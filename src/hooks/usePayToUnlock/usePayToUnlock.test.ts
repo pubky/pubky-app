@@ -6,7 +6,13 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { LockFile, TUnlockedContent, TVerificationStatus, TVerificationTask } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { CONNECTION_POLL_INTERVAL_MS, POLL_INTERVAL_MS, STALL_AFTER_MS, usePayToUnlock } from './usePayToUnlock';
+import {
+  CONNECTION_POLL_INTERVAL_MS,
+  POLL_BACKOFF_MAX_MS,
+  POLL_INTERVAL_MS,
+  STALL_AFTER_MS,
+  usePayToUnlock,
+} from './usePayToUnlock';
 import type { TPayToUnlockStage, UsePayToUnlockParams } from './usePayToUnlock.types';
 
 vi.mock('@/controllers/locks/locks', () => ({
@@ -158,7 +164,10 @@ describe('usePayToUnlock (opening)', () => {
       const { result } = renderPay();
       await waitFor(() => expect(result.current.stage).toBe('waiting'));
       expect(LocksController.startPayment).not.toHaveBeenCalled();
-      expect(LocksController.fetchPaykitConnectionState).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+      expect(LocksController.fetchPaykitConnectionState).toHaveBeenCalledWith(
+        { lockFile, bundleId: 'stored-1' },
+        expect.anything(),
+      );
     },
   );
 
@@ -462,7 +471,10 @@ describe('usePayToUnlock (retry)', () => {
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
       });
       expect(LocksController.fetchPaymentStatus).toHaveBeenCalledTimes(1);
-      expect(LocksController.fetchPaymentStatus).toHaveBeenCalledWith({ lockFile, bundleId: 'fresh-1' });
+      expect(LocksController.fetchPaymentStatus).toHaveBeenCalledWith(
+        { lockFile, bundleId: 'fresh-1' },
+        expect.anything(),
+      );
     } finally {
       vi.useRealTimers();
     }
@@ -985,7 +997,8 @@ describe('usePayToUnlock (waiting)', () => {
     expect(connectionCalls()).toBe(1);
     expect(result.current.isConnectionPending).toBe(true);
 
-    await advance(CONNECTION_POLL_INTERVAL_MS);
+    // A failed read doubles the wait before the next one.
+    await advance(CONNECTION_POLL_INTERVAL_MS * 2);
     expect(connectionCalls()).toBe(2);
     expect(result.current.isConnectionPending).toBe(false);
     expect(result.current.handshakePubky).toBe('pubkybob');
@@ -1338,7 +1351,8 @@ describe('usePayToUnlock (waiting)', () => {
     const { result } = renderPay();
     await advance(0);
 
-    await advance(POLL_INTERVAL_MS * 2);
+    // The failed lookup at 3 s backs the next one off to 6 s later.
+    await advance(POLL_INTERVAL_MS * 3);
     expect(result.current.stage).toBe('waiting');
     expect(result.current.isStalled).toBe(false);
     expect(toastMock).not.toHaveBeenCalled();
@@ -1646,6 +1660,116 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(0);
     expect(LocksController.fetchPaidContent).not.toHaveBeenCalled();
     expect(onCompleted).not.toHaveBeenCalled();
+  });
+
+  // An outage must not read (and report) every tick: each loop backs off and tags repeats (#2641).
+  describe('backoff while reads fail', () => {
+    const failing = (times: number[]) => async (): Promise<never> => {
+      times.push(Date.now());
+      throw new Error('Lock Server unavailable');
+    };
+    const gaps = (times: number[]) => times.slice(1).map((t, i) => t - times[i]);
+    const connectionReports = () => vi.mocked(LocksController.fetchPaykitConnectionState).mock.calls.map((c) => c[1]);
+    const paymentReports = () => vi.mocked(LocksController.fetchPaymentStatus).mock.calls.map((c) => c[1]);
+    const connection = (suppress: boolean) => ({ callSite: 'payToUnlockConnectionPoll', suppress });
+    const payment = (suppress: boolean) => ({ callSite: 'payToUnlockPaymentPoll', suppress });
+
+    it('doubles the link read interval from 1 s up to the 15 s cap', async () => {
+      const times: number[] = [];
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(failing(times));
+
+      renderPay();
+      await advance(0);
+      await advance(60_000);
+      expect(gaps(times)).toEqual([2000, 4000, 8000, POLL_BACKOFF_MAX_MS, POLL_BACKOFF_MAX_MS, POLL_BACKOFF_MAX_MS]);
+    });
+
+    it('doubles the task lookup interval from 3 s up to the 15 s cap', async () => {
+      const times: number[] = [];
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockImplementation(failing(times));
+
+      renderPay();
+      const start = Date.now();
+      await advance(0);
+      await advance(60_000);
+      expect(times[0] - start).toBe(POLL_INTERVAL_MS);
+      expect(gaps(times)).toEqual([6000, 12000, POLL_BACKOFF_MAX_MS, POLL_BACKOFF_MAX_MS]);
+    });
+
+    it('keeps the 3 s interval when the server answers with no task', async () => {
+      const times: number[] = [];
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockImplementation(async () => {
+          times.push(Date.now());
+          return null;
+        });
+
+      renderPay();
+      await advance(0);
+      await advance(POLL_INTERVAL_MS * 4);
+      expect(gaps(times)).toEqual([POLL_INTERVAL_MS, POLL_INTERVAL_MS, POLL_INTERVAL_MS]);
+    });
+
+    it('returns to full speed after a successful read, and reports the next outage again', async () => {
+      const times: number[] = [];
+      let call = 0;
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(async () => {
+        times.push(Date.now());
+        if (++call === 3) return 'none';
+        throw new Error('Lock Server unavailable');
+      });
+
+      renderPay();
+      await advance(0);
+      await advance(9000);
+      expect(gaps(times)).toEqual([2000, 4000, CONNECTION_POLL_INTERVAL_MS, 2000]);
+      expect(connectionReports()).toEqual([
+        connection(false),
+        connection(true),
+        connection(true),
+        connection(false),
+        connection(true),
+      ]);
+    });
+
+    it('returns both loops to full speed when the reader comes back', async () => {
+      const linkTimes: number[] = [];
+      const taskTimes: number[] = [];
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(failing(linkTimes));
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockImplementation(failing(taskTimes));
+
+      renderPay();
+      const start = Date.now();
+      await advance(0);
+      await advance(16_000);
+      const back = Date.now();
+      await returnToTab(6000);
+      const since = (times: number[]) => times.filter((t) => t >= back).map((t) => t - start);
+      expect(since(linkTimes)).toEqual([16_000, 18_000, 22_000]);
+      expect(since(taskTimes)).toEqual([16_000, 22_000]);
+      // The read on return starts a new streak, so its failure is reported.
+      expect(connectionReports()[4]).toEqual(connection(false));
+      expect(paymentReports().at(-2)).toEqual(payment(false));
+    });
+
+    it('tags only the first failure of a streak as reportable', async () => {
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(failing([]));
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockImplementation(failing([]));
+
+      renderPay();
+      await advance(0);
+      await advance(10_000);
+      expect(connectionReports()).toEqual([connection(false), connection(true), connection(true)]);
+      // The open-time lookup is a one-shot read and stays untagged.
+      expect(paymentReports()).toEqual([undefined, payment(false), payment(true)]);
+    });
   });
 });
 

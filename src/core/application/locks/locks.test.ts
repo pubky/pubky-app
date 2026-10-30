@@ -1178,7 +1178,7 @@ describe('LocksApplication (payment unlock)', () => {
         'handshake',
       );
 
-      expect(mocks.lookupPaykitConnectionState).toHaveBeenCalledWith('pubkybob', 'saved-1');
+      expect(mocks.lookupPaykitConnectionState).toHaveBeenCalledWith('pubkybob', 'saved-1', undefined);
       // Read-only: it must not touch the purchase file or submit anything.
       expect(mocks.getBytesIfExists).not.toHaveBeenCalled();
       expect(mocks.submitProof).not.toHaveBeenCalled();
@@ -1232,7 +1232,7 @@ describe('LocksApplication (payment unlock)', () => {
     it('passes the null through when the submission never reached the server', async () => {
       mocks.lookupVerificationTask.mockResolvedValue(null);
       await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toBeNull();
-      expect(mocks.lookupVerificationTask).toHaveBeenCalledWith('pubkybob', 'bundle-1');
+      expect(mocks.lookupVerificationTask).toHaveBeenCalledWith('pubkybob', 'bundle-1', undefined);
     });
 
     it('returns the task the server holds', async () => {

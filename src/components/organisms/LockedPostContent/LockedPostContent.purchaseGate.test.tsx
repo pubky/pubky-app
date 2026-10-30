@@ -126,7 +126,10 @@ describe('purchase-aware region gate', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
     await waitFor(() => expect(screen.getByTestId('pay-dialog')).toHaveTextContent('waiting'));
-    expect(LocksController.fetchPaykitConnectionState).toHaveBeenCalledWith({ lockFile, bundleId: 'saved-bundle' });
+    expect(LocksController.fetchPaykitConnectionState).toHaveBeenCalledWith(
+      { lockFile, bundleId: 'saved-bundle' },
+      { callSite: 'payToUnlockConnectionPoll', suppress: false },
+    );
     expect(LocksController.startPayment).not.toHaveBeenCalled();
   });
 

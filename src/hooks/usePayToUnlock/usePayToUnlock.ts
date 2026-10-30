@@ -5,7 +5,12 @@ import { LocksController } from '@/controllers/locks/locks';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
-import type { TPaykitConnectionState, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
+import type {
+  TPaykitConnectionState,
+  TUnlockedContent,
+  TVerificationStatus,
+  TVerificationTask,
+} from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { TPayToUnlockStage, UsePayToUnlockParams, UsePayToUnlockResult } from './usePayToUnlock.types';
 
@@ -22,6 +27,17 @@ export const CONNECTION_POLL_INTERVAL_MS = 1000;
  * time, but a returning tab does not re-read it: only Check again does.
  */
 export const STALL_AFTER_MS = 3 * 60 * 1000;
+/**
+ * Ceiling of the backoff a loop applies while its reads keep failing: each consecutive failure doubles
+ * its interval up to this. A successful read, or the reader returning to the tab, restores full speed.
+ */
+export const POLL_BACKOFF_MAX_MS = 15_000;
+
+/** What one poll tick did: `failed` (the read rejected) backs the loop off, `done` ends it. */
+type TPollStep = 'continue' | 'failed' | 'done';
+
+const backoffDelay = (intervalMs: number, failures: number): number =>
+  failures === 0 ? intervalMs : Math.min(intervalMs * 2 ** failures, POLL_BACKOFF_MAX_MS);
 
 const SUBMIT_FAILED_TOAST = 'The payment could not be started. Try again later.';
 const NO_WALLET_TOAST = 'Bitkit is not set up yet. Finish the steps, then try again.';
@@ -205,31 +221,39 @@ export function usePayToUnlock({
     // Bumped when the wait parks: an answer from before the park is no longer ours to apply.
     let epoch = 0;
 
-    type TLoop = { timer: number | null; inFlight: boolean; alive: boolean; run: () => void };
+    type TLoop = { timer: number | null; inFlight: boolean; alive: boolean; failures: number; run: () => void };
     const loops: TLoop[] = [];
 
     /**
-     * `step` returns false when this loop is done, and takes the guard it must re-check after its
-     * await: applying an answer from a closed modal or a parked wait is what opens content nobody
-     * asked for. Each loop skips a tick while its own call is still out.
+     * `step` says whether this loop is done or its read failed, and takes the guard it must re-check
+     * after its await: applying an answer from a closed modal or a parked wait is what opens content
+     * nobody asked for. Each loop skips a tick while its own call is still out. It also gets the
+     * loop's consecutive failures, so only the first failure of a streak is reported (#2641).
      */
-    const addLoop = (intervalMs: number, step: (isCurrent: () => boolean) => Promise<boolean>): TLoop => {
+    const addLoop = (
+      intervalMs: number,
+      step: (isCurrent: () => boolean, failures: number) => Promise<TPollStep>,
+    ): TLoop => {
       const loop: TLoop = {
         timer: null,
         inFlight: false,
         alive: true,
+        failures: 0,
         run: () => {
           if (!active || !loop.alive || loop.inFlight || generation.current !== gen) return;
           const startedAt = epoch;
           const isCurrent = () => active && generation.current === gen && startedAt === epoch;
           loop.inFlight = true;
-          void step(isCurrent).then((keepGoing) => {
+          void step(isCurrent, loop.failures).then((result) => {
             // Checked before the flag is cleared: after a park, a newer request may already own it,
             // and clearing it here would let the next visibility event start a duplicate.
             if (!isCurrent()) return;
             loop.inFlight = false;
-            loop.alive = keepGoing;
-            if (keepGoing) schedule(loop, intervalMs);
+            loop.alive = result !== 'done';
+            // An outage backs off instead of reading (and reporting) every interval; any answer,
+            // a null task included, is a working server and restores full speed.
+            loop.failures = result === 'failed' ? loop.failures + 1 : 0;
+            if (loop.alive) schedule(loop, backoffDelay(intervalMs, loop.failures));
           });
         },
       };
@@ -242,11 +266,20 @@ export function usePayToUnlock({
       loop.timer = window.setTimeout(loop.run, intervalMs);
     };
 
-    const paymentLoop = addLoop(POLL_INTERVAL_MS, async (isCurrent) => {
-      const task = await LocksController.fetchPaymentStatus({ lockFile, bundleId }).catch(() => null);
-      if (!isCurrent()) return false;
-      // A failed lookup or a null task is transient mid-wait; both mean "keep waiting".
-      if (!task) return true;
+    const paymentLoop = addLoop(POLL_INTERVAL_MS, async (isCurrent, failures) => {
+      let task: TVerificationTask | null;
+      try {
+        task = await LocksController.fetchPaymentStatus(
+          { lockFile, bundleId },
+          { callSite: 'payToUnlockPaymentPoll', suppress: failures > 0 },
+        );
+      } catch {
+        // A failed lookup is transient mid-wait: keep waiting, more slowly.
+        return 'failed';
+      }
+      if (!isCurrent()) return 'done';
+      // A null task is an answer, not a failure: keep waiting at full speed.
+      if (!task) return 'continue';
       setWalletSetupNeeded(task.walletSetupNeeded);
       // Re-armed when the deadline appears, and again when it clears: the invoice now exists, so the
       // reader gets a full window to pay.
@@ -255,20 +288,27 @@ export function usePayToUnlock({
         stallNotBefore = notBefore;
         armStallTimer();
       }
-      if (applyStatus(gen, bundleId, task.status)) return true;
+      if (applyStatus(gen, bundleId, task.status)) return 'continue';
       stop();
-      return false;
+      return 'done';
     });
 
-    const connectionLoop = addLoop(CONNECTION_POLL_INTERVAL_MS, async (isCurrent) => {
-      const state = await LocksController.fetchPaykitConnectionState({ lockFile, bundleId }).catch(() => null);
-      if (!isCurrent()) return false;
-      // A failed read invents no state: the last one stands, QR included.
-      if (!state) return true;
+    const connectionLoop = addLoop(CONNECTION_POLL_INTERVAL_MS, async (isCurrent, failures) => {
+      let state: TPaykitConnectionState;
+      try {
+        state = await LocksController.fetchPaykitConnectionState(
+          { lockFile, bundleId },
+          { callSite: 'payToUnlockConnectionPoll', suppress: failures > 0 },
+        );
+      } catch {
+        // A failed read invents no state: the last one stands, QR included.
+        return 'failed';
+      }
+      if (!isCurrent()) return 'done';
       setConnectionState(state);
       setIsConnectionPending(false);
       // `connected` needs no more reads; `blocked` is an operator switch this reader cannot flip.
-      return state !== 'connected' && state !== 'blocked';
+      return state !== 'connected' && state !== 'blocked' ? 'continue' : 'done';
     });
     if (!watchConnection) connectionLoop.alive = false;
 
@@ -297,6 +337,8 @@ export function usePayToUnlock({
       armStallTimer();
       loops.forEach((loop) => {
         if (loop.timer !== null) window.clearTimeout(loop.timer);
+        // The reader is looking again: read at full speed, and report the next failure afresh.
+        loop.failures = 0;
         loop.run();
       });
     };
