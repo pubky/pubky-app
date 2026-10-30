@@ -522,6 +522,8 @@ export class AuthController {
     if (!snapshot.sessionReference || (id !== null && snapshot.sessionReference.sessionStoreId !== id)) return;
     this.reportSavedSessionLoss(id === null ? 'cleared' : 'removed', snapshot.sessionReference);
     this.cancelActiveAuthFlow();
+    // A gate paused on Retry or Continue would otherwise hold the restore awaited below behind a loading screen.
+    SocialMigrationController.cancel();
     const version = ++this.restoreVersion;
     this.sessionRestore = null;
     const previousRestore = this.restorePromise;

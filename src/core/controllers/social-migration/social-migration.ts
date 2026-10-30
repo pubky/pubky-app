@@ -38,7 +38,7 @@ import type {
 export type SocialMigrationEntry = 'restore' | 'signin' | 'signup' | 'upgrade';
 
 /** `reauth-required` leaves `restoreStatus` at `social-migration` for the screen to sign the account out. */
-export type SocialMigrationOutcome = 'passed' | 'reauth-required' | 'canceled';
+type SocialMigrationOutcome = 'passed' | 'reauth-required' | 'canceled';
 
 type Wake = 'retry' | 'continue' | 'cancel';
 

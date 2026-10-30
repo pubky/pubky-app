@@ -156,6 +156,32 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       expect(useAuthStore.getState().restoreStatus).toBe('ready');
     });
 
+    it.each([
+      ['blocked', { status: 'aborted', error: { code: 'UNSUPPORTED_EPOCH', message: '' } }],
+      ['summary', { counts: { invalid: 1 } }],
+    ] as const)(
+      'cancels a gate paused on the %s screen when the SDK removes the grant, instead of hiding it behind a restore',
+      async (stage, report) => {
+        vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
+        writeSocialMigrationRecord(pubky, { v: 1, admittedGrantIds: ['saved-grant'] });
+        vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(
+          asOpaque<MigrationReport>({ ...done(), ...report }),
+        );
+        vi.mocked(AuthApplication.restorePersistedSession)
+          .mockResolvedValueOnce({ status: 'restored', session })
+          .mockResolvedValueOnce({ status: 'reauth-required' });
+        const restore = AuthController.restorePersistedSession();
+        await vi.waitFor(() => expect(useSocialMigrationStore.getState().stage).toBe(stage));
+
+        await AuthController.syncRemovedSession('saved-grant');
+
+        expect(await restore).toBe(false);
+        expect(useSocialMigrationStore.getState().stage).toBe('idle');
+        expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'reauth-required' });
+        expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
+      },
+    );
+
     it('offers recovery when the flag cannot be read', async () => {
       vi.spyOn(HomeserverService, 'getBytesIfExists').mockRejectedValue(new Error('offline'));
 
