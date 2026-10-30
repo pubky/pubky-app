@@ -81,6 +81,23 @@ describe('AlertInstall', () => {
     expect(screen.getByTestId('dialog-install-ios')).toHaveAttribute('data-open', 'true');
   });
 
+  it('holds the banner back while hidden', () => {
+    const { container } = render(<AlertInstall hidden />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('keeps an open iOS steps dialog when the banner is hidden or no longer eligible', () => {
+    mockPrompt({ platform: 'ios', iosDialogOpen: true });
+    const { rerender } = render(<AlertInstall />);
+    rerender(<AlertInstall hidden />);
+    expect(screen.queryByRole('region', { name: 'Install Pubky' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('dialog-install-ios')).toHaveAttribute('data-open', 'true');
+
+    mockPrompt({ visible: false, platform: 'ios', iosDialogOpen: true });
+    rerender(<AlertInstall />);
+    expect(screen.getByTestId('dialog-install-ios')).toHaveAttribute('data-open', 'true');
+  });
+
   it('maps closing the iOS dialog to a snooze and confirming it to a permanent dismissal', () => {
     const prompt = mockPrompt({ platform: 'ios', iosDialogOpen: true });
     render(<AlertInstall />);

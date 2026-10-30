@@ -13,6 +13,7 @@ import { APP_VERSION } from '@/config/app';
 import { APP_RELEASE_URL } from '@/config/externalLinks';
 import { cn } from '@/libs/utils/utils';
 import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
+import { VibesCard } from '@/organisms/VibesCard/VibesCard';
 import { COPYRIGHT_TEXT, FAQ_QUESTIONS } from './SettingsInfo.constants';
 import type { SettingsInfoProps } from './SettingsInfo.types';
 
@@ -65,6 +66,7 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
       )}
 
       {/* Feedback Section */}
+      <VibesCard />
       <FeedbackCard />
 
       {/* Version Section */}

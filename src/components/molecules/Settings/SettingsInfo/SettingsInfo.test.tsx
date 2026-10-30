@@ -9,6 +9,7 @@ vi.mock('@/config/app', () => ({
 
 vi.mock('@/config/externalLinks', () => ({
   APP_RELEASE_URL: 'https://github.com/pubky/pubky-app/releases/tag/v1.2.3',
+  PUBKY_VIBES_URL: 'https://vibes.pubky.app',
 }));
 
 describe('SettingsInfo', () => {
@@ -50,6 +51,13 @@ describe('SettingsInfo', () => {
   it('renders subtitle for Terms section', () => {
     render(<SettingsInfo />);
     expect(screen.getByText('Please read our terms carefully.')).toBeInTheDocument();
+  });
+
+  it('places the permanent Vibes entry directly above Feedback', () => {
+    render(<SettingsInfo />);
+    expect(screen.getByTestId('vibes-card').nextElementSibling?.getAttribute('data-testid')).toMatch(
+      /^feedback-card(?:-skeleton)?$/,
+    );
   });
 
   it('renders version section with title and version number', () => {
