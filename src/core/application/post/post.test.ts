@@ -429,11 +429,13 @@ describe('Post Application', () => {
           undefined,
           undefined,
         );
+        const onPostSynced = vi.fn();
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-with-tags-fail',
           post: mockPost,
           postUrl: 'pubky://author/pub/pubky.app/posts/post-with-tags-fail',
           tags: mockTags,
+          onPostSynced,
         };
 
         const { saveSpy, requestSpy, tagCreateSpy } = setupCreateSpies();
@@ -454,6 +456,8 @@ describe('Post Application', () => {
           }),
         });
         expect(tagCreateSpy).toHaveBeenCalledWith({ tagList: mockTags });
+        // The caller may treat the post as live once this runs, so it must come before the tag write.
+        expect(onPostSynced.mock.invocationCallOrder[0]).toBeLessThan(tagCreateSpy.mock.invocationCallOrder[0]);
       });
     });
 
@@ -518,6 +522,7 @@ describe('Post Application', () => {
           postUrl: 'pubky://author/pub/pubky.app/posts/post-fail',
           fileAttachments: mockFileAttachments,
           tags: mockTags,
+          onPostSynced: vi.fn(),
         };
 
         const { commitCreateSpy, saveSpy, requestSpy, tagCreateSpy } = setupCreateSpies();
@@ -546,6 +551,7 @@ describe('Post Application', () => {
         // Rollback deletes by the known record + blob URLs, not by record URI
         expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
         expect(tagCreateSpy).not.toHaveBeenCalled();
+        expect(mockData.onPostSynced).not.toHaveBeenCalled();
       });
 
       it('should propagate original error when file rollback also fails', async () => {

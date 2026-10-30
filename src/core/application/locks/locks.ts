@@ -716,7 +716,6 @@ export class LocksApplication {
       }
       throw error;
     }
-    const lockUrl = `pubky://${stripPubkyPrefix(result.creator)}${result.content_lock_path}`;
     const parsedPost = GuardedContentParser.parsePost(postFile.bytes);
     if (parsedPost && isCurrent?.() !== false) {
       await this.cacheGuardedOriginal({
@@ -726,8 +725,6 @@ export class LocksApplication {
         resources: Object.fromEntries(attachmentResources.map((resource) => [resource.path, resource])),
       });
     }
-    // Publishing must not wait for a second homeserver read before the announcement can be posted.
-    void this.fetchLockFile({ lockUrl, isCurrent }).catch(() => undefined);
     return result;
   }
 

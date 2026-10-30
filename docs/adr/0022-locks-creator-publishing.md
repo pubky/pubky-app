@@ -123,9 +123,10 @@ frontend must handle both cases.
   guarded content are built only from the owner the Lock Server reports, never from the signed-in
   account, and tests pin this.
 - Partial failures orphan uploaded resources or an unreferenced lock (#2039, #2181). Since #2039 the
-  app deletes the uploads when publishing fails before the lock exists. Still open: an announcement
-  that fails after the lock exists (#2181, merged into #2039) and a tab closed mid-publish
-  (server-side reaping, pubky/locks#107).
+  app deletes the uploads when publishing fails before the lock exists, and deletes the lock when the
+  announcement fails after it exists. Still open: a tab closed mid-publish (server-side reaping,
+  pubky/locks#107), a lock delete refused because the Locks session was rejected, and an announcement
+  whose answer was lost, which then points at a deleted lock.
 
 ### Neutral ⚠️
 
