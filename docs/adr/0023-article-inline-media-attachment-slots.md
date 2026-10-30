@@ -4,7 +4,9 @@
 
 Accepted — 2026-10-02
 
-Amended — 2026-10-16 (#2687, #2684): the composer no longer uploads at insert time. A file inserted this session is staged in memory under a placeholder author-owned file URI (`pubky://{author}/pub/pubky.app/files/draft-{7 hex}`, the length of a real id) and uploaded when the article is published, so nothing reaches public storage before then and a locked article's files never leave the lock. The composer-form contract (an author-owned `pubky://…/files/{id}` destination) and the published form are unchanged; see `docs/data-patterns.md`.
+Amended — 2026-10-16 (#2687, #2684): the composer no longer uploads at insert time. A file inserted this session is staged in memory under a placeholder author-owned file URI (the length of a real id) and uploaded when the article is published, so nothing reaches public storage before then and a locked article's files never leave the lock. The composer-form contract (an author-owned `pubky://…/files/{id}` destination) and the published form are unchanged; see `docs/data-patterns.md`.
+
+Amended — 2026-10-30 (ADR-0027, `pubky-social-specs` 1.x): the cover leaves the attachment list. A v1 article carries it in its envelope (`cover_image`, a media URI or `null`) and `attachments` holds the inline media alone, so slot 0 is the first inline file. The reader resolves every article through `resolveArticleCover` (`src/libs/post/articleCover.ts`): rule A, an envelope cover is the cover and the slots are the attachments as stored; rule A′, a migrated 0.x article (envelope cover, body references starting at `attachment:1` and none at 0) keeps its shifted slots by reading them as `['', ...attachments]`; rule B, no envelope cover means the 0.x slot-0 rule below. A placeholder staged this session is an author-owned v1 media URI for random bytes (`pubky://{author}/pub/social/v1/files/{hash}.{ext}`). The exception is a locked article: the lock's primary is a v1 post whose envelope cover is `null` and whose slot 0 is the cover, since the unlocked copy renders from the lock's own files (ADR-0022). Rule A′ retires with the 0.x tree.
 
 ## Context
 
@@ -16,7 +18,7 @@ Users asked for inline video, audio and PDF. Markdown has no syntax for them, th
 
 - **One syntax for every kind.** Images, videos, audio files and PDFs all use markdown image syntax. The published body is `![alt](attachment:{n})` whatever the kind; the composer body is the author's `pubky://…/files/{id}` URI. `serializeArticleBody`, `deserializeArticleBody`, the slot-0 cover rule and the controller contract are unchanged (`src/libs/post/articleInlineMedia.ts`).
 - **The kind lives in file metadata, never in the body.** The reader types each slot from `file_details.content_type` (`useAttachmentsMetadata`, matched by `uri`, never by index), a same-session publish from the local files store entry, unlocked (paid) content from the bytes the reader holds, and an external `https:` URL from its file extension. Unknown stays an image, which keeps today's placeholder behaviour; a row of a type the reader has no player for is a placeholder that requests nothing.
-- **The ownership invariant is unchanged.** A slot renders only if `attachments[n]` is a file URI owned by the author; the cover remains image-only.
+- **The ownership invariant is unchanged.** A slot renders only if `attachments[n]` is a file URI owned by the author (a v1 media URI or a 0.x file or blob URI an existing article references); the cover remains image-only.
 - **The editor keeps `imagePlugin` for images** and adds a plugin whose import visitor runs ahead of it, claiming only the image-syntax nodes whose file type the composer knows is not an image (session files, the edited post's attachments) or whose `https:` URL has a video/audio/PDF extension. The node exports back to a plain mdast `image`, so the markdown is byte-identical to an image's. An edit holds the editor behind its skeleton until the referenced attachments' metadata has settled, because the import runs once.
 - **Caps follow post attachments.** Images keep `IMAGE_MAX_RAW_SIZE`; other kinds the spec's file size limit (`ATTACHMENT_MAX_OTHER_SIZE`). Locked articles keep the lock's own caps.
 
@@ -62,3 +64,4 @@ Rejected in ADR-era discussions of #2437 and unchanged here: host coupling, no o
 
 - [ADR-0001: Local-first writes](./0001-local-first-writes.md)
 - [ADR-0022: Locks — creator-side locked content publishing](./0022-locks-creator-publishing.md) (unlocked articles render the same slots from local bytes)
+- [ADR-0027: Social v1 versioned edits and data model](./0027-social-v1-versioned-edits-and-data-model.md) (the envelope cover and the slot rules A/A′/B)
