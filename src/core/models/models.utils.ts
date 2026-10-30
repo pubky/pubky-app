@@ -68,21 +68,10 @@ export function buildCompositeIdFromPubkyUri({ uri, domain }: CompositeIdParams)
 }
 
 /**
- * Whether `uri` names a v1 public media file (`pubky://{owner}/pub/social/v1/files/{hash}.{ext}`),
- * as `pubky-social-specs` parses it. False for a 0.x file, a private file, any other object and
+ * The `{hash}.{ext}` filename of a v1 public media URI (`pubky://{owner}/pub/social/v1/files/{hash}.{ext}`),
+ * as `pubky-social-specs` parses it. Null for a 0.x file, a private file, any other object and
  * anything the data model refuses, so a caller can branch without a try/catch.
  */
-export function isV1MediaUri(uri: unknown): boolean {
-  if (typeof uri !== 'string') return false;
-  try {
-    const parsed = parseUri(uri);
-    return parsed.kind === 'file' && parsed.root === 'public';
-  } catch {
-    return false;
-  }
-}
-
-/** The `{hash}.{ext}` filename of a v1 public media URI, or null for anything else (see `isV1MediaUri`). */
 export function mediaFilenameFromUri(uri: unknown): string | null {
   if (typeof uri !== 'string') return null;
   try {
@@ -91,6 +80,11 @@ export function mediaFilenameFromUri(uri: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+/** Whether `uri` names a v1 public media file (see `mediaFilenameFromUri`). */
+export function isV1MediaUri(uri: unknown): boolean {
+  return mediaFilenameFromUri(uri) !== null;
 }
 
 export function buildCompositeId({ pubky, id }: CompositeIdResult): string {
