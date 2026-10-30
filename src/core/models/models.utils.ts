@@ -1,4 +1,5 @@
-import type { Pubky } from '@/models/models.types';
+import { parseUri } from 'pubky-social-specs';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { COMPOSITE_ID_DELIMITER } from './models.defaults';
 import type { CompositeIdParams, CompositeIdResult } from './models.types';
 
@@ -36,13 +37,17 @@ export function parsePubkyUri(uri: unknown): { authority: string; path: string }
  * Parses a pubky:// URI to extract the author and ID,
  * then builds a composite ID in the format "author:id"
  *
- * @param uri - A pubky URI (e.g., "pubky://author/pub/pubky.app/posts/post123")
+ * Form-agnostic across epochs: a 0.x post `posts/{id}`, a v1 reference `posts/{id}` and a v1
+ * version `posts/{id}/{editId}.json` all yield `{id}`; a v1 file `files/{hash}.{ext}` yields the
+ * hash (how Nexus keys media) and a 0.x file `files/{tsid}` its id.
+ *
+ * @param uri - A pubky URI (e.g., "pubky://author/pub/social/v1/posts/post123")
  * @param domain - The domain of the URI (e.g., "posts", "files")
  * @returns Composite ID in "author:id" format, or null if parsing fails
  *
  * @example
- * buildCompositeIdFromUri("pubky://author123/pub/pubky.app/files/file456")
- * // Returns: "author123:file456"
+ * buildCompositeIdFromUri("pubky://author123/pub/social/v1/files/AKSZ57W2RFKHV1EHK007FQQ8TW.png")
+ * // Returns: "author123:AKSZ57W2RFKHV1EHK007FQQ8TW"
  */
 export function buildCompositeIdFromPubkyUri({ uri, domain }: CompositeIdParams): string | null {
   const parsed = parsePubkyUri(uri);
@@ -51,13 +56,41 @@ export function buildCompositeIdFromPubkyUri({ uri, domain }: CompositeIdParams)
   }
   const segments = parsed.path.split('/').filter(Boolean);
   const domainIndex = segments.lastIndexOf(domain);
-  const id = domainIndex !== -1 ? segments[domainIndex + 1] : undefined;
+  const segment = domainIndex !== -1 ? segments[domainIndex + 1] : undefined;
+  // v1 media is `files/{hash}.{ext}`; its id is the hash. A 0.x file id has no dot.
+  const id = domain === CompositeIdDomain.FILES ? segment?.split('.')[0] : segment;
 
   if (!id) {
     return null;
   }
 
   return buildCompositeId({ pubky: parsed.authority, id });
+}
+
+/**
+ * Whether `uri` names a v1 public media file (`pubky://{owner}/pub/social/v1/files/{hash}.{ext}`),
+ * as `pubky-social-specs` parses it. False for a 0.x file, a private file, any other object and
+ * anything the data model refuses, so a caller can branch without a try/catch.
+ */
+export function isV1MediaUri(uri: unknown): boolean {
+  if (typeof uri !== 'string') return false;
+  try {
+    const parsed = parseUri(uri);
+    return parsed.kind === 'file' && parsed.root === 'public';
+  } catch {
+    return false;
+  }
+}
+
+/** The `{hash}.{ext}` filename of a v1 public media URI, or null for anything else (see `isV1MediaUri`). */
+export function mediaFilenameFromUri(uri: unknown): string | null {
+  if (typeof uri !== 'string') return null;
+  try {
+    const parsed = parseUri(uri);
+    return parsed.kind === 'file' && parsed.root === 'public' ? parsed.filename : null;
+  } catch {
+    return null;
+  }
 }
 
 export function buildCompositeId({ pubky, id }: CompositeIdResult): string {
