@@ -671,6 +671,18 @@ describe('PostController', () => {
       expect(tagList?.[0]?.label).toBe('nft');
     });
 
+    // Without it the lock publish deletes the lock behind a live announcement (#2039).
+    it('forwards onPostSynced to the application', async () => {
+      const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+      const onPostSynced = vi.fn();
+
+      const { PostController } = await import('./post');
+      await PostController.commitCreate({ ...createPostParams('Lock teaser'), onPostSynced });
+
+      expect(postCommitSpy.mock.calls[0][0].onPostSynced).toBe(onPostSynced);
+      expect(onPostSynced).toHaveBeenCalledOnce();
+    });
+
     describe('hashtags in content (#1882)', () => {
       it('creates a tag on the new post for a hashtag in the content', async () => {
         const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
