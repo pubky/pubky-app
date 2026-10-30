@@ -143,6 +143,69 @@ describe('MuteApplication.commitMute', () => {
     expect(deleteIdempotent).toHaveBeenCalledExactlyOnceWith(deleteUrls[0]);
   });
 
+  it('runs overlapping commits for one pair in order, so a retrying unmute cannot remove a newer mute', async () => {
+    const createSpy = vi.spyOn(LocalMuteService, 'create');
+    const deleteSpy = vi.spyOn(LocalMuteService, 'delete');
+    // The first copy's delete is still retrying (deleteIdempotent waits between attempts).
+    const pendingDelete = Promise.withResolvers<void>();
+    const deleteIdempotent = vi
+      .spyOn(HomeserverService, 'deleteIdempotent')
+      .mockImplementationOnce(() => pendingDelete.promise)
+      .mockResolvedValue(undefined);
+    const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+
+    const unmuteCommit = MuteApplication.commitMute(unmute);
+    const muteCommit = MuteApplication.commitMute(mute);
+    await vi.waitFor(() => expect(deleteIdempotent).toHaveBeenCalledOnce());
+
+    // The mute waits: no local write and no PUT while the unmute is still deleting.
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(putBlob).not.toHaveBeenCalled();
+
+    pendingDelete.resolve();
+    await Promise.all([unmuteCommit, muteCommit]);
+
+    expect(deleteIdempotent).toHaveBeenCalledTimes(2);
+    expect(putBlob).toHaveBeenCalledExactlyOnceWith({ url: built.url, blob: built.body });
+    expect(deleteSpy.mock.invocationCallOrder[0]).toBeLessThan(createSpy.mock.invocationCallOrder[0]);
+    expect(Math.max(...deleteIdempotent.mock.invocationCallOrder)).toBeLessThan(putBlob.mock.invocationCallOrder[0]);
+    await expect(mutedStream()).resolves.toEqual([MUTEE]);
+  });
+
+  it('lets a failed commit release the pair queue for the next one', async () => {
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValueOnce(new Error('offline'));
+    const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+
+    const unmuteCommit = MuteApplication.commitMute(unmute);
+    const muteCommit = MuteApplication.commitMute(mute);
+
+    await expect(unmuteCommit).rejects.toThrow('offline');
+    await expect(muteCommit).resolves.toBeUndefined();
+    expect(putBlob).toHaveBeenCalledOnce();
+  });
+
+  it('does not make commits for different pairs wait on each other', async () => {
+    const other = MuteNormalizer.to({ muter: MUTER, mutee: OTHER });
+    const pendingDelete = Promise.withResolvers<void>();
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockImplementation(() => pendingDelete.promise);
+    const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+
+    const unmuteCommit = MuteApplication.commitMute(unmute);
+    const otherCommit = MuteApplication.commitMute({
+      eventType: HttpMethod.PUT,
+      muteUrl: other.url,
+      muteBody: other.body,
+      muter: MUTER,
+      mutee: OTHER,
+    });
+
+    await expect(otherCommit).resolves.toBeUndefined();
+    expect(putBlob).toHaveBeenCalledWith({ url: other.url, blob: other.body });
+
+    pendingDelete.resolve();
+    await expect(unmuteCommit).resolves.toBeUndefined();
+  });
+
   it('reports the local failure when both the database and the homeserver would fail', async () => {
     const createSpy = vi.spyOn(LocalMuteService, 'create').mockRejectedValue(new Error('db-fail'));
     const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(new Error('homeserver-fail'));

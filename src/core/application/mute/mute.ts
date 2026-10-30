@@ -13,11 +13,31 @@ export class MuteApplication {
   private constructor() {}
 
   /**
+   * Mute syncs in flight, keyed by muter and mutee. Overlapping commits for one pair run in order:
+   * `deleteIdempotent` waits between its attempts outside the homeserver's per-file queue, so a mute
+   * issued while an unmute is still retrying must wait for it, or the retried DELETE would remove
+   * the mute the user just put back.
+   */
+  private static readonly inFlightMutes = new Map<string, Promise<void>>();
+
+  /**
    * Handles muting or unmuting a user.
-   * Performs local database operations and syncs with the homeserver.
+   * Performs local database operations and syncs with the homeserver, one commit at a time per pair.
    * @param params - Parameters containing event type, the URL and bytes to PUT or the URLs to delete, and user IDs
    */
-  static async commitMute(params: TMuteApplicationCommitParams) {
+  static async commitMute(params: TMuteApplicationCommitParams): Promise<void> {
+    const key = `${params.muter}:${params.mutee}`;
+    const previous = this.inFlightMutes.get(key) ?? Promise.resolve();
+    const run = previous.catch(() => undefined).then(() => this.syncMute(params));
+    this.inFlightMutes.set(key, run);
+    try {
+      await run;
+    } finally {
+      if (this.inFlightMutes.get(key) === run) this.inFlightMutes.delete(key);
+    }
+  }
+
+  private static async syncMute(params: TMuteApplicationCommitParams): Promise<void> {
     const { muter, mutee } = params;
     if (params.eventType === HttpMethod.PUT) {
       await LocalMuteService.create({ muter, mutee });
