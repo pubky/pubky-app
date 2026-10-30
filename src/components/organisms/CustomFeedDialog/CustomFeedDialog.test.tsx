@@ -2,7 +2,6 @@ import { type ReactElement } from 'react';
 import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
@@ -368,10 +367,10 @@ const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSche
   icon: 'activity',
   tags: ['bitcoin', 'lightning'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.Following,
-  sort: PubkyAppFeedSort.Popularity,
-  content: PubkyAppPostKind.Short,
-  layout: PubkyAppFeedLayout.Wide,
+  reach: 'following',
+  sort: 'popularity',
+  content: 'note',
+  layout: 'wide',
   created_at: Date.now(),
   updated_at: Date.now(),
   ...overrides,
@@ -427,7 +426,7 @@ describe('CustomFeedDialog', () => {
   it('shows a stored reach this dialog cannot offer as a disabled option', () => {
     // Followers has no home-store equivalent, so it is not an option — without
     // this the Select would fall back to its placeholder and read as unset.
-    const feed = createMockFeed({ reach: PubkyAppFeedReach.Followers });
+    const feed = createMockFeed({ reach: 'followers' });
 
     render(<CustomFeedDialog mode="edit" feed={feed} open />);
 
@@ -759,7 +758,7 @@ describe('CustomFeedDialog', () => {
 
   it('hydrates existing profile tags from a Tagged-as feed in edit mode', () => {
     const mockFeed = createMockFeed({
-      reach: PubkyAppFeedReach.Wot,
+      reach: 'wot',
       tags: [],
       domain_tags: ['bitcoiner', '🔥'],
     });
@@ -778,7 +777,7 @@ describe('CustomFeedDialog', () => {
 
   it('shows legacy Me profile tags read-only while keeping the editor hidden', () => {
     const mockFeed = createMockFeed({
-      reach: PubkyAppFeedReach.Me,
+      reach: 'me',
       tags: [],
       domain_tags: ['bitcoiner'],
     });
@@ -805,7 +804,7 @@ describe('CustomFeedDialog', () => {
     fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'bitcoiner' } });
     expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
 
-    changeSelectValue('reach-select', PubkyAppFeedReach.Following);
+    changeSelectValue('reach-select', 'following');
 
     expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
     expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
@@ -831,7 +830,7 @@ describe('CustomFeedDialog', () => {
 
   it('creates a profile-only Tagged-as feed as Wot plus domain tags', async () => {
     mockCommitCreate.mockResolvedValue(
-      createMockFeed({ id: 'profile-feed', reach: PubkyAppFeedReach.Wot, tags: [], domain_tags: ['🔥'] }),
+      createMockFeed({ id: 'profile-feed', reach: 'wot', tags: [], domain_tags: ['🔥'] }),
     );
 
     render(
@@ -850,7 +849,7 @@ describe('CustomFeedDialog', () => {
       expect(mockCommitCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Emoji Network',
-          reach: PubkyAppFeedReach.Wot,
+          reach: 'wot',
           tags: [],
           domain_tags: ['🔥'],
         }),
@@ -860,7 +859,7 @@ describe('CustomFeedDialog', () => {
 
   it('preserves a legacy Me domain feed during a rename-only edit', async () => {
     const mockFeed = createMockFeed({
-      reach: PubkyAppFeedReach.Me,
+      reach: 'me',
       tags: ['bitcoin'],
       domain_tags: ['developer'],
     });
@@ -881,7 +880,7 @@ describe('CustomFeedDialog', () => {
         feedId: mockFeed.id,
         changes: expect.objectContaining({
           name: 'Renamed legacy feed',
-          reach: PubkyAppFeedReach.Me,
+          reach: 'me',
           domain_tags: ['developer'],
         }),
       });
@@ -890,11 +889,11 @@ describe('CustomFeedDialog', () => {
 
   it('clears a legacy domain tag list on an explicit Following to Friends change', async () => {
     const mockFeed = createMockFeed({
-      reach: PubkyAppFeedReach.Following,
+      reach: 'following',
       tags: ['bitcoin'],
       domain_tags: ['developer'],
     });
-    mockCommitUpdate.mockResolvedValue({ ...mockFeed, reach: PubkyAppFeedReach.Friends, domain_tags: [] });
+    mockCommitUpdate.mockResolvedValue({ ...mockFeed, reach: 'friends', domain_tags: [] });
 
     render(
       <CustomFeedDialog mode="edit" feed={mockFeed} open>
@@ -902,7 +901,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    changeSelectValue('reach-select', PubkyAppFeedReach.Friends);
+    changeSelectValue('reach-select', 'friends');
     await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
     fireEvent.click(screen.getByTestId('save-feed-button'));
 
@@ -910,7 +909,7 @@ describe('CustomFeedDialog', () => {
       expect(mockCommitUpdate).toHaveBeenCalledWith({
         feedId: mockFeed.id,
         changes: expect.objectContaining({
-          reach: PubkyAppFeedReach.Friends,
+          reach: 'friends',
           domain_tags: [],
         }),
       });
@@ -940,14 +939,14 @@ describe('CustomFeedDialog', () => {
 
     const reachSection = within(screen.getByTestId('reach-filter-section'));
     expect(reachSection.getAllByTestId(/^select-item-/).map((item) => item.getAttribute('data-value'))).toEqual([
-      String(PubkyAppFeedReach.Wot),
+      String('wot'),
       TAGGED_AS_FILTER_KEY,
-      String(PubkyAppFeedReach.Following),
-      String(PubkyAppFeedReach.Friends),
-      String(PubkyAppFeedReach.Me),
-      String(PubkyAppFeedReach.All),
+      String('following'),
+      String('friends'),
+      String('me'),
+      String('all'),
     ]);
-    expect(reachSection.getByTestId(`select-item-${PubkyAppFeedReach.Wot}`)).toHaveTextContent('My network');
+    expect(reachSection.getByTestId(`select-item-${'wot'}`)).toHaveTextContent('My network');
     expect(reachSection.getByTestId(`select-item-${TAGGED_AS_FILTER_KEY}`)).toHaveTextContent('Tagged as');
   });
 
@@ -1060,7 +1059,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
+    changeSelectValue('layout-select', 'visual');
 
     await waitFor(() => {
       const section = screen.getByTestId('content-filter-section');
@@ -1082,18 +1081,18 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
     expect(within(screen.getByTestId('layout-select')).getByText('Cards')).toBeInTheDocument();
-    changeSelectValue('content-select', PubkyAppPostKind.Long);
-    changeSelectValue('layout-select', PubkyAppFeedLayout.Cards);
+    changeSelectValue('content-select', 'article');
+    changeSelectValue('layout-select', 'cards');
 
-    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', String(PubkyAppPostKind.Long));
+    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'article');
     for (const label of ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files']) {
       expect(within(screen.getByTestId('content-filter-section')).getByText(label)).toBeInTheDocument();
     }
   });
 
   it('loads a saved Cards feed for editing', () => {
-    render(<CustomFeedDialog mode="edit" feed={createMockFeed({ layout: PubkyAppFeedLayout.Cards })} open />);
-    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(PubkyAppFeedLayout.Cards));
+    render(<CustomFeedDialog mode="edit" feed={createMockFeed({ layout: 'cards' })} open />);
+    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', 'cards');
   });
 
   // -- Default select values in create mode --
@@ -1105,7 +1104,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', String(PubkyAppFeedReach.All));
+    expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', String('all'));
   });
 
   it('sets default sort to Recent in create mode', () => {
@@ -1115,7 +1114,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('sort-select')).toHaveAttribute('data-value', String(PubkyAppFeedSort.Recent));
+    expect(screen.getByTestId('sort-select')).toHaveAttribute('data-value', String('recent'));
   });
 
   it('sets default layout to Columns in create mode', () => {
@@ -1125,7 +1124,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(PubkyAppFeedLayout.Columns));
+    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String('columns'));
   });
 
   it('sets default content to ALL in create mode', () => {
@@ -1145,10 +1144,10 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    changeSelectValue('content-select', PubkyAppPostKind.Short);
-    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', String(PubkyAppPostKind.Short));
+    changeSelectValue('content-select', 'note');
+    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', String('note'));
 
-    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
+    changeSelectValue('layout-select', 'visual');
 
     await waitFor(() => {
       expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
@@ -1162,14 +1161,14 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    changeSelectValue('content-select', PubkyAppPostKind.Link);
-    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
+    changeSelectValue('content-select', 'link');
+    changeSelectValue('layout-select', 'visual');
 
     await waitFor(() => {
       expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
     });
 
-    changeSelectValue('layout-select', PubkyAppFeedLayout.Columns);
+    changeSelectValue('layout-select', 'columns');
 
     expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
   });
@@ -1219,7 +1218,7 @@ describe('CustomFeedDialog', () => {
   });
 
   it('populates reach select from customFeed in edit mode', () => {
-    const mockFeed = createMockFeed({ reach: PubkyAppFeedReach.Friends });
+    const mockFeed = createMockFeed({ reach: 'friends' });
 
     render(
       <CustomFeedDialog mode="edit" feed={mockFeed} open>
@@ -1227,7 +1226,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', String(PubkyAppFeedReach.Friends));
+    expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', String('friends'));
   });
 
   it('maps null content from customFeed to ALL in edit mode', () => {
@@ -1243,7 +1242,7 @@ describe('CustomFeedDialog', () => {
   });
 
   it('populates visual layout from customFeed in edit mode', () => {
-    const mockFeed = createMockFeed({ layout: PubkyAppFeedLayout.Visual, content: PubkyAppPostKind.Video });
+    const mockFeed = createMockFeed({ layout: 'visual', content: 'video' });
 
     render(
       <CustomFeedDialog mode="edit" feed={mockFeed} open>
@@ -1251,11 +1250,11 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(PubkyAppFeedLayout.Visual));
+    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String('visual'));
   });
 
   it('normalizes unsupported visual content from customFeed to ALL in edit mode', async () => {
-    const mockFeed = createMockFeed({ layout: PubkyAppFeedLayout.Visual, content: PubkyAppPostKind.Short });
+    const mockFeed = createMockFeed({ layout: 'visual', content: 'note' });
 
     render(
       <CustomFeedDialog mode="edit" feed={mockFeed} open>
@@ -1295,9 +1294,9 @@ describe('CustomFeedDialog', () => {
       expect(mockCommitCreate).toHaveBeenCalledWith({
         name: 'My Feed',
         icon: 'activity',
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        layout: PubkyAppFeedLayout.Columns,
+        reach: 'all',
+        sort: 'recent',
+        layout: 'columns',
         content: null, // ALL maps to null
         tags: ['bitcoin'],
         domain_tags: [],
@@ -1377,87 +1376,81 @@ describe('CustomFeedDialog', () => {
     });
   });
 
-  it.each([PubkyAppFeedLayout.Visual, PubkyAppFeedLayout.Cards])(
-    'passes layout %s on create when selected',
-    async (layout) => {
-      const mockCreatedFeed = createMockFeed({
-        id: 'new-feed-123',
-        name: 'My Feed',
-        layout,
-        content: null,
-      });
-      mockCommitCreate.mockResolvedValue(mockCreatedFeed);
+  it.each(['visual', 'cards'] as const)('passes layout %s on create when selected', async (layout) => {
+    const mockCreatedFeed = createMockFeed({
+      id: 'new-feed-123',
+      name: 'My Feed',
+      layout,
+      content: null,
+    });
+    mockCommitCreate.mockResolvedValue(mockCreatedFeed);
 
-      render(
-        <CustomFeedDialog mode="create" open>
-          <button>Create Feed</button>
-        </CustomFeedDialog>,
+    render(
+      <CustomFeedDialog mode="create" open>
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'My Feed' } });
+    fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'images' } });
+    changeSelectValue('layout-select', layout);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(layout));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+
+    fireEvent.click(screen.getByTestId('save-feed-button'));
+
+    await waitFor(() => {
+      expect(mockCommitCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          layout,
+          content: null,
+        }),
       );
-
-      fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'My Feed' } });
-      fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'images' } });
-      changeSelectValue('layout-select', layout);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(layout));
-      });
-
-      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
-
-      fireEvent.click(screen.getByTestId('save-feed-button'));
-
-      await waitFor(() => {
-        expect(mockCommitCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            layout,
-            content: null,
-          }),
-        );
-      });
-    },
-  );
+    });
+  });
 
   // -- Edit feed flow --
 
-  it.each([PubkyAppFeedLayout.Wide, PubkyAppFeedLayout.Cards])(
-    'saves layout %s when editing an existing feed',
-    async (layout) => {
-      const mockFeed = createMockFeed();
+  it.each(['wide', 'cards'] as const)('saves layout %s when editing an existing feed', async (layout) => {
+    const mockFeed = createMockFeed();
 
-      const mockUpdatedFeed = createMockFeed({ id: 'feed-abc123', name: 'Bitcoin News' });
-      mockCommitUpdate.mockResolvedValue(mockUpdatedFeed);
+    const mockUpdatedFeed = createMockFeed({ id: 'feed-abc123', name: 'Bitcoin News' });
+    mockCommitUpdate.mockResolvedValue(mockUpdatedFeed);
 
-      render(
-        <CustomFeedDialog mode="edit" feed={mockFeed} open>
-          <button>Edit Feed</button>
-        </CustomFeedDialog>,
-      );
+    render(
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
 
-      changeSelectValue('layout-select', layout);
+    changeSelectValue('layout-select', layout);
 
-      // Add a new tag (existing tags are populated from customFeed)
-      fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'crypto' } });
-      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+    // Add a new tag (existing tags are populated from customFeed)
+    fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'crypto' } });
+    await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
 
-      fireEvent.click(screen.getByTestId('save-feed-button'));
+    fireEvent.click(screen.getByTestId('save-feed-button'));
 
-      await waitFor(() => {
-        expect(mockCommitUpdate).toHaveBeenCalledWith({
-          feedId: 'feed-abc123',
-          changes: {
-            name: 'Bitcoin News',
-            icon: 'activity',
-            reach: PubkyAppFeedReach.Following,
-            sort: PubkyAppFeedSort.Popularity,
-            layout,
-            content: PubkyAppPostKind.Short,
-            tags: ['bitcoin', 'lightning', 'crypto'],
-            domain_tags: [],
-          },
-        });
+    await waitFor(() => {
+      expect(mockCommitUpdate).toHaveBeenCalledWith({
+        feedId: 'feed-abc123',
+        changes: {
+          name: 'Bitcoin News',
+          icon: 'activity',
+          reach: 'following',
+          sort: 'popularity',
+          layout,
+          content: 'note',
+          tags: ['bitcoin', 'lightning', 'crypto'],
+          domain_tags: [],
+        },
       });
-    },
-  );
+    });
+  });
 
   it('persists a newly selected icon when editing a feed', async () => {
     const mockFeed = createMockFeed({ icon: 'activity' });
@@ -1576,7 +1569,7 @@ describe('CustomFeedDialog', () => {
   });
 
   it('sends content kind value when content is not ALL on edit', async () => {
-    const mockFeed = createMockFeed({ content: PubkyAppPostKind.Image });
+    const mockFeed = createMockFeed({ content: 'image' });
     mockCommitUpdate.mockResolvedValue(createMockFeed());
 
     render(
@@ -1594,7 +1587,7 @@ describe('CustomFeedDialog', () => {
       expect(mockCommitUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           changes: expect.objectContaining({
-            content: PubkyAppPostKind.Image,
+            content: 'image',
           }),
         }),
       );
