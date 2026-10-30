@@ -53,7 +53,7 @@ export class BootstrapApplication {
       NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
       MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
-      FeedApplication.fetchFeeds(pubky),
+      FeedApplication.fetchFeeds(pubky, { isCurrent: params.isCurrent }),
     ]);
     if (params.isCurrent && !params.isCurrent())
       return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };

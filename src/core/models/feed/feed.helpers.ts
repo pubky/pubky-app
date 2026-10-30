@@ -1,4 +1,4 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 import { isProfileTagReachSupported, type ProfileTagSupportedReach } from '@/config/feed';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -11,87 +11,48 @@ import {
   type PostStreamId,
   type WotDomainDepth,
 } from '@/models/stream/post/postStream.types';
+import { toLocalPostKind } from '@/pipes/post/post.kind';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 
-export function reachToString(reach: PubkyAppFeedReach): string {
-  const map: Record<PubkyAppFeedReach, string> = {
-    [PubkyAppFeedReach.Following]: 'following',
-    [PubkyAppFeedReach.Followers]: 'followers',
-    [PubkyAppFeedReach.Friends]: 'friends',
-    [PubkyAppFeedReach.All]: 'all',
-    [PubkyAppFeedReach.Wot]: 'wot',
-    [PubkyAppFeedReach.Me]: 'me',
+export function reachToStreamSource(reach: Exclude<KnownFeedReach, 'me'>): StreamSource {
+  const map: Record<Exclude<KnownFeedReach, 'me'>, StreamSource> = {
+    all: StreamSource.ALL,
+    following: StreamSource.FOLLOWING,
+    friends: StreamSource.FRIENDS,
+    followers: StreamSource.FOLLOWERS,
+    wot: StreamSource.WOT,
   };
   return map[reach];
 }
 
-export function layoutToString(layout: PubkyAppFeedLayout): string {
-  const map: Record<PubkyAppFeedLayout, string> = {
-    [PubkyAppFeedLayout.Columns]: 'columns',
-    [PubkyAppFeedLayout.Wide]: 'wide',
-    [PubkyAppFeedLayout.Visual]: 'visual',
-    [PubkyAppFeedLayout.List]: 'list',
-    [PubkyAppFeedLayout.Cards]: 'cards',
-  };
-  return map[layout];
-}
-
-export function sortToString(sort: PubkyAppFeedSort): string {
-  const map: Record<PubkyAppFeedSort, string> = {
-    [PubkyAppFeedSort.Recent]: 'recent',
-    [PubkyAppFeedSort.Popularity]: 'popularity',
+export function sortToStreamSorting(sort: KnownFeedSort): StreamSorting {
+  const map: Record<KnownFeedSort, StreamSorting> = {
+    recent: StreamSorting.TIMELINE,
+    popularity: StreamSorting.ENGAGEMENT,
   };
   return map[sort];
 }
 
-export function postKindToString(kind: PubkyAppPostKind): PostKind {
-  const map: Record<PubkyAppPostKind, PostKind> = {
-    [PubkyAppPostKind.Short]: 'short',
-    [PubkyAppPostKind.Long]: 'long',
-    [PubkyAppPostKind.Image]: 'image',
-    [PubkyAppPostKind.Video]: 'video',
-    [PubkyAppPostKind.Link]: 'link',
-    [PubkyAppPostKind.File]: 'file',
-    [PubkyAppPostKind.Collection]: 'collection',
-    [PubkyAppPostKind.Unknown]: 'unknown',
-  };
-  return map[kind];
-}
-
-export function reachToStreamSource(reach: Exclude<PubkyAppFeedReach, PubkyAppFeedReach.Me>): StreamSource {
-  const map: Record<Exclude<PubkyAppFeedReach, PubkyAppFeedReach.Me>, StreamSource> = {
-    [PubkyAppFeedReach.All]: StreamSource.ALL,
-    [PubkyAppFeedReach.Following]: StreamSource.FOLLOWING,
-    [PubkyAppFeedReach.Friends]: StreamSource.FRIENDS,
-    [PubkyAppFeedReach.Followers]: StreamSource.FOLLOWERS,
-    [PubkyAppFeedReach.Wot]: StreamSource.WOT,
-  };
-  return map[reach];
-}
-
-export function sortToStreamSorting(sort: PubkyAppFeedSort): StreamSorting {
-  const map: Record<PubkyAppFeedSort, StreamSorting> = {
-    [PubkyAppFeedSort.Recent]: StreamSorting.TIMELINE,
-    [PubkyAppFeedSort.Popularity]: StreamSorting.ENGAGEMENT,
-  };
-  return map[sort];
-}
-
-export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKind | undefined {
+/**
+ * The Nexus stream kind of a feed's content filter. A feed stores the v1 kind names (`note`,
+ * `article`); Nexus still speaks the 0.x names (`short`, `long`), so the filter crosses the local
+ * vocabulary once and the stream ids of existing feeds are unchanged.
+ */
+export function contentToStreamKind(content: KnownPostKind | null): StreamKind | undefined {
   if (content === null) return undefined;
-  const map: Record<PubkyAppPostKind, StreamKind | undefined> = {
-    [PubkyAppPostKind.Short]: StreamKind.SHORT,
-    [PubkyAppPostKind.Long]: StreamKind.LONG,
-    [PubkyAppPostKind.Image]: StreamKind.IMAGE,
-    [PubkyAppPostKind.Video]: StreamKind.VIDEO,
-    [PubkyAppPostKind.Link]: StreamKind.LINK,
-    [PubkyAppPostKind.File]: StreamKind.FILE,
-    [PubkyAppPostKind.Collection]: StreamKind.COLLECTION,
-    [PubkyAppPostKind.Unknown]: undefined,
+  const map: Record<PostKind, StreamKind | undefined> = {
+    short: StreamKind.SHORT,
+    long: StreamKind.LONG,
+    image: StreamKind.IMAGE,
+    video: StreamKind.VIDEO,
+    link: StreamKind.LINK,
+    file: StreamKind.FILE,
+    collection: StreamKind.COLLECTION,
+    unknown: undefined,
   };
-  return map[content];
+  return map[toLocalPostKind(content)];
 }
 
 /**
@@ -99,8 +60,7 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
  * set: adding a reach to PROFILE_TAG_SUPPORTED_REACHES without an explicit
  * depth decision fails compilation here. WoT V1 creates only wot/depth-2
  * Tagged-as feeds; the remaining depths are preserved for foreign and legacy
- * feed compatibility and future authoring. Plain string keys avoid accessing
- * pubky-app-specs enums at module scope because some tests partially mock it.
+ * feed compatibility and future authoring.
  * Following and Friends both serialize to depth 1, so a domain stream ID cannot
  * recover which reach authored it. Follow invalidation therefore treats every
  * depth-1 domain stream as graph-dependent rather than friend-only.
@@ -119,7 +79,7 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
   const domainTags = feed.domain_tags ?? [];
 
   if (domainTags.length > 0) {
-    const reach = reachToString(feed.reach);
+    const reach = feed.reach;
     if (!isProfileTagReachSupported(reach)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Profile tags are not supported for this feed reach', {
         service: ErrorService.SocialSpecs,
@@ -131,7 +91,7 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
     return buildWotDomainStreamId(sorting, depth, kind, domainTags, feed.tags);
   }
 
-  if (feed.reach === PubkyAppFeedReach.Me) {
+  if (feed.reach === 'me') {
     return buildSortedAuthorStreamId(sorting, viewerPubky, kind, feed.tags);
   }
 
