@@ -13,7 +13,7 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import { TagApplication } from './tag';
 import { TagKind, type TCreateTagInput } from './tag.types';
 
-vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { request: vi.fn() } }));
+vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { request: vi.fn(), putBlob: vi.fn() } }));
 vi.mock('@/services/local/tag/post/tag.post', () => ({ LocalPostTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/user/tag.user', () => ({ LocalUserTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/tag-cache', () => ({
@@ -34,14 +34,15 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     taggedId: 'author:post',
     taggerId: 'viewer',
     label: 'bitcoin',
-    tagUrl: 'pubky://viewer/pub/pubky.app/tags/tag',
-    tagJson: { label: 'bitcoin' },
+    tagUrl: 'pubky://viewer/pub/social/v1/tags/TAG01.json',
+    tagBody: new TextEncoder().encode('{"label":"bitcoin"}'),
   };
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(local.create).mockResolvedValue(true);
     vi.mocked(local.delete).mockResolvedValue(true);
     vi.mocked(HomeserverService.request).mockResolvedValue(undefined);
+    vi.mocked(HomeserverService.putBlob).mockResolvedValue(undefined);
     vi.mocked(LocalTagCacheService.completeMutation).mockResolvedValue(undefined);
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(data.tagUrl);
     vi.mocked(LocalTagCacheService.ownsMutation).mockResolvedValue(true);
@@ -51,6 +52,9 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     taggedKind === TagKind.POST ? vi.mocked(NexusPostService.getPostTaggers) : vi.mocked(NexusUserService.taggers);
   const deleteRequest = () =>
     vi.mocked(HomeserverService.request).mock.calls.find(([request]) => request.method === HttpMethod.DELETE)?.[0];
+  /** The homeserver write each action makes: a create PUTs the built bytes, a delete sends a DELETE request. */
+  const sync = (action: 'create' | 'delete') =>
+    action === 'create' ? vi.mocked(HomeserverService.putBlob) : vi.mocked(HomeserverService.request);
 
   afterEach(() => vi.unstubAllGlobals());
 
@@ -59,7 +63,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     if (action === 'create') await TagApplication.commitCreate({ tagList: [data] });
     else await TagApplication.commitDelete(data);
     expect(local[action]).toHaveBeenCalledWith(expect.objectContaining({ mutationId: expect.any(String) }));
-    expect(HomeserverService.request).toHaveBeenCalledOnce();
+    expect(sync(action)).toHaveBeenCalledOnce();
   });
 
   it.each(['create', 'delete'] as const)('persists %s before syncing, then settles that operation', async (action) => {
@@ -70,17 +74,18 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     });
     const result =
       action === 'create' ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(data);
-    expect(HomeserverService.request).not.toHaveBeenCalled();
+    expect(sync(action)).not.toHaveBeenCalled();
     pending.resolve();
     await result;
     const operation = vi.mocked(local[action]).mock.calls[0][0];
     expect(operation.mutationId).toEqual(expect.any(String));
-    expect(HomeserverService.request).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: action === 'create' ? HttpMethod.PUT : HttpMethod.DELETE,
-        url: data.tagUrl,
-      }),
-    );
+    if (action === 'create') {
+      expect(HomeserverService.putBlob).toHaveBeenCalledExactlyOnceWith({ url: data.tagUrl, blob: data.tagBody });
+    } else {
+      expect(HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({ method: HttpMethod.DELETE, url: data.tagUrl }),
+      );
+    }
     expect(LocalTagCacheService.completeMutation).toHaveBeenCalledWith(
       { kind: taggedKind, id: data.taggedId },
       { mutationId: operation.mutationId, isCurrent: undefined },
@@ -89,7 +94,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
 
   it.each(['create', 'delete'] as const)('conditionally compensates only the failed %s operation', async (action) => {
     const failure = new Error('homeserver offline');
-    vi.mocked(HomeserverService.request).mockRejectedValue(failure);
+    sync(action).mockRejectedValue(failure);
     const result =
       action === 'create' ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(data);
     await expect(result).rejects.toBe(failure);
@@ -112,7 +117,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
         service: ErrorService.Homeserver,
         operation: 'request',
       });
-      vi.mocked(HomeserverService.request).mockImplementation(async () => {
+      sync(action).mockImplementation(async () => {
         current = false;
         throw rejected;
       });
@@ -139,7 +144,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
       });
       if (action === 'create') await TagApplication.commitCreate({ tagList: [data], isCurrent: () => current });
       else await TagApplication.commitDelete({ ...data, isCurrent: () => current });
-      expect(HomeserverService.request).not.toHaveBeenCalled();
+      expect(sync(action)).not.toHaveBeenCalled();
       const original = vi.mocked(local[action]).mock.calls[0][0];
       const undo = vi.mocked(local[action === 'create' ? 'delete' : 'create']).mock.calls[0][0];
       expect(undo).toMatchObject({ expectedMutationId: original.mutationId, synced: true });
@@ -168,13 +173,13 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
 
   it('does not undo a preexisting tag when its redundant PUT fails', async () => {
     vi.mocked(local.create).mockResolvedValue(false);
-    vi.mocked(HomeserverService.request).mockRejectedValue(new Error('offline'));
+    vi.mocked(HomeserverService.putBlob).mockRejectedValue(new Error('offline'));
     await expect(TagApplication.commitCreate({ tagList: [data] })).rejects.toThrow('offline');
     expect(local.delete).not.toHaveBeenCalled();
   });
 
   it('stops before later tags after a failed entry', async () => {
-    vi.mocked(HomeserverService.request).mockRejectedValue(new Error('offline'));
+    vi.mocked(HomeserverService.putBlob).mockRejectedValue(new Error('offline'));
     await expect(TagApplication.commitCreate({ tagList: [data, { ...data, label: 'later' }] })).rejects.toThrow(
       'offline',
     );
@@ -190,7 +195,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
   it('does not sync after a failed local transaction', async () => {
     vi.mocked(local.create).mockRejectedValue(new Error('database unavailable'));
     await expect(TagApplication.commitCreate({ tagList: [data] })).rejects.toThrow('database unavailable');
-    expect(HomeserverService.request).not.toHaveBeenCalled();
+    expect(HomeserverService.putBlob).not.toHaveBeenCalled();
   });
 
   it('records the URL a create writes, so it can be deleted before Nexus reports it', async () => {

@@ -1,480 +1,198 @@
-import { postUriBuilder, TagResult } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildTag, buildUri, decodeObject, limits, parseUri } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
+import { describe, expect, it } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { parseCompositeId } from '@/models/models.utils';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import type { Pubky } from '@/models/models.types';
+import { buildCompositeId } from '@/models/models.utils';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildPubkyUri,
-  restoreMocks,
-  setupIntegrationTestMocks,
-  setupUnitTestMocks,
-  TEST_POST_IDS,
-  TEST_PUBKY,
-} from '../pipes.test-utils';
+import { withFrozenSpecClock } from '@/test-utils/spec-clock';
+import { asInvalid } from '@/test-utils/type-assertions';
 
-const spyOnParseCompositeId = async () => vi.spyOn(await import('@/models/models.utils'), 'parseCompositeId');
+const TAGGER = fakeOwner(1);
+const AUTHOR = fakeOwner(2);
+const POST_ID = '0032PARTQP4G0';
+const POST_REF = buildUri(AUTHOR, 'post', POST_ID);
+
+const caught = (run: () => unknown): unknown => {
+  try {
+    run();
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+};
+
+const expectValidationError = (error: unknown, operation: string) => {
+  expect(error).toBeInstanceOf(AppError);
+  expect(error).toMatchObject({
+    category: ErrorCategory.Validation,
+    code: ValidationErrorCode.INVALID_INPUT,
+    service: ErrorService.SocialSpecs,
+    operation,
+  });
+};
 
 describe('TagNormalizer', () => {
-  const createMockBuilder = (overrides?: Partial<{ createTag: ReturnType<typeof vi.fn> }>) => ({
-    createTag: vi.fn((uri: string, label: string) =>
-      asOpaque<TagResult>({
-        tag: { label, toJson: vi.fn(() => ({ uri, label })) },
-        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `tags/${encodeURIComponent(label)}`) },
-      }),
-    ),
-    ...overrides,
-  });
+  withFrozenSpecClock();
 
-  /**
-   * Tests for `to` method - Creates TagResult directly
-   */
   describe('to', () => {
-    describe('Unit Tests', () => {
-      let mockBuilder: ReturnType<typeof createMockBuilder>;
+    it('builds the tag where pubky-social-specs stores it: a hash id under the tagger public tags', () => {
+      const built = TagNormalizer.to(POST_REF, 'technology', TAGGER);
 
-      beforeEach(() => {
-        mockBuilder = createMockBuilder();
-        setupUnitTestMocks(mockBuilder);
-      });
+      expect(built.url).toBe(`pubky://${TAGGER}/pub/social/v1/tags/${built.id}.json`);
+      expect(parseUri(built.url)).toMatchObject({ owner: TAGGER, root: 'public', kind: 'tag', id: built.id });
+      expect(built.object).toEqual({ uri: POST_REF, label: 'technology', created_at: expect.any(Number) });
+    });
 
-      afterEach(restoreMocks);
+    it('returns the bytes to PUT, which decode back to the stored object', () => {
+      const built = TagNormalizer.to(POST_REF, 'technology', TAGGER);
 
-      describe('successful creation', () => {
-        it('should create tag with tag and meta properties', () => {
-          const uri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_1}`);
-          const result = TagNormalizer.to(uri, 'technology', TEST_PUBKY.USER_1);
+      expect(ArrayBuffer.isView(built.body)).toBe(true);
+      expect(decodeObject(built.url, built.body, 'tag')).toEqual(built.object);
+    });
 
-          expect(result).toHaveProperty('tag');
-          expect(result).toHaveProperty('meta');
-        });
+    it('is the package builder: the same target and label give the same id, another label another id', () => {
+      const built = TagNormalizer.to(POST_REF, 'technology', TAGGER);
 
-        it('should call PubkySpecsSingleton.get with pubky and createTag with uri/label', () => {
-          const uri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_1}`);
-          TagNormalizer.to(uri, 'tech', TEST_PUBKY.USER_1);
+      expect(built.id).toBe(buildTag(TAGGER, POST_REF, 'technology').id);
+      expect(TagNormalizer.to(POST_REF, 'rust', TAGGER).id).not.toBe(built.id);
+    });
 
-          expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-          expect(mockBuilder.createTag).toHaveBeenCalledWith(uri, 'tech');
-        });
-
-        it('should return correct structure with tag and meta URL', () => {
-          const uri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_1}`);
-          const result = TagNormalizer.to(uri, 'label', TEST_PUBKY.USER_1);
-
-          expect(result.tag).toHaveProperty('toJson');
-          expect(result.meta.url).toContain('pubky://');
-          expect(result.meta.url).toContain('/pub/pubky.app/tags/');
-        });
-      });
-
-      describe('different inputs', () => {
-        it.each([['technology'], ['Developer'], ['tech-tag'], ['tag_123']])('should handle label "%s"', (label) => {
-          const uri = buildPubkyUri(TEST_PUBKY.USER_2, 'posts/123');
-          TagNormalizer.to(uri, label, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createTag).toHaveBeenCalledWith(uri, label);
-        });
-
-        it.each([
-          ['USER_1', TEST_PUBKY.USER_1],
-          ['USER_2', TEST_PUBKY.USER_2],
-        ])('should handle pubky: %s', (_, pubky) => {
-          const uri = buildPubkyUri(TEST_PUBKY.USER_2, 'posts/123');
-          TagNormalizer.to(uri, 'label', pubky);
-
-          expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(pubky);
-        });
-      });
-
-      describe('error handling', () => {
-        it('should throw AppError with correct properties when createTag fails', () => {
-          const errorMessage = 'Invalid tag';
-          mockBuilder.createTag.mockImplementation(() => {
-            throw errorMessage;
-          });
-          const uri = 'pubky://test/uri';
-          const label = 'testlabel';
-
-          try {
-            TagNormalizer.to(uri, label, TEST_PUBKY.USER_1);
-            expect.fail('Should have thrown');
-          } catch (error) {
-            expect(error).toBeInstanceOf(AppError);
-            const appError = error as AppError;
-            expect(appError.category).toBe(ErrorCategory.Validation);
-            expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-            expect(appError.service).toBe(ErrorService.SocialSpecs);
-            expect(appError.operation).toBe('createTag');
-            expect(appError.context).toEqual({ uri, label, pubky: TEST_PUBKY.USER_1 });
-            expect(appError.message).toBe(errorMessage);
-          }
-        });
-
-        it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-          vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
-            throw 'Singleton error';
-          });
-
-          expect(() => TagNormalizer.to('uri', 'label', TEST_PUBKY.USER_1)).toThrow(AppError);
-        });
+    it('hashes the folded label, so a differently cased spelling is the same tag', () => {
+      expect(TagNormalizer.to(POST_REF, '  TechNology ', TAGGER)).toMatchObject({
+        id: TagNormalizer.to(POST_REF, 'technology', TAGGER).id,
+        object: { label: 'technology' },
       });
     });
 
-    describe('Integration Tests', () => {
-      beforeEach(setupIntegrationTestMocks);
-      afterEach(restoreMocks);
+    it.each([
+      ['an empty label', '', 'length'],
+      ['a blank label', '   ', 'length'],
+      ['a label over the limit', 'a'.repeat(limits.tagLabelMaxLength + 1), 'length'],
+      ['a label with whitespace inside', 'tech nology', 'format'],
+      ['a label with a comma', 'tech,nology', 'format'],
+      ['a label with a colon', 'tech:nology', 'format'],
+    ])('refuses %s as a validation error carrying the package code', (_case, label, code) => {
+      const error = caught(() => TagNormalizer.to(POST_REF, label, TAGGER));
 
-      describe('successful creation with real library', () => {
-        it('should create valid result with correct URL format', () => {
-          const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-          const result = TagNormalizer.to(uri, 'technology', TEST_PUBKY.USER_1);
+      expectValidationError(error, 'buildTag');
+      expect((error as AppError).context).toMatchObject({ uri: POST_REF, label, pubky: TAGGER, code, field: 'label' });
+    });
 
-          expect(result.tag).toBeDefined();
-          expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/tags\/.+/);
-        });
+    it('accepts a label at the limit, counted in code points', () => {
+      const label = '😀'.repeat(limits.tagLabelMaxLength);
 
-        it('should store label in tag', () => {
-          const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-          const result = TagNormalizer.to(uri, 'developer', TEST_PUBKY.USER_1);
+      expect(TagNormalizer.to(POST_REF, label, TAGGER).object.label).toBe(label);
+      expectValidationError(
+        caught(() => TagNormalizer.to(POST_REF, `${label}😀`, TAGGER)),
+        'buildTag',
+      );
+    });
 
-          expect(result.tag.label).toBe('developer');
-        });
+    it.each([
+      ['a tagger that is no key', 'viewer'],
+      ['a tagger written as a URL', `pubky://${TAGGER}`],
+    ])('refuses %s', (_case, tagger) => {
+      const error = caught(() => TagNormalizer.to(POST_REF, 'technology', tagger as Pubky));
 
-        it('should create unique URLs for different labels', () => {
-          const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-          const result1 = TagNormalizer.to(uri, 'tech', TEST_PUBKY.USER_1);
-          const result2 = TagNormalizer.to(uri, 'news', TEST_PUBKY.USER_1);
+      expectValidationError(error, 'buildTag');
+      expect((error as AppError).context).toMatchObject({ field: 'owner' });
+    });
 
-          expect(result1.meta.url).not.toBe(result2.meta.url);
-        });
+    it('refuses a target that is a post version instead of the versionless reference', () => {
+      const error = caught(() => TagNormalizer.to(`${POST_REF}/0032PARTQP4G0.json`, 'technology', TAGGER));
 
-        it('should produce valid JSON from tag object', () => {
-          const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-          const result = TagNormalizer.to(uri, 'label', TEST_PUBKY.USER_1);
+      expectValidationError(error, 'buildTag');
+      expect((error as AppError).context).toMatchObject({ field: 'uri' });
+    });
 
-          expect(typeof result.tag.toJson).toBe('function');
-          const tagJson = result.tag.toJson();
-          expect(tagJson).toHaveProperty('uri', uri);
-          expect(tagJson).toHaveProperty('label', 'label');
-        });
-      });
+    it('refuses a label of the wrong type as a misuse naming the argument', () => {
+      const error = caught(() => TagNormalizer.to(POST_REF, asInvalid<string>(42), TAGGER));
 
-      describe('validation with real library', () => {
-        it('should throw AppError for empty label', () => {
-          const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-
-          try {
-            TagNormalizer.to(uri, '', TEST_PUBKY.USER_1);
-            expect.fail('Should have thrown');
-          } catch (error) {
-            expect(error).toBeInstanceOf(AppError);
-            const appError = error as AppError;
-            expect(appError.category).toBe(ErrorCategory.Validation);
-            expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-            expect(appError.service).toBe(ErrorService.SocialSpecs);
-            expect(appError.operation).toBe('createTag');
-          }
-        });
-
-        it('should throw AppError for null label', () => {
-          const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-
-          expect(() => TagNormalizer.to(uri, asInvalid<string>(null), TEST_PUBKY.USER_1)).toThrow(AppError);
-        });
-      });
-
-      describe('label length limits', () => {
-        const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-
-        it('should accept label at maximum length (20 characters)', () => {
-          const maxLengthLabel = 'A'.repeat(20);
-          const result = TagNormalizer.to(uri, maxLengthLabel, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-          // Library converts labels to lowercase
-          expect(result.tag.label).toBe(maxLengthLabel.toLowerCase());
-        });
-
-        it('should throw AppError for label exceeding maximum length', () => {
-          const tooLongLabel = 'A'.repeat(21);
-          expect(() => TagNormalizer.to(uri, tooLongLabel, TEST_PUBKY.USER_1)).toThrow(AppError);
-        });
-
-        it('should throw AppError for label with emojis exceeding maximum length', () => {
-          const tooLongEmojiLabel = '🎉'.repeat(21);
-          expect(() => TagNormalizer.to(uri, tooLongEmojiLabel, TEST_PUBKY.USER_1)).toThrow(AppError);
-        });
-
-        it('should accept mixed label at maximum length', () => {
-          const mixedLabel = 'A'.repeat(15) + '🎉'.repeat(5);
-          const result = TagNormalizer.to(uri, mixedLabel, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-          expect(result.tag.label).toBe('a'.repeat(15) + '🎉'.repeat(5));
-        });
-
-        it('should throw AppError for mixed label exceeding maximum length', () => {
-          const tooLongMixedLabel = 'A'.repeat(16) + '🎉'.repeat(5);
-          expect(() => TagNormalizer.to(uri, tooLongMixedLabel, TEST_PUBKY.USER_1)).toThrow(AppError);
-        });
-      });
-
-      describe('special characters in labels', () => {
-        const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
-
-        /**
-         * Characters that are ACCEPTED by the library
-         */
-        it.each([
-          ['hyphen', 'tag-value'],
-          ['underscore', 'tag_value'],
-          ['period', 'tag.value'],
-          ['at symbol', 'tag@value'],
-          ['hash', 'tag#value'],
-          ['ampersand', 'tag&value'],
-          ['equals', 'tag=value'],
-          ['plus', 'tag+value'],
-        ])('should accept label with %s: "%s"', (_, label) => {
-          const result = TagNormalizer.to(uri, label, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-          expect(result.tag.label).toBe(label);
-        });
-
-        /**
-         * Characters that are REJECTED by the library.
-         * Note: `:` and `,` have semantic meaning in the pubky protocol
-         * - `:` is used in composite IDs (author:postId)
-         * - `,` might be used to separate multiple tags
-         */
-        it.each([
-          ['colon', 'tag:value'],
-          ['comma', 'tag,value'],
-        ])('should reject label with %s: "%s"', (_, label) => {
-          expect(() => TagNormalizer.to(uri, label, TEST_PUBKY.USER_1)).toThrow(AppError);
-        });
-      });
+      expectValidationError(error, 'buildTag');
     });
   });
 
-  /**
-   * Tests for `from` method - High-level tag creation with normalization
-   */
   describe('from', () => {
-    describe('Unit Tests', () => {
-      let mockBuilder: ReturnType<typeof createMockBuilder>;
-      const compositePostId = `${TEST_PUBKY.USER_2}:${TEST_POST_IDS.POST_1}`;
-
-      beforeEach(() => {
-        mockBuilder = createMockBuilder();
-        setupUnitTestMocks(mockBuilder);
-      });
-
-      afterEach(restoreMocks);
-
-      describe('POST tag creation', () => {
-        it('should parse composite ID and build post URI', async () => {
-          (await spyOnParseCompositeId()).mockReturnValue({
-            pubky: TEST_PUBKY.USER_2,
-            id: TEST_POST_IDS.POST_1,
-          });
-
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: compositePostId,
-            label: 'Technology',
-            taggedKind: TagKind.POST,
-          };
-
-          TagNormalizer.from(params);
-
-          expect(parseCompositeId).toHaveBeenCalledWith(compositePostId);
-          expect(mockBuilder.createTag).toHaveBeenCalledWith(
-            expect.stringContaining(`pubky://${TEST_PUBKY.USER_2}/pub/pubky.app/posts/${TEST_POST_IDS.POST_1}`),
-            'Technology',
-          );
-        });
-
-        it('should return normalized response with lowercase label', async () => {
-          (await spyOnParseCompositeId()).mockReturnValue({
-            pubky: TEST_PUBKY.USER_2,
-            id: TEST_POST_IDS.POST_1,
-          });
-
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: compositePostId,
-            label: '  TECHNOLOGY  ',
-            taggedKind: TagKind.POST,
-          };
-
-          const result = TagNormalizer.from(params);
-
-          expect(result.label).toBe('technology'); // Trimmed and lowercase
-          expect(result.taggerId).toBe(TEST_PUBKY.USER_1);
-          expect(result.taggedId).toBe(compositePostId);
-          expect(result.taggedKind).toBe(TagKind.POST);
-          expect(result.tagUrl).toContain('pubky://');
-          expect(result.tagJson).toBeDefined();
-        });
-      });
-
-      describe('USER tag creation', () => {
-        it('should build user URI directly without parsing', () => {
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: TEST_PUBKY.USER_2,
-            label: 'Developer',
-            taggedKind: TagKind.USER,
-          };
-
-          TagNormalizer.from(params);
-
-          expect(mockBuilder.createTag).toHaveBeenCalledWith(
-            expect.stringContaining(`pubky://${TEST_PUBKY.USER_2}`),
-            'Developer',
-          );
-        });
-
-        it('should return normalized response with lowercase label', () => {
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: TEST_PUBKY.USER_2,
-            label: '  DEVELOPER  ',
-            taggedKind: TagKind.USER,
-          };
-
-          const result = TagNormalizer.from(params);
-
-          expect(result.label).toBe('developer');
-          expect(result.taggedKind).toBe(TagKind.USER);
-        });
-      });
-
-      describe('error handling', () => {
-        it('should throw AppError with correct properties when parseCompositeId fails', async () => {
-          (await spyOnParseCompositeId()).mockImplementation(() => {
-            throw 'Invalid composite ID';
-          });
-
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: 'invalid',
-            label: 'test',
-            taggedKind: TagKind.POST,
-          };
-
-          try {
-            TagNormalizer.from(params);
-            expect.fail('Should have thrown');
-          } catch (error) {
-            expect(error).toBeInstanceOf(AppError);
-            const appError = error as AppError;
-            expect(appError.category).toBe(ErrorCategory.Validation);
-            expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-            expect(appError.service).toBe(ErrorService.SocialSpecs);
-            expect(appError.operation).toBe('createTagFromParams');
-            expect(appError.context).toEqual(params);
-          }
-        });
-
-        it('should throw AppError when createTag fails', async () => {
-          (await spyOnParseCompositeId()).mockReturnValue({
-            pubky: TEST_PUBKY.USER_2,
-            id: TEST_POST_IDS.POST_1,
-          });
-          mockBuilder.createTag.mockImplementation(() => {
-            throw 'Builder error';
-          });
-
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: compositePostId,
-            label: 'test',
-            taggedKind: TagKind.POST,
-          };
-
-          expect(() => TagNormalizer.from(params)).toThrow(AppError);
-        });
-      });
+    const params = (overrides: Partial<TTagEventParams> = {}): TTagEventParams => ({
+      taggerId: TAGGER,
+      taggedId: buildCompositeId({ pubky: AUTHOR, id: POST_ID }),
+      label: 'Bitcoin',
+      taggedKind: TagKind.POST,
+      ...overrides,
     });
 
-    describe('Integration Tests', () => {
-      beforeEach(setupIntegrationTestMocks);
-      afterEach(restoreMocks);
+    it('targets a post by its versionless v1 reference, built from the composite id', () => {
+      const result = TagNormalizer.from(params());
+      const built = buildTag(TAGGER, POST_REF, 'bitcoin');
 
-      describe('POST tag with real library', () => {
-        it('should create valid POST tag', () => {
-          const compositeId = `${TEST_PUBKY.USER_2}:${TEST_POST_IDS.POST_1}`;
-
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: compositeId,
-            label: 'technology',
-            taggedKind: TagKind.POST,
-          };
-
-          const result = TagNormalizer.from(params);
-
-          expect(result.tagUrl).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/tags\/.+/);
-          expect(result.label).toBe('technology');
-          expect(result.tagJson).toBeDefined();
-        });
+      expect(result).toEqual({
+        taggerId: TAGGER,
+        taggedId: `${AUTHOR}:${POST_ID}`,
+        label: 'bitcoin',
+        taggedKind: TagKind.POST,
+        tagUrl: built.url,
+        tagBody: built.body,
       });
+      expect(decodeObject(result.tagUrl, result.tagBody, 'tag').uri).toBe(POST_REF);
+    });
 
-      describe('USER tag with real library', () => {
-        it('should create valid USER tag', () => {
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: TEST_PUBKY.USER_2,
-            label: 'developer',
-            taggedKind: TagKind.USER,
-          };
+    it('targets a user by the profile URL, the target the migration respells a 0.x user tag to', () => {
+      const result = TagNormalizer.from(params({ taggedId: AUTHOR, taggedKind: TagKind.USER }));
+      const profileUrl = buildUri(AUTHOR, 'user');
 
-          const result = TagNormalizer.from(params);
-
-          expect(result.tagUrl).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/tags\/.+/);
-          expect(result.label).toBe('developer');
-        });
+      expect(profileUrl).toBe(`pubky://${AUTHOR}/pub/social/v1/profile.json`);
+      expect(decodeObject(result.tagUrl, result.tagBody, 'tag').uri).toBe(profileUrl);
+      expect(result).toMatchObject({
+        taggedId: AUTHOR,
+        taggedKind: TagKind.USER,
+        tagUrl: buildTag(TAGGER, profileUrl, 'bitcoin').url,
       });
+      expect(result.tagUrl).not.toBe(buildTag(TAGGER, `pubky://${AUTHOR}`, 'bitcoin').url);
+    });
 
-      describe('label normalization', () => {
-        it.each([
-          ['  spaces  ', 'spaces'],
-          ['UPPERCASE', 'uppercase'],
-          ['  MixedCASE  ', 'mixedcase'],
-        ])('should normalize "%s" to "%s"', (input, expected) => {
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: TEST_PUBKY.USER_2,
-            label: input,
-            taggedKind: TagKind.USER,
-          };
+    it.each([
+      ['  Bitcoin  ', 'bitcoin'],
+      ['RUST', 'rust'],
+      ['ÄPFEL', 'Äpfel'],
+      ['Café', 'café'],
+      ['İ', 'İ'],
+      ['tag_123', 'tag_123'],
+    ])('returns the stored label for %j: trimmed, ASCII letters lowercased, the rest kept', (label, stored) => {
+      const result = TagNormalizer.from(params({ label }));
 
-          const result = TagNormalizer.from(params);
+      expect(result.label).toBe(stored);
+      expect(decodeObject(result.tagUrl, result.tagBody, 'tag').label).toBe(stored);
+    });
 
-          expect(result.label).toBe(expected);
-        });
+    it.each([
+      ['a composite id without a post id', AUTHOR],
+      ['a composite id with an author that is no key', `author:${POST_ID}`],
+      ['a composite id with a post id the data model refuses', `${AUTHOR}:not-a-post-id`],
+    ])('refuses %s before building the tag', (_case, taggedId) => {
+      const error = caught(() => TagNormalizer.from(params({ taggedId: taggedId as Pubky })));
 
-        /**
-         * Note: The pubky-app-specs library rejects labels with internal whitespace.
-         */
-        it('should throw AppError for label with internal whitespace', () => {
-          const params: TTagEventParams = {
-            taggerId: TEST_PUBKY.USER_1,
-            taggedId: TEST_PUBKY.USER_2,
-            label: 'mixed case',
-            taggedKind: TagKind.USER,
-          };
+      expectValidationError(error, 'createTagFromParams');
+      expect((error as AppError).context).toMatchObject({ taggedKind: TagKind.POST, taggedId, taggerId: TAGGER });
+    });
 
-          expect(() => TagNormalizer.from(params)).toThrow(AppError);
-        });
-      });
+    it('refuses a tagged user that is no key', () => {
+      const error = caught(() =>
+        TagNormalizer.from(params({ taggedId: 'someone' as Pubky, taggedKind: TagKind.USER })),
+      );
+
+      expectValidationError(error, 'createTagFromParams');
+    });
+
+    it('refuses an invalid label with the builder error', () => {
+      const error = caught(() => TagNormalizer.from(params({ label: 'two words' })));
+
+      expectValidationError(error, 'buildTag');
+      expect((error as AppError).context).toMatchObject({ label: 'two words', code: 'format' });
     });
   });
 
@@ -483,8 +201,21 @@ describe('TagNormalizer', () => {
       'pubky://viewer/pub/pubky.app/tags/0033RX1Y4ZTQ0',
       'pubky://viewer/pub/mapky/tags/MAPKY01',
       'pubky://viewer/pub/social/v1/tags/SOCIAL01',
+      'pubky://viewer/pub/social/v1/tags/PZ367H48M2YE6VG4YY439CXC6W.json',
     ])('accepts a tag file in the viewer folder: %s', (tagUri) => {
       expect(TagNormalizer.toOwnTagUri(tagUri, 'viewer')).toBe(tagUri);
+    });
+
+    it('accepts the address TagNormalizer.from writes', () => {
+      const { tagUrl } = TagNormalizer.from({
+        taggerId: TAGGER,
+        taggedId: buildCompositeId({ pubky: AUTHOR, id: POST_ID }),
+        label: 'bitcoin',
+        taggedKind: TagKind.POST,
+      });
+
+      expect(TagNormalizer.toOwnTagUri(tagUrl, TAGGER)).toBe(tagUrl);
+      expect(TagNormalizer.toOwnTagUri(tagUrl, AUTHOR)).toBeUndefined();
     });
 
     it.each([

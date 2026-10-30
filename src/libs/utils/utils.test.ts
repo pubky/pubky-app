@@ -1,3 +1,5 @@
+import { buildTag, buildUri, limits } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   POST_ID_STAGING_FIXTURE,
@@ -1281,6 +1283,16 @@ describe('Utils', () => {
     it('should reject a pk:-prefixed pubky string', () => {
       expect(isValidTagLabel('pk:abcdefghijklmnopqrstuvwxyz')).toBe(false);
     });
+
+    it('counts the limit in code points, as pubky-social-specs does', () => {
+      const target = buildUri(fakeOwner(2), 'post', '0032PARTQP4G0');
+      const atLimit = '😀'.repeat(limits.tagLabelMaxLength);
+
+      expect(isValidTagLabel(atLimit)).toBe(true);
+      expect(buildTag(fakeOwner(1), target, atLimit).object.label).toBe(atLimit);
+      expect(isValidTagLabel(`${atLimit}😀`)).toBe(false);
+      expect(() => buildTag(fakeOwner(1), target, `${atLimit}😀`)).toThrow();
+    });
   });
 
   describe('canonicalizeTagLabel', () => {
@@ -1291,6 +1303,22 @@ describe('Utils', () => {
     it('should preserve valid non-Latin labels', () => {
       expect(canonicalizeTagLabel(' 日本語 ')).toBe('日本語');
     });
+
+    it('lowercases ASCII letters only, so a non-ASCII capital stays as typed', () => {
+      expect(canonicalizeTagLabel('ÄPFEL')).toBe('Äpfel');
+      expect(canonicalizeTagLabel('İSTANBUL')).toBe('İstanbul');
+    });
+
+    // The fold the data model applies when it stores a tag: the label a tag id hashes, and the one
+    // Nexus indexes, so hashtags, the composer and the search must agree with it.
+    it.each(['RUST', 'ÄPFEL', 'Café', 'İ', '  Mixed_Case  ', 'tag!'])(
+      'agrees with the label pubky-social-specs stores for %j',
+      (label) => {
+        const target = buildUri(fakeOwner(2), 'post', '0032PARTQP4G0');
+
+        expect(canonicalizeTagLabel(label)).toBe(buildTag(fakeOwner(1), target, label).object.label);
+      },
+    );
   });
 
   describe('isStarterPackReservedTag', () => {

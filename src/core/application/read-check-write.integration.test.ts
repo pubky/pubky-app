@@ -339,11 +339,12 @@ describe('writes to one tag run in the order the user made them', () => {
     tagUrl: `pubky://${USER}${TAG_PATH}`,
   };
   const tagJson = { uri: `pubky://${USER}/pub/pubky.app/posts/0033SSE3B1FQ0`, label: 'bitcoin', created_at: 1 };
+  const tagBody = new TextEncoder().encode(JSON.stringify(tagJson));
   const tagOps = () => homeserver.writes.filter(({ path }) => path === TAG_PATH).map(({ op }) => op);
 
   it('keeps a tag removed while its add was retrying removed', async () => {
     let failAdd!: () => void;
-    homeserver.putJson.mockImplementationOnce(
+    homeserver.putBytes.mockImplementationOnce(
       () =>
         new Promise<void>((_, reject) => {
           failAdd = () => reject(sdkError(503));
@@ -351,7 +352,7 @@ describe('writes to one tag run in the order the user made them', () => {
     );
 
     const request = vi.spyOn(HomeserverService, 'request');
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
     await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
     const remove = TagApplication.commitDelete(tag);
     // The removal has reached the homeserver service before the add's first attempt fails.
@@ -367,7 +368,7 @@ describe('writes to one tag run in the order the user made them', () => {
 
   it('keeps a tag added back while its removal was retrying present', async () => {
     homeserver.files.set(TAG_PATH, JSON.stringify(tagJson));
-    await TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    await TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
     homeserver.writes = [];
     let releaseRemove!: () => void;
     homeserver.delete.mockRejectedValueOnce(sdkError(429));
@@ -376,11 +377,11 @@ describe('writes to one tag run in the order the user made them', () => {
         releaseRemove = resolve;
       });
 
-    const request = vi.spyOn(HomeserverService, 'request');
+    const putBlob = vi.spyOn(HomeserverService, 'putBlob');
     const remove = TagApplication.commitDelete(tag);
     await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
-    await vi.waitFor(() => expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT })));
+    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
+    await vi.waitFor(() => expect(putBlob).toHaveBeenCalledWith(expect.objectContaining({ url: tag.tagUrl })));
     expect(tagOps()).toEqual(['DELETE']);
     releaseRemove();
     await Promise.all([remove, add]);

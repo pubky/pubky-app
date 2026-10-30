@@ -15,6 +15,10 @@ describe('extractHashtagLabelsFromMarkdown', () => {
       expect(extractHashtagLabelsFromMarkdown('#Tag and #tag and #TAG')).toEqual(['tag']);
     });
 
+    it('folds ASCII letters only, like the stored tag label', () => {
+      expect(extractHashtagLabelsFromMarkdown('#xÄPFEL and #xäpfel')).toEqual(['xÄpfel', 'xäpfel']);
+    });
+
     it('finds hashtags in list items and blockquotes', () => {
       const content = '- item with #one\n- item with #two\n\n> quote with #three';
 

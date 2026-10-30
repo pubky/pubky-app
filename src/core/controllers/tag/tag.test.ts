@@ -21,8 +21,8 @@ describe('TagController', () => {
     taggerId: 'viewer',
     label: 'bitcoin',
     taggedKind: TagKind.POST,
-    tagUrl: 'pubky://viewer/pub/pubky.app/tags/tag',
-    tagJson: { label: 'bitcoin' },
+    tagUrl: 'pubky://viewer/pub/social/v1/tags/tag.json',
+    tagBody: new TextEncoder().encode('{"label":"bitcoin"}'),
   };
   beforeEach(() => {
     vi.resetAllMocks();
@@ -41,9 +41,9 @@ describe('TagController', () => {
     expect(TagApplication.commitCreate).toHaveBeenCalledWith({ tagList: [tag], isCurrent: expect.any(Function) });
   });
 
-  it('passes normalized deletion data without a rebuilt tag URL or JSON body', async () => {
+  it('passes normalized deletion data without a rebuilt tag URL or body', async () => {
     await TagController.commitDelete(normalized);
-    const { tagJson: _tagJson, tagUrl: _tagUrl, ...deleted } = normalized;
+    const { tagBody: _tagBody, tagUrl: _tagUrl, ...deleted } = normalized;
     expect(TagApplication.commitDelete).toHaveBeenCalledWith({
       ...deleted,
       isCurrent: expect.any(Function),
@@ -67,6 +67,16 @@ describe('TagController', () => {
     useAuthStore.setState({ session: null });
     await TagController.commitDelete(normalized);
     expect(vi.mocked(TagApplication.commitDelete).mock.calls[2][0].canWrite!(app)).toBe(false);
+  });
+
+  it('lets a social v1 grant delete a v1 tag file but not a 0.x one', async () => {
+    const v1 = 'pubky://viewer/pub/social/v1/tags/PZ367H48M2YE6VG4YY439CXC6W.json';
+    const legacy = 'pubky://viewer/pub/pubky.app/tags/TAG01';
+    useAuthStore.setState({ session: mockRingSession(['/pub/social/v1/:rw']) });
+    await TagController.commitDelete(normalized);
+    const canWrite = vi.mocked(TagApplication.commitDelete).mock.calls[0][0].canWrite!;
+    expect(canWrite(v1)).toBe(true);
+    expect(canWrite(legacy)).toBe(false);
   });
 
   it('expires the predicate on logout and same-account re-login', async () => {

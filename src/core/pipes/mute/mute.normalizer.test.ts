@@ -1,204 +1,92 @@
-import { MuteResult } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildMute, buildUri, decodeObject, listPrefix, parseUri } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
+import { describe, expect, it } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
 import { MuteNormalizer } from '@/pipes/mute/mute.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildPubkyUri,
-  INVALID_INPUTS,
-  restoreMocks,
-  setupIntegrationTestMocks,
-  setupUnitTestMocks,
-  TEST_PUBKY,
-} from '../pipes.test-utils';
+import { withFrozenSpecClock } from '@/test-utils/spec-clock';
+
+const MUTER = fakeOwner(1);
+const MUTEE = fakeOwner(2);
+
+const caught = (run: () => unknown): unknown => {
+  try {
+    run();
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+};
 
 describe('MuteNormalizer', () => {
-  const createMockBuilder = (overrides?: Partial<{ createMute: ReturnType<typeof vi.fn> }>) => ({
-    createMute: vi.fn((mutee: string) =>
-      asOpaque<MuteResult>({
-        mute: { mutee, toJson: vi.fn(() => ({})) },
-        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `mutes/${mutee}`) },
-      }),
-    ),
-    ...overrides,
-  });
+  withFrozenSpecClock();
 
-  /**
-   * Unit Tests
-   */
-  describe('Unit Tests', () => {
-    let mockBuilder: ReturnType<typeof createMockBuilder>;
+  describe('to', () => {
+    it('builds the mute where pubky-social-specs stores it: the mutee key under the muter PRIVATE tree', () => {
+      const built = MuteNormalizer.to({ muter: MUTER, mutee: MUTEE });
 
-    beforeEach(() => {
-      mockBuilder = createMockBuilder();
-      setupUnitTestMocks(mockBuilder);
+      expect(built.url).toBe(`pubky://${MUTER}/priv/social/v1/mutes/${MUTEE}.json`);
+      expect(built.url).toBe(buildUri(MUTER, 'mute', MUTEE));
+      expect(built.id).toBe(MUTEE);
+      expect(parseUri(built.url)).toMatchObject({ owner: MUTER, root: 'private', kind: 'mute', id: MUTEE });
     });
 
-    afterEach(restoreMocks);
+    it('returns the bytes to PUT, which decode back to the stored object', () => {
+      const built = MuteNormalizer.to({ muter: MUTER, mutee: MUTEE });
 
-    describe('to - successful creation', () => {
-      it('should create mute with mute and meta properties', () => {
-        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-
-        expect(result).toHaveProperty('mute');
-        expect(result).toHaveProperty('meta');
-      });
-
-      it('should call PubkySpecsSingleton.get with muter and createMute with mutee', () => {
-        MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-        expect(mockBuilder.createMute).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
-      });
-
-      it('should return correct structure with mute and meta URL', () => {
-        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-
-        expect(result.mute).toHaveProperty('toJson');
-        expect(result.meta.url).toContain('pubky://');
-        expect(result.meta.url).toContain('/pub/pubky.app/mutes/');
-      });
+      expect(built.object).toEqual({ created_at: expect.any(Number) });
+      expect(decodeObject(built.url, built.body, 'mute')).toEqual(built.object);
+      expect(built.body).toEqual(buildMute(MUTER, MUTEE).body);
     });
 
-    describe('to - different inputs', () => {
-      it('should handle different muter/mutee combinations', () => {
-        MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-        expect(mockBuilder.createMute).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
-
-        MuteNormalizer.to({ muter: TEST_PUBKY.USER_2, mutee: TEST_PUBKY.USER_1 });
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
-      });
-
-      it('should handle self-mute scenario', () => {
-        MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
-
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-        expect(mockBuilder.createMute).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-      });
+    it.each([`pubky${MUTEE}`, `pk:${MUTEE}`])('strips the %s prefix the builder refuses', (mutee) => {
+      expect(MuteNormalizer.to({ muter: MUTER, mutee: mutee as Pubky }).id).toBe(MUTEE);
     });
 
-    describe('to - error handling', () => {
-      it('should throw AppError with correct properties when createMute fails', () => {
-        const errorMessage = 'Invalid mutee';
-        mockBuilder.createMute.mockImplementation(() => {
-          throw errorMessage;
-        });
-
-        try {
-          MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.SocialSpecs);
-          expect(appError.operation).toBe('createMute');
-          expect(appError.context).toEqual({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-          expect(appError.message).toBe(errorMessage);
-        }
-      });
-
-      it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
-          throw 'Singleton error';
-        });
-
-        expect(() => MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 })).toThrow(AppError);
-      });
+    it('allows a self-mute at the data model level', () => {
+      expect(MuteNormalizer.to({ muter: MUTER, mutee: MUTER }).id).toBe(MUTER);
     });
 
-    describe('to - edge cases', () => {
-      it.each([
-        ['empty mutee', { muter: TEST_PUBKY.USER_1, mutee: INVALID_INPUTS.EMPTY }],
-        ['empty muter', { muter: INVALID_INPUTS.EMPTY, mutee: TEST_PUBKY.USER_2 }],
-      ])('should pass %s to builder (unit test)', (_, params) => {
-        MuteNormalizer.to(params);
-        expect(mockBuilder.createMute).toHaveBeenCalled();
+    it.each([
+      ['an empty mutee', MUTER, '', 'mutee'],
+      ['a mutee that is no key', MUTER, 'not-a-key', 'mutee'],
+      ['a mutee with a bad character', MUTER, `${MUTEE.slice(0, 51)}O`, 'mutee'],
+      ['a muter that is no key', 'viewer', MUTEE, 'owner'],
+    ])('refuses %s as a validation error naming the field', (_case, muter, mutee, field) => {
+      const error = caught(() => MuteNormalizer.to({ muter: muter as Pubky, mutee: mutee as Pubky }));
+
+      expect(error).toBeInstanceOf(AppError);
+      expect(error).toMatchObject({
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.INVALID_INPUT,
+        service: ErrorService.SocialSpecs,
+        operation: 'buildMute',
+        context: { muter, mutee, field },
       });
     });
   });
 
-  /**
-   * Integration Tests - Real pubky-app-specs library
-   */
-  describe('Integration Tests', () => {
-    beforeEach(setupIntegrationTestMocks);
-    afterEach(restoreMocks);
-
-    describe('successful creation with real library', () => {
-      it('should create valid result with correct URL format', () => {
-        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-
-        expect(result.mute).toBeDefined();
-        expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/mutes\/.+/);
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
-      });
-
-      it('should create unique URLs for different mutees', () => {
-        const result1 = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-        const result2 = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
-
-        expect(result1.meta.url).not.toBe(result2.meta.url);
-      });
-
-      it('should allow self-mute at specs level', () => {
-        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
-
-        expect(result).toBeDefined();
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_1);
-      });
-
-      it('should produce valid JSON from mute object', () => {
-        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-
-        expect(typeof result.mute.toJson).toBe('function');
-        expect(result.mute.toJson()).toBeDefined();
-      });
-
-      it('should handle mutee with "pubky" prefix by stripping it', () => {
-        const prefixedMutee = `pubky${TEST_PUBKY.USER_2}`;
-        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: prefixedMutee });
-
-        expect(result.mute).toBeDefined();
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
-      });
-
-      it('should handle mutee with "pk:" prefix by stripping it', () => {
-        const prefixedMutee = `pk:${TEST_PUBKY.USER_2}`;
-        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: prefixedMutee });
-
-        expect(result.mute).toBeDefined();
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
-      });
+  describe('toDeleteUrls', () => {
+    it('names both copies an unmute deletes: the 0.x mute first, then the private v1 one', () => {
+      expect(MuteNormalizer.toDeleteUrls({ muter: MUTER, mutee: MUTEE })).toEqual([
+        `${listPrefix(MUTER, 'legacy')}mutes/${MUTEE}`,
+        buildUri(MUTER, 'mute', MUTEE),
+      ]);
     });
 
-    describe('validation with real library', () => {
-      /**
-       * Note: createMute(mutee) validates the mutee parameter.
-       * Invalid mutees throw because the method takes a parameter.
-       */
-      it.each([
-        ['empty', INVALID_INPUTS.EMPTY],
-        ['null', INVALID_INPUTS.NULL],
-        ['undefined', INVALID_INPUTS.UNDEFINED],
-        ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
-      ])('should throw AppError for %s mutee', (_, invalidMutee) => {
-        try {
-          MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: invalidMutee });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.SocialSpecs);
-          expect(appError.operation).toBe('createMute');
-        }
-      });
+    it('strips a prefixed mutee like `to` does', () => {
+      expect(MuteNormalizer.toDeleteUrls({ muter: MUTER, mutee: `pk:${MUTEE}` as Pubky })).toEqual(
+        MuteNormalizer.toDeleteUrls({ muter: MUTER, mutee: MUTEE }),
+      );
+    });
+
+    it('refuses a mutee that is no key', () => {
+      const error = caught(() => MuteNormalizer.toDeleteUrls({ muter: MUTER, mutee: 'nope' as Pubky }));
+
+      expect(error).toBeInstanceOf(AppError);
+      expect(error).toMatchObject({ code: ValidationErrorCode.INVALID_INPUT, operation: 'muteDeletionPaths' });
     });
   });
 });

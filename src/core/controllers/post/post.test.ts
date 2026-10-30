@@ -72,9 +72,10 @@ vi.mock('pubky-app-specs', () => ({
           attachments: null,
           toJson: () => ({ content, kind: kindMap[kind] ?? 'short' }),
         },
+        // A real post id (distinct from the fixture post, a reply or repost of it must not collide)
         meta: {
-          id: 'post123',
-          url: `pubky://author/pub/pubky.app/posts/post123`,
+          id: '0033RX1Y4ZTQ0',
+          url: `pubky://author/pub/pubky.app/posts/0033RX1Y4ZTQ0`,
         },
       };
     }
@@ -125,7 +126,8 @@ vi.mock('pubky-app-specs', () => ({
 // Test data
 const testData = {
   authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
-  postId: 'abc123xyz',
+  // A real post id: the v1 tag target is built from it and the data model refuses a malformed one
+  postId: '0035QZPT4QG00',
   get fullPostId() {
     return buildCompositeId({ pubky: this.authorPubky, id: this.postId });
   },
