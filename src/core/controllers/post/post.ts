@@ -387,13 +387,13 @@ export class PostController {
 
     const previousCover = currentContent.cover_image;
     let coverImageUrl: string | null = null;
-    let uploadedCoverUri: string | null = null;
+    let uploadedCover: TFileAttachmentResult | null = null;
     if (coverImage instanceof File) {
       try {
         const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
         coverImageUrl = fileAttachment.media.url;
-        uploadedCoverUri = coverImageUrl;
+        uploadedCover = fileAttachment;
       } catch (error) {
         // Same as `commitCreateCollection`: an expired session keeps its auth
         // classification so the caller can prompt for sign-in (issue #2555).
@@ -423,13 +423,15 @@ export class PostController {
         edit: { collection: nextContent },
       });
     } catch (error) {
-      // Roll back the newly uploaded cover so a failed edit does not orphan it.
-      // If rollback itself fails, log and still rethrow the original edit error.
-      if (uploadedCoverUri) {
-        await FileApplication.commitDelete([uploadedCoverUri], compositeCollectionId).catch((cleanupError) => {
+      // Roll back the newly uploaded cover so a failed edit does not orphan it: media is content
+      // addressed, so a cover picked again names the file the restored row still uses, which the
+      // upload found there (`preexisting`) and the sweep leaves in place. If the rollback itself
+      // fails, log and still rethrow the original edit error.
+      if (uploadedCover) {
+        await FileApplication.commitDeleteUploaded([uploadedCover]).catch((cleanupError) => {
           Logger.warn('[PostController.commitEditCollection] Failed to rollback newly uploaded cover', {
             compositeCollectionId,
-            uploadedCoverUri,
+            uploadedCoverUri: uploadedCover.media.url,
             cleanupError,
           });
         });
@@ -650,15 +652,20 @@ export class PostController {
       return;
     }
 
-    // Removals are diffed against the seeded snapshot (`original`), never the
-    // live row — only files the user actually saw and removed get deleted. A
-    // replaced or cleared cover leaves the envelope and is a removal too.
-    const removedUris = [...new Set([...original.filter((uri) => !keptSet.has(uri)), ...(coverChange.removed ?? [])])];
-
     const fileAttachments =
       added.length > 0 ? await this.normalizeFileAttachments({ attachments: added, pubky: authorId }) : [];
     const nextUris = [...kept, ...fileAttachments.map((f) => f.media.url)];
     const attachmentNames = Object.fromEntries(fileAttachments.map((f) => [f.media.url, f.name]));
+
+    // Removals are diffed against the seeded snapshot (`original`), never the
+    // live row — only files the user actually saw and removed get deleted. A
+    // replaced or cleared cover leaves the envelope and is a removal too. Media
+    // is content addressed: a file removed and added again names the same URI,
+    // so nothing the next version references is a removal.
+    const nextSet = new Set([...nextUris, ...(coverChange.next ? [coverChange.next] : [])]);
+    const removedUris = [
+      ...new Set([...original.filter((uri) => !keptSet.has(uri)), ...(coverChange.removed ?? [])]),
+    ].filter((uri) => !nextSet.has(uri));
 
     const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added });
 

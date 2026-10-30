@@ -45,6 +45,7 @@ vi.mock('@/application/file/file', () => ({
     toFileAttachment: vi.fn(),
     commitCreate: vi.fn(),
     commitDelete: vi.fn(),
+    commitDeleteUploaded: vi.fn(),
     getMetadata: vi.fn(),
   },
 }));
@@ -869,6 +870,39 @@ describe('PostController', () => {
           fileAttachments: [expect.objectContaining({ media: expect.objectContaining({ url: photoUri }) })],
           removedUris: [removedUri],
         });
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('keeps a file the user removed and added again: the same bytes name the same URI', async () => {
+      setupAuthUser(testData.authorPubky);
+      const photoUri = mediaUrl('image-content', 'image/png');
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
+        createPostDetails({ attachments: [keptUri, photoUri] }),
+      );
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
+      vi.spyOn(FileApplication, 'getMetadata').mockResolvedValue([
+        { uri: keptUri, content_type: 'image/png' },
+      ] as never);
+      const imageFile = new File(['image-content'], 'photo.png', { type: 'image/png' });
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEdit({
+          compositePostId: testData.fullPostId,
+          content: 'Updated content',
+          attachments: { original: [keptUri, photoUri], kept: [keptUri], added: [imageFile] },
+        });
+
+        // The re-added file goes up (idempotent, found preexisting) and is no removal
+        expect(commitEditSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            edit: expect.objectContaining({ attachmentUris: [keptUri, photoUri] }),
+            removedUris: undefined,
+          }),
+        );
       } finally {
         cleanupAuthUser();
       }
@@ -1889,6 +1923,7 @@ describe('PostController', () => {
       vi.spyOn(PostApplication, 'commitEdit').mockRejectedValue(editError);
       vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
       vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
       const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
 
       try {
@@ -1902,8 +1937,48 @@ describe('PostController', () => {
           }),
         ).rejects.toBe(editError);
 
-        expect(commitFileDeleteSpy).toHaveBeenCalledWith([newCover], collectionPostId);
-        expect(commitFileDeleteSpy).not.toHaveBeenCalledWith([oldCover], collectionPostId);
+        // The upload itself goes to the sweep, which leaves a preexisting file in place
+        expect(sweepSpy).toHaveBeenCalledWith([
+          expect.objectContaining({ media: expect.objectContaining({ url: newCover }) }),
+        ]);
+        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('keeps a cover picked again when the edit fails: the upload found it on the homeserver', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const editError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
+        service: ErrorService.Homeserver,
+        operation: 'commitEditCollection',
+      });
+      vi.spyOn(PostApplication, 'commitEdit').mockRejectedValue(editError);
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
+      // The same bytes as the stored cover: the homeserver already holds them
+      vi.spyOn(FileApplication, 'commitCreate').mockImplementation(async ({ fileAttachments }) => {
+        for (const attachment of fileAttachments) attachment.preexisting = true;
+      });
+      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+      const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: 'Updated description',
+            coverImage: new File(['old-cover'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toBe(editError);
+
+        // The restored row still shows that cover: the sweep sees it preexisting and leaves it alone
+        expect(sweepSpy).toHaveBeenCalledWith([
+          expect.objectContaining({ media: expect.objectContaining({ url: oldCover }), preexisting: true }),
+        ]);
+        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
@@ -1915,6 +1990,7 @@ describe('PostController', () => {
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit');
       vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
       vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
       const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
 
       try {
@@ -1929,8 +2005,10 @@ describe('PostController', () => {
         ).rejects.toThrow('Collection name is required');
 
         expect(commitEditSpy).not.toHaveBeenCalled();
-        expect(commitFileDeleteSpy).toHaveBeenCalledWith([newCover], collectionPostId);
-        expect(commitFileDeleteSpy).not.toHaveBeenCalledWith([oldCover], collectionPostId);
+        expect(sweepSpy).toHaveBeenCalledWith([
+          expect.objectContaining({ media: expect.objectContaining({ url: newCover }) }),
+        ]);
+        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }

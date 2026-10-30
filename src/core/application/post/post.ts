@@ -1,4 +1,4 @@
-import { buildUri, decodeObject, deletionPaths, listPrefix, toPath, toUrl } from 'pubky-social-specs';
+import { buildUri, decodeObject, deletionPaths, listPrefix, toPath, toUrl, tryDecodeContent } from 'pubky-social-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type {
@@ -511,7 +511,15 @@ export class PostApplication {
       );
     }
 
-    const deletableRemovedUris = removedUris?.filter(isHomeserverFileUri) ?? [];
+    // Media is content addressed: a file removed and added again, or a cover picked again, names
+    // the URI the version just written references. Nothing it references is deleted.
+    const referencedByNext = new Set(built.object.attachments.map(({ uri }) => uri));
+    const nextEnvelope = tryDecodeContent(built.object);
+    if (nextEnvelope.ok && nextEnvelope.value?.content.cover_image) {
+      referencedByNext.add(nextEnvelope.value.content.cover_image);
+    }
+    const deletableRemovedUris =
+      removedUris?.filter((uri) => isHomeserverFileUri(uri) && !referencedByNext.has(uri)) ?? [];
     if (deletableRemovedUris.length > 0) {
       await FileApplication.commitDelete(deletableRemovedUris, compositePostId).catch((cleanupError) => {
         Logger.warn('[PostApplication.commitEdit] Failed to cleanup removed attachments', {

@@ -848,6 +848,20 @@ describe('Post Application', () => {
         expect(putBlobSpy.mock.invocationCallOrder[0]).toBeLessThan(fileDeleteSpy.mock.invocationCallOrder[0]);
       });
 
+      it('never deletes a removed URI the version just written still references', async () => {
+        storeVersions(withAttachments());
+        const { fileDeleteSpy } = setupEditSpies();
+
+        // A file removed and added again names the same URI: it stays referenced
+        await PostApplication.commitEdit({
+          compositePostId,
+          edit: { attachmentUris: [kept, removed] },
+          removedUris: [removed],
+        });
+
+        expect(fileDeleteSpy).not.toHaveBeenCalled();
+      });
+
       it('should not fail the edit when removed-attachment cleanup fails', async () => {
         storeVersions(withAttachments());
         const { fileDeleteSpy } = setupEditSpies();
