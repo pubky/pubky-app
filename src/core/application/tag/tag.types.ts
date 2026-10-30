@@ -2,7 +2,8 @@ import type { TTagEventParams } from '@/controllers/tag/tag.types';
 
 export interface TCreateTagInput extends TTagEventParams {
   tagUrl: string;
-  tagJson: Record<string, unknown>;
+  /** The exact bytes to PUT at `tagUrl`, as `buildTag` spelled them. */
+  tagBody: Uint8Array;
 }
 
 export interface TCreateTagListInput {

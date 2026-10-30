@@ -1,28 +1,27 @@
-import { FollowResult } from 'pubky-app-specs';
+import { buildFollow, type Built, deletionPaths, type Follow, type Owner, toUrl } from 'pubky-social-specs';
 import type { TFollowParams } from '@/controllers/user/user.type';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { toSpecsValidationError } from '@/pipes/specs.errors';
 
 export class FollowNormalizer {
   private constructor() {}
 
-  static to({ follower, followee }: TFollowParams): FollowResult {
+  /** The follow as `pubky-social-specs` stores it under the follower's public root. */
+  static to({ follower, followee }: TFollowParams): Built<Follow, Owner, 'follow'> {
     try {
-      const builder = PubkySpecsSingleton.get(follower);
-      // Strip any prefix (pubky or pk:) from the followee ID before passing to createFollow
-      // pubky-app-specs expects a raw 52-character z-base-32 encoded public key
-      const normalizedFollowee = stripPubkyPrefix(followee);
-      const result = builder.createFollow(normalizedFollowee);
-      return result;
+      // The builder takes a bare 52-character z-base32 key, so any `pubky` or `pk:` prefix goes first
+      return buildFollow(follower, stripPubkyPrefix(followee));
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.SocialSpecs,
-        operation: 'createFollow',
-        context: { follower, followee },
-      });
+      throw toSpecsValidationError(error, 'buildFollow', { follower, followee });
+    }
+  }
+
+  /** Every copy an unfollow deletes: the 0.x follow first, then the v1 one. */
+  static toDeleteUrls({ follower, followee }: TFollowParams): string[] {
+    try {
+      return deletionPaths({ kind: 'follow', id: stripPubkyPrefix(followee) }).map((path) => toUrl(follower, path));
+    } catch (error) {
+      throw toSpecsValidationError(error, 'followDeletionPaths', { follower, followee });
     }
   }
 }

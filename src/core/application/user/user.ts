@@ -1,4 +1,4 @@
-import { followUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import type {
   TEnsureModerationFollowParams,
   TUserApplicationFollowParams,
@@ -11,8 +11,8 @@ import type { TFetchUserDetailsParams, TFetchUserParams, TPubkyListParams } from
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus, isAppError, toAppError } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { isAppError, toAppError } from '@/libs/error/error.utils';
+import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -317,32 +317,28 @@ export class UserApplication {
     }
   }
 
-  private static async syncFollow({
-    eventType,
-    followUrl,
-    followJson,
-    follower,
-    followee,
-    signal,
-  }: TUserApplicationFollowParams): Promise<void> {
+  private static async syncFollow(params: TUserApplicationFollowParams): Promise<void> {
+    const { eventType, follower, followee, signal } = params;
     if (signal?.aborted) return;
 
     // A write that found the relationship already in its target state has nothing to compensate:
     // rolling it back would undo a follow the homeserver already holds.
-    let changed = false;
-    if (eventType === HttpMethod.PUT) {
-      changed = await LocalFollowService.create({ follower, followee });
-    } else if (eventType === HttpMethod.DELETE) {
-      changed = await LocalFollowService.delete({ follower, followee });
-    }
+    const changed =
+      params.eventType === HttpMethod.PUT
+        ? await LocalFollowService.create({ follower, followee })
+        : await LocalFollowService.delete({ follower, followee });
 
     if (signal?.aborted) return;
 
     try {
-      await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+      if (params.eventType === HttpMethod.PUT) {
+        await HomeserverService.putBlob({ url: params.followUrl, blob: params.followBody });
+      } else {
+        // Both copies, the 0.x one first; `deleteIdempotent` absorbs the 404 of a copy that was never
+        // there, which agrees with the optimistic unfollow.
+        for (const url of params.deleteUrls) await HomeserverService.deleteIdempotent(url);
+      }
     } catch (error) {
-      // An already absent homeserver record agrees with the optimistic unfollow.
-      if (eventType === HttpMethod.DELETE && hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return;
       // A torn-down session skips the compensation: its local rows no longer belong to this flow.
       if (changed && !signal?.aborted) {
         try {
@@ -376,24 +372,26 @@ export class UserApplication {
       return undefined;
     }
 
-    const { meta, follow } = FollowNormalizer.to({ follower, followee: moderationId });
-    const expectedFollowUrl = followUriBuilder(follower, moderationId);
-    if (meta.url !== expectedFollowUrl) {
+    const follow = FollowNormalizer.to({ follower, followee: moderationId });
+    const expectedFollowUrl = buildUri(follower, 'follow', moderationId);
+    if (follow.url !== expectedFollowUrl) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Follow resource belongs to an unexpected account', {
         service: ErrorService.SocialSpecs,
         operation: 'ensureModerationFollow',
-        context: { follower, moderationId, followUrl: meta.url },
+        context: { follower, moderationId, followUrl: follow.url },
       });
     }
 
-    const followExists = await HomeserverService.exists(meta.url);
+    // The v1 path only: `privacy.moderationBot` in settings is the idempotency guard, so an
+    // un-migrated 0.x bot follow is irrelevant after the migration gate.
+    const followExists = await HomeserverService.exists(follow.url);
     if (signal?.aborted) return undefined;
 
     if (!followExists) {
       await this.commitFollow({
         eventType: HttpMethod.PUT,
-        followUrl: meta.url,
-        followJson: follow.toJson(),
+        followUrl: follow.url,
+        followBody: follow.body,
         follower,
         followee: moderationId,
         signal,

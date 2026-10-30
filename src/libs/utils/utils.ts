@@ -648,13 +648,16 @@ export function sanitizeTagInput(value: string): string {
 }
 
 /**
- * Convert a tag label to the canonical form used by local storage and Nexus.
+ * Convert a tag label to the canonical form used by local storage and Nexus: the fold
+ * `pubky-social-specs` applies when it stores a tag, so a label matches the one the tag id
+ * hashes. Trimmed, with ASCII letters lowercased and every other character kept (`RUST` becomes
+ * `rust`, `Äpfel` stays `Äpfel`).
  *
  * @param value - The raw tag label
- * @returns The trimmed, lowercase tag label
+ * @returns The trimmed, ASCII-lowercased tag label
  */
 export function canonicalizeTagLabel(value: string): string {
-  return value.trim().toLowerCase();
+  return value.trim().replace(/[A-Z]+/g, (upper) => upper.toLowerCase());
 }
 
 /** Whether Nexus reserves this label from starter-pack interest streams. */

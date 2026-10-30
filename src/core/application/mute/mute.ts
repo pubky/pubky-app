@@ -1,4 +1,4 @@
-import { baseUriBuilder } from 'pubky-app-specs';
+import { listPrefix, parseUri } from 'pubky-social-specs';
 import type { TMuteApplicationCommitParams } from '@/application/mute/mute.types';
 import { MUTE_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/mute-sync';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
@@ -15,32 +15,33 @@ export class MuteApplication {
   /**
    * Handles muting or unmuting a user.
    * Performs local database operations and syncs with the homeserver.
-   * @param params - Parameters containing event type, URLs, JSON data, and user IDs
+   * @param params - Parameters containing event type, the URL and bytes to PUT or the URLs to delete, and user IDs
    */
-  static async commitMute({ eventType, muteUrl, muteJson, muter, mutee }: TMuteApplicationCommitParams) {
-    if (eventType === HttpMethod.PUT) {
+  static async commitMute(params: TMuteApplicationCommitParams) {
+    const { muter, mutee } = params;
+    if (params.eventType === HttpMethod.PUT) {
       await LocalMuteService.create({ muter, mutee });
-      await HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
+      await HomeserverService.putBlob({ url: params.muteUrl, blob: params.muteBody });
       return;
     }
 
-    if (eventType === HttpMethod.DELETE) {
-      await LocalMuteService.delete({ muter, mutee });
-      await HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
-      return;
-    }
+    await LocalMuteService.delete({ muter, mutee });
+    // Both copies, the 0.x one first: `deleteIdempotent` absorbs the 404 of a copy that was never there.
+    for (const url of params.deleteUrls) await HomeserverService.deleteIdempotent(url);
   }
 
   /**
    * Fetches the list of muted user IDs from the homeserver and persists them to the local MUTED stream.
    * Callers do not need to persist the result; this method handles fetch + persist.
+   *
+   * Only the v1 private tree is listed: the migration gate guarantees every 0.x mute was copied there,
+   * and an unmute deletes both copies, so the 0.x tree has nothing the v1 one lacks (ADR-0014).
    * @param pubky - The user's pubky to fetch mutes for
    * @returns Array of muted user pubkeys
    */
   static async fetchMutedUsers(pubky: Pubky): Promise<Pubky[]> {
-    const mutesDirectory = `${baseUriBuilder(pubky)}mutes/`;
-    const muteUris = await HomeserverService.list({ baseDirectory: mutesDirectory });
-    const stream = muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Pubky[];
+    const muteUris = await HomeserverService.list({ baseDirectory: `${listPrefix(pubky, 'private')}mutes/` });
+    const stream = muteUris.map(mutedKey).filter((id): id is Pubky => id !== null);
 
     await LocalStreamUsersService.upsert({
       streamId: UserStreamTypes.MUTED,
@@ -50,7 +51,8 @@ export class MuteApplication {
   }
 
   /**
-   * Homeserver `/events-stream` (live) for mute directory changes only.
+   * Homeserver `/events-stream` (live) for mute directory changes only. The directory is private, so
+   * the service attaches the signed-in session and fails as an auth error without one.
    * @see HomeserverService.subscribeUserEventStreamForPath
    */
   static subscribeMuteDirectoryEventStream(
@@ -62,5 +64,16 @@ export class MuteApplication {
       cursor,
       pathPrefix: MUTE_HOMESERVER_EVENTS_PATH_PREFIX,
     });
+  }
+}
+
+/** The muted key a listed file names (`mutes/<key>.json`); any other file in the directory names no mute. */
+function mutedKey(url: string): Pubky | null {
+  try {
+    const parsed = parseUri(url);
+    return parsed.kind === 'mute' ? parsed.id : null;
+  } catch {
+    // A name that is no canonical URI names no mute.
+    return null;
   }
 }
