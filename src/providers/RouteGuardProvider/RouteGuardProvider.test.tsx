@@ -659,6 +659,31 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
     expect(mocks.mockRouterPush).not.toHaveBeenCalled();
   });
 
+  it('shows the gate over a recreated database instead of the resync loading screen, and resyncs after the gate', () => {
+    mocks.wasDbReset = true;
+    mocks.pathname = '/migration';
+    const { rerender } = render(
+      <RouteGuardProvider>
+        <div>Gate</div>
+      </RouteGuardProvider>,
+    );
+    expect(screen.getByText('Gate')).toBeInTheDocument();
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    expect(mocks.mockResync).not.toHaveBeenCalled();
+
+    // The gate passed: the session is placed, the account is ready, and the resync runs as before
+    mocks.status = 'AUTHENTICATED';
+    mocks.restoreStatus = 'ready';
+    mocks.session = {};
+    mocks.pathname = '/feed';
+    rerender(
+      <RouteGuardProvider>
+        <div>Feed</div>
+      </RouteGuardProvider>,
+    );
+    expect(mocks.mockResync).toHaveBeenCalledWith('test-pubky-z32');
+  });
+
   it('keeps the onboarding page mounted while a signup migrates inline without a session', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.restoreStatus = 'restoring';

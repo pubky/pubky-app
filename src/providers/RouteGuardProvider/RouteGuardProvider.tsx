@@ -239,10 +239,11 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Show loading spinner while:
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
-  // 3. Migration re-sync is in progress (wasDbReset = true)
+  // 3. Migration re-sync is in progress (wasDbReset = true), unless the account is held behind the social
+  //    migration gate: the resync waits for a ready session, which the gate's screen has to produce first
   if (
     !isRouteAccessible ||
-    (wasDbReset && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
+    (wasDbReset && !isGated && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">

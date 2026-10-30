@@ -17,7 +17,7 @@ const ADMITTED_GRANTS_KEPT = 8;
 
 const countsSchema = z.record(z.string(), z.number().int().nonnegative());
 
-export const socialMigrationRecordSchema = z.object({
+const socialMigrationRecordSchema = z.object({
   v: z.literal(1),
   migratedRev: z.number().int().nonnegative().optional(),
   admittedGrantIds: z.array(z.string().min(1)),
@@ -46,7 +46,7 @@ export const socialMigrationRecordSchema = z.object({
 
 export type SocialMigrationRecord = z.infer<typeof socialMigrationRecordSchema>;
 
-export const emptySocialMigrationRecord = (): SocialMigrationRecord => ({ v: 1, admittedGrantIds: [] });
+const emptySocialMigrationRecord = (): SocialMigrationRecord => ({ v: 1, admittedGrantIds: [] });
 
 export function socialMigrationRecordKey(pubky: string): string {
   return `${SOCIAL_MIGRATION_RECORD_KEY_PREFIX}${pubky}`;
