@@ -1,12 +1,17 @@
 import type { Interception } from 'cypress/types/net-stubbing';
 import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
+import { searchForProfileByPubky } from '../support/contacts';
+import { goToProfilePageFromHeader } from '../support/header';
+import { notificationsIndexed, postIndexed, postTagsIndexed, userSearchIndexed, waitForNexus } from '../support/nexus';
+import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
 import {
   latestPostInFeedContentEq,
   createQuickPost,
+  createQuickPostWithMention,
   createPostFromDialog,
   createQuickArticle,
   createArticleFromDialog,
@@ -26,10 +31,17 @@ import {
   switchToArticleMode,
   waitForFeedToLoad,
 } from '../support/posts';
-import { taggedPostFromInterception, waitForNexusPostTags } from '../support/nexus';
-import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
+import { taggedPostFromInterception } from '../support/nexus';
+import {
+  expectTimelineContains,
+  expectTimelineOmits,
+  expectVisibleReachSelected,
+  expectVisibleSortSelected,
+  resetHomeFeedToAllRecent,
+  revealPostInTimeline,
+} from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
-import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
 
 const username = 'Poster';
 
@@ -352,6 +364,20 @@ describe('posts', () => {
     });
   });
 
+  it('can mention a profile picked from the @ autocomplete', () => {
+    // A name with a space covers multi-word mention lookup (https://github.com/pubky/pubky-app/issues/1638)
+    seedUserViaApi(`Mention Me ${String(Date.now()).slice(-6)}`).then((mentioned) => {
+      waitForNexus(userSearchIndexed(mentioned));
+
+      createQuickPostWithMention(mentioned.name);
+
+      // The autocomplete inserted a real mention, which links to the profile, not just the name
+      cy.findFirstPostInFeed().within(() => {
+        cy.get(`[data-cy="post-text"] a[href="/profile/${mentioned.id}"]`).should('contain.text', `@${mentioned.name}`);
+      });
+    });
+  });
+
   it('can delete a post', () => {
     const postContent = `I can delete this post! ${Date.now()}`;
     createQuickPost(postContent);
@@ -365,6 +391,27 @@ describe('posts', () => {
     // Reload and check post is still deleted
     cy.reload();
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+  });
+
+  it('can edit and delete a post from the profile posts tab', () => {
+    const postContent = `I can edit this post from my profile! ${Date.now()}`;
+    const editedContent = `I have edited this post from my profile! ${Date.now()}`;
+    createQuickPost(postContent);
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-posts"]').click();
+    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    expectTimelineContains(postContent);
+
+    editPost({ newPostContent: editedContent, filterText: postContent });
+    cy.findFirstPostInFeedFiltered(editedContent).should('be.visible');
+
+    deletePost({ filterText: editedContent });
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', editedContent);
+
+    // Reload and check post is still deleted
+    cy.reload();
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', editedContent);
   });
 
   it("cannot delete other profile's post", () => {
@@ -462,7 +509,7 @@ describe('posts', () => {
 
     cy.get<Interception>('@putTag').then((interception) => {
       const { authorId, postId } = taggedPostFromInterception(interception);
-      waitForNexusPostTags(authorId, postId, [tag1, tag2, tag3]);
+      waitForNexus(postTagsIndexed({ authorId, id: postId }, [tag1, tag2, tag3]));
     });
 
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
@@ -485,6 +532,84 @@ describe('posts', () => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
+    });
+  });
+
+  it("can tag another profile's post from the feed and from their profile", () => {
+    const stamp = Date.now();
+    const postContent = `Tag my post from anywhere! ${stamp}`;
+    const feedTag = `feed${String(stamp).slice(-6)}`;
+    const profileTag = `prof${String(stamp).slice(-6)}`;
+    const expectTagsOnPost = (tags: string[]) => {
+      expectTimelineContains(postContent);
+      cy.findFirstPostInFeedFiltered(postContent).within(() => {
+        tags.forEach((tag) => {
+          cy.get(`[data-cy="post-tag"][data-tag-label="${tag}"]`).filter(':visible').should('have.length.at.least', 1);
+        });
+      });
+    };
+
+    seedUserViaApi(`Tag Target ${String(stamp).slice(-6)}`).then((author) => {
+      createPostViaApi(author, postContent).then((post) => {
+        waitForNexus(postIndexed(post));
+
+        // * tag the post from the home feed. Reach All lists authors the viewer does not follow. The
+        // feed loaded before the post existed, so it arrives through 'See new posts' unless the
+        // reach change already refetched it.
+        resetHomeFeedToAllRecent();
+        expectVisibleReachSelected('all-reach-toggle');
+        expectVisibleSortSelected('recent-sort-toggle');
+        revealPostInTimeline(postContent);
+        fastTagPostInFeed([feedTag], postContent);
+        expectTagsOnPost([feedTag]);
+
+        // * tag the same post from the Posts tab of the author's profile
+        searchForProfileByPubky(author.pubky, author.name);
+        cy.get('[data-cy="profile-filter-item-posts"]').click();
+        cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+        expectTimelineContains(postContent);
+        fastTagPostInFeed([profileTag], postContent);
+        expectTagsOnPost([feedTag, profileTag]);
+
+        waitForNexus(postTagsIndexed(post, [feedTag, profileTag]));
+        cy.reload();
+        expectTagsOnPost([feedTag, profileTag]);
+      });
+    });
+  });
+
+  it("can reply to and repost another profile's post", () => {
+    const stamp = Date.now();
+    const postToReplyTo = `Reply to my post! ${stamp}`;
+    const postToRepost = `Repost my post! ${stamp}`;
+    const replyContent = `Replying to another profile's post! ${stamp}`;
+    const repostContent = `Reposting another profile's post! ${stamp}`;
+
+    // * another profile publishes two posts the viewer has never loaded, so neither is in the
+    // viewer's local database until the feed brings it in
+    seedUserViaApi(`Reply Target ${String(stamp).slice(-6)}`).then((author) => {
+      createPostViaApi(author, postToReplyTo).then((replyTarget) => {
+        createPostViaApi(author, postToRepost).then((repostTarget) =>
+          waitForNexus(postIndexed(replyTarget), postIndexed(repostTarget)),
+        );
+      });
+
+      resetHomeFeedToAllRecent();
+      revealPostInTimeline(postToRepost);
+      expectTimelineContains(postToReplyTo);
+
+      // * reply to the first post from the home feed
+      replyToPost({ replyContent, filterText: postToReplyTo });
+      cy.findFirstPostInFeedFiltered(replyContent, CheckForNewPosts.No, WaitForNewPosts.Yes).should('be.visible');
+
+      // * repost the second with content: the repost embeds the other profile's post
+      repostPost({ repostContent, filterText: postToRepost });
+      cy.findFirstPostInFeedFilteredByType(repostContent, PostType.Repost, CheckForNewPosts.No, WaitForNewPosts.Yes)
+        .find('[data-cy="post-preview-card"]')
+        .should('contain.text', postToRepost);
+
+      // * Nexus indexed both as a reply to and a repost of the author's posts
+      waitForNexus(notificationsIndexed(author, 'reply'), notificationsIndexed(author, 'repost'));
     });
   });
 

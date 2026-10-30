@@ -398,6 +398,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
   const edit = async ({
     editPostId,
     isLockAnnouncement,
+    lockContentKind,
     originalAttachmentUris,
     preservedAttachmentUris,
     article,
@@ -508,7 +509,11 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
         const originalUris = originalAttachmentUris ?? keptUris;
         const attachmentsChanged = attachments.length > 0 || keptUris.length !== originalUris.length;
         editContentPayload = isLockAnnouncement
-          ? buildLockTeaserContent({ lock_title: lockTitle, teaser_description: content })
+          ? buildLockTeaserContent({
+              lock_title: lockTitle,
+              teaser_description: content,
+              content_kind: lockContentKind,
+            })
           : content.trim();
         editAttachments = attachmentsChanged
           ? { original: originalUris, kept: keptUris, added: attachments }

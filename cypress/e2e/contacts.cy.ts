@@ -1,7 +1,10 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import { BackupType, HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
-import { searchAndFollowProfile } from '../support/contacts';
+import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
+import { backupDownloadFilePath } from '../support/auth';
+import { followIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
+import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { clickUnfollowButton, reloadUntilOwnFollowingIsEmpty, unfollowUserByUsername } from '../support/profile';
 
 // cy.visit(`/profile/${pubky}`);
@@ -62,6 +65,32 @@ describe('contacts', () => {
     cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
     cy.get('[data-cy="profile-following-empty"]').should('be.visible');
     cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
+  });
+
+  it('can follow a profile from their post menu', () => {
+    const stamp = String(Date.now()).slice(-6);
+    const postContent = `Follow me from this post! ${stamp}`;
+
+    // both profiles are seeded through the API: this test is about the post menu, onboarding is covered elsewhere
+    seedUserViaApi(`Menu Author ${stamp}`, { bio: 'Follow me from my post' }).then((author) => {
+      createPostViaApi(author, postContent).then((post) => {
+        seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus', withRecoveryFile: true }).then(
+          (follower) => {
+            waitForNexus(postIndexed(post), userIndexed(follower));
+            cy.signInWithEncryptedFile(backupDownloadFilePath(follower.name));
+            followFromPostMenu(postContent);
+            waitForNexus(followIndexed(follower, author));
+
+            // the author is listed under the follower's following
+            goToProfilePageFromHeader();
+            cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '1').click();
+            cy.get('[data-cy="profile-connections-list"]').within(() => {
+              cy.get('[data-cy="profile-follower-item-name"]').should('have.text', author.name);
+            });
+          },
+        );
+      });
+    });
   });
 
   it('follow, be followed, and make a friend', () => {

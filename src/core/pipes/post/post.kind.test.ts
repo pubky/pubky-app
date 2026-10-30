@@ -5,6 +5,7 @@ import {
   inferPostKindForCreate,
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
+  toLockContentKind,
 } from '@/pipes/post/post.kind';
 
 describe('inferPostKindForCreate', () => {
@@ -293,5 +294,33 @@ describe('inferAnnouncementKind', () => {
   it('allows the kinds a teaser can take', () => {
     expect(inferAnnouncementKind({ content: 'hello' })).toBe(PubkyAppPostKind.Short);
     expect(inferAnnouncementKind({ content: 'see https://pubky.app' })).toBe(PubkyAppPostKind.Link);
+  });
+});
+
+describe('toLockContentKind', () => {
+  it.each([
+    [PubkyAppPostKind.Short, 'note'],
+    [PubkyAppPostKind.Long, 'article'],
+    [PubkyAppPostKind.Image, 'image'],
+    [PubkyAppPostKind.Video, 'video'],
+    [PubkyAppPostKind.Link, 'link'],
+    [PubkyAppPostKind.File, 'file'],
+  ])('saves kind %s as %s', (kind, name) => {
+    expect(toLockContentKind(kind)).toBe(name);
+  });
+
+  it('saves nothing for a kind a create never infers', () => {
+    expect(toLockContentKind(PubkyAppPostKind.Collection)).toBeUndefined();
+    expect(toLockContentKind(PubkyAppPostKind.Unknown)).toBeUndefined();
+  });
+
+  // The existing order decides a mixed draft: video over image over file, and audio is a file.
+  it.each([
+    ['a video beside an image', ['video/mp4', 'image/png'], 'video'],
+    ['an image beside a pdf', ['image/png', 'application/pdf'], 'image'],
+    ['audio', ['audio/mpeg'], 'file'],
+  ])('names %s', (_name, types, name) => {
+    const attachments = types.map((type, i) => new File(['x'], `f${i}`, { type }));
+    expect(toLockContentKind(inferPostKindForCreate({ content: '', attachments, isArticle: false }))).toBe(name);
   });
 });

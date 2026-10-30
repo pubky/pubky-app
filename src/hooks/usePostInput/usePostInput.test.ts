@@ -575,6 +575,25 @@ describe('usePostInput', () => {
       });
     });
 
+    it('passes the stored lock content kind to the edit method (#2433)', async () => {
+      mockContent = 'Updated teaser';
+      const editLock = {
+        lockUrl: 'pubky://author/pub/app.locks/LOCK1.json',
+        title: 'Private note',
+        contentKind: 'article',
+      };
+
+      const { result } = renderHook(() => usePostInput({ variant: 'edit', editPostId: 'post-to-edit-id', editLock }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        expect.objectContaining({ isLockAnnouncement: true, lockContentKind: 'article' }),
+      );
+    });
+
     it('passes the seeded attachment snapshot to edit as originalAttachmentUris', async () => {
       mockContent = 'Updated post content';
       const editAttachmentUris = ['pubky://user/pub/pubky.app/files/F1', 'pubky://user/pub/pubky.app/files/F2'];

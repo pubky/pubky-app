@@ -186,19 +186,76 @@ describe('LockedPostCard', () => {
     expect(onChange).toHaveBeenCalledWith('Updated');
   });
 
-  it('swaps the icon (StickyNote → Check) while the title is being edited', () => {
+  it('keeps the post type icon while the title is being edited, with no checkmark', () => {
     render(<LockedPostCard title="" editableTitle={{ value: '', onChange: vi.fn() }} />);
-    const input = screen.getByRole('textbox', { name: 'Lock title' });
+
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Lock title' }));
 
     expect(document.querySelector('.lucide-sticky-note')).toBeInTheDocument();
     expect(document.querySelector('.lucide-check')).not.toBeInTheDocument();
+  });
 
-    fireEvent.focus(input);
-    expect(document.querySelector('.lucide-check')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-sticky-note')).not.toBeInTheDocument();
+  it('starts editing the title from the pencil button after it', () => {
+    render(<LockedPostCard title="" editableTitle={{ value: 'My quote', onChange: vi.fn() }} />);
 
-    fireEvent.blur(input);
-    expect(document.querySelector('.lucide-check')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit lock title' }));
+
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveFocus();
+  });
+
+  it('disables the pencil button together with the title', () => {
+    render(<LockedPostCard title="" editableTitle={{ value: 'My quote', onChange: vi.fn(), disabled: true }} />);
+
+    expect(screen.getByRole('button', { name: 'Edit lock title' })).toBeDisabled();
+  });
+
+  it.each(['Enter', 'Escape'])('ends editing on %s and keeps the typed title', (key) => {
+    const onChange = vi.fn();
+    render(<LockedPostCard title="" editableTitle={{ value: 'My quote', onChange }} />);
+    const input = screen.getByRole('textbox', { name: 'Lock title' });
+
+    input.focus();
+    fireEvent.keyDown(input, { key });
+
+    expect(input).not.toHaveFocus();
+    expect(input).toHaveValue('My quote');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps editing on an Enter that confirms an IME composition', () => {
+    render(<LockedPostCard title="" editableTitle={{ value: '제목', onChange: vi.fn() }} />);
+    const input = screen.getByRole('textbox', { name: 'Lock title' });
+
+    input.focus();
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+
+    expect(input).toHaveFocus();
+  });
+
+  it('makes the price a button that changes it when onChangePrice is set', () => {
+    const onChangePrice = vi.fn();
+    render(<LockedPostCard price={{ amount: '1000', asset: 'BTC' }} onChangePrice={onChangePrice} />);
+
+    // Browsers differ on the space between the hidden prefix and the price in the accessible name.
+    const priceButton = screen.getByRole('button', { name: /^Change price:\s?₿1,000$/ });
+    fireEvent.click(priceButton);
+    expect(onChangePrice).toHaveBeenCalledTimes(1);
+  });
+
+  it('dims only the inert Unlock, not the whole pill, when the price can be changed', () => {
+    render(<LockedPostCard price={{ amount: '1000', asset: 'BTC' }} onChangePrice={vi.fn()} />);
+
+    const unlock = screen.getByRole('button', { name: 'Unlock' });
+    expect(unlock).toBeDisabled();
+    expect(unlock).toHaveClass('disabled:opacity-50');
+    expect(unlock.parentElement).not.toHaveClass('opacity-50');
+  });
+
+  it('shows the price as plain text without onChangePrice', () => {
+    render(<LockedPostCard price={{ amount: '1000', asset: 'BTC' }} />);
+
+    expect(screen.getByText('₿1,000')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Change price/ })).not.toBeInTheDocument();
   });
 
   it('shows a static, non-editable title in reader mode', () => {
@@ -210,5 +267,40 @@ describe('LockedPostCard', () => {
   it('applies two-line clamping and anywhere wrapping to a reader title', () => {
     render(<LockedPostCard title="A long lock title" />);
     expect(screen.getByRole('heading', { level: 4 })).toHaveClass('line-clamp-2', 'wrap-anywhere');
+  });
+
+  // #2433: one helper picks the icon and the untitled fallback from the saved kind.
+  describe('content kind', () => {
+    it.each([
+      ['image', 'Locked image', 'lucide-image'],
+      ['article', 'Locked article', 'lucide-newspaper'],
+      ['video', 'Locked video', 'lucide-circle-play'],
+      ['file', 'Locked file', 'lucide-download'],
+      ['link', 'Locked content', 'lucide-link'],
+      ['note', 'Locked content', 'lucide-sticky-note'],
+      ['podcast', 'Locked content', 'lucide-sticky-note'],
+      [undefined, 'Locked content', 'lucide-sticky-note'],
+    ] as const)('shows %s as "%s" with its icon when untitled', (contentKind, title, iconClass) => {
+      const { container } = render(<LockedPostCard title="" contentKind={contentKind} price={null} />);
+
+      expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent(title);
+      expect(container.querySelector(`svg.${iconClass}`)).toBeInTheDocument();
+    });
+
+    it('keeps the creator title and only swaps the icon', () => {
+      const { container } = render(<LockedPostCard title="Sunset" contentKind="image" price={null} />);
+
+      expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Sunset');
+      expect(container.querySelector('svg.lucide-image')).toBeInTheDocument();
+    });
+
+    it('uses the kind icon and placeholder in the composer card', () => {
+      const { container } = render(
+        <LockedPostCard contentKind="file" price={null} editableTitle={{ value: '', onChange: vi.fn() }} />,
+      );
+
+      expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveAttribute('placeholder', 'Locked file');
+      expect(container.querySelector('svg.lucide-download')).toBeInTheDocument();
+    });
   });
 });

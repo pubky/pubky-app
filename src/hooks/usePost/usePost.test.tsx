@@ -1649,6 +1649,29 @@ describe('usePost', () => {
         expect(result.current.lockTitle).toBe('');
       });
 
+      // #2433: an edit rebuilt the envelope from the two text fields and would drop the saved kind.
+      it('writes the stored content kind back into the edited announcement', async () => {
+        const { result } = renderHook(() => usePost());
+
+        act(() => {
+          result.current.setContent('Updated teaser');
+          result.current.setLockTitle('Updated title');
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            isLockAnnouncement: true,
+            lockContentKind: 'image',
+          });
+        });
+
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: '{"lock_title":"Updated title","teaser_description":"Updated teaser","content_kind":"image"}',
+        });
+      });
+
       it('should commit content-only (no attachments payload) when the attachment set is unchanged', async () => {
         const { result } = renderHook(() => usePost());
         const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
