@@ -358,7 +358,7 @@ describe('FeedNormalizer', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-        expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+        expect(appError.service).toBe(ErrorService.SocialSpecs);
         expect(appError.operation).toBe('createFeed');
         expect(appError.context).toEqual({ params, userId: testData.userPubky });
         expect(appError.message).toBe(errorMessage);

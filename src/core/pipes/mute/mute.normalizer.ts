@@ -18,7 +18,7 @@ export class MuteNormalizer {
       return builder.createMute(normalizedMutee);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createMute',
         context: { muter, mutee },
       });

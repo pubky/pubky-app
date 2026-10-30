@@ -95,7 +95,7 @@ describe('FollowNormalizer', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.service).toBe(ErrorService.SocialSpecs);
           expect(appError.operation).toBe('createFollow');
           expect(appError.context).toEqual({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
           expect(appError.message).toBe(errorMessage);
@@ -198,7 +198,7 @@ describe('FollowNormalizer', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.service).toBe(ErrorService.SocialSpecs);
           expect(appError.operation).toBe('createFollow');
         }
       });

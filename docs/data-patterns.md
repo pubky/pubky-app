@@ -191,7 +191,7 @@ export class PostNormalizer {
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createPost',
         context: { post, specsPubky },
       });

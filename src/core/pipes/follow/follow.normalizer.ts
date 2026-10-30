@@ -19,7 +19,7 @@ export class FollowNormalizer {
       return result;
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createFollow',
         context: { follower, followee },
       });

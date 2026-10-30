@@ -107,7 +107,7 @@ describe('BookmarkNormalizer', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.service).toBe(ErrorService.SocialSpecs);
           expect(appError.operation).toBe('createBookmark');
           expect(appError.context).toEqual({ postUri, userId: TEST_PUBKY.USER_1 });
           expect(appError.message).toBe(errorMessage);
@@ -129,7 +129,7 @@ describe('BookmarkNormalizer', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.service).toBe(ErrorService.SocialSpecs);
           expect(appError.operation).toBe('createBookmark');
         }
       });
@@ -222,7 +222,7 @@ describe('BookmarkNormalizer', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.service).toBe(ErrorService.SocialSpecs);
           expect(appError.operation).toBe('createBookmark');
           expect(appError.context).toHaveProperty('postUri', invalidUri);
           expect(appError.context).toHaveProperty('userId', TEST_PUBKY.USER_1);

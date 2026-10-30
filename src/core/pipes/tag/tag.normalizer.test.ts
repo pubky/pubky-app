@@ -108,7 +108,7 @@ describe('TagNormalizer', () => {
             const appError = error as AppError;
             expect(appError.category).toBe(ErrorCategory.Validation);
             expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-            expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+            expect(appError.service).toBe(ErrorService.SocialSpecs);
             expect(appError.operation).toBe('createTag');
             expect(appError.context).toEqual({ uri, label, pubky: TEST_PUBKY.USER_1 });
             expect(appError.message).toBe(errorMessage);
@@ -176,7 +176,7 @@ describe('TagNormalizer', () => {
             const appError = error as AppError;
             expect(appError.category).toBe(ErrorCategory.Validation);
             expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-            expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+            expect(appError.service).toBe(ErrorService.SocialSpecs);
             expect(appError.operation).toBe('createTag');
           }
         });
@@ -377,7 +377,7 @@ describe('TagNormalizer', () => {
             const appError = error as AppError;
             expect(appError.category).toBe(ErrorCategory.Validation);
             expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-            expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+            expect(appError.service).toBe(ErrorService.SocialSpecs);
             expect(appError.operation).toBe('createTagFromParams');
             expect(appError.context).toEqual(params);
           }

@@ -122,7 +122,7 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
     const reach = reachToString(feed.reach);
     if (!isProfileTagReachSupported(reach)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Profile tags are not supported for this feed reach', {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'buildFeedStreamId',
         context: { reach },
       });

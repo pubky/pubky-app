@@ -41,7 +41,7 @@ export class FeedNormalizer {
       });
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createFeed',
         context: { params, userId },
       });
