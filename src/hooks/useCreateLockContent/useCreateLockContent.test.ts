@@ -1,5 +1,4 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   LOCK_TEASER_MAX_CHARACTER_LENGTH,
@@ -10,7 +9,6 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY } from '@/libs/image/imageUploadSizeLimit';
-import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useCreateLockContent } from './useCreateLockContent';
 
 const mocks = vi.hoisted(() => ({
@@ -36,32 +34,12 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'alice' }),
 }));
 
-vi.mock('pubky-app-specs', () => ({
-  PubkyAppPostKind: { Short: 0, Long: 1 },
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {
-      mocks.post(content, kind, parent, embed, attachments);
-    }
-    toJson() {
-      return { content: this.content, attachments: this.attachments };
-    }
-  },
-}));
-
-const decode = (bytes: Uint8Array) => JSON.parse(new TextDecoder().decode(bytes));
 const makeFile = (name: string, type: string) => new File(['xx'], name, { type });
-const descriptor = (path: string): TGuardedResource => ({ path, hash: 'HASH', content_type: 'image/png', size: 2 });
 
 const teaser = { lock_title: 'My quote', teaser_description: 'a public teaser' };
 
 const params = (lockedAttachments: File[] = [], announcementAttachments: File[] = []) => ({
-  lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: lockedAttachments },
+  lockedPost: { content: 'locked body', kind: 'short' as const, attachments: lockedAttachments },
   announcement: { teaser, attachments: announcementAttachments, tags: ['bitcoin'] },
   lockConfig: { amount: '1000', asset: 'BTC' as const },
 });
@@ -122,36 +100,13 @@ describe('useCreateLockContent', () => {
     });
   });
 
-  it('builds the locked post JSON pointing at the uploaded attachment paths', async () => {
+  it('hands the captured post to the application, which builds the guarded primary over the uploads', async () => {
     const { result } = renderHook(() => useCreateLockContent(params([makeFile('a.png', 'image/png')])));
     await act(() => result.current.publish());
 
-    const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    // The controller passes the guarded-bytes owner (`bob`), so the URIs point at that account — not alice.
-    const postFile = buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob');
-
-    expect(postFile.contentType).toBe('application/octet-stream');
-    expect(decode(postFile.bytes)).toEqual({
-      content: 'locked body',
-      attachments: ['pubky://bob/priv/app.locks/content/id-1'],
-    });
-  });
-
-  it('omits attachments from the locked post when there are none', async () => {
-    const { result } = renderHook(() => useCreateLockContent(params()));
-    await act(() => result.current.publish());
-
-    const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    expect(decode(buildPost([]).bytes).attachments).toBeNull();
-  });
-
-  // The pubky.app account must never stand in for the missing owner — the two can differ (A ≠ B).
-  it('refuses to build a post with attachments but no owner pubky', async () => {
-    const { result } = renderHook(() => useCreateLockContent(params()));
-    await act(() => result.current.publish());
-
-    const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    expect(() => buildPost([descriptor('/priv/app.locks/content/id-1')])).toThrow();
+    expect(mocks.createLockContent).toHaveBeenCalledWith(
+      expect.objectContaining({ post: { content: 'locked body', kind: 'short' } }),
+    );
   });
 
   // The announcement is posted by the pubky.app account (`alice`), but the lock URL points at the

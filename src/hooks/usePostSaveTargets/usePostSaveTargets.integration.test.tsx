@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { usePostSaveTargets } from '@/hooks/usePostSaveTargets/usePostSaveTargets';
@@ -7,6 +7,7 @@ import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { mockSession } from '@/test-utils/pubky';
 
 vi.mock('@/molecules/Toaster/toast');
@@ -16,7 +17,7 @@ const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 describe('concurrent picker regression', () => {
   beforeEach(() => {
     useAuthStore.setState({ currentUserPubky: AUTHOR, session: mockSession(), restoreStatus: 'ready' });
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    stubMemoryHomeserver(AUTHOR);
   });
 
   afterEach(() => vi.restoreAllMocks());
@@ -29,7 +30,7 @@ describe('concurrent picker regression', () => {
       const collectionId = await PostController.commitCreateCollection({
         authorId: AUTHOR,
         name: 'Reading',
-        items: initiallySaved ? [postUriBuilder(pubky, id)] : [],
+        items: initiallySaved ? [buildUri(pubky, 'post', id)] : [],
       });
       const first = renderHook(() => usePostSaveTargets(postId));
       const second = renderHook(() => usePostSaveTargets(postId));
@@ -37,8 +38,8 @@ describe('concurrent picker regression', () => {
       await waitFor(() => expect(target(first)?.isSaved).toBe(initiallySaved));
       await waitFor(() => expect(target(second)?.isSaved).toBe(initiallySaved));
 
-      const pendingFirstRequest = Promise.withResolvers<void>();
-      vi.mocked(HomeserverService.request).mockReturnValueOnce(pendingFirstRequest.promise);
+      const pendingFirstRequest = Promise.withResolvers<undefined>();
+      vi.mocked(HomeserverService.putBlob).mockReturnValueOnce(pendingFirstRequest.promise);
       let firstUpdate!: Promise<boolean>;
       act(() => {
         firstUpdate = first.result.current.toggleCollection(collectionId);
@@ -54,7 +55,7 @@ describe('concurrent picker regression', () => {
       await waitFor(() => expect(target(first)?.isSaved).toBe(initiallySaved));
       await waitFor(() => expect(target(second)?.isUpdating).toBe(false));
       await act(async () => {
-        pendingFirstRequest.resolve();
+        pendingFirstRequest.resolve(undefined);
         await firstUpdate;
       });
 

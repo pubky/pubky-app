@@ -1,11 +1,13 @@
-import type { PubkyAppCollectionContent } from 'pubky-app-specs';
-import { type CollectionLayout, DEFAULT_COLLECTION_LAYOUT, isCollectionLayout } from '@/config/collections';
+import { DEFAULT_COLLECTION_LAYOUT, isCollectionLayout } from '@/config/collections';
+import type { CollectionContent } from '@/models/post/collection/collectionPost.types';
 
 /** Parsed Collection envelope with a normalized, backwards-compatible layout. */
-export type ParsedCollectionContent = PubkyAppCollectionContent & { layout: CollectionLayout };
+export type ParsedCollectionContent = CollectionContent;
 
 /**
- * Parses a Collection post's `content` JSON envelope into `PubkyAppCollectionContent`.
+ * Parses a Collection post's `content` JSON envelope, in either spelling: v1 items are
+ * `{ uri, note }` objects, 0.x items plain URIs. Item notes are not shown, so they are dropped
+ * here; the write side merges onto the stored envelope and keeps them.
  *
  * Returns `null` when:
  *   - `raw` is null / undefined / empty
@@ -22,9 +24,9 @@ export type ParsedCollectionContent = PubkyAppCollectionContent & { layout: Coll
 export function parseCollectionContent(raw: string | null | undefined): ParsedCollectionContent | null {
   if (!raw) return null;
 
-  let content: Partial<PubkyAppCollectionContent> & { layout?: unknown };
+  let content: { name?: unknown; description?: unknown; items?: unknown; cover_image?: unknown; layout?: unknown };
   try {
-    content = JSON.parse(raw) as Partial<PubkyAppCollectionContent>;
+    content = JSON.parse(raw) as typeof content;
   } catch {
     return null;
   }
@@ -35,8 +37,19 @@ export function parseCollectionContent(raw: string | null | undefined): ParsedCo
   return {
     name: content.name,
     description: typeof content.description === 'string' ? content.description : undefined,
-    items: Array.isArray(content.items) ? content.items : undefined,
+    items: Array.isArray(content.items) ? collectionItemUris(content.items) : undefined,
     cover_image: typeof content.cover_image === 'string' ? content.cover_image : undefined,
     layout: isCollectionLayout(content.layout) ? content.layout : DEFAULT_COLLECTION_LAYOUT,
   };
+}
+
+/** The URIs of a stored item list: v1 `{ uri, note }` objects or 0.x strings; anything else is skipped. */
+export function collectionItemUris(items: readonly unknown[]): string[] {
+  return items.flatMap((item) => {
+    if (typeof item === 'string') return [item];
+    if (typeof item === 'object' && item !== null && typeof (item as { uri?: unknown }).uri === 'string') {
+      return [(item as { uri: string }).uri];
+    }
+    return [];
+  });
 }

@@ -114,9 +114,11 @@ const selectLocalFiles = (posts: LocalFilesStore['posts']) =>
     selector({
       profile: null,
       posts,
+      articleCovers: {},
       collections: {},
       setProfile: vi.fn(),
       setPostAttachments: vi.fn(),
+      setArticleCover: vi.fn(),
       setCollectionCover: vi.fn(),
       reset: vi.fn(),
     }),

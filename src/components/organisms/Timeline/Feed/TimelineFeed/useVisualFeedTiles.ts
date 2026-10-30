@@ -8,8 +8,7 @@ import { ModerationController } from '@/controllers/moderation/moderation';
 import { PostController } from '@/controllers/post/post';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { Logger } from '@/libs/logger/logger';
-import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
@@ -78,14 +77,15 @@ const EMPTY_SNAPSHOT: VisualFeedSnapshot = {
  * them wherever they fit.
  */
 /**
- * Articles carry inline body images in `attachments`, but only the cover
- * (slot-0 rule) is tile-worthy media — inline images render inside the
- * article body, never as standalone visual tiles. Non-articles pass through.
+ * Articles carry inline body media in `attachments`, but only the cover is
+ * tile-worthy media — inline media renders inside the article body, never as
+ * standalone visual tiles. `resolveArticleCover` says where the cover is (the
+ * envelope, or slot 0 of a 0.x article). Non-articles pass through.
  */
-function visualMediaAttachments<T>(post: EnrichedPostDetails, attachments: readonly T[]): readonly T[] {
+function visualMediaAttachments(post: EnrichedPostDetails, attachments: readonly string[]): readonly string[] {
   if (post.kind !== 'long') return attachments;
-  const hasCover = attachments.length > 0 && !articleHasInlineSlotZero(parseArticleContent(post.content)?.body ?? '');
-  return attachments.slice(0, hasCover ? 1 : 0);
+  const { cover } = resolveArticleCover({ content: post.content, attachments });
+  return cover ? [cover] : [];
 }
 
 function buildPlaceholderTile(postId: string, placeholderKind: VisualPlaceholderKind, indexedAt = 0): VisualTile {
@@ -319,6 +319,7 @@ export function useVisualFeedTiles({
   showUnavailablePosts?: boolean;
 }) {
   const localPostAttachments = useLocalFilesStore((state) => state.posts);
+  const localArticleCovers = useLocalFilesStore((state) => state.articleCovers);
   const postIdsKey = React.useMemo(() => postIds.join('|'), [postIds]);
   const [, forceProbeRefresh] = React.useReducer((count) => count + 1, 0);
   // Post ids whose ensure-fetch has settled (success OR failure). The batch
@@ -430,9 +431,13 @@ export function useVisualFeedTiles({
           return showUnavailablePosts ? [buildPlaceholderTile(postId, 'deleted', post.indexed_at)] : [];
         }
 
-        const localAttachments = localPostAttachments[postId];
+        // An article's local media is its cover entry alone (its inline entries are body media)
+        const localAttachments =
+          post.kind === 'long'
+            ? localArticleCovers[postId] && [localArticleCovers[postId]]
+            : localPostAttachments[postId];
         if (localAttachments?.length) {
-          const postTiles = visualMediaAttachments(post, localAttachments).flatMap((attachment, index) => {
+          const postTiles = localAttachments.flatMap((attachment, index) => {
             const tile = buildLocalTile(post, attachment, index);
             return tile ? [tile] : [];
           });
@@ -481,7 +486,7 @@ export function useVisualFeedTiles({
     // consumers must treat as loading — a fully-paged feed (hasMore false) would
     // otherwise flash its empty state for the frame(s) before the first
     // liveQuery emission, e.g. when a collection viewer switches to Visual.
-    [postIdsKey, localPostAttachments, settledDetailPostIds, showUnavailablePosts],
+    [postIdsKey, localPostAttachments, localArticleCovers, settledDetailPostIds, showUnavailablePosts],
   );
   const hasPendingSnapshot = snapshot === undefined;
   const missingFileUris = React.useMemo(() => snapshot?.missingFileUris ?? [], [snapshot?.missingFileUris]);

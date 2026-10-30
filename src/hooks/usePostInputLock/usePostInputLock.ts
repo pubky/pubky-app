@@ -13,7 +13,7 @@ import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import { inferPostKindForCreate } from '@/pipes/post/post.kind';
+import { inferPostKindForCreate, toLocalPostKind } from '@/pipes/post/post.kind';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -122,11 +122,13 @@ export function usePostInputLock({
       content: lockDraft?.isArticle
         ? buildArticleContent(lockDraft.articleTitle, lockDraft.serializedArticle.body)
         : (lockDraft?.content ?? ''),
-      kind: inferPostKindForCreate({
-        content: lockDraft?.content ?? '',
-        attachments: lockDraft?.attachments,
-        isArticle: lockDraft?.isArticle,
-      }),
+      kind: toLocalPostKind(
+        inferPostKindForCreate({
+          content: lockDraft?.content ?? '',
+          attachments: lockDraft?.attachments,
+          isArticle: lockDraft?.isArticle,
+        }),
+      ),
       attachments: [
         ...(lockDraft?.attachments ?? []),
         ...(lockDraft?.isArticle ? lockDraft.serializedArticle.inlineFiles : []),

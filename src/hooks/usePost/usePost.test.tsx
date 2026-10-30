@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
@@ -2208,7 +2209,8 @@ describe('usePost', () => {
 });
 
 describe('usePost — article inline images', () => {
-  const AUTHOR = 'test-user-id';
+  // A real key: the session names a staged file by the data model's media URI for it
+  const AUTHOR = fakeOwner(1);
   const fileUri = (id: string) => `pubky://${AUTHOR}/pub/pubky.app/files/${id}`;
 
   beforeEach(() => {
@@ -2277,7 +2279,7 @@ describe('usePost — article inline images', () => {
       expect(FileController.commitCreate).not.toHaveBeenCalled();
     });
 
-    it('offsets inline slots when a cover file is present', async () => {
+    it('keeps the cover out of the slots: inline media numbers from 0 and the cover goes on its own', async () => {
       mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
       const cover = new File(['x'], 'cover.png', { type: 'image/png' });
       const file = new File(['x'], 'img.png', { type: 'image/png' });
@@ -2293,10 +2295,18 @@ describe('usePost — article inline images', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
-          attachments: [cover, file],
+          content: JSON.stringify({ title: 'My Article', body: '![A](attachment:0)' }),
+          attachments: [file],
+          coverImage: cover,
         }),
       );
+      // The cover has its own local entry; the inline entries align with the attachments
+      expect(useLocalFilesStore.getState().articleCovers[`${AUTHOR}:post1`]).toEqual(
+        expect.objectContaining({ name: 'cover.png' }),
+      );
+      expect(useLocalFilesStore.getState().posts[`${AUTHOR}:post1`]).toEqual([
+        expect.objectContaining({ name: 'img.png' }),
+      ]);
     });
 
     it('leaves nothing on the homeserver and keeps the staged file when the publish fails', async () => {
@@ -2524,22 +2534,49 @@ describe('usePost — article inline images', () => {
       await act(async () => {
         await result.current.edit({
           editPostId: `${AUTHOR}:post1`,
-          originalAttachmentUris: [coverUri, oldInline],
+          originalAttachmentUris: [oldInline],
+          originalCoverUri: coverUri,
         });
       });
 
-      // The staged file went up before the commit, under the URI the order carries
+      // The staged file went up before the commit, under the URI the order carries; the cover is
+      // no slot, so the inline slots count from 0 and the kept cover rides in `coverImage`
       expect(FileController.commitCreate).toHaveBeenCalledWith({ file: reusedFile, pubky: AUTHOR });
       expect(mockPostControllerEdit).toHaveBeenCalledWith({
         compositePostId: `${AUTHOR}:post1`,
-        content: JSON.stringify({ title: 'My Article', body: '![Old](attachment:1)\n\n![Reused](attachment:2)' }),
+        content: JSON.stringify({ title: 'My Article', body: '![Old](attachment:0)\n\n![Reused](attachment:1)' }),
         attachments: {
-          original: [coverUri, oldInline],
-          kept: [coverUri, oldInline],
+          original: [oldInline],
+          kept: [oldInline],
           added: [],
           addedUris: [fileUri('reused')],
-          nextOrder: [coverUri, oldInline, fileUri('reused')],
+          nextOrder: [oldInline, fileUri('reused')],
         },
+        coverImage: coverUri,
+      });
+    });
+
+    it("moves a 0.x article's slot-0 cover into the envelope even when nothing else changed", async () => {
+      mockPostControllerEdit.mockResolvedValue(undefined);
+      const coverUri = fileUri('cover');
+      const inline = fileUri('inline');
+      const result = await setupArticle(`![A](${inline})`, {
+        existing: [mockExistingAttachment(coverUri)],
+      });
+
+      await act(async () => {
+        await result.current.edit({
+          editPostId: `${AUTHOR}:post1`,
+          originalAttachmentUris: [coverUri, inline],
+          originalCoverUri: coverUri,
+        });
+      });
+
+      expect(mockPostControllerEdit).toHaveBeenCalledWith({
+        compositePostId: `${AUTHOR}:post1`,
+        content: JSON.stringify({ title: 'My Article', body: '![A](attachment:0)' }),
+        attachments: { original: [coverUri, inline], kept: [inline], added: [], addedUris: [], nextOrder: [inline] },
+        coverImage: coverUri,
       });
     });
 
@@ -2554,18 +2591,20 @@ describe('usePost — article inline images', () => {
       await act(async () => {
         await result.current.edit({
           editPostId: `${AUTHOR}:post1`,
-          originalAttachmentUris: [coverUri, inline],
+          originalAttachmentUris: [inline],
+          originalCoverUri: coverUri,
         });
       });
 
       expect(mockPostControllerEdit).toHaveBeenCalledWith({
         compositePostId: `${AUTHOR}:post1`,
-        content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
+        content: JSON.stringify({ title: 'My Article', body: '![A](attachment:0)' }),
         attachments: undefined,
+        coverImage: undefined,
       });
     });
 
-    it('uploads a replacement cover before committing and places it at slot 0', async () => {
+    it('uploads a replacement cover before committing and sends it as the envelope cover', async () => {
       mockPostControllerEdit.mockResolvedValue(undefined);
       const newCoverUri = fileUri('new-cover');
       vi.mocked(FileController.commitCreate).mockResolvedValue(newCoverUri);
@@ -2576,20 +2615,16 @@ describe('usePost — article inline images', () => {
       await act(async () => {
         await result.current.edit({
           editPostId: `${AUTHOR}:post1`,
-          originalAttachmentUris: [oldCoverUri],
+          originalAttachmentUris: [],
+          originalCoverUri: oldCoverUri,
         });
       });
 
       expect(FileController.commitCreate).toHaveBeenCalledWith({ file: cover, pubky: AUTHOR });
       expect(mockPostControllerEdit).toHaveBeenCalledWith(
         expect.objectContaining({
-          attachments: {
-            original: [oldCoverUri],
-            kept: [],
-            added: [],
-            addedUris: [newCoverUri],
-            nextOrder: [newCoverUri],
-          },
+          attachments: { original: [], kept: [], added: [], addedUris: [], nextOrder: [] },
+          coverImage: newCoverUri,
         }),
       );
     });
@@ -2612,8 +2647,12 @@ describe('usePost — article inline images', () => {
         await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [keptInline] });
       });
 
+      expect(useLocalFilesStore.getState().articleCovers[`${AUTHOR}:post1`]).toEqual({
+        type: 'image/png',
+        name: 'new-cover.png',
+        urls: { main: 'blob:mock-url', feed: 'blob:mock-url' },
+      });
       expect(useLocalFilesStore.getState().posts[`${AUTHOR}:post1`]).toEqual([
-        { type: 'image/png', name: 'new-cover.png', urls: { main: 'blob:mock-url', feed: 'blob:mock-url' } },
         {
           type: 'image/png',
           name: 'kept.png',
@@ -2767,7 +2806,8 @@ describe('usePost — article inline images', () => {
       await act(async () => {
         await result.current.edit({
           editPostId: `${AUTHOR}:post1`,
-          originalAttachmentUris: [coverUri, referencedUri, unseenUri],
+          originalAttachmentUris: [referencedUri, unseenUri],
+          originalCoverUri: coverUri,
           preservedAttachmentUris: [unseenUri],
         });
       });
@@ -2776,8 +2816,9 @@ describe('usePost — article inline images', () => {
       // nothing diffed into removals (nextOrder equals the original set)
       expect(mockPostControllerEdit).toHaveBeenCalledWith({
         compositePostId: `${AUTHOR}:post1`,
-        content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
+        content: JSON.stringify({ title: 'My Article', body: '![A](attachment:0)' }),
         attachments: undefined, // element-wise equal to original → content-only edit
+        coverImage: undefined,
       });
     });
 

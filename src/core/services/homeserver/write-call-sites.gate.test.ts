@@ -130,6 +130,8 @@ describe('homeserver write call sites', () => {
       'ProfileApplication.commitCreate': 'the first profile.json, built from the form, not a read',
       'ProfileApplication.deleteFile': 'account deletion: a DELETE has no body to go stale',
       'LocksApplication.replicateUnlockedContent': 'the replica bytes are fixed by the unlocked content',
+      'PostApplication.commitCreate': 'the first version of a post, built from the composer, not a read',
+      'PostApplication.commitDelete': 'a DELETE has no body to go stale',
     };
     const offenders = files
       .filter(({ path, code }) => path !== HOMESERVER_SERVICE && /\bretryHomeserverWriteAfterReread\s*\(/.test(code))

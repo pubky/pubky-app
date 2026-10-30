@@ -66,8 +66,9 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
 };
 
 /**
- * Every file that matched when the gate landed (2026-10-30, 55 files). Each child PR of
- * `feat/social-v1` deletes the entries it ports; the cleanup PR empties the list.
+ * Every file that matched when the gate landed (2026-10-30, 55 files; 36 after the posts, media,
+ * articles, collections and Locks port). Each child PR of `feat/social-v1` deletes the entries
+ * it ports; the cleanup PR empties the list.
  */
 const LEGACY_RATCHET: readonly string[] = [
   'src/components/organisms/CustomFeedDialog/CustomFeedDialog.tsx',
@@ -77,53 +78,34 @@ const LEGACY_RATCHET: readonly string[] = [
   'src/core/application/feed/feed.types.ts',
   'src/core/application/mute/mute.ts',
   'src/core/application/notification/notification.ts',
-  'src/core/application/post/post.ts',
-  'src/core/application/post/post.types.ts',
   'src/core/application/profile/profile.ts',
   'src/core/application/profile/profile.types.ts',
   'src/core/application/user/user.ts',
   'src/core/controllers/auth/auth.ts',
   'src/core/controllers/bookmark/bookmark.ts',
   'src/core/controllers/feed/feed.types.ts',
-  'src/core/controllers/locks/locks.ts',
-  'src/core/controllers/post/post.ts',
   'src/core/models/feed/feed.helpers.ts',
   'src/core/models/feed/feed.schema.ts',
   'src/core/models/feed/feed.ts',
-  'src/core/models/post/collection/collectionPost.types.ts',
   'src/core/pipes/bookmark/bookmark.normalizer.ts',
   'src/core/pipes/feed/feed.normalizer.ts',
   'src/core/pipes/feed/feed.validators.ts',
-  'src/core/pipes/file/file.normalizer.ts',
-  'src/core/pipes/file/file.types.ts',
   'src/core/pipes/follow/follow.normalizer.ts',
   'src/core/pipes/lastRead/lastRead.normalizer.ts',
   'src/core/pipes/mute/mute.normalizer.ts',
   'src/core/pipes/notification/notification.normalizer.ts',
   'src/core/pipes/pipes.builder.ts',
   'src/core/pipes/pipes.test-utils.ts',
-  'src/core/pipes/pipes.types.ts',
-  'src/core/pipes/post/post.kind.ts',
-  'src/core/pipes/post/post.normalizer.ts',
-  'src/core/pipes/post/post.reference.ts',
   'src/core/pipes/settings/settings.normalizer.ts',
   'src/core/pipes/tag/tag.normalizer.ts',
   'src/core/pipes/user/user.normalizer.ts',
-  'src/core/services/local/post/post.ts',
-  'src/core/services/local/post/post.types.ts',
   'src/core/services/local/profile/profile.ts',
   'src/core/services/local/stream/posts/posts.ts',
   'src/core/utils/pubky-app-spec-feed-mappers.ts',
   'src/hooks/useCreateInterestsFeed/useCreateInterestsFeed.utils.ts',
-  'src/hooks/useCreateLockContent/useCreateLockContent.ts',
-  'src/hooks/useCreateLockContent/useCreateLockContent.types.ts',
   'src/hooks/useCustomFeedForm/useCustomFeedForm.ts',
   'src/hooks/useCustomFeedForm/useCustomFeedForm.types.ts',
   'src/hooks/useCustomStreamId/useCustomStreamId.ts',
-  'src/hooks/useInlineMediaUpload/useInlineMediaUpload.ts',
-  'src/hooks/usePostSaveTargets/usePostSaveTargets.ts',
-  'src/hooks/useRemoveDeletedPost/useRemoveDeletedPost.ts',
-  'src/libs/post/collectionContent.ts',
   'src/libs/utils/utils.constants.ts',
 ];
 
