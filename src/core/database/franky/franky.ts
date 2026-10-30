@@ -79,8 +79,21 @@ export function isTransientIndexedDbError(error: unknown): boolean {
   return false;
 }
 
+interface InitializeOptions {
+  /**
+   * Whether a stored-version mismatch may delete and recreate the database once this page has
+   * already done so. `true` for the page's own start-up and the user's retry (default); `false`
+   * when re-initializing after an unexpected close, so a tab running another build cannot take
+   * turns with this one recreating the database (ADR-0019).
+   */
+  allowRecreate?: boolean;
+}
+
 export class AppDatabase extends Dexie {
   private static readonly DEXIE_VERSION_MULTIPLIER = 10;
+
+  /** Set once `runInitialize` has deleted and recreated the database in this page lifetime. */
+  private recreatedThisPageLifetime = false;
 
   // User
   user_counts!: Dexie.Table<UserCountsModelSchema>;
@@ -260,7 +273,7 @@ export class AppDatabase extends Dexie {
     }
   }
 
-  async initialize(): Promise<{ wasDbReset: boolean }> {
+  async initialize({ allowRecreate = true }: InitializeOptions = {}): Promise<{ wasDbReset: boolean }> {
     if (typeof indexedDB === 'undefined') {
       Logger.warn('IndexedDB is not available in this environment. Skipping database initialization.');
       return { wasDbReset: false };
@@ -268,7 +281,7 @@ export class AppDatabase extends Dexie {
 
     for (let attempt = 1; ; attempt++) {
       try {
-        const result = await this.runInitialize();
+        const result = await this.runInitialize(allowRecreate);
 
         // A prior retry may have called this.close(), which disables Dexie's auto-open.
         // runInitialize()'s version-match path returns without opening, so guarantee the
@@ -310,7 +323,7 @@ export class AppDatabase extends Dexie {
     }
   }
 
-  private async runInitialize(): Promise<{ wasDbReset: boolean }> {
+  private async runInitialize(allowRecreate: boolean): Promise<{ wasDbReset: boolean }> {
     const dbExists = await Dexie.exists(this.name);
 
     if (!dbExists) {
@@ -339,10 +352,22 @@ export class AppDatabase extends Dexie {
     if (currentVersion === null) {
       Logger.warn('Unable to determine current database version. Recreating database...');
       await this.recreateDatabase(currentVersion, rawVersion);
+      this.recreatedThisPageLifetime = true;
       return { wasDbReset: true };
     }
 
     if (currentVersion !== DB_VERSION) {
+      // A second mismatch after this page already recreated the database means another tab, running
+      // a different build, recreated it at its own version in between. Recreating again would hand the
+      // turn back to that tab (each recreate closes the other's connection, which re-initializes it),
+      // so only an explicit request may do it; the unexpected-close path surfaces the conflict instead.
+      if (this.recreatedThisPageLifetime && !allowRecreate) {
+        throw Err.database(DatabaseErrorCode.VERSION_CONFLICT, 'Another tab is running a different app version', {
+          service: ErrorService.Local,
+          operation: 'initialize',
+          context: { currentVersion, expectedVersion: DB_VERSION },
+        });
+      }
       Logger.info(`Database version mismatch. Current: ${currentVersion}, Expected: ${DB_VERSION}`, {
         rawVersion,
         normalizedVersion: currentVersion,
@@ -350,6 +375,7 @@ export class AppDatabase extends Dexie {
         expectedInternalVersion: DB_VERSION * AppDatabase.DEXIE_VERSION_MULTIPLIER,
       });
       await this.recreateDatabase(currentVersion, rawVersion);
+      this.recreatedThisPageLifetime = true;
       return { wasDbReset: true };
     }
 
