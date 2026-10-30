@@ -302,6 +302,23 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     });
   });
 
+  it('undoes the optimistic delete without a request for a session replaced during the ownership read', async () => {
+    let current = true;
+    vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
+    fetchTaggers().mockResolvedValue({ users: ['viewer'], relationship: true, tag_uri: data.tagUrl });
+    vi.mocked(LocalTagCacheService.ownsMutation).mockImplementation(async () => {
+      current = false;
+      return true;
+    });
+    await TagApplication.commitDelete({ ...data, isCurrent: () => current });
+    expect(HomeserverService.request).not.toHaveBeenCalled();
+    const original = vi.mocked(local.delete).mock.calls[0][0];
+    expect(local.create).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedMutationId: original.mutationId, synced: true, tagUri: data.tagUrl }),
+    );
+    expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
+  });
+
   it('does not re-read ownership when the address was already stored', async () => {
     await TagApplication.commitDelete(data);
     expect(LocalTagCacheService.ownsMutation).not.toHaveBeenCalled();
