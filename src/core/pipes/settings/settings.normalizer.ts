@@ -1,4 +1,4 @@
-import { baseUriBuilder } from 'pubky-app-specs';
+import { APP_PRIVATE_PATH, APP_SETTINGS_FILE, LEGACY_SETTINGS_PATH } from '@/config/app-files';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import {
@@ -46,8 +46,8 @@ export interface SettingsNormalizerResult {
   };
 }
 
-/** Path constant for settings.json */
-const SETTINGS_PATH = 'pub/pubky.app/settings.json';
+/** Owner-relative path of settings.json, in the app's private namespace. */
+const SETTINGS_PATH = `${APP_PRIVATE_PATH}${APP_SETTINGS_FILE}`;
 
 export class SettingsNormalizer {
   private constructor() {}
@@ -70,11 +70,15 @@ export class SettingsNormalizer {
 
   /**
    * Builds the settings URL for a given pubky.
-   * URL format: pubky://{pubky}/pub/pubky.app/settings.json
+   * URL format: pubky://{pubky}/priv/app.pubky/v1/settings.json
    */
   static buildUrl(pubky: Pubky): string {
-    const baseUri = baseUriBuilder(pubky);
-    return `${baseUri}settings.json`;
+    return `pubky://${pubky}${SETTINGS_PATH}`;
+  }
+
+  /** Where a 0.x client kept settings; read while the account has no v1 settings file. */
+  static buildLegacyUrl(pubky: Pubky): string {
+    return `pubky://${pubky}${LEGACY_SETTINGS_PATH}`;
   }
 
   /**

@@ -22,7 +22,7 @@ export class ProfileController {
    * @param pubky - The public key of the user
    */
   static async commitCreate({ profile, image, pubky }: TCommitSetDetailsParams) {
-    const { user, meta } = UserNormalizer.to(
+    const user = UserNormalizer.to(
       {
         name: profile.name,
         bio: profile.bio ?? '',
@@ -33,7 +33,7 @@ export class ProfileController {
       pubky,
     );
 
-    await ProfileApplication.commitCreate({ profile: user, url: meta.url, pubky });
+    await ProfileApplication.commitCreate({ profile: user, pubky });
   }
 
   /**

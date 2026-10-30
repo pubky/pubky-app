@@ -59,10 +59,6 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
     patterns: ['legacyTree', 'blobs'],
     reason: 'the author check still accepts the 0.x File and blob URIs existing articles reference',
   },
-  'src/core/application/profile/profile.ts': {
-    patterns: ['legacyTree'],
-    reason: 'account delete and export walk the 0.x tree beside the v1 trees',
-  },
 };
 
 /**
@@ -71,20 +67,11 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
  * it ports; the cleanup PR empties the list.
  */
 const LEGACY_RATCHET: readonly string[] = [
-  'src/core/application/auth/auth.ts',
-  'src/core/application/notification/notification.ts',
-  'src/core/application/profile/profile.ts',
-  'src/core/application/profile/profile.types.ts',
   'src/core/controllers/auth/auth.ts',
   'src/core/controllers/bookmark/bookmark.ts',
   'src/core/pipes/bookmark/bookmark.normalizer.ts',
-  'src/core/pipes/lastRead/lastRead.normalizer.ts',
-  'src/core/pipes/notification/notification.normalizer.ts',
   'src/core/pipes/pipes.builder.ts',
   'src/core/pipes/pipes.test-utils.ts',
-  'src/core/pipes/settings/settings.normalizer.ts',
-  'src/core/pipes/user/user.normalizer.ts',
-  'src/core/services/local/profile/profile.ts',
   'src/core/services/local/stream/posts/posts.ts',
 ];
 

@@ -1,10 +1,11 @@
-import { LastReadResult } from 'pubky-app-specs';
 import { APP_LAST_READ_FILE, APP_PRIVATE_PATH } from '@/config/app-files';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
+/** The notification read cursor as the app stores it, `{ timestamp }` in milliseconds, with its URL. */
+export type TLastRead = {
+  url: string;
+  lastRead: { timestamp: number };
+};
 
 export class LastReadNormalizer {
   private constructor() {}
@@ -19,16 +20,8 @@ export class LastReadNormalizer {
     return `pubky://${pubky}/pub/pubky.app/last_read`;
   }
 
-  static to(pubky: Pubky): LastReadResult {
-    try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createLastRead();
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.SocialSpecs,
-        operation: 'createLastRead',
-        context: { pubky },
-      });
-    }
+  /** A cursor at the current time, the document a mark-all-as-read or a first bootstrap writes. */
+  static to(pubky: Pubky): TLastRead {
+    return { url: this.buildUrl(pubky), lastRead: { timestamp: Date.now() } };
   }
 }

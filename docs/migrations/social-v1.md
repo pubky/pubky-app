@@ -74,9 +74,11 @@ File ownership: `homeserver.ts` is PR-A then PR-D only; `controllers/auth/auth.t
 PR-D only; `src/config/*` PR-A only; the lockfile changes only in PR-A and PR-F. Each child session merges
 `feat/social-v1` into its branch before opening the PR.
 
-Known limitation on the intermediate branch (after PR-A, before PR-C/PR-D): `hydrateMeImAlive` writes the
-notification cursor to `/priv/app.pubky/v1/last_read.json`, so a pre-port Ring grant (lacking
-`/priv/app.pubky/v1/:rw`) fails that PUT until the gate signs it out for a new grant. Root sessions are unaffected.
+Known limitation on the intermediate branch (after PR-A and PR-C, before PR-D): the first bootstrap reads and
+writes the notification cursor and the settings at `/priv/app.pubky/v1/`, so a pre-port Ring grant (lacking
+`/priv/app.pubky/v1/:rw`) fails those requests until the gate signs it out for a new grant. Root sessions are
+unaffected. PR-C also makes `AuthApplication.userIsSignedUp` probe the v1 profile alone: until the gate lands, a
+session restored on an un-migrated account reads as not signed up.
 
 Known limitation on the intermediate branch (after PR-B2, before PR-D): tags, follows and mutes are written to the
 v1 trees and `MuteApplication.fetchMutedUsers` lists `/priv/social/v1/mutes/` only, so an account that has not

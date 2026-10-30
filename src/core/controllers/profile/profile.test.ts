@@ -1,4 +1,4 @@
-import { UserResult } from 'pubky-app-specs';
+import type { Built, User } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -103,12 +103,9 @@ describe('ProfileController', () => {
         bio: 'Short bio',
         links: [{ label: 'Docs', url: 'https://example.com' }],
       };
-      const userResult = {
-        user: { toJson: vi.fn() },
-        meta: { url: 'user-url' },
-      };
+      const userResult = asOpaque<Built<User>>({ object: { name: 'Test User' }, url: 'user-url' });
 
-      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
+      mockUserNormalizer.to.mockReturnValue(userResult);
       mockProfileApplication.commitCreate.mockResolvedValue(undefined);
 
       await ProfileController.commitCreate({
@@ -129,23 +126,16 @@ describe('ProfileController', () => {
         testPubky,
       );
 
-      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({
-        profile: userResult.user,
-        url: userResult.meta.url,
-        pubky: testPubky,
-      });
+      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({ profile: userResult, pubky: testPubky });
     });
 
     it('defaults optional fields when not provided', async () => {
       const profile = {
         name: 'Test User',
       };
-      const userResult = {
-        user: { toJson: vi.fn() },
-        meta: { url: 'user-url' },
-      };
+      const userResult = asOpaque<Built<User>>({ object: { name: 'Test User' }, url: 'user-url' });
 
-      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
+      mockUserNormalizer.to.mockReturnValue(userResult);
       mockProfileApplication.commitCreate.mockResolvedValue(undefined);
 
       await ProfileController.commitCreate({
@@ -165,11 +155,7 @@ describe('ProfileController', () => {
         testPubky,
       );
 
-      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({
-        profile: userResult.user,
-        url: userResult.meta.url,
-        pubky: testPubky,
-      });
+      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({ profile: userResult, pubky: testPubky });
     });
 
     it('propagates errors from the user normalizer', async () => {
@@ -198,12 +184,9 @@ describe('ProfileController', () => {
         name: 'Test User',
         bio: 'Short bio',
       };
-      const userResult = {
-        user: { toJson: vi.fn() },
-        meta: { url: 'user-url' },
-      };
+      const userResult = asOpaque<Built<User>>({ object: { name: 'Test User' }, url: 'user-url' });
 
-      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
+      mockUserNormalizer.to.mockReturnValue(userResult);
       mockProfileApplication.commitCreate.mockRejectedValue(new Error('create failed'));
 
       await expect(
