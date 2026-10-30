@@ -51,17 +51,31 @@ describe('isStagingHomeserverDeploy', () => {
   });
 });
 
+describe('HOMESERVER_CAPABILITIES', () => {
+  it('pins the sign-in grant: the 0.x tree, the social v1 trees and the Locks entries, in Ring order', () => {
+    expect(HOMESERVER_CAPABILITIES).toBe(
+      '/pub/pubky.app/:rw,/pub/social/v1/:rw,/priv/social/v1/:rw,/priv/app.pubky/v1/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+    );
+  });
+});
+
 describe('embedded Shop initial permissions', () => {
   it.each(['production', 'staging'])('includes Shop storage permissions by default on %s', (deployEnv) => {
     withRuntimeEnv({ PUBKY_RUNTIME_ENV: deployEnv }, () => {
       const scopes = getHomeserverCapabilities().split(',');
       expect(scopes).toEqual([
-        ...HOMESERVER_CAPABILITIES.split(','),
+        '/pub/pubky.app/:rw',
+        '/pub/social/v1/:rw',
+        '/priv/social/v1/:rw',
+        '/priv/app.pubky/v1/:rw',
+        '/priv/social/:rw',
+        '/priv/app.locks/content/:r',
         '/pub/paykit/:rw',
         '/priv/pubky.app/:rw',
         '/pub/chat/v0/:rw',
         '/priv/chat/v0/:rw',
       ]);
+      expect(new Set(scopes).size).toBe(scopes.length);
       expect(scopes.some((scope) => scope.split(':')[1].includes('e'))).toBe(false);
     });
   });

@@ -7,7 +7,7 @@ import { BootstrapApplication, type BootstrapProgressCallback } from '@/applicat
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getDeployEnv, getHomeserver, getHomeserverCapabilities } from '@/config/network';
 import type {
@@ -45,6 +45,7 @@ import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
@@ -604,9 +605,7 @@ export class AuthController {
   private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
     const isCurrent = captureViewerSession();
     const signInStore = useSignInStore.getState();
-    const {
-      meta: { url },
-    } = NotificationNormalizer.to(pubky);
+    const url = LastReadNormalizer.buildUrl(pubky);
 
     // Progress callback to update signInStore from Controller layer (respecting architecture rules)
     const onProgress: BootstrapProgressCallback = (step) => {
@@ -1150,7 +1149,9 @@ export class AuthController {
         operation: 'requestCapabilities',
       });
     const capabilities = validateCapabilities(
-      [APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(','),
+      [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(
+        ',',
+      ),
     ) as Capabilities;
     return this.wrapAuthFlow({
       purpose: 'upgrade',
