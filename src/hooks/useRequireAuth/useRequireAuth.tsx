@@ -36,6 +36,8 @@ export function useRequireAuth(active = true, options?: UseRequireAuthOptions): 
       state.hasHydrated === false ||
       state.isLoggingOut ||
       state.restoreStatus === 'restoring' ||
+      // The migration gate owns the screen; never open sign-in over it
+      state.restoreStatus === 'social-migration' ||
       (state.sessionReference && state.restoreStatus === 'idle')
     )
       return undefined;

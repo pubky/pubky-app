@@ -66,6 +66,18 @@ describe('useAuthStatus', () => {
     },
   );
 
+  it('holds an account behind the social v1 migration gate without loading, whatever the profile says', () => {
+    mockAuthStore.session = null;
+    mockAuthStore.sessionReference = mockGrantReference();
+    mockAuthStore.hasProfile = true;
+    mockAuthStore.restoreStatus = 'social-migration';
+    const { result } = renderHook(() => useAuthStatus());
+    expect(result.current.status).toBe('NEEDS_SOCIAL_MIGRATION');
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.hasKeypair).toBe(false);
+    expect(result.current.isFullyAuthenticated).toBe(false);
+  });
+
   it('should return loading state when onboarding store not hydrated', () => {
     mockOnboardingStore.hasHydrated = false;
     mockAuthStore.hasHydrated = true;

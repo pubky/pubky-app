@@ -17,6 +17,10 @@ How errors and performance data leave Pubky App. Sentry is the primary sink (bro
 
 Every `Pulse.*` capture call is a no-op until `Pulse.init()` runs, and it never runs outside the browser or without consent — so a `Sink` of "Sentry + Pulse" means Sentry always, Pulse only in a consenting browser.
 
+### Social v1 migration (`socialMigration`)
+
+The migration gate (ADR-0026) captures one event per (account, code) per page for a run that did not pass: `Err.server(SERVICE_UNAVAILABLE)` for an unreachable or full homeserver, `Err.server(UNKNOWN_ERROR)` for an unsupported epoch or a thrown engine error, `Err.auth(FORBIDDEN)` for a scope refusal after adoption. The context carries status, code, attempt and the per-outcome counts only; the report's `skipped` paths, `notes`, `droppedValues` and `current` are the user's own file names and never leave the browser (`src/libs/social-migration/report-telemetry.ts`). A finished run with skips is `Logger.info` only.
+
 ## Capture rule
 
 > Throw via `Err.*` factories. Do **not** call `Sentry.captureException` or `Pulse.captureException` directly anywhere except the single `Pulse.captureException` inside `createAppError()` (`src/libs/error/error.factories.ts`) and the two boundaries `app/error.tsx` and `app/global-error.tsx` — and in those two files only for non-`AppError` instances.

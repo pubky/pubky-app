@@ -11,12 +11,16 @@ export function useAuthStatus(): AuthStatusResult {
   const hasProfile = auth.hasProfile;
   // A retained handle after failed bootstrap is not a ready session for route access.
   const needsSignIn = auth.restoreStatus === 'reauth-required' || auth.restoreStatus === 'temporary-error';
+  // The gate holds the session out of the store, so it is decided before the session checks (not loading: the
+  // route guard must redirect to /migration).
   const status = needsSignIn
     ? AuthStatus.UNAUTHENTICATED
-    : hasKeypair && hasProfile === true
-      ? AuthStatus.AUTHENTICATED
-      : hasKeypair && hasProfile === false
-        ? AuthStatus.NEEDS_PROFILE_CREATION
-        : AuthStatus.UNAUTHENTICATED;
+    : auth.restoreStatus === 'social-migration'
+      ? AuthStatus.NEEDS_SOCIAL_MIGRATION
+      : hasKeypair && hasProfile === true
+        ? AuthStatus.AUTHENTICATED
+        : hasKeypair && hasProfile === false
+          ? AuthStatus.NEEDS_PROFILE_CREATION
+          : AuthStatus.UNAUTHENTICATED;
   return { status, isLoading, hasKeypair, hasProfile, isFullyAuthenticated: status === AuthStatus.AUTHENTICATED };
 }

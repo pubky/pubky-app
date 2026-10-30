@@ -62,7 +62,7 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
 | PR-B3    | bookmarks (locally owned); ADR-0028                                                                                                                                                                                                                                                | A, C            | targeted tests, code-review                                                   |
 | PR-B4    | feeds                                                                                                                                                                                                                                                                              | A               | targeted tests, code-review                                                   |
 | PR-C     | profile, settings, last_read, bootstrap, notifications, account delete/export                                                                                                                                                                                                      | A               | targeted tests, code-review                                                   |
-| PR-D     | migration gate and UI (`/migration`), `migrateToSocialV1`, auth controller wiring; ADR-0026                                                                                                                                                                                        | A               | tests, code-review, security-review; migrator service test first              |
+| PR-D     | migration gate and UI (`/migration`), `migrateToSocialV1`, auth controller wiring; ADR-0026 (open, see _The migration gate_ below)                                                                                                                                                 | A               | tests, code-review, security-review; migrator service test first              |
 | PR-E     | rollout guards: service-worker reload, `DB_VERSION` 4 loop-breaker; ADR-0019/0021 amendments                                                                                                                                                                                       | —               | `npm test -- src/sw.test.ts src/core/database src/providers`, security-review |
 | PR-CI    | `release-docker.yml`, `build-docker-image.yml`: `NEXT_PUBLIC_DB_VERSION=4`                                                                                                                                                                                                         | E               | CI task review                                                                |
 | PR-D2    | dropped-values note on the profile edit page                                                                                                                                                                                                                                       | C, D            | tests, code-review                                                            |
@@ -80,10 +80,42 @@ writes the notification cursor and the settings at `/priv/app.pubky/v1/`, so a p
 unaffected. PR-C also makes `AuthApplication.userIsSignedUp` probe the v1 profile alone: until the gate lands, a
 session restored on an un-migrated account reads as not signed up.
 
-Known limitation on the intermediate branch (after PR-B2, before PR-D): tags, follows and mutes are written to the
-v1 trees and `MuteApplication.fetchMutedUsers` lists `/priv/social/v1/mutes/` only, so an account that has not
-run the migrator sees an empty mute list until the gate migrates it, and a pre-port Ring grant (lacking
-`/pub/social/v1/:rw` or `/priv/social/v1/:rw`) fails those writes and that LIST until the gate signs it out.
+## The migration gate (PR-D, ADR-0026)
+
+Behavior. Every restore and every sign-in passes `SocialMigrationController.ensureMigrated` before the session enters
+the auth store (`restoreStatus` `social-migration`, session `null`, committed identity visible meanwhile). A session
+without `MIGRATION_CAPS` or a saved grant from before the gate whose flag is absent is signed out on `/migration`
+(backup prompt first for a never-backed-up browser key), told why, and offered Sign in; the new grant is admitted, runs
+`pubky-social-migrator` on the blocking screen (steps, "{done} of {total}", "Do not close this tab"), and bootstraps as
+usual once it passes. A reload or a closed tab mid-run resumes on the next restore (the grant is admitted); a second
+tab waits for the Web Lock and then reads the flag; a signup runs inline on its empty tree with no screen. Outcomes:
+`incomplete`/`IO_ERROR` auto-retry (2 s, 5 s, 15 s) then Retry, also on foreground and network return; `QUOTA` shows
+the bytes needed; `PRIV_UNSUPPORTED`, `UNSUPPORTED_EPOCH` and a thrown error block on Retry with Sign out;
+`SESSION_EXPIRED` signs out and the next sign-in resumes; a run that skipped or dropped something waits on a summary
+(Continue) and leaves the counts for the profile edit page (PR-D2).
+
+Persistence and recovery. `localStorage` `social-migration:<pubky>` (`migratedRev`, `admittedGrantIds`, `lastRun`,
+`notice`) survives the logout sweep; a trusted `migratedRev` makes a restore pass with no request and no migrator chunk;
+the flag on the homeserver stays the authority (401/403 on its read are errors, never "absent"). A tab-scoped
+`sessionStorage` notice explains the sign-out after the stores reset. `SOCIAL_MIGRATION_TRANSFORM_REV` is
+contract-tested against the engine's `transformRev`; a higher build revision walks the tree again.
+
+Paths. Ring QR/deep link, Bitkit and Passport adopt then gate (Passport stops its timers before adoption, so a run that
+takes minutes does not time the attempt out); recovery phrase and encrypted file sign in then gate (the dialog closes
+when the gate takes over); browser and Ring signup run inline; a capability upgrade (Locks, Shop) consults the local
+record only and keeps its context. Shop learns the account as `restoring` while gated.
+
+Verification matrix (QA-1, local stack): seed user X with 0.x data on the current build, deploy the branch, restore → sign-out
+explanation → Sign in → `/migration` runs → `/home`; reload mid-run resumes ("Continuing from an earlier run"); second
+tab waits; sign in from a second browser after the first finished passes on the flag read; a never-backed-up browser key
+sees the backup prompt first; a pre-port Ring grant sees `missing-scopes`; signup lands on onboarding with no gate screen;
+QUOTA, offline (auto-retry then Retry), summary with a dropped profile image; `/post/*`, `/profile/<pk>`, `/shop` redirect
+to `/migration` while gated; logout from `/migration` works with the backup prompt.
+
+Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (ten
+states × desktop/mobile), CI-owned baselines. Cypress (QA-owned, flag only): every pre-seeded account lands on
+`/migration` after the forced sign-out; `cy.signOut` and the sign-in specs see the gate; a freshly signed-up account sees
+no screen.
 
 ## Compliance gate and dev-sync routine
 

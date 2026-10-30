@@ -28,6 +28,7 @@ import {
   matchPostRoute,
   matchProfileRoute,
   matchSingleCollectionRoute,
+  NEEDS_SOCIAL_MIGRATION_ROUTES,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
   PUBLIC_ROUTES,
@@ -244,6 +245,27 @@ describe('route access matrix', () => {
 
     expect(isDynamicPublicRoute(pathname)).toBe(true);
     expect(isRouteAccessible(pathname, UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
+  });
+});
+
+describe('social v1 migration gate routes (ADR-0026)', () => {
+  it('names the gate page under the auth routes, so the logo links to the landing page there', () => {
+    expect(AUTH_ROUTES.MIGRATION).toBe('/migration');
+    expect(isLogoLandingRoute(AUTH_ROUTES.MIGRATION)).toBe(true);
+  });
+
+  it('lets a held account reach only the gate, logout and the legal pages, and sends it to the gate', () => {
+    expect(NEEDS_SOCIAL_MIGRATION_ROUTES).toEqual({
+      allowedRoutes: ['/migration', '/logout', '/terms-of-use', '/privacy-policy'],
+      redirectTo: '/migration',
+    });
+    for (const route of NEEDS_SOCIAL_MIGRATION_ROUTES.allowedRoutes)
+      expect(matchesAllowedRoute(route, NEEDS_SOCIAL_MIGRATION_ROUTES.redirectTo)).toBe(route === '/migration');
+  });
+
+  it('lets a signed-out visitor read the gate explanation', () => {
+    expect(UNAUTHENTICATED_ROUTES.allowedRoutes).toContain(AUTH_ROUTES.MIGRATION);
+    expect(AUTHENTICATED_ROUTES.allowedRoutes).not.toContain(AUTH_ROUTES.MIGRATION);
   });
 });
 

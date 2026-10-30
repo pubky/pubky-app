@@ -5,6 +5,7 @@ import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import { LOCKS_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
@@ -276,6 +277,9 @@ afterEach(() => {
 describe('AuthController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // These suites cover the auth lifecycle of a migrated account; the gate has its own suite.
+    vi.spyOn(SocialMigrationController, 'ensureMigrated').mockResolvedValue('passed');
+    vi.spyOn(SocialMigrationController, 'hasPassedLocally').mockReturnValue(true);
     getModerationIdMock.mockReset().mockReturnValue(undefined);
     vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
     mockClearDatabase.mockReset();

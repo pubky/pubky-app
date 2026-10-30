@@ -3,6 +3,7 @@ import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { UserApplication } from '@/application/user/user';
 import { SettingsController } from '@/controllers/settings/settings';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -124,6 +125,9 @@ function startFreshRecoveryLogin() {
 describe('AuthController restored session lifecycle', () => {
   beforeEach(() => {
     localStorage.clear();
+    // These suites cover the auth lifecycle of a migrated account; the gate has its own suite.
+    vi.spyOn(SocialMigrationController, 'ensureMigrated').mockResolvedValue('passed');
+    vi.spyOn(SocialMigrationController, 'hasPassedLocally').mockReturnValue(true);
     vi.stubGlobal('navigator', { locks: { request: async (_name: string, callback: () => unknown) => callback() } });
     useAuthStore.setState(authInitialState);
     useSettingsStore.getState().reset();
