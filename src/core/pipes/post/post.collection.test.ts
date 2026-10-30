@@ -1,3 +1,5 @@
+import { type CollectionContent as StoredCollectionContent, decodeContent, encodeContent } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT } from '@/config/collections';
 import {
@@ -7,7 +9,14 @@ import {
 } from '@/config/posts';
 import { CollectionPostContent } from './post.collection';
 
-const VALID_ITEM_URI = 'pubky://1111111111111111111111111111111111111111111111111111/pub/pubky.app/posts/0034A0X7NJ52A';
+const ITEM_AUTHOR = fakeOwner(3);
+const VALID_ITEM_URI = `pubky://${ITEM_AUTHOR}/pub/social/v1/posts/0034A0X7NJ52A`;
+/** The same post as an account that has not migrated references it. */
+const LEGACY_ITEM_URI = `pubky://${ITEM_AUTHOR}/pub/pubky.app/posts/0034A0X7NJ52A`;
+
+/** The stored envelope of a collection with `items`, as `encodeContent` spells it. */
+const stored = (items: StoredCollectionContent['items'], overrides: Partial<StoredCollectionContent> = {}) =>
+  encodeContent({ name: 'Stored', description: null, cover_image: null, layout: null, items, ...overrides });
 
 describe('CollectionPostContent', () => {
   describe('normalize', () => {
@@ -127,12 +136,11 @@ describe('CollectionPostContent', () => {
     });
   });
 
-  describe('toJson and parse', () => {
-    it('serializes and parses a valid envelope', () => {
-      const json = CollectionPostContent.toJson({
+  describe('parse', () => {
+    it('parses a v1 envelope, its items by uri with the notes dropped', () => {
+      const json = stored([{ uri: VALID_ITEM_URI, note: 'start here' }], {
         name: 'Proof of Work',
         description: 'Bitcoin writing',
-        items: [VALID_ITEM_URI],
       });
 
       expect(CollectionPostContent.parse(json)).toEqual({
@@ -144,29 +152,24 @@ describe('CollectionPostContent', () => {
       });
     });
 
-    it('round-trips a cover_image envelope from pubky-app-specs', () => {
-      // Mirrors the read shape from `pubky-app-specs` (`PubkyAppCollectionContent`),
-      // including `cover_image`. New fields are additive in the envelope; older
-      // payloads without `cover_image` are still accepted.
-      const json = CollectionPostContent.toJson({
-        name: 'Cover',
+    it('parses a 0.x envelope, whose items are plain URIs', () => {
+      const json = JSON.stringify({
+        name: 'Legacy',
         description: '',
-        items: [],
-        coverImage: 'https://cdn.example.com/cover.png',
+        items: [LEGACY_ITEM_URI],
+        cover_image: 'https://cdn.example.com/cover.png',
       });
 
       expect(CollectionPostContent.parse(json)).toEqual({
-        name: 'Cover',
+        name: 'Legacy',
         description: '',
-        items: [],
+        items: [LEGACY_ITEM_URI],
         cover_image: 'https://cdn.example.com/cover.png',
         layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
     it('parses minimal envelopes with only a name (per spec, other fields are optional)', () => {
-      // `description`/`items`/`cover_image` are all optional in the spec
-      // envelope, so a payload with just `name` is a valid (older) collection.
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Minimal' }))).toEqual({
         name: 'Minimal',
         description: '',
@@ -176,18 +179,9 @@ describe('CollectionPostContent', () => {
       });
     });
 
-    it('parses pubky-app-specs envelopes with null cover_image', () => {
-      expect(
-        CollectionPostContent.parse(
-          JSON.stringify({
-            name: 'Saved posts',
-            description: '',
-            items: [VALID_ITEM_URI],
-            cover_image: null,
-          }),
-        ),
-      ).toEqual({
-        name: 'Saved posts',
+    it('parses envelopes with null description and cover_image, as the data model spells none', () => {
+      expect(CollectionPostContent.parse(stored([{ uri: VALID_ITEM_URI, note: null }]))).toEqual({
+        name: 'Stored',
         description: '',
         items: [VALID_ITEM_URI],
         cover_image: undefined,
@@ -195,33 +189,13 @@ describe('CollectionPostContent', () => {
       });
     });
 
-    it('round-trips List and falls back to Grid for missing or unknown layouts', () => {
-      const listJson = CollectionPostContent.toJson({
-        name: 'Reading',
-        layout: COLLECTION_LAYOUT.LIST,
-      });
-
-      expect(CollectionPostContent.parse(listJson)?.layout).toBe(COLLECTION_LAYOUT.LIST);
+    it('reads List and Visual and falls back to Grid for missing or unknown layouts', () => {
+      expect(CollectionPostContent.parse(stored([], { layout: 'list' }))?.layout).toBe(COLLECTION_LAYOUT.LIST);
+      expect(CollectionPostContent.parse(stored([], { layout: 'visual' }))?.layout).toBe(COLLECTION_LAYOUT.VISUAL);
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Legacy' }))?.layout).toBe(COLLECTION_LAYOUT.CARDS);
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Future', layout: 'spiral' }))?.layout).toBe(
         COLLECTION_LAYOUT.CARDS,
       );
-    });
-
-    it('round-trips Visual through normalize, toJson, and parse', () => {
-      expect(
-        CollectionPostContent.normalize({
-          name: 'Gallery',
-          layout: COLLECTION_LAYOUT.VISUAL,
-        }).layout,
-      ).toBe(COLLECTION_LAYOUT.VISUAL);
-
-      const visualJson = CollectionPostContent.toJson({
-        name: 'Gallery',
-        layout: COLLECTION_LAYOUT.VISUAL,
-      });
-
-      expect(CollectionPostContent.parse(visualJson)?.layout).toBe(COLLECTION_LAYOUT.VISUAL);
     });
 
     it('returns null for malformed envelopes', () => {
@@ -238,33 +212,123 @@ describe('CollectionPostContent', () => {
     });
   });
 
-  describe('item helpers', () => {
-    it('adds an item idempotently', () => {
-      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [VALID_ITEM_URI] });
+  describe('toNewInput', () => {
+    it('spells the buildPost input of a new collection, items without notes', () => {
+      const normalized = CollectionPostContent.normalize({
+        name: 'Reading',
+        description: '',
+        items: [VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.LIST,
+      });
 
-      expect(CollectionPostContent.addItem(collection, VALID_ITEM_URI).items).toEqual([VALID_ITEM_URI]);
+      expect(CollectionPostContent.toNewInput(normalized)).toEqual({
+        kind: 'collection',
+        name: 'Reading',
+        description: null,
+        items: [{ uri: VALID_ITEM_URI }],
+        cover_image: null,
+        layout: 'list',
+      });
+    });
+  });
+
+  describe('toStored', () => {
+    it('merges the shown envelope onto the stored one, keeping item notes and unknown members', () => {
+      const storedEnvelope = decodeContent({
+        kind: 'collection',
+        content: stored([{ uri: VALID_ITEM_URI, note: 'start here' }], { description: 'Old' }),
+      });
+      if (storedEnvelope?.kind !== 'collection') throw new Error('not a collection');
+      const withUnknown = { ...storedEnvelope.content, $unknown: '{"mood":"calm"}' };
+
+      const next = CollectionPostContent.toStored(withUnknown, {
+        name: 'Renamed',
+        description: 'New',
+        items: ['https://example.com/post', VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.VISUAL,
+      });
+
+      expect(next).toEqual({
+        name: 'Renamed',
+        description: 'New',
+        cover_image: null,
+        layout: 'visual',
+        items: [
+          { uri: 'https://example.com/post', note: null },
+          { uri: VALID_ITEM_URI, note: 'start here' },
+        ],
+        $unknown: '{"mood":"calm"}',
+      });
+      // What `encodeContent` spells of it decodes back, notes included
+      expect(decodeContent({ kind: 'collection', content: encodeContent(next) })).toEqual({
+        kind: 'collection',
+        content: next,
+      });
     });
 
-    it('prepends a new item', () => {
+    it('spells an empty description as null and a cover as given', () => {
+      const base: StoredCollectionContent = {
+        name: 'B',
+        description: null,
+        items: [],
+        cover_image: null,
+        layout: null,
+      };
+
+      expect(
+        CollectionPostContent.toStored(base, {
+          name: 'B',
+          description: '',
+          items: [],
+          cover_image: 'https://cdn.example.com/cover.png',
+          layout: COLLECTION_LAYOUT.CARDS,
+        }),
+      ).toEqual({
+        name: 'B',
+        description: null,
+        items: [],
+        cover_image: 'https://cdn.example.com/cover.png',
+        layout: 'grid',
+      });
+    });
+  });
+
+  describe('item helpers', () => {
+    const spellings = [VALID_ITEM_URI, LEGACY_ITEM_URI];
+
+    it('adds an item idempotently, whichever way the collection spells it', () => {
+      const v1 = CollectionPostContent.normalize({ name: 'Saved', items: [VALID_ITEM_URI] });
+      const legacy = CollectionPostContent.normalize({ name: 'Saved', items: [LEGACY_ITEM_URI] });
+
+      expect(CollectionPostContent.addItem(v1, spellings)).toBe(v1);
+      expect(CollectionPostContent.addItem(legacy, spellings)).toBe(legacy);
+    });
+
+    it('prepends a new item under its first spelling, the v1 reference', () => {
       const existingUri = 'https://example.com/post';
       const collection = CollectionPostContent.normalize({ name: 'Saved', items: [existingUri] });
 
-      expect(CollectionPostContent.addItem(collection, VALID_ITEM_URI).items).toEqual([VALID_ITEM_URI, existingUri]);
+      expect(CollectionPostContent.addItem(collection, spellings).items).toEqual([VALID_ITEM_URI, existingUri]);
     });
 
-    it('removes an item', () => {
-      const collection = CollectionPostContent.normalize({
+    it('removes an item whichever way the collection spells it', () => {
+      const v1 = CollectionPostContent.normalize({
         name: 'Saved',
         items: [VALID_ITEM_URI, 'https://example.com/post'],
       });
+      const legacy = CollectionPostContent.normalize({
+        name: 'Saved',
+        items: [LEGACY_ITEM_URI, 'https://example.com/post'],
+      });
 
-      expect(CollectionPostContent.removeItem(collection, VALID_ITEM_URI).items).toEqual(['https://example.com/post']);
+      expect(CollectionPostContent.removeItem(v1, spellings).items).toEqual(['https://example.com/post']);
+      expect(CollectionPostContent.removeItem(legacy, spellings).items).toEqual(['https://example.com/post']);
     });
 
     it('returns the same collection when removing an absent item', () => {
       const collection = CollectionPostContent.normalize({ name: 'Saved', items: [VALID_ITEM_URI] });
 
-      expect(CollectionPostContent.removeItem(collection, 'https://example.com/missing')).toBe(collection);
+      expect(CollectionPostContent.removeItem(collection, ['https://example.com/missing'])).toBe(collection);
     });
   });
 

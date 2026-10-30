@@ -36,10 +36,12 @@ vi.mock('@/molecules/Toaster/toast');
 
 // Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();
+const mockSetArticleCover = vi.fn();
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: {
     getState: vi.fn(() => ({
       setPostAttachments: mockSetPostAttachments,
+      setArticleCover: mockSetArticleCover,
     })),
   },
 }));

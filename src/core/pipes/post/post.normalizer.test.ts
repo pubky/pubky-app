@@ -1,945 +1,430 @@
-import { type FileResult, PostResult, PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildFile,
+  buildPost,
+  buildUri,
+  decodeContent,
+  decodeObject,
+  editPost,
+  encodeContent,
+  parseUri,
+} from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
+import { describe, expect, it } from 'vitest';
 import { COLLECTION_LAYOUT } from '@/config/collections';
-import { Logger } from '@/libs/logger/logger';
-import { PostDetailsModel } from '@/models/post/details/postDetails';
-import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
-import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
-import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import { ARTICLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorService } from '@/libs/error/error.types';
+import { getCharacterCount } from '@/libs/utils/utils';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { PostValidatorData } from '@/pipes/pipes.types';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildPubkyUri,
-  restoreMocks,
-  setupIntegrationTestMocks,
-  setupUnitTestMocks,
-  TEST_POST_IDS,
-  TEST_PUBKY,
-} from '../pipes.test-utils';
+import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 
-const spyOnBuildCompositeIdFromPubkyUri = async () =>
-  vi.spyOn(await import('@/models/models.utils'), 'buildCompositeIdFromPubkyUri');
+const OWNER = fakeOwner(1);
+const FRIEND = fakeOwner(2);
+const PARENT = buildUri(FRIEND, 'post', '0035QZPT4QG00');
+
+const upload = (byte: number, name = `file-${byte}.png`, type = 'image/png'): TFileAttachmentResult => {
+  const bytes = new Uint8Array([byte]);
+  return { media: buildFile(OWNER, { bytes, type }), bytes, name, contentType: type };
+};
+
+const note = (overrides: Partial<PostValidatorData> = {}): PostValidatorData => ({
+  content: 'Hello, world!',
+  kind: 'note',
+  ...overrides,
+});
+
+const articleContent = (title = 'Title', body = 'Body') => JSON.stringify({ title, body });
 
 describe('PostNormalizer', () => {
-  // Test data factories
-  const createBasicPost = (overrides?: Partial<PostValidatorData>): PostValidatorData => ({
-    content: 'Hello, world!',
-    kind: PubkyAppPostKind.Short,
-    ...overrides,
-  });
+  withFrozenSpecClock();
 
-  const createMockFileResult = (id: string): FileResult =>
-    asOpaque<FileResult>({
-      file: { toJson: vi.fn(() => ({ id, src: `blob-${id}`, content_type: 'image/png', size: 1024 })) },
-      meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `files/${id}`) },
-    });
-
-  const createMockAttachment = (id: string): TFileAttachmentResult => ({
-    blobResult: asOpaque<TFileAttachmentResult['blobResult']>({
-      blob: { data: new Uint8Array([1, 2, 3]) },
-      meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `blobs/${id}`) },
-    }),
-    fileResult: createMockFileResult(id),
-  });
-
-  const createMockPostDetails = (id: string, kind = 'short'): PostDetailsModelSchema => ({
-    id,
-    content: 'Mock content',
-    kind,
-    uri: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${id}`),
-    indexed_at: Date.now(),
-    attachments: null,
-  });
-
-  const createMockBuilder = (
-    overrides?: Partial<{ createPost: ReturnType<typeof vi.fn>; createCollectionPost: ReturnType<typeof vi.fn> }>,
-  ) => ({
-    createPost: vi.fn((content, kind, parent, embed, attachments) =>
-      asOpaque<PostResult>({
-        post: {
-          content,
-          kind,
-          parent: parent || undefined,
-          embed: embed || undefined,
-          attachments: attachments || undefined,
-        },
-        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`) },
-      }),
-    ),
-    createCollectionPost: vi.fn((name, description, items, cover_image, layout) =>
-      asOpaque<PostResult>({
-        post: {
-          content: JSON.stringify({
-            name,
-            description: description ?? '',
-            items: items ?? [],
-            cover_image: cover_image ?? null,
-            layout: layout ?? null,
-          }),
-          kind: 'collection',
-          parent: undefined,
-          embed: undefined,
-          attachments: undefined,
-        },
-        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`) },
-      }),
-    ),
-    ...overrides,
-  });
-
-  /**
-   * Tests for `postKindToLowerCase` - Simple string transformation
-   */
-  describe('postKindToLowerCase', () => {
-    it.each([
-      ['SHORT', 'short'],
-      ['LoNg', 'long'],
-      ['short', 'short'],
-      ['TYPE-123', 'type-123'],
-      ['MIXED_Case', 'mixed_case'],
-    ])('should convert "%s" to "%s"', (input, expected) => {
-      expect(PostNormalizer.postKindToLowerCase(input)).toBe(expected);
-    });
-  });
-
-  /**
-   * Tests for `mapKindToEnum` - Maps stored string kind to PubkyAppPostKind enum
-   */
-  describe('mapKindToEnum', () => {
-    it.each([
-      ['short', PubkyAppPostKind.Short],
-      ['SHORT', PubkyAppPostKind.Short],
-      ['0', PubkyAppPostKind.Short],
-      ['long', PubkyAppPostKind.Long],
-      ['LONG', PubkyAppPostKind.Long],
-      ['1', PubkyAppPostKind.Long],
-      ['collection', PubkyAppPostKind.Collection],
-      ['6', PubkyAppPostKind.Collection],
-      ['image', PubkyAppPostKind.Image],
-      ['IMAGE', PubkyAppPostKind.Image],
-      ['2', PubkyAppPostKind.Image],
-      ['video', PubkyAppPostKind.Video],
-      ['3', PubkyAppPostKind.Video],
-      ['link', PubkyAppPostKind.Link],
-      ['4', PubkyAppPostKind.Link],
-      ['file', PubkyAppPostKind.File],
-      ['5', PubkyAppPostKind.File],
-    ])('should map "%s" to correct enum', (input, expected) => {
-      expect(PostNormalizer.mapKindToEnum(input)).toBe(expected);
-    });
-
-    // Fails closed: Nexus can serve kinds this client doesn't know yet (an
-    // older build vs a newer spec); a silent Short fallback would make every
-    // edit of such a post rewrite its kind on the homeserver.
-    it.each([['unknown'], ['7'], [''], ['shorts']])('should throw for unrecognized kind "%s"', (input) => {
-      expect(() => PostNormalizer.mapKindToEnum(input)).toThrow('Unsupported post kind');
-    });
-  });
-
-  /**
-   * Tests for `to` method - Creates PostResult
-   */
   describe('to', () => {
-    describe('Unit Tests', () => {
-      let mockBuilder: ReturnType<typeof createMockBuilder>;
+    it('builds the first version of a note where buildPost puts it: one file under posts/{id}/', () => {
+      const built = PostNormalizer.to(note(), OWNER);
 
-      beforeEach(() => {
-        mockBuilder = createMockBuilder();
-        setupUnitTestMocks(mockBuilder);
-      });
+      expect(built.id).toBe(built.editId);
+      expect(built.url).toBe(`pubky://${OWNER}/pub/social/v1/posts/${built.id}/${built.editId}.json`);
+      expect(built.object).toMatchObject({ content: 'Hello, world!', kind: 'note', parent: null, embed: null });
+      // The body is what goes on the wire; it decodes back to the object
+      expect(decodeObject(built.url, built.body, 'post')).toEqual(built.object);
+    });
 
-      afterEach(restoreMocks);
+    it.each(['image', 'video', 'link', 'file'] as const)('writes the %s kind as given', (kind) => {
+      expect(PostNormalizer.to(note({ kind, attachments: [upload(1)] }), OWNER).object.kind).toBe(kind);
+    });
 
-      describe('successful creation', () => {
-        it('should create post successfully', async () => {
-          const post = createBasicPost();
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
+    it('carries the parent, the embed as a plain URI, and a lock', () => {
+      const lock = `pubky://${OWNER}/pub/app.locks/0035QZPT4QG00.json`;
+      const built = PostNormalizer.to(note({ parentUri: PARENT, embed: PARENT, lock }), OWNER);
 
-          expect(result).toHaveProperty('post');
-          expect(result).toHaveProperty('meta');
-        });
+      expect(built.object).toMatchObject({ parent: PARENT, embed: PARENT, lock });
+    });
 
-        it('should call PubkySpecsSingleton.get with pubky and createPost with content/kind', async () => {
-          const post = createBasicPost();
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
+    it('references each upload by its media URL with the picked file name, in the order given', () => {
+      const built = PostNormalizer.to(note({ attachments: [upload(1, 'one.png'), upload(2, 'two.png')] }), OWNER);
 
-          expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
-        });
+      expect(built.object.attachments).toEqual([
+        { uri: upload(1).media.url, name: 'one.png', alt: null },
+        { uri: upload(2).media.url, name: 'two.png', alt: null },
+      ]);
+    });
 
-        // `lock` is only ever set on the public announcement of a lock post.
-        it('should forward a lock URL when present', async () => {
-          const post = { ...createBasicPost(), lock: 'pubky://alice/pub/app.locks/LOCK1.json' };
+    it('writes an article with its cover in the envelope and its inline media as the slots (ADR-0023)', () => {
+      const cover = upload(9, 'cover.png');
+      const inline = upload(1, 'inline.png');
+      const built = PostNormalizer.to(
+        {
+          content: articleContent('On Pubky', '![a](attachment:0)'),
+          kind: 'article',
+          attachments: [inline],
+          coverImage: cover,
+        },
+        OWNER,
+      );
 
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(
-            post.content,
-            post.kind,
-            null,
-            null,
-            null,
-            'pubky://alice/pub/app.locks/LOCK1.json',
-          );
-        });
-      });
-
-      describe('different post kinds', () => {
-        it.each([
-          ['Short', PubkyAppPostKind.Short],
-          ['Long', PubkyAppPostKind.Long],
-        ])('should handle %s post kind', async (_, kind) => {
-          const post = createBasicPost({ kind });
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(expect.any(String), kind, null, null, null, null);
-        });
-      });
-
-      describe('parent URI handling', () => {
-        it('should pass parentUri to createPost when provided', async () => {
-          const parentUri = buildPubkyUri(TEST_PUBKY.USER_2, 'posts/parent123');
-          const post = createBasicPost({ parentUri });
-
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, parentUri, null, null, null);
-        });
-
-        it('should pass null when parentUri not provided', async () => {
-          const post = createBasicPost();
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
-        });
-      });
-
-      describe('embed handling', () => {
-        const embedUri = buildPubkyUri(TEST_PUBKY.USER_2, 'posts/embedded123');
-        const embeddedPostId = `${TEST_PUBKY.USER_2}:embedded123`;
-
-        it('should create embed object when embed post exists', async () => {
-          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
-          vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(embeddedPostId));
-
-          const post = createBasicPost({ embed: embedUri });
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(
-            post.content,
-            post.kind,
-            null,
-            expect.any(PubkyAppPostEmbed),
-            null,
-            null,
-          );
-        });
-
-        it('should pass null embed when URI is invalid', async () => {
-          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(null);
-
-          const post = createBasicPost({ embed: embedUri });
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
-        });
-
-        it('should pass null embed when embedded post not found', async () => {
-          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
-          vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
-
-          const post = createBasicPost({ embed: embedUri });
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
-        });
-      });
-
-      describe('attachments handling', () => {
-        it('should map attachments to file URLs', async () => {
-          const attachments = [createMockAttachment('file1'), createMockAttachment('file2')];
-          const post = createBasicPost({ attachments });
-
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(
-            post.content,
-            post.kind,
-            null,
-            null,
-            [buildPubkyUri(TEST_PUBKY.USER_1, 'files/file1'), buildPubkyUri(TEST_PUBKY.USER_1, 'files/file2')],
-            null,
-          );
-        });
-
-        it('should pass null when no attachments', async () => {
-          const post = createBasicPost();
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
-        });
-      });
-
-      describe('all options combined', () => {
-        it('should handle post with all options', async () => {
-          const parentUri = buildPubkyUri(TEST_PUBKY.USER_2, 'posts/parent');
-          const embedUri = buildPubkyUri(TEST_PUBKY.USER_2, 'posts/embed');
-          const embeddedPostId = `${TEST_PUBKY.USER_2}:embed`;
-
-          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
-          vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(embeddedPostId));
-
-          const post = createBasicPost({
-            parentUri,
-            embed: embedUri,
-            attachments: [createMockAttachment('file1')],
-          });
-
-          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(
-            post.content,
-            post.kind,
-            parentUri,
-            expect.any(PubkyAppPostEmbed),
-            [buildPubkyUri(TEST_PUBKY.USER_1, 'files/file1')],
-            null,
-          );
-        });
-      });
-
-      describe('error handling', () => {
-        it.each([
-          [
-            'buildCompositeIdFromPubkyUri',
-            async () =>
-              (await spyOnBuildCompositeIdFromPubkyUri()).mockImplementation((_params) => {
-                throw new Error('URI error');
-              }),
-          ],
-          [
-            'createPost',
-            () =>
-              mockBuilder.createPost.mockImplementation(() => {
-                throw new Error('Builder error');
-              }),
-          ],
-        ])('should propagate errors from %s', async (_, setupError) => {
-          await setupError();
-          const post = createBasicPost({ embed: 'pubky://embed' });
-
-          await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow();
-        });
-
-        it('should propagate errors from PostDetailsModel.findById', async () => {
-          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue('valid-id');
-          vi.spyOn(PostDetailsModel, 'findById').mockRejectedValue(new Error('Database error'));
-
-          const post = createBasicPost({ embed: 'pubky://embed' });
-
-          await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow('Database error');
-        });
-
-        it('should not call logger when error occurs', async () => {
-          mockBuilder.createPost.mockImplementation(() => {
-            throw new Error('Error');
-          });
-
-          await expect(PostNormalizer.to(createBasicPost(), TEST_PUBKY.USER_1)).rejects.toThrow();
-          expect(Logger.debug).not.toHaveBeenCalled();
-        });
+      expect(built.object.kind).toBe('article');
+      expect(built.object.attachments).toEqual([{ uri: inline.media.url, name: 'inline.png', alt: null }]);
+      expect(decodeContent(built.object)).toEqual({
+        kind: 'article',
+        content: { title: 'On Pubky', body: '![a](attachment:0)', cover_image: cover.media.url },
       });
     });
 
-    describe('Integration Tests', () => {
-      beforeEach(setupIntegrationTestMocks);
-      afterEach(restoreMocks);
+    it('writes an article without a cover as cover_image null', () => {
+      const built = PostNormalizer.to({ content: articleContent(), kind: 'article' }, OWNER);
 
-      describe('successful creation with real library', () => {
-        it('should create valid result with correct URL format', async () => {
-          const post = createBasicPost();
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(result.post).toBeDefined();
-          expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/posts\/.+/);
-        });
-
-        it.each([
-          ['Short', PubkyAppPostKind.Short],
-          ['Long', PubkyAppPostKind.Long],
-        ])('should handle %s post kind', async (_, kind) => {
-          const post = createBasicPost({ kind });
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-          expect(result.meta.url).toContain('pubky://');
-        });
-
-        it('should create post with parent URI', async () => {
-          const parentUri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_2}`);
-          const post = createBasicPost({ parentUri });
-
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-        });
-
-        it('should produce valid JSON from post object', async () => {
-          const post = createBasicPost();
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(typeof result.post.toJson).toBe('function');
-          const postJson = result.post.toJson();
-          expect(postJson).toHaveProperty('content', post.content);
-        });
+      expect(decodeContent(built.object)).toEqual({
+        kind: 'article',
+        content: { title: 'Title', body: 'Body', cover_image: null },
       });
+    });
 
-      describe('validation with real library', () => {
-        /**
-         * Note: The pubky-app-specs library requires content, embed, or attachments.
-         * Empty content alone is not allowed.
-         */
-        it('should reject empty content without embed or attachments', async () => {
-          const post = createBasicPost({ content: '' });
+    it('refuses an article whose content is not a title and a body', () => {
+      expect(() => PostNormalizer.to({ content: 'plain text', kind: 'article' }, OWNER)).toThrow(AppError);
+    });
 
-          await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow(
-            'Post must have content, an embed, or attachments',
-          );
-        });
+    it('refuses a collection: toCollection builds one', () => {
+      expect(() => PostNormalizer.to({ content: '{}', kind: 'collection' }, OWNER)).toThrow(
+        'A collection is created with toCollection',
+      );
+    });
 
-        it('should throw error for null content', async () => {
-          const post = createBasicPost({ content: asInvalid<string>(null) });
-
-          await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow();
-        });
+    it("wraps the data model's refusal as a validation error carrying its code, field and limit", () => {
+      let caught: unknown;
+      try {
+        PostNormalizer.to(note({ content: 'x'.repeat(POST_MAX_CHARACTER_LENGTH + 1) }), OWNER);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(AppError);
+      expect(caught).toMatchObject({
+        code: ValidationErrorCode.INVALID_INPUT,
+        service: ErrorService.SocialSpecs,
+        operation: 'buildPost',
+        context: expect.objectContaining({ code: 'length', field: 'content', limit: POST_MAX_CHARACTER_LENGTH }),
       });
+    });
 
-      describe('content length stress tests', () => {
-        it('should handle moderate length Short post (2000 characters)', async () => {
-          const moderateContent = 'A'.repeat(2000);
-          const post = createBasicPost({ content: moderateContent, kind: PubkyAppPostKind.Short });
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
+    it('refuses empty content without an embed or an attachment, and accepts it with one', () => {
+      expect(() => PostNormalizer.to(note({ content: '' }), OWNER)).toThrow(AppError);
+      expect(PostNormalizer.to(note({ content: '', attachments: [upload(1)] }), OWNER).object.content).toBe('');
+    });
 
-          expect(result).toBeDefined();
-          expect(result.post.toJson().content).toBe(moderateContent);
-        });
+    it('counts code points like getCharacterCount, so the composer cap and the data model agree', () => {
+      // An astral character is two UTF-16 units but one code point to both
+      const body = '😀'.repeat(ARTICLE_MAX_CHARACTER_LENGTH);
+      expect(getCharacterCount(body)).toBe(ARTICLE_MAX_CHARACTER_LENGTH);
+      expect(body.length).toBe(2 * ARTICLE_MAX_CHARACTER_LENGTH);
 
-        /**
-         * Note: The pubky-app-specs library validates max length and throws an error
-         * when content exceeds the limit for the post kind.
-         */
-        it('should reject Short post exceeding max length (2000 characters)', async () => {
-          const longContent = 'B'.repeat(10_000);
-          const post = createBasicPost({ content: longContent, kind: PubkyAppPostKind.Short });
-
-          await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow(
-            'Post content exceeds maximum length for Short kind',
-          );
-        });
-
-        /**
-         * Note: pubky-app-specs counts emoji units as 1 character, unlike how JavaScript counts string length.
-         */
-        it('should accept Short post with unicode characters at the limit', async () => {
-          const unicodeContent = '🎉'.repeat(2000); // 4,000 string length but 2,000 emoji units
-          const post = createBasicPost({ content: unicodeContent, kind: PubkyAppPostKind.Short });
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-          const returnedContent = result.post.toJson().content;
-          expect(returnedContent.length).toBe(4000);
-          expect(returnedContent).toBe('🎉'.repeat(2000));
-        });
-
-        it('should handle very long Long post (10,000 characters)', async () => {
-          const longContent = 'E'.repeat(10_000);
-          const post = createBasicPost({ content: longContent, kind: PubkyAppPostKind.Long });
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-          expect(result.post.toJson().content).toBe(longContent);
-        });
-
-        /**
-         * Note: The pubky-app-specs library validates max length and throws an error
-         * when content exceeds the limit for Long posts (50,000 characters).
-         */
-        it('should reject Long post exceeding max length (50,000 characters)', async () => {
-          const extremelyLongContent = 'F'.repeat(100_000);
-          const post = createBasicPost({ content: extremelyLongContent, kind: PubkyAppPostKind.Long });
-
-          await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow(
-            'Post content exceeds maximum length for Long kind',
-          );
-        });
-
-        /**
-         * Note: pubky-app-specs counts emoji units as 1 character, unlike how JavaScript counts string length.
-         */
-        it('should accept Long post with unicode characters within limit', async () => {
-          const unicodeContent = '🚀'.repeat(30_000); // 60,000 string length but 30,000 emoji units
-          const post = createBasicPost({ content: unicodeContent, kind: PubkyAppPostKind.Long });
-          const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
-
-          expect(result).toBeDefined();
-          const returnedContent = result.post.toJson().content;
-          expect(returnedContent.length).toBe(60_000);
-          expect(returnedContent).toBe('🚀'.repeat(30_000));
-        });
-      });
+      expect(() => PostNormalizer.to({ content: articleContent('T', body), kind: 'article' }, OWNER)).not.toThrow();
+      expect(() => PostNormalizer.to({ content: articleContent('T', `${body}x`), kind: 'article' }, OWNER)).toThrow(
+        AppError,
+      );
     });
   });
 
   describe('toCollection', () => {
-    let mockBuilder: ReturnType<typeof createMockBuilder>;
+    it('builds a collection whose envelope the data model spells, items with no note', () => {
+      const built = PostNormalizer.toCollection(
+        { name: 'Reading', description: 'Later', items: [PARENT], layout: COLLECTION_LAYOUT.LIST },
+        OWNER,
+      );
 
-    beforeEach(() => {
-      mockBuilder = createMockBuilder();
-      setupUnitTestMocks(mockBuilder);
-    });
-
-    afterEach(restoreMocks);
-
-    it('creates a collection post through pubky-app-specs', async () => {
-      await PostNormalizer.toCollection(
-        {
-          name: 'Proof of Work',
-          description: 'Bitcoin writing',
-          items: [buildPubkyUri(TEST_PUBKY.USER_2, 'posts/post-1')],
+      expect(built.object.kind).toBe('collection');
+      expect(built.object.attachments).toEqual([]);
+      expect(decodeContent(built.object)).toEqual({
+        kind: 'collection',
+        content: {
+          name: 'Reading',
+          description: 'Later',
+          items: [{ uri: PARENT, note: null }],
+          cover_image: null,
+          layout: 'list',
         },
-        TEST_PUBKY.USER_1,
-      );
-
-      expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-      expect(mockBuilder.createCollectionPost).toHaveBeenCalledWith(
-        'Proof of Work',
-        'Bitcoin writing',
-        [buildPubkyUri(TEST_PUBKY.USER_2, 'posts/post-1')],
-        undefined,
-        COLLECTION_LAYOUT.CARDS,
-      );
+      });
     });
 
-    it('forwards an optional cover_image URL to pubky-app-specs', async () => {
-      await PostNormalizer.toCollection(
-        {
-          name: 'Proof of Work',
-          coverImage: 'https://cdn.example.com/cover.png',
-          layout: COLLECTION_LAYOUT.LIST,
-        },
-        TEST_PUBKY.USER_1,
-      );
-
-      expect(mockBuilder.createCollectionPost).toHaveBeenCalledWith(
-        'Proof of Work',
-        '',
-        [],
-        'https://cdn.example.com/cover.png',
-        COLLECTION_LAYOUT.LIST,
-      );
-    });
-
-    it('forwards the Visual layout to pubky-app-specs', async () => {
-      await PostNormalizer.toCollection(
-        {
-          name: 'Gallery',
-          layout: COLLECTION_LAYOUT.VISUAL,
-        },
-        TEST_PUBKY.USER_1,
-      );
-
-      expect(mockBuilder.createCollectionPost).toHaveBeenCalledWith(
-        'Gallery',
-        '',
-        [],
-        undefined,
-        COLLECTION_LAYOUT.VISUAL,
-      );
-    });
-
-    it('validates the collection envelope before calling specs', async () => {
-      await expect(
-        PostNormalizer.toCollection(
-          {
-            name: '   ',
-            description: 'No name',
-          },
-          TEST_PUBKY.USER_1,
-        ),
-      ).rejects.toThrow('Collection name is required');
-
-      expect(mockBuilder.createCollectionPost).not.toHaveBeenCalled();
+    it('validates the envelope before the data model sees it', () => {
+      expect(() => PostNormalizer.toCollection({ name: '   ' }, OWNER)).toThrow('Collection name is required');
     });
   });
 
-  /**
-   * Tests for `toEdit` method - Edits existing post content
-   */
   describe('toEdit', () => {
-    const compositePostId = `${TEST_PUBKY.USER_1}:${TEST_POST_IDS.POST_1}`;
+    const head = (input: Parameters<typeof buildPost>[1]) => {
+      const built = buildPost(OWNER, input);
+      return { url: built.url, post: built.object };
+    };
 
-    const createMockPostRelationships = (
-      overrides?: Partial<PostRelationshipsModelSchema>,
-    ): PostRelationshipsModelSchema => ({
-      id: compositePostId,
-      replied: null,
-      reposted: null,
-      mentioned: [],
-      ...overrides,
+    it('writes the next version above the head, with the content changed and everything else carried', () => {
+      const lock = `pubky://${OWNER}/pub/app.locks/0035QZPT4QG00.json`;
+      const stored = head({ content: 'Hello', parent: PARENT, embed: PARENT, lock });
+
+      const next = PostNormalizer.toEdit({ owner: OWNER, head: stored, edit: { content: 'Hello again' } });
+
+      const storedVersion = parseUri(stored.url);
+      expect(storedVersion.kind).toBe('post');
+      if (storedVersion.kind !== 'post') return;
+      expect(next.id).toBe(storedVersion.id);
+      // Versions sort by edit id: the next one lands above the stored head
+      expect(String(next.editId) > String(storedVersion.editId)).toBe(true);
+      expect(next.url).not.toBe(stored.url);
+      expect(next.object).toEqual({ ...stored.post, content: 'Hello again' });
+      expect(next.object.lock).toBe(lock);
     });
 
-    const createMockEditBuilder = (
-      overrides?: Partial<{ editPost: ReturnType<typeof vi.fn>; createPost: ReturnType<typeof vi.fn> }>,
-    ) => ({
-      editPost: vi.fn((originalPost: PubkyAppPost, postId: string, newContent: string) =>
-        asOpaque<PostResult>({
-          post: {
-            content: newContent,
-            kind: originalPost.kind,
-            parent: originalPost.parent,
-            embed: originalPost.embed,
-            attachments: originalPost.attachments,
-            toJson: vi.fn(() => ({
-              content: newContent,
-              kind: originalPost.kind,
-            })),
-          },
-          meta: {
-            id: postId,
-            url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${postId}`),
-            path: `/pub/pubky.app/posts/${postId}`,
-          },
+    it('keeps the alt text of kept attachments, names new ones, and drops the ones left out', () => {
+      const kept = upload(1, 'kept.png');
+      const dropped = upload(2, 'dropped.png');
+      const added = upload(3, 'added.png');
+      const stored = head({
+        content: 'pics',
+        attachments: [
+          { uri: kept.media.url, name: 'kept.png', alt: 'A kept picture' },
+          { uri: dropped.media.url, name: 'dropped.png' },
+        ],
+      });
+
+      const next = PostNormalizer.toEdit({
+        owner: OWNER,
+        head: stored,
+        edit: {
+          content: 'pics',
+          attachmentUris: [added.media.url, kept.media.url],
+          attachmentNames: { [added.media.url]: 'added.png' },
+          kind: 'image',
+        },
+      });
+
+      expect(next.object.attachments).toEqual([
+        { uri: added.media.url, name: 'added.png', alt: null },
+        { uri: kept.media.url, name: 'kept.png', alt: 'A kept picture' },
+      ]);
+      expect(next.object.kind).toBe('image');
+    });
+
+    it('clears the attachments with null and leaves them with undefined', () => {
+      const stored = head({ content: 'pics', attachments: [{ uri: upload(1).media.url }] });
+
+      expect(
+        PostNormalizer.toEdit({ owner: OWNER, head: stored, edit: { content: 'x', attachmentUris: null } }).object
+          .attachments,
+      ).toEqual([]);
+      expect(PostNormalizer.toEdit({ owner: OWNER, head: stored, edit: { content: 'x' } }).object.attachments).toEqual(
+        stored.post.attachments,
+      );
+    });
+
+    it('carries the members another client added ($unknown) into the next version', () => {
+      const stored = head({ content: 'Hello' });
+      const withUnknown = { url: stored.url, post: { ...stored.post, $unknown: '{"mood":"calm"}' } };
+
+      const next = PostNormalizer.toEdit({ owner: OWNER, head: withUnknown, edit: { content: 'Edited' } });
+
+      expect(next.object.$unknown).toBe('{"mood":"calm"}');
+      expect(new TextDecoder().decode(next.body)).toContain('"mood":"calm"');
+    });
+
+    it("rewrites an article's title and body and keeps its cover unless the edit says otherwise", () => {
+      const cover = upload(9).media.url;
+      const stored = head({ kind: 'article', title: 'Old', body: 'Old body', cover_image: cover });
+
+      const kept = PostNormalizer.toEdit({
+        owner: OWNER,
+        head: stored,
+        edit: { content: articleContent('New', 'New body') },
+      });
+      expect(decodeContent(kept.object)).toEqual({
+        kind: 'article',
+        content: { title: 'New', body: 'New body', cover_image: cover },
+      });
+
+      const replaced = upload(8).media.url;
+      const withNewCover = PostNormalizer.toEdit({
+        owner: OWNER,
+        head: stored,
+        edit: { content: articleContent('New', 'New body'), coverImage: replaced },
+      });
+      expect(decodeContent(withNewCover.object)?.content).toMatchObject({ cover_image: replaced });
+
+      const cleared = PostNormalizer.toEdit({ owner: OWNER, head: stored, edit: { coverImage: null } });
+      expect(decodeContent(cleared.object)).toEqual({
+        kind: 'article',
+        content: { title: 'Old', body: 'Old body', cover_image: null },
+      });
+    });
+
+    it("merges a collection edit onto the stored envelope, keeping each kept item's note", () => {
+      const stored = head({
+        kind: 'collection',
+        name: 'Reading',
+        items: [
+          { uri: PARENT, note: 'start here' },
+          { uri: 'https://example.com/a', note: 'later' },
+        ],
+      });
+
+      const next = PostNormalizer.toEdit({
+        owner: OWNER,
+        head: stored,
+        edit: {
+          collection: { name: 'Renamed', description: 'Now', items: ['https://example.com/b', PARENT], layout: 'grid' },
+        },
+      });
+
+      expect(decodeContent(next.object)).toEqual({
+        kind: 'collection',
+        content: {
+          name: 'Renamed',
+          description: 'Now',
+          cover_image: null,
+          layout: 'grid',
+          items: [
+            { uri: 'https://example.com/b', note: null },
+            { uri: PARENT, note: 'start here' },
+          ],
+        },
+      });
+    });
+
+    it('refuses a collection edit of a note and a text edit of a collection', () => {
+      const noteHead = head({ content: 'Hello' });
+      const collectionHead = head({ kind: 'collection', name: 'Reading' });
+
+      expect(() =>
+        PostNormalizer.toEdit({ owner: OWNER, head: noteHead, edit: { collection: { name: 'x', layout: 'grid' } } }),
+      ).toThrow('The stored post is not a collection');
+      expect(() => PostNormalizer.toEdit({ owner: OWNER, head: collectionHead, edit: { content: 'text' } })).toThrow(
+        'The stored post is not a note',
+      );
+    });
+
+    it("refuses an edit of another user's head and wraps it with the package's field", () => {
+      const theirs = buildPost(FRIEND, { content: 'Theirs' });
+      let caught: unknown;
+      try {
+        PostNormalizer.toEdit({
+          owner: OWNER,
+          head: { url: theirs.url, post: theirs.object },
+          edit: { content: 'Mine' },
+        });
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(AppError);
+      expect(caught).toMatchObject({
+        service: ErrorService.SocialSpecs,
+        operation: 'editPost',
+        context: expect.objectContaining({ field: 'headUri' }),
+      });
+    });
+
+    it('writes above the newest version when the head is an edit, not the first version', () => {
+      const first = buildPost(OWNER, { content: 'v1' });
+      const second = editPost(OWNER, first.url, { ...first.object, content: 'v2' });
+
+      const third = PostNormalizer.toEdit({
+        owner: OWNER,
+        head: { url: second.url, post: second.object },
+        edit: { content: 'v3' },
+      });
+
+      expect(third.id).toBe(first.id);
+      expect(third.editId > second.editId).toBe(true);
+    });
+  });
+
+  describe('toLocalEdit', () => {
+    it('projects a note edit: the content, the attachments (null for none) and the local kind', () => {
+      const row = { content: 'Hello', attachments: null, kind: 'short' };
+
+      expect(
+        PostNormalizer.toLocalEdit({ row, edit: { content: 'Edited', attachmentUris: [], kind: 'note' } }),
+      ).toEqual({
+        content: 'Edited',
+        attachments: null,
+        kind: 'short',
+      });
+      expect(PostNormalizer.toLocalEdit({ row, edit: { attachmentUris: ['pubky://x'], kind: 'image' } })).toEqual({
+        content: 'Hello',
+        attachments: ['pubky://x'],
+        kind: 'image',
+      });
+      expect(PostNormalizer.toLocalEdit({ row, edit: {} })).toEqual({ content: 'Hello' });
+    });
+
+    it("spells an article's envelope with its cover kept, replaced or cleared", () => {
+      const cover = upload(9).media.url;
+      const row = {
+        content: encodeContent({ title: 'Old', body: 'Old body', cover_image: cover }),
+        attachments: null,
+        kind: 'long',
+      };
+
+      expect(PostNormalizer.toLocalEdit({ row, edit: { content: articleContent('New', 'B') } }).content).toBe(
+        encodeContent({ title: 'New', body: 'B', cover_image: cover }),
+      );
+      expect(PostNormalizer.toLocalEdit({ row, edit: { coverImage: null } }).content).toBe(
+        encodeContent({ title: 'Old', body: 'Old body', cover_image: null }),
+      );
+    });
+
+    it('merges a collection edit onto the stored envelope, keeping notes, and starts from an empty one otherwise', () => {
+      const stored = encodeContent({
+        name: 'Reading',
+        description: null,
+        cover_image: null,
+        layout: null,
+        items: [{ uri: PARENT, note: 'start here' }],
+      });
+      const edit = { collection: { name: 'Renamed', items: [PARENT], layout: COLLECTION_LAYOUT.CARDS } };
+
+      expect(
+        PostNormalizer.toLocalEdit({ row: { content: stored, attachments: null, kind: 'collection' }, edit }).content,
+      ).toBe(
+        encodeContent({
+          name: 'Renamed',
+          description: null,
+          cover_image: null,
+          layout: 'grid',
+          items: [{ uri: PARENT, note: 'start here' }],
         }),
-      ),
-      createPost: vi.fn(),
-      ...overrides,
-    });
-
-    describe('Unit Tests', () => {
-      let mockBuilder: ReturnType<typeof createMockEditBuilder>;
-
-      beforeEach(() => {
-        mockBuilder = createMockEditBuilder();
-        setupUnitTestMocks(mockBuilder);
-      });
-
-      afterEach(restoreMocks);
-
-      it('should edit post with correct arguments', async () => {
-        const mockPostDetails = createMockPostDetails(compositePostId);
-        mockPostDetails.content = 'Original content';
-        mockPostDetails.attachments = ['pubky://attachment1'];
-
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(mockPostDetails);
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-
-        const newContent = 'Updated content';
-        const result = await PostNormalizer.toEdit({
-          compositePostId,
-          content: newContent,
-          currentUserPubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result).toHaveProperty('post');
-        expect(result).toHaveProperty('meta');
-        expect(mockBuilder.editPost).toHaveBeenCalledWith(expect.any(PubkyAppPost), TEST_POST_IDS.POST_1, newContent);
-
-        // Verify original post data is preserved
-        const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
-        expect(originalPostArg.content).toBe('Original content');
-        expect(originalPostArg.attachments).toEqual(['pubky://attachment1']);
-      });
-
-      describe('attachments and kind overrides', () => {
-        const storedAttachments = ['pubky://attachment1', 'pubky://attachment2'];
-
-        const setupStoredPost = (kind = 'short') => {
-          const mockPostDetails = createMockPostDetails(compositePostId, kind);
-          mockPostDetails.content = 'Original content';
-          mockPostDetails.attachments = [...storedAttachments];
-
-          vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(mockPostDetails);
-          vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-        };
-
-        it('keeps stored attachments and kind when neither override is provided', async () => {
-          setupStoredPost();
-
-          await PostNormalizer.toEdit({
-            compositePostId,
-            content: 'Updated content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-          });
-
-          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
-          expect(originalPostArg.attachments).toEqual(storedAttachments);
-          // The WASM `kind` getter serializes enum variant names (PascalCase)
-          expect(originalPostArg.kind).toBe('Short');
-        });
-
-        it('replaces attachments while keeping the same post id and URL', async () => {
-          setupStoredPost();
-          const nextAttachments = ['pubky://next1', 'pubky://next2'];
-
-          const result = await PostNormalizer.toEdit({
-            compositePostId,
-            content: 'Updated content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-            attachments: nextAttachments,
-          });
-
-          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
-          expect(originalPostArg.attachments).toEqual(nextAttachments);
-          // The edit stays under the existing post id/URL — no new post is minted
-          expect(result.meta.id).toBe(TEST_POST_IDS.POST_1);
-          expect(result.meta.url).toBe(buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`));
-        });
-
-        it.each([
-          ['an empty array', [] as string[]],
-          ['null', null],
-        ])('clears stored attachments when %s is provided', async (_, attachments) => {
-          setupStoredPost();
-
-          await PostNormalizer.toEdit({
-            compositePostId,
-            content: 'Updated content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-            attachments,
-          });
-
-          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
-          expect(originalPostArg.attachments).toBeUndefined();
-        });
-
-        it('overrides the stored kind when provided', async () => {
-          setupStoredPost('short');
-
-          await PostNormalizer.toEdit({
-            compositePostId,
-            content: 'Updated content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-            attachments: ['pubky://next1'],
-            kind: PubkyAppPostKind.Image,
-          });
-
-          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
-          expect(originalPostArg.kind).toBe('Image');
-        });
-      });
-
-      it('should throw error when current user is not the author', async () => {
-        await expect(
-          PostNormalizer.toEdit({
-            compositePostId,
-            content: 'New content',
-            currentUserPubky: TEST_PUBKY.USER_2, // Different user
-          }),
-        ).rejects.toThrow('Current user is not the author of this post');
-      });
-
-      it('should throw POST_NOT_FOUND when post does not exist', async () => {
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
-
-        await expect(
-          PostNormalizer.toEdit({
-            compositePostId,
-            content: 'New content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-          }),
-        ).rejects.toThrow('Post not found');
-      });
-
-      it('should throw POST_NOT_FOUND when the post is tombstoned (content === [DELETED])', async () => {
-        // Regression: pre-tombstone refactor `!postDetails` caught hard-deleted
-        // rows. Now they stick around as tombstones — without the content
-        // check, `toEdit` would try to build a `PubkyAppPost` whose content is
-        // the `[DELETED]` sentinel.
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(
-          asOpaque<PostDetailsModel>({ ...createMockPostDetails(compositePostId), content: '[DELETED]' }),
-        );
-
-        await expect(
-          PostNormalizer.toEdit({
-            compositePostId,
-            content: 'New content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-          }),
-        ).rejects.toThrow('Post not found');
-      });
-
-      it('should throw POST_NOT_FOUND when the post is a Nexus tombstone (empty content, flag set)', async () => {
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(
-          asOpaque<PostDetailsModel>({ ...createMockPostDetails(compositePostId), content: '', deleted: true }),
-        );
-
-        await expect(
-          PostNormalizer.toEdit({
-            compositePostId,
-            content: 'New content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-          }),
-        ).rejects.toThrow('Post not found');
-      });
-
-      it('should preserve parent URI for reply posts', async () => {
-        const parentUri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_2}`);
-
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId));
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(
-          createMockPostRelationships({ replied: parentUri }),
-        );
-
-        await PostNormalizer.toEdit({
-          compositePostId,
-          content: 'Updated reply',
-          currentUserPubky: TEST_PUBKY.USER_1,
-        });
-
-        const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
-        expect(originalPostArg.parent).toBe(parentUri);
-      });
-
-      it('should reconstruct embed for repost/quote', async () => {
-        const repostedUri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_2}`);
-        const embeddedPostId = `${TEST_PUBKY.USER_2}:${TEST_POST_IDS.POST_2}`;
-
-        vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
-          if (id === compositePostId) return createMockPostDetails(compositePostId);
-          if (id === embeddedPostId) return createMockPostDetails(embeddedPostId, 'short');
-          return null;
-        });
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(
-          createMockPostRelationships({ reposted: repostedUri }),
-        );
-        (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
-
-        await PostNormalizer.toEdit({
-          compositePostId,
-          content: 'Updated quote',
-          currentUserPubky: TEST_PUBKY.USER_1,
-        });
-
-        const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
-        expect(originalPostArg.embed).toBeDefined();
-      });
-
-      it('should propagate database errors', async () => {
-        vi.spyOn(PostDetailsModel, 'findById').mockRejectedValue(new Error('Database error'));
-
-        await expect(
-          PostNormalizer.toEdit({
-            compositePostId,
-            content: 'New content',
-            currentUserPubky: TEST_PUBKY.USER_1,
-          }),
-        ).rejects.toThrow('Database error');
-      });
-    });
-
-    describe('Integration Tests', () => {
-      beforeEach(setupIntegrationTestMocks);
-      afterEach(restoreMocks);
-
-      it('should edit post and return valid result with new content', async () => {
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId));
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-
-        const newContent = 'Updated post content';
-        const result = await PostNormalizer.toEdit({
-          compositePostId,
-          content: newContent,
-          currentUserPubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.post).toBeDefined();
-        expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/posts\/.+/);
-        expect(result.meta.id).toBe(TEST_POST_IDS.POST_1);
-        expect(result.post.toJson().content).toBe(newContent);
-      });
-
-      it('preserves the stored lock when editing announcement content', async () => {
-        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/app.locks/LOCK1.json`;
-        const postDetails = createMockPostDetails(compositePostId);
-        postDetails.lock = lockUrl;
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(postDetails);
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-
-        const result = await PostNormalizer.toEdit({
-          compositePostId,
-          content: 'Updated announcement',
-          currentUserPubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.post.toJson()).toEqual(
-          expect.objectContaining({ content: 'Updated announcement', lock: lockUrl }),
-        );
-      });
-
-      it('preserves the stored lock when attachments and kind change', async () => {
-        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/app.locks/LOCK1.json`;
-        const nextAttachments = [buildPubkyUri(TEST_PUBKY.USER_1, 'files/NEXT1')];
-        const postDetails = createMockPostDetails(compositePostId);
-        postDetails.lock = lockUrl;
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(postDetails);
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-
-        const result = await PostNormalizer.toEdit({
-          compositePostId,
-          content: 'Updated announcement',
-          currentUserPubky: TEST_PUBKY.USER_1,
-          attachments: nextAttachments,
-          kind: PubkyAppPostKind.Image,
-        });
-
-        expect(result.post.toJson()).toEqual(
-          expect.objectContaining({ lock: lockUrl, attachments: nextAttachments, kind: 'image' }),
-        );
-      });
-
-      it('does not add a lock field to a normal post edit', async () => {
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId));
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-
-        const result = await PostNormalizer.toEdit({
-          compositePostId,
-          content: 'Updated post content',
-          currentUserPubky: TEST_PUBKY.USER_1,
-        });
-
-        expect('lock' in result.post.toJson()).toBe(false);
-      });
-
-      it('should reject empty content', async () => {
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId));
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-
-        await expect(
-          PostNormalizer.toEdit({
-            compositePostId,
-            content: '',
-            currentUserPubky: TEST_PUBKY.USER_1,
-          }),
-        ).rejects.toThrow();
-      });
-
-      it('should handle Long posts with extended content length', async () => {
-        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId, 'long'));
-        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
-
-        const longContent = 'E'.repeat(10_000);
-        const result = await PostNormalizer.toEdit({
-          compositePostId,
-          content: longContent,
-          currentUserPubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result).toBeDefined();
-        expect(result.post.toJson().content).toBe(longContent);
-      });
+      );
+      // A row Nexus served in the 0.x spelling (plain URIs) has no notes to keep
+      const legacy = JSON.stringify({ name: 'Reading', items: [PARENT] });
+      expect(
+        PostNormalizer.toLocalEdit({ row: { content: legacy, attachments: null, kind: 'collection' }, edit }).content,
+      ).toBe(
+        encodeContent({
+          name: 'Renamed',
+          description: null,
+          cover_image: null,
+          layout: 'grid',
+          items: [{ uri: PARENT, note: null }],
+        }),
+      );
     });
   });
 });

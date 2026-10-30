@@ -24,7 +24,10 @@ const {
   mockGetMetadata: vi.fn(),
   mockFindByIdsPreserveOrder: vi.fn(),
   mockEnrichPosts: vi.fn(),
-  mockLocalFilesState: { posts: {} as Record<string, AttachmentConstructed[]> },
+  mockLocalFilesState: {
+    posts: {} as Record<string, AttachmentConstructed[]>,
+    articleCovers: {} as Record<string, AttachmentConstructed>,
+  },
 }));
 
 type VisualFeedSnapshot = {
@@ -178,8 +181,12 @@ vi.mock('dexie-react-hooks', () => ({
 }));
 
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
-  useLocalFilesStore: (selector: (state: { posts: Record<string, AttachmentConstructed[]> }) => unknown) =>
-    selector(mockLocalFilesState),
+  useLocalFilesStore: (
+    selector: (state: {
+      posts: Record<string, AttachmentConstructed[]>;
+      articleCovers: Record<string, AttachmentConstructed>;
+    }) => unknown,
+  ) => selector(mockLocalFilesState),
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -220,6 +227,7 @@ describe('useVisualFeedTiles', () => {
     vi.clearAllMocks();
     resetVisualTileCaches();
     mockLocalFilesState.posts = {};
+    mockLocalFilesState.articleCovers = {};
     mockUseLiveQuery.mockReturnValue({
       tiles: [],
       missingFileUris: [],
