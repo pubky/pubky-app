@@ -6,6 +6,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
+import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
 import { RouteGuardProvider } from './RouteGuardProvider';
 
 // Hoisted mocks
@@ -656,6 +657,24 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
     );
     expect(screen.getByText('Page Content')).toBeInTheDocument();
     expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('keeps the onboarding page mounted while a signup migrates inline without a session', () => {
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.restoreStatus = 'restoring';
+    mocks.isLoading = true;
+    mocks.pathname = '/onboarding/pubky';
+    useSocialMigrationStore.setState({ stage: 'running' });
+    try {
+      render(
+        <RouteGuardProvider>
+          <div>Onboarding</div>
+        </RouteGuardProvider>,
+      );
+      expect(screen.getByText('Onboarding')).toBeInTheDocument();
+    } finally {
+      useSocialMigrationStore.getState().reset();
+    }
   });
 
   it('lets a signed-out visitor read the gate explanation', () => {

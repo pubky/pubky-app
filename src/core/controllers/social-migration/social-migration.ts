@@ -168,6 +168,7 @@ export class SocialMigrationController {
   private static cancelGate(gate: Gate): void {
     gate.abort.abort();
     gate.wake?.('cancel');
+    useSocialMigrationStore.getState().reset();
   }
 
   private static async migrate({
@@ -326,7 +327,7 @@ export class SocialMigrationController {
       });
       // The listing of this run replaces the earlier run's position once the walk starts
       if (changed && event.phase === 'migrating') store.setResumedFrom(undefined);
-      if (changed && store.stage !== 'running' && store.stage !== 'waiting-for-tab') return;
+      // The first event of a run that waited for another tab's lock ends the waiting stage
       if (changed) store.setStage('running');
       this.saveLastRun(gate.pubky, { status: 'running', ...event });
     };

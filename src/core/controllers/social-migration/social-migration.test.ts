@@ -290,6 +290,7 @@ describe('SocialMigrationController', () => {
     useAuthStore.setState({ generation: 'another-tab' });
 
     expect(await migrating).toBe('canceled');
+    expect(stage().stage).toBe('idle');
   });
 
   describe('outcome policy', () => {

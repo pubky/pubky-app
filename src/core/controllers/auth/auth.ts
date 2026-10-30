@@ -1073,7 +1073,10 @@ export class AuthController {
               completed = isAuthFlowCanceledError(error) || isAuthApprovalMismatchError(error);
               throw error;
             } finally {
-              if (completed || useAuthStore.getState().session === session) flow.completeAuthFlow?.();
+              // The gate's forced sign-out also ends the attempt: the session never reaches the store.
+              const state = useAuthStore.getState();
+              if (completed || state.session === session || state.restoreStatus === 'social-migration')
+                flow.completeAuthFlow?.();
             }
           };
           if (deferAdoption) this.pendingSessionAdoptions.set(session, adopt);

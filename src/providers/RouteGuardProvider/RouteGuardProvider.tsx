@@ -26,6 +26,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
+import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
@@ -74,8 +75,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   }, [currentUserPubky, pathname, restoreStatus, session, wasDbReset, isLoading]);
   const preserveMountedPage =
     currentUserPubky !== null && lastReadyPage?.pubky === currentUserPubky && lastReadyPage.pathname === pathname;
+  // A signup's migration run is inline (ADR-0026): the session is not in the store yet, the onboarding page stays.
+  const inlineGateRun = useSocialMigrationStore((state) => state.stage === 'running');
   const interactiveAuth = Boolean(
-    session &&
+    (session || inlineGateRun) &&
     restoreStatus === 'restoring' &&
     (pathname === AUTH_ROUTES.SIGN_IN ||
       Object.values(ONBOARDING_ROUTES).some((route) => matchesAllowedRoute(pathname, route))),

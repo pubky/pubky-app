@@ -241,6 +241,28 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     });
   });
 
+  it('ends a Ring attempt whose session the gate signed out, so its pending record is discarded', async () => {
+    const complete = vi.fn();
+    vi.spyOn(AuthApplication, 'startGrantFlow').mockResolvedValue(
+      asOpaque({
+        url: 'pubkyauth://flow',
+        awaitApproval: Promise.resolve(session),
+        cancelAuthFlow: vi.fn(),
+        completeAuthFlow: complete,
+      }),
+    );
+    vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('ring-grant'));
+    vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(
+      asOpaque<MigrationReport>({ ...done(), status: 'aborted', error: { code: 'SESSION_EXPIRED', message: '' } }),
+    );
+
+    const flow = await AuthController.getAuthUrl();
+    await flow.awaitApproval;
+
+    expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'social-migration' });
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
   it('runs a signup inline: the status never leaves restoring for the gate', async () => {
     vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(asOpaque({ publicKey: { z32: () => pubky } }));
     vi.spyOn(AuthApplication, 'createAccount').mockResolvedValue(undefined);
