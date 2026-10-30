@@ -124,9 +124,13 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
         // Claiming is best effort: `navigate` below still reaches every window this worker controls.
       }
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      // `navigate` rejects for a window the worker does not control or that is mid-navigation; one
-      // such window must not keep the others on the old build.
-      await Promise.allSettled(windows.map((client) => client.navigate(client.url)));
+      // Not awaited: each navigation is a fetch this worker now serves, and the browser holds fetch
+      // events until this activation has finished, so waiting for the navigations here would deadlock
+      // until the event timeout. `navigate` rejects for a window the worker does not control or that
+      // is mid-navigation; one such window must not keep the others on the old build.
+      for (const client of windows) {
+        client.navigate(client.url).catch(() => undefined);
+      }
     })(),
   );
 });

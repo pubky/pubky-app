@@ -150,12 +150,14 @@ describe('src/sw.ts', () => {
 
   describe('social v1 cut-over takeover', () => {
     const order: string[] = [];
-    const windowClient = (url: string, outcome: 'ok' | 'rejected') => ({
+    const windowClient = (url: string, outcome: 'ok' | 'rejected' | 'pending') => ({
       url,
-      navigate: vi.fn(async (target: string) => {
+      navigate: vi.fn((target: string) => {
         order.push(`navigate:${target}`);
-        if (outcome === 'rejected') throw new TypeError('The client is not controlled by this worker');
-        return null;
+        if (outcome === 'rejected') return Promise.reject(new TypeError('The client is not controlled by this worker'));
+        // A navigation is a fetch served by this worker, which the browser holds until activation ends.
+        if (outcome === 'pending') return new Promise<null>(() => {});
+        return Promise.resolve(null);
       }),
     });
     const claim = vi.fn(async () => {
@@ -170,7 +172,7 @@ describe('src/sw.ts', () => {
       windows = [
         windowClient('https://pubky.app/home', 'ok'),
         windowClient('https://pubky.app/settings', 'rejected'),
-        windowClient('https://pubky.app/post/alice:0123', 'ok'),
+        windowClient('https://pubky.app/post/alice:0123', 'pending'),
       ];
       matchAll = vi.fn().mockResolvedValue(windows);
       Object.defineProperty(globalThis, 'clients', { configurable: true, value: { claim, matchAll } });
@@ -186,11 +188,12 @@ describe('src/sw.ts', () => {
       expect(onTakeover).toBeDefined();
       const waitUntil = vi.fn();
       onTakeover({ waitUntil });
-      // A rejected navigate or claim must not reject the activation itself.
+      // Activation must settle on its own: a rejected navigate or claim must not reject it, and a
+      // navigation still in flight must not hold it open (its fetch waits for this very activation).
       await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
     };
 
-    it('claims then navigates every window client, tolerating a rejected navigate', async () => {
+    it('claims then navigates every window client without waiting for the navigations', async () => {
       await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
 
       expect(claim).toHaveBeenCalledTimes(1);
