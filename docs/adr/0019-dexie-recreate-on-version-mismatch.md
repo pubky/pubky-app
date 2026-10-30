@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2026-09-15
+Accepted — 2026-09-15  
+Updated — 2026-10-30 (`DB_VERSION` 3 → 4 for the social v1 port; mixed-build tabs and the recreate loop-breaker)
 
 ## Context
 
@@ -45,6 +46,11 @@ Local schema evolution is destructive and explicit.
   unreadable version self-heals by recreating.
 - Callers that care that the database was emptied read `wasDbReset`. `RouteGuardProvider` uses it to
   re-run `MigrationController.resync` and to hold routing until that resync finishes.
+- `AppDatabase.initialize({ allowRecreate })` guards the recreate against a tab running another build.
+  The first mismatch in a page lifetime always recreates. A second one is refused with
+  `Err.database(DatabaseErrorCode.VERSION_CONFLICT)` unless the caller allows it: `DatabaseProvider`
+  passes `allowRecreate: true` on mount and from the user's retry, and `false` when it re-initializes
+  after an unexpected close, which is how the other tab's recreate reaches this page.
 - Local-only choices that the network cannot restore, today only the unblur flag, are accepted as
   lost by a recreate. Growing that set is a reason to revisit this ADR.
 
@@ -70,6 +76,19 @@ Local schema evolution is destructive and explicit.
 - A recreate discards local-only user choices. An explicit unblur is not synced, so after a bump the
   item is moderated again and blurred: the next nexus persistence pass upserts the record with
   `is_blurred: true` (`ModerationModel.bulkSave` in `src/core/services/local/stream/{posts,users}`).
+- Two tabs of different builds in one browser profile would otherwise take turns: each recreate closes
+  the other tab's connection (`versionchange` → Dexie `close`), whose provider re-initializes, finds the
+  wrong version, and recreates again, wiping the database and re-running the resync in both tabs each
+  round. The loop-breaker in _Decision_ stops the new build after one round; `DatabaseErrorScreen` then
+  says "Close other Pubky tabs, then retry.", and in the social v1 release the forced worker reload
+  (ADR-0021 amendment) brings the old tab onto the new build. A tab of a build without the breaker
+  keeps recreating until it reloads.
+- A bump that ships with a forced sign-out (the social v1 gate, ADR-0026) resyncs twice on the first
+  load: the recreate sets `wasDbReset` before auth restore, and the bootstrap after the gate runs
+  `MigrationController.resync` again. Accepted: both runs are reads of small lists.
+- The default in `src/libs/env/env.ts` does not ship on its own: the Docker workflows
+  (`release-docker.yml`, `build-docker-image.yml`) pass `NEXT_PUBLIC_DB_VERSION` as a build arg, so a
+  bump is two PRs, the app change and a CI-task PR for those two lines, merged together.
 
 ### Neutral ⚠️
 
@@ -132,7 +151,14 @@ with snapshot tests.
 - Version source: `src/config/database.ts` (`DB_VERSION = Env.NEXT_PUBLIC_DB_VERSION`).
 - `wasDbReset` consumer: `src/providers/RouteGuardProvider/RouteGuardProvider.tsx`.
 - Tests: `src/core/database/franky/franky.test.ts` covers the version mismatch, the unknown-version
-  path, and the transient-error cases that must not recreate the database.
+  path, the transient-error cases that must not recreate the database, and the refused second recreate.
+- Loop-breaker: `InitializeOptions.allowRecreate` and `recreatedThisPageLifetime` in `franky.ts`,
+  `DatabaseErrorCode.VERSION_CONFLICT` in `src/libs/error/error.codes.ts`, the two `initDatabase` call
+  sites in `src/providers/DatabaseProvider/DatabaseProvider.tsx`, and the `description` prop of
+  `src/components/molecules/DatabaseErrorScreen/DatabaseErrorScreen.tsx`.
+- Version history: 3 → 4 on 2026-10-30 for the social v1 port (feed enums become strings, file ids
+  become `owner:hash`, post `uri` spellings change, bookmarks become locally owned). The index map did
+  not change, so the recreate is the only way to guarantee that every client starts clean.
 
 ## Related Decisions
 

@@ -98,12 +98,51 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   );
 });
 
+// Social v1 cut-over, one release only (ADR-0021 amendment, docs/pwa.md "Rollout note"): a page
+// still running the previous build keeps writing the retired `/pub/pubky.app/` tree until it
+// reloads, and nothing server-side reaches it. Once this worker activates over an earlier one it
+// claims every window and navigates each one to its own URL, the one reload the old bundle cannot
+// decline. A first install (no earlier worker) keeps the silent `clientsClaim` behaviour: reloading
+// a first-time visitor mid-onboarding would lose their input for nothing. The release after this
+// one removes both listeners and restores `skipWaiting: false` below.
+//
+// During `install`, `self.registration.active` is still the worker being replaced; a first
+// install has none. The flag lives in the worker instance, which `skipWaiting` activates right
+// after installing; a worker restarted in between defaults to the harmless first-install path.
+let replacesActiveWorker = false;
+self.addEventListener('install', () => {
+  replacesActiveWorker = self.registration.active !== null;
+});
+
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(
+    (async () => {
+      if (!replacesActiveWorker) return;
+      try {
+        await self.clients.claim();
+      } catch {
+        // Claiming is best effort: `navigate` below still reaches every window this worker controls.
+      }
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      // Not awaited: each navigation is a fetch this worker now serves, and the browser holds fetch
+      // events until this activation has finished, so waiting for the navigations here would deadlock
+      // until the event timeout. `navigate` rejects for a window the worker does not control or that
+      // is mid-navigation; one such window must not keep the others on the old build.
+      for (const client of windows) {
+        client.navigate(client.url).catch(() => undefined);
+      }
+    })(),
+  );
+});
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  // Never activate over live clients on its own: the app shows an "Update available"
-  // toast and posts SKIP_WAITING once the user opts in (useServiceWorkerUpdate).
-  skipWaiting: false,
-  // The first install claims open tabs immediately; updates still wait for consent.
+  // Social v1 cut-over, one release only (ADR-0021 amendment): the worker activates as soon as it
+  // installs instead of waiting for the "Update available" consent (useServiceWorkerUpdate), and
+  // the activate listener above reloads every open window when it replaces an earlier worker.
+  // Restore `false` in the next release.
+  skipWaiting: true,
+  // The first install claims open tabs immediately.
   clientsClaim: true,
   // Consumed by the NetworkOnly navigation route below.
   navigationPreload: true,
