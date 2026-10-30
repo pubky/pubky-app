@@ -35,6 +35,7 @@ import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type {
   FeedDeleteParams,
+  FeedFetchOptions,
   FeedPutParams,
   LocalFeedMigrationParams,
   LocalFeedReconcileParams,
@@ -43,11 +44,14 @@ import type {
   StoredFeedWriteParams,
 } from './feed.types';
 
+/** Web Lock shared by every tab: feed writes hold it `shared`, the reconciling fetch `exclusive`. */
+const FEED_SYNC_LOCK_PREFIX = 'pubky-feeds-sync:';
+
 export class FeedApplication {
   private constructor() {}
   private static readonly FETCH_FEEDS_BATCH_SIZE = 10;
-  /** Ids whose PUT is in flight in this tab: a listing taken meanwhile does not name them yet. */
-  private static readonly syncingIds = new Set<string>();
+  /** Per-tab stand-in for the Web Lock where `navigator.locks` is unavailable (an insecure origin). */
+  private static pendingSync = new Map<Pubky, Promise<unknown>>();
 
   static async getList(): Promise<FeedModelSchema[]> {
     return LocalFeedService.readAll();
@@ -58,6 +62,10 @@ export class FeedApplication {
   }
 
   static async persist({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
+    return this.withSyncLock(userId, 'shared', () => this.persistUnderLock({ userId, params }));
+  }
+
+  private static async persistUnderLock({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
     const { feed: builtFeed, existingId } = params as TFeedPersistCreateParams;
     // The id is the filter's hash, computed by the builder from this client's input alone, so it
     // is known before any homeserver round trip and never changes once the stored copy is merged in.
@@ -92,7 +100,7 @@ export class FeedApplication {
       // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
 
-      await this.putStoredFeed({ id: newId, storedUrl, feedUrl, feed: builtFeed.object });
+      await this.putStoredFeed({ storedUrl, feedUrl, feed: builtFeed.object });
 
       const persistedNewFeed = await this.migrateLocalFeedAtomically({ userId, existingId, feedSchema, oldFeed });
 
@@ -108,10 +116,14 @@ export class FeedApplication {
       return persistedNewFeed;
     }
 
-    return this.commit({ feedSchema, id: newId, storedUrl, feedUrl, feed: builtFeed.object });
+    return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object });
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
+    return this.withSyncLock(userId, 'shared', () => this.commitDeleteUnderLock({ userId, params }));
+  }
+
+  private static async commitDeleteUnderLock({ userId, params }: FeedDeleteParams): Promise<void> {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
 
     // Model errors are already logged; cache cleanup must not block the delete itself.
@@ -174,12 +186,18 @@ export class FeedApplication {
    * Feeds live under the private root only; the listing is the whole truth about which feeds
    * exist, so every local row it does not name (a feed deleted on another device, a row carrying
    * a 0.x id from before the account was migrated) is removed with its stream cache. The whole
-   * directory is listed for that reason: a truncated listing would delete feeds that exist.
+   * directory is listed for that reason: a truncated listing would delete feeds that exist. The
+   * listing and the local write hold the sync lock exclusively, so a feed being written in any tab
+   * (its row stored, its PUT not yet landed) is either listed or written after this returns, never
+   * removed. `isCurrent` is checked inside the local write: a listing that outlives an account
+   * switch touches nothing.
    */
-  static async fetchFeeds(userId: Pubky): Promise<FeedModelSchema[]> {
+  static async fetchFeeds(userId: Pubky, { isCurrent }: FeedFetchOptions = {}): Promise<FeedModelSchema[]> {
+    return this.withSyncLock(userId, 'exclusive', () => this.fetchFeedsUnderLock(userId, isCurrent));
+  }
+
+  private static async fetchFeedsUnderLock(userId: Pubky, isCurrent?: () => boolean): Promise<FeedModelSchema[]> {
     const feedsDirectory = `${listPrefix(userId, 'private')}feeds/`;
-    // Taken before the listing: a row written from here on is a create whose PUT may still be in flight.
-    const listedAt = Date.now();
     const feedUris = await HomeserverService.listAll({ baseDirectory: feedsDirectory });
     const listedIds = new Set(feedUris.flatMap((feedUri) => this.feedIdOfUri(feedUri) ?? []));
 
@@ -210,9 +228,7 @@ export class FeedApplication {
       });
     }
 
-    const persisted = validFeeds.length > 0 ? await LocalFeedService.createOrUpdateMany(validFeeds) : [];
-    await this.reconcileLocalFeeds({ userId, listedIds, listedAt });
-    return persisted;
+    return this.reconcileLocalFeeds({ userId, feeds: validFeeds, listedIds, isCurrent });
   }
 
   /** The feed id a listing entry names, or null for a file in the directory that is no feed. */
@@ -226,14 +242,16 @@ export class FeedApplication {
   }
 
   /**
-   * Removes the local feeds the listing no longer names, with the stream caches keyed on them, so
-   * their tabs and cached pages do not outlive the stored object. A feed whose PUT is in flight in
-   * this tab, or a row written since the listing was taken (another tab's), is a create still
-   * syncing and is left alone.
+   * Stores the listed feeds and removes the rows the listing no longer names, with the stream
+   * caches keyed on them, so their tabs and cached pages do not outlive the stored object.
    */
-  private static async reconcileLocalFeeds({ userId, listedIds, listedAt }: LocalFeedReconcileParams): Promise<void> {
-    const keepIds = new Set([...listedIds, ...this.syncingIds]);
-    const removed = await LocalFeedService.deleteMissing({ keepIds, listedAt });
+  private static async reconcileLocalFeeds({
+    userId,
+    feeds,
+    listedIds,
+    isCurrent,
+  }: LocalFeedReconcileParams): Promise<FeedModelSchema[]> {
+    const { persisted, removed } = await LocalFeedService.reconcile({ feeds, keepIds: listedIds, isCurrent });
     const streamIds = removed.flatMap((feed) => {
       try {
         return [buildFeedStreamId(feed, userId)];
@@ -248,6 +266,34 @@ export class FeedApplication {
         LocalStreamPostsService.clearUnreadStream({ streamId }),
       ]),
     );
+    return persisted;
+  }
+
+  /**
+   * Runs `task` under the user's feed sync lock. Writes (`persist`, `commitDelete`) hold it
+   * `shared`, so they overlap each other; the reconciling fetch holds it `exclusive`, so it never
+   * lists while a row's PUT or DELETE is in flight and no write lands between its listing and its
+   * local write. Web Locks share the lock with every tab of the app. Without them (an insecure
+   * origin), a queue covers this tab only, one task at a time.
+   */
+  private static async withSyncLock<T>(pubky: Pubky, mode: LockMode, task: () => Promise<T>): Promise<T> {
+    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+      try {
+        return await navigator.locks.request(`${FEED_SYNC_LOCK_PREFIX}${pubky}`, { mode }, task);
+      } catch (error) {
+        // `request` itself can reject with a DOMException that no Err factory has reported.
+        throw toAppError(error, ErrorService.Local, 'withSyncLock');
+      }
+    }
+
+    const previousTask = this.pendingSync.get(pubky) ?? Promise.resolve();
+    const pendingTask = previousTask.catch(() => {}).then(task);
+    this.pendingSync.set(pubky, pendingTask);
+    try {
+      return await pendingTask;
+    } finally {
+      if (this.pendingSync.get(pubky) === pendingTask) this.pendingSync.delete(pubky);
+    }
   }
 
   /**
@@ -308,18 +354,13 @@ export class FeedApplication {
    * a fence: a PUT the homeserver refuses with a retried status (429, 500, 503 or the publish
    * conflict) runs again from the read, and no later pass outlives the session.
    */
-  private static async putStoredFeed({ id, storedUrl, feedUrl, feed }: StoredFeedWriteParams): Promise<void> {
+  private static async putStoredFeed({ storedUrl, feedUrl, feed }: StoredFeedWriteParams): Promise<void> {
     const fence = HomeserverService.createWriteFence();
-    this.syncingIds.add(id);
-    try {
-      await retryHomeserverWriteAfterReread(fence, async () => {
-        const stored = await this.readStoredFeed(storedUrl);
-        const merged = stored ? this.carryStoredMembers(feed, stored) : feed;
-        await HomeserverService.putBlob({ url: feedUrl, blob: encodeObject(feedUrl, merged), fence });
-      });
-    } finally {
-      this.syncingIds.delete(id);
-    }
+    await retryHomeserverWriteAfterReread(fence, async () => {
+      const stored = await this.readStoredFeed(storedUrl);
+      const merged = stored ? this.carryStoredMembers(feed, stored) : feed;
+      await HomeserverService.putBlob({ url: feedUrl, blob: encodeObject(feedUrl, merged), fence });
+    });
   }
 
   /** The feed stored at `url`, or null when there is none or its bytes do not decode (then the write starts fresh). */
@@ -371,7 +412,6 @@ export class FeedApplication {
    */
   private static async commit({
     feedSchema,
-    id,
     storedUrl,
     feedUrl,
     feed,
@@ -379,7 +419,7 @@ export class FeedApplication {
     const { persisted: persistedFeed, prior: priorFeed } = await LocalFeedService.createOrUpdate(feedSchema);
 
     try {
-      await this.putStoredFeed({ id, storedUrl, feedUrl, feed });
+      await this.putStoredFeed({ storedUrl, feedUrl, feed });
     } catch (error) {
       try {
         await LocalFeedService.rollback({

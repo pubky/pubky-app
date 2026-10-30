@@ -21,6 +21,7 @@ import { LocalFeedService } from '@/services/local/feed/feed';
 import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { freezeSpecClock, restoreSpecClock } from '@/test-utils/spec-clock';
 import { VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
+import { createTestWebLocks } from '@/test-utils/web-locks';
 import { FeedApplication } from './feed';
 
 const owner = fakeOwner(1) as Pubky;
@@ -576,7 +577,7 @@ describe('FeedApplication', () => {
       expect(await UnreadPostStreamModel.findById(legacyStreamId)).toBeNull();
     });
 
-    it('leaves a feed whose create is still syncing alone', async () => {
+    it('waits for a feed whose create is still syncing instead of removing it', async () => {
       const inFlight = built({ tags: ['syncing'] });
       const putBlob = homeserver.spies.putBlob.getMockImplementation()!;
       const landed = Promise.withResolvers<void>();
@@ -587,12 +588,59 @@ describe('FeedApplication', () => {
       const creating = FeedApplication.persist({ userId: owner, params: { feed: inFlight } });
       await vi.waitFor(async () => expect(await FeedModel.table.get(inFlight.id)).toBeDefined());
 
-      await expect(FeedApplication.fetchFeeds(owner)).resolves.toEqual([]);
+      // The fetch holds the sync lock exclusively: it lists only once the create has landed.
+      let fetched: FeedModelSchema[] | null = null;
+      const fetching = FeedApplication.fetchFeeds(owner).then((feeds) => (fetched = feeds));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(fetched).toBeNull();
+      expect(homeserver.spies.listAll).not.toHaveBeenCalled();
+
       landed.resolve();
       await creating;
+      await fetching;
 
+      expect(fetched!.map((feed) => feed.id)).toEqual([inFlight.id]);
       expect((await FeedModel.table.toArray()).map((feed) => feed.id)).toEqual([inFlight.id]);
       expect(await storedExists(inFlight.path)).toBe(true);
+    });
+
+    it('holds the per-user Web Lock shared for writes and exclusive for the fetch', async () => {
+      const locks = createTestWebLocks();
+      const request = vi.spyOn(locks, 'request');
+      Object.defineProperty(navigator, 'locks', { value: locks, configurable: true });
+      try {
+        const feed = built();
+        await FeedApplication.persist({ userId: owner, params: { feed } });
+        await FeedApplication.fetchFeeds(owner);
+        await FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } });
+      } finally {
+        Reflect.deleteProperty(navigator, 'locks');
+      }
+
+      expect(request.mock.calls.map(([name, options]) => [name, (options as LockOptions).mode])).toEqual([
+        [`pubky-feeds-sync:${owner}`, 'shared'],
+        [`pubky-feeds-sync:${owner}`, 'exclusive'],
+        [`pubky-feeds-sync:${owner}`, 'shared'],
+      ]);
+    });
+
+    it('touches no local row once the account is no longer current', async () => {
+      const previousAccount = built();
+      await homeserver.session.storage.putBytes(previousAccount.path, previousAccount.body);
+      const nextAccount: FeedModelSchema = {
+        ...feedParams({ tags: ['next'] }),
+        id: built({ tags: ['next'] }).id,
+        created_at: 1,
+        updated_at: 1,
+      };
+      await FeedModel.upsert(nextAccount);
+      const streamId = await seedStreamCaches(nextAccount);
+
+      await expect(FeedApplication.fetchFeeds(owner, { isCurrent: () => false })).resolves.toEqual([]);
+
+      expect(await FeedModel.table.toArray()).toEqual([nextAccount]);
+      expect(await PostStreamModel.findById(streamId)).not.toBeNull();
+      expect(await UnreadPostStreamModel.findById(streamId)).not.toBeNull();
     });
 
     it('returns no feeds and clears every row for an empty directory', async () => {

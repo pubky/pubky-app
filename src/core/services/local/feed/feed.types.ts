@@ -14,9 +14,19 @@ export type TFeedRollbackParams = {
   priorFeed: FeedModelSchema | null;
 };
 
-export type TFeedDeleteMissingParams = {
-  /** The ids the homeserver listing names; every other row older than the listing goes. */
+export type TFeedReconcileParams = {
+  /** The feeds the listing holds, decoded; upserted by id. */
+  feeds: FeedModelSchema[];
+  /** The ids the listing names; every other row goes. */
   keepIds: ReadonlySet<string>;
-  /** When the listing was taken (ms): a row updated at or after it is an in-flight write and stays. */
-  listedAt: number;
+  /** Checked inside the transaction: when false, nothing is written. */
+  isCurrent?: () => boolean;
+};
+
+export type TFeedReconcileResult = {
+  /** False when `isCurrent` refused the write; then nothing changed. */
+  applied: boolean;
+  persisted: FeedModelSchema[];
+  /** The rows the listing no longer named, now deleted. */
+  removed: FeedModelSchema[];
 };
