@@ -1,4 +1,3 @@
-import { PubkyAppPostKind } from 'pubky-app-specs';
 import { postKinds } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import { POST_KINDS } from '@/models/models.types';
@@ -21,7 +20,7 @@ describe('inferPostKindForCreate', () => {
       ],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it('returns image when attachments contain image and no video', () => {
@@ -33,7 +32,7 @@ describe('inferPostKindForCreate', () => {
       ],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Image);
+    expect(kind).toBe('image');
   });
 
   it('returns file when attachments are non-image and non-video', () => {
@@ -42,7 +41,7 @@ describe('inferPostKindForCreate', () => {
       attachments: [new File(['pdf-content'], 'doc.pdf', { type: 'application/pdf' })],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.File);
+    expect(kind).toBe('file');
   });
 
   it('returns link when content contains url and there are no attachments', () => {
@@ -50,7 +49,7 @@ describe('inferPostKindForCreate', () => {
       content: 'Read https://pubky.app',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it('returns link when content contains a protocol-less url', () => {
@@ -58,7 +57,7 @@ describe('inferPostKindForCreate', () => {
       content: 'Watch example.com/video',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it.each([
@@ -70,7 +69,7 @@ describe('inferPostKindForCreate', () => {
   ])('returns video when the content url is a video (%s)', (content) => {
     const kind = inferPostKindForCreate({ content });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it.each([
@@ -80,23 +79,23 @@ describe('inferPostKindForCreate', () => {
   ])('returns link when the content url is a video host but not a playable video (%s)', (content) => {
     const kind = inferPostKindForCreate({ content });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
-  it('returns short when there is no attachment and no url', () => {
+  it('returns note when there is no attachment and no url', () => {
     const kind = inferPostKindForCreate({
       content: 'Just plain text',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
-  it('returns short for ignored protocols like mailto and ftp', () => {
+  it('returns note for ignored protocols like mailto and ftp', () => {
     const kind = inferPostKindForCreate({
       content: 'Contact me at mailto:test@example.com or ftp://example.com/file.txt',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
   it('does not mark markdown links as link kind', () => {
@@ -104,7 +103,7 @@ describe('inferPostKindForCreate', () => {
       content: 'See [pubky](https://pubky.app) for details',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
   it('prioritizes link over attachments', () => {
@@ -113,7 +112,7 @@ describe('inferPostKindForCreate', () => {
       attachments: [new File(['video-content'], 'clip.mp4', { type: 'video/mp4' })],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it('prioritizes link over image attachments', () => {
@@ -122,37 +121,37 @@ describe('inferPostKindForCreate', () => {
       attachments: [new File(['image-content'], 'photo.png', { type: 'image/png' })],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
-  it('returns long when isArticle is true', () => {
+  it('returns article when isArticle is true', () => {
     const kind = inferPostKindForCreate({
       content: JSON.stringify({ title: 'My Article', body: 'Article body' }),
       isArticle: true,
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Long);
+    expect(kind).toBe('article');
   });
 
-  it('returns long for article even when content contains a url', () => {
+  it('returns article for article even when content contains a url', () => {
     const kind = inferPostKindForCreate({
       content: JSON.stringify({ title: 'Title', body: 'See https://pubky.app' }),
       isArticle: true,
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Long);
+    expect(kind).toBe('article');
   });
 });
 
 describe('inferPostKindForEdit', () => {
-  it('keeps the long kind for articles regardless of content and attachments', () => {
+  it('keeps the article kind for articles regardless of content and attachments', () => {
     const kind = inferPostKindForEdit({
       content: 'See https://pubky.app',
       attachmentContentTypes: ['video/mp4'],
       currentKind: 'long',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Long);
+    expect(kind).toBe('article');
   });
 
   it('keeps the collection kind for collections', () => {
@@ -162,7 +161,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'collection',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Collection);
+    expect(kind).toBe('collection');
   });
 
   it('prioritizes link over attachments when content has a URL', () => {
@@ -172,7 +171,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'short',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it('returns video when the edited content url is a video', () => {
@@ -182,7 +181,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'link',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it('returns video when at least one content type is video', () => {
@@ -192,7 +191,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'image',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it('returns image when content types contain image and no video', () => {
@@ -202,7 +201,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'file',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Image);
+    expect(kind).toBe('image');
   });
 
   it('returns file for non-image, non-video content types', () => {
@@ -212,17 +211,17 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'short',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.File);
+    expect(kind).toBe('file');
   });
 
-  it('returns short when the resulting attachment set is empty and content has no URL', () => {
+  it('returns note when the resulting attachment set is empty and content has no URL', () => {
     const kind = inferPostKindForEdit({
       content: 'Just plain text',
       attachmentContentTypes: [],
       currentKind: 'image',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
   it('does not preserve a stale media kind once its attachments are gone', () => {
@@ -232,7 +231,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'video',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 });
 
@@ -295,8 +294,8 @@ describe('inferAnnouncementKind', () => {
   });
 
   it('allows the kinds a teaser can take', () => {
-    expect(inferAnnouncementKind({ content: 'hello' })).toBe(PubkyAppPostKind.Short);
-    expect(inferAnnouncementKind({ content: 'see https://pubky.app' })).toBe(PubkyAppPostKind.Link);
+    expect(inferAnnouncementKind({ content: 'hello' })).toBe('note');
+    expect(inferAnnouncementKind({ content: 'see https://pubky.app' })).toBe('link');
   });
 });
 

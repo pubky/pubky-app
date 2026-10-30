@@ -9,8 +9,7 @@ import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { inferPostKindForCreate } from '@/pipes/post/post.kind';
-import type { TGuardedResource } from '@/services/locks/locks.types';
+import { inferPostKindForCreate, toLocalPostKind } from '@/pipes/post/post.kind';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -28,7 +27,6 @@ const mocks = vi.hoisted(() => ({
   clearSession: vi.fn(),
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
   toast: vi.fn(),
-  post: vi.fn(), // PubkyAppPost constructor spy — records the locked post's content/kind
   hasExternalContent: undefined as (() => boolean) | undefined,
   locksAuthed: false,
   paykitConnected: false,
@@ -71,26 +69,6 @@ vi.mock('@/config/network', () => ({
   getPaykitServerUrl: () => 'https://paykit.server',
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => mocks.toast(...args) }));
-
-// Minimal specs stand-in: a kind enum (consumed by the real `inferPostKindForCreate`) and a
-// constructor spy so the locked post's content/kind can be asserted.
-vi.mock('pubky-app-specs', () => ({
-  PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {
-      mocks.post(content, kind, parent, embed, attachments);
-    }
-    toJson() {
-      return { content: this.content, kind: this.kind, attachments: this.attachments };
-    }
-  },
-}));
 
 // Fake composer: real state for the fields the lock flow captures/clears, no-ops for the rest.
 vi.mock('@/hooks/usePostInput/usePostInput', async () => {
@@ -220,8 +198,6 @@ vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => ({ PostLinkEmbeds: ()
 vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => ({ EmojiPickerDialog: () => null }));
 vi.mock('../PostHeader/PostHeader', () => ({ PostHeader: () => null }));
 
-const descriptor = (path: string): TGuardedResource => ({ path, hash: 'H', content_type: 'image/png', size: 2 });
-
 const renderComposer = async () => {
   const onSuccess = vi.fn();
   await act(async () => {
@@ -306,16 +282,13 @@ describe('PostInput lock flow (integration)', () => {
       }),
     );
 
-    // The locked post carries the captured body and the kind a normal post would infer.
-    const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    buildPost(files.length > 0 ? [descriptor('/priv/app.locks/content/id-1')] : [], 'pubkybob');
-    const expectedKind = inferPostKindForCreate({ content: body, attachments: files, isArticle: false });
-    expect(mocks.post).toHaveBeenLastCalledWith(
-      body,
-      expectedKind,
-      null,
-      null,
-      files.length > 0 ? ['pubky://bob/priv/app.locks/content/id-1'] : null,
+    // The locked post carries the captured body and the kind a normal post would infer; the
+    // application builds the guarded primary from them once the files are up.
+    const expectedKind = toLocalPostKind(
+      inferPostKindForCreate({ content: body, attachments: files, isArticle: false }),
+    );
+    expect(mocks.createLockContent).toHaveBeenCalledWith(
+      expect.objectContaining({ attachments: files, post: { content: body, kind: expectedKind } }),
     );
 
     expect(mocks.handleSubmit).not.toHaveBeenCalled(); // never the normal path
@@ -363,9 +336,8 @@ describe('PostInput lock flow (integration)', () => {
     });
   });
 
-  // Mixed media on both sides: every guarded file keeps its own content type, the locked post is
-  // declared as an opaque blob (the homeserver cannot detect JSON), and the announcement's public
-  // attachments travel untouched as File objects into the normal upload path.
+  // Mixed media on both sides: every guarded file keeps its own content type and the announcement's
+  // public attachments travel untouched as File objects into the normal upload path.
   it('locks mixed media and publishes an announcement with its own media', async () => {
     const lockedFiles = [
       new File(['i'], 'pic.png', { type: 'image/png' }),
@@ -385,8 +357,8 @@ describe('PostInput lock flow (integration)', () => {
     fireEvent.click(postButton());
     await waitFor(() => expect(mocks.commitCreate).toHaveBeenCalledTimes(1));
 
-    // Each guarded file went up as bytes with its own content type, in order.
-    const [{ attachments, buildPost }] = mocks.createLockContent.mock.calls[0];
+    // Each guarded file goes up as bytes with its own content type, in order, beside the post.
+    const [{ attachments, post }] = mocks.createLockContent.mock.calls[0];
     expect(attachments.map((file: File) => file.type)).toEqual([
       'image/png',
       'video/mp4',
@@ -394,39 +366,35 @@ describe('PostInput lock flow (integration)', () => {
       'audio/mpeg',
     ]);
     for (const file of attachments) expect(file).toBeInstanceOf(File);
-
-    // The locked post itself is declared as an opaque blob and links all four files.
-    const postFile = buildPost(
-      attachments.map((_: unknown, index: number) => descriptor(`/priv/app.locks/content/id-${index}`)),
-      'pubkybob',
-    );
-    expect(postFile.contentType).toBe('application/octet-stream');
-    const [, , , , uris] = mocks.post.mock.lastCall as [string, number, null, null, string[]];
-    expect(uris).toHaveLength(4);
+    expect(post).toEqual({
+      content: 'all my media',
+      kind: toLocalPostKind(
+        inferPostKindForCreate({ content: 'all my media', attachments: lockedFiles, isArticle: false }),
+      ),
+    });
 
     // The announcement carries its own public media, untouched.
     expect(mocks.commitCreate).toHaveBeenCalledWith(expect.objectContaining({ attachments: teaserFiles }));
   });
 
   // The guarded files live on the Lock-Server-authenticated account, which may differ from the
-  // pubky.app account. The owner itself comes from real upload responses (covered by the controller
-  // unit tests); here we pin what the composer does with it — and that it never falls back to the
-  // pubky.app account when it is missing.
-  it('points guarded file links at the Lock Server account, never the pubky.app account', async () => {
+  // pubky.app account: the composer hands the application the files and the post, never an owner,
+  // so the links can only come from the upload responses (covered by the application tests).
+  it('hands the guarded files and the post over without naming an owner', async () => {
     await renderComposer();
-    await configureLock('secret body', [new File(['x'], 'pic.png', { type: 'image/png' })]);
+    const file = new File(['x'], 'pic.png', { type: 'image/png' });
+    await configureLock('secret body', [file]);
     act(() => mocks.composer.setContent('my teaser'));
     fireEvent.click(postButton());
     await waitFor(() => expect(mocks.createLockContent).toHaveBeenCalledTimes(1));
 
-    const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob');
-    const [, , , , uris] = mocks.post.mock.lastCall as [string, number, null, null, string[]];
-    expect(uris).toEqual(['pubky://bob/priv/app.locks/content/id-1']);
-    expect(JSON.stringify(uris)).not.toContain('alice');
-
-    // No owner → refuse loudly instead of silently using the pubky.app account.
-    expect(() => buildPost([descriptor('/priv/app.locks/content/id-1')])).toThrow();
+    const [params] = mocks.createLockContent.mock.calls[0];
+    expect(params).toEqual({
+      attachments: [file],
+      post: { content: 'secret body', kind: 'image' },
+      lockConfig: expect.objectContaining({ asset: expect.any(String) }),
+    });
+    expect(JSON.stringify(params.post)).not.toContain('alice');
   });
 
   it('cannot publish while the Lock Server sign-in is still pending', async () => {

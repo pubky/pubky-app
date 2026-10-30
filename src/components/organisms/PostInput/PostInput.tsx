@@ -33,6 +33,7 @@ import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import type { TLockDraft } from '@/hooks/usePostInputLock/usePostInputLock.types';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
@@ -380,9 +381,11 @@ export function PostInput({
         } catch {
           // Malformed composite id — no reference can resolve to an author-owned file
         }
+        // What each `attachment:{n}` names depends on the stored shape (ADR-0023, ADR-0027)
+        const { slots } = resolveArticleCover({ content: editSeed.content ?? '', attachments: editSeed.attachments });
         const deserialized = deserializeArticleBody({
           body: parsed.body,
-          attachments: editSeed.attachments ?? [],
+          slot: (index) => slots[index],
           authorPubky: articleAuthorPubky,
         });
         setContent(deserialized.body);

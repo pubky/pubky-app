@@ -6,11 +6,12 @@ import { mockSession } from '@/test-utils/pubky';
 import { mockAuthStore } from '@/test-utils/stores';
 import { DialogAddContent } from './DialogAddContent';
 
-const AUTHOR = 'a'.repeat(52);
-const VIEWER = 'v'.repeat(52);
+// Real keys: the pasted link is parsed into the data model's post reference
+const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy';
+const VIEWER = 'o4dksfbqk85ogzdb5osziw6befigbuxmuxkuxq8434q89uj56uyy';
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
-const POST_URI = `pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`;
+const POST_URI = `pubky://${AUTHOR}/pub/social/v1/posts/${POST_ID}`;
 const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
 
 const mocks = vi.hoisted(() => ({

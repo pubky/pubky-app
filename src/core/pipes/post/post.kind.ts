@@ -1,4 +1,3 @@
-import { PubkyAppPostKind } from 'pubky-app-specs';
 import { isOneOf, type KnownPostKind, postKinds } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -29,17 +28,17 @@ type TResolveTagTargetCompositeIdParams = {
   attachments?: File[];
 };
 
-const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
+const getAttachmentKind = (contentTypes: string[]): KnownPostKind | null => {
   if (contentTypes.some((type) => type.startsWith('video/'))) {
-    return PubkyAppPostKind.Video;
+    return 'video';
   }
 
   if (contentTypes.some((type) => type.startsWith('image/'))) {
-    return PubkyAppPostKind.Image;
+    return 'image';
   }
 
   if (contentTypes.length > 0) {
-    return PubkyAppPostKind.File;
+    return 'file';
   }
 
   return null;
@@ -48,21 +47,22 @@ const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
 /**
  * Shared tail of kind inference, applied after the callers' own guards
  * (article on create, article/collection preservation on edit):
- * video URL in content → Video, other URL in content → Link, else attachment
- * media kind, else Short.
+ * video URL in content → video, other URL in content → link, else attachment
+ * media kind, else note. The result is the stored (v1) kind name; the local
+ * tables keep Nexus's `short`/`long` through `toLocalPostKind`.
  */
-const inferContentKind = (content: string, attachmentContentTypes: string[]): PubkyAppPostKind => {
+const inferContentKind = (content: string, attachmentContentTypes: string[]): KnownPostKind => {
   const url = getFirstLinkUrl(content);
   if (url) {
-    return isVideoUrl(url) ? PubkyAppPostKind.Video : PubkyAppPostKind.Link;
+    return isVideoUrl(url) ? 'video' : 'link';
   }
 
-  return getAttachmentKind(attachmentContentTypes) ?? PubkyAppPostKind.Short;
+  return getAttachmentKind(attachmentContentTypes) ?? 'note';
 };
 
-export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInferPostKindParams): PubkyAppPostKind => {
+export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInferPostKindParams): KnownPostKind => {
   if (isArticle) {
-    return PubkyAppPostKind.Long;
+    return 'article';
   }
 
   return inferContentKind(
@@ -80,32 +80,30 @@ export const inferPostKindForEdit = ({
   content,
   attachmentContentTypes,
   currentKind,
-}: TInferPostKindForEditParams): PubkyAppPostKind => {
+}: TInferPostKindForEditParams): KnownPostKind => {
   if (currentKind === 'long') {
-    return PubkyAppPostKind.Long;
+    return 'article';
   }
 
   if (currentKind === 'collection') {
-    return PubkyAppPostKind.Collection;
+    return 'collection';
   }
 
   return inferContentKind(content, attachmentContentTypes);
 };
 
 /** Kinds a lock post's public announcement may never use — it is a short teaser, not the content. */
-const KINDS_FORBIDDEN_FOR_ANNOUNCEMENT = new Set<PubkyAppPostKind>([
-  PubkyAppPostKind.Long,
-  PubkyAppPostKind.Collection,
-]);
+const KINDS_FORBIDDEN_FOR_ANNOUNCEMENT = new Set<KnownPostKind>(['article', 'collection']);
 
 /**
  * Kind of the public announcement that advertises a lock.
  *
- * The announcement is a teaser, so `long` and `collection` are rejected outright — the locked content
- * behind it may still be either. Today the composer hides the article button while the lock switch is
- * on, which already rules `long` out; this guard keeps that from breaking silently if the UI changes.
+ * The announcement is a teaser, so an article and a collection are rejected outright — the locked
+ * content behind it may still be either. Today the composer hides the article button while the lock
+ * switch is on, which already rules an article out; this guard keeps that from breaking silently if
+ * the UI changes.
  */
-export const inferAnnouncementKind = (params: TInferPostKindParams): PubkyAppPostKind => {
+export const inferAnnouncementKind = (params: TInferPostKindParams): KnownPostKind => {
   const kind = inferPostKindForCreate(params);
   if (KINDS_FORBIDDEN_FOR_ANNOUNCEMENT.has(kind)) {
     throw Err.validation(ValidationErrorCode.INVALID_INPUT, `A lock announcement cannot be a ${kind} post`, {

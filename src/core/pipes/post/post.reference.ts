@@ -1,4 +1,3 @@
-import { postUriBuilder } from 'pubky-app-specs';
 import { buildUri, listPrefix, ValidationError } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -27,7 +26,7 @@ export function parsePostReference(value: string): ParsedPostReference | null {
     compositeId,
     pubky,
     postId: id,
-    postUri: postUriBuilder(pubky, id),
+    postUri: buildUri(pubky, 'post', id),
   };
 }
 

@@ -40,6 +40,28 @@ describe('resolvePostCoverPreloadUrls', () => {
     expect(urls).toEqual(cover);
   });
 
+  it('resolves the envelope cover of a v1 article, whose attachments are inline media only', () => {
+    const inline = `pubky://${AUTHOR}/pub/social/v1/files/P5VYR6ZJDQXKPW0GTHSYDN272C.png`;
+    const urls = resolvePostCoverPreloadUrls({
+      kind: 'long',
+      content: JSON.stringify({ title: 'T', body: '![diagram](attachment:0)', cover_image: ATTACHMENT }),
+      attachments: [inline],
+    });
+
+    expect(urls).toEqual(cover);
+  });
+
+  it('returns null for a v1 article without a cover, whatever its slot 0 holds', () => {
+    const inline = `pubky://${AUTHOR}/pub/social/v1/files/P5VYR6ZJDQXKPW0GTHSYDN272C.png`;
+    const urls = resolvePostCoverPreloadUrls({
+      kind: 'long',
+      content: JSON.stringify({ title: 'T', body: '![diagram](attachment:0)', cover_image: null }),
+      attachments: [inline],
+    });
+
+    expect(urls).toBeNull();
+  });
+
   it('returns null when the body references slot 0, which makes it an inline image', () => {
     const urls = resolvePostCoverPreloadUrls({
       kind: 'long',

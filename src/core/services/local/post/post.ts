@@ -1,4 +1,4 @@
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import type { TDeletePostParams } from '@/controllers/post/post.types';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -31,7 +31,7 @@ import {
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
-import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { toLocalPostKind } from '@/pipes/post/post.kind';
 import type { TLocalSavePostParams, TLocalUpdatePostStreamParams } from '@/services/local/post/post.types';
 import {
   type CollectionCountWrite,
@@ -130,12 +130,13 @@ export class LocalPostService {
   }
 
   /**
-   * Reads all posts that are replies to a specific post
-   * @param postId - Composite post ID to read replies for
+   * Reads all posts that are replies to a specific post, whichever way their `replied` spells it
+   * (the v1 reference, or the 0.x one Nexus serves for an author who has not migrated).
+   * @param parentUris - Every spelling of the parent post's reference
    * @returns Array of post relationships that replied to this post
    */
-  static async readReplies(postId: string): Promise<PostRelationshipsModelSchema[]> {
-    return PostRelationshipsModel.getReplies(postId);
+  static async readReplies(parentUris: readonly string[]): Promise<PostRelationshipsModelSchema[]> {
+    return PostRelationshipsModel.getReplies(parentUris);
   }
 
   static async updatePostCounts({ postCompositeId, countChanges }: TPostCountsParams) {
@@ -294,17 +295,17 @@ export class LocalPostService {
    *
    * If the post is a reply, also updates the parent post's reply count.
    *
-   * @param params.authorId - Unique identifier of the post author
-   * @param params.postId - Unique identifier for the post
-   * @param params.post - PubkyAppPost object
+   * @param params.compositePostId - Composite post ID (author:postId)
+   * @param params.post - The built first version (`buildPost`): its object is what the row holds
    *
    * @throws {DatabaseError} When database operations fail
    */
   static async create({ compositePostId, post }: TLocalSavePostParams) {
-    const { content, kind, parent: parentUri, attachments, embed, lock } = post;
+    const { content, kind, parent, attachments, embed, lock } = post.object;
 
-    const repostedUri = embed?.uri ?? null;
-    const normalizedKind = PostNormalizer.postKindToLowerCase(kind);
+    const parentUri = parent ?? undefined;
+    const repostedUri = embed ?? null;
+    const normalizedKind = toLocalPostKind(kind);
 
     const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
     // Set once the transaction announces its curated-count writes; runs if it does not commit.
@@ -316,8 +317,9 @@ export class LocalPostService {
         content,
         indexed_at: Date.now(),
         kind: normalizedKind,
-        uri: postUriBuilder(authorId, postId),
-        attachments: attachments ?? null,
+        // The versionless v1 reference: what every reference to this post spells.
+        uri: buildUri(authorId, 'post', postId),
+        attachments: attachments.length > 0 ? attachments.map((attachment) => attachment.uri) : null,
         lock: lock ?? null,
       };
       if (normalizedKind === 'collection') {
