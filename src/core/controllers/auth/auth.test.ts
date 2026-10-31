@@ -88,12 +88,6 @@ const setupNotificationMocks = () => {
   vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
 };
 
-// Mock pubky-app-specs to avoid WebAssembly issues
-vi.mock('pubky-app-specs', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('pubky-app-specs')>()),
-  default: vi.fn(() => Promise.resolve()),
-}));
-
 vi.mock('@/database/franky/franky.helpers', () => ({
   clearDatabase: vi.fn(),
 }));

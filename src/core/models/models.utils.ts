@@ -17,8 +17,8 @@ const PUBKY_AUTHORITY = /^[^:@]+$/;
  * unvalidated remote data (e.g. a Nexus file record without a `uri`).
  *
  * @example
- * parsePubkyUri("pubky://author123/pub/pubky.app/files/file456?v=1")
- * // Returns: { authority: "author123", path: "/pub/pubky.app/files/file456" }
+ * parsePubkyUri("pubky://author123/pub/social/v1/files/file456.png?v=1")
+ * // Returns: { authority: "author123", path: "/pub/social/v1/files/file456.png" }
  */
 export function parsePubkyUri(uri: unknown): { authority: string; path: string } | null {
   if (typeof uri !== 'string' || uri.slice(0, PUBKY_URI_PREFIX.length).toLowerCase() !== PUBKY_URI_PREFIX) {

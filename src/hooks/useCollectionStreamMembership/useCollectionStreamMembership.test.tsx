@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { PostController } from '@/controllers/post/post';
@@ -260,7 +260,7 @@ describe('useCollectionStreamMembership', () => {
         name: 'Paginated collection',
         items: members.map((postId) => {
           const { pubky, id } = parseCompositeId(postId);
-          return postUriBuilder(pubky, id);
+          return buildUri(pubky, 'post', id);
         }),
       });
       let indexed = [...indexedIds];

@@ -5,7 +5,7 @@ export interface FeedModelSchema {
   name: string;
   /**
    * Lucide icon name in kebab-case.
-   * Optional because feeds created before pubky-app-specs 0.7 have no icon.
+   * Optional because 0.x feeds created before the 0.7 spec added icons have none.
    */
   icon?: string;
   tags: string[];

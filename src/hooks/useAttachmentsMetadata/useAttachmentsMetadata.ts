@@ -6,7 +6,7 @@ import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFi
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 
 interface UseAttachmentsMetadataParams {
-  /** Attachment file URIs (`pubky://<author>/pub/pubky.app/files/<id>`) to resolve. */
+  /** Attachment file URIs (v1 `pubky://<author>/pub/social/v1/files/<hash>.<ext>`, or a 0.x file URI) to resolve. */
   fileUris: readonly string[];
   /**
    * Caller gate. `false` while local optimistic attachments win, or while the

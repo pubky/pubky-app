@@ -30,7 +30,7 @@ interface VRTImageFileFixture {
   id: string;
   name: string;
   content_type: string;
-  /** `pubky://<author>/pub/pubky.app/files/<fileId>` — what post `attachments` hold. */
+  /** `pubky://<author>/pub/pubky.app/files/<fileId>` — a 0.x attachment URI, as Nexus serves an un-migrated post. */
   uri: string;
   metadata: { width: string; height: string };
 }

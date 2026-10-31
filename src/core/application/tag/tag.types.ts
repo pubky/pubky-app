@@ -14,7 +14,7 @@ export interface TCreateTagListInput {
 /** The tag file is resolved from the viewer's local tag row or Nexus `tag_uri`, never rebuilt from ids. */
 export type TDeleteTagInput = TTagEventParams & {
   isCurrent?: () => boolean;
-  /** Whether the session's capabilities cover the resolved tag file; a Ring session covers only `/pub/pubky.app/`. */
+  /** Whether the session's capabilities cover the resolved tag file; a scoped grant may not cover every tree. */
   canWrite?: (tagUri: string) => boolean;
 };
 

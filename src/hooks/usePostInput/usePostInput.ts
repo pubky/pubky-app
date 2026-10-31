@@ -649,7 +649,7 @@ export function usePostInput({
           break;
         }
 
-        // Check against specific supported MIME types from pubky-app-specs
+        // Check against the supported MIME types (`src/config/posts.ts`)
         const isAcceptedType = SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type);
         if (!isAcceptedType) {
           reject('unsupportedType');

@@ -67,18 +67,12 @@ const nextConfig: NextConfig = {
       config.externals.push('@synonymdev/pubky');
     }
 
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-    };
-
     return config;
   },
   // Turbopack config for WebAssembly dependencies
   turbopack: {
     resolveAlias: {
       '@synonymdev/pubky': '@synonymdev/pubky/index.js',
-      'pubky-app-specs': 'pubky-app-specs/index.js',
     },
   },
 };

@@ -48,7 +48,6 @@ import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import type {
@@ -1116,9 +1115,7 @@ export class AuthController {
     // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
 
-    // Reset singletons
-    PubkySpecsSingleton.reset();
-    // CoordinatorManager owns TTL lifetime; its auth listener clears session work.
+    // Reset singletons. CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
 
