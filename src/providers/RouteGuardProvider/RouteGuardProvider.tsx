@@ -12,6 +12,7 @@ import {
 } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { MigrationController } from '@/controllers/migration/migration';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { AuthCoordinator } from '@/coordinators/auth/auth';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
@@ -85,6 +86,17 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   );
   const canBrowseWithoutSession =
     hasHydrated && (needsSignIn || restoreStatus === 'restoring') && (isPublic || isCoreExploreRoute(pathname));
+  // Until the gate decides (session exchange, account preparation, flag read, another tab's lock), an account this
+  // browser never saw pass it may still be held: only the gate's own routes render meanwhile, never a page (D11).
+  // A page this tab showed the account ready on has passed it already.
+  const isGatePending =
+    !isGated &&
+    isLoading &&
+    session === null &&
+    currentUserPubky !== null &&
+    !interactiveAuth &&
+    !preserveMountedPage &&
+    !SocialMigrationController.hasPassedLocally(currentUserPubky);
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -156,8 +168,11 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = (() => {
-    // Behind the gate only its own page, logout and the legal pages render (public or not)
-    if (isGated) return ROUTE_ACCESS_MAP[status].allowedRoutes.some((route) => matchesAllowedRoute(pathname, route));
+    // Behind the gate, or before it decides, only its own page, logout and the legal pages render (public or not)
+    if (isGated || isGatePending)
+      return ROUTE_ACCESS_MAP[AuthStatus.NEEDS_SOCIAL_MIGRATION].allowedRoutes.some((route) =>
+        matchesAllowedRoute(pathname, route),
+      );
 
     // Static public routes are ALWAYS accessible, even during loading
     if (PUBLIC_ROUTES.includes(pathname)) return true;
@@ -240,10 +255,16 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
   // 3. Migration re-sync is in progress (wasDbReset = true), unless the account is held behind the social
-  //    migration gate: the resync waits for a ready session, which the gate's screen has to produce first
+  //    migration gate or may be: the resync waits for a ready session, which the gate's screen has to produce first
   if (
     !isRouteAccessible ||
-    (wasDbReset && !isGated && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
+    (wasDbReset &&
+      !isGated &&
+      !isGatePending &&
+      !needsSignIn &&
+      !canBrowseWithoutSession &&
+      !preserveMountedPage &&
+      !interactiveAuth)
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">

@@ -69,6 +69,8 @@ type Scenario = {
   heading: string;
   account?: 'held' | 'signed-out' | 'backup';
   needBytes?: number;
+  /** The engine's position; a run defaults to the copy pass at 42 of 120. */
+  progress?: { phase: string; done: number; total: number };
   summary?: { skipped: Record<string, number>; dropped: { profileImage: number; profileLinks: number } };
 };
 
@@ -86,6 +88,7 @@ const SCENARIOS: Record<string, Scenario> = {
   },
   'reauth-signed-out': { stage: 'idle', account: 'signed-out', heading: 'Your account needs an update' },
   waiting: { stage: 'waiting-for-tab', heading: 'Another tab is updating your account' },
+  checking: { stage: 'running', progress: { phase: 'probe', done: 0, total: 0 }, heading: 'Checking your account' },
   running: { stage: 'running', heading: 'Updating your account' },
   'blocked-incomplete': {
     stage: 'blocked',
@@ -125,6 +128,7 @@ for (const [name, viewport] of [
       });
       Object.assign(useOnboardingStore.getState(), { secretKey: scenario.account === 'backup' ? 'fixture-key' : '' });
       Object.assign(useSocialMigrationStore.getState(), {
+        ...(scenario.progress ?? { phase: 'migrating', done: 42, total: 120 }),
         stage: scenario.stage,
         reason: scenario.reason,
         needBytes: scenario.needBytes,
@@ -138,7 +142,7 @@ for (const [name, viewport] of [
         { viewport },
       );
       await expect.element(page.getByRole('heading', { name: scenario.heading })).toBeVisible();
-      if (scenario.stage === 'running') await expect.element(page.getByText('42 of 120')).toBeVisible();
+      if (state === 'running') await expect.element(page.getByText('42 of 120')).toBeVisible();
       if (scenario.stage === 'blocked') await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
       if (scenario.stage === 'summary')
         await expect.element(page.getByRole('button', { name: 'Continue' })).toBeVisible();

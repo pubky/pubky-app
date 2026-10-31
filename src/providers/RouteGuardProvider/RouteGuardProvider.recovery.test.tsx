@@ -9,13 +9,15 @@ import {
   ONBOARDING_ROUTES,
   ROOT_ROUTES,
 } from '@/app/routes';
+import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { markSocialMigrated } from '@/libs/social-migration/record';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { onboardingInitialState } from '@/stores/onboarding/onboarding.types';
-import { mockSession } from '@/test-utils/pubky';
+import { mockGrantReference, mockSession } from '@/test-utils/pubky';
 import { RouteGuardProvider } from './RouteGuardProvider';
 
 const mocks = vi.hoisted(() => ({
@@ -207,6 +209,8 @@ describe('mounted recovery context', () => {
   );
   it('preserves a draft during an offline retry without a prior ready session in this tab', () => {
     mocks.pathname = APP_ROUTES.HOME;
+    // An account this browser saw pass the migration gate: the retry cannot be held by it
+    markSocialMigrated('account', SOCIAL_MIGRATION_TRANSFORM_REV);
     useAuthStore.setState({ session: null, restoreStatus: 'temporary-error' });
     render(
       <RouteGuardProvider>
@@ -246,6 +250,75 @@ describe('mounted recovery context', () => {
         </RouteGuardProvider>,
       );
       expect(screen.getByText('Preparing your account')).toBeInTheDocument();
+    },
+  );
+});
+
+describe('RouteGuardProvider while the social migration gate decides (ADR-0026)', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const pages = [APP_ROUTES.HOME, APP_ROUTES.SETTINGS, `/post/${pubky}/0034BBBDFK83G`, `/profile/${pubky}`];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    // A second tab restoring the account another tab is migrating: no session yet, the gate not decided
+    useAuthStore.setState({
+      ...authInitialState,
+      hasHydrated: true,
+      currentUserPubky: 'account',
+      sessionReference: mockGrantReference(),
+      hasProfile: true,
+      restoreStatus: 'restoring',
+    });
+    useOnboardingStore.setState({ ...onboardingInitialState, hasHydrated: true });
+    useMigrationStore.getState().reset();
+  });
+
+  it.each(pages)('renders no page on %s until the gate decides, then sends the account to it', (pathname) => {
+    mocks.pathname = pathname;
+    renderRoute();
+    expect(screen.queryByText('Public content')).not.toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
+
+    act(() => useAuthStore.getState().setRestoreStatus('social-migration'));
+    expect(screen.queryByText('Public content')).not.toBeInTheDocument();
+    expect(mocks.push).toHaveBeenCalledWith(AUTH_ROUTES.MIGRATION);
+  });
+
+  it.each([AUTH_ROUTES.MIGRATION, AUTH_ROUTES.LOGOUT, ...Object.values(LEGAL_ROUTES)])(
+    'renders %s, which the gate allows, meanwhile',
+    (pathname) => {
+      mocks.pathname = pathname;
+      renderRoute();
+      expect(screen.getByText('Public content')).toBeInTheDocument();
+      expect(mocks.push).not.toHaveBeenCalled();
+    },
+  );
+
+  it('renders the gate page over a recreated database instead of the resync loading screen', () => {
+    mocks.pathname = AUTH_ROUTES.MIGRATION;
+    useMigrationStore.getState().setWasDbReset(true);
+    renderRoute();
+    expect(screen.getByText('Public content')).toBeInTheDocument();
+    expect(mocks.resync).not.toHaveBeenCalled();
+  });
+
+  it('renders the page once the gate passes the account', () => {
+    mocks.pathname = APP_ROUTES.HOME;
+    renderRoute();
+    expect(screen.queryByText('Public content')).not.toBeInTheDocument();
+    act(() => useAuthStore.setState({ session: mockSession(), restoreStatus: 'restoring' }));
+    expect(screen.getByText('Public content')).toBeInTheDocument();
+  });
+
+  it.each([APP_ROUTES.HOME, `/post/${pubky}/0034BBBDFK83G`])(
+    'keeps %s readable while an account this browser saw migrated restores',
+    (pathname) => {
+      markSocialMigrated('account', SOCIAL_MIGRATION_TRANSFORM_REV);
+      mocks.pathname = pathname;
+      renderRoute();
+      expect(screen.getByText('Public content')).toBeInTheDocument();
     },
   );
 });

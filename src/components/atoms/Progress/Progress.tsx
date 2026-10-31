@@ -18,6 +18,8 @@ const Progress = React.forwardRef<React.ComponentRef<typeof ProgressPrimitive.Ro
         {...props}
       >
         <ProgressPrimitive.Indicator
+          // One indicator per mode: a first value shows at once instead of sliding down from the indeterminate fill
+          key={indeterminate ? 'indeterminate' : 'determinate'}
           className={cn('h-full w-full flex-1 bg-brand transition-transform', indeterminate && 'animate-pulse')}
           style={{ transform: indeterminate ? undefined : `translateX(-${100 - clamped}%)` }}
         />

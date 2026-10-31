@@ -87,6 +87,40 @@ describe('SocialMigration', () => {
     expect(unloadPrevented()).toBe(false);
   });
 
+  it('stays neutral while the first run only checks the account, then shows the steps once there is work', () => {
+    setStore({ stage: 'running', phase: 'probe', attempt: 1 });
+    render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: 'Checking your account' })).toBeInTheDocument();
+    expect(screen.queryByText(/Do not close this tab/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('progress')).not.toBeInTheDocument();
+    expect(unloadPrevented()).toBe(true);
+
+    act(() => setStore({ stage: 'running', phase: 'listing', attempt: 1 }));
+    expect(screen.getByRole('heading', { name: 'Checking your account' })).toBeInTheDocument();
+
+    act(() => setStore({ stage: 'running', phase: 'migrating', pass: 'files', done: 1, total: 13, attempt: 1 }));
+    expect(screen.getByRole('heading', { name: 'Updating your account' })).toBeInTheDocument();
+    expect(screen.getByText(/Do not close this tab/)).toBeInTheDocument();
+    expect(screen.getByTestId('progress')).toHaveAttribute('data-done', '1');
+  });
+
+  it('stays neutral while a restore waits for the gate to decide', () => {
+    mocks.authState.restoreStatus = 'restoring';
+    render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: 'Checking your account' })).toBeInTheDocument();
+    expect(unloadPrevented()).toBe(false);
+  });
+
+  it.each([
+    ['a retry', { attempt: 2 }],
+    ['a resumed run', { attempt: 1, resumedFrom: { done: 4, total: 12 } }],
+  ])('keeps the steps on screen while %s checks the account again', (_, state) => {
+    setStore({ stage: 'running', phase: 'probe', ...state });
+    render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: 'Updating your account' })).toBeInTheDocument();
+    expect(screen.getByTestId('progress')).toHaveAttribute('data-phase', 'probe');
+  });
+
   it('shows the waiting screen while another tab runs, still guarding the tab', () => {
     setStore({ stage: 'waiting-for-tab' });
     render(<SocialMigration />);

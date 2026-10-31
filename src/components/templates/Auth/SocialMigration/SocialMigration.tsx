@@ -71,12 +71,12 @@ function describeNeedBytes(needBytes: number | undefined): string {
   return megabytes.format(Math.max(1, Math.ceil((needBytes ?? 0) / 100_000) / 10));
 }
 
-function Screen({ title, subtitle, children }: { title: string; subtitle: string; children?: React.ReactNode }) {
+function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) {
   return (
     <Container size="container">
       <PageHeader>
         <PageTitle size="large">{title}</PageTitle>
-        <PageSubtitle>{subtitle}</PageSubtitle>
+        {subtitle && <PageSubtitle>{subtitle}</PageSubtitle>}
       </PageHeader>
       {children}
     </Container>
@@ -93,7 +93,7 @@ function Navigation(props: NavigationProps) {
   );
 }
 
-function Waiting({ title, subtitle }: { title: string; subtitle: string }) {
+function Waiting({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <Screen title={title} subtitle={subtitle}>
       <ContentCard layout="column">
@@ -118,12 +118,14 @@ export function SocialMigration() {
   const pass = useSocialMigrationStore((state) => state.pass);
   const done = useSocialMigrationStore((state) => state.done);
   const total = useSocialMigrationStore((state) => state.total);
+  const attempt = useSocialMigrationStore((state) => state.attempt);
   const resumedFrom = useSocialMigrationStore((state) => state.resumedFrom);
   const needBytes = useSocialMigrationStore((state) => state.needBytes);
   const summary = useSocialMigrationStore((state) => state.summary);
   const authHydrated = useAuthStore((state) => state.hasHydrated);
   const hasAccount = useAuthStore(hasAccountState);
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
+  const restoreStatus = useAuthStore((state) => state.restoreStatus);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const onboardingHydrated = useOnboardingStore((state) => state.hasHydrated);
   const secretKey = useOnboardingStore((state) => state.secretKey);
@@ -142,6 +144,14 @@ export function SocialMigration() {
     hasBackupAccount && secretKey && currentUserPubky && Identity.tryZ32FromSecret(secretKey) === currentUserPubky,
   );
   const isRunning = stage === 'running' || stage === 'waiting-for-tab';
+  // Until the engine lists something to copy, a first run is only a check: an account migrated elsewhere or an empty
+  // tree passes in a moment, so the screen stays neutral; so does a restore the gate has not decided yet. Retries
+  // and resumed runs keep the full screen.
+  const isChecking =
+    (stage === 'running' || (stage === 'idle' && restoreStatus === 'restoring')) &&
+    total === 0 &&
+    attempt <= 1 &&
+    !resumedFrom;
 
   useBeforeUnloadGuard(isRunning);
 
@@ -290,6 +300,8 @@ export function SocialMigration() {
         />
       </>
     );
+  } else if (isChecking) {
+    content = <Waiting title="Checking your account" />;
   } else {
     content = (
       <Screen
