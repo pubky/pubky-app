@@ -295,7 +295,7 @@ export function DialogPayToUnlock({
               onClick={() => copyToClipboard(handshakeValue)}
               aria-label="Copy creator pubky"
               data-cy="pay-to-unlock-handshake-qr"
-              className="group hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 lg:block"
+              className="group hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 lg:block [.light_&]:bg-white"
             >
               <QRCodeSVG value={handshakeValue} size={112} className={QR_HOVER_OPACITY} />
             </Button>

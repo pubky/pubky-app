@@ -49,7 +49,7 @@ vi.mock('@/molecules/SearchTagSection/SearchTagSection', () => {
 
 vi.mock('@/config/search', () => ({
   SEARCH_EXPANDED_STYLE: {
-    background: 'linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%)',
+    background: 'linear-gradient(180deg, var(--background) 0%, var(--search-expanded-fade) 100%)',
     backdropFilter: 'blur(25px)',
     boxShadow: '0px 50px 100px rgba(0, 0, 0, 1)',
     maxHeight: '300px',
@@ -144,7 +144,7 @@ describe('SearchSuggestions', () => {
 
     const dropdown = screen.getByTestId('search-suggestions');
     expect(dropdown).toHaveStyle({
-      background: 'linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%)',
+      background: 'linear-gradient(180deg, var(--background) 0%, var(--search-expanded-fade) 100%)',
     });
   });
 

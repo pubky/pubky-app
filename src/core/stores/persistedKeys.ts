@@ -13,6 +13,8 @@ export const HOT_PERSIST_KEY = 'hot-store';
 export const SETTINGS_PERSIST_KEY = 'settings-storage';
 export const MIGRATION_STORE_KEY = 'migration-store';
 export const LOCKS_AUTH_PERSIST_KEY = 'locks-auth-store';
+// Device appearance, like the `pubky-theme` next-themes key: deliberately survives logout.
+export const APPEARANCE_PERSIST_KEY = 'pubky-appearance';
 
 // List of all persisted store keys (Local storage keys)
 // EX: MIGRATION_STORE_KEY won't be included in this list because it's not a persisted store key.

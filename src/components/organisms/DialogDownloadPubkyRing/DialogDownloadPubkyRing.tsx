@@ -63,7 +63,7 @@ export function DialogDownloadPubkyRing({ store = 'apple' }: DialogDownloadPubky
           <Container className="flex-row items-center gap-8">
             <Image src="/images/pubky-ring-phone.webp" alt="App preview" width={96} height={256} />
             <Container className="space-y-6">
-              <Container className="flex h-[192px] w-[192px] items-center justify-center rounded-lg bg-foreground p-4">
+              <Container className="flex h-[192px] w-[192px] items-center justify-center rounded-lg bg-foreground p-4 [.light_&]:bg-white">
                 <QRCodeSVG value={imageBadge.href} size={160} />
               </Container>
               <Container className="items-center justify-between">

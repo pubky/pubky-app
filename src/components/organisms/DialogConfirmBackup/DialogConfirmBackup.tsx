@@ -41,7 +41,7 @@ export function DialogConfirmBackup({ onConfirm }: DialogConfirmBackupProps) {
           <Button
             id="backup-done-btn"
             variant="secondary"
-            className="border bg-card text-xs font-bold text-white shadow-sm"
+            className="border bg-card text-xs font-bold text-foreground shadow-sm"
           >
             Done
           </Button>

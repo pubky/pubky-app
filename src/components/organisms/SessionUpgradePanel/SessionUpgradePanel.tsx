@@ -69,7 +69,7 @@ export function SessionUpgradePanel({ requiredCapabilities }: { requiredCapabili
         data-testid="session-upgrade-qr"
         // Device split spelled out: Tailwind scans source text, so a class built from a template
         // literal is never generated. A phone cannot scan its own screen, hence the QR/button swap.
-        className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 pointer-coarse:hidden"
+        className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 pointer-coarse:hidden [.light_&]:bg-white"
         onClick={isExpired ? fetchUrl : handleQrClick}
         disabled={isLoading || (!url && !isExpired)}
         aria-label={isExpired ? 'Reload authorization QR code' : 'Copy authorization link'}
@@ -132,7 +132,7 @@ export function SessionUpgradePanel({ requiredCapabilities }: { requiredCapabili
         )}
       </Button>
       <AppDownload
-        logo={{ src: '/images/logo-pubky-ring.svg', alt: 'Pubky Ring', width: 147 }}
+        logo={{ src: '/images/logo-pubky-ring.svg', alt: 'Pubky Ring', width: 147, className: '[.light_&]:invert' }}
         appStoreUrl={getAppStoreLink()}
         playStoreUrl={getPlayStoreLink()}
       />

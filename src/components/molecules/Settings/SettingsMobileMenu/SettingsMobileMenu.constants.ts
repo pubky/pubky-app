@@ -1,4 +1,4 @@
-import { Bell, CircleHelp, MegaphoneOff, Shield, UserRound } from 'lucide-react';
+import { Bell, CircleHelp, MegaphoneOff, Shield, SunMoon, UserRound } from 'lucide-react';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import type { SettingsMenuItem } from '../SettingsMenu/SettingsMenu.types';
 
@@ -14,6 +14,12 @@ export const SETTINGS_MOBILE_ITEMS: SettingsMenuItem[] = [
     id: 'notifications',
     label: 'Notifications',
     path: SETTINGS_ROUTES.NOTIFICATIONS,
+  },
+  {
+    icon: SunMoon,
+    id: 'appearance',
+    label: 'Appearance',
+    path: SETTINGS_ROUTES.APPEARANCE,
   },
   {
     icon: Shield,

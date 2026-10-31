@@ -4,7 +4,7 @@ import { cva } from 'class-variance-authority';
 export const postActionsButtonVariants = cva('', {
   variants: {
     variant: {
-      default: 'border-none shadow-xs',
+      default: 'border-none bg-action-pill shadow-xs',
       visual: 'border-white/10 bg-black/40 text-white shadow-none hover:border-white/30 hover:bg-black/70',
     },
   },

@@ -23,9 +23,9 @@ export function PopoverSocialGraph({ className }: { className?: string }) {
           size="icon"
           aria-label="About social graph status"
           data-cy="social-graph-help-btn"
-          className={cn('size-8 hover:bg-white/10', className)}
+          className={cn('size-8 hover:bg-foreground/10', className)}
         >
-          <CircleHelp className="size-4 text-white" data-testid="circle-help-icon" />
+          <CircleHelp className="size-4 text-foreground" data-testid="circle-help-icon" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[327px] p-6">

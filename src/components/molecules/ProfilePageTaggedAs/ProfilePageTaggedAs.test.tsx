@@ -75,7 +75,7 @@ describe('ProfilePageTaggedAs', () => {
   it('Add Tag button has correct styling', () => {
     render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} />);
     const addTagButton = screen.getByText(/Add Tag/).closest('button');
-    expect(addTagButton).toHaveClass('border', 'border-border', 'bg-foreground/5');
+    expect(addTagButton).toHaveClass('border', 'border-border', 'bg-glass');
   });
 
   it('has correct container structure', () => {

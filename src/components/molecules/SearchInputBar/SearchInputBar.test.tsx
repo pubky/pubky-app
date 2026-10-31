@@ -63,14 +63,14 @@ vi.mock('@/molecules/PostTag/PostTag', () => {
 
 vi.mock('@/config/search', () => ({
   SEARCH_CLOSED_STYLE: {
-    background: 'linear-gradient(180deg, #07040a 0%, #1b1820 100%)',
+    background: 'linear-gradient(180deg, var(--search-closed-from) 0%, var(--search-closed-to) 100%)',
     backdropFilter: 'blur(20px)',
   },
   SEARCH_INPUT_EXPANDED_STYLE: {
     background: 'linear-gradient(180deg, var(--background) 0%, var(--background) 100%)',
   },
   SEARCH_EXPANDED_STYLE: {
-    background: 'linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%)',
+    background: 'linear-gradient(180deg, var(--background) 0%, var(--search-expanded-fade) 100%)',
     backdropFilter: 'blur(25px)',
     boxShadow: '0px 50px 100px rgba(0, 0, 0, 1)',
     maxHeight: '300px',

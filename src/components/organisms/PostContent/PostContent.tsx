@@ -31,7 +31,7 @@ export function PostContent({ postId, className, textClassName, mediaVariant = '
       />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className="bg-muted" />}
+      {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className="bg-embed" />}
     </>
   );
 }

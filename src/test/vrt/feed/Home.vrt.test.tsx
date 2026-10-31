@@ -707,6 +707,20 @@ describe('Home (global feed) — visual regression', () => {
     await matchVrtFrameScreenshot('home-feed-mobile');
   });
 
+  // Custom feed tabs arrive asynchronously from the mocked FeedApplication;
+  // wait for the last fixture feed so the strip is captured in one known state.
+  it('renders the global feed in light mode at desktop viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP, theme: 'light' });
+    await expect.element(screen.getByRole('link', { name: 'Photography' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-light-desktop');
+  });
+
+  it('renders the global feed in light mode at mobile viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE, theme: 'light' });
+    await expect.element(screen.getByRole('link', { name: 'Photography' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-light-mobile');
+  });
+
   it('renders an expanded QuickReply at desktop viewport', async () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
     await expandFirstQuickReply(screen);

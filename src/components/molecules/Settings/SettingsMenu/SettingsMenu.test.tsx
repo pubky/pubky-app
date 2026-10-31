@@ -18,6 +18,7 @@ describe('SettingsMenu', () => {
 
     expect(screen.getByText('Account')).toBeInTheDocument();
     expect(screen.getByText('Notifications')).toBeInTheDocument();
+    expect(screen.getByText('Appearance')).toBeInTheDocument();
     expect(screen.getByText('Privacy & Safety')).toBeInTheDocument();
     expect(screen.getByText('Muted Users')).toBeInTheDocument();
     expect(screen.getByText('Help')).toBeInTheDocument();

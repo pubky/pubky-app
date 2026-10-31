@@ -68,6 +68,7 @@ export enum SETTINGS_ROUTES {
   ACCOUNT = '/settings/account',
   EDIT = '/settings/edit',
   NOTIFICATIONS = '/settings/notifications',
+  APPEARANCE = '/settings/appearance',
   PRIVACY_SAFETY = '/settings/privacy-safety',
   MUTED_USERS = '/settings/muted-users',
   HELP = '/settings/help',

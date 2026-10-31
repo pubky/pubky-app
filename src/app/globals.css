@@ -51,6 +51,12 @@ body {
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-brand: var(--brand);
+  --color-glass: var(--glass);
+  --color-glass-hover: var(--glass-hover);
+  --color-glass-strong: var(--glass-strong);
+  --color-button-outline: var(--button-outline);
+  --color-action-pill: var(--action-pill);
+  --color-embed: var(--embed);
   --color-toast-action-muted: var(--toast-action-muted);
   --color-toast-action-muted-hover-border: var(--toast-action-muted-hover-border);
   --color-transparent: var(--transparent);
@@ -90,6 +96,7 @@ body {
 }
 
 :root {
+  color-scheme: dark;
   --radius: 0.625rem;
   --background: oklch(0.118 0.014 284.115);
   --foreground: oklch(1 0 0);
@@ -126,9 +133,34 @@ body {
   --sidebar-border: oklch(0.311 0.007 285.98);
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
+  /**
+   * Translucent chrome fill for outline-style controls (nav buttons, FAB,
+   * sidebar "See all", checkbox/radio wells). Mirrors the Figma variable
+   * `custom/background dark:input\30`: a faint white wash in dark mode and
+   * the opaque card surface in light mode, so these controls read lighter
+   * than the grey light page. Hover follows `custom/accent dark:input\50`.
+   */
+  --glass: rgb(255 255 255 / 0.05);
+  --glass-hover: rgb(255 255 255 / 0.1);
+  --glass-strong: rgb(255 255 255 / 0.12);
+  /**
+   * Surface of the `outline` Button variant. Dark mode matches `bg-foreground/4`.
+   * Light mode uses the card surface, so these buttons read lighter than the page.
+   */
+  --button-outline: color-mix(in oklab, var(--foreground) 4%, transparent);
+  /** Surface of the post action pills (tag / reply / repost / save / more): secondary in dark, page in light. */
+  --action-pill: var(--secondary);
+  /** Surface of a post or link embedded in a post (repost preview, link preview): muted in dark, page in light. */
+  --embed: var(--muted);
+  /** Wash laid over a tag's colour in PostTag (Figma `alpha/30` → 70% background). */
+  --tag-overlay: rgb(5 5 10 / 0.7);
   --toast-action-muted: oklch(0.218 0.006 286);
   --toast-action-muted-hover-border: oklch(0.277 0.006 286);
   --transparent: oklch(0.118 0.014 284.115 / 0);
+  --search-closed-from: #07040a;
+  --search-closed-to: #1b1820;
+  --search-expanded-fade: rgba(5, 5, 10, 0.5);
+  --search-expanded-shadow: rgba(0, 0, 0, 1);
   --scrollbar-size: 10px;
   --scrollbar-radius: 100%;
   --scrollbar-thumb-color: var(--muted-foreground);
@@ -376,12 +408,75 @@ body {
   --container-max-width: 1200px;
 }
 
+/**
+ * Light theme. Values come from the Figma "Pubky SHADCN" library, mode "Light"
+ * (Feed - Column - 1280px (Light Mode) frame). Tokens the frame does not
+ * exercise (primary, accent, popover, toast, search chrome) mirror the dark
+ * scale so hover/active states keep the same relative contrast.
+ */
+.light {
+  color-scheme: light;
+  --background: #eeeef6;
+  --foreground: #303034;
+  --card: #ffffff;
+  --card-foreground: #303034;
+  --popover: #ffffff;
+  --popover-foreground: #303034;
+  --primary: #48484f;
+  --primary-foreground: #eeeef6;
+  --secondary: #d4d4db;
+  --secondary-foreground: #1d1d20;
+  --muted: #d4d4db;
+  --muted-foreground: #717176;
+  --accent: #c4c4cc;
+  --accent-foreground: #303034;
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0.013 17.38);
+  --border: #babac1;
+  --input: #babac1;
+  --ring: oklch(0.55 0.008 286.145);
+  --sidebar-background: #ffffff;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #303034;
+  --sidebar-primary: #88ad00;
+  --sidebar-primary-foreground: #303034;
+  --sidebar-accent: #d4d4db;
+  --sidebar-accent-foreground: #303034;
+  --sidebar-border: #babac1;
+  --sidebar-ring: oklch(0.55 0.008 274.863);
+  --brand: #88ad00;
+  --glass: var(--card);
+  --glass-hover: var(--accent);
+  --glass-strong: var(--card);
+  --button-outline: var(--card);
+  --action-pill: var(--background);
+  --embed: var(--background);
+  --tag-overlay: rgb(255 255 255 / 0.7);
+  --toast-action-muted: #f4f4f9;
+  --toast-action-muted-hover-border: #e4e4ec;
+  --transparent: rgb(255 255 255 / 0);
+  --search-closed-from: #eeeef6;
+  --search-closed-to: #dfdfe7;
+  --search-expanded-fade: rgb(238 238 246 / 0.5);
+  /* Figma `shadow/*` colour: the dark-mode solid black reads as a smudge on the light page. */
+  --search-expanded-shadow: rgb(5 5 10 / 0.25);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /*
+    emoji-mart paints its search field and dividers with `--color-border`, which Tailwind
+    also defines as the opaque border token. On the white light picker that reads as a heavy
+    grey slab, so hand it the page surface (and the accent on hover) instead.
+  */
+  .light em-emoji-picker {
+    --color-border: var(--background);
+    --color-border-over: var(--accent);
   }
   /*
     Keep keyboard focus and scroll targets clear of the fixed guest contextual banner (WCAG 2.4.11).
@@ -415,6 +510,23 @@ body {
   }
   .hover\:bg-brand\/90:hover {
     background-color: oklch(from var(--brand) calc(l * 0.9) c h);
+  }
+
+  /**
+   * Tag chips and fallback avatars set Night and Day values inline (`getTagPaletteStyle` in `tagPalette.ts`); this picks
+   * the set for the active theme. The values inherit, so a nested `.tag-palette` resolves the same.
+   */
+  .tag-palette {
+    --tag-fill: var(--tag-night-fill);
+    --tag-edge: var(--tag-night-edge);
+    --tag-label: var(--foreground);
+    --tag-count: color-mix(in oklab, var(--foreground) 50%, transparent);
+  }
+  .light .tag-palette {
+    --tag-fill: var(--tag-day-fill);
+    --tag-edge: var(--tag-day-edge);
+    --tag-label: var(--tag-day-label);
+    --tag-count: var(--tag-day-count);
   }
 
   /**
@@ -617,17 +729,17 @@ body {
 
   /* Thicker white caret for focused inputs (used by PostTagInput) */
   .caret-white {
-    caret-color: white;
+    caret-color: var(--foreground);
   }
   .caret-thick::selection {
     /* noop: selection styles kept default */
   }
   input.caret-white {
-    caret-color: #fff;
+    caret-color: var(--foreground);
   }
   /* Some browsers allow caret-width via proprietary property */
   input.caret-thick {
-    caret-color: #fff;
+    caret-color: var(--foreground);
   }
 
   /* Keep the document scrollbar visible and hide all nested scrollbars */
@@ -843,6 +955,17 @@ body {
     );
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: 100% 100%;
+  }
+
+  /* Same artwork in the light brand colour, as the logo swaps to `pubky-logo-on-light.svg`. */
+  .light .landing-swirl-background__graphic {
+    background-image: url('/images/bg-home-on-light.svg');
+  }
+
+  /* The posters are white line art on transparency, drawn for a dark card; outline them on a light one. */
+  .light .landing-broken-art {
+    filter: drop-shadow(1px 0 0 var(--foreground)) drop-shadow(-1px 0 0 var(--foreground))
+      drop-shadow(0 1px 0 var(--foreground)) drop-shadow(0 -1px 0 var(--foreground));
   }
 
   :root[data-landing-swirl='broken'] .landing-swirl-background__graphic {

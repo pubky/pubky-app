@@ -28,7 +28,7 @@ export function FriendsEmpty() {
         src="/images/connections-empty-state.webp"
         alt={'Friends - Empty state'}
         fill
-        className="pointer-events-none object-contain object-center"
+        className="pointer-events-none object-contain object-center [.light_&]:invert"
         aria-hidden="true"
       />
 

@@ -80,7 +80,7 @@ export const ScanContent = () => {
             />
           }
         >
-          <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
+          <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2 [.light_&]:bg-white">
             <QrCodeSlot
               isLoading={isLoading}
               isExpired={isExpired}
@@ -98,7 +98,13 @@ export const ScanContent = () => {
         <ScanHeader isMobile={true} />
         <ContentCard layout="column">
           <Container className="flex-col items-center justify-center gap-12 lg:flex-row">
-            <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
+            <Image
+              src="/images/logo-pubky-ring.svg"
+              alt="Pubky Ring"
+              width={137}
+              height={30}
+              className="[.light_&]:invert"
+            />
             <Button
               className="w-full"
               size="lg"

@@ -50,7 +50,7 @@ export function DialogConfirmDelete({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <Typography className="text-base tracking-wide text-white/80">{description}</Typography>
+        <Typography className="text-base tracking-wide text-foreground/80">{description}</Typography>
         <DialogFooter>
           <Button
             variant="destructive"

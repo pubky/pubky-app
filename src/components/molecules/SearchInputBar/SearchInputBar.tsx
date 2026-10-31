@@ -91,7 +91,7 @@ export function SearchInputBar({
         aria-expanded={isExpanded}
         aria-haspopup={suggestionsId ? 'dialog' : undefined}
         className={cn(
-          'h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base',
+          'h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground shadow-none md:text-base',
           hasActiveTags ? 'min-w-8 pl-2.5' : 'min-w-20 pl-0',
         )}
       />

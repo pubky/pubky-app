@@ -19,7 +19,9 @@ export function DialogConfirmDiscard({ open, onOpenChange, onConfirm }: DialogCo
         <DialogHeader>
           <DialogTitle>Do you want to close it?</DialogTitle>
         </DialogHeader>
-        <Typography className="text-base tracking-wide text-white/80">If you do, you will lose the content.</Typography>
+        <Typography className="text-base tracking-wide text-foreground/80">
+          If you do, you will lose the content.
+        </Typography>
         <DialogFooter>
           <Button variant="destructive" size="lg" onClick={handleDiscard}>
             <Trash2 className="h-4 w-4" />

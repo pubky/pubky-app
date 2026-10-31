@@ -10,8 +10,8 @@ export function PopoverBackup({ ...props }: React.HTMLAttributes<HTMLDivElement>
   return (
     <Popover hover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn('hover:bg-white/10', props.className)}>
-          <CircleHelp className="h-4 w-4 text-white" data-testid="circle-help-icon" />
+        <Button variant="ghost" size="icon" className={cn('hover:bg-foreground/10', props.className)}>
+          <CircleHelp className="h-4 w-4 text-foreground" data-testid="circle-help-icon" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[327px] p-6">

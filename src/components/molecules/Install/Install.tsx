@@ -34,7 +34,7 @@ export const InstallCard = () => {
           <Image
             src="/images/logo-pubky-ring.svg"
             alt="Pubky Ring"
-            className="w-[137px] sm:w-auto"
+            className="w-[137px] sm:w-auto [.light_&]:invert"
             width={220}
             height={48}
           />

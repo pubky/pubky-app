@@ -42,7 +42,7 @@ export function FeedbackCard() {
           <Container overrideDefaults={true} className="flex w-full min-w-0 items-center gap-2">
             <Container
               overrideDefaults={true}
-              className="flex size-12 shrink-0 items-center justify-center rounded-md p-2 shadow-xs"
+              className="flex size-12 shrink-0 items-center justify-center rounded-md p-2 shadow-xs [.light_&]:shadow-none"
             >
               <AvatarWithFallback
                 avatarUrl={avatarUrl}

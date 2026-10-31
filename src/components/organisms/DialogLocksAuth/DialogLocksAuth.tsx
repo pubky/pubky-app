@@ -252,7 +252,13 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
             {/* The embedded shell draws no logos, and on touch its buttons already name each app. */}
             <Container overrideDefaults className="flex items-center gap-3.5 pointer-coarse:hidden">
               <Link href={getPubkyRingLink()} overrideDefaults>
-                <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={101} height={22} />
+                <Image
+                  src="/images/logo-pubky-ring.svg"
+                  alt="Pubky Ring"
+                  width={101}
+                  height={22}
+                  className="[.light_&]:invert"
+                />
               </Link>
               <Link href={BITKIT_WEBSITE_URL} overrideDefaults>
                 <Image src="/images/bitkit-logo.svg" alt="Bitkit" width={75} height={22} />

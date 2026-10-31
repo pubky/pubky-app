@@ -41,7 +41,7 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
               <Link key={question} href={SETTINGS_ROUTES.HELP}>
                 <Container
                   overrideDefaults
-                  className="relative w-full min-w-0 cursor-pointer rounded-md border border-border p-4 transition-colors hover:border-white"
+                  className="relative w-full min-w-0 cursor-pointer rounded-md border border-border p-4 transition-colors hover:border-foreground"
                 >
                   <Typography
                     as="span"
@@ -88,9 +88,21 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
         {/* Synonym Logo with Tether tagline */}
         <Container overrideDefaults className="flex flex-col items-start">
           <AtomsLink href="https://synonym.to" target="_blank" className="block" aria-label="Synonym">
-            <Image src="/images/synonym-white-logo.svg" alt="Synonym" width={96} height={24} />
+            <Image
+              src="/images/synonym-white-logo.svg"
+              alt="Synonym"
+              width={96}
+              height={24}
+              className="[.light_&]:invert"
+            />
           </AtomsLink>
-          <Image src="/images/a-tether-company.svg" alt="a tether company" width={109} height={16} />
+          <Image
+            src="/images/a-tether-company.svg"
+            alt="a tether company"
+            width={109}
+            height={16}
+            className="[.light_&]:invert"
+          />
         </Container>
       </Container>
     </Container>

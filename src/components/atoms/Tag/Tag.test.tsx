@@ -1,9 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getTagDayPalette } from '@/libs/utils/tagPalette';
 import { generateRandomColor, hexToRgba } from '@/libs/utils/utils';
+import { useAppearanceStore } from '@/stores/appearance/appearance.store';
+import { appearanceInitialState } from '@/stores/appearance/appearance.types';
 import { Tag } from './Tag';
 
 describe('Tag', () => {
+  beforeEach(() => {
+    useAppearanceStore.setState(appearanceInitialState);
+  });
+
   it('renders tag with count', () => {
     render(<Tag name="bitcoin" count={16} />);
 
@@ -41,7 +48,7 @@ describe('Tag', () => {
     const style1 = container1.firstChild as HTMLElement;
     const style2 = container2.firstChild as HTMLElement;
 
-    expect(style1.style.backgroundColor).toBe(style2.style.backgroundColor);
+    expect(style1.style.getPropertyValue('--tag-night-fill')).toBe(style2.style.getPropertyValue('--tag-night-fill'));
   });
 
   it('generates different colors for different tag names', () => {
@@ -51,7 +58,9 @@ describe('Tag', () => {
     const style1 = container1.firstChild as HTMLElement;
     const style2 = container2.firstChild as HTMLElement;
 
-    expect(style1.style.backgroundColor).not.toBe(style2.style.backgroundColor);
+    expect(style1.style.getPropertyValue('--tag-night-fill')).not.toBe(
+      style2.style.getPropertyValue('--tag-night-fill'),
+    );
   });
 
   it('uses custom color for known tags with opacity', () => {
@@ -59,7 +68,35 @@ describe('Tag', () => {
     const style = container.firstChild as HTMLElement;
 
     const expectedColor = hexToRgba(generateRandomColor('bitcoin'), 0.3);
-    expect(style.style.backgroundColor).toBe(expectedColor);
+    expect(style).toHaveClass('tag-palette');
+    expect(style.style.backgroundColor).toBe('var(--tag-fill)');
+    expect(style.style.getPropertyValue('--tag-night-fill')).toBe(expectedColor);
+  });
+
+  it('sets the pastel day mode palette for the tag colour by default', () => {
+    const { container } = render(<Tag name="bitcoin" />);
+    const style = container.firstChild as HTMLElement;
+
+    const day = getTagDayPalette(generateRandomColor('bitcoin'), 'pastel');
+    expect(style.style.getPropertyValue('--tag-day-fill')).toBe(day.background);
+    expect(style.style.getPropertyValue('--tag-day-edge')).toBe(day.accent);
+    expect(style.style.getPropertyValue('--tag-day-label')).toBe(day.label);
+    expect(style.style.getPropertyValue('--tag-day-count')).toBe(day.count);
+  });
+
+  it('switches to the saturated day mode palette live when chosen', () => {
+    const { container } = render(<Tag name="synonym" />);
+    const style = container.firstChild as HTMLElement;
+    const color = generateRandomColor('synonym');
+
+    act(() => {
+      useAppearanceStore.getState().setTagLightPalette('saturated');
+    });
+
+    const day = getTagDayPalette(color, 'saturated');
+    expect(style.style.getPropertyValue('--tag-day-fill')).toBe(day.background);
+    expect(style.style.getPropertyValue('--tag-day-label')).toBe(day.label);
+    expect(style.style.getPropertyValue('--tag-night-fill')).toBe(hexToRgba(color, 0.3));
   });
 
   it('maintains background color regardless of clicked state', () => {
@@ -71,8 +108,8 @@ describe('Tag', () => {
 
     // Both should have same background color
     const expectedColor = hexToRgba(generateRandomColor('bitcoin'), 0.3);
-    expect(tag1.style.backgroundColor).toBe(expectedColor);
-    expect(tag2.style.backgroundColor).toBe(expectedColor);
+    expect(tag1.style.getPropertyValue('--tag-night-fill')).toBe(expectedColor);
+    expect(tag2.style.getPropertyValue('--tag-night-fill')).toBe(expectedColor);
   });
 
   it('shows shadow on hover when not clicked', () => {
@@ -85,9 +122,10 @@ describe('Tag', () => {
     // Hover the tag
     fireEvent.mouseEnter(tag);
 
-    // Should show inset shadow (using borderColor which is 0.5 opacity)
+    // Should show inset shadow in the edge colour (Night mode: the tag colour at 0.5 opacity)
     const expectedShadowColor = hexToRgba(generateRandomColor('bitcoin'), 0.5);
-    expect(tag.style.boxShadow).toBe(`inset 0 0 10px 2px ${expectedShadowColor}`);
+    expect(tag.style.boxShadow).toBe('inset 0 0 10px 2px var(--tag-edge)');
+    expect(tag.style.getPropertyValue('--tag-night-edge')).toBe(expectedShadowColor);
 
     // Leave hover
     fireEvent.mouseLeave(tag);
@@ -120,15 +158,14 @@ describe('Tag', () => {
     const { container } = render(<Tag name="bitcoin" clicked={true} />);
     const tag = container.firstChild as HTMLElement;
 
-    // Should have border when clicked (using 0.5 opacity)
-    const expectedBorderColor = hexToRgba(generateRandomColor('bitcoin'), 0.5);
-    expect(tag.style.border).toBe(`1px solid ${expectedBorderColor}`);
+    // Should have border when clicked, in the edge colour
+    expect(tag.style.border).toBe('1px solid var(--tag-edge)');
 
     // Hover and leave
     fireEvent.mouseEnter(tag);
     fireEvent.mouseLeave(tag);
 
     // Should still have border
-    expect(tag.style.border).toBe(`1px solid ${expectedBorderColor}`);
+    expect(tag.style.border).toBe('1px solid var(--tag-edge)');
   });
 });

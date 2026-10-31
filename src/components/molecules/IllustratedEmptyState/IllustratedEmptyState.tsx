@@ -26,12 +26,12 @@ export function IllustratedEmptyState({
 }: IllustratedEmptyStateProps) {
   return (
     <Container data-cy={dataCy} className="relative flex flex-col items-center justify-center gap-6 p-6">
-      {/* Background image */}
+      {/* Background image. The artwork is drawn for the dark page, so light mode inverts it to keep it a faint relief. */}
       <Image
         src={imageSrc}
         alt={imageAlt}
         fill
-        className="pointer-events-none object-contain object-center"
+        className="pointer-events-none object-contain object-center [.light_&]:invert"
         aria-hidden="true"
       />
 

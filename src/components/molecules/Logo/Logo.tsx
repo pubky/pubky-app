@@ -81,15 +81,26 @@ export function Logo({
   );
 }
 
-const LogoImage = ({ width, height, className }: { width: number; height: number; className?: string }) => {
-  return (
+// Both wordmarks are rendered and the `.light` class on <html> picks one via
+// CSS. Reading `resolvedTheme` from next-themes instead would be `undefined`
+// on the server and first client paint, flashing the dark logo on light mode.
+const LogoImage = ({ width, height, className }: { width: number; height: number; className?: string }) => (
+  <>
     <Image
       src="/pubky-logo.svg"
       alt="Pubky"
-      className={logoImageClassName(width, height, className)}
+      className={logoImageClassName(width, height, cn('[.light_&]:hidden', className))}
       style={logoImageStyle(width, height)}
       width={width}
       height={height}
     />
-  );
-};
+    <Image
+      src="/pubky-logo-on-light.svg"
+      alt="Pubky"
+      className={logoImageClassName(width, height, cn('hidden [.light_&]:block', className))}
+      style={logoImageStyle(width, height)}
+      width={width}
+      height={height}
+    />
+  </>
+);

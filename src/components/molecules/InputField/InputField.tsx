@@ -139,7 +139,7 @@ export function InputField({
           id={id}
           name={name}
           type="text"
-          className={cn('h-auto w-full border-none !bg-transparent py-4', inputClassName)}
+          className={cn('h-auto w-full border-none !bg-transparent py-4 shadow-none', inputClassName)}
           value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}
