@@ -4,6 +4,9 @@
 
 Accepted — 2026-10-30
 
+Amended — 2026-10-31 (QA-1 BUG-2): media is collected on a post delete only, and only once every check says nothing
+else of the owner references it; edits and avatar replacement never delete media. See _Media lifetime_ below.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`). Amends ADR-0023 (article covers)
 and the Locks reader described in ADR-0022.
 
@@ -41,7 +44,7 @@ or private posts.
 - **Delete** tombstones the row, then runs `deletionPaths({ kind: 'post', id, listings })` over a LIST of both roots
   plus the 0.x copy when the grant covers `/pub/pubky.app/:rw` and a GET finds it, one sequential
   `deleteIdempotent` per path (0.x first, oldest version first, public before private). A 0.x copy the grant cannot
-  delete is logged (`legacyRefused`). Media is collected afterwards unless another cached post references it.
+  delete is logged (`legacyRefused`). Media is collected afterwards under the rule in _Media lifetime_.
 - **Dual spellings.** A post URI is never compared against one spelling: lookups reduce it to a composite id or match
   both `postReferenceSpellings` (replies, collection membership and counts, validators, the Locks announcement).
 - **Media** is hashed (`hashMedia` + `buildFile`), PUT once, and rowed as `owner:hash` with the upload's
@@ -53,6 +56,25 @@ or private posts.
 - **Collections** write `{ uri, note }` items through `toNewInput` / `toStored` + `encodeContent`; notes are kept.
 - **Locks** write the guarded primary as a v1 `Post` from a pipe (`GuardedPostBuilder`, `encodeObject` by kind) and
   read both the v1 and the 0.x shape; a locked article keeps its cover in slot 0 with `cover_image: null`.
+- **Media lifetime** (amended 2026-10-31). A content-addressed file is shared: the migrator dedupes identical blobs
+  and identical uploads collapse to one `files/{hash}.{ext}`, so an avatar, several posts and a collection cover can
+  name the same file, and every earlier version file of a post (immutable) still references what a later edit
+  removed. The package leaves collection to the app (`planDelete` returns `mediaGcCandidates`: "only the app knows
+  whether something else still uses one"). So:
+  - **Edits never delete media.** Removing or replacing an attachment, an article's `cover_image` or a collection's
+    cover only writes the next version; the old file stays. Replacing the avatar never deletes the previous file.
+  - **A post delete** hands the post's attachments (when the row keeps no connections) and its homeserver cover to
+    `FileApplication.commitDelete`, which deletes a file only when all of these say it is unreferenced: the local
+    cache (`LocalFileService.isReferencedElsewhere`: another cached post's attachments or content, the owner's cached
+    profile image), the owner's `profile.json` read fresh (`getFreshBytes` + `decodeObject(…, 'user')`), and a fresh
+    Nexus view (`by_ids`, `force`) of every post a LIST of the owner's public `posts/` names, attachments and
+    content. A check that fails, or a Nexus view missing a listed post (indexing lag, an author Nexus has not
+    indexed: its streams answer an empty page, never a 404, so the LIST is the completeness proof), keeps the file
+    with a `Logger.warn`, never an error or a toast. An orphan is the safe failure.
+  - **A rollback** (`commitDeleteUploaded`) deletes only files the failed write itself created: the upload asked
+    `exists` first, and a `preexisting` file stays. The same verified delete serves a discarded composer session's
+    uploads (`FileController.commitDelete`).
+  - Private trees are not checked: the app writes no private object that references public media.
 - **Kinds** cross the vocabulary in one place (`toLocalPostKind` / `toStoredPostKind`); `storedKind` fails closed.
 - **Limits** come from the package: the article body cap is `articleBodyMaxLength` for the body alone, in code
   points, which `getCharacterCount` already counts.
@@ -64,12 +86,19 @@ or private posts.
 - Local-first semantics are unchanged for the user: the edit shows at once, offline fails exactly as before.
 - Members this client does not know or show survive every edit, so other 1.x clients lose nothing.
 - Content-addressed media dedupes identical uploads and needs no id guard.
+- A shared file is never deleted on the strength of local knowledge alone (QA-1 BUG-2), and an edit never strips an
+  earlier version of its media.
 
 ### Negative ❌
 
 - An edit costs a LIST and a GET before the PUT; a post with only a 0.x copy cannot be edited until migrated.
-- The media reference check is local knowledge: a file referenced only by posts this device never cached can be
-  collected (the same blind spot the blob reference check had).
+- Orphans accumulate: every file an edit or an avatar change drops, and every file a delete could not verify, stays
+  on the homeserver until media GC moves server-side (homeserver or Nexus reference counting, a follow-up in
+  `docs/migrations/social-v1.md`).
+- A post delete with media costs a profile GET, a LIST of the owner's posts and one `by_ids` request per 50 posts.
+- What the checks cannot see: an edit another device made within Nexus's indexing window (Nexus still serves the
+  previous head), an earlier version of another post, and an account whose posts Nexus never indexes, whose media
+  is then never collected.
 
 ### Neutral ⚠️
 
@@ -98,7 +127,8 @@ migrated-shape heuristic permanent. Rejected (D14).
 - `src/core/pipes/post/{post.normalizer,post.head,post.collection,post.kind,post.reference}.ts`,
   `src/core/pipes/file/file.normalizer.ts`, `src/core/pipes/locks/{guardedPost.builder,locks.parser}.ts`
 - `src/core/application/post/post.ts` (`commitCreate`, `commitEdit`, `commitDelete`, `readHead`),
-  `src/core/application/file/file.ts`, `src/core/services/local/{post,file}`
+  `src/core/application/file/file.ts` (`commitDelete`, `commitDeleteUploaded`), `src/core/services/local/{post,file}`
+- Media lifetime tests: `src/core/controllers/post/post.media.integration.test.ts` (the BUG-2 regression included)
 - `src/libs/post/articleCover.ts` and its consumers; `docs/data-patterns.md`, `docs/local-first.md`, `docs/locks.md`
 - Gate: `write-call-sites.gate.test.ts` lists `PostApplication.commitCreate` and `commitDelete` as unfenced writes.
 

@@ -286,6 +286,15 @@ absent check runs again on every retry pass, so a v1 file another client wrote m
 forward only: once the v1 file exists the 0.x one is never read again, and it is never deleted (D15). Every write
 goes to the v1 URL (`SettingsNormalizer.buildUrl`, `LastReadNormalizer.buildUrl`).
 
+**Media lifetime** (ADR-0027 as amended). A media file is content addressed and therefore shared: the avatar, posts
+and covers of one owner can name the same `files/{hash}.{ext}`, and earlier post versions keep referencing what an
+edit removed. Edits (attachments, an article's `cover_image`, a collection's cover) and avatar changes never delete
+a file. A post delete passes its attachments and cover to `FileApplication.commitDelete`, which deletes a file only
+when the local cache (other posts' attachments and content, the cached profile image), a fresh `profile.json` and a
+fresh Nexus `by_ids` view of every post a LIST of the owner's public `posts/` names all leave it unreferenced; a
+failed check, or a listed post Nexus does not serve, keeps it with a `Logger.warn`. A rollback deletes only what
+the failed write created (`preexisting` stays). Orphans accumulate until server-side media GC (follow-up).
+
 **Account delete and export** (`ProfileApplication.commitDelete` / `downloadData`) walk all five trees:
 `listPrefix(pubky, 'legacy')`, `listPrefix(pubky, 'public')`, the whole `/priv/social/` (the v1 tree, the flag and
 the Locks reader directories) and `/priv/app.pubky/v1/`. The export names every file by its path under the account.
