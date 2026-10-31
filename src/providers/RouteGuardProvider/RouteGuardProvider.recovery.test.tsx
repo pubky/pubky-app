@@ -209,8 +209,6 @@ describe('mounted recovery context', () => {
   );
   it('preserves a draft during an offline retry without a prior ready session in this tab', () => {
     mocks.pathname = APP_ROUTES.HOME;
-    // An account this browser saw pass the migration gate: the retry cannot be held by it
-    markSocialMigrated('account', SOCIAL_MIGRATION_TRANSFORM_REV);
     useAuthStore.setState({ session: null, restoreStatus: 'temporary-error' });
     render(
       <RouteGuardProvider>
@@ -302,6 +300,33 @@ describe('RouteGuardProvider while the social migration gate decides (ADR-0026)'
     renderRoute();
     expect(screen.getByText('Public content')).toBeInTheDocument();
     expect(mocks.resync).not.toHaveBeenCalled();
+  });
+
+  it('keeps the page a failed restore rendered while it retries, and sends the account to the gate if it holds it', () => {
+    mocks.pathname = APP_ROUTES.HOME;
+    useAuthStore.setState({ restoreStatus: 'temporary-error' });
+    render(
+      <RouteGuardProvider>
+        <input aria-label="Draft" defaultValue="offline draft" />
+      </RouteGuardProvider>,
+    );
+    const input = screen.getByRole('textbox');
+    act(() => useAuthStore.setState({ restoreStatus: 'restoring' }));
+    expect(screen.getByRole('textbox')).toBe(input);
+    expect(input).toHaveValue('offline draft');
+
+    act(() => useAuthStore.getState().setRestoreStatus('social-migration'));
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(mocks.push).toHaveBeenCalledWith(AUTH_ROUTES.MIGRATION);
+  });
+
+  it('holds the page again when another account restores after a failed one', () => {
+    mocks.pathname = APP_ROUTES.HOME;
+    useAuthStore.setState({ restoreStatus: 'temporary-error' });
+    renderRoute();
+    expect(screen.getByText('Public content')).toBeInTheDocument();
+    act(() => useAuthStore.setState({ currentUserPubky: 'another-account', restoreStatus: 'restoring' }));
+    expect(screen.queryByText('Public content')).not.toBeInTheDocument();
   });
 
   it('renders the page once the gate passes the account', () => {

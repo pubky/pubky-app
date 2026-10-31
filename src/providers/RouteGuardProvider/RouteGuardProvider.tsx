@@ -86,9 +86,16 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   );
   const canBrowseWithoutSession =
     hasHydrated && (needsSignIn || restoreStatus === 'restoring') && (isPublic || isCoreExploreRoute(pathname));
+  // The account whose failed restore this tab shows without a session; its retries keep the pages it already rendered.
+  const [retryingPubky, setRetryingPubky] = useState<string | null>(null);
+  useEffect(() => {
+    if (restoreStatus === 'temporary-error') setRetryingPubky(currentUserPubky);
+    else if (restoreStatus !== 'restoring') setRetryingPubky(null);
+  }, [currentUserPubky, restoreStatus]);
   // Until the gate decides (session exchange, account preparation, flag read, another tab's lock), an account this
   // browser never saw pass it may still be held: only the gate's own routes render meanwhile, never a page (D11).
-  // A page this tab showed the account ready on has passed it already.
+  // A page this tab showed the account ready on has passed it already; a retry after a failed restore shows nothing
+  // the failure did not already show.
   const isGatePending =
     !isGated &&
     isLoading &&
@@ -96,6 +103,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     currentUserPubky !== null &&
     !interactiveAuth &&
     !preserveMountedPage &&
+    retryingPubky !== currentUserPubky &&
     !SocialMigrationController.hasPassedLocally(currentUserPubky);
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)

@@ -39,7 +39,8 @@ redirects to `/migration` before its public-route early returns: `/post/*`, `/pr
 explore routes are not reachable mid-gate; only `/migration`, `/logout` and the legal pages render. The same holds
 before the gate decides: while an account without a trusted local record restores with no session in the store (the
 exchange, account preparation and flag read of a second tab, say), the route guard renders only those routes, so no
-page mounts before the account is sent to `/migration` or passed. `useRequireAuth`
+page mounts before the account is sent to `/migration` or passed (a retry out of `temporary-error` keeps the pages
+the failed restore already showed without a session). `useRequireAuth`
 and `waitForSession` treat the status like `restoring` (never open sign-in over the gate), the sign-in dialog closes
 when the status is set, `CoordinatorsManager` starts coordinators only while the status is not
 `NEEDS_SOCIAL_MIGRATION`, the Shop bridge reports the account as `restoring`, and the Header shows only the logo on
