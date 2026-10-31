@@ -67,18 +67,12 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
  * it ports; the cleanup PR empties the list.
  */
 const LEGACY_RATCHET: readonly string[] = [
-  'src/core/application/mute/mute.ts',
-  'src/core/application/user/user.ts',
   'src/core/controllers/auth/auth.ts',
   'src/core/controllers/bookmark/bookmark.ts',
   'src/core/pipes/bookmark/bookmark.normalizer.ts',
-  'src/core/pipes/follow/follow.normalizer.ts',
-  'src/core/pipes/mute/mute.normalizer.ts',
   'src/core/pipes/pipes.builder.ts',
   'src/core/pipes/pipes.test-utils.ts',
-  'src/core/pipes/tag/tag.normalizer.ts',
   'src/core/services/local/stream/posts/posts.ts',
-  'src/libs/utils/utils.constants.ts',
 ];
 
 function sourceFiles(dir: string): string[] {

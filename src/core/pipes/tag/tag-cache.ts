@@ -1,3 +1,4 @@
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import { findTagMutation, getTagMembership, getTagMutationEntries } from '@/models/shared/tag/tag.utils';
 import type { NexusTag } from '@/services/nexus/nexus.types';
@@ -10,10 +11,22 @@ export function reconcileTagWindow(
   viewerId?: string,
   options: { append?: boolean; complete?: boolean } = {},
 ) {
-  const remoteTags = new Map(incoming.map((tag) => [tag.label.toLowerCase(), tag]));
-  const localTags = new Map(existing?.tags.map((tag) => [tag.label.toLowerCase(), tag]));
+  // Keyed by the stored label fold, like the mutation entries: two labels share a key only when they are one tag file.
+  const remoteTags = new Map(incoming.map((tag) => [canonicalizeTagLabel(tag.label), tag]));
+  const localTags = new Map(existing?.tags.map((tag) => [canonicalizeTagLabel(tag.label), tag]));
+  // A response without `tag_uri` keeps the address stored for the same viewer while they still tag the label.
+  const sameViewer = viewerId !== undefined && existing?.cache?.viewerId === viewerId;
+  const withStoredUri = (tag: NexusTag): NexusTag => {
+    const stored =
+      sameViewer &&
+      tag.relationship &&
+      tag.tag_uri === undefined &&
+      localTags.get(canonicalizeTagLabel(tag.label))?.tag_uri;
+    return stored ? { ...tag, tag_uri: stored } : tag;
+  };
+  const retained = options.append ? (existing?.tags ?? []) : [];
   const tags = new Map(
-    [...(options.append ? (existing?.tags ?? []) : []), ...incoming].map((tag) => [tag.label.toLowerCase(), tag]),
+    [...retained, ...incoming.map(withStoredUri)].map((tag) => [canonicalizeTagLabel(tag.label), tag]),
   );
   const mutations: NonNullable<TagCollectionModelSchema<string>['mutations']> = {};
   for (const { key, label, mutation } of getTagMutationEntries(existing)) {
@@ -59,7 +72,7 @@ export function reconcileTagWindow(
     }
     const membership = getTagMembership(tag, mutation.viewerId, viewerId);
     const previousCount =
-      existing?.tags.find((item) => item.label.toLowerCase() === label)?.taggers_count ?? tag.taggers_count;
+      existing?.tags.find((item) => canonicalizeTagLabel(item.label) === label)?.taggers_count ?? tag.taggers_count;
     const count =
       membership === undefined
         ? mutation.relationship
@@ -103,7 +116,7 @@ export function reconcileTagCounts(
     byLabel.set(entry.label, [...(byLabel.get(entry.label) ?? []), entry]);
   }
   for (const [label, entries] of byLabel) {
-    const remote = preview.find((tag) => tag.label.toLowerCase() === label);
+    const remote = preview.find((tag) => canonicalizeTagLabel(tag.label) === label);
     let delta = 0;
     for (const { mutation } of entries) {
       const membership = remote

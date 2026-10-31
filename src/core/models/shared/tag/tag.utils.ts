@@ -1,3 +1,4 @@
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import type { TagCollectionModelSchema, TagMutation } from './tag.schema';
 
@@ -17,12 +18,39 @@ export function getTagMembership(
   return tag.taggers.length >= tag.taggers_count ? false : undefined;
 }
 
+/**
+ * Mutation entries keyed by the stored label fold (`canonicalizeTagLabel`): the fold `pubky-social-specs`
+ * applies when it stores a tag, so two labels are one tag here exactly when they are one tag file.
+ */
 export function getTagMutationEntries(record: TagCollectionModelSchema<unknown> | null | undefined) {
   return Object.entries(record?.mutations ?? {}).map(([key, mutation]) => ({
     key,
-    label: mutation.label.toLowerCase(),
+    label: canonicalizeTagLabel(mutation.label),
     mutation,
   }));
+}
+
+/**
+ * The viewer's own tag file for a label. A pending local create knows the address it wrote, which Nexus
+ * may not report yet; otherwise Nexus is the source, falling back to an expired create's address.
+ */
+export function getViewerTagUri(
+  record: TagCollectionModelSchema<unknown> | null | undefined,
+  label: string,
+  viewerId: string,
+  now = Date.now(),
+): string | undefined {
+  const mutation = findTagMutation(record, label, viewerId);
+  if (mutation && mutation.expiresAt > now) {
+    if (!mutation.relationship) return undefined;
+    if (mutation.uri) return mutation.uri;
+  }
+  const tag =
+    record?.cache?.viewerId === viewerId
+      ? record.tags.find((item) => canonicalizeTagLabel(item.label) === canonicalizeTagLabel(label))
+      : undefined;
+  if (tag?.relationship && tag.tag_uri) return tag.tag_uri;
+  return mutation?.relationship ? mutation.uri : undefined;
 }
 
 export function findTagMutation(
@@ -31,6 +59,6 @@ export function findTagMutation(
   viewerId: string,
 ): TagMutation | undefined {
   return getTagMutationEntries(record).find(
-    (entry) => entry.label === label.toLowerCase() && entry.mutation.viewerId === viewerId,
+    (entry) => entry.label === canonicalizeTagLabel(label) && entry.mutation.viewerId === viewerId,
   )?.mutation;
 }

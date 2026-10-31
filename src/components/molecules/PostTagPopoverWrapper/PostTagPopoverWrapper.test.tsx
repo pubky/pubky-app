@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_HOVER_CLOSE_DELAY } from '@/atoms/Popover/Popover.constants';
 import type { TaggersState, UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
 import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
@@ -156,5 +157,31 @@ describe('PostTagPopoverWrapper', () => {
     });
 
     expect(mockLoadTaggers).toHaveBeenCalledWith('bitcoin', 10);
+  });
+
+  it('reads the taggers window of a label with a non-ASCII capital under the stored fold', async () => {
+    // The hook keys its state map by `canonicalizeTagLabel`, which keeps the Ä; a Unicode-lowercase lookup would miss it.
+    const window: TaggersState = { ids: ['user4'], isLoading: false, hasError: false, hasMore: true, hasFetched: true };
+    mockTaggerStates = new Map([[canonicalizeTagLabel('Ärger'), window]]);
+    expect(mockTaggerStates.has('Ärger'.toLowerCase())).toBe(false);
+    render(
+      <PostTagPopoverWrapper taggers={mockTaggers} taggersCount={10} postId="author:post-id" tagLabel="Ärger">
+        <button data-testid="trigger">Tag</button>
+      </PostTagPopoverWrapper>,
+    );
+
+    fireEvent.mouseEnter(screen.getByTestId('trigger'));
+    await act(async () => {
+      vi.advanceTimersByTime(POPOVER_HOVER_DELAY);
+    });
+    fireEvent.click(screen.getByText('+7'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockLoadTaggers).toHaveBeenCalledWith('Ärger', 10);
+    // The stored window reached the list: not loading, and `hasMore` renders the load-more sentinel.
+    expect(screen.getByTestId('who-tagged-expanded-list')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByTestId('who-tagged-expanded-list-sentinel')).toBeInTheDocument();
   });
 });

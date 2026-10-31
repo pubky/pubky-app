@@ -1,5 +1,6 @@
 import { Table } from 'dexie';
 import { TAG_MUTATION_TTL_MS } from '@/config/tags';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { ModelBase } from '@/models/shared/base/baseModel';
 import { TagModel } from '@/models/shared/tag/tag';
@@ -23,7 +24,7 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
     return expectedId === undefined || findTagMutation(this, label, viewerId)?.id === expectedId;
   }
 
-  recordMutation(label: string, viewerId: string, relationship: boolean, id: string, synced: boolean) {
+  recordMutation(label: string, viewerId: string, relationship: boolean, id: string, synced: boolean, uri?: string) {
     const now = Date.now();
     this.initializeLegacyCursor();
     this.mutations = {
@@ -32,17 +33,18 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
           .filter(
             (entry) =>
               (entry.mutation.expiresAt > now || !entry.mutation.synced) &&
-              !(entry.label === label.toLowerCase() && entry.mutation.viewerId === viewerId),
+              !(entry.label === canonicalizeTagLabel(label) && entry.mutation.viewerId === viewerId),
           )
           .map(({ key, mutation }) => [key, mutation]),
       ),
-      [`${viewerId}:${label.toLowerCase()}`]: {
+      [`${viewerId}:${canonicalizeTagLabel(label)}`]: {
         id,
         label,
         viewerId,
         relationship,
         synced,
         expiresAt: now + TAG_MUTATION_TTL_MS,
+        ...(uri && { uri }),
       },
     };
     this.cache!.revision += 1;
@@ -65,7 +67,7 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
   // -------- Instance helpers (shared) --------
 
   findByLabel(label: string): TagModel | null {
-    const found = this.tags.find((t) => t.label.toLowerCase() === label.toLowerCase());
+    const found = this.tags.find((t) => canonicalizeTagLabel(t.label) === canonicalizeTagLabel(label));
     return found ?? null;
   }
 

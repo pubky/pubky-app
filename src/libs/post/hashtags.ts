@@ -19,11 +19,12 @@ import { remarkDisallowMarkdownLinks, remarkPlaintextTables } from './markdown';
  * - Paragraph text is scanned after the same table and short-post link rewrites
  *   used by the renderer. Genuine article links, headings, code and image alt
  *   text are excluded unless a table rewrite exposes them as plain text.
- * - The same pattern (`HASHTAG_IN_TEXT_REGEX`, pubky-app-specs `tagInvalidChars`
+ * - The same pattern (`HASHTAG_IN_TEXT_REGEX`, pubky-social-specs `tagInvalidChars`
  *   terminate the body) and the same gate (`isValidTagLabel`) as rendering, so
  *   an over-long or character-invalid hashtag stays a plain hashtag.
- * - Labels are canonicalized (`trim().toLowerCase()`, the form written by
- *   `TagNormalizer.from`) and deduplicated case-insensitively.
+ * - Labels are canonicalized (`canonicalizeTagLabel`: trim and ASCII lowercase, the
+ *   fold `buildTag` stores and `TagNormalizer.from` returns) and deduplicated by
+ *   that canonical form.
  *
  * This module is pure (markdown in, labels out): no IO, no stores, no React.
  */
@@ -81,7 +82,7 @@ export function extractHashtagLabelsFromMarkdown(markdown: string, isArticle = f
 /**
  * The tag labels a create should carry: the composer's explicit labels first
  * (they are the user's own choice, so they are never dropped), then the extracted
- * hashtags, deduplicated case-insensitively, with extracted labels stopped at
+ * hashtags, deduplicated by canonical label, with extracted labels stopped at
  * `maxLabels`.
  *
  * `maxLabels` is the existing per-post tag limit (`POST_MAX_TAGS`), so extraction

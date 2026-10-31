@@ -172,6 +172,23 @@ describe('useTagSearch', () => {
 
       expect(mockRemoveActiveTag).toHaveBeenCalledWith('react');
     });
+
+    it('folds ASCII letters only when adding and removing, like the stored label', () => {
+      mockActiveTags = [];
+      const { result } = renderHook(() => useTagSearch());
+
+      act(() => {
+        result.current.addTagToSearch(' xÄPFEL ', { addToRecent: true });
+      });
+      expect(mockAddTag).toHaveBeenCalledWith('xÄpfel');
+      expect(mockSetActiveTags).toHaveBeenCalledWith(['xÄpfel']);
+
+      mockActiveTags = ['xÄpfel'];
+      act(() => {
+        result.current.removeTagFromSearch('xÄPFEL');
+      });
+      expect(mockRemoveActiveTag).toHaveBeenCalledWith('xÄpfel');
+    });
   });
 
   describe('activeTags', () => {

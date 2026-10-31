@@ -85,20 +85,27 @@ describe.each([
     expect(await readViewerTagged()).toBe(3);
   });
 
-  it('restores an optimistically removed tag with its counts', async () => {
+  it('restores an optimistically removed tag with its counts and address', async () => {
+    const tagUri = `pubky://${viewer}/pub/mapky/tags/MAPKY01`;
     await seedCounts(1);
     await tags.create({
       id: taggedId,
-      tags: [{ label, taggers: [viewer], taggers_count: 1, relationship: true }],
+      tags: [{ label, taggers: [viewer], taggers_count: 1, relationship: true, tag_uri: tagUri }],
     });
     expect(await local.delete({ ...write, mutationId: 'op', isCurrent: () => true })).toBe(true);
     expect(await readCounts()).toEqual({ tags: 0, unique_tags: 0 });
 
-    expect(await local.create(undoOf('op'))).toBe(true);
+    expect(await local.create({ ...undoOf('op'), tagUri })).toBe(true);
 
     const row = await tags.findById(taggedId);
     expect(row?.tags.find((tag) => tag.label === label)).toMatchObject({ taggers: [viewer], taggers_count: 1 });
-    expect(row?.mutations?.[`${viewer}:${label}`]).toMatchObject({ id: 'undo', relationship: true, synced: true });
+    // The restored row keeps the address that failed, so the next delete needs no Nexus round trip.
+    expect(row?.mutations?.[`${viewer}:${label}`]).toMatchObject({
+      id: 'undo',
+      relationship: true,
+      synced: true,
+      uri: tagUri,
+    });
     expect(await readCounts()).toEqual({ tags: 1, unique_tags: 1 });
     expect(await readViewerTagged()).toBe(3);
   });

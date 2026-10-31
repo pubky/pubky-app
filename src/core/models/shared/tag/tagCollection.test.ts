@@ -105,6 +105,55 @@ describe('TagCollection local intent', () => {
   });
 });
 
+describe('TagCollection tag address', () => {
+  it('records the address a create wrote, and none for a delete', () => {
+    const row = new TestTagCollection({ id: 'profile', tags: [] });
+    row.recordMutation('bitcoin', 'viewer', true, 'a', false, 'pubky://viewer/pub/pubky.app/tags/TAG01');
+    expect(row.mutations?.['viewer:bitcoin']?.uri).toBe('pubky://viewer/pub/pubky.app/tags/TAG01');
+    row.recordMutation('bitcoin', 'viewer', false, 'b', false);
+    expect(row.mutations?.['viewer:bitcoin']).not.toHaveProperty('uri');
+  });
+
+  it('keeps the Nexus tag_uri through a local write, and adds none to rows cached without it', () => {
+    const tagUri = 'pubky://viewer/pub/mapky/tags/MAPKY01';
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [
+        { label: 'bitcoin', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: tagUri },
+        { label: 'legacy', taggers: [], taggers_count: 1, relationship: false },
+      ],
+    });
+    row.addTagger('pubky', 'viewer');
+    expect(row.tags[0].tag_uri).toBe(tagUri);
+    expect(row.tags[1]).not.toHaveProperty('tag_uri');
+  });
+});
+
+describe('TagCollection label fold', () => {
+  it('keeps labels that differ outside ASCII apart, as the stored tag files are', () => {
+    const row = new TestTagCollection({ id: 'profile', tags: [] });
+    row.recordMutation('xÄpfel', 'viewer', true, 'a', false, 'pubky://viewer/pub/social/v1/tags/UPPER.json');
+    row.recordMutation('xäpfel', 'viewer', true, 'b', false, 'pubky://viewer/pub/social/v1/tags/LOWER.json');
+    expect(Object.keys(row.mutations ?? {}).sort()).toEqual(['viewer:xäpfel', 'viewer:xÄpfel'].sort());
+    // Each add creates its own label (false = the label did not exist yet)
+    expect(row.addTagger('xÄpfel', 'viewer')).toBe(false);
+    expect(row.addTagger('xäpfel', 'viewer')).toBe(false);
+    expect(row.tags.map((tag) => tag.label)).toEqual(['xÄpfel', 'xäpfel']);
+    expect(row.findByLabel('xÄpfel')?.label).toBe('xÄpfel');
+  });
+
+  it('still folds ASCII case into one label', () => {
+    const row = new TestTagCollection({ id: 'profile', tags: [] });
+    row.recordMutation('Bitcoin', 'viewer', true, 'a', false);
+    row.recordMutation('BITCOIN', 'viewer', true, 'b', false);
+    expect(Object.keys(row.mutations ?? {})).toEqual(['viewer:bitcoin']);
+    expect(row.addTagger('Bitcoin', 'viewer')).toBe(false);
+    // The same label: the viewer already tags it
+    expect(row.addTagger('BITCOIN', 'viewer')).toBeNull();
+    expect(row.findByLabel('BITCOIN')?.label).toBe('Bitcoin');
+  });
+});
+
 describe('TagCollection mutation ownership', () => {
   it('keeps operations from different viewers on the same label independently', () => {
     const row = new TestTagCollection({ id: 'profile', tags: [] });

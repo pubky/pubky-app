@@ -17,12 +17,11 @@ export type TUserSocialGraphStatusResult = {
   status: NexusSocialGraphStatus | null;
 };
 
-export type TUserApplicationFollowParams = TFollowParams & {
-  eventType: HttpMethod;
-  followUrl: string;
-  followJson: Record<string, unknown>;
-  signal?: AbortSignal;
-};
+export type TUserApplicationFollowParams = TFollowParams & { signal?: AbortSignal } & (
+    | { eventType: HttpMethod.PUT; followUrl: string; followBody: Uint8Array }
+    /** Every copy of the follow to delete: the 0.x one first, then the v1 one. */
+    | { eventType: HttpMethod.DELETE; deleteUrls: string[] }
+  );
 
 export type TEnsureModerationFollowParams = {
   follower: Pubky;

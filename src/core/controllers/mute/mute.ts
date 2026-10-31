@@ -1,5 +1,6 @@
 import { MuteApplication } from '@/application/mute/mute';
 import type { TMuteDirectoryEvent, TMuteParams } from '@/controllers/mute/mute.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -14,16 +15,14 @@ export class MuteController {
    * @param muter - The muter user ID
    * @param mutee - The mutee user ID
    */
-  static async commitMute(eventType: HttpMethod, { muter, mutee }: TMuteParams) {
-    const normalizedMutee = stripPubkyPrefix(mutee) as Pubky;
-    const { meta, mute } = MuteNormalizer.to({ muter, mutee: normalizedMutee });
-    await MuteApplication.commitMute({
-      eventType,
-      muteUrl: meta.url,
-      muteJson: mute.toJson(),
-      muter,
-      mutee: normalizedMutee,
-    });
+  static async commitMute(eventType: HttpMethod.PUT | HttpMethod.DELETE, { muter, mutee }: TMuteParams) {
+    const params = { muter, mutee: stripPubkyPrefix(mutee) as Pubky, isCurrent: captureViewerSession() };
+    if (eventType === HttpMethod.DELETE) {
+      await MuteApplication.commitMute({ ...params, eventType, deleteUrls: MuteNormalizer.toDeleteUrls(params) });
+      return;
+    }
+    const { url, body } = MuteNormalizer.to(params);
+    await MuteApplication.commitMute({ ...params, eventType, muteUrl: url, muteBody: body });
   }
 
   /**
@@ -36,7 +35,7 @@ export class MuteController {
   }
 
   /**
-   * Live SSE (via SDK) for `/pub/pubky.app/mutes/` changes on the homeserver.
+   * Live SSE (via SDK) for `/priv/social/v1/mutes/` changes on the homeserver.
    */
   static subscribeMuteDirectoryEventStream(
     pubky: Pubky,

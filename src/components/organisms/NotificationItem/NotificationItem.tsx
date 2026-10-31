@@ -7,6 +7,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useNotificationPostContent } from '@/hooks/useNotificationPostContent/useNotificationPostContent';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { NotificationType } from '@/models/notification/notification.types';
 import {
   NotificationActorAvatar,
@@ -61,8 +62,8 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
   const handleTagClick = (tagLabel: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const normalizedTag = tagLabel.trim().toLowerCase();
-    router.push(buildSearchUrl([normalizedTag]));
+    // The stored label fold (trim + ASCII lowercase), the same one the search page parses
+    router.push(buildSearchUrl([canonicalizeTagLabel(tagLabel)]));
   };
 
   // Handle clicking empty space in the notification row - navigate to the main notification target

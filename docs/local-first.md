@@ -236,27 +236,29 @@ For immediate UI feedback, controllers manage store state while application hand
 // Real pattern: src/core/controllers/user/user.ts
 class UserController {
   static async commitFollow(eventType, { follower, followee }) {
-    const normalizedFollowee = stripPubkyPrefix(followee);
-    const { meta, follow } = FollowNormalizer.to({ follower, followee: normalizedFollowee });
-
-    await UserApplication.commitFollow({
-      eventType,
-      followUrl: meta.url,
-      followJson: follow.toJson(),
-      follower,
-      followee: normalizedFollowee,
-    });
+    const params = { follower, followee: stripPubkyPrefix(followee) };
+    if (eventType === HttpMethod.DELETE) {
+      // Both copies of the follow, the 0.x one first, then the v1 one
+      await UserApplication.commitFollow({ ...params, eventType, deleteUrls: FollowNormalizer.toDeleteUrls(params) });
+      return;
+    }
+    const { url, body } = FollowNormalizer.to(params); // buildFollow: where it goes and the bytes to PUT
+    await UserApplication.commitFollow({ ...params, eventType, followUrl: url, followBody: body });
   }
 }
 
 // Application handles local-first persistence
 // Real pattern: src/core/application/user/user.ts
 class UserApplication {
-  static async commitFollow({ eventType, followUrl, followJson, follower, followee }) {
+  static async commitFollow(params) {
     // 1. Write to IndexedDB first
-    await LocalFollowService.create({ follower, followee });
-    // 2. Sync to homeserver
-    await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+    await LocalFollowService.create({ follower: params.follower, followee: params.followee });
+    // 2. Sync to homeserver (rolled back on failure, see the real `syncFollow`)
+    if (params.eventType === HttpMethod.PUT) {
+      await HomeserverService.putBlob({ url: params.followUrl, blob: params.followBody });
+    } else {
+      for (const url of params.deleteUrls) await HomeserverService.deleteIdempotent(url);
+    }
   }
 }
 ```

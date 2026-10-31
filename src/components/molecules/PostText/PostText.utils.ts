@@ -17,7 +17,7 @@ import { visit } from 'unist-util-visit';
 import { MENTION_IN_TEXT_REGEX } from '@/libs/identity/identity.constants';
 import { extractText } from '@/libs/post/markdown';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
-import { isValidTagLabel } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, isValidTagLabel } from '@/libs/utils/utils';
 import { HASHTAG_IN_TEXT_REGEX } from '@/libs/utils/utils.constants';
 import { POST_TEXT_PREVIEW_MAX_LINES, TRUNCATION_LIMIT } from './PostText.constants';
 
@@ -172,7 +172,7 @@ const createPatternPlugin = (config: PatternPluginConfig) => {
 };
 
 // Parse hashtags in paragraph text nodes and convert them to links with data-type="hashtag"
-// Pattern follows pubky-app-specs tagInvalidChars; isValidTagLabel gates link conversion (length, etc.)
+// Pattern follows pubky-social-specs tagInvalidChars; isValidTagLabel gates link conversion (length, etc.)
 // Must be at start of text or preceded by whitespace (standalone)
 export const remarkHashtags = createPatternPlugin({
   regex: HASHTAG_IN_TEXT_REGEX,
@@ -182,7 +182,7 @@ export const remarkHashtags = createPatternPlugin({
     return `/search?tags=${encodeURIComponent(tagName)}`;
   },
   dataType: 'hashtag',
-  shouldConvert: (hashtag) => isValidTagLabel(hashtag.slice(1).trim().toLowerCase()),
+  shouldConvert: (hashtag) => isValidTagLabel(canonicalizeTagLabel(hashtag.slice(1))),
 });
 
 // Parse mentions in paragraph text nodes and convert them to links with data-type="mention"

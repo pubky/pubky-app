@@ -126,7 +126,7 @@ describe('Post Application', () => {
     label,
     taggedKind: TagKind.POST,
     tagUrl: `pubky://${OWNER}/pub/social/v1/tags/${label}.json`,
-    tagJson: { uri: `pubky://${OWNER}/pub/social/v1/posts/${id}`, label },
+    tagBody: new TextEncoder().encode(JSON.stringify({ uri: `pubky://${OWNER}/pub/social/v1/posts/${id}`, label })),
   });
 
   // Spy setup helpers
