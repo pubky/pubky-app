@@ -31,8 +31,8 @@ const PATTERNS = {
   specsClass: /\bPubkyApp[A-Z]\w*/g,
   /** The 0.x builder singleton (`PubkySpecsSingleton`, `PubkySpecsBuilder`). */
   specsBuilder: /\bPubkySpecs\w*/g,
-  /** Any import of the 0.x package, its limits JSON included. */
-  specsImport: /from\s+['"]pubky-app-specs(?:\/[^'"]*)?['"]/g,
+  /** Any static or dynamic import of the 0.x package, its limits JSON included. */
+  specsImport: /(?:from\s+|import\s*\(\s*)['"]pubky-app-specs(?:\/[^'"]*)?['"]/g,
   /** The Nexus bookmark field on a post view: bookmarks are locally owned after the port. */
   nexusBookmark: /\.bookmark\b(?!\s*\()/g,
 } as const;

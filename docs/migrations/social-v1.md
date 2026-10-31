@@ -1,14 +1,15 @@
 # Social v1 migration (`pubky-social-specs` 1.x)
 
 **Status: in progress** on the integration branch `feat/social-v1` (cut from `dev`; child PRs merge into it, one
-final PR merges it into `dev`). The port is complete: PR-F removed `pubky-app-specs` and emptied the compliance
-ratchet; the docs sweep (PR-G), QA-3 against a complete Nexus and the final PR remain. The approved plan, its decisions D1–D19 and the design documents behind them live
+final PR merges it into `dev`). The port is complete: PR-F removed `pubky-app-specs` from the app and emptied the
+compliance ratchet; the docs sweep (PR-G), QA-3 against a complete Nexus, QA's Cypress update and the final PR
+remain. The approved plan, its decisions D1–D19 and the design documents behind them live
 outside the repository (`~/.claude/plans/ok-we-have-a-majestic-rivest.md`, `social-v1/{reports,designs}`); this
 file is the in-repo record and is kept current by every child PR.
 
 ## Behavior
 
-`pubky-app-specs` 0.8.1 (wasm, data under `/pub/pubky.app/`) is deprecated and no longer installed. `pubky-social-specs` 1.0.0-rc.1
+`pubky-app-specs` 0.8.1 (wasm, data under `/pub/pubky.app/`) is deprecated and no longer used by the app. `pubky-social-specs` 1.0.0-rc.1
 (native TypeScript, `/pub/social/v1/` + `/priv/social/v1/`) replaces it, and `pubky-social-migrator` 1.0.0-rc.1
 copies each user's 0.x tree to the 1.x layout and records the done flag `/priv/social/v1/_migrated.json`. When
 the branch ships, the app reads and writes only the 1.x trees, every existing user is force-migrated through a
@@ -133,7 +134,8 @@ Two gate tests keep the branch honest while it lives, and ship to `dev` with the
   matched when the gate landed (55 files on 2026-10-30), each child PR shrank it, and PR-F emptied it. A file that
   matches outside `PERMANENT` fails the gate.
 - ESLint `no-restricted-imports` bans `pubky-app-specs` and `pubky-app-specs/*` everywhere linted (`cypress/` is not),
-  and the package is gone from `package.json`, so an old import also fails `npm run typecheck`.
+  and the compliance gate also catches a dynamic `import('pubky-app-specs')`. The package itself stays a
+  devDependency only for the Cypress seed plugin (see _Cypress hand-off_).
 
 Dev-sync routine (its own short-lived session, daily or before a child PR merges, in the integration worktree):
 fetch, record the sync SHA, list the merged `dev` PRs, merge, resolve, then a narrow compliance sweep of the
@@ -159,7 +161,8 @@ bookmarks/mutes/feeds or auth capabilities should be written against `pubky-soci
 
 ## Cleanup (PR-F)
 
-`pubky-app-specs` is uninstalled (npm regenerated the lockfile) and ESLint-banned. Gone with it: the wasm builder
+`pubky-app-specs` is no longer used by the app: it moved to `devDependencies` (npm regenerated the lockfile), only
+for the QA-owned Cypress seed plugin, and is banned in `src/**` by ESLint and the compliance gate. Gone with it: the wasm builder
 singleton `src/core/pipes/pipes.builder.ts` and its test, the builder double in `pipes.test-utils.ts`, the unused 0.x
 kind helper `src/core/services/local/post/post.helpers.ts`, every `vi.mock('pubky-app-specs')`, the
 `@/config/posts` preload in `src/config/test.ts`, and the last `LEGACY_RATCHET` entries (the list is empty).
@@ -173,7 +176,7 @@ kind helper `src/core/services/local/post/post.helpers.ts`, every `vi.mock('pubk
 - Tests: the WebAssembly console and unhandled-rejection suppressions in `src/config/test.ts` and `vitest.config.ts`
   are removed; the full suite printed the same output with and without them. The jsdom navigation filter stays.
 
-Follow-ups (not in PR-F): `.github/dependabot.yml` still lists `pubky-app-specs` in the `pubky-sdk` group (a CI
+Follow-ups (not in PR-F): `npm uninstall pubky-app-specs` once QA ports `cypress/plugins/seed.ts`; `.github/dependabot.yml` still lists `pubky-app-specs` in the `pubky-sdk` group (a CI
 task; `pubky-social-specs` and `pubky-social-migrator` could join that group); the `@synonymdev/pubky` chunk (3.4 MB
 since SDK 0.16) is over `maximumFileSizeToCacheInBytes` (3 MiB), so it is left out of the precache, on `dev` too;
 `src/core/utils/pubky-app-spec-feed-mappers.ts` keeps its old file name although it maps `pubky-social-specs` values.
@@ -227,11 +230,12 @@ moved to `/priv/social/v1/bookmarks/` (the `PUT`/`DELETE` intercepts on `**/pub/
 only after the next sign-in (a reload restores the session without the listing).
 Added by the first dev-sync: `cypress/plugins/seed.ts` (#2897) seeds supporting users through `pubky-app-specs`
 (`PubkySpecsBuilder`, `PubkyAppPost`, `PubkyAppPostKind`, `PubkyAppPostEmbed`, `/pub/pubky.app/` paths), so they are
-un-migrated 0.x accounts. It is the only Cypress file that imports the old package, and since PR-F removed it the
-file no longer resolves: `cypress/cypress.config.ts` imports it in `setupNodeEvents` (and
-`cypress.config.mobile.ts` extends that config), so no spec starts until QA ports the plugin to
-`pubky-social-specs`. `cypress/support/{seed,feeds}.ts` and `cypress/plugins/nexus.ts` depend on it. e2e runs only
-on pushes to `dev`/`master`, so the port must land with or before the final PR.
+un-migrated 0.x accounts. It is the only Cypress file that imports the old package, and the root `tsconfig.json`
+type-checks `cypress/**` (`npm run typecheck` and `next build`), and `cypress/cypress.config.ts` loads the plugin
+in `setupNodeEvents`, so PR-F keeps `pubky-app-specs` as a devDependency for it. Once QA ports the plugin to
+`pubky-social-specs`, `npm uninstall pubky-app-specs` finishes the removal. `cypress/support/{seed,feeds}.ts` and
+`cypress/plugins/nexus.ts` depend on it. e2e runs only on pushes to `dev`/`master`, so the port should land with or
+before the final PR.
 
 ## Reductions and follow-ups
 
