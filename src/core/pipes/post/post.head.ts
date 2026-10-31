@@ -20,3 +20,22 @@ export function pickHeadVersion(urls: readonly string[]): string | null {
   }
   return head?.url ?? null;
 }
+
+/**
+ * The ids of the posts a LIST of an owner's `posts/` directory found: every post with at least
+ * one canonical version, once, in listing order. Entries that are no post version are skipped,
+ * as `pickHeadVersion` skips them.
+ */
+export function pickListedPostIds(urls: readonly string[]): string[] {
+  const ids = new Set<string>();
+  for (const url of urls) {
+    let at: ReturnType<typeof parseUri>;
+    try {
+      at = parseUri(url);
+    } catch {
+      continue;
+    }
+    if (at.kind === 'post' && at.editId !== undefined) ids.add(at.id);
+  }
+  return [...ids];
+}

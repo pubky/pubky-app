@@ -35,10 +35,12 @@ export class FileController {
   }
 
   /**
-   * Deletes media from the homeserver and the local cache. Files another
-   * cached post still references and already-deleted resources are handled by
-   * the application layer, so callers may treat this as idempotent best-effort
-   * cleanup (e.g. discarding uploads of an unpublished article draft).
+   * Deletes media from the homeserver and the local cache, but only a file
+   * nothing else of its owner references (the local cache, the published
+   * profile and Nexus are checked; a check that cannot complete keeps the file).
+   * Already-deleted resources are handled by the application layer, so callers
+   * may treat this as idempotent best-effort cleanup (e.g. discarding uploads of
+   * an unpublished article draft).
    *
    * @param params - Parameters for file deletion
    * @param params.fileUris - Homeserver media URIs (`pubky://…/files/{hash}.{ext}`) to delete

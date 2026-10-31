@@ -1,4 +1,4 @@
-import { buildUri, decodeObject, deletionPaths, listPrefix, toPath, toUrl, tryDecodeContent } from 'pubky-social-specs';
+import { buildUri, decodeObject, deletionPaths, listPrefix, toPath, toUrl } from 'pubky-social-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type {
@@ -304,15 +304,13 @@ export class PostApplication {
    * grant can write the 0.x tree (a Ring session without `/pub/pubky.app/:rw` leaves it, which
    * is logged: `legacyRefused`). Nexus deletes the logical post on any version's DELETE.
    *
-   * Collection and article covers: `cover_image` lives in the content envelope, not
-   * `post.attachments`. After the homeserver DELETEs succeed, if the post had a homeserver file
-   * cover, that file is deleted too — including when the local row is soft-deleted
-   * (`hadConnections`), because the envelope is tombstoned either way and no longer references
-   * the file. Failures during cover delete are logged and swallowed so they do not fail an
+   * Media: after the homeserver DELETEs succeed, the post's attachments (only when the row did
+   * not keep its connections, `!hadConnections`) and its homeserver file cover (`cover_image`
+   * lives in the content envelope; collected either way, the envelope is tombstoned) go to
+   * `FileApplication.commitDelete`, which deletes a file only once the local cache, the published
+   * profile and Nexus all say nothing else of the owner references it (content-addressed media is
+   * shared). Best-effort: a failure is logged and swallowed so it does not fail an
    * already-successful post delete. External http(s) covers are never deleted.
-   *
-   * Regular attachment cleanup still runs only when `!hadConnections`, and is likewise
-   * best-effort. Both skip media another cached post still references.
    */
   static async commitDelete({ compositePostId, canWriteLegacy }: TDeletePostInput) {
     const post = await PostDetailsModel.findById(compositePostId);
@@ -357,25 +355,17 @@ export class PostApplication {
       await HomeserverService.deleteIdempotent(toUrl(owner, path));
     }
 
-    // Best-effort: the post delete already succeeded on the homeserver, so a
-    // file-cleanup failure (e.g. files already deleted by an earlier edit whose
-    // Nexus state was reverted locally) must not surface as a delete failure.
-    if (!hadConnections && post.attachments && post.attachments.length > 0) {
-      await FileApplication.commitDelete(post.attachments, compositePostId).catch((cleanupError) => {
-        Logger.warn('[PostApplication.commitDelete] Failed to cleanup post attachments', {
+    // Best-effort, in one pass so the reference checks run once: the post delete already
+    // succeeded on the homeserver, so a file-cleanup failure must not surface as a delete failure.
+    const mediaUris = [
+      ...(!hadConnections && post.attachments ? post.attachments : []),
+      ...(isHomeserverFileUri(coverUri) ? [coverUri] : []),
+    ];
+    if (mediaUris.length > 0) {
+      await FileApplication.commitDelete(mediaUris, compositePostId).catch((cleanupError) => {
+        Logger.warn('[PostApplication.commitDelete] Failed to cleanup post media', {
           compositePostId,
-          cleanupError,
-        });
-      });
-    }
-
-    // Cover is no longer referenced after delete; if this delete fails, the post
-    // delete still stands (old cover may remain on the homeserver).
-    if (isHomeserverFileUri(coverUri)) {
-      await FileApplication.commitDelete([coverUri], compositePostId).catch((cleanupError) => {
-        Logger.warn('[PostApplication.commitDelete] Failed to cleanup cover', {
-          compositePostId,
-          coverUri,
+          mediaUris,
           cleanupError,
         });
       });
@@ -404,11 +394,13 @@ export class PostApplication {
    *    next version is PUT at its own URL. A refusal the write policy retries runs the read
    *    again; the body is never replayed from a stale read.
    * 4. The local row converges to the version that was PUT; on failure it goes back to what it
-   *    was and the uploads are swept. `removedUris` are deleted only after success, best-effort.
+   *    was and the uploads are swept. Media the edit removed (an attachment, an article's or a
+   *    collection's cover) is never deleted: the earlier versions still reference it, and content
+   *    addressing lets other objects share it.
    *
    * A post with no v1 version (one the migration skipped) cannot be edited: `NOT_FOUND`.
    */
-  static async commitEdit({ compositePostId, edit, fileAttachments, removedUris }: TEditPostInput) {
+  static async commitEdit({ compositePostId, edit, fileAttachments }: TEditPostInput) {
     const { pubky: owner, id: postId } = parseCompositeId(compositePostId);
     const originalPost = await LocalPostService.readDetails({ postId: compositePostId });
     // A tombstone (the Nexus `deleted` flag, or the legacy `[DELETED]` content) is not-found: a
@@ -509,25 +501,6 @@ export class PostApplication {
           });
         },
       );
-    }
-
-    // Media is content addressed: a file removed and added again, or a cover picked again, names
-    // the URI the version just written references. Nothing it references is deleted.
-    const referencedByNext = new Set(built.object.attachments.map(({ uri }) => uri));
-    const nextEnvelope = tryDecodeContent(built.object);
-    if (nextEnvelope.ok && nextEnvelope.value?.content.cover_image) {
-      referencedByNext.add(nextEnvelope.value.content.cover_image);
-    }
-    const deletableRemovedUris =
-      removedUris?.filter((uri) => isHomeserverFileUri(uri) && !referencedByNext.has(uri)) ?? [];
-    if (deletableRemovedUris.length > 0) {
-      await FileApplication.commitDelete(deletableRemovedUris, compositePostId).catch((cleanupError) => {
-        Logger.warn('[PostApplication.commitEdit] Failed to cleanup removed attachments', {
-          compositePostId,
-          removedUris: deletableRemovedUris,
-          cleanupError,
-        });
-      });
     }
   }
 

@@ -1,7 +1,8 @@
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import { CompositeIdDomain } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { buildCompositeIdFromPubkyUri, parsePubkyUri } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import type { TPersistFilesParams } from '@/services/local/file/file.types';
 import { buildUrls } from '@/services/local/file/file.utils';
@@ -27,11 +28,12 @@ export class LocalFileService {
   }
 
   /**
-   * Whether a cached post other than `excludePostId` still references the media `uri`, as an
-   * attachment or inside its content (an article's or a collection's cover). Media is content
-   * addressed, so byte-identical uploads share one file and a delete must leave a file another
-   * post still uses. Local-only knowledge: posts never cached on this device are not seen (the
-   * complete fix is homeserver-side ref-counting, tracked as a follow-up).
+   * Whether a cached object other than the post `excludePostId` still references the media `uri`:
+   * another post, as an attachment or inside its content (an article's or a collection's
+   * `cover_image` envelope), or the owner's profile, as its image. Media is content addressed, so
+   * byte-identical uploads share one file and a delete must leave a file anything else still uses.
+   * Local knowledge only: objects never cached on this device are not seen, so a delete checks the
+   * homeserver and Nexus as well (`FileApplication.commitDelete`).
    */
   static async isReferencedElsewhere({
     uri,
@@ -40,6 +42,10 @@ export class LocalFileService {
     uri: string;
     excludePostId?: string;
   }): Promise<boolean> {
+    const owner = parsePubkyUri(uri)?.authority;
+    const profile = owner ? await UserDetailsModel.findById(owner) : null;
+    if (profile?.image === uri) return true;
+
     const other = await PostDetailsModel.table
       .filter((post) => post.id !== excludePostId && (post.attachments?.includes(uri) || post.content.includes(uri)))
       .first();
