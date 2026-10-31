@@ -5,6 +5,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { isVideoUrl } from '@/libs/utils/videoUrl';
 import type { PostKind } from '@/models/models.types';
+import type { TLockContentKind } from '@/services/locks/locks.types';
 
 type TInferPostKindParams = {
   content: string;
@@ -70,6 +71,25 @@ export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInf
     (attachments ?? []).map((file) => file.type),
   );
 };
+
+/**
+ * The pubky-social-specs v1.0.0-rc.1 name a lock announcement saves for the kind of its locked post (#2433). An
+ * explicit mapping, so the stored names stay fixed when the internal kinds are renamed. A `Record` over every
+ * `KnownPostKind`, so a kind added by a specs upgrade fails to compile until it is mapped here. A create never
+ * infers a collection, so it saves nothing and reads as generic content.
+ */
+const LOCK_CONTENT_KIND_BY_POST_KIND: Record<KnownPostKind, TLockContentKind | undefined> = {
+  note: 'note',
+  article: 'article',
+  image: 'image',
+  video: 'video',
+  link: 'link',
+  file: 'file',
+  collection: undefined,
+};
+
+export const toLockContentKind = (kind: KnownPostKind): TLockContentKind | undefined =>
+  LOCK_CONTENT_KIND_BY_POST_KIND[kind];
 
 /**
  * Kind for an edited post whose attachment set changed. Articles and

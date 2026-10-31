@@ -14,12 +14,22 @@ export function parseLockPrice(value: string, asset: TLockPriceAsset): TLockPric
   return price.success ? price.data : null;
 }
 
-export function formatLockPrice({ amount, asset }: TLockPrice, { space = false } = {}): string {
-  const units = BigInt(amount);
-  if (asset === 'BTC') return `₿${space ? ' ' : ''}${integerFormatter.format(units)}`;
+/** Whole units and the zero-padded fraction the asset's decimals call for (empty for BTC). */
+const splitLockPrice = ({ amount, asset }: TLockPrice) => {
   const decimals = inputDecimals[asset];
+  const units = BigInt(amount);
   const scale = BigInt(10) ** BigInt(decimals);
-  const whole = integerFormatter.format(units / scale);
-  const fraction = (units % scale).toString().padStart(decimals, '0');
-  return `$${whole}.${fraction}`;
+  return { whole: units / scale, fraction: decimals ? (units % scale).toString().padStart(decimals, '0') : '' };
+};
+
+/** The reverse of `parseLockPrice`: the amount as the price field takes it, without grouping or symbol. */
+export function lockPriceInputValue(price: TLockPrice): string {
+  const { whole, fraction } = splitLockPrice(price);
+  return fraction ? `${whole}.${fraction}` : whole.toString();
+}
+
+export function formatLockPrice(price: TLockPrice, { space = false } = {}): string {
+  const { whole, fraction } = splitLockPrice(price);
+  if (price.asset === 'BTC') return `₿${space ? ' ' : ''}${integerFormatter.format(whole)}`;
+  return `$${integerFormatter.format(whole)}.${fraction}`;
 }

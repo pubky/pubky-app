@@ -150,8 +150,9 @@ bookmarks/mutes/feeds or auth capabilities should be written against `pubky-soci
 
 ### Sync log
 
-| Date | `dev` SHA | Merged PRs | Ported by the sweep | Notes |
-| ---- | --------- | ---------- | ------------------- | ----- |
+| Date       | `dev` SHA                      | Merged PRs                                            | Ported by the sweep                                                                                                                                                                                                                                                                                                                                                                                | Notes                                                                                                                                                        |
+| ---------- | ------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-30 | `28b06db7d` (from `f63e73aad`) | #2981 (with #2982), #2983, #2965, #3002, #3001, #2897 | `toLockContentKind` keyed on `KnownPostKind` (was `PubkyAppPostKind`) and its test; `usePostInputLock` hands the locked post `toLocalPostKind(lockedKind)`; the "locks the edited body" integration test asserts the `createLockContent` input (no `PubkyAppPost` spy); "pubky-app-specs v1.0.0-rc.1" renamed `pubky-social-specs` in ADR-0022, `docs/locks.md`, `locks.types.ts` and a test title | Ratchet unchanged. Cypress (flag): #2897's `cypress/plugins/seed.ts` writes 0.x through `pubky-app-specs`. New VRT `LockedPostCard.vrt` (CI-owned baselines) |
 
 ## Retest list (final full-stack pass, D10)
 
@@ -173,6 +174,9 @@ Specs invalidated by the port, to be updated by QA with or before the final PR (
 `cypress/support/{posts,collections,profile,pagination,nexus}.ts` (the URI regex in `nexus.ts`,
 `postIdFromWriteUrl`). Seeded accounts now land on `/migration`; the "followed collection updated" scenario is
 removed by product decision (D7); the settings and `last_read` paths move to `/priv/app.pubky/v1/`.
+Added by the first dev-sync: `cypress/plugins/seed.ts` (#2897) seeds supporting users through `pubky-app-specs`
+(`PubkySpecsBuilder`, `/pub/pubky.app/` paths), so they are un-migrated 0.x accounts, and it stops compiling when
+the old package is removed; `cypress/support/{seed,feeds}.ts` and `cypress/plugins/nexus.ts` depend on it.
 
 ## Reductions and follow-ups
 

@@ -53,6 +53,8 @@ export interface UsePostEditOptions {
   editPostId: string;
   /** Keeps an existing lock announcement in teaser-envelope mode. */
   isLockAnnouncement?: boolean;
+  /** The announcement's stored `content_kind`, written back so an edit keeps the card's icon and title (#2433). */
+  lockContentKind?: string;
   /**
    * The attachment URIs the edit composer was seeded from (the snapshot taken
    * when the dialog opened — NOT the live post row, which can change underneath
