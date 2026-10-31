@@ -72,6 +72,16 @@ describe('ProfileApplication edit round trip on the data model', () => {
     expect(await UserTtlModel.findById(pubky)).toBeTruthy();
   });
 
+  it('replacing the avatar never deletes the previous file: content-addressed media may be shared', async () => {
+    const next = `pubky://${pubky}/pub/social/v1/files/5YZPH0G0HBSXPQQKYZCJ2G7Z64.png`;
+
+    await ProfileApplication.commitUpdate({ pubky, changes: { image: next } });
+
+    expect(await storedJson()).toMatchObject({ image: next });
+    expect(homeserver.spies.delete).not.toHaveBeenCalled();
+    expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+  });
+
   it.each(refusals)(
     'refuses $label before the PUT and local persistence, naming the member',
     async ({ changes, field }) => {

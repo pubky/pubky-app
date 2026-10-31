@@ -826,7 +826,6 @@ describe('PostController', () => {
         expect(commitEditSpy).toHaveBeenCalledWith({
           compositePostId: testData.fullPostId,
           edit: { content: 'Updated content' },
-          removedUris: undefined,
         });
         const commitEditArg = commitEditSpy.mock.calls[0][0];
         expect('fileAttachments' in commitEditArg).toBe(false);
@@ -837,7 +836,7 @@ describe('PostController', () => {
       }
     });
 
-    it('merges kept and newly uploaded attachment URIs, names the new ones, and reports removed URIs', async () => {
+    it('merges kept and newly uploaded attachment URIs and names the new ones; the removed one only leaves the post', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
         createPostDetails({ attachments: [keptUri, removedUri] }),
@@ -868,8 +867,8 @@ describe('PostController', () => {
             kind: 'image',
           },
           fileAttachments: [expect.objectContaining({ media: expect.objectContaining({ url: photoUri }) })],
-          removedUris: [removedUri],
         });
+        expect(FileApplication.commitDelete).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
@@ -896,12 +895,9 @@ describe('PostController', () => {
           attachments: { original: [keptUri, photoUri], kept: [keptUri], added: [imageFile] },
         });
 
-        // The re-added file goes up (idempotent, found preexisting) and is no removal
+        // The re-added file goes up (idempotent, found preexisting)
         expect(commitEditSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            edit: expect.objectContaining({ attachmentUris: [keptUri, photoUri] }),
-            removedUris: undefined,
-          }),
+          expect.objectContaining({ edit: expect.objectContaining({ attachmentUris: [keptUri, photoUri] }) }),
         );
       } finally {
         cleanupAuthUser();
@@ -933,22 +929,19 @@ describe('PostController', () => {
           },
         });
 
-        // Nothing from the snapshot was removed, so no removedUris at all —
-        // the grown URI the dialog never saw must be left untouched.
+        // The next version is built from the snapshot; the grown URI the dialog never saw is never deleted
         const commitEditArg = commitEditSpy.mock.calls[0][0];
-        expect(commitEditArg.removedUris).toBeUndefined();
         expect(commitEditArg.edit.attachmentUris).toEqual([keptUri, mediaUrl('x', 'image/png')]);
+        expect(FileApplication.commitDelete).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
     });
 
-    it('computes removals from the original snapshot regardless of the live row contents', async () => {
+    it('deletes nothing an edit removes: the earlier versions still reference it (ADR-0027)', async () => {
       setupAuthUser(testData.authorPubky);
-      const divergedUri = mediaUrl('diverged', 'image/png');
-      // The live row diverged completely from the snapshot the dialog was seeded with
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
-        createPostDetails({ attachments: [keptUri, divergedUri] }),
+        createPostDetails({ kind: 'image', attachments: [keptUri, removedUri] }),
       );
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
       vi.spyOn(FileApplication, 'getMetadata').mockResolvedValue([
@@ -963,30 +956,13 @@ describe('PostController', () => {
           attachments: { original: [keptUri, removedUri], kept: [keptUri], added: [] },
         });
 
-        expect(commitEditSpy).toHaveBeenCalledWith(expect.objectContaining({ removedUris: [removedUri] }));
-      } finally {
-        cleanupAuthUser();
-      }
-    });
-
-    it('still reports the removed URI when the live row already lost it', async () => {
-      setupAuthUser(testData.authorPubky);
-      // Another tab/device already removed `removedUri` from the row
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createPostDetails({ attachments: [keptUri] }));
-      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
-      vi.spyOn(FileApplication, 'getMetadata').mockResolvedValue([
-        { uri: keptUri, content_type: 'image/png' },
-      ] as never);
-
-      try {
-        const { PostController } = await import('./post');
-        await PostController.commitEdit({
+        expect(commitEditSpy).toHaveBeenCalledWith({
           compositePostId: testData.fullPostId,
-          content: 'Updated content',
-          attachments: { original: [keptUri, removedUri], kept: [keptUri], added: [] },
+          edit: { content: 'Updated content', attachmentUris: [keptUri], attachmentNames: {}, kind: 'image' },
+          fileAttachments: undefined,
         });
-
-        expect(commitEditSpy).toHaveBeenCalledWith(expect.objectContaining({ removedUris: [removedUri] }));
+        expect(FileApplication.commitDelete).not.toHaveBeenCalled();
+        expect(FileApplication.commitDeleteUploaded).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
@@ -1124,7 +1100,6 @@ describe('PostController', () => {
           expect(commitEditSpy).toHaveBeenCalledWith(
             expect.objectContaining({
               edit: expect.objectContaining({ attachmentUris: [], kind: 'note' }),
-              removedUris: [keptUri],
             }),
           );
           // No new uploads → the application layer must not receive file attachments
@@ -1231,7 +1206,7 @@ describe('PostController', () => {
           attachments,
         });
 
-      it('passes a cover change through a content-only edit and deletes the replaced envelope cover', async () => {
+      it('passes a cover change through a content-only edit, never deleting the replaced cover', async () => {
         setupAuthUser(testData.authorPubky);
         vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(article([], coverUri));
         const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
@@ -1247,14 +1222,14 @@ describe('PostController', () => {
           expect(commitEditSpy).toHaveBeenCalledWith({
             compositePostId: testData.fullPostId,
             edit: { content: JSON.stringify({ title: 'T', body: 'new body' }), coverImage: newCoverUri },
-            removedUris: [coverUri],
           });
+          expect(FileApplication.commitDelete).not.toHaveBeenCalled();
         } finally {
           cleanupAuthUser();
         }
       });
 
-      it('deletes the replaced cover on the kept/added attachments path too', async () => {
+      it('replaces the cover on the kept/added attachments path too, deleting nothing', async () => {
         setupAuthUser(testData.authorPubky);
         const inline = mediaUrl('inline', 'image/png');
         vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(article([inline], coverUri));
@@ -1270,8 +1245,12 @@ describe('PostController', () => {
           });
 
           expect(commitEditSpy).toHaveBeenCalledWith(
-            expect.objectContaining({ removedUris: [inline, coverUri], fileAttachments: undefined }),
+            expect.objectContaining({
+              edit: expect.objectContaining({ attachmentUris: [], coverImage: newCoverUri }),
+              fileAttachments: undefined,
+            }),
           );
+          expect(FileApplication.commitDelete).not.toHaveBeenCalled();
         } finally {
           cleanupAuthUser();
         }
@@ -1290,12 +1269,10 @@ describe('PostController', () => {
           expect(commitEditSpy.mock.calls[0][0]).toEqual({
             compositePostId: testData.fullPostId,
             edit: { content: 'c', coverImage: null },
-            removedUris: [coverUri],
           });
           expect(commitEditSpy.mock.calls[1][0]).toEqual({
             compositePostId: testData.fullPostId,
             edit: { content: 'c' },
-            removedUris: undefined,
           });
         } finally {
           cleanupAuthUser();
@@ -1332,8 +1309,6 @@ describe('PostController', () => {
               kind: 'article',
               coverImage: coverUri,
             },
-            // The cover left the attachments but is still the cover: not a removal
-            removedUris: undefined,
           });
         } finally {
           cleanupAuthUser();
@@ -1814,7 +1789,7 @@ describe('PostController', () => {
       }
     });
 
-    it('uploads a new cover File, replaces cover_image with the resulting URL, and deletes the old one', async () => {
+    it('uploads a new cover File and replaces cover_image with the resulting URL, never deleting the old one', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
@@ -1836,13 +1811,13 @@ describe('PostController', () => {
         expect(toFileAttachmentSpy).toHaveBeenCalledWith({ file, pubky: testData.authorPubky });
         expect(commitFileCreateSpy).toHaveBeenCalled();
         expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit(newCover));
-        expect(commitFileDeleteSpy).toHaveBeenCalledWith([oldCover], collectionPostId);
+        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
     });
 
-    it('clears the cover when coverImage is null', async () => {
+    it('clears the cover when coverImage is null, leaving the file: earlier versions and other objects may use it', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
@@ -1858,7 +1833,7 @@ describe('PostController', () => {
         });
 
         expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit(undefined));
-        expect(commitFileDeleteSpy).toHaveBeenCalledWith([oldCover], collectionPostId);
+        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
@@ -2464,7 +2439,7 @@ describe('PostController', () => {
         is_blurred: false,
       }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
 
-    it('persists nextOrder verbatim, diffs removals against the snapshot, and keeps the article kind', async () => {
+    it('persists nextOrder verbatim, deletes nothing it drops, and keeps the article kind', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([inlineA, inlineB]));
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
@@ -2491,10 +2466,10 @@ describe('PostController', () => {
             attachmentUris: [inlineA, inlineNew],
             kind: 'article',
           },
-          removedUris: [inlineB],
         });
         const commitEditArg = commitEditSpy.mock.calls[0][0];
         expect('fileAttachments' in commitEditArg).toBe(false);
+        expect(FileApplication.commitDelete).not.toHaveBeenCalled();
         // Articles keep their kind without resolving attachment metadata
         expect(getMetadataSpy).not.toHaveBeenCalled();
       } finally {
@@ -2502,7 +2477,7 @@ describe('PostController', () => {
       }
     });
 
-    it('keeps the cover out of the removals when the same file is also an inline slot', async () => {
+    it('clears the envelope cover while the same file stays an inline slot', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([coverUri]));
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
@@ -2520,7 +2495,6 @@ describe('PostController', () => {
         expect(commitEditSpy).toHaveBeenCalledWith(
           expect.objectContaining({
             edit: expect.objectContaining({ attachmentUris: [coverUri], coverImage: null }),
-            removedUris: undefined,
           }),
         );
       } finally {
@@ -2528,7 +2502,7 @@ describe('PostController', () => {
       }
     });
 
-    it('clears attachments when nextOrder is empty and removes the full snapshot', async () => {
+    it('clears attachments when nextOrder is empty, deleting none of them', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([inlineA, inlineB], null));
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
@@ -2542,11 +2516,9 @@ describe('PostController', () => {
         });
 
         expect(commitEditSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            edit: expect.objectContaining({ attachmentUris: [] }),
-            removedUris: [inlineA, inlineB],
-          }),
+          expect.objectContaining({ edit: expect.objectContaining({ attachmentUris: [] }) }),
         );
+        expect(FileApplication.commitDelete).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }

@@ -474,8 +474,8 @@ describe('Post Application', () => {
 
         await expect(PostApplication.commitDelete({ compositePostId, canWriteLegacy: true })).resolves.toBeUndefined();
         expect(warnSpy).toHaveBeenCalledWith(
-          '[PostApplication.commitDelete] Failed to cleanup post attachments',
-          expect.objectContaining({ compositePostId }),
+          '[PostApplication.commitDelete] Failed to cleanup post media',
+          expect.objectContaining({ compositePostId, mediaUris: attachments }),
         );
       });
 
@@ -499,6 +499,20 @@ describe('Post Application', () => {
         expect(fileCommitDeleteSpy).toHaveBeenCalledTimes(2);
         expect(fileCommitDeleteSpy).toHaveBeenNthCalledWith(1, [cover], compositePostId);
         expect(fileCommitDeleteSpy).toHaveBeenNthCalledWith(2, [cover], compositePostId);
+      });
+
+      it("hands an article's attachments and its cover over in one pass, so the reference checks run once", async () => {
+        const cover = createMockFileAttachment(9).media.url;
+        const { findByIdSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(
+          asOpaque<PostDetailsModel>(
+            row({ kind: 'long', attachments, content: JSON.stringify({ title: 't', body: 'b', cover_image: cover }) }),
+          ),
+        );
+
+        await PostApplication.commitDelete({ compositePostId, canWriteLegacy: true });
+
+        expect(fileCommitDeleteSpy).toHaveBeenCalledExactlyOnceWith([...attachments, cover], compositePostId);
       });
 
       it('does not delete an external https cover, nor look for one on a note', async () => {
@@ -534,8 +548,8 @@ describe('Post Application', () => {
 
         await expect(PostApplication.commitDelete({ compositePostId, canWriteLegacy: true })).resolves.toBeUndefined();
         expect(warnSpy).toHaveBeenCalledWith(
-          '[PostApplication.commitDelete] Failed to cleanup cover',
-          expect.objectContaining({ compositePostId, coverUri: cover }),
+          '[PostApplication.commitDelete] Failed to cleanup post media',
+          expect.objectContaining({ compositePostId, mediaUris: [cover] }),
         );
       });
     });
@@ -834,47 +848,15 @@ describe('Post Application', () => {
         expect(putBlobSpy).not.toHaveBeenCalled();
       });
 
-      it('should delete only removed homeserver file URIs after a successful PUT, as the post giving them up', async () => {
+      it('never deletes media the edit removes: the earlier versions still reference it', async () => {
         storeVersions(withAttachments());
-        const { fileDeleteSpy, putBlobSpy } = setupEditSpies();
+        const { fileDeleteSpy, fileDeleteUploadedSpy, putBlobSpy } = setupEditSpies();
 
-        await PostApplication.commitEdit({
-          compositePostId,
-          edit: { attachmentUris: [kept] },
-          removedUris: [removed, 'https://example.com/external.png'],
-        });
+        await PostApplication.commitEdit({ compositePostId, edit: { attachmentUris: [kept] } });
 
-        expect(fileDeleteSpy).toHaveBeenCalledWith([removed], compositePostId);
-        expect(putBlobSpy.mock.invocationCallOrder[0]).toBeLessThan(fileDeleteSpy.mock.invocationCallOrder[0]);
-      });
-
-      it('never deletes a removed URI the version just written still references', async () => {
-        storeVersions(withAttachments());
-        const { fileDeleteSpy } = setupEditSpies();
-
-        // A file removed and added again names the same URI: it stays referenced
-        await PostApplication.commitEdit({
-          compositePostId,
-          edit: { attachmentUris: [kept, removed] },
-          removedUris: [removed],
-        });
-
+        expect(lastPut(putBlobSpy).post.attachments).toEqual([{ uri: kept, alt: null, name: null }]);
         expect(fileDeleteSpy).not.toHaveBeenCalled();
-      });
-
-      it('should not fail the edit when removed-attachment cleanup fails', async () => {
-        storeVersions(withAttachments());
-        const { fileDeleteSpy } = setupEditSpies();
-        fileDeleteSpy.mockRejectedValue(new Error('cleanup failed'));
-        const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
-
-        await expect(
-          PostApplication.commitEdit({ compositePostId, edit: { attachmentUris: [kept] }, removedUris: [removed] }),
-        ).resolves.toBeUndefined();
-        expect(warnSpy).toHaveBeenCalledWith(
-          '[PostApplication.commitEdit] Failed to cleanup removed attachments',
-          expect.objectContaining({ compositePostId }),
-        );
+        expect(fileDeleteUploadedSpy).not.toHaveBeenCalled();
       });
 
       it('should remove the post from the old kind streams after a kind-changing edit succeeds', async () => {

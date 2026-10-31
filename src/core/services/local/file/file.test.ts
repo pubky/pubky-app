@@ -9,6 +9,7 @@ import { FileDetailsModel } from '@/models/file/fileDetails';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { buildUrls } from '@/services/local/file/file.utils';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { LocalFileService } from './file';
@@ -291,6 +292,18 @@ describe('LocalFileService', () => {
       );
 
       expect(await LocalFileService.isReferencedElsewhere({ uri: mediaUri })).toBe(true);
+    });
+
+    it("counts the owner's cached profile image, whichever post is excluded", async () => {
+      const profile = { id: testPubky, name: 'Alice', bio: '', links: [], status: null, indexed_at: 1 };
+      await UserDetailsModel.table.put({ ...profile, image: mediaUri });
+
+      expect(await LocalFileService.isReferencedElsewhere({ uri: mediaUri, excludePostId: `${testPubky}:A` })).toBe(
+        true,
+      );
+
+      await UserDetailsModel.table.put({ ...profile, image: 'pubky://elsewhere/pub/social/v1/files/X.png' });
+      expect(await LocalFileService.isReferencedElsewhere({ uri: mediaUri })).toBe(false);
     });
   });
 });

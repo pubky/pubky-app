@@ -1,4 +1,4 @@
-import { buildFile } from 'pubky-social-specs';
+import { buildFile, buildPost, buildUri, buildUser, listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -13,7 +13,8 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
-import type { NexusFileDetails } from '@/services/nexus/nexus.types';
+import type { NexusFileDetails, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 vi.mock('@/libs/image/stripImageMetadata', () => ({
@@ -33,6 +34,8 @@ vi.mock('@/services/homeserver/homeserver', () => ({
     exists: vi.fn(),
     delete: vi.fn(),
     deleteIdempotent: vi.fn(),
+    getFreshBytes: vi.fn(),
+    listAll: vi.fn(),
   },
 }));
 
@@ -52,6 +55,12 @@ vi.mock('@/services/local/file/file', () => ({
 vi.mock('@/services/nexus/file/file', () => ({
   NexusFileService: {
     fetchFiles: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/nexus/stream/posts/postStream', () => ({
+  NexusPostStreamService: {
+    fetchByIds: vi.fn(),
   },
 }));
 
@@ -114,9 +123,13 @@ beforeEach(async () => {
 
   ({ FileApplication } = await import('./file'));
 
-  // Default: the homeserver does not hold the bytes yet, and no other cached post references them
+  // Default: the homeserver does not hold the bytes yet, and nothing references them: no other
+  // cached post, a published profile without an image, no other post
   vi.mocked(HomeserverService.exists).mockResolvedValue(false);
   vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(false);
+  vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(buildUser(TEST_PUBKY, { name: 'Alice' }).body);
+  vi.mocked(HomeserverService.listAll).mockResolvedValue([]);
+  vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -564,40 +577,135 @@ describe('FileApplication', () => {
 
   describe('commitDelete', () => {
     const media = (byte: number) => createMockFileAttachment(byte).media;
+    /** Nexus's view of a post of the owner's, referencing `attachments`. */
+    const indexedPost = (id: string, attachments: string[] = []): NexusPostWithAttachmentMetadata => ({
+      details: {
+        id,
+        author: TEST_PUBKY,
+        content: 'text',
+        kind: 'short',
+        uri: buildUri(TEST_PUBKY, 'post', id),
+        attachments,
+        indexed_at: 1,
+      },
+      counts: { tags: 0, unique_tags: 0, replies: 0, reposts: 0 },
+      tags: [],
+      relationships: { replied: null, reposted: null, mentioned: [] },
+      bookmark: null,
+    });
+    const listPosts = (count: number) => Array.from({ length: count }, () => buildPost(TEST_PUBKY, { content: 'p' }));
+    /** Nexus serving every requested post, none referencing anything. */
+    const serveAll = () =>
+      vi
+        .mocked(NexusPostStreamService.fetchByIds)
+        .mockImplementation(async ({ post_ids }) => post_ids.map((postId) => indexedPost(postId.split(':')[1])));
 
-    it('deletes a v1 media file nothing else references, then its local row', async () => {
+    it('deletes a v1 media file after the local, profile and Nexus checks, then its local row', async () => {
       const { url, id } = media(1);
       const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id });
+      const [other] = listPosts(1);
+      vi.mocked(HomeserverService.listAll).mockResolvedValue([other.url]);
+      serveAll();
       const deleteIdempotentSpy = vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
       const deleteLocalSpy = vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
 
       await FileApplication.commitDelete([url], 'author:post');
 
       expect(LocalFileService.isReferencedElsewhere).toHaveBeenCalledWith({ uri: url, excludePostId: 'author:post' });
+      expect(HomeserverService.getFreshBytes).toHaveBeenCalledWith(buildUri(TEST_PUBKY, 'user'));
+      expect(HomeserverService.listAll).toHaveBeenCalledWith({
+        baseDirectory: `${listPrefix(TEST_PUBKY, 'public')}posts/`,
+      });
+      expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledWith({
+        post_ids: [buildCompositeId({ pubky: TEST_PUBKY, id: other.id })],
+        include_attachment_metadata: false,
+        force: true,
+      });
       expect(deleteIdempotentSpy).toHaveBeenCalledExactlyOnceWith(url);
       expect(HomeserverService.delete).not.toHaveBeenCalled();
       expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId);
       expect(deleteIdempotentSpy.mock.invocationCallOrder[0]).toBeLessThan(deleteLocalSpy.mock.invocationCallOrder[0]);
     });
 
-    it('keeps a file another cached post still references: media is content addressed', async () => {
+    it('asks Nexus for every listed post but the one giving the file up, a batch of 50 at a time', async () => {
+      const { url } = media(1);
+      const [deleted, ...others] = listPosts(61);
+      vi.mocked(HomeserverService.listAll).mockResolvedValue([deleted.url, ...others.map((post) => post.url)]);
+      serveAll();
+      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
+
+      await FileApplication.commitDelete([url], buildCompositeId({ pubky: TEST_PUBKY, id: deleted.id }));
+
+      const batches = vi.mocked(NexusPostStreamService.fetchByIds).mock.calls.map(([{ post_ids }]) => post_ids);
+      expect(batches.map((batch) => batch.length)).toEqual([50, 10]);
+      expect(batches.flat()).toEqual(others.map((post) => buildCompositeId({ pubky: TEST_PUBKY, id: post.id })));
+      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(url);
+    });
+
+    it('stops asking Nexus once every file is found referenced, and deletes none', async () => {
+      const { url } = media(1);
+      const posts = listPosts(60);
+      vi.mocked(HomeserverService.listAll).mockResolvedValue(posts.map((post) => post.url));
+      vi.mocked(NexusPostStreamService.fetchByIds).mockImplementation(async ({ post_ids }) =>
+        post_ids.map((postId, index) => indexedPost(postId.split(':')[1], index === 0 ? [url] : [])),
+      );
+
+      await FileApplication.commitDelete([url]);
+
+      expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledTimes(1);
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    it('keeps a file a listed post holds inside its content: an article or a collection cover', async () => {
+      const { url } = media(1);
+      const [collection] = listPosts(1);
+      vi.mocked(HomeserverService.listAll).mockResolvedValue([collection.url]);
+      const cover = indexedPost(collection.id);
+      cover.details.content = JSON.stringify({ name: 'c', cover_image: url });
+      vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue([cover]);
+
+      await FileApplication.commitDelete([url]);
+
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    it('keeps a file another cached object still references, without asking the network', async () => {
       const { url } = media(1);
       vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(true);
 
       await FileApplication.commitDelete([url]);
 
+      expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
       expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
       expect(LocalFileService.deleteById).not.toHaveBeenCalled();
+    });
+
+    it('keeps the files, with a warning, when the profile read fails, and never throws for it', async () => {
+      const { url } = media(1);
+      vi.mocked(HomeserverService.getFreshBytes).mockRejectedValue(new Error('offline'));
+      // The module registry was reset: the application logs through a fresh Logger
+      const { Logger } = await import('@/libs/logger/logger');
+      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      await expect(FileApplication.commitDelete([url])).resolves.toBeUndefined();
+
+      expect(HomeserverService.listAll).not.toHaveBeenCalled();
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[FileApplication] Kept media whose references could not be checked',
+        expect.objectContaining({ owner: TEST_PUBKY, fileUris: [url] }),
+      );
     });
 
     it('leaves a 0.x file URI and anything that is no media URI alone', async () => {
       await FileApplication.commitDelete([createFileUri('0035WQZH789FG'), 'https://example.com/a.png', 'not a uri']);
 
+      expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
       expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
       expect(LocalFileService.deleteById).not.toHaveBeenCalled();
     });
 
-    it('deletes several files in parallel, each once', async () => {
+    it('checks an owner once for all of its files and deletes each once, in parallel', async () => {
       const first = media(1);
       const second = media(2);
       vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
@@ -605,6 +713,8 @@ describe('FileApplication', () => {
 
       await FileApplication.commitDelete([first.url, second.url, first.url]);
 
+      expect(HomeserverService.getFreshBytes).toHaveBeenCalledTimes(1);
+      expect(HomeserverService.listAll).toHaveBeenCalledTimes(1);
       expect(HomeserverService.deleteIdempotent).toHaveBeenCalledTimes(2);
       expect(HomeserverService.deleteIdempotent).toHaveBeenCalledWith(first.url);
       expect(HomeserverService.deleteIdempotent).toHaveBeenCalledWith(second.url);
@@ -656,13 +766,25 @@ describe('FileApplication', () => {
       expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(fresh.media.url);
     });
 
-    it('keeps a file another cached post references, as commitDelete does', async () => {
+    it('keeps a file another cached object references, and asks nothing of the network', async () => {
       const attachment = createMockFileAttachment(1);
       vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(true);
 
       await FileApplication.commitDeleteUploaded([attachment]);
 
       expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    it('runs only the local check: a file new to the homeserver has no other referencer there', async () => {
+      const attachment = createMockFileAttachment(1);
+      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
+      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
+
+      await FileApplication.commitDeleteUploaded([attachment]);
+
+      expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
+      expect(NexusPostStreamService.fetchByIds).not.toHaveBeenCalled();
+      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(attachment.media.url);
     });
 
     it('propagates errors when the deletion fails, leaving the row for a retry', async () => {

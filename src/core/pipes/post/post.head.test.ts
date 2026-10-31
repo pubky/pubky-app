@@ -1,7 +1,7 @@
 import { buildPost, editPost, listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it } from 'vitest';
-import { pickHeadVersion } from './post.head';
+import { pickHeadVersion, pickListedPostIds } from './post.head';
 
 const OWNER = fakeOwner(1);
 
@@ -38,5 +38,28 @@ describe('pickHeadVersion', () => {
     const slugged = editPost(OWNER, post.url, { ...post.object, content: 'v2' }, { slug: 'renamed' });
 
     expect(pickHeadVersion([post.url, slugged.url])).toBe(slugged.url);
+  });
+});
+
+describe('pickListedPostIds', () => {
+  it('names every post with a version once, whatever its version count', () => {
+    const first = buildPost(OWNER, { content: 'a' });
+    const edited = editPost(OWNER, first.url, { ...first.object, content: 'a2' });
+    const second = buildPost(OWNER, { content: 'b' });
+
+    expect(pickListedPostIds([first.url, edited.url, second.url])).toEqual([first.id, second.id]);
+  });
+
+  it('skips entries that are no post version', () => {
+    const post = buildPost(OWNER, { content: 'v1' });
+
+    expect(
+      pickListedPostIds([
+        `${listPrefix(OWNER, 'public')}posts/${post.id}/`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}/notes.txt`,
+        'not a uri',
+      ]),
+    ).toEqual([]);
   });
 });
