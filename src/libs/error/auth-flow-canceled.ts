@@ -24,13 +24,24 @@ export const isAuthFlowCanceledError = (error: unknown): boolean =>
   'name' in error &&
   (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME;
 
-/** A user can approve with the wrong account; show feedback without reporting a system failure. */
-export function createAuthApprovalMismatchError(): Error {
+/** Why an approval was refused: another account than the requested one, or a grant without every requested permission. */
+export type AuthApprovalMismatchReason = 'identity' | 'capabilities';
+
+/**
+ * A user can approve with the wrong account or untick a requested permission; show feedback
+ * without reporting a system failure. `reason` lets the UI name the cause.
+ */
+export function createAuthApprovalMismatchError(reason: AuthApprovalMismatchReason): Error {
   const error = new Error('Approve with the account and permissions requested.');
   error.name = 'AuthApprovalMismatch';
-  return error;
+  return Object.assign(error, { reason });
 }
 
-export function isAuthApprovalMismatchError(error: unknown): boolean {
+export function isAuthApprovalMismatchError(error: unknown): error is Error {
   return error instanceof Error && error.name === 'AuthApprovalMismatch';
+}
+
+/** True when the approval came from the right account but left out a requested permission. */
+export function isAuthApprovalCapabilityError(error: unknown): boolean {
+  return isAuthApprovalMismatchError(error) && 'reason' in error && error.reason === 'capabilities';
 }

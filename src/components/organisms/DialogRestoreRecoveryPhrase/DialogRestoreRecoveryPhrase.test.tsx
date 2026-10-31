@@ -613,7 +613,7 @@ describe('DialogRestoreRecoveryPhrase', () => {
     });
 
     it('shows the Shop toast when the approved key does not match the signed-in one', async () => {
-      mockLoginWithMnemonic.mockRejectedValue(createAuthApprovalMismatchError());
+      mockLoginWithMnemonic.mockRejectedValue(createAuthApprovalMismatchError('identity'));
       render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);
 
       screen.getAllByTestId('word-input').forEach((input) => fireEvent.change(input, { target: { value: 'abandon' } }));
