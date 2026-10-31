@@ -110,7 +110,9 @@ export class FileApplication {
    *
    * A check that fails, or a Nexus view that misses a listed post (indexing lag, an author Nexus
    * has not indexed), keeps the file and logs a warning: an orphan is the safe failure, a deleted
-   * shared file breaks every object that still points at it. Private trees are not checked: this
+   * shared file breaks every object that still points at it. The skip itself is no error; a read
+   * that fails (a homeserver or Nexus outage) is reported by its service like any other read
+   * (`docs/error-handling.md`), while Nexus lag answers 200 and reports nothing. Private trees are not checked: this
    * app writes no private object that references public media. A 0.x file URI (`files/{tsid}`, a File object
    * naming a blob) is left alone: its blob is named by the object this client no longer reads,
    * and the 0.x tree's sunset is a separate task. Every homeserver delete is idempotent (404 =

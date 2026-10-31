@@ -70,7 +70,9 @@ or private posts.
     Nexus view (`by_ids`, `force`) of every post a LIST of the owner's public `posts/` names, attachments and
     content. A check that fails, or a Nexus view missing a listed post (indexing lag, an author Nexus has not
     indexed: its streams answer an empty page, never a 404, so the LIST is the completeness proof), keeps the file
-    with a `Logger.warn`, never an error or a toast. An orphan is the safe failure.
+    with a `Logger.warn`, never an error or a toast. An orphan is the safe failure. A read that fails outright (a
+    homeserver or Nexus outage) is still reported by its service like any other data read; lag is not a failure
+    (`by_ids` answers 200 without the post) and reports nothing.
   - **A rollback** (`commitDeleteUploaded`) deletes only files the failed write itself created: the upload asked
     `exists` first, and a `preexisting` file stays. The same verified delete serves a discarded composer session's
     uploads (`FileController.commitDelete`).
