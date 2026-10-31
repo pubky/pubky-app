@@ -49,7 +49,7 @@ let sdkReady: Promise<void> | null = null;
 /**
  * Runs the locks-sdk's wasm `init()` (its default export) once, on the first call. The `pkg`
  * build of the SDK (wasm-pack `--target web`) requires this before any SDK class is used —
- * unlike `@synonymdev/pubky` / `pubky-app-specs`, which self-initialize on import.
+ * unlike `@synonymdev/pubky`, which self-initializes on import.
  *
  * TODO:[Locks] #2372 — This only exists because the SDK is shipped as the web build. If the SDK is published
  * as a bundler or self-contained (base64-inlined) build instead, wasm initializes on import and

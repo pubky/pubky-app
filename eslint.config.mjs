@@ -8,6 +8,13 @@ import pluginSimpleImportSort from 'eslint-plugin-simple-import-sort';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 
+// The 0.x data model package (wasm, `/pub/pubky.app/`) is gone; the app is on pubky-social-specs 1.x.
+const LEGACY_SPECS_IMPORTS = {
+  group: ['pubky-app-specs', 'pubky-app-specs/*'],
+  message:
+    "pubky-app-specs was removed by the social v1 port. Use 'pubky-social-specs' (docs/migrations/social-v1.md).",
+};
+
 const eslintConfig = [
   {
     ignores: [
@@ -118,6 +125,7 @@ const eslintConfig = [
               message:
                 "Toast internals are private to the Toaster module. Import { toast } from '@/molecules/Toaster/toast'.",
             },
+            LEGACY_SPECS_IMPORTS,
           ],
         },
       ],
@@ -140,7 +148,7 @@ const eslintConfig = [
     // The Toaster module and the Toast atoms may import their own internals.
     files: ['src/components/atoms/Toast/**', 'src/components/molecules/Toaster/**'],
     rules: {
-      'no-restricted-imports': 'off',
+      'no-restricted-imports': ['error', { patterns: [LEGACY_SPECS_IMPORTS] }],
     },
   },
   {

@@ -4,12 +4,11 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Social v1 compliance ratchet (`docs/migrations/social-v1.md`): while `feat/social-v1` ports the app
- * from `pubky-app-specs` 0.8 to `pubky-social-specs` 1.x, no file outside the allow-lists below may
- * use the 0.x package, its URI builders, its hard-coded homeserver paths or the Nexus bookmark
- * fields. `LEGACY_RATCHET` is every file that matched when the gate landed: each child PR removes
- * the files it ports (a listed file that no longer matches fails the gate), and the cleanup PR
- * empties it. `PERMANENT` names the 0.x spellings that stay after the port, with the reason.
+ * Social v1 compliance gate (`docs/migrations/social-v1.md`): the app is ported from `pubky-app-specs`
+ * 0.8 to `pubky-social-specs` 1.x, so no file outside the allow-lists below may use the 0.x package,
+ * its URI builders, its hard-coded homeserver paths or the Nexus bookmark fields. `LEGACY_RATCHET`
+ * held every file that matched when the gate landed and shrank with each port until the cleanup PR
+ * emptied it. `PERMANENT` names the 0.x spellings that stay after the port, with the reason.
  */
 
 const ROOT = join(__dirname, '../../../..');
@@ -62,15 +61,11 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
 };
 
 /**
- * Every file that matched when the gate landed (2026-10-30, 55 files; 36 after the posts, media,
- * articles, collections and Locks port; 3 after the bookmarks port). Each child PR of
- * `feat/social-v1` deletes the entries it ports; the cleanup PR empties the list.
+ * Files still on the 0.x model while `feat/social-v1` ported the app (55 when the gate landed on
+ * 2026-10-30; 36 after the posts, media, articles, collections and Locks port; 3 after the bookmarks
+ * port). Empty since the cleanup PR: a new match is ported, never listed.
  */
-const LEGACY_RATCHET: readonly string[] = [
-  'src/core/controllers/auth/auth.ts',
-  'src/core/pipes/pipes.builder.ts',
-  'src/core/pipes/pipes.test-utils.ts',
-];
+const LEGACY_RATCHET: readonly string[] = [];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {

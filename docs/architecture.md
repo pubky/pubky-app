@@ -95,7 +95,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 ### Pipes (`src/core/pipes/`)
 
 - Normalize and validate data
-- Transform external shapes to domain shapes via `pubky-app-specs`
+- Transform external shapes to domain shapes via `pubky-social-specs`
 - Pure functions only
 - **NEVER** perform IO
 - **NEVER** access database or network
@@ -301,7 +301,7 @@ src/core/
 Trace call sites and mirror the existing pattern before changing any of these. No opportunistic refactors.
 
 - `src/core/database/franky/franky.ts` + `src/config/database.ts` — one `this.version(DB_VERSION).stores({...})` definition. A `DB_VERSION` mismatch deletes and recreates the local database (`recreateDatabase`), i.e. user-visible local data loss until the next sync. Bumping the version or editing a table's index map is a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature (ADR-0019).
-- `src/core/services/homeserver/**` and `src/core/pipes/**` — wire-format boundaries (`pubky-app-specs`, composite ids, signup tokens, auth URLs). Preserve payload shapes; do not change a format incidentally while adding a feature.
+- `src/core/services/homeserver/**` and `src/core/pipes/**` — wire-format boundaries (`pubky-social-specs`, composite ids, signup tokens, auth URLs). Preserve payload shapes; do not change a format incidentally while adding a feature.
 - `src/core/services/local/**` — writer of Dexie + TTL invariants; getting the order wrong corrupts caches silently. Persist dependencies before dependents, refresh `*_ttl` rows on every write, and use the dirty registry rather than deleting stream rows eagerly (`docs/local-first.md`).
 - `src/core/application/**` cross-domain calls — verify the ADR-0009 allow-list above before wiring two Applications together.
 - `src/libs/env/env.ts` + `src/libs/runtime-config/**` — the only places allowed to read `process.env.NEXT_PUBLIC_*` / `process.env.PUBKY_RUNTIME_*` (ESLint-enforced). Runtime config is injected into the browser as `window.__PUBKY_CONFIG__`, so never put a secret there (`docs/environment.md`).

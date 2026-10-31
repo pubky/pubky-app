@@ -827,8 +827,8 @@ export class LocksApplication {
    *
    * The path is a random id, never the original filename: two attachments named `cover.png` would
    * resolve to the same path and the second upload would silently overwrite the first. This mirrors
-   * normal posts, where the blob path comes from a spec-generated id and the filename survives only
-   * as display metadata on `PubkyAppFile`.
+   * normal posts, where the file path is the content hash (`files/{hash}.{ext}`) and the filename
+   * survives only as display metadata, the attachment's `name`.
    */
   private static upload({ contentType, bytes }: TLockContentFile): Promise<TRegisterGuardedResourceResult> {
     return LocksService.registerGuardedResource({

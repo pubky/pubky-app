@@ -45,11 +45,6 @@ process.env.SUPPORT_ACCOUNT_ID = '123';
 
 const { db } = await import('@/database/franky/franky');
 
-// Resolve pubky-app-specs-backed MIME constants before per-file mocks of that
-// package can take effect. Previously this happened as a side effect of loading
-// the Radix snapshot serializer from `@/libs/utils/utils`.
-await import('@/config/posts');
-
 // Polyfill IntersectionObserver for jsdom
 class MockIntersectionObserver implements IntersectionObserver {
   constructor() {}
@@ -90,43 +85,16 @@ if (typeof window !== 'undefined') {
   (window as unknown as { ResizeObserver: typeof MockResizeObserver }).ResizeObserver = MockResizeObserver;
 }
 
-// Suppress specific WebAssembly and navigation warnings
+// Suppress jsdom's navigation warning
 const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
 
 console.error = (...args) => {
   const message = args.join(' ');
-  // Suppress WebAssembly errors
-  if (
-    message.includes('WebAssembly') ||
-    message.includes('application/wasm') ||
-    message.includes('MIME type') ||
-    message.includes('Not implemented: navigation')
-  ) {
+  if (message.includes('Not implemented: navigation')) {
     return;
   }
   originalConsoleError.apply(console, args);
 };
-
-console.warn = (...args) => {
-  const message = args.join(' ');
-  // Suppress WebAssembly warnings
-  if (message.includes('WebAssembly') || message.includes('application/wasm') || message.includes('MIME type')) {
-    return;
-  }
-  originalConsoleWarn.apply(console, args);
-};
-
-// Capture unhandled rejections of WebAssembly
-process.on('unhandledRejection', (reason) => {
-  const reasonStr = String(reason);
-  // Suppress only WebAssembly errors
-  if (reasonStr.includes('WebAssembly') || reasonStr.includes('expected 4 bytes, fell off end')) {
-    return; // Suppress this specific type of error
-  }
-  // Re-throw other errors to not mask real problems
-  throw reason;
-});
 
 // Mock global fetch to prevent undici errors
 global.fetch = vi.fn().mockResolvedValue(

@@ -141,8 +141,8 @@ to people. See [People and names](docs/development-workflow.md#people-and-names)
 - A `useEffect` where `useLocalFirstQuery` belongs; a cache hit treated as fresh data; a second freshness mechanism beside TTL.
 - User text interpolated into toast copy; toasts styled by `className`.
 - A dependency added for something already in the tree (`dexie`, `zustand`, `@tanstack/react-query`, `react-hook-form`,
-  `zod`, `radix-ui`, `motion`, `lodash-es`, `usehooks-ts`, `jszip`, `@synonymdev/pubky`, `pubky-social-specs` and
-  `pubky-social-migrator` (beside the deprecated `pubky-app-specs` until the social v1 port lands), …).
+  `zod`, `radix-ui`, `motion`, `lodash-es`, `usehooks-ts`, `jszip`, `@synonymdev/pubky`, `pubky-social-specs`,
+  `pubky-social-migrator`, …; the removed `pubky-app-specs` is ESLint-banned).
 - A feature task turned into a refactor, or a route page rewritten with a new layout instead of composing the template.
 
 ## Cursor Cloud specific instructions

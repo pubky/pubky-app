@@ -227,9 +227,7 @@ export type NexusPostDetails = {
   indexed_at: number;
   author: Pubky;
   /**
-   * Post kind/type as a string.
-   * Note: Using string instead of PubkyAppPostKind enum to avoid indexing issues.
-   * @see https://github.com/pubky/pubky-app-specs/issues/74
+   * Post kind as a string, in the Nexus vocabulary (`short`, `long`, `image`, ...).
    */
   kind: string;
   uri: string;

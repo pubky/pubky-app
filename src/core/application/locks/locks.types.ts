@@ -99,7 +99,7 @@ export type TLockConfig = TLockPrice;
 
 /**
  * One file to guard. The storage path is minted per upload, so the original filename is not part of
- * it — carry that name as metadata inside the post JSON, like a normal post's `PubkyAppFile.name`.
+ * it — carry that name as metadata inside the post JSON, like a normal post's attachment `name`.
  */
 export type TLockContentFile = {
   contentType: string;

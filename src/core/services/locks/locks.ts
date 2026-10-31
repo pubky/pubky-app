@@ -408,7 +408,7 @@ export class LocksService {
     const session = getLockSession();
     try {
       await ensureLocksSdkReady();
-      // primaryResource is the JSON file holding the `PubkyAppPost` object (the lock's entry point).
+      // primaryResource is the locked post, a v1 `Post` (the lock's entry point).
       let builder = new CreateContentLockRequestBuilder().primaryResource(primaryResource);
       for (const resource of secondaryResources) {
         builder = builder.secondaryResource(resource);

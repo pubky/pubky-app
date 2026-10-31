@@ -44,7 +44,7 @@ export type CancelableAuthApproval = {
  * @example
  * ```typescript
  * const validPath: PubPath<string> = '/pub/user/profile';
- * const validPath2: PubPath<string> = '/pub/pubky.app/:rw';
+ * const validPath2: PubPath<string> = '/pub/social/v1/:rw';
  * ```
  */
 export type PubPath<T extends string = string> = `/pub/${T}`;

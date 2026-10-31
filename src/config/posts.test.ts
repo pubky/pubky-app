@@ -1,4 +1,3 @@
-import { getValidMimeTypes } from 'pubky-app-specs';
 import { describe, expect, it } from 'vitest';
 import {
   ARTICLE_MAX_CHARACTER_LENGTH,
@@ -23,9 +22,31 @@ describe('post limits sourced from pubky-social-specs', () => {
   });
 
   it('accepts exactly the MIME types the 0.x package accepted, in the same order', () => {
-    // Both packages are installed while the port lands. The v1 table also allows text/csv; supporting
-    // it is a deferred follow-up, so the list is pinned to the 0.x one.
-    expect(POST_SUPPORTED_ATTACHMENT_MIME_TYPES).toEqual(getValidMimeTypes());
+    // The 0.x `getValidMimeTypes()` list. The v1 table also allows text/csv; supporting it is a
+    // deferred follow-up, so the list stays pinned to the 0.x one.
+    expect(POST_SUPPORTED_ATTACHMENT_MIME_TYPES).toEqual([
+      'application/javascript',
+      'application/json',
+      'application/octet-stream',
+      'application/pdf',
+      'application/x-www-form-urlencoded',
+      'application/xml',
+      'application/zip',
+      'audio/mpeg',
+      'audio/wav',
+      'image/gif',
+      'image/jpeg',
+      'image/png',
+      'image/svg+xml',
+      'image/webp',
+      'multipart/form-data',
+      'text/css',
+      'text/html',
+      'text/plain',
+      'text/xml',
+      'video/mp4',
+      'video/mpeg',
+    ]);
     expect(POST_SUPPORTED_ATTACHMENT_MIME_TYPES).not.toContain('text/csv');
   });
 
