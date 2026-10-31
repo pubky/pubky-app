@@ -61,7 +61,9 @@ field is ignored.**
   cached yet counts); `useBookmarksCollectionSummary` reads it with `useLiveQuery`, so it is local and live.
   `LocalBookmarkService.persist` no longer touches `user_counts`.
 - **Followed Collections** walks `timeline:bookmarks:all` for the hydration side effect and keeps its live query
-  (`bookmarks` × `post_details.kind === 'collection'`). Discover keeps reading the local table.
+  (`bookmarks` × `post_details.kind === 'collection'`). A slice may hydrate only posts, so the walk goes on by
+  itself while the window is not full and the stream has more, and "Show more" stays while the live query holds
+  more collections than the window. Discover keeps reading the local table.
 - **Nexus**: `LocalStreamPostsService.persistPosts` no longer writes `bookmarks`; `postStreamApi.bookmarks`, the
   `StreamSource.BOOKMARKS` branch of `NexusPostStreamService.fetch` and the unused `v0/post/{a}/{p}/bookmarks` endpoint
   are deleted. `StreamSource.BOOKMARKS` stays as the local stream id segment; `NexusPost.bookmark` and
@@ -87,8 +89,9 @@ field is ignored.**
 - The first bootstrap on a device costs one GET per bookmark; later ones only GET new filenames.
 - The 0.x copy of an un-bookmarked post stays on the homeserver and in Nexus until Nexus stops indexing
   `/pub/pubky.app/bookmarks/`; it is invisible in the app.
-- Followed Collections hydrates through the stream of all bookmarks, so a collection bookmarked long before many
-  posts surfaces only once the walk reaches it ("Show more").
+- Followed Collections hydrates through the stream of all bookmarks, posts included: to fill a page with
+  collections it may walk (and hydrate through `by_ids`) many bookmarked posts first, up to every bookmark when
+  the account follows fewer collections than a page.
 - Following a collection is a private bookmark: its creator never learns of it (no creator-side surface existed).
 
 ### Neutral ⚠️

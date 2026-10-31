@@ -46,8 +46,19 @@ describe('MigrationApplication', () => {
       expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
       expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
       expect(initSettingsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, mockLocalSettings);
-      expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
       expect(result).toBe(mockSettings);
+    });
+
+    it('passes the account guard to the bookmarks fetch', async () => {
+      vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+      vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+      const isCurrent = () => true;
+
+      await MigrationApplication.resync(TEST_PUBKY, { version: 3, updatedAt: 300 } as SettingsState, { isCurrent });
+
+      expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent });
     });
 
     it('still returns the settings when the bookmarks fetch fails', async () => {

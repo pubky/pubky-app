@@ -1,4 +1,5 @@
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
+import type { TBookmarkFetchOptions } from '@/application/bookmark/bookmark.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { MuteApplication } from '@/application/mute/mute';
 import { SettingsApplication } from '@/application/settings/settings';
@@ -20,9 +21,15 @@ export class MigrationApplication {
    * Fetches critical homeserver data that is not automatically re-fetched after DB recreation.
    * Calls MuteApplication, FeedApplication, SettingsApplication and BookmarkApplication in parallel.
    *
+   * @param isCurrent - Whether the account the resync started for is still the current one; the
+   *   bookmarks reconcile checks it before writing.
    * @returns Remote settings if available (for Controller to apply to Zustand store)
    */
-  static async resync(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
+  static async resync(
+    pubky: Pubky,
+    localSettings: SettingsState,
+    { isCurrent }: TBookmarkFetchOptions = {},
+  ): Promise<SettingsState | null> {
     Logger.info('Starting post-DB-recreation re-sync', { pubky });
 
     // ADR-0009: MigrationApplication → leaf Applications (depth 1)
@@ -30,7 +37,8 @@ export class MigrationApplication {
       MuteApplication.fetchMutedUsers(pubky),
       FeedApplication.fetchFeeds(pubky),
       SettingsApplication.initializeSettings(pubky, localSettings),
-      BookmarkApplication.fetchBookmarks(pubky),
+      // Private and account-scoped: the guard keeps an outlived fetch from writing another account's rows.
+      BookmarkApplication.fetchBookmarks(pubky, { isCurrent }),
     ]);
 
     Logger.info('Post-DB-recreation re-sync completed', { pubky });

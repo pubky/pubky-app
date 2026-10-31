@@ -276,54 +276,104 @@ describe('FollowedCollections', () => {
     });
   });
 
-  it('shows Show More when reachedEnd is false; clicking resumes from the threaded nextCursor', async () => {
+  it('keeps walking the bookmarks stream while the window is not full, resuming from the threaded cursor', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockUseLiveQuery.mockReturnValue(['a:p1']);
-    mockGetOrFetchStreamSlice.mockResolvedValue(
-      makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, nextCursor: 42 }),
-    );
+    mockGetOrFetchStreamSlice
+      .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, nextCursor: 42 }))
+      .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:p2'], reachedEnd: true }));
 
     await act(async () => {
       render(<FollowedCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'Show more' });
-    expect(button).toBeInTheDocument();
-
-    const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
-    await act(async () => {
-      button.click();
-    });
-    await waitFor(() => {
-      expect(mockGetOrFetchStreamSlice.mock.calls.length).toBeGreaterThan(callsBefore);
-    });
-    // The follow-up fetch must resume from the cursor threaded back by the first page (42),
-    // proving the timestamp->nextCursor rename actually feeds pagination.
-    expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 42 });
+    await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+    // The follow-up walk must resume from the cursor threaded back by the first page (42).
+    expect(mockGetOrFetchStreamSlice.mock.calls[1][0]).toMatchObject({ lastPostId: 'a:p1', streamTail: 42 });
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
   });
 
-  it('Show More resumes the cache walk from lastRawPostId, not the last visible id', async () => {
+  it('walks past a first slice of bookmarked posts instead of hiding the section (cold cache)', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    // Twenty recent post bookmarks hydrate first; no collection is cached yet.
+    mockUseLiveQuery.mockReturnValue([]);
+    mockGetOrFetchStreamSlice
+      .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, lastRawPostId: 'a:p20' }))
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+    expect(mockGetOrFetchStreamSlice.mock.calls[1][0]).toMatchObject({ lastPostId: 'a:p20' });
+    // Still walking: the section stays, with skeletons, rather than returning null.
+    expect(screen.getByText('Followed Collections')).toBeInTheDocument();
+    expect(screen.getAllByTestId('collection-card-skeleton').length).toBeGreaterThan(0);
+  });
+
+  it('stops walking when a slice makes no progress', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockUseLiveQuery.mockReturnValue(['a:p1']);
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false }));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
+  });
+
+  it('keeps Show more while the live query holds more collections than the window, after the walk ended', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    const collectionIds = Array.from({ length: COLLECTIONS_SECTION_PAGE_SIZE + 1 }, (_, i) => `a:c${i}`);
+    mockUseLiveQuery.mockReturnValue(collectionIds);
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true }));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    expect(screen.getAllByTestId('collection-card')).toHaveLength(COLLECTIONS_SECTION_PAGE_SIZE);
+    const button = await screen.findByRole('button', { name: 'Show more' });
+    await act(async () => {
+      button.click();
+    });
+
+    expect(screen.getAllByTestId('collection-card')).toHaveLength(COLLECTIONS_SECTION_PAGE_SIZE + 1);
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
+    // Everything was hydrated already: the wider window needs no walk.
+    expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+  });
+
+  it('Show More widens the window and the walk resumes from lastRawPostId, not the last visible id', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    const collectionIds = Array.from({ length: COLLECTIONS_SECTION_PAGE_SIZE + 1 }, (_, i) => `a:c${i}`);
+    mockUseLiveQuery.mockReturnValue(collectionIds);
     // The slice's raw scan ended past the visible page — e.g. a filtered tail of
-    // deleted bookmarked collections. The next request must anchor on the raw id.
-    mockGetOrFetchStreamSlice.mockResolvedValue(
-      makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, nextCursor: 42, lastRawPostId: 'a:deleted-9' }),
-    );
+    // bookmarked collections. The next request must anchor on the raw id.
+    mockGetOrFetchStreamSlice
+      .mockResolvedValueOnce(
+        makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, nextCursor: 42, lastRawPostId: 'a:deleted-9' }),
+      )
+      .mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true }));
 
     await act(async () => {
       render(<FollowedCollections />);
     });
 
     const button = await screen.findByRole('button', { name: 'Show more' });
-    const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
+    expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
     await act(async () => {
       button.click();
     });
-    await waitFor(() => {
-      expect(mockGetOrFetchStreamSlice.mock.calls.length).toBeGreaterThan(callsBefore);
-    });
-    expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({
+    await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+    expect(mockGetOrFetchStreamSlice.mock.calls[1][0]).toMatchObject({
       lastPostId: 'a:deleted-9',
       streamTail: 42,
     });

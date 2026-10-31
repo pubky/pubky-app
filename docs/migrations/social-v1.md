@@ -170,8 +170,8 @@ Reductions, reported to the team:
 - The Nexus notifications "a post you bookmarked was deleted or edited" and "a collection you follow was updated"
   stop for v1 bookmarks (D7); the notification type and renderer stay for 0.x ghosts.
 - A bookmark made or removed on another device shows at the next session start, not live (no bookmarks SSE).
-- Followed Collections hydrates through every bookmark, posts included, so a collection followed long before many
-  bookmarked posts appears only once "Show more" walks that far.
+- Followed Collections hydrates through every bookmark, posts included: it keeps walking until a page of
+  collections is shown or the bookmarks run out, so it may fetch the details of many bookmarked posts first.
 - Following a collection stays a bookmark of the collection post, now private: its creator never learns of it.
 
 ## Retest list (final full-stack pass, D10)

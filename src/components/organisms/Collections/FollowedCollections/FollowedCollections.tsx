@@ -51,6 +51,11 @@ const EMPTY_IDS: string[] = [];
  *      window so the visible count grows in lockstep with "Show more"
  *      clicks (always a multiple of `COLLECTIONS_SECTION_PAGE_SIZE`).
  *
+ * The walk hydrates every bookmark, posts included, so a slice can surface
+ * no collection at all: it keeps walking on its own while the window is not
+ * full and the stream has more, and "Show more" stays while either the walk
+ * or the live query (more collections than the window) has more to show.
+ *
  * Live-reactive: a Follow / Unfollow performed anywhere in the app
  * pushes a card into / out of this section without a reload.
  */
@@ -95,11 +100,15 @@ export function FollowedCollections() {
       // A fully-filtered slice (e.g. a run of bookmarked collections, which the bookmarks
       // feed drops on read) must still advance the cache walk, so the anchor resolves from
       // the raw scan.
+      const previousAnchor = cursorRef.current.lastPostId;
       cursorRef.current = {
-        lastPostId: resolveResumeAnchor(result) ?? cursorRef.current.lastPostId,
+        lastPostId: resolveResumeAnchor(result) ?? previousAnchor,
         streamTail: result.nextCursor ?? cursorRef.current.streamTail,
       };
-      setReachedEnd(result.reachedEnd === true);
+      // A slice that scanned nothing and did not move the anchor would be requested again
+      // verbatim by the automatic walk below: treat it as the end of the walk.
+      const progressed = (result.rawScannedCount ?? 0) > 0 || cursorRef.current.lastPostId !== previousAnchor;
+      setReachedEnd(result.reachedEnd === true || !progressed);
     } catch (error) {
       Logger.error('[FollowedCollections] Failed to seed bookmark slice', { error });
       // Mirror `MyCollections`' `useStreamPagination({ onError })` toast so the
@@ -127,7 +136,8 @@ export function FollowedCollections() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated]);
 
-  // Visible-count cap; live query slices its result to this many rows.
+  // Visible-count cap; live query slices its result to this many rows (one more is read to
+  // tell whether there is more to show).
   const visibleLimit = pagesShown * COLLECTIONS_SECTION_PAGE_SIZE;
 
   // Live query: bookmarks table ∩ collection-kind post details, newest first.
@@ -137,47 +147,59 @@ export function FollowedCollections() {
   // layered architecture per AGENTS.md. Dexie's live-query observer still picks
   // up changes because the underlying reads go through the same Dexie instance.
   // `getDetailsByIds` preserves bookmark order, so the result aligns to `ids` by index.
-  const visibleIds =
-    useLiveQuery(async () => {
-      try {
-        const ids = await BookmarkController.getAll();
-        if (ids.length === 0) return EMPTY_IDS;
-        const details = await PostController.getDetailsByIds({ compositeIds: ids });
-        const collectionIds: string[] = [];
-        for (let i = 0; i < ids.length; i += 1) {
-          const detail = details[i];
-          // Filter out deleted collections (content === '[DELETED]'). Mirrors
-          // the timeline's `isPostDeleted` guard in `useVisualFeedTiles`. The
-          // live query observes `post_details`, so deleting flips visibility
-          // immediately without a refresh.
-          if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail)) {
-            collectionIds.push(ids[i]);
-            if (collectionIds.length >= visibleLimit) break;
-          }
+  const liveIds = useLiveQuery(async () => {
+    try {
+      const ids = await BookmarkController.getAll();
+      if (ids.length === 0) return EMPTY_IDS;
+      const details = await PostController.getDetailsByIds({ compositeIds: ids });
+      const collectionIds: string[] = [];
+      for (let i = 0; i < ids.length; i += 1) {
+        const detail = details[i];
+        // Filter out deleted collections (content === '[DELETED]'). Mirrors
+        // the timeline's `isPostDeleted` guard in `useVisualFeedTiles`. The
+        // live query observes `post_details`, so deleting flips visibility
+        // immediately without a refresh.
+        if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail)) {
+          collectionIds.push(ids[i]);
+          if (collectionIds.length > visibleLimit) break;
         }
-        return collectionIds;
-      } catch (error) {
-        Logger.error('[FollowedCollections] Live query failed', { error });
-        return EMPTY_IDS;
       }
-    }, [visibleLimit]) ?? EMPTY_IDS;
+      return collectionIds;
+    } catch (error) {
+      Logger.error('[FollowedCollections] Live query failed', { error });
+      return EMPTY_IDS;
+    }
+  }, [visibleLimit]);
+  const visibleIds = (liveIds ?? EMPTY_IDS).slice(0, visibleLimit);
+  const hasMoreCollections = (liveIds ?? EMPTY_IDS).length > visibleLimit;
+
+  // Keep walking while the window has room and the stream has more: a slice of the bookmarks
+  // stream can hydrate only posts, and a collection bookmarked before them would otherwise
+  // never be reached. Waits for the live query to read the last slice's hydration first.
+  useEffect(() => {
+    if (liveIds === undefined || seedLoading || loadingMore || reachedEnd) return;
+    if (liveIds.length >= visibleLimit) return;
+    setLoadingMore(true);
+    void fetchNextSeedSlice({ isInitial: false }).finally(() => setLoadingMore(false));
+    // `fetchNextSeedSlice` is recreated on every render; the state below is what decides a walk.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveIds, visibleLimit, seedLoading, loadingMore, reachedEnd]);
 
   const handleShowMore = () => {
     if (loadingMore) return;
-    setLoadingMore(true);
+    // A wider window walks on by itself (above) when the cached collections do not fill it.
     setPagesShown((p) => p + 1);
-    void fetchNextSeedSlice({ isInitial: false }).finally(() => setLoadingMore(false));
   };
 
   const headerPubkys = uniqueAuthors(visibleIds);
 
-  const showShowMore = !reachedEnd && !seedLoading;
-  // Skeleton only while the seed is in flight AND we have no cached bookmarks
-  // yet — warm-cache visits paint the live-query result immediately.
-  const showSkeletons = seedLoading && visibleIds.length === 0;
+  const showShowMore = visibleIds.length > 0 && !seedLoading && (hasMoreCollections || !reachedEnd);
+  // Skeletons while nothing is shown yet and the walk goes on — warm-cache visits paint the
+  // live-query result immediately.
+  const showSkeletons = visibleIds.length === 0 && (seedLoading || !reachedEnd);
 
-  // Hide the entire section (title + empty copy) when there is nothing to show.
-  if (!seedLoading && visibleIds.length === 0) {
+  // Hide the entire section (title + empty copy) once the walk ended with nothing to show.
+  if (!seedLoading && reachedEnd && visibleIds.length === 0) {
     return null;
   }
 
