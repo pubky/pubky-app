@@ -204,6 +204,73 @@ describe('NotificationController', () => {
       expect(setLastPolledTimestamp).not.toHaveBeenCalled();
     });
 
+    it('should recount unread against the current boundary when lastRead advanced during the poll', async () => {
+      let currentLastRead = 1000;
+      const setUnread = vi.fn();
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          selectLastRead: vi.fn(() => currentLastRead),
+          selectLastPolledTimestamp: vi.fn(() => 500),
+          setUnread,
+          setLastPolledTimestamp: vi.fn(),
+        }),
+      );
+      // Another device's last_read is adopted while the poll's network request is in flight.
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockImplementation(async () => {
+        currentLastRead = 5000;
+        return { unread: 7, nextPollCursor: 6000 };
+      });
+      const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(1);
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(countSpy).toHaveBeenCalledWith(5000, expect.arrayContaining(Object.values(NotificationType)));
+      expect(setUnread).toHaveBeenCalledTimes(1);
+      expect(setUnread).toHaveBeenCalledWith(1);
+    });
+
+    it('should recount again when lastRead advances during the recount', async () => {
+      let currentLastRead = 1000;
+      const setUnread = vi.fn();
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          selectLastRead: vi.fn(() => currentLastRead),
+          selectLastPolledTimestamp: vi.fn(() => 500),
+          setUnread,
+          setLastPolledTimestamp: vi.fn(),
+        }),
+      );
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockImplementation(async () => {
+        currentLastRead = 5000;
+        return { unread: 7, nextPollCursor: 6000 };
+      });
+      const countSpy = vi
+        .spyOn(NotificationApplication, 'countFilteredUnreadSince')
+        .mockImplementationOnce(async () => {
+          currentLastRead = 9000;
+          return 3;
+        })
+        .mockResolvedValueOnce(0);
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(countSpy).toHaveBeenNthCalledWith(1, 5000, expect.any(Array));
+      expect(countSpy).toHaveBeenNthCalledWith(2, 9000, expect.any(Array));
+      expect(setUnread).toHaveBeenCalledTimes(1);
+      expect(setUnread).toHaveBeenCalledWith(0);
+    });
+
+    it('should not recount when lastRead did not change during the poll', async () => {
+      const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockResolvedValue({ unread: 5, nextPollCursor: 3000 });
+      const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince');
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(countSpy).not.toHaveBeenCalled();
+      expect(store.setUnread).toHaveBeenCalledWith(5);
+    });
+
     it('should bubble errors and not update store', async () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
       vi.spyOn(NotificationApplication, 'fetchNotifications').mockRejectedValue(new Error('poll-fail'));

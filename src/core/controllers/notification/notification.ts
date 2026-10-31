@@ -21,6 +21,7 @@ export class NotificationController {
    * Refreshes unread notifications for the current user.
    * Uses lastPolledTimestamp as the Nexus polling cursor and lastRead as the read/unread boundary.
    * After fetching, advances lastPolledTimestamp to the newest notification timestamp.
+   * When lastRead moved forward during the fetch, the unread count is recomputed against the new boundary.
    *
    * @param userId - The user ID to fetch notifications for
    * @returns Promise resolving when notifications are updated
@@ -42,7 +43,16 @@ export class NotificationController {
     });
 
     if (!isCurrent()) return;
-    notificationStore.setUnread(unread);
+    // The count above used the boundary read before the request. If another device's last_read
+    // (or a local mark) moved it forward meanwhile, that count includes notifications already read.
+    let boundary = lastRead;
+    let count = unread;
+    while (notificationStore.selectLastRead() > boundary) {
+      boundary = notificationStore.selectLastRead();
+      count = await NotificationApplication.countFilteredUnreadSince(boundary, allowedTypes);
+      if (!isCurrent()) return;
+    }
+    notificationStore.setUnread(count);
 
     const currentCursor = notificationStore.selectLastPolledTimestamp();
     if (nextPollCursor !== undefined && (currentCursor === undefined || nextPollCursor > currentCursor)) {
