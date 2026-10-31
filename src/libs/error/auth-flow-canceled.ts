@@ -25,7 +25,7 @@ export const isAuthFlowCanceledError = (error: unknown): boolean =>
   (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME;
 
 /** Why an approval was refused: another account than the requested one, or a grant without every requested permission. */
-export type AuthApprovalMismatchReason = 'identity' | 'capabilities';
+type AuthApprovalMismatchReason = 'identity' | 'capabilities';
 
 /**
  * A user can approve with the wrong account or untick a requested permission; show feedback
