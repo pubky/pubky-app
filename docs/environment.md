@@ -184,6 +184,10 @@ Nexus data requested after the local edit can confirm it early; expiry alone doe
 
 Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.
 
+### Homeserver notification last_read sync
+
+Cross-session alignment of the notification read boundary uses the same homeserver **event stream**. The debounce, backoff and alert threshold are fixed in [`src/config/notification-last-read-sync.ts`](../src/config/notification-last-read-sync.ts), not environment variables. See ADR-0029.
+
 ## Setting Variables
 
 1. **Development**: Create a `.env.local` file in the project root (both `Env` and `PUBKY_RUNTIME_*` values are honored)

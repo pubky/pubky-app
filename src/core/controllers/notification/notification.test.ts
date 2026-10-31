@@ -204,6 +204,73 @@ describe('NotificationController', () => {
       expect(setLastPolledTimestamp).not.toHaveBeenCalled();
     });
 
+    it('should recount unread against the current boundary when lastRead advanced during the poll', async () => {
+      let currentLastRead = 1000;
+      const setUnread = vi.fn();
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          selectLastRead: vi.fn(() => currentLastRead),
+          selectLastPolledTimestamp: vi.fn(() => 500),
+          setUnread,
+          setLastPolledTimestamp: vi.fn(),
+        }),
+      );
+      // Another device's last_read is adopted while the poll's network request is in flight.
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockImplementation(async () => {
+        currentLastRead = 5000;
+        return { unread: 7, nextPollCursor: 6000 };
+      });
+      const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(1);
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(countSpy).toHaveBeenCalledWith(5000, expect.arrayContaining(Object.values(NotificationType)));
+      expect(setUnread).toHaveBeenCalledTimes(1);
+      expect(setUnread).toHaveBeenCalledWith(1);
+    });
+
+    it('should recount again when lastRead advances during the recount', async () => {
+      let currentLastRead = 1000;
+      const setUnread = vi.fn();
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          selectLastRead: vi.fn(() => currentLastRead),
+          selectLastPolledTimestamp: vi.fn(() => 500),
+          setUnread,
+          setLastPolledTimestamp: vi.fn(),
+        }),
+      );
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockImplementation(async () => {
+        currentLastRead = 5000;
+        return { unread: 7, nextPollCursor: 6000 };
+      });
+      const countSpy = vi
+        .spyOn(NotificationApplication, 'countFilteredUnreadSince')
+        .mockImplementationOnce(async () => {
+          currentLastRead = 9000;
+          return 3;
+        })
+        .mockResolvedValueOnce(0);
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(countSpy).toHaveBeenNthCalledWith(1, 5000, expect.any(Array));
+      expect(countSpy).toHaveBeenNthCalledWith(2, 9000, expect.any(Array));
+      expect(setUnread).toHaveBeenCalledTimes(1);
+      expect(setUnread).toHaveBeenCalledWith(0);
+    });
+
+    it('should not recount when lastRead did not change during the poll', async () => {
+      const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockResolvedValue({ unread: 5, nextPollCursor: 3000 });
+      const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince');
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(countSpy).not.toHaveBeenCalled();
+      expect(store.setUnread).toHaveBeenCalledWith(5);
+    });
+
     it('should bubble errors and not update store', async () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
       vi.spyOn(NotificationApplication, 'fetchNotifications').mockRejectedValue(new Error('poll-fail'));
@@ -452,6 +519,102 @@ describe('NotificationController', () => {
       expect(loggerWarnSpy).toHaveBeenCalledWith('Failed to mark notifications as read on homeserver', {
         error: expect.any(Error),
       });
+    });
+  });
+
+  describe('fetchLastReadFromHomeserver', () => {
+    const lastReadUrl = 'pubky://pubky-user-123/pub/pubky.app/last_read';
+
+    const setup = ({ localLastRead, remoteLastRead }: { localLastRead: number; remoteLastRead: number | null }) => {
+      let lastRead = localLastRead;
+      const setLastRead = vi.fn((value: number) => {
+        lastRead = value;
+      });
+      const setUnread = vi.fn();
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({ selectLastRead: () => lastRead, setLastRead, setUnread }),
+      );
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(
+        mockAuthStore({ currentUserPubky: mockUserId, session: asOpaque<Session>({}) }),
+      );
+      mockSettingsStore();
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(
+        asOpaque<ReturnType<typeof LastReadNormalizer.to>>({ meta: { url: lastReadUrl } }),
+      );
+      const fetchSpy = vi
+        .spyOn(NotificationApplication, 'fetchLastReadFromHomeserver')
+        .mockResolvedValue(remoteLastRead);
+      const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(2);
+      return {
+        setLastRead,
+        setUnread,
+        fetchSpy,
+        countSpy,
+        moveLocal: (value: number) => {
+          lastRead = value;
+        },
+      };
+    };
+
+    it('adopts a newer remote lastRead and recounts unread against it', async () => {
+      const { setLastRead, setUnread, fetchSpy, countSpy } = setup({ localLastRead: 1_000, remoteLastRead: 2_000 });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(fetchSpy).toHaveBeenCalledWith(lastReadUrl);
+      expect(countSpy).toHaveBeenCalledWith(2_000, expect.any(Array));
+      expect(setLastRead).toHaveBeenCalledWith(2_000);
+      expect(setUnread).toHaveBeenCalledWith(2);
+    });
+
+    it.each([
+      ['older', 500],
+      ['equal', 1_000],
+    ])('ignores an %s remote lastRead without counting', async (_name, remote) => {
+      const { setLastRead, setUnread, countSpy } = setup({ localLastRead: 1_000, remoteLastRead: remote });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(countSpy).not.toHaveBeenCalled();
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the file is missing', async () => {
+      const { setLastRead, countSpy } = setup({ localLastRead: 1_000, remoteLastRead: null });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(countSpy).not.toHaveBeenCalled();
+      expect(setLastRead).not.toHaveBeenCalled();
+    });
+
+    it('does not roll back a local mark-as-read that landed while unread was being counted', async () => {
+      const ctx = setup({ localLastRead: 1_000, remoteLastRead: 2_000 });
+      ctx.countSpy.mockImplementation(async () => {
+        ctx.moveLocal(3_000);
+        return 4;
+      });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(ctx.setLastRead).not.toHaveBeenCalled();
+      expect(ctx.setUnread).not.toHaveBeenCalled();
+    });
+
+    it('drops the result when the viewer changed while reading', async () => {
+      const ctx = setup({ localLastRead: 1_000, remoteLastRead: 2_000 });
+      ctx.fetchSpy.mockImplementation(async () => {
+        vi.mocked(useAuthStore.getState).mockReturnValue(
+          mockAuthStore({ currentUserPubky: 'other-user' as Pubky, session: asOpaque<Session>({}) }),
+        );
+        return 2_000;
+      });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(ctx.countSpy).not.toHaveBeenCalled();
+      expect(ctx.setLastRead).not.toHaveBeenCalled();
     });
   });
 
