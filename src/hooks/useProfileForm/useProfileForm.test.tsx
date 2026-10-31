@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
+import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useProfileForm } from './useProfileForm';
@@ -408,6 +409,99 @@ describe('useProfileForm effective link changes', () => {
       pubky,
       changes: { bio: 'New bio', ...expected },
     });
+  });
+});
+
+describe('useProfileForm account update notice', () => {
+  const userDetails: NexusUserDetails = {
+    id: pubky,
+    name: 'Valid User',
+    bio: '',
+    links: [],
+    status: null,
+    image: null,
+    indexed_at: 1,
+  };
+
+  const writeNotice = (notice: { profileImage: number; profileLinks: number; pending: boolean }) =>
+    writeSocialMigrationRecord(pubky, {
+      v: 1,
+      migratedRev: 1,
+      admittedGrantIds: [],
+      notice: { skipped: {}, ...notice },
+    });
+
+  const renderEditForm = async () => {
+    const hook = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(hook.result.current.state.isLoading).toBe(false));
+    return hook.result;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it('exposes the profile values the account update dropped while the notice is pending', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 2, pending: true });
+    const result = await renderEditForm();
+    expect(result.current.state.migrationNotice).toEqual({ profileImage: 1, profileLinks: 2 });
+  });
+
+  it('exposes nothing without a record, after an acknowledged notice, or on the create form', async () => {
+    expect((await renderEditForm()).current.state.migrationNotice).toBeNull();
+
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: false });
+    expect((await renderEditForm()).current.state.migrationNotice).toBeNull();
+
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+    expect(result.current.state.migrationNotice).toBeNull();
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(true);
+  });
+
+  it('clears the notice for good when dismissed', async () => {
+    writeNotice({ profileImage: 0, profileLinks: 1, pending: true });
+    const result = await renderEditForm();
+
+    act(() => result.current.handlers.handleDismissMigrationNotice());
+
+    expect(result.current.state.migrationNotice).toBeNull();
+    expect(readSocialMigrationRecord(pubky)?.notice).toEqual({
+      skipped: {},
+      profileImage: 0,
+      profileLinks: 1,
+      pending: false,
+    });
+    expect((await renderEditForm()).current.state.migrationNotice).toBeNull();
+  });
+
+  it('clears the notice on the next successful save', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    const result = await renderEditForm();
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledOnce();
+    expect(result.current.state.migrationNotice).toBeNull();
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(false);
+  });
+
+  it('keeps the notice when the save fails', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(new Error('offline'));
+    const result = await renderEditForm();
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.state.migrationNotice).toEqual({ profileImage: 1, profileLinks: 0 });
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(true);
   });
 });
 

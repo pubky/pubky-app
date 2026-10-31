@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import type { SocialMigrationProfileNotice } from '@/libs/social-migration/record';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
@@ -30,6 +31,8 @@ export interface ProfileFormState {
   isSaving: boolean;
   isLoading: boolean;
   submitText: SubmitText;
+  /** Edit mode: profile values the account update dropped, until dismissed or the profile is saved. */
+  migrationNotice: SocialMigrationProfileNotice | null;
 }
 
 export interface ProfileFormErrors {
@@ -52,6 +55,7 @@ export interface ProfileFormHandlers {
   handleCropComplete: (file: File, previewUrl: string) => void;
   handleSubmit: () => Promise<void>;
   handleCancel: () => void;
+  handleDismissMigrationNotice: () => void;
   validateLinkUrl: (value: string, index: number) => void;
   validateName: (value: string) => void;
 }

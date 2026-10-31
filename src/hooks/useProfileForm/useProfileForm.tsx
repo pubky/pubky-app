@@ -9,6 +9,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import type { TCommitUpdateDetailsParams } from '@/controllers/profile/profile.types';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
@@ -121,6 +122,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
   // Edit mode specific state
   const [avatarChanged, setAvatarChanged] = useState(false);
+  const [migrationNoticeAcknowledged, setMigrationNoticeAcknowledged] = useState(false);
 
   // Crop dialog state
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
@@ -158,6 +160,18 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setIsLoading(false);
     }
   }, [mode, userDetails, pubky]);
+
+  // The account update's one-shot note on values it could not carry over (D17). Read from this
+  // browser's record once the form has loaded, so the server render never reads storage.
+  const migrationNotice =
+    mode === 'edit' && pubky && !isLoading && !migrationNoticeAcknowledged
+      ? SocialMigrationController.getPendingProfileNotice(pubky)
+      : null;
+
+  const handleDismissMigrationNotice = () => {
+    if (pubky) SocialMigrationController.acknowledgeProfileNotice(pubky);
+    setMigrationNoticeAcknowledged(true);
+  };
 
   const isEditProfileDirty =
     mode === 'edit' &&
@@ -405,6 +419,9 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         });
       } else {
         await ProfileController.commitUpdate({ pubky, changes });
+        // A saved profile is the user's answer to the account update's note
+        SocialMigrationController.acknowledgeProfileNotice(pubky);
+        setMigrationNoticeAcknowledged(true);
         // Update local avatar store: set NEW blob URL if new avatar, clear if deleted
         // We create a separate blob URL so the form's cleanup can safely revoke its own
         if (avatarChanged) {
@@ -514,6 +531,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       isSaving: isSaving || isNavigating,
       isLoading,
       submitText,
+      migrationNotice,
     },
     errors: {
       nameError,
@@ -540,6 +558,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       handleCropComplete,
       handleSubmit,
       handleCancel,
+      handleDismissMigrationNotice,
       validateLinkUrl,
       validateName,
     },

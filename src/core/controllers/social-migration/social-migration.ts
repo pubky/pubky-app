@@ -8,11 +8,14 @@ import {
 } from '@/config/social-migration';
 import { hasSocialV1Capabilities } from '@/libs/capabilities/capabilities';
 import {
+  acknowledgeSocialMigrationProfileNotice,
   admitSocialMigrationGrant,
   isSocialMigrationGrantAdmitted,
   isSocialMigrationRecordTrusted,
   markSocialMigrated,
+  readPendingSocialMigrationProfileNotice,
   readSocialMigrationRecord,
+  type SocialMigrationProfileNotice,
   type SocialMigrationRecord,
   updateSocialMigrationRecord,
 } from '@/libs/social-migration/record';
@@ -133,6 +136,16 @@ export class SocialMigrationController {
   /** Continue from the summary screen. */
   static acknowledge(): void {
     if (useSocialMigrationStore.getState().stage === 'summary') this.gate?.wake?.('continue');
+  }
+
+  /** The profile values the run dropped, until the profile edit page's note is dismissed or the profile saved: no network. */
+  static getPendingProfileNotice(pubky: string): SocialMigrationProfileNotice | null {
+    return readPendingSocialMigrationProfileNotice(pubky);
+  }
+
+  /** The profile edit page's note was dismissed or the profile saved: it does not show again. */
+  static acknowledgeProfileNotice(pubky: string): void {
+    acknowledgeSocialMigrationProfileNotice(pubky);
   }
 
   /** Stops the run and clears the screen state; logout and session loss call it first. */

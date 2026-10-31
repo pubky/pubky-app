@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import { PERSISTED_STORE_KEYS } from '@/stores/persistedKeys';
 import {
+  acknowledgeSocialMigrationProfileNotice,
   admitSocialMigrationGrant,
   isSocialMigrationGrantAdmitted,
   isSocialMigrationRecordTrusted,
   markSocialMigrated,
+  readPendingSocialMigrationProfileNotice,
   readSocialMigrationRecord,
   SOCIAL_MIGRATION_RECORD_KEY_PREFIX,
   socialMigrationRecordKey,
@@ -89,5 +91,48 @@ describe('social migration record', () => {
     const next = updateSocialMigrationRecord(PUBKY, (record) => ({ ...record, migratedRev: 1 }));
     expect(next).toEqual({ v: 1, admittedGrantIds: [], migratedRev: 1 });
     expect(readSocialMigrationRecord(PUBKY)).toEqual(next);
+  });
+
+  describe('profile notice', () => {
+    const withNotice = (notice: { profileImage: number; profileLinks: number; pending: boolean }) =>
+      writeSocialMigrationRecord(PUBKY, {
+        v: 1,
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+        admittedGrantIds: ['grant-1'],
+        notice: { skipped: { malformed: 2 }, ...notice },
+      });
+
+    it('reads the dropped profile values while the notice is pending', () => {
+      withNotice({ profileImage: 1, profileLinks: 2, pending: true });
+      expect(readPendingSocialMigrationProfileNotice(PUBKY)).toEqual({ profileImage: 1, profileLinks: 2 });
+    });
+
+    it('reads nothing without a record, once acknowledged, or when only items were skipped', () => {
+      expect(readPendingSocialMigrationProfileNotice(PUBKY)).toBeNull();
+      withNotice({ profileImage: 1, profileLinks: 0, pending: false });
+      expect(readPendingSocialMigrationProfileNotice(PUBKY)).toBeNull();
+      withNotice({ profileImage: 0, profileLinks: 0, pending: true });
+      expect(readPendingSocialMigrationProfileNotice(PUBKY)).toBeNull();
+    });
+
+    it('acknowledges by clearing pending only, keeping the counts and the rest of the record', () => {
+      withNotice({ profileImage: 1, profileLinks: 1, pending: true });
+      acknowledgeSocialMigrationProfileNotice(PUBKY);
+      expect(readSocialMigrationRecord(PUBKY)).toEqual({
+        v: 1,
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+        admittedGrantIds: ['grant-1'],
+        notice: { skipped: { malformed: 2 }, profileImage: 1, profileLinks: 1, pending: false },
+      });
+      expect(readPendingSocialMigrationProfileNotice(PUBKY)).toBeNull();
+    });
+
+    it('never creates a record or a notice when acknowledging', () => {
+      acknowledgeSocialMigrationProfileNotice(PUBKY);
+      expect(localStorage.getItem(socialMigrationRecordKey(PUBKY))).toBeNull();
+      writeSocialMigrationRecord(PUBKY, { v: 1, admittedGrantIds: [] });
+      acknowledgeSocialMigrationProfileNotice(PUBKY);
+      expect(readSocialMigrationRecord(PUBKY)).toEqual({ v: 1, admittedGrantIds: [] });
+    });
   });
 });

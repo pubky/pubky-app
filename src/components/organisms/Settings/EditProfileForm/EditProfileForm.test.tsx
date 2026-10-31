@@ -19,6 +19,7 @@ const mockHandlers = {
   handleCropComplete: vi.fn(),
   handleCancel: vi.fn(),
   handleSubmit: vi.fn(),
+  handleDismissMigrationNotice: vi.fn(),
 };
 
 const mockUseProfileForm = vi.fn();
@@ -74,6 +75,7 @@ describe('EditProfileForm', () => {
         avatarFile: null,
         isSaving: false,
         submitText: 'Save Profile',
+        migrationNotice: null,
       },
       errors: {
         nameError: null,
@@ -134,5 +136,51 @@ describe('EditProfileForm', () => {
     expect(mockHandlers.handleSubmit).toHaveBeenCalledOnce();
     expect(useAuthStore.getState().showSignInDialog).toBe(false);
     expect(screen.getByTestId('edit-profile-form')).toBeInTheDocument();
+  });
+
+  describe('account update notice', () => {
+    const PICTURE = 'Your profile picture could not be carried over by the account update. Set it again.';
+    const ONE_LINK = 'One of your profile links could not be carried over. Check your links.';
+    const SOME_LINKS = 'Some of your profile links could not be carried over. Check your links.';
+
+    const withNotice = (migrationNotice: { profileImage: number; profileLinks: number } | null) => {
+      const value = mockUseProfileForm();
+      mockUseProfileForm.mockReturnValue({ ...value, state: { ...value.state, migrationNotice } });
+    };
+
+    it('renders nothing without a pending notice', () => {
+      render(<EditProfileForm />);
+      expect(screen.queryByTestId('edit-profile-migration-notice')).not.toBeInTheDocument();
+    });
+
+    it('names only the dropped profile picture', () => {
+      withNotice({ profileImage: 1, profileLinks: 0 });
+      render(<EditProfileForm />);
+      expect(screen.getByRole('status')).toHaveTextContent(PICTURE);
+      expect(screen.queryByText(ONE_LINK)).not.toBeInTheDocument();
+      expect(screen.queryByText(SOME_LINKS)).not.toBeInTheDocument();
+    });
+
+    it('names one dropped link', () => {
+      withNotice({ profileImage: 0, profileLinks: 1 });
+      render(<EditProfileForm />);
+      expect(screen.getByText(ONE_LINK)).toBeInTheDocument();
+      expect(screen.queryByText(PICTURE)).not.toBeInTheDocument();
+    });
+
+    it('names the picture and several dropped links together', () => {
+      withNotice({ profileImage: 1, profileLinks: 3 });
+      render(<EditProfileForm />);
+      expect(screen.getByText(PICTURE)).toBeInTheDocument();
+      expect(screen.getByText(SOME_LINKS)).toBeInTheDocument();
+      expect(screen.queryByText(ONE_LINK)).not.toBeInTheDocument();
+    });
+
+    it('dismisses through the profile hook', () => {
+      withNotice({ profileImage: 1, profileLinks: 0 });
+      render(<EditProfileForm />);
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+      expect(mockHandlers.handleDismissMigrationNotice).toHaveBeenCalledOnce();
+    });
   });
 });
