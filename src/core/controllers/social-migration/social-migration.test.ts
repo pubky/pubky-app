@@ -484,6 +484,17 @@ describe('SocialMigrationController', () => {
       SocialMigrationController.acknowledge();
 
       expect(await migrating).toBe('passed');
+      // The profile edit page shows its note until it is dismissed or the profile saved
+      expect(SocialMigrationController.getPendingProfileNotice(owner)).toEqual({ profileImage: 1, profileLinks: 2 });
+      SocialMigrationController.acknowledgeProfileNotice(owner);
+      expect(SocialMigrationController.getPendingProfileNotice(owner)).toBeNull();
+      expect(readSocialMigrationRecord(owner)?.notice).toEqual({
+        skipped: { invalid: 2 },
+        profileImage: 1,
+        profileLinks: 2,
+        pending: false,
+      });
+      expect(SocialMigrationController.hasPassedLocally(owner)).toBe(true);
     });
 
     it('does not stop on a summary for objects with no 1.x counterpart', async () => {

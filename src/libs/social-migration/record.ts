@@ -106,3 +106,23 @@ export function markSocialMigrated(pubky: string, rev: number): void {
     lastRun: undefined,
   }));
 }
+
+/** The profile values a finished run dropped, for the one-shot note on the profile edit page (D17). */
+export type SocialMigrationProfileNotice = Pick<
+  NonNullable<SocialMigrationRecord['notice']>,
+  'profileImage' | 'profileLinks'
+>;
+
+/** `null` once the note was acknowledged, and when the run dropped no profile value (only skipped items). */
+export function readPendingSocialMigrationProfileNotice(pubky: string): SocialMigrationProfileNotice | null {
+  const notice = readSocialMigrationRecord(pubky)?.notice;
+  if (!notice?.pending || (notice.profileImage === 0 && notice.profileLinks === 0)) return null;
+  return { profileImage: notice.profileImage, profileLinks: notice.profileLinks };
+}
+
+/** The note does not show again; the counts stay. A record without a pending notice is left as it is, never created. */
+export function acknowledgeSocialMigrationProfileNotice(pubky: string): void {
+  const record = readSocialMigrationRecord(pubky);
+  if (!record?.notice?.pending) return;
+  writeSocialMigrationRecord(pubky, { ...record, notice: { ...record.notice, pending: false } });
+}
