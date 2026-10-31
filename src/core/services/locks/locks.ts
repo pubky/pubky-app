@@ -12,8 +12,10 @@ import {
 } from '@synonymdev/locks-sdk';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
+import { HttpMethod } from '@/libs/http/http.types';
 import { withPubkyPrefix } from '@/libs/utils/utils';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type {
@@ -22,10 +24,12 @@ import type {
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TGenerateConnectUrlParams,
+  TGeneratePaykitReconnectUrlParams,
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLockPriceAsset,
   TLocksSessionResult,
+  TLookupPaykitCreatorHeldParams,
   TPaykitConnectionState,
   TPaykitSetupStatus,
   TRegisterGuardedResourceParams,
@@ -36,6 +40,7 @@ import type {
 } from './locks.types';
 import {
   paykitConnectionStateResponseSchema,
+  paykitCreatorHeldResponseSchema,
   paykitSetupStatusResponseSchema,
   submitProofResultSchema,
   verificationTaskResponseSchema,
@@ -279,6 +284,50 @@ export class LocksService {
     setupUrl.searchParams.set('return_to', returnTo);
     setupUrl.searchParams.set('state', state);
     return setupUrl.toString();
+  }
+
+  /**
+   * Builds the `/setup/reconnect` URL: the Paykit page for a creator the Paykit Server already holds,
+   * which refuses `/setup` for it. Unlike `/setup` it requires `creator`, in `pubky<z32>` form.
+   */
+  static generatePaykitReconnectUrl({ returnTo, state, creator }: TGeneratePaykitReconnectUrlParams): string {
+    const reconnectUrl = new URL('/setup/reconnect', getPaykitServerOrigin());
+    reconnectUrl.searchParams.set('creator', withPubkyPrefix(creator));
+    reconnectUrl.searchParams.set('return_to', returnTo);
+    reconnectUrl.searchParams.set('state', state);
+    return reconnectUrl.toString();
+  }
+
+  /**
+   * Whether the Paykit Server already holds this creator, read through the app's own
+   * `/api/paykit-creator` (the Paykit Server sends no CORS headers, so a browser cannot ask it).
+   * Throws when the answer is unavailable; that says nothing about the creator.
+   */
+  static async lookupPaykitCreatorHeld({ creator, returnTo }: TLookupPaykitCreatorHeldParams): Promise<boolean> {
+    const operation = 'LocksService.lookupPaykitCreatorHeld';
+    const endpoint = new URL('/api/paykit-creator', window.location.origin);
+    endpoint.searchParams.set('creator', withPubkyPrefix(creator));
+    endpoint.searchParams.set('return_to', returnTo);
+    try {
+      const response = await safeFetch(
+        endpoint.href,
+        { method: HttpMethod.GET, credentials: 'omit', cache: 'no-store' },
+        ErrorService.Locks,
+        operation,
+      );
+      if (!response.ok) throw httpResponseToError(response, ErrorService.Locks, operation, endpoint.pathname);
+      const body = paykitCreatorHeldResponseSchema.safeParse(await response.json());
+      if (!body.success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit creator probe response is invalid', {
+          service: ErrorService.Locks,
+          operation,
+          cause: body.error,
+        });
+      }
+      return body.data.held;
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, operation);
+    }
   }
 
   /** Exchanges the one-time callback code for a Locks session. */

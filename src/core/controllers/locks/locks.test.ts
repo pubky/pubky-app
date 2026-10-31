@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   signout: vi.fn(),
   setLockServiceConfig: vi.fn(),
   fetchPaykitSetupStatus: vi.fn(),
+  generatePaykitReconnectUrl: vi.fn(),
+  fetchPaykitCreatorHeld: vi.fn(),
   createLockContent: vi.fn(),
   deleteLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
@@ -46,6 +48,8 @@ vi.mock('@/application/locks/locks', () => ({
     signout: mocks.signout,
     setLockServiceConfig: mocks.setLockServiceConfig,
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    generatePaykitReconnectUrl: mocks.generatePaykitReconnectUrl,
+    fetchPaykitCreatorHeld: mocks.fetchPaykitCreatorHeld,
     createLockContent: mocks.createLockContent,
     deleteLockContent: mocks.deleteLockContent,
     fetchLockFile: mocks.fetchLockFile,
@@ -516,6 +520,46 @@ describe('LocksController (auth)', () => {
       await discarded;
       expect(useLocksAuthStore.getState().selectLocksSession()).toBeNull();
       expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
+    });
+  });
+
+  describe('Paykit reconnect for the signed-in creator', () => {
+    it('builds the reconnect URL for the stored creator on the app origin', () => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      mocks.generatePaykitReconnectUrl.mockReturnValue('https://paykit.server/setup/reconnect?x=1');
+
+      expect(LocksController.getPaykitReconnectUrl({ state: 'STATE' })).toBe(
+        'https://paykit.server/setup/reconnect?x=1',
+      );
+      expect(mocks.generatePaykitReconnectUrl).toHaveBeenCalledWith({
+        returnTo: window.location.origin,
+        state: 'STATE',
+        creator: MOCK_LOCK_AUTHOR_PUBKY,
+      });
+    });
+
+    it('asks whether Paykit holds the stored creator', async () => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);
+
+      await expect(LocksController.fetchPaykitCreatorHeld()).resolves.toBe(true);
+      expect(mocks.fetchPaykitCreatorHeld).toHaveBeenCalledWith({
+        creator: MOCK_LOCK_AUTHOR_PUBKY,
+        returnTo: window.location.origin,
+      });
+    });
+
+    it('refuses both without a creator, rather than probing for nobody', async () => {
+      useLocksAuthStore.setState(locksAuthInitialState);
+
+      expect(() => LocksController.getPaykitReconnectUrl({ state: 'STATE' })).toThrow('No Locks creator');
+      await expect(LocksController.fetchPaykitCreatorHeld()).rejects.toThrow('No Locks creator');
+      expect(mocks.generatePaykitReconnectUrl).not.toHaveBeenCalled();
+      expect(mocks.fetchPaykitCreatorHeld).not.toHaveBeenCalled();
     });
   });
 
