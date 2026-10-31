@@ -692,13 +692,11 @@ export class AuthController {
   ) {
     const previous = useAuthStore.getState();
     const pubky = Identity.z32FromSession({ session });
-    if (
-      (expectedPubky && pubky !== expectedPubky) ||
-      !hasCapabilities(session.info.capabilities, required) ||
-      !session.grant
-    ) {
+    const wrongAccount = Boolean(expectedPubky) && pubky !== expectedPubky;
+    const missingCapabilities = !hasCapabilities(session.info.capabilities, required);
+    if (wrongAccount || missingCapabilities || !session.grant) {
       await AuthApplication.retainUnusedSession(session);
-      throw createAuthApprovalMismatchError();
+      throw createAuthApprovalMismatchError(!wrongAccount && missingCapabilities ? 'capabilities' : 'identity');
     }
     const persistence = AuthApplication.saveSession(session);
     let reference;

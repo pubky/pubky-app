@@ -1,4 +1,4 @@
-import { buildUri, listPrefix, ValidationError } from 'pubky-social-specs';
+import { buildUri, listPrefix, parseOwner, parsePostId, ValidationError } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -21,13 +21,22 @@ export function parsePostReference(value: string): ParsedPostReference | null {
   }
 
   const { pubky, id } = parseCompositeId(compositeId);
+  const postUri = buildPostUriOrNull(pubky, id);
 
-  return {
-    compositeId,
-    pubky,
-    postId: id,
-    postUri: buildUri(pubky, 'post', id),
-  };
+  return postUri ? { compositeId, pubky, postId: id, postUri } : null;
+}
+
+/**
+ * The v1 reference of the post, or null when the key or the id is not one the data model spells
+ * (a URL still being typed or pasted). Runs on every keystroke, so nothing it refuses may throw.
+ */
+function buildPostUriOrNull(pubky: Pubky, id: string): string | null {
+  try {
+    return buildUri(parseOwner(pubky), 'post', parsePostId(id));
+  } catch (error) {
+    if (error instanceof ValidationError) return null;
+    throw error;
+  }
 }
 
 function resolveAppPostUrl(value: string): string | null {

@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -21,6 +21,7 @@ import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import type { THomeserverBytesResult } from '@/services/homeserver/homeserver.types';
 import {
   HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
   installHomeserverWriteRetryDependenciesForTests,
@@ -126,13 +127,30 @@ const getBootstrapParams = (pubky: string): TBootstrapParams & { allowedTypes: N
   allowedTypes: MOCK_ALLOWED_TYPES,
 });
 
-/** A GET answered 404: the file is absent. */
-const notFound = (url: string) =>
-  Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
-    service: ErrorService.Homeserver,
-    operation: 'request',
-    context: { statusCode: HttpStatusCode.NOT_FOUND, url },
-  });
+/** `doc` stored as a JSON file, as the homeserver read returns it. */
+const storedJson = (doc: unknown): THomeserverBytesResult => ({
+  bytes: new TextEncoder().encode(JSON.stringify(doc)),
+  modifiedAt: null,
+});
+
+/** A homeserver holding only the 0.x lastRead `legacy` (when given): every other read is absent (404). */
+const legacyOnly = (legacy?: number) => async (url: string) =>
+  url === LEGACY_LAST_READ_URL && legacy !== undefined ? storedJson({ timestamp: legacy }) : null;
+
+/** The read and request calls in order: `['read', url]` for a read, `[method, url]` for a request. */
+const homeserverCalls = (
+  readSpy: MockInstance<typeof HomeserverService.getBytesIfExists>,
+  requestSpy: MockInstance<typeof HomeserverService.request>,
+) =>
+  [
+    ...readSpy.mock.calls.map(([url], i) => ({ at: readSpy.mock.invocationCallOrder[i], call: ['read', url] })),
+    ...requestSpy.mock.calls.map(([params], i) => ({
+      at: requestSpy.mock.invocationCallOrder[i],
+      call: [params.method, params.url],
+    })),
+  ]
+    .sort((a, b) => a.at - b.at)
+    .map(({ call }) => call);
 
 type MockConfig = {
   bootstrapData?: NexusBootstrapResponse | null;
@@ -155,6 +173,7 @@ type MockConfig = {
 
 type ServiceMocks = {
   nexusFetch: unknown;
+  homeserverRead: unknown;
   homeserverRequest: unknown;
   fetchMutedUsers: unknown;
   fetchFeeds: unknown;
@@ -201,11 +220,14 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
           ? () => Promise.reject(bootstrapError)
           : () => Promise.resolve(bootstrapData as NexusBootstrapResponse),
       ),
-    homeserverRequest: vi
-      .spyOn(HomeserverService, 'request')
+    homeserverRead: vi
+      .spyOn(HomeserverService, 'getBytesIfExists')
       .mockImplementation(
-        homeserverError ? () => Promise.reject(homeserverError) : () => Promise.resolve({ timestamp: MOCK_LAST_READ }),
+        homeserverError
+          ? () => Promise.reject(homeserverError)
+          : () => Promise.resolve(storedJson({ timestamp: MOCK_LAST_READ })),
       ),
+    homeserverRequest: vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined),
     fetchMutedUsers: vi
       .spyOn(MuteApplication, 'fetchMutedUsers')
       .mockImplementation(
@@ -254,7 +276,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
 
 const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapResponse) => {
   expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
-  expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+  expect(mocks.homeserverRead).toHaveBeenCalledWith(MOCK_LAST_READ_URL);
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
   expect(mocks.fetchBookmarks).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
@@ -382,10 +404,8 @@ describe('BootstrapApplication', () => {
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(mocks.homeserverRequest).toHaveBeenCalledExactlyOnceWith({
-        method: HttpMethod.GET,
-        url: MOCK_LAST_READ_URL,
-      });
+      expect(mocks.homeserverRead).toHaveBeenCalledExactlyOnceWith(MOCK_LAST_READ_URL);
+      expect(mocks.homeserverRequest).not.toHaveBeenCalled();
       expect(result.lastRead).toBe(MOCK_LAST_READ);
     });
 
@@ -403,12 +423,9 @@ describe('BootstrapApplication', () => {
 
       const run = async (existsAfterConflict: boolean, legacy?: number) => {
         setupMocks({ bootstrapData: emptyBootstrap() });
+        vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(legacyOnly(legacy));
         let puts = 0;
-        const requestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
-          if (method === HttpMethod.GET) {
-            if (url === LEGACY_LAST_READ_URL && legacy !== undefined) return Promise.resolve({ timestamp: legacy });
-            return Promise.reject(notFound(url));
-          }
+        const requestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(() => {
           puts += 1;
           return puts === 1 ? Promise.reject(publishConflict()) : Promise.resolve(undefined);
         });
@@ -459,11 +476,11 @@ describe('BootstrapApplication', () => {
     it('copies the 0.x lastRead to the v1 file when only the 0.x one exists', async () => {
       const LEGACY_TIMESTAMP = 1234;
       const mocks = setupMocks({ bootstrapData: emptyBootstrap() });
-      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
-        if (method !== HttpMethod.GET) return Promise.resolve(undefined);
-        if (url === LEGACY_LAST_READ_URL) return Promise.resolve({ timestamp: LEGACY_TIMESTAMP });
-        return Promise.reject(notFound(url));
-      });
+      const homeserverReadSpy = vi
+        .spyOn(HomeserverService, 'getBytesIfExists')
+        .mockImplementation(legacyOnly(LEGACY_TIMESTAMP));
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      mocks.homeserverRead = homeserverReadSpy;
       mocks.homeserverRequest = homeserverRequestSpy;
       const lastReadNormalizerSpy = vi.spyOn(LastReadNormalizer, 'to');
       const loggerInfoSpy = vi.spyOn(Logger, 'info').mockImplementation(() => {});
@@ -474,9 +491,9 @@ describe('BootstrapApplication', () => {
         pubky: TEST_PUBKY,
       });
       expect(lastReadNormalizerSpy).not.toHaveBeenCalled();
-      expect(homeserverRequestSpy.mock.calls.map(([params]) => [params.method, params.url])).toEqual([
-        [HttpMethod.GET, MOCK_LAST_READ_URL],
-        [HttpMethod.GET, LEGACY_LAST_READ_URL],
+      expect(homeserverCalls(homeserverReadSpy, homeserverRequestSpy)).toEqual([
+        ['read', MOCK_LAST_READ_URL],
+        ['read', LEGACY_LAST_READ_URL],
         [HttpMethod.PUT, MOCK_LAST_READ_URL],
       ]);
       expect(homeserverRequestSpy).toHaveBeenLastCalledWith({
@@ -494,10 +511,9 @@ describe('BootstrapApplication', () => {
       const MOCK_NORMALIZED_TIMESTAMP = 9876543210;
 
       const mocks = setupMocks({ bootstrapData });
-      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
-        if (method === HttpMethod.GET) return Promise.reject(notFound(url));
-        return Promise.resolve(undefined);
-      });
+      const homeserverReadSpy = vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      mocks.homeserverRead = homeserverReadSpy;
       mocks.homeserverRequest = homeserverRequestSpy;
 
       const lastReadNormalizerSpy = vi
@@ -511,8 +527,8 @@ describe('BootstrapApplication', () => {
         pubky: TEST_PUBKY,
       });
       expect(lastReadNormalizerSpy).toHaveBeenCalledWith(TEST_PUBKY);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: LEGACY_LAST_READ_URL });
+      expect(homeserverReadSpy).toHaveBeenCalledWith(MOCK_LAST_READ_URL);
+      expect(homeserverReadSpy).toHaveBeenCalledWith(LEGACY_LAST_READ_URL);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({
         method: HttpMethod.PUT,
         url: MOCK_LAST_READ_URL,
@@ -535,22 +551,84 @@ describe('BootstrapApplication', () => {
       });
     });
 
+    it('reads a missing lastRead (404) as absent without creating an error', async () => {
+      const MOCK_NORMALIZED_TIMESTAMP = 9876543210;
+      const mocks = setupMocks({ bootstrapData: emptyBootstrap() });
+      const homeserverReadSpy = vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
+      mocks.homeserverRead = homeserverReadSpy;
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue({
+        url: MOCK_LAST_READ_URL,
+        lastRead: { timestamp: MOCK_NORMALIZED_TIMESTAMP },
+      });
+      vi.spyOn(Logger, 'info').mockImplementation(() => {});
+      // Every Err.* factory logs through Logger.error before it reports
+      const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(loggerErrorSpy).not.toHaveBeenCalled();
+      expect(homeserverReadSpy.mock.calls.map(([url]) => url)).toEqual([MOCK_LAST_READ_URL, LEGACY_LAST_READ_URL]);
+      expect(result.lastRead).toBe(MOCK_NORMALIZED_TIMESTAMP);
+      expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_NORMALIZED_TIMESTAMP, MOCK_ALLOWED_TYPES);
+    });
+
+    it('warns and falls back when the v1 lastRead holds no timestamp', async () => {
+      setupMocks({ bootstrapData: emptyBootstrap() }).homeserverRead = vi
+        .spyOn(HomeserverService, 'getBytesIfExists')
+        .mockImplementation(async (url) =>
+          url === MOCK_LAST_READ_URL ? { bytes: new TextEncoder().encode('{"timest'), modifiedAt: null } : null,
+        );
+      vi.spyOn(Logger, 'info').mockImplementation(() => {});
+      const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith('Last read file holds no timestamp', { url: MOCK_LAST_READ_URL });
+      expect(loggerErrorSpy).not.toHaveBeenCalled();
+    });
+
+    it('rejects with a 500 on the 0.x lastRead read instead of reading it as absent', async () => {
+      const mocks = setupMocks({ bootstrapData: emptyBootstrap() });
+      const serverError = httpStatusCodeToError(
+        500,
+        'Internal server error',
+        ErrorService.Homeserver,
+        'getBytesIfExists',
+        LEGACY_LAST_READ_URL,
+      );
+      const homeserverReadSpy = vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(async (url) => {
+        if (url === LEGACY_LAST_READ_URL) throw serverError;
+        return null;
+      });
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      mocks.homeserverRead = homeserverReadSpy;
+      mocks.homeserverRequest = homeserverRequestSpy;
+      vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toBe(serverError);
+
+      expect(homeserverReadSpy.mock.calls.map(([url]) => url)).toEqual([MOCK_LAST_READ_URL, LEGACY_LAST_READ_URL]);
+      // The cursor is unknown, so no lastRead file is created over it
+      expect(homeserverRequestSpy).not.toHaveBeenCalled();
+      expect(mocks.persistUsers).not.toHaveBeenCalled();
+    });
+
     it('should throw error when homeserver returns 500 error', async () => {
       const bootstrapData = emptyBootstrap();
       const mocks = setupMocks({ bootstrapData });
 
-      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
-        if (method === HttpMethod.GET) {
-          return Promise.reject(
-            Err.server(ServerErrorCode.INTERNAL_ERROR, 'Internal server error', {
-              service: ErrorService.Homeserver,
-              operation: 'request',
-              context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR, url },
-            }),
-          );
-        }
-        return Promise.resolve(undefined);
-      });
+      const homeserverReadSpy = vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation((url) =>
+        Promise.reject(
+          Err.server(ServerErrorCode.INTERNAL_ERROR, 'Internal server error', {
+            service: ErrorService.Homeserver,
+            operation: 'getBytesIfExists',
+            context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR, url },
+          }),
+        ),
+      );
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      mocks.homeserverRead = homeserverReadSpy;
       mocks.homeserverRequest = homeserverRequestSpy;
 
       const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
@@ -563,8 +641,8 @@ describe('BootstrapApplication', () => {
 
       // The error factory already reported the failure; bootstrap does not log it again
       expect(loggerErrorSpy).not.toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.anything());
-      expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverReadSpy).toHaveBeenCalledExactlyOnceWith(MOCK_LAST_READ_URL);
+      expect(homeserverRequestSpy).not.toHaveBeenCalled();
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
@@ -574,12 +652,11 @@ describe('BootstrapApplication', () => {
       const bootstrapData = emptyBootstrap();
       const mocks = setupMocks({ bootstrapData });
 
-      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method }) => {
-        if (method === HttpMethod.GET) {
-          return Promise.reject(new Error('Network timeout'));
-        }
-        return Promise.resolve(undefined);
-      });
+      const homeserverReadSpy = vi
+        .spyOn(HomeserverService, 'getBytesIfExists')
+        .mockRejectedValue(new Error('Network timeout'));
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      mocks.homeserverRead = homeserverReadSpy;
       mocks.homeserverRequest = homeserverRequestSpy;
 
       const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
@@ -587,8 +664,8 @@ describe('BootstrapApplication', () => {
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Network timeout');
 
       expect(loggerErrorSpy).not.toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.anything());
-      expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverReadSpy).toHaveBeenCalledExactlyOnceWith(MOCK_LAST_READ_URL);
+      expect(homeserverRequestSpy).not.toHaveBeenCalled();
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();

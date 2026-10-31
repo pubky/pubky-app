@@ -339,6 +339,16 @@ describe('grant-only session lifecycle', () => {
       expect.objectContaining({ purpose: 'signin', capabilities: getHomeserverCapabilities() }),
     );
   });
+  it('refuses a Ring sign-in whose grant left out a requested scope as a missing permission', async () => {
+    const flow = startFlow();
+    const result = await AuthController.getAuthUrl();
+    const trimmed = getHomeserverCapabilities()
+      .split(',')
+      .filter((capability) => !(SOCIAL_V1_APP_CAPABILITIES as readonly string[]).includes(capability));
+    flow.approval.resolve(grantSession(trimmed));
+    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'capabilities' });
+    expect(AuthApplication.saveSession).not.toHaveBeenCalled();
+  });
   it('requests the current App, Locks and Shop scopes during Ring signup too', async () => {
     startFlow();
     await AuthController.getSignupAuthUrl('invite');
@@ -474,7 +484,7 @@ describe('grant-only session lifecycle', () => {
     flow.approval.resolve(
       grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES], 'another-user'),
     );
-    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
+    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'identity' });
     expect(useAuthStore.getState().session).toBe(narrowGrant);
     expect(AuthApplication.saveSession).not.toHaveBeenCalled();
     expect(AuthApplication.logout).not.toHaveBeenCalled();
@@ -483,7 +493,7 @@ describe('grant-only session lifecycle', () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     flow.approval.resolve(grantSession([APP_CAPABILITIES]));
-    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
+    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'capabilities' });
     expect(useAuthStore.getState().session).toBe(narrowGrant);
   });
   it('keeps the old session on cancel even if its approval arrives later', async () => {
@@ -2133,7 +2143,7 @@ describe('identity-bound Shop reauthorization', () => {
                 password: 'password',
                 expectedPubky: PUBKY,
               });
-      await expect(adoption).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
+      await expect(adoption).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'identity' });
       expect(AuthApplication.readPersistedAuth()).toEqual(previous);
       expect(useOnboardingStore.getState()).toMatchObject({ secretKey: 'pending-secret', mnemonic: 'pending phrase' });
       expect(AuthApplication.saveSession).not.toHaveBeenCalled();

@@ -43,6 +43,7 @@ const savedSettings = {
   updatedAt: 10,
   version: 1,
 };
+const settingsUrlA = `pubky://${pubkyA}/priv/app.pubky/v1/settings.json`;
 const completedSignIn = {
   authUrlResolved: true,
   profileChecked: true,
@@ -98,6 +99,17 @@ async function replaceAccount() {
   persistState();
 }
 
+/** Serves `savedSettings` as account A's v1 settings file; every other read is absent (404). */
+function storeSavedSettings() {
+  return vi
+    .spyOn(HomeserverService, 'getBytesIfExists')
+    .mockImplementation(async (url) =>
+      url === settingsUrlA
+        ? { bytes: new TextEncoder().encode(JSON.stringify(savedSettings)), modifiedAt: null }
+        : null,
+    );
+}
+
 const pkarrLookupError = () =>
   Err.network(NetworkErrorCode.CONNECTION_FAILED, 'PKARR lookup failed', {
     service: ErrorService.Homeserver,
@@ -111,9 +123,8 @@ function prepareFreshLogin() {
   vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(asOpaque({}));
   vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(asOpaque({}));
   vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference());
-  vi.spyOn(HomeserverService, 'request')
-    .mockResolvedValueOnce({ name: 'Account A' })
-    .mockResolvedValueOnce(savedSettings);
+  vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+  storeSavedSettings();
 }
 
 function startFreshRecoveryLogin() {
@@ -315,15 +326,12 @@ describe('AuthController restored session lifecycle', () => {
     const request = vi
       .spyOn(HomeserverService, 'request')
       .mockResolvedValueOnce({ name: 'Account A' })
-      .mockResolvedValueOnce(savedSettings)
       .mockResolvedValue(undefined);
+    const read = storeSavedSettings();
     const restore = AuthController.restorePersistedSession();
     await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
 
-    expect(request).toHaveBeenCalledWith({
-      method: HttpMethod.GET,
-      url: `pubky://${pubkyA}/priv/app.pubky/v1/settings.json`,
-    });
+    expect(read).toHaveBeenCalledWith(settingsUrlA);
     expect(useAuthStore.getState()).toMatchObject({ hasProfile: null, isRestoringSession: true });
 
     bootstrap.resolve(notificationInitialState);
@@ -335,7 +343,7 @@ describe('AuthController restored session lifecycle', () => {
     await SettingsController.setHideSearch(true);
     expect(request).toHaveBeenLastCalledWith({
       method: HttpMethod.PUT,
-      url: `pubky://${pubkyA}/priv/app.pubky/v1/settings.json`,
+      url: settingsUrlA,
       bodyJson: expect.objectContaining({
         notifications: expect.objectContaining({ follow: false }),
         privacy: expect.objectContaining({ hideSearch: true, neverShowPosts: true }),
@@ -347,9 +355,8 @@ describe('AuthController restored session lifecycle', () => {
   it.each(['success', 'failure'] as const)('ignores bootstrap %s after account replacement', async (result) => {
     const bootstrap = deferred<typeof notificationInitialState>();
     vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
-    vi.spyOn(HomeserverService, 'request')
-      .mockResolvedValueOnce({ name: 'Account A' })
-      .mockResolvedValueOnce(savedSettings);
+    vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+    storeSavedSettings();
     const restore = AuthController.restorePersistedSession();
     await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
 
@@ -375,9 +382,8 @@ describe('AuthController restored session lifecycle', () => {
   ] as const)(
     'preserves its session and offers recovery when bootstrap fails: $failure',
     async ({ failure, restoreStatus }) => {
-      vi.spyOn(HomeserverService, 'request')
-        .mockResolvedValueOnce({ name: 'Account A' })
-        .mockResolvedValueOnce(savedSettings);
+      vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+      storeSavedSettings();
       const error = failure === 'temporary' ? profileError() : wrongEnvironmentError();
       vi.mocked(BootstrapApplication.initialize).mockRejectedValue(error);
 
@@ -397,9 +403,8 @@ describe('AuthController restored session lifecycle', () => {
   );
 
   it('offers recovery when the saved session becomes unreadable during bootstrap', async () => {
-    vi.spyOn(HomeserverService, 'request')
-      .mockResolvedValueOnce({ name: 'Account A' })
-      .mockResolvedValueOnce(savedSettings);
+    vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+    storeSavedSettings();
     const generation = useAuthStore.getState().generation;
     vi.mocked(BootstrapApplication.initialize).mockImplementation(async () => {
       // The post-restore storage check cannot parse the record and falls back to recovery.

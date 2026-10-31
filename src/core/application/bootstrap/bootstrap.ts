@@ -5,8 +5,8 @@ import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { hasHttpStatus } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { parseJsonBytesOrUndefined } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
@@ -158,19 +158,15 @@ export class BootstrapApplication {
 
   /** The cursor stored at `url`, or null when the file is absent. Any other failure rejects. */
   private static async fetchLastReadAt(url: string): Promise<number | null> {
-    try {
-      const stored = await HomeserverService.request<{ timestamp?: unknown } | undefined>({
-        method: HttpMethod.GET,
-        url,
-      });
-      return typeof stored?.timestamp === 'number' ? stored.timestamp : null;
-    } catch (error) {
-      // Only a 404 (resource not found) means absent; network errors, timeouts, server errors,
-      // etc. bubble up (already reported by the homeserver service)
-      // TODO: TO harsh, we should handle this error better
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
-      throw error;
-    }
+    // A 404 is the usual answer until the first write (a new or just-migrated account), so it is
+    // read as absent without reporting an error; network errors, timeouts, server errors, etc.
+    // bubble up (already reported by the homeserver service)
+    const stored = await HomeserverService.getBytesIfExists(url);
+    if (!stored) return null;
+    const lastRead = parseJsonBytesOrUndefined<{ timestamp?: unknown } | null>(stored.bytes);
+    if (typeof lastRead?.timestamp === 'number') return lastRead.timestamp;
+    Logger.warn('Last read file holds no timestamp', { url });
+    return null;
   }
 
   /**

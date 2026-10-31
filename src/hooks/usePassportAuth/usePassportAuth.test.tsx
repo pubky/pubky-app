@@ -10,6 +10,7 @@ import {
   PASSPORT_POPUP_CLOSED_POLL_MS,
   PASSPORT_RETURN_MESSAGE_TYPE,
 } from '@/config/passport';
+import { createAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -567,6 +568,26 @@ describe('usePassportAuth', () => {
     expect(mockLoggerError).not.toHaveBeenCalled();
     expect(onAttemptSettled).toHaveBeenCalledWith({ attemptId: attemptIds[0], result: 'failed' });
     expect(hook.result.current.isPending).toBe(false);
+  });
+
+  it.each([
+    ['capabilities', 'Authorization failed. Approve every requested permission and try again.'],
+    ['identity', 'Approve with the account you are signed in with.'],
+  ] as const)('names the cause of a %s refusal', async (reason, description) => {
+    const flow = createFlow();
+    mockGetPassportAuthUrl.mockResolvedValue(flow);
+    mockInitializeAuthenticatedSession.mockRejectedValue(createAuthApprovalMismatchError(reason));
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ onAttemptSettled }));
+    await startAttempt(hook);
+
+    await act(async () => {
+      flow.approval.resolve(mockSession());
+    });
+
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'error', description });
+    expect(mockLoggerError).not.toHaveBeenCalled();
+    expect(onAttemptSettled).toHaveBeenCalledWith({ attemptId: attemptIds[0], result: 'failed' });
   });
 
   it('ignores a double click while an attempt is pending and allows a retry after it fails', async () => {
