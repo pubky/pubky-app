@@ -27,6 +27,17 @@ describe('Progress', () => {
     expect(bar.firstElementChild).toHaveClass('animate-pulse');
   });
 
+  it('shows a first value at once instead of sliding down from the indeterminate fill', () => {
+    const { rerender } = render(<Progress value={null} />);
+    const indeterminate = screen.getByRole('progressbar').firstElementChild;
+    rerender(<Progress value={8} />);
+    const determinate = screen.getByRole('progressbar').firstElementChild;
+    expect(determinate).not.toBe(indeterminate);
+    expect(determinate).toHaveStyle({ transform: 'translateX(-92%)' });
+    rerender(<Progress value={15} />);
+    expect(screen.getByRole('progressbar').firstElementChild).toBe(determinate);
+  });
+
   it('merges a className', () => {
     render(<Progress value={10} className="h-4" />);
     expect(screen.getByRole('progressbar')).toHaveClass('h-4');

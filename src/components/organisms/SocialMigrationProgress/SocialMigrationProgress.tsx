@@ -54,9 +54,12 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
   }
 };
 
+const MIGRATING_STEP = STEPS.findIndex((step) => step.key === 'migrating');
+
 /** The steps and the object count of a social v1 migration run (ADR-0026); presentational, the template feeds it. */
 export function SocialMigrationProgress({ phase, pass, done, total, resumedFrom }: SocialMigrationProgressProps) {
-  const percent = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : null;
+  // The bar measures the copy pass alone, like the count beside it; the steps show the phases around it.
+  const percent = phase === 'migrating' && total > 0 ? Math.min(100, Math.round((done / total) * 100)) : null;
   return (
     <Container className="items-start justify-center gap-6" data-testid="social-migration-progress">
       <div className="flex w-full max-w-sm flex-col gap-4">
@@ -85,7 +88,11 @@ export function SocialMigrationProgress({ phase, pass, done, total, resumedFrom 
       <div className="flex w-full max-w-sm flex-col gap-2">
         <Progress value={percent} aria-label="Migration progress" />
         <Typography as="p" size="sm" className="text-muted-foreground">
-          {total > 0 ? `${done} of ${total}` : 'Preparing...'}
+          {percent !== null
+            ? `${done} of ${total}`
+            : stepIndex(phase) > MIGRATING_STEP
+              ? 'Finishing up...'
+              : 'Preparing...'}
         </Typography>
         {resumedFrom && (
           <Typography as="p" size="sm" className="text-muted-foreground">
