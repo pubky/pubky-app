@@ -173,7 +173,7 @@ vi.mock('@/stores/localFiles/localFiles.store', async () => {
     { type: 'image/svg+xml', name: 'Portrait study', width: 400, height: 800, urls: { main: portrait } },
     { type: 'image/webp', name: 'Collections on a desk', urls: { main: landscape } },
   ];
-  const empty = { profile: null, posts: {}, collections: {} };
+  const empty = { profile: null, posts: {}, articleCovers: {}, collections: {} };
   const withMedia = {
     ...empty,
     posts: {

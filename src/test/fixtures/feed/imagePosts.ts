@@ -108,7 +108,7 @@ function imagePost(input: {
 export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
   imagePost({
     authorKey: 'cleo',
-    postId: '0VRTIMAGE0CLEO0001',
+    postId: '0034EMJH3KDR0',
     fileId: 'vrt-image-only-golden-hour',
     imageUrl: goldenHourUrl,
     imageName: 'Quay at golden hour',
@@ -125,7 +125,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
   }),
   imagePost({
     authorKey: 'hana',
-    postId: '0VRTIMAGE0HANA0002',
+    postId: '0034EMJHD4KC0',
     fileId: 'vrt-image-only-desk',
     imageUrl: deskUrl,
     imageName: 'Collections arranged on a desk',
@@ -139,7 +139,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
   }),
   imagePost({
     authorKey: 'fynn',
-    postId: '0VRTIMAGE0FYNN0003',
+    postId: '0034EMJH9AH40',
     fileId: 'vrt-image-only-signals',
     imageUrl: signalsUrl,
     imageName: 'Signals from the field',
@@ -153,7 +153,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
   }),
   imagePost({
     authorKey: 'dion',
-    postId: '0VRTIMAGE0DION0004',
+    postId: '0034EMJH5GEW0',
     fileId: 'vrt-image-only-references',
     imageUrl: referencesUrl,
     imageName: 'Design references',
@@ -166,7 +166,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
   }),
   imagePost({
     authorKey: 'glen',
-    postId: '0VRTIMAGE0GLEN0005',
+    postId: '0034EMJHB7J80',
     fileId: 'vrt-image-only-note',
     imageUrl: noteUrl,
     imageName: 'Handwritten note',
@@ -180,7 +180,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
   }),
   imagePost({
     authorKey: 'eira',
-    postId: '0VRTIMAGE0EIRA0006',
+    postId: '0034EMJH7DG00',
     fileId: 'vrt-image-only-move',
     imageUrl: moveUrl,
     imageName: 'Moving through a local-first network',
@@ -193,7 +193,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
   }),
   imagePost({
     authorKey: 'bran',
-    postId: '0VRTIMAGE0BRAN0007',
+    postId: '0034EMJH1PCM0',
     fileId: 'vrt-image-only-portrait',
     imageUrl: portraitUrl,
     imageName: 'Pubky community portrait',

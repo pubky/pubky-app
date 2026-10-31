@@ -34,7 +34,7 @@ function makeFileUri(author: Pubky, fileId: string): string {
 }
 
 const BRAN = VRT_AUTHOR_PUBKYS.bran;
-const ARTICLE_POST_ID = '0VRTARTCL0BRAN0001';
+const ARTICLE_POST_ID = '0034EMJGCQ080';
 const COVER_FILE_ID = 'vrt-article-cover-quay';
 
 export const VRT_ARTICLE_TITLE = 'Why timestamps belong in the corner';
@@ -118,13 +118,13 @@ function reply(input: { author: Pubky; postId: string; content: string; agoMs: n
 export const VRT_ARTICLE_THREAD_REPLIES: readonly VRTArticlePostFixture[] = [
   reply({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTARTCLREPLY0001',
+    postId: '0034EMJGEM1C0',
     content: 'This is why the feed card only shows the first paragraph. The rest is for the article page.',
     agoMs: 8 * MINUTE_MS,
   }),
   reply({
     author: VRT_AUTHOR_PUBKYS.cleo,
-    postId: '0VRTARTCLREPLY0002',
+    postId: '0034EMJGGH2G0',
     content: 'The newspaper mark next to the title is doing a lot of work in the timeline.',
     agoMs: 5 * MINUTE_MS,
   }),

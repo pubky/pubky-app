@@ -105,7 +105,7 @@ function collection(
 export const VRT_MY_COLLECTIONS: readonly VRTCollectionFixture[] = [
   collection(
     'alice',
-    '0VRTCOLL0ALICE0001',
+    '0034EMJGJE3M0',
     'Local-first notes',
     'Drafts and shipping logs for the feed work.',
     8,
@@ -115,7 +115,7 @@ export const VRT_MY_COLLECTIONS: readonly VRTCollectionFixture[] = [
   ),
   collection(
     'alice',
-    '0VRTCOLL0ALICE0002',
+    '0034EMJGMB4R0',
     'Design references',
     'Type, colour, and layout references worth keeping.',
     5,
@@ -129,7 +129,7 @@ export const VRT_MY_COLLECTIONS: readonly VRTCollectionFixture[] = [
 export const VRT_FOLLOWED_COLLECTIONS: readonly VRTCollectionFixture[] = [
   collection(
     'cleo',
-    '0VRTCOLL0CLEO00001',
+    '0034EMJGP85W0',
     'Golden hour',
     'Bridge light and rooftop sessions.',
     12,
@@ -137,7 +137,7 @@ export const VRT_FOLLOWED_COLLECTIONS: readonly VRTCollectionFixture[] = [
     [{ label: 'photography', taggers: [VRT_AUTHOR_PUBKYS.fynn], taggers_count: 4, relationship: false }],
     { coverId: COLLECTION_COVER_IDS.goldenHour },
   ),
-  collection('eira', '0VRTCOLL0EIRA00001', 'Protocol reading', 'Papers and notes on human-scale networks.', 7, 36, [
+  collection('eira', '0034EMJGT2840', 'Protocol reading', 'Papers and notes on human-scale networks.', 7, 36, [
     { label: 'protocols', taggers: [VRT_AUTHOR_PUBKYS.alice], taggers_count: 2, relationship: false },
   ]),
 ];
@@ -146,7 +146,7 @@ export const VRT_FOLLOWED_COLLECTIONS: readonly VRTCollectionFixture[] = [
 export const VRT_DISCOVER_COLLECTIONS: readonly VRTCollectionFixture[] = [
   collection(
     'dion',
-    '0VRTCOLL0DION00001',
+    '0034EMJGR5700',
     'Weekend reads',
     'Long-form pieces queued for a quiet morning.',
     9,
@@ -154,13 +154,13 @@ export const VRT_DISCOVER_COLLECTIONS: readonly VRTCollectionFixture[] = [
     [{ label: 'reading', taggers: [VRT_AUTHOR_PUBKYS.hana], taggers_count: 2, relationship: false }],
     { coverId: COLLECTION_COVER_IDS.weekendReads },
   ),
-  collection('fynn', '0VRTCOLL0FYNN00001', 'Studio stems', 'Rough mixes and bridge takes.', 11, 14, [
+  collection('fynn', '0034EMJGVZ980', 'Studio stems', 'Rough mixes and bridge takes.', 11, 14, [
     { label: 'music', taggers: [VRT_AUTHOR_PUBKYS.glen], taggers_count: 3, relationship: false },
   ]),
-  collection('hana', '0VRTCOLL0HANA00001', 'Type specimens', 'Letter-spacing experiments and footnotes.', 4, 28, [
+  collection('hana', '0034EMJGZSBG0', 'Type specimens', 'Letter-spacing experiments and footnotes.', 4, 28, [
     { label: 'typography', taggers: [VRT_AUTHOR_PUBKYS.alice], taggers_count: 1, relationship: false },
   ]),
-  collection('glen', '0VRTCOLL0GLEN00001', 'KV store notes', 'Indexes, cycling routes, and kettle timers.', 6, 40),
+  collection('glen', '0034EMJGXWAC0', 'KV store notes', 'Indexes, cycling routes, and kettle timers.', 6, 40),
 ];
 
 export const VRT_COLLECTION_ITEM_POSTS = VRT_FEED_POSTS.slice(0, 6);
@@ -197,9 +197,9 @@ function singleCollection(postId: string, layout: 'grid' | 'list' | 'visual'): V
 
 /** The same deterministic collection content rendered in each supported layout. */
 export const VRT_SINGLE_COLLECTIONS = {
-  grid: singleCollection('0VRTSINGLE0GRID001', 'grid'),
-  list: singleCollection('0VRTSINGLE0LIST001', 'list'),
-  visual: singleCollection('0VRTSINGLE0VISUAL1', 'visual'),
+  grid: singleCollection('0034EMJM4W740', 'grid'),
+  list: singleCollection('0034EMJM6S880', 'list'),
+  visual: singleCollection('0034EMJM8P9C0', 'visual'),
 } as const;
 
 /** A partially-overlapping saved-post set for the Bookmarks collection. */
