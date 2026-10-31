@@ -88,17 +88,11 @@ export type TUserStreamReachParams = {
  * Bookmark metadata from Nexus API.
  *
  * Shape mirrors the upstream OpenAPI `Bookmark` schema
- * (`/v0/post/{author_id}/{post_id}/bookmark`):
- *   - `id`: the bookmark record's id on Nexus.
- *   - `indexed_at`: epoch-ms timestamp Nexus assigned when it indexed the
- *     bookmark. We use this as the local `created_at` ordering key.
+ * (`/v0/post/{author_id}/{post_id}/bookmark`): `id` is the bookmark record's id on Nexus,
+ * `indexed_at` the epoch-ms time Nexus indexed it.
  *
- * Historical note: an earlier `{ created_at, updated_at }` shape was kept
- * here that did not match what the API actually returned. That mismatch
- * caused the bookmarks table to be written with `created_at: undefined`,
- * which is silently excluded from IndexedDB index cursors and broke the
- * `FollowedCollections` live query. See `LocalStreamPostsService.persistPosts`
- * for the write-site coercion.
+ * 0.x ghosts, never read: a v1 bookmark is private and invisible to Nexus, so this only ever
+ * describes a 0.x copy the app cannot delete (ADR-0028).
  */
 export type NexusBookmark = {
   id: string;
@@ -145,6 +139,7 @@ export type NexusUserCounts = {
   following: number;
   followers: number;
   friends: number;
+  /** 0.x ghosts, never read: bookmarks are counted locally (ADR-0028). */
   bookmarks: number;
 };
 
@@ -277,6 +272,7 @@ export type NexusPost = {
   counts: NexusPostCounts;
   tags: TagModel[];
   relationships: NexusPostRelationships;
+  /** 0.x ghosts, never read: bookmarks are hydrated from the homeserver listing (ADR-0028). */
   bookmark: NexusBookmark | null;
 };
 

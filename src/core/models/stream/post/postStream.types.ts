@@ -59,12 +59,11 @@ export enum PostStreamTypes {
   // ============================================
   // TIMELINE (Recent) - BOOKMARKS Source
   // ============================================
-  // The bookmarks route uses a single fixed stream (it has no content/sort filter
-  // UI). ALL is the main bookmarks feed; COLLECTION backs the FollowedCollections
-  // section (see buildFollowedCollectionsStreamId). Kind-specific and popularity
-  // bookmark variants were removed with the legacy filter coupling.
+  // One local stream holds every bookmark, collections included, newest bookmark
+  // first: it backs the bookmarks feed (which drops collections on read) and the
+  // FollowedCollections hydration. Bookmarks are private, so Nexus has no copy of
+  // it (ADR-0028).
   TIMELINE_BOOKMARKS_ALL = 'timeline:bookmarks:all',
-  TIMELINE_BOOKMARKS_COLLECTION = 'timeline:bookmarks:collection',
 
   // ============================================
   // POPULARITY (Total Engagement) - ALL Sources
@@ -124,11 +123,8 @@ export type SortedAuthorStreamCompositeId =
 // Stream id shapes:
 // - Author's own collections (kind=collection filter on author endpoint):
 //     `<authorPubky>:author:collection`
-// - Bookmarked collections (current viewer's bookmarks filtered by kind):
-//     `timeline:bookmarks:collection`
-//   The bookmarks endpoint pulls observer_id from `viewer_id` at fetch time,
-//   so the stream id does not embed the observer pubky (matches existing
-//   `TIMELINE_BOOKMARKS_*` shapes).
+// - Followed collections (the viewer's bookmarked collections): no stream of their own; the
+//   section walks the local bookmarks stream `timeline:bookmarks:all` (ADR-0028).
 // - Discover collections (popularity, all sources, kind=collection):
 //     `total_engagement:all:collection`
 // - Single-collection items (posts inside one collection):
@@ -137,8 +133,6 @@ export type SortedAuthorStreamCompositeId =
 //     `post_collections:<authorPubky>:<postId>` (source-first composite, skip-paginated,
 //     served from Nexus's COLLECTED edges — pubky-nexus#1067).
 export type AuthorCollectionsStreamId = `${string}:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`;
-export type FollowedCollectionsStreamId =
-  `${StreamSorting.TIMELINE}:${StreamSource.BOOKMARKS}:${StreamKind.COLLECTION}`;
 export type DiscoverCollectionsStreamId = `${StreamSorting.ENGAGEMENT}:${StreamSource.ALL}:${StreamKind.COLLECTION}`;
 export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${string}:${string}`;
 export type PostCollectionsStreamCompositeId = `${StreamSource.POST_COLLECTIONS}:${string}:${string}`;
@@ -199,10 +193,6 @@ export function isAuthorStreamSkippingMuteFilter(streamId: string): boolean {
     secondSegment === StreamSource.AUTHOR ||
     isAuthorScopedContentSearchStream(streamId)
   );
-}
-
-export function buildFollowedCollectionsStreamId(): FollowedCollectionsStreamId {
-  return `${StreamSorting.TIMELINE}:${StreamSource.BOOKMARKS}:${StreamKind.COLLECTION}`;
 }
 
 export function buildDiscoverCollectionsStreamId(): DiscoverCollectionsStreamId {
@@ -421,20 +411,15 @@ export function getStreamDependencyScopes(streamId: string): ReadonlySet<StreamD
 
 /**
  * Single-collection item feeds (`collection:<author>:<postId>`) and the
- * bookmarks post feeds (`<sorting>:bookmarks:<kind>`) intentionally keep deleted
+ * bookmarks stream (`timeline:bookmarks:all`) intentionally keep deleted
  * posts in the stream so the feed still renders the saved/collected slot with the
  * post component's deleted-state placeholder, rather than silently dropping it.
- * Every other stream filters deleted posts out entirely.
- *
- * The collection-kind bookmark stream (`<sorting>:bookmarks:collection`) is
- * excluded: it is not a bookmarks post feed but the seed for the
- * `FollowedCollections` section, which deliberately hides deleted collections
- * (its live query filters them out). Keeping stream-level filtering here stays
- * consistent with that, rather than surfacing deleted collections in that section.
+ * Every other stream filters deleted posts out entirely. The `FollowedCollections`
+ * section, which walks the bookmarks stream too, hides deleted collections in its
+ * own live query.
  */
 export function isDeletedRetainingStream(streamId: string): boolean {
-  if (isCollectionItemsStream(streamId)) return true;
-  return streamId.includes(`:${StreamSource.BOOKMARKS}:`) && !streamId.endsWith(`:${StreamKind.COLLECTION}`);
+  return isCollectionItemsStream(streamId) || isBookmarkStream(streamId);
 }
 
 export type PostStreamId =
@@ -446,7 +431,6 @@ export type PostStreamId =
   | AuthorStreamCompositeId
   | AuthorRepliesStreamCompositeId
   | AuthorCollectionsStreamId
-  | FollowedCollectionsStreamId
   | DiscoverCollectionsStreamId
   | CollectionItemsStreamCompositeId
   | PostCollectionsStreamCompositeId
@@ -492,12 +476,9 @@ export function advanceCursor(
 }
 
 /**
- * Bookmark post streams (`…:bookmarks:…`) — e.g. `timeline:bookmarks:all` and
- * `timeline:bookmarks:collection`.
- *
- * Nexus orders these by *bookmark* time (the bookmark's `indexed_at`, stored
- * locally as `bookmarks.created_at`), not the post's own `indexed_at`. Pagination
- * cursors for them must therefore be derived from the local bookmarks table.
+ * The bookmarks stream (`…:bookmarks:…`, i.e. `timeline:bookmarks:all`): local only, written
+ * from the homeserver listing and this tab's bookmark writes in bookmark order, never fetched
+ * from Nexus (ADR-0028).
  */
 export function isBookmarkStream(streamId: string): boolean {
   return streamId.includes(`:${StreamSource.BOOKMARKS}:`);

@@ -54,8 +54,6 @@ function callStreamEndpoint(
       return postStreamApi.wot(params as TStreamWithObserverParams);
     case 'wot_domain':
       return postStreamApi.wot_domain(params as TStreamWithObserverParams);
-    case 'bookmarks':
-      return postStreamApi.bookmarks(params as TStreamWithObserverParams);
     case 'post_replies':
       return postStreamApi.post_replies(params as TStreamPostRepliesParams);
     case 'author':
@@ -139,18 +137,6 @@ describe('Stream API URL Generation', () => {
         endpoint: 'wot_domain' as const,
         params: { observer_id: mockObserverId, depth: 0, domain_tags: 'bitcoiner' },
         expectedInUrl: ['source=wot_domain', `observer_id=${mockObserverId}`, 'depth=0', 'domain_tags=bitcoiner'],
-      },
-      {
-        name: 'bookmarks',
-        endpoint: 'bookmarks' as const,
-        params: { observer_id: mockObserverId, order: StreamOrder.ASCENDING, start: 1759289451314, end: 1759289451314 },
-        expectedInUrl: [
-          'source=bookmarks',
-          `observer_id=${mockObserverId}`,
-          'order=ascending',
-          'start=1759289451314',
-          'end=1759289451314',
-        ],
       },
       {
         name: 'post_replies',
@@ -393,7 +379,6 @@ describe('Stream API URL Generation', () => {
         'friends',
         'wot',
         'wot_domain',
-        'bookmarks',
         'post_replies',
         'author',
         'author_replies',
@@ -403,6 +388,8 @@ describe('Stream API URL Generation', () => {
       expectedEndpoints.forEach((endpoint) => {
         expect(endpointKeys).toContain(endpoint);
       });
+      // Bookmarks are private v1 objects: Nexus has no stream of them (ADR-0028).
+      expect(endpointKeys).not.toContain('bookmarks');
     });
   });
 });
@@ -411,24 +398,24 @@ describe('createPostStreamParams', () => {
   const mockViewerId = 'viewer-pubky-id' as Pubky;
 
   describe('Bookmark streams', () => {
-    test.each([
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_ALL, kind: undefined, name: 'all' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION, kind: StreamKind.COLLECTION, name: 'collection' },
-    ])('should handle timeline:bookmarks:$name stream', ({ streamType, kind }) => {
-      const result = createPostStreamParams({
-        streamId: streamType,
-        streamTail: 0,
-        streamHead: 0,
-        limit: 20,
-        viewerId: mockViewerId,
-      });
+    test.each([{ streamType: PostStreamTypes.TIMELINE_BOOKMARKS_ALL, kind: undefined, name: 'all' }])(
+      'should handle timeline:bookmarks:$name stream',
+      ({ streamType, kind }) => {
+        const result = createPostStreamParams({
+          streamId: streamType,
+          streamTail: 0,
+          streamHead: 0,
+          limit: 20,
+          viewerId: mockViewerId,
+        });
 
-      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
-      expect(result.params.kind).toBe(kind);
-      expect(result.params.viewer_id).toBe(mockViewerId);
-      expect(result.params.limit).toBe(20);
-      expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
-    });
+        expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+        expect(result.params.kind).toBe(kind);
+        expect(result.params.viewer_id).toBe(mockViewerId);
+        expect(result.params.limit).toBe(20);
+        expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
+      },
+    );
   });
 
   describe('WoT streams', () => {
@@ -867,23 +854,6 @@ describe('createPostStreamParams', () => {
       expect(result.extraParams.post_id).toBeUndefined();
     });
 
-    it('builds params for timeline:bookmarks:collection (Followed Collections)', () => {
-      const result = createPostStreamParams({
-        streamId: 'timeline:bookmarks:collection' as PostStreamId,
-        streamHead: 0,
-        streamTail: 0,
-        limit: 20,
-        viewerId: mockViewerId,
-      });
-
-      expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
-      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
-      expect(result.params.kind).toBe(StreamKind.COLLECTION);
-      expect(result.params.viewer_id).toBe(mockViewerId);
-      // Bookmarks endpoint doesn't consume extraParams.post_id; ensure it isn't populated.
-      expect(result.extraParams.post_id).toBeUndefined();
-    });
-
     it('builds params for total_engagement:all:collection (Discover Collections)', () => {
       const result = createPostStreamParams({
         streamId: 'total_engagement:all:collection' as PostStreamId,
@@ -1127,16 +1097,6 @@ describe('breakDownStreamId', () => {
       });
     });
 
-    it('should parse timeline:bookmarks:collection (Followed Collections)', () => {
-      const result = breakDownStreamId('timeline:bookmarks:collection' as PostStreamId);
-      expect(result).toEqual({
-        sorting: 'timeline',
-        invokeEndpoint: StreamSource.BOOKMARKS,
-        kind: 'collection',
-        tags: undefined,
-      });
-    });
-
     it('should parse total_engagement:all:collection (Discover Collections)', () => {
       const result = breakDownStreamId('total_engagement:all:collection' as PostStreamId);
       expect(result).toEqual({
@@ -1287,13 +1247,6 @@ describe('NexusPostStreamService', () => {
         params: { limit: 15, viewer_id: mockViewerId, depth: 2 },
         extraParams: {},
         expectedInUrl: ['source=wot', 'observer_id=viewer-pubky-id', 'depth=2'],
-      },
-      {
-        name: 'BOOKMARKS',
-        invokeEndpoint: StreamSource.BOOKMARKS,
-        params: { limit: 25, viewer_id: mockViewerId, sorting: StreamSorting.TIMELINE },
-        extraParams: {},
-        expectedInUrl: ['source=bookmarks', 'observer_id=viewer-pubky-id', 'sorting=timeline'],
       },
       {
         name: 'REPLIES',
@@ -1486,15 +1439,6 @@ describe('NexusPostStreamService', () => {
         expectedCode: AuthErrorCode.UNAUTHORIZED,
       },
       {
-        name: 'BOOKMARKS requires viewer_id',
-        invokeEndpoint: StreamSource.BOOKMARKS,
-        params: { limit: 10 }, // Missing viewer_id
-        extraParams: {},
-        expectedError: 'Sign in to see this feed',
-        expectedCategory: ErrorCategory.Auth,
-        expectedCode: AuthErrorCode.UNAUTHORIZED,
-      },
-      {
         name: 'WOT requires viewer_id',
         invokeEndpoint: StreamSource.WOT,
         params: { limit: 10 }, // Missing viewer_id
@@ -1551,6 +1495,18 @@ describe('NexusPostStreamService', () => {
       const params = {
         params: { limit: 10 },
         invokeEndpoint: 'invalid_stream_type' as StreamSource,
+        extraParams: {},
+      };
+
+      await expect(NexusPostStreamService.fetch(params as TPostStreamFetchParams)).rejects.toThrow(
+        'Invalid stream type',
+      );
+    });
+
+    it('has no bookmarks source: the bookmarks stream is local (ADR-0028)', async () => {
+      const params = {
+        params: { limit: 10, viewer_id: 'viewer-pubky-id' },
+        invokeEndpoint: StreamSource.BOOKMARKS,
         extraParams: {},
       };
 

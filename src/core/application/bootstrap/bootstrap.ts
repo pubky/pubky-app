@@ -1,3 +1,4 @@
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
@@ -54,6 +55,7 @@ export class BootstrapApplication {
       this.fetchOrPutLastRead(params),
       MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
       FeedApplication.fetchFeeds(pubky, { isCurrent: params.isCurrent }),
+      BookmarkApplication.fetchBookmarks(pubky, { isCurrent: params.isCurrent }), // private: Nexus never sees them
     ]);
     if (params.isCurrent && !params.isCurrent())
       return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };

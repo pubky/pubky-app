@@ -57,9 +57,6 @@ export const postStreamApi = {
   wot_domain: (params: TStreamWithObserverParams) =>
     buildPostStreamUrl(params, StreamSource.WOT_DOMAIN, STREAM_PREFIX.POSTS_KEYS),
 
-  bookmarks: (params: TStreamWithObserverParams) =>
-    buildPostStreamUrl(params, StreamSource.BOOKMARKS, STREAM_PREFIX.POSTS_KEYS),
-
   // Post replies requiring author_id and post_id
   post_replies: (params: TStreamPostRepliesParams) =>
     buildPostStreamUrl(params, StreamSource.REPLIES, STREAM_PREFIX.POSTS_KEYS),

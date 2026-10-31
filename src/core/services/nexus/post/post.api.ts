@@ -1,7 +1,6 @@
 import { buildNexusUrl, buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
 import {
   POST_PATH_PARAMS,
-  type TPostBase,
   type TPostBasePathParams,
   type TPostTaggersParams,
   type TPostTagsParams,
@@ -22,15 +21,6 @@ export const postApi = {
     const post = encodePathSegment(params.post_id);
     return buildUrlWithQuery({
       baseRoute: `${PREFIX}/${author}/${post}`,
-      params,
-      excludeKeys: POST_PATH_PARAMS,
-    });
-  },
-  bookmarks: (params: TPostBase) => {
-    const author = encodePathSegment(params.author_id);
-    const post = encodePathSegment(params.post_id);
-    return buildUrlWithQuery({
-      baseRoute: `${PREFIX}/${author}/${post}/bookmarks`,
       params,
       excludeKeys: POST_PATH_PARAMS,
     });

@@ -336,7 +336,7 @@ tag_streams        — Hot tags in streams
 
 ```
 file_details       — File attachment metadata, keyed `owner:hash` for v1 media (`owner:id` for 0.x rows)
-bookmarks          — Bookmarked post references
+bookmarks          — The owner's bookmarks (composite post id, `created_at` in ms): the source of truth for the private `/priv/social/v1/bookmarks/{base64url(target)}.json` objects Nexus never sees; hydrated by a LIST at bootstrap (one GET per new filename for its time), which also deletes rows the listing no longer names and rewrites the one local stream `timeline:bookmarks:all` (ADR-0028)
 hot_tags           — Trending tag snapshots
 feeds              — Custom feed definitions: the owner's private `/priv/social/v1/feeds/{id}.json` objects, id = hash of the filter (reach, layout, sort, content, tags, domain_tags), kinds as the data model spells them (`note`/`article`); hydrated by a LIST at bootstrap, which also deletes rows the listing no longer names
 moderation         — Content moderation state

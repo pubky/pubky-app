@@ -16,12 +16,11 @@ import { TagModel } from '@/models/shared/tag/tag';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
-import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { LocalPostService } from '@/services/local/post/post';
 import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 describe('LocalStreamPostsService', () => {
   const streamId: PostStreamId = PostStreamTypes.TIMELINE_ALL_ALL;
@@ -484,113 +483,29 @@ describe('LocalStreamPostsService', () => {
     });
 
     describe('bookmark persistence', () => {
-      // Regression coverage for the bug where Nexus's `bookmark: { id,
-      // indexed_at }` payload was being mirrored locally with
-      // `created_at: post.bookmark.created_at` (a field that doesn't exist
-      // on the upstream DTO). That landed `created_at: undefined` rows in
-      // the bookmarks table, which IndexedDB index cursors silently drop
-      // — breaking the FollowedCollections live query.
+      // Bookmarks are private v1 objects Nexus never sees: the viewer's `bookmark` on a post
+      // view only describes an undeletable 0.x copy, so trusting it would resurrect posts the
+      // viewer un-bookmarked (ADR-0028). The table is hydrated from the homeserver listing.
 
-      it('does not write a bookmark row when post.bookmark is null', async () => {
-        const post = createMockNexusPost('post-no-bookmark', 'author-1', BASE_TIMESTAMP);
-
-        await LocalStreamPostsService.persistPosts({ posts: [post] });
-
-        const all = await BookmarkModel.table.toArray();
-        expect(all).toHaveLength(0);
-      });
-
-      it('writes a bookmark row using post.bookmark.indexed_at as created_at', async () => {
-        const bookmarkIndexedAt = 1_700_000_000_000;
-        const post = createMockNexusPost('post-with-bookmark', 'author-1', BASE_TIMESTAMP, {
-          bookmark: { id: 'bm-1', indexed_at: bookmarkIndexedAt },
-        });
-        const compositeId = buildCompositeId({ pubky: 'author-1', id: 'post-with-bookmark' });
-
-        await LocalStreamPostsService.persistPosts({ posts: [post] });
-
-        const saved = await BookmarkModel.table.get(compositeId);
-        expect(saved).toBeTruthy();
-        expect(saved!.id).toBe(compositeId);
-        expect(saved!.created_at).toBe(bookmarkIndexedAt);
-      });
-
-      it('falls back to post.details.indexed_at when bookmark.indexed_at is missing', async () => {
-        // Simulate Nexus shape drift: bookmark present but indexed_at absent.
-        // The defensive fallback must keep created_at numeric so the row
-        // stays visible to IndexedDB index cursors.
-        const detailsIndexedAt = 1_650_000_000_000;
-        const post = createMockNexusPost('post-no-bookmark-ts', 'author-1', detailsIndexedAt, {
-          bookmark: { id: 'bm-2', indexed_at: asInvalid<number>(undefined) },
-        });
-        const compositeId = buildCompositeId({ pubky: 'author-1', id: 'post-no-bookmark-ts' });
-
-        await LocalStreamPostsService.persistPosts({ posts: [post] });
-
-        const saved = await BookmarkModel.table.get(compositeId);
-        expect(saved).toBeTruthy();
-        expect(typeof saved!.created_at).toBe('number');
-        expect(saved!.created_at).toBe(detailsIndexedAt);
-      });
-
-      it('writes bookmark rows for every bookmarked post in a batch', async () => {
-        const posts = [
-          createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, {
-            bookmark: { id: 'bm-1', indexed_at: 1_000 },
-          }),
-          createMockNexusPost('p2', 'a2', BASE_TIMESTAMP, {
-            bookmark: { id: 'bm-2', indexed_at: 2_000 },
-          }),
-          // Not bookmarked — should NOT produce a row.
-          createMockNexusPost('p3', 'a3', BASE_TIMESTAMP),
-        ];
-
-        await LocalStreamPostsService.persistPosts({ posts });
-
-        const all = await BookmarkModel.table.toArray();
-        const ids = all.map((row) => row.id).sort();
-        expect(ids).toEqual([buildCompositeId({ pubky: 'a1', id: 'p1' }), buildCompositeId({ pubky: 'a2', id: 'p2' })]);
-        // All rows must have a numeric created_at — the bug guard.
-        expect(all.every((row) => typeof row.created_at === 'number')).toBe(true);
-      });
-
-      it('does not restore a bookmark the viewer removed while Nexus was still indexing it', async () => {
-        // #2237: a post view fetched within Nexus's indexing lag still reports the
-        // removed bookmark; persisting it would bring the unfollowed collection back.
-        const removedId = buildCompositeId({ pubky: 'a1', id: 'p1' });
-        recentUnbookmarks.markRemoved('viewer-a', removedId);
+      it('ignores the bookmark Nexus reports on a post view', async () => {
         const posts = [
           createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, { bookmark: { id: 'bm-1', indexed_at: 1_000 } }),
-          createMockNexusPost('p2', 'a2', BASE_TIMESTAMP, { bookmark: { id: 'bm-2', indexed_at: 2_000 } }),
+          createMockNexusPost('p2', 'a2', BASE_TIMESTAMP),
         ];
 
-        try {
-          await LocalStreamPostsService.persistPosts({ posts, tagGuard: { viewerId: 'viewer-a' } });
-        } finally {
-          recentUnbookmarks.reset();
-        }
+        await LocalStreamPostsService.persistPosts({ posts, tagGuard: { viewerId: 'viewer-a' } });
 
-        const ids = (await BookmarkModel.table.toArray()).map((row) => row.id);
-        expect(ids).toEqual([buildCompositeId({ pubky: 'a2', id: 'p2' })]);
-        expect(await PostDetailsModel.table.get(removedId)).toBeTruthy();
+        expect(await BookmarkModel.table.count()).toBe(0);
+        expect(await PostDetailsModel.table.get(buildCompositeId({ pubky: 'a1', id: 'p1' }))).toBeTruthy();
       });
 
-      it("keeps another viewer's bookmark on a post the previous viewer unbookmarked", async () => {
-        // Viewer A unbookmarks, then viewer B signs in to the same tab: B's own
-        // bookmark from Nexus must still be persisted.
+      it('keeps a local bookmark the Nexus post view does not report', async () => {
         const postId = buildCompositeId({ pubky: 'a1', id: 'p1' });
-        recentUnbookmarks.markRemoved('viewer-a', postId);
-        const posts = [
-          createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, { bookmark: { id: 'bm-1', indexed_at: 1_000 } }),
-        ];
+        await BookmarkModel.upsert({ id: postId, created_at: 1_000 });
 
-        try {
-          await LocalStreamPostsService.persistPosts({ posts, tagGuard: { viewerId: 'viewer-b' } });
-        } finally {
-          recentUnbookmarks.reset();
-        }
+        await LocalStreamPostsService.persistPosts({ posts: [createMockNexusPost('p1', 'a1', BASE_TIMESTAMP)] });
 
-        expect(await BookmarkModel.table.get(postId)).toBeTruthy();
+        expect(await BookmarkModel.table.get(postId)).toEqual({ id: postId, created_at: 1_000 });
       });
     });
   });

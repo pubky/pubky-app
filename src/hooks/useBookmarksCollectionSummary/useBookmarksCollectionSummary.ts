@@ -1,9 +1,9 @@
 'use client';
 
+import { useLiveQuery } from 'dexie-react-hooks';
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { FileController } from '@/controllers/file/file';
-import { UserController } from '@/controllers/user/user';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 interface UseBookmarksCollectionSummaryResult {
@@ -18,15 +18,14 @@ export function useBookmarksCollectionSummary(): UseBookmarksCollectionSummaryRe
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
 
-  // The count comes from the Nexus aggregate counts, not the bookmarks stream:
-  // the stream only holds the currently paginated page, so its length
-  // under-reports the true total once there is more than one page.
-  const { data: userCounts } = useLocalFirstQuery({
-    queryFn: () => UserController.getCounts({ userId: currentUserPubky! }),
-    fetchFn: () => UserController.fetchCounts({ userId: currentUserPubky! }),
-    deps: [currentUserPubky],
-    enabled: !!currentUserPubky,
-  });
+  // Counted locally and live: bookmarks are private, so Nexus has no count of them, and the local
+  // table, hydrated from the homeserver listing at bootstrap, names every one (ADR-0028).
+  // Undefined until the first read resolves.
+  const bookmarkCount = useLiveQuery(async () => {
+    if (!currentUserPubky) return undefined;
+    // The model error is already logged; the badge just stays hidden.
+    return await BookmarkController.getCount().catch(() => undefined);
+  }, [currentUserPubky]);
 
   const avatarUrl =
     localAvatarUrl ??
@@ -39,7 +38,7 @@ export function useBookmarksCollectionSummary(): UseBookmarksCollectionSummaryRe
     avatarName,
     avatarSeed: currentUserPubky ?? avatarName,
     avatarUrl,
-    bookmarkCount: userCounts?.bookmarks,
+    bookmarkCount,
     isProfileResolved: userDetails != null,
   };
 }

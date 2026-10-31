@@ -63,16 +63,13 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
 
 /**
  * Every file that matched when the gate landed (2026-10-30, 55 files; 36 after the posts, media,
- * articles, collections and Locks port). Each child PR of `feat/social-v1` deletes the entries
- * it ports; the cleanup PR empties the list.
+ * articles, collections and Locks port; 3 after the bookmarks port). Each child PR of
+ * `feat/social-v1` deletes the entries it ports; the cleanup PR empties the list.
  */
 const LEGACY_RATCHET: readonly string[] = [
   'src/core/controllers/auth/auth.ts',
-  'src/core/controllers/bookmark/bookmark.ts',
-  'src/core/pipes/bookmark/bookmark.normalizer.ts',
   'src/core/pipes/pipes.builder.ts',
   'src/core/pipes/pipes.test-utils.ts',
-  'src/core/services/local/stream/posts/posts.ts',
 ];
 
 function sourceFiles(dir: string): string[] {

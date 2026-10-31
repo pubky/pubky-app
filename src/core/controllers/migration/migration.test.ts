@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MigrationApplication } from '@/application/migration/migration';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { SettingsState } from '@/stores/settings/settings.types';
 import { mockSettingsStore } from '@/test-utils/stores';
@@ -39,8 +40,23 @@ describe('MigrationController', () => {
 
       await MigrationController.resync(TEST_PUBKY);
 
-      expect(resyncSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, mockLocalSettings);
+      expect(resyncSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, mockLocalSettings, {
+        isCurrent: expect.any(Function),
+      });
       expect(loadFromHomeserverSpy).toHaveBeenCalledExactlyOnceWith(mockRemoteSettings);
+    });
+
+    it('hands the resync a guard that turns false once the viewer session changes', async () => {
+      const resyncSpy = vi.spyOn(MigrationApplication, 'resync').mockResolvedValue(null);
+      vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue({ version: 1, updatedAt: 1 } as SettingsState);
+      useAuthStore.setState({ currentUserPubky: TEST_PUBKY });
+
+      await MigrationController.resync(TEST_PUBKY);
+      const { isCurrent } = resyncSpy.mock.calls[0][2]!;
+
+      expect(isCurrent!()).toBe(true);
+      useAuthStore.setState({ currentUserPubky: null });
+      expect(isCurrent!()).toBe(false);
     });
 
     it('should not apply settings to store when MigrationApplication.resync returns null', async () => {

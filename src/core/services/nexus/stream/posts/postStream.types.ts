@@ -16,6 +16,7 @@ export enum StreamSource {
   FRIENDS = 'friends',
   WOT = 'wot',
   WOT_DOMAIN = 'wot_domain',
+  /** No Nexus source any more: the id segment of the local bookmarks stream (ADR-0028). */
   BOOKMARKS = 'bookmarks',
   REPLIES = 'post_replies',
   AUTHOR = 'author',

@@ -79,6 +79,9 @@ export class PostStreamApplication {
    * there is no usable cache.
    */
   static async getCachedLastPostTimestamp({ streamId }: TStreamIdParams): Promise<number> {
+    // The bookmarks stream has no Nexus seam to resume (ADR-0028): resolving a cursor would only
+    // walk the row reading post details it does not need.
+    if (isBookmarkStream(streamId)) return NOT_FOUND_CACHED_STREAM;
     try {
       const postStream = await LocalStreamPostsService.read({ streamId });
       if (!postStream || postStream.stream.length === 0) {
@@ -102,8 +105,8 @@ export class PostStreamApplication {
    * raw anchor sitting on one of them, never advances (#2523, #1569). The only exact
    * cursor is the `last_post_score` Nexus returned for the deepest page, persisted on the
    * row as `tailCursor`. Rows without one (written before it was tracked, or seeded by
-   * bootstrap) fall back once to the last resolvable post timestamp — bookmark time for
-   * bookmark streams — and their first Nexus page persists the real cursor.
+   * bootstrap) fall back once to the last resolvable post timestamp, and their first Nexus page
+   * persists the real cursor.
    */
   private static async resolveCachedStreamTailCursor(
     streamId: PostStreamId,
@@ -114,10 +117,10 @@ export class PostStreamApplication {
     }
 
     // Iterate backwards through the stream to find the last entry we can resolve
-    // a pagination cursor for. This handles cases where the last PostDetails (or
-    // bookmark row) might be missing.
+    // a pagination cursor for. This handles cases where the last PostDetails
+    // might be missing.
     for (let i = cachedStream.stream.length - 1; i >= 0; i--) {
-      const cursor = await this.getStreamCursorTimestamp(streamId, cachedStream.stream[i]);
+      const cursor = await this.getPostTimestamp(cachedStream.stream[i]);
 
       if (cursor !== undefined) {
         return cursor;
@@ -344,6 +347,11 @@ export class PostStreamApplication {
     // not reuse buffered overflow from a previous pagination session.
     postStreamQueue.remove(streamId);
 
+    // The bookmarks stream is the only copy of the viewer's bookmark order, rebuilt from the
+    // homeserver listing at bootstrap (ADR-0028): no Nexus page could refill it, so it is never
+    // dropped as stale or dirty.
+    if (isBookmarkStream(streamId)) return;
+
     // 0. Rebuild streams invalidated by follow/friendship/profile-tag mutations.
     // Mutations only mark scopes dirty (mounted feeds are never disturbed);
     // the stale membership is dropped here, on the next initial load (#2294).
@@ -421,22 +429,12 @@ export class PostStreamApplication {
     if (!postCompositeId) {
       return FORCE_FETCH_NEW_POSTS;
     }
-    // Bookmark streams stale-check against bookmark time, not the (possibly old)
-    // bookmarked post's `indexed_at` — otherwise bookmarking an old post would mark
-    // the whole cache stale on every load and defeat local-first caching.
-    if (isBookmarkStream(streamId)) {
-      const bookmarkedAt = await this.getBookmarkTimestamp(postCompositeId as string);
-      if (bookmarkedAt !== undefined) {
-        return bookmarkedAt;
-      }
-    }
     const postDetails = await PostDetailsModel.findById(postCompositeId);
     return postDetails?.indexed_at ?? SKIP_FETCH_NEW_POSTS;
   }
 
   /**
-   * Poll-time fallback: the timestamp of the first main-row id that resolves one (bookmark time
-   * for bookmark streams). A main-row id without details, left at the head when the post above
+   * Poll-time fallback: the timestamp of the first main-row id that resolves one. A main-row id without details, left at the head when the post above
    * it was removed, then stalls nothing: the poll runs from the id below it and lists it again
    * for the unread hydration to retry (#2608). `getMainStreamHeadTimestamp` stays literal so the
    * initial load still rebuilds a row whose head has no details.
@@ -447,7 +445,7 @@ export class PostStreamApplication {
       return FORCE_FETCH_NEW_POSTS;
     }
     for (const postCompositeId of postStream.stream) {
-      const timestamp = await this.getStreamCursorTimestamp(streamId, postCompositeId);
+      const timestamp = await this.getPostTimestamp(postCompositeId);
       if (timestamp !== undefined) {
         return timestamp;
       }
@@ -462,12 +460,6 @@ export class PostStreamApplication {
     const unreadCompositePostId = await UnreadPostStreamModel.getStreamHead(streamId);
     if (!unreadCompositePostId) {
       return FORCE_FETCH_NEW_POSTS;
-    }
-    if (isBookmarkStream(streamId)) {
-      const bookmarkedAt = await this.getBookmarkTimestamp(unreadCompositePostId as string);
-      if (bookmarkedAt !== undefined) {
-        return bookmarkedAt;
-      }
     }
     const postDetails = await PostDetailsModel.findById(unreadCompositePostId);
     return postDetails?.indexed_at ?? SKIP_FETCH_NEW_POSTS;
@@ -609,43 +601,6 @@ export class PostStreamApplication {
   }
 
   /**
-   * Bookmark time (`created_at`) for a post, or undefined if it isn't bookmarked
-   * locally. Bookmark streams are ordered by this on Nexus — not the post's own
-   * `indexed_at` — so it is the correct key for both pagination cursors and the
-   * stream-head staleness check.
-   */
-  private static async getBookmarkTimestamp(postId: string): Promise<number | undefined> {
-    try {
-      const bookmark = await BookmarkModel.findById(postId);
-      return typeof bookmark?.created_at === 'number' ? bookmark.created_at : undefined;
-    } catch (error) {
-      Logger.warn('Failed to get bookmark timestamp', { postId, error });
-      return undefined;
-    }
-  }
-
-  /**
-   * Resolve the pagination cursor timestamp for a post within a given stream.
-   *
-   * Bookmark streams must page by bookmark time (see `getBookmarkTimestamp`) rather
-   * than the post's `indexed_at`. Seeding the cursor from the post timestamp desyncs
-   * the cache→Nexus pagination seam — a post bookmarked recently but created long ago
-   * would send an old `start`, skipping or repeating bookmarks. Every other stream
-   * paginates by the post's `indexed_at`.
-   *
-   * Falls open to the post timestamp if the bookmark row is missing.
-   */
-  private static async getStreamCursorTimestamp(streamId: PostStreamId, postId: string): Promise<number | undefined> {
-    if (isBookmarkStream(streamId)) {
-      const bookmarkedAt = await this.getBookmarkTimestamp(postId);
-      if (bookmarkedAt !== undefined) {
-        return bookmarkedAt;
-      }
-    }
-    return this.getPostTimestamp(postId);
-  }
-
-  /**
    * Internal method that performs the actual fetch without mute filtering.
    * This is the original getOrFetchStreamSlice logic, now used as a building block.
    */
@@ -660,6 +615,10 @@ export class PostStreamApplication {
     isCurrent,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    if (isBookmarkStream(streamId)) {
+      return await this.getBookmarkStreamSlice({ streamId, lastPostId, visiblePostIds, limit });
+    }
+
     // Avoid the indexdb query for skip-paginated streams (engagement + single-collection items):
     // their local cache is timestamp-keyed and incompatible with offset pagination.
     let seededFromTimestamp = false;
@@ -720,6 +679,33 @@ export class PostStreamApplication {
       isCurrent,
       order,
     });
+  }
+
+  /**
+   * A page of the bookmarks stream, which is local only: Nexus never sees a v1 bookmark, so the
+   * row `fetchBookmarks` wrote from the homeserver listing is the whole stream (ADR-0028). The
+   * page is a slice of that row; the caller hydrates the posts it has no details for through
+   * `by_ids`, and the stream ends with the row.
+   */
+  private static async getBookmarkStreamSlice({
+    streamId,
+    lastPostId,
+    visiblePostIds,
+    limit,
+  }: Pick<
+    TFetchStreamParams,
+    'streamId' | 'lastPostId' | 'visiblePostIds' | 'limit'
+  >): Promise<TPostStreamChunkResponse> {
+    const cachedStream = await LocalStreamPostsService.read({ streamId });
+    const chunk = cachedStream
+      ? await this.getStreamFromCache({ lastPostId, visiblePostIds, limit, cachedStream })
+      : [];
+    return {
+      nextPageIds: chunk,
+      cacheMissPostIds: await this.getNotPersistedPostsInCache(chunk),
+      nextCursor: undefined,
+      reachedEnd: chunk.length < limit,
+    };
   }
 
   /**
@@ -917,6 +903,11 @@ export class PostStreamApplication {
     isCurrent,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    // The bookmarks stream has no Nexus side (ADR-0028): no page, no head poll.
+    if (isBookmarkStream(streamId)) {
+      return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: true };
+    }
+
     // Nexus bounds the by_content offset (skip ≤ CONTENT_SEARCH_MAX_SKIP, inclusive). A cursor
     // already past the bound could only produce a request Nexus rejects — report the end
     // defensively instead of issuing it.

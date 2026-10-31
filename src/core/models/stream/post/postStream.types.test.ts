@@ -6,7 +6,6 @@ import {
   buildCollectionItemsStreamId,
   buildContentSearchStreamId,
   buildDiscoverCollectionsStreamId,
-  buildFollowedCollectionsStreamId,
   buildPostCollectionsStreamId,
   buildPostReplyStreamId,
   buildSortedAuthorStreamId,
@@ -25,6 +24,7 @@ import {
   isWotDomainStream,
   isWotStream,
   parseContentSearchStreamId,
+  PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -260,18 +260,12 @@ describe('post-stream id builders', () => {
     });
   });
 
-  describe('buildFollowedCollectionsStreamId (Followed Collections)', () => {
-    it('produces the static timeline:bookmarks:collection id', () => {
-      expect(buildFollowedCollectionsStreamId()).toBe('timeline:bookmarks:collection');
-    });
-
-    it('round-trips through breakDownStreamId as named fields', () => {
-      const streamId = buildFollowedCollectionsStreamId();
-      expect(breakDownStreamId(streamId)).toEqual({
-        sorting: StreamSorting.TIMELINE,
-        invokeEndpoint: StreamSource.BOOKMARKS,
-        kind: StreamKind.COLLECTION,
-      });
+  describe('the bookmarks stream (Followed Collections walks it too)', () => {
+    it('is the one bookmark stream, and keeps deleted posts for their placeholders', () => {
+      expect(isBookmarkStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL)).toBe(true);
+      expect(isDeletedRetainingStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL)).toBe(true);
+      expect(isBookmarkStream('timeline:all:collection')).toBe(false);
+      expect(isDeletedRetainingStream('timeline:all:collection')).toBe(false);
     });
   });
 
@@ -355,7 +349,7 @@ describe('isSkipPaginatedStream', () => {
 
   it('returns false for timeline / author / bookmarks streams (timestamp-paginated)', () => {
     expect(isSkipPaginatedStream('timeline:all:all')).toBe(false);
-    expect(isSkipPaginatedStream('timeline:bookmarks:collection')).toBe(false);
+    expect(isSkipPaginatedStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL)).toBe(false);
     expect(isSkipPaginatedStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
     expect(isSkipPaginatedStream(`${TEST_PUBKY}:author`)).toBe(false);
   });
@@ -365,7 +359,7 @@ describe('isCollectionItemsStream', () => {
   it('returns true only for single-collection item streams', () => {
     expect(isCollectionItemsStream(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
     expect(isCollectionItemsStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
-    expect(isCollectionItemsStream('timeline:bookmarks:collection')).toBe(false);
+    expect(isCollectionItemsStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL)).toBe(false);
     // `post_collections:` must not read as the `collection:` prefix.
     expect(isCollectionItemsStream(buildPostCollectionsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(false);
   });
@@ -422,7 +416,7 @@ describe('getPostStreamKind', () => {
     expect(getPostStreamKind('timeline:following:short')).toBe(StreamKind.SHORT);
     expect(getPostStreamKind('total_engagement:friends:image')).toBe(StreamKind.IMAGE);
     expect(getPostStreamKind('timeline:wot:short')).toBe(StreamKind.SHORT);
-    expect(getPostStreamKind('timeline:bookmarks:collection')).toBe(StreamKind.COLLECTION);
+    expect(getPostStreamKind('timeline:following:collection')).toBe(StreamKind.COLLECTION);
   });
 
   it('extracts the kind from 4-segment tag stream ids', () => {
