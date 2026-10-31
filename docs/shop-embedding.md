@@ -2,7 +2,7 @@
 
 App Shop navigation always opens `/shop`, which embeds a separately deployed Shop. There is no enable flag or external fallback. Both apps must appear on the **same scheme, hostname and port** so the SDK can restore App's exact saved grant record. The iframe uses the relative `/shop-embed` prefix; do not configure a cross-origin iframe or redirect this prefix to Shop's public hostname. [ADR 0025](adr/0025-same-origin-shop-session.md) defines the protocol and session ownership.
 
-The loaded iframe and initial loading skeleton fill the space available below the desktop App header, using `--header-offset-main` for its height. On mobile, the header, frame and bottom navigation share a full-height flex shell. Shop owns scrolling inside the iframe; the outer page should have no unused bottom strip or extra vertical scroll.
+The loaded iframe and initial loading skeleton fill the space available below the desktop App header, using `--header-offset-main` for its height, across the full window width. Shop centres its own content column, which lines up with the App header's column, and the mouse wheel scrolls Shop anywhere below the header, including beside the column. Because the frame is as wide as the window, Shop's own breakpoints match the App's. On mobile, the header, frame and bottom navigation share a full-height flex shell. Shop owns scrolling inside the iframe; the outer page should have no unused bottom strip or extra vertical scroll.
 
 ## Configuration
 
@@ -83,6 +83,6 @@ For navigation, set catalog search, filters and sort, scroll down, open a listin
 
 Enable Shop VRT covers the desktop dialog in all configured engines and the phone controls with real coarse-pointer emulation in macOS Chromium. The current Linux Chromium CI environment does not restore native pointer/hover media after disabling touch, so the phone case is skipped there to avoid affecting later tests. The macOS case verifies that desktop input media is restored. Real Safari and mobile signer checks remain part of staging QA.
 
-For layout, check both signed-in and guest chrome at desktop and mobile widths, including a short desktop window and both sides of the 1024px breakpoint. The frame should end at the viewport bottom on desktop and directly above mobile navigation. Scroll long Shop content to its final action and verify it remains reachable without scrolling the outer App page. Repeat while loading and after resizing across the breakpoint; resizing should preserve the iframe document.
+For layout, check both signed-in and guest chrome at desktop and mobile widths, including a short desktop window and both sides of the 1024px breakpoint. The frame should end at the viewport bottom on desktop and directly above mobile navigation. Scroll long Shop content to its final action and verify it remains reachable without scrolling the outer App page. On desktop, also scroll with the pointer beside the Shop column: Shop must scroll, and only one scrollbar may show, at the window edge. Repeat while loading and after resizing across the breakpoint; resizing should preserve the iframe document.
 
 Protocol and session ownership: [ADR 0025](adr/0025-same-origin-shop-session.md).

@@ -23,11 +23,9 @@ export function ShopEmbed() {
     >
       <MobileHeader showLeftButton={false} showRightButton={false} />
       {/* Shop owns document scrolling. Desktop reserves space for the App header;
-          mobile chrome shares the full-height shell with the frame. */}
-      <Container
-        overrideDefaults
-        className="flex min-h-0 flex-1 flex-col lg:container lg:mx-auto lg:w-full lg:max-w-(--container-max-width) lg:px-6 xl:px-0"
-      >
+          mobile chrome shares the full-height shell with the frame. The frame spans the
+          window width so the wheel reaches Shop beside its content; Shop centres its own column. */}
+      <Container overrideDefaults className="flex min-h-0 flex-1 flex-col">
         {initialSrc ? (
           <iframe
             ref={iframe}
