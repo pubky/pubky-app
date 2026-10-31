@@ -161,10 +161,12 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     }
   }, [mode, userDetails, pubky]);
 
-  // The account update's one-shot note on values it could not carry over (D17). Read from this
-  // browser's record once the form has loaded, so the server render never reads storage.
+  // The account update's one-shot note on values it could not carry over (D17), on the settings
+  // page only (not the onboarding revisit). Read from this browser's record once the form has
+  // loaded, so the server render never reads storage.
+  const hasMigrationNotice = mode === 'edit' && !editRedirectTo;
   const migrationNotice =
-    mode === 'edit' && pubky && !isLoading && !migrationNoticeAcknowledged
+    hasMigrationNotice && pubky && !isLoading && !migrationNoticeAcknowledged
       ? SocialMigrationController.getPendingProfileNotice(pubky)
       : null;
 
@@ -420,8 +422,10 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       } else {
         await ProfileController.commitUpdate({ pubky, changes });
         // A saved profile is the user's answer to the account update's note
-        SocialMigrationController.acknowledgeProfileNotice(pubky);
-        setMigrationNoticeAcknowledged(true);
+        if (hasMigrationNotice) {
+          SocialMigrationController.acknowledgeProfileNotice(pubky);
+          setMigrationNoticeAcknowledged(true);
+        }
         // Update local avatar store: set NEW blob URL if new avatar, clear if deleted
         // We create a separate blob URL so the form's cleanup can safely revoke its own
         if (avatarChanged) {
@@ -496,6 +500,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     editRedirectTo,
     idleSubmitText,
     isEditProfileDirty,
+    hasMigrationNotice,
     setShowWelcomeDialog,
     router,
   ]);

@@ -24,6 +24,34 @@ const mockHandlers = {
 
 const mockUseProfileForm = vi.fn();
 
+const profileFormReturn = (migrationNotice: { profileImage: number; profileLinks: number } | null = null) => ({
+  state: {
+    isLoading: false,
+    name: 'Test User',
+    bio: 'Test bio',
+    links: [],
+    avatarPreview: null,
+    avatarFile: null,
+    isSaving: false,
+    submitText: 'Save Profile',
+    migrationNotice,
+  },
+  errors: {
+    nameError: null,
+    bioError: null,
+    linkUrlErrors: [],
+    avatarError: null,
+  },
+  handlers: mockHandlers,
+  cropDialog: {
+    cropDialogOpen: false,
+    pendingAvatarPreview: null,
+    pendingAvatarFile: null,
+  },
+  fileInputRef: { current: null },
+  isSubmitDisabled: false,
+});
+
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => ({
     userDetails: { name: 'Test User', bio: 'Test bio' },
@@ -65,33 +93,7 @@ describe('EditProfileForm', () => {
       session: mockSession(),
       restoreStatus: 'ready',
     });
-    mockUseProfileForm.mockReturnValue({
-      state: {
-        isLoading: false,
-        name: 'Test User',
-        bio: 'Test bio',
-        links: [],
-        avatarPreview: null,
-        avatarFile: null,
-        isSaving: false,
-        submitText: 'Save Profile',
-        migrationNotice: null,
-      },
-      errors: {
-        nameError: null,
-        bioError: null,
-        linkUrlErrors: [],
-        avatarError: null,
-      },
-      handlers: mockHandlers,
-      cropDialog: {
-        cropDialogOpen: false,
-        pendingAvatarPreview: null,
-        pendingAvatarFile: null,
-      },
-      fileInputRef: { current: null },
-      isSubmitDisabled: false,
-    });
+    mockUseProfileForm.mockReturnValue(profileFormReturn());
   });
 
   it('renders without crashing', () => {
@@ -143,10 +145,8 @@ describe('EditProfileForm', () => {
     const ONE_LINK = 'One of your profile links could not be carried over. Check your links.';
     const SOME_LINKS = 'Some of your profile links could not be carried over. Check your links.';
 
-    const withNotice = (migrationNotice: { profileImage: number; profileLinks: number } | null) => {
-      const value = mockUseProfileForm();
-      mockUseProfileForm.mockReturnValue({ ...value, state: { ...value.state, migrationNotice } });
-    };
+    const withNotice = (migrationNotice: { profileImage: number; profileLinks: number }) =>
+      mockUseProfileForm.mockReturnValue(profileFormReturn(migrationNotice));
 
     it('renders nothing without a pending notice', () => {
       render(<EditProfileForm />);

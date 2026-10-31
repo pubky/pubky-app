@@ -490,6 +490,23 @@ describe('useProfileForm account update notice', () => {
     expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(false);
   });
 
+  it('leaves the notice to the settings page on the onboarding revisit', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    const { result } = renderHook(() =>
+      useProfileForm({ mode: 'edit', pubky, userDetails, redirectTo: ONBOARDING_ROUTES.TAGS }),
+    );
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+    expect(result.current.state.migrationNotice).toBeNull();
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledOnce();
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(true);
+  });
+
   it('keeps the notice when the save fails', async () => {
     writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
     vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(new Error('offline'));
