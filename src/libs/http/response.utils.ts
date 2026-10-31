@@ -42,6 +42,18 @@ export async function parseResponseOrThrow<T>(
 }
 
 /**
+ * JSON held in `bytes`, or `undefined` for an empty or invalid body. Quiet: the caller decides
+ * whether a document that does not parse is worth reporting.
+ */
+export function parseJsonBytesOrUndefined<T>(bytes: Uint8Array): T | undefined {
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes)) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Parses Retry-After header into delay seconds.
  * Supports either delta-seconds ("120") or HTTP-date format.
  *

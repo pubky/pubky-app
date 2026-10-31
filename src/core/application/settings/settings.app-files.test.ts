@@ -28,6 +28,7 @@ const settings = (overrides?: Partial<SettingsState>): SettingsState => ({
 // The real normalizer and application against the in-memory homeserver.
 describe('settings in the app private namespace', () => {
   let homeserver: ReturnType<typeof stubMemoryHomeserver>;
+  const readUrls = () => homeserver.spies.getBytesIfExists.mock.calls.map(([url]) => url);
   const file = async (path: string) =>
     (await homeserver.session.storage.exists(path))
       ? JSON.parse(new TextDecoder().decode(await homeserver.session.storage.getBytes(path)))
@@ -58,7 +59,7 @@ describe('settings in the app private namespace', () => {
     );
 
     expect(await SettingsApplication.fetchFromHomeserver(pubky)).toMatchObject({ version: 2 });
-    expect(homeserver.spies.request.mock.calls.map(([params]) => params.url)).toEqual([`pubky://${pubky}${V1_PATH}`]);
+    expect(readUrls()).toEqual([`pubky://${pubky}${V1_PATH}`]);
   });
 
   it('reads the 0.x file while the v1 file is absent, without writing it', async () => {
@@ -118,11 +119,13 @@ describe('settings in the app private namespace', () => {
         SettingsNormalizer.to(settings({ version: 8 }), pubky).settings,
       );
       homeserver.spies.request.mockClear();
+      homeserver.spies.getBytesIfExists.mockClear();
 
       const adopted = await SettingsApplication.initializeSettings(pubky, settings({ version: 1 }));
 
       expect(adopted).toMatchObject({ version: 3 });
-      expect(homeserver.spies.request.mock.calls.map(([params]) => params.url)).toEqual([`pubky://${pubky}${V1_PATH}`]);
+      expect(readUrls()).toEqual([`pubky://${pubky}${V1_PATH}`]);
+      expect(homeserver.spies.request).not.toHaveBeenCalled();
     });
   });
 });

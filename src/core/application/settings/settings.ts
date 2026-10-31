@@ -1,5 +1,5 @@
-import { hasHttpStatus } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { parseJsonBytesOrUndefined } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
@@ -126,25 +126,23 @@ export class SettingsApplication {
   private static async fetchSettingsAt(url: string): Promise<SettingsState | null> {
     Logger.info('[Settings] Pulling from homeserver', { url });
 
-    try {
-      const settingsJson = await HomeserverService.request<SettingsJson>({ method: HttpMethod.GET, url });
-
-      if (!settingsJson) {
-        Logger.info('[Settings] Pull complete, no settings found');
-        return null;
-      }
-
-      const settings = SettingsNormalizer.from(settingsJson);
-      Logger.info('[Settings] Pull complete', { settings });
-      return settings;
-    } catch (error) {
-      // Handle 404, settings don't exist yet
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-        Logger.info('[Settings] Pull complete, settings file not found (404)');
-        return null;
-      }
-      throw error;
+    // A 404 is the usual answer until the first write (a new or just-migrated account), so it is
+    // read as absent without reporting an error; any other failure still rejects.
+    const stored = await HomeserverService.getBytesIfExists(url);
+    if (!stored) {
+      Logger.info('[Settings] Pull complete, settings file not found (404)');
+      return null;
     }
+
+    const settingsJson = parseJsonBytesOrUndefined<SettingsJson>(stored.bytes);
+    if (!settingsJson) {
+      Logger.warn('[Settings] Pull complete, the settings file holds no JSON document', { url });
+      return null;
+    }
+
+    const settings = SettingsNormalizer.from(settingsJson);
+    Logger.info('[Settings] Pull complete', { settings });
+    return settings;
   }
 
   /**
