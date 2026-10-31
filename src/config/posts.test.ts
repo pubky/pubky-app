@@ -22,11 +22,11 @@ describe('post limits sourced from pubky-social-specs', () => {
     expect(COLLECTION_COVER_IMAGE_URL_MAX_LENGTH).toBe(300);
   });
 
-  it('accepts every MIME type the 0.x package accepted, in the same order, plus text/csv', () => {
-    // Both packages are installed while the port lands; the 0.x list is the baseline nobody loses.
-    const legacy = getValidMimeTypes();
-    expect(POST_SUPPORTED_ATTACHMENT_MIME_TYPES.filter((mime) => legacy.includes(mime))).toEqual(legacy);
-    expect(POST_SUPPORTED_ATTACHMENT_MIME_TYPES.filter((mime) => !legacy.includes(mime))).toEqual(['text/csv']);
+  it('accepts exactly the MIME types the 0.x package accepted, in the same order', () => {
+    // Both packages are installed while the port lands. The v1 table also allows text/csv; supporting
+    // it is a deferred follow-up, so the list is pinned to the 0.x one.
+    expect(POST_SUPPORTED_ATTACHMENT_MIME_TYPES).toEqual(getValidMimeTypes());
+    expect(POST_SUPPORTED_ATTACHMENT_MIME_TYPES).not.toContain('text/csv');
   });
 
   it('keeps the article cover image-only', () => {
