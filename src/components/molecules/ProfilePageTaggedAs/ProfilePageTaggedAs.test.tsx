@@ -4,12 +4,21 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
 
+const { mockPush, mockRequireAuth } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockRequireAuth: vi.fn((action: () => void) => action()),
+}));
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   usePathname: () => '/test',
   useRouter: () => ({
-    push: vi.fn(),
+    push: mockPush,
   }),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
 }));
 
 // Mock TaggedItem. The avatar marker only renders when `hideAvatars` is falsy,
@@ -60,22 +69,45 @@ describe('ProfilePageTaggedAs', () => {
     expect(taggedItems).toHaveLength(defaultTags.length);
   });
 
-  it('renders Add Tag button', () => {
-    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} />);
-    const addTagButton = screen.getByText(/Add Tag/);
-    expect(addTagButton).toBeInTheDocument();
+  it('renders a See all button with the unique tag count', () => {
+    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} />);
+    expect(screen.getByRole('button', { name: 'See all (7)' })).toBeInTheDocument();
+    expect(screen.queryByText('Add Tag')).not.toBeInTheDocument();
   });
 
-  it('renders Add Tag button when viewing other profile', () => {
-    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} pubky="pk:abc123" />);
-    const addTagButton = screen.getByText(/Add Tag/);
-    expect(addTagButton).toBeInTheDocument();
+  it('counts unique tags, not the preview rows', () => {
+    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={12} />);
+    expect(screen.getAllByTestId('tagged-item')).toHaveLength(defaultTags.length);
+    expect(screen.getByRole('button', { name: 'See all (12)' })).toBeInTheDocument();
   });
 
-  it('Add Tag button has correct styling', () => {
-    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} />);
-    const addTagButton = screen.getByText(/Add Tag/).closest('button');
-    expect(addTagButton).toHaveClass('border', 'border-border', 'bg-foreground/5');
+  it('navigates a signed-in viewer to the viewed profile tagged page through the auth gate', () => {
+    mockRequireAuth.mockClear();
+    mockPush.mockClear();
+    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} pubky="pk:abc123" />);
+    fireEvent.click(screen.getByRole('button', { name: 'See all (7)' }));
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/profile/pk:abc123/tagged');
+  });
+
+  it('does not navigate a guest to the tagged sub-route, which the route guard would redirect', () => {
+    // A guest's requireAuth opens the sign-in dialog and never runs the action.
+    mockRequireAuth.mockClear();
+    mockRequireAuth.mockImplementationOnce(() => undefined);
+    mockPush.mockClear();
+    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} pubky="pk:abc123" />);
+    fireEvent.click(screen.getByRole('button', { name: 'See all (7)' }));
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('See all button has correct styling', () => {
+    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} />);
+    expect(screen.getByRole('button', { name: 'See all (7)' })).toHaveClass(
+      'border',
+      'border-border',
+      'bg-foreground/5',
+    );
   });
 
   it('has correct container structure', () => {
@@ -149,7 +181,7 @@ describe('ProfilePageTaggedAs - mobile variant', () => {
   it('keeps the sidebar variant free of the input and avatars', () => {
     render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} onTagAdd={mockOnTagAdd} />);
     expect(screen.getByText('Tagged as')).toBeInTheDocument();
-    expect(screen.getByText('Add Tag')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'See all (7)' })).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('add tag')).not.toBeInTheDocument();
     expect(screen.queryByTestId('tagged-item-avatars')).not.toBeInTheDocument();
   });
