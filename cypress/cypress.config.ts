@@ -2,6 +2,8 @@ import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
 import { appendFileSync, existsSync, readdirSync, rename, rm, unlink } from 'fs';
+import { createNexusTasks } from './plugins/nexus';
+import { createSeedTasks } from './plugins/seed';
 import { defaultMs } from './support/slow-down';
 
 config({ path: '../.env' });
@@ -26,6 +28,9 @@ export default defineConfig({
       homeserverAdminUrl: process.env['HOMESERVER_ADMIN_URL'] || 'http://localhost:6288/generate_signup_token',
       homeserverAdminPassword: process.env['HOMESERVER_ADMIN_PASSWORD'] || 'admin',
       nexusUrl: process.env['PUBKY_RUNTIME_NEXUS_URL'] || 'http://localhost:8080',
+      // The pubky-testnet homeserver key, which the app's testnet mode also defaults to
+      homeserverPublicKey:
+        process.env['PUBKY_RUNTIME_HOMESERVER'] || '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo',
     },
     expose: {
       // slow down execution more in CI to avoid flaky tests
@@ -36,7 +41,7 @@ export default defineConfig({
 
     // Plugins
 
-    setupNodeEvents(on, _config) {
+    setupNodeEvents(on, cypressConfig) {
       on('before:browser:launch', (browser, launchOptions) => {
         if (browser.family === 'firefox') {
           // Firefox to treat localhost as secure context (needed for win.navigator.clipboard)
@@ -136,6 +141,20 @@ export default defineConfig({
           return null; // return null to indicate task completion
         },
       });
+
+      // Seed supporting users and activity through the homeserver API (see plugins/seed.ts)
+      on(
+        'task',
+        createSeedTasks({
+          homeserverAdminUrl: String(cypressConfig.env['homeserverAdminUrl']),
+          homeserverAdminPassword: String(cypressConfig.env['homeserverAdminPassword']),
+          homeserverPublicKey: String(cypressConfig.env['homeserverPublicKey']),
+          nexusUrl: String(cypressConfig.env['nexusUrl']),
+        }),
+      );
+
+      // Wait for a phase's seeds to be indexed, all at once (see plugins/nexus.ts)
+      on('task', createNexusTasks(String(cypressConfig.env['nexusUrl'])));
     },
     experimentalModifyObstructiveThirdPartyCode: true,
     chromeWebSecurity: false,

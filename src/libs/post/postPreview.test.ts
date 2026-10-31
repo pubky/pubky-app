@@ -63,6 +63,15 @@ describe('deriveTextPreview', () => {
     expect(deriveTextPreview({ content, kind: 'short', lock: LOCK_URL, deleted: false })).toBe(DEFAULT_LOCK_TITLE);
   });
 
+  // #2433: an untitled lock is named by its saved kind, as `LockedPostCard` names it.
+  it.each([
+    ['image', 'Locked image'],
+    [undefined, 'Locked content'],
+  ])('names an untitled lock announcement of kind %s "%s"', (contentKind, title) => {
+    const content = JSON.stringify({ lock_title: '', teaser_description: 'A peek', content_kind: contentKind });
+    expect(deriveTextPreview({ content, kind: 'short', lock: LOCK_URL, deleted: false })).toBe(title);
+  });
+
   it('ignores a whitespace-only lock title', () => {
     const content = JSON.stringify({ lock_title: '   ', teaser_description: 'A peek' });
     expect(deriveTextPreview({ content, kind: 'short', lock: LOCK_URL, deleted: false })).toBe(DEFAULT_LOCK_TITLE);

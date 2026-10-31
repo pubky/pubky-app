@@ -1,23 +1,30 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TLockConfig } from '@/application/locks/locks.types';
 import { getLockServer, getPaykitServerUrl } from '@/config/network';
+import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
 import { usePaidUnlockAvailability } from '@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
 import { buildArticleContent } from '@/libs/post/articleContent';
-import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
+import { getLockContentDisplay } from '@/libs/post/lockContentKind';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import { inferPostKindForCreate, toLocalPostKind } from '@/pipes/post/post.kind';
+import { inferPostKindForCreate, toLocalPostKind, toLockContentKind } from '@/pipes/post/post.kind';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
-import type { UsePostInputLockOptions, UsePostInputLockReturn } from './usePostInputLock.types';
+import type { TLockDraft, UsePostInputLockOptions, UsePostInputLockReturn } from './usePostInputLock.types';
+
+/** The kind a lock announcement saves for a captured draft, inferred as a normal post's would be (#2433). */
+const contentKindOf = (draft: TLockDraft) =>
+  toLockContentKind(
+    inferPostKindForCreate({ content: draft.content, attachments: draft.attachments, isArticle: draft.isArticle }),
+  );
 
 /** Turns raw files into the local-blob attachment shape shown before the remote copies are ready. */
 const filesToLocalAttachments = (files: File[]) =>
@@ -63,6 +70,16 @@ export function usePostInputLock({
   // The auth modal fires `onOpenChange(false)` on both cancel and the success "Continue"; this flag
   // lets the close handler tell them apart so success advances instead of reverting the switch.
   const advancingFromAuth = useRef(false);
+  // Bumped on every switch change, so a Paykit answer that lands after the creator switched off (or on
+  // again) opens nothing.
+  const setupCheck = useRef(0);
+  // The composer as it stands now, for a capture made after an await: the Paykit check below leaves the
+  // composer editable, so the draft is read when its answer lands, not from the render that started it.
+  // Written from an effect (not during render) so the React Compiler `refs` rule holds.
+  const latest = useRef({ captureComposer, canEnable });
+  useEffect(() => {
+    latest.current = { captureComposer, canEnable };
+  });
   const timelineFeed = useTimelineFeedContext();
 
   const lockServerPubky = getLockServer() ?? '';
@@ -80,6 +97,35 @@ export function usePostInputLock({
   const isLocksSetUp = () => {
     const store = useLocksAuthStore.getState();
     return store.selectIsLocksAuthenticated() && store.selectIsPaykitConnected() && !needsSessionUpgrade;
+  };
+
+  /**
+   * Signed in and on a session that reaches `/priv`, with only the Paykit answer unknown (after a reload or a
+   * new Locks session). The Lock Server is asked before any dialog opens, so a creator whose Bitkit payout
+   * account is already set up goes straight to the price (#2997). `setup_required`, `unavailable` or a failed
+   * read open the setup modal, which checks again and shows the reason, as before.
+   */
+  const openLockSetup = async (check: number) => {
+    let status: Awaited<ReturnType<typeof LocksController.fetchPaykitSetupStatus>> | null = null;
+    try {
+      status = await LocksController.fetchPaykitSetupStatus(lockConfig?.asset ?? 'BTC');
+    } catch {
+      // Already reported by the Err factory; the modal retries and explains.
+    }
+    if (check !== setupCheck.current) return;
+    // Capture only now: the creator could keep typing while the Lock Server answered (#2997).
+    const draft = latest.current.canEnable ? latest.current.captureComposer() : null;
+    if (!draft) {
+      resetLock();
+      return;
+    }
+    holdDraft(draft);
+    if (status === 'ready') {
+      LocksController.markPaykitConnected();
+      setIsLockDialogOpen(true);
+    } else {
+      setIsAuthDialogOpen(true);
+    }
   };
 
   // Optimistic commit of the just-published announcement, like a normal post: local blobs (so the
@@ -111,6 +157,14 @@ export function usePostInputLock({
     })();
   };
 
+  const lockedKind = inferPostKindForCreate({
+    content: lockDraft?.content ?? '',
+    attachments: lockDraft?.attachments,
+    isArticle: lockDraft?.isArticle,
+  });
+  // Saved in the announcement, so the card shows what is locked before anyone unlocks it (#2433).
+  const lockContentKind = lockDraft ? contentKindOf(lockDraft) : undefined;
+
   // Once the switch is on the composer holds the announcement; the locked post is the captured draft,
   // whose kind is inferred exactly as a normal post would be (link / image / video / …).
   // An article draft is serialized the same way a normal publish would (`usePost`): title + body as
@@ -122,20 +176,14 @@ export function usePostInputLock({
       content: lockDraft?.isArticle
         ? buildArticleContent(lockDraft.articleTitle, lockDraft.serializedArticle.body)
         : (lockDraft?.content ?? ''),
-      kind: toLocalPostKind(
-        inferPostKindForCreate({
-          content: lockDraft?.content ?? '',
-          attachments: lockDraft?.attachments,
-          isArticle: lockDraft?.isArticle,
-        }),
-      ),
+      kind: toLocalPostKind(lockedKind),
       attachments: [
         ...(lockDraft?.attachments ?? []),
         ...(lockDraft?.isArticle ? lockDraft.serializedArticle.inlineFiles : []),
       ],
     },
     announcement: {
-      teaser: { lock_title: lockTitle, teaser_description: announcementContent },
+      teaser: { lock_title: lockTitle, teaser_description: announcementContent, content_kind: lockContentKind },
       attachments: announcementAttachments,
       tags: announcementTags,
     },
@@ -151,6 +199,15 @@ export function usePostInputLock({
     setLockTitle('');
   };
 
+  /** The composer holds the content to be locked: snapshot it, leaving it on screen behind the dialogs. */
+  const holdDraft = (draft: TLockDraft) => {
+    setLockDraft(draft);
+    setLockEnabled(true);
+    // Seed the card's title with the default for what is being locked, so it reads as real, editable text
+    // (not a placeholder). A title the creator edits is kept as typed (#2433).
+    setLockTitle(getLockContentDisplay(contentKindOf(draft)).title);
+  };
+
   /** The lock was abandoned: the captured content is a normal post again. */
   const revertToNormalPost = () => {
     if (lockDraft) restoreComposer(lockDraft);
@@ -158,6 +215,7 @@ export function usePostInputLock({
   };
 
   const onCheckedChange = (checked: boolean) => {
+    setupCheck.current += 1;
     if (!checked) {
       revertToNormalPost();
       return;
@@ -168,15 +226,21 @@ export function usePostInputLock({
     // Likewise while paid unlocks are held for the creator's region: the switch is disabled and says why.
     if (paidUnlocks.status !== 'available') return;
 
+    // Signed in with only the Bitkit answer unknown: the switch shows on while the Lock Server is asked,
+    // and the draft is captured when the answer lands (`openLockSetup`), so edits made meanwhile are kept.
+    const store = useLocksAuthStore.getState();
+    if (!isLocksSetUp() && store.selectIsLocksAuthenticated() && !needsSessionUpgrade) {
+      setLockEnabled(true);
+      void openLockSetup(setupCheck.current);
+      return;
+    }
+
     // The composer currently holds the content to be locked. Snapshot it, but leave it on screen so the
     // creator still sees their draft behind the auth/lock dialogs — it is only swapped for the
     // empty announcement composer once the lock is applied (see `handleLockApplied`).
     const draft = captureComposer();
     if (!draft) return;
-    setLockDraft(draft);
-    setLockEnabled(true);
-    // Seed the card's title with the default so it reads as real, editable text (not a placeholder).
-    setLockTitle(DEFAULT_LOCK_TITLE);
+    holdDraft(draft);
 
     // Gate on Locks setup: fully set up → lock content dialog; otherwise the modal, which opens at
     // whichever step is still missing.
@@ -208,12 +272,21 @@ export function usePostInputLock({
   const handleLockApplied = (config: TLockConfig) => {
     setLockConfig(config);
     setIsLockDialogOpen(false);
-    // Only now swap the still-visible locked draft for the empty announcement composer.
-    clearComposer();
+    // Only the first Apply swaps the still-visible locked draft for the empty announcement composer. A
+    // price change keeps the announcement the creator is writing.
+    if (!isLockConfigured) clearComposer();
   };
 
-  // Dismissing the lock dialog without applying abandons the lock.
-  const closeLockDialog = () => revertToNormalPost();
+  const changeLockPrice = () => setIsLockDialogOpen(true);
+
+  // Dismissing the first lock dialog abandons the lock; dismissing a price change keeps the applied price.
+  const closeLockDialog = () => {
+    if (isLockConfigured) {
+      setIsLockDialogOpen(false);
+      return;
+    }
+    revertToNormalPost();
+  };
 
   // The session was rejected while publishing. Reopen sign-in, keeping the draft and the configured
   // price so the creator only has to sign in again, not redo the lock.
@@ -270,8 +343,10 @@ export function usePostInputLock({
     isLockDialogOpen,
     closeLockDialog,
     handleLockApplied,
+    changeLockPrice,
     lockTitle,
     setLockTitle,
+    lockContentKind,
     submitOrPublish,
     isPublishing,
   };

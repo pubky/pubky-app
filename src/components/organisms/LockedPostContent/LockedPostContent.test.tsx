@@ -16,7 +16,7 @@ import type {
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
 
-const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
+const { toastMock, payDialogProps } = vi.hoisted(() => ({ toastMock: vi.fn(), payDialogProps: vi.fn() }));
 const pathname = vi.hoisted(() => ({ value: '/home' }));
 
 vi.mock('next/navigation', () => ({ usePathname: () => pathname.value }));
@@ -102,25 +102,22 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   }),
 }));
 vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
-  DialogPayToUnlock: ({
-    open,
-    price,
-    handshakePubky,
-    connectionState,
-    onViewContent,
-  }: {
+  DialogPayToUnlock: (props: {
     open: boolean;
     price: TLockPrice;
     handshakePubky: string | null;
     connectionState: string | null;
     onViewContent: () => void;
-  }) =>
-    open ? (
+  }) => {
+    payDialogProps(props);
+    const { open, price, handshakePubky, connectionState, onViewContent } = props;
+    return open ? (
       <div data-testid="pay-dialog" data-handshake-pubky={handshakePubky} data-connection-state={connectionState}>
         {price.amount}
         <button onClick={onViewContent}>{'Mock view content'}</button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
@@ -284,6 +281,42 @@ describe('LockedPostContent', () => {
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByTestId('spinner')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+  });
+
+  // #2433: the saved kind reaches all three places that show the lock: the reader card, the pay dialog,
+  // and the creator's own card.
+  describe('content kind', () => {
+    const untitledVideo = { lock_title: '', teaser_description: 'A teaser', content_kind: 'video' };
+
+    it('shows an untitled video lock as "Locked video" with the video icon, and tells the pay dialog', () => {
+      mockLockData({
+        lockContent: untitledVideo,
+        lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
+        price: { amount: '1000', asset: 'BTC' as const },
+      });
+      const { container } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked video');
+      expect(container.querySelector('svg.lucide-circle-play')).toBeInTheDocument();
+      expect(payDialogProps).toHaveBeenCalledWith(expect.objectContaining({ contentKind: 'video' }));
+    });
+
+    it('passes the kind to the card of an own lock', async () => {
+      mockLockData({
+        lockContent: untitledVideo,
+        lockFile: asOpaque<LockFile>({ creator: 'pubkypubkyreader' }),
+        price: { amount: '1000', asset: 'BTC' as const },
+      });
+      vi.mocked(LocksController.fetchOwnContent).mockResolvedValue({
+        post: { content: 'my own locked content', kind: 'video', attachments: null },
+        attachments: [],
+      });
+      const { container } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkyreader:POST1" />);
+
+      await waitFor(() => expect(screen.getByText('My locked content')).toBeInTheDocument());
+      expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked video');
+      expect(container.querySelector('svg.lucide-circle-play')).toBeInTheDocument();
+    });
   });
 
   describe('payment lock', () => {

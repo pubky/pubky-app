@@ -58,6 +58,23 @@ export const verifyNotificationCounter = (expectedCount?: number) => {
 };
 
 /**
+ * Waits for the app's service worker to be active, which happens once it has precached every
+ * build chunk. A first visit to the app starts that install, and while it runs its hundreds of
+ * chunk requests share the browser's connections to the Cypress proxy with the app's own
+ * requests: a sign-in's PKARR lookups then time out, and a page can take tens of seconds to load
+ * its first stream page. Resolves at once when the worker is already active, or when the build
+ * has no service worker.
+ */
+export const waitForServiceWorker = () =>
+  cy
+    .window({ log: false })
+    .then({ timeout: 120_000 }, (win) =>
+      'serwist' in win && 'serviceWorker' in win.navigator
+        ? win.navigator.serviceWorker.ready.then(() => undefined)
+        : undefined,
+    );
+
+/**
  * Returns a timeout options object with doubled timeout when not in CI
  * Useful for commands that may need extra time in local development
  */

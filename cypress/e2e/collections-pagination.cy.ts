@@ -1,20 +1,17 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { createCollection } from '../support/collections';
-import { backupDownloadFilePath, userIdFromPubky } from '../support/common';
+import { backupDownloadFilePath } from '../support/common';
 import { goToCollectionsPage } from '../support/header';
 import {
   assertNoRepeatedStreamRequests,
   COLLECTIONS_PAGE_SIZE,
   keyMatchesPostId,
-  postIdFromWriteUrl,
   recordStreamPages,
   waitForNexusStream,
 } from '../support/pagination';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { createCollectionViaApi, seedUserViaApi } from '../support/seed';
 
 const username = 'Mr Collector';
-const authorAlias = 'collectionsAuthor';
 const runId = Date.now().toString();
 
 // One more collection than the My Collections section shows before "Show more"
@@ -37,26 +34,26 @@ const cardIds = ($cards: JQuery<HTMLElement>) =>
 const idsForKeys = (keys: string[]) => keys.map((key) => collectionIds.find((id) => keyMatchesPostId(key, id)) ?? key);
 
 describe('collections pagination', () => {
+  // Seeded through the API: creating a collection in the UI is covered in collections.cy.ts. The author
+  // only signs in for the test, so the section below pages from Nexus.
   before(() => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
-    cy.onboardAsNewUser(username, 'I collect everything', [BackupType.EncryptedFile], authorAlias);
-    cy.get<string>(`@${authorAlias}`).then((pubky) => {
-      authorId = userIdFromPubky(pubky);
+    // Installs the app while the seeds index; the sign-in below waits for the install to finish
+    cy.visit('/');
+
+    seedUserViaApi(username, { bio: 'I collect everything', withRecoveryFile: true }).then((author) => {
+      authorId = author.id;
+      Cypress._.times(COLLECTION_COUNT, (index) => {
+        createCollectionViaApi(author, `Collection ${runId} ${String(index + 1).padStart(2, '0')}`).then(
+          (collection) => {
+            collectionIds.push(collection.id);
+          },
+        );
+      });
     });
 
-    Cypress._.times(COLLECTION_COUNT, (index) => {
-      goToCollectionsPage();
-      createCollection(`Collection ${runId} ${String(index + 1).padStart(2, '0')}`);
-      cy.get<{ request: { url: string } }>('@collectionCreated')
-        .its('request.url')
-        .then((url) => {
-          collectionIds.push(postIdFromWriteUrl(url));
-        });
-    });
-
-    // Signing out clears the local database, so the section below pages from Nexus
-    cy.signOut(HasBackedUp.Yes);
+    // The section is checked against the stream Nexus returns, in Nexus's order
     cy.then(() =>
       waitForNexusStream({ source: 'author', author_id: authorId, kind: 'collection' }, collectionIds).then((keys) => {
         collectionKeys = keys;

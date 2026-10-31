@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatLockPrice, parseLockPrice } from './lockPrice';
+import { formatLockPrice, lockPriceInputValue, parseLockPrice } from './lockPrice';
 
 describe('lock prices', () => {
   it.each([
@@ -7,9 +7,15 @@ describe('lock prices', () => {
     ['USD', '12.34', '1234', '$12.34'],
     ['USD', '0.01', '1', '$0.01'],
     ['BTC', '18446744073709551615', '18446744073709551615', '₿18,446,744,073,709,551,615'],
-  ] as const)('converts %s %s to exact atomic units and formats them', (asset, input, amount, shown) => {
+  ] as const)('converts %s %s to exact atomic units and back, and formats them', (asset, input, amount, shown) => {
     expect(parseLockPrice(input, asset)).toEqual({ amount, asset });
+    expect(lockPriceInputValue({ amount, asset })).toBe(input);
     expect(formatLockPrice({ amount, asset })).toBe(shown);
+  });
+
+  it('gives a whole dollar price its cents, so the field reads it back as the same price', () => {
+    expect(lockPriceInputValue({ amount: '500', asset: 'USD' })).toBe('5.00');
+    expect(parseLockPrice('5.00', 'USD')).toEqual({ amount: '500', asset: 'USD' });
   });
 
   it.each([

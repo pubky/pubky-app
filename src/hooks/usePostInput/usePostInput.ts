@@ -114,6 +114,7 @@ export function usePostInput({
   keepInlineMedia,
 }: UsePostInputOptions): UsePostInputReturn {
   const isLockAnnouncement = editLock != null;
+  const lockContentKind = editLock?.contentKind;
 
   // State
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -510,6 +511,7 @@ export function usePostInput({
         await edit({
           editPostId: editPostId!,
           isLockAnnouncement: isLockAnnouncement || undefined,
+          lockContentKind,
           originalAttachmentUris: seededAttachmentUris,
           originalCoverUri: editCoverUri,
           preservedAttachmentUris: editPreservedUris,
@@ -538,6 +540,7 @@ export function usePostInput({
     edit,
     editPostId,
     isLockAnnouncement,
+    lockContentKind,
     seededAttachmentUris,
     editCoverUri,
     editPreservedUris,

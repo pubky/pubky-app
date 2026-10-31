@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Controller, useWatch } from 'react-hook-form';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -29,12 +30,36 @@ const toSats = (value: string) =>
     .replace(/\D.*$/, '')
     .replace(/^0+(?=\d)/, '');
 
-export function DialogLockContent({ open, onOpenChange, onApplied, focusAfterApplyRef }: DialogLockContentProps) {
+// True when the filter dropped something the creator typed, beyond grouping separators and leading
+// zeros: a decimal or a stray character. The field then says so instead of changing it silently.
+const dropsInput = (value: string) => /\D/.test(value.replace(/[,\s]/g, ''));
+
+const satsFormatter = new Intl.NumberFormat('en-US');
+
+export function DialogLockContent({
+  open,
+  onOpenChange,
+  onApplied,
+  appliedPrice = null,
+  focusAfterApplyRef,
+}: DialogLockContentProps) {
   // Set when Apply Lock closes the dialog, so the close can move focus on instead of restoring it.
   const appliedRef = useRef(false);
-  const { form, submit, reset, changeAsset } = useLockContentForm((config) => {
-    appliedRef.current = true;
-    onApplied(config);
+  // Grouping is applied only while the field is not focused: re-inserting a separator mid-edit moves
+  // the caret to the end, so a correction lands in the wrong place (#2458).
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const [droppedInput, setDroppedInput] = useState(false);
+  const {
+    form,
+    submit,
+    changeAsset: changeFormAsset,
+  } = useLockContentForm({
+    open,
+    price: appliedPrice,
+    onApplied: (config) => {
+      appliedRef.current = true;
+      onApplied(config);
+    },
   });
   const [amount, asset] = useWatch({
     control: form.control,
@@ -44,21 +69,17 @@ export function DialogLockContent({ open, onOpenChange, onApplied, focusAfterApp
   // before it opens would cost a `/api/btc-rate` call on the home feed, Locks users or not.
   const { rate: btcRate, status: rateStatus } = useBtcRate(open && asset === 'BTC');
 
+  const changeAsset = (next: string) => {
+    setDroppedInput(false);
+    changeFormAsset(next);
+  };
+
   const price = parseLockPrice(amount, asset);
   const { isValid, isSubmitting } = form.formState;
   const usdValue = asset === 'BTC' && btcRate && price ? Number(price.amount) * btcRate.satUsd : null;
 
-  const handleOpenChange = (next: boolean) => {
-    if (!next) reset();
-    onOpenChange(next);
-  };
-
-  const handleApply = async () => {
-    if (await submit()) reset();
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         avoidKeyboard
         className="max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
@@ -66,6 +87,8 @@ export function DialogLockContent({ open, onOpenChange, onApplied, focusAfterApp
         // Radix restores focus to whatever had it before the dialog opened (the lock switch). After
         // Apply Lock the creator's next step is the announcement, so focus goes there instead.
         onCloseAutoFocus={(event) => {
+          // Every close drops what was typed (the form re-seeds while closed), so the note goes with it.
+          setDroppedInput(false);
           const target = appliedRef.current ? focusAfterApplyRef?.current : null;
           appliedRef.current = false;
           if (!target) return;
@@ -126,13 +149,49 @@ export function DialogLockContent({ open, onOpenChange, onApplied, focusAfterApp
                     id="lock-amount"
                     inputMode={asset === 'BTC' ? 'numeric' : 'decimal'}
                     value={
-                      asset === 'BTC' && field.value
-                        ? new Intl.NumberFormat('en-US').format(BigInt(field.value))
+                      asset === 'BTC' && field.value && !isAmountFocused
+                        ? satsFormatter.format(BigInt(field.value))
                         : field.value
                     }
-                    onChange={(event) =>
-                      field.onChange(asset === 'BTC' ? toSats(event.target.value) : event.target.value)
-                    }
+                    onFocus={(event) => {
+                      // Only the sats value is grouped; a USD value is shown as typed, so its selection stays.
+                      if (asset !== 'BTC') {
+                        setIsAmountFocused(true);
+                        return;
+                      }
+                      const input = event.currentTarget;
+                      // Ungroup only after the browser has placed the caret (a click) or selected the value (Tab)
+                      // in the grouped text, then carry that selection over to the same digits. Ungrouping in the
+                      // focus task itself drops the select-all and shifts a click by the separators before it.
+                      requestAnimationFrame(() => {
+                        if (document.activeElement !== input) return;
+                        const { value, selectionStart, selectionEnd } = input;
+                        const digitsBefore = (index: number | null) =>
+                          value.slice(0, index ?? value.length).replace(/\D/g, '').length;
+                        const start = digitsBefore(selectionStart);
+                        const end = digitsBefore(selectionEnd);
+                        flushSync(() => setIsAmountFocused(true));
+                        input.setSelectionRange(start, end);
+                      });
+                    }}
+                    onBlur={() => {
+                      setIsAmountFocused(false);
+                      field.onBlur();
+                    }}
+                    onChange={(event) => {
+                      if (asset !== 'BTC') {
+                        field.onChange(event.target.value);
+                        return;
+                      }
+                      // Stays up after the next keystroke: typing "2.4" leaves "24", and the note must still
+                      // be there when the creator looks. Emptying the field clears it.
+                      const raw = event.target.value;
+                      const next = toSats(raw);
+                      const dropped = dropsInput(raw);
+                      setDroppedInput((shown) => dropped || (shown && next !== ''));
+                      field.onChange(next);
+                    }}
+                    aria-describedby={asset === 'BTC' && droppedInput ? 'lock-amount-whole-sats' : undefined}
                     maxLength={27}
                     placeholder="0"
                     className="h-auto flex-1 border-0 bg-transparent p-0 text-base shadow-none"
@@ -147,6 +206,16 @@ export function DialogLockContent({ open, onOpenChange, onApplied, focusAfterApp
               )}
             </Container>
 
+            {/* A live region, rendered before its text: aria-describedby is read only on focus, and the note
+                appears while the field already has it. Empty, it leaves the flow, so the layout does not move. */}
+            <Typography
+              id="lock-amount-whole-sats"
+              role="status"
+              className="pt-1 text-xs text-muted-foreground empty:absolute"
+            >
+              {asset === 'BTC' && droppedInput ? 'Only whole sat amounts are accepted.' : null}
+            </Typography>
+
             {asset === 'BTC' && rateStatus === 'failed' && (
               <Typography className="pt-1 text-xs text-destructive">
                 {"The dollar value can't be shown right now. Your Bitcoin price is unaffected."}
@@ -159,7 +228,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied, focusAfterApp
           <Button
             variant={ButtonVariant.OUTLINE}
             size="lg"
-            onClick={() => handleOpenChange(false)}
+            onClick={() => onOpenChange(false)}
             data-cy="lock-content-cancel"
           >
             {'Cancel'}
@@ -167,7 +236,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied, focusAfterApp
           <Button
             variant={ButtonVariant.DEFAULT}
             size="lg"
-            onClick={handleApply}
+            onClick={() => void submit()}
             disabled={!isValid || isSubmitting}
             // The Button base sets disabled:pointer-events-none, which would swallow the hover and
             // leave the default arrow cursor. A disabled button still cannot fire a click.

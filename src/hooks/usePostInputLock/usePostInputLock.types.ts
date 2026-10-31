@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { TLockConfig } from '@/application/locks/locks.types';
 import type { SerializedArticle } from '@/hooks/usePost/usePost.types';
+import type { TLockContentKind } from '@/services/locks/locks.types';
 
 /**
  * The composer state captured when the lock switch goes on: this is the content that gets locked.
@@ -89,9 +90,13 @@ export interface UsePostInputLockReturn {
   isLockDialogOpen: boolean;
   closeLockDialog: () => void;
   handleLockApplied: (config: TLockConfig) => void;
+  /** Reopens the lock dialog to change the applied price. Cancelling it keeps the applied price. */
+  changeLockPrice: () => void;
   /** Title of the locked content, shown on the composer's "Locked content" card. */
   lockTitle: string;
   setLockTitle: (title: string) => void;
+  /** The locked post's kind, saved in the announcement for its icon and default title. Unset before a draft is captured. */
+  lockContentKind?: TLockContentKind;
   /**
    * The composer's Post button handler: publishes the locked content (switch on + configured),
    * publishes nothing (switch on, not yet configured), or runs the normal submit (switch off).

@@ -428,6 +428,30 @@ describe('PostMainListRow', () => {
     expect(screen.getByText('BBC')).toBeInTheDocument();
   });
 
+  // #2433: an untitled lock is named by its saved kind, as `LockedPostCard` names it.
+  it.each([
+    ['image', 'Locked image'],
+    [undefined, 'Locked content'],
+  ])('labels an untitled lock announcement of kind %s as "%s"', (contentKind, label) => {
+    mockPostDetails(
+      JSON.stringify({ lock_title: '', teaser_description: 'A peek', content_kind: contentKind }),
+      'short',
+      'pubky://hs/pub/app.locks/lock1.json',
+    );
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
   it('keeps compact list row content truncated', () => {
     const longContent =
       'This reply is intentionally long enough to exceed the compact list row snippet limit so it should keep the ellipsis behavior for replies.';

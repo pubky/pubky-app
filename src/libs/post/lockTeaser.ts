@@ -1,4 +1,4 @@
-import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { LOCK_TEASER_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { getCharacterCount } from '@/libs/utils/utils';
 import { lockPostContentSchema } from '@/services/locks/locks.types';
 
@@ -9,11 +9,16 @@ export const DEFAULT_LOCK_TITLE = 'Locked content';
 export type TLockTeaser = {
   lock_title: string;
   teaser_description: string;
+  /**
+   * The locked post's kind (#2433), carried raw so an edit writes back a kind this build does not know.
+   * Omitted from the JSON when unset, so an old lock re-serializes unchanged.
+   */
+  content_kind?: string;
 };
 
-/** Picks the two fields by name, so a new field is never published before we count its length. */
-export function buildLockTeaserContent({ lock_title, teaser_description }: TLockTeaser): string {
-  return JSON.stringify({ lock_title, teaser_description });
+/** Picks the fields by name, so a new field is never published before we count its length. */
+export function buildLockTeaserContent({ lock_title, teaser_description, content_kind }: TLockTeaser): string {
+  return JSON.stringify({ lock_title, teaser_description, content_kind });
 }
 
 /**
@@ -37,6 +42,15 @@ export function parseLockTeaserContent(content: string): TLockTeaser | null {
 
   const result = lockPostContentSchema.safeParse(raw);
   return result.success ? result.data : null;
+}
+
+/**
+ * The composer's teaser max for the envelope actually written: the budget without a kind, less the length of
+ * the `content_kind` entry when one is written (#2433). A lock with no kind keeps the old limit.
+ */
+export function getLockTeaserMaxLength(contentKind?: string): number {
+  if (contentKind === undefined) return LOCK_TEASER_MAX_CHARACTER_LENGTH;
+  return LOCK_TEASER_MAX_CHARACTER_LENGTH - getCharacterCount(`,"content_kind":${JSON.stringify(contentKind)}`);
 }
 
 /** Measures the serialized string, because JSON escaping adds characters. Counts code points, as the spec does. */

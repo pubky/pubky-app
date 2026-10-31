@@ -9,6 +9,7 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY } from '@/libs/image/imageUploadSizeLimit';
+import { getLockTeaserMaxLength, type TLockTeaser } from '@/libs/post/lockTeaser';
 import { useCreateLockContent } from './useCreateLockContent';
 
 const mocks = vi.hoisted(() => ({
@@ -258,7 +259,7 @@ describe('useCreateLockContent', () => {
   });
 
   describe('announcement length guard', () => {
-    const withTeaser = (teaserOverride: { lock_title: string; teaser_description: string }) => ({
+    const withTeaser = (teaserOverride: TLockTeaser) => ({
       ...params(),
       announcement: { teaser: teaserOverride, attachments: [], tags: [] },
     });
@@ -291,12 +292,32 @@ describe('useCreateLockContent', () => {
       expect(mocks.createLockContent).not.toHaveBeenCalled();
     });
 
+    // #2433: content_kind is part of what is measured, before the lock exists.
+    it('never creates the lock when only the content kind pushes the announcement over', async () => {
+      const { result } = renderHook(() =>
+        useCreateLockContent(
+          withTeaser({
+            lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
+            teaser_description: 'b'.repeat(POST_MAX_CHARACTER_LENGTH - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41),
+            content_kind: 'note',
+          }),
+        ),
+      );
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed' });
+      expect(mocks.createLockContent).not.toHaveBeenCalled();
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
+
     it('publishes when both fields are filled to their maxLengths', async () => {
       const { result } = renderHook(() =>
         useCreateLockContent(
           withTeaser({
             lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
-            teaser_description: 'b'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH),
+            teaser_description: 'b'.repeat(getLockTeaserMaxLength('article')),
+            content_kind: 'article',
           }),
         ),
       );

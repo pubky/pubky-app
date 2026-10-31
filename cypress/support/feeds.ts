@@ -96,6 +96,28 @@ export const expectTimelineContains = (text: string) => {
   cy.contains('[data-cy="timeline-container"] [data-cy="post-card"]', text, { timeout: 30_000 }).should('be.visible');
 };
 
+const NEW_POSTS_BUTTON = '[data-cy="new-posts-button"]:visible';
+
+const timelineShows = ($body: JQuery<HTMLElement>, text: string) =>
+  $body.find('[data-cy="timeline-container"] [data-cy="post-card"]').text().includes(text);
+
+/**
+ * Shows a post published after the feed loaded: a refetch renders it in place, otherwise it waits
+ * behind 'See new posts', which this clicks. Waits on the post's text, not its card, because a card
+ * mounts with a loading skeleton before its post details arrive.
+ */
+export const revealPostInTimeline = (text: string) => {
+  cy.get('body', { timeout: 30_000 })
+    .should(($body) => {
+      const revealable = timelineShows($body, text) || $body.find(NEW_POSTS_BUTTON).length > 0;
+      expect(revealable, `'${text}' or 'See new posts' in the timeline`).to.equal(true);
+    })
+    .then(($body) => {
+      if (!timelineShows($body, text)) cy.get(NEW_POSTS_BUTTON).click();
+    });
+  expectTimelineContains(text);
+};
+
 export const expectTimelineOmits = (text: string) => {
   cy.get('[data-cy="timeline-container"]', { timeout: 20_000 }).should('not.contain.text', text);
 };

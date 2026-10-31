@@ -7,6 +7,7 @@ import {
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
   toLocalPostKind,
+  toLockContentKind,
   toStoredPostKind,
 } from '@/pipes/post/post.kind';
 
@@ -347,5 +348,32 @@ describe('toStoredPostKind', () => {
       expect(stored).not.toBeNull();
       expect(toLocalPostKind(stored!)).toBe(kind);
     }
+  });
+});
+
+describe('toLockContentKind', () => {
+  it.each([
+    ['note', 'note'],
+    ['article', 'article'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+  ] as const)('saves kind %s as %s', (kind, name) => {
+    expect(toLockContentKind(kind)).toBe(name);
+  });
+
+  it('saves nothing for a kind a create never infers', () => {
+    expect(toLockContentKind('collection')).toBeUndefined();
+  });
+
+  // The existing order decides a mixed draft: video over image over file, and audio is a file.
+  it.each([
+    ['a video beside an image', ['video/mp4', 'image/png'], 'video'],
+    ['an image beside a pdf', ['image/png', 'application/pdf'], 'image'],
+    ['audio', ['audio/mpeg'], 'file'],
+  ])('names %s', (_name, types, name) => {
+    const attachments = types.map((type, i) => new File(['x'], `f${i}`, { type }));
+    expect(toLockContentKind(inferPostKindForCreate({ content: '', attachments, isArticle: false }))).toBe(name);
   });
 });
