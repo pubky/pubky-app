@@ -1,3 +1,4 @@
+import { parsePostId } from 'pubky-social-specs';
 import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
@@ -100,16 +101,29 @@ function parseValidPostCompositeId(compositeId: string): { pubky: string; id: st
   }
 }
 
-/**
- * True when `compositeId` parses as `author:postId` and `author` is a valid pubky identifier.
- * Used to reject malformed `/post/:userId/:postId` URLs without treating them as a cache miss.
- */
-export function isValidPostCompositeId(compositeId: string): boolean {
-  return parseValidPostCompositeId(compositeId) !== null;
+function isPostId(id: string): boolean {
+  try {
+    parsePostId(id);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Author pubky from `author:postId` when {@link isValidPostCompositeId} is true; otherwise `null`.
+ * True when `compositeId` parses as `author:postId`, `author` is a valid pubky identifier and
+ * `postId` is a canonical TimestampId (13 Crockford characters).
+ * Used to reject malformed `/post/:userId/:postId` URLs without treating them as a cache miss.
+ */
+export function isValidPostCompositeId(compositeId: string): boolean {
+  const parsed = parseValidPostCompositeId(compositeId);
+  return parsed !== null && isPostId(parsed.id);
+}
+
+/**
+ * Author pubky from `author:postId` when `author` is a valid pubky identifier and `postId` is not
+ * empty; otherwise `null`. Looser than {@link isValidPostCompositeId} on the post id, so a
+ * not-found page for a malformed post id still links the author's profile.
  */
 export function getValidAuthorPubkyFromPostCompositeId(compositeId: string): string | null {
   return parseValidPostCompositeId(compositeId)?.pubky ?? null;

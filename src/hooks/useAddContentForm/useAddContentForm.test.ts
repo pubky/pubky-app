@@ -144,6 +144,27 @@ describe('useAddContentForm', () => {
     );
   });
 
+  it('keeps showing the invalid URL message while a post URL is typed character by character', async () => {
+    const { result } = renderHook(() =>
+      useAddContentForm({ target: { type: 'collection', collectionId: COLLECTION_ID } }),
+    );
+    const typeValue = async (value: string) => {
+      await act(async () => {
+        result.current.form.setValue(ADD_CONTENT_FORM_FIELDS.POST_URL, value, { shouldValidate: true });
+      });
+    };
+
+    for (let length = 1; length < POST_ID.length; length++) {
+      await typeValue(`https://pubky.app/post/${AUTHOR}/${POST_ID.slice(0, length)}`);
+      expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
+        'Enter a valid post URL.',
+      );
+    }
+
+    await typeValue(POST_URL);
+    expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error).toBeUndefined();
+  });
+
   it('rejects missing and deleted posts', async () => {
     mocks.getOrFetchPost.mockResolvedValueOnce(null);
     const { result, rerender } = renderHook(() =>

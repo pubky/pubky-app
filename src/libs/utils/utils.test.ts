@@ -287,12 +287,27 @@ describe('Utils', () => {
     it('returns false for unparseable composite', () => {
       expect(isValidPostCompositeId('nocolon')).toBe(false);
     });
+
+    it('returns false when post id is not a canonical TimestampId', () => {
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:0`)).toBe(false);
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE.slice(0, 12)}`)).toBe(false);
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE.toLowerCase()}`)).toBe(
+        false,
+      );
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:not-a-post-id`)).toBe(false);
+    });
   });
 
   describe('getValidAuthorPubkyFromPostCompositeId', () => {
     it('returns author pubky for a valid composite', () => {
       const composite = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
       expect(getValidAuthorPubkyFromPostCompositeId(composite)).toBe(PUBKY_52_STAGING_FIXTURE);
+    });
+
+    it('returns the author when only the post id is malformed', () => {
+      expect(getValidAuthorPubkyFromPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:not-a-post-id`)).toBe(
+        PUBKY_52_STAGING_FIXTURE,
+      );
     });
 
     it('returns null when composite is invalid', () => {
