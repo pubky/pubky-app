@@ -1,4 +1,4 @@
-import type { SpanJSON, TransactionEvent } from '@sentry/core';
+import type { SpanJSON, StreamedSpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
@@ -71,7 +71,9 @@ function runBeforeSendSpan(span: SpanJSON): SpanJSON {
 
   expect(beforeSendSpan).toBeTypeOf('function');
 
-  return beforeSendSpan!(span);
+  // getSentryInitBase() pins traceLifecycle 'static' and wraps the callback in withStaticSpan,
+  // so the stored callback still receives and returns a static SpanJSON at runtime.
+  return asOpaque<SpanJSON>(beforeSendSpan!(asOpaque<StreamedSpanJSON>(span)));
 }
 
 async function withEnabledSentryCapture(
@@ -98,6 +100,8 @@ async function withEnabledSentryCapture(
   vi.doMock('@sentry/nextjs', () => ({
     withScope,
     captureException,
+    // Mirrors the SDK's withStaticSpan: tags the callback and returns it unchanged.
+    withStaticSpan: <T>(callback: T): T => callback,
   }));
   vi.doMock('@/libs/env/env', () => ({
     Env: {

@@ -438,10 +438,15 @@ describe('ShopEmbed', () => {
   it('preserves host custom and Next history fields while updating the parent router URL', () => {
     const require = createRequire(import.meta.url);
     const source = readFileSync(require.resolve('next/dist/client/components/app-router'), 'utf8');
+    const popStateStart = source.indexOf('function hasMissedTraversal(');
+    const popStateEnd = source.indexOf('function HistoryUpdater(', popStateStart);
     const copyStart = source.indexOf('function copyNextJsInternalHistoryState(');
     const copyEnd = source.indexOf('function Head(', copyStart);
     const effectStart = source.indexOf('    (0, _react.useEffect)(()=>{\n        const originalPushState');
     const effectEnd = source.indexOf('    }, []);', effectStart) + '    }, []);'.length;
+    expect(popStateStart).toBeGreaterThan(-1);
+    expect(popStateEnd).toBeGreaterThan(-1);
+    expect(copyStart).toBeGreaterThan(-1);
     expect(effectStart).toBeGreaterThan(-1);
     const parentTree = { tree: ['shop-wrapper'], renderedSearch: '' };
     window.history.replaceState(
@@ -449,23 +454,25 @@ describe('ShopEmbed', () => {
       '',
       '/shop',
     );
-    const updateUrl = vi.fn();
+    const restore = vi.fn();
     let dispose = () => {};
-    // Use Next's installed public history wrappers; only the reducer boundary is
+    // Use Next's installed public history wrappers; only the navigator boundary is
     // controlled, so a bypass-marker regression is visible to this assertion.
-    runInNewContext(source.slice(copyStart, copyEnd) + source.slice(effectStart, effectEnd), {
-      window,
-      URL,
-      _react: {
-        useEffect: (run: () => () => void) => {
-          dispose = run();
+    runInNewContext(
+      source.slice(popStateStart, popStateEnd) +
+        source.slice(copyStart, copyEnd) +
+        source.slice(effectStart, effectEnd),
+      {
+        window,
+        URL,
+        _react: {
+          useEffect: (run: () => () => void) => {
+            dispose = run();
+          },
         },
-        startTransition: (run: () => void) => run(),
+        _navigator: { restore, traverse: vi.fn() },
       },
-      _routerreducertypes: { ACTION_RESTORE: 'restore' },
-      _useactionqueue: { dispatchAppRouterAction: updateUrl },
-      _approuterinstance: { dispatchTraverseAction: vi.fn() },
-    });
+    );
     try {
       const { frame } = mount();
       fireEvent.load(frame);
@@ -478,11 +485,7 @@ describe('ShopEmbed', () => {
         custom: 'host',
         __pubkyShopEntry: expect.any(String),
       });
-      expect(updateUrl).toHaveBeenCalledExactlyOnceWith({
-        type: 'restore',
-        url: new URL('/shop/marketplace/cart', location.origin),
-        historyState: parentTree,
-      });
+      expect(restore).toHaveBeenCalledExactlyOnceWith(new URL('/shop/marketplace/cart', location.origin), parentTree);
     } finally {
       dispose();
     }

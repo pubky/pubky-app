@@ -73,7 +73,7 @@ describe('ButtonFilters', () => {
   it('applies correct icon classes', () => {
     render(<ButtonFilters />);
 
-    expect(document.querySelector('.lucide-settings2')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-settings-2')).toBeInTheDocument();
   });
 
   it('handles multiple clicks correctly', () => {

@@ -92,12 +92,18 @@ beforeEach(() => {
   };
   mockCreateElement.mockReturnValue(mockAnchorElement);
 
-  global.document = asOpaque<Document>({
-    createElement: mockCreateElement,
-    body: {
-      appendChild: mockAppendChild,
-      removeChild: mockRemoveChild,
-    },
+  // jsdom 30.1 makes globalThis.document getter-only, so a plain assignment
+  // throws; defineProperty replaces the descriptor outright.
+  Object.defineProperty(globalThis, 'document', {
+    value: asOpaque<Document>({
+      createElement: mockCreateElement,
+      body: {
+        appendChild: mockAppendChild,
+        removeChild: mockRemoveChild,
+      },
+    }),
+    writable: true,
+    configurable: true,
   });
 
   // Don't override the entire URL object, just the methods we need

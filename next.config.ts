@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 import { z } from 'zod';
 import withSerwistInit from '@serwist/next';
-import { withSentryConfig } from '@sentry/nextjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import packageJson from './package.json';
 
 const nextConfig: NextConfig = {
@@ -116,7 +116,12 @@ const composedConfig = withSerwist(nextConfig);
 
 export default withSentryConfig(composedConfig, {
   silent: !process.env.CI,
-  disableLogger: true,
+  // SDK v11: `disableLogger` moved to webpack.treeshake.removeDebugLogging.
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
   // Disable the Sentry plugin upload. Docker builds handle Debug-ID injection and optional
   // source-map upload via sentry-cli, while public builds without Sentry credentials skip upload.
   sourcemaps: {

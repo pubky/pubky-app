@@ -70,9 +70,9 @@ vi.mock('next/link', async () => {
           unmountPrefetchableInstance: () => {},
           onNavigationIntent: () => {},
         };
-      if (name === '../components/app-router-instance')
+      if (name === '../components/navigator')
         return {
-          dispatchNavigateAction: (
+          navigate: (
             href: string,
             _type: unknown,
             _scroll: unknown,

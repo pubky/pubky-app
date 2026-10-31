@@ -97,13 +97,16 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
     // local builds fall back to package.json version, and source-map uploads must match it.
     release: Env.NEXT_PUBLIC_APP_VERSION,
     debug: false,
-    sendDefaultPii: false,
     tracesSampleRate: getSentryTracesSampleRate(),
     // Spread, not passed through: the SDK option is a mutable array, and neither sink may mutate the shared list.
     ignoreErrors: [...OBSERVABILITY_IGNORE_ERRORS],
+    // Sentry v11 defaults to streamed spans, which ignores `beforeSendTransaction` and hands
+    // `beforeSendSpan` a StreamedSpanJSON. The scrubbing contract in docs/sentry.md is built on
+    // transaction events + SpanJSON, so pin the static lifecycle.
+    traceLifecycle: 'static',
     beforeSend: filterAndScrubErrorEvent,
     beforeSendTransaction: scrubTransactionEvent,
-    beforeSendSpan: scrubSpanJson,
+    beforeSendSpan: Sentry.withStaticSpan(scrubSpanJson),
   };
 }
 
