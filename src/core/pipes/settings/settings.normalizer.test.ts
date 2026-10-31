@@ -7,7 +7,7 @@ import {
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
-import { restoreMocks, TEST_PUBKY } from '../pipes.test-utils';
+import { TEST_PUBKY } from '../pipes.test-utils';
 
 describe('SettingsNormalizer', () => {
   beforeEach(() => {
@@ -15,7 +15,9 @@ describe('SettingsNormalizer', () => {
     vi.spyOn(Logger, 'debug').mockImplementation(() => {});
   });
 
-  afterEach(restoreMocks);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   // Test data factory
   const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({

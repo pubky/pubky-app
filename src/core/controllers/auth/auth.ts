@@ -1115,8 +1115,7 @@ export class AuthController {
     // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
 
-    // Reset singletons
-    // CoordinatorManager owns TTL lifetime; its auth listener clears session work.
+    // Reset singletons. CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
 
