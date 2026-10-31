@@ -217,4 +217,6 @@ Follow-ups (not in this round): private drafts and `planPublish`, slugs, attachm
 notes UI, published feeds, `createSocialClient`, the 0.x tree sunset (who deletes `/pub/pubky.app/`, when legacy
 reads stop, the `rescan` schedule), bookmark SSE, the auth-store v4 cut-over (contingency only), 1.1 kinds; generic
 file card renders only PDFs; CSV/zip/txt uploads show no card (pre-existing); text/csv attachments (spec allows
-them; deferred).
+them; deferred); media GC for orphaned files (server-side or Nexus-backed reference counting): edits and avatar
+changes never delete media and a post delete skips any file it cannot verify unreferenced (ADR-0027), so orphaned
+files accumulate in each account's storage until then.

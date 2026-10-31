@@ -1,5 +1,6 @@
-import { hashMedia } from 'pubky-social-specs';
-import type { FilesListParams } from '@/application/file/file.types';
+import { buildUri, decodeObject, hashMedia, listPrefix } from 'pubky-social-specs';
+import type { FilesListParams, TMediaFile } from '@/application/file/file.types';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { TGetFileUrlParams, TGetMetadataParams, TUploadFileParams } from '@/controllers/file/file.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -11,14 +12,16 @@ import {
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, isV1MediaUri, parseCompositeId } from '@/models/models.utils';
+import { buildCompositeId, buildCompositeIdFromPubkyUri, isV1MediaUri, parseCompositeId } from '@/models/models.utils';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { pickListedPostIds } from '@/pipes/post/post.head';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { NexusFileService } from '@/services/nexus/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
 import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.types';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 
 /**
  * File Application
@@ -93,40 +96,135 @@ export class FileApplication {
   }
 
   /**
-   * Deletes media the caller no longer references. Media is content addressed, so byte-identical
-   * uploads share one file: a URI another cached post of the author still references is kept.
-   * That check is local-only knowledge (posts never cached on this device are not seen). A 0.x
-   * file URI (`files/{tsid}`, a File object naming a blob) is left alone: its blob is named by the
-   * object this client no longer reads, and the 0.x tree's sunset is a separate task. Every
-   * homeserver delete is idempotent (404 = already gone = success).
+   * Deletes media a deleted post gave up (or a discarded composer session uploaded), but only a
+   * file nothing else of its owner references. Media is content addressed: identical bytes name
+   * one file, so an avatar, several posts and a collection cover can share it (the migrator
+   * dedupes blobs, and two identical uploads collapse to one URI). A file goes only when every
+   * check says it is unreferenced:
    *
-   * @param fileAttachments - The media URIs to delete
+   * 1. the local cache: another cached post's attachments or content (an article's or a
+   *    collection's `cover_image`), or the owner's cached profile image;
+   * 2. the owner's published `profile.json`, read fresh: its `image`;
+   * 3. every public post of the owner, as a fresh Nexus view (`by_ids`) of the posts a LIST of
+   *    the owner's `posts/` directory names: their attachments and content.
+   *
+   * A check that fails, or a Nexus view that misses a listed post (indexing lag, an author Nexus
+   * has not indexed), keeps the file and logs a warning: an orphan is the safe failure, a deleted
+   * shared file breaks every object that still points at it. The skip itself is no error; a read
+   * that fails (a homeserver or Nexus outage) is reported by its service like any other read
+   * (`docs/error-handling.md`), while Nexus lag answers 200 and reports nothing. Private trees are not checked: this
+   * app writes no private object that references public media. A 0.x file URI (`files/{tsid}`, a File object
+   * naming a blob) is left alone: its blob is named by the object this client no longer reads,
+   * and the 0.x tree's sunset is a separate task. Every homeserver delete is idempotent (404 =
+   * already gone = success).
+   *
+   * Edits never call this: an earlier version of the post still references what an edit removed.
+   *
+   * @param fileUris - The media URIs to delete
    * @param excludePostId - The post giving them up, whose own references do not count
    */
-  static async commitDelete(fileAttachments: string[], excludePostId?: string) {
-    await Promise.all(
-      [...new Set(fileAttachments)].map(async (fileUri) => {
-        const fileCompositeId = buildCompositeIdFromPubkyUri({ uri: fileUri, domain: CompositeIdDomain.FILES });
-        if (!fileCompositeId || !isV1MediaUri(fileUri)) return;
+  static async commitDelete(fileUris: string[], excludePostId?: string) {
+    const locallyUnreferenced = await this.filterLocallyUnreferenced(fileUris, excludePostId);
+    if (locallyUnreferenced.length === 0) return;
 
-        if (await LocalFileService.isReferencedElsewhere({ uri: fileUri, excludePostId })) {
-          Logger.debug('[FileApplication] Skipping deletion of shared media', { fileUri });
-          return;
-        }
-        await HomeserverService.deleteIdempotent(fileUri);
-        await LocalFileService.deleteById(fileCompositeId);
-      }),
+    const byOwner = new Map<Pubky, TMediaFile[]>();
+    for (const file of locallyUnreferenced) {
+      const { pubky: owner } = parseCompositeId(file.fileId);
+      byOwner.set(owner, [...(byOwner.get(owner) ?? []), file]);
+    }
+    const unreferenced = await Promise.all(
+      [...byOwner].map(([owner, files]) => this.filterRemotelyUnreferenced(owner, files, excludePostId)),
     );
+    await this.deleteMedia(unreferenced.flat());
   }
 
   /**
    * Deletes freshly uploaded media during a rollback: the files this batch put on the homeserver,
    * never one it found there already (`preexisting`), which another post may reference. Identical
-   * bytes within the batch share one URI, and the same reference check as `commitDelete` applies.
+   * bytes within the batch share one URI. Only the local reference check applies: a file that was
+   * not on the homeserver before this upload can have no other referencer there.
    */
   static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[]) {
-    await this.commitDelete(
-      fileAttachments.filter((attachment) => !attachment.preexisting).map((attachment) => attachment.media.url),
+    await this.deleteMedia(
+      await this.filterLocallyUnreferenced(
+        fileAttachments.filter((attachment) => !attachment.preexisting).map((attachment) => attachment.media.url),
+      ),
+    );
+  }
+
+  /** The v1 media files among `fileUris`, once each, that no cached object other than `excludePostId` references. */
+  private static async filterLocallyUnreferenced(fileUris: string[], excludePostId?: string): Promise<TMediaFile[]> {
+    const candidates = [...new Set(fileUris)].flatMap((uri) => {
+      const fileId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
+      return fileId && isV1MediaUri(uri) ? [{ uri, fileId }] : [];
+    });
+    const referenced = await Promise.all(
+      candidates.map(({ uri }) => LocalFileService.isReferencedElsewhere({ uri, excludePostId })),
+    );
+    return candidates.filter(({ uri }, index) => {
+      if (referenced[index]) Logger.debug('[FileApplication] Skipping deletion of shared media', { fileUri: uri });
+      return !referenced[index];
+    });
+  }
+
+  /**
+   * The files among `files` (all `owner`'s) that neither the owner's published profile nor any of
+   * the owner's public posts references, read fresh from the homeserver and Nexus. Empty when a
+   * check fails or Nexus has not indexed every listed post: the files stay, with a warning.
+   */
+  private static async filterRemotelyUnreferenced(
+    owner: Pubky,
+    files: TMediaFile[],
+    excludePostId?: string,
+  ): Promise<TMediaFile[]> {
+    const fileUris = files.map(({ uri }) => uri);
+    try {
+      const profileUrl = buildUri(owner, 'user');
+      const profile = decodeObject(profileUrl, await HomeserverService.getFreshBytes(profileUrl), 'user');
+      let remaining = files.filter(({ uri }) => uri !== profile.image);
+      if (remaining.length === 0) return [];
+
+      const listing = await HomeserverService.listAll({ baseDirectory: `${listPrefix(owner, 'public')}posts/` });
+      const postIds = pickListedPostIds(listing)
+        .map((id) => buildCompositeId({ pubky: owner, id }))
+        .filter((postId) => postId !== excludePostId);
+      // One batch at a time: `by_ids` is rate limited, and a reference found early ends the scan.
+      for (let start = 0; start < postIds.length && remaining.length > 0; start += NEXUS_STREAM_MAX_LIMIT) {
+        const batch = postIds.slice(start, start + NEXUS_STREAM_MAX_LIMIT);
+        const posts = await NexusPostStreamService.fetchByIds({
+          post_ids: batch,
+          include_attachment_metadata: false,
+          force: true,
+        });
+        const served = new Set(posts.map(({ details }) => buildCompositeId({ pubky: details.author, id: details.id })));
+        const unindexed = batch.filter((postId) => !served.has(postId));
+        if (unindexed.length > 0) {
+          Logger.warn('[FileApplication] Kept media: Nexus has not indexed every post of the owner', {
+            owner,
+            fileUris,
+            unindexed,
+          });
+          return [];
+        }
+        remaining = remaining.filter(
+          ({ uri }) =>
+            !posts.some(({ details }) => details.attachments?.includes(uri) || details.content.includes(uri)),
+        );
+      }
+      return remaining;
+    } catch (error) {
+      Logger.warn('[FileApplication] Kept media whose references could not be checked', { owner, fileUris, error });
+      return [];
+    }
+  }
+
+  /** Deletes each media file on the homeserver, then its local row. */
+  private static async deleteMedia(files: TMediaFile[]) {
+    await Promise.all(
+      files.map(async ({ uri, fileId }) => {
+        await HomeserverService.deleteIdempotent(uri);
+        await LocalFileService.deleteById(fileId);
+      }),
     );
   }
 

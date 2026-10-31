@@ -29,10 +29,8 @@ import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils';
-import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { resolveArticleCover } from '@/libs/post/articleCover';
 import { isAuthorFileUri } from '@/libs/post/articleInlineMedia';
 import { extractHashtagLabelsFromMarkdown, mergeTagLabels } from '@/libs/post/hashtags';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -337,16 +335,13 @@ export class PostController {
    * `coverImage` is required: pass a `File` to replace, the current cover URL
    * string to keep it, or `null` to clear. Callers must not omit it.
    *
-   * Cover cleanup: after the envelope is persisted, if the previous `cover_image`
-   * was a homeserver file URI and is no longer referenced (replaced or cleared),
-   * that file is deleted from the homeserver. Failures during that delete are
-   * logged and swallowed — the edit already succeeded, so a cleanup failure must
-   * not surface as an edit failure (the old file may remain orphaned). External
-   * http(s) covers are never deleted.
+   * A replaced or cleared cover is never deleted: the collection's earlier versions
+   * still reference it, and content-addressed media may be shared with other posts
+   * or the profile (ADR-0027).
    *
    * If a new cover File was uploaded and then edit normalization or `commitEdit`
    * fails, the new file is deleted before rethrowing so the failed edit does not
-   * leave an unreferenced upload.
+   * leave an unreferenced upload (never a file the homeserver held before).
    */
   static async commitEditCollection({
     compositeCollectionId,
@@ -385,7 +380,6 @@ export class PostController {
       });
     }
 
-    const previousCover = currentContent.cover_image;
     let coverImageUrl: string | null = null;
     let uploadedCover: TFileAttachmentResult | null = null;
     if (coverImage instanceof File) {
@@ -437,18 +431,6 @@ export class PostController {
         });
       }
       throw toAppError(error, ErrorService.Local, 'commitEditCollection');
-    }
-
-    // Previous cover is no longer referenced by the envelope (replaced or cleared).
-    // Delete it after a successful persist; if delete fails, the edit still stands.
-    if (isHomeserverFileUri(previousCover) && previousCover !== coverImageUrl) {
-      await FileApplication.commitDelete([previousCover], compositeCollectionId).catch((cleanupError) => {
-        Logger.warn('[PostController.commitEditCollection] Failed to cleanup previous collection cover', {
-          compositeCollectionId,
-          previousCover,
-          cleanupError,
-        });
-      });
     }
   }
 
@@ -555,11 +537,11 @@ export class PostController {
    * Without `attachments` this is a content-only edit. With `attachments`,
    * `kept` URIs are validated against the post's current attachments, `added`
    * files are normalized here (no IO) and uploaded by the application layer,
-   * current attachments not in `kept` are deleted best-effort after a
-   * successful edit, and the post kind is recomputed to match the resulting
-   * attachment set (articles and collections keep their kind). An article's
-   * `coverImage` replaces (a string) or clears (`null`) the envelope's cover;
-   * the cover it replaces is deleted best-effort after a successful edit.
+   * current attachments not in `kept` leave the post, and the post kind is
+   * recomputed to match the resulting attachment set (articles and collections
+   * keep their kind). An article's `coverImage` replaces (a string) or clears
+   * (`null`) the envelope's cover. Nothing an edit removes is deleted: the
+   * earlier versions still reference it (ADR-0027).
    */
   static async commitEdit({ compositePostId, content, attachments, coverImage }: TEditPostParams) {
     const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
@@ -576,17 +558,12 @@ export class PostController {
       });
     }
 
-    // An article's cover: the one stored today, for the GC of a replaced one, and the one asked for.
-    const coverChange: { next?: string | null; removed?: string[] } =
-      coverImage === undefined ? {} : this.articleCoverChange({ current, coverImage, authorId });
-    const coverEdit = coverChange.next === undefined ? {} : { coverImage: coverChange.next };
+    // An article's cover, as asked for.
+    const coverEdit =
+      coverImage === undefined ? {} : { coverImage: this.articleCover({ current, coverImage, authorId }) };
 
     if (!attachments) {
-      await PostApplication.commitEdit({
-        compositePostId,
-        edit: { content, ...coverEdit },
-        removedUris: coverChange.removed,
-      });
+      await PostApplication.commitEdit({ compositePostId, edit: { content, ...coverEdit } });
       return;
     }
 
@@ -630,24 +607,11 @@ export class PostController {
         });
       }
 
-      // Removals are diffed against the seeded snapshot (`original`), never
-      // the live row — only files the user actually saw and removed get
-      // deleted. A cover kept from the stored attachments (a 0.x article's
-      // slot 0, now moving into the envelope) is not a removal. Session
-      // uploads dropped before saving are not our concern here; the composer
-      // session cleans those up itself.
-      const nextOrderSet = new Set(nextOrder);
-      const orderRemovedUris = [
-        ...original.filter((uri) => !nextOrderSet.has(uri) && uri !== coverChange.next),
-        ...(coverChange.removed ?? []).filter((uri) => !nextOrderSet.has(uri)),
-      ];
-
       const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added: [] });
 
       await PostApplication.commitEdit({
         compositePostId,
         edit: { content, attachmentUris: nextOrder, kind, ...coverEdit },
-        removedUris: orderRemovedUris.length > 0 ? [...new Set(orderRemovedUris)] : undefined,
       });
       return;
     }
@@ -657,33 +621,21 @@ export class PostController {
     const nextUris = [...kept, ...fileAttachments.map((f) => f.media.url)];
     const attachmentNames = Object.fromEntries(fileAttachments.map((f) => [f.media.url, f.name]));
 
-    // Removals are diffed against the seeded snapshot (`original`), never the
-    // live row — only files the user actually saw and removed get deleted. A
-    // replaced or cleared cover leaves the envelope and is a removal too. Media
-    // is content addressed: a file removed and added again names the same URI,
-    // so nothing the next version references is a removal.
-    const nextSet = new Set([...nextUris, ...(coverChange.next ? [coverChange.next] : [])]);
-    const removedUris = [
-      ...new Set([...original.filter((uri) => !keptSet.has(uri)), ...(coverChange.removed ?? [])]),
-    ].filter((uri) => !nextSet.has(uri));
-
     const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added });
 
     await PostApplication.commitEdit({
       compositePostId,
       edit: { content, attachmentUris: nextUris, attachmentNames, kind, ...coverEdit },
       fileAttachments: fileAttachments.length > 0 ? fileAttachments : undefined,
-      removedUris: removedUris.length > 0 ? removedUris : undefined,
     });
   }
 
   /**
-   * An article's cover change: `next` is what the envelope should hold (a file URI of the author's
-   * or null), `removed` the stored cover a replaced or cleared one leaves behind. A cover that is
-   * not a homeserver file of the author's is refused: every slot and the cover are subject to hard
-   * deletion when a later edit drops them.
+   * An article's next cover: a file URI of the author's, or null to clear it. A cover that is not a
+   * homeserver file of the author's is refused: readers resolve only the author's own files, and a
+   * delete of the article collects its cover.
    */
-  private static articleCoverChange({
+  private static articleCover({
     current,
     coverImage,
     authorId,
@@ -691,7 +643,7 @@ export class PostController {
     current: PostDetailsModelSchema;
     coverImage: string | null;
     authorId: string;
-  }): { next: string | null; removed?: string[] } {
+  }): string | null {
     if (current.kind !== 'long') {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Only an article has a cover image', {
         service: ErrorService.Local,
@@ -710,9 +662,7 @@ export class PostController {
         },
       );
     }
-    const previous = resolveArticleCover({ content: current.content, attachments: current.attachments }).cover;
-    const removed = previous && previous !== coverImage && isHomeserverFileUri(previous) ? [previous] : undefined;
-    return { next: coverImage, removed };
+    return coverImage;
   }
 
   /**
