@@ -159,3 +159,37 @@ export function getContentWithMention(content: string, caret: number, userId: st
     caret: range.start + mention.length,
   };
 }
+
+/**
+ * The exact string a paste inserts at `start`: an optional leading space (only when the
+ * character before `start` is not already whitespace) followed by `pubky<userId> `.
+ *
+ * Exported so the paste handler can hand the same string to the browser's native
+ * insertion API, keeping the helper and the DOM write in lockstep.
+ */
+export function buildMentionText(content: string, start: number, userId: string): string {
+  const startIndex = clampCaret(content, start);
+  const before = content.slice(0, startIndex);
+  const space = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
+  return `${space}${PUBKY_PREFIX}${userId} `;
+}
+
+/**
+ * Insert a mention at a caret range without consuming an existing mention pattern.
+ *
+ * Paste is a drop, not a completion: the user is handing over a whole key, not typing
+ * one. So unlike `getContentWithMention`, this helper must not look at the text before
+ * the caret — an earlier `@name` on the same line is not the mention being completed,
+ * and writing over it would delete the draft. The mention is written over `[start, end)`
+ * so a highlighted selection is replaced, and a leading space is added only when the
+ * character before the range is not already whitespace.
+ */
+export function insertMentionAtRange(content: string, start: number, end: number, userId: string): MentionInsertion {
+  const startIndex = clampCaret(content, start);
+  const endIndex = clampCaret(content, Math.max(startIndex, end));
+  const inserted = buildMentionText(content, startIndex, userId);
+  return {
+    content: content.slice(0, startIndex) + inserted + content.slice(endIndex),
+    caret: startIndex + inserted.length,
+  };
+}
