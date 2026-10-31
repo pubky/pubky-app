@@ -173,7 +173,9 @@ export function LockedPostContent({
       {unlockedPost || isResolvingOwn ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
-          {isOwnLock && <LockedPostCard title={lockContent.lock_title} price={price} />}
+          {isOwnLock && (
+            <LockedPostCard title={lockContent.lock_title} contentKind={lockContent.content_kind} price={price} />
+          )}
           <div className="flex w-full flex-col gap-4">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
@@ -218,6 +220,7 @@ export function LockedPostContent({
           {regionBlock && <LocksRegionNotice cause={regionBlock.cause} />}
           <LockedPostCard
             title={lockContent.lock_title}
+            contentKind={lockContent.content_kind}
             price={price}
             isLoading={isLockFileLoading || isRegionChecking}
             unlockOpen={isPayOpen}
@@ -233,6 +236,7 @@ export function LockedPostContent({
           open={isPayOpen}
           onOpenChange={setIsPayOpen}
           lockTitle={lockContent.lock_title}
+          contentKind={lockContent.content_kind}
           authorId={authorId}
           price={price}
           stage={stage}
