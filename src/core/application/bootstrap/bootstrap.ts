@@ -164,7 +164,9 @@ export class BootstrapApplication {
     const stored = await HomeserverService.getBytesIfExists(url);
     if (!stored) return null;
     const lastRead = parseJsonBytesOrUndefined<{ timestamp?: unknown } | null>(stored.bytes);
-    return typeof lastRead?.timestamp === 'number' ? lastRead.timestamp : null;
+    if (typeof lastRead?.timestamp === 'number') return lastRead.timestamp;
+    Logger.warn('Last read file holds no timestamp', { url });
+    return null;
   }
 
   /**

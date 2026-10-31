@@ -37,11 +37,16 @@ export function createAuthApprovalMismatchError(reason: AuthApprovalMismatchReas
   return Object.assign(error, { reason });
 }
 
-export function isAuthApprovalMismatchError(error: unknown): error is Error {
+export function isAuthApprovalMismatchError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AuthApprovalMismatch';
 }
 
 /** True when the approval came from the right account but left out a requested permission. */
 export function isAuthApprovalCapabilityError(error: unknown): boolean {
-  return isAuthApprovalMismatchError(error) && 'reason' in error && error.reason === 'capabilities';
+  return (
+    error instanceof Error &&
+    error.name === 'AuthApprovalMismatch' &&
+    'reason' in error &&
+    error.reason === 'capabilities'
+  );
 }

@@ -10,7 +10,11 @@ import {
   PASSPORT_POPUP_NAME_PREFIX,
 } from '@/config/passport';
 import { AuthController } from '@/controllers/auth/auth';
-import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import {
+  isAuthApprovalCapabilityError,
+  isAuthApprovalMismatchError,
+  isAuthFlowCanceledError,
+} from '@/libs/error/auth-flow-canceled';
 import { isAppError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import {
@@ -221,9 +225,11 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
           variant: 'error',
           description: isWrongEnvironment
             ? 'This account is linked to a different homeserver. Use a staging account on this site.'
-            : isAuthApprovalMismatchError(error)
-              ? 'Approve with the account you are signed in with.'
-              : 'Sign in failed. Try again.',
+            : isAuthApprovalCapabilityError(error)
+              ? 'Authorization failed. Approve every requested permission and try again.'
+              : isAuthApprovalMismatchError(error)
+                ? 'Approve with the account you are signed in with.'
+                : 'Sign in failed. Try again.',
         });
         settle(attempt, 'failed');
         return;

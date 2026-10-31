@@ -572,6 +572,22 @@ describe('BootstrapApplication', () => {
       expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_NORMALIZED_TIMESTAMP, MOCK_ALLOWED_TYPES);
     });
 
+    it('warns and falls back when the v1 lastRead holds no timestamp', async () => {
+      setupMocks({ bootstrapData: emptyBootstrap() }).homeserverRead = vi
+        .spyOn(HomeserverService, 'getBytesIfExists')
+        .mockImplementation(async (url) =>
+          url === MOCK_LAST_READ_URL ? { bytes: new TextEncoder().encode('{"timest'), modifiedAt: null } : null,
+        );
+      vi.spyOn(Logger, 'info').mockImplementation(() => {});
+      const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith('Last read file holds no timestamp', { url: MOCK_LAST_READ_URL });
+      expect(loggerErrorSpy).not.toHaveBeenCalled();
+    });
+
     it('rejects with a 500 on the 0.x lastRead read instead of reading it as absent', async () => {
       const mocks = setupMocks({ bootstrapData: emptyBootstrap() });
       const serverError = httpStatusCodeToError(

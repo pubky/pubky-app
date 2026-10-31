@@ -296,4 +296,5 @@ invalid password or damaged backup. Unknown errors use a generic sign-in failure
 superseded work and `AuthApprovalMismatch` for an approval using the wrong account or capabilities. These are expected
 user choices, not faults to capture with `Err.*`. Use their shared predicates; show actionable UI feedback for a
 mismatch and remain quiet for supersession. A mismatch carries `reason: 'identity' | 'capabilities'`, so the UI can tell
-a wrong key from a grant without every requested permission (`isAuthApprovalCapabilityError`). Storage, transport and unexpected failures still use the normal factories.
+a wrong key from a grant without every requested permission (`isAuthApprovalCapabilityError`). Storage, transport and
+unexpected failures still use the normal factories.
