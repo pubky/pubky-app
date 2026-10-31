@@ -48,8 +48,9 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
   0026 (gate), 0027 (versioned edits and v1 data model), 0028 (private, locally owned bookmarks).
 - **Config policy (D19):** accepted widenings, no visible reduction: article body cap = `articleBodyMaxLength`
   (body only, title has its own 100), collection item URI 200 → 1024, cover URL 200 → 300, the MIME table from
-  the package (adds `text/csv`); `src/config/bookmarks.ts` retired with its mechanism; the mute SSE prefix is
-  `/priv/social/v1/mutes/`; new `src/config/social-migration.ts` and `src/config/app-files.ts`.
+  the package minus `text/csv` (deferred, see follow-ups); `src/config/bookmarks.ts` retired with its mechanism;
+  the mute SSE prefix is `/priv/social/v1/mutes/`; new `src/config/social-migration.ts` and
+  `src/config/app-files.ts`.
 
 ## Child PRs (into `feat/social-v1`)
 
@@ -184,4 +185,5 @@ the migrated-article reader rule until the migrator fix lands.
 Follow-ups (not in this round): private drafts and `planPublish`, slugs, attachment alt text UI, collection item
 notes UI, published feeds, `createSocialClient`, the 0.x tree sunset (who deletes `/pub/pubky.app/`, when legacy
 reads stop, the `rescan` schedule), bookmark SSE, the auth-store v4 cut-over (contingency only), 1.1 kinds; generic
-file card renders only PDFs; CSV/zip/txt uploads show no card (pre-existing).
+file card renders only PDFs; CSV/zip/txt uploads show no card (pre-existing); text/csv attachments (spec allows
+them; deferred).

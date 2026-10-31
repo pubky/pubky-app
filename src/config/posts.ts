@@ -57,10 +57,10 @@ export const COLLECTION_COVER_IMAGE_URL_MAX_LENGTH = limits.imageUrlMaxLength;
 export const COLLECTION_COVER_IMAGE_ALLOWED_PROTOCOLS: readonly string[] = limits.postAllowedAttachmentProtocols;
 
 /**
- * Supported MIME types for file attachments.
- * Imported directly from pubky-social-specs to ensure consistency.
+ * Supported MIME types for file attachments: the pubky-social-specs table minus `text/csv`, which the
+ * spec allows but the app defers (follow-up in `docs/migrations/social-v1.md`), so the list is the 0.x one.
  */
-export const POST_SUPPORTED_ATTACHMENT_MIME_TYPES: string[] = [...validMimeTypes];
+export const POST_SUPPORTED_ATTACHMENT_MIME_TYPES: string[] = validMimeTypes.filter((mime) => mime !== 'text/csv');
 
 export const ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES: string[] = validMimeTypes.filter((t) => t.startsWith('image/'));
 
