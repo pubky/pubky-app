@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import { FeedApplication } from '@/application/feed/feed';
 import { MuteApplication } from '@/application/mute/mute';
 import { SettingsApplication } from '@/application/settings/settings';
@@ -18,8 +19,11 @@ vi.mock('@/libs/logger/logger', () => ({
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 
 describe('MigrationApplication', () => {
+  let fetchBookmarksSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchBookmarksSpy = vi.spyOn(BookmarkApplication, 'fetchBookmarks').mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -27,7 +31,7 @@ describe('MigrationApplication', () => {
   });
 
   describe('resync', () => {
-    it('should fetch muted users, feeds, and settings in parallel, and return settings', async () => {
+    it('should fetch muted users, feeds, settings and bookmarks in parallel, and return settings', async () => {
       const mockMutedUsers = ['muted-1', 'muted-2'] as Pubky[];
       const mockFeeds = [{ id: 'feed-1' }] as FeedModelSchema[];
       const mockSettings = { version: 1, updatedAt: 123 } as SettingsState;
@@ -42,6 +46,19 @@ describe('MigrationApplication', () => {
       expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
       expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
       expect(initSettingsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, mockLocalSettings);
+      expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(result).toBe(mockSettings);
+    });
+
+    it('still returns the settings when the bookmarks fetch fails', async () => {
+      const mockSettings = { version: 2, updatedAt: 456 } as SettingsState;
+      vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+      vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(mockSettings);
+      fetchBookmarksSpy.mockRejectedValue(new Error('bookmarks-500'));
+
+      const result = await MigrationApplication.resync(TEST_PUBKY, { version: 3, updatedAt: 300 } as SettingsState);
+
       expect(result).toBe(mockSettings);
     });
 

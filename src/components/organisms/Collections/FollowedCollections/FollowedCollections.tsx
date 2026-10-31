@@ -14,7 +14,7 @@ import { resolveResumeAnchor } from '@/controllers/stream/posts/posts.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
-import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { AvatarStack } from '@/molecules/AvatarStack/AvatarStack';
 import { AvatarStackSkeleton } from '@/molecules/AvatarStack/AvatarStack.skeleton';
 import { toast } from '@/molecules/Toaster/toast';
@@ -38,10 +38,12 @@ const EMPTY_IDS: string[] = [];
  *
  * "Followed Collections" section. Two-track architecture:
  *
- *   1. **Seed track** — paginated stream fetch on
- *      `timeline:bookmarks:collection`. We only care about the persist
- *      side effect: each slice writes viewer bookmark records + post
- *      details into Dexie, broadening the live query's result set.
+ *   1. **Seed track** — paginated walk of the local bookmarks stream
+ *      `timeline:bookmarks:all`, which bootstrap rebuilds from the
+ *      homeserver listing (bookmarks are private, ADR-0028). We only care
+ *      about the hydration side effect: each slice fetches the details of
+ *      the bookmarked posts not cached yet, so the live query can tell
+ *      which bookmarks are collections.
  *
  *   2. **Render track** — `useLiveQuery` joining the local `bookmarks`
  *      table with `post_details.kind === 'collection'`. Sorted by
@@ -54,24 +56,24 @@ const EMPTY_IDS: string[] = [];
  */
 export function FollowedCollections() {
   // Gate the seed fetch on auth hydration. `StreamPostsController.getOrFetchStreamSlice`
-  // reads `viewerId` from the auth store synchronously, and the bookmarks-collection
-  // Nexus endpoint needs the viewer to resolve. If we fire pre-hydration the slice
-  // returns empty / errors, `reachedEnd` flips to `true`, and the seed never re-fires
-  // (so the user gets no fresh bookmarks until a manual refresh).
+  // reads `viewerId` from the auth store synchronously for the viewer-relative post
+  // hydration, and the bookmarks stream is the signed-in viewer's. If we fire
+  // pre-hydration the slice returns empty, `reachedEnd` flips to `true`, and the seed
+  // never re-fires (so the user gets no collections until a manual refresh).
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
-  const streamId = buildFollowedCollectionsStreamId();
+  const streamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 
   const [pagesShown, setPagesShown] = useState(1);
   const cursorRef = useRef<SeedCursor>(EMPTY_CURSOR);
   // Visible ids the seed walk has served, so the cache walk can re-anchor after the anchor
-  // collection is un-bookmarked (its id leaves the cached row) instead of restarting at the head.
+  // post is un-bookmarked (its id leaves the cached row) instead of restarting at the head.
   const walkedIdsRef = useRef<string[]>([]);
   const [reachedEnd, setReachedEnd] = useState(false);
   const [seedLoading, setSeedLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const initialFetchRef = useRef(false);
 
-  /** Pull one more slice of the bookmarks-collection stream. */
+  /** Walk one more slice of the bookmarks stream, hydrating the posts it names. */
   const fetchNextSeedSlice = async ({ isInitial }: { isInitial: boolean }) => {
     try {
       if (isInitial) {
@@ -90,8 +92,9 @@ export function FollowedCollections() {
       });
       walkedIdsRef.current = [...walkedIdsRef.current, ...result.nextPageIds];
 
-      // A fully-filtered slice (e.g. a run of deleted bookmarked collections) must
-      // still advance the cache walk, so the anchor resolves from the raw scan.
+      // A fully-filtered slice (e.g. a run of bookmarked collections, which the bookmarks
+      // feed drops on read) must still advance the cache walk, so the anchor resolves from
+      // the raw scan.
       cursorRef.current = {
         lastPostId: resolveResumeAnchor(result) ?? cursorRef.current.lastPostId,
         streamTail: result.nextCursor ?? cursorRef.current.streamTail,
@@ -110,7 +113,7 @@ export function FollowedCollections() {
   };
 
   // Initial seed fetch — once per mount, AFTER auth hydrates so the
-  // bookmarks-collection slice request resolves with the real viewer pubky.
+  // bookmarks slice hydrates with the real viewer pubky.
   useEffect(() => {
     if (!hasHydrated) return;
     if (initialFetchRef.current) return;

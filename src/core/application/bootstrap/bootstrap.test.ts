@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
@@ -149,6 +150,7 @@ type MockConfig = {
   mutedUsers?: Pubky[];
   fetchMutedUsersError?: Error;
   fetchFeedsError?: Error;
+  fetchBookmarksError?: Error;
 };
 
 type ServiceMocks = {
@@ -156,6 +158,7 @@ type ServiceMocks = {
   homeserverRequest: unknown;
   fetchMutedUsers: unknown;
   fetchFeeds: unknown;
+  fetchBookmarks: unknown;
   persistUsers: unknown;
   persistPosts: unknown;
   persistFiles: unknown;
@@ -185,6 +188,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     mutedUsers = [],
     fetchMutedUsersError,
     fetchFeedsError,
+    fetchBookmarksError,
   } = config;
 
   vi.clearAllMocks();
@@ -210,6 +214,9 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     fetchFeeds: vi
       .spyOn(FeedApplication, 'fetchFeeds')
       .mockImplementation(fetchFeedsError ? () => Promise.reject(fetchFeedsError) : () => Promise.resolve([])),
+    fetchBookmarks: vi
+      .spyOn(BookmarkApplication, 'fetchBookmarks')
+      .mockImplementation(fetchBookmarksError ? () => Promise.reject(fetchBookmarksError) : () => Promise.resolve([])),
     persistUsers: vi
       .spyOn(LocalStreamUsersService, 'persistUsers')
       .mockImplementation(persistUsersError ? () => Promise.reject(persistUsersError) : () => Promise.resolve([])),
@@ -250,6 +257,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
   expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
+  expect(mocks.fetchBookmarks).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
   expect(mocks.persistUsers).toHaveBeenCalledWith(
     bootstrapData.users,
     expect.objectContaining({ revisions: expect.any(Map), viewerId: TEST_PUBKY }),
@@ -734,6 +742,26 @@ describe('BootstrapApplication', () => {
       expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
       // fetchMutedUsers fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
+    });
+
+    it('should throw error when BookmarkApplication.fetchBookmarks fails', async () => {
+      const mocks = setupMocks({ fetchBookmarksError: new Error('Bookmark list error') });
+
+      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow(
+        'Bookmark list error',
+      );
+
+      expect(mocks.fetchBookmarks).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
+      expect(mocks.persistUsers).not.toHaveBeenCalled();
+    });
+
+    it('passes the account guard to the bookmarks fetch', async () => {
+      const mocks = setupMocks();
+      const isCurrent = () => true;
+
+      await BootstrapApplication.initialize({ ...getBootstrapParams(TEST_PUBKY), isCurrent });
+
+      expect(mocks.fetchBookmarks).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent });
     });
   });
 

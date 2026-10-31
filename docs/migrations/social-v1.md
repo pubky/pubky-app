@@ -153,6 +153,27 @@ bookmarks/mutes/feeds or auth capabilities should be written against `pubky-soci
 | Date | `dev` SHA | Merged PRs | Ported by the sweep | Notes |
 | ---- | --------- | ---------- | ------------------- | ----- |
 
+## Bookmarks (PR-B3, ADR-0028)
+
+Bookmarks are private (`/priv/social/v1/bookmarks/`), so Nexus never sees them and the local `bookmarks` table is the
+source of truth: `BookmarkApplication.fetchBookmarks` LISTs the directory at bootstrap and in the DB-reset resync,
+GETs the time of each bookmark not stored locally yet, and reconciles the table and the one local stream
+`timeline:bookmarks:all`. The bookmarks feed is served from that row only (posts hydrated through `by_ids`), the
+bookmark count is local and live, Followed Collections walks the same stream, and every Nexus bookmark field
+(`post.bookmark`, `counts.bookmarks`, the `source=bookmarks` stream) is ignored or removed. An un-bookmark deletes
+the v1 file only: the 0.x copy cannot be named, so it stays on the homeserver and in Nexus as an invisible ghost
+until Nexus stops indexing `/pub/pubky.app/bookmarks/`. `src/config/bookmarks.ts` (`BOOKMARK_REMOVAL_PROTECTION_MS`)
+is retired with `recentUnbookmarks`.
+
+Reductions, reported to the team:
+
+- The Nexus notifications "a post you bookmarked was deleted or edited" and "a collection you follow was updated"
+  stop for v1 bookmarks (D7); the notification type and renderer stay for 0.x ghosts.
+- A bookmark made or removed on another device shows at the next session start, not live (no bookmarks SSE).
+- Followed Collections hydrates through every bookmark, posts included, so a collection followed long before many
+  bookmarked posts appears only once "Show more" walks that far.
+- Following a collection stays a bookmark of the collection post, now private: its creator never learns of it.
+
 ## Retest list (final full-stack pass, D10)
 
 Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
@@ -164,6 +185,8 @@ Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
 - Tag deletion across epochs via `tag_uri`.
 - `details.content` served verbatim for articles (the cover in the envelope).
 - Nexus notification URI forms; the resources stream without `app`; `details.uri` after a URI-only change.
+- Bookmarks on a live homeserver: the LIST of `/priv/social/v1/bookmarks/` through the session, the GETs of their
+  times, and the DELETE of a file already gone answering 404.
 - The Cypress suite on `dev` after QA's update.
 
 ## Cypress hand-off (QA-owned, flag only)
@@ -172,7 +195,10 @@ Specs invalidated by the port, to be updated by QA with or before the final PR (
 `cypress/e2e/{posts,collections,notifications,feed,onboarding,profile,pagination,deep-links}.cy.ts` and
 `cypress/support/{posts,collections,profile,pagination,nexus}.ts` (the URI regex in `nexus.ts`,
 `postIdFromWriteUrl`). Seeded accounts now land on `/migration`; the "followed collection updated" scenario is
-removed by product decision (D7); the settings and `last_read` paths move to `/priv/app.pubky/v1/`.
+removed by product decision (D7); the settings and `last_read` paths move to `/priv/app.pubky/v1/`. Bookmark writes
+moved to `/priv/social/v1/bookmarks/` (the `PUT`/`DELETE` intercepts on `**/pub/pubky.app/bookmarks/**` in
+`posts.cy.ts`, `collections.cy.ts` and `notifications.cy.ts`), and a bookmark made in another browser session shows
+only after the next sign-in or reload.
 
 ## Reductions and follow-ups
 

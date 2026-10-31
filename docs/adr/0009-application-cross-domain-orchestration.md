@@ -61,7 +61,7 @@ The fundamental issue: **Where does cross-domain orchestration belong?**
 
 #### Root-node orchestrators
 
-`BootstrapApplication` and `MigrationApplication` are **source nodes (in-degree 0)** in the Application dependency DAG: Controllers invoke them, and no Application may call them, preventing cycles through these roots. Their current execution paths stop after one cross-Application hop, so they remain at depth 1.
+`BootstrapApplication` and `MigrationApplication` are **source nodes (in-degree 0)** in the Application dependency DAG: Controllers invoke them, and no Application may call them, preventing cycles through these roots. Their current execution paths stop after one cross-Application hop, so they remain at depth 1. Both call the leaf `BookmarkApplication.fetchBookmarks` beside the mute and feed fetches (ADR-0028), still one hop.
 
 ### Example
 

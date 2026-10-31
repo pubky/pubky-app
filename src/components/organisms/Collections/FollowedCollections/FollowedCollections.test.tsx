@@ -8,7 +8,7 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
-import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { FollowedCollections } from './FollowedCollections';
@@ -130,7 +130,7 @@ describe('FollowedCollections', () => {
     expect(mockGetOrFetchStreamSlice).not.toHaveBeenCalled();
   });
 
-  it('post-hydration: seeds the followed-collections stream and persists slice via the controller', async () => {
+  it('post-hydration: walks the local bookmarks stream to hydrate the bookmarked collections', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockGetOrFetchStreamSlice.mockResolvedValue(
       makeSlice({ nextPageIds: ['a:p1'], reachedEnd: true, nextCursor: 123 }),
@@ -140,7 +140,8 @@ describe('FollowedCollections', () => {
       render(<FollowedCollections />);
     });
 
-    const expectedStreamId = buildFollowedCollectionsStreamId();
+    // No stream of its own: the one bookmarks stream, collections included (ADR-0028).
+    const expectedStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 
     await waitFor(() => {
       expect(mockPrepareStreamForInitialLoad).toHaveBeenCalledWith({ streamId: expectedStreamId });

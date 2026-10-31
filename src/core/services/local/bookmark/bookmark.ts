@@ -3,48 +3,40 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
+import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
-import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { TBookmarkReconcileParams } from '@/services/local/bookmark/bookmark.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
-import { recentUnbookmarks } from './recentUnbookmarks';
 
 /**
- * The two local bookmark streams. The bookmarks route has no content/sort filter
- * UI, so non-collection bookmarks all live in the single ALL feed; collections
- * are filed under the dedicated collection stream that backs FollowedCollections.
+ * The one local bookmark stream: every bookmark, collections included, newest bookmark first. The
+ * bookmarks feed drops collections on read; `FollowedCollections` walks it to hydrate them.
  */
-const BOOKMARK_STREAMS = {
-  all: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
-  collection: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
-} as const;
+const BOOKMARKS_STREAM = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 
 export class LocalBookmarkService {
-  private static readonly BOOKMARK_TABLES = [
-    BookmarkModel.table,
-    UserCountsModel.table,
-    PostStreamModel.table,
-    PostDetailsModel.table,
-  ] as const;
+  private static readonly BOOKMARK_TABLES = [BookmarkModel.table, PostStreamModel.table] as const;
+
+  /** Counts the local bookmark writes of this tab; see `captureWriteSequence`. */
+  private static writeSequence = 0;
+  /** The sequence number of the latest local write per composite post id. */
+  private static readonly lastWriteSequence = new Map<string, number>();
 
   /**
    * Persists a bookmark operation (create or delete).
    *
-   * A delete is recorded in `recentUnbookmarks` for this viewer before the
-   * write, so a Nexus response that still reports the bookmark cannot restore
-   * it; a create clears that record.
+   * The write is numbered before it runs, so a reconcile whose listing started earlier leaves this
+   * post alone (`reconcile`).
    */
-  static async persist(action: HttpMethod, { userId, postId }: TBookmarkEventParams) {
+  static async persist(action: HttpMethod, { postId }: Pick<TBookmarkEventParams, 'postId'>) {
     const isCreate = action === HttpMethod.PUT;
-    if (isCreate) {
-      recentUnbookmarks.clear(userId, postId);
-    } else {
-      recentUnbookmarks.markRemoved(userId, postId);
-    }
+    this.lastWriteSequence.set(postId, ++this.writeSequence);
 
     try {
       await db.transaction('rw', this.BOOKMARK_TABLES, async () => {
@@ -57,37 +49,21 @@ export class LocalBookmarkService {
           return;
         }
 
-        // Fetch post details to determine which streams to update
-        const postDetails = await PostDetailsModel.findById(postId);
-        const kind = postDetails?.kind;
-
-        // The `bookmarks` count is posts-only — bookmarked collections are
-        // excluded — so only move the count when the target isn't a collection.
-        const isCollection = kind === 'collection';
-
         if (isCreate) {
-          const ops: Promise<unknown>[] = [
+          await Promise.all([
             BookmarkModel.upsert({
               id: postId,
               created_at: Date.now(),
             }),
-            this.addToBookmarkStreams(postId, kind),
-          ];
-          if (!isCollection) {
-            ops.push(UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: 1 } }));
-          }
-          await Promise.all(ops);
+            LocalStreamPostsService.prependToStream({ streamId: BOOKMARKS_STREAM, compositePostId: postId }),
+          ]);
 
           Logger.debug('Bookmark created', { postId });
         } else {
-          const ops: Promise<unknown>[] = [
+          await Promise.all([
             BookmarkModel.deleteById(postId),
-            this.removeFromBookmarkStreams(postId, kind),
-          ];
-          if (!isCollection) {
-            ops.push(UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: -1 } }));
-          }
-          await Promise.all(ops);
+            LocalStreamPostsService.removeFromStream({ streamId: BOOKMARKS_STREAM, compositePostId: postId }),
+          ]);
 
           Logger.debug('Bookmark deleted', { postId });
         }
@@ -97,6 +73,50 @@ export class LocalBookmarkService {
         service: ErrorService.Local,
         operation: isCreate ? 'createBookmark' : 'deleteBookmark',
         context: { postId },
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * The position of this tab's local bookmark writes, for a reconcile to take before it lists the
+   * homeserver directory: every write after it is newer than that listing.
+   */
+  static captureWriteSequence(): number {
+    return this.writeSequence;
+  }
+
+  /**
+   * Replaces the local bookmarks with what the homeserver listing holds, in one transaction:
+   * deletes every row the listing no longer names (un-bookmarked elsewhere), upserts the listed
+   * ones and rewrites the bookmarks stream from the table, newest bookmark first and without a
+   * Nexus cursor. A post this tab bookmarked or un-bookmarked after `since` keeps its local state:
+   * the listing predates that write. `isCurrent` is checked inside the transaction, so a listing
+   * that finished after an account switch writes nothing for the next account.
+   *
+   * @returns The stored bookmark ids, newest first, or null when nothing was written.
+   */
+  static async reconcile({ bookmarks, since, isCurrent }: TBookmarkReconcileParams): Promise<string[] | null> {
+    const writtenSince = (postId: string) => (this.lastWriteSequence.get(postId) ?? 0) > since;
+    try {
+      return await db.transaction('rw', this.BOOKMARK_TABLES, async () => {
+        if (isCurrent && !isCurrent()) return null;
+        const listedIds = new Set(bookmarks.map((bookmark) => bookmark.id));
+        const stale = (await BookmarkModel.findAll()).filter((id) => !listedIds.has(id) && !writtenSince(id));
+        const listed = bookmarks.filter((bookmark) => !writtenSince(bookmark.id));
+        if (stale.length > 0) await BookmarkModel.table.bulkDelete(stale);
+        if (listed.length > 0) await BookmarkModel.bulkSave(listed);
+
+        const ids = (await BookmarkModel.findAllSorted()).map((bookmark) => bookmark.id);
+        await LocalStreamPostsService.upsert({ streamId: BOOKMARKS_STREAM, stream: ids });
+        return ids;
+      });
+    } catch (error) {
+      if (isAppError(error)) throw error;
+      throw Err.database(DatabaseErrorCode.TRANSACTION_FAILED, 'Failed to reconcile bookmarks with the homeserver', {
+        service: ErrorService.Local,
+        operation: 'reconcileBookmarks',
+        context: { table: BookmarkModel.table.name, count: bookmarks.length },
         cause: error,
       });
     }
@@ -133,45 +153,19 @@ export class LocalBookmarkService {
     return sorted.map((b) => b.id);
   }
 
-  /**
-   * Resolve which local bookmark stream a post belongs to, by kind.
-   *
-   * Collections are "followed", not feed posts: the posts feed (`…_ALL`) filters
-   * collection-kind posts out on read, so we keep them out of it entirely and
-   * file them under the dedicated collection bookmark stream instead. Every other
-   * kind goes to the ALL stream.
-   *
-   * @param kind - Post kind (short, long, image, video, file, link, collection)
-   */
-  private static bookmarkStreamsForKind(kind?: string): PostStreamTypes[] {
-    return kind === 'collection' ? [BOOKMARK_STREAMS.collection] : [BOOKMARK_STREAMS.all];
+  /** Every local bookmark row, newest first. */
+  static async readAll(): Promise<BookmarkModelSchema[]> {
+    return await BookmarkModel.findAllSorted();
   }
 
   /**
-   * Add a post to the appropriate bookmark streams based on post type
-   *
-   * @param postId - Composite post ID
-   * @param kind - Post kind (short, long, image, video, file, link, collection)
+   * How many bookmarked posts there are: every bookmark but those of collections, which the
+   * Collections page lists as followed instead. A bookmark whose post is not cached yet counts.
    */
-  private static async addToBookmarkStreams(postId: string, kind?: string): Promise<void> {
-    await Promise.all(
-      this.bookmarkStreamsForKind(kind).map((streamId) =>
-        LocalStreamPostsService.prependToStream({ streamId, compositePostId: postId }),
-      ),
-    );
-  }
-
-  /**
-   * Remove a post from the bookmark streams it was added to (see `bookmarkStreamsForKind`).
-   *
-   * @param postId - Composite post ID
-   * @param kind - Post kind (short, long, image, video, file, link, collection)
-   */
-  private static async removeFromBookmarkStreams(postId: string, kind?: string): Promise<void> {
-    await Promise.all(
-      this.bookmarkStreamsForKind(kind).map((streamId) =>
-        LocalStreamPostsService.removeFromStream({ streamId, compositePostId: postId }),
-      ),
-    );
+  static async countPosts(): Promise<number> {
+    const ids = await BookmarkModel.findAll();
+    if (ids.length === 0) return 0;
+    const details = await PostDetailsModel.findByIdsPreserveOrder(ids);
+    return details.filter((detail) => detail?.kind !== 'collection').length;
   }
 }

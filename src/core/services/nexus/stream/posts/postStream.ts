@@ -63,7 +63,6 @@ export class NexusPostStreamService {
       case StreamSource.FRIENDS:
       case StreamSource.WOT:
       case StreamSource.WOT_DOMAIN:
-      case StreamSource.BOOKMARKS:
         if (!params.viewer_id) {
           throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Sign in to see this feed', {
             service: ErrorService.Nexus,

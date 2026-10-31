@@ -1,3 +1,4 @@
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import { FeedApplication } from '@/application/feed/feed';
 import { MuteApplication } from '@/application/mute/mute';
 import { SettingsApplication } from '@/application/settings/settings';
@@ -17,7 +18,7 @@ export class MigrationApplication {
 
   /**
    * Fetches critical homeserver data that is not automatically re-fetched after DB recreation.
-   * Calls MuteApplication, FeedApplication, and SettingsApplication in parallel.
+   * Calls MuteApplication, FeedApplication, SettingsApplication and BookmarkApplication in parallel.
    *
    * @returns Remote settings if available (for Controller to apply to Zustand store)
    */
@@ -29,6 +30,7 @@ export class MigrationApplication {
       MuteApplication.fetchMutedUsers(pubky),
       FeedApplication.fetchFeeds(pubky),
       SettingsApplication.initializeSettings(pubky, localSettings),
+      BookmarkApplication.fetchBookmarks(pubky),
     ]);
 
     Logger.info('Post-DB-recreation re-sync completed', { pubky });

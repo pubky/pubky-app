@@ -56,29 +56,6 @@ describe('Post API', () => {
     });
   });
 
-  describe('postApi.bookmarks', () => {
-    it('should generate correct bookmarks URL with basic parameters', () => {
-      const params: TPostBase = {
-        author_id: pubky,
-        post_id: postId,
-      };
-
-      const result = postApi.bookmarks(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/bookmarks`);
-    });
-
-    it('should generate correct bookmarks URL with viewer_id', () => {
-      const params: TPostBase = {
-        author_id: pubky,
-        post_id: postId,
-        viewer_id: `${pubky}-viewer`,
-      };
-
-      const result = postApi.bookmarks(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/bookmarks?viewer_id=${pubky}-viewer`);
-    });
-  });
-
   describe('postApi.counts', () => {
     it('should generate correct counts URL', () => {
       const params: TPostBase = {
@@ -227,11 +204,11 @@ describe('Post API', () => {
   });
 
   describe('PostApiEndpoint type', () => {
-    it('should have exactly 6 endpoints', () => {
+    it('should have exactly 5 endpoints', () => {
       const endpointKeys = Object.keys(postApi);
-      expect(endpointKeys).toHaveLength(6);
+      expect(endpointKeys).toHaveLength(5);
       expect(endpointKeys).toContain('view');
-      expect(endpointKeys).toContain('bookmarks');
+      expect(endpointKeys).not.toContain('bookmarks');
       expect(endpointKeys).toContain('counts');
       expect(endpointKeys).toContain('details');
       expect(endpointKeys).toContain('taggers');
