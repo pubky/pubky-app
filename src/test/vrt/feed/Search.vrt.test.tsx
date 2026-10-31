@@ -72,7 +72,7 @@ const fixtures = vi.hoisted(async () => {
   );
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   // Profile autocomplete results (same shape as useSearchAutocomplete → SearchUsersSection).
-  // Pubky ids follow the existing VRT author convention (`…alice01`, `…bran02`, …).
+  // Pubky ids are the shared VRT author keys (`VRT_AUTHOR_PUBKYS`).
   // Display names are Ali*-prefixed fixtures for the typed query in the profile-results case.
   const autocompleteUsers = (
     [
