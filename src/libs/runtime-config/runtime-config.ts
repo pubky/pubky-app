@@ -210,6 +210,8 @@ export const getPlausibleDomain = (): string | undefined => getRuntimeConfig().p
 export const getPlausibleScriptUrl = (): string | undefined => getRuntimeConfig().plausibleScriptUrl;
 /** Pubky Passport signer origin; `undefined` disables every "Continue with Google" entry point. */
 export const getPassportUrl = (): string | undefined => getRuntimeConfig().passportUrl;
+/** Marketplace transaction service origin; `undefined` leaves sign-out unable to revoke Shop sessions there. */
+export const getMarketplaceUrl = (): string | undefined => getRuntimeConfig().marketplaceUrl;
 export const getPreviewImage = (): string => getRuntimeConfig().previewImage;
 export const getSiteName = (): string => getRuntimeConfig().siteName;
 export const getLocale = (): string => getRuntimeConfig().locale;

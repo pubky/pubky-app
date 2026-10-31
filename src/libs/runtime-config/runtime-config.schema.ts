@@ -216,6 +216,16 @@ export const PASSPORT_RUNTIME_DEFAULTS = {
   passportUrl: 'https://passport.staging.pubky.app',
 } as const;
 
+/**
+ * Marketplace transaction service origin: the service `/v1/auth/sessions/{id}` is revoked on. Deployed
+ * mode has NO default: an unset value means sign-out cannot end the Shop's marketplace sessions at the
+ * service, which then expire on their own after 24 hours. Set it to the origin the Shop reads from the
+ * same-named variable. The lenient dev/test parse applies the local service origin the Shop defaults to.
+ */
+export const MARKETPLACE_RUNTIME_DEFAULTS = {
+  marketplaceUrl: 'http://localhost:3100',
+} as const;
+
 // ---------------------------------------------------------------------------
 // App-facing config shape
 // ---------------------------------------------------------------------------
@@ -280,6 +290,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   plausibleScriptUrl: urlValue.optional(),
   /** Pubky Passport origin. Absent disables Passport ("Continue with Google") everywhere. */
   passportUrl: urlValue.optional(),
+  /** Marketplace transaction service origin. Absent leaves sign-out unable to revoke Shop sessions there. */
+  marketplaceUrl: urlValue.optional(),
   previewImage: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.previewImage),
   siteName: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.siteName),
   locale: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.locale),
@@ -369,6 +381,7 @@ export const runtimeEnvInputSchema = z
     plausibleDomain: optionalTrimmedString,
     plausibleScriptUrl: optionalUrlFromString,
     passportUrl: optionalUrlFromString,
+    marketplaceUrl: optionalUrlFromString,
     previewImage: optionalTrimmedString,
     siteName: optionalTrimmedString,
     locale: optionalTrimmedString,
@@ -460,6 +473,12 @@ export const runtimeEnvInputSchemaWithDefaults = z
       .default(PASSPORT_RUNTIME_DEFAULTS.passportUrl)
       .transform((val) => (val.trim() !== '' ? val : undefined))
       .pipe(urlValue.optional()),
+    // Lenient-only local default; an explicit empty value still disables the revocation in dev.
+    marketplaceUrl: z
+      .string()
+      .default(MARKETPLACE_RUNTIME_DEFAULTS.marketplaceUrl)
+      .transform((val) => (val.trim() !== '' ? val : undefined))
+      .pipe(urlValue.optional()),
     previewImage: optionalTrimmedString,
     siteName: optionalTrimmedString,
     locale: optionalTrimmedString,
@@ -538,6 +557,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   plausibleDomain: 'PUBKY_RUNTIME_PLAUSIBLE_DOMAIN',
   plausibleScriptUrl: 'PUBKY_RUNTIME_PLAUSIBLE_SCRIPT_URL',
   passportUrl: 'PUBKY_RUNTIME_PASSPORT_URL',
+  marketplaceUrl: 'PUBKY_RUNTIME_MARKETPLACE_URL',
   previewImage: 'PUBKY_RUNTIME_PREVIEW_IMAGE',
   siteName: 'PUBKY_RUNTIME_SITE_NAME',
   locale: 'PUBKY_RUNTIME_LOCALE',

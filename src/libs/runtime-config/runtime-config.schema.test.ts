@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APP_RUNTIME_DEFAULTS,
+  MARKETPLACE_RUNTIME_DEFAULTS,
   NETWORK_RUNTIME_DEFAULTS,
   PASSPORT_RUNTIME_DEFAULTS,
   runtimeConfigValueSchema,
@@ -300,6 +301,7 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
       ...SENTRY_RUNTIME_DEFAULTS,
       ...APP_RUNTIME_DEFAULTS,
       ...PASSPORT_RUNTIME_DEFAULTS,
+      ...MARKETPLACE_RUNTIME_DEFAULTS,
     });
     expect(Array.isArray(parsed.pkarrRelays)).toBe(true);
     expect(typeof parsed.testnet).toBe('boolean');
@@ -355,5 +357,28 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
       runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportUrl: 'https://passport.example.com' }).passportUrl,
     ).toBe('https://passport.example.com');
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportUrl: 'not-a-url' })).toThrow();
+  });
+
+  it('defaults marketplaceUrl to the local service only in lenient mode', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).marketplaceUrl).toBe(
+      MARKETPLACE_RUNTIME_DEFAULTS.marketplaceUrl,
+    );
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).marketplaceUrl).toBeUndefined();
+  });
+
+  it('lets an explicit blank marketplaceUrl disable the revocation in lenient mode', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ marketplaceUrl: '' }).marketplaceUrl).toBeUndefined();
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ marketplaceUrl: '   ' }).marketplaceUrl).toBeUndefined();
+  });
+
+  it('honors a provided marketplaceUrl and rejects a malformed one', () => {
+    expect(
+      runtimeEnvInputSchemaWithDefaults.parse({ marketplaceUrl: 'https://marketplace.example.com' }).marketplaceUrl,
+    ).toBe('https://marketplace.example.com');
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, marketplaceUrl: 'https://marketplace.example.com' })
+        .marketplaceUrl,
+    ).toBe('https://marketplace.example.com');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, marketplaceUrl: 'not-a-url' })).toThrow();
   });
 });
