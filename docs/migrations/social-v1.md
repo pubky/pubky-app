@@ -170,7 +170,8 @@ Reductions, reported to the team:
 
 - The Nexus notifications "a post you bookmarked was deleted or edited" and "a collection you follow was updated"
   stop for v1 bookmarks (D7); the notification type and renderer stay for 0.x ghosts.
-- A bookmark made or removed on another device shows at the next session start, not live (no bookmarks SSE).
+- A bookmark made or removed on another device shows at the next sign-in (or after a local database reset), not
+  live and not on a plain reload (no bookmarks SSE).
 - Followed Collections hydrates through every bookmark, posts included: it keeps walking until a page of
   collections is shown or the bookmarks run out, so it may fetch the details of many bookmarked posts first.
 - Following a collection stays a bookmark of the collection post, now private: its creator never learns of it.
@@ -199,7 +200,7 @@ Specs invalidated by the port, to be updated by QA with or before the final PR (
 removed by product decision (D7); the settings and `last_read` paths move to `/priv/app.pubky/v1/`. Bookmark writes
 moved to `/priv/social/v1/bookmarks/` (the `PUT`/`DELETE` intercepts on `**/pub/pubky.app/bookmarks/**` in
 `posts.cy.ts`, `collections.cy.ts` and `notifications.cy.ts`), and a bookmark made in another browser session shows
-only after the next sign-in or reload.
+only after the next sign-in (a reload restores the session without the listing).
 Added by the first dev-sync: `cypress/plugins/seed.ts` (#2897) seeds supporting users through `pubky-app-specs`
 (`PubkySpecsBuilder`, `/pub/pubky.app/` paths), so they are un-migrated 0.x accounts, and it stops compiling when
 the old package is removed; `cypress/support/{seed,feeds}.ts` and `cypress/plugins/nexus.ts` depend on it.
@@ -207,7 +208,7 @@ the old package is removed; `cypress/support/{seed,feeds}.ts` and `cypress/plugi
 ## Reductions and follow-ups
 
 Reductions (reported, not built around): bookmark-derived notifications ("post you bookmarked was deleted/edited",
-"followed collection updated"); cross-device bookmark changes visible at the next session start only; `/feed/<id>`
+"followed collection updated"); cross-device bookmark changes visible at the next sign-in only; `/feed/<id>`
 deep links change once (a feed id is the hash of its filter, and the migrator re-derives every id when it copies a
 0.x feed); forced sign-out and forced reload on upgrade; migrated articles with the rc.1 off-by-one render through
 the migrated-article reader rule until the migrator fix lands.

@@ -84,7 +84,8 @@ field is ignored.**
 - **Reductions (D7, reported, not rebuilt)**: the Nexus notification "a post you bookmarked was deleted or edited"
   (`PostChangedSource.Bookmark`) stops for v1 bookmarks (the enum and renderer stay; Nexus may still emit it for 0.x
   ghosts), and "a collection you follow was updated" stops. A local recomputation would be a new feature.
-- Cross-device bookmark changes appear at the next session start (bootstrap LIST), not live. A bookmarks SSE like
+- Cross-device bookmark changes appear at the next sign-in or local database reset (the bootstrap and resync
+  LISTs), not live and not on a plain reload, which restores the session without bootstrapping. A bookmarks SSE like
   the mutes one is a follow-up.
 - The first bootstrap on a device costs one GET per bookmark; later ones only GET new filenames.
 - The 0.x copy of an un-bookmarked post stays on the homeserver and in Nexus until Nexus stops indexing
@@ -98,7 +99,7 @@ field is ignored.**
 
 - A failed LIST fails the bootstrap, like the mute and feed fetches beside it; a failed GET does not.
 - The write sequence is per tab: a write in another tab during this tab's listing can be undone locally until the
-  next session start.
+  next listing.
 - Orphan `timeline:bookmarks:collection` rows from older builds are harmless (`DB_VERSION` 4 recreates them away).
 
 ## Alternatives Considered
