@@ -190,7 +190,7 @@ export const APP_RUNTIME_DEFAULTS = {
   siteName: 'Pubky App',
   locale: 'en_US',
   author: 'Pubky Team',
-  keywords: 'pubky, social media, decentralized, key, pkarr, pubky core',
+  keywords: 'pubky, social media, decentralized, key, pkarr',
   type: 'website',
   creator: '@getpubky',
   defaultUrl: 'https://pubky.app',
@@ -228,7 +228,7 @@ export const networkConfigValueSchema = z.object({
   nexusUrl: urlValue,
   cdnUrl: urlValue,
   homeserver: homeserverValue,
-  /** Homeserver HTTP base URL: the homeserver pubkey has no resolvable HTTPS endpoint (pubky-core#410) */
+  /** Homeserver HTTP base URL: the homeserver pubkey has no resolvable HTTPS endpoint (pubky-homeserver#410) */
   homeserverUrl: urlValue,
   homegateUrl: urlValue,
   defaultHttpRelay: urlValue,

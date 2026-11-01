@@ -1,8 +1,11 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAppError, isAuthError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -10,6 +13,14 @@ import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.types';
+
+/** Null unless the Lock Server refused the lock deletion; a rejected Locks session needs a sign-in, not a retry. */
+function lockFailureDescription(error: unknown): string | null {
+  if (!isAppError(error) || error.service !== ErrorService.Locks) return null;
+  return isAuthError(error)
+    ? 'Sign in to the Lock Server to delete this post.'
+    : 'Could not delete the locked content. Try again.';
+}
 
 /**
  * Hook to handle post deletion with optimistic UI updates and error recovery.
@@ -76,6 +87,11 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
     }
 
     try {
+      // A lock announcement takes its lock down first: once the post is gone nothing points at the
+      // lock any more, so a lock that failed to delete would be stranded. Failing here keeps the post.
+      // The bulk read skips moderation enrichment, which a delete does not need.
+      const [details] = await PostController.getDetailsByIds({ compositeIds: [postId] });
+      if (details?.lock) await LocksController.deleteLockContent({ lockUrl: details.lock });
       await PostController.commitDelete({ compositePostId: postId });
       // Clear the optimistic attachment cache so its blob URLs are revoked and
       // don't shadow the tombstone for the rest of the session
@@ -157,7 +173,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
 
       toast({
         variant: 'error',
-        description: deleteFailedDesc,
+        description: lockFailureDescription(error) ?? deleteFailedDesc,
       });
       return false;
     } finally {

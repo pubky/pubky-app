@@ -53,6 +53,12 @@ const nextConfig: NextConfig = {
         destination: '/profile/:pubky',
         permanent: true,
       },
+      // The Terms of Service give the Privacy Policy's address as https://pubky.app/privacy.
+      {
+        source: '/privacy',
+        destination: '/privacy-policy',
+        permanent: true,
+      },
     ];
   },
   webpack: (config, { isServer }) => {

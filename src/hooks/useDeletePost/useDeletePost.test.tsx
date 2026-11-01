@@ -1,7 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
+import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
@@ -12,10 +16,18 @@ import { useDeletePost } from './useDeletePost';
 // Mock dependencies
 const mockDelete = vi.fn();
 const mockGetPostDetails = vi.fn();
+const mockGetPostDetailsByIds = vi.fn();
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitDelete: vi.fn(),
     getDetails: vi.fn(),
+    getDetailsByIds: vi.fn(),
+  },
+}));
+const mockDeleteLockContent = vi.fn();
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: {
+    deleteLockContent: vi.fn(),
   },
 }));
 
@@ -63,9 +75,97 @@ describe('useDeletePost', () => {
     });
     vi.mocked(PostController.commitDelete).mockImplementation(mockDelete);
     vi.mocked(PostController.getDetails).mockImplementation(mockGetPostDetails);
+    vi.mocked(PostController.getDetailsByIds).mockImplementation(mockGetPostDetailsByIds);
+    vi.mocked(LocksController.deleteLockContent).mockImplementation(mockDeleteLockContent);
     vi.mocked(useTimelineFeedContext).mockReturnValue(mockTimelineFeed);
     // Default: post exists (for tests that expect restoration)
     mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: 'Test post' });
+    mockGetPostDetailsByIds.mockResolvedValue([{ id: mockPostId, content: 'Test post' }]);
+  });
+
+  describe('lock announcements', () => {
+    const lockUrl = 'pubky://qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry/pub/app.locks/LOCK1.json';
+
+    beforeEach(() => {
+      mockGetPostDetailsByIds.mockResolvedValue([{ id: mockPostId, content: '{}', lock: lockUrl }]);
+      mockDeleteLockContent.mockResolvedValue(undefined);
+      mockDelete.mockResolvedValue(undefined);
+    });
+
+    it('deletes the lock before the post when the stored row carries a lock URL', async () => {
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await expect(result.current.deletePost(mockPostId)).resolves.toBe(true);
+      });
+
+      expect(mockDeleteLockContent).toHaveBeenCalledWith({ lockUrl });
+      expect(mockDelete).toHaveBeenCalledWith({ compositePostId: mockPostId });
+      expect(mockDeleteLockContent.mock.invocationCallOrder[0]).toBeLessThan(mockDelete.mock.invocationCallOrder[0]);
+    });
+
+    it('never calls the Lock Server for a post without a lock', async () => {
+      mockGetPostDetailsByIds.mockResolvedValue([{ id: mockPostId, content: 'Test post' }]);
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(mockDeleteLockContent).not.toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledWith({ compositePostId: mockPostId });
+    });
+
+    it('keeps the post, restores it in the feed and says why when the lock deletion fails', async () => {
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.server(ServerErrorCode.INTERNAL_ERROR, 'refused', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await expect(result.current.deletePost(mockPostId)).resolves.toBe(false);
+      });
+
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(mockPrependPosts).toHaveBeenCalledWith(mockPostId);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not delete the locked content. Try again.',
+      });
+    });
+
+    it('asks for a Lock Server sign-in when the Locks session was rejected or is missing', async () => {
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Sign in to the Lock Server to delete this post.',
+      });
+    });
+
+    it('keeps the generic copy for a homeserver failure after the lock was deleted', async () => {
+      mockDelete.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Homeserver, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not delete post. Try again.',
+      });
+    });
   });
 
   it('does not optimistically remove or delete a post after its confirmation loses authorization', async () => {

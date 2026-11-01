@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { LinkifyIt } from 'linkify-it';
 import { Container } from '@/atoms/Container/Container';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
+import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { Generic } from './Providers/Generic/ProviderGeneric';
@@ -23,9 +23,6 @@ const EMBED_PROVIDERS: EmbedProvider[] = [
   // Twitch,
 ];
 
-// Protocol types to ignore when parsing links
-const IGNORED_PROTOCOLS = ['ftp:', 'mailto:'];
-
 /**
  * Create a hostname-to-provider lookup map for O(1) performance
  * Lazily initialized on first use to avoid module circular dependency issues
@@ -42,36 +39,6 @@ const getProviderMap = (): Map<string, EmbedProvider> => {
 };
 
 /**
- * Strip Markdown link syntax from content
- * Removes [text](url) entirely so URLs inside Markdown links aren't detected
- * Handles URLs with nested parentheses (e.g., Wikipedia links like /wiki/Foo_(bar))
- */
-const stripMarkdownLinks = (content: string): string => {
-  // Pattern handles one level of nested parentheses in URLs
-  // [^()]* matches chars that aren't parentheses
-  // (?:\([^()]*\)[^()]*)* matches (content) groups and text after them
-  return content.replace(/\[([^\]]*)\]\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, '<stripped-link>');
-};
-
-/**
- * Parse content for URLs
- * Returns the first URL
- */
-const parseContentForUrl = (content: string) => {
-  // linkify-it v6 defaults fuzzyLink to false; keep matching protocol-less URLs.
-  const linkify = new LinkifyIt({ fuzzyLink: true });
-
-  // Disable unwanted protocol types
-  IGNORED_PROTOCOLS.forEach((protocol) => linkify.add(protocol, null));
-
-  // Strip Markdown link syntax before parsing
-  const strippedContent = stripMarkdownLinks(content);
-  const match = linkify.match(strippedContent);
-
-  return match?.[0].url;
-};
-
-/**
  * Parse content for embeddable links
  * Returns the first embeddable link and its provider
  *
@@ -83,7 +50,7 @@ const parseContentForUrl = (content: string) => {
  */
 const parseContentForLinkEmbed = (content: string, allowInApp: boolean): ParseUrlForLinkEmbedResult => {
   try {
-    const url = parseContentForUrl(content);
+    const url = getFirstLinkUrl(content);
     if (!url) return { embed: null, provider: null };
 
     const inAppEmbed = InApp.parseEmbed(url);

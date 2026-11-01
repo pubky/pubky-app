@@ -227,6 +227,35 @@ describe('shouldEnableSentry', () => {
 });
 
 describe('captureAppError filtering', () => {
+  it('reports a lost saved session even though its restoreGrant error is dropped (#2942)', async () => {
+    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
+      const dropped = new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.SESSION_EXPIRED,
+        message: 'Authorize this account again to restore its session.',
+        service: ErrorService.Homeserver,
+        operation: 'restoreGrant',
+        context: { reason: 'missing_local_grant', material: 'record' },
+      });
+      const lost = new AppError({
+        category: ErrorCategory.Database,
+        code: DatabaseErrorCode.RECORD_NOT_FOUND,
+        message: 'Saved session disappeared without a logout in this tab',
+        service: ErrorService.Local,
+        operation: 'savedSessionLost',
+        context: { trigger: 'restore', material: 'record', shopFrameLoaded: true },
+      });
+
+      captureAppError(dropped);
+      captureAppError(lost);
+
+      expect(shouldDropAppErrorFromSentry(dropped)).toBe(true);
+      expect(shouldDropAppErrorFromSentry(lost)).toBe(false);
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(lost);
+    });
+  });
+
   it('keeps OG metadata fetch errors reportable unless handled before Err creation', async () => {
     await withEnabledSentryCapture(({ captureAppError, captureException }) => {
       const error = new AppError({

@@ -119,6 +119,8 @@ describe('route privacy', () => {
     ['/profile/tags', '/profile/tags'],
     ['/search?q=private#secret', '/search'],
     ['/settings/privacy-safety', '/settings/privacy-safety'],
+    ['/privacy-policy#children', '/privacy-policy'],
+    ['/terms-of-use', '/terms-of-use'],
     [`/profile/${PUBLIC_KEY}`, '/profile/[pubky]'],
     [`/profile/${PUBLIC_KEY}/followers`, '/profile/[pubky]/followers'],
     [`/post/${PUBLIC_KEY}/private-post`, '/post/[userId]/[postId]'],

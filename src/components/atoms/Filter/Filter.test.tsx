@@ -1,6 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { FilterHeader, FilterItem, FilterItemIcon, FilterItemLabel, FilterList, FilterRoot } from './Filter';
+import {
+  FilterHeader,
+  FilterItem,
+  FilterItemCheck,
+  FilterItemIcon,
+  FilterItemLabel,
+  FilterList,
+  FilterRoot,
+} from './Filter';
 
 const MockIcon = ({ className }: { className?: string }) => <svg data-testid="mock-icon" className={className} />;
 
@@ -76,6 +84,21 @@ describe('Filter Components', () => {
       render(<FilterItemLabel>Test Label</FilterItemLabel>);
 
       expect(screen.getByText('Test Label')).toBeInTheDocument();
+    });
+  });
+
+  describe('FilterItemCheck', () => {
+    it('renders a trailing check that is hidden from the lg breakpoint up', () => {
+      render(<FilterItemCheck />);
+
+      const check = screen.getByTestId('filter-item-check');
+      expect(check).toHaveClass('lucide-check', 'ml-auto', 'lg:hidden');
+    });
+
+    it('merges a passthrough className', () => {
+      render(<FilterItemCheck className="custom-class" />);
+
+      expect(screen.getByTestId('filter-item-check')).toHaveClass('custom-class', 'lg:hidden');
     });
   });
 

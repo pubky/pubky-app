@@ -67,7 +67,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
       data-show-right-sidebar={String(showRightSidebar)}
       data-show-left-mobile-button={String(showLeftMobileButton)}
       data-show-right-mobile-button={String(showRightMobileButton)}
-      data-class-name={className}
+      className={className}
     >
       {children}
     </div>
@@ -94,6 +94,20 @@ describe('BookmarksCollection', () => {
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-show-right-mobile-button', 'false');
     expect(screen.getByTestId('bookmarks-items')).toBeInTheDocument();
     expect(screen.getByTestId('collections-sections')).toBeInTheDocument();
+  });
+
+  it('keeps bottom clearance for the floating action button on mobile only', () => {
+    mockUseBookmarksCollectionSummary.mockReturnValue({
+      avatarName: 'Alice',
+      avatarSeed: 'alice-pubky',
+      avatarUrl: 'https://example.com/avatar.png',
+      bookmarkCount: 4,
+      isProfileResolved: true,
+    });
+
+    render(<BookmarksCollection />);
+
+    expect(screen.getByTestId('content-layout')).toHaveClass('pb-44', 'lg:pb-12');
   });
 
   it('passes a BookmarksHero with summary props as the BookmarksItems header', () => {

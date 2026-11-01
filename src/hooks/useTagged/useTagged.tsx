@@ -7,8 +7,7 @@ import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTagCache } from '@/hooks/useTagCache/useTagCache';
 import type { Pubky } from '@/models/models.types';
-import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
-import { toast } from '@/molecules/Toaster/toast';
+import { showTagWriteErrorToast, transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseTaggedOptions, UseTaggedResult } from './useTagged.types';
@@ -148,12 +147,11 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         });
 
         return { success: true };
-      } catch {
-        if (viewRevision.current !== revision) return { success: false };
-        toast({
-          variant: 'error',
-          description: 'Could not add tag',
-        });
+      } catch (error) {
+        // Only the prompt for a session the homeserver ended outlives the view (issue #2957, see the helper).
+        const viewClosed = viewRevision.current !== revision;
+        showTagWriteErrorToast(error, 'Could not add tag', { viewClosed });
+        if (viewClosed) return { success: false };
         return { success: false, error: 'Failed to add tag' };
       }
     },
@@ -214,20 +212,17 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
             return next;
           });
         }
-      } catch {
-        if (viewRevision.current !== revision) return;
+      } catch (error) {
+        const viewClosed = viewRevision.current !== revision;
         // Rollback zero-tagger state on error
-        if (userIsTagger) {
+        if (userIsTagger && !viewClosed) {
           setZeroTaggerTags((prev) => {
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
           });
         }
-        toast({
-          variant: 'error',
-          description: userIsTagger ? 'Could not remove tag' : 'Could not add tag',
-        });
+        showTagWriteErrorToast(error, userIsTagger ? 'Could not remove tag' : 'Could not add tag', { viewClosed });
       }
     },
     [userId, viewerId, allTags, tagOrder, waitForAuth],

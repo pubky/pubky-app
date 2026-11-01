@@ -12,7 +12,7 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getPubkyCoreLink, getPubkyRingLink } from '@/config/externalLinks';
+import { getPubkyProtocolLink, getPubkyRingLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
@@ -123,10 +123,10 @@ export const ScanFooter = () => {
         {'Pubky Ring'}
       </Link>
       {' or any other '}
-      <Link href={getPubkyCoreLink()} target="_blank">
-        {'Pubky Core'}
+      <Link href={getPubkyProtocolLink()} target="_blank">
+        {'Pubky'}
       </Link>
-      {'–powered keychain.'}
+      {'-powered keychain.'}
     </FooterLinks>
   );
 };

@@ -40,6 +40,8 @@ type DialogOverrides = {
   onRecheck?: () => void;
   onViewContent?: () => void;
   onOpenChange?: (open: boolean) => void;
+  lockTitle?: string;
+  contentKind?: React.ComponentProps<typeof DialogPayToUnlock>['contentKind'];
   wrapper?: React.JSXElementConstructor<{ children: React.ReactNode }>;
 };
 
@@ -47,7 +49,8 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
   <DialogPayToUnlock
     open={overrides.open ?? true}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
-    lockTitle="My locked post"
+    lockTitle={overrides.lockTitle ?? 'My locked post'}
+    contentKind={overrides.contentKind}
     authorId="pubkycreator"
     price={overrides.price ?? { amount: '1000', asset: 'BTC' }}
     stage={stage}
@@ -401,6 +404,22 @@ describe('DialogPayToUnlock', () => {
     expect(screen.queryByRole('button', { name: /Try again|I completed the steps/ })).not.toBeInTheDocument();
   });
 
+  // #2516: the header follows the body. Only a payment whose content is ready reads "Unlocked"; a received
+  // payment still opening, or one whose content failed to open, says so instead.
+  it.each([
+    ['checking', 'Pay to Unlock'],
+    ['waiting', 'Pay to Unlock'],
+    ['retry', 'Pay to Unlock'],
+    ['finishing', 'Payment received'],
+    ['unopened', 'Payment received'],
+    ['paid', 'Unlocked'],
+  ] as const)('titles the %s stage "%s"', (stage, title) => {
+    renderDialog(stage);
+
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(title);
+    expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
+  });
+
   it('blocked: explains the failed check and offers no way to pay', () => {
     renderDialog('blocked');
     expect(screen.getByText(/could not be checked/)).toBeInTheDocument();
@@ -622,5 +641,30 @@ describe('DialogPayToUnlock', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(cardClick).not.toHaveBeenCalled();
+  });
+
+  it('shows a user key in the lock title as @<display name>, as text inside the dialog (#2681)', () => {
+    const key = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    renderDialog('retry', { lockTitle: `hello pubky${key}` });
+
+    const mention = screen.getByText('@Jane Whitlock');
+    expect(mention.tagName).toBe('SPAN');
+    expect(mention.parentElement).toHaveTextContent('hello @Jane Whitlock');
+    expect(screen.queryByText(new RegExp(key))).not.toBeInTheDocument();
+  });
+
+  // #2433: the header card uses the same mapping as LockedPostCard.
+  it.each([
+    ['image', 'Locked image', 'lucide-image'],
+    ['article', 'Locked article', 'lucide-newspaper'],
+    ['video', 'Locked video', 'lucide-circle-play'],
+    ['file', 'Locked file', 'lucide-download'],
+    ['link', 'Locked content', 'lucide-link'],
+    [undefined, 'Locked content', 'lucide-sticky-note'],
+  ] as const)('shows an untitled %s lock as "%s" with its icon', (contentKind, title, iconClass) => {
+    renderDialog('waiting', { lockTitle: '', contentKind });
+
+    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(document.querySelector(`svg.${iconClass}`)).toBeInTheDocument();
   });
 });

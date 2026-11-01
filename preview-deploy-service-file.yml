@@ -70,6 +70,10 @@ spec:
               value: "pubkysefcamkcucuoenhz33jixp6s6kxt8hpas7mm9m7a4cihhuwr6byo"
             - name: PUBKY_RUNTIME_PAYKIT_SERVER_URL
               value: "https://paykit.staging.pubky.app"
+            # Blocks locks in PR previews. Commas stay intact because this is the
+            # service env list, not a gcloud --set-env-vars string.
+            - name: PUBKY_RUNTIME_REGION_MODES
+              value: "EU=blocked,GB=blocked,US=blocked"
             # Pubky Passport ("Continue with Google") signer for the staging homeserver above.
             # Optional tier: unset disables the feature. Previews are HTTPS, so the hand-off works.
             - name: PUBKY_RUNTIME_PASSPORT_URL

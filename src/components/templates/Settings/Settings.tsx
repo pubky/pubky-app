@@ -41,7 +41,9 @@ export function Settings({ children }: SettingsProps) {
         leftDrawerContent={<SettingsMenu />}
         rightDrawerContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
         className="pt-(--settings-mobile-chrome-height) lg:pt-0"
-        classNameWrapperContent="pt-6 lg:pt-0"
+        // Below lg the fixed Fab (bottom-18 + size-20, md:bottom-20) reaches 152px/160px above the
+        // viewport bottom; pb-32 plus ContentLayout's own pb-12 lets the last row scroll clear of it.
+        classNameWrapperContent="pt-6 pb-32 lg:pt-0 lg:pb-0"
         disableWideShellLayout
       >
         {children}

@@ -1,9 +1,10 @@
-import { LinkifyIt } from 'linkify-it';
 import { PubkyAppPostKind } from 'pubky-app-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { isVideoUrl } from '@/libs/utils/videoUrl';
+import type { TLockContentKind } from '@/services/locks/locks.types';
 
 type TInferPostKindParams = {
   content: string;
@@ -25,24 +26,6 @@ type TResolveTagTargetCompositeIdParams = {
   originalPostId?: string;
   content: string;
   attachments?: File[];
-};
-
-// Keep these aligned with PostLinkEmbeds so we treat links consistently.
-// linkify-it v6 defaults fuzzyLink to false; keep matching protocol-less URLs.
-const IGNORED_PROTOCOLS = ['ftp:', 'mailto:'];
-
-const stripMarkdownLinks = (content: string): string => {
-  return content.replace(/\[([^\]]*)\]\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, '<stripped-link>');
-};
-
-const getSupportedUrl = (content: string): string | null => {
-  const linkify = new LinkifyIt({ fuzzyLink: true });
-  IGNORED_PROTOCOLS.forEach((protocol) => linkify.add(protocol, null));
-
-  const strippedContent = stripMarkdownLinks(content);
-  const match = linkify.match(strippedContent);
-
-  return match?.[0]?.url ?? null;
 };
 
 const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
@@ -68,7 +51,7 @@ const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
  * media kind, else Short.
  */
 const inferContentKind = (content: string, attachmentContentTypes: string[]): PubkyAppPostKind => {
-  const url = getSupportedUrl(content);
+  const url = getFirstLinkUrl(content);
   if (url) {
     return isVideoUrl(url) ? PubkyAppPostKind.Video : PubkyAppPostKind.Link;
   }
@@ -86,6 +69,26 @@ export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInf
     (attachments ?? []).map((file) => file.type),
   );
 };
+
+/**
+ * The pubky-app-specs v1.0.0-rc.1 name a lock announcement saves for the kind of its locked post (#2433). An
+ * explicit mapping, so the stored names stay fixed when the internal kinds are renamed. A `Record` over every
+ * `PubkyAppPostKind`, so a kind added by a specs upgrade fails to compile until it is mapped here. A create never
+ * infers a collection or an unknown kind, so those save nothing and read as generic content.
+ */
+const LOCK_CONTENT_KIND_BY_POST_KIND: Record<PubkyAppPostKind, TLockContentKind | undefined> = {
+  [PubkyAppPostKind.Short]: 'note',
+  [PubkyAppPostKind.Long]: 'article',
+  [PubkyAppPostKind.Image]: 'image',
+  [PubkyAppPostKind.Video]: 'video',
+  [PubkyAppPostKind.Link]: 'link',
+  [PubkyAppPostKind.File]: 'file',
+  [PubkyAppPostKind.Collection]: undefined,
+  [PubkyAppPostKind.Unknown]: undefined,
+};
+
+export const toLockContentKind = (kind: PubkyAppPostKind): TLockContentKind | undefined =>
+  LOCK_CONTENT_KIND_BY_POST_KIND[kind];
 
 /**
  * Kind for an edited post whose attachment set changed. Articles and

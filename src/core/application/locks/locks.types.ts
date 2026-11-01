@@ -67,10 +67,13 @@ export type TReplicateUnlockedContentParams = {
   announcementUri: string;
 };
 
+/** A preview card renders an article's cover and none of its body media, so a preview read skips those bytes. */
+export type TPreviewRead = { preview?: boolean };
+
 export type TFetchReplicatedContentParams = {
   lockUrl: string;
   readerPubky: string;
-};
+} & TPreviewRead;
 
 export type TFetchUnlockedListParams = {
   readerPubky: string;
@@ -78,12 +81,19 @@ export type TFetchUnlockedListParams = {
 
 export type TFetchReplicatedAttachmentsParams = {
   post: ReplicatedPost;
-};
+} & TPreviewRead;
 
 export type TFetchOwnContentParams = {
   lockUrl: string;
   lockFile: LockFile;
-};
+} & TPreviewRead;
+
+/**
+ * The viewer session a call started under. `isCurrent()` turns false once that viewer logged out or the
+ * account was replaced; a cache write is then skipped, so a late response cannot put a signed-out
+ * reader's content back into IndexedDB after logout cleared it (#2797).
+ */
+export type TViewerScope = { isCurrent?: () => boolean };
 
 /** The creator's price, in the selected denomination's smallest unit. */
 export type TLockConfig = TLockPrice;
@@ -107,8 +117,11 @@ export type TLockContentFile = {
  * attachments land.
  */
 export type TCreateLockContentParams = {
-  /** Attachments (images, video, …). Uploaded first, so `buildPost` can reference their paths. */
-  attachments?: TLockContentFile[];
+  /**
+   * Attachments (images, video, …) as the author picked them. Cleaned like a normal upload, then
+   * uploaded first, so `buildPost` can reference their paths.
+   */
+  attachments?: File[];
   /**
    * Builds the JSON file holding the `PubkyAppPost` object from the uploaded attachment descriptors.
    * Called with an empty array when there are no attachments. `ownerPubky` is the account the guarded
@@ -119,3 +132,6 @@ export type TCreateLockContentParams = {
   /** How the content is gated. The criterion is assembled from it at publish time. */
   lockConfig: TLockConfig;
 };
+
+/** The announcement's top-level `lock` URL; the lock id is parsed from it. */
+export type TDeleteLockContentParams = { lockUrl: string };

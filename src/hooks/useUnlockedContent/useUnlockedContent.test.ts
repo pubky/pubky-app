@@ -182,7 +182,7 @@ describe('useUnlockedContent', () => {
 
     await waitFor(() => expect(result.current.unlockedPost).toEqual(content.post));
     expect(result.current.isOwnLock).toBe(true);
-    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile });
+    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile, preview: false });
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
   });
 
@@ -194,7 +194,11 @@ describe('useUnlockedContent', () => {
 
     await waitFor(() => expect(result.current.unlockedPost).toEqual(content.post));
     expect(result.current.isOwnLock).toBe(false);
-    expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, readerPubky: 'me' });
+    expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith({
+      lockUrl: LOCK_URL,
+      readerPubky: 'me',
+      preview: false,
+    });
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
   });
 
@@ -207,7 +211,70 @@ describe('useUnlockedContent', () => {
     expect(result.current.unlockedPost?.attachments).toBeNull();
     expect(result.current.isResolvingReplica).toBe(false);
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
-    expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: cached });
+    expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: cached, preview: false });
+  });
+
+  it('asks every read of a preview card for the preview media only', async () => {
+    const cached = { content: 'cached', kind: 'long' as const, attachments: null };
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValueOnce(cached);
+    renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1', preview: true }));
+    await waitFor(() =>
+      expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: cached, preview: true }),
+    );
+
+    const ownLockFile = asOpaque<LockFile>({ creator: 'pubkyme' });
+    renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: ownLockFile, postId: 'me:POST1', preview: true }));
+    await waitFor(() =>
+      expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({
+        lockUrl: LOCK_URL,
+        lockFile: ownLockFile,
+        preview: true,
+      }),
+    );
+  });
+
+  it('reads the full media again once the card stops being a preview', async () => {
+    const { rerender } = renderHook(
+      ({ preview }) => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1', preview }),
+      { initialProps: { preview: true } },
+    );
+    await waitFor(() =>
+      expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith({
+        lockUrl: LOCK_URL,
+        readerPubky: 'me',
+        preview: true,
+      }),
+    );
+
+    rerender({ preview: false });
+    await waitFor(() =>
+      expect(LocksController.fetchReplicatedContent).toHaveBeenLastCalledWith({
+        lockUrl: LOCK_URL,
+        readerPubky: 'me',
+        preview: false,
+      }),
+    );
+  });
+
+  it('lets purchase recovery run when the full read fails after a preview read succeeded', async () => {
+    const article: TUnlockedContent = {
+      post: { content: JSON.stringify({ title: 'T', body: 'text' }), kind: 'long', attachments: null },
+      attachments: [],
+    };
+    vi.mocked(LocksController.fetchReplicatedContent)
+      .mockResolvedValueOnce(article)
+      .mockRejectedValueOnce(new Error('homeserver down'));
+    const { result, rerender } = renderHook(
+      ({ preview }) => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1', preview }),
+      { initialProps: { preview: true } },
+    );
+    await waitFor(() => expect(result.current.hasCompleteContent).toBe(true));
+
+    rerender({ preview: false });
+
+    await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
+    expect(result.current.hasCompleteContent).toBe(false);
   });
 
   it('uses the creator’s cached original only on their own announcement', async () => {
@@ -294,7 +361,11 @@ describe('useUnlockedContent', () => {
     rerender({ lockFile: ownLockFile });
 
     await waitFor(() =>
-      expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile: ownLockFile }),
+      expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({
+        lockUrl: LOCK_URL,
+        lockFile: ownLockFile,
+        preview: false,
+      }),
     );
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
   });
@@ -340,6 +411,36 @@ describe('useUnlockedContent (fresh unlock)', () => {
 
     expect(result.current.media).toHaveLength(1);
     expect(toastMock).toHaveBeenCalledWith({ variant: 'error', description: 'Could not load attachments' });
+  });
+
+  it.each([
+    { name: 'only the cover of an article', kind: 'long' as const, body: '![b](attachment:1)', kept: [0] },
+    {
+      name: 'nothing of an article whose slot 0 is inline',
+      kind: 'long' as const,
+      body: '![a](attachment:0)',
+      kept: [],
+    },
+    { name: 'every file of a post that is not an article', kind: 'image' as const, body: 'text', kept: [0, 1] },
+  ])('keeps $name from a fresh unlock on a preview card, while replicating every file', ({ kind, body, kept }) => {
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+    const { result } = renderHook(() =>
+      useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1', preview: true }),
+    );
+    const unlocked: TUnlockedContent = {
+      post: { content: JSON.stringify({ title: 'T', body }), kind, attachments: ['a', 'b'] },
+      attachments: [
+        { id: 'a', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
+        { id: 'b', contentType: 'image/png', bytes: new Uint8Array([2]), slot: 1 },
+      ],
+    };
+
+    act(() => result.current.applyUnlockedContent(unlocked));
+
+    expect(result.current.media.map((item) => item.slot)).toEqual(kept);
+    expect(LocksController.replicateUnlockedContent).toHaveBeenCalledWith(
+      expect.objectContaining({ content: unlocked }),
+    );
   });
 });
 

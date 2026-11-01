@@ -1,7 +1,9 @@
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { postUriBuilder } from 'pubky-app-specs';
 import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
+  TDeleteLockContentParams,
   TFetchOwnContentParams,
   TFetchReplicatedAttachmentsParams,
   TFetchReplicatedContentParams,
@@ -13,6 +15,7 @@ import type {
   TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -141,13 +144,14 @@ export class LocksController {
     const { generation, currentUserPubky } = useAuthStore.getState();
     const store = useLocksAuthStore.getState();
     const session = store.selectLocksSession();
+    const secret = store.selectLocksSessionSecret();
     // Detach before awaiting the server, so completion cannot erase a later login.
     this.clearLocalSession(persist);
-    if (session) {
+    if (session || secret) {
       try {
         // A server that accepts the connection but never answers would otherwise hold logout for as
         // long as the OS takes to give up, leaving cookies and the local database in place.
-        await Promise.race([LocksApplication.signout(session), sleep(SIGNOUT_TIMEOUT_MS)]);
+        await Promise.race([this.revokeOnServer(session, secret), sleep(SIGNOUT_TIMEOUT_MS)]);
       } catch {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }
@@ -157,6 +161,16 @@ export class LocksController {
     if (current.generation === generation && current.currentUserPubky === currentUserPubky) {
       this.clearLocalSession(persist);
     }
+  }
+
+  /**
+   * Signs the session out on the Lock Server. On a fresh load the persisted secret is back before
+   * `restorePersistedLocksSession` has rebuilt the live session, so a logout in that window rebuilds
+   * it from the captured secret (offline) first: the SDK has no revoke-by-secret call (#2712).
+   */
+  private static async revokeOnServer(session: LocksSdkSession | null, secret: string | null): Promise<void> {
+    const live = session ?? (secret ? await LocksApplication.restoreSession(secret) : null);
+    if (live) await LocksApplication.signout(live);
   }
 
   /** Detach this tab without overwriting another account's shared secret. */
@@ -270,10 +284,35 @@ export class LocksController {
   static async createLockContent(params: TCreateLockContentParams): Promise<TCreateContentLockResult> {
     const isCurrent = this.captureSessionOwner();
     try {
-      return await LocksApplication.createLockContent(params);
+      return await LocksApplication.createLockContent({ ...params, isCurrent: captureViewerSession() });
     } catch (error) {
       // A homeserver auth failure cannot be fixed by signing in to the Lock Server.
       if (isCurrent() && isAppError(error) && isAuthError(error) && error.service === ErrorService.Locks) {
+        this.clearSession();
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes the lock behind an announcement. Same session-owner rule as `createLockContent`: a
+   * rejected session is cleared only while this request still owns it.
+   */
+  static async deleteLockContent(params: TDeleteLockContentParams): Promise<void> {
+    const isCurrent = this.captureSessionOwner();
+    // With no session there is nothing to invalidate; clearing would also drop the stored secret a
+    // restore still in flight is about to use.
+    const hadSession = useLocksAuthStore.getState().selectLocksSession() !== null;
+    try {
+      await LocksApplication.deleteLockContent({ ...params, isCurrent: captureViewerSession() });
+    } catch (error) {
+      if (
+        hadSession &&
+        isCurrent() &&
+        isAppError(error) &&
+        isAuthError(error) &&
+        error.service === ErrorService.Locks
+      ) {
         this.clearSession();
       }
       throw error;
@@ -285,7 +324,7 @@ export class LocksController {
    * its content is gated. Delegates to the application, which validates the URL and performs the read.
    */
   static async fetchLockFile(params: TFetchLockFileParams): Promise<TFetchLockFileResult> {
-    const lockFile = await LocksApplication.fetchLockFile(params);
+    const lockFile = await LocksApplication.fetchLockFile({ ...params, isCurrent: captureViewerSession() });
     return {
       lockFile,
       price: LockFileParser.resolvePrice(lockFile),
@@ -293,7 +332,7 @@ export class LocksController {
   }
 
   static async getOrFetchLockFile(params: TFetchLockFileParams): Promise<TFetchLockFileResult> {
-    const lockFile = await LocksApplication.getOrFetchLockFile(params);
+    const lockFile = await LocksApplication.getOrFetchLockFile({ ...params, isCurrent: captureViewerSession() });
     return {
       lockFile,
       price: LockFileParser.resolvePrice(lockFile),
@@ -364,12 +403,13 @@ export class LocksController {
     return LocksApplication.replicateUnlockedContent({
       ...params,
       announcementUri: postUriBuilder(authorId, rawPostId),
+      isCurrent: captureViewerSession(),
     });
   }
 
   /** Loads already-unlocked content from the reader's `/priv`, or null if this lock isn't unlocked yet. */
   static fetchReplicatedContent(params: TFetchReplicatedContentParams): Promise<TUnlockedContent | null> {
-    return LocksApplication.fetchReplicatedContent(params);
+    return LocksApplication.fetchReplicatedContent({ ...params, isCurrent: captureViewerSession() });
   }
 
   /** Loads the media bytes for one already-listed unlocked post. */
@@ -379,11 +419,11 @@ export class LocksController {
 
   /** Lists the reader's unlocked content (newest first) from their own `/priv/social/unlocked/`. */
   static fetchUnlockedList(params: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
-    return LocksApplication.fetchUnlockedList(params);
+    return LocksApplication.fetchUnlockedList({ ...params, isCurrent: captureViewerSession() });
   }
 
   /** Creator reads their own locked content directly from the guarded original (owner == signed-in). */
   static fetchOwnContent(params: TFetchOwnContentParams): Promise<TUnlockedContent> {
-    return LocksApplication.fetchOwnContent(params);
+    return LocksApplication.fetchOwnContent({ ...params, isCurrent: captureViewerSession() });
   }
 }

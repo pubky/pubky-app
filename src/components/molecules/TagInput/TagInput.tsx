@@ -70,6 +70,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     handleInputChange,
     handleInputFocus,
     handleTagSubmit,
+    addTag,
     handleEmojiSelect,
     handlePaste,
   } = useTagInput({
@@ -136,10 +137,9 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     const normalizedLabel = label.toLowerCase();
     if (addOnSuggestionClick) {
       const isDuplicate = tagsForDuplicateCheck.some((tag) => tag.label.toLowerCase() === normalizedLabel);
-      if (!isDuplicate) {
-        onTagAdd(normalizedLabel);
-      }
-      setInputValue('');
+      // Like a typed submit, the input clears only once the add went through (issue #2890).
+      if (isDuplicate) setInputValue('');
+      else void addTag(normalizedLabel);
     } else {
       setInputValue(normalizedLabel);
     }

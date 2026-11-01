@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { LEGAL_ROUTES } from '@/app/routes';
 import { LandingFinalSection } from './LandingFinalSection';
 
 const mockPush = vi.fn();
@@ -15,11 +16,12 @@ vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
   useJoinRoute: () => '/onboarding/human',
 }));
 
-const LEGAL_DIALOGS = [
-  { trigger: 'Terms of Service', title: 'Terms of Service' },
-  { trigger: 'Privacy Policy', title: 'Privacy Policy' },
-  { trigger: 'over 18 years old.', title: 'Age minimum: 18' },
+const LEGAL_PAGES = [
+  { name: 'Terms of Service', href: LEGAL_ROUTES.TERMS_OF_USE },
+  { name: 'Privacy Policy', href: LEGAL_ROUTES.PRIVACY_POLICY },
 ];
+
+const AGE_DIALOG = { trigger: 'over 18 years old.', title: 'Age minimum: 18' };
 
 describe('LandingFinalSection', () => {
   it('routes Join now to the join route', async () => {
@@ -40,46 +42,54 @@ describe('LandingFinalSection', () => {
     expect(link).toHaveClass('font-semibold');
   });
 
-  it.each(LEGAL_DIALOGS)('opens the "$title" dialog when "$trigger" is clicked', async ({ trigger, title }) => {
+  it.each(LEGAL_PAGES)('links "$name" to its page in the same tab', ({ name, href }) => {
+    render(<LandingFinalSection />);
+
+    const link = screen.getByRole('link', { name });
+    expect(link).toHaveAttribute('href', href);
+    expect(link).not.toHaveAttribute('target');
+  });
+
+  it('opens the age dialog when its trigger is clicked', async () => {
     const user = userEvent.setup();
     render(<LandingFinalSection />);
 
-    const button = screen.getByRole('button', { name: trigger });
+    const button = screen.getByRole('button', { name: AGE_DIALOG.trigger });
     expect(button).toHaveAttribute('aria-expanded', 'false');
     await user.click(button);
 
-    expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: AGE_DIALOG.title })).toBeInTheDocument();
   });
 
-  it.each(LEGAL_DIALOGS)('opens the "$title" dialog from the keyboard with Enter', async ({ trigger, title }) => {
+  it('opens the age dialog from the keyboard with Enter', async () => {
     const user = userEvent.setup();
     render(<LandingFinalSection />);
 
-    screen.getByRole('button', { name: trigger }).focus();
+    screen.getByRole('button', { name: AGE_DIALOG.trigger }).focus();
     await user.keyboard('{Enter}');
 
-    expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: AGE_DIALOG.title })).toBeInTheDocument();
   });
 
-  it.each(LEGAL_DIALOGS)('opens the "$title" dialog from the keyboard with Space', async ({ trigger, title }) => {
+  it('opens the age dialog from the keyboard with Space', async () => {
     const user = userEvent.setup();
     render(<LandingFinalSection />);
 
-    screen.getByRole('button', { name: trigger }).focus();
+    screen.getByRole('button', { name: AGE_DIALOG.trigger }).focus();
     await user.keyboard(' ');
 
-    expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: AGE_DIALOG.title })).toBeInTheDocument();
   });
 
-  it('reaches every legal trigger with the Tab key', async () => {
+  it('reaches every legal link and trigger with the Tab key', async () => {
     const user = userEvent.setup();
     render(<LandingFinalSection />);
 
     screen.getByRole('button', { name: 'Join now' }).focus();
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Terms of Service' })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveFocus();
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Privacy Policy' })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'over 18 years old.' })).toHaveFocus();
   });

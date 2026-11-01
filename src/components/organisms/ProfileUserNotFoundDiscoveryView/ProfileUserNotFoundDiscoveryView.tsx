@@ -12,7 +12,7 @@ import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout
 export function ProfileUserNotFoundDiscoveryView() {
   return (
     <HotDiscoveryContentLayout>
-      <Container overrideDefaults className="flex flex-col gap-12">
+      <Container overrideDefaults className="flex flex-col gap-12" data-cy="profile-not-found">
         <UserNotFound />
         <HotActiveUsers />
       </Container>

@@ -23,6 +23,8 @@ export interface PostInputActionBarProps {
     disabled?: boolean;
     /** Paid unlocks are not offered where the creator is: the switch stays off and an info icon says why. */
     regionNotice?: LocksRegionNoticeProps['cause'];
+    /** Paid unlocks are offered and the switch is off: an info icon explains selling content. */
+    showHelp?: boolean;
   };
   /** Rendered before the action buttons (the article composer puts the author's avatar here). */
   leadingContent?: React.ReactNode;

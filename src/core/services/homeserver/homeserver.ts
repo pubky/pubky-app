@@ -470,7 +470,13 @@ export class HomeserverService {
         throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
           service: ErrorService.Homeserver,
           operation: 'restoreGrant',
-          context: { reason },
+          context: {
+            reason,
+            // Diagnostics for #2942: which half of the saved grant was gone.
+            ...(reason === 'missing_local_grant' && {
+              material: this.isMissingSessionRecord(error, reference.sessionStoreId) ? 'record' : 'key',
+            }),
+          },
         });
       }
       if (isPubkyErrorLike(error) && error.name === 'ClientStateError') {

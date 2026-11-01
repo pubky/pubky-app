@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   setLockServiceConfig: vi.fn(),
   fetchPaykitSetupStatus: vi.fn(),
   createLockContent: vi.fn(),
+  deleteLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
   getOrFetchLockFile: vi.fn(),
   hasPaykitReceiver: vi.fn(),
@@ -46,6 +47,7 @@ vi.mock('@/application/locks/locks', () => ({
     setLockServiceConfig: mocks.setLockServiceConfig,
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
     createLockContent: mocks.createLockContent,
+    deleteLockContent: mocks.deleteLockContent,
     fetchLockFile: mocks.fetchLockFile,
     getOrFetchLockFile: mocks.getOrFetchLockFile,
     hasPaykitReceiver: mocks.hasPaykitReceiver,
@@ -70,6 +72,9 @@ const fakeSession = asOpaque<LocksSdkSession>({
 describe('LocksController (auth)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks keeps queued once-values; a logout test that never reaches the restore must not
+    // hand its value to the next test.
+    mocks.restoreSession.mockReset();
     mocks.generateConnectUrl.mockResolvedValue('https://lock.server/connect');
     mocks.isServerReady.mockResolvedValue(true);
     mocks.exchangeSessionCode.mockResolvedValue({ session: fakeSession, secret: 'secret-abc' });
@@ -257,13 +262,71 @@ describe('LocksController (auth)', () => {
       expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('secret-new');
     });
 
-    it('clears the persisted secret without a network call when no live session exists', async () => {
+    // A fresh load rehydrates the secret before the live session is rebuilt; a logout in that window
+    // must still revoke the session on the Lock Server (#2712).
+    it('rebuilds the session from the persisted secret and signs it out when no live session exists yet', async () => {
+      const restored = asOpaque<LocksSdkSession>({ id: 'restored-session' });
+      mocks.restoreSession.mockResolvedValueOnce(restored);
       useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+
+      await LocksController.logout();
+
+      expect(mocks.restoreSession).toHaveBeenCalledWith('secret-abc');
+      expect(mocks.signout).toHaveBeenCalledWith(restored);
+      expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+    });
+
+    it('revokes the session when logout lands while the fresh-load restore is still running', async () => {
+      const pendingRestore = Promise.withResolvers<LocksSdkSession>();
+      const revoked = asOpaque<LocksSdkSession>({ id: 'revoked-session' });
+      mocks.restoreSession.mockReturnValueOnce(pendingRestore.promise).mockResolvedValueOnce(revoked);
+      useAuthStore.setState({ currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+
+      const restoring = LocksController.restorePersistedLocksSession();
+      await LocksController.logout();
+      pendingRestore.resolve(fakeSession);
+      await restoring;
+
+      expect(mocks.signout).toHaveBeenCalledWith(revoked);
+      const store = useLocksAuthStore.getState();
+      expect(store.selectLocksSession()).toBeNull();
+      expect(store.selectLocksSessionSecret()).toBeNull();
+    });
+
+    it('still clears the device when the secret cannot be rebuilt into a session', async () => {
+      mocks.restoreSession.mockRejectedValueOnce(new Error('malformed secret'));
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-bad', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
 
       await LocksController.logout();
 
       expect(mocks.signout).not.toHaveBeenCalled();
       expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+    });
+
+    it('does not wait past the timeout for a restore that never finishes', async () => {
+      vi.useFakeTimers();
+      try {
+        mocks.restoreSession.mockReturnValueOnce(new Promise(() => {}));
+        useLocksAuthStore
+          .getState()
+          .init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+
+        const done = LocksController.logout();
+        await vi.advanceTimersByTimeAsync(60_000);
+        await done;
+
+        expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('makes no network call when neither a session nor a secret exists', async () => {
+      await LocksController.logout();
+
+      expect(mocks.restoreSession).not.toHaveBeenCalled();
+      expect(mocks.signout).not.toHaveBeenCalled();
     });
   });
 
@@ -640,7 +703,7 @@ describe('LocksController (content)', () => {
     };
 
     await expect(LocksController.createLockContent(params)).resolves.toBe(lock);
-    expect(mocks.createLockContent).toHaveBeenCalledWith(params);
+    expect(mocks.createLockContent).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
   });
 
   it.each([ErrorService.Locks, ErrorService.Homeserver])(
@@ -665,6 +728,51 @@ describe('LocksController (content)', () => {
       );
     },
   );
+
+  it('deleteLockContent delegates to the application', async () => {
+    mocks.deleteLockContent.mockResolvedValue(undefined);
+    const params = { lockUrl: `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/LOCK1.json` };
+
+    await expect(LocksController.deleteLockContent(params)).resolves.toBeUndefined();
+    expect(mocks.deleteLockContent).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
+  });
+
+  it.each([ErrorService.Locks, ErrorService.Homeserver])(
+    'deleteLockContent only clears the current Locks session for a Locks auth error: %s',
+    async (service) => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service, operation: 'test' });
+      mocks.deleteLockContent.mockRejectedValueOnce(rejected);
+
+      await expect(
+        LocksController.deleteLockContent({ lockUrl: `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/LOCK1.json` }),
+      ).rejects.toBe(rejected);
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(
+        service === ErrorService.Locks ? null : fakeSession,
+      );
+    },
+  );
+
+  it('deleteLockContent keeps the stored secret when the auth error came from a missing session', async () => {
+    // Restore in flight: the secret is persisted, the session is not back yet.
+    const store = useLocksAuthStore.getState();
+    store.init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+    store.setSession(null);
+    const rejected = Err.auth(AuthErrorCode.UNAUTHORIZED, 'no session', {
+      service: ErrorService.Locks,
+      operation: 'test',
+    });
+    mocks.deleteLockContent.mockRejectedValueOnce(rejected);
+
+    await expect(
+      LocksController.deleteLockContent({ lockUrl: `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/LOCK1.json` }),
+    ).rejects.toBe(rejected);
+
+    expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('secret-abc');
+  });
 });
 
 const MOCK_LOCK_FILE = mockLockFile();
@@ -681,7 +789,10 @@ describe('LocksController.fetchLockFile', () => {
       lockFile: MOCK_LOCK_FILE,
       price: { amount: '1000', asset: 'BTC' as const },
     });
-    expect(LocksApplication.fetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
+    expect(LocksApplication.fetchLockFile).toHaveBeenCalledWith({
+      lockUrl: VALID_LOCK_URL,
+      isCurrent: expect.any(Function),
+    });
   });
 
   it('resolves a null price without a lock file', async () => {
@@ -709,7 +820,7 @@ describe('LocksController.getOrFetchLockFile', () => {
       lockFile,
       price: { amount: '1000', asset },
     });
-    expect(mocks.getOrFetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
+    expect(mocks.getOrFetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL, isCurrent: expect.any(Function) });
   });
 
   it('resolves a null price without a lock file', async () => {
@@ -740,7 +851,7 @@ describe('LocksController.fetchReplicatedContent', () => {
     mocks.fetchReplicatedContent.mockResolvedValue(content);
 
     await expect(LocksController.fetchReplicatedContent(params)).resolves.toEqual(content);
-    expect(mocks.fetchReplicatedContent).toHaveBeenCalledWith(params);
+    expect(mocks.fetchReplicatedContent).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
   });
 });
 
@@ -763,6 +874,7 @@ describe('LocksController.replicateUnlockedContent', () => {
       readerPubky: 'pubkyreader',
       content,
       announcementUri: 'pubky://pubkyauthor/pub/pubky.app/posts/POST1',
+      isCurrent: expect.any(Function),
     });
   });
 });
@@ -774,7 +886,7 @@ describe('LocksController.fetchUnlockedList', () => {
     mocks.fetchUnlockedList.mockResolvedValue(items);
 
     await expect(LocksController.fetchUnlockedList(params)).resolves.toEqual(items);
-    expect(mocks.fetchUnlockedList).toHaveBeenCalledWith(params);
+    expect(mocks.fetchUnlockedList).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
   });
 });
 
@@ -785,7 +897,7 @@ describe('LocksController.fetchOwnContent', () => {
     mocks.fetchOwnContent.mockResolvedValue(content);
 
     await expect(LocksController.fetchOwnContent(params)).resolves.toEqual(content);
-    expect(mocks.fetchOwnContent).toHaveBeenCalledWith(params);
+    expect(mocks.fetchOwnContent).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
   });
 });
 
@@ -829,5 +941,65 @@ describe('LocksController (payment delegation)', () => {
 
     await expect(controller[method](params)).resolves.toEqual(result);
     expect(application[target]).toHaveBeenCalledWith(params);
+  });
+});
+
+describe('LocksController cache writes are scoped to the viewer (#2797)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY, generation: 'original-login' });
+  });
+
+  const lastScope = (mock: ReturnType<typeof vi.fn>) => {
+    const [params] = mock.mock.calls.at(-1) as [{ isCurrent?: () => boolean }];
+    return params.isCurrent;
+  };
+
+  it.each([
+    [
+      'fetchUnlockedList',
+      () => LocksController.fetchUnlockedList({ readerPubky: 'pubkyreader' }),
+      mocks.fetchUnlockedList,
+    ],
+    [
+      'fetchReplicatedContent',
+      () => LocksController.fetchReplicatedContent({ lockUrl: VALID_LOCK_URL, readerPubky: 'pubkyreader' }),
+      mocks.fetchReplicatedContent,
+    ],
+    [
+      'fetchOwnContent',
+      () => LocksController.fetchOwnContent({ lockUrl: VALID_LOCK_URL, lockFile: MOCK_LOCK_FILE }),
+      mocks.fetchOwnContent,
+    ],
+    [
+      'replicateUnlockedContent',
+      () =>
+        LocksController.replicateUnlockedContent({
+          lockUrl: VALID_LOCK_URL,
+          readerPubky: 'pubkyreader',
+          content: { post: { content: 's', kind: 'short', attachments: null }, attachments: [] },
+          postId: 'pubkyauthor:POST1',
+        }),
+      mocks.replicateUnlockedContent,
+    ],
+    ['fetchLockFile', () => LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL }), mocks.fetchLockFile],
+    [
+      'getOrFetchLockFile',
+      () => LocksController.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL }),
+      mocks.getOrFetchLockFile,
+    ],
+    [
+      'deleteLockContent',
+      () => LocksController.deleteLockContent({ lockUrl: VALID_LOCK_URL }),
+      mocks.deleteLockContent,
+    ],
+  ])('%s hands the application a scope that ends at logout', async (_name, call, appMock) => {
+    appMock.mockResolvedValueOnce(null);
+    await call().catch(() => undefined);
+
+    const isCurrent = lastScope(appMock);
+    expect(isCurrent?.()).toBe(true);
+    useAuthStore.setState({ currentUserPubky: null });
+    expect(isCurrent?.()).toBe(false);
   });
 });

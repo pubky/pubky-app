@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
 import { TagCacheController } from '@/controllers/tag/tag-cache';
-import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
@@ -18,15 +18,18 @@ import { mergePostTagLists, usePostTags } from './usePostTags';
 const { mockGetOrFetchTags, mockAuthStoreSelector, mockWaitForAuth } = vi.hoisted(() => ({
   mockGetOrFetchTags: vi.fn().mockResolvedValue(undefined),
   mockWaitForAuth: vi.fn(async (_key?: string) => true),
-  mockAuthStoreSelector: (currentUserPubky: string | null) => {
-    return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky }));
+  mockAuthStoreSelector: (currentUserPubky: string | null, partial: Partial<AuthStore> = {}) => {
+    return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky, ...partial }));
   },
 }));
 
 // Mock dependencies
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: vi.fn(mockAuthStoreSelector('mock-user-id')),
-}));
+vi.mock('@/stores/auth/auth.store', () => {
+  const useAuthStore = vi.fn(mockAuthStoreSelector('mock-user-id'));
+  // `getState()` reads the snapshot through whichever selector implementation the test installed.
+  const getState = () => useAuthStore.getMockImplementation()?.((state: AuthStore) => state);
+  return { useAuthStore: Object.assign(useAuthStore, { getState }) };
+});
 vi.mock('@/controllers/tag/tag-cache', () => ({
   TagCacheController: { get: vi.fn(), getOrFetch: mockGetOrFetchTags, getOrFetchNext: vi.fn() },
 }));
@@ -188,6 +191,10 @@ describe('usePostTags', () => {
       toggle = result.current.handleTagToggle({ label: 'solo', relationship: true });
     });
     await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
+    // Even once another write's 401 ended the session, a generic failure of a closed view stays silent (#2957).
+    vi.mocked(useAuthStore).mockImplementation(
+      mockAuthStoreSelector('mock-user-id', { restoreStatus: 'reauth-required' }),
+    );
     unmount();
     await act(async () => {
       pending.reject(new Error('offline'));
@@ -315,6 +322,63 @@ describe('usePostTags', () => {
         description: 'Could not add tag',
       });
     });
+
+    it('prompts sign-in instead of the generic copy when the add is rejected as unauthenticated (#2890)', async () => {
+      vi.mocked(TagController.commitCreate).mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      const { result } = renderHook(() => usePostTags('author:post123'));
+
+      let response: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
+      await act(async () => {
+        response = await result.current.handleTagAdd('unauthed');
+      });
+
+      expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+    });
+
+    it('still prompts sign-in when the rejected add settles after the view unmounted (#2957)', async () => {
+      const pending = Promise.withResolvers<void>();
+      vi.mocked(TagController.commitCreate).mockReturnValueOnce(pending.promise);
+
+      const { result, unmount } = renderHook(() => usePostTags('author:post123'));
+      let add!: ReturnType<typeof result.current.handleTagAdd>;
+      act(() => {
+        add = result.current.handleTagAdd('unauthed');
+      });
+      await waitFor(() => expect(TagController.commitCreate).toHaveBeenCalled());
+      // The 401 ends the session; the route guard redirects a guarded route to the landing page.
+      vi.mocked(useAuthStore).mockImplementation(
+        mockAuthStoreSelector('mock-user-id', { restoreStatus: 'reauth-required' }),
+      );
+      unmount();
+      let response: Awaited<typeof add>;
+      await act(async () => {
+        pending.reject(
+          Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+            service: ErrorService.Homeserver,
+            operation: 'commitCreate',
+          }),
+        );
+        response = await add;
+      });
+
+      expect(response!).toEqual({ success: false });
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+    });
   });
 
   describe('handleTagToggle', () => {
@@ -403,6 +467,117 @@ describe('usePostTags', () => {
         variant: 'error',
         description: 'Could not remove tag',
       });
+    });
+
+    it('prompts sign-in when adding through a toggle is rejected as UNAUTHORIZED (#2890)', async () => {
+      vi.mocked(TagController.commitCreate).mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      const { result } = renderHook(() => usePostTags('author:post123'));
+
+      await act(async () => {
+        await result.current.handleTagToggle({ label: 'bitcoin', relationship: false });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+    });
+
+    it('prompts sign-in when removing a tag is rejected as SESSION_EXPIRED (#2890)', async () => {
+      const mockViewerId = 'viewer-123';
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
+      vi.mocked(useLiveQuery).mockReturnValue({
+        id: 'author:post123',
+        tags: [{ label: 'solo-tag', taggers_count: 1, taggers: [mockViewerId], relationship: true }],
+      });
+      vi.mocked(TagController.commitDelete).mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+          service: ErrorService.Homeserver,
+          operation: 'commitDelete',
+        }),
+      );
+
+      const { result } = renderHook(() => usePostTags('author:post123'));
+
+      await act(async () => {
+        await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+    });
+
+    it('still prompts sign-in when a rejected toggle settles after the view unmounted (#2957)', async () => {
+      const pending = Promise.withResolvers<void>();
+      vi.mocked(TagController.commitDelete).mockReturnValueOnce(pending.promise);
+      setupLiveQueryMock(
+        { tags: [{ label: 'solo', taggers: ['mock-user-id'], taggers_count: 1, relationship: true }] },
+        { unique_tags: 1 },
+      );
+      const { result, unmount } = renderHook(() => usePostTags('author:post123'));
+      let toggle!: Promise<void>;
+      act(() => {
+        toggle = result.current.handleTagToggle({ label: 'solo', relationship: true });
+      });
+      await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
+      vi.mocked(useAuthStore).mockImplementation(
+        mockAuthStoreSelector('mock-user-id', { restoreStatus: 'reauth-required' }),
+      );
+      unmount();
+      await act(async () => {
+        pending.reject(
+          Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+            service: ErrorService.Homeserver,
+            operation: 'commitDelete',
+          }),
+        );
+        await toggle;
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+    });
+
+    it("stays silent when a write ended by the user's own logout settles after the view unmounted (#2957)", async () => {
+      const pending = Promise.withResolvers<void>();
+      vi.mocked(TagController.commitDelete).mockReturnValueOnce(pending.promise);
+      setupLiveQueryMock(
+        { tags: [{ label: 'solo', taggers: ['mock-user-id'], taggers_count: 1, relationship: true }] },
+        { unique_tags: 1 },
+      );
+      const { result, unmount } = renderHook(() => usePostTags('author:post123'));
+      let toggle!: Promise<void>;
+      act(() => {
+        toggle = result.current.handleTagToggle({ label: 'solo', relationship: true });
+      });
+      await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
+      // Logout resets the store (no reauth needed) and the queued write throws SESSION_EXPIRED.
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(null, { restoreStatus: 'idle' }));
+      unmount();
+      await act(async () => {
+        pending.reject(
+          Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session ended before the homeserver write completed.', {
+            service: ErrorService.Homeserver,
+            operation: 'queuedWrite',
+          }),
+        );
+        await toggle;
+      });
+
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
   });
 

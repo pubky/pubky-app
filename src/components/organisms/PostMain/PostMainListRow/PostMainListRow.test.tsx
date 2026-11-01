@@ -90,6 +90,10 @@ vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
   useUserDetails: vi.fn(),
 }));
 
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: () => ({ profile: { name: 'dummy-5' }, isLoading: false }),
+}));
+
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(mockAuthStoreSelector(null)),
 }));
@@ -422,6 +426,30 @@ describe('PostMainListRow', () => {
     );
 
     expect(screen.getByText('BBC')).toBeInTheDocument();
+  });
+
+  // #2433: an untitled lock is named by its saved kind, as `LockedPostCard` names it.
+  it.each([
+    ['image', 'Locked image'],
+    [undefined, 'Locked content'],
+  ])('labels an untitled lock announcement of kind %s as "%s"', (contentKind, label) => {
+    mockPostDetails(
+      JSON.stringify({ lock_title: '', teaser_description: 'A peek', content_kind: contentKind }),
+      'short',
+      'pubky://hs/pub/app.locks/lock1.json',
+    );
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
 
   it('keeps compact list row content truncated', () => {
@@ -824,5 +852,45 @@ describe('PostMainListRow', () => {
     const panel = screen.getByTestId('post-tags-panel');
     expect(panel).toHaveAttribute('data-post-id', 'original-author:original-post');
     expect(panel).toHaveAttribute('data-merge-post-id', 'author:post');
+  });
+
+  it('shows a user key in a lock title as @<display name> in the list row (#2681)', () => {
+    const key = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    mockPostDetails(
+      JSON.stringify({ lock_title: `hello pubky${key}`, teaser_description: 'A peek' }),
+      'short',
+      'pubky://hs/pub/app.locks/lock1.json',
+    );
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    const snippet = screen.getByText(/^hello/);
+    expect(snippet).toHaveTextContent('hello @dummy-5');
+    expect(snippet).not.toHaveTextContent(key);
+  });
+
+  it('leaves a key in a normal post snippet as typed', () => {
+    const key = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    mockPostDetails(`hello pubky${key}`);
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('@dummy-5')).not.toBeInTheDocument();
   });
 });

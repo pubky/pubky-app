@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMEFRAME } from '@/stores/hot/hot.types';
 import { FilterTimeframe, HotFeedDrawer, HotFeedSidebar } from './HotFeedFilters';
@@ -39,6 +39,7 @@ vi.mock('@/atoms/Filter/Filter', () => {
         {children}
       </li>
     ),
+    FilterItemCheck: () => <span data-testid="filter-item-check" />,
     FilterItemIcon: ({ icon: Icon }: { icon: React.ComponentType }) => (
       <span data-testid="filter-icon">
         <Icon />
@@ -81,6 +82,17 @@ describe('FilterTimeframe', () => {
 
     fireEvent.click(screen.getByText('This Month'));
     expect(onTabChange).toHaveBeenCalledWith(TIMEFRAME.THIS_MONTH);
+  });
+
+  it('renders the check on the selected timeframe only', () => {
+    render(<FilterTimeframe selectedTab={TIMEFRAME.TODAY} />);
+
+    const [today, thisWeek] = screen.getAllByTestId('filter-item');
+
+    expect(today).toHaveAttribute('data-selected', 'true');
+    expect(within(today).getByTestId('filter-item-check')).toBeInTheDocument();
+    expect(within(thisWeek).queryByTestId('filter-item-check')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('filter-item-check')).toHaveLength(1);
   });
 });
 
