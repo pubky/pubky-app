@@ -96,7 +96,6 @@ body {
 }
 
 :root {
-  color-scheme: dark;
   --radius: 0.625rem;
   --background: oklch(0.118 0.014 284.115);
   --foreground: oklch(1 0 0);
@@ -415,7 +414,6 @@ body {
  * scale so hover/active states keep the same relative contrast.
  */
 .light {
-  color-scheme: light;
   --background: #eeeef6;
   --foreground: #303034;
   --card: #ffffff;
