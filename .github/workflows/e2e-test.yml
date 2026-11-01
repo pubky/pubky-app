@@ -338,7 +338,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Desktop
-        if: always() && steps.test-desktop.outcome == 'failure'
+        if: always() && (steps.test-desktop.outcome == 'failure' || matrix.spec == 'locks.cy.ts')
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
