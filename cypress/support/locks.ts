@@ -277,8 +277,26 @@ export const editLockedPostText = (text: string) => {
   homeComposer().find('[data-cy="post-input-attachment-remove"]').filter(':visible').should('have.length', 1);
 };
 
+/**
+ * The body editor is lazy-loaded and focuses itself once it mounts (a new article, or a draft the
+ * lock switch put back): typing before then sends the rest of the keystrokes into the body.
+ */
+const waitForArticleEditorFocus = () => {
+  cy.focused().closest('.mdxeditor-root-contenteditable').should('exist');
+};
+
 const typeArticleBody = (body: string) => {
-  homeComposer().find('button[aria-label="Markdown"]').filter(':visible').click();
+  // The rich-text toolbar is sticky, so Cypress counts its buttons as hidden while the page header
+  // covers them; earlier steps scroll the composer under the header.
+  homeComposer().scrollIntoView({ offset: { top: -200, left: 0 } });
+  // Exactly one of the two shows, whichever mode the editor is in; only rich text needs the switch.
+  homeComposer()
+    .find('button[aria-label="Markdown"], [data-cy="article-markdown-textarea"]')
+    .filter(':visible')
+    .should('have.length', 1)
+    .then(($control) => {
+      if ($control.is('button')) cy.wrap($control).click();
+    });
   homeComposer()
     .find('[data-cy="article-markdown-textarea"]')
     .filter(':visible')
@@ -291,9 +309,7 @@ const typeArticleBody = (body: string) => {
 export const writeLockedArticle = (title: string, body: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click();
   homeComposer().find('[data-cy="post-input-action-bar-add-article"]').filter(':visible').click();
-  // The body editor is lazy-loaded and focuses itself once it mounts: typing the title before then
-  // sends the rest of the keystrokes into the body and leaves the title empty.
-  cy.focused().closest('.mdxeditor-root-contenteditable').should('exist');
+  waitForArticleEditorFocus();
   homeComposer()
     .find('[data-cy="article-title-input"]')
     .filter(':visible')
@@ -304,6 +320,7 @@ export const writeLockedArticle = (title: string, body: string) => {
 
 /** Replaces the body of an article draft the lock switch put back into the composer. */
 export const editLockedArticleBody = (title: string, body: string) => {
+  waitForArticleEditorFocus();
   homeComposer().find('[data-cy="article-title-input"]').filter(':visible').should('have.value', title);
   typeArticleBody(body);
 };
