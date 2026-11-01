@@ -150,7 +150,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 variant="secondary"
               >
                 <Typography
-                  className={cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
+                  className={cn('font-semibold text-brand-foreground', unreadNotifications > 21 && 'text-xs')}
                   size="xs"
                 >
                   {unreadNotifications > 21 ? '21+' : unreadNotifications}

@@ -211,7 +211,7 @@ export function HeaderNavigationButtons({
             className="absolute right-0 bottom-0 h-5 w-5 rounded-full bg-brand shadow-sm"
             variant="secondary"
           >
-            <Typography className={cn('font-semibold text-primary-foreground', counter > 21 && 'text-xs')} size="xs">
+            <Typography className={cn('font-semibold text-brand-foreground', counter > 21 && 'text-xs')} size="xs">
               {counterString}
             </Typography>
           </Badge>

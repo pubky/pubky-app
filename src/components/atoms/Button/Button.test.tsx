@@ -29,7 +29,7 @@ describe('Button', () => {
 
     rerender(<Button variant={ButtonVariant.BRAND}>Brand</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-brand', 'text-background');
+    expect(button).toHaveClass('bg-brand', 'text-brand-foreground');
 
     rerender(<Button variant="destructive">Destructive</Button>);
     button = screen.getByRole('button');

@@ -51,6 +51,7 @@ body {
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-glass: var(--glass);
   --color-glass-hover: var(--glass-hover);
   --color-glass-strong: var(--glass-strong);
@@ -132,6 +133,8 @@ body {
   --sidebar-border: oklch(0.311 0.007 285.98);
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
+  /** Text and icons on a `bg-brand` fill. Dark in both themes: the light theme's page colour on its green is 2.3:1. */
+  --brand-foreground: var(--background);
   /**
    * Translucent chrome fill for outline-style controls (nav buttons, FAB,
    * sidebar "See all", checkbox/radio wells). Mirrors the Figma variable
@@ -443,6 +446,7 @@ body {
   --sidebar-border: #babac1;
   --sidebar-ring: oklch(0.55 0.008 274.863);
   --brand: #88ad00;
+  --brand-foreground: var(--foreground);
   --glass: var(--card);
   --glass-hover: var(--accent);
   --glass-strong: var(--card);

@@ -71,7 +71,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
             {dataAvailable ? (
               <Badge
                 variant="secondary"
-                className="rounded-md border-0 bg-brand px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground shadow-sm lg:hidden"
+                className="rounded-md border-0 bg-brand px-2 py-[2px] text-sm font-semibold tracking-wide text-brand-foreground shadow-sm lg:hidden"
               >
                 ₿ {formattedPrice}
               </Badge>
