@@ -102,6 +102,8 @@ export interface UsePostInputReturn {
   serializeArticleForLock: UsePostReturn['serializeArticleForLock'];
   /** The article as the inputs hold it now. `articleTitle` and `content` trail them by the debounce. */
   getLatestArticle: () => { title: string; body: string };
+  /** Cancels the title and body commits still on their debounce (#3021). */
+  discardPendingArticle: () => void;
 
   // Mention autocomplete state
   mentionUsers: AutocompleteUserData[];

@@ -591,6 +591,18 @@ export function usePostInput({
     setContent(markdown);
   }, 500);
 
+  // Drops the title and body still on their debounce, at once. A caller that empties the composer
+  // outside a render (the lock's Apply runs after react-hook-form's async submit) must not leave a
+  // commit armed until `useEffect([isArticle])` runs: firing in between, it writes the body back into
+  // `content`, which is then the public teaser (#3021). Clearing the pending values is what stops it:
+  // `cancel` reaches only this render's debounce, not a timer an earlier render's one still holds.
+  const discardPendingArticle = () => {
+    commitArticleTitle.cancel();
+    commitArticleBody.cancel();
+    pendingArticleTitleRef.current = null;
+    pendingArticleBodyRef.current = null;
+  };
+
   // Handle article body change - length validation is handled via MDXEditor's maxLength plugin.
   // Rich text and markdown mode both report here; the rich text editor knows nothing of markdown mode.
   const handleArticleBodyChange: NonNullable<MDXEditorProps['onChange']> = (markdown) => {
@@ -859,6 +871,7 @@ export function usePostInput({
     isEditInlineMediaLoading,
     serializeArticleForLock,
     getLatestArticle,
+    discardPendingArticle,
 
     // Mention autocomplete state
     mentionUsers,
