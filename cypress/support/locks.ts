@@ -291,7 +291,14 @@ const typeArticleBody = (body: string) => {
 export const writeLockedArticle = (title: string, body: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click();
   homeComposer().find('[data-cy="post-input-action-bar-add-article"]').filter(':visible').click();
-  homeComposer().find('[data-cy="article-title-input"]').filter(':visible').type(title, { delay: 0 });
+  // The body editor is lazy-loaded and focuses itself once it mounts: typing the title before then
+  // sends the rest of the keystrokes into the body and leaves the title empty.
+  cy.focused().closest('.mdxeditor-root-contenteditable').should('exist');
+  homeComposer()
+    .find('[data-cy="article-title-input"]')
+    .filter(':visible')
+    .type(title, { delay: 0 })
+    .should('have.value', title);
   typeArticleBody(body);
 };
 
