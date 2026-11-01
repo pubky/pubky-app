@@ -1,4 +1,14 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run build"
+  "buildCommand": "npm run build",
+  "rewrites": [
+    {
+      "source": "/shop-embed",
+      "destination": "https://pubky-shop-light.vercel.app/shop-embed"
+    },
+    {
+      "source": "/shop-embed/:path*",
+      "destination": "https://pubky-shop-light.vercel.app/shop-embed/:path*"
+    }
+  ]
 }
