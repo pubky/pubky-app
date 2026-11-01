@@ -29,6 +29,12 @@ export const COLORS = {
  */
 export const THEME_OPTIONS = ['dark', 'light', 'system'] as const;
 
+/**
+ * Themes with their own class on `<html>`. `system` is left out: next-themes appends it when
+ * `enableSystem` is set and resolves it to one of these.
+ */
+export const THEME_CLASSES = ['dark', 'light'] as const;
+
 export type ThemeOption = (typeof THEME_OPTIONS)[number];
 
 /** Theme applied until the user chooses one. Dark is the brand, so the system setting is opt-in via Auto. */

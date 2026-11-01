@@ -2,7 +2,7 @@
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import type { ReactNode } from 'react';
-import { DEFAULT_THEME, THEME_OPTIONS, THEME_STORAGE_KEY } from '@/config/theme';
+import { DEFAULT_THEME, THEME_CLASSES, THEME_STORAGE_KEY } from '@/config/theme';
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -25,7 +25,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     <NextThemesProvider
       attribute="class"
       defaultTheme={DEFAULT_THEME}
-      themes={[...THEME_OPTIONS]}
+      themes={[...THEME_CLASSES]}
       enableSystem
       enableColorScheme={false}
       disableTransitionOnChange

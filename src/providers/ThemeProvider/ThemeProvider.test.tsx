@@ -28,4 +28,12 @@ describe('ThemeProvider', () => {
 
     expect(providerProps).toHaveBeenCalledWith(expect.objectContaining({ enableColorScheme: false }));
   });
+
+  it('passes only the class themes, since enableSystem already appends system', () => {
+    render(<ThemeProvider>{null}</ThemeProvider>);
+
+    expect(providerProps).toHaveBeenCalledWith(
+      expect.objectContaining({ themes: ['dark', 'light'], enableSystem: true }),
+    );
+  });
 });
