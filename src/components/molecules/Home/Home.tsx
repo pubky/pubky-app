@@ -89,7 +89,7 @@ export const HomeBrandFooter = ({ className, ...props }: React.HTMLAttributes<HT
           alt="a tether. company"
           width={109}
           height={16}
-          className="max-w-none translate-y-px [.light_&]:invert"
+          className="max-w-none translate-y-px light:invert"
         />
       </Link>
     </div>

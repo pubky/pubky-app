@@ -26,8 +26,8 @@ export function QrCodeSlot({
   if (isLoading || (!url && !isExpired)) {
     return (
       <Container className="items-center gap-2">
-        <Loader2 className="size-8 animate-spin text-background [.light_&]:text-foreground" />
-        <Typography as="small" size="sm" className="text-background [.light_&]:text-foreground">
+        <Loader2 className="size-8 animate-spin text-background light:text-foreground" />
+        <Typography as="small" size="sm" className="text-background light:text-foreground">
           {generatingLabel}
         </Typography>
       </Container>

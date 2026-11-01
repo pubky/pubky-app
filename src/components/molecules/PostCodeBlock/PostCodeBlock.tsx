@@ -32,7 +32,7 @@ const PostCodeBlockPlain = ({ code }: { code: string }) => (
   // Same padding, font size and line height as the highlighted block (oneDark pads 1em, the
   // post body is text-base at line-height 1.5), so the box does not change height when the
   // chunk lands.
-  <pre className="overflow-x-auto rounded-b-md bg-neutral-800 p-4 font-mono text-base leading-normal [.light_&]:text-white">
+  <pre className="overflow-x-auto rounded-b-md bg-neutral-800 p-4 font-mono text-base leading-normal light:text-white">
     {code}
   </pre>
 );
@@ -64,7 +64,7 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
     // Full code block with syntax highlighting and copy functionality (ex. ``` or ```ts).
     // The oneDark body is dark in both themes, so its chrome keeps light text in light mode too.
     <Container overrideDefaults className="max-w-69.5 xsm:max-w-72 sm:max-w-120 md:max-w-168 lg:max-w-130 xl:max-w-175">
-      <Container className="flex-row items-center justify-between gap-x-2 rounded-t-md bg-gray-600 px-4 [.light_&]:text-white">
+      <Container className="flex-row items-center justify-between gap-x-2 rounded-t-md bg-gray-600 px-4 light:text-white">
         <Typography size="sm" className="text-white">
           {lang}
         </Typography>
@@ -99,7 +99,7 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
       className={cn(
         className,
         'rounded border border-white/10 bg-neutral-800 px-1 font-mono text-orange-500',
-        '[.light_&]:border-border [.light_&]:bg-secondary [.light_&]:text-orange-700',
+        'light:border-border light:bg-secondary light:text-orange-700',
       )}
     >
       {children}

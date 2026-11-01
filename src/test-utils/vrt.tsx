@@ -5,6 +5,7 @@ import { expect, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { THEME_CLASSES } from '@/config/theme';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { freezeNow } from './vrt.clock';
 import type { VrtViewport } from './vrt.viewports';
@@ -14,14 +15,12 @@ export type VrtTheme = 'dark' | 'light';
 export interface RenderForVRTOptions {
   viewport: VrtViewport;
   /**
-   * Colour scheme to capture. Defaults to `dark` (the `:root` tokens); `light`
-   * adds the `.light` class to `<html>` the same way next-themes does at runtime.
+   * Colour scheme to capture. Defaults to `dark` (the `:root` tokens). The
+   * matching `.dark` / `.light` class is put on `<html>` the same way
+   * next-themes does at runtime, so `dark:` and `light:` utilities apply.
    */
   theme?: VrtTheme;
 }
-
-/** Class next-themes applies to `<html>` for the light theme (see `ThemeProvider`). */
-const LIGHT_THEME_CLASS = 'light';
 
 export const VRT_ROOT_TESTID = 'vrt-root';
 
@@ -130,7 +129,8 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
   );
   // Set explicitly on every render so a light capture never leaks into the
   // next (dark) test in the same browser document.
-  document.documentElement.classList.toggle(LIGHT_THEME_CLASS, options.theme === 'light');
+  const theme = options.theme ?? 'dark';
+  for (const themeClass of THEME_CLASSES) document.documentElement.classList.toggle(themeClass, themeClass === theme);
   await moveCursorToTopLeftCorner();
   freezeNow();
   mockMathRandom(0xdeadbeef);

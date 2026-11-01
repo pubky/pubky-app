@@ -84,7 +84,7 @@ export function DialogBackupExport({ mnemonic, children }: DialogBackupExportPro
               </Container>
 
               <Container className="gap-6">
-                <Container className="relative mx-0 h-[192px] w-[192px] items-center rounded-lg bg-foreground p-[9px] [.light_&]:bg-white">
+                <Container className="relative mx-0 h-[192px] w-[192px] items-center rounded-lg bg-white p-[9px]">
                   <QRCodeSVG value={qrValue} size={174} />
                   <Image
                     src="/images/ring-logo.svg"

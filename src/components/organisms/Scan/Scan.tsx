@@ -80,7 +80,7 @@ export const ScanContent = () => {
             />
           }
         >
-          <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2 [.light_&]:bg-white">
+          <div className="relative flex size-48 items-center justify-center rounded-md bg-white p-2">
             <QrCodeSlot
               isLoading={isLoading}
               isExpired={isExpired}
@@ -103,7 +103,7 @@ export const ScanContent = () => {
               alt="Pubky Ring"
               width={137}
               height={30}
-              className="[.light_&]:invert"
+              className="light:invert"
             />
             <Button
               className="w-full"

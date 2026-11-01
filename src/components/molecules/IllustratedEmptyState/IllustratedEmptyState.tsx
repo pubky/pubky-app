@@ -31,7 +31,7 @@ export function IllustratedEmptyState({
         src={imageSrc}
         alt={imageAlt}
         fill
-        className="pointer-events-none object-contain object-center [.light_&]:invert"
+        className="pointer-events-none object-contain object-center light:invert"
         aria-hidden="true"
       />
 

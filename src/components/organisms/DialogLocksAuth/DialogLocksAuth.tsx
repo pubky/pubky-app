@@ -257,7 +257,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
                   alt="Pubky Ring"
                   width={101}
                   height={22}
-                  className="[.light_&]:invert"
+                  className="light:invert"
                 />
               </Link>
               <Link href={BITKIT_WEBSITE_URL} overrideDefaults>

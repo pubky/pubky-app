@@ -179,7 +179,7 @@ export const SignInContent = () => {
   const qrButton = (
     <button
       type="button"
-      className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 [.light_&]:bg-white"
+      className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-white p-2"
       onClick={isExpired ? fetchUrl : handleQRClick}
       disabled={isLoading || isRingLocked || (!url && !isExpired)}
       aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
@@ -314,7 +314,7 @@ export const SignInContent = () => {
                 alt="Pubky Ring"
                 width={137}
                 height={30}
-                className="[.light_&]:invert"
+                className="light:invert"
               />
               {mobileRingButton}
               {mobileBitkitButton}

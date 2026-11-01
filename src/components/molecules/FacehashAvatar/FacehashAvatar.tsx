@@ -39,10 +39,7 @@ export function FacehashAvatar({ seed, initial, className }: FacehashAvatarProps
       intensity3d={freezeForVrt ? 'none' : 'dramatic'}
       interactive={!freezeForVrt}
       style={getTagPaletteStyle({ nightFill: color, nightEdge: color, dayFill: day.background, day })}
-      className={cn(
-        'tag-palette h-full w-full rounded-full text-background [.light_&]:text-(--tag-day-label)',
-        className,
-      )}
+      className={cn('tag-palette h-full w-full rounded-full text-background light:text-(--tag-day-label)', className)}
       onRenderMouth={() => (
         <Typography
           as="span"

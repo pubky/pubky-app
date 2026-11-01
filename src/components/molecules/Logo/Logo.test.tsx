@@ -53,9 +53,9 @@ describe('Logo', () => {
 
     expect(darkImage.parentElement).toBeInTheDocument();
     expect(darkImage).toHaveAttribute('src', '/pubky-logo.svg');
-    expect(darkImage).toHaveClass('[.light_&]:hidden');
+    expect(darkImage).toHaveClass('light:hidden');
     expect(lightImage).toHaveAttribute('src', '/pubky-logo-on-light.svg');
-    expect(lightImage).toHaveClass('hidden', '[.light_&]:block');
+    expect(lightImage).toHaveClass('hidden', 'light:block');
   });
 
   it('scrolls to top when clicking logo on /home', () => {

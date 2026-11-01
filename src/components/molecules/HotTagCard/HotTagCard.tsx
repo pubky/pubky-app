@@ -81,7 +81,7 @@ export function HotTagCard({
           <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <Container
               overrideDefaults
-              className="flex size-6 shrink-0 items-center justify-center rounded-full border border-accent-foreground [.light_&]:border-(--tag-day-label)"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full border border-accent-foreground light:border-(--tag-day-label)"
             >
               <Typography size="sm" className="font-bold text-(--tag-label)">
                 {rank}
@@ -104,7 +104,7 @@ export function HotTagCard({
         </Container>
 
         {/* Post Count */}
-        <Typography size="md" className="text-secondary-foreground [.light_&]:text-(--tag-day-count)">
+        <Typography size="md" className="text-secondary-foreground light:text-(--tag-day-count)">
           {TIMEFRAME_POST_COUNT_LABEL[timeframe](postCount.toLocaleString())}
         </Typography>
       </Container>

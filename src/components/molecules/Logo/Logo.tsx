@@ -89,7 +89,7 @@ const LogoImage = ({ width, height, className }: { width: number; height: number
     <Image
       src="/pubky-logo.svg"
       alt="Pubky"
-      className={logoImageClassName(width, height, cn('[.light_&]:hidden', className))}
+      className={logoImageClassName(width, height, cn('light:hidden', className))}
       style={logoImageStyle(width, height)}
       width={width}
       height={height}
@@ -97,7 +97,7 @@ const LogoImage = ({ width, height, className }: { width: number; height: number
     <Image
       src="/pubky-logo-on-light.svg"
       alt="Pubky"
-      className={logoImageClassName(width, height, cn('hidden [.light_&]:block', className))}
+      className={logoImageClassName(width, height, cn('hidden light:block', className))}
       style={logoImageStyle(width, height)}
       width={width}
       height={height}

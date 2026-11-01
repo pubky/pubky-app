@@ -22,7 +22,7 @@ export function ThemeToggle() {
         variant="outline"
         size="icon"
         aria-label="Switch to light mode"
-        className="size-10 [.light_&]:hidden"
+        className="size-10 light:hidden"
         onClick={() => setTheme('light')}
       >
         <Moon className="size-4" />
@@ -32,7 +32,7 @@ export function ThemeToggle() {
         variant="outline"
         size="icon"
         aria-label="Switch to dark mode"
-        className="hidden size-10 [.light_&]:inline-flex"
+        className="hidden size-10 light:inline-flex"
         onClick={() => setTheme('dark')}
       >
         <Sun className="size-4" />

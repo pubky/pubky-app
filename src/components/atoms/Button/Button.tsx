@@ -31,7 +31,7 @@ const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline',
         dark: 'bg-card text-foreground hover:bg-muted border-card',
         'dark-outline':
-          'bg-transparent hover:bg-neutral-900 hover:text-white bg-transparent border-neutral-700 hover:bg-neutral-800 [.light_&]:border-border [.light_&]:hover:bg-accent [.light_&]:hover:text-accent-foreground',
+          'bg-transparent hover:bg-neutral-900 hover:text-white bg-transparent border-neutral-700 hover:bg-neutral-800 light:border-border light:hover:bg-accent light:hover:text-accent-foreground',
       },
       size: {
         default: 'h-10 gap-1 px-4 py-2 has-[>svg]:px-4',

@@ -410,6 +410,13 @@ body {
   --container-max-width: 1200px;
 }
 
+/*
+ * Theme variants: `light:` and `dark:` follow the class next-themes sets on <html> (see
+ * ThemeProvider), not `prefers-color-scheme`, so they track the theme chosen in Settings.
+ */
+@custom-variant light (&:where(.light, .light *));
+@custom-variant dark (&:where(.dark, .dark *));
+
 /**
  * Light theme. Values come from the Figma "Pubky SHADCN" library, mode "Light"
  * (Feed - Column - 1280px (Light Mode) frame). Tokens the frame does not

@@ -17,7 +17,7 @@ describe('ThemeToggle', () => {
     render(<ThemeToggle />);
 
     const toLight = screen.getByRole('button', { name: 'Switch to light mode' });
-    expect(toLight).toHaveClass('[.light_&]:hidden');
+    expect(toLight).toHaveClass('light:hidden');
     expect(screen.getByRole('button', { name: 'Switch to dark mode' })).toHaveClass('hidden');
 
     fireEvent.click(toLight);
