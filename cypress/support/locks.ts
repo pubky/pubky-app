@@ -247,6 +247,33 @@ export const stubLockServer = (state: TLockServerState) => {
   }).as('proxyReadGuardedResource');
 };
 
+/** The Lock Server's error body (`locks-server/src/api/errors.rs`). */
+export const lockServerError = (code: string) => ({ error: { code, message: code.replaceAll('_', ' ') } });
+
+/**
+ * Answers the next matching stand-in call with `statusCode` and `body` instead of `stubLockServer`'s
+ * route, once: Cypress tries the latest intercept first, and `times: 1` hands every later call back.
+ * A non-2xx answer reaches the app as the Locks SDK's own error (`locks.e2eStub.ts`).
+ */
+export const answerLockServerOnce = (
+  method: 'GET' | 'POST',
+  pathname: string,
+  { statusCode, body, summary }: { statusCode: number; body: unknown; summary: string },
+) =>
+  cy.intercept({ ...route(method, pathname), times: 1 }, (req) => {
+    answer(req, 'one-off answer', `${method} ${pathname}: ${summary}`, body, statusCode);
+  });
+
+/** Adds a paid lock the creator published without the composer to the stand-in Lock Server. */
+export const holdSeededLock = (
+  state: TLockServerState,
+  lock: { lockId: string; guardedPath: string; guardedBytes: string },
+  price: TLockPrice,
+) => {
+  state.guarded[lock.guardedPath] = lock.guardedBytes;
+  state.locks[lock.lockId] = price;
+};
+
 /** The app's Dexie database (`NEXT_PUBLIC_DB_NAME`, unset in the e2e stack) and its unlocked-lock table. */
 const APP_DB_NAME = 'franky';
 const LOCKS_TABLE = 'locks';
@@ -386,6 +413,32 @@ export const turnLockOnAndSetUpLocks = () => {
   cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
 };
 
+const locksSetupDialog = () => cy.get('[role="dialog"]').filter(':visible');
+
+/** The setup dialog shows `message`, for an error or the Lock Server being down. */
+export const expectLocksSetupMessage = (message: string) => {
+  locksSetupDialog().should('contain.text', message);
+};
+
+/** Presses one of the setup dialog's own buttons (Cancel, Try again), which carry no `data-cy`. */
+export const pressLocksSetupButton = (label: 'Cancel' | 'Try again') => {
+  locksSetupDialog().contains('button', label).should('not.be.disabled').click();
+};
+
+/** Walks an open setup dialog through a working Lock Server: intro, approval, Paykit `ready`, done. */
+export const completeLocksSetup = () => {
+  cy.get('[data-cy="locks-auth-intro-continue"]').filter(':visible').should('not.be.disabled').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').should('not.exist');
+};
+
+/** The draft a lock gave back: the post text and its one image, with the switch off. */
+export const expectComposerDraft = (text: string) => {
+  lockSwitch().should('have.attr', 'aria-checked', 'false');
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', text);
+  homeComposer().find('[data-cy="post-input-attachment-remove"]').filter(':visible').should('have.length', 1);
+};
+
 /** Flips the lock switch on once Locks is set up in this tab: the price dialog opens straight away. */
 export const turnLockOn = () => {
   lockSwitch().should('have.attr', 'aria-checked', 'false').and('not.be.disabled').click();
@@ -411,6 +464,24 @@ export const fillLockAnnouncement = (title: string, teaser: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', '').click();
   homeComposer().find('[data-cy="lock-title-input"]').filter(':visible').clear().type(title);
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').type(teaser);
+};
+
+/** Presses Post on the configured lock, for a publish that is expected to fail. */
+export const pressPost = () => {
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
+};
+
+/** A failed publish keeps the lock, its title and its teaser, and lets the creator press Post again. */
+export const expectLockKept = (title: string, teaser: string) => {
+  lockSwitch().should('have.attr', 'aria-checked', 'true');
+  homeComposer().find('[data-cy="lock-title-input"]').filter(':visible').should('have.value', title);
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', teaser);
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled');
+};
+
+/** The toast with exactly this copy. */
+export const expectToast = (description: string) => {
+  cy.contains('[data-cy="toast"]', description).should('be.visible');
 };
 
 /**
