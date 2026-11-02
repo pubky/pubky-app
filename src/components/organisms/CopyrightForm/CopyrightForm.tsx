@@ -12,6 +12,7 @@ import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { useCopyrightForm } from '@/hooks/useCopyrightForm/useCopyrightForm';
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES } from '@/hooks/useCopyrightForm/useCopyrightForm.constants';
 import type { CopyrightFormData } from '@/hooks/useCopyrightForm/useCopyrightForm.types';
+import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { formatUSDate } from '@/libs/utils/utils';
 import { cn } from '@/libs/utils/utils';
 import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
@@ -21,7 +22,8 @@ export function CopyrightForm() {
   const { form, onSubmit } = useCopyrightForm();
   const { isSubmitting, errors } = form.formState;
   const roleError = errors.role?.message;
-  const currentDate = formatUSDate();
+  // The page is server-rendered and the server's time zone is not the visitor's, so the date waits for hydration.
+  const currentDate = useIsHydrated() ? formatUSDate() : '';
   return (
     <Container size="container" className={cn('pb-12', CONTENT_GUTTER_CLASS)}>
       <form onSubmit={onSubmit}>

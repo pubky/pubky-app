@@ -1,6 +1,8 @@
+import { renderToString } from 'react-dom/server';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { formatUSDate } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { CopyrightForm } from './CopyrightForm';
 
@@ -23,6 +25,19 @@ describe('CopyrightForm', () => {
     render(<CopyrightForm />);
 
     expect(screen.getByText('Copyright Removal Request')).toBeInTheDocument();
+  });
+
+  it("shows today's date once mounted", () => {
+    render(<CopyrightForm />);
+
+    expect(screen.getByText(`Date: ${formatUSDate()}`)).toBeInTheDocument();
+  });
+
+  it("leaves the date out of the server's HTML, whose time zone is not the visitor's", () => {
+    const html = renderToString(<CopyrightForm />);
+
+    expect(html).toContain('Copyright Removal Request');
+    expect(html).not.toContain(formatUSDate());
   });
 
   it('renders all form fields', () => {
