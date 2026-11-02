@@ -40,6 +40,7 @@ import {
   openPostFromHomeFeed,
   publishLock,
   registeredGuardedPosts,
+  reloadFromReaderReplica,
   singlePostCard,
   stubLockServer,
   turnLockOff,
@@ -134,6 +135,7 @@ const payToUnlock = () => {
       asset: 'BTC',
       recipient: creator.pubky,
     });
+    cy.wrap(lockId).as('lockId');
   });
   // The wallet pays on the second lookup: the first one runs as the proof is submitted and reads
   // `pending`, the next comes one payment poll (3 s) later and reads `completed`.
@@ -240,10 +242,13 @@ describe('locks', () => {
         .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
 
       // A later visit reads the reader's own replica: no further payment or Lock Server read.
-      cy.reload();
-      expectSignedIn('the reader is still signed in after a reload');
-      singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', lockedText);
-      singlePostCard().find('[data-cy="post-attachment-image"]').should('be.visible');
+      cy.get<string>('@lockId').then((lockId) =>
+        reloadFromReaderReplica(lockId, () => {
+          expectSignedIn('the reader is still signed in after a reload');
+          singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', lockedText);
+          singlePostCard().find('[data-cy="post-attachment-image"]').should('be.visible');
+        }),
+      );
     });
   });
 
@@ -312,9 +317,12 @@ describe('locks', () => {
         .should('contain.text', articleTitle)
         .and('contain.text', body);
 
-      cy.reload();
-      expectSignedIn('the reader is still signed in after a reload');
-      singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', body);
+      cy.get<string>('@lockId').then((lockId) =>
+        reloadFromReaderReplica(lockId, () => {
+          expectSignedIn('the reader is still signed in after a reload');
+          singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', body);
+        }),
+      );
     });
   });
 });

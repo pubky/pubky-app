@@ -247,6 +247,53 @@ export const stubLockServer = (state: TLockServerState) => {
   }).as('proxyReadGuardedResource');
 };
 
+/** The app's Dexie database (`NEXT_PUBLIC_DB_NAME`, unset in the e2e stack) and its unlocked-lock table. */
+const APP_DB_NAME = 'franky';
+const LOCKS_TABLE = 'locks';
+
+/** Drops one lock's cached content from the app's IndexedDB, leaving the session and every other row. */
+const deleteCachedLock = (lockId: string) =>
+  cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const open = win.indexedDB.open(APP_DB_NAME);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const database = open.result;
+          const transaction = database.transaction(LOCKS_TABLE, 'readwrite');
+          transaction.objectStore(LOCKS_TABLE).delete(lockId);
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+  );
+
+/**
+ * Reloads with this lock's cached content gone, so the unlocked view can only come from the reader's
+ * `post.json` replica: the reload must read it, and must make no payment or guarded Lock Server read.
+ */
+export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: () => void) => {
+  const lockServerCalls: string[] = [];
+  deleteCachedLock(lockId);
+  cy.intercept(
+    { method: 'POST', hostname: new URL(locksStubUrl()).hostname, pathname: /^\/e2e\/(viewer|paykit)\// },
+    (req) => {
+      lockServerCalls.push(new URL(req.url).pathname);
+    },
+  );
+  cy.intercept('GET', `**/priv/social/unlocked/${lockId}/post.json`).as('replicaRead');
+  cy.reload();
+  cy.wait('@replicaRead').its('response.statusCode').should('eq', 200);
+  expectUnlockedContent();
+  cy.then(() => expect(lockServerCalls, 'payment or guarded reads after the reload').to.be.empty);
+};
+
 export type TGuardedPost = { content: string; kind: string; attachments: string[] | null };
 
 /** Every guarded post (a lock's primary resource) registered so far; attachment bytes are skipped. */
