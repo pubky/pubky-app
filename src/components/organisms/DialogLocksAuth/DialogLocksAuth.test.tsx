@@ -362,6 +362,22 @@ describe('DialogLocksAuth', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it('says the Lock Server authorization failed, with Try again instead of Continue, after a failed sign-in', () => {
+    mocks.flow = {
+      status: LocksAuthFlowStatus.ERROR,
+      connectUrl: null,
+      session: null,
+      error: { message: 'Something went wrong. Try again.' },
+    };
+    renderDialog();
+
+    expect(screen.getByText('Enable Locks')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong while authorizing the Lock Server.')).toBeInTheDocument();
+    expect(screen.queryByTitle('Lock Server authorization')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
+  });
+
   it('retries the flow when Try again is clicked on the Error step', () => {
     mocks.flow = {
       status: LocksAuthFlowStatus.ERROR,
