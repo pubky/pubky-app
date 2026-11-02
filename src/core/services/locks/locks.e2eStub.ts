@@ -27,8 +27,8 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
  * `HomeserverService` with the creator's own session, so the owner view and every reader-side
  * `/priv` read and replica write hit the real homeserver.
  *
- * Errors keep the SDK's `Lock Server request failed with HTTP <status>` message, which
- * `toLocksError` and `LocksService.lookupVerificationTask` read.
+ * A non-2xx answer rejects with the SDK's own error shape (see `sdkError`), so the spec can drive
+ * every status mapping `LocksService` applies to the real Lock Server.
  */
 
 const SECRET_PREFIX = 'e2e-locks:';
@@ -42,20 +42,29 @@ export type TLocksReads = {
 const toBase64 = (bytes: Uint8Array) => btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
 const fromBase64 = (value: string) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
 
+/**
+ * The pinned SDK 0.1.0 rejects with a plain, unreported `Error` named after its error kind, and
+ * `LocksService` maps that itself (`toLocksError`, `isLockServerRegionBlocked`, the lookup 404). An
+ * `Err.*` here would be reported twice and would never match the region-refusal contract.
+ */
+function sdkError(path: string, status: number): Error {
+  if (path.startsWith('paykit/')) {
+    return Object.assign(new Error('Paykit data lookup failed'), { name: 'PaykitDataLookupFailed' });
+  }
+  const message = path.startsWith('viewer/')
+    ? `Lock Server viewer request failed with HTTP ${status}`
+    : `Lock Server request failed with HTTP ${status}`;
+  return Object.assign(new Error(message), { name: 'InvalidInput' });
+}
+
 /** `text/plain` keeps each call a CORS simple request, so the stub never has to answer a preflight. */
-async function post<T>(stubUrl: string, path: string, body: unknown, operation: string): Promise<T> {
+async function post<T>(stubUrl: string, path: string, body: unknown): Promise<T> {
   const response = await fetch(new URL(`/e2e/${path}`, stubUrl), {
     method: 'POST',
     headers: { 'content-type': 'text/plain' },
     body: JSON.stringify(body),
   });
-  if (!response.ok) {
-    throw Err.server(ServerErrorCode.INTERNAL_ERROR, `Lock Server request failed with HTTP ${response.status}`, {
-      service: ErrorService.Locks,
-      operation,
-      context: { path, statusCode: response.status },
-    });
-  }
+  if (!response.ok) throw sdkError(path, response.status);
   return (await response.json()) as T;
 }
 
@@ -70,33 +79,27 @@ function createCreator(stubUrl: string, owner: string): Creator {
     'setLockServicePointer' | 'paykitSetupStatus' | 'registerGuardedResource' | 'createContentLock'
   > = {
     setLockServicePointer: async (options) => {
-      await post(
-        stubUrl,
-        'creator/lock-service-pointer',
-        { owner, default_lock_server: options.defaultLockServer },
-        'setLockServicePointer',
-      );
+      await post(stubUrl, 'creator/lock-service-pointer', { owner, default_lock_server: options.defaultLockServer });
     },
-    paykitSetupStatus: (asset) => post(stubUrl, 'creator/paykit-setup-status', { owner, asset }, 'paykitSetupStatus'),
+    paykitSetupStatus: (asset) => post(stubUrl, 'creator/paykit-setup-status', { owner, asset }),
     registerGuardedResource: async (options: RegisterGuardedResourceOptions) => {
       const bytes = options.bytes;
       await HomeserverService.putBlob({
         url: `pubky://${owner}${LOCKS_GUARDED_CONTENT_PATH}${options.path}`,
         blob: bytes,
       });
-      return post(
-        stubUrl,
-        'creator/guarded-resources',
-        { owner, path: options.path, content_type: options.contentType, bytes: toBase64(bytes) },
-        'registerGuardedResource',
-      );
+      return post(stubUrl, 'creator/guarded-resources', {
+        owner,
+        path: options.path,
+        content_type: options.contentType,
+        bytes: toBase64(bytes),
+      });
     },
     createContentLock: async (body) => {
       const response = await post<{ content_lock_path: string; content_lock: unknown }>(
         stubUrl,
         'creator/content-locks',
         { owner, body },
-        'createContentLock',
       );
       await HomeserverService.putBlob({
         url: `pubky://${owner}${response.content_lock_path}`,
@@ -128,20 +131,12 @@ function createViewer(stubUrl: string): Viewer {
     | 'issueAccessCredential'
     | 'proxyReadGuardedResource'
   > = {
-    submitProofBundle: (bundle) => post(stubUrl, 'viewer/proof-bundles', bundle, 'submitProofBundle'),
-    lookupVerificationTask: (options) =>
-      post(stubUrl, 'viewer/verification-tasks', handle(options), 'lookupVerificationTask'),
-    lookupPaykitConnectionState: (options) =>
-      post(stubUrl, 'viewer/paykit-connection-state', handle(options), 'lookupPaykitConnectionState'),
-    issueAccessCredential: (options) =>
-      post(stubUrl, 'viewer/access-credentials', handle(options), 'issueAccessCredential'),
+    submitProofBundle: (bundle) => post(stubUrl, 'viewer/proof-bundles', bundle),
+    lookupVerificationTask: (options) => post(stubUrl, 'viewer/verification-tasks', handle(options)),
+    lookupPaykitConnectionState: (options) => post(stubUrl, 'viewer/paykit-connection-state', handle(options)),
+    issueAccessCredential: (options) => post(stubUrl, 'viewer/access-credentials', handle(options)),
     proxyReadGuardedResource: async (credential, path) => {
-      const { bytes } = await post<{ bytes: string }>(
-        stubUrl,
-        'viewer/guarded-resources/read',
-        { credential, path },
-        'proxyReadGuardedResource',
-      );
+      const { bytes } = await post<{ bytes: string }>(stubUrl, 'viewer/guarded-resources/read', { credential, path });
       return fromBase64(bytes);
     },
   };
@@ -159,12 +154,10 @@ export function createE2eLocksClient(stubUrl: string): Locks {
       return url.toString();
     },
     exchangeFrontendSessionCode: async (options: ExchangeFrontendSessionCodeOptions) => {
-      const { creator } = await post<{ creator: string }>(
-        stubUrl,
-        'session/exchange',
-        { code: options.code, state: options.state },
-        'exchangeFrontendSessionCode',
-      );
+      const { creator } = await post<{ creator: string }>(stubUrl, 'session/exchange', {
+        code: options.code,
+        state: options.state,
+      });
       return createSession(stubUrl, stripPubkyPrefix(creator));
     },
     restoreSession: (secret: string) => {
@@ -190,7 +183,7 @@ export function createE2eLocksReads(stubUrl: string): TLocksReads {
     readContentLock: async (resource) =>
       JSON.parse(new TextDecoder().decode(await HomeserverService.getBytes(`pubky://${resource}`))),
     hasPaykitData: async (user) => {
-      const { has_data } = await post<{ has_data: boolean }>(stubUrl, 'paykit/has-data', { user }, 'hasPaykitData');
+      const { has_data } = await post<{ has_data: boolean }>(stubUrl, 'paykit/has-data', { user });
       return has_data;
     },
   };
