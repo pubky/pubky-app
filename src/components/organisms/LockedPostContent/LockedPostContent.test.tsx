@@ -981,6 +981,68 @@ describe('LockedPostContent', () => {
     });
   });
 
+  describe('listed purchase whose copy was not found, while recovery looks it up', () => {
+    const renderReader = () => render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    const unlock = () => screen.getByRole('button', { name: 'Unlock', hidden: true });
+    /** The replica read has come back empty, so only recovery decides what the reader sees next. */
+    const settleEmptyRead = async () => {
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      await waitFor(() => expect(resumeMocks.params?.isResolvingContent).toBe(false));
+    };
+
+    it('keeps the pill busy while recovery checks the purchase', async () => {
+      resumeMocks.status = 'checking';
+      paymentData();
+      renderReader();
+      await settleEmptyRead();
+
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(unlock()).toBeDisabled();
+    });
+
+    it('releases the pill once recovery finds nothing to recover', async () => {
+      resumeMocks.status = 'checking';
+      paymentData();
+      const { rerender } = renderReader();
+      await settleEmptyRead();
+      expect(unlock()).toBeDisabled();
+
+      resumeMocks.status = 'none';
+      rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    it('does not hold a reader the purchase list does not name', async () => {
+      resumeMocks.status = 'checking';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      paymentData();
+      renderReader();
+      await settleEmptyRead();
+
+      expect(unlock()).toBeEnabled();
+    });
+
+    it('gives up on a recovery lookup that outlives the hold', async () => {
+      vi.useFakeTimers();
+      try {
+        resumeMocks.status = 'checking';
+        paymentData();
+        renderReader();
+        await act(async () => {});
+        expect(resumeMocks.params?.isResolvingContent).toBe(false);
+        expect(unlock()).toBeDisabled();
+
+        await act(async () => vi.advanceTimersByTime(REPLICA_READ_HOLD_MS - 1));
+        expect(unlock()).toBeDisabled();
+        await act(async () => vi.advanceTimersByTime(1));
+        expect(unlock()).toBeEnabled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe("paid unlocks held for the reader's region", () => {
     const renderReader = () => render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     /** The read of a possible earlier unlock holds the pill too; settle it so only the region gates are tested. */

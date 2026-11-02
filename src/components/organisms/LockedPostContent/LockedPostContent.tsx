@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Check, Lock } from 'lucide-react';
 import { isPostRoute, matchPostRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
+import { REPLICA_READ_HOLD_MS } from '@/config/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { usePaidUnlockAvailability } from '@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability';
@@ -135,6 +136,24 @@ export function LockedPostContent({
     isResolvingReplica &&
     !isReplicaReadOverdue &&
     (purchasesStatus !== 'ready' || hasPurchase(lockId));
+  // A listed purchase whose copy never reached the reader's homeserver: the replica read came back empty
+  // and purchase recovery is now looking the purchase up. The pill stays busy through that lookup too, or
+  // a click opens the pay dialog and cancels the recovery that was about to show the content. Only once the
+  // replica read has settled: while it runs, recovery also says 'checking', and holding on that would undo
+  // the read's deadline above. The lookup has no deadline of its own, so the pill gives up after the same
+  // hold; the dialog re-reads the saved bundle id before it offers to pay.
+  const isRecoveryLookupPending =
+    isPayableReader && !isPayOpen && !isResolvingReplica && hasPurchase(lockId) && purchaseStatus === 'checking';
+  const [isRecoveryLookupOverdue, setIsRecoveryLookupOverdue] = useState(false);
+  useEffect(() => {
+    if (!isRecoveryLookupPending) {
+      setIsRecoveryLookupOverdue(false);
+      return;
+    }
+    const deadline = setTimeout(() => setIsRecoveryLookupOverdue(true), REPLICA_READ_HOLD_MS);
+    return () => clearTimeout(deadline);
+  }, [isRecoveryLookupPending]);
+  const isRecoveryHold = isRecoveryLookupPending && !isRecoveryLookupOverdue;
   const regionBlock =
     isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
       ? paidUnlocks
@@ -235,7 +254,7 @@ export function LockedPostContent({
             title={lockContent.lock_title}
             contentKind={lockContent.content_kind}
             price={price}
-            isLoading={isLockFileLoading || isRegionChecking || isReplicaPending}
+            isLoading={isLockFileLoading || isRegionChecking || isReplicaPending || isRecoveryHold}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
             // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal

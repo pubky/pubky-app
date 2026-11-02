@@ -15,6 +15,7 @@ export const LOCK_ATTACHMENT_UPLOAD_CONCURRENCY = 3;
  * How long the Unlock pill of a locked post waits on the read of the reader's replicated copy before it
  * stops treating the reader as one who may already have unlocked it (#2795). The homeserver reads carry
  * no deadline of their own. Only the pill is bounded: the read keeps going, still renders the copy if it
- * lands later, and purchase recovery waits for it to settle.
+ * lands later, and purchase recovery waits for it to settle. The same hold bounds the pill while recovery
+ * then looks up a listed purchase whose copy was not found.
  */
 export const REPLICA_READ_HOLD_MS = 10_000;
