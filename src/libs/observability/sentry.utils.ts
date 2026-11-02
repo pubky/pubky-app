@@ -62,6 +62,8 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
   return endpointPath ? pattern.test(endpointPath) : false;
 }
 
+const LOCKS_UNLOCK_POLL_CALL_SITE_SET: ReadonlySet<unknown> = new Set(Object.values(LOCKS_UNLOCK_POLL_CALL_SITES));
+
 /**
  * Expected-error drop rules (ADR-0015 §5.1 Challenge 3).
  *
@@ -73,8 +75,6 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
  * `code` / `context.statusCode`) and be covered by a test that routes a fixture through that pipeline
  * (`safeFetch`, homeserver `handleError`, ...) rather than a hand-built `new AppError(...)`.
  */
-const LOCKS_UNLOCK_POLL_CALL_SITE_SET: ReadonlySet<unknown> = new Set(Object.values(LOCKS_UNLOCK_POLL_CALL_SITES));
-
 const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'unusable-saved-grant',
