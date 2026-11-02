@@ -79,6 +79,13 @@ function resolveSentryEnvironment(): string {
 }
 
 /**
+ * Key snippets the SDK must deny when it collects HTTP headers, cookies or URL query
+ * parameters: v10's `PII_HEADER_SNIPPETS`, which v11 no longer exports. `forwarded`
+ * catches `forwarded` / `x-forwarded-for`; `-ip` catches `x-real-ip` and friends.
+ */
+const PII_HEADER_DENY_SNIPPETS = ['forwarded', '-ip', 'remote-', 'via', '-user'] as const;
+
+/**
  * Shared options applied to every Sentry.init() call (browser, node, edge).
  * Each runtime layers its own additions on top (e.g. replayIntegration only on browser).
  *
@@ -97,6 +104,27 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
     // local builds fall back to package.json version, and source-map uploads must match it.
     release: Env.NEXT_PUBLIC_APP_VERSION,
     debug: false,
+    // v11 replaced `sendDefaultPii: false` with per-category `dataCollection` whose
+    // defaults collect MORE: the browser client flips `infer_ip` to 'auto' (Relay
+    // infers the connecting IP) and the server RequestData integration attaches
+    // `user.ip_address` plus IP-bearing headers such as `x-forwarded-for`. This is
+    // the vendor v10→v11 migration guide's "keep the v10 defaults" preset, so the
+    // previous privacy behaviour holds: no IP inference, no `user.ip_address`, no
+    // cookies or bodies, and PII-shaped header/query keys stay denied. The deny
+    // arrays are spread because the SDK option type is mutable.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: {
+        request: { deny: [...PII_HEADER_DENY_SNIPPETS] },
+        response: { deny: [...PII_HEADER_DENY_SNIPPETS] },
+      },
+      httpBodies: [],
+      urlQueryParams: { deny: [...PII_HEADER_DENY_SNIPPETS] },
+      genAI: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      graphQL: { document: false, variables: false },
+    },
     tracesSampleRate: getSentryTracesSampleRate(),
     // Spread, not passed through: the SDK option is a mutable array, and neither sink may mutate the shared list.
     ignoreErrors: [...OBSERVABILITY_IGNORE_ERRORS],

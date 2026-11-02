@@ -153,7 +153,12 @@ Third-party deployers get unsymbolicated events unless they obtain the maps for 
 
 Pubky App is decentralized social — strict defaults:
 
-- No client PII by default (SDK v11 removed `sendDefaultPii`; the SDK never attaches IP/headers itself)
+- No SDK-collected PII by default: v11 replaced `sendDefaultPii` with `dataCollection`, whose defaults collect
+  **more** (browser `infer_ip: 'auto'` lets Relay infer the connecting IP; the server RequestData integration
+  attaches `user.ip_address` and IP-bearing headers such as `x-forwarded-for`). `getSentryInitBase()` sets the
+  vendor migration guide's v10-preserving mapping (`userInfo: false`, `cookies: false`, no HTTP bodies, a deny
+  list for PII-shaped header/query keys), so no IP inference and no IP/cookie/header PII is attached in any
+  runtime (browser, server, edge).
 - Replay: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`, `networkCaptureBodies: false`
 - `beforeSend` defensively redacts user identifiers and user-provided data from app-controlled payloads:
   `email`, `phone` / `phoneNumber`, `name`, `firstName`, `lastName`, `displayName`, `username`, `bio`, `file`,
