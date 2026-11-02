@@ -59,7 +59,7 @@ import { flushLocksStubLog, locksStep } from '../support/locks-log';
 import { userIndexed, waitForNexus } from '../support/nexus';
 import { deletePost } from '../support/posts';
 import { seedUserViaApi } from '../support/seed';
-import { CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { HasBackedUp } from '../support/types/enums';
 import type { SeededUser } from '../support/types/seed';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
@@ -267,7 +267,8 @@ describe('locks', () => {
       deletePost({ filterText: teaser });
       cy.wait('@deleteContentLockFailed');
       cy.contains('Could not delete the locked content. Try again.').should('be.visible');
-      cy.findFirstPostInFeedFiltered(teaser, CheckForNewPosts.No, WaitForNewPosts.No).should('exist');
+      // The restored card remounts and loads its body again, so retry rather than filter one snapshot.
+      cy.get('[data-cy="timeline-posts"]').should('contain.text', teaser);
       cy.intercept('DELETE', `**/pub/pubky.app/posts/${postId}`).as('announcementDeleted');
       deletePost({ filterText: teaser });
       cy.wait('@announcementDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
