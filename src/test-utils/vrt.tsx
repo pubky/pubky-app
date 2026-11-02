@@ -145,6 +145,20 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
   );
 }
 
+/**
+ * Give the tester iframe focus in the parent document, as a user's page has.
+ *
+ * Vitest mounts a new iframe per test file and does not focus it, so the
+ * parent can be left with `<body>` active, depending on the files before it.
+ * In that state Firefox does not move focus into the child frame on a
+ * Playwright mousedown: the click reaches the `<input>` but
+ * `document.activeElement` stays `<body>`. Chromium and WebKit focus the frame
+ * on that mousedown, so this only makes Firefox start from the same state.
+ */
+function focusTesterFrame() {
+  if (window.frameElement && !document.hasFocus()) window.focus();
+}
+
 /** The iframe resize ack has no timeout of its own. A lost `viewport:done` must not consume the test. */
 const VIEWPORT_READY_TIMEOUT_MS = 5_000;
 
@@ -155,6 +169,7 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
     () =>
       `VRT viewport timed out after ${VIEWPORT_READY_TIMEOUT_MS}ms (${options.viewport.width}x${options.viewport.height})`,
   );
+  focusTesterFrame();
   await moveCursorToTopLeftCorner();
   freezeNow();
   mockMathRandom(0xdeadbeef);
