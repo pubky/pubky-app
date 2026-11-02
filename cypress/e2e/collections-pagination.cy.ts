@@ -39,6 +39,8 @@ describe('collections pagination', () => {
   before(() => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
+    // Installs the app while the seeds index; the sign-in below waits for the install to finish
+    cy.visit('/');
 
     seedUserViaApi(username, { bio: 'I collect everything', withRecoveryFile: true }).then((author) => {
       authorId = author.id;

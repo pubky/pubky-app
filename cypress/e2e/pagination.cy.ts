@@ -13,6 +13,7 @@ import {
   seededStreamKeys,
   THREAD_INITIAL_REPLIES,
 } from '../support/pagination';
+import { waitForServiceWorker } from '../support/common';
 import { waitForNexus } from '../support/nexus';
 import { createPostViaApi, replyViaApi, seedUserViaApi } from '../support/seed';
 
@@ -59,6 +60,8 @@ describe('pagination', () => {
   // are covered in posts.cy.ts. Nothing is signed in, so every surface below pages from Nexus.
   before(() => {
     slowCypressDown();
+    // Installs the app while the seeds index, so the first test does not page a stream mid-install
+    cy.visit('/');
 
     seedUserViaApi(username, { bio: 'I post one page at a time' }).then((author) => {
       authorId = author.id;
@@ -99,6 +102,7 @@ describe('pagination', () => {
         replyKeys = seededStreamKeys(replyStream);
       }),
     );
+    waitForServiceWorker();
   });
 
   it('profile posts tab loads every page once and stops at the end', () => {
