@@ -4,6 +4,7 @@ import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
@@ -42,6 +43,7 @@ import { isAppError, isNotFound, isWrongEnvironmentHomeserverError, toAppError }
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
+import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -545,6 +547,7 @@ export class AuthController {
       clearAllQueryClients();
       postStreamQueue.clear();
       clearMuteSyncCursorSessionStorage();
+      clearNotificationLastReadSyncCursorSessionStorage();
       useLocalFilesStore.getState().reset();
       useSignInStore.getState().reset();
       resetTabStore(useSettingsStore);
@@ -639,7 +642,15 @@ export class AuthController {
       onProgress,
     );
     if (!isCurrent()) return;
-    useNotificationStore.getState().setState(notification);
+    // The last_read sync may have adopted a newer boundary while bootstrap ran: never move it back, recount instead.
+    let state = notification;
+    while (useNotificationStore.getState().selectLastRead() > state.lastRead) {
+      const lastRead = useNotificationStore.getState().selectLastRead();
+      const unread = await NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
+      if (!isCurrent()) return;
+      state = { ...state, lastRead, unread };
+    }
+    useNotificationStore.getState().setState(state);
 
     // Apply remote settings to store (store mutation stays in Controller layer)
     if (remoteSettings) {
@@ -1063,14 +1074,15 @@ export class AuthController {
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
    * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * and mute-sync `sessionStorage` cursors.
+   * and the mute-sync and last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
-    // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
+    // Mute-list and last_read SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
+    clearNotificationLastReadSyncCursorSessionStorage();
 
     // Reset singletons
     PubkySpecsSingleton.reset();
