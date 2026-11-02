@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import type { ComponentProps, ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LOCK_TEASER_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { MAX_CHARACTERS_TOAST_TITLE } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
@@ -31,6 +31,8 @@ const mocks = vi.hoisted(() => ({
   commitDeleteFile: vi.fn(),
   useAttachmentsMetadata: vi.fn(),
   toast: vi.fn(),
+  // Renders the real LockedPostCard instead of nothing, for what the card itself shows.
+  realLockCard: false,
   // Handle into the stand-in editor, refreshed on every render. Null while no editor is mounted.
   editor: null as {
     markdown: string;
@@ -161,13 +163,31 @@ vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', async () => {
   };
 });
 vi.mock('../PostInputExpandableSection/PostInputExpandableSection', () => ({
-  PostInputExpandableSection: (props: { onSubmit: () => void; isPostDisabled: boolean; isSubmitting: boolean }) => (
-    <button data-testid="post-button" disabled={props.isPostDisabled || props.isSubmitting} onClick={props.onSubmit} />
+  PostInputExpandableSection: (props: {
+    onSubmit: () => void;
+    isPostDisabled: boolean;
+    isSubmitting: boolean;
+    lockCard?: ReactElement;
+  }) => (
+    <>
+      {props.lockCard}
+      <button
+        data-testid="post-button"
+        disabled={props.isPostDisabled || props.isSubmitting}
+        onClick={props.onSubmit}
+      />
+    </>
   ),
 }));
 vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({ DialogLockContent: () => null }));
 vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({ DialogLocksAuth: () => null }));
-vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({ LockedPostCard: () => null }));
+vi.mock('@/molecules/LockedPostCard/LockedPostCard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/LockedPostCard/LockedPostCard')>();
+  return {
+    LockedPostCard: (props: ComponentProps<typeof actual.LockedPostCard>) =>
+      mocks.realLockCard ? <actual.LockedPostCard {...props} /> : null,
+  };
+});
 vi.mock('@/molecules/MentionPopover/MentionPopover', () => ({ MentionPopover: () => null }));
 vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({ PostInputAttachments: () => null }));
 vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => ({ PostPreviewCard: () => null }));
@@ -359,6 +379,36 @@ describe('PostInput - editing while the post row changes under the dialog (integ
 
       const [{ content }] = mocks.commitEdit.mock.calls[0];
       expect(content).toBe('{"lock_title":"Holiday","teaser_description":"New teaser","content_kind":"podcast"}');
+    });
+
+    // Staging locks published before the specs v1 names stored `short` and `long`. They read as generic content,
+    // and an edit writes the value back unchanged: there is no remap, so they stay generic for good.
+    describe('a legacy short or long kind', () => {
+      beforeEach(() => {
+        mocks.realLockCard = true;
+      });
+      afterEach(() => {
+        mocks.realLockCard = false;
+      });
+
+      it.each(['short', 'long'])('shows %s as generic content and writes it back unchanged', async (legacyKind) => {
+        const { container } = render(
+          editLockPost(JSON.stringify({ lock_title: '', teaser_description: 'Old teaser', content_kind: legacyKind })),
+        );
+
+        expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveAttribute('placeholder', 'Locked content');
+        expect(container.querySelector('svg.lucide-sticky-note')).toBeInTheDocument();
+
+        fireEvent.change(screen.getByRole('textbox', { name: 'Lock title' }), { target: { value: 'Holiday' } });
+        fireEvent.change(screen.getByDisplayValue('Old teaser'), { target: { value: 'New teaser' } });
+
+        await save(1);
+
+        const [{ content }] = mocks.commitEdit.mock.calls[0];
+        expect(content).toBe(
+          JSON.stringify({ lock_title: 'Holiday', teaser_description: 'New teaser', content_kind: legacyKind }),
+        );
+      });
     });
 
     // The max follows the envelope actually written: a lock with no kind keeps the old teaser budget.

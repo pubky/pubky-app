@@ -7,7 +7,7 @@ import { DEFAULT_LOCK_TITLE } from './lockTeaser';
 describe('getLockContentDisplay', () => {
   // The icons are the content filter's, so a lock reads as the same kind the feed filters by.
   it.each([
-    ['long', 'Locked article', Newspaper],
+    ['article', 'Locked article', Newspaper],
     ['image', 'Locked image', ImageIcon],
     ['video', 'Locked video', CirclePlay],
     ['file', 'Locked file', Download],
@@ -16,7 +16,8 @@ describe('getLockContentDisplay', () => {
     expect(getLockContentDisplay(kind)).toEqual({ title, Icon });
   });
 
-  it.each([['short'], ['podcast'], ['collection'], [''], [undefined]] as const)(
+  // `short` and `long` are the internal kind strings. Only pre-v1 staging locks stored them: no aliases, they read as unknown.
+  it.each([['note'], ['short'], ['long'], ['podcast'], ['collection'], [''], [undefined]] as const)(
     'reads %s as generic locked content',
     (kind) => {
       expect(getLockContentDisplay(kind)).toEqual({ title: DEFAULT_LOCK_TITLE, Icon: StickyNote });
@@ -26,10 +27,10 @@ describe('getLockContentDisplay', () => {
 });
 
 describe('isLockContentKind', () => {
-  it('accepts the post kind strings a create can infer, and nothing else', () => {
-    expect(LOCK_CONTENT_KINDS).toEqual(['short', 'long', 'image', 'video', 'link', 'file']);
+  it('accepts the pubky-app-specs v1.0.0-rc.1 kind names, and nothing else', () => {
+    expect(LOCK_CONTENT_KINDS).toEqual(['note', 'article', 'image', 'video', 'link', 'file']);
     for (const kind of LOCK_CONTENT_KINDS) expect(isLockContentKind(kind)).toBe(true);
-    for (const kind of ['collection', 'unknown', 'note', 'article', 'podcast', '']) {
+    for (const kind of ['collection', 'unknown', 'short', 'long', 'podcast', '']) {
       expect(isLockContentKind(kind)).toBe(false);
     }
   });

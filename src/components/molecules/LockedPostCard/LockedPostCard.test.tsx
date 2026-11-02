@@ -273,11 +273,11 @@ describe('LockedPostCard', () => {
   describe('content kind', () => {
     it.each([
       ['image', 'Locked image', 'lucide-image'],
-      ['long', 'Locked article', 'lucide-newspaper'],
+      ['article', 'Locked article', 'lucide-newspaper'],
       ['video', 'Locked video', 'lucide-circle-play'],
       ['file', 'Locked file', 'lucide-download'],
       ['link', 'Locked content', 'lucide-link'],
-      ['short', 'Locked content', 'lucide-sticky-note'],
+      ['note', 'Locked content', 'lucide-sticky-note'],
       ['podcast', 'Locked content', 'lucide-sticky-note'],
       [undefined, 'Locked content', 'lucide-sticky-note'],
     ] as const)('shows %s as "%s" with its icon when untitled', (contentKind, title, iconClass) => {

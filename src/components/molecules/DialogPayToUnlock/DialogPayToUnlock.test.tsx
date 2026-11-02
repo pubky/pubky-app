@@ -656,7 +656,7 @@ describe('DialogPayToUnlock', () => {
   // #2433: the header card uses the same mapping as LockedPostCard.
   it.each([
     ['image', 'Locked image', 'lucide-image'],
-    ['long', 'Locked article', 'lucide-newspaper'],
+    ['article', 'Locked article', 'lucide-newspaper'],
     ['video', 'Locked video', 'lucide-circle-play'],
     ['file', 'Locked file', 'lucide-download'],
     ['link', 'Locked content', 'lucide-link'],

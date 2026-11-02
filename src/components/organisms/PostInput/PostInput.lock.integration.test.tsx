@@ -350,7 +350,7 @@ describe('PostInput lock flow (integration)', () => {
 
   // Full creator journey: write → switch on → sign in → price → teaser → Post.
   it.each([
-    ['short text', 'my secret note', [] as File[], 'short', 'Locked content'],
+    ['short text', 'my secret note', [] as File[], 'note', 'Locked content'],
     ['a link', 'see https://pubky.app', [] as File[], 'link', 'Locked content'],
     ['an image', 'holiday pic', [new File(['x'], 'pic.png', { type: 'image/png' })], 'image', 'Locked image'],
   ])('locks %s and publishes the announcement', async (_name, body, files, contentKind, defaultTitle) => {
@@ -581,17 +581,17 @@ describe('PostInput lock flow (integration)', () => {
       await configureLock();
 
       expect(screen.getByLabelText('Lock title')).toHaveAttribute('maxLength', String(LOCK_TITLE_MAX_CHARACTER_LENGTH));
-      // The draft is a short post, so the max gives up exactly its `content_kind` entry (#2433).
+      // The draft is a note, so the max gives up exactly its `content_kind` entry (#2433).
       expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveAttribute(
         'maxLength',
-        String(getLockTeaserMaxLength('short')),
+        String(getLockTeaserMaxLength('note')),
       );
     });
 
     it('publishes when both fields are filled to their budgets', async () => {
       await renderComposer();
       await configureLock();
-      setTeaser('b'.repeat(getLockTeaserMaxLength('short')));
+      setTeaser('b'.repeat(getLockTeaserMaxLength('note')));
       setTitle('a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH));
 
       fireEvent.click(postButton());
@@ -599,7 +599,7 @@ describe('PostInput lock flow (integration)', () => {
       await waitFor(() => expect(mocks.commitCreate).toHaveBeenCalledTimes(1));
       const [{ content }] = mocks.commitCreate.mock.calls[0];
       // The max follows the `content_kind` actually written, so a full composer fills the post exactly (#2433).
-      expect(JSON.parse(content).content_kind).toBe('short');
+      expect(JSON.parse(content).content_kind).toBe('note');
       expect(content.length).toBe(POST_MAX_CHARACTER_LENGTH);
     });
 

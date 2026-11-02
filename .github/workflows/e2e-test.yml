@@ -195,8 +195,9 @@ jobs:
           path: |
             pubky-app/node_modules
             ~/.cache/Cypress
-          # `v1` is the cache format. `.npmrc` matches nothing until the file exists.
-          key: e2e-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
+          # `v2` is the cache format (v2 caches a verified Cypress binary). `.npmrc` matches
+          # nothing until the file exists.
+          key: e2e-node-modules-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -209,6 +210,15 @@ jobs:
         if: steps.node-modules.outputs.cache-hit != 'true'
         working-directory: pubky-app
         run: npm ci
+
+      # Verifying writes `verified: true` beside the binary, so jobs that restore the cache skip the
+      # first-launch smoke test. Here it runs before the stack starts, on an idle runner.
+      - name: Verify the Cypress binary
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        working-directory: pubky-app
+        run: npx --no-install cypress verify
+        env:
+          CYPRESS_VERIFY_TIMEOUT: 120000
 
       - name: Save node_modules cache
         if: steps.node-modules.outputs.cache-hit != 'true'

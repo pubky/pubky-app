@@ -769,7 +769,7 @@ describe('PostInput lock wiring', () => {
     const fullTeaser = 'b'.repeat(POST_MAX_CHARACTER_LENGTH - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41);
 
     it('disables Save when the stored kind pushes a full announcement over', () => {
-      renderEditLockKind('long', fullTitle);
+      renderEditLockKind('article', fullTitle);
       act(() => mocks.composer.setContent(fullTeaser));
 
       expect(screen.getByTestId('post-button')).toBeDisabled();
@@ -826,7 +826,7 @@ describe('PostInput lock wiring', () => {
     expect(mocks.commitCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         authorId: 'alice',
-        content: JSON.stringify({ lock_title: 'My title', teaser_description: 'my teaser', content_kind: 'short' }),
+        content: JSON.stringify({ lock_title: 'My title', teaser_description: 'my teaser', content_kind: 'note' }),
         lock: 'pubky://bob/pub/app.locks/L1.json',
       }),
     );

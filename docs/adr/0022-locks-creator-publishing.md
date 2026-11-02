@@ -11,7 +11,8 @@ to the account signed in to pubky.app. The two-identities decision below is unch
 temporary.
 
 **Amendment (#2433, 2026-10-29):** the announcement envelope gains an optional `content_kind`, the locked
-post's kind string (`short | long | image | video | link | file`), so the card and the unlock dialog show
+post's kind in its pubky-app-specs v1.0.0-rc.1 name (`note | article | image | video | link | file`), mapped from the
+internal kind by an explicit list that never follows a rename of it, so the card and the unlock dialog show
 what is locked before anyone unlocks it, with the content filter's icons. It stays app-owned and leniently
 parsed: a missing or unknown value shows as generic locked content and never fails the parse, and an edit
 writes the stored value back unchanged, including one this build does not know. The teaser max is

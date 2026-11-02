@@ -13,10 +13,10 @@ type TLockContentDisplay = {
 const GENERIC_LOCK_CONTENT: TLockContentDisplay = { title: DEFAULT_LOCK_TITLE, Icon: StickyNote };
 
 // The icons are the content filter's (`FilterContent`), so a lock reads as the kind the feed filters by.
-// A short post or a link has no label of its own and keeps the generic title.
+// A note or a link has no label of its own and keeps the generic title.
 const LOCK_CONTENT_BY_KIND: Record<TLockContentKind, TLockContentDisplay> = {
-  short: GENERIC_LOCK_CONTENT,
-  long: { title: 'Locked article', Icon: Newspaper },
+  note: GENERIC_LOCK_CONTENT,
+  article: { title: 'Locked article', Icon: Newspaper },
   image: { title: 'Locked image', Icon: ImageIcon },
   video: { title: 'Locked video', Icon: CirclePlay },
   link: { title: DEFAULT_LOCK_TITLE, Icon: Link },

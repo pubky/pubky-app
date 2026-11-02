@@ -1,6 +1,7 @@
 'use client';
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { REPLICA_READ_HOLD_MS } from '@/config/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
@@ -102,7 +103,10 @@ export function useUnlockedContent({
   const [hasCompleteContent, setHasCompleteContent] = useState(false);
   // Until the replica read settles, "no content" means "not known yet". Callers that would act on
   // its absence — re-downloading a purchase, say — have to be able to tell the two apart.
-  const [isResolvingReplica, setIsResolvingReplica] = useState(true);
+  const [isReplicaReadPending, setIsReplicaReadPending] = useState(true);
+  // Set once the replica read outlives `REPLICA_READ_HOLD_MS`. Only the Unlock pill stops waiting then;
+  // the read stays pending for purchase recovery, which would otherwise download the purchase twice.
+  const [isReplicaReadOverdue, setIsReplicaReadOverdue] = useState(false);
   // Starts true so an own lock renders its layout on the first render that has lock.json, before the
   // effect below has started the read.
   const [isOwnReadPending, setIsOwnReadPending] = useState(true);
@@ -113,6 +117,12 @@ export function useUnlockedContent({
   // A session from before the app requested `/priv` gets a 403 on both reads, and each refusal is an
   // `Err.auth` sent to Sentry; skip them until the user approves the upgrade (#2373).
   const needsUpgrade = useSessionNeedsUpgrade();
+  // After a reload the pubky is back before the session, and the replica read waits for the session. Same
+  // rule as `AuthController.waitForSession`: a restore running, or a saved session not yet picked up.
+  const isRestorePending = useAuthStore(
+    (state) =>
+      state.restoreStatus === 'restoring' || (state.sessionReference !== null && state.restoreStatus === 'idle'),
+  );
 
   // Own lock when I posted it (author) AND I own the guarded storage (lock file creator == me, a == b).
   // `authorId === currentUserPubky` is required: lock.json is public, so anyone can point their own
@@ -121,6 +131,16 @@ export function useUnlockedContent({
   const isOwnLock = lockOwner !== null && lockOwner === currentUserPubky && authorId === currentUserPubky;
   // The read is skipped without a session, or for one that cannot make it, so neither counts as pending.
   const isResolvingOwn = isOwnLock && Boolean(session) && !needsUpgrade && isOwnReadPending;
+  // The replica read runs for someone else's post with a session that can read `/priv`; it counts as
+  // pending while it runs, however long, and while a restore it will run after is still going.
+  // Signed out, a failed restore, an own post or a session needing the upgrade: no read, nothing pending.
+  const isResolvingReplica =
+    Boolean(lock) &&
+    currentUserPubky !== null &&
+    authorId !== currentUserPubky &&
+    (session ? !needsUpgrade && isReplicaReadPending : isRestorePending);
+  // A running read past its deadline. A pending restore is never overdue: no read has started.
+  const isReplicaReadOverdueNow = isResolvingReplica && Boolean(session) && isReplicaReadOverdue;
 
   // Content belongs to one post read by one account: a different post, account or session starts
   // from nothing, so the previous post's text and media never show under the new one.
@@ -141,19 +161,26 @@ export function useUnlockedContent({
     // This session cannot read `/priv`, so the answer is known: there is nothing to wait for.
     // Leaving the flag set would tell callers (a purchase resume, say) a read is still in flight.
     if (needsUpgrade) {
-      setIsResolvingReplica(false);
+      setIsReplicaReadPending(false);
       return;
     }
     // My own post can't have a replicated copy (unlocking only happens on other people's posts).
     // Leans on the a == b policy: post author == lock creator. TODO:[Locks] #2283 — a != b breaks
     // that inference; decide by lock ownership (e.g. a local unlock index), not authorship.
     if (authorId === currentUserPubky) {
-      setIsResolvingReplica(false);
+      setIsReplicaReadPending(false);
       return;
     }
 
     let cancelled = false;
-    setIsResolvingReplica(true);
+    setIsReplicaReadPending(true);
+    setIsReplicaReadOverdue(false);
+    // The homeserver reads have no deadline, and the Unlock pill must not wait on a stalled one forever.
+    // Past this one the read is overdue: the pill stops waiting, the read goes on and still renders a
+    // late copy, and purchase recovery keeps waiting for it to settle.
+    const deadline = setTimeout(() => {
+      if (!cancelled) setIsReplicaReadOverdue(true);
+    }, REPLICA_READ_HOLD_MS);
     readContent({
       getCached: () => LocksController.getUnlockedPost({ lockUrl: lock }),
       fetchRemote: () =>
@@ -167,10 +194,14 @@ export function useUnlockedContent({
     })
       .catch(() => undefined) // already reported by the Err factory; fall back to the lock card
       .finally(() => {
-        if (!cancelled) setIsResolvingReplica(false);
+        clearTimeout(deadline);
+        if (cancelled) return;
+        setIsReplicaReadPending(false);
+        setIsReplicaReadOverdue(false);
       });
     return () => {
       cancelled = true;
+      clearTimeout(deadline);
     };
   }, [lock, currentUserPubky, session, needsUpgrade, authorId, preview]);
 
@@ -257,5 +288,6 @@ export function useUnlockedContent({
     isOwnLock,
     isResolvingOwn,
     isResolvingReplica,
+    isReplicaReadOverdue: isReplicaReadOverdueNow,
   };
 }

@@ -1,7 +1,7 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { z } from 'zod';
 import type { TLocksUnlockPollCallSite } from '@/libs/observability/sentry.constants';
-import { POST_KINDS, type PostKind } from '@/models/models.types';
+import { POST_KINDS } from '@/models/models.types';
 
 /** A price in the denomination's smallest unit: sats or USD cents. */
 export const lockPriceSchema = z.object({
@@ -212,11 +212,13 @@ export interface LockFile {
 
 /**
  * The locked post's kind, saved in the announcement as `content_kind` so the card and the unlock dialog can
- * show what is locked before anyone unlocks it (#2433). The post kind strings a create can infer.
+ * show what is locked before anyone unlocks it (#2433). These are the pubky-app-specs v1.0.0-rc.1 kind names. They are
+ * stored in published posts, so the list is its own and is never derived from the app's internal post kinds:
+ * renaming an internal kind must not change what a lock saves. `toLockContentKind` maps one to the other.
  */
-export type TLockContentKind = Exclude<PostKind, 'collection' | 'unknown'>;
-const isInferableKind = (kind: PostKind): kind is TLockContentKind => kind !== 'collection' && kind !== 'unknown';
-export const LOCK_CONTENT_KINDS: readonly TLockContentKind[] = POST_KINDS.filter(isInferableKind);
+// exported for tests
+export const LOCK_CONTENT_KINDS = ['note', 'article', 'image', 'video', 'link', 'file'] as const;
+export type TLockContentKind = (typeof LOCK_CONTENT_KINDS)[number];
 
 /** Narrows a stored `content_kind` to one this build can show. Anything else is carried raw and shown as generic. */
 export function isLockContentKind(kind: string | undefined): kind is TLockContentKind {

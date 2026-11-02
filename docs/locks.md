@@ -196,14 +196,16 @@ deleted-post fallback once Nexus drops it.
   fields degrade to empty strings so the teaser still renders. The edit composer reads it with
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
-- `content_kind` (#2433) is the locked post's kind, from `inferPostKindForCreate` at publish time, as its
-  post kind string: `short | long | image | video | link | file` (`LOCK_CONTENT_KINDS`, `toLockContentKind`).
+- `content_kind` (#2433) is the locked post's kind, from `inferPostKindForCreate` at publish time, in its
+  pubky-app-specs v1.0.0-rc.1 name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
+  the internal post kind by `toLockContentKind`). The list is its own, not derived from the app's internal
+  kinds, so renaming those never changes what a lock stores.
   The order is the normal post's: video over image over file, and audio is a file. Any string is kept raw, so
   an edit writes the stored value back unchanged, including one this build does not know; a non-string reads
   as unset. `getLockContentDisplay` (`libs/post/lockContentKind.ts`) narrows it for display only, with icons
-  that follow the content filter: long → "Locked article" / Newspaper, image → "Locked image" / Image,
+  that follow the content filter: article → "Locked article" / Newspaper, image → "Locked image" / Image,
   video → "Locked video" / CirclePlay, file → "Locked file" / Download, link → "Locked content" / Link,
-  short, missing or unknown → "Locked content" / StickyNote. The card, the unlock dialog and the text previews
+  note, missing or unknown → "Locked content" / StickyNote. The card, the unlock dialog and the text previews
   share it. The composer seeds the card's title with that default; a title the creator types is kept. The
   field is written after the two text fields and left out when unset, and it counts in
   `isLockTeaserWithinLimit`. The composer's teaser max (`getLockTeaserMaxLength`) is

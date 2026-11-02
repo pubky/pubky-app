@@ -276,8 +276,9 @@ function deepScrubTelemetryStrings<T>(value: T, seen: WeakSet<object>): T {
  * Defensive PII filter — redacts user-provided identifiers across application-owned
  * event surfaces (messages, exception values, breadcrumb data, extras, and AppError context).
  *
- * The browser/server initializers also set sendDefaultPii: false; this hook is a
- * second line of defense for application payloads we attach ourselves.
+ * SDK-side collection is already minimized by the `dataCollection` mapping in
+ * `getSentryInitBase()` (no IP inference, no `user.ip_address`, no IP-bearing headers);
+ * this hook is the second line of defense for application payloads we attach ourselves.
  */
 export function scrubSensitiveData(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
   event.message = event.message ? scrubSensitiveString(event.message) : event.message;

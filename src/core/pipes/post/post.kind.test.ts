@@ -299,8 +299,8 @@ describe('inferAnnouncementKind', () => {
 
 describe('toLockContentKind', () => {
   it.each([
-    [PubkyAppPostKind.Short, 'short'],
-    [PubkyAppPostKind.Long, 'long'],
+    [PubkyAppPostKind.Short, 'note'],
+    [PubkyAppPostKind.Long, 'article'],
     [PubkyAppPostKind.Image, 'image'],
     [PubkyAppPostKind.Video, 'video'],
     [PubkyAppPostKind.Link, 'link'],

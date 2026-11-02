@@ -344,7 +344,7 @@ describe('useCreateLockContent', () => {
           withTeaser({
             lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
             teaser_description: 'b'.repeat(POST_MAX_CHARACTER_LENGTH - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41),
-            content_kind: 'short',
+            content_kind: 'note',
           }),
         ),
       );
@@ -361,8 +361,8 @@ describe('useCreateLockContent', () => {
         useCreateLockContent(
           withTeaser({
             lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
-            teaser_description: 'b'.repeat(getLockTeaserMaxLength('long')),
-            content_kind: 'long',
+            teaser_description: 'b'.repeat(getLockTeaserMaxLength('article')),
+            content_kind: 'article',
           }),
         ),
       );

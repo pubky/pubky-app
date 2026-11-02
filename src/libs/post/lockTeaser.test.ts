@@ -96,7 +96,7 @@ describe('isLockTeaserWithinLimit', () => {
     );
 
     expect(isLockTeaserWithinLimit(fitsWithoutKind)).toBe(true);
-    expect(isLockTeaserWithinLimit({ ...fitsWithoutKind, content_kind: 'short' })).toBe(false);
+    expect(isLockTeaserWithinLimit({ ...fitsWithoutKind, content_kind: 'note' })).toBe(false);
   });
 
   // Why the check measures the serialized string: each of these grows to two characters.

@@ -805,12 +805,12 @@ describe('usePostInputLock', () => {
     const typed = (type: string) => new File(['x'], 'f', { type });
 
     it.each([
-      ['an article', draft, 'Locked article', 'long'],
+      ['an article', draft, 'Locked article', 'article'],
       ['an image', textDraft('pic', [typed('image/png')]), 'Locked image', 'image'],
       ['a video beside an image', textDraft('clip', [typed('video/mp4'), typed('image/png')]), 'Locked video', 'video'],
       ['a pdf', textDraft('doc', [typed('application/pdf')]), 'Locked file', 'file'],
       ['audio', textDraft('song', [typed('audio/mpeg')]), 'Locked file', 'file'],
-      ['a note', textDraft('my secret'), 'Locked content', 'short'],
+      ['a note', textDraft('my secret'), 'Locked content', 'note'],
       ['a link', textDraft('see https://pubky.app'), 'Locked content', 'link'],
     ] as const)('seeds the title for %s and saves its kind', (_name, lockDraft, title, kind) => {
       setUpLocks();
