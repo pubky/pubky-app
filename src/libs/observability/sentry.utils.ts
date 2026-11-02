@@ -8,6 +8,7 @@ import {
   EMAIL_PATTERN,
   EMAIL_REDACTED,
   HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+  LOCKS_UNLOCK_POLL_CALL_SITES,
   NEXUS_POST_TAGS_PATH_PATTERN,
   PHONE_PATTERN,
   PHONE_REDACTED,
@@ -72,6 +73,8 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
  * `code` / `context.statusCode`) and be covered by a test that routes a fixture through that pipeline
  * (`safeFetch`, homeserver `handleError`, ...) rather than a hand-built `new AppError(...)`.
  */
+const LOCKS_UNLOCK_POLL_CALL_SITE_SET: ReadonlySet<unknown> = new Set(Object.values(LOCKS_UNLOCK_POLL_CALL_SITES));
+
 const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'unusable-saved-grant',
@@ -112,14 +115,15 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
     name: 'locks-unlock-poll-repeat-reports',
     reason:
       'While a reader waits in the Pay to Unlock modal, usePayToUnlock polls the verification task every 3 s and the ' +
-      'Paykit link every 1 s, so a Lock Server outage built one AppError per tick, ~180 events per 3-minute wait (issue ' +
+      'Paykit link every 1 s, so a Lock Server outage built one AppError per tick, ~240 events per 3-minute wait (issue ' +
       '#2641). The loops back off and tag every failure after the first of a streak with context.reportSuppressed, ' +
       'so the first failure of each outage stays reportable; untagged reads (the open-time lookup, the purchase ' +
-      'resume) and other Locks operations are untouched.',
+      'resume) and other Locks operations are untouched. A streak does not tell failures apart: a different failure ' +
+      'during one (a response the schema rejects after a run of 503s, say) is tagged too until the streak ends on an ' +
+      'answer, a return to the tab or a new wait, while a reader who opens the dialog afterwards reports it.',
     matches: (error) =>
       error.service === ErrorService.Locks &&
-      (error.context?.callSite === 'payToUnlockPaymentPoll' ||
-        error.context?.callSite === 'payToUnlockConnectionPoll') &&
+      LOCKS_UNLOCK_POLL_CALL_SITE_SET.has(error.context?.callSite) &&
       error.context?.reportSuppressed === true,
   },
   {

@@ -128,7 +128,7 @@ describe('purchase-aware region gate', () => {
     await waitFor(() => expect(screen.getByTestId('pay-dialog')).toHaveTextContent('waiting'));
     expect(LocksController.fetchPaykitConnectionState).toHaveBeenCalledWith(
       { lockFile, bundleId: 'saved-bundle' },
-      { callSite: 'payToUnlockConnectionPoll', suppress: false },
+      { callSite: 'payToUnlockConnectionPoll' },
     );
     expect(LocksController.startPayment).not.toHaveBeenCalled();
   });

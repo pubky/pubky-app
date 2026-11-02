@@ -1,5 +1,6 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { z } from 'zod';
+import type { TLocksUnlockPollCallSite } from '@/libs/observability/sentry.constants';
 import { POST_KINDS, type PostKind } from '@/models/models.types';
 
 /** A price in the denomination's smallest unit: sats or USD cents. */
@@ -396,18 +397,15 @@ export type TSubmitProofOutcome = (TSubmitProofResult & { regionBlocked?: false 
 export type TVerificationLookup = TVerificationTask | null | { regionBlocked: true };
 
 /**
- * Passed by a polling loop to tag the AppErrors of one Lock Server read: `callSite` names the loop,
- * `suppress` marks a repeat failure of a streak, which the `locks-unlock-poll-repeat-reports` drop
- * rule keeps out of Sentry (#2641). One-shot reads pass nothing and stay untagged.
+ * Passed by a polling loop as the context of the AppErrors one Lock Server read builds, unchanged:
+ * `callSite` names the loop, `reportSuppressed` marks a repeat failure of a streak, which the
+ * `locks-unlock-poll-repeat-reports` drop rule keeps out of Sentry (#2641). One-shot reads pass
+ * nothing and stay untagged.
  */
 export type TLocksPollReport = {
-  callSite: 'payToUnlockPaymentPoll' | 'payToUnlockConnectionPoll';
-  suppress: boolean;
+  callSite: TLocksUnlockPollCallSite;
+  reportSuppressed?: true;
 };
-
-/** The AppError context a poll report adds at construction; undefined for an untagged read. */
-export const locksPollReportContext = (report?: TLocksPollReport): Record<string, unknown> | undefined =>
-  report && { callSite: report.callSite, ...(report.suppress && { reportSuppressed: true }) };
 
 export const isRegionBlockedLookup = (lookup: TVerificationLookup): lookup is { regionBlocked: true } =>
   lookup !== null && 'regionBlocked' in lookup;

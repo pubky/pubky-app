@@ -5,6 +5,7 @@ import type { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { LOCKS_UNLOCK_POLL_CALL_SITES } from '@/libs/observability/sentry.constants';
 import { shouldDropAppErrorFromSentry } from '@/libs/observability/sentry.utils';
 import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import type { TLocksPollReport } from '@/services/locks/locks.types';
@@ -44,8 +45,12 @@ const lockFile = mockLockFile({ creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}` });
 const BUNDLE = 'A'.repeat(26);
 const LOCK_URL = `pubky://${lockFile.creator}/pub/app.locks/LOCK1.json`;
 const outage = () => new Error('Lock Server viewer request failed with HTTP 503');
-const paymentPoll = (suppress: boolean): TLocksPollReport => ({ callSite: 'payToUnlockPaymentPoll', suppress });
-const connectionPoll = (suppress: boolean): TLocksPollReport => ({ callSite: 'payToUnlockConnectionPoll', suppress });
+const pollReport = (callSite: TLocksPollReport['callSite'], suppress: boolean): TLocksPollReport => ({
+  callSite,
+  ...(suppress && { reportSuppressed: true as const }),
+});
+const paymentPoll = (suppress: boolean) => pollReport(LOCKS_UNLOCK_POLL_CALL_SITES.payment, suppress);
+const connectionPoll = (suppress: boolean) => pollReport(LOCKS_UNLOCK_POLL_CALL_SITES.connection, suppress);
 
 const outageCause = (error: AppError) => expect(String(error.cause)).toContain('HTTP 503');
 
@@ -94,6 +99,20 @@ describe('locks-unlock-poll-repeat-reports drop rule', () => {
     expect(invalid.message).toBe('paykit connection state response is invalid');
     expect(invalid.context).toMatchObject({ callSite: 'payToUnlockConnectionPoll', reportSuppressed: true });
     expect(shouldDropAppErrorFromSentry(invalid)).toBe(true);
+  });
+
+  it('drops a tagged task lookup the schema rejects, and keeps the untagged one', async () => {
+    mocks.lookupVerificationTask.mockResolvedValue({ status: 'weird' });
+    const repeat = await caught(LocksController.fetchPaymentStatus({ lockFile, bundleId: BUNDLE }, paymentPoll(true)));
+    expect(repeat.message).toBe('verification task response is invalid');
+    expect(repeat.context).toMatchObject({ callSite: 'payToUnlockPaymentPoll', reportSuppressed: true });
+    expect(shouldDropAppErrorFromSentry(repeat)).toBe(true);
+
+    const first = await caught(LocksController.fetchPaymentStatus({ lockFile, bundleId: BUNDLE }, paymentPoll(false)));
+    expect(first.message).toBe('verification task response is invalid');
+    expect(first.context?.callSite).toBe('payToUnlockPaymentPoll');
+    expect(first.context?.reportSuppressed).toBeUndefined();
+    expect(shouldDropAppErrorFromSentry(first)).toBe(false);
   });
 
   it('reports the first failure of a streak', async () => {

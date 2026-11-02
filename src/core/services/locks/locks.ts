@@ -36,7 +36,6 @@ import type {
   TVerificationLookup,
 } from './locks.types';
 import {
-  locksPollReportContext,
   paykitConnectionStateResponseSchema,
   paykitSetupStatusResponseSchema,
   submitProofResultSchema,
@@ -179,8 +178,8 @@ export class LocksService {
     bundleId: string,
     report?: TLocksPollReport,
   ): Promise<TPaykitConnectionState> {
-    // Set at construction: capture happens there, so a polling loop's tags must already be on the error.
-    const context = locksPollReportContext(report);
+    // `report` is the context of the errors built here, set at construction: capture happens there,
+    // so a polling loop's tags must already be on the error.
     try {
       const viewer = await this.getViewer();
       const response = paykitConnectionStateResponseSchema.safeParse(
@@ -191,12 +190,12 @@ export class LocksService {
           service: ErrorService.Locks,
           operation: 'LocksService.lookupPaykitConnectionState',
           cause: response.error,
-          context,
+          context: report,
         });
       }
       return response.data.state;
     } catch (error) {
-      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupPaykitConnectionState', undefined, context);
+      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupPaykitConnectionState', { context: report });
     }
   }
 
@@ -225,7 +224,6 @@ export class LocksService {
     bundleId: string,
     report?: TLocksPollReport,
   ): Promise<TVerificationLookup> {
-    const context = locksPollReportContext(report);
     try {
       const viewer = await this.getViewer();
       const response = verificationTaskResponseSchema.safeParse(
@@ -236,7 +234,7 @@ export class LocksService {
           service: ErrorService.Locks,
           operation: 'LocksService.lookupVerificationTask',
           cause: response.error,
-          context,
+          context: report,
         });
       }
       return {
@@ -248,7 +246,7 @@ export class LocksService {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('HTTP 404')) return null;
-      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupVerificationTask', undefined, context);
+      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupVerificationTask', { context: report });
     }
   }
 

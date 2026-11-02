@@ -1671,8 +1671,9 @@ describe('usePayToUnlock (waiting)', () => {
     const gaps = (times: number[]) => times.slice(1).map((t, i) => t - times[i]);
     const connectionReports = () => vi.mocked(LocksController.fetchPaykitConnectionState).mock.calls.map((c) => c[1]);
     const paymentReports = () => vi.mocked(LocksController.fetchPaymentStatus).mock.calls.map((c) => c[1]);
-    const connection = (suppress: boolean) => ({ callSite: 'payToUnlockConnectionPoll', suppress });
-    const payment = (suppress: boolean) => ({ callSite: 'payToUnlockPaymentPoll', suppress });
+    const report = (callSite: string, suppress: boolean) => ({ callSite, ...(suppress && { reportSuppressed: true }) });
+    const connection = (suppress: boolean) => report('payToUnlockConnectionPoll', suppress);
+    const payment = (suppress: boolean) => report('payToUnlockPaymentPoll', suppress);
 
     it('doubles the link read interval from 1 s up to the 15 s cap', async () => {
       const times: number[] = [];
@@ -1755,6 +1756,93 @@ describe('usePayToUnlock (waiting)', () => {
       // The read on return starts a new streak, so its failure is reported.
       expect(connectionReports()[4]).toEqual(connection(false));
       expect(paymentReports().at(-2)).toEqual(payment(false));
+    });
+
+    it('restores full speed when the reader comes back while a failing read is still out', async () => {
+      const times: number[] = [];
+      let rejectHeld: (error: Error) => void = () => {};
+      let call = 0;
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(() => {
+        times.push(Date.now());
+        // The second read hangs, as a request does until a gateway timeout; the rest fail at once.
+        if (++call === 2)
+          return new Promise<never>((_, reject) => {
+            rejectHeld = reject;
+          });
+        return Promise.reject(new Error('Lock Server unavailable'));
+      });
+
+      renderPay();
+      await advance(0);
+      await advance(2000);
+      expect(connectionCalls()).toBe(2);
+      expect(connectionReports()[1]).toEqual(connection(true));
+
+      await returnToTab();
+      // Still out, so the return started no duplicate read.
+      expect(connectionCalls()).toBe(2);
+      await act(async () => {
+        rejectHeld(new Error('Lock Server unavailable'));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const settledAt = Date.now();
+      await advance(CONNECTION_POLL_INTERVAL_MS);
+      expect(connectionCalls()).toBe(3);
+      expect(times[2] - settledAt).toBe(CONNECTION_POLL_INTERVAL_MS);
+      // The held read's failure did not reopen the streak the return ended.
+      expect(connectionReports()[2]).toEqual(connection(false));
+    });
+
+    it('restarts both loops at full speed with a reportable first read on Check again', async () => {
+      const linkTimes: number[] = [];
+      const taskTimes: number[] = [];
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(failing(linkTimes));
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockImplementation(failing(taskTimes));
+
+      const { result } = renderPay();
+      await advance(0);
+      await advance(STALL_AFTER_MS);
+      expect(result.current.isStalled).toBe(true);
+      expect(connectionReports().at(-1)).toEqual(connection(true));
+      expect(paymentReports().at(-1)).toEqual(payment(true));
+      const linkBefore = connectionCalls();
+      const taskBefore = statusCalls();
+
+      const pressedAt = Date.now();
+      act(() => result.current.recheck());
+      await advance(0);
+      // Both read at once, and as the first failure of a new streak.
+      expect(connectionCalls()).toBe(linkBefore + 1);
+      expect(statusCalls()).toBe(taskBefore + 1);
+      expect(connectionReports().at(-1)).toEqual(connection(false));
+      expect(paymentReports().at(-1)).toEqual(payment(false));
+
+      await advance(6000);
+      const since = (times: number[]) => times.filter((t) => t >= pressedAt).map((t) => t - pressedAt);
+      expect(since(linkTimes)).toEqual([0, 2000, 6000]);
+      expect(since(taskTimes)).toEqual([0, 6000]);
+    });
+
+    it('still parks at STALL_AFTER_MS when every polled read rejects', async () => {
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(failing([]));
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockImplementation(failing([]));
+
+      const { result } = renderPay();
+      await advance(0);
+      await advance(STALL_AFTER_MS - 1);
+      expect(result.current.isStalled).toBe(false);
+      await advance(1);
+      expect(result.current.isStalled).toBe(true);
+      expect(result.current.stage).toBe('waiting');
+
+      const parked = { status: statusCalls(), connection: connectionCalls() };
+      await advance(STALL_AFTER_MS);
+      expect(statusCalls()).toBe(parked.status);
+      expect(connectionCalls()).toBe(parked.connection);
     });
 
     it('tags only the first failure of a streak as reportable', async () => {

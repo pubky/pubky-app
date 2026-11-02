@@ -116,8 +116,9 @@ export const getRetryAfter = (error: AppError): number | undefined => {
  * @param error - The unknown error to normalize
  * @param service - Which service produced the error
  * @param operation - Which operation failed
- * @param traceId - Optional trace ID for correlation
- * @param context - Optional context set at construction (e.g. tags a drop rule matches on)
+ * @param options - Optional `traceId` for correlation and `context` for the wrapped error (e.g. tags a
+ *   drop rule matches on). Both apply only when a non-AppError is wrapped: an AppError comes back
+ *   unchanged with its own context, so this cannot tag an error that was already built (and captured).
  * @returns AppError (either the original if already AppError, or a new wrapped one)
  *
  * @example
@@ -133,8 +134,7 @@ export const toAppError = (
   error: unknown,
   service: ErrorService,
   operation: string,
-  traceId?: string,
-  context?: Record<string, unknown>,
+  { traceId, context }: { traceId?: string; context?: Record<string, unknown> } = {},
 ): AppError => {
   // Preserve existing AppError as-is; traceId should be set at origin
   if (isAppError(error)) {
