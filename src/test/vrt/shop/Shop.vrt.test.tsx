@@ -284,6 +284,17 @@ async function renderShop(
   );
 }
 
+/** The App document's own `scrollbar-gutter`, read past the VRT stabiliser that forces `auto`. */
+function appScrollbarGutter() {
+  const stabilizer = (document.getElementById('__vrt_stabilizer__') as HTMLStyleElement | null)?.sheet;
+  if (stabilizer) stabilizer.disabled = true;
+  try {
+    return getComputedStyle(document.documentElement).getPropertyValue('scrollbar-gutter');
+  } finally {
+    if (stabilizer) stabilizer.disabled = false;
+  }
+}
+
 async function withUnclippedDocument(root: HTMLElement | SVGElement, check: () => Promise<void>) {
   const elements = [root, document.documentElement, document.body];
   const originalStyles = elements.map((element) => element.style.cssText);
@@ -320,6 +331,8 @@ function expectShopViewport(root: HTMLElement | SVGElement, content: HTMLElement
   const middle = bounds.top + bounds.height / 2;
   expect(document.elementFromPoint(4, middle)).toBe(content);
   expect(document.elementFromPoint(window.innerWidth - 4, middle)).toBe(content);
+  // Headless browsers hide scrollbars, so the hit tests above cannot see a reserved gutter.
+  if (CSS.supports('scrollbar-gutter', 'stable')) expect(appScrollbarGutter()).toBe('auto');
   if (!desktop) expect(footer.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
   expect(shell.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
   expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(window.innerHeight + 1);

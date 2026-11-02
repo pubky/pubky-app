@@ -19,6 +19,7 @@ export function ShopEmbed() {
     <Container
       overrideDefaults
       className="flex h-dvh flex-col lg:h-[calc(100dvh-var(--header-offset-main))]"
+      data-slot="shop-shell"
       data-testid="shop-shell"
     >
       <MobileHeader showLeftButton={false} showRightButton={false} />
