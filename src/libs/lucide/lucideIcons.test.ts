@@ -7,7 +7,9 @@ import {
   subscribeToLucideIcons,
   toLucideIconName,
 } from './lucideIcons';
+import { LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL } from './lucideIcons.aliases';
 import { LUCIDE_ICON_NODES } from './lucideIcons.nodes';
+import { LUCIDE_ICON_TAGS } from './lucideIcons.tags';
 
 describe('lucideIcons', () => {
   it('normalizes kebab-case icon names, including foreign ones', () => {
@@ -124,15 +126,23 @@ describe('lucideIcons', () => {
     expect(pickerIcons.every((icon) => icon.tags.every((tag) => !tag.includes(' ')))).toBe(true);
   });
 
-  it('keeps the generated picker nodes identical to the installed lucide-react catalog', async () => {
-    // Regression guard for lucide upgrades: LUCIDE_ICON_NODES is a generated
-    // copy of the catalog, and a stale copy made opening the picker overwrite
-    // freshly rendered icons with old glyphs ('trash' gained its two interior
-    // strokes when 'trash-2' was renamed to 'trash' in lucide 1.65).
+  it('keeps the generated picker data identical to the installed lucide-react catalog', async () => {
+    // The picker's bulk load overwrites icons the feed already rendered, so a
+    // lucide bump without regenerating these files silently swaps in stale
+    // glyphs (as 'trash' lost two strokes on the 1.65 bump).
     const { dynamicIconImports } = await import('lucide-react/dynamic.js');
-    const trashModule = await dynamicIconImports.trash();
-    expect(LUCIDE_ICON_NODES.trash).toEqual(trashModule.__iconData?.node);
-    const trash2Module = await dynamicIconImports['trash-2']();
-    expect(trash2Module.__iconData?.node).toBe(trashModule.__iconData?.node);
+    const nodes: Record<string, unknown> = {};
+    const aliases: Record<string, unknown> = {};
+    await Promise.all(
+      Object.entries(dynamicIconImports).map(async ([name, load]) => {
+        const { __iconData } = await load();
+        if (__iconData.name === name) nodes[name] = __iconData.node;
+        else aliases[name] = __iconData.name;
+      }),
+    );
+
+    expect(LUCIDE_ICON_NODES).toEqual(nodes);
+    expect(LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL).toEqual(aliases);
+    expect(Object.keys(LUCIDE_ICON_TAGS).filter((name) => !Object.hasOwn(nodes, name))).toEqual([]);
   });
 });
