@@ -102,8 +102,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-browsers-cache.outputs.cache-primary-key }}
 
+      # One retry when the Playwright socket drops mid-run and every finished
+      # test passed. Screenshot diffs, assertions, and timeouts are not retried.
+      # See src/test-utils/vrt.run.ts.
       - name: Run visual regression tests
-        run: npx vitest run --project "vrt (${{ matrix.browser }})"
+        run: npm run test:vrt -- --project "vrt (${{ matrix.browser }})"
 
       - name: Upload VRT failure screenshots
         if: failure()

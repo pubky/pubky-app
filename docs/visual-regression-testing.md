@@ -21,8 +21,9 @@ interaction tests for those).
   `matchVrtElementScreenshot`), `vrt.setup.ts` (global mocks), `vrt.clock.ts`,
   `vrt.viewports.ts`.
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
-- Run one browser only: `npx vitest run --project "vrt (chromium)"` (CI runs one
-  job per browser this way).
+- Run one browser only: `npm run test:vrt -- --project "vrt (chromium)"` (CI runs
+  one job per browser this way). That command retries a dropped browser
+  connection; `npx vitest run` does not. See [Dropped browser connection](#dropped-browser-connection).
 - `patches/@vitest+browser+*.patch` (applied by `patch-package` on install) clears
   the `toMatchScreenshot` stability timer once a capture settles. Upstream leaves
   it running, so the last capture in a run kept the Node process alive and every
@@ -239,6 +240,21 @@ adjacent elements anti-alias at the boundary instead of blending. Not a CSS bug
 
 **Accept it in the baseline.** It reproduces identically every run, so it doesn't
 cause flakiness or hide regressions.
+
+## Dropped browser connection
+
+Vitest keeps one WebSocket from the Playwright page for the whole browser run.
+If that socket closes, Vitest stops the files still queued with
+`VITEST_BROWSER_CONNECTION_CLOSED` ("Browser connection was closed while running
+tests"), even when every test that finished had passed. The same commit passes
+on a rerun. `npm run test:vrt` and the VRT workflow go through
+`src/test-utils/vrt.run.ts`, which retries that outcome once. A retry runs only
+when the log contains that disconnect and does not contain a failed test, a
+screenshot mismatch, an assertion, a timeout, or a harness image or font error.
+Any of those still fails the run on the first attempt.
+`test:vrt:regenerate-baseline` calls Vitest directly, so a dropped connection
+cannot rewrite baselines twice. Set `VRT_BROWSER_DISCONNECT_RETRIES` to `0` to
+disable the retry, or `2` for one extra attempt (the wrapper will not go higher).
 
 ## Updating baselines
 
