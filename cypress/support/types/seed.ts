@@ -48,3 +48,21 @@ export type SeedCreateCollectionArgs = {
   layout: SeededCollectionLayout;
 };
 export type SeedAddToCollectionArgs = { authorId: string; collectionId: string; itemUri: string };
+
+export type SeedCreateLockPostArgs = {
+  authorId: string;
+  title: string;
+  teaser: string;
+  // Text of the short post behind the lock
+  lockedContent: string;
+  // Price in sats
+  amount: string;
+};
+
+export type SeededLockPost = SeededPost & {
+  lockId: string;
+  // Path tail under /priv/app.locks/content/, as a guarded read names it
+  guardedPath: string;
+  // The locked post's JSON, base64, for the Lock Server stub to serve
+  guardedBytes: string;
+};
