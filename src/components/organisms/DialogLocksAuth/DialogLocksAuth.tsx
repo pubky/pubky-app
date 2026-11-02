@@ -78,7 +78,6 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
   const {
     status: locksStatus,
     connectUrl,
-    error: locksError,
     iframeRef: locksIframeRef,
     prepare,
     start: startLocks,
@@ -87,7 +86,6 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
   const {
     status: paykitStatus,
     setupUrl,
-    error: paykitError,
     iframeRef: paykitIframeRef,
     check: checkPaykit,
     reset: resetPaykit,
@@ -295,9 +293,12 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
 
         {isError && (
           <Typography size="sm" className="text-destructive">
+            {/* Raw error messages are diagnostic text that already reaches logs and Sentry, so the dialog shows fixed copy only (#3028). */}
             {isPaykitUnavailable
               ? 'Payments are unavailable right now. Please try again later.'
-              : ((isPaykitError ? paykitError?.message : locksError?.message) ?? 'Lock authorization failed.')}
+              : isPaykitError
+                ? "Couldn't connect your Bitkit wallet. Please try again."
+                : "Couldn't authorize the Lock Server. Please try again."}
           </Typography>
         )}
 
