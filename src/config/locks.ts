@@ -12,10 +12,9 @@ export const PAYKIT_PAYMENT_IN_HOURS = 24;
 export const LOCK_ATTACHMENT_UPLOAD_CONCURRENCY = 3;
 
 /**
- * How long the Unlock pill of a locked post waits on the read of the reader's replicated copy before it
- * stops treating the reader as one who may already have unlocked it (#2795). The homeserver reads carry
- * no deadline of their own. Only the pill is bounded: the read keeps going, still renders the copy if it
- * lands later, and purchase recovery waits for it to settle. The same hold bounds the pill while recovery
- * then looks up a listed purchase whose copy was not found.
+ * How long the Unlock pill of someone else's locked post stays busy, at most, while the reader may already
+ * own the content (#2795): their replicated copy is read, the purchase list is still loading, or purchase
+ * recovery looks up a listed purchase. One limit for all of it, counted from the first busy moment with a
+ * session. The reads carry no deadline of their own and keep going after it; only the pill stops waiting.
  */
-export const REPLICA_READ_HOLD_MS = 10_000;
+export const UNLOCK_PILL_HOLD_MS = 10_000;
