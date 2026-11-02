@@ -149,6 +149,20 @@ describe('Logo on the public documents', () => {
     expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/');
   });
 
+  it('takes a guest whose key step generated a pubky without a session to the landing page (#2882)', () => {
+    vi.mocked(usePathname).mockReturnValue(COPYRIGHT_ROUTES.COPYRIGHT);
+    useAuthStore.setState({
+      currentUserPubky: 'generated-key',
+      session: null,
+      sessionReference: null,
+      restoreStatus: 'idle',
+    });
+
+    render(<Logo />);
+
+    expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/');
+  });
+
   it('keeps the landing link for a member on the other landing routes', () => {
     vi.mocked(usePathname).mockReturnValue('/sign-in');
     useAuthStore.setState({ currentUserPubky: 'account', restoreStatus: 'ready' });

@@ -8,7 +8,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getPubkyCoreLink } from '@/config/externalLinks';
+import { getPubkyProtocolLink } from '@/config/externalLinks';
 import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
@@ -58,7 +58,7 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
         {' account, you agree to the'} <Link href={LEGAL_ROUTES.TERMS_OF_USE}>{'Terms of Service'}</Link>,{' '}
         <Link href={LEGAL_ROUTES.PRIVACY_POLICY}>{'Privacy Policy'}</Link>
         {', and confirm you are'} <DialogAge /> {'Pubky is powered by '}
-        <Link href={getPubkyCoreLink()} target="_blank" className="font-semibold">
+        <Link href={getPubkyProtocolLink()} target="_blank" className="font-semibold">
           {'Pubky Protocol'}
         </Link>
         {` and was built by ${LEGAL_ENTITY_NAME} ©2026. All rights reserved.`}

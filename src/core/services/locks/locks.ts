@@ -293,9 +293,13 @@ export class LocksService {
     }
   }
 
-  /** Restores a Locks session from the persisted bearer secret (read from the store). */
-  static async restoreSession(): Promise<LocksSdkSession> {
-    const secret = useLocksAuthStore.getState().selectLocksSessionSecret();
+  /**
+   * Restores a Locks session from a bearer secret: the persisted one by default, or one the caller
+   * captured before clearing the store (logout revokes a session that was never rebuilt).
+   */
+  static async restoreSession(
+    secret: string | null = useLocksAuthStore.getState().selectLocksSessionSecret(),
+  ): Promise<LocksSdkSession> {
     if (!secret) {
       throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No persisted Locks secret to restore', {
         service: ErrorService.Locks,
@@ -432,6 +436,20 @@ export class LocksService {
       };
     } catch (error) {
       throw toLocksError(error, 'LocksService.createContentLock');
+    }
+  }
+
+  /**
+   * Default (graceful) deletion: `lock.json` becomes a tombstone at once, paid-but-unfinished unlocks
+   * are drained server-side, then the guarded resources go. Accepted as `202` and irreversible.
+   */
+  static async deleteContentLock(lockId: string): Promise<void> {
+    const session = getLockSession();
+    try {
+      await ensureLocksSdkReady();
+      await session.creator.deleteContentLock(lockId);
+    } catch (error) {
+      throw toLocksError(error, 'LocksService.deleteContentLock');
     }
   }
 }

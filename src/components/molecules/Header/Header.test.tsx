@@ -1,7 +1,9 @@
 import { usePathname, useRouter } from 'next/navigation';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import {
   readServerConfig,
   resetRuntimeConfigForTests,
@@ -200,7 +202,11 @@ describe('Header Components', () => {
     ])('keeps $name Shop navigation inside the App', ({ name, Component }) => {
       mockCurrentUserPubky = name === 'guest' ? null : 'test-pubky';
       window[RUNTIME_CONFIG_WINDOW_KEY] = readServerConfig();
-      render(<Component />);
+      render(
+        <TooltipProvider delayDuration={0}>
+          <Component />
+        </TooltipProvider>,
+      );
       const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
       expect(link).toHaveAttribute('href', '/shop');
       expect(link).not.toHaveAttribute('target');
@@ -547,8 +553,15 @@ describe('Header Components', () => {
   });
 
   describe('HeaderExploreNavigationButtons', () => {
+    const renderExploreButtons = () =>
+      render(
+        <TooltipProvider delayDuration={0}>
+          <HeaderExploreNavigationButtons />
+        </TooltipProvider>,
+      );
+
     it('renders full navigation with account routes gated behind the Join dialog', () => {
-      render(<HeaderExploreNavigationButtons />);
+      renderExploreButtons();
 
       // Home, Hot, and Collections are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
@@ -570,18 +583,84 @@ describe('Header Components', () => {
     });
 
     it('opens sign-in dialog from the Join button', () => {
-      render(<HeaderExploreNavigationButtons />);
+      renderExploreButtons();
 
-      fireEvent.click(screen.getByTestId('header-explore-join-button'));
+      const joinButton = screen.getByTestId('header-explore-join-button');
+      expect(joinButton).toHaveAttribute('aria-label', 'Join Pubky');
+
+      fireEvent.click(joinButton);
 
       expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
+    });
+
+    it('shows a "Sign in" tooltip while the Join button is hovered', async () => {
+      const user = userEvent.setup();
+      renderExploreButtons();
+      const joinButton = screen.getByTestId('header-explore-join-button');
+
+      await user.hover(joinButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Sign in');
+      });
+      // Existing accent hint styling, hidden on touch where a tap goes straight to the dialog.
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass(
+        'bg-accent',
+        'font-medium',
+        'text-foreground',
+        'pointer-coarse:hidden',
+      );
+
+      await user.unhover(joinButton);
+      fireEvent.pointerMove(document.body, { clientX: 500, clientY: 500 });
+
+      await waitFor(() => {
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows the tooltip on keyboard focus and dismisses it on Escape', async () => {
+      const user = userEvent.setup();
+      renderExploreButtons();
+      const joinButton = screen.getByTestId('header-explore-join-button');
+
+      act(() => joinButton.focus());
+
+      await waitFor(() => {
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Sign in');
+      });
+      expect(joinButton).toHaveAttribute('aria-label', 'Join Pubky');
+
+      await user.keyboard('{Escape}');
+
+      await waitFor(() => {
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      });
+    });
+
+    it('closes the tooltip when the hovered Join button is clicked to open the dialog', async () => {
+      const user = userEvent.setup();
+      renderExploreButtons();
+      const joinButton = screen.getByTestId('header-explore-join-button');
+
+      await user.hover(joinButton);
+      await waitFor(() => {
+        expect(screen.getByRole('tooltip')).toBeInTheDocument();
+      });
+
+      await user.click(joinButton);
+
+      expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
+      await waitFor(() => {
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      });
     });
 
     it('highlights Collections on single collection pages for guests', () => {
       const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
       vi.mocked(usePathname).mockReturnValue(`/collections/${pubky}/0034BBBDFK83G`);
 
-      render(<HeaderExploreNavigationButtons />);
+      renderExploreButtons();
 
       const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
       expect(collectionsButton).toHaveClass('bg-secondary');

@@ -1,6 +1,11 @@
 import type { Session } from '@synonymdev/pubky';
 import { userUriBuilder } from 'pubky-app-specs';
-import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
+import type {
+  TKeypairParams,
+  TRestoreSessionParams,
+  TRestoreSessionResult,
+  TSignInParams,
+} from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import type { ActiveSessionFailure, PersistedAuth, SessionReference } from '@/libs/auth/session.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -34,6 +39,8 @@ export class AuthApplication {
 
   private static readonly PROFILE_CHECK_MAX_ATTEMPTS = 3;
   private static readonly PROFILE_CHECK_RETRY_DELAY_MS = 3000;
+  private static readonly SIGN_IN_MAX_ATTEMPTS = 3;
+  private static readonly SIGN_IN_RETRY_BASE_DELAY_MS = 500;
 
   /** A failed exchange is not proof that a saved grant should be deleted. */
   static async restorePersistedSession(params: TRestoreSessionParams): TRestoreSessionResult {
@@ -145,12 +152,20 @@ export class AuthApplication {
   /**
    * Authenticates the user against the homeserver using their cryptographic keypair.
    *
+   * A transient failure (a PKARR relay blip during the homeserver lookup, a homeserver 5xx)
+   * is retried with linear backoff, as `restorePersistedSession` does for a saved session
+   * (issue #2873). Anything else (wrong environment, auth rejection, validation) is thrown at
+   * once, and a sign-in that a newer flow superseded makes no further attempt.
+   *
    * @param params - The authentication parameters
    * @param params.keypair - The cryptographic keypair for the user authentication
-   * @param params.secretKey - Secret key for homeserver service
+   * @param params.isCurrent - False once a newer auth flow owns sign-in; stops the retries
    * @returns Session and pubky of the authenticated user
    */
-  static async signIn({ keypair }: TKeypairParams): Promise<THomeserverSessionResult | undefined> {
+  static async signIn({
+    keypair,
+    isCurrent = () => true,
+  }: TSignInParams): Promise<THomeserverSessionResult | undefined> {
     if (!keypair) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
@@ -161,7 +176,22 @@ export class AuthApplication {
         },
       );
     }
-    return await HomeserverService.signIn({ keypair });
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await HomeserverService.signIn({ keypair });
+      } catch (error) {
+        if (!isAppError(error) || !isRetryable(error) || attempt >= this.SIGN_IN_MAX_ATTEMPTS || !isCurrent()) {
+          throw error;
+        }
+        const delayMs = this.SIGN_IN_RETRY_BASE_DELAY_MS * attempt;
+        Logger.warn(
+          `Sign-in attempt ${attempt}/${this.SIGN_IN_MAX_ATTEMPTS} failed with a transient error, retrying in ${delayMs}ms`,
+          { code: error.code, operation: error.operation },
+        );
+        await sleep(delayMs);
+        if (!isCurrent()) throw error;
+      }
+    }
   }
 
   /**

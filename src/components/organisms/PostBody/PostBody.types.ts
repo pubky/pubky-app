@@ -10,5 +10,7 @@ export interface PostBodyProps {
   /** Forwarded to `PostAttachments`. */
   mediaVariant?: 'default' | 'list';
   /** Forwarded to `PostAttachments`. */
+  collapseMedia?: boolean;
+  /** Forwarded to `PostAttachments`. */
   pendingAttachments?: PendingAttachment[];
 }

@@ -17,6 +17,8 @@ import {
 import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { isAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
+import { AppError } from '@/libs/error/error';
+import { ErrorCategory } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
@@ -60,7 +62,10 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
           ? 'This key is linked to a different homeserver. Use a staging account on this site.'
           : isAuthApprovalMismatchError(error)
             ? 'Use the key you are already signed in with to enable Shop.'
-            : 'Could not sign in. Try again.',
+            : error instanceof AppError &&
+                (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout)
+              ? 'Could not connect. Check your connection and try again.'
+              : 'Could not sign in. Try again.',
       });
       setIsRestoring(false);
     }

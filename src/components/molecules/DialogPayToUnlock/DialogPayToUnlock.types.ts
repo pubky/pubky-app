@@ -6,6 +6,8 @@ export interface DialogPayToUnlockProps {
   onOpenChange: (open: boolean) => void;
   /** Creator-typed lock title, shown in the header card. */
   lockTitle: string;
+  /** The locked post's kind: picks the header icon and the title shown when none was typed (#2433). */
+  contentKind?: string;
   /** Post author — the avatar beside the title links to their profile. */
   authorId: string;
   /** Price and denomination, from the lock file's payment criterion. */

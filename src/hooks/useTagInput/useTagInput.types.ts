@@ -37,6 +37,8 @@ export interface UseTagInputReturn {
   handleInputFocus: () => void;
   /** Handle tag submission */
   handleTagSubmit: () => Promise<unknown>;
+  /** Add a given label (e.g. a clicked suggestion); clears the input only when the add went through */
+  addTag: (label: string) => Promise<void>;
   /** Handle emoji selection */
   handleEmojiSelect: (emoji: { native: string }) => void;
   /** Handle paste event */

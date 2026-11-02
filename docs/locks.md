@@ -18,6 +18,7 @@ Paykit Server's optional USDT configuration is absent.
 - Details
   - [Detecting a lock post](#detecting-a-lock-post)
   - [Editing an announcement](#editing-an-announcement)
+  - [Deleting an announcement](#deleting-an-announcement)
   - [Data shape](#data-shape)
   - [Render flow (shared by feed and detail)](#render-flow-shared-by-feed-and-detail)
   - [Reading a lock post](#reading-a-lock-post)
@@ -133,7 +134,8 @@ honoring the specs contract and returning this field.
 Lock announcements use the existing `DialogEditPost` composer. The dialog detects the top-level
 `lock`, parses the public envelope with the reader's parse, and exposes only the teaser
 description and editable lock title. Saving rebuilds the envelope with
-`buildLockTeaserContent`; `PostNormalizer.toEdit` reconstructs the original post with
+`buildLockTeaserContent`, writing back the stored `content_kind` unchanged, including one this build does not
+know (`DialogEditPost` → `EditLock.contentKind` → `usePostInput` → `usePost.edit`); `PostNormalizer.toEdit` reconstructs the original post with
 `PubkyAppPost.new_with_lock` so the stored lock URL survives content, kind, and attachment edits.
 The price is read-only from the existing `lock.json`; the edit composer cannot change lock criteria
 or guarded content.
@@ -156,20 +158,59 @@ parse, so one edit would blank the post for everyone.
 
 The `lock` URL survives either way — `toEdit` reads it from the stored row, not from the content.
 
+## Deleting an announcement
+
+Deleting a lock announcement deletes the lock behind it as well. There is no option to keep one
+without the other: nothing in the app can reference a lock again once its announcement is gone, so
+a kept lock would only be orphaned content in the creator's `/priv`.
+
+`useDeletePost` reads the stored row and, when it carries a `lock` URL, calls
+`LocksController.deleteLockContent` **before** `PostController.commitDelete`. The order matters: a
+lock deletion that fails keeps the announcement (the optimistic removal is rolled back and the
+toast says so), instead of leaving a lock nobody can delete any more. A rejected or missing Locks
+session is cleared as on publish, and the toast asks the creator to sign in to the Lock Server. The
+reverse failure, a local post delete that fails after the Lock Server already accepted, leaves the
+announcement pointing at a tombstone; deleting it again is safe because the server answers a repeated
+delete with the job's status instead of a new job. A `lock` URL with no lock id in it (no `.json`
+file or no pubky host) is skipped, not an error: it addresses nothing on the server and must not make
+the announcement undeletable. A URL that does carry an id the server rejects still fails the delete.
+
+On the Lock Server the deletion is graceful and asynchronous (`DELETE /creator/content-locks/{lock_id}`,
+`202`): `lock.json` is replaced by a tombstone at once, new unlocks are refused, readers who already
+paid can still finish, then the guarded resources are removed. The app does not poll the job.
+Readers' replicas in their own `/priv/social/unlocked/` are never touched; only the creator's cached
+original is dropped from IndexedDB. A reader who still has the announcement cached sees the usual
+deleted-post fallback once Nexus drops it.
+
 ## Data shape
 
-| Field                    | Owner           | Meaning                                                                           |
-| ------------------------ | --------------- | --------------------------------------------------------------------------------- |
-| top-level `kind`         | Nexus / specs   | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`) |
-| top-level `lock`         | Lock server     | URL of the public `lock.json` — the detection seam                                |
-| `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`        |
-| `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                      |
+| Field                    | Owner           | Meaning                                                                                             |
+| ------------------------ | --------------- | --------------------------------------------------------------------------------------------------- |
+| top-level `kind`         | Nexus / specs   | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`)                   |
+| top-level `lock`         | Lock server     | URL of the public `lock.json` — the detection seam                                                  |
+| `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`, optional `content_kind` |
+| `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                                        |
 
 - `content` is FE-owned (pubky-app-specs does not manage it) and validated at runtime
   with Zod (`lockPostContentSchema`, `core/services/locks/locks.types.ts`). Bad / missing
   fields degrade to empty strings so the teaser still renders. The edit composer reads it with
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
+- `content_kind` (#2433) is the locked post's kind, from `inferPostKindForCreate` at publish time, in its
+  pubky-app-specs v1.0.0-rc.1 name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
+  the internal post kind by `toLockContentKind`). The list is its own, not derived from the app's internal
+  kinds, so renaming those never changes what a lock stores.
+  The order is the normal post's: video over image over file, and audio is a file. Any string is kept raw, so
+  an edit writes the stored value back unchanged, including one this build does not know; a non-string reads
+  as unset. `getLockContentDisplay` (`libs/post/lockContentKind.ts`) narrows it for display only, with icons
+  that follow the content filter: article → "Locked article" / Newspaper, image → "Locked image" / Image,
+  video → "Locked video" / CirclePlay, file → "Locked file" / Download, link → "Locked content" / Link,
+  note, missing or unknown → "Locked content" / StickyNote. The card, the unlock dialog and the text previews
+  share it. The composer seeds the card's title with that default; a title the creator types is kept. The
+  field is written after the two text fields and left out when unset, and it counts in
+  `isLockTeaserWithinLimit`. The composer's teaser max (`getLockTeaserMaxLength`) is
+  `LOCK_TEASER_MAX_CHARACTER_LENGTH` minus the length of the `content_kind` entry actually written, so a lock
+  without one keeps the old limit.
 - The reader's replica marker (`/priv/social/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
   not a `PubkyAppPost`: each attachment carries its `content_type` inline so the copy renders without
   the creator's lock file, and `announcement` holds the `pubky://…/posts/<id>` URI of the post the
@@ -212,20 +253,21 @@ parents through this component and those stay previews (#2401, absorbed into #24
 In full, the body images render from the reader's local copies: `PostArticle` hands its
 `localAttachments` to `PostText`, and `ArticleInlineImage` resolves `attachment:{n}` to the object
 URL of slot `n`. A slot whose file is missing shows the placeholder. The preview shows no body
-image, like any article card.
+image, like any article card, and reads none: it loads the cover's bytes alone, and the body media
+is read once the article opens in full (#2686).
 
-| File                                                           | Role                                                                                |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `components/organisms/PostContentBase/PostContentBase.tsx`     | detect lock by `!!postDetails.lock`                                                 |
-| `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked               |
-| `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser) |
-| `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control (also used by the composer)        |
-| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                     |
-| `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
-| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                    |
-| `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction            |
-| `components/organisms/DialogEditPost/DialogEditPost.tsx`       | routes an announcement into teaser mode, or falls back to a plain post edit         |
-| `libs/post/lockTeaser.ts`                                      | the envelope: builder and length guard                                              |
+| File                                                           | Role                                                                                                                                                     |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/organisms/PostContentBase/PostContentBase.tsx`     | detect lock by `!!postDetails.lock`                                                                                                                      |
+| `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked                                                                                    |
+| `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser)                                                                      |
+| `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control; in the composer the title is editable (pencil) and the price is a button that reopens the price dialog |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                                                                                          |
+| `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume                                                                              |
+| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                                                                                         |
+| `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction                                                                                 |
+| `components/organisms/DialogEditPost/DialogEditPost.tsx`       | routes an announcement into teaser mode, or falls back to a plain post edit                                                                              |
+| `libs/post/lockTeaser.ts`                                      | the envelope: builder and length guard                                                                                                                   |
 
 ## Reading a lock post
 
@@ -573,12 +615,15 @@ Never commit either.
 - Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
-  (testnet + Lock Server + nexus) is driven manually.
+  (testnet + Lock Server + nexus) is driven manually. How to run it, approve as Bitkit and pay from
+  the terminal: [`locks/locks-local-stack/README.md`](locks/locks-local-stack/README.md).
 
 ## References
 
 - Lock server FE integration: `pubky/locks` → `docs/_front_end_integration.md` — the
   `lock.json` shape and the submit-proof → credential → proxy-read access flow.
+- User-facing walkthroughs, screen states and manual test scenarios:
+  [`locks/creator-flow.md`](locks/creator-flow.md), [`locks/reader-flow.md`](locks/reader-flow.md)
 - Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
 - Issues: #2297 (bundle-id persistence), #2827 (one file per bundle id), #2368 (reader payment),
   #2369 (payment-only locks), #2468 (multi-tab read-back), #1998 (Phase 1 epic).

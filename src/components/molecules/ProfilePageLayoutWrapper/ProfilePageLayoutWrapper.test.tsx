@@ -51,4 +51,14 @@ describe('ProfilePageLayoutWrapper', () => {
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass('px-4', 'lg:px-6', 'xl:px-0', 'pt-0');
   });
+
+  it('keeps bottom clearance for the floating action button on mobile only', () => {
+    const { container } = render(
+      <ProfilePageLayoutWrapper>
+        <div>Test</div>
+      </ProfilePageLayoutWrapper>,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper).toHaveClass('pb-44', 'lg:pb-0');
+  });
 });

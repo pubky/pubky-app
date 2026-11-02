@@ -23,6 +23,15 @@ export function mergeTagSuggestions(
 }
 
 /**
+ * True when an `onTagAdd` result reports a failed add: the tag hooks' `handleTagAdd` resolves
+ * `{ success: false }` on a rejected write instead of throwing, so the input keeps the typed
+ * label for a retry (issue #2890). A `void` result or `{ success: true }` counts as added.
+ */
+export function isTagAddFailure(result: unknown): boolean {
+  return typeof result === 'object' && result !== null && 'success' in result && result.success === false;
+}
+
+/**
  * Filter tags for autocomplete suggestions based on input text.
  * Returns tags that contain the input text (case-insensitive),
  * excluding exact matches.

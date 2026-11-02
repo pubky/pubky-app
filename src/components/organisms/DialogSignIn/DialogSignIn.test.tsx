@@ -131,6 +131,18 @@ describe('DialogSignIn', () => {
       expect(screen.getByAltText('New here?').getAttribute('src')).toContain('new-here.webp');
       expect(screen.getByAltText('Already have a pubky?').getAttribute('src')).toContain('sign-in.webp');
     });
+
+    it('sizes each card illustration for the stacked mobile cards and the side-by-side desktop cards', () => {
+      mockShowSignInDialog.value = true;
+      render(<DialogSignIn />);
+
+      for (const image of [screen.getByAltText('New here?'), screen.getByAltText('Already have a pubky?')]) {
+        // Mobile stacks the cards, so a fixed height lets the illustration fill the card between headline and button.
+        expect(image).toHaveClass('h-36', 'w-auto');
+        // Desktop keeps the width-driven illustration unchanged.
+        expect(image).toHaveClass('sm:h-auto', 'sm:w-full', 'max-w-[202px]');
+      }
+    });
   });
 
   describe('interactions', () => {

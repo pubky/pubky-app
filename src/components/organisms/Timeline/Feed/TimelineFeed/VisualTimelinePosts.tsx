@@ -498,34 +498,30 @@ export function VisualTimelinePosts({
       hasMore,
       showUnavailablePosts,
     });
-  const initialBackfillInFlightRef = React.useRef(false);
   const hasRows = rows.length > 0;
-  const shouldBackfillInitialRows =
-    !loading && !loadingMore && !error && !hasPendingSnapshot && postIds.length > 0 && !hasRows && hasMore;
+  // Loaded ids whose rows are still unresolved. Before the tile snapshot's first emission
+  // empty rows say nothing about those ids, so the skeleton holds and nothing loads (a
+  // Grid→Visual switch of a partially-paged collection with cached tiles would otherwise
+  // fetch a page it may not need). Once it has emitted and more pages exist, the wrapper's
+  // empty-but-`hasMore` state owns the case: it keeps the skeleton beside the children, so
+  // the sentinel below the empty mosaic requests the next page under the unproductive-load
+  // budget and the manual Load more replaces the skeleton once it is spent (#2538). Only an
+  // exhausted stream waits here for the pending probes to settle, so the filtered empty
+  // state never shows before the pipeline has had its say.
   const isResolvingInitialRows =
     !error &&
     postIds.length > 0 &&
     !hasRows &&
-    (hasPendingSnapshot || hasMore || loadingMore || hasPendingTiles || hasPendingFiles || hasPendingPostDetails);
+    (hasPendingSnapshot || (!hasMore && (loadingMore || hasPendingTiles || hasPendingFiles || hasPendingPostDetails)));
   const isInitialLoading = loading || isResolvingInitialRows;
 
-  useEffect(() => {
-    if (!shouldBackfillInitialRows) return;
-    if (initialBackfillInFlightRef.current) return;
-
-    initialBackfillInFlightRef.current = true;
-    void Promise.resolve()
-      .then(() => loadMore())
-      .finally(() => {
-        initialBackfillInFlightRef.current = false;
-      });
-  }, [loadMore, shouldBackfillInitialRows]);
-
-  // `hasRows` keeps the observer quiet while the tile pipeline resolves rows for
-  // existing postIds (the backfill effect owns that case). A fully-filtered stream
-  // region leaves postIds itself empty — there the sentinel must stay armed so
-  // load rounds keep chaining toward the first visible posts, within the budget of
-  // rounds that grow nothing; past it the manual Load more below takes over (#2523).
+  // The sentinel owns every automatic load, including the backfill of a stream whose loaded
+  // ids yield no tile yet (a text-only profile, a text-heavy custom feed, a content filter
+  // that drops every post's media): a separate effect used to chain `loadMore` there outside
+  // the budget, page after page, until the stream ended or a tile appeared (#2538). A
+  // fully-filtered stream region leaves postIds itself empty — the sentinel stays armed
+  // there too, so load rounds keep chaining toward the first visible posts, within the
+  // budget of rounds that grow nothing; past it the manual Load more below takes over (#2523).
   // The budget measures mosaic progress, not ids: with content set to All a page of
   // text-only posts grows `postIds` while the tile pipeline drops every one of them, and a
   // budget keyed on ids would keep resetting (#2523). It counts every tile the pipeline
@@ -537,7 +533,7 @@ export function VisualTimelinePosts({
   // them would hold every load behind a slow probe, which dev never did.
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
-    hasMore: hasMore && (hasRows || postIds.length === 0),
+    hasMore,
     isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,

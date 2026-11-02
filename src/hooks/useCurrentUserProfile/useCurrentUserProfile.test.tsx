@@ -1,10 +1,18 @@
+import type { Session } from '@synonymdev/pubky';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SessionReference, SessionRestoreStatus } from '@/libs/auth/session.types';
+import type { AuthStore } from '@/stores/auth/auth.types';
+import { mockGrantReference, mockSession } from '@/test-utils/pubky';
+import { mockAuthStore } from '@/test-utils/stores';
 import { useCurrentUserProfile } from './useCurrentUserProfile';
 
 // Hoist mock data
 const mockState = vi.hoisted(() => ({
   currentUserPubky: null as string | null,
+  session: null as Session | null,
+  sessionReference: null as SessionReference | null,
+  restoreStatus: 'idle' as SessionRestoreStatus,
   userDetails: undefined as unknown,
 }));
 
@@ -18,8 +26,13 @@ vi.mock('@/controllers/user/user', () => ({
   },
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: vi.fn((selector?: (state: { currentUserPubky: string | null }) => unknown) => {
-    const state = { currentUserPubky: mockState.currentUserPubky };
+  useAuthStore: vi.fn((selector?: (state: AuthStore) => unknown) => {
+    const state = mockAuthStore({
+      currentUserPubky: mockState.currentUserPubky,
+      session: mockState.session,
+      sessionReference: mockState.sessionReference,
+      restoreStatus: mockState.restoreStatus,
+    });
     return selector ? selector(state) : state;
   }),
 }));
@@ -36,8 +49,51 @@ vi.mock('dexie-react-hooks', () => ({
 describe('useCurrentUserProfile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // A ready member session: `currentUserPubky` alone switches the signed-in cases below on and off.
     mockState.currentUserPubky = null;
+    mockState.session = mockSession();
+    mockState.sessionReference = mockGrantReference();
+    mockState.restoreStatus = 'ready';
     mockGetDetails.mockReturnValue(null);
+  });
+
+  describe('Guest with a generated pubky (#2955)', () => {
+    beforeEach(() => {
+      // The onboarding key step stores the generated pubky with no session and nothing to restore.
+      mockState.currentUserPubky = 'generated-key';
+      mockState.session = null;
+      mockState.sessionReference = null;
+      mockState.restoreStatus = 'idle';
+    });
+
+    it('reports no user and neither reads nor fetches details for a key without an account', () => {
+      const { result } = renderHook(() => useCurrentUserProfile());
+
+      expect(result.current.currentUserPubky).toBeNull();
+      expect(result.current.userDetails).toBeUndefined();
+      expect(mockGetDetails).not.toHaveBeenCalled();
+      expect(mockFetchDetails).not.toHaveBeenCalled();
+    });
+
+    it('reports the user and reads details again once that key has a session reference to restore', () => {
+      mockState.sessionReference = mockGrantReference();
+
+      const { result } = renderHook(() => useCurrentUserProfile());
+
+      expect(result.current.currentUserPubky).toBe('generated-key');
+      expect(mockGetDetails).toHaveBeenCalledWith({ userId: 'generated-key' });
+    });
+
+    it.each(['restoring', 'reauth-required', 'temporary-error'] as const)(
+      'keeps reading details for a member during %s',
+      (restoreStatus) => {
+        mockState.restoreStatus = restoreStatus;
+
+        renderHook(() => useCurrentUserProfile());
+
+        expect(mockGetDetails).toHaveBeenCalledWith({ userId: 'generated-key' });
+      },
+    );
   });
 
   describe('Authentication state', () => {

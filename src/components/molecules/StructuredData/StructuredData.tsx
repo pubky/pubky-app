@@ -22,7 +22,7 @@ export function StructuredData() {
         name: getSiteName(),
         url: siteUrl,
         description:
-          'Pubky App is a social-media-like experience built over Pubky Core, a decentralised, censorship-resistant protocol.',
+          'Pubky App is a social-media-like experience built over Pubky, a decentralised, censorship-resistant protocol.',
         publisher: { '@id': `${siteUrl}/#organisation` },
       },
       {

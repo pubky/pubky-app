@@ -171,6 +171,8 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       loading,
       error,
       hasItems,
+      hasMore = false,
+      stalled = false,
       loadingComponent,
       emptyComponent,
     }: {
@@ -178,11 +180,24 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       loading: boolean;
       error: string | null;
       hasItems: boolean;
+      hasMore?: boolean;
+      stalled?: boolean;
       loadingComponent?: React.ReactNode;
       emptyComponent?: React.ReactNode;
     }) => {
-      if (loading) return <>{loadingComponent ?? <div data-testid="timeline-loading">Loading</div>}</>;
+      const loadingNode = loadingComponent ?? <div data-testid="timeline-loading">Loading</div>;
+      if (loading) return <>{loadingNode}</>;
       if (error && !hasItems) return <div data-testid="timeline-error-state">{error}</div>;
+      // Mirrors the real wrapper: an empty list with more pages keeps the skeleton beside the
+      // children (which own the sentinel), and drops it once auto-loading has stalled.
+      if (!hasItems && hasMore) {
+        return (
+          <>
+            {!stalled && loadingNode}
+            {children}
+          </>
+        );
+      }
       if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">Empty</div>}</>;
       return <>{children}</>;
     },
@@ -670,8 +685,12 @@ describe('VisualTimelinePosts', () => {
     expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
   });
 
-  it('keeps the initial skeleton and backfills while the first visual rows are unavailable', async () => {
+  it('keeps the initial skeleton and arms the sentinel while the first visual rows are unavailable', async () => {
+    // The backfill of loaded ids that yield no tile runs through the sentinel, so it shares
+    // the unproductive-load budget instead of chaining loadMore from an effect (#2538).
     const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    const sentinelRef = vi.fn();
+    mockUseInfiniteScroll.mockReturnValue({ sentinelRef, isStalled: false, resumeAutoLoad: vi.fn() });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: [],
       tail: [],
@@ -694,18 +713,18 @@ describe('VisualTimelinePosts', () => {
     expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
     expect(mockUseInfiniteScroll).toHaveBeenCalledWith({
       onLoadMore: expect.any(Function),
-      hasMore: false,
-      isLoading: true,
+      hasMore: true,
+      isLoading: false,
       threshold: 3000,
       debounceMs: 20,
       // The budget measures mosaic tiles, not ids: no rows yet, so nothing to count.
       itemCount: 0,
       maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
     });
-
     await waitFor(() => {
-      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+      expect(sentinelRef).toHaveBeenCalledWith(expect.any(HTMLElement));
     });
+    expect(mockLoadMore).not.toHaveBeenCalled();
   });
 
   it('does not backfill while the tile snapshot is still resolving', async () => {
@@ -736,12 +755,12 @@ describe('VisualTimelinePosts', () => {
 
     expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
     await waitFor(() => {
-      expect(mockUseInfiniteScroll).toHaveBeenCalled();
+      expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ isLoading: true }));
     });
     expect(mockLoadMore).not.toHaveBeenCalled();
   });
 
-  it('backfills initial rows while tile probes are pending', async () => {
+  it('keeps the sentinel armed for the backfill while tile probes are pending', async () => {
     const mockLoadMore = vi.fn().mockResolvedValue(undefined);
     mockUseVisualFeedTiles.mockReturnValue({
       rows: [],
@@ -763,10 +782,10 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
-
     await waitFor(() => {
-      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+      expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ hasMore: true, isLoading: false }));
     });
+    expect(mockLoadMore).not.toHaveBeenCalled();
   });
 
   it('renders visual grid skeletons during initial loading', () => {
@@ -1178,7 +1197,26 @@ describe('VisualTimelinePosts', () => {
       expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ hasMore: true }));
     });
 
-    it('keeps the observer quiet while rows resolve for existing postIds (backfill effect owns that case)', () => {
+    it('bounds the backfill by the unproductive-load budget and hands over to Load more', async () => {
+      // A text-only profile, a text-heavy custom feed or a content filter that drops every
+      // post's media: pages keep delivering ids while the tile pipeline yields no row. The
+      // backfill runs through the sentinel's budget, so it stops after the configured rounds
+      // instead of chaining to the end of the stream, and the skeleton gives way to the manual
+      // Load more, which loads one page and re-arms auto-loading under the same budget (#2538).
+      const { useInfiniteScroll: realUseInfiniteScroll } = await vi.importActual<
+        typeof import('@/hooks/useInfiniteScroll/useInfiniteScroll')
+      >('@/hooks/useInfiniteScroll/useInfiniteScroll');
+      mockUseInfiniteScroll.mockImplementation(realUseInfiniteScroll);
+      const observerCallbacks: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
+      const previousObserver = window.IntersectionObserver;
+      Object.defineProperty(window, 'IntersectionObserver', {
+        writable: true,
+        configurable: true,
+        value: vi.fn(function (callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+          observerCallbacks.push(callback);
+          return { observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() };
+        }),
+      });
       mockUseVisualFeedTiles.mockReturnValue({
         rows: [],
         tail: [],
@@ -1188,19 +1226,59 @@ describe('VisualTimelinePosts', () => {
         hasPendingFiles: false,
         hasPendingPostDetails: false,
       });
-
-      render(
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      const renderFeed = (postIds: string[]) => (
         <VisualTimelinePosts
-          postIds={['author:post1']}
+          postIds={postIds}
           loading={false}
           loadingMore={false}
           error={null}
           hasMore={true}
-          loadMore={vi.fn()}
-        />,
+          loadMore={mockLoadMore}
+        />
       );
+      const intersect = async () => {
+        await act(async () => {
+          observerCallbacks.at(-1)?.([{ isIntersecting: true }]);
+          await new Promise((resolve) => setTimeout(resolve, 40));
+        });
+      };
 
-      expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ hasMore: false }));
+      try {
+        const postIds = ['author:post1'];
+        const { rerender } = render(renderFeed(postIds));
+        expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+        await waitFor(() => expect(observerCallbacks.length).toBeGreaterThan(0));
+
+        for (let round = 1; round <= TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS; round += 1) {
+          await intersect();
+          expect(mockLoadMore).toHaveBeenCalledTimes(round);
+          // The page delivered ids but no tiles: the mosaic stays empty and the skeleton holds.
+          postIds.push(`author:text-only-${round}`);
+          rerender(renderFeed([...postIds]));
+          expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+        }
+
+        await intersect();
+        // Within the budget plus the one load that delivered the ids in the first place.
+        expect(mockLoadMore).toHaveBeenCalledTimes(TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS);
+        expect(screen.queryByTestId('visual-feed-skeleton')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+        expect(mockLoadMore).toHaveBeenCalledTimes(TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS + 1);
+        expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+        expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+
+        // Auto-loading is re-armed under the same budget: the next sentinel hit loads again.
+        await intersect();
+        expect(mockLoadMore).toHaveBeenCalledTimes(TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS + 2);
+      } finally {
+        Object.defineProperty(window, 'IntersectionObserver', {
+          writable: true,
+          configurable: true,
+          value: previousObserver,
+        });
+      }
     });
   });
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
+import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
 import { BookmarksHero } from '@/organisms/Bookmarks/BookmarksHero/BookmarksHero';
 import { BookmarksItems } from '@/organisms/Bookmarks/BookmarksItems/BookmarksItems';
@@ -16,7 +17,7 @@ export function BookmarksCollection() {
       showRightSidebar={false}
       showLeftMobileButton={false}
       showRightMobileButton={false}
-      className="pb-24 lg:pb-12 xl:px-0!"
+      className={`${MOBILE_FAB_CLEARANCE_CLASS} lg:pb-12 xl:px-0!`}
     >
       <Container className="gap-12">
         <BookmarksItems

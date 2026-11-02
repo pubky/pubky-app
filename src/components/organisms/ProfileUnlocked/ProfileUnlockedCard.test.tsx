@@ -51,7 +51,7 @@ describe('ProfileUnlockedCard', () => {
     render(<ProfileUnlockedCard post={post(attachments)} />);
 
     await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalledTimes(1));
-    expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: post(attachments) });
+    expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: post(attachments), preview: true });
   });
 
   // The kinds a locked post can carry, per `inferPostKindForCreate`. Collection is unreachable here.
@@ -134,22 +134,44 @@ describe('ProfileUnlockedCard', () => {
     const attachments = [{ url: 'pubky://me/priv/social/unlocked/LOCK1/one', content_type: 'image/png' }];
     const user = userEvent.setup();
 
+    const article = { content: JSON.stringify({ title: 'My Title', body }), kind: 'long' as const, attachments };
+    render(<ProfileUnlockedCard post={article} />);
+
+    // Collapsed: the card previews the article, so the rest of the body and its images are not read yet.
+    expect(screen.getByText('Intro paragraph')).toBeInTheDocument();
+    expect(screen.queryByText(tail)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-inline-image')).not.toBeInTheDocument();
+    expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: article, preview: true });
+
+    await user.click(screen.getByRole('button', { name: 'Read full article' }));
+
+    expect(LocksController.fetchReplicatedAttachments).toHaveBeenLastCalledWith({ post: article, preview: false });
+
+    expect(screen.getByText(tail)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('article-inline-image')).toHaveAttribute('src', 'blob:media'));
+    expect(screen.queryByRole('button', { name: 'Read full article' })).not.toBeInTheDocument();
+  });
+
+  it('holds a skeleton for a body image that is still downloading after the article opens', async () => {
+    const body = ['Intro paragraph', '![one](attachment:1)'].join('\n\n');
+    const attachments = [
+      { url: 'pubky://me/priv/social/unlocked/LOCK1/cover', content_type: 'image/png' },
+      { url: 'pubky://me/priv/social/unlocked/LOCK1/one', content_type: 'image/png' },
+    ];
+    vi.mocked(LocksController.fetchReplicatedAttachments)
+      .mockResolvedValueOnce([{ id: 'cover', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 }])
+      .mockReturnValueOnce(new Promise(() => undefined));
+    const user = userEvent.setup();
     render(
       <ProfileUnlockedCard
         post={{ content: JSON.stringify({ title: 'My Title', body }), kind: 'long', attachments }}
       />,
     );
 
-    // Collapsed: the card previews the article, so the rest of the body and its images are not read yet.
-    expect(screen.getByText('Intro paragraph')).toBeInTheDocument();
-    expect(screen.queryByText(tail)).not.toBeInTheDocument();
-    expect(screen.queryByTestId('article-inline-image')).not.toBeInTheDocument();
-
     await user.click(screen.getByRole('button', { name: 'Read full article' }));
 
-    expect(screen.getByText(tail)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('article-inline-image')).toHaveAttribute('src', 'blob:media'));
-    expect(screen.queryByRole('button', { name: 'Read full article' })).not.toBeInTheDocument();
+    expect(await screen.findByTestId('article-inline-image-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('article-inline-image-fallback')).not.toBeInTheDocument();
   });
 
   it('renders the surviving media when the replica lost some attachments', async () => {

@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, HOME_ROUTES, LEGAL_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import type { SessionReference } from '@/libs/auth/session.types';
+import { mockGrantReference } from '@/test-utils/pubky';
 import { Header } from './Header';
 
 // Mock Next.js navigation
@@ -13,6 +15,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock auth store - use selector pattern (component calls useAuthStore with selector function)
 let mockCurrentUserPubky: string | null = null;
+let mockSessionReference: SessionReference | null = null;
 let mockRestoreStatus = 'ready';
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
@@ -93,8 +96,20 @@ vi.mock('@/app/routes', async (importOriginal) => {
 });
 
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string | null; restoreStatus: string }) => unknown) =>
-    selector({ currentUserPubky: mockCurrentUserPubky, restoreStatus: mockRestoreStatus }),
+  useAuthStore: (
+    selector: (state: {
+      currentUserPubky: string | null;
+      session: null;
+      sessionReference: SessionReference | null;
+      restoreStatus: string;
+    }) => unknown,
+  ) =>
+    selector({
+      currentUserPubky: mockCurrentUserPubky,
+      session: null,
+      sessionReference: mockSessionReference,
+      restoreStatus: mockRestoreStatus,
+    }),
 }));
 vi.mock('@/stores/notification/notification.store', () => ({
   useNotificationStore: () => ({ selectUnread: () => 0 }),
@@ -203,6 +218,7 @@ describe('Header', () => {
     vi.clearAllMocks();
     // Default mock return values
     mockCurrentUserPubky = null; // Not authenticated by default
+    mockSessionReference = null;
     mockRestoreStatus = 'ready';
     mockUsePathname.mockReturnValue(ROOT_ROUTES);
     mockUseRouter.mockReturnValue({ push: vi.fn() });
@@ -228,6 +244,25 @@ describe('Header', () => {
     render(<Header />);
     expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps account navigation visible while a saved session is still pending restoration', () => {
+    mockCurrentUserPubky = 'retained-account';
+    mockSessionReference = mockGrantReference();
+    mockRestoreStatus = 'idle';
+    render(<Header />);
+    expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the landing guest header on mobile and desktop after the key step generated a pubky without a session (#2882)', () => {
+    mockCurrentUserPubky = 'generated-key';
+    mockRestoreStatus = 'idle';
+    render(<Header />);
+    expect(screen.getByTestId('logo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+    expect(screen.getByTestId('header-container')).not.toHaveAttribute('data-class-name', 'hidden lg:block');
   });
 
   it('renders header container with logo and home header', () => {

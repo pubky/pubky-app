@@ -72,6 +72,17 @@ describe('LocalLocksService', () => {
     }
   });
 
+  it('deletes one lock row and leaves the others; a missing row is not an error', async () => {
+    await LocalLocksService.upsertPost({ lockId: 'mine', creator: 'pubkyme', post });
+    await LocalLocksService.upsertPost({ lockId: 'paid', creator: 'pubkyother', post, unlockedAt: 1 });
+
+    await LocalLocksService.delete('mine');
+    await expect(LocalLocksService.delete('mine')).resolves.toBeUndefined();
+
+    expect(await LocalLocksService.get('mine')).toBeNull();
+    expect(await LocalLocksService.get('paid')).not.toBeNull();
+  });
+
   it('is cleared with the other per-user tables on logout', async () => {
     await LocalLocksService.upsertPost({ lockId: 'paid', creator: 'pubkyother', post, unlockedAt: 1 });
     await clearDatabase();

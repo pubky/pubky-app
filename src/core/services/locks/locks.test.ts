@@ -48,6 +48,7 @@ const mocks = vi.hoisted(() => {
     fakeViewer,
     registerGuardedResource: vi.fn(),
     createContentLock: vi.fn(),
+    deleteContentLock: vi.fn(),
     readContentLockWithOptions: vi.fn(async () => ({ version: 1, creator: 'pubkybob' })),
     generateBundleId: vi.fn(() => ({ toString: () => 'bundle-generated' })),
     ensureLocksSdkReady: vi.fn(async () => {}),
@@ -210,6 +211,12 @@ describe('LocksService (auth)', () => {
     expect(mocks.fakeLocks.restoreSession).toHaveBeenCalledWith('secret-abc');
   });
 
+  it('restoreSession rebuilds from a secret the caller passes, even after the store was cleared', async () => {
+    const session = await LocksService.restoreSession('secret-captured');
+    expect(session).toBe(mocks.fakeSession);
+    expect(mocks.fakeLocks.restoreSession).toHaveBeenCalledWith('secret-captured');
+  });
+
   it('restoreSession throws an auth error when the store holds no secret', async () => {
     const error = await LocksService.restoreSession().catch((e: unknown) => e);
     expect(isAppError(error)).toBe(true);
@@ -293,7 +300,11 @@ describe('LocksService (auth)', () => {
 
 const session = asOpaque<LocksSdkSession>({
   creatorPubky: () => 'pubkyaccount',
-  creator: { registerGuardedResource: mocks.registerGuardedResource, createContentLock: mocks.createContentLock },
+  creator: {
+    registerGuardedResource: mocks.registerGuardedResource,
+    createContentLock: mocks.createContentLock,
+    deleteContentLock: mocks.deleteContentLock,
+  },
   lockServer: () => 'lockpubky',
 });
 
@@ -338,6 +349,15 @@ describe('LocksService (content)', () => {
     expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/app.locks/LOCK1.json', creator: 'pubkybob' });
   });
 
+  // No options = the server's default graceful mode; `force` must never be chosen by the app.
+  it('deleteContentLock asks the Lock Server for the default (graceful) deletion of the lock id', async () => {
+    mocks.deleteContentLock.mockResolvedValue({ lock_id: 'LOCK1', status: 'queued' });
+
+    await expect(LocksService.deleteContentLock('LOCK1')).resolves.toBeUndefined();
+
+    expect(mocks.deleteContentLock).toHaveBeenCalledWith('LOCK1');
+  });
+
   it.each([
     [
       'registerGuardedResource',
@@ -346,6 +366,7 @@ describe('LocksService (content)', () => {
       mocks.registerGuardedResource,
     ],
     ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
+    ['deleteContentLock', () => LocksService.deleteContentLock('LOCK1'), mocks.deleteContentLock],
   ])('%s throws an auth error without touching the server when no Locks session exists', async (_name, call, mock) => {
     useLocksAuthStore.getState().reset();
 
@@ -365,6 +386,7 @@ describe('LocksService (content)', () => {
       mocks.registerGuardedResource,
     ],
     ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
+    ['deleteContentLock', () => LocksService.deleteContentLock('LOCK1'), mocks.deleteContentLock],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     mock.mockRejectedValue(new Error('Lock Server request failed with HTTP 401'));
 

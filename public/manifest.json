@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Pubky App",
   "short_name": "Pubky",
-  "description": "A social-media experience built on Pubky Core",
+  "description": "A social-media experience built on the Pubky protocol",
   "scope": "/",
   "lang": "en",
   "orientation": "portrait-primary",

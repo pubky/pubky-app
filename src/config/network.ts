@@ -51,7 +51,7 @@ export function isPassportConfigured(): boolean {
  * config drift (URL rotation, trailing slash) would silently disable the
  * staging sign-in guard and re-enable the force-republish path it exists to
  * prevent. `PUBKY_RUNTIME_HOMESERVER_URL` is also temporary until
- * pubky-core#410 resolves transport URLs via PKARR.
+ * pubky-homeserver#410 resolves transport URLs via PKARR.
  */
 export function isStagingHomeserverDeploy(): boolean {
   return getDeployEnv() === 'staging';
