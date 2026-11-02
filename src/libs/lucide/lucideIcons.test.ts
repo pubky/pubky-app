@@ -7,6 +7,7 @@ import {
   subscribeToLucideIcons,
   toLucideIconName,
 } from './lucideIcons';
+import { LUCIDE_ICON_NODES } from './lucideIcons.nodes';
 
 describe('lucideIcons', () => {
   it('normalizes kebab-case icon names, including foreign ones', () => {
@@ -109,13 +110,29 @@ describe('lucideIcons', () => {
     // 'home' aliases 'house' — the picker search relies on this mapping.
     const house = pickerIcons.find((icon) => icon.name === 'house');
     expect(house?.aliases).toContain('home');
+    // 'trash-2' was renamed to 'trash' in lucide 1.65 — hidden from the grid
+    // as a deprecated alias, still searchable through the canonical entry.
+    expect(names).not.toContain('trash-2');
+    const trash = pickerIcons.find((icon) => icon.name === 'trash');
+    expect(trash?.aliases).toContain('trash-2');
     // Synonym tags power vocabulary search ('delete' finds the trash icons).
-    const trash = pickerIcons.find((icon) => icon.name === 'trash-2');
     expect(trash?.tags).toContain('delete');
     // Multi-word tags are hyphenated to match the picker's normalized query,
     // which turns 'air conditioner' into 'air-conditioner'.
     const airVent = pickerIcons.find((icon) => icon.tags.some((tag) => tag.includes('air-condition')));
     expect(airVent).toBeDefined();
     expect(pickerIcons.every((icon) => icon.tags.every((tag) => !tag.includes(' ')))).toBe(true);
+  });
+
+  it('keeps the generated picker nodes identical to the installed lucide-react catalog', async () => {
+    // Regression guard for lucide upgrades: LUCIDE_ICON_NODES is a generated
+    // copy of the catalog, and a stale copy made opening the picker overwrite
+    // freshly rendered icons with old glyphs ('trash' gained its two interior
+    // strokes when 'trash-2' was renamed to 'trash' in lucide 1.65).
+    const { dynamicIconImports } = await import('lucide-react/dynamic.js');
+    const trashModule = await dynamicIconImports.trash();
+    expect(LUCIDE_ICON_NODES.trash).toEqual(trashModule.__iconData?.node);
+    const trash2Module = await dynamicIconImports['trash-2']();
+    expect(trash2Module.__iconData?.node).toBe(trashModule.__iconData?.node);
   });
 });
