@@ -226,14 +226,14 @@ describe('locks.e2eStub', () => {
       });
     });
 
-    it('rejects a failed code exchange with the session error, not an auth error', async () => {
+    it('rejects a failed code exchange with the SDK exchange error', async () => {
       replyWith({ error: { code: 'frontend_session_code_expired', message: 'expired' } }, 410);
 
       const error = await createE2eLocksClient(STUB_URL)
         .exchangeFrontendSessionCode(asOpaque<ExchangeFrontendSessionCodeOptions>({ code: 'c', state: 's' }))
         .catch((caught: unknown) => caught);
 
-      expect(error).toMatchObject({ name: 'InvalidInput', message: 'Lock Server request failed with HTTP 410' });
+      expect(error).toMatchObject({ name: 'InvalidInput', message: 'frontend session exchange failed with HTTP 410' });
       expect(isLockServerRegionBlocked(error)).toBe(false);
     });
 

@@ -51,10 +51,10 @@ function sdkError(path: string, status: number): Error {
   if (path.startsWith('paykit/')) {
     return Object.assign(new Error('Paykit data lookup failed'), { name: 'PaykitDataLookupFailed' });
   }
-  const message = path.startsWith('viewer/')
-    ? `Lock Server viewer request failed with HTTP ${status}`
-    : `Lock Server request failed with HTTP ${status}`;
-  return Object.assign(new Error(message), { name: 'InvalidInput' });
+  let request = 'Lock Server request';
+  if (path.startsWith('viewer/')) request = 'Lock Server viewer request';
+  if (path.startsWith('session/')) request = 'frontend session exchange';
+  return Object.assign(new Error(`${request} failed with HTTP ${status}`), { name: 'InvalidInput' });
 }
 
 /** `text/plain` keeps each call a CORS simple request, so the stub never has to answer a preflight. */
