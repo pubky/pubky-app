@@ -98,8 +98,10 @@ const resumeMocks = vi.hoisted(() => ({
 vi.mock('@/hooks/usePurchaseResume/usePurchaseResume', () => ({
   usePurchaseResume: (params: ResumeParams) => {
     resumeMocks.params = params;
-    // As the real hook: nothing to resume without a listed purchase, and nothing known while the read runs.
+    // As the real hook: nothing to resume without a listed purchase, content already read is recoverable,
+    // and nothing is known while the read runs.
     if (!params.isPurchased) return 'none';
+    if (params.hasContent) return 'recoverable';
     if (params.isResolvingContent) return 'checking';
     return resumeMocks.status ?? 'recoverable';
   },
