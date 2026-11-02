@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { REPLICA_READ_HOLD_MS } from '@/config/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import type { UsePurchasedLocksResult } from '@/hooks/usePurchasedLocks/usePurchasedLocks.types';
@@ -84,12 +85,18 @@ vi.mock('@/hooks/usePurchasedLocks/usePurchasedLocks', () => ({
   },
 }));
 // The resume hook has its own tests; here only the wiring matters — capture what it was handed.
+type ResumeParams = {
+  onResumed: (content: unknown) => void;
+  isPurchased: boolean;
+  hasContent: boolean;
+  isResolvingContent: boolean;
+};
 const resumeMocks = vi.hoisted(() => ({
   status: null as PurchaseResumeStatus | null,
-  params: null as null | { onResumed: (content: unknown) => void; isPurchased: boolean; hasContent: boolean },
+  params: null as null | ResumeParams,
 }));
 vi.mock('@/hooks/usePurchaseResume/usePurchaseResume', () => ({
-  usePurchaseResume: (params: { onResumed: (content: unknown) => void; isPurchased: boolean; hasContent: boolean }) => {
+  usePurchaseResume: (params: ResumeParams) => {
     resumeMocks.params = params;
     return resumeMocks.status ?? (params.isPurchased ? 'recoverable' : 'none');
   },
@@ -922,6 +929,28 @@ describe('LockedPostContent', () => {
 
       expect(unlock()).toBeEnabled();
       expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    // The pill stops waiting at the deadline, but purchase recovery does not: a slow but healthy read
+    // would otherwise download the purchase again and re-upload every attachment.
+    it('releases the pill past the deadline while recovery still waits on the read', async () => {
+      vi.useFakeTimers();
+      try {
+        holdReplicaRead();
+        paymentData();
+        render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+        await act(async () => {});
+        expect(LocksController.fetchReplicatedContent).toHaveBeenCalled();
+        expect(unlock()).toBeDisabled();
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+
+        await act(async () => vi.advanceTimersByTime(REPLICA_READ_HOLD_MS));
+        expect(unlock()).toBeEnabled();
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     // The flash #2795 reports: the restore finishes, the read starts, the copy lands. Unlock stays

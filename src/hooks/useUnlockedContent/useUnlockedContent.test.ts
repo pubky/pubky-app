@@ -120,22 +120,47 @@ describe('useUnlockedContent (replica resolution)', () => {
     expect(result.current.isResolvingReplica).toBe(false);
   });
 
-  // The homeserver reads carry no deadline of their own; a stalled one must not hold callers forever.
-  it('stops resolving once the replica read outlives its deadline', async () => {
+  // The homeserver reads carry no deadline of their own. Past the deadline the read is reported overdue,
+  // so the pill can stop waiting, but it still counts as resolving: purchase recovery waits for the
+  // read to settle, or a slow but healthy read downloads and replicates the purchase a second time.
+  it('reports an overdue read past the deadline and keeps resolving until it settles', async () => {
     vi.useFakeTimers();
     try {
-      vi.mocked(LocksController.fetchReplicatedContent).mockReturnValue(new Promise(() => undefined));
+      const read = Promise.withResolvers<TUnlockedContent | null>();
+      vi.mocked(LocksController.fetchReplicatedContent).mockReturnValue(read.promise);
 
       const { result } = renderHook(() =>
         useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }),
       );
       await act(async () => {});
       expect(result.current.isResolvingReplica).toBe(true);
+      expect(result.current.isReplicaReadOverdue).toBe(false);
 
       await act(async () => vi.advanceTimersByTime(REPLICA_READ_HOLD_MS - 1));
-      expect(result.current.isResolvingReplica).toBe(true);
+      expect(result.current.isReplicaReadOverdue).toBe(false);
       await act(async () => vi.advanceTimersByTime(1));
+      expect(result.current.isReplicaReadOverdue).toBe(true);
+      expect(result.current.isResolvingReplica).toBe(true);
+
+      await act(async () => read.resolve(null));
       expect(result.current.isResolvingReplica).toBe(false);
+      expect(result.current.isReplicaReadOverdue).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('is never overdue while the session restore is pending', async () => {
+    vi.useFakeTimers();
+    try {
+      Object.assign(authState, { session: null, restoreStatus: 'restoring' });
+
+      const { result } = renderHook(() =>
+        useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }),
+      );
+      await act(async () => vi.advanceTimersByTime(REPLICA_READ_HOLD_MS));
+      expect(result.current.isResolvingReplica).toBe(true);
+      expect(result.current.isReplicaReadOverdue).toBe(false);
     } finally {
       vi.useRealTimers();
     }

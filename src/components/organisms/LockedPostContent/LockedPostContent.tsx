@@ -80,6 +80,7 @@ export function LockedPostContent({
     isOwnLock,
     isResolvingOwn,
     isResolvingReplica,
+    isReplicaReadOverdue,
   } = useUnlockedContent({ lock, lockFile, postId, preview });
   const { waitForAuth, isAuthenticated } = useRequireAuth();
   // A session from before the app asked for `/priv` cannot read whether this reader already
@@ -126,9 +127,14 @@ export function LockedPostContent({
   // live in between (#2795). The purchase list says who that can be: wait on the replica read until the
   // list is in ('idle' while a reload's session restore runs, then 'loading'), when it failed (no way to
   // tell, so wait as for everyone), or when it names this lock. A reader the list rules out gets the pill
-  // as soon as the lock file is in. `isResolvingReplica` is false when no read will run, and is bounded.
+  // as soon as the lock file is in. `isResolvingReplica` is false when no read will run. The pill gives up
+  // once the read is overdue, so a stalled one cannot hold it; purchase recovery above keeps waiting.
   const isReplicaPending =
-    isPayableReader && !isPayOpen && isResolvingReplica && (purchasesStatus !== 'ready' || hasPurchase(lockId));
+    isPayableReader &&
+    !isPayOpen &&
+    isResolvingReplica &&
+    !isReplicaReadOverdue &&
+    (purchasesStatus !== 'ready' || hasPurchase(lockId));
   const regionBlock =
     isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
       ? paidUnlocks

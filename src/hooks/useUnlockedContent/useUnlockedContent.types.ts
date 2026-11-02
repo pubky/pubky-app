@@ -33,8 +33,13 @@ export interface UseUnlockedContentResult {
   isResolvingOwn: boolean;
   /**
    * The replica read has not settled (or a session restore it will follow is pending), so an empty
-   * `unlockedPost` means "not known yet". False when no read will run, and once the read passes its
-   * deadline (`REPLICA_READ_HOLD_MS`).
+   * `unlockedPost` means "not known yet". False when no read will run. No deadline: purchase recovery
+   * waits on this, and a slow read it gave up on would download the purchase a second time.
    */
   isResolvingReplica: boolean;
+  /**
+   * The replica read is still running past `REPLICA_READ_HOLD_MS`. The Unlock pill stops waiting then;
+   * `isResolvingReplica` stays true until the read settles.
+   */
+  isReplicaReadOverdue: boolean;
 }
