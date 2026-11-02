@@ -142,6 +142,25 @@ describe('purchase-aware region gate', () => {
     expect(LocksController.startPayment).not.toHaveBeenCalled();
   });
 
+  // #3038: the real recovery and pill hooks together. A click while the download runs would cancel it and
+  // have the pay dialog download the same content again.
+  it('keeps Unlock busy while recovery downloads a completed purchase, then shows the content', async () => {
+    availability.value = { status: 'available' };
+    vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue(reusable('completed'));
+    const download = Promise.withResolvers<TUnlockedContent>();
+    vi.mocked(LocksController.fetchPaidContent).mockReturnValue(download.promise);
+    renderCard();
+
+    await waitFor(() => expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: 'Unlock', hidden: true })).toBeDisabled();
+    expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
+
+    download.resolve(content);
+    await waitFor(() => expect(applyUnlockedContent).toHaveBeenCalledWith(content));
+    expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(1);
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
+  });
+
   it.each(['pending', 'completed'] as const)(
     'recovers a %s purchase after the shared listing fails',
     async (status) => {

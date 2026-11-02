@@ -184,6 +184,33 @@ describe('usePurchaseResume', () => {
     expect(LocksController.fetchPaidContent).not.toHaveBeenCalled();
   });
 
+  // #3038: the content of a completed purchase is on its way, so the card must not offer to pay for it.
+  it('reports a completed purchase as recovering while its content downloads, then recoverable', async () => {
+    const resolveRead = deferredRead();
+    const { result, onResumed } = renderResume();
+    await waitFor(() => expect(result.current).toBe('recovering'));
+    expect(onResumed).not.toHaveBeenCalled();
+
+    await act(async () => resolveRead(content));
+    expect(onResumed).toHaveBeenCalledWith(content);
+    expect(result.current).toBe('recoverable');
+  });
+
+  it.each(['pending', 'in_progress'] as const)('never reports a %s task as recovering', async (status) => {
+    vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue({
+      kind: 'reusable',
+      bundleId: 'saved-bundle',
+      task: { status, walletSetupNeeded: false, admissionDeadlineAt: null },
+    });
+    const seen: string[] = [];
+    const { result } = renderResume();
+    await waitFor(() => {
+      seen.push(result.current);
+      expect(result.current).toBe('recoverable');
+    });
+    expect(seen).not.toContain('recovering');
+  });
+
   it('keeps a completed purchase recoverable when only its content read failed', async () => {
     vi.mocked(LocksController.fetchPaidContent).mockRejectedValue(new Error('offline'));
     const { result } = renderResume();
@@ -202,7 +229,7 @@ describe('usePurchaseResume', () => {
   it('hides the old reader status and drops their late download after an account change', async () => {
     const resolveRead = deferredRead();
     const { result, rerender, onResumed } = renderResume();
-    await waitFor(() => expect(result.current).toBe('recoverable'));
+    await waitFor(() => expect(result.current).toBe('recovering'));
     authState.currentUserPubky = 'reader2';
     authState.session = {};
     vi.mocked(LocksController.fetchResolvedPurchase).mockReturnValue(new Promise(() => {}));
