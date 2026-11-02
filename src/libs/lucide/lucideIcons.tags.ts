@@ -6,11 +6,9 @@ import type { IconName } from 'lucide-react/dynamic.js';
  * vocabulary search in the icon picker ('delete' finds the trash icons) —
  * loaded lazily with the catalog, never in the initial bundle.
  *
- * Generated artifact. Regenerate after a lucide upgrade with:
- * npm pack lucide-static@<same version as lucide-react> && tar -xzf lucide-static-*.tgz package/tags.json
- * then rebuild this map keeping only canonical lucide-react names, dropping
- * tags equal to the icon name, and run prettier on the result. Upstream tag
- * metadata grows between releases, so line counts can jump.
+ * Generated artifact. Regenerate after a lucide upgrade as described in
+ * `docs/components.md` (Data-driven Lucide icons). Upstream tag metadata grows
+ * between releases, so line counts can jump.
  */
 export const LUCIDE_ICON_TAGS: Readonly<Partial<Record<IconName, readonly string[]>>> = {
   'a-arrow-down': [

@@ -7,10 +7,8 @@ import type { IconName } from 'lucide-react/dynamic.js';
  * validation and rendering — the grid hides them, and search maps an alias
  * query (e.g. 'home') to its canonical icon (e.g. 'house').
  *
- * Generated from the installed lucide-react. Regenerate after a lucide
- * upgrade with the one-liner below, sorted by alias key, and run prettier on
- * the result:
- * node -e "const m=require('lucide-react/dynamic.js');for(const[k,f]of Object.entries(m.dynamicIconImports)){const t=/\.\/icons\/([a-z0-9-]+)\.mjs/.exec(String(f));if(t&&t[1]!==k)console.log(`  '${k}': '${t[1]}',`)}"
+ * Generated artifact. Regenerate after a lucide upgrade as described in
+ * `docs/components.md` (Data-driven Lucide icons).
  */
 export const LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL: Readonly<Partial<Record<IconName, IconName>>> = {
   'activity-square': 'square-activity',

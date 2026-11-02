@@ -3,8 +3,8 @@ import type { IconName } from 'lucide-react/dynamic.js';
 import { LUCIDE_ICON_NAME_PATTERN } from '@/config/feed';
 import { Logger } from '@/libs/logger/logger';
 
-// The full Lucide catalog ('lucide-react/dynamic.js', ~1960 dynamic-import
-// stubs, ~116KB raw) lives behind a lazy import so feed pages that render at
+// The full Lucide catalog ('lucide-react/dynamic.js', ~2280 dynamic-import
+// stubs, ~136KB raw) lives behind a lazy import so feed pages that render at
 // most a handful of icons do not ship it in their initial bundle. Sync
 // callers can therefore only check a name's *shape*; real validation happens
 // against the catalog once it is resident.
@@ -176,9 +176,9 @@ let allIconNodesLoad: Promise<readonly IconName[]> | null = null;
 /**
  * Loads every canonical icon in one chunk and fills the store with it.
  *
- * The picker renders up to ~1700 cells and lucide ships one chunk per icon, so
- * the per-icon path costs one request per cell (~539B on the wire, ~920KB over
- * a full scroll). This is a single ~109KB chunk, after which every cell renders
+ * The picker renders up to ~2000 cells and lucide ships one chunk per icon, so
+ * the per-icon path costs one request per cell (~539B on the wire, ~1MB over
+ * a full scroll). This is a single ~130KB chunk, after which every cell renders
  * synchronously and issues no request at all. Returns the canonical names so
  * the picker can enumerate without also pulling the catalog.
  */

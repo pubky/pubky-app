@@ -4,14 +4,14 @@ import type { IconName } from 'lucide-react/dynamic.js';
 /**
  * Every canonical Lucide icon node in one payload.
  *
- * The icon picker renders up to ~1700 cells, and lucide ships one chunk per
+ * The icon picker renders up to ~2000 cells, and lucide ships one chunk per
  * icon, so per-icon loading costs one request each (~539B on the wire) — over
- * a full scroll that is ~1700 requests and ~920KB. This bundle is a single
+ * a full scroll that is ~2000 requests and ~1MB. This bundle is a single
  * lazily-imported chunk, so the picker pays one request instead. Feed tabs
  * keep the per-icon path: they render a handful of icons and must not pull
  * the whole set.
  *
- * Generated artifact. Regenerate after a lucide upgrade with the script in
+ * Generated artifact. Regenerate after a lucide upgrade as described in
  * `docs/components.md` (Data-driven Lucide icons).
  */
 export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = {
