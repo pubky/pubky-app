@@ -394,7 +394,16 @@ export const runtimeEnvInputSchema = z
     appStoreUrl: optionalUrlFromString,
     playStoreUrl: optionalUrlFromString,
   })
-  .pipe(runtimeConfigValueSchema);
+  .pipe(runtimeConfigValueSchema)
+  .superRefine((config, ctx) => {
+    if (config.deployEnv === 'production' && config.e2eLocksStubUrl) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['e2eLocksStubUrl'],
+        message: 'E2E Locks stub URL must not be set in production',
+      });
+    }
+  });
 
 /**
  * Canonical staging defaults for the required network tier (single source of truth, parsed shape).

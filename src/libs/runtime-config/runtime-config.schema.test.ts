@@ -76,6 +76,33 @@ describe('runtimeEnvInputSchema', () => {
     expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, deployEnv: 'staging' }).deployEnv).toBe('staging');
   });
 
+  it('rejects the E2E Locks stub URL in production', () => {
+    const result = runtimeEnvInputSchema.safeParse({
+      ...VALID_ENV_INPUT,
+      e2eLocksStubUrl: 'http://lock-server.e2e.test',
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ['e2eLocksStubUrl'],
+        message: 'E2E Locks stub URL must not be set in production',
+      }),
+    ]);
+  });
+
+  it('accepts the E2E Locks stub URL in staging', () => {
+    const parsed = runtimeEnvInputSchema.parse({
+      ...VALID_ENV_INPUT,
+      deployEnv: 'staging',
+      e2eLocksStubUrl: 'http://lock-server.e2e.test',
+    });
+    expect(parsed.e2eLocksStubUrl).toBe('http://lock-server.e2e.test');
+  });
+
+  it('accepts production without the E2E Locks stub URL', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).e2eLocksStubUrl).toBeUndefined();
+  });
+
   it('throws on malformed PKARR_RELAYS JSON', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pkarrRelays: 'not-json' })).toThrow();
   });
@@ -313,6 +340,12 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(Array.isArray(parsed.pkarrRelays)).toBe(true);
     expect(typeof parsed.testnet).toBe('boolean');
     expect(parsed.moderationId).toBe(APP_RUNTIME_DEFAULTS.moderationId);
+  });
+
+  it('keeps the E2E Locks stub URL with the default (staging) deploy identity', () => {
+    const parsed = runtimeEnvInputSchemaWithDefaults.parse({ e2eLocksStubUrl: 'http://lock-server.e2e.test' });
+    expect(parsed.deployEnv).toBe('staging');
+    expect(parsed.e2eLocksStubUrl).toBe('http://lock-server.e2e.test');
   });
 
   it('honors provided values over defaults', () => {
