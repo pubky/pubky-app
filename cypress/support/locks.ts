@@ -277,6 +277,7 @@ export const holdSeededLock = (
 /** The app's Dexie database (`NEXT_PUBLIC_DB_NAME`, unset in the e2e stack) and its unlocked-lock table. */
 const APP_DB_NAME = 'franky';
 const LOCKS_TABLE = 'locks';
+const REPLICA_READ_TIMEOUT_MS = 30_000;
 
 /** Drops one lock's cached content from the app's IndexedDB, leaving the session and every other row. */
 const deleteCachedLock = (lockId: string) =>
@@ -314,9 +315,21 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
       lockServerCalls.push(new URL(req.url).pathname);
     },
   );
-  cy.intercept('GET', `**/priv/social/unlocked/${lockId}/post.json`).as('replicaRead');
+  const replicaReads: string[] = [];
+  cy.intercept({ method: 'GET', url: /\/priv\/social\/unlocked\// }, (req) => {
+    req.continue((res) => {
+      replicaReads.push(`${new URL(req.url).pathname} → ${res.statusCode}`);
+    });
+  }).as('replicaRead');
   cy.reload();
-  cy.wait('@replicaRead').its('response.statusCode').should('eq', 200);
+  // The read starts only once the reader's session is restored and the post card has rendered.
+  cy.wrap(replicaReads, { timeout: REPLICA_READ_TIMEOUT_MS }).should((reads) => {
+    const marker = `/priv/social/unlocked/${lockId}/post.json → 200`;
+    expect(
+      reads.some((read) => read.endsWith(marker)),
+      `the reader's post.json replica read after the reload (seen: ${reads.join(', ') || 'none'})`,
+    ).to.be.true;
+  });
   expectUnlockedContent();
   cy.then(() => expect(lockServerCalls, 'payment or guarded reads after the reload').to.be.empty);
 };
