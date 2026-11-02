@@ -276,7 +276,8 @@ describe('locks', () => {
       cy.get<string>('@lockId').then((lockId) => {
         cy.wrap(lockServer).its('deletedLocks').should('deep.eq', [lockId]);
       });
-      cy.get('[data-cy="timeline-posts"]').should('not.contain.text', teaser);
+      // An emptied feed renders its empty state without the `timeline-posts` list, so check the page.
+      cy.get('body').should('not.contain.text', teaser);
 
       locksStep(8, POST_STEPS, 'B no longer sees the teaser or the unlock option');
       waitForNexusPostDeleted(creator.pubky, postId);
