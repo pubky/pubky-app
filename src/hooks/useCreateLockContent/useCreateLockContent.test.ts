@@ -6,7 +6,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
-import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY } from '@/libs/image/imageUploadSizeLimit';
@@ -275,6 +275,35 @@ describe('useCreateLockContent', () => {
     expect(await act(() => result.current.publish())).toEqual({ status });
     expect(mocks.createLockContent).not.toHaveBeenCalled();
     expect(mocks.commitCreate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'an expired Locks session',
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Locks session rejected by the Lock Server', {
+        service: ErrorService.Locks,
+        operation: 'LocksService.lookupPaykitSetupStatus',
+      }),
+      'auth-expired',
+    ],
+    [
+      'an unreachable Lock Server',
+      Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Lock Server request failed: offline', {
+        service: ErrorService.Locks,
+        operation: 'LocksService.lookupPaykitSetupStatus',
+      }),
+      'failed',
+    ],
+  ])('stops before creating content when the setup check fails with %s', async (_, error, status) => {
+    mocks.fetchPaykitSetupStatus.mockRejectedValue(error);
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    expect(await act(() => result.current.publish())).toEqual({ status });
+
+    expect(mocks.createLockContent).not.toHaveBeenCalled();
+    expect(mocks.commitCreate).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(error);
+    expect(result.current.isPublishing).toBe(false);
   });
 
   describe('price guard', () => {
