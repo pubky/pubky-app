@@ -25,6 +25,7 @@ import type {
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLockPriceAsset,
+  TLocksPollReport,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -172,7 +173,13 @@ export class LocksService {
    * One read of the Paykit link between this reader and the lock's creator. Bound to an existing
    * verification task, so it must not be called before a proof submission has landed.
    */
-  static async lookupPaykitConnectionState(creator: string, bundleId: string): Promise<TPaykitConnectionState> {
+  static async lookupPaykitConnectionState(
+    creator: string,
+    bundleId: string,
+    report?: TLocksPollReport,
+  ): Promise<TPaykitConnectionState> {
+    // `report` is the context of the errors built here, set at construction: capture happens there,
+    // so a polling loop's tags must already be on the error.
     try {
       const viewer = await this.getViewer();
       const response = paykitConnectionStateResponseSchema.safeParse(
@@ -183,11 +190,12 @@ export class LocksService {
           service: ErrorService.Locks,
           operation: 'LocksService.lookupPaykitConnectionState',
           cause: response.error,
+          context: report,
         });
       }
       return response.data.state;
     } catch (error) {
-      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupPaykitConnectionState');
+      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupPaykitConnectionState', { context: report });
     }
   }
 
@@ -209,8 +217,13 @@ export class LocksService {
    * Null when the Lock Server has no task for this bundle id (the submission never landed). The SDK
    * error exposes no HTTP status code, so the 404 is read from the message, like `toLocksError` does for 401.
    * A 451 is returned as `regionBlocked`, never thrown: it is the same expected refusal as the submission's.
+   * `report` tags a polling loop's errors; the one-shot reads pass none.
    */
-  static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationLookup> {
+  static async lookupVerificationTask(
+    creator: string,
+    bundleId: string,
+    report?: TLocksPollReport,
+  ): Promise<TVerificationLookup> {
     try {
       const viewer = await this.getViewer();
       const response = verificationTaskResponseSchema.safeParse(
@@ -221,6 +234,7 @@ export class LocksService {
           service: ErrorService.Locks,
           operation: 'LocksService.lookupVerificationTask',
           cause: response.error,
+          context: report,
         });
       }
       return {
@@ -232,7 +246,7 @@ export class LocksService {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('HTTP 404')) return null;
-      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupVerificationTask');
+      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupVerificationTask', { context: report });
     }
   }
 
