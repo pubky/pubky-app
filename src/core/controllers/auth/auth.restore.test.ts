@@ -2,6 +2,7 @@ import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { NotificationApplication } from '@/application/notification/notification';
 import { UserApplication } from '@/application/user/user';
 import { SettingsController } from '@/controllers/settings/settings';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
@@ -344,6 +345,44 @@ describe('AuthController restored session lifecycle', () => {
       }),
       fence: expect.anything(),
     });
+  });
+
+  it('keeps a newer read boundary adopted while bootstrap was running', async () => {
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    // What the last_read sync coordinator does when it adopts another device's read.
+    useNotificationStore.getState().setLastRead(2_000);
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 2_000, unread: 3, lastPolledTimestamp: 5 });
+    expect(countSpy).toHaveBeenCalledWith(2_000, expect.any(Array));
+  });
+
+  it('applies the bootstrap read boundary without recounting when the store is not newer', async () => {
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 1_000, unread: 7 });
+    expect(countSpy).not.toHaveBeenCalled();
   });
 
   it.each(['success', 'failure'] as const)('ignores bootstrap %s after account replacement', async (result) => {

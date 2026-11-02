@@ -100,26 +100,46 @@ export class NotificationController {
    *
    * Only a newer remote value is applied, and it is checked again after the unread count: a local
    * mark-as-read that lands during the count must not be rolled back.
+   * A same-account session change replays the read instead of dropping it, so the caller never stores the
+   * event cursor for a discarded result.
    *
    * @param pubky - The user whose `last_read` changed
    */
   static async fetchLastReadFromHomeserver(pubky: Pubky): Promise<void> {
-    const isCurrent = captureViewerSession();
-    const {
-      meta: { url },
-    } = LastReadNormalizer.to(pubky);
-    const remoteLastRead = await NotificationApplication.fetchLastReadFromHomeserver(url);
-    if (remoteLastRead === null || !isCurrent()) return;
+    while (true) {
+      const isCurrent = captureViewerSession();
+      if (!NotificationController.isSameAccountSession(pubky)) return;
+      const {
+        meta: { url },
+      } = LastReadNormalizer.to(pubky);
+      const remoteLastRead = await NotificationApplication.fetchLastReadFromHomeserver(url);
+      if (remoteLastRead === null) return;
+      if (!isCurrent()) {
+        if (NotificationController.isSameAccountSession(pubky)) continue;
+        return;
+      }
 
-    const notificationStore = useNotificationStore.getState();
-    if (remoteLastRead <= notificationStore.selectLastRead()) return;
+      const notificationStore = useNotificationStore.getState();
+      if (remoteLastRead <= notificationStore.selectLastRead()) return;
 
-    const allowedTypes = NotificationNormalizer.toEnabledTypes(useSettingsStore.getState().notifications);
-    const unread = await NotificationApplication.countFilteredUnreadSince(remoteLastRead, allowedTypes);
+      const allowedTypes = NotificationNormalizer.toEnabledTypes(useSettingsStore.getState().notifications);
+      const unread = await NotificationApplication.countFilteredUnreadSince(remoteLastRead, allowedTypes);
 
-    if (!isCurrent() || remoteLastRead <= useNotificationStore.getState().selectLastRead()) return;
-    notificationStore.setLastRead(remoteLastRead);
-    notificationStore.setUnread(unread);
+      if (!isCurrent()) {
+        if (NotificationController.isSameAccountSession(pubky)) continue;
+        return;
+      }
+      if (remoteLastRead <= useNotificationStore.getState().selectLastRead()) return;
+      notificationStore.setLastRead(remoteLastRead);
+      notificationStore.setUnread(unread);
+      return;
+    }
+  }
+
+  /** True while `pubky` is still the signed-in account and holds a session. */
+  private static isSameAccountSession(pubky: Pubky): boolean {
+    const { currentUserPubky, session } = useAuthStore.getState();
+    return currentUserPubky === pubky && !!session;
   }
 
   /**

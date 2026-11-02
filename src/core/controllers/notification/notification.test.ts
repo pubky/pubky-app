@@ -616,6 +616,54 @@ describe('NotificationController', () => {
       expect(ctx.countSpy).not.toHaveBeenCalled();
       expect(ctx.setLastRead).not.toHaveBeenCalled();
     });
+
+    it('replays the read when the same account upgrades its session during the read', async () => {
+      const ctx = setup({ localLastRead: 1_000, remoteLastRead: 2_000 });
+      ctx.fetchSpy.mockImplementationOnce(async () => {
+        vi.mocked(useAuthStore.getState).mockReturnValue(
+          mockAuthStore({ currentUserPubky: mockUserId, session: asOpaque<Session>({}) }),
+        );
+        return 2_000;
+      });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(ctx.fetchSpy).toHaveBeenCalledTimes(2);
+      expect(ctx.setLastRead).toHaveBeenCalledWith(2_000);
+      expect(ctx.setUnread).toHaveBeenCalledWith(2);
+    });
+
+    it('replays the read when the same account upgrades its session during the count', async () => {
+      const ctx = setup({ localLastRead: 1_000, remoteLastRead: 2_000 });
+      ctx.countSpy.mockImplementationOnce(async () => {
+        vi.mocked(useAuthStore.getState).mockReturnValue(
+          mockAuthStore({ currentUserPubky: mockUserId, session: asOpaque<Session>({}) }),
+        );
+        return 9;
+      });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(ctx.fetchSpy).toHaveBeenCalledTimes(2);
+      expect(ctx.setLastRead).toHaveBeenCalledWith(2_000);
+      expect(ctx.setUnread).toHaveBeenCalledWith(2);
+      expect(ctx.setUnread).not.toHaveBeenCalledWith(9);
+    });
+
+    it('stops when the session is cleared during the read', async () => {
+      const ctx = setup({ localLastRead: 1_000, remoteLastRead: 2_000 });
+      ctx.fetchSpy.mockImplementationOnce(async () => {
+        vi.mocked(useAuthStore.getState).mockReturnValue(
+          mockAuthStore({ currentUserPubky: mockUserId, session: null }),
+        );
+        return 2_000;
+      });
+
+      await NotificationController.fetchLastReadFromHomeserver(mockUserId);
+
+      expect(ctx.fetchSpy).toHaveBeenCalledOnce();
+      expect(ctx.setLastRead).not.toHaveBeenCalled();
+    });
   });
 
   describe('getAllFromCache', () => {
