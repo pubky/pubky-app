@@ -1,6 +1,5 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { waitForServiceWorker } from '../support/common';
 import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { seededStreamIndexed } from '../support/pagination';
 import { createCollectionViaApi, createPostViaApi, seedUserViaApi } from '../support/seed';
@@ -37,8 +36,6 @@ describe('logged-out deep links', () => {
   // onboarding.cy.ts, posts.cy.ts and collections.cy.ts. Nothing is signed in, as a shared link opens.
   before(() => {
     slowCypressDown();
-    // Installs the app while the seeds index, so the not-found views are not timed mid-install
-    cy.visit('/');
 
     seedUserViaApi(username, { bio: userBio }).then((author) => {
       authorId = author.id;
@@ -57,7 +54,6 @@ describe('logged-out deep links', () => {
         );
       });
     });
-    waitForServiceWorker();
   });
 
   beforeEach(() => {
