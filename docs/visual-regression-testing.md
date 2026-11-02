@@ -61,8 +61,9 @@ scales to a fractional raster width (390 → 332.7px), so the last column of
 mobile baselines is a blend whose exact colour depends on the browser version.
 
 Always capture through `matchVrtFrameScreenshot` (frame) or
-`matchVrtElementScreenshot` (element). A raw `toMatchScreenshot` would store a
-natural-size PNG no baseline has.
+`matchVrtElementScreenshot` (element). ESLint rejects a raw
+`toMatchScreenshot` in `*.vrt.test.tsx`, which would store a natural-size PNG
+no baseline has.
 
 ## Determinism
 
