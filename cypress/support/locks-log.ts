@@ -70,9 +70,9 @@ export const flushLocksStubLog = () => {
 };
 
 /** A step marker in the command log and the terminal, after the stub lines of the step before it. */
-export const locksStep = (step: number, text: string) => {
+export const locksStep = (step: number, text: string, stepCount = STEP_COUNT) => {
   flushLocksStubLog();
-  const line = `Step ${step}/${STEP_COUNT}: ${text}`;
+  const line = `Step ${step}/${stepCount}: ${text}`;
   cy.log(`**${STEP_LOG_NAME} ${line}**`);
   cy.task('log', `${STEP_LOG_NAME} ${line}`, { log: false });
 };

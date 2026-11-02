@@ -264,6 +264,18 @@ export const answerLockServerOnce = (
     answer(req, 'one-off answer', `${method} ${pathname}: ${summary}`, body, statusCode);
   });
 
+/**
+ * Records every later call to one stand-in route and leaves the answer to the routes registered
+ * before it. A one-off answer registered after this one replies first, so its call is not recorded.
+ */
+export const recordLockServerCalls = (method: 'GET' | 'POST', pathname: string): string[] => {
+  const calls: string[] = [];
+  cy.intercept(route(method, pathname), (req) => {
+    calls.push(redactLocksStubUrl(req.url));
+  });
+  return calls;
+};
+
 /** Adds a paid lock the creator published without the composer to the stand-in Lock Server. */
 export const holdSeededLock = (
   state: TLockServerState,
@@ -426,30 +438,11 @@ export const turnLockOnAndSetUpLocks = () => {
   cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
 };
 
-const locksSetupDialog = () => cy.get('[role="dialog"]').filter(':visible');
-
-/** The setup dialog shows `message`, for an error or the Lock Server being down. */
-export const expectLocksSetupMessage = (message: string) => {
-  locksSetupDialog().should('contain.text', message);
-};
-
-/** Presses one of the setup dialog's own buttons (Cancel, Try again), which carry no `data-cy`. */
-export const pressLocksSetupButton = (label: 'Cancel' | 'Try again') => {
-  locksSetupDialog().contains('button', label).should('not.be.disabled').click();
-};
-
 /** Walks an open setup dialog through a working Lock Server: intro, approval, Paykit `ready`, done. */
 export const completeLocksSetup = () => {
   cy.get('[data-cy="locks-auth-intro-continue"]').filter(':visible').should('not.be.disabled').click();
   cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
   cy.get('[data-cy="locks-auth-success-continue"]').should('not.exist');
-};
-
-/** The draft a lock gave back: the post text and its one image, with the switch off. */
-export const expectComposerDraft = (text: string) => {
-  lockSwitch().should('have.attr', 'aria-checked', 'false');
-  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', text);
-  homeComposer().find('[data-cy="post-input-attachment-remove"]').filter(':visible').should('have.length', 1);
 };
 
 /** Flips the lock switch on once Locks is set up in this tab: the price dialog opens straight away. */
