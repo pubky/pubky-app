@@ -43,28 +43,26 @@ data dependency (store/hook/fetch/router) so the pixels are deterministic.
 
 ## Capture dimensions
 
-Baselines are rasterized at the `VRT_CAPTURE_WINDOW` scale (`vrt.viewports.ts`,
-1280x720): a capture whose viewport fits the window is stored at natural size,
-a larger one is scaled down by `min(1, 1280/width, 720/height)` — desktop
-1440x900 → 1152x720, mobile 390x844 → 333x720, tablet 768x1024 → 540x720, and
-element crops likewise. Vitest 4 produced these dimensions by laying the
-tester iframe out at the requested viewport inside Playwright's default
-1280x720 window and scaling the iframe's wrapper with a CSS transform; Vitest
-5 resizes the real window instead, so `vrt.tsx` re-creates the same window,
-wrapper transform and transparent iframe background around each capture
-(`withCaptureScale`) to keep the committed references comparable. The wrapper
-must be sized exactly to the iframe — scaling the iframe element itself or a
-full-window container shifts the fractional mobile edge column and no
-committed baseline matches. Layout still happens at the full viewport — media
-queries, viewport units and coordinates see the real size; only the raster is
-scaled. The exact edge-column blending is Chromium-version-sensitive: keep
-Playwright pinned to `1.62.1` in `package.json` (Vitest 5's
-`@vitest/browser-playwright` accepts `playwright: "*"`), since the Chromium
-156 bundled with 1.64 blends the fractional edge uniformly and breaks the
-committed mobile references. Never capture through a raw
-`expect(...).toMatchScreenshot` in a test: use `matchVrtFrameScreenshot`
-(frame) or `matchVrtElementScreenshot` (element), or the PNG gets natural-size
-dimensions no baseline has.
+Every capture is scaled down to fit `VRT_CAPTURE_MAX_SIZE` (`vrt.viewports.ts`,
+1280x720) by `min(1, 1280/width, 720/height)`: desktop 1440x900 is stored at
+1152x720, mobile 390x844 at 333x720, tablet 768x1024 at 540x720, and element
+crops by the same factor as their viewport. A viewport that already fits is
+stored at natural size. These are the dimensions the baselines have had since
+Vitest 4, whose 1280x720 headless window produced them; Vitest 5 sizes the
+window to the viewport and has no capture-scale option.
+
+`withCaptureScale` in `vrt.tsx` applies the scale as a `transform` on the
+tester `<iframe>` (`window.frameElement`) for the duration of the capture
+only. Nothing inside the tested page changes: layout, media queries and
+in-page coordinates stay at the real viewport. Do not move the transform into
+the page (e.g. onto `<html>`): popovers and tooltips measure
+`getBoundingClientRect` and would reposition mid-capture. A mobile width
+scales to a fractional raster width (390 → 332.7px), so the last column of
+mobile baselines is a blend whose exact colour depends on the browser version.
+
+Always capture through `matchVrtFrameScreenshot` (frame) or
+`matchVrtElementScreenshot` (element). A raw `toMatchScreenshot` would store a
+natural-size PNG no baseline has.
 
 ## Determinism
 

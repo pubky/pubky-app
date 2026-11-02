@@ -7,7 +7,7 @@ import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { freezeNow } from './vrt.clock';
-import { VRT_CAPTURE_WINDOW, type VrtViewport } from './vrt.viewports';
+import { VRT_CAPTURE_MAX_SIZE, type VrtViewport } from './vrt.viewports';
 
 export interface RenderForVRTOptions {
   viewport: VrtViewport;
@@ -80,81 +80,40 @@ export async function matchVrtFrameScreenshot(name: string, options?: Screenshot
   await withCaptureScale(() => expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options));
 }
 
-/**
- * Element-level counterpart of `matchVrtFrameScreenshot` for direct
- * `locator` captures (e.g. RepostHeader). The same capture-frame scale
- * applies, so component crops keep the dimensions of their committed
- * baselines.
- */
+/** Element-level counterpart of `matchVrtFrameScreenshot` (e.g. RepostHeader crops), at the same capture scale. */
 export async function matchVrtElementScreenshot(locator: Locator, name: string, options?: ScreenshotMatcherOptions) {
   await withCaptureScale(() => expect(locator).toMatchScreenshot(name, options));
 }
 
 /**
- * Recreate the Vitest 4 capture geometry (see `VRT_CAPTURE_WINDOW`) around a
- * capture. Vitest 4 laid the tester iframe out at the requested viewport
- * inside Playwright's default 1280x720 window and scaled a wrapper div —
- * sized exactly to the iframe — with a CSS transform, so the raster came out
- * at `viewport x scale` (desktop 1152x720, mobile 333x720, tablet 540x720).
- * Vitest 5 instead resizes the real window to the requested viewport and
- * rasterizes at natural size, which changes every baseline's dimensions.
+ * Scale the tester iframe down to fit `VRT_CAPTURE_MAX_SIZE` for the duration
+ * of a capture, so every baseline keeps the same dimensions on every viewport
+ * (desktop 1152x720, mobile 333x720, tablet 540x720, element crops likewise).
+ * Vitest 5 has no capture-scale option and would store 1440x900 / 390x844 at
+ * natural size.
  *
- * The document keeps laying out at the real viewport (media queries,
- * viewport units and coordinates are unaffected — the iframe is pinned to
- * the requested size while the window behind it is at 1280x720); only the
- * rasterized output shrinks. Two details make the pixels match the committed
- * references exactly:
- *
- * - The transform goes on the iframe's container (the orchestrator's
- *   `#vitest-tester` div), sized to the iframe: the v4 wrapper's own edge
- *   coincided with the iframe's edge, and the compositor's edge sampling at
- *   a fractional scaled width (390px mobile → 332.7px) depends on it.
- * - The orchestrator sets the iframe element's background to `#fff`; v4's
- *   iframe had none. Left in place, that white layer bleeds into the
- *   fractional right edge of mobile rasters, so it is made transparent for
- *   the capture.
- *
- * `window.frameElement` belongs to the parent realm, so `instanceof
- * HTMLElement` (this realm) always fails on it; the cast is intentional.
+ * The transform sits on the `<iframe>` element in the parent document, not
+ * inside the tested page: layout, media queries and every in-page coordinate
+ * stay at the real viewport, so floating UI (popovers, tooltips) measuring
+ * `getBoundingClientRect` during the capture is not repositioned. The iframe
+ * comes from the parent realm, so an `instanceof` check from this realm would
+ * always fail; hence the cast.
  */
 async function withCaptureScale<T>(capture: () => Promise<T>): Promise<T> {
   const scale = Math.min(
     1,
-    VRT_CAPTURE_WINDOW.width / window.innerWidth,
-    VRT_CAPTURE_WINDOW.height / window.innerHeight,
+    VRT_CAPTURE_MAX_SIZE.width / window.innerWidth,
+    VRT_CAPTURE_MAX_SIZE.height / window.innerHeight,
   );
-  const iframe = scale === 1 ? null : (window.frameElement as HTMLElement | null);
-  const container = iframe?.parentElement;
-  if (!iframe || !container) return capture();
-  const viewport = { width: window.innerWidth, height: window.innerHeight };
-  await withTimeout(
-    page.viewport(VRT_CAPTURE_WINDOW.width, VRT_CAPTURE_WINDOW.height),
-    VIEWPORT_READY_TIMEOUT_MS,
-    () => `VRT capture window timed out after ${VIEWPORT_READY_TIMEOUT_MS}ms`,
-  );
-  iframe.style.width = `${viewport.width}px`;
-  iframe.style.height = `${viewport.height}px`;
-  container.style.width = `${viewport.width}px`;
-  container.style.height = `${viewport.height}px`;
-  container.style.transform = `scale(${scale})`;
-  container.style.transformOrigin = 'left top';
-  const previousIframeBackground = iframe.style.backgroundColor;
-  iframe.style.backgroundColor = 'transparent';
+  const frame = window.frameElement as HTMLIFrameElement | null;
+  if (scale === 1 || !frame) return capture();
+  frame.style.transform = `scale(${scale})`;
+  frame.style.transformOrigin = 'left top';
   try {
     return await capture();
   } finally {
-    container.style.transform = '';
-    container.style.transformOrigin = '';
-    container.style.width = '';
-    container.style.height = '';
-    iframe.style.width = '';
-    iframe.style.height = '';
-    iframe.style.backgroundColor = previousIframeBackground;
-    await withTimeout(
-      page.viewport(viewport.width, viewport.height),
-      VIEWPORT_READY_TIMEOUT_MS,
-      () => `VRT capture window restore timed out after ${VIEWPORT_READY_TIMEOUT_MS}ms`,
-    );
+    frame.style.removeProperty('transform');
+    frame.style.removeProperty('transform-origin');
   }
 }
 
