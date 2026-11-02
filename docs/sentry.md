@@ -143,7 +143,7 @@ All Sentry and Pulse values are part of the **optional runtime-config tier** ([A
 The public Docker image remains buildable **without** Sentry credentials. Docker builds always inject Debug IDs, and upload source maps only when Sentry build credentials are provided ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)):
 
 1. `next.config.ts` generates maps for every build (`productionBrowserSourceMaps` + `experimental.serverSourceMaps`) and disables the plugin upload (`sourcemaps.disable: true`, `release.create: false`).
-2. The Dockerfile builder stage runs `npx sentry-cli sourcemaps inject` over `.next` and over the nested `.next/standalone/.next` (hidden directories are skipped by the walker) — offline, deterministic Debug-ID stamping of chunks and maps.
+2. The Dockerfile builder stage runs `npx sentry-cli sourcemaps inject` over `.next` and over the nested `.next/standalone/.next` (hidden directories are skipped by the walker) — offline, deterministic Debug-ID stamping of chunks and maps. `@sentry/cli` is a pinned direct devDependency: since SDK v11 `@sentry/nextjs` no longer pulls it in transitively (its bundler plugins use the separate `sentry` CLI package), so without it `npx sentry-cli` fails the image build.
 3. If `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are present, the Dockerfile uploads `.next` source maps with `--release="$NEXT_PUBLIC_APP_VERSION"`.
 4. The runner stage deletes `*.map` under `.next/static` (browser maps must not be publicly served); standalone server maps stay for readable Node stack traces.
 
@@ -153,7 +153,12 @@ Third-party deployers get unsymbolicated events unless they obtain the maps for 
 
 Pubky App is decentralized social — strict defaults:
 
-- `sendDefaultPii: false` (no IP, no headers)
+- No SDK-collected PII by default: v11 replaced `sendDefaultPii` with `dataCollection`, whose defaults collect
+  **more** (browser `infer_ip: 'auto'` lets Relay infer the connecting IP; the server RequestData integration
+  attaches `user.ip_address` and IP-bearing headers such as `x-forwarded-for`). `getSentryInitBase()` sets the
+  vendor migration guide's v10-preserving mapping (`userInfo: false`, `cookies: false`, no HTTP bodies, a deny
+  list for PII-shaped header/query keys), so no IP inference and no IP/cookie/header PII is attached in any
+  runtime (browser, server, edge).
 - Replay: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`, `networkCaptureBodies: false`
 - `beforeSend` defensively redacts user identifiers and user-provided data from app-controlled payloads:
   `email`, `phone` / `phoneNumber`, `name`, `firstName`, `lastName`, `displayName`, `username`, `bio`, `file`,
@@ -166,6 +171,10 @@ Pubky App is decentralized social — strict defaults:
 Never call `Sentry.setUser({ email, ... })` or `Pulse.setUser(...)`. If user attribution is ever needed, use the user's Pubky public key as `id` only.
 
 ### Tracing scrubbing (`beforeSendTransaction`, `beforeSendSpan`)
+
+`getSentryInitBase()` pins `traceLifecycle: 'static'` (SDK v11 defaults to streamed spans, which
+ignores `beforeSendTransaction` and changes the `beforeSendSpan` payload to `StreamedSpanJSON`), so
+`beforeSendSpan` is wrapped in `withStaticSpan` and keeps the `SpanJSON` contract below.
 
 Tracing payloads carry user-controlled URL strings (route names, fetch URLs, root-span data) that
 the error-only `beforeSend` does not see. Two additional hooks in `src/libs/observability/sentry.ts`
