@@ -4,14 +4,14 @@ import type { IconName } from 'lucide-react/dynamic.js';
 /**
  * Every canonical Lucide icon node in one payload.
  *
- * The icon picker renders up to ~1700 cells, and lucide ships one chunk per
+ * The icon picker renders up to ~2000 cells, and lucide ships one chunk per
  * icon, so per-icon loading costs one request each (~539B on the wire) — over
- * a full scroll that is ~1700 requests and ~920KB. This bundle is a single
+ * a full scroll that is ~2000 requests and ~1MB. This bundle is a single
  * lazily-imported chunk, so the picker pays one request instead. Feed tabs
  * keep the per-icon path: they render a handful of icons and must not pull
  * the whole set.
  *
- * Generated artifact. Regenerate after a lucide upgrade with the script in
+ * Generated artifact. Regenerate after a lucide upgrade as described in
  * `docs/components.md` (Data-driven Lucide icons).
  */
 export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = {
@@ -48,6 +48,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: '169zse',
       },
     ],
+  ],
+  ad: [
+    ['path', { d: 'M10 13H6', key: '18d9xh' }],
+    ['path', { d: 'M10 15v-4a2 2 0 0 0-4 0v4', key: 'ss28p3' }],
+    [
+      'path',
+      {
+        d: 'M14 14.5a.5.5 0 0 0 .5.5h1a2.5 2.5 0 0 0 2.5-2.5v-1A2.5 2.5 0 0 0 15.5 9h-1a.5.5 0 0 0-.5.5z',
+        key: 'b3f847',
+      },
+    ],
+    ['rect', { x: '2', y: '5', width: '20', height: '14', rx: '2', key: 'qneu4z' }],
   ],
   'air-vent': [
     ['path', { d: 'M18 17.5a2.5 2.5 0 1 1-4 2.03V12', key: 'yd12zl' }],
@@ -106,10 +118,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm19 8-.8 3a1.25 1.25 0 0 1-1.2 1H7a1.25 1.25 0 0 1-1.2-1L5 8', key: '1bvca4' }],
     ['path', { d: 'M21 3a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z', key: 'x3qr1j' }],
     ['path', { d: 'M6 21c0-2.5 2-2.5 2-5', key: 'i3w1gp' }],
-  ],
-  album: [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', ry: '2', key: '1m3agn' }],
-    ['polyline', { points: '11 3 11 11 14 8 17 11 17 3', key: '1wcwz3' }],
   ],
   'align-center-horizontal': [
     ['path', { d: 'M2 12h20', key: '9i4pu4' }],
@@ -277,19 +285,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M9 11h6', key: '1fldmi' }],
     ['circle', { cx: '12', cy: '4', r: '2', key: 'muu5ef' }],
   ],
-  angry: [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'M16 16s-1.5-2-4-2-4 2-4 2', key: 'epbg0q' }],
-    ['path', { d: 'M7.5 8 10 9', key: 'olxxln' }],
-    ['path', { d: 'm14 9 2.5-1', key: '1j6cij' }],
-    ['path', { d: 'M9 10h.01', key: 'qbtxuw' }],
-    ['path', { d: 'M15 10h.01', key: '1qmjsl' }],
-  ],
-  annoyed: [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'M8 15h8', key: '45n4r' }],
-    ['path', { d: 'M8 9h2', key: '1g203m' }],
-    ['path', { d: 'M14 9h2', key: '116p9w' }],
+  angle: [
+    ['path', { d: 'M3 3v16a2 2 0 0 0 2 2h16', key: 'c24i48' }],
+    ['path', { d: 'M3 11a10 10 0 0 1 10 10', key: 'jhvw44' }],
   ],
   antenna: [
     ['path', { d: 'M2 12 7 2', key: '117k30' }],
@@ -337,7 +335,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
-  'archive-restore': [
+  'archive-arrow-down': [
+    ['rect', { width: '20', height: '5', x: '2', y: '3', rx: '1', key: '1wp1u1' }],
+    ['path', { d: 'M4 8v11a2 2 0 0 0 2 2h.343', key: 'huy5ri' }],
+    ['path', { d: 'M20 8v11a2 2 0 0 1-2 2h-.343', key: 'yw7gyh' }],
+    ['path', { d: 'm9 18 3 3 3-3', key: '1ne217' }],
+    ['path', { d: 'M12 12v9', key: '192myk' }],
+  ],
+  'archive-arrow-up': [
     ['rect', { width: '20', height: '5', x: '2', y: '3', rx: '1', key: '1wp1u1' }],
     ['path', { d: 'M4 8v11a2 2 0 0 0 2 2h2', key: 'tvwodi' }],
     ['path', { d: 'M20 8v11a2 2 0 0 1-2 2h-2', key: '1gkqxj' }],
@@ -366,6 +371,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M5 18v2', key: 'ppbyun' }],
     ['path', { d: 'M19 18v2', key: 'gy7782' }],
+  ],
+  'armenian-dram': [
+    ['path', { d: 'M11 10h8', key: 'cn0dty' }],
+    ['path', { d: 'M11 14h8', key: 'lksjnm' }],
+    ['path', { d: 'M17 20V10a6 6 0 0 0-12 0', key: '1gdsmd' }],
   ],
   'arrow-big-down-dash': [
     [
@@ -641,9 +651,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M4 21h16', key: '1h09gz' }],
   ],
   asterisk: [
-    ['path', { d: 'M12 6v12', key: '1vza4d' }],
-    ['path', { d: 'M17.196 9 6.804 15', key: '1ah31z' }],
-    ['path', { d: 'm6.804 9 10.392 6', key: '1b6pxd' }],
+    ['path', { d: 'M12 5v14', key: 's699le' }],
+    ['path', { d: 'm18.065 8.496-12.125 7', key: '1h26g9' }],
+    ['path', { d: 'm5.94 8.504 12.125 7', key: 'k77sdm' }],
   ],
   astroid: [
     [
@@ -675,6 +685,27 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'audio-lines-off': [
+    ['path', { d: 'M10 10v11', key: 'tkf9cx' }],
+    ['path', { d: 'M10 3v1.35', key: '1rsffz' }],
+    ['path', { d: 'M14 14v1', key: 'hsexio' }],
+    ['path', { d: 'M14 8v.35', key: 'isohmc' }],
+    ['path', { d: 'M18 5v7.35', key: '1b0cqo' }],
+    ['path', { d: 'M2 10v3', key: '1fnikh' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M22 10v3', key: '154ddg' }],
+    ['path', { d: 'M6 6v11', key: '11sgs0' }],
+  ],
+  'audio-lines-x': [
+    ['path', { d: 'M10 3v18', key: 'yhl04a' }],
+    ['path', { d: 'M14 8v6.35', key: '1ubbml' }],
+    ['path', { d: 'm17 17 5 5', key: 'p7ous7' }],
+    ['path', { d: 'M18 5v8.1', key: '1icuhc' }],
+    ['path', { d: 'M2 10v3', key: '1fnikh' }],
+    ['path', { d: 'M22 10v3', key: '154ddg' }],
+    ['path', { d: 'm22 17-5 5', key: 'gqnmv0' }],
+    ['path', { d: 'M6 6v11', key: '11sgs0' }],
+  ],
   'audio-lines': [
     ['path', { d: 'M2 10v3', key: '1fnikh' }],
     ['path', { d: 'M6 6v11', key: '11sgs0' }],
@@ -691,6 +722,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: '57tc96',
       },
     ],
+  ],
+  avocado: [
+    [
+      'path',
+      {
+        d: 'M13.465 3.464a5 5 0 017.07 0 5 5 0 010 7.072c-1.204 1.203-2.38 2.89-2.614 4.577A8 8 0 118.886 6.08c1.687-.235 3.375-1.41 4.579-2.615',
+        key: 'opbrel',
+      },
+    ],
+    ['circle', { cx: '10', cy: '14', r: '3', key: '1l1kct' }],
   ],
   award: [
     [
@@ -718,6 +759,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M4.293 19.707 6 18', key: '3g1p8c' }],
     ['path', { d: 'm9 15 1.5-1.5', key: '1xfbes' }],
   ],
+  'azerbaijani-manat': [
+    ['path', { d: 'M12 4v16', key: '1654pz' }],
+    ['path', { d: 'M18 20v-8a6 6 0 00-12 0v8', key: '1ekwy4' }],
+  ],
   baby: [
     ['path', { d: 'M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5', key: '1u7htd' }],
     ['path', { d: 'M15 12h.01', key: '1k8ypt' }],
@@ -736,6 +781,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 18h8', key: '1no2b1' }],
     ['path', { d: 'M8 22v-6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6', key: '1fr6do' }],
     ['path', { d: 'M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2', key: 'donm21' }],
+  ],
+  bacon: [
+    [
+      'path',
+      {
+        d: 'M2.795 16.804c-.789-.79-1.09-2.018-.442-2.928 1.933-2.713 4.414-1.05 6.145-5.378 1.868-4.67 4.608-2.366 6.592-6.107.218-.412.78-.53 1.11-.2l5.005 5.005c.789.79 1.09 2.018.442 2.928-1.933 2.713-4.414 1.05-6.145 5.378-1.868 4.67-4.608 2.366-6.591 6.107-.22.412-.78.53-1.11.2z',
+        key: '15j3n2',
+      },
+    ],
+    ['path', { d: 'M4.5 18.5c2-5 5-2 7-7s5-2 7-7', key: '191iws' }],
   ],
   'badge-alert': [
     [
@@ -767,7 +822,7 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: '3c2336',
       },
     ],
-    ['path', { d: 'm9 12 2 2 4-4', key: 'dzmm74' }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12', key: 'xofnsj' }],
   ],
   'badge-dollar-sign': [
     [
@@ -944,6 +999,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '18', cy: '20', r: '2', key: 't9985n' }],
     ['circle', { cx: '9', cy: '20', r: '2', key: 'e5v82j' }],
   ],
+  'ball-wave': [
+    [
+      'path',
+      { d: 'M2 20c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1', key: '17ivm9' },
+    ],
+    ['path', { d: 'M7.757 13.243a2 6 45 1 0 8.486-8.486 2 6 45 1 0-8.486 8.486', key: '1i25wk' }],
+    ['circle', { cx: '12', cy: '9', r: '6', key: '1nw4tq' }],
+  ],
   balloon: [
     ['path', { d: 'M12 16v1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v1', key: '2nz4b' }],
     ['path', { d: 'M12 6a2 2 0 0 1 2 2', key: '7y7d82' }],
@@ -972,6 +1035,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M6 6v12', key: 'vkc79e' }],
     ['rect', { x: '2', y: '6', width: '20', height: '12', rx: '2', key: '1wpnh2' }],
   ],
+  'bangladeshi-taka': [
+    ['path', { d: 'M6 5a2 2 0 0 1 4 0v12a4 4 0 0 0 8 0 2 2 0 0 0-4 0', key: '1rv5si' }],
+    ['path', { d: 'M6 9h12', key: 'oae0tv' }],
+  ],
   'banknote-arrow-down': [
     ['path', { d: 'M12 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5', key: 'x6cv4u' }],
     ['path', { d: 'm16 19 3 3 3-3', key: '1ibux0' }],
@@ -985,6 +1052,13 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M18 12h.01', key: 'yjnet6' }],
     ['path', { d: 'M19 22v-6', key: 'qhmiwi' }],
     ['path', { d: 'm22 19-3-3-3 3', key: 'rn6bg2' }],
+    ['path', { d: 'M6 12h.01', key: 'c2rlol' }],
+    ['circle', { cx: '12', cy: '12', r: '2', key: '1c9p78' }],
+  ],
+  'banknote-check': [
+    ['path', { d: 'M11.748 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4.875', key: 't4e5a5' }],
+    ['path', { d: 'm16 19 2 2 4-4', key: '1b14m6' }],
+    ['path', { d: 'M18 12h.01', key: 'yjnet6' }],
     ['path', { d: 'M6 12h.01', key: 'c2rlol' }],
     ['circle', { cx: '12', cy: '12', r: '2', key: '1c9p78' }],
   ],
@@ -1009,17 +1083,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M21 5v14', key: 'nzette' }],
   ],
   barrel: [
-    ['path', { d: 'M10 3a41 41 0 0 0 0 18', key: '1qcnzb' }],
-    ['path', { d: 'M14 3a41 41 0 0 1 0 18', key: '547vd4' }],
+    ['path', { d: 'M10.5 2a34.5 34.5 0 000 20', key: '101rs3' }],
+    ['path', { d: 'M13.5 2a34.5 34.5 0 010 20', key: 'op77mm' }],
+    ['path', { d: 'M4.67 17h14.67', key: 'qzi5u0' }],
+    ['path', { d: 'M4.67 7h14.67', key: '1fzc0z' }],
     [
       'path',
       {
-        d: 'M17 3a2 2 0 0 1 1.68.92 15.25 15.25 0 0 1 0 16.16A2 2 0 0 1 17 21H7a2 2 0 0 1-1.68-.92 15.25 15.25 0 0 1 0-16.16A2 2 0 0 1 7 3z',
-        key: '1wepyy',
+        d: 'M6.23 3.06a19 19 0 000 17.88A2 2 0 008 22h8a2 2 0 001.77-1.06 19 19 0 000-17.88A2 2 0 0016 2H8a2 2 0 00-1.77 1.06',
+        key: '161s4t',
       },
     ],
-    ['path', { d: 'M3.84 17h16.32', key: '1wh981' }],
-    ['path', { d: 'M3.84 7h16.32', key: '19jf4x' }],
   ],
   baseline: [
     ['path', { d: 'M4 20h16', key: '14thso' }],
@@ -1138,8 +1212,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     [
       'path',
       {
-        d: 'm18.5 6 2.19 4.5a6.48 6.48 0 0 1-2.29 7.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5',
-        key: '5byaag',
+        d: 'm18.5 6 1.754 3.5a6.48 6.48 0 0 1-1.854 8.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5',
+        key: 'hvizuk',
       },
     ],
     ['circle', { cx: '12.5', cy: '8.5', r: '2.5', key: '9738u8' }],
@@ -1172,6 +1246,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
     ['path', { d: 'M5 8v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8', key: '19jb7n' }],
+  ],
+  'belarusian-ruble': [
+    ['path', { d: 'M3 16 L13 16', key: '16et0b' }],
+    ['path', { d: 'M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7', key: '1d39ym' }],
   ],
   'bell-check': [
     ['path', { d: 'M10.268 21a2 2 0 0 0 3.464 0', key: 'vwvbt9' }],
@@ -1358,8 +1436,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   blend: [
-    ['circle', { cx: '9', cy: '9', r: '7', key: 'p2h5vp' }],
-    ['circle', { cx: '15', cy: '15', r: '7', key: '19ennj' }],
+    ['circle', { cx: '15', cy: '9', r: '7', key: '1i12rt' }],
+    ['circle', { cx: '9', cy: '15', r: '7', key: '19bs8k' }],
   ],
   blender: [
     [
@@ -1410,7 +1488,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M18 12h.01', key: 'yjnet6' }],
   ],
   bluetooth: [['path', { d: 'm7 7 10 10-5 5V2l5 5L7 17', key: '1q5490' }]],
-  bold: [['path', { d: 'M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8', key: 'mg9rjx' }]],
   bolt: [
     [
       'path',
@@ -1425,6 +1502,26 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '11', cy: '13', r: '9', key: 'hd149' }],
     ['path', { d: 'M14.35 4.65 16.3 2.7a2.41 2.41 0 0 1 3.4 0l1.6 1.6a2.4 2.4 0 0 1 0 3.4l-1.95 1.95', key: 'jp4j1b' }],
     ['path', { d: 'm22 2-1.5 1.5', key: 'ay92ug' }],
+  ],
+  'bone-fracture': [
+    [
+      'path',
+      {
+        d: 'M14 4.5a1 1 0 0 1 5 0 .5.5 0 0 0 .5.5 1 1 0 0 1 0 5c-.81 0-1.8-.7-2.5 0l-1.958 1.957a.15.15 0 0 1-.252-.072l-.493-2.07a.15.15 0 0 0-.111-.112l-2.072-.494a.15.15 0 0 1-.072-.252L14 7c.7-.7 0-1.69 0-2.5',
+        key: '1c7o5b',
+      },
+    ],
+    ['path', { d: 'm16 20-1-2', key: '5348lt' }],
+    ['path', { d: 'm20 16-2-1', key: '2c7pv5' }],
+    ['path', { d: 'm4 8 2 1', key: 'rpj1x4' }],
+    ['path', { d: 'm8 4 1 2', key: '1r4zbp' }],
+    [
+      'path',
+      {
+        d: 'M9.698 14.19a.15.15 0 0 0 .112.112l2.074.489a.15.15 0 0 1 .072.252L10 17c-.7.7 0 1.69 0 2.5a1 1 0 0 1-5 0 .495.495 0 0 0-.5-.5 1 1 0 0 1 0-5c.81 0 1.8.7 2.5 0l1.956-1.957a.15.15 0 0 1 .252.072z',
+        key: '3u61yx',
+      },
+    ],
   ],
   bone: [
     [
@@ -1459,6 +1556,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       { d: 'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20', key: 'k3hazp' },
     ],
     ['path', { d: 'M8 8v3', key: '1qzp49' }],
+  ],
+  'book-bookmark': [
+    [
+      'path',
+      {
+        d: 'M10 2v7.751a.25.25 0 00.407.195l2.28-1.834a.5.5 0 01.627 0l2.28 1.834A.25.25 0 0016 9.751V2',
+        key: 'x9x4jl',
+      },
+    ],
+    ['path', { d: 'M4 19.5v-15A2.5 2.5 0 016.5 2H19a1 1 0 011 1v18a1 1 0 01-1 1H6.5a1 1 0 010-5H20', key: '1889un' }],
   ],
   'book-check': [
     [
@@ -1536,13 +1643,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H10', key: '18wgow' }],
     ['rect', { x: '12', y: '6', width: '8', height: '5', rx: '1', key: '73l30o' }],
   ],
-  'book-marked': [
-    ['path', { d: 'M10 2v8l3-3 3 3V2', key: 'sqw3rj' }],
-    [
-      'path',
-      { d: 'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20', key: 'k3hazp' },
-    ],
-  ],
   'book-minus': [
     [
       'path',
@@ -1551,37 +1651,37 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M9 10h6', key: '9gxzsh' }],
   ],
   'book-open-check': [
-    ['path', { d: 'M12 21V7', key: 'gj6g52' }],
+    ['path', { d: 'M12 5v16', key: '1f6ucr' }],
     ['path', { d: 'm16 12 2 2 4-4', key: 'mdajum' }],
     [
       'path',
       {
-        d: 'M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3',
-        key: '8arnkb',
+        d: 'M22 6V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2h4.001A2 2 0 0022 17v-1.344',
+        key: '144kbk',
       },
     ],
   ],
   'book-open-text': [
-    ['path', { d: 'M12 7v14', key: '1akyts' }],
-    ['path', { d: 'M16 12h2', key: '7q9ll5' }],
-    ['path', { d: 'M16 8h2', key: 'msurwy' }],
+    ['path', { d: 'M12 5v16', key: '1f6ucr' }],
+    ['path', { d: 'M16 13h2', key: 'weia3s' }],
+    ['path', { d: 'M16 9h2', key: '1n7gjm' }],
     [
       'path',
       {
-        d: 'M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z',
-        key: 'ruj8y',
+        d: 'M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z',
+        key: '1fyvmf',
       },
     ],
-    ['path', { d: 'M6 12h2', key: '32wvfc' }],
-    ['path', { d: 'M6 8h2', key: '30oboj' }],
+    ['path', { d: 'M6 13h2', key: '1cckiz' }],
+    ['path', { d: 'M6 9h2', key: '1k7j9f' }],
   ],
   'book-open': [
-    ['path', { d: 'M12 7v14', key: '1akyts' }],
+    ['path', { d: 'M12 5v16', key: '1f6ucr' }],
     [
       'path',
       {
-        d: 'M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z',
-        key: 'ruj8y',
+        d: 'M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z',
+        key: '1fyvmf',
       },
     ],
   ],
@@ -1640,12 +1740,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '12', cy: '8', r: '2', key: '1822b1' }],
   ],
   'book-x': [
-    ['path', { d: 'm14.5 7-5 5', key: 'dy991v' }],
+    ['path', { d: 'm14.5 7.5-5 5', key: '3lb6iw' }],
     [
       'path',
       { d: 'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20', key: 'k3hazp' },
     ],
-    ['path', { d: 'm9.5 7 5 5', key: 's45iea' }],
+    ['path', { d: 'm9.5 7.5 5 5', key: 'ko136h' }],
   ],
   book: [
     [
@@ -1786,6 +1886,27 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm3.3 7 8.7 5 8.7-5', key: 'g66t2b' }],
     ['path', { d: 'M12 22V12', key: 'd0xqtd' }],
   ],
+  'boxes-linked': [
+    ['path', { d: 'M14 6h2a2 2 0 0 1 2 2v5', key: 'dpdf3h' }],
+    ['path', { d: 'M14.21 15.202 18 17.4V22', key: '643eh2' }],
+    [
+      'path',
+      {
+        d: 'M14.796 14.611A1.6 1.6 0 0 0 14 15.995v3.013a1.6 1.6 0 0 0 .797 1.384l2.4 1.392a1.6 1.6 0 0 0 1.606 0l2.4-1.392A1.6 1.6 0 0 0 22 19.008v-3.013a1.6 1.6 0 0 0-.796-1.384l-2.4-1.394a1.6 1.6 0 0 0-1.514-.051z',
+        key: 'g76p55',
+      },
+    ],
+    ['path', { d: 'm18 17.4 3.79-2.198', key: '9mu234' }],
+    ['path', { d: 'M2.21 4.202 6 6.4V16a2 2 0 0 0 2 2h2', key: '1qwzoc' }],
+    [
+      'path',
+      {
+        d: 'M2.796 3.611A1.6 1.6 0 0 0 2 4.995v3.013a1.6 1.6 0 0 0 .797 1.384l2.4 1.392a1.6 1.6 0 0 0 1.606 0l2.4-1.392A1.6 1.6 0 0 0 10 8.008V4.995a1.6 1.6 0 0 0-.796-1.384l-2.4-1.394a1.6 1.6 0 0 0-1.514-.052z',
+        key: 'cbb3m8',
+      },
+    ],
+    ['path', { d: 'm6 6.4 3.79-2.198', key: '11cxrz' }],
+  ],
   boxes: [
     [
       'path',
@@ -1827,55 +1948,63 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3', key: 'gduv9' }],
   ],
   'brain-circuit': [
-    [
-      'path',
-      { d: 'M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z', key: 'l5xja' },
-    ],
-    ['path', { d: 'M9 13a4.5 4.5 0 0 0 3-4', key: '10igwf' }],
-    ['path', { d: 'M6.003 5.125A3 3 0 0 0 6.401 6.5', key: '105sqy' }],
-    ['path', { d: 'M3.477 10.896a4 4 0 0 1 .585-.396', key: 'ql3yin' }],
-    ['path', { d: 'M6 18a4 4 0 0 1-1.967-.516', key: '2e4loj' }],
     ['path', { d: 'M12 13h4', key: '1ku699' }],
-    ['path', { d: 'M12 18h6a2 2 0 0 1 2 2v1', key: '105ag5' }],
+    ['path', { d: 'M12 18h6a2 2 0 012 2v1', key: '6s3bw4' }],
     ['path', { d: 'M12 8h8', key: '1lhi5i' }],
-    ['path', { d: 'M16 8V5a2 2 0 0 1 2-2', key: 'u6izg6' }],
-    ['circle', { cx: '16', cy: '13', r: '.5', key: 'ry7gng' }],
-    ['circle', { cx: '18', cy: '3', r: '.5', key: '1aiba7' }],
-    ['circle', { cx: '20', cy: '21', r: '.5', key: 'yhc1fs' }],
-    ['circle', { cx: '20', cy: '8', r: '.5', key: '1e43v0' }],
+    ['path', { d: 'M12 9a4.17 4.17 0 01-3 4', key: '13l7kh' }],
+    ['path', { d: 'M16 8V5a2 2 0 012-2', key: 'gais5y' }],
+    ['path', { d: 'M6 18a4 4 0 01-2-7.465', key: '1y2m15' }],
+    ['path', { d: 'M6.004 5.125a4 4 0 00-2.526 5.77', key: '3cw1ss' }],
+    ['path', { d: 'M6.294 6.294A3 3 0 1112 5v13a4 4 0 11-7.967-.518', key: 'm2z1wm' }],
+    ['circle', { cx: '16', cy: '13', r: '0.5', fill: 'currentColor', key: '9zzywh' }],
+    ['circle', { cx: '18', cy: '3', r: '0.5', fill: 'currentColor', key: 'i2xui6' }],
+    ['circle', { cx: '20', cy: '21', r: '0.5', fill: 'currentColor', key: '1dobdp' }],
+    ['circle', { cx: '20', cy: '8', r: '0.5', fill: 'currentColor', key: 'r9nqlq' }],
   ],
   'brain-cog': [
     ['path', { d: 'm10.852 14.772-.383.923', key: '11vil6' }],
     ['path', { d: 'm10.852 9.228-.383-.923', key: '1fjppe' }],
     ['path', { d: 'm13.148 14.772.382.924', key: 'je3va1' }],
-    ['path', { d: 'm13.531 8.305-.383.923', key: '18epck' }],
+    ['path', { d: 'm13.53 8.305-.382.923', key: '159shc' }],
     ['path', { d: 'm14.772 10.852.923-.383', key: 'k9m8cz' }],
     ['path', { d: 'm14.772 13.148.923.383', key: '1xvhww' }],
+    ['path', { d: 'M17.997 5.125a4 4 0 012.526 5.77', key: '14qhlz' }],
+    ['path', { d: 'M18 18a4 4 0 002-7.464', key: '10tzm7' }],
+    ['path', { d: 'M4.033 17.483A4 4 0 0011.46 20c.184-.31.896-.31 1.076 0a4 4 0 007.43-2.517', key: '19974p' }],
+    ['path', { d: 'M6 18a4 4 0 01-2-7.464', key: '17o2ag' }],
+    ['path', { d: 'M6.002 5.125a4 4 0 00-2.525 5.77', key: '1vafpg' }],
     [
       'path',
       {
-        d: 'M17.598 6.5A3 3 0 1 0 12 5a3 3 0 0 0-5.63-1.446 3 3 0 0 0-.368 1.571 4 4 0 0 0-2.525 5.771',
-        key: 'jcbbz1',
+        d: 'M6.293 6.294a3 3 0 01-.287-1.098l-.004-.07a3 3 0 015.968-.543c.05.02.057.01.059 0a3 3 0 015.968.542l-.004.071a3 3 0 01-.287 1.098',
+        key: 'l6g9lk',
       },
     ],
-    ['path', { d: 'M17.998 5.125a4 4 0 0 1 2.525 5.771', key: '1kkn7e' }],
-    ['path', { d: 'M19.505 10.294a4 4 0 0 1-1.5 7.706', key: '18bmuc' }],
-    ['path', { d: 'M4.032 17.483A4 4 0 0 0 11.464 20c.18-.311.892-.311 1.072 0a4 4 0 0 0 7.432-2.516', key: 'uozx0d' }],
-    ['path', { d: 'M4.5 10.291A4 4 0 0 0 6 18', key: 'whdemb' }],
-    ['path', { d: 'M6.002 5.125a3 3 0 0 0 .4 1.375', key: '1kqy2g' }],
     ['path', { d: 'm9.228 10.852-.923-.383', key: '1wtb30' }],
     ['path', { d: 'm9.228 13.148-.923.383', key: '1a830x' }],
     ['circle', { cx: '12', cy: '12', r: '3', key: '1v7zrd' }],
   ],
+  'brain-off': [
+    ['path', { d: 'M12 18v-6', key: '17g6i2' }],
+    ['path', { d: 'M12 5v1.344', key: 'tksvkr' }],
+    ['path', { d: 'M17.707 6.293A3 3 0 1012 5a3 3 0 00-4.124-2.781', key: '1nsar9' }],
+    ['path', { d: 'M17.997 5.125a4 4 0 012.526 5.77', key: '14qhlz' }],
+    ['path', { d: 'M19.644 19.644A4 4 0 0112 18a4 4 0 11-7.967-.517', key: '1to9rp' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M20 10.536a4 4 0 011.533 5.34', key: '1sftkt' }],
+    ['path', { d: 'M3.477 10.895a4 4 0 011.876-5.542', key: 'pom6ba' }],
+    ['path', { d: 'M6 18a4 4 0 01-2-7.464', key: '17o2ag' }],
+    ['path', { d: 'M9 13a4.17 4.17 0 002.166-1.5 4 4 0 00.138-.196', key: '1daz6i' }],
+  ],
   brain: [
     ['path', { d: 'M12 18V5', key: 'adv99a' }],
-    ['path', { d: 'M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4', key: '1e3is1' }],
-    ['path', { d: 'M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5', key: '1gqd8o' }],
-    ['path', { d: 'M17.997 5.125a4 4 0 0 1 2.526 5.77', key: 'iwvgf7' }],
-    ['path', { d: 'M18 18a4 4 0 0 0 2-7.464', key: 'efp6ie' }],
-    ['path', { d: 'M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517', key: '1gq6am' }],
-    ['path', { d: 'M6 18a4 4 0 0 1-2-7.464', key: 'k1g0md' }],
-    ['path', { d: 'M6.003 5.125a4 4 0 0 0-2.526 5.77', key: 'q97ue3' }],
+    ['path', { d: 'M15 13a4.17 4.17 0 01-3-4 4.17 4.17 0 01-3 4', key: '5nuw1p' }],
+    ['path', { d: 'M17.707 6.294A3 3 0 1012 5a3 3 0 10-5.707 1.294', key: '18ldcf' }],
+    ['path', { d: 'M17.996 5.125a4 4 0 012.526 5.77', key: '1sdu8q' }],
+    ['path', { d: 'M18 18a4 4 0 002-7.465', key: '7xqqvr' }],
+    ['path', { d: 'M19.967 17.482a4 4 0 11-7.967.517 4 4 0 11-7.967-.517', key: 't46ysz' }],
+    ['path', { d: 'M6 18a4 4 0 01-2-7.465', key: '1y2m15' }],
+    ['path', { d: 'M6.004 5.125a4 4 0 00-2.526 5.77', key: '3cw1ss' }],
   ],
   'brick-wall-fire': [
     ['path', { d: 'M16 3v2.107', key: 'gq8xun' }],
@@ -1918,6 +2047,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 15v6', key: '1stoo3' }],
     ['path', { d: 'M8 3v6', key: 'vlvjmk' }],
   ],
+  bridge: [
+    ['path', { d: 'M10 9.728V16', key: 'o67grx' }],
+    ['path', { d: 'M14 9.728V16', key: 'podb55' }],
+    ['path', { d: 'M18 20V4', key: 'o2hl4u' }],
+    ['path', { d: 'm22 11-4-4A7.5 7.5 0 0 1 6 7l-4 4', key: 'uc7s7' }],
+    ['path', { d: 'M22 16H2', key: '142mmy' }],
+    ['path', { d: 'M6 20V4', key: '1w1bmo' }],
+  ],
   'briefcase-business': [
     ['path', { d: 'M12 12h.01', key: '1mp3jc' }],
     ['path', { d: 'M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2', key: '1ksdt3' }],
@@ -1941,6 +2078,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M6 6v14', key: '1s15cj' }],
     ['rect', { width: '20', height: '14', x: '2', y: '6', rx: '2', key: 'i6l2r4' }],
   ],
+  'briefcase-plus': [
+    ['path', { d: 'M13.354 20H4a2 2 0 01-2-2V8a2 2 0 012-2h16a2 2 0 012 2v3.354', key: '59v5n6' }],
+    ['path', { d: 'M16 11.354V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v16', key: '13yhyp' }],
+    ['path', { d: 'M16 17h6', key: '1ook5g' }],
+    ['path', { d: 'M19 14v6', key: '1ckrd5' }],
+  ],
   briefcase: [
     ['path', { d: 'M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16', key: 'jecpp' }],
     ['rect', { width: '20', height: '14', x: '2', y: '6', rx: '2', key: 'i6l2r4' }],
@@ -1951,22 +2094,52 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M14 20a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2', key: '1q24h9' }],
   ],
   broccoli: [
-    ['path', { d: 'M10 13a3 3 0 0 1-2.121-5.121', key: '1oqad0' }],
+    ['path', { d: 'M10 13a3 3 0 01-2.121-5.121', key: '1g9r2w' }],
     [
       'path',
       {
-        d: 'M15.606 14.204c-3.5 1.5-5.899 4.503-8.899 7.503A1 1 0 0 1 6 22c-2 0-4-2-4-4a1 1 0 0 1 .293-.707c1.911-1.911 3.823-3.578 5.347-5.441',
-        key: 'c93qjr',
+        d: 'M15.606 14.204c-3.5 1.5-5.899 4.503-8.899 7.503A1 1 0 016 22c-2 0-4-2-4-4a1 1 0 01.293-.707c1.911-1.911 3.823-3.578 5.347-5.441',
+        key: '1ansp5',
       },
     ],
-    ['path', { d: 'M16.573 14.737A4 4 0 0 1 14 11', key: '1ymr17' }],
+    ['path', { d: 'M16.573 14.737A4 4 0 0114 11', key: 'icunya' }],
     [
       'path',
       {
-        d: 'M7.14 10.907a4 4 0 1 1 2.756-7.43A4 4 0 0 1 16.7 4.48a2 2 0 0 1 2.82 2.82 4 4 0 0 1 1.002 6.805A4 4 0 1 1 13 16',
-        key: '1kbgad',
+        d: 'M7.14 10.907a4 4 0 112.756-7.43A4 4 0 0116.7 4.48a2 2 0 012.82 2.82 4 4 0 011.002 6.805 4 4 0 11-7.51 1.59',
+        key: 'cbikky',
       },
     ],
+  ],
+  'broom-sparkles': [
+    ['path', { d: 'M11 2v2', key: '1539x4' }],
+    ['path', { d: 'M12 3h-2', key: '1su5n0' }],
+    ['path', { d: 'M13.5 10.5 22 2', key: '1yxz6l' }],
+    [
+      'path',
+      {
+        d: 'M14.734 13.841a2 2 0 00-.314-2.42L12.58 9.58a2 2 0 00-2.421-.314l-7.657 4.461A1 1 0 002.3 15.3l6.403 6.403a1 1 0 001.571-.204z',
+        key: '1q75r6',
+      },
+    ],
+    ['path', { d: 'M20 15v4', key: 'nmhudv' }],
+    ['path', { d: 'M22 17h-4', key: '1sj068' }],
+    ['path', { d: 'M4 4v4', key: 'a4sqb9' }],
+    ['path', { d: 'm5 18 2-2', key: '11qwpn' }],
+    ['path', { d: 'M6 6H2', key: '1cli1h' }],
+    ['path', { d: 'm7.699 10.7 5.602 5.601', key: '1rehuz' }],
+  ],
+  broom: [
+    ['path', { d: 'M13.5 10.5 22 2', key: '1yxz6l' }],
+    [
+      'path',
+      {
+        d: 'M14.734 13.841a2 2 0 00-.314-2.42L12.58 9.58a2 2 0 00-2.421-.314l-7.657 4.461A1 1 0 002.3 15.3l6.403 6.403a1 1 0 001.571-.204z',
+        key: '1q75r6',
+      },
+    ],
+    ['path', { d: 'm5 18 2-2', key: '11qwpn' }],
+    ['path', { d: 'm7.699 10.7 5.602 5.601', key: '1rehuz' }],
   ],
   'brush-cleaning': [
     ['path', { d: 'm16 22-1-4', key: '1ow2iv' }],
@@ -2035,7 +2208,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm8 2 1.88 1.88', key: 'fmnt4t' }],
     ['path', { d: 'M9 7.13V6a3 3 0 1 1 6 0v1.13', key: '1vgav8' }],
   ],
-  'building-2': [
+  'building-complex-plus': [
+    ['path', { d: 'M10 12h4', key: 'a56b0p' }],
+    ['path', { d: 'M10 21v-3a2 2 0 013.05-1.702', key: 'm393w2' }],
+    ['path', { d: 'M10 8h4', key: '1sr2af' }],
+    ['path', { d: 'M16 19h6', key: 'xwg31i' }],
+    ['path', { d: 'M18 7h2a2 2 0 012 2v4.355', key: 'p613ng' }],
+    ['path', { d: 'M19 16v6', key: 'tddt3s' }],
+    ['path', { d: 'M6 10H4a2 2 0 00-2 2v7a2 2 0 002 2h8.535', key: 's5wgjh' }],
+    ['path', { d: 'M6 21V5a2 2 0 012-2h8a2 2 0 012 2v7.126', key: 'hmp3za' }],
+  ],
+  'building-complex': [
     ['path', { d: 'M10 12h4', key: 'a56b0p' }],
     ['path', { d: 'M10 8h4', key: '1sr2af' }],
     ['path', { d: 'M14 21v-3a2 2 0 0 0-4 0v3', key: '1rgiei' }],
@@ -2136,190 +2319,227 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 18h.01', key: 'lrp35t' }],
   ],
   'calendar-1': [
-    ['path', { d: 'M11 14h1v4', key: 'fy54vd' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['rect', { x: '3', y: '4', width: '18', height: '18', rx: '2', key: '12vinp' }],
+    ['path', { d: 'M11 13h1v4', key: '10p4bv' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'calendar-arrow-down': [
-    ['path', { d: 'm14 18 4 4 4-4', key: '1waygx' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M18 14v8', key: 'irew45' }],
-    ['path', { d: 'M21 11.354V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7.343', key: 'bse4f3' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'm14 17 4 4 4-4', key: '17qdjf' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M18 13v8', key: '1a00n0' }],
+    ['path', { d: 'M21 10.354V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h7.343', key: '1qsorh' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+  ],
+  'calendar-arrow-left': [
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M21 9H3', key: '1338ky' }],
+    ['path', { d: 'M3 12.34V5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2h-7.35', key: '1lqlf5' }],
+    ['path', { d: 'M3 18h6', key: 'sbs6yb' }],
+    ['path', { d: 'm6 21-3-3 3-3', key: 'hun6sv' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+  ],
+  'calendar-arrow-right': [
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'm18 21 3-3h-6', key: 'g53kbn' }],
+    ['path', { d: 'M21 12.34V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h7.35', key: 'fu7jzs' }],
+    ['path', { d: 'm21 18-3-3', key: '1l7y10' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-arrow-up': [
-    ['path', { d: 'm14 18 4-4 4 4', key: 'ftkppy' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M18 22v-8', key: 'su0gjh' }],
-    ['path', { d: 'M21 11.343V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9', key: '1exg90' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'm14 17 4-4 4 4', key: '1qa3u6' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M18 21v-8', key: '1ao88k' }],
+    ['path', { d: 'M21 10.343V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h9', key: '185mot' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-check-2': [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M21 14V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8', key: 'bce9hv' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'm16 20 2 2 4-4', key: '13tcca' }],
+    ['path', { d: 'M 19 3 L 5 3', key: '1xn3iy' }],
+    ['path', { d: 'M 21 13 L 21 5', key: '102s58' }],
+    ['path', { d: 'M 21 5 A2 2 0 0 0 19 3', key: '1xylja' }],
+    ['path', { d: 'M 3 19 A2 2 0 0 0 5 21', key: '19jxbv' }],
+    ['path', { d: 'M 3 5 L 3 19', key: '1yylhw' }],
+    ['path', { d: 'M 5 3 A2 2 0 0 0 3 5', key: '164twa' }],
+    ['path', { d: 'm16 19 2 2 4-4', key: '1b14m6' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M5 21 L12.5 21', key: '1n38e0' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-check': [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['rect', { width: '18', height: '18', x: '3', y: '4', rx: '2', key: '1hopcy' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'm9 16 2 2 4-4', key: '19s6y9' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'm9 15 2 2 4-4', key: '1grp1n' }],
+  ],
+  'calendar-chevrons-left': [
+    ['path', { d: 'm11 21-3-3 3-3', key: '62wrx5' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M21 9H3', key: '1338ky' }],
+    ['path', { d: 'M3 11.5V5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2h-4', key: '1476xe' }],
+    ['path', { d: 'm5 21-3-3 3-3', key: '6iupho' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+  ],
+  'calendar-chevrons-right': [
+    ['path', { d: 'm13 21 3-3-3-3', key: '1c4snd' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'm19 21 3-3-3-3', key: '1ci517' }],
+    ['path', { d: 'M21 11.5V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h4', key: '11xpaj' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-clock': [
     ['path', { d: 'M16 14v2.2l1.6 1', key: 'fo4ql5' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5', key: '1osxxc' }],
-    ['path', { d: 'M3 10h5', key: 'r794hk' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M21 7.338V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h2.338', key: '7hb8p4' }],
+    ['path', { d: 'M3 9h5.859', key: 'numkqi' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
     ['circle', { cx: '16', cy: '16', r: '6', key: 'qoo3c4' }],
   ],
   'calendar-cog': [
     ['path', { d: 'm15.228 16.852-.923-.383', key: 'npixar' }],
     ['path', { d: 'm15.228 19.148-.923.383', key: '51cr3n' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
     ['path', { d: 'm16.47 14.305.382.923', key: 'obybxd' }],
     ['path', { d: 'm16.852 20.772-.383.924', key: 'dpfhf9' }],
     ['path', { d: 'm19.148 15.228.383-.923', key: '1reyyz' }],
     ['path', { d: 'm19.53 21.696-.382-.924', key: '1goivc' }],
-    ['path', { d: 'm20.772 16.852.924-.383', key: 'htqkph' }],
-    ['path', { d: 'm20.772 19.148.924.383', key: '9w9pjp' }],
-    ['path', { d: 'M21 10.592V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6', key: '1pvbig' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'm20.773 16.852.924-.383', key: 'ybmb4k' }],
+    ['path', { d: 'm20.773 19.148.924.383', key: '1c2d3p' }],
+    ['path', { d: 'M21 10.5V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h5.5', key: '1e6z1y' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
   ],
   'calendar-days': [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['rect', { width: '18', height: '18', x: '3', y: '4', rx: '2', key: '1hopcy' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 14h.01', key: '6423bh' }],
-    ['path', { d: 'M12 14h.01', key: '1etili' }],
-    ['path', { d: 'M16 14h.01', key: '1gbofw' }],
-    ['path', { d: 'M8 18h.01', key: 'lrp35t' }],
-    ['path', { d: 'M12 18h.01', key: 'mhygvu' }],
-    ['path', { d: 'M16 18h.01', key: 'kzsmim' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 13h.01', key: '1sbv64' }],
+    ['path', { d: 'M12 13h.01', key: 'y0uutt' }],
+    ['path', { d: 'M16 13h.01', key: 'wip0gl' }],
+    ['path', { d: 'M8 17h.01', key: 'p3bg7i' }],
+    ['path', { d: 'M12 17h.01', key: 'p32p05' }],
+    ['path', { d: 'M16 17h.01', key: 'ql8jdd' }],
   ],
   'calendar-fold': [
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
     [
       'path',
       {
-        d: 'M3 20a2 2 0 0 0 2 2h10a2.4 2.4 0 0 0 1.706-.706l3.588-3.588A2.4 2.4 0 0 0 21 16V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z',
-        key: 'r586nh',
+        d: 'M21 15V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h10v-5a1 1 0 011-1za2.4 2.4 0 01-.706 1.706l-3.588 3.588A2.4 2.4 0 0115 21',
+        key: '4uit17',
       },
     ],
-    ['path', { d: 'M15 22v-5a1 1 0 0 1 1-1h5', key: 'xl3app' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-heart': [
-    ['path', { d: 'M12.127 22H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5.125', key: 'vxdnp4' }],
+    ['path', { d: 'M12.127 21H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v5.125', key: '1fsxpc' }],
     [
       'path',
       {
-        d: 'M14.62 18.8A2.25 2.25 0 1 1 18 15.836a2.25 2.25 0 1 1 3.38 2.966l-2.626 2.856a.998.998 0 0 1-1.507 0z',
-        key: '15cy7q',
+        d: 'M14.62 17.8A2.25 2.25 0 1118 14.836a2.25 2.25 0 113.38 2.966l-2.626 2.856a.998.998 0 01-1.507 0z',
+        key: '1gk3ue',
       },
     ],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-minus-2': [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['rect', { width: '18', height: '18', x: '3', y: '4', rx: '2', key: '1hopcy' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M10 16h4', key: '17e571' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M10 15h4', key: '192ueg' }],
   ],
   'calendar-minus': [
-    ['path', { d: 'M16 19h6', key: 'xwg31i' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M21 15V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8.5', key: '1scpom' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'M16 18h6', key: '987eiv' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M21 14V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h8.3', key: 'gcu0od' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-off': [
-    ['path', { d: 'M4.2 4.2A2 2 0 0 0 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 1.82-1.18', key: '16swn3' }],
-    ['path', { d: 'M21 15.5V6a2 2 0 0 0-2-2H9.5', key: 'yhw86o' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M3 10h7', key: '1wap6i' }],
-    ['path', { d: 'M21 10h-5.5', key: 'quycpq' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
     ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M21 9h-5.5', key: '1g344v' }],
+    ['path', { d: 'M3 9h6', key: '1q2djq' }],
+    ['path', { d: 'M3.586 3.586A2 2 0 003 5v14a2 2 0 002 2h14a2 2 0 001.414-.586', key: '1g7ltu' }],
+    ['path', { d: 'M8.656 3H19a2 2 0 012 2v10.344', key: '1bwpd1' }],
   ],
   'calendar-plus-2': [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['rect', { width: '18', height: '18', x: '3', y: '4', rx: '2', key: '1hopcy' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M10 16h4', key: '17e571' }],
-    ['path', { d: 'M12 14v4', key: '1thi36' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M10 15h4', key: '192ueg' }],
+    ['path', { d: 'M12 13v4', key: '1il4po' }],
   ],
   'calendar-plus': [
-    ['path', { d: 'M16 19h6', key: 'xwg31i' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M19 16v6', key: 'tddt3s' }],
-    ['path', { d: 'M21 12.598V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8.5', key: '1glfrc' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'M16 18h6', key: '987eiv' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M19 15v6', key: '10aioa' }],
+    ['path', { d: 'M21 11.5V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h8.3', key: 'jgwkxf' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-range': [
-    ['rect', { width: '18', height: '18', x: '3', y: '4', rx: '2', key: '1hopcy' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M17 14h-6', key: 'bkmgh3' }],
-    ['path', { d: 'M13 18H7', key: 'bb0bb7' }],
-    ['path', { d: 'M7 14h.01', key: '1qa3f1' }],
-    ['path', { d: 'M17 18h.01', key: '1bdyru' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['path', { d: 'M17 13h-6', key: '1qbiup' }],
+    ['path', { d: 'M13 17H7', key: '1x38vv' }],
+    ['path', { d: 'M7 13h.01', key: '1vezk1' }],
+    ['path', { d: 'M17 17h.01', key: '1sd3ek' }],
   ],
   'calendar-search': [
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M21 11.75V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7.25', key: '1jrsq6' }],
-    ['path', { d: 'm22 22-1.875-1.875', key: '13zax7' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'M21 10.69V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h7.25', key: 'h6gkkz' }],
+    ['path', { d: 'm22 21-1.875-1.875', key: '1dzjql' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['circle', { cx: '18', cy: '17', r: '3', key: '1hty4x' }],
   ],
   'calendar-sync': [
     ['path', { d: 'M11 10v4h4', key: '172dkj' }],
-    ['path', { d: 'm11 14 1.535-1.605a5 5 0 0 1 8 1.5', key: 'vu0qm5' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'm21 18-1.535 1.605a5 5 0 0 1-8-1.5', key: '1qgeyt' }],
+    ['path', { d: 'm11 14 1.535-1.605a5 5 0 018 1.5', key: 'jekqcd' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'm21 18-1.535 1.605a5 5 0 01-8-1.5', key: 'n107hu' }],
     ['path', { d: 'M21 22v-4h-4', key: 'hrummi' }],
-    ['path', { d: 'M21 8.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4.3', key: 'mctw84' }],
-    ['path', { d: 'M3 10h4', key: '1el30a' }],
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
+    ['path', { d: 'M21 8.517V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h3.517', key: 'yafrba' }],
+    ['path', { d: 'M3 9h4', key: 'rnfnj5' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-x-2': [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['path', { d: 'M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8', key: '3spt84' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'm17 22 5-5', key: '1k6ppv' }],
-    ['path', { d: 'm17 17 5 5', key: 'p7ous7' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['path', { d: 'm17 16 5 5', key: '1a37d9' }],
+    ['path', { d: 'm17 21 5-5', key: '1b797a' }],
+    ['path', { d: 'M21 12V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h8', key: '14ws7l' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
   ],
   'calendar-x': [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['rect', { width: '18', height: '18', x: '3', y: '4', rx: '2', key: '1hopcy' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
-    ['path', { d: 'm14 14-4 4', key: 'rymu2i' }],
-    ['path', { d: 'm10 14 4 4', key: '3sz06r' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'm14 13-4 4', key: '1gib57' }],
+    ['path', { d: 'm10 13 4 4', key: '153uiq' }],
   ],
   calendar: [
-    ['path', { d: 'M8 2v4', key: '1cmpym' }],
-    ['path', { d: 'M16 2v4', key: '4m81vk' }],
-    ['rect', { width: '18', height: '18', x: '3', y: '4', rx: '2', key: '1hopcy' }],
-    ['path', { d: 'M3 10h18', key: '8toen8' }],
+    ['path', { d: 'M8 2v3', key: '1ioesn' }],
+    ['path', { d: 'M16 2v3', key: 'otl347' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
   ],
   calendars: [
     ['path', { d: 'M12 2v2', key: 'tus03m' }],
@@ -2350,6 +2570,20 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
     ['circle', { cx: '12', cy: '13', r: '3', key: '1vg3eu' }],
+  ],
+  'can-soda': [
+    ['path', { d: 'm17 22 1.664-2.496a2 2 0 00.336-1.11V5.606a2 2 0 00-.336-1.11L17 2', key: '8r63so' }],
+    ['path', { d: 'M18 22H6', key: 'mg6kv4' }],
+    ['path', { d: 'M18 2H6', key: '10w3qr' }],
+    ['path', { d: 'M5 17h14', key: '74xsq1' }],
+    ['path', { d: 'M5 7h14', key: '1ic0q6' }],
+    ['path', { d: 'm7 22-1.664-2.496A2 2 0 015 18.394V5.606a2 2 0 01.336-1.11L7 2', key: 'p59xmm' }],
+  ],
+  can: [
+    ['path', { d: 'M21 10.5a9 2.5 0 01-18 0v8a9 2.5 0 0018 0z', key: '9pzxzq' }],
+    ['path', { d: 'M21 10.5A9 2.5 25.32 004.59 3.47 9 2.5 25.32 0021 10.5', key: '9bp7vi' }],
+    ['path', { d: 'M3 10.5a9 2.5 0 016.527-2.405', key: '13emm5' }],
+    ['path', { d: 'M9 16.858a31 31 0 006 0', key: '1nnpid' }],
   ],
   'candy-cane': [
     ['path', { d: 'm10.8 5 2.111 4.223', key: '11kb8w' }],
@@ -2443,6 +2677,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['rect', { width: '18', height: '14', x: '3', y: '5', rx: '2', ry: '2', key: '12ruh7' }],
     ['path', { d: 'M7 15h4M15 15h2M7 11h2M13 11h4', key: '1ueiar' }],
   ],
+  'car-battery': [
+    ['path', { d: 'M14 13h4', key: 'xb9564' }],
+    ['path', { d: 'M16 15v-4', key: 'rpmtp7' }],
+    ['path', { d: 'M18 5v2', key: 'n2sebz' }],
+    ['path', { d: 'M6 13h4', key: 'vm80m7' }],
+    ['path', { d: 'M6 5v2', key: 'h3tt00' }],
+    ['rect', { x: '2', y: '7', width: '20', height: '12', rx: '2', key: 'uzf593' }],
+  ],
   'car-front': [
     ['path', { d: 'm21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8', key: '1imjwt' }],
     ['path', { d: 'M7 14h.01', key: '1qa3f1' }],
@@ -2488,18 +2730,30 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
     ['path', { d: 'M8 14h8', key: '1fgep2' }],
-    ['rect', { x: '8', y: '10', width: '8', height: '8', rx: '1', key: '1aonk6' }],
+    ['rect', { x: '8', y: '10', width: '8', height: '8', rx: '2', key: '15l861' }],
   ],
   carrot: [
+    ['path', { d: 'M15 16a1 1 0 0 0-7-7q-4 4-5.987 12.385a.5.5 0 0 0 .602.602Q11 20 15 16l-3-3', key: '1ta62j' }],
+    ['path', { d: 'M15 9q4 4 7 0-3-4-7 0 4-4 0-7-4 3 0 7', key: '1svf7i' }],
+    ['path', { d: 'm8 15-2.58-2.58', key: '7t238r' }],
+  ],
+  'carton-off': [
+    ['path', { d: 'M10 10H5v10a2 2 0 002 2h10a2 2 0 002-2v-1', key: 'a96p2r' }],
+    ['path', { d: 'M13 22v-9', key: '1nhnq0' }],
+    ['path', { d: 'M13.902 8.245 16 6h-4.343', key: '19phw3' }],
+    ['path', { d: 'M19 13.343V10a2 2 0 00-.539-1.367L16 6V3a1 1 0 00-1-1H9a1 1 0 00-.857.486', key: 'afhpp5' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M7.034 7.034 5.539 8.633A2 2 0 005 10', key: '1798p5' }],
+  ],
+  carton: [
     [
       'path',
       {
-        d: 'M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7zM8.64 14l-2.05-2.04M15.34 15l-2.46-2.46',
-        key: 'rfqxbe',
+        d: 'M13 22V10a2 2 0 01.539-1.367L16 6H8L5.539 8.633A2 2 0 005 10v10a2 2 0 002 2h10a2 2 0 002-2V10a2 2 0 00-.539-1.367L16 6V3a1 1 0 00-1-1H9a1 1 0 00-1 1v3',
+        key: '9jv8ej',
       },
     ],
-    ['path', { d: 'M22 9s-1.33-2-3.5-2C16.86 7 15 9 15 9s1.33 2 3.5 2S22 9 22 9z', key: '6b25w4' }],
-    ['path', { d: 'M15 2s-2 1.33-2 3.5S15 9 15 9s2-1.84 2-3.5C17 3.33 15 2 15 2z', key: 'fn65lo' }],
+    ['path', { d: 'M5 10h8', key: 'gs3i43' }],
   ],
   'case-lower': [
     ['path', { d: 'M10 9v7', key: 'ylp826' }],
@@ -2585,6 +2839,19 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M2 19h3.76a2 2 0 0 0 1.8-1.1L9 15', key: '19bib8' }],
     ['path', { d: 'M2 21v-4', key: 'l40lih' }],
     ['path', { d: 'M7 9h.01', key: '19b3jx' }],
+  ],
+  certificate: [
+    ['path', { d: 'M12 10H6', key: '1xtf46' }],
+    [
+      'path',
+      {
+        d: 'm20.69 15.479 1.29 4.88a.5.5 0 01-.698.591l-1.843-.849a1 1 0 00-.879.001l-1.846.85a.5.5 0 01-.692-.593l1.29-4.88',
+        key: 'gisnvv',
+      },
+    ],
+    ['path', { d: 'M22 6.675V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h8', key: '1ml1d0' }],
+    ['path', { d: 'M6 14h4', key: '1pohh5' }],
+    ['circle', { cx: '19', cy: '13', r: '3', key: '1rjyw2' }],
   ],
   'chart-area': [
     ['path', { d: 'M3 3v16a2 2 0 0 0 2 2h16', key: 'c24i48' }],
@@ -2722,6 +2989,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M21.21 15.89A10 10 0 1 1 8 2.83', key: 'k2fpak' }],
   ],
+  'chart-quadrant': [
+    ['path', { d: 'M13 3v18', key: 'k5a9nd' }],
+    ['path', { d: 'M3 12h18', key: '1i2n21' }],
+    ['path', { d: 'M3 3v16a2 2 0 002 2h16', key: '80ll88' }],
+    ['circle', { cx: '17.5', cy: '5.5', r: '0.5', fill: 'currentColor', key: 'k94etj' }],
+    ['circle', { cx: '19.5', cy: '16.5', r: '0.5', fill: 'currentColor', key: '16k0ni' }],
+    ['circle', { cx: '7.5', cy: '16.5', r: '0.5', fill: 'currentColor', key: '1yzd8a' }],
+    ['circle', { cx: '7.5', cy: '7.5', r: '0.5', fill: 'currentColor', key: '1v8giy' }],
+  ],
+  'chart-radar': [
+    ['path', { d: 'M12 2v10', key: 'mnfbl' }],
+    ['path', { d: 'm16 18 3.085-8.125L12 4.103 3.473 9.442l3.196 10.554z', key: 'h34id' }],
+    ['path', { d: 'm2 9 10 3 6 9', key: 'rxmbgh' }],
+    ['path', { d: 'm6 21 6-9 10-3', key: '4hdcm7' }],
+  ],
   'chart-scatter': [
     ['circle', { cx: '7.5', cy: '7.5', r: '.5', fill: 'currentColor', key: 'kqv944' }],
     ['circle', { cx: '18.5', cy: '5.5', r: '.5', fill: 'currentColor', key: 'lysivs' }],
@@ -2805,11 +3087,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '12', cy: '6', r: '4', key: '1frrej' }],
   ],
   'chess-queen': [
-    ['path', { d: 'M4 20a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z', key: 'mqzwx6' }],
-    ['path', { d: 'm12.474 5.943 1.567 5.34a1 1 0 0 0 1.75.328l2.616-3.402', key: '1js4gl' }],
-    ['path', { d: 'm20 9-3 9', key: 'r75r3f' }],
-    ['path', { d: 'm5.594 8.209 2.615 3.403a1 1 0 0 0 1.75-.329l1.567-5.34', key: '1joj19' }],
-    ['path', { d: 'M7 18 4 9', key: '1mfzj8' }],
+    ['path', { d: 'm10.68 5.499-.996 4.982a.65.65 0 01-1.131.295L5.885 7.663', key: '1qgnha' }],
+    ['path', { d: 'm13.32 5.5.995 4.98a.65.65 0 001.131.296l2.668-3.113', key: '1tybta' }],
+    ['path', { d: 'M20.428 8.952 17.5 18', key: 'ppcm61' }],
+    ['path', { d: 'M4 20a2 2 0 012-2h12a2 2 0 012 2v1a1 1 0 01-1 1H5a1 1 0 01-1-1z', key: '1vltu5' }],
+    ['path', { d: 'M6.5 18 3.571 8.952', key: '1cx6vq' }],
     ['circle', { cx: '12', cy: '4', r: '2', key: 'muu5ef' }],
     ['circle', { cx: '20', cy: '7', r: '2', key: '9w7p1x' }],
     ['circle', { cx: '4', cy: '7', r: '2', key: '1d9wy8' }],
@@ -2953,7 +3235,7 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   ],
   'circle-check': [
     ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'm9 12 2 2 4-4', key: 'dzmm74' }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12', key: 'xofnsj' }],
   ],
   'circle-chevron-down': [
     ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
@@ -2970,6 +3252,37 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   'circle-chevron-up': [
     ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
     ['path', { d: 'm8 14 4-4 4 4', key: 'fy2ptz' }],
+  ],
+  'circle-chevrons-down': [
+    ['path', { d: 'M9 14L12 17L15 14', key: 'hpyt1r' }],
+    ['path', { d: 'M9 8L12 11L15 8', key: '19orua' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-chevrons-left': [
+    ['path', { d: 'M10 9L7 12L10 15', key: 'yiqvdq' }],
+    ['path', { d: 'M16 9L13 12L16 15', key: '1czhyg' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-chevrons-right': [
+    ['path', { d: 'M14 15L17 12L14 9', key: '1hxjqw' }],
+    ['path', { d: 'M8 15L11 12L8 9', key: '1wss1f' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-chevrons-up': [
+    ['path', { d: 'M15 10L12 7L9 10', key: 'x6fbge' }],
+    ['path', { d: 'M15 16L12 13L9 16', key: 'ouerij' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-dashed-check': [
+    ['path', { d: 'M10.1 2.182a10 10 0 013.8 0', key: 'upsxbf' }],
+    ['path', { d: 'M13.9 21.818a10 10 0 01-3.8 0', key: 'ms125y' }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12', key: 'xofnsj' }],
+    ['path', { d: 'M17.609 3.721a10 10 0 012.69 2.7', key: 'iyn141' }],
+    ['path', { d: 'M2.182 13.9a10 10 0 010-3.8', key: '68e3e5' }],
+    ['path', { d: 'M20.279 17.609a10 10 0 01-2.7 2.69', key: 'wpakmt' }],
+    ['path', { d: 'M21.818 10.1a10 10 0 010 3.8', key: 'w6g6ls' }],
+    ['path', { d: 'M3.721 6.391a10 10 0 012.7-2.69', key: 'sn8908' }],
+    ['path', { d: 'M6.391 20.279a10 10 0 01-2.69-2.7', key: '11rjuk' }],
   ],
   'circle-dashed': [
     ['path', { d: 'M10.1 2.182a10 10 0 0 1 3.8 0', key: '5ilxe3' }],
@@ -3004,8 +3317,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '12', cy: '12', r: '1', key: '41hilf' }],
   ],
   'circle-dot': [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
     ['circle', { cx: '12', cy: '12', r: '1', key: '41hilf' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
   ],
   'circle-ellipsis': [
     ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
@@ -3018,10 +3331,29 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M7 10h10', key: '1101jm' }],
     ['path', { d: 'M7 14h10', key: '1mhdw3' }],
   ],
+  'circle-euro': [
+    ['path', { d: 'M15 9.4a4 4 0 1 0 0 5.2', key: '1makmb' }],
+    ['path', { d: 'M7 12h5', key: 'gblrwe' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
   'circle-fading-arrow-up': [
     ['path', { d: 'M12 2a10 10 0 0 1 7.38 16.75', key: '175t95' }],
     ['path', { d: 'm16 12-4-4-4 4', key: '177agl' }],
     ['path', { d: 'M12 16V8', key: '1sbj14' }],
+    ['path', { d: 'M2.5 8.875a10 10 0 0 0-.5 3', key: '1vce0s' }],
+    ['path', { d: 'M2.83 16a10 10 0 0 0 2.43 3.4', key: 'o3fkw4' }],
+    ['path', { d: 'M4.636 5.235a10 10 0 0 1 .891-.857', key: '1szpfk' }],
+    ['path', { d: 'M8.644 21.42a10 10 0 0 0 7.631-.38', key: '9yhvd4' }],
+  ],
+  'circle-fading-play': [
+    ['path', { d: 'M12 2a10 10 0 0 1 7.38 16.75', key: '175t95' }],
+    [
+      'path',
+      {
+        d: 'M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z',
+        key: 'kmsa83',
+      },
+    ],
     ['path', { d: 'M2.5 8.875a10 10 0 0 0-.5 3', key: '1vce0s' }],
     ['path', { d: 'M2.83 16a10 10 0 0 0 2.43 3.4', key: 'o3fkw4' }],
     ['path', { d: 'M4.636 5.235a10 10 0 0 1 .891-.857', key: '1szpfk' }],
@@ -3041,6 +3373,145 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '12', cy: '12', r: '2', key: '1c9p78' }],
     ['path', { d: 'M13.4 10.6 19 5', key: '1kr7tw' }],
   ],
+  'circle-letter-a': [
+    ['path', { d: 'M15 14H9', key: 'u4f7rb' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+    ['path', { d: 'm8 16 3.453-7.648a.6.6 0 0 1 1.094 0L16 16', key: '26tkhz' }],
+  ],
+  'circle-letter-b': [
+    [
+      'path',
+      {
+        d: 'M9 12h4.846a2.24 2.24 0 011.523.586 2 2 0 01.001 2.828 2.24 2.24 0 01-1.524.586H9.5a.5.5 0 01-.5-.5v-7a.5.5 0 01.5-.5H13a2 2 0 010 4',
+        key: '10umad',
+      },
+    ],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-c': [
+    ['path', { d: 'M15 9.354a4 4 0 1 0 0 5.292', key: '8xfhbo' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-d': [
+    ['path', { d: 'M12 8a4 4 0 010 8H9.412A.41.41 0 019 15.588V8.412A.41.41 0 019.412 8z', key: '1jpkd7' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-e': [
+    ['path', { d: 'M15 8H9.5a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5H15', key: '1qch15' }],
+    ['path', { d: 'M9 12h4', key: 'wrur8x' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-f': [
+    ['path', { d: 'M9 16V8.5a.5.5 0 0 1 .5-.5H15', key: '14bvk2' }],
+    ['path', { d: 'M9 12h4', key: 'wrur8x' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-g': [
+    ['path', { d: 'M12.5 12H15v2.268a.88.88 0 01-.263.65A4 4 0 1112 8h2.5', key: 'qr2odw' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-h': [
+    ['path', { d: 'M9 16V8', key: 'ydmt1j' }],
+    ['path', { d: 'M15 16V8', key: '1pg9zw' }],
+    ['path', { d: 'M9 12h6', key: '1c52cq' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-i': [
+    ['path', { d: 'M12 16V8', key: '1sbj14' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-j': [
+    ['path', { d: 'M15 8v5a3 3 0 1 1-6 0', key: '1l082q' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-k': [
+    ['path', { d: 'M9 16V8', key: 'ydmt1j' }],
+    ['path', { d: 'm11 12 4 4', key: '12i9ze' }],
+    ['path', { d: 'm15 8-6 6', key: 'r7kjba' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-l': [
+    ['path', { d: 'M9 8v7.5a.5.5 0 0 0 .5.5H15', key: 'oor4up' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-m': [
+    [
+      'path',
+      { d: 'M8 16.001v-7.5a.5.5 0 0 1 .9-.3l2.7 3.599a.5.5 0 0 0 .8 0l2.7-3.6a.5.5 0 0 1 .9.3v7.501', key: '1triz2' },
+    ],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-n': [
+    ['path', { d: 'M9 16V8.576a.496.496 0 01.937-.243l4.126 7.43A.496.496 0 0015 15.52V8', key: 'qirm77' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-o': [
+    ['circle', { cx: '12', cy: '12', r: '4', key: '4exip2' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-p-off': [
+    ['path', { d: 'M12.656 7H13a3 3 0 0 1 2.984 3.307', key: '1sjx87' }],
+    ['path', { d: 'M13 13H9', key: 'e2beee' }],
+    ['path', { d: 'M19.071 19.071A1 1 0 0 1 4.93 4.93', key: '1kb595' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M8.357 2.687a10 10 0 0 1 12.956 12.956', key: '5bsfdx' }],
+    ['path', { d: 'M9 17V9', key: 'ojradj' }],
+  ],
+  'circle-letter-p': [
+    ['path', { d: 'M9 12h4a2 2 0 0 0 0-4H9.5a.5.5 0 0 0-.5.5V16', key: '15uh3t' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-q': [
+    ['circle', { cx: '12', cy: '12', r: '4', key: '4exip2' }],
+    ['path', { d: 'm16 16-2.5-2.5', key: 'fmqegn' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-r': [
+    ['path', { d: 'm11 12 4 4', key: '12i9ze' }],
+    ['path', { d: 'M9 12h4a2 2 0 0 0 0-4H9.5a.5.5 0 0 0-.5.5V16', key: '15uh3t' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-s': [
+    ['path', { d: 'M14.5 8H11a2 2 0 100 4h2a2 2 0 110 4H9', key: '1ihxbb' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-t': [
+    ['path', { d: 'M12 16V8', key: '1sbj14' }],
+    ['path', { d: 'M9 8h6', key: '209ih4' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-u': [
+    ['path', { d: 'M15 8v5a3 3 0 1 1-6 0V8', key: '17gkvj' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-v': [
+    ['path', { d: 'm9 8 2.525 7.66a.5.5 0 0 0 .95 0L15 8', key: '1arqi6' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-w': [
+    [
+      'path',
+      {
+        d: 'm16 8-1.591 7.598a.497.497 0 01-.97.038l-.96-3.276a.5.5 0 00-.959 0l-.96 3.276a.496.496 0 01-.969-.038L8 8',
+        key: 'crbxe1',
+      },
+    ],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-x': [
+    ['path', { d: 'm9 16 6-8', key: '1u7o9k' }],
+    ['path', { d: 'm9 8 6 8', key: '1csz0j' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-y': [
+    ['path', { d: 'm9 8 3 4 3-4', key: '1ydu8c' }],
+    ['path', { d: 'M12 12v4', key: 'tww15h' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'circle-letter-z': [
+    ['path', { d: 'M9 8h5.501a.5.5 0 0 1 .37.836L9.13 15.164A.5.5 0 0 0 9.5 16H15', key: 'hctxk0' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
   'circle-minus': [
     ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
     ['path', { d: 'M8 12h8', key: '1wcyev' }],
@@ -3049,18 +3520,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
     ['path', { d: 'M8.35 2.69A10 10 0 0 1 21.3 15.65', key: '1pfsoa' }],
     ['path', { d: 'M19.08 19.08A10 10 0 1 1 4.92 4.92', key: '1ablyi' }],
-  ],
-  'circle-parking-off': [
-    ['path', { d: 'M12.656 7H13a3 3 0 0 1 2.984 3.307', key: '1sjx87' }],
-    ['path', { d: 'M13 13H9', key: 'e2beee' }],
-    ['path', { d: 'M19.071 19.071A1 1 0 0 1 4.93 4.93', key: '1kb595' }],
-    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
-    ['path', { d: 'M8.357 2.687a10 10 0 0 1 12.956 12.956', key: '5bsfdx' }],
-    ['path', { d: 'M9 17V9', key: 'ojradj' }],
-  ],
-  'circle-parking': [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'M9 17V7h4a3 3 0 0 1 0 6H9', key: '1dfk2c' }],
   ],
   'circle-pause': [
     ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
@@ -3173,6 +3632,29 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', key: '4lm6w1' }],
     ['path', { d: 'm6.18 5.276 3.1 3.899', key: 'zjj9t3' }],
   ],
+  'clef-alto': [
+    ['path', { d: 'M10 4v16', key: '14ds90' }],
+    [
+      'path',
+      { d: 'M14 4.764a3 3 0 1 1-.152 4.327A4 4 0 0 1 10 12a4 4 0 0 1 3.848 2.909A3 3 0 1 1 14 19.236', key: 'udi1dj' },
+    ],
+    ['path', { d: 'M6 4v16', key: 'n0nszo' }],
+  ],
+  'clef-bass': [
+    ['path', { d: 'M19 11h.01', key: '6rud08' }],
+    ['path', { d: 'M19 6h.01', key: '1ngg9n' }],
+    ['path', { d: 'M5 8c0-4 4-4 4-4 6 0 6 6 6 6 0 7-10 11-10 11', key: '149hcj' }],
+    ['circle', { cx: '7', cy: '8', r: '2', key: 'p5re1b' }],
+  ],
+  'clef-treble': [
+    [
+      'path',
+      {
+        d: 'M10.586 21.414a2 2 0 0 0 3.378-1.791L11.036 4.377a2 2 0 1 1 3.378 1.037C12.414 7.414 7 8 7 13a5 5 0 0 0 5 5 5 4 0 0 0 5-4 3 3 0 0 0-3-3 3 2 0 0 0-3 2',
+        key: '1v9z72',
+      },
+    ],
+  ],
   'clipboard-check': [
     ['rect', { width: '8', height: '4', x: '8', y: '2', rx: '1', ry: '1', key: 'tgr4d6' }],
     ['path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2', key: '116196' }],
@@ -3253,8 +3735,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   'clipboard-x': [
     ['rect', { width: '8', height: '4', x: '8', y: '2', rx: '1', ry: '1', key: 'tgr4d6' }],
     ['path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2', key: '116196' }],
-    ['path', { d: 'm15 11-6 6', key: '1toa9n' }],
-    ['path', { d: 'm9 11 6 6', key: 'wlibny' }],
+    ['path', { d: 'm14.5 11.5-5 5', key: '1eaq8h' }],
+    ['path', { d: 'm9.5 11.5 5 5', key: '1exjew' }],
   ],
   clipboard: [
     ['rect', { width: '8', height: '4', x: '8', y: '2', rx: '1', ry: '1', key: 'tgr4d6' }],
@@ -3320,6 +3802,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm14 18 4 4 4-4', key: '1waygx' }],
     ['path', { d: 'M18 14v8', key: 'irew45' }],
   ],
+  'clock-arrow-left': [
+    ['path', { d: 'M12 6v6l1.5.8', key: 'uc7jki' }],
+    ['path', { d: 'M12.338 21.994a10 10 0 1 1 9.587-8.767', key: '1lz5pu' }],
+    ['path', { d: 'M14 18h8', key: '1le3fr' }],
+    ['path', { d: 'm18 22-4-4 4-4', key: 'dh5o1f' }],
+  ],
+  'clock-arrow-right': [
+    ['path', { d: 'M12 6v6l2 1', key: '19cm8n' }],
+    ['path', { d: 'M13.5 21.885A10 10 0 1 1 22 12', key: 'xgp8as' }],
+    ['path', { d: 'M14 18h8', key: '1le3fr' }],
+    ['path', { d: 'm18 22 4-4-4-4', key: 'mordo3' }],
+  ],
   'clock-arrow-up': [
     ['path', { d: 'M12 6v6l1.56.78', key: '14ed3g' }],
     ['path', { d: 'M13.227 21.925a10 10 0 1 1 8.767-9.588', key: 'jwkls1' }],
@@ -3327,9 +3821,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M18 22v-8', key: 'su0gjh' }],
   ],
   'clock-check': [
+    ['path', { d: 'M21.95 13a10 10 0 1 0-8.685 8.92', key: '1ujumx' }],
     ['path', { d: 'M12 6v6l4 2', key: 'mmk7yg' }],
-    ['path', { d: 'M22 12a10 10 0 1 0-11 9.95', key: '17dhok' }],
-    ['path', { d: 'm22 16-5.5 5.5L14 19', key: '1eibut' }],
+    ['path', { d: 'm16 19 2 2 4-4', key: '1b14m6' }],
   ],
   'clock-fading': [
     ['path', { d: 'M12 2a10 10 0 0 1 7.38 16.75', key: '175t95' }],
@@ -3554,16 +4048,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 3v18', key: '108xh3' }],
   ],
   'columns-3-cog': [
-    ['path', { d: 'M10.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5.5', key: '1g2yzs' }],
-    ['path', { d: 'm14.3 19.6 1-.4', key: '11sv9r' }],
-    ['path', { d: 'M15 3v7.5', key: '7lm50a' }],
-    ['path', { d: 'm15.2 16.9-.9-.3', key: '1t7mvx' }],
-    ['path', { d: 'm16.6 21.7.3-.9', key: '1j67ps' }],
-    ['path', { d: 'm16.8 15.3-.4-1', key: '1ei7r6' }],
-    ['path', { d: 'm19.1 15.2.3-.9', key: '18r7jp' }],
-    ['path', { d: 'm19.6 21.7-.4-1', key: 'z2vh2' }],
-    ['path', { d: 'm20.7 16.8 1-.4', key: '19m87a' }],
-    ['path', { d: 'm21.7 19.4-.9-.3', key: '1qgwi9' }],
+    ['path', { d: 'M10.6 21H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v5.6', key: '19s2bv' }],
+    ['path', { d: 'm14.305 19.53.923-.382', key: '3m78fa' }],
+    ['path', { d: 'M15 3v7.6', key: 'mv9izd' }],
+    ['path', { d: 'm15.229 16.852-.924-.383', key: 'qpfz85' }],
+    ['path', { d: 'm16.852 15.228-.383-.923', key: '5xggr7' }],
+    ['path', { d: 'm16.852 20.772-.383.924', key: 'dpfhf9' }],
+    ['path', { d: 'm19.148 15.228.383-.923', key: '1reyyz' }],
+    ['path', { d: 'm19.53 21.696-.382-.924', key: '1goivc' }],
+    ['path', { d: 'm20.773 16.852.922-.383', key: '59dfo2' }],
+    ['path', { d: 'm20.773 19.148.922.383', key: '1lk755' }],
     ['path', { d: 'M9 3v18', key: 'fh3hqa' }],
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
   ],
@@ -3628,10 +4122,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   computer: [
-    ['rect', { width: '14', height: '8', x: '5', y: '2', rx: '2', key: 'wc9tft' }],
-    ['rect', { width: '20', height: '8', x: '2', y: '14', rx: '2', key: 'w68u3i' }],
-    ['path', { d: 'M6 18h2', key: 'rwmk9e' }],
     ['path', { d: 'M12 18h6', key: 'aqd8w3' }],
+    ['path', { d: 'M6 18h.01', key: 'uhywen' }],
+    ['path', { d: 'M8 6h1', key: 'tn6mkg' }],
+    ['rect', { x: '2', y: '14', width: '20', height: '8', rx: '2', key: 'rlpjsu' }],
+    ['rect', { x: '4', y: '2', width: '16', height: '12', rx: '2', key: 'fhup8x' }],
   ],
   'concierge-bell': [
     ['path', { d: 'M3 20a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1Z', key: '1pvr1r' }],
@@ -3655,17 +4150,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   ],
   'contact-round': [
     ['path', { d: 'M16 2v2', key: 'scm5qe' }],
-    ['path', { d: 'M17.915 22a6 6 0 0 0-12 0', key: 'suqz9p' }],
+    ['path', { d: 'M17.915 21a6 6 0 10-12 0', key: '13n4mv' }],
     ['path', { d: 'M8 2v2', key: 'pbkmx' }],
-    ['circle', { cx: '12', cy: '12', r: '4', key: '4exip2' }],
-    ['rect', { x: '3', y: '4', width: '18', height: '18', rx: '2', key: '12vinp' }],
+    ['circle', { cx: '12', cy: '11', r: '4', key: '1gt34v' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   contact: [
     ['path', { d: 'M16 2v2', key: 'scm5qe' }],
-    ['path', { d: 'M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2', key: '1waht3' }],
+    ['path', { d: 'M7 21v-2a2 2 0 012-2h6a2 2 0 012 2v2', key: 'k82dct' }],
     ['path', { d: 'M8 2v2', key: 'pbkmx' }],
-    ['circle', { cx: '12', cy: '11', r: '3', key: 'itu57m' }],
-    ['rect', { x: '3', y: '4', width: '18', height: '18', rx: '2', key: '12vinp' }],
+    ['circle', { cx: '12', cy: '10', r: '3', key: 'ilqhr7' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   container: [
     [
@@ -3685,12 +4180,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 18a6 6 0 0 0 0-12v12z', key: 'j4l70d' }],
   ],
   cookie: [
-    ['path', { d: 'M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5', key: 'laymnq' }],
-    ['path', { d: 'M8.5 8.5v.01', key: 'ue8clq' }],
-    ['path', { d: 'M16 15.5v.01', key: '14dtrp' }],
-    ['path', { d: 'M12 12v.01', key: 'u5ubse' }],
-    ['path', { d: 'M11 17v.01', key: '1hyl5a' }],
-    ['path', { d: 'M7 14v.01', key: 'uct60s' }],
+    ['path', { d: 'M11 17h.01', key: 'dukryu' }],
+    [
+      'path',
+      {
+        d: 'M11.496 2c.324-.016.558.292.529.615a4 4 0 004.235 4.368.713.713 0 01.758.757 4 4 0 004.366 4.237c.323-.03.63.204.614.527a10 10 0 01-2.915 6.566A1 1 0 114.93 4.918 10 10 0 0111.496 2',
+        key: '1x76et',
+      },
+    ],
+    ['path', { d: 'M12 12h.01', key: '1mp3jc' }],
+    ['path', { d: 'M16 16h.01', key: '1f9h7w' }],
+    ['path', { d: 'M16 3h.01', key: 'll0zb8' }],
+    ['path', { d: 'M21 4h.01', key: 'uw58yv' }],
+    ['path', { d: 'M21 8h.01', key: '17axm7' }],
+    ['path', { d: 'M7 14h.01', key: '1qa3f1' }],
+    ['path', { d: 'M9 8h.01', key: '1jwowd' }],
   ],
   'cooking-pot': [
     ['path', { d: 'M2 12h20', key: '9i4pu4' }],
@@ -3720,10 +4224,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2', key: 'zix9uf' }],
   ],
   'copy-x': [
-    ['line', { x1: '12', x2: '18', y1: '12', y2: '18', key: '1rg63v' }],
-    ['line', { x1: '12', x2: '18', y1: '18', y2: '12', key: 'ebkxgr' }],
-    ['rect', { width: '14', height: '14', x: '8', y: '8', rx: '2', ry: '2', key: '17jyea' }],
-    ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2', key: 'zix9uf' }],
+    ['path', { d: 'M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2', key: '1qd6ae' }],
+    ['rect', { x: '8', y: '8', width: '14', height: '14', rx: '2', key: '1an92s' }],
+    ['path', { d: 'm12.5 12.5 5 5', key: '1simgt' }],
+    ['path', { d: 'm12.5 17.5 5-5', key: 'pc59mn' }],
   ],
   copy: [
     ['rect', { width: '14', height: '14', x: '8', y: '8', rx: '2', ry: '2', key: '17jyea' }],
@@ -3732,10 +4236,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   copyleft: [
     ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
     ['path', { d: 'M9.17 14.83a4 4 0 1 0 0-5.66', key: '1sveal' }],
-  ],
-  copyright: [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'M14.83 14.83a4 4 0 1 1 0-5.66', key: '1i56pz' }],
   ],
   'corner-down-left': [
     ['path', { d: 'M20 4v7a4 4 0 0 1-4 4H4', key: '6o5b7l' }],
@@ -3769,6 +4269,24 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm15 14 5-5-5-5', key: '12vg1m' }],
     ['path', { d: 'M4 20v-7a4 4 0 0 1 4-4h12', key: '1lu4f8' }],
   ],
+  'cpu-ai': [
+    ['path', { d: 'M12 20v2', key: '1lh1kg' }],
+    ['path', { d: 'M12 2v2', key: 'tus03m' }],
+    ['path', { d: 'M16 9v6', key: '1arpx1' }],
+    ['path', { d: 'M17 20v2', key: '1rnc9c' }],
+    ['path', { d: 'M17 2v2', key: '11trls' }],
+    ['path', { d: 'M2 12h2', key: '1t8f8n' }],
+    ['path', { d: 'M2 17h2', key: '7oei6x' }],
+    ['path', { d: 'M2 7h2', key: 'asdhe0' }],
+    ['path', { d: 'M20 12h2', key: '1q8mjw' }],
+    ['path', { d: 'M20 17h2', key: '1fpfkl' }],
+    ['path', { d: 'M20 7h2', key: '1o8tra' }],
+    ['path', { d: 'M7 20v2', key: '4gnj0m' }],
+    ['path', { d: 'M7 2v2', key: '1i4yhu' }],
+    ['path', { d: 'M8 13h4', key: 'mvy7dd' }],
+    ['path', { d: 'M8 15v-4a2 2 0 014 0v4', key: '1ys9qo' }],
+    ['rect', { x: '4', y: '4', width: '16', height: '16', rx: '2', key: '1vbyd7' }],
+  ],
   cpu: [
     ['path', { d: 'M12 20v2', key: '1lh1kg' }],
     ['path', { d: 'M12 2v2', key: 'tus03m' }],
@@ -3790,9 +4308,48 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M10 9.3a2.8 2.8 0 0 0-3.5 1 3.1 3.1 0 0 0 0 3.4 2.7 2.7 0 0 0 3.5 1', key: '1ss3eq' }],
     ['path', { d: 'M17 9.3a2.8 2.8 0 0 0-3.5 1 3.1 3.1 0 0 0 0 3.4 2.7 2.7 0 0 0 3.5 1', key: '1od56t' }],
   ],
+  'credit-card-check': [
+    ['path', { d: 'M12.5 19H4a2 2 0 01-2-2V7a2 2 0 012-2h16a2 2 0 012 2v4', key: '1pfaq2' }],
+    ['path', { d: 'M2 10h20', key: '1ir3d8' }],
+    ['path', { d: 'M6 14h2', key: 'mk7k0u' }],
+    ['path', { d: 'm16 17 2 2 4-4', key: 'uh5qu3' }],
+  ],
+  'credit-card-minus': [
+    ['path', { d: 'M22 13V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h8.536', key: 'ljwgfh' }],
+    ['path', { d: 'M22 10H2', key: 'jawrgs' }],
+    ['path', { d: 'M6 14h2', key: 'mk7k0u' }],
+    ['path', { d: 'M16 17h6', key: '1ook5g' }],
+  ],
+  'credit-card-plus': [
+    ['path', { d: 'M22 11.354V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h8.536', key: '19x2x0' }],
+    ['path', { d: 'M22 10H2', key: 'jawrgs' }],
+    ['path', { d: 'M6 14h2', key: 'mk7k0u' }],
+    ['path', { d: 'M16 17h6', key: '1ook5g' }],
+    ['path', { d: 'M19 14v6', key: '1ckrd5' }],
+  ],
+  'credit-card-reader': [
+    ['path', { d: 'M15 16v1', key: '11t5ze' }],
+    [
+      'path',
+      {
+        d: 'M16.963 7.734A1 1 0 0015.999 7H8.003a1 1 0 00-.964.734L4.073 18.467A2 2 0 006 21h12a2 2 0 001.927-2.532z',
+        key: '83jfh2',
+      },
+    ],
+    ['path', { d: 'M2.678 8.5A2 2 0 012 7V5a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 01-.676 1.499', key: 'rj5azy' }],
+    ['path', { d: 'm9 21 2-14', key: '1em7wr' }],
+  ],
+  'credit-card-x': [
+    ['path', { d: 'M12.5 19H4a2 2 0 01-2-2V7a2 2 0 012-2h16a2 2 0 012 2v3.5', key: '187u2m' }],
+    ['path', { d: 'M2 10h20', key: '1ir3d8' }],
+    ['path', { d: 'M6 14h2', key: 'mk7k0u' }],
+    ['path', { d: 'm16.5 14.5 5 5', key: 'ozpm51' }],
+    ['path', { d: 'm21.5 14.5-5 5', key: '1bnlip' }],
+  ],
   'credit-card': [
     ['rect', { width: '20', height: '14', x: '2', y: '5', rx: '2', key: 'ynyp8z' }],
     ['line', { x1: '2', x2: '22', y1: '10', y2: '10', key: '1b3vmo' }],
+    ['path', { d: 'M6 14h2', key: 'mk7k0u' }],
   ],
   croissant: [
     ['path', { d: 'M10.2 18H4.774a1.5 1.5 0 0 1-1.352-.97 11 11 0 0 1 .132-6.487', key: '14kkz9' }],
@@ -3854,6 +4411,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M7 15a6.47 6.47 0 0 1 5 0 6.47 6.47 0 0 0 5 0', key: 'yjz344' }],
     ['path', { d: 'm12 8 1-6h2', key: '3ybfa4' }],
   ],
+  cupcake: [
+    ['path', { d: 'M12 22v-9', key: 'x3hkom' }],
+    ['path', { d: 'M14 4h1a3 3 0 013 3l-.004.125A4 4 0 0121 11v2', key: '1uimk1' }],
+    ['path', { d: 'm15.5 22 1.5-9', key: 'p3wz2u' }],
+    [
+      'path',
+      {
+        d: 'M21 13a1 1 0 01.919 1.394l-2.74 6.394A2 2 0 0117.34 22H6.659a2 2 0 01-1.838-1.212l-2.74-6.394A1 1 0 013 13z',
+        key: 'dykv9l',
+      },
+    ],
+    ['path', { d: 'M3 13v-2a4 4 0 013.003-3.875L6 7a3 3 0 013-3h1', key: '6kd3ki' }],
+    ['path', { d: 'M8.5 22 7 13', key: '1l6g57' }],
+    ['circle', { cx: '12', cy: '4', r: '2', key: 'muu5ef' }],
+  ],
   currency: [
     ['circle', { cx: '12', cy: '12', r: '8', key: '46899m' }],
     ['line', { x1: '3', x2: '6', y1: '3', y2: '6', key: '1jkytn' }],
@@ -3874,6 +4446,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M2 6h4', key: 'aawbzj' }],
     ['path', { d: 'M7 3a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1L10 4a1 1 0 0 0-1-1z', key: 'pr6s65' }],
   ],
+  'database-arrow-down': [
+    ['path', { d: 'm16 19 3 3 3-3', key: '1ibux0' }],
+    ['path', { d: 'M19 16v6', key: 'tddt3s' }],
+    ['path', { d: 'M21 12.536V5', key: 'zeza6i' }],
+    ['path', { d: 'M3 12A9 3 0 0 0 15.182 14.806', key: '11e5wb' }],
+    ['path', { d: 'M3 5V19A9 3 0 0 0 13.318 21.968', key: '1lyu4j' }],
+    ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
+  ],
+  'database-arrow-up': [
+    ['path', { d: 'M19 22v-6', key: 'qhmiwi' }],
+    ['path', { d: 'M21 12.536V5', key: 'zeza6i' }],
+    ['path', { d: 'm22 19-3-3-3 3', key: 'rn6bg2' }],
+    ['path', { d: 'M3 12A9 3 0 0 0 14.457 14.886', key: '1941vg' }],
+    ['path', { d: 'M3 5V19A9 3 0 0 0 13.318 21.968', key: '1lyu4j' }],
+    ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
+  ],
   'database-backup': [
     ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
     ['path', { d: 'M3 12a9 3 0 0 0 5 2.69', key: '1ui2ym' }],
@@ -3882,12 +4470,58 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 12v4h4', key: '1bxaet' }],
     ['path', { d: 'M13 20a5 5 0 0 0 9-3 4.5 4.5 0 0 0-4.5-4.5c-1.33 0-2.54.54-3.41 1.41L12 16', key: '1f4ei9' }],
   ],
+  'database-check': [
+    ['path', { d: 'm16 19 2 2 4-4', key: '1b14m6' }],
+    ['path', { d: 'M21 13.127V5', key: '59o5vz' }],
+    ['path', { d: 'M3 12A9 3 0 0 0 21 12', key: 'mv7ke4' }],
+    ['path', { d: 'M3 5V19A9 3 0 0 0 13.318 21.968', key: '1lyu4j' }],
+    ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
+  ],
+  'database-cog': [
+    ['path', { d: 'm14.305 19.53.923-.382', key: '3m78fa' }],
+    ['path', { d: 'm15.228 16.852-.923-.383', key: 'npixar' }],
+    ['path', { d: 'm16.852 15.228-.383-.923', key: '5xggr7' }],
+    ['path', { d: 'm16.852 20.772-.383.924', key: 'dpfhf9' }],
+    ['path', { d: 'm19.148 15.228.383-.923', key: '1reyyz' }],
+    ['path', { d: 'm19.53 21.696-.382-.924', key: '1goivc' }],
+    ['path', { d: 'm20.772 16.852.924-.383', key: 'htqkph' }],
+    ['path', { d: 'm20.772 19.148.924.383', key: '9w9pjp' }],
+    ['path', { d: 'M21 10.5V5', key: '177532' }],
+    ['path', { d: 'M3 12a9 3 0 0 0 7.599 2.963', key: '1asfn4' }],
+    ['path', { d: 'M3 5v14a9 3 0 0 0 8.148 2.987', key: 'ppu9tk' }],
+    ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
+    ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
+  ],
+  'database-minus': [
+    ['path', { d: 'M21 15V5', key: '1lbg5w' }],
+    ['path', { d: 'M22 19h-6', key: 'vcuq98' }],
+    ['path', { d: 'M3 12A9 3 0 0 0 21 12', key: 'mv7ke4' }],
+    ['path', { d: 'M3 5V19A9 3 0 0 0 13.318 21.968', key: '1lyu4j' }],
+    ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
+  ],
+  'database-plus': [
+    ['path', { d: 'M19 16v6', key: 'tddt3s' }],
+    ['path', { d: 'M21 12.536V5', key: 'zeza6i' }],
+    ['path', { d: 'M22 19h-6', key: 'vcuq98' }],
+    ['path', { d: 'M3 12A9 3 0 0 0 15.1824 14.8061', key: 'ukc3b1' }],
+    ['path', { d: 'M3 5V19A9 3 0 0 0 13.318 21.968', key: '1lyu4j' }],
+    ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
+  ],
   'database-search': [
     ['path', { d: 'M21 11.693V5', key: '175m1t' }],
     ['path', { d: 'm22 22-1.875-1.875', key: '13zax7' }],
     ['path', { d: 'M3 12a9 3 0 0 0 8.697 2.998', key: '151u9p' }],
     ['path', { d: 'M3 5v14a9 3 0 0 0 9.28 2.999', key: 'q2rs2p' }],
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
+    ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
+  ],
+  'database-x': [
+    ['path', { d: 'm17 17 5 5', key: 'p7ous7' }],
+    ['path', { d: 'M19.323 13.744A9 3 0 0 0 21 12', key: 'hmry77' }],
+    ['path', { d: 'M21 13.127V5', key: '59o5vz' }],
+    ['path', { d: 'm22 17-5 5', key: 'gqnmv0' }],
+    ['path', { d: 'M3 12A9 3 0 0 0 13.563 14.954', key: '1rmyhq' }],
+    ['path', { d: 'M3 5V19A9 3 0 0 0 13 21.981', key: '159k2m' }],
     ['ellipse', { cx: '12', cy: '5', rx: '9', ry: '3', key: 'msslwz' }],
   ],
   'database-zap': [
@@ -4113,8 +4747,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   'dollar-sign': [
-    ['line', { x1: '12', x2: '12', y1: '2', y2: '22', key: '7eqyqh' }],
-    ['path', { d: 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6', key: '1b0p4s' }],
+    ['path', { d: 'M12 3v18', key: '108xh3' }],
+    ['path', { d: 'M17 5H9.5a1 1 0 000 7h5a1 1 0 010 7H6', key: 'pwzcbw' }],
+  ],
+  dome: [
+    ['path', { d: 'M10 21v-3a2 2 0 014 0v3', key: '109363' }],
+    ['path', { d: 'M12 2v2', key: 'tus03m' }],
+    ['path', { d: 'M18 12v9', key: 'igdtv6' }],
+    ['path', { d: 'M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2v-6a1 1 0 011-1h18a1 1 0 011 1z', key: 'ggamol' }],
+    ['path', { d: 'M4 12a8 8 0 0116 0', key: 'ug8bwn' }],
+    ['path', { d: 'M6 12v9', key: '9e33v1' }],
   ],
   donut: [
     [
@@ -4126,32 +4768,54 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['circle', { cx: '12', cy: '12', r: '3', key: '1v7zrd' }],
   ],
+  'door-closed-cog': [
+    ['path', { d: 'm14.305 19.53.923-.382', key: '3m78fa' }],
+    ['path', { d: 'm15.229 16.852-.924-.383', key: 'qpfz85' }],
+    ['path', { d: 'm16.852 15.228-.383-.923', key: '5xggr7' }],
+    ['path', { d: 'm16.852 20.773-.383.924', key: '14cn6x' }],
+    ['path', { d: 'M19 10.35V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16', key: '19nivt' }],
+    ['path', { d: 'm19.148 15.228.383-.923', key: '1reyyz' }],
+    ['path', { d: 'm19.53 21.697-.382-.924', key: 'x9j19g' }],
+    ['path', { d: 'M2 21h8.58', key: '10z3zh' }],
+    ['path', { d: 'm20.773 16.852.922-.383', key: '59dfo2' }],
+    ['path', { d: 'm20.773 19.148.922.383', key: '1lk755' }],
+    ['path', { d: 'M9 12h.01', key: '157uk2' }],
+    ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
+  ],
   'door-closed-locked': [
-    ['path', { d: 'M10 12h.01', key: '1kxr2c' }],
-    ['path', { d: 'M18 9V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14', key: '1bnhmg' }],
-    ['path', { d: 'M2 20h8', key: '10ntw1' }],
-    ['path', { d: 'M20 17v-2a2 2 0 1 0-4 0v2', key: 'pwaxnr' }],
-    ['rect', { x: '14', y: '17', width: '8', height: '5', rx: '1', key: '15pjcy' }],
+    ['path', { d: 'M19 8V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16', key: '18uk87' }],
+    ['path', { d: 'M2 21h8', key: 'oshpy' }],
+    ['path', { d: 'M20 16v-2a2 2 0 00-4 0v2', key: '1xumi5' }],
+    ['path', { d: 'M9 12h.01', key: '157uk2' }],
+    ['rect', { x: '14', y: '16', width: '8', height: '5', rx: '1', key: '1rp9x2' }],
+  ],
+  'door-closed-package': [
+    ['path', { d: 'M18 13v3', key: '1uyp25' }],
+    ['path', { d: 'M19 9V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16', key: 'ia57q' }],
+    ['path', { d: 'M2 21h8', key: 'oshpy' }],
+    ['path', { d: 'M9 12h.01', key: '157uk2' }],
+    ['rect', { x: '14', y: '13', width: '8', height: '8', rx: '1', key: '1ecvqg' }],
   ],
   'door-closed': [
-    ['path', { d: 'M10 12h.01', key: '1kxr2c' }],
-    ['path', { d: 'M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14', key: '36qu9e' }],
-    ['path', { d: 'M2 20h20', key: 'owomy5' }],
+    ['path', { d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16', key: '4uynto' }],
+    ['path', { d: 'M2 21h20', key: '1nyx9w' }],
+    ['path', { d: 'M9 12h.01', key: '157uk2' }],
   ],
   'door-open': [
-    ['path', { d: 'M11 20H2', key: 'nlcfvz' }],
-    [
-      'path',
-      {
-        d: 'M11 4.562v16.157a1 1 0 0 0 1.242.97L19 20V5.562a2 2 0 0 0-1.515-1.94l-4-1A2 2 0 0 0 11 4.561z',
-        key: 'au4z13',
-      },
-    ],
-    ['path', { d: 'M11 4H8a2 2 0 0 0-2 2v14', key: '74r1mk' }],
+    ['path', { d: 'M10 21H2', key: '1sthdo' }],
+    ['path', { d: 'M10 3H7a2 2 0 00-2 2v16', key: '15gt7x' }],
     ['path', { d: 'M14 12h.01', key: '1jfl7z' }],
-    ['path', { d: 'M22 20h-3', key: 'vhrsz' }],
+    ['path', { d: 'M19 21V5a2 2 0 00-1.675-1.974l-6.163-1.013A1 1 0 0010 3v18a1 1 0 001.124.992z', key: 'tyvg9a' }],
+    ['path', { d: 'M22 21h-3', key: '1ec3tr' }],
   ],
-  dot: [['circle', { cx: '12.1', cy: '12.1', r: '1', key: '18d7e5' }]],
+  'door-stairwell': [
+    ['path', { d: 'M12 17v-3a1 1 0 011-1h6', key: '1skdtv' }],
+    ['path', { d: 'M19 17h-9a1 1 0 00-1 1v3', key: 'to8zj0' }],
+    ['path', { d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16', key: '4uynto' }],
+    ['path', { d: 'M19 9h-3a1 1 0 00-1 1v3', key: '1r4j1u' }],
+    ['path', { d: 'M22 21H2', key: '1gy6en' }],
+  ],
+  dot: [['circle', { cx: '12', cy: '12', r: '1', key: '41hilf' }]],
   download: [
     ['path', { d: 'M12 15V3', key: 'm9g1x1' }],
     ['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', key: 'ih7n3h' }],
@@ -4284,6 +4948,40 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0', key: '1dfaln' }],
     ['path', { d: 'M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4', key: '1qnva7' }],
   ],
+  'earbuds-off': [
+    [
+      'path',
+      {
+        d: 'M10 10v9a2 2 0 01-4 0v-8a5 5 0 01-3.75-1.693A1 1 0 012 8.646V5.354a1 1 0 01.25-.661 5 5 0 011.359-1.084',
+        key: '1wg918',
+      },
+    ],
+    ['path', { d: 'M14 14v5a2 2 90 004 0v-1', key: '19xl4q' }],
+    [
+      'path',
+      {
+        d: 'M18 12.343V11a5 5 90 003.75-1.693 1 1 90 00.25-.661V5.354a1 1 90 00-.25-.661A5 5 90 0018 3a4 4 90 00-4 4v1.343',
+        key: '16xbui',
+      },
+    ],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+  ],
+  earbuds: [
+    [
+      'path',
+      {
+        d: 'M18 3a4 4 90 00-4 4v12a2 2 90 004 0v-8a5 5 90 003.75-1.693 1 1 90 00.25-.661V5.354a1 1 90 00-.25-.661A5 5 90 0018 3',
+        key: '11kxgw',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M6 3a4 4 0 014 4v12a2 2 0 01-4 0v-8a5 5 0 01-3.75-1.693A1 1 0 012 8.646V5.354a1 1 0 01.25-.661A5 5 0 016 3',
+        key: '14gtst',
+      },
+    ],
+  ],
   'earth-lock': [
     ['path', { d: 'M7 3.34V5a3 3 0 0 0 3 3', key: 'w732o8' }],
     ['path', { d: 'M11 21.95V18a2 2 0 0 0-2-2 2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05', key: 'f02343' }],
@@ -4321,6 +5019,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M6.206 6.21C4.871 8.4 4 11.2 4 14a8 8 0 0 0 14.568 4.568', key: '1581id' }],
   ],
   egg: [['path', { d: 'M12 2C8 2 4 8 4 14a8 8 0 0 0 16 0c0-6-4-12-8-12', key: '1le142' }]],
+  'eighth-note': [
+    ['path', { d: 'm19 6-5.2-3.9a.5.5 0 0 0-.8.4V18', key: 'nsdg4r' }],
+    ['circle', { cx: '9', cy: '18', r: '4', key: '1972g7' }],
+  ],
+  'eighth-notes': [
+    ['path', { d: 'M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19', key: 'uy6ho8' }],
+    ['circle', { cx: '18', cy: '16', r: '3', key: '1hluhg' }],
+    ['circle', { cx: '6', cy: '19', r: '3', key: '1kj8tv' }],
+  ],
+  eject: [
+    [
+      'path',
+      { d: 'M4 13a1 1 0 0 1-.72-1.695l7.257-7.668a2 2 0 0 1 2.926 0l7.256 7.668A1 1 0 0 1 20 13z', key: 'ua5u6w' },
+    ],
+    ['rect', { x: '3', y: '17', width: '18', height: '4', rx: '1', key: 'kj6cfs' }],
+  ],
   ellipse: [['ellipse', { cx: '12', cy: '12', rx: '10', ry: '6', key: 'swdkt4' }]],
   'ellipsis-vertical': [
     ['circle', { cx: '12', cy: '12', r: '1', key: '41hilf' }],
@@ -4331,6 +5045,29 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '12', cy: '12', r: '1', key: '41hilf' }],
     ['circle', { cx: '19', cy: '12', r: '1', key: '1wjl8i' }],
     ['circle', { cx: '5', cy: '12', r: '1', key: '1pcz8c' }],
+  ],
+  'emirati-dirham': [
+    ['path', { d: 'M11 4a8 8 0 0 1 0 16H6.406A.4.4 0 0 1 6 19.594V4.406A.4.4 0 0 1 6.406 4z', key: '1vb4d1' }],
+    ['path', { d: 'M4 10h17', key: 'pjix64' }],
+    ['path', { d: 'M4 14h17', key: '426kq0' }],
+  ],
+  engine: [
+    ['path', { d: 'M10 3h6', key: '1f0zxz' }],
+    ['path', { d: 'M13 3v4', key: 'vu7fyc' }],
+    ['path', { d: 'M2 10v6', key: 'c2i6v8' }],
+    ['path', { d: 'M2 13h4', key: '14htpc' }],
+    [
+      'path',
+      {
+        d: 'M6 16a2 2 0 002 2h1a2 2 0 011.6.8l.3.4a2 2 0 001.6.8h2.264a2 2 0 001.789-1.106l1.67-3.341a1 1 0 01.895-.553H21a1 1 0 001-1v-4a1 1 0 00-1-1h-3.5a1 1 0 01-.8-.4l-.9-1.2A1 1 0 0015 7h-4a1 1 0 00-.8.4l-.9 1.2a1 1 0 01-.8.4H7a1 1 0 00-1 1z',
+        key: '1bwqof',
+      },
+    ],
+  ],
+  'equal-approximately-not': [
+    ['path', { d: 'M5 15a6.5 6.5 0 0 1 7 0 6.5 6.5 0 0 0 7 0', key: 'yrdkhy' }],
+    ['path', { d: 'M5 9a6.5 6.5 0 0 1 7 0 6.5 6.5 0 0 0 7 0', key: 'gzkvyz' }],
+    ['line', { x1: '19', x2: '5', y1: '5', y2: '19', key: '1x9vlm' }],
   ],
   'equal-approximately': [
     ['path', { d: 'M5 15a6.5 6.5 0 0 1 7 0 6.5 6.5 0 0 0 7 0', key: 'yrdkhy' }],
@@ -4356,11 +5093,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm5.082 11.09 8.828 8.828', key: '1wx5vj' }],
   ],
   'ethernet-port': [
-    ['path', { d: 'm15 20 3-3h2a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2l3 3z', key: 'rbahqx' }],
-    ['path', { d: 'M6 8v1', key: '1636ez' }],
     ['path', { d: 'M10 8v1', key: '1talb4' }],
     ['path', { d: 'M14 8v1', key: '1rsfgr' }],
     ['path', { d: 'M18 8v1', key: 'gnkwox' }],
+    [
+      'path',
+      {
+        d: 'M19 17a2 2 0 00-1.765 1.059l-.47.882A2 2 0 0115 20H9a2 2 0 01-1.765-1.059l-.47-.882A2 2 0 005 17H4a2 2 0 01-2-2V6a2 2 0 012-2h16a2 2 0 012 2v9a2 2 0 01-2 2z',
+        key: 'v5qa57',
+      },
+    ],
+    ['path', { d: 'M6 8v1', key: '1636ez' }],
   ],
   euro: [
     ['path', { d: 'M4 10h12', key: '1y6xl8' }],
@@ -4396,6 +5139,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm4 15 1.726-2.05', key: '1dsqqd' }],
     ['path', { d: 'm9 18 .722-3.25', key: 'ypw2yx' }],
   ],
+  'eye-dashed': [
+    ['path', { d: 'M13.054 18.946a11 11 0 0 1-2.11 0', key: '1lgjj0' }],
+    ['path', { d: 'M13.054 5.054a11 11 0 0 0-2.11-.001', key: 'f7voaa' }],
+    ['path', { d: 'M17.072 6.274a11 11 0 0 1 1.753 1.173', key: '1rga24' }],
+    ['path', { d: 'M18.825 16.552a11 11 0 0 1-1.753 1.174', key: 'jfvai2' }],
+    ['path', { d: 'M2.514 13.303a11 11 0 0 1-.452-.954 1 1 0 0 1 0-.697 11 11 0 0 1 .45-.955', key: '1deed4' }],
+    ['path', { d: 'M21.485 10.697a11 11 0 0 1 .453.955 1 1 0 0 1 0 .697 11 11 0 0 1-.453.954', key: '1k4xil' }],
+    ['path', { d: 'M5.173 7.448a11 11 0 0 1 1.753-1.174', key: 'mwd8rq' }],
+    ['path', { d: 'M6.926 17.726a11 11 0 0 1-1.753-1.174', key: '15rpim' }],
+    ['circle', { cx: '12', cy: '12', r: '3', key: '1v7zrd' }],
+  ],
   'eye-off': [
     [
       'path',
@@ -4424,6 +5178,55 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['circle', { cx: '12', cy: '12', r: '3', key: '1v7zrd' }],
   ],
+  'face-angry': [
+    ['path', { d: 'M15 12v-1.584', key: '1md67h' }],
+    ['path', { d: 'M17 10a5 5 0 00-3 1', key: '1dqs4m' }],
+    ['path', { d: 'M7 10a5 5 0 013 1', key: '1okmnq' }],
+    ['path', { d: 'M9 12v-1.584', key: 'cfo04w' }],
+    ['path', { d: 'M9 17a5 5 0 016.001 0', key: 'ipdrmp' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'face-expressionless': [
+    ['path', { d: 'M14 10h2', key: '1lstlu' }],
+    ['path', { d: 'M8 10h2', key: '66od0' }],
+    ['path', { d: 'M8 16h8', key: '10ke2u' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'face-grinning': [
+    ['path', { d: 'M15 10V9', key: '4dkmfx' }],
+    [
+      'path',
+      { d: 'M7.084 14.302a5.12 5.12 0 009.833 0 .24.24 0 00-.235-.302H7.32a.24.24 0 00-.235.302', key: '1ad3z7' },
+    ],
+    ['path', { d: 'M9 10V9', key: '1lazqi' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'face-neutral': [
+    ['path', { d: 'M15 10V9', key: '4dkmfx' }],
+    ['path', { d: 'M8 16h8', key: '10ke2u' }],
+    ['path', { d: 'M9 10V9', key: '1lazqi' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'face-slightly-frowning': [
+    ['path', { d: 'M15 10V9', key: '4dkmfx' }],
+    ['path', { d: 'M9 10V9', key: '1lazqi' }],
+    ['path', { d: 'M9 16a5 5 0 016 0', key: '34mdxb' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'face-slightly-smiling-plus': [
+    ['path', { d: 'M13.267 2.08a10 10 0 108.653 8.653', key: '1wbpyh' }],
+    ['path', { d: 'M15 10V9', key: '4dkmfx' }],
+    ['path', { d: 'M16 5h6', key: '1vod17' }],
+    ['path', { d: 'M16.472 15a6 6 0 01-8.943 0', key: '7qomzy' }],
+    ['path', { d: 'M19 2v6', key: '4bpg5p' }],
+    ['path', { d: 'M9 10V9', key: '1lazqi' }],
+  ],
+  'face-slightly-smiling': [
+    ['path', { d: 'M15 10V9', key: '4dkmfx' }],
+    ['path', { d: 'M16.472 15a6 6 0 01-8.943 0', key: '7qomzy' }],
+    ['path', { d: 'M9 10V9', key: '1lazqi' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
   factory: [
     ['path', { d: 'M12 16h.01', key: '1drbdi' }],
     ['path', { d: 'M16 16h.01', key: '1f9h7w' }],
@@ -4450,16 +5253,28 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 12 18z', key: 'b19h5q' }],
     ['path', { d: 'M2 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 2 18z', key: 'h7h5ge' }],
   ],
-  feather: [
+  faucet: [
+    ['path', { d: 'M10.083 5.428 5.57 4.083a2 2 0 10.001 3.834l4.512-1.345', key: '1curt5' }],
+    ['path', { d: 'M12 8v3', key: 'hwp4zt' }],
+    ['path', { d: 'm13.917 5.428 4.511-1.345a2 2 0 110 3.834l-4.51-1.345', key: '1j1ygv' }],
+    ['path', { d: 'M18 17v-4.006', key: '1ovurp' }],
+    ['path', { d: 'M22 11v8', key: '15un1y' }],
     [
       'path',
       {
-        d: 'M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z',
-        key: '18jl4k',
+        d: 'M22 12h-3a1 1 0 00-1 .994h-2.539a4 4 0 00-6.915-.012L7 13a5 5 0 00-5 5v1a1 1 0 001 1h2a1 1 0 001-1v-1a1 1 0 01.995-1l1.552.018a4 4 0 006.907 0L18 17a1 1 0 001 1h3',
+        key: '2dw4iy',
       },
     ],
+    ['circle', { cx: '12', cy: '6', r: '2', key: '1jj5th' }],
+  ],
+  feather: [
+    [
+      'path',
+      { d: 'M14.086 18.412A2 2 0 0112.67 19H5v-7.672a2 2 0 01.586-1.414L11.75 3.75a6 6 0 118.49 8.49z', key: '1nq9jb' },
+    ],
     ['path', { d: 'M16 8 2 22', key: 'vp34q' }],
-    ['path', { d: 'M17.5 15H9', key: '1oz8nu' }],
+    ['path', { d: 'M17.488 15H9', key: '16yirz' }],
   ],
   fence: [
     ['path', { d: 'M4 3 2 5v15c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V5Z', key: '1n2rgs' }],
@@ -4526,23 +5341,23 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '6', cy: '14', r: '3', key: 'a1xfv6' }],
   ],
   'file-box': [
+    ['path', { d: 'M14 2v5a1 1 0 001 1h5', key: '9v5fu7' }],
     [
       'path',
       {
-        d: 'M14.5 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v3.8',
-        key: '1kchwa',
+        d: 'M14.692 22H18a2 2 0 002-2V8a2.4 2.4 0 00-.706-1.706l-3.588-3.588A2.4 2.4 0 0014 2H6a2 2 0 00-2 2v3.804',
+        key: '1ne0j7',
       },
     ],
-    ['path', { d: 'M14 2v5a1 1 0 0 0 1 1h5', key: 'wfsgrz' }],
-    ['path', { d: 'M11.7 14.2 7 17l-4.7-2.8', key: '1yk8tc' }],
+    ['path', { d: 'M2.264 13.752 7 16.5l4.737-2.748', key: 't73mg3' }],
     [
       'path',
       {
-        d: 'M3 13.1a2 2 0 0 0-.999 1.76v3.24a2 2 0 0 0 .969 1.78L6 21.7a2 2 0 0 0 2.03.01L11 19.9a2 2 0 0 0 1-1.76V14.9a2 2 0 0 0-.97-1.78L8 11.3a2 2 0 0 0-2.03-.01z',
-        key: '19flxy',
+        d: 'M2.995 13.014A2 2 0 002 14.744v3.516a2 2 0 00.996 1.73l3 1.74a2 2 0 002.008 0l3-1.74A2 2 0 0012 18.26v-3.517a2 2 0 00-.995-1.73l-3-1.742a2 2 0 00-1.892-.064z',
+        key: 'h4qck',
       },
     ],
-    ['path', { d: 'M7 17v5', key: '1yj1jh' }],
+    ['path', { d: 'M7 16.5V22', key: '1i1gou' }],
   ],
   'file-braces-corner': [
     [
@@ -5367,22 +6182,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M5 15h14', key: 'm0yey3' }],
     ['path', { d: 'M8.5 2h7', key: 'csnxdl' }],
   ],
-  'flip-horizontal-2': [
-    ['path', { d: 'm3 7 5 5-5 5V7', key: 'couhi7' }],
-    ['path', { d: 'm21 7-5 5 5 5V7', key: '6ouia7' }],
-    ['path', { d: 'M12 20v2', key: '1lh1kg' }],
-    ['path', { d: 'M12 14v2', key: '8jcxud' }],
-    ['path', { d: 'M12 8v2', key: '1woqiv' }],
-    ['path', { d: 'M12 2v2', key: 'tus03m' }],
-  ],
-  'flip-vertical-2': [
-    ['path', { d: 'm17 3-5 5-5-5h10', key: '1ftt6x' }],
-    ['path', { d: 'm17 21-5-5-5 5h10', key: '1m0wmu' }],
-    ['path', { d: 'M4 12H2', key: 'rhcxmi' }],
-    ['path', { d: 'M10 12H8', key: 's88cx1' }],
-    ['path', { d: 'M16 12h-2', key: '10asgb' }],
-    ['path', { d: 'M22 12h-2', key: '14jgyd' }],
-  ],
   'flower-2': [
     [
       'path',
@@ -5454,12 +6253,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M15 17v-2', key: '1279jj' }],
   ],
   'folder-bookmark': [
-    ['path', { d: 'M12 6v8l3-3 3 3V6', key: '11pvqx' }],
     [
       'path',
       {
-        d: 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z',
-        key: '1u1bxd',
+        d: 'M12 6v7.751a.25.25 0 00.407.195l2.28-1.834a.5.5 0 01.627 0l2.28 1.834a.25.25 0 00.406-.195V6',
+        key: 'd4trya',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M20 20a2 2 0 002-2V8a2 2 0 00-2-2h-7.9a2 2 0 01-1.69-.9L9.6 3.9A2 2 0 007.93 3H4a2 2 0 00-2 2v13a2 2 0 002 2z',
+        key: '1qsbi2',
       },
     ],
   ],
@@ -5782,6 +6587,29 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 10v6', key: '1bos4e' }],
     ['path', { d: 'm9 13 3-3 3 3', key: '1pxg3c' }],
   ],
+  'folder-user': [
+    [
+      'path',
+      {
+        d: 'M10.254 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2V9.255',
+        key: '2h2hvb',
+      },
+    ],
+    ['path', { d: 'M22 22a4 4 0 0 0-8 0', key: '17r3y1' }],
+    ['circle', { cx: '18', cy: '15', r: '3', key: 'gjjjvw' }],
+  ],
+  'folder-users': [
+    [
+      'path',
+      {
+        d: 'M5.254 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2V9.255',
+        key: '1rporr',
+      },
+    ],
+    ['circle', { cx: '13', cy: '15', r: '3', key: 'n2jvxj' }],
+    ['path', { d: 'M17 22a4 4 0 0 0-8 0', key: '1q7oy8' }],
+    ['path', { d: 'M22 22A4 4 0 0 0 20.24 18.686 1 1 0 0 1 20.1 17.143 3 3 0 0 0 19.5 12.402', key: '75th5l' }],
+  ],
   'folder-x': [
     [
       'path',
@@ -5855,12 +6683,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['line', { x1: '6', x2: '6', y1: '2', y2: '22', key: 'a2lnyx' }],
     ['line', { x1: '18', x2: '18', y1: '2', y2: '22', key: '8vb6jd' }],
   ],
-  frown: [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'M16 16s-1.5-2-4-2-4 2-4 2', key: 'epbg0q' }],
-    ['line', { x1: '9', x2: '9.01', y1: '9', y2: '9', key: 'yxxnd0' }],
-    ['line', { x1: '15', x2: '15.01', y1: '9', y2: '9', key: '1p4y9e' }],
-  ],
   fuel: [
     ['path', { d: 'M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5', key: '1wtuz0' }],
     ['path', { d: 'M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16', key: 'e09ifn' }],
@@ -5904,6 +6726,19 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: 'sc7q7i',
       },
     ],
+  ],
+  galaxy: [
+    [
+      'path',
+      {
+        d: 'M16.005 15.108a5.041 6.52 28.25 00-8.008-6.217 5.041 6.52 28.25 008.008 6.217A11.884 7.288-60.76 014.029 7.001',
+        key: '1w3uyc',
+      },
+    ],
+    ['path', { d: 'M17 21h.01', key: '1yigvh' }],
+    ['path', { d: 'M7 3h.01', key: 'we4yfo' }],
+    ['path', { d: 'M7.997 8.891a11.885 7.288-60.756 0111.977 8.107', key: 'mpf5op' }],
+    ['circle', { cx: '12', cy: '12', r: '1', fill: 'currentColor', key: '1t76vf' }],
   ],
   'gallery-horizontal-end': [
     ['path', { d: 'M2 7v10', key: 'a2pl2d' }],
@@ -5982,6 +6817,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['line', { x1: '18', x2: '18.01', y1: '11', y2: '11', key: 'meh2c' }],
     ['rect', { width: '20', height: '12', x: '2', y: '6', rx: '2', key: '9lu3g6' }],
   ],
+  'gap-horizontal': [
+    ['path', { d: 'M12 2v2', key: 'tus03m' }],
+    ['path', { d: 'M12 8v2', key: '1woqiv' }],
+    ['path', { d: 'M12 14v2', key: '8jcxud' }],
+    ['path', { d: 'M12 20v2', key: '1lh1kg' }],
+    ['path', { d: 'M21 3h-3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3', key: 'sixnkk' }],
+    ['path', { d: 'M3 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H3', key: 'z694kp' }],
+  ],
+  'gap-vertical': [
+    ['path', { d: 'M2 12h2', key: '1t8f8n' }],
+    ['path', { d: 'M8 12h2', key: 'f27al2' }],
+    ['path', { d: 'M14 12h2', key: '5yx4ln' }],
+    ['path', { d: 'M20 12h2', key: '1q8mjw' }],
+    ['path', { d: 'M3 21v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3', key: 'mbp45m' }],
+    ['path', { d: 'M3 3v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3', key: 'kci8nr' }],
+  ],
   gauge: [
     ['path', { d: 'm12 14 4-4', key: '9kzdfg' }],
     ['path', { d: 'M3.34 19a10 10 0 1 1 17.32 0', key: '19p75a' }],
@@ -6005,15 +6856,56 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M2 9h20', key: '16fsjt' }],
   ],
   'georgian-lari': [
-    ['path', { d: 'M11.5 21a7.5 7.5 0 1 1 7.35-9', key: '1gyj8k' }],
-    ['path', { d: 'M13 12V3', key: '18om2a' }],
-    ['path', { d: 'M4 21h16', key: '1h09gz' }],
-    ['path', { d: 'M9 12V3', key: 'geutu0' }],
+    ['path', { d: 'M10 10V3', key: 'we2wk2' }],
+    ['path', { d: 'M14 10V3', key: 'uvx26u' }],
+    ['path', { d: 'M19 13a7 7 0 10-7 7', key: 'ic4q8w' }],
+    ['path', { d: 'M5 20h14', key: '1dxev2' }],
+  ],
+  'germ-off': [
+    ['path', { d: 'm11 2 .925 1.848', key: 'geewpq' }],
+    ['path', { d: 'M13 15h.01', key: 'igtdqu' }],
+    ['path', { d: 'M13.424 7.768a2 2 0 112.808 2.808', key: '1e1m3r' }],
+    ['path', { d: 'm16 21-1-2.472', key: '197l0j' }],
+    ['path', { d: 'M16.988 16.988A12 12 0 019 20a5 5 0 01-2.759-9.171 8.8 8.8 0 002.307-2.28', key: '1ydoa0' }],
+    ['path', { d: 'm19 2-1 1.804', key: 'qavonm' }],
+    ['path', { d: 'm2 19 2.746-1.373', key: '1mv7mx' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'm22 16-2.474-2.13a12 12 0 001.376-3.786 6 6 0 00-10.313-5.151', key: '11ksly' }],
+    ['path', { d: 'm22 5-1.804 1', key: '8v36m5' }],
+    ['path', { d: 'm3 10 2 2', key: '1n5c32' }],
+    ['path', { d: 'M9 16h.01', key: '1zau5q' }],
+    ['path', { d: 'M9 20v2', key: 'i2bqo8' }],
+  ],
+  germ: [
+    ['path', { d: 'm11 2 .925 1.848', key: 'geewpq' }],
+    ['path', { d: 'M13 15h.01', key: 'igtdqu' }],
+    ['path', { d: 'm16 21-1-2.472', key: '197l0j' }],
+    ['path', { d: 'm19 2-1 1.804', key: 'qavonm' }],
+    ['path', { d: 'm2 19 2.746-1.373', key: '1mv7mx' }],
+    ['path', { d: 'm22 16-2.474-2.13', key: '1hzzot' }],
+    ['path', { d: 'm22 5-1.804 1', key: '8v36m5' }],
+    ['path', { d: 'm3 10 2 2', key: '1n5c32' }],
+    ['path', { d: 'M9 16h.01', key: '1zau5q' }],
+    ['path', { d: 'M9 20v2', key: 'i2bqo8' }],
+    [
+      'path',
+      {
+        d: 'M9.33 7.035c-.51 1.478-1.786 2.93-3.09 3.794A5 5 0 009 20a12.1 12.1 0 0011.902-9.916A6 6 0 009.33 7.035',
+        key: 'lfugof',
+      },
+    ],
+    ['circle', { cx: '15', cy: '9', r: '2', key: '14ricq' }],
   ],
   ghost: [
-    ['path', { d: 'M9 10h.01', key: 'qbtxuw' }],
-    ['path', { d: 'M15 10h.01', key: '1qmjsl' }],
-    ['path', { d: 'M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z', key: 'uwwb07' }],
+    ['path', { d: 'M15 10v1', key: 'oj8wfp' }],
+    [
+      'path',
+      {
+        d: 'M7.528 20.472a1.6 1.6 0 012.277 0l1.057 1.056a1.6 1.6 0 002.276 0l1.057-1.056a1.6 1.6 0 012.277 0l1.114 1.114a1.4 1.4 0 002.414-1V10a8 8 0 00-16 0v10.586a1.4 1.4 0 002.414 1z',
+        key: '13lou3',
+      },
+    ],
+    ['path', { d: 'M9 10v1', key: '1e14fa' }],
   ],
   gift: [
     ['path', { d: 'M12 7v14', key: '1akyts' }],
@@ -6082,8 +6974,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   'git-merge-conflict': [
     ['path', { d: 'M12 6h4a2 2 0 0 1 2 2v7', key: '18ej7s' }],
     ['path', { d: 'M6 12v9', key: '9e33v1' }],
-    ['path', { d: 'M9 3 3 9', key: 'ahyygn' }],
-    ['path', { d: 'M9 9 3 3', key: 'v551iv' }],
+    ['path', { d: 'm8.5 3.5-5 5', key: 'cpmru9' }],
+    ['path', { d: 'm8.5 8.5-5-5', key: '1blc57' }],
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
   ],
   'git-merge': [
@@ -6099,12 +6991,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 6h5a2 2 0 0 1 2 2v7', key: '1yj91y' }],
   ],
   'git-pull-request-closed': [
-    ['circle', { cx: '6', cy: '6', r: '3', key: '1lh9wr' }],
+    ['path', { d: 'm15.5 3.5 5 5', key: '1kmx7t' }],
+    ['path', { d: 'm15.5 8.5 5-5', key: 'saftza' }],
+    ['path', { d: 'M18 11.62V15', key: '1greaj' }],
     ['path', { d: 'M6 9v12', key: '1sc30k' }],
-    ['path', { d: 'm21 3-6 6', key: '16nqsk' }],
-    ['path', { d: 'm21 9-6-6', key: '9j17rh' }],
-    ['path', { d: 'M18 11.5V15', key: '65xf6f' }],
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
+    ['circle', { cx: '6', cy: '6', r: '3', key: '1lh9wr' }],
   ],
   'git-pull-request-create-arrow': [
     ['circle', { cx: '5', cy: '6', r: '3', key: '1qnov2' }],
@@ -6150,6 +7042,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M14 15a2 2 0 0 0-2-2 2 2 0 0 0-2 2', key: '1ag4bs' }],
     ['path', { d: 'M2.5 13 5 7c.7-1.3 1.4-2 3-2', key: '1hm1gs' }],
     ['path', { d: 'M21.5 13 19 7c-.7-1.3-1.5-2-3-2', key: '1r31ai' }],
+  ],
+  'globe-check': [
+    ['path', { d: 'm15 6 2 2 4-4', key: 'levio8' }],
+    ['path', { d: 'M2 12h20A10 10 0 1 1 12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 4-10', key: '46evmv' }],
+  ],
+  'globe-code': [
+    ['path', { d: 'M15.5 10 13 7.5 15.5 5', key: '1sohav' }],
+    ['path', { d: 'M15.861 14A14.5 14.5 0 0112 22a14.48 14.48 0 010-20 10 10 0 109.888 11.5', key: 'zybipq' }],
+    ['path', { d: 'M19.5 5 22 7.5 19.5 10', key: 'hhg2en' }],
+    ['path', { d: 'M2 12h8.5', key: 'ovaggd' }],
   ],
   'globe-lock': [
     ['path', { d: 'M15.686 15A14.5 14.5 0 0 1 12 22a14.5 14.5 0 0 1 0-20 10 10 0 1 0 9.542 13', key: 'qkt0x6' }],
@@ -6210,6 +7112,28 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '10.8', cy: '17.44', r: '3', key: '1hogw9' }],
     ['circle', { cx: '5', cy: '19', r: '3', key: '1sn6vo' }],
   ],
+  'graph-hub': [
+    ['circle', { cx: '12', cy: '7', r: '4', key: '17ys0d' }],
+    ['circle', { cx: '4', cy: '19', r: '2', key: 'p3m9r0' }],
+    ['circle', { cx: '12', cy: '19', r: '2', key: '13j0tp' }],
+    ['circle', { cx: '20', cy: '19', r: '2', key: '1obnsp' }],
+    ['path', { d: 'M8 7a4 4 0 0 0-4 4v6', key: '4fno04' }],
+    ['path', { d: 'M12 11v6', key: '1bwqyc' }],
+    ['path', { d: 'M16 7a4 4 0 0 1 4 4v6', key: '1sfi0q' }],
+  ],
+  'graph-star': [
+    ['path', { d: 'm12.342 9.316 1.764-3.527', key: 'mh60h2' }],
+    ['path', { d: 'm12.59 14.545 2.35 3.759', key: '4imxmd' }],
+    ['path', { d: 'm13.982 12.332 4.03.447', key: '1ivffm' }],
+    ['path', { d: 'M5.414 17.586 8.88 14.12', key: '6yuyfk' }],
+    ['path', { d: 'M9.025 9.742 5.317 5.505', key: '2rwptg' }],
+    ['circle', { cx: '11', cy: '12', r: '3', key: 'j2555u' }],
+    ['circle', { cx: '15', cy: '4', r: '2', key: '4awe34' }],
+    ['circle', { cx: '16', cy: '20', r: '2', key: '1vifvg' }],
+    ['circle', { cx: '20', cy: '13', r: '2', key: '1ofwxo' }],
+    ['circle', { cx: '4', cy: '19', r: '2', key: 'p3m9r0' }],
+    ['circle', { cx: '4', cy: '4', r: '2', key: 'bt5ra8' }],
+  ],
   'grid-2x2-check': [
     [
       'path',
@@ -6230,8 +7154,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       'path',
       { d: 'M12 3v17a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1H3', key: '11za1p' },
     ],
-    ['path', { d: 'm16 16 5 5', key: '8tpb07' }],
-    ['path', { d: 'm16 21 5-5', key: '193jll' }],
+    ['path', { d: 'm16.5 16.5 5 5', key: 'zc9lw7' }],
+    ['path', { d: 'm16.5 21.5 5-5', key: '1fr29m' }],
   ],
   'grid-2x2': [
     ['path', { d: 'M12 3v18', key: '108xh3' }],
@@ -6278,6 +7202,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '19', cy: '19', r: '1', key: 'shf9b7' }],
     ['circle', { cx: '5', cy: '19', r: '1', key: 'bfqh0e' }],
   ],
+  groceries: [
+    ['path', { d: 'M10 15h4', key: '192ueg' }],
+    [
+      'path',
+      {
+        d: 'M19.424 11.095a2.5 2.5 0 00.471-2.309 2 2 0 00.424-3.286 2 2 0 00-2.143-3.322 2 2 0 00-.676.502 2 2 0 00-3.287.424 2.5 2.5 0 00-3.189 2.06A3 3 0 0012 11l4-4',
+        key: 'ioa4ee',
+      },
+    ],
+    ['path', { d: 'M4 12.006A1 1 0 014.994 11H19a1 1 0 011 1v7a2 2 0 01-2 2H6a2 2 0 01-2-2z', key: '1y761e' }],
+    ['path', { d: 'M7 11a4 4 0 01-4-4V5a1 1 0 011-1h2a4 4 0 013.584 2.222', key: 'g173vy' }],
+  ],
   group: [
     ['path', { d: 'M3 7V5c0-1.1.9-2 2-2h2', key: 'adw53z' }],
     ['path', { d: 'M17 3h2c1.1 0 2 .9 2 2v2', key: 'an4l38' }],
@@ -6285,6 +7221,24 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M7 21H5c-1.1 0-2-.9-2-2v-2', key: 'rtnfgi' }],
     ['rect', { width: '7', height: '5', x: '7', y: '7', rx: '1', key: '1eyiv7' }],
     ['rect', { width: '7', height: '5', x: '10', y: '12', rx: '1', key: '1qlmkx' }],
+  ],
+  'guitar-electric': [
+    ['path', { d: 'm12.172 11.828 4.242-4.242', key: '2r10qn' }],
+    [
+      'path',
+      {
+        d: 'M16.414 7.586A2 2 0 0017 6.172V5a2 2 0 011.177-1.823L20.59 2.09a1 1 0 011.32 1.32l-1.088 2.412A2 2 0 0119 7h-1a2 2 0 00-1.586.586',
+        key: '1s41e7',
+      },
+    ],
+    ['path', { d: 'm6 16 2 2', key: '16qmzd' }],
+    [
+      'path',
+      {
+        d: 'M8.23 9.85a3 3 0 011.28-1.454 1 1 0 011.496.815 4 4 0 003.783 3.783 1 1 0 01.815 1.496 3 3 0 01-1.454 1.28l-.92.38A2 2 0 0012 18a4 4 0 01-4 4 6 6 0 01-6-6 4 4 0 014-4 2 2 0 001.85-1.23z',
+        key: 'lfhfey',
+      },
+    ],
   ],
   guitar: [
     ['path', { d: 'm11.9 12.1 4.514-4.514', key: '109xqo' }],
@@ -6303,6 +7257,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: '1de1vg',
       },
     ],
+  ],
+  'half-note': [
+    ['circle', { cx: '12', cy: '18', r: '4', key: 'm3r9ws' }],
+    ['path', { d: 'M16 18V2', key: '40x2m5' }],
   ],
   ham: [
     ['path', { d: 'M13.144 21.144A7.274 10.445 45 1 0 2.856 10.856', key: '1k1t7q' }],
@@ -6436,6 +7394,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M8 11V6a4 4 0 0 1 8 0v5', key: 'tcht90' }],
   ],
+  'handle-bottom-right': [
+    ['path', { d: 'M21 8 8 21', key: '16gpkk' }],
+    ['path', { d: 'm21 15-6 6', key: '1kohh4' }],
+  ],
   handshake: [
     ['path', { d: 'm11 17 2 2a1 1 0 1 0 3-3', key: 'efffak' }],
     [
@@ -6524,8 +7486,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['rect', { x: '2', y: '5', width: '20', height: '14', rx: '2', key: 'qneu4z' }],
   ],
   'hdmi-port': [
-    ['path', { d: 'M22 9a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1l2 2h12l2-2h1a1 1 0 0 0 1-1Z', key: '2128wb' }],
-    ['path', { d: 'M7.5 12h9', key: '1t0ckc' }],
+    [
+      'path',
+      {
+        d: 'M22 9a1 1 0 00-1-1H3a1 1 0 00-1 1v4a1 1 0 001 1h.5a2 2 0 011.6.8l.3.4A2 2 0 007 16h10a2 2 0 001.6-.8l.3-.4a2 2 0 011.6-.8h.5a1 1 0 001-1z',
+        key: '1kwg9h',
+      },
+    ],
+    ['path', { d: 'M8 12h8', key: '1wcyev' }],
   ],
   'heading-1': [
     ['path', { d: 'M4 12h8', key: '17cfdx' }],
@@ -6566,11 +7534,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 18V6', key: 'zqpxq5' }],
     ['circle', { cx: '19', cy: '16', r: '2', key: '15mx69' }],
     ['path', { d: 'M20 10c-2 2-3 3.5-3 6', key: 'f35dl0' }],
-  ],
-  heading: [
-    ['path', { d: 'M6 12h12', key: '8npq4p' }],
-    ['path', { d: 'M6 20V4', key: '1w1bmo' }],
-    ['path', { d: 'M18 20V4', key: 'o2hl4u' }],
   ],
   'headphone-off': [
     ['path', { d: 'M21 14h-1.343', key: '1jdnxi' }],
@@ -6726,10 +7689,30 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm9 11-6 6v3h9l3-3', key: '1a3l36' }],
     ['path', { d: 'm22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4', key: '14a9rk' }],
   ],
-  history: [
-    ['path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', key: '1357e3' }],
-    ['path', { d: 'M3 3v5h5', key: '1xhq8a' }],
-    ['path', { d: 'M12 7v5l4 2', key: '1fdv2h' }],
+  'hiking-stick': [
+    ['path', { d: 'M13.5 10.5 2 22', key: 't0ajqe' }],
+    [
+      'path',
+      {
+        d: 'M16.352 11.648a1.205 1.205 0 01-1.704 0l-2.296-2.296a1.205 1.205 0 010-1.704l.72-.72a2 2 0 011.022-.546l.599-.12a2 2 0 001.569-1.57l.12-.598a2 2 0 01.546-1.022l.72-.72a1.205 1.205 0 011.704 0l2.296 2.296a1.205 1.205 0 010 1.704l-6.02 6.02a1 1 0 103 3l.201-.201A7.4 7.4 0 0021 9.93V7',
+        key: 'haz2xx',
+      },
+    ],
+    ['path', { d: 'm6 21-3-3', key: '1kwco5' }],
+  ],
+  'hockey-stick': [
+    ['path', { d: 'M11 4v4c0 1.1-2.025 2-4.5 2S2 9.1 2 8V4', key: 'lexbbr' }],
+    [
+      'path',
+      {
+        d: 'M18.21 3.106a2 2 0 013.579 1.789l-6.895 13.789A6 6 0 019.529 22H4.5a1 1 0 010-5h5.528a2 2 0 001.788-1.105z',
+        key: '9gk7j2',
+      },
+    ],
+    ['path', { d: 'm18.59 11.295-3.578-1.789', key: '12onxe' }],
+    ['path', { d: 'm20.79 6.895-3.578-1.789', key: '11qs8n' }],
+    ['path', { d: 'M7 17v5', key: '1yj1jh' }],
+    ['ellipse', { cx: '6.5', cy: '4', rx: '4.5', ry: '2', key: 'u5t2ln' }],
   ],
   'hop-off': [
     ['path', { d: 'M10.82 16.12c1.69.6 3.91.79 5.18.85.28.01.53-.09.7-.27', key: 'qyzcap' }],
@@ -6783,6 +7766,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M18 11h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2', key: '1tthqt' }],
     ['path', { d: 'M18 21V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16', key: 'dw4p4i' }],
   ],
+  'hot-air-balloon': [
+    ['path', { d: 'M11.5 18C10 15 9 12 9 9a3 7 0 0 1 6 0c0 3-1 6-2.5 9', key: 'kp3qpo' }],
+    ['path', { d: 'M15 18c3-3 5-5 5-9A8 7 0 0 0 4 9c0 4 2 6 5 9', key: 'dn6qp0' }],
+    ['path', { d: 'M15 18H9v3a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1z', key: 'j2zuhx' }],
+  ],
   hotel: [
     ['path', { d: 'M10 22v-6.57', key: '1wmca3' }],
     ['path', { d: 'M12 11h.01', key: 'z322tv' }],
@@ -6795,11 +7783,45 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 7h.01', key: '1vti4s' }],
     ['rect', { x: '4', y: '2', width: '16', height: '20', rx: '2', key: '1uxh74' }],
   ],
+  'hourglass-cog': [
+    ['path', { d: 'm14.305 19.53.923-.382', key: '3m78fa' }],
+    ['path', { d: 'm15.228 16.852-.923-.383', key: 'npixar' }],
+    ['path', { d: 'm16.852 15.228-.383-.923', key: '5xggr7' }],
+    ['path', { d: 'm16.852 20.772-.383.924', key: 'dpfhf9' }],
+    ['path', { d: 'M17 2v4.172a2 2 0 0 1-.586 1.414l-8.828 8.828A2 2 0 0 0 7 17.828V22', key: '1ps5j6' }],
+    ['path', { d: 'm19.148 15.228.383-.923', key: '1reyyz' }],
+    ['path', { d: 'm19.53 21.696-.382-.924', key: '1goivc' }],
+    ['path', { d: 'm20.772 16.852.924-.383', key: 'htqkph' }],
+    ['path', { d: 'm20.772 19.148.924.383', key: '9w9pjp' }],
+    ['path', { d: 'M5 22h6.159', key: '56uwxb' }],
+    ['path', { d: 'M5 2h14', key: 'pdyrp9' }],
+    ['path', { d: 'M7 2v4.172a2 2 0 0 0 .586 1.414l5.188 5.188', key: 'ydx7yk' }],
+    ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
+  ],
   hourglass: [
     ['path', { d: 'M5 22h14', key: 'ehvnwv' }],
     ['path', { d: 'M5 2h14', key: 'pdyrp9' }],
     ['path', { d: 'M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22', key: '1d314k' }],
     ['path', { d: 'M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2', key: '1vvvr6' }],
+  ],
+  'house-cog': [
+    [
+      'path',
+      {
+        d: 'M10.584 21H5a2 2 0 01-2-2v-9a2 2 0 01.709-1.527l7-6a2 2 0 012.582 0l7 6A2 2 0 0121 10.001v.583',
+        key: 'cw5g2y',
+      },
+    ],
+    ['path', { d: 'M14 12H10a1 1 0 00-1 1v8', key: '1qps3c' }],
+    ['path', { d: 'm14.305 19.53.923-.382', key: '3m78fa' }],
+    ['path', { d: 'm15.229 16.852-.924-.383', key: 'qpfz85' }],
+    ['path', { d: 'm16.852 15.228-.383-.923', key: '5xggr7' }],
+    ['path', { d: 'm16.852 20.773-.383.924', key: '14cn6x' }],
+    ['path', { d: 'm19.148 15.228.383-.923', key: '1reyyz' }],
+    ['path', { d: 'm19.53 21.697-.382-.924', key: 'x9j19g' }],
+    ['path', { d: 'm20.773 16.852.922-.383', key: '59dfo2' }],
+    ['path', { d: 'm20.773 19.148.922.383', key: '1lk755' }],
+    ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
   ],
   'house-heart': [
     [
@@ -6863,6 +7885,23 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  houses: [
+    [
+      'path',
+      {
+        d: 'm12.681 4.24.834-.715a1.45 1.45 0 011.88 0l5.09 4.364A1.45 1.45 0 0121 9v6.546a1.45 1.45 0 01-1 1.381',
+        key: '1qphub',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M15.485 11.889A1.45 1.45 0 0116 13v6.546A1.454 1.454 0 0114.546 21H4.364a1.454 1.454 0 01-1.454-1.454V13a1.45 1.45 0 01.515-1.111l5.09-4.364a1.45 1.45 0 011.88 0z',
+        key: '11pwvt',
+      },
+    ],
+    ['path', { d: 'M7.41 20.546v-4a1 1 0 011-1h2a1 1 0 011 1v4', key: 'grn8bu' }],
+  ],
   'ice-cream-bowl': [
     ['path', { d: 'M12 17c5 0 8-2.69 8-6H4c0 3.31 3 6 8 6m-4 4h8m-4-3v3M5.14 11a3.5 3.5 0 1 1 6.71 0', key: '1uxfcu' }],
     ['path', { d: 'M12.14 11a3.5 3.5 0 1 1 6.71 0', key: '4k3m1s' }],
@@ -6875,16 +7914,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   ],
   'id-card-lanyard': [
     ['path', { d: 'M13.5 8h-3', key: 'xvov4w' }],
-    ['path', { d: 'm15 2-1 2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3', key: '16uttc' }],
-    ['path', { d: 'M16.899 22A5 5 0 0 0 7.1 22', key: '1d0ppr' }],
+    ['path', { d: 'm15 2-1 2h3a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2h3', key: '1vkqmv' }],
+    ['path', { d: 'M16 22a4 4 0 00-8 0', key: 'uyxag4' }],
     ['path', { d: 'm9 2 3 6', key: '1o7bd9' }],
     ['circle', { cx: '12', cy: '15', r: '3', key: 'g36mzq' }],
   ],
   'id-card': [
+    ['path', { d: 'M13 19a4 4 0 00-8 0', key: 'cugzd5' }],
     ['path', { d: 'M16 10h2', key: '8sgtl7' }],
     ['path', { d: 'M16 14h2', key: 'epxaof' }],
-    ['path', { d: 'M6.17 15a3 3 0 0 1 5.66 0', key: 'n6f512' }],
-    ['circle', { cx: '9', cy: '11', r: '2', key: 'yxgjnd' }],
+    ['circle', { cx: '9', cy: '12', r: '3', key: 'u3jwor' }],
     ['rect', { x: '2', y: '5', width: '20', height: '14', rx: '2', key: 'qneu4z' }],
   ],
   'image-down': [
@@ -6981,11 +8020,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   'indian-rupee': [
-    ['path', { d: 'M6 3h12', key: 'ggurg9' }],
+    ['path', { d: 'm14 20-8-8h4c5.333 0 5.333-8 0-8', key: 'cvo5tb' }],
+    ['path', { d: 'M6 4h12', key: '1x2ag7' }],
     ['path', { d: 'M6 8h12', key: '6g4wlu' }],
-    ['path', { d: 'm6 13 8.5 8', key: 'u1kupk' }],
-    ['path', { d: 'M6 13h3', key: 'wdp6ag' }],
-    ['path', { d: 'M9 13c6.667 0 6.667-10 0-10', key: '1nkvk2' }],
   ],
   infinity: [['path', { d: 'M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8', key: '18ogeb' }]],
   info: [
@@ -7013,10 +8050,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M4 10a8 8 0 1 1 8 8H4', key: 'svv66n' }],
     ['path', { d: 'm8 22-4-4 4-4', key: '6g7gki' }],
   ],
+  'iv-bag': [
+    ['path', { d: 'M12 18v2a2 2 0 002 2h6', key: '1pl0l9' }],
+    ['path', { d: 'M6 11c.72.5 1.44 1 3 1 3 0 3-2 6-2 1.56 0 2.28.5 3 1', key: 'h3dcr' }],
+    [
+      'path',
+      {
+        d: 'M9.293 3c.453 0 .887-.18 1.207-.5s.754-.5 1.207-.5h.586c.453 0 .887.18 1.207.5s.754.5 1.207.5H16a2 2 0 012 2v11a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z',
+        key: 'nsf2p2',
+      },
+    ],
+  ],
   'japanese-yen': [
-    ['path', { d: 'M12 9.5V21m0-11.5L6 3m6 6.5L18 3', key: '2ej80x' }],
-    ['path', { d: 'M6 15h12', key: '1hwgt5' }],
-    ['path', { d: 'M6 11h12', key: 'wf4gp6' }],
+    ['path', { d: 'M12 12v8', key: '1by136' }],
+    ['path', { d: 'm6 4 6 8 6-8', key: '15qpi5' }],
+    ['path', { d: 'M8 13h8', key: '1s9po7' }],
+    ['path', { d: 'M8 17h8', key: 'wh5c61' }],
   ],
   joystick: [
     ['path', { d: 'M21 17a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2Z', key: 'jg2n2t' }],
@@ -7040,6 +8089,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'm6.707 6.707 10.586 10.586', key: 'd2l993' }],
     ['path', { d: 'M7 5a2 2 0 1 0-2 2h1a1 1 0 0 0 1-1z', key: 'i0et4n' }],
+  ],
+  'kazakh-tenge': [
+    ['path', { d: 'M12 8v12', key: 'rrnztl' }],
+    ['path', { d: 'M6 4h12', key: '1x2ag7' }],
+    ['path', { d: 'M6 8h12', key: '6g4wlu' }],
   ],
   'key-round': [
     [
@@ -7069,9 +8123,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   key: [
-    ['path', { d: 'm15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4', key: 'g0fldk' }],
-    ['path', { d: 'm21 2-9.6 9.6', key: '1j0ho8' }],
-    ['circle', { cx: '7.5', cy: '15.5', r: '5.5', key: 'yqb3hr' }],
+    ['path', { d: 'm2 21 9.6-9.6', key: '9l79m3' }],
+    ['path', { d: 'm7.5 15.5 2.3 2.3a1 1 0 0 1 0 1.4l-2.1 2.1a1 1 0 0 1-1.4 0L4 19', key: 'fw8biw' }],
+    ['circle', { cx: '15.5', cy: '7.5', r: '5.5', key: '4wxmhb' }],
   ],
   'keyboard-music': [
     ['rect', { width: '20', height: '16', x: '2', y: '4', rx: '2', key: '18n3k1' }],
@@ -7106,6 +8160,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M7 16h10', key: 'wp8him' }],
     ['path', { d: 'M8 12h.01', key: 'czm47f' }],
     ['rect', { width: '20', height: '16', x: '2', y: '4', rx: '2', key: '18n3k1' }],
+  ],
+  lambda: [
+    ['path', { d: 'M11.38 10 5 20', key: '1y3u8v' }],
+    ['path', { d: 'M19 18a2 2 0 01-2 2c-4.87-.003-5.052-16-10-16a2 2 0 00-2 2', key: '15fdan' }],
   ],
   'lamp-ceiling': [
     ['path', { d: 'M12 2v5', key: 'nd4vlx' }],
@@ -7221,6 +8279,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M20.054 15.987H3.946', key: '14rxg9' }],
   ],
+  laser: [
+    ['path', { d: 'm13 8 .95-.95', key: '1w28a0' }],
+    ['path', { d: 'M13.95 16.95 13 16', key: '1aw54t' }],
+    ['path', { d: 'M22 12h-9', key: '1wq8hv' }],
+    ['path', { d: 'M4 12H2', key: 'rhcxmi' }],
+    ['path', { d: 'M4.05 16.95 5 16', key: '1f9uwk' }],
+    ['path', { d: 'm5 8-.95-.95', key: '1to6i7' }],
+    ['path', { d: 'M9 12h.01', key: '157uk2' }],
+    ['path', { d: 'M9 19v-2', key: 'anqm27' }],
+    ['path', { d: 'M9 7V5', key: 'q7fpoa' }],
+  ],
   'lasso-select': [
     ['path', { d: 'M7 22a5 5 0 0 1-2-4', key: 'umushi' }],
     ['path', { d: 'M7 16.93c.96.43 1.96.74 2.99.91', key: 'ybbtv3' }],
@@ -7239,11 +8308,28 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M7 22a5 5 0 0 1-2-3.994', key: '1xp6a4' }],
     ['circle', { cx: '5', cy: '16', r: '2', key: '18csp3' }],
   ],
-  laugh: [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z', key: 'b2q4dd' }],
-    ['line', { x1: '9', x2: '9.01', y1: '9', y2: '9', key: 'yxxnd0' }],
-    ['line', { x1: '15', x2: '15.01', y1: '9', y2: '9', key: '1p4y9e' }],
+  'layer-arrow-down': [
+    ['path', { d: 'M12 10v10', key: '1ogziz' }],
+    ['path', { d: 'M22 10a1 1 0 01-.59.92l-5.077 2.308', key: 'q38q1t' }],
+    [
+      'path',
+      {
+        d: 'M22.017 10.005a1 1 0 00-.597-.916l-8.59-3.91a2 2 0 00-1.66.001L2.6 9.08a1 1 0 00-.02 1.831l5.093 2.316',
+        key: 'h1p4gn',
+      },
+    ],
+    ['path', { d: 'm9 17 3 3 3-3', key: 'l18qqt' }],
+  ],
+  'layer-arrow-up': [
+    ['path', { d: 'M12 14V4', key: '1t7zjg' }],
+    [
+      'path',
+      {
+        d: 'M7.674 10.774 2.58 13.09a1 1 0 000 1.822l8.6 3.91a2 2 0 001.65 0l8.58-3.9a1 1 0 00.59-.92 1 1 0 00-.59-.922l-5.078-2.308',
+        key: '1cy4ex',
+      },
+    ],
+    ['path', { d: 'm9 7 3-3 3 3', key: '8sjys4' }],
   ],
   'layers-2': [
     [
@@ -7260,6 +8346,31 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: 'byia6g',
       },
     ],
+  ],
+  'layers-arrow-down': [
+    ['path', { d: 'M12 7v15', key: '1onnba' }],
+    ['path', { d: 'M2 12a1 1 0 00.58.91l5.093 2.316', key: 'xofxlj' }],
+    ['path', { d: 'M22 12a1 1 0 01-.59.92l-5.077 2.308', key: 'cc7swz' }],
+    [
+      'path',
+      {
+        d: 'M8 10.37 2.6 7.91a1 1 0 010-1.831l8.57-3.9a2 2 0 011.66.001l8.59 3.91a1 1 0 010 1.831l-5.392 2.45',
+        key: 'kdwjlb',
+      },
+    ],
+    ['path', { d: 'm9 19 3 3 3-3', key: '1fhphp' }],
+  ],
+  'layers-arrow-up': [
+    ['path', { d: 'M12 12V2', key: '17ugg4' }],
+    ['path', { d: 'M2 17.002a1 1 0 00.58.91l8.6 3.91a2 2 0 001.65 0l8.58-3.9a1 1 0 00.59-.92', key: '1ke1hd' }],
+    [
+      'path',
+      {
+        d: 'M7.674 8.774 2.58 11.09a1 1 0 000 1.822l8.6 3.91a2 2 0 001.65 0l8.58-3.9a1 1 0 00.59-.92 1 1 0 00-.59-.922l-5.078-2.308',
+        key: 'hlro1u',
+      },
+    ],
+    ['path', { d: 'm9 5 3-3 3 3', key: 'l8vdw6' }],
   ],
   'layers-minus': [
     [
@@ -7301,11 +8412,34 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12', key: '1wduqc' }],
     ['path', { d: 'M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17', key: 'kqbvx6' }],
   ],
+  'layout-arrow-down': [
+    ['rect', { width: '7', height: '7', x: '3', y: '3', rx: '1', key: '1g98yp' }],
+    ['rect', { width: '7', height: '7', x: '3', y: '14', rx: '1', key: '1bb6yr' }],
+    ['path', { d: 'M18 3v18', key: '1kvono' }],
+    ['path', { d: 'm21 18-3 3-3-3', key: '1df7ah' }],
+  ],
+  'layout-arrow-right': [
+    ['rect', { width: '7', height: '7', x: '3', y: '3', rx: '1', key: '1g98yp' }],
+    ['rect', { width: '7', height: '7', x: '14', y: '3', rx: '1', key: '6d4xhi' }],
+    ['path', { d: 'M3 18h18', key: '1h113x' }],
+    ['path', { d: 'm18 21 3-3-3-3', key: 'y411s' }],
+  ],
   'layout-dashboard': [
     ['rect', { width: '7', height: '9', x: '3', y: '3', rx: '1', key: '10lvy0' }],
     ['rect', { width: '7', height: '5', x: '14', y: '3', rx: '1', key: '16une8' }],
     ['rect', { width: '7', height: '9', x: '14', y: '12', rx: '1', key: '1hutg5' }],
     ['rect', { width: '7', height: '5', x: '3', y: '16', rx: '1', key: 'ldoo1y' }],
+  ],
+  'layout-freeform': [
+    ['rect', { width: '7', height: '7', x: '3', y: '3', rx: '1', key: '1g98yp' }],
+    ['rect', { width: '7', height: '7', x: '14', y: '4', rx: '1', key: 'n7b4zl' }],
+    ['rect', { width: '7', height: '7', x: '4', y: '14', rx: '1', key: '1ngf42' }],
+  ],
+  'layout-grid-circles': [
+    ['circle', { cx: '17.5', cy: '17.5', r: '3.5', key: 'w3z12y' }],
+    ['circle', { cx: '17.5', cy: '6.5', r: '3.5', key: '1dwebm' }],
+    ['circle', { cx: '6.5', cy: '17.5', r: '3.5', key: '1sut0i' }],
+    ['circle', { cx: '6.5', cy: '6.5', r: '3.5', key: 'hiq0pm' }],
   ],
   'layout-grid': [
     ['rect', { width: '7', height: '7', x: '3', y: '3', rx: '1', key: '1g98yp' }],
@@ -7337,8 +8471,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['rect', { width: '5', height: '7', x: '16', y: '14', rx: '1', key: 'q5h2i8' }],
   ],
   leaf: [
-    ['path', { d: 'M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z', key: 'nnexq3' }],
-    ['path', { d: 'M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12', key: 'mt58a7' }],
+    [
+      'path',
+      {
+        d: 'M11 20a10 10 0 0010-10 25.9 25.9 0 00-1.04-7.281 1 1 0 00-1.755-.325C15.833 5.5 13 5.5 9.8 6.1A7 7 0 0011 20',
+        key: '1wjnjv',
+      },
+    ],
+    ['path', { d: 'M2 21a5 5 0 012.911-4.544C7.613 15.212 8.351 15.24 11 13', key: 'c1ejpn' }],
   ],
   'leafy-green': [
     [
@@ -7354,12 +8494,13 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     [
       'path',
       {
-        d: 'M16 12h3a2 2 0 0 0 1.902-1.38l1.056-3.333A1 1 0 0 0 21 6H3a1 1 0 0 0-.958 1.287l1.056 3.334A2 2 0 0 0 5 12h3',
-        key: '13jjxg',
+        d: 'M15 13h4a2 2 0 001.901-1.38l1.057-4.333A1 1 0 0021 6H3a1 1 0 00-.958 1.287L3.1 11.621A2 2 0 005.001 13h4',
+        key: 'uu7fz6',
       },
     ],
-    ['path', { d: 'M18 6V3a1 1 0 0 0-1-1h-3', key: '1550fe' }],
-    ['rect', { width: '8', height: '12', x: '8', y: '10', rx: '1', key: 'qmu8b6' }],
+    ['path', { d: 'M15 22V11a1 1 0 00-1-1h-4a1 1 0 00-1 1v11', key: 'hedff3' }],
+    ['path', { d: 'M18 22H6', key: 'mg6kv4' }],
+    ['path', { d: 'M18 6V3a1 1 0 00-1-1h-3', key: '1y10qe' }],
   ],
   'lens-concave': [
     [
@@ -7378,6 +8519,101 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: 'cq67go',
       },
     ],
+  ],
+  lens: [
+    ['path', { d: 'M15.725 7.296h.01', key: 'bv0cmm' }],
+    ['path', { d: 'M6 12a6 6 0 016-6', key: '1k6wou' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
+  'letter-a': [
+    ['path', { d: 'M17.117 14H6.883', key: '1jhv35' }],
+    ['path', { d: 'm4 20 7.55-15.712a.5.5 0 01.9 0L20 20', key: '6eyjao' }],
+  ],
+  'letter-b': [['path', { d: 'M6 12h9a4 4 0 010 8H7a1 1 0 01-1-1V5a1 1 0 011-1h7a4 4 0 010 8', key: 'n8tvfh' }]],
+  'letter-c': [['path', { d: 'M19 6.708a8 8 0 100 10.584', key: 'raljny' }]],
+  'letter-d': [
+    ['path', { d: 'M11 4a8 8 0 010 16H6.406A.406.406 0 016 19.594V4.406A.406.406 0 016.406 4z', key: '1eea42' }],
+  ],
+  'letter-e': [
+    ['path', { d: 'M18 4H7a1 1 0 00-1 1v14a1 1 0 001 1h11', key: 'gqqh7n' }],
+    ['path', { d: 'M6 12h8', key: '1hdiqa' }],
+  ],
+  'letter-f': [
+    ['path', { d: 'M6 12h8', key: '1hdiqa' }],
+    ['path', { d: 'M6 20V5a1 1 0 011-1h11', key: '1ru2wd' }],
+  ],
+  'letter-g': [
+    ['path', { d: 'M19 6.708a8 8 0 10-.526 11.126c.355-.333.526-.811.526-1.299V13a1 1 0 00-1-1h-4', key: '4rfts' }],
+  ],
+  'letter-h': [
+    ['path', { d: 'M18 20V4', key: 'o2hl4u' }],
+    ['path', { d: 'M6 12H18', key: '1fx1vx' }],
+    ['path', { d: 'M6 20V4', key: '1w1bmo' }],
+  ],
+  'letter-i': [['path', { d: 'M12 20V4', key: '1c7xpo' }]],
+  'letter-j': [['path', { d: 'M17 4v11a5 5 0 01-10 0', key: 'zhp4m7' }]],
+  'letter-k': [
+    ['path', { d: 'M17 4 6 15', key: '1n3nze' }],
+    ['path', { d: 'M6 20V4', key: '1w1bmo' }],
+    ['path', { d: 'm9 12 8 8', key: '1n0g11' }],
+  ],
+  'letter-l': [['path', { d: 'M6 4v15a1 1 0 001 1h11', key: 'zj9oda' }]],
+  'letter-m': [
+    [
+      'path',
+      {
+        d: 'M4 20V4.253a.25.25 0 01.454-.144l6.727 9.467a1 1 0 001.63 0l6.735-9.468a.25.25 0 01.454.145V20',
+        key: '1fs39h',
+      },
+    ],
+  ],
+  'letter-n': [['path', { d: 'M6 20V4.25a.25.25 0 01.455-.143l11.09 15.786a.25.25 0 00.455-.144V4', key: '1kjm2c' }]],
+  'letter-o': [['circle', { cx: '12', cy: '12', r: '8', key: '46899m' }]],
+  'letter-p': [['path', { d: 'M6 12h8a4 4 0 000-8H7a1 1 0 00-1 1v15', key: 'i6awvr' }]],
+  'letter-q': [
+    ['circle', { cx: '12', cy: '12', r: '8', key: '46899m' }],
+    ['path', { d: 'M20 20L15 15', key: 'mpejh7' }],
+  ],
+  'letter-r': [
+    ['path', { d: 'm10 12 8 8', key: 'o8ikc5' }],
+    ['path', { d: 'M6 12h8a4 4 0 000-8H7a1 1 0 00-1 1v15', key: 'i6awvr' }],
+  ],
+  'letter-s': [['path', { d: 'M17 4h-7a4 4 0 000 8h4a4 4 0 010 8H6', key: '7vn0d0' }]],
+  'letter-spacing': [
+    ['path', { d: 'M15 14H9', key: 'u4f7rb' }],
+    ['path', { d: 'M21 3v18', key: 'fnf4zc' }],
+    ['path', { d: 'M3 3v18', key: 'k760nc' }],
+    ['path', { d: 'm8 16 3.453-7.648a.6.6 0 011.094.001L16 16', key: '16ilm2' }],
+  ],
+  'letter-t': [
+    ['path', { d: 'M12 20V4', key: '1c7xpo' }],
+    ['path', { d: 'M5 4h14', key: '12vcz2' }],
+  ],
+  'letter-u': [['path', { d: 'M6 4v10a6 6 0 0012 0V4', key: 'n6j4aq' }]],
+  'letter-v': [['path', { d: 'm6 4 5.765 15.835a.25.25 0 00.47 0L18 4', key: '1e633t' }]],
+  'letter-w': [
+    [
+      'path',
+      {
+        d: 'm21 4-4.794 15.821a.25.25 0 01-.471.021l-3.503-8.685a.25.25 0 00-.464 0l-3.503 8.685a.25.25 0 01-.47-.021L3 4',
+        key: '1q41gw',
+      },
+    ],
+  ],
+  'letter-x': [
+    ['path', { d: 'M18 4 6 20', key: '1bmua5' }],
+    ['path', { d: 'm6 4 12 16', key: 'muct2p' }],
+  ],
+  'letter-y': [
+    ['path', { d: 'M12 12v8', key: '1by136' }],
+    ['path', { d: 'm6 4 6 8 6-8', key: '15qpi5' }],
+  ],
+  'letter-z': [['path', { d: 'M6 4h11.5a.5.5 0 01.387.817L6.114 19.183a.5.5 0 00.387.817H18', key: '2p8y6y' }]],
+  letters: [
+    ['path', { d: 'M15 8H9', key: '1wjlh6' }],
+    ['path', { d: 'M21 15.354a4 4 0 100 5.292', key: '1p5awo' }],
+    ['path', { d: 'M3 18h4a2 2 0 010 4H3.5a.5.5 0 01-.5-.5v-7a.5.5 0 01.5-.5H6a2 2 0 010 4', key: '1pg2jz' }],
+    ['path', { d: 'm8 10 3.453-7.648a.6.6 0 011.094 0L16 10', key: '1spis8' }],
   ],
   'library-big': [
     ['rect', { width: '8', height: '18', x: '3', y: '3', rx: '1', key: 'oynpb5' }],
@@ -7429,9 +8665,41 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M9 18h6', key: 'x1upvd' }],
     ['path', { d: 'M10 22h4', key: 'ceow96' }],
   ],
+  lighthouse: [
+    ['path', { d: 'M12 3V2', key: 'ar7q03' }],
+    ['path', { d: 'M16.066 16.865 7 22l2-11V6a3 3 0 016 0v5l2 11', key: '1945zj' }],
+    ['path', { d: 'm19.792 4.5.866-.5', key: 'nm0czm' }],
+    ['path', { d: 'm19.797 13.5.866.5', key: '1ywzlr' }],
+    ['path', { d: 'M21 9h1', key: 'oh5ys' }],
+    ['path', { d: 'M3 9H2', key: '1fr1tj' }],
+    ['path', { d: 'm4.203 13.5-.866.5', key: 'oyimbp' }],
+    ['path', { d: 'M4.208 4.5 3.342 4', key: 'lkiptw' }],
+    ['path', { d: 'M5.5 22h13', key: '1mvt70' }],
+    ['path', { d: 'm7.932 16.875 7.377-4.178', key: 'w78ch2' }],
+    ['path', { d: 'M8 11h8', key: 'vwpz6n' }],
+    ['path', { d: 'M8 7h8', key: 'i86dvs' }],
+  ],
+  'line-dot-bottom-vertical': [
+    ['path', { d: 'M12 3v12', key: '1x0j5s' }],
+    ['circle', { cx: '12', cy: '18', r: '3', key: '1mpf1b' }],
+  ],
+  'line-dot-left-horizontal': [
+    ['path', { d: 'M9 12h12', key: 'nafxnq' }],
+    ['circle', { cx: '6', cy: '12', r: '3', key: 'w7nqdw' }],
+  ],
   'line-dot-right-horizontal': [
     ['path', { d: 'M 3 12 L 15 12', key: 'ymhu98' }],
     ['circle', { cx: '18', cy: '12', r: '3', key: '1kchzo' }],
+  ],
+  'line-dot-top-vertical': [
+    ['path', { d: 'M12 9v12', key: '10tdml' }],
+    ['circle', { cx: '12', cy: '6', r: '3', key: '1gm2ql' }],
+  ],
+  'line-height': [
+    ['path', { d: 'M15 14H9', key: 'u4f7rb' }],
+    ['path', { d: 'M21 21H3', key: 'oafrgs' }],
+    ['path', { d: 'M21 3H3', key: 'e9iw4c' }],
+    ['path', { d: 'm8 16 3.453-7.648a.6.6 0 011.094.001L16 16', key: '16ilm2' }],
   ],
   'line-squiggle': [
     ['path', { d: 'M7 3.5c5-2 7 2.5 3 4C1.5 10 2 15 5 16c5 2 9-10 14-7s.5 13.5-4 12c-5-2.5.5-11 6-2', key: '1lrphd' }],
@@ -7485,6 +8753,13 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M3 19h8', key: 'fpbke4' }],
     ['path', { d: 'm15 8 3-3 3 3', key: 'bc4io6' }],
     ['path', { d: 'm15 16 3 3 3-3', key: '9wmg1l' }],
+  ],
+  'list-clock': [
+    ['path', { d: 'M16 13v2.2l1.6 1', key: '1bc147' }],
+    ['path', { d: 'M3 12h3.458', key: 'brzde3' }],
+    ['path', { d: 'M3 19h3.832', key: '1d2y74' }],
+    ['path', { d: 'M3 5h18', key: '1u36vt' }],
+    ['circle', { cx: '16', cy: '15', r: '6', key: '1cvf88' }],
   ],
   'list-collapse': [
     ['path', { d: 'M10 5h11', key: '1hkqpe' }],
@@ -7558,6 +8833,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M7 19H3', key: 'wbqt3n' }],
     ['path', { d: 'M12 18a5 5 0 0 0 9-3 4.5 4.5 0 0 0-4.5-4.5c-1.33 0-2.54.54-3.41 1.41L11 14', key: 'qth677' }],
     ['path', { d: 'M11 10v4h4', key: '172dkj' }],
+  ],
+  'list-sort-ascending': [
+    ['path', { d: 'M3 19h18', key: 'awlh7x' }],
+    ['path', { d: 'M15 12H3', key: '6jk70r' }],
+    ['path', { d: 'M9 5H3', key: '15j2za' }],
+  ],
+  'list-sort-descending': [
+    ['path', { d: 'M15 12H3', key: '6jk70r' }],
+    ['path', { d: 'M3 5h18', key: '1u36vt' }],
+    ['path', { d: 'M9 19H3', key: 's61nz1' }],
   ],
   'list-start': [
     ['path', { d: 'M3 5h6', key: '1ltk0q' }],
@@ -7710,10 +8995,34 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'm5 8 4 4', key: 'j6kj7e' }],
   ],
+  'mail-badge': [
+    ['path', { d: 'M22 7.7V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8.25', key: '1a6dr2' }],
+    ['path', { d: 'M12 12.996a1.94 1.94 0 0 1-1.03-.296L2 7', key: '15acam' }],
+    [
+      'path',
+      {
+        d: 'm20.69 16.479 1.29 4.88a.5.5 0 0 1-.698.591l-1.843-.849a1 1 0 0 0-.879.001l-1.846.85a.5.5 0 0 1-.692-.593l1.29-4.88',
+        key: '1kx8o4',
+      },
+    ],
+    ['circle', { cx: '19', cy: '14', r: '3', key: '9c2nho' }],
+  ],
   'mail-check': [
     ['path', { d: 'M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8', key: '12jkf8' }],
     ['path', { d: 'm22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7', key: '1ocrg3' }],
     ['path', { d: 'm16 19 2 2 4-4', key: '1b14m6' }],
+  ],
+  'mail-clock': [
+    ['path', { d: 'M16 14v2.2l1.6 1', key: 'fo4ql5' }],
+    ['path', { d: 'm22 7-.759.484', key: '12ll7o' }],
+    ['path', { d: 'M6.835 20H4a2 2 0 01-2-2V6a2 2 0 012-2h16a2 2 0 012 2v2', key: '1wt3ht' }],
+    ['path', { d: 'M7.605 10.567 2 7', key: '1ducps' }],
+    ['circle', { cx: '16', cy: '16', r: '6', key: 'qoo3c4' }],
+  ],
+  'mail-dot': [
+    ['path', { d: 'M12.674 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4.675', key: 'p1lhjt' }],
+    ['path', { d: 'm2 7 9 5.701a2 2 0 0 0 2 0l1.084-.686', key: '1fjuug' }],
+    ['circle', { cx: '19', cy: '7', r: '3', key: '4p623i' }],
   ],
   'mail-minus': [
     ['path', { d: 'M22 15V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8', key: 'fuxbkv' }],
@@ -7729,6 +9038,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
     ['path', { d: 'm22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10', key: '1qfld7' }],
+  ],
+  'mail-pen': [
+    [
+      'path',
+      {
+        d: 'M15.363 17.634a2 2 0 00-.506.854l-.837 2.87a.5.5 0 00.62.62l2.87-.837a2 2 0 00.854-.506l3.013-3.009a1 1 0 10-3.004-3.004z',
+        key: '1xvqjp',
+      },
+    ],
+    ['path', { d: 'M22 10.38V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h6.25', key: 'nc1zf5' }],
+    ['path', { d: 'm22 7-8.991 5.727a2 2 0 01-2.009 0L2 7', key: 'uoxq3m' }],
   ],
   'mail-plus': [
     ['path', { d: 'M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8', key: '12jkf8' }],
@@ -7756,10 +9076,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M20 22v.01', key: '12bgn6' }],
   ],
   'mail-x': [
-    ['path', { d: 'M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h9', key: '1j9vog' }],
-    ['path', { d: 'm22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7', key: '1ocrg3' }],
-    ['path', { d: 'm17 17 4 4', key: '1b3523' }],
-    ['path', { d: 'm21 17-4 4', key: 'uinynz' }],
+    ['path', { d: 'M22 12.532V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8.792', key: '8lpqwp' }],
+    ['path', { d: 'm22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7', key: '132q7q' }],
+    ['path', { d: 'm16.5 16.5 5 5', key: 'zc9lw7' }],
+    ['path', { d: 'm21.5 16.5-5 5', key: '1empo3' }],
   ],
   mail: [
     ['path', { d: 'm22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7', key: '132q7q' }],
@@ -7938,18 +9258,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     [
       'path',
       {
-        d: 'M18 8c0 3.613-3.869 7.429-5.393 8.795a1 1 0 0 1-1.214 0C9.87 15.429 6 11.613 6 8a6 6 0 0 1 12 0',
-        key: '11u0oz',
+        d: 'M18 8c0 3.613-3.869 7.429-5.393 8.795a1 1 0 01-1.214 0C9.87 15.429 6 11.613 6 8a6 6 0 0112 0',
+        key: '61byd1',
       },
     ],
-    ['circle', { cx: '12', cy: '8', r: '2', key: '1822b1' }],
     [
       'path',
       {
-        d: 'M8.714 14h-3.71a1 1 0 0 0-.948.683l-2.004 6A1 1 0 0 0 3 22h18a1 1 0 0 0 .948-1.316l-2-6a1 1 0 0 0-.949-.684h-3.712',
-        key: 'q8zwxj',
+        d: 'M4.474 15h-.197a1 1 0 00-.969.753l-1.097 4.35a1.5 1.5 0 001.444 1.898L20.344 22a1.5 1.5 0 001.446-1.897l-1.098-4.35a1 1 0 00-.969-.753h-.197',
+        key: '1m5apm',
       },
     ],
+    ['circle', { cx: '12', cy: '8', r: '2', key: '1822b1' }],
   ],
   'map-plus': [
     [
@@ -7987,9 +9307,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '10', cy: '14', r: '6', key: '1qwbdc' }],
   ],
   martini: [
-    ['path', { d: 'M8 22h8', key: 'rmew8v' }],
-    ['path', { d: 'M12 11v11', key: 'ur9y6a' }],
-    ['path', { d: 'm19 3-7 8-7-8Z', key: '1sgpiw' }],
+    ['path', { d: 'M12 12 4.207 4.207A.707.707 0 0 1 4.707 3h14.586a.707.707 0 0 1 .5 1.207z', key: 'vxdekd' }],
+    ['path', { d: 'M12 12v10', key: '1nesaz' }],
+    ['path', { d: 'M7 22h10', key: '10w4w3' }],
   ],
   'maximize-2': [
     ['path', { d: 'M15 3h6v6', key: '1q9fwt' }],
@@ -8035,12 +9355,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14', key: '1853fq' }],
     ['path', { d: 'M8 6v8', key: '15ugcq' }],
   ],
-  meh: [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['line', { x1: '8', x2: '16', y1: '15', y2: '15', key: '1xb1d9' }],
-    ['line', { x1: '9', x2: '9.01', y1: '9', y2: '9', key: 'yxxnd0' }],
-    ['line', { x1: '15', x2: '15.01', y1: '9', y2: '9', key: '1p4y9e' }],
-  ],
   'memory-stick': [
     ['path', { d: 'M12 12v-2', key: 'fwoke6' }],
     ['path', { d: 'M12 18v-2', key: 'qj6yno' }],
@@ -8072,7 +9386,7 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: '1sd12s',
       },
     ],
-    ['path', { d: 'm9 12 2 2 4-4', key: 'dzmm74' }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12', key: 'xofnsj' }],
   ],
   'message-circle-code': [
     ['path', { d: 'm10 9-3 3 3 3', key: '1oro0q' }],
@@ -8084,6 +9398,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: '1sd12s',
       },
     ],
+  ],
+  'message-circle-dashed-check': [
+    ['path', { d: 'M10.1 2.182a10 10 0 013.8 0', key: 'upsxbf' }],
+    ['path', { d: 'M13.9 21.818a10 10 0 01-3.8 0', key: 'ms125y' }],
+    ['path', { d: 'M17.609 3.72a10 10 0 012.69 2.7', key: '1jzhoq' }],
+    ['path', { d: 'M2.182 13.9a10 10 0 010-3.8', key: '68e3e5' }],
+    ['path', { d: 'M20.28 17.61a10 10 0 01-2.7 2.69', key: '1m37bo' }],
+    ['path', { d: 'M21.818 10.1a10 10 0 010 3.8', key: 'w6g6ls' }],
+    ['path', { d: 'M3.721 6.391a10 10 0 012.7-2.69', key: 'sn8908' }],
+    ['path', { d: 'm6.163 21.117-2.906.85a1 1 0 01-1.236-1.169l.965-2.98', key: '7908cd' }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12', key: 'xofnsj' }],
   ],
   'message-circle-dashed': [
     ['path', { d: 'M10.1 2.182a10 10 0 0 1 3.8 0', key: '5ilxe3' }],
@@ -8166,6 +9491,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'm10 15-3-3 3-3', key: '1pgupc' }],
     ['path', { d: 'M7 12h8a2 2 0 0 1 2 2v1', key: '89sh1g' }],
+  ],
+  'message-circle-text': [
+    [
+      'path',
+      {
+        d: 'M3.086 17.509a2 2 0 00-.094-1.167 10 10 0 114.777 4.719 2 2 0 00-1.099-.092l-3.413.998a1 1 0 01-1.236-1.168z',
+        key: '14vwyc',
+      },
+    ],
+    ['path', { d: 'M8 12h9', key: 'mjdx3x' }],
+    ['path', { d: 'M8 16h5', key: 'cy6sb9' }],
+    ['path', { d: 'M8 8h7', key: 'ej08g8' }],
   ],
   'message-circle-warning': [
     [
@@ -8387,6 +9724,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'messages-circle': [
+    [
+      'path',
+      {
+        d: 'M19.95 10.05a7 7 0 011.412 7.872 1 1 0 00-.058.787l.675 2.089a1 1 0 01-1.236 1.168l-2.155-.631a1 1 0 00-.745.06 7 7 0 01-7.793-1.445',
+        key: '10mcl1',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M2.696 12.708a1 1 0 00-.058-.785 7 7 0 113.518 3.473 1 1 0 00-.744-.061l-2.155.63a1 1 0 01-1.236-1.167z',
+        key: 'cpppzk',
+      },
+    ],
+  ],
   'messages-square': [
     [
       'path',
@@ -8415,6 +9768,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['circle', { cx: '20', cy: '9', r: '2', key: '1udoqf' }],
   ],
+  'mic-audio-lines': [
+    ['path', { d: 'M10 3v2.341', key: 'd00509' }],
+    ['path', { d: 'M12 17v4', key: '1riwvh' }],
+    ['path', { d: 'M14 5v.341', key: '72nt6x' }],
+    ['path', { d: 'M18 5v13', key: '123xd1' }],
+    ['path', { d: 'M2 10v3', key: '1fnikh' }],
+    ['path', { d: 'M22 10v3', key: '154ddg' }],
+    ['path', { d: 'M6 6v11', key: '11sgs0' }],
+    ['path', { d: 'M9 21h6', key: '1udhl7' }],
+    ['rect', { width: '4', height: '8', x: '10', y: '9', rx: '2', key: '1d9qhd' }],
+  ],
   'mic-off': [
     ['path', { d: 'M12 19v3', key: 'npa21l' }],
     ['path', { d: 'M15 9.34V5a3 3 0 0 0-5.68-1.33', key: '1gzdoj' }],
@@ -8422,6 +9786,15 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M18.89 13.23A7 7 0 0 0 19 12v-2', key: '16hl24' }],
     ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
     ['path', { d: 'M9 9v3a3 3 0 0 0 5.12 2.12', key: 'r2i35w' }],
+  ],
+  'mic-signal': [
+    ['path', { d: 'M12 17v4', key: '1riwvh' }],
+    ['path', { d: 'M18 11a6 6 0 00-3-5.197', key: '1lvu40' }],
+    ['path', { d: 'M2 11a10 10 0 015-8.662', key: 'bida4p' }],
+    ['path', { d: 'M22 11a10 10 0 00-5-8.662', key: 'idvinr' }],
+    ['path', { d: 'M6 11a6 6 0 013-5.197', key: '17n2ii' }],
+    ['path', { d: 'M9 21h6', key: '1udhl7' }],
+    ['rect', { x: '10', y: '9', width: '4', height: '8', rx: '2', key: '1l8p2f' }],
   ],
   'mic-vocal': [
     ['path', { d: 'm11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12', key: '80a601' }],
@@ -8465,6 +9838,15 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M18 8v7', key: 'o5zi4n' }],
     ['path', { d: 'M6 19v2', key: '1loha6' }],
     ['path', { d: 'M18 19v2', key: '1dawf0' }],
+  ],
+  'midi-port': [
+    ['path', { d: 'M12 18h.01', key: 'mhygvu' }],
+    ['path', { d: 'M15 2.458V5a1 1 0 01-1 1h-4a1 1 0 01-1-1V2.458', key: '1e2lr4' }],
+    ['path', { d: 'M16 16h.01', key: '1f9h7w' }],
+    ['path', { d: 'M18 12h.01', key: 'yjnet6' }],
+    ['path', { d: 'M6 12h.01', key: 'c2rlol' }],
+    ['path', { d: 'M8 16h.01', key: '18s6g9' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
   ],
   milestone: [
     ['path', { d: 'M12 13v8', key: '1l5pq0' }],
@@ -8578,6 +9960,15 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 17v4', key: '1riwvh' }],
     ['path', { d: 'M8 21h8', key: '1ev6f3' }],
   ],
+  'monitor-pc': [
+    ['path', { d: 'M10 15H4a2 2 0 01-2-2V7a2 2 0 012-2h6', key: '26zmak' }],
+    ['path', { d: 'M10 19H5', key: '9av7mr' }],
+    ['path', { d: 'M14 11h8', key: '1cakcr' }],
+    ['path', { d: 'M14 7h8', key: '1azo9j' }],
+    ['path', { d: 'M18 17h.01', key: 'xmkgv' }],
+    ['path', { d: 'M9 19v-4', key: 'fgy2jt' }],
+    ['rect', { x: '14', y: '3', width: '8', height: '18', rx: '1', key: '1ewuvr' }],
+  ],
   'monitor-play': [
     [
       'path',
@@ -8647,6 +10038,49 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: 'kfwtm',
       },
     ],
+  ],
+  'mop-sparkles': [
+    ['path', { d: 'M10 22a3 3 0 01-3-3', key: 'oxdmti' }],
+    ['path', { d: 'M10 22c2.761 0 5-1.79 5-4-4.42 0-4.08-5-8.5-5a4.501 4.501 0 000 9z', key: 'q53vem' }],
+    ['path', { d: 'M10 3H8', key: 'mzdi2d' }],
+    ['path', { d: 'M12.5 11.5 22 2', key: '1r4cui' }],
+    ['path', { d: 'M20 13v4', key: '1ugfop' }],
+    ['path', { d: 'M22 15h-4', key: '1es58f' }],
+    ['path', { d: 'M4 5v4', key: '13jjxc' }],
+    ['path', { d: 'M6 7H2', key: '8zbtv0' }],
+    [
+      'path',
+      {
+        d: 'm6.98 13.02 2.665-2.664a1.21 1.21 0 011.71 0l2.29 2.288a1.21 1.21 0 010 1.712l-2.088 2.087',
+        key: '1dw0bk',
+      },
+    ],
+    ['path', { d: 'M9 2v2', key: '165o2o' }],
+  ],
+  mop: [
+    ['path', { d: 'M10 22c2.761 0 5-1.79 5-4-4.42 0-4.08-5-8.5-5a1 1 0 100 9za3 3 0 01-3-3', key: '16ixf7' }],
+    ['path', { d: 'M12.5 11.5 22 2', key: '1r4cui' }],
+    [
+      'path',
+      {
+        d: 'm6.98 13.02 2.665-2.664a1.21 1.21 0 011.71 0l2.29 2.288a1.21 1.21 0 010 1.712l-2.088 2.087',
+        key: '1dw0bk',
+      },
+    ],
+  ],
+  mosque: [
+    ['path', { d: 'M12.268 2a2 2 0 003.465 2', key: '3in8xp' }],
+    ['path', { d: 'M14 5 L14 8', key: '1fhhfb' }],
+    ['path', { d: 'M16 22v-3a2 2 0 00-4 0v3', key: '1p6nbd' }],
+    [
+      'path',
+      {
+        d: 'M21 13c-.662-1.497-1.666-2.753-2.9-3.63C16.825 8.47 15.422 8 14 8s-2.826.47-4.1 1.37C8.668 10.248 7.663 11.504 7 13z',
+        key: 'ck3r5y',
+      },
+    ],
+    ['path', { d: 'M3 9h4', key: 'rnfnj5' }],
+    ['path', { d: 'M7 22V6a5 5 0 00-2-4 5 5 0 00-2 4v14a2 2 0 002 2h14a2 2 0 002-2v-7', key: '28kgc3' }],
   ],
   motorbike: [
     ['path', { d: 'm18 14-1-3', key: 'bdajw9' }],
@@ -8734,6 +10168,35 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['rect', { x: '5', y: '2', width: '14', height: '20', rx: '7', key: '11ol66' }],
     ['path', { d: 'M12 6v4', key: '16clxf' }],
   ],
+  'mouth-off': [
+    [
+      'path',
+      {
+        d: 'M13.074 7.417a2.6 2.6 0 012.989.099c1.829 1.36 3.053 2.076 5.479 3.644a1 1 0 01.308 1.368 11.6 11.6 0 01-1.617 2.05',
+        key: '150453',
+      },
+    ],
+    ['path', { d: 'M2 12a50.5 50.5 0 0010.99.99', key: '1ccgm2' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M21 11a1 1 0 011 1 51 51 0 01-3.734.61', key: '5gbt18' }],
+    [
+      'path',
+      {
+        d: 'M7.695 7.695c-1.7 1.247-2.92 1.967-5.238 3.464a1 1 0 00-.307 1.369 11.6 11.6 0 0014.766 4.388',
+        key: '4jj8yu',
+      },
+    ],
+  ],
+  mouth: [
+    ['path', { d: 'M2 12a50.5 50.5 0 0020 0 1 1 0 00-1-1', key: '18uu27' }],
+    [
+      'path',
+      {
+        d: 'M2.457 11.159a1 1 0 00-.307 1.369 11.59 11.59 0 0019.7 0 1 1 0 00-.308-1.368c-2.426-1.568-3.65-2.284-5.479-3.644a2.6 2.6 0 00-3.373.208 1 1 0 01-1.38 0 2.62 2.62 0 00-3.373-.208c-1.83 1.36-3.053 2.076-5.48 3.643',
+        key: '9k55ex',
+      },
+    ],
+  ],
   'move-3d': [
     ['path', { d: 'M5 3v16h16', key: '1mqmf9' }],
     ['path', { d: 'm5 19 6-6', key: 'jh6hbb' }],
@@ -8800,25 +10263,6 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm5 9-3 3 3 3', key: 'j64kie' }],
     ['path', { d: 'm9 5 3-3 3 3', key: 'l8vdw6' }],
   ],
-  'music-2': [
-    ['circle', { cx: '8', cy: '18', r: '4', key: '1fc0mg' }],
-    ['path', { d: 'M12 18V2l7 4', key: 'g04rme' }],
-  ],
-  'music-3': [
-    ['circle', { cx: '12', cy: '18', r: '4', key: 'm3r9ws' }],
-    ['path', { d: 'M16 18V2', key: '40x2m5' }],
-  ],
-  'music-4': [
-    ['path', { d: 'M9 18V5l12-2v13', key: '1jmyc2' }],
-    ['path', { d: 'm9 9 12-2', key: '1e64n2' }],
-    ['circle', { cx: '6', cy: '18', r: '3', key: 'fqmcym' }],
-    ['circle', { cx: '18', cy: '16', r: '3', key: '1hluhg' }],
-  ],
-  music: [
-    ['path', { d: 'M9 18V5l12-2v13', key: '1jmyc2' }],
-    ['circle', { cx: '6', cy: '18', r: '3', key: 'fqmcym' }],
-    ['circle', { cx: '18', cy: '16', r: '3', key: '1hluhg' }],
-  ],
   'navigation-2-off': [
     ['path', { d: 'M9.31 9.31 5 21l7-4 7 4-1.17-3.17', key: 'qoq2o2' }],
     ['path', { d: 'M14.53 8.88 12 2l-1.17 3.17', key: 'k3sjzy' }],
@@ -8831,6 +10275,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['line', { x1: '2', x2: '22', y1: '2', y2: '22', key: 'a6p6uj' }],
   ],
   navigation: [['polygon', { points: '3 11 22 2 13 21 11 13 3 11', key: '1ltx0t' }]],
+  'nepali-rupee': [
+    ['path', { d: 'm14 20-8-8h4c5.333 0 5.333-8 0-8', key: 'cvo5tb' }],
+    ['path', { d: 'M14 8c4.078 0 5.038 4.678 2.88 6.88', key: '1t5u1p' }],
+    ['path', { d: 'M6 4h12', key: '1x2ag7' }],
+  ],
   network: [
     ['rect', { x: '16', y: '16', width: '6', height: '6', rx: '1', key: '4q2zg0' }],
     ['rect', { x: '2', y: '16', width: '6', height: '6', rx: '1', key: '8cvhb9' }],
@@ -8861,6 +10310,15 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm8.5 4 7 4', key: 'm1xjk3' }],
     ['path', { d: 'm8.5 8 7-4', key: 't0m5j6' }],
     ['circle', { cx: '12', cy: '17', r: '5', key: 'qbz8iq' }],
+  ],
+  'notebook-dot': [
+    ['path', { d: 'M16 11.75V22', key: '1a97l0' }],
+    ['path', { d: 'M2 10h4', key: 'l0bgd4' }],
+    ['path', { d: 'M2 14h4', key: '1gsvsf' }],
+    ['path', { d: 'M2 18h4', key: '1bu2t1' }],
+    ['path', { d: 'M2 6h4', key: 'aawbzj' }],
+    ['path', { d: 'M20 11.75V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h5.65', key: '1h4mjg' }],
+    ['circle', { cx: '18', cy: '5', r: '3', key: 'gq8acd' }],
   ],
   'notebook-pen': [
     ['path', { d: 'M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4', key: 're6nr2' }],
@@ -8929,41 +10387,46 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 14h8', key: '1fgep2' }],
     ['path', { d: 'M8 18h5', key: '17enja' }],
   ],
+  numbers: [
+    ['path', { d: 'm10 4 2.6-1.95a.25.25 0 01.4.2V10', key: '13vgod' }],
+    ['path', { d: 'M16 14.535A4 4 0 0118 14a2 2 0 010 4 2 2 0 010 4 4 4 0 01-2-.535', key: '8az2h7' }],
+    ['path', { d: 'M8 22H4.5a.5.5 0 01-.5-.5c0-2.68 4-2.932 4-5.5a2 2 0 00-2-2 2.5 2.5 0 00-2 1', key: '110tub' }],
+  ],
   'nut-off': [
-    ['path', { d: 'M12 4V2', key: '1k5q1u' }],
     [
       'path',
       {
-        d: 'M5 10v4a7.004 7.004 0 0 0 5.277 6.787c.412.104.802.292 1.102.592L12 22l.621-.621c.3-.3.69-.488 1.102-.592a7.01 7.01 0 0 0 4.125-2.939',
-        key: '1xcvy9',
+        d: 'M11.868 11.868a.88.88 0 01-.488.252c-1.78.28-3.54-.17-4.88-.62 0 1.272-.229 3.578-.653 5.347a10 10 0 01-.417 1.363c-.21.52-.82.55-1.17.12a10 10 0 01.677-13.393',
+        key: '1wghw8',
       },
     ],
-    ['path', { d: 'M19 10v3.343', key: '163tfc' }],
+    ['path', { d: 'M12.14 6.485a27.4 27.4 0 004.707-.638L20 9a7.23 7.23 0 011.706 7.05', key: '1ytkaj' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
     [
       'path',
       {
-        d: 'M12 12c-1.349-.573-1.905-1.005-2.5-2-.546.902-1.048 1.353-2.5 2-1.018-.644-1.46-1.08-2-2-1.028.71-1.69.918-3 1 1.081-1.048 1.757-2.03 2-3 .194-.776.84-1.551 1.79-2.21m11.654 5.997c.887-.457 1.28-.891 1.556-1.787 1.032.916 1.683 1.157 3 1-1.297-1.036-1.758-2.03-2-3-.5-2-4-4-8-4-.74 0-1.461.068-2.15.192',
-        key: '17914v',
+        d: 'M20.707 20.707A1 1 0 0120 21h-1c-1.069 0-1.648.242-2.485.552A7.2 7.2 0 019.002 20l-3.155-3.153',
+        key: 'xvz8if',
       },
     ],
-    ['line', { x1: '2', x2: '22', y1: '2', y2: '22', key: 'a6p6uj' }],
+    ['path', { d: 'M8.356 2.7a10 10 0 019.974 1.56c.43.35.4.97-.12 1.17a10 10 0 01-1.363.417', key: 'o7h9wy' }],
   ],
   nut: [
-    ['path', { d: 'M12 4V2', key: '1k5q1u' }],
     [
       'path',
       {
-        d: 'M5 10v4a7.004 7.004 0 0 0 5.277 6.787c.412.104.802.292 1.102.592L12 22l.621-.621c.3-.3.69-.488 1.102-.592A7.003 7.003 0 0 0 19 14v-4',
-        key: '1tgyif',
+        d: 'M16.847 5.847 20 9a7.23 7.23 0 011.551 7.516C21.241 17.352 21 17.932 21 19v1a1 1 0 01-1 1h-1c-1.069 0-1.648.242-2.485.552A7.2 7.2 0 019.002 20l-3.155-3.153',
+        key: '1efe3h',
       },
     ],
     [
       'path',
       {
-        d: 'M12 4C8 4 4.5 6 4 8c-.243.97-.919 1.952-2 3 1.31-.082 1.972-.29 3-1 .54.92.982 1.356 2 2 1.452-.647 1.954-1.098 2.5-2 .595.995 1.151 1.427 2.5 2 1.31-.621 1.862-1.058 2.5-2 .629.977 1.162 1.423 2.5 2 1.209-.548 1.68-.967 2-2 1.032.916 1.683 1.157 3 1-1.297-1.036-1.758-2.03-2-3-.5-2-4-4-8-4Z',
-        key: 'tnsqj',
+        d: 'M18.21 5.43c-1.71.69-5.07 1.07-6.71 1.07.46 1.38.91 2.74.61 4.88a.88.88 0 01-.73.74c-1.78.28-3.54-.17-4.88-.62 0 1.64-.38 5-1.07 6.71-.21.52-.82.55-1.17.12A10 10 0 0118.33 4.26c.43.35.4.97-.12 1.17',
+        key: 'pqqcbt',
       },
     ],
+    ['path', { d: 'M4.93 4.93 3 3a.7.7 0 010-1', key: '13508k' }],
   ],
   'octagon-alert': [
     ['path', { d: 'M12 16h.01', key: '1drbdi' }],
@@ -9027,8 +10490,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   option: [
-    ['path', { d: 'M3 3h6l6 18h6', key: 'ph9rgk' }],
     ['path', { d: 'M14 3h7', key: '16f0ms' }],
+    ['path', { d: 'M3 3h5.28a1 1 0 0 1 .948.684l5.544 16.632a1 1 0 0 0 .949.684H21', key: '1qf1im' }],
   ],
   orbit: [
     ['path', { d: 'M20.341 6.484A10 10 0 0 1 10.266 21.85', key: '1enhxb' }],
@@ -9234,15 +10697,15 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   panda: [
     ['path', { d: 'M11.25 17.25h1.5L12 18z', key: '1wmwwj' }],
     ['path', { d: 'm15 12 2 2', key: 'k60wz4' }],
-    ['path', { d: 'M18 6.5a.5.5 0 0 0-.5-.5', key: '1ch4h4' }],
+    ['path', { d: 'M17.902 6.599a8 8 0 0 0-.5-.5', key: '1hpval' }],
     [
       'path',
       {
-        d: 'M20.69 9.67a4.5 4.5 0 1 0-7.04-5.5 8.35 8.35 0 0 0-3.3 0 4.5 4.5 0 1 0-7.04 5.5C2.49 11.2 2 12.88 2 14.5 2 19.47 6.48 22 12 22s10-2.53 10-7.5c0-1.62-.48-3.3-1.3-4.83',
-        key: '1c660l',
+        d: 'M2 14.5C2 19.47 6.48 22 12 22s10-2.53 10-7.5a10 10 0 0 0-1.3-4.83 4.5 4.5 0 1 0-7.05-5.5 8 8 0 0 0-3.3 0 4.5 4.5 0 1 0-7.04 5.5A10 10 0 0 0 2 14.5',
+        key: 'fsvxqb',
       },
     ],
-    ['path', { d: 'M6 6.5a.495.495 0 0 1 .5-.5', key: 'eviuep' }],
+    ['path', { d: 'M6.099 6.599a8 8 0 0 1 .5-.5', key: '1mh6nx' }],
     ['path', { d: 'm9 12-2 2', key: '326nkw' }],
   ],
   'panel-bottom-close': [
@@ -9366,6 +10829,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M3 9h18', key: '1pudct' }],
     ['path', { d: 'M9 21V9', key: '1oto5p' }],
   ],
+  'paper-bag': [
+    [
+      'path',
+      {
+        d: 'M5.364 3.848C4 6 3 9.652 3 12.652V19a2 2 0 002 2h14a2 2 0 002-2v-5c0-2.334-1.816-4.668-2.622-7.002',
+        key: 'vlsvfu',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M7 3h11.379a2 2 0 011.789 1.106l.723 1.447A1 1 0 0119.997 7h-8.525a2 2 0 01-1.789-1.106L8.79 4.105a2 2 0 10-3.579 1.789l2.261 4.522A5 5 0 018 12.652V21',
+        key: '12exh5',
+      },
+    ],
+  ],
   paperclip: [
     [
       'path',
@@ -9375,9 +10854,30 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  parasol: [
+    ['path', { d: 'M12.5 11.134 18.196 21', key: 'gf58kt' }],
+    [
+      'path',
+      {
+        d: 'M20.425 5.299a10 10 0 0 0-16.941 9.78c.183.563.843.774 1.355.478L20.16 6.711c.512-.296.66-.973.264-1.413',
+        key: 'znqfe4',
+      },
+    ],
+    ['path', { d: 'M21 21H3', key: 'oafrgs' }],
+  ],
   parentheses: [
     ['path', { d: 'M8 21s-4-3-4-9 4-9 4-9', key: 'uto9ud' }],
     ['path', { d: 'M16 3s4 3 4 9-4 9-4 9', key: '4w2vsq' }],
+  ],
+  park: [
+    ['path', { d: 'M12 18h10', key: '1c50yy' }],
+    ['path', { d: 'M13.248 9.998A4.5 4.5 0 0 0 11.75 8.6V8a1 1 0 0 0-7.5 0 4.9 4.9 0 0 0 2.25 9H8', key: 't0a46z' }],
+    ['path', { d: 'm15 14-2 6', key: 'u1moqn' }],
+    ['path', { d: 'm19 14 2 6', key: 'ceqmri' }],
+    ['path', { d: 'M21 14h-8', key: 'jf2tjg' }],
+    ['path', { d: 'M8 20v-5.922a2 2 0 0 0-.586-1.414L6.5 11.75', key: '4fcolv' }],
+    ['path', { d: 'M9.205 12.795 8 14', key: 'z0drss' }],
+    ['circle', { cx: '19', cy: '6', r: '2', key: '1yudst' }],
   ],
   'parking-meter': [
     ['path', { d: 'M11 15h2', key: '199qp6' }],
@@ -9459,18 +10959,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     [
       'path',
       {
-        d: 'M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z',
-        key: 'nt11vn',
+        d: 'm18 13-.654-4.736a4 4 0 00-2.756-3.266l-9.163-2.9a2 2 0 00-2.017.493l-.82.819a2 2 0 00-.492 2.017l2.9 9.163a4 4 0 003.266 2.756L13 18',
+        key: '93nyr4',
       },
     ],
     [
       'path',
       {
-        d: 'm18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18',
-        key: '15qc1e',
+        d: 'M18.648 12.352a1.205 1.205 0 011.704 0l1.296 1.296a1.205 1.205 0 010 1.704l-6.296 6.296a1.205 1.205 0 01-1.704 0l-1.296-1.296a1.205 1.205 0 010-1.704z',
+        key: 'lnux7s',
       },
     ],
-    ['path', { d: 'm2.3 2.3 7.286 7.286', key: '1wuzzi' }],
+    ['path', { d: 'm3 3 6.586 6.586', key: '1igwcn' }],
     ['circle', { cx: '11', cy: '11', r: '2', key: 'xmgehs' }],
   ],
   pen: [
@@ -9519,6 +11019,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'm15 5 4 4', key: '1mk7zo' }],
   ],
+  'pencil-sparkles': [
+    ['path', { d: 'M10 3H8', key: 'mzdi2d' }],
+    ['path', { d: 'm15.007 5.008 3.987 3.986', key: '1scubj' }],
+    ['path', { d: 'M20 15v4', key: 'nmhudv' }],
+    [
+      'path',
+      {
+        d: 'M21.174 6.813a2.82 2.82 0 0 0-3.986-3.987L3.842 16.175a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z',
+        key: 'fs0856',
+      },
+    ],
+    ['path', { d: 'M22 17h-4', key: '1sj068' }],
+    ['path', { d: 'M4 5v4', key: '13jjxc' }],
+    ['path', { d: 'M6 7H2', key: '8zbtv0' }],
+    ['path', { d: 'M9 2v2', key: '165o2o' }],
+  ],
   pencil: [
     [
       'path',
@@ -9543,16 +11059,31 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '6.5', cy: '6.5', r: '2.5', key: '4mh3h7' }],
     ['circle', { cx: '17.5', cy: '17.5', r: '2.5', key: '1mdrzq' }],
   ],
+  'perfume-bottle': [
+    ['path', { d: 'M 5 22 H 11.072', key: '1ds6j9' }],
+    ['path', { d: 'M15 5 C 23 4 23.328 12.676 20 14.536', key: 'm2x5id' }],
+    ['path', { d: 'M15.802 10.308 C 14.776 9.465 14 8.496 14 7', key: 'k2g993' }],
+    ['path', { d: 'M2 2h.01', key: 't85c5s' }],
+    ['path', { d: 'M2 7h.01', key: '4rb8c5' }],
+    ['path', { d: 'M5 4.5h.01', key: '1v53bk' }],
+    ['path', { d: 'M8.127 22 A 8 8 0 0 1 4 15 3 3 0 0 1 4.879 12.879C 6.879 10.879 10 10 10 7', key: '1wboph' }],
+    ['circle', { cx: '18', cy: '18', r: '4', key: 'lned0m' }],
+    ['rect', { x: '9', y: '2', width: '6', height: '5', rx: '1', key: '1wlw2z' }],
+  ],
   'person-standing': [
     ['circle', { cx: '12', cy: '5', r: '1', key: 'gxeob9' }],
     ['path', { d: 'm9 20 3-6 3 6', key: 'se2kox' }],
     ['path', { d: 'm6 8 6 2 6-2', key: '4o3us4' }],
     ['path', { d: 'M12 10v4', key: '1kjpxc' }],
   ],
+  phi: [
+    ['path', { d: 'M12 2v20', key: 't6zp3m' }],
+    ['circle', { cx: '12', cy: '12', r: '7', key: 'fim9np' }],
+  ],
   'philippine-peso': [
-    ['path', { d: 'M20 11H4', key: '6ut86h' }],
-    ['path', { d: 'M20 7H4', key: 'zbl0bi' }],
-    ['path', { d: 'M7 21V4a1 1 0 0 1 1-1h4a1 1 0 0 1 0 12H7', key: '1ana5r' }],
+    ['path', { d: 'M4 12h16', key: '1lakjw' }],
+    ['path', { d: 'M4 8h16', key: 'y22wk4' }],
+    ['path', { d: 'M6 20V5a1 1 0 011-1h5a6 6 0 010 12H6', key: '1szfpi' }],
   ],
   'phone-call': [
     ['path', { d: 'M13 2a9 9 0 0 1 9 9', key: '1itnx2' }],
@@ -9586,6 +11117,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
         key: '9njp5v',
       },
     ],
+  ],
+  'phone-log': [
+    [
+      'path',
+      {
+        d: 'M13.832 16.568a1 1 0 001.213-.303l.355-.465A2 2 0 0117 15h3a2 2 0 012 2v3a2 2 0 01-2 2A18 18 0 012 4a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-.8 1.6l-.468.351a1 1 0 00-.292 1.233 14 14 0 006.392 6.384',
+        key: 'dn7fr7',
+      },
+    ],
+    ['path', { d: 'M14.396 4.171h7.171', key: 'qkdnsb' }],
+    ['path', { d: 'M17.343 8.17h4.224', key: 'cclf0d' }],
   ],
   'phone-missed': [
     ['path', { d: 'm16 2 6 6', key: '1gw87d' }],
@@ -9641,18 +11183,18 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M18 20c-1.7 0-3-1.3-3-3V4', key: '1gaosr' }],
   ],
   piano: [
+    ['path', { d: 'M10 13v4', key: '5krxfa' }],
+    ['path', { d: 'M14 13v4', key: '72xrsi' }],
+    ['path', { d: 'M18 13v4', key: '1i7sbu' }],
+    ['path', { d: 'M2 13h20', key: '5evz65' }],
     [
       'path',
       {
-        d: 'M18.5 8c-1.4 0-2.6-.8-3.2-2A6.87 6.87 0 0 0 2 9v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8.5C22 9.6 20.4 8 18.5 8',
-        key: 'lag0yf',
+        d: 'M22 11.5A3.5 3.5 0 0018.5 8a3.52 3.52 0 01-3.173-2A7 7 0 002 9v10a2 2 0 002 2h16a2 2 0 002-2z',
+        key: '1txdgy',
       },
     ],
-    ['path', { d: 'M2 14h20', key: 'myj16y' }],
-    ['path', { d: 'M6 14v4', key: '9ng0ue' }],
-    ['path', { d: 'M10 14v4', key: '1v8uk5' }],
-    ['path', { d: 'M14 14v4', key: '1tqops' }],
-    ['path', { d: 'M18 14v4', key: '18uqwm' }],
+    ['path', { d: 'M6 13v4', key: '9v0cap' }],
   ],
   pickaxe: [
     ['path', { d: 'm14 13-8.381 8.38a1 1 0 0 1-3.001-3L11 9.999', key: '1lw9ds' }],
@@ -9797,11 +11339,59 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'plant-pot': [
+    [
+      'path',
+      {
+        d: 'M14 8.536V6a4 4 0 014-4h1.5a.5.5 0 01.5.5V4a4 4 0 01-4 4 4 4 0 00-4 4 5 5 0 01-8-4 5 5 0 018 4c0 2 1 3 1 5',
+        key: '1yu01x',
+      },
+    ],
+    ['path', { d: 'm18 17-1.085 3.58A2 2 0 0115 22H9.002a2 2 0 01-1.913-1.418L6 17', key: '4ibc1g' }],
+    ['path', { d: 'M5 17h14', key: '74xsq1' }],
+  ],
+  'play-off': [
+    ['path', { d: 'm10.215 4.56 9.79 5.71a2 2 0 0 1 .003 3.458l-.393.23', key: 'fdtkwz' }],
+    ['path', { d: 'm16.042 16.042-8.034 4.686A2 2 0 0 1 5 19V5', key: '1c8hxg' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+  ],
   play: [
     [
       'path',
       { d: 'M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z', key: '10ikf1' },
     ],
+  ],
+  'playing-card': [
+    [
+      'path',
+      {
+        d: 'M12.832 8.445a1 1 0 00-1.589-.098l-2.075 3.098a1 1 0 000 1.11l2 3a1 1 0 001.664 0l2-3a1 1 0 000-1.11z',
+        key: 'r2cm5y',
+      },
+    ],
+    ['rect', { x: '5', y: '2', width: '14', height: '20', rx: '2', key: '1k0ky4' }],
+  ],
+  'playing-cards-fan': [
+    [
+      'path',
+      {
+        d: 'M12.65 7.65a2 2 0 012.629-1.046l5.51 2.374a2 2 0 011.046 2.628l-3.957 9.184a2 2 0 01-2.628 1.046l-5.51-2.374a2 2 0 01-1.046-2.628z',
+        key: '15jvxw',
+      },
+    ],
+    ['path', { d: 'M18 7.777V4a2 2 0 00-2-2h-6a2 2 0 00-2 2v10a2 2 0 001.137 1.805', key: 'y6hc3m' }],
+    ['path', { d: 'm8 4.389-4.364.809a2 2 0 00-1.602 2.33l1.822 9.833a2 2 0 002.331 1.602l2.542-.47', key: 't01ww5' }],
+  ],
+  'playing-cards': [
+    [
+      'path',
+      {
+        d: 'M14.832 8.445a1 1 0 00-1.589-.098l-2.075 3.098a1 1 0 000 1.11l2 3a1 1 0 001.664 0l2-3a1 1 0 000-1.11z',
+        key: 'ubuxio',
+      },
+    ],
+    ['path', { d: 'm7.18 20.827-5-11a2 2 0 01.993-2.647L7 5.44', key: '1dure5' }],
+    ['rect', { x: '7', y: '2', width: '14', height: '20', rx: '2', key: 'p3xopd' }],
   ],
   'plug-2': [
     ['path', { d: 'M9 2v6', key: '17ngun' }],
@@ -9834,11 +11424,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M20.83 8.83a4 4 0 0 0-5.66-5.66l-12 12a4 4 0 1 0 5.66 5.66Z', key: '6fykxj' }],
     ['path', { d: 'M18 11.66V22a4 4 0 0 0 4-4V6', key: '1utzek' }],
   ],
-  podcast: [
-    ['path', { d: 'M13 17a1 1 0 1 0-2 0l.5 4.5a0.5 0.5 0 0 0 1 0z', fill: 'currentColor', key: 'x1mxqr' }],
-    ['path', { d: 'M16.85 18.58a9 9 0 1 0-9.7 0', key: 'd71mpg' }],
-    ['path', { d: 'M8 14a5 5 0 1 1 8 0', key: 'fc81rn' }],
-    ['circle', { cx: '12', cy: '11', r: '1', fill: 'currentColor', key: 'vqiwd' }],
+  podium: [
+    ['path', { d: 'M12 6V2h-1', key: '1hv4eo' }],
+    [
+      'path',
+      {
+        d: 'M9 15a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1',
+        key: '1jvw5n',
+      },
+    ],
+    ['path', { d: 'M9 21V11a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v10', key: 'rgi5dp' }],
   ],
   'pointer-off': [
     ['path', { d: 'M10 4.5V4a2 2 0 0 0-2.41-1.957', key: 'jsi14n' }],
@@ -9881,10 +11476,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm22 22-5.5-5.5', key: '17o70y' }],
   ],
   'pound-sterling': [
-    ['path', { d: 'M18 7c0-5.333-8-5.333-8 0', key: '1prm2n' }],
-    ['path', { d: 'M10 7v14', key: '18tmcs' }],
-    ['path', { d: 'M6 21h12', key: '4dkmi1' }],
-    ['path', { d: 'M6 13h10', key: 'ybwr4a' }],
+    ['path', { d: 'M17 18a2 2 0 01-2 2H5a3 3 0 003-3V8a4 4 0 018 0', key: 'cv9piq' }],
+    ['path', { d: 'M6 12h7', key: '1re8yl' }],
   ],
   'power-off': [
     ['path', { d: 'M18.36 6.64A9 9 0 0 1 20.77 15', key: 'dxknvb' }],
@@ -9900,6 +11493,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M2 3h20', key: '91anmk' }],
     ['path', { d: 'M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3', key: '2k9sn8' }],
     ['path', { d: 'm7 21 5-5 5 5', key: 'bip4we' }],
+  ],
+  'printer-3d': [
+    ['path', { d: 'M10 11v1', key: 'jskgh' }],
+    ['path', { d: 'M12 8h8', key: '1lhi5i' }],
+    ['path', { d: 'M15 20v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3', key: '19jk1g' }],
+    ['path', { d: 'M4 20h16', key: '14thso' }],
+    ['path', { d: 'M4 22V4a2 2 0 012-2h12a2 2 0 012 2v18', key: 'kht5js' }],
+    ['path', { d: 'M4 8h4', key: '1nzhgk' }],
+    [
+      'path',
+      {
+        d: 'M8.635 10.093A2 2 0 018 8.631V7a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-.293.707l-1 1a1 1 0 01-1.414 0z',
+        key: 'afkd69',
+      },
+    ],
   ],
   'printer-check': [
     ['path', { d: 'M13.5 22H7a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v.5', key: 'qeb09x' }],
@@ -10388,6 +11996,24 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'robot-arm': [
+    ['path', { d: 'M12 21 7.5 8.322', key: '18d2q3' }],
+    ['path', { d: 'm14 7 1.75-3.767a.5.5 0 0 1 .662-.172L20 5.005', key: '1ui6cx' }],
+    ['path', { d: 'm20 8.998-3.588 1.944a.5.5 0 0 1-.662-.172L14 7H8', key: 'mfi17k' }],
+    ['path', { d: 'M3.486 21h10', key: 'd8eyu2' }],
+    ['path', { d: 'M5 21V8.732', key: 'uljm3b' }],
+    ['circle', { cx: '6', cy: '7', r: '2', key: '11yjtp' }],
+  ],
+  'robot-vacuum': [
+    ['path', { d: 'M11 17h2', key: '12w5me' }],
+    ['path', { d: 'M12 12h.01', key: '1mp3jc' }],
+    ['path', { d: 'M17 12a5 5 0 00-10 0', key: '7ltzr3' }],
+    ['path', { d: 'M19 2v2.8', key: '5fivdr' }],
+    ['path', { d: 'M2 5h2.8', key: '1hq9iq' }],
+    ['path', { d: 'M22 5h-2.8', key: '1w5mcv' }],
+    ['path', { d: 'M5 2v2.8', key: '1aozhq' }],
+    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
+  ],
   rocket: [
     ['path', { d: 'M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5', key: 'qeys4' }],
     [
@@ -10430,6 +12056,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M16.47214 7.52786 A 5 10 0 1 0 13 21.79796', key: '1245p8' }],
     ['path', { d: 'M21.79796 11 A 10 5 0 1 0 19 15.57071', key: '1i40ks' }],
   ],
+  'rotate-ccw-clock': [
+    ['path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', key: '1357e3' }],
+    ['path', { d: 'M3 3v5h5', key: '1xhq8a' }],
+    ['path', { d: 'M12 7v5l4 2', key: '1fdv2h' }],
+  ],
   'rotate-ccw-key': [
     ['path', { d: 'M12 7v6', key: 'lw1j43' }],
     ['path', { d: 'M12 9h2', key: '1lpap9' }],
@@ -10445,6 +12076,23 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   'rotate-ccw': [
     ['path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', key: '1357e3' }],
     ['path', { d: 'M3 3v5h5', key: '1xhq8a' }],
+  ],
+  'rotate-cw-clock': [
+    ['path', { d: 'M12 7v5l4 2', key: '1fdv2h' }],
+    ['path', { d: 'M16 8h5V3', key: '1fyz0c' }],
+    ['path', { d: 'm21 8-2.3-2.3A9.7 9.7 0 0012 3a9 9 0 109 9', key: 'l7odlp' }],
+  ],
+  'rotate-cw-fading-clock': [
+    ['path', { d: 'M12 3a9.75 9.75 0 0 1 6.74 2.74', key: '1k3kxf' }],
+    ['path', { d: 'M18.74 5.74 21 8', key: '1eb40o' }],
+    ['path', { d: 'M21 8V3', key: '1et280' }],
+    ['path', { d: 'M7.5 19.794c-6-3.464-6-12.124 0-15.588', key: '19r0lp' }],
+    ['path', { d: 'M7.5 4.206A9 9 0 0 1 12 3', key: 's8r11' }],
+    ['path', { d: 'M12 7v5l4 2', key: '1fdv2h' }],
+    ['path', { d: 'M14 20.775A9 9 0 0 1 12 21', key: '184rgu' }],
+    ['path', { d: 'M19 17.656a9 9 0 0 1-1.5 1.456', key: '7qgp6l' }],
+    ['path', { d: 'M21 12a9 9 0 0 1-.228 2', key: '1h378y' }],
+    ['path', { d: 'M21 8h-5', key: 'k0yzmk' }],
   ],
   'rotate-cw-square': [
     ['path', { d: 'M12 5H6a2 2 0 0 0-2 2v3', key: 'l96uqu' }],
@@ -10497,6 +12145,19 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M4 4a16 16 0 0 1 16 16', key: 'k0647b' }],
     ['circle', { cx: '5', cy: '19', r: '1', key: 'bfqh0e' }],
   ],
+  'rugby-ball': [
+    ['path', { d: 'm10 10 4 4', key: '1twawc' }],
+    ['path', { d: 'm13 7 4 4', key: '17f0qu' }],
+    [
+      'path',
+      {
+        d: 'M15.34 2.138A15 15 0 002.138 15.34c-.357 2.94.004 4.919.805 5.717.798.8 2.778 1.162 5.718.805A15 15 0 0021.862 8.661c.357-2.94-.004-4.92-.805-5.718-.798-.8-2.778-1.162-5.717-.805',
+        key: '7bv9ob',
+      },
+    ],
+    ['path', { d: 'M17 7 7 17', key: '15tmo1' }],
+    ['path', { d: 'm7 13 4 4', key: 'ir98si' }],
+  ],
   'ruler-dimension-line': [
     ['path', { d: 'M10 15v-3', key: '1pjskw' }],
     ['path', { d: 'M14 15v-3', key: '1o1mqj' }],
@@ -10521,8 +12182,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm17.5 15.5 2-2', key: 'wo5hmg' }],
   ],
   'russian-ruble': [
-    ['path', { d: 'M6 11h8a4 4 0 0 0 0-8H9v18', key: '18ai8t' }],
-    ['path', { d: 'M6 15h8', key: '1y8f6l' }],
+    ['path', { d: 'M4 16h6', key: 'm3hhay' }],
+    ['path', { d: 'M7 20V5a1 1 0 011-1h6a4 4 0 010 8H4', key: 'buy49y' }],
   ],
   sailboat: [
     ['path', { d: 'M10 2v15', key: '1qf71f' }],
@@ -10533,17 +12194,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   salad: [
-    ['path', { d: 'M7 21h10', key: '1b0cd5' }],
-    ['path', { d: 'M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z', key: '4rw317' }],
     [
       'path',
       {
-        d: 'M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1',
-        key: '10xrj0',
+        d: 'M19.496 12a2.5 2.5 0 00.399-2.214A2 2 0 0020.32 6.5 2 2 0 0019 3a2 2 0 00-1.5.68 2 2 0 00-3.287.424 2.5 2.5 0 00-3.189 2.06A3 3 0 0012 12l4-4',
+        key: 'zab2hg',
       },
     ],
-    ['path', { d: 'm13 12 4-4', key: '1hckqy' }],
-    ['path', { d: 'M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2', key: '1p4srx' }],
+    ['path', { d: 'M4 12a1 1 0 00-.99 1.133A9 9 0 0012 21a9 9 0 008.99-7.867A1 1 0 0020 12z', key: 'mjw0tp' }],
+    ['path', { d: 'M7 21h10', key: '1b0cd5' }],
+    ['path', { d: 'M9.85 6.907A3.5 3.5 0 005.05 12', key: '2us4sn' }],
   ],
   sandwich: [
     ['path', { d: 'm2.37 11.223 8.372-6.777a2 2 0 0 1 2.516 0l8.371 6.777', key: 'f1wd0e' }],
@@ -10553,10 +12213,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['rect', { width: '20', height: '4', x: '2', y: '11', rx: '1', key: 'itshg' }],
   ],
   'satellite-dish': [
-    ['path', { d: 'M4 10a7.31 7.31 0 0 0 10 10Z', key: '1fzpp3' }],
-    ['path', { d: 'm9 15 3-3', key: '88sc13' }],
-    ['path', { d: 'M17 13a6 6 0 0 0-6-6', key: '15cc6u' }],
-    ['path', { d: 'M21 13A10 10 0 0 0 11 3', key: '11nf8s' }],
+    ['path', { d: 'M18 12a6 6 0 00-6-6', key: '9b1kp8' }],
+    [
+      'path',
+      {
+        d: 'M2.824 10.459a8 8 0 0010.717 10.717c.558-.276.623-1.012.183-1.452l-9.448-9.448c-.44-.44-1.176-.375-1.452.183',
+        key: '1jwhal',
+      },
+    ],
+    ['path', { d: 'M22 12A10 10 0 0012 2', key: 'm7rnro' }],
+    ['path', { d: 'm9 15 4-4', key: '1tjxz5' }],
   ],
   satellite: [
     [
@@ -10584,10 +12250,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   'saudi-riyal': [
-    ['path', { d: 'm20 19.5-5.5 1.2', key: '1aenhr' }],
-    ['path', { d: 'M14.5 4v11.22a1 1 0 0 0 1.242.97L20 15.2', key: '2rtezt' }],
-    ['path', { d: 'm2.978 19.351 5.549-1.363A2 2 0 0 0 10 16V2', key: '1kbm92' }],
-    ['path', { d: 'M20 10 4 13.5', key: '8nums9' }],
+    ['path', { d: 'M10 2.977v13.19a2 2 0 01-1.23 1.846L4 19.999', key: '1v3jsl' }],
+    ['path', { d: 'M14 4v9.523a1 1 0 001.371.928L19 13', key: 'nugghf' }],
+    ['path', { d: 'm19 18-5 2', key: '1vcw15' }],
+    ['path', { d: 'M19 8 4 14', key: 't5tnti' }],
   ],
   'save-all': [
     ['path', { d: 'M10 2v3a1 1 0 0 0 1 1h5', key: '1xspal' }],
@@ -10601,14 +12267,47 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'save-check': [
+    [
+      'path',
+      {
+        d: 'M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4v4.35',
+        key: '6jbevg',
+      },
+    ],
+    ['path', { d: 'm16 19 2 2 4-4', key: '1b14m6' }],
+    ['path', { d: 'M17 15.13V14a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7', key: '1bzeol' }],
+    ['path', { d: 'M7 3v4a1 1 0 0 0 1 1h7', key: 't51u73' }],
+  ],
   'save-off': [
     ['path', { d: 'M13 13H8a1 1 0 0 0-1 1v7', key: 'h8g396' }],
     ['path', { d: 'M14 8h1', key: '1lfen6' }],
     ['path', { d: 'M17 21v-4', key: '1yknxs' }],
     ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
     ['path', { d: 'M20.41 20.41A2 2 0 0 1 19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 .59-1.41', key: '1t4vdl' }],
-    ['path', { d: 'M29.5 11.5s5 5 4 5', key: 'zzn4i6' }],
     ['path', { d: 'M9 3h6.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V15', key: '24cby9' }],
+  ],
+  'save-pen': [
+    ['path', { d: 'M13.33 13H8a1 1 0 00-1 1v7', key: '60fs50' }],
+    [
+      'path',
+      {
+        d: 'M14.363 17.634a2 2 0 00-.506.854l-.837 2.87a.5.5 0 00.62.62l2.87-.837a2 2 0 00.854-.506l4.013-4.009a1 1 0 10-3.004-3.004z',
+        key: 'dpj1he',
+      },
+    ],
+    ['path', { d: 'M7 3v4a1 1 0 001 1h7', key: 'vkun1b' }],
+    ['path', { d: 'M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h10.2a2 2 0 011.4.6l3.8 3.8a2 2 0 01.6 1.4v.3', key: '1oj3yb' }],
+  ],
+  'save-plus': [
+    [
+      'path',
+      { d: 'M12.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10.2a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V12', key: 'bhibzn' },
+    ],
+    ['path', { d: 'M16 13H8a1 1 0 0 0-1 1v7', key: '164ge7' }],
+    ['path', { d: 'M19 22v-6', key: 'qhmiwi' }],
+    ['path', { d: 'M22 19h-6', key: 'vcuq98' }],
+    ['path', { d: 'M7 3v4a1 1 0 0 0 1 1h7', key: 't51u73' }],
   ],
   save: [
     [
@@ -10648,6 +12347,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 7v10', key: '23sfjj' }],
     ['path', { d: 'M12 7v10', key: 'jspqdw' }],
     ['path', { d: 'M17 7v10', key: '578dap' }],
+  ],
+  'scan-box': [
+    ['path', { d: 'M12 12v5.5', key: '1fezw7' }],
+    ['path', { d: 'M17 3h2a2 2 0 012 2v2', key: 'sxhzt8' }],
+    ['path', { d: 'M21 17v2a2 2 0 01-2 2h-2', key: 'b4b27w' }],
+    ['path', { d: 'M3 7V5a2 2 0 012-2h2', key: '5quapj' }],
+    ['path', { d: 'M7 21H5a2 2 0 01-2-2v-2', key: 'rx7q13' }],
+    ['path', { d: 'M7.264 9.252 12 12l4.737-2.748', key: '176tmc' }],
+    [
+      'path',
+      {
+        d: 'M7.995 8.514A2 2 0 007 10.244v3.516a2 2 0 00.996 1.73l3 1.74a2 2 0 002.008 0l3-1.74A2 2 0 0017 13.76v-3.517a2 2 0 00-.995-1.73l-3-1.742a2 2 0 00-1.892-.064z',
+        key: '7zy66p',
+      },
+    ],
   ],
   'scan-eye': [
     ['path', { d: 'M3 7V5a2 2 0 0 1 2-2h2', key: 'aa7l1z' }],
@@ -10707,6 +12421,13 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '12', cy: '12', r: '3', key: '1v7zrd' }],
     ['path', { d: 'm16 16-1.9-1.9', key: '1dq9hf' }],
   ],
+  'scan-square': [
+    ['path', { d: 'M3 7V5a2 2 0 0 1 2-2h2', key: 'aa7l1z' }],
+    ['path', { d: 'M17 3h2a2 2 0 0 1 2 2v2', key: '4qcy5o' }],
+    ['path', { d: 'M21 17v2a2 2 0 0 1-2 2h-2', key: '6vwrx8' }],
+    ['path', { d: 'M7 21H5a2 2 0 0 1-2-2v-2', key: 'ioqczr' }],
+    ['rect', { width: '8', height: '8', x: '8', y: '8', rx: '1', key: '69yp3k' }],
+  ],
   'scan-text': [
     ['path', { d: 'M3 7V5a2 2 0 0 1 2-2h2', key: 'aa7l1z' }],
     ['path', { d: 'M17 3h2a2 2 0 0 1 2 2v2', key: '4qcy5o' }],
@@ -10758,6 +12479,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '19.5', cy: '17.5', r: '2.5', key: 'e4zhv9' }],
     ['circle', { cx: '4.5', cy: '17.5', r: '2.5', key: '50vk4p' }],
   ],
+  'scratch-blocks': [
+    [
+      'path',
+      {
+        d: 'M19 5a2 2 0 012 2v11a2 2 0 01-2 2h-5.586a1 1 0 00-.707.293l-1.414 1.414a1 1 0 01-.707.293H8.414a1 1 0 01-.707-.293l-1.414-1.414A1 1 0 005.586 20H5a2 2 0 01-2-2V5.286c0-.394.11-.785.36-1.09a6 6 0 019.168-.133C12.996 4.6 13.637 5 14.35 5z',
+        key: 'fo9iu6',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M21 12h-7.586a1 1 0 00-.707.293l-1.414 1.414a1 1 0 01-.707.293H8.414a1 1 0 01-.707-.293l-1.414-1.414A1 1 0 005.586 12H3',
+        key: '4ikqyq',
+      },
+    ],
+  ],
   'screen-share-off': [
     ['path', { d: 'M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3', key: 'i8wdob' }],
     ['path', { d: 'M8 21h8', key: '1ev6f3' }],
@@ -10771,6 +12508,25 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 17v4', key: '1riwvh' }],
     ['path', { d: 'm17 8 5-5', key: 'fqif7o' }],
     ['path', { d: 'M17 3h5v5', key: '1o3tu8' }],
+  ],
+  screw: [
+    ['path', { d: 'M10 9v10', key: 'fk50ew' }],
+    ['path', { d: 'M14 13v2', key: '1x1eb0' }],
+    [
+      'path',
+      {
+        d: 'M16.5 10.5 5.706 21.294A2.4 2.4 0 014.002 22H2.5a.5.5 0 01-.5-.5v-1.502a2.4 2.4 0 01.706-1.704L13.5 7.5',
+        key: '151u8u',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M20.819 11.575a6 6 0 00.969-5.162.6.6 0 00-.981-.219l-.455.454a1.2 1.2 0 01-1.704 0l-1.296-1.296a1.2 1.2 0 010-1.704l.454-.453a.595.595 0 00-.219-.98 6 6 0 00-5.162.967 2 2 0 00-.222 3.019l5.596 5.597a2 2 0 003.02-.222',
+        key: '6u8bap',
+      },
+    ],
+    ['path', { d: 'M6 13v8', key: '1f4euz' }],
   ],
   'scroll-text': [
     ['path', { d: 'M15 12h-5', key: 'r7krc0' }],
@@ -10887,6 +12643,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M6 18h.01', key: 'uhywen' }],
     ['path', { d: 'm13 6-4 6h6l-4 6', key: '14hqih' }],
   ],
+  'server-nas': [
+    ['path', { d: 'M10 16V8', key: 'fb68vz' }],
+    ['path', { d: 'M14 16V8', key: 'gtc397' }],
+    ['path', { d: 'M18 16V8', key: '11p9wf' }],
+    ['path', { d: 'M6 12h.01', key: 'c2rlol' }],
+    ['path', { d: 'M6 16h.01', key: '1pmjb7' }],
+    ['rect', { x: '2', y: '4', width: '20', height: '16', rx: '2', key: 'izxlao' }],
+  ],
   'server-off': [
     ['path', { d: 'M7 2h13a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-5', key: 'bt2siv' }],
     ['path', { d: 'M10 10 2.5 2.5C2 2 2 2.5 2 5v3a2 2 0 0 0 2 2h6z', key: '1hjrv1' }],
@@ -10894,6 +12658,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M4 14a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16.5l1-.5.5.5-8-8H4z', key: '161ggg' }],
     ['path', { d: 'M6 18h.01', key: 'uhywen' }],
     ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+  ],
+  'server-plus': [
+    ['path', { d: 'M12.5 10H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2', key: 's66i12' }],
+    ['path', { d: 'M16 12h6', key: '15xry1' }],
+    ['path', { d: 'M19 9v6', key: '1kf5t6' }],
+    ['path', { d: 'M22 18v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h8.5', key: 'lo70fm' }],
+    ['path', { d: 'M6 18h.01', key: 'uhywen' }],
+    ['path', { d: 'M6 6h.01', key: '1utrut' }],
   ],
   server: [
     ['rect', { width: '20', height: '8', x: '2', y: '2', rx: '2', ry: '2', key: 'ngkwjq' }],
@@ -11051,6 +12823,45 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M12 22V2', key: 'zs6s6o' }],
   ],
+  'shield-house': [
+    [
+      'path',
+      {
+        d: 'M15 22a1 1 0 01-1-1v-4a1 1 0 01.445-.832l3-2a1 1 0 011.11 0l3 2A1 1 0 0122 17v4a1 1 0 01-1 1z',
+        key: 'jqwun0',
+      },
+    ],
+    ['path', { d: 'M18 22v-3', key: '1t1ugv' }],
+    [
+      'path',
+      {
+        d: 'M20 10.418V6a1 1 0 00-1-1c-2 0-4.49-1.19-6.24-2.72a1.17 1.17 0 00-1.52 0C9.5 3.8 7 5 5 5a1 1 0 00-1 1v7c0 4.602 2.67 7.1 6.037 8.603',
+        key: 'yw0ofp',
+      },
+    ],
+  ],
+  'shield-keyhole': [
+    ['path', { d: 'M12 13v3', key: 'gkc6qb' }],
+    [
+      'path',
+      {
+        d: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 01-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 011-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 011.52 0C14.51 3.81 17 5 19 5a1 1 0 011 1z',
+        key: '1buusj',
+      },
+    ],
+    ['circle', { cx: '12', cy: '11', r: '2', key: '1yggc4' }],
+  ],
+  'shield-lock': [
+    [
+      'path',
+      {
+        d: 'M20 9.807V6a1 1 0 00-1-1c-2 0-4.49-1.19-6.24-2.72a1.17 1.17 0 00-1.52 0C9.5 3.8 7 5 5 5a1 1 0 00-1 1v7c0 3.88 2.107 6.254 5 7.796',
+        key: '1gl1o4',
+      },
+    ],
+    ['path', { d: 'M19 17v-2a2 2 0 00-4 0v2', key: 'uefur0' }],
+    ['rect', { x: '13', y: '17', width: '8', height: '5', rx: '1', key: '2y8vuh' }],
+  ],
   'shield-minus': [
     [
       'path',
@@ -11128,6 +12939,31 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'ship-cargo': [
+    ['path', { d: 'M12 15v-3', key: '1rb51w' }],
+    ['path', { d: 'M12 2v2', key: 'tus03m' }],
+    [
+      'path',
+      {
+        d: 'M16.5 12V9a1 1 0 011-1h1a1 1 0 001-1V5a1 1 0 00-1-1h-13a1 1 0 00-1 1v2a1 1 0 001 1h1a1 1 0 011 1v3',
+        key: '1byvar',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M19.38 19c1.076-1.815 1.636-4.89 1.628-6.008a1 1 0 00-1-.992H3.984a1 1 0 00-1 .984c-.03 1.86.97 5.621 2.826 7.776',
+        key: '1kvu1n',
+      },
+    ],
+    [
+      'path',
+      {
+        d: 'M2 20c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1',
+        key: '1l8w7g',
+      },
+    ],
+  ],
   'ship-wheel': [
     ['circle', { cx: '12', cy: '12', r: '8', key: '46899m' }],
     ['path', { d: 'M12 2v7.5', key: '1e5rl5' }],
@@ -11141,21 +12977,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '12', cy: '12', r: '2.5', key: 'ix0uyj' }],
   ],
   ship: [
-    ['path', { d: 'M12 10.189V14', key: '1p8cqu' }],
-    ['path', { d: 'M12 2v3', key: 'qbqxhf' }],
-    ['path', { d: 'M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6', key: 'qpkstq' }],
+    ['path', { d: 'M12 2v2', key: 'tus03m' }],
+    ['path', { d: 'M12 9.189V13', key: 'yp40p3' }],
+    ['path', { d: 'M19 12V6a2 2 0 00-2-2H7a2 2 0 00-2 2v6', key: '1wcigf' }],
     [
       'path',
       {
-        d: 'M19.38 20A11.6 11.6 0 0 0 21 14l-8.188-3.639a2 2 0 0 0-1.624 0L3 14a11.6 11.6 0 0 0 2.81 7.76',
-        key: '7tigtc',
+        d: 'M19.38 19A11.6 11.6 0 0021 13l-8.188-3.639a2 2 0 00-1.624 0L3 13.001a11.6 11.6 0 002.81 7.76',
+        key: '1kdp0u',
       },
     ],
     [
       'path',
       {
-        d: 'M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1',
-        key: '1924j5',
+        d: 'M2 20c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1',
+        key: '1l8w7g',
       },
     ],
   ],
@@ -11188,10 +13024,28 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm5 11 4-7', key: '116ra9' }],
     ['path', { d: 'm9 11 1 9', key: '1ojof7' }],
   ],
+  'shopping-cart-minus': [
+    ['path', { d: 'M16 5h6', key: '1vod17' }],
+    ['path', { d: 'm2.05 2.05 1.099-.028a1 1 0 011.008.815l2.69 14.347A1 1 0 007.83 18H18', key: 'ppm817' }],
+    ['path', { d: 'M4.564 5H12', key: '11wyuq' }],
+    ['path', { d: 'M6.25 14h12.712a2 2 0 001.991-1.57l.514-3.113', key: 'zs85e' }],
+    ['circle', { cx: '18', cy: '20', r: '2', key: 't9985n' }],
+    ['circle', { cx: '8', cy: '20', r: '2', key: 'ckkr5m' }],
+  ],
+  'shopping-cart-plus': [
+    ['path', { d: 'M16 5h6', key: '1vod17' }],
+    ['path', { d: 'M19 2v6', key: '4bpg5p' }],
+    ['path', { d: 'm2.05 2.05 1.099-.028a1 1 0 011.008.815l2.69 14.347A1 1 0 007.83 18H18', key: 'ppm817' }],
+    ['path', { d: 'M4.564 5H12', key: '11wyuq' }],
+    ['path', { d: 'M6.25 14h12.712a2 2 0 001.991-1.57l.172-1.041', key: 'q079k2' }],
+    ['circle', { cx: '18', cy: '20', r: '2', key: 't9985n' }],
+    ['circle', { cx: '8', cy: '20', r: '2', key: 'ckkr5m' }],
+  ],
   'shopping-cart': [
-    ['circle', { cx: '8', cy: '21', r: '1', key: 'jimo8o' }],
-    ['circle', { cx: '19', cy: '21', r: '1', key: '13723u' }],
-    ['path', { d: 'M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12', key: '9zh506' }],
+    ['path', { d: 'm2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18', key: 'uebgi3' }],
+    ['path', { d: 'M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25', key: '1j7c9p' }],
+    ['circle', { cx: '18', cy: '20', r: '2', key: 't9985n' }],
+    ['circle', { cx: '8', cy: '20', r: '2', key: 'ckkr5m' }],
   ],
   shovel: [
     [
@@ -11231,18 +13085,27 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M2 13h20', key: '5evz65' }],
     ['path', { d: 'M6 20v-3', key: 'c6pdcb' }],
   ],
+  'shrimp-off': [
+    ['path', { d: 'M10 2a3.28 3.28 0 003.227 1.798l6.17-.561A1 1 0 1119.614 8H13.5', key: '1y5dzy' }],
+    ['path', { d: 'M11 20c-.5.5-1.12 1-2.5 1a1 1 0 010-5H12a7 7 0 003.283-.817', key: 'rkxng5' }],
+    ['path', { d: 'M11 22c-.5-.5-1.12-1-2.5-1a6.5 6.5 0 01-5.63-3.25 6.44 6.44 0 015.236-9.744', key: '1arf7n' }],
+    ['path', { d: 'M18.04 12.54A7 7 0 0019 9V8', key: '10qvq6' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M8 16c-2 0-4.5-4-4-6', key: '1f5g8v' }],
+    ['path', { d: 'M9.43 9.33A8.5 8.5 0 0010 16', key: '1wfq5e' }],
+  ],
   shrimp: [
-    ['path', { d: 'M11 12h.01', key: '1lr4k6' }],
-    ['path', { d: 'M13 22c.5-.5 1.12-1 2.5-1-1.38 0-2-.5-2.5-1', key: 'fatpdi' }],
     [
       'path',
       {
-        d: 'M14 2a3.28 3.28 0 0 1-3.227 1.798l-6.17-.561A2.387 2.387 0 1 0 4.387 8H15.5a1 1 0 0 1 0 13 1 1 0 0 0 0-5H12a7 7 0 0 1-7-7V8',
-        key: 'kehrqe',
+        d: 'M10 2a3.28 3.28 0 003.227 1.798l6.17-.561A1 1 0 1119.614 8H8.5a6.44 6.44 0 00-5.63 9.75A6.5 6.5 0 008.5 21c1.38 0 2-.5 2.5-1',
+        key: '17dh52',
       },
     ],
-    ['path', { d: 'M14 8a8.5 8.5 0 0 1 0 8', key: '1imjx2' }],
-    ['path', { d: 'M16 16c2 0 4.5-4 4-6', key: 'z0nejz' }],
+    ['path', { d: 'M10 8a8.5 8.5 0 000 8', key: 'vsnxbr' }],
+    ['path', { d: 'M11 22c-.5-.5-1.12-1-2.5-1a1 1 0 010-5H12a7 7 0 007-7V8', key: 'lzdhj4' }],
+    ['path', { d: 'M13 12h.01', key: '1nih16' }],
+    ['path', { d: 'M8 16c-2 0-4.5-4-4-6', key: '1f5g8v' }],
   ],
   shrink: [
     ['path', { d: 'm15 15 6 6m-6-6v4.8m0-4.8h4.8', key: '17vawe' }],
@@ -11321,6 +13184,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'siren-off': [
+    ['path', { d: 'M12 12v6', key: '3ahymv' }],
+    ['path', { d: 'M12 2v1', key: '11qlp1' }],
+    ['path', { d: 'M12.707 7.05a5 5 0 0 1 4.243 4.243', key: '15s6xm' }],
+    ['path', { d: 'M17 17v1H7a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2', key: '10n5bo' }],
+    ['path', { d: 'M18.5 4.5 18 5', key: 'g5sp9y' }],
+    ['path', { d: 'M2 12h1', key: '1uaihz' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M21 12h1', key: 'jtio3y' }],
+    ['path', { d: 'M7 18v-6a5 5 0 0 1 1.464-3.536', key: '3ca0xp' }],
+  ],
   siren: [
     ['path', { d: 'M7 18v-6a5 5 0 1 1 10 0v6', key: 'pcx96s' }],
     ['path', { d: 'M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z', key: '1b4s83' }],
@@ -11330,6 +13204,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 2v1', key: '11qlp1' }],
     ['path', { d: 'm4.929 4.929.707.707', key: '1i51kw' }],
     ['path', { d: 'M12 12v6', key: '3ahymv' }],
+  ],
+  'sixteenth-notes': [
+    ['path', { d: 'M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19', key: 'uy6ho8' }],
+    ['path', { d: 'M21 6 9 9.5', key: '1w47ha' }],
+    ['circle', { cx: '18', cy: '16', r: '3', key: '1hluhg' }],
+    ['circle', { cx: '6', cy: '19', r: '3', key: '1kj8tv' }],
   ],
   'skip-back': [
     [
@@ -11399,23 +13279,15 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M16.46 6.21a11.76 11.76 0 0 1 0 11.58', key: 'uqvjvo' }],
     ['path', { d: 'M19.91 4.1a15.91 15.91 0 0 1 .01 15.8', key: 'ujntz3' }],
   ],
+  'smartphone-user-round': [
+    ['path', { d: 'M10 22H6a2 2 0 01-2-2V4a2 2 0 012-2h10a2 2 0 012 2v4', key: '106ik5' }],
+    ['path', { d: 'M11 18h.01', key: 'qvdchl' }],
+    ['path', { d: 'M22 22a4 4 0 00-8 0', key: 'z7lshv' }],
+    ['circle', { cx: '18', cy: '15', r: '3', key: 'gjjjvw' }],
+  ],
   smartphone: [
     ['rect', { width: '14', height: '20', x: '5', y: '2', rx: '2', ry: '2', key: '1yt0o3' }],
     ['path', { d: 'M12 18h.01', key: 'mhygvu' }],
-  ],
-  'smile-plus': [
-    ['path', { d: 'M22 11v1a10 10 0 1 1-9-10', key: 'ew0xw9' }],
-    ['path', { d: 'M8 14s1.5 2 4 2 4-2 4-2', key: '1y1vjs' }],
-    ['line', { x1: '9', x2: '9.01', y1: '9', y2: '9', key: 'yxxnd0' }],
-    ['line', { x1: '15', x2: '15.01', y1: '9', y2: '9', key: '1p4y9e' }],
-    ['path', { d: 'M16 5h6', key: '1vod17' }],
-    ['path', { d: 'M19 2v6', key: '4bpg5p' }],
-  ],
-  smile: [
-    ['circle', { cx: '12', cy: '12', r: '10', key: '1mglay' }],
-    ['path', { d: 'M8 14s1.5 2 4 2 4-2 4-2', key: '1y1vjs' }],
-    ['line', { x1: '9', x2: '9.01', y1: '9', y2: '9', key: 'yxxnd0' }],
-    ['line', { x1: '15', x2: '15.01', y1: '9', y2: '9', key: '1p4y9e' }],
   ],
   snail: [
     ['path', { d: 'M2 13a6 6 0 1 0 12 0 4 4 0 1 0-8 0 2 2 0 0 0 4 0', key: 'hneq2s' }],
@@ -11479,12 +13351,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm8.66 7.66 1.41 1.41', key: '1vaqj8' }],
   ],
   soup: [
-    ['path', { d: 'M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z', key: '4rw317' }],
-    ['path', { d: 'M7 21h10', key: '1b0cd5' }],
+    [
+      'path',
+      { d: 'M11.248 3c.273.1.808.53.747 1.36-.05.83-.938 1.2-.989 2.02-.06.78.333 1.24.727 1.62', key: '1upgzp' },
+    ],
+    [
+      'path',
+      { d: 'M16.252 3c.268.1.794.53.745 1.36-.06.83-.923 1.2-.993 2.02-.05.78.338 1.24.725 1.62', key: '1cendu' },
+    ],
     ['path', { d: 'M19.5 12 22 6', key: 'shfsr5' }],
-    ['path', { d: 'M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62', key: 'rpc6vp' }],
-    ['path', { d: 'M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62', key: '1lf63m' }],
-    ['path', { d: 'M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62', key: '97tijn' }],
+    ['path', { d: 'M4 12a1 1 0 00-.99 1.133A9 9 0 0012 21a9 9 0 008.99-7.867A1 1 0 0020 12z', key: 'mjw0tp' }],
+    [
+      'path',
+      { d: 'M6.252 3c.268.1.794.53.745 1.36-.06.83-.923 1.2-.993 2.02-.05.78.338 1.24.735 1.62', key: 'q4b97x' },
+    ],
+    ['path', { d: 'M7 21h10', key: '1b0cd5' }],
   ],
   space: [['path', { d: 'M22 17v1c0 .5-.5 1-1 1H3c-.5 0-1-.5-1-1v-1', key: 'lt2kga' }]],
   spade: [
@@ -11547,9 +13428,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
   ],
   'spell-check': [
-    ['path', { d: 'm6 16 6-12 6 12', key: '1b4byz' }],
-    ['path', { d: 'M8 12h8', key: '1wcyev' }],
-    ['path', { d: 'm16 20 2 2 4-4', key: '13tcca' }],
+    ['path', { d: 'm20 15-5.5 5.5L12 18', key: '6ytzne' }],
+    ['path', { d: 'm4 16 6-12 5.115 10.23', key: 'fyukjg' }],
+    ['path', { d: 'M6 12h8', key: '1hdiqa' }],
   ],
   'spline-pointer': [
     [
@@ -11642,14 +13523,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M17 12h-2l-2 5-2-10-2 5H7', key: '15hlnc' }],
   ],
   'square-arrow-down-left': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['path', { d: 'm16 8-8 8', key: '166keh' }],
-    ['path', { d: 'M16 16H8V8', key: '1w2ppm' }],
+    ['path', { d: 'M15 15H9l6-6', key: '1w52wt' }],
+    ['path', { d: 'M9 15V9', key: '1kwqze' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'square-arrow-down-right': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['path', { d: 'm8 8 8 8', key: '1imecy' }],
-    ['path', { d: 'M16 8v8H8', key: '1lbpgo' }],
+    ['path', { d: 'M15 15 9 9', key: 'qb9ybb' }],
+    ['path', { d: 'M9 15h6V9', key: '1wezwn' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'square-arrow-down': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
@@ -11700,14 +13581,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm12 16 4-4-4-4', key: '1i9zcv' }],
   ],
   'square-arrow-up-left': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['path', { d: 'M8 16V8h8', key: '19xb1h' }],
-    ['path', { d: 'M16 16 8 8', key: '1qdy8n' }],
+    ['path', { d: 'M15 15 9 9', key: 'qb9ybb' }],
+    ['path', { d: 'M9 15V9h6', key: '1pdr5l' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'square-arrow-up-right': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['path', { d: 'M8 8h8v8', key: 'b65dnt' }],
-    ['path', { d: 'm8 16 8-8', key: '13b9ih' }],
+    ['path', { d: 'M15 15V9H9', key: 'vxyd2h' }],
+    ['path', { d: 'm9 15 6-6', key: '1ygkhp' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'square-arrow-up': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
@@ -11720,21 +13601,25 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm8.5 14 7-4', key: '12hpby' }],
     ['path', { d: 'm8.5 10 7 4', key: 'wwy2dy' }],
   ],
+  'square-bookmark': [
+    [
+      'path',
+      {
+        d: 'M11 3v7.751a.25.25 0 00.407.195l2.28-1.834a.5.5 0 01.627 0l2.28 1.834a.25.25 0 00.406-.195V3',
+        key: '1rbn6x',
+      },
+    ],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
   'square-bottom-dashed-scissors': [
-    ['line', { x1: '5', y1: '3', x2: '19', y2: '3', key: 'x74652' }],
-    ['line', { x1: '3', y1: '5', x2: '3', y2: '19', key: '31ivqu' }],
-    ['line', { x1: '21', y1: '5', x2: '21', y2: '19', key: '1am4cd' }],
-    ['line', { x1: '9', y1: '21', x2: '10', y2: '21', key: 'sb02er' }],
-    ['line', { x1: '14', y1: '21', x2: '15', y2: '21', key: '1bvb1m' }],
-    ['path', { d: 'M 3 5 A2 2 0 0 1 5 3', key: 'dbypyf' }],
-    ['path', { d: 'M 19 3 A2 2 0 0 1 21 5', key: 'y6haui' }],
-    ['path', { d: 'M 5 21 A2 2 0 0 1 3 19', key: 'kb75wq' }],
-    ['path', { d: 'M 21 19 A2 2 0 0 1 19 21', key: '1p3zbf' }],
-    ['circle', { cx: '8.5', cy: '8.5', r: '1.5', key: 'cn5opk' }],
-    ['line', { x1: '9.56066', y1: '9.56066', x2: '12', y2: '12', key: 'mksg6j' }],
-    ['line', { x1: '17', y1: '17', x2: '14.82', y2: '14.82', key: '1lwi1d' }],
+    ['path', { d: 'M14 21h1', key: 'v9vybs' }],
+    ['path', { d: 'm17 17-2.18-2.18', key: '1y7dt1' }],
+    ['path', { d: 'M5 21a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2', key: '2q1jq4' }],
+    ['path', { d: 'M9 21h1', key: '15o7lz' }],
+    ['path', { d: 'M9.56 14.44 17 7', key: 'ue8l15' }],
+    ['path', { d: 'M9.56 9.56 12 12', key: 'rml9qv' }],
     ['circle', { cx: '8.5', cy: '15.5', r: '1.5', key: '12hfy1' }],
-    ['line', { x1: '9.56066', y1: '14.43934', x2: '17', y2: '7', key: '4jyfgs' }],
+    ['circle', { cx: '8.5', cy: '8.5', r: '1.5', key: 'cn5opk' }],
   ],
   'square-centerline-dashed-horizontal': [
     ['path', { d: 'M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3', key: '1i73f7' }],
@@ -11764,7 +13649,7 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   ],
   'square-check': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['path', { d: 'm9 12 2 2 4-4', key: 'dzmm74' }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12', key: 'xofnsj' }],
   ],
   'square-chevron-down': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
@@ -11781,6 +13666,26 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   'square-chevron-up': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
     ['path', { d: 'm8 14 4-4 4 4', key: 'fy2ptz' }],
+  ],
+  'square-chevrons-down': [
+    ['path', { d: 'M9 14L12 17L15 14', key: 'hpyt1r' }],
+    ['path', { d: 'M9 8L12 11L15 8', key: '19orua' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-chevrons-left': [
+    ['path', { d: 'M10 9L7 12L10 15', key: 'yiqvdq' }],
+    ['path', { d: 'M16 9L13 12L16 15', key: '1czhyg' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-chevrons-right': [
+    ['path', { d: 'M14 15L17 12L14 9', key: '1hxjqw' }],
+    ['path', { d: 'M8 15L11 12L8 9', key: '1wss1f' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-chevrons-up': [
+    ['path', { d: 'M15 10L12 7L9 10', key: 'x6fbge' }],
+    ['path', { d: 'M15 16L12 13L9 16', key: 'ouerij' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'square-code': [
     ['path', { d: 'm10 9-3 3 3 3', key: '1oro0q' }],
@@ -11834,6 +13739,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M21 9v2', key: 'p14lih' }],
     ['path', { d: 'M3 14v1', key: 'vnatye' }],
   ],
+  'square-dashed-plus': [
+    ['path', { d: 'M5 3a2 2 0 0 0-2 2', key: 'y57alp' }],
+    ['path', { d: 'M19 3a2 2 0 0 1 2 2', key: '18rm91' }],
+    ['path', { d: 'M21 19a2 2 0 0 1-2 2', key: '1j7049' }],
+    ['path', { d: 'M5 21a2 2 0 0 1-2-2', key: 'sbafld' }],
+    ['path', { d: 'M9 3h1', key: '1yesri' }],
+    ['path', { d: 'M9 21h1', key: '15o7lz' }],
+    ['path', { d: 'M14 3h1', key: '1ec4yj' }],
+    ['path', { d: 'M14 21h1', key: 'v9vybs' }],
+    ['path', { d: 'M3 9v1', key: '1r0deq' }],
+    ['path', { d: 'M21 9v1', key: 'mxsmne' }],
+    ['path', { d: 'M3 14v1', key: 'vnatye' }],
+    ['path', { d: 'M21 14v1', key: '169vum' }],
+    ['path', { d: 'M8 12h8', key: '1wcyev' }],
+    ['path', { d: 'M12 8v8', key: 'napkw2' }],
+  ],
   'square-dashed-text': [
     ['path', { d: 'M14 21h1', key: 'v9vybs' }],
     ['path', { d: 'M14 3h1', key: '1ec4yj' }],
@@ -11862,6 +13783,35 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M5 21a2 2 0 0 1-2-2', key: 'sbafld' }],
     ['path', { d: 'M9 21h1', key: '15o7lz' }],
   ],
+  'square-dashed-x-corner': [
+    ['path', { d: 'M14 3h1', key: '1ec4yj' }],
+    ['path', { d: 'm16 16 5 5', key: '8tpb07' }],
+    ['path', { d: 'M19 3a2 2 0 012 2', key: '165vzh' }],
+    ['path', { d: 'm21 16-5 5', key: 'kplof2' }],
+    ['path', { d: 'M21 9v1', key: 'mxsmne' }],
+    ['path', { d: 'M3 14v1', key: 'vnatye' }],
+    ['path', { d: 'M3 9v1', key: '1r0deq' }],
+    ['path', { d: 'M5 21a2 2 0 01-2-2', key: 'y6v07l' }],
+    ['path', { d: 'M5 3a2 2 0 00-2 2', key: 'xbjhl9' }],
+    ['path', { d: 'M9 21h1', key: '15o7lz' }],
+    ['path', { d: 'M9 3h1', key: '1yesri' }],
+  ],
+  'square-dashed-x': [
+    ['path', { d: 'M14 21h1', key: 'v9vybs' }],
+    ['path', { d: 'M14 3h1', key: '1ec4yj' }],
+    ['path', { d: 'M19 3a2 2 0 012 2', key: '165vzh' }],
+    ['path', { d: 'M21 14v1', key: '169vum' }],
+    ['path', { d: 'M21 19a2 2 0 01-2 2', key: '9nkj6p' }],
+    ['path', { d: 'M21 9v1', key: 'mxsmne' }],
+    ['path', { d: 'M3 14v1', key: 'vnatye' }],
+    ['path', { d: 'M3 9v1', key: '1r0deq' }],
+    ['path', { d: 'M5 21a2 2 0 01-2-2', key: 'y6v07l' }],
+    ['path', { d: 'M5 3a2 2 0 00-2 2', key: 'xbjhl9' }],
+    ['path', { d: 'm9 15 6-6', key: '1ygkhp' }],
+    ['path', { d: 'M9 21h1', key: '15o7lz' }],
+    ['path', { d: 'M9 3h1', key: '1yesri' }],
+    ['path', { d: 'm9 9 6 6', key: 'z0biqf' }],
+  ],
   'square-dashed': [
     ['path', { d: 'M5 3a2 2 0 0 0-2 2', key: 'y57alp' }],
     ['path', { d: 'M19 3a2 2 0 0 1 2 2', key: '18rm91' }],
@@ -11875,6 +13825,11 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M21 9v1', key: 'mxsmne' }],
     ['path', { d: 'M3 14v1', key: 'vnatye' }],
     ['path', { d: 'M21 14v1', key: '169vum' }],
+  ],
+  'square-dimensions': [
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+    ['path', { d: 'M12 7H7v5', key: 'ow32kf' }],
+    ['path', { d: 'M12 17h5v-5', key: '1biuiz' }],
   ],
   'square-divide': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', ry: '2', key: '1m3agn' }],
@@ -11891,10 +13846,23 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M7 10h10', key: '1101jm' }],
     ['path', { d: 'M7 14h10', key: '1mhdw3' }],
   ],
+  'square-exclamation-point': [
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+    ['line', { x1: '12', x2: '12', y1: '8', y2: '12', key: '1pkeuh' }],
+    ['line', { x1: '12', x2: '12.01', y1: '16', y2: '16', key: '4dfq90' }],
+  ],
   'square-function': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', ry: '2', key: '1m3agn' }],
     ['path', { d: 'M9 17c2 0 2.8-1 2.8-2.8V10c0-2 1-3.3 3.2-3', key: 'm1af9g' }],
     ['path', { d: 'M9 11.2h5.7', key: '3zgcl2' }],
+  ],
+  'square-kanban-plus': [
+    ['path', { d: 'M12 7v4', key: 'xawao1' }],
+    ['path', { d: 'M12.354 21H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v7.354', key: '1bm62u' }],
+    ['path', { d: 'M15 18h6', key: '3b3c90' }],
+    ['path', { d: 'M16 7v4.536', key: 'ywnmwr' }],
+    ['path', { d: 'M18 21v-6', key: '19ny4e' }],
+    ['path', { d: 'M8 7v7', key: '1x2jlm' }],
   ],
   'square-kanban': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
@@ -11902,15 +13870,149 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M12 7v4', key: 'xawao1' }],
     ['path', { d: 'M16 7v9', key: '1hp2iy' }],
   ],
+  'square-letter-a': [
+    ['path', { d: 'm8 16 3.453-7.648a.6.6 0 0 1 1.094 0L16 16', key: '26tkhz' }],
+    ['path', { d: 'M15 14H9', key: 'u4f7rb' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-b': [
+    [
+      'path',
+      {
+        d: 'M9 12h4.846a2.24 2.24 0 011.523.586 2 2 0 01.001 2.828 2.24 2.24 0 01-1.524.586H9.5a.5.5 0 01-.5-.5v-7a.5.5 0 01.5-.5H13a2 2 0 010 4',
+        key: '10umad',
+      },
+    ],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-letter-c': [
+    ['path', { d: 'M15 9.354a4 4 0 1 0 0 5.292', key: '8xfhbo' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-d': [
+    ['path', { d: 'M12 8a4 4 0 010 8H9.412A.41.41 0 019 15.588V8.412A.41.41 0 019.412 8z', key: '1jpkd7' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-e': [
+    ['path', { d: 'M15 8H9.5a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5H15', key: '1qch15' }],
+    ['path', { d: 'M9 12h4', key: 'wrur8x' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-f': [
+    ['path', { d: 'M9 16V8.5a.5.5 0 0 1 .5-.5H15', key: '14bvk2' }],
+    ['path', { d: 'M9 12h4', key: 'wrur8x' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-g': [
+    ['path', { d: 'M12.5 12H15v2.268a.88.88 0 01-.263.65A4 4 0 1112 8h2.5', key: 'qr2odw' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-h': [
+    ['path', { d: 'M9 16V8', key: 'ydmt1j' }],
+    ['path', { d: 'M15 16V8', key: '1pg9zw' }],
+    ['path', { d: 'M9 12h6', key: '1c52cq' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-i': [
+    ['path', { d: 'M12 16V8', key: '1sbj14' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-j': [
+    ['path', { d: 'M15 8v5a3 3 0 1 1-6 0', key: '1l082q' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-k': [
+    ['path', { d: 'M9 16V8', key: 'ydmt1j' }],
+    ['path', { d: 'm11 12 4 4', key: '12i9ze' }],
+    ['path', { d: 'm15 8-6 6', key: 'r7kjba' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-l': [
+    ['path', { d: 'M9 8v7.5a.5.5 0 0 0 .5.5H15', key: 'oor4up' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-m': [
+    [
+      'path',
+      { d: 'M8 16.001v-7.5a.5.5 0 0 1 .9-.3l2.7 3.599a.5.5 0 0 0 .8 0l2.7-3.6a.5.5 0 0 1 .9.3v7.501', key: '1triz2' },
+    ],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-n': [
+    ['path', { d: 'M9 16V8.576a.496.496 0 01.937-.243l4.126 7.43A.496.496 0 0015 15.52V8', key: 'qirm77' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-letter-o': [
+    ['circle', { cx: '12', cy: '12', r: '4', key: '4exip2' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-p-off': [
+    ['path', { d: 'M3.6 3.6A2 2 0 0 1 5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-.59 1.41', key: '9l1ft6' }],
+    ['path', { d: 'M3 8.7V19a2 2 0 0 0 2 2h10.3', key: '17knke' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M13 13a3 3 0 1 0 0-6H9v2', key: 'uoagbd' }],
+    ['path', { d: 'M9 17v-2.3', key: '1jxgo2' }],
+  ],
+  'square-letter-p': [
+    ['path', { d: 'M9 12h4a2 2 0 0 0 0-4H9.5a.5.5 0 0 0-.5.5V16', key: '15uh3t' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-q': [
+    ['circle', { cx: '12', cy: '12', r: '4', key: '4exip2' }],
+    ['path', { d: 'm16 16-2.5-2.5', key: 'fmqegn' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-r': [
+    ['path', { d: 'm11 12 4 4', key: '12i9ze' }],
+    ['path', { d: 'M9 12h4a2 2 0 0 0 0-4H9.5a.5.5 0 0 0-.5.5V16', key: '15uh3t' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-s': [
+    ['path', { d: 'M14.5 8H11a2 2 0 100 4h2a2 2 0 110 4H9', key: '1ihxbb' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-letter-t': [
+    ['path', { d: 'M12 16V8', key: '1sbj14' }],
+    ['path', { d: 'M9 8h6', key: '209ih4' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-letter-u': [
+    ['path', { d: 'M15 8v5a3 3 0 1 1-6 0V8', key: '17gkvj' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-v': [
+    ['path', { d: 'm9 8 2.525 7.66a.5.5 0 0 0 .95 0L15 8', key: '1arqi6' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-w': [
+    [
+      'path',
+      {
+        d: 'm16 8-1.591 7.598a.497.497 0 01-.97.038l-.96-3.276a.5.5 0 00-.959 0l-.96 3.276a.496.496 0 01-.969-.038L8 8',
+        key: 'crbxe1',
+      },
+    ],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-letter-x': [
+    ['path', { d: 'm9 16 6-8', key: '1u7o9k' }],
+    ['path', { d: 'm9 8 6 8', key: '1csz0j' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
+  ],
+  'square-letter-y': [
+    ['path', { d: 'm9 8 3 4 3-4', key: '1ydu8c' }],
+    ['path', { d: 'M12 12v4', key: 'tww15h' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
+  'square-letter-z': [
+    ['path', { d: 'M9 8h5.501a.5.5 0 0 1 .37.836L9.13 15.164A.5.5 0 0 0 9.5 16H15', key: 'hctxk0' }],
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+  ],
   'square-library': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
     ['path', { d: 'M7 7v10', key: 'd5nglc' }],
     ['path', { d: 'M11 7v10', key: 'pptsnr' }],
     ['path', { d: 'm15 7 2 10', key: '1m7qm5' }],
-  ],
-  'square-m': [
-    ['path', { d: 'M8 16V8.5a.5.5 0 0 1 .9-.3l2.7 3.599a.5.5 0 0 0 .8 0l2.7-3.6a.5.5 0 0 1 .9.3V16', key: '1ywlsj' }],
-    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'square-menu': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
@@ -11932,16 +14034,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M21 11V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6', key: '14rsvq' }],
   ],
-  'square-parking-off': [
-    ['path', { d: 'M3.6 3.6A2 2 0 0 1 5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-.59 1.41', key: '9l1ft6' }],
-    ['path', { d: 'M3 8.7V19a2 2 0 0 0 2 2h10.3', key: '17knke' }],
-    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
-    ['path', { d: 'M13 13a3 3 0 1 0 0-6H9v2', key: 'uoagbd' }],
-    ['path', { d: 'M9 17v-2.3', key: '1jxgo2' }],
-  ],
-  'square-parking': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['path', { d: 'M9 17V7h4a3 3 0 0 1 0 6H9', key: '1dfk2c' }],
+  'square-off': [
+    ['path', { d: 'M20.4 20.4a2 2 0 01-1.4.6H5a2 2 0 01-2-2V5a2 2 0 01.59-1.41', key: '7ym6nm' }],
+    ['path', { d: 'M21 15.3V5a2 2 0 00-2-2H8.7', key: 'm4nk5y' }],
+    ['path', { d: 'M22 22 2 2', key: '1r8tn9' }],
   ],
   'square-pause': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
@@ -12005,12 +14101,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', key: '1dv2y5' }],
   ],
   'square-scissors': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['circle', { cx: '8.5', cy: '8.5', r: '1.5', key: 'cn5opk' }],
-    ['line', { x1: '9.56066', y1: '9.56066', x2: '12', y2: '12', key: 'mksg6j' }],
-    ['line', { x1: '17', y1: '17', x2: '14.82', y2: '14.82', key: '1lwi1d' }],
+    ['path', { d: 'm17 17-2.18-2.18', key: '1y7dt1' }],
+    ['path', { d: 'M9.56 14.44 17 7', key: 'ue8l15' }],
+    ['path', { d: 'M9.56 9.56 12 12', key: 'rml9qv' }],
     ['circle', { cx: '8.5', cy: '15.5', r: '1.5', key: '12hfy1' }],
-    ['line', { x1: '9.56066', y1: '14.43934', x2: '17', y2: '7', key: '4jyfgs' }],
+    ['circle', { cx: '8.5', cy: '8.5', r: '1.5', key: 'cn5opk' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'square-sigma': [
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
@@ -12020,15 +14116,27 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
     ['line', { x1: '9', x2: '15', y1: '15', y2: '9', key: '1dfufj' }],
   ],
+  'square-sparkles': [
+    ['path', { d: 'M11 15H7', key: 'qgb73g' }],
+    [
+      'path',
+      {
+        d: 'M15.41 2.49a.6.6 0 011.18 0l.63 3.334a1.2 1.2 0 00.956.955l3.334.631a.6.6 0 010 1.18l-3.334.63a1.2 1.2 0 00-.955.956l-.631 3.334a.6.6 0 01-1.18 0l-.63-3.334a1.2 1.2 0 00-.956-.955L10.49 8.59a.6.6 0 010-1.18l3.334-.63a1.2 1.2 0 00.955-.956z',
+        key: '1ntfkx',
+      },
+    ],
+    ['path', { d: 'M21 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h6', key: '12sala' }],
+    ['path', { d: 'M9 13v4', key: '190znx' }],
+  ],
   'square-split-horizontal': [
-    ['path', { d: 'M8 19H5c-1 0-2-1-2-2V7c0-1 1-2 2-2h3', key: 'lubmu8' }],
-    ['path', { d: 'M16 5h3c1 0 2 1 2 2v10c0 1-1 2-2 2h-3', key: '1ag34g' }],
-    ['line', { x1: '12', x2: '12', y1: '4', y2: '20', key: '1tx1rr' }],
+    ['path', { d: 'M12 2v20', key: 't6zp3m' }],
+    ['path', { d: 'M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3', key: 'saxlbk' }],
+    ['path', { d: 'M8 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3', key: 'm1vog4' }],
   ],
   'square-split-vertical': [
-    ['path', { d: 'M5 8V5c0-1 1-2 2-2h10c1 0 2 1 2 2v3', key: '1pi83i' }],
-    ['path', { d: 'M19 16v3c0 1-1 2-2 2H7c-1 0-2-1-2-2v-3', key: 'ido5k7' }],
-    ['line', { x1: '4', x2: '20', y1: '12', y2: '12', key: '1e0a9i' }],
+    ['path', { d: 'M2 12h20', key: '9i4pu4' }],
+    ['path', { d: 'M21 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3', key: '14rx03' }],
+    ['path', { d: 'M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3', key: '1haecz' }],
   ],
   'square-square': [
     ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
@@ -12057,6 +14165,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm7 11 2-2-2-2', key: '1lz0vl' }],
     ['path', { d: 'M11 13h4', key: '1p7l4v' }],
     ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', ry: '2', key: '1m3agn' }],
+  ],
+  'square-text': [
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
+    ['path', { d: 'M7 8h8', key: '1jbsf9' }],
+    ['path', { d: 'M7 12h10', key: 'b7w52i' }],
+    ['path', { d: 'M7 16h6', key: '1vyc9m' }],
   ],
   'square-user-round': [
     ['path', { d: 'M18 21a6 6 0 0 0-12 0', key: 'kaz2du' }],
@@ -12157,12 +14271,32 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M5 22h14', key: 'ehvnwv' }],
   ],
+  'star-check': [
+    [
+      'path',
+      {
+        d: 'm19.06 12.501 2.78-2.707a.53.53 0 0 0-.294-.905l-5.166-.755a2.1 2.1 0 0 1-1.595-1.16l-2.31-4.68a.53.53 0 0 0-.95.001L9.216 6.974a2.1 2.1 0 0 1-1.597 1.16l-5.165.755a.53.53 0 0 0-.294.906l3.736 3.637a2.1 2.1 0 0 1 .611 1.879l-.88 5.139a.53.53 0 0 0 .769.56l4.617-2.428.027-.014',
+        key: '14g7km',
+      },
+    ],
+    ['path', { d: 'm15 18 2 2 4-4', key: '1szwhi' }],
+  ],
   'star-half': [
     [
       'path',
       {
         d: 'M12 18.338a2.1 2.1 0 0 0-.987.244L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16l2.309-4.679A.53.53 0 0 1 12 2',
         key: '2ksp49',
+      },
+    ],
+  ],
+  'star-minus': [
+    ['path', { d: 'M15 18h6', key: '3b3c90' }],
+    [
+      'path',
+      {
+        d: 'M17.688 14a2.1 2.1 0 0 1 .416-.568l3.736-3.638a.53.53 0 0 0-.294-.905l-5.166-.755a2.1 2.1 0 0 1-1.595-1.16l-2.31-4.68a.53.53 0 0 0-.95.001L9.216 6.974a2.1 2.1 0 0 1-1.597 1.16l-5.165.755a.53.53 0 0 0-.294.906l3.736 3.637a2.1 2.1 0 0 1 .611 1.879l-.88 5.139a.53.53 0 0 0 .769.56l4.617-2.428.027-.014',
+        key: 'rwo527',
       },
     ],
   ],
@@ -12182,6 +14316,28 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
     ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+  ],
+  'star-plus': [
+    [
+      'path',
+      {
+        d: 'M11.013 18.582 6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16l2.309-4.679a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904L20 11.5',
+        key: '1hs8rk',
+      },
+    ],
+    ['path', { d: 'M15 18h6', key: '3b3c90' }],
+    ['path', { d: 'M18 15v6', key: '9wciyi' }],
+  ],
+  'star-x': [
+    ['path', { d: 'm15.5 15.5 5 5', key: '1ky94l' }],
+    [
+      'path',
+      {
+        d: 'm20.063 11.525 1.777-1.731a.53.53 0 0 0-.294-.905l-5.166-.755a2.1 2.1 0 0 1-1.595-1.16l-2.31-4.68a.53.53 0 0 0-.95.001L9.216 6.974a2.1 2.1 0 0 1-1.597 1.16l-5.165.755a.53.53 0 0 0-.294.906l3.736 3.637a2.1 2.1 0 0 1 .611 1.879l-.88 5.139a.53.53 0 0 0 .769.56l4.617-2.428a2.1 2.1 0 0 1 .987-.243 2 2 0 0 1 .132.004',
+        key: '6uuto3',
+      },
+    ],
+    ['path', { d: 'm20.5 15.5-5 5', key: '1w5am3' }],
   ],
   star: [
     [
@@ -12352,6 +14508,13 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  summary: [
+    ['path', { d: 'M15 4H7', key: 'oyc4c8' }],
+    ['path', { d: 'm18 16 3 3-3 3', key: '1d4glt' }],
+    ['path', { d: 'M3 4v13a2 2 0 0 0 2 2h16', key: 'o3n0ii' }],
+    ['path', { d: 'M7 14h7', key: '16kgpy' }],
+    ['path', { d: 'M7 9h12', key: 'ihq7ma' }],
+  ],
   'sun-dim': [
     ['circle', { cx: '12', cy: '12', r: '4', key: '4exip2' }],
     ['path', { d: 'M12 4h.01', key: '1ujb9j' }],
@@ -12449,9 +14612,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm11 8 2.3-2.3a2.4 2.4 0 0 1 3.404.004L18.6 7.6a2.4 2.4 0 0 1 .026 3.434L9.9 19.8', key: 'o2gii7' }],
   ],
   'swiss-franc': [
-    ['path', { d: 'M10 21V3h8', key: 'br2l0g' }],
+    ['path', { d: 'M10 10h7', key: 'jlzm20' }],
+    ['path', { d: 'M10 20V5a1 1 0 011-1h7', key: '1ru8sx' }],
     ['path', { d: 'M6 16h9', key: '2py0wn' }],
-    ['path', { d: 'M10 9.5h7', key: '13dmhz' }],
   ],
   'switch-camera': [
     ['path', { d: 'M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5', key: 'mtk2lu' }],
@@ -12464,17 +14627,20 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm11 19-6-6', key: 's7kpr' }],
     ['path', { d: 'm5 21-2-2', key: '1kw20b' }],
     ['path', { d: 'm8 16-4 4', key: '1oqv8h' }],
-    ['path', { d: 'M9.5 17.5 21 6V3h-3L6.5 14.5', key: 'pkxemp' }],
+    ['path', { d: 'M9.5 17.5 20.414 6.586A2 2 0 0021 5.172V3h-2.172a2 2 0 00-1.414.586L6.5 14.5', key: '1pjndt' }],
   ],
   swords: [
-    ['polyline', { points: '14.5 17.5 3 6 3 3 6 3 17.5 14.5', key: '1hfsw2' }],
-    ['line', { x1: '13', x2: '19', y1: '19', y2: '13', key: '1vrmhu' }],
-    ['line', { x1: '16', x2: '20', y1: '16', y2: '20', key: '1bron3' }],
-    ['line', { x1: '19', x2: '21', y1: '21', y2: '19', key: '13pww6' }],
-    ['polyline', { points: '14.5 6.5 18 3 21 3 21 6 17.5 9.5', key: 'hbey2j' }],
-    ['line', { x1: '5', x2: '9', y1: '14', y2: '18', key: '1hf58s' }],
-    ['line', { x1: '7', x2: '4', y1: '17', y2: '20', key: 'pidxm4' }],
-    ['line', { x1: '3', x2: '5', y1: '19', y2: '21', key: '1pehsh' }],
+    ['path', { d: 'm13 19 6-6', key: 'gj6q8g' }],
+    ['path', { d: 'M14.5 17.5 3.586 6.586A2 2 0 013 5.172V3h2.172a2 2 0 011.414.586L17.5 14.5', key: 'uwfxh8' }],
+    [
+      'path',
+      { d: 'm14.828 6.172 2.586-2.586A2 2 0 0118.828 3H21v2.172a2 2 0 01-.586 1.414l-2.586 2.586', key: '1f17hx' },
+    ],
+    ['path', { d: 'm16 16 4 4', key: 'up5ibb' }],
+    ['path', { d: 'm19 21 2-2', key: '1phfkn' }],
+    ['path', { d: 'm5 14 4 4', key: '1gk0qx' }],
+    ['path', { d: 'm5 21-2-2', key: '1kw20b' }],
+    ['path', { d: 'M7.5 16.5 4 20', key: '14nozp' }],
   ],
   syringe: [
     ['path', { d: 'm18 2 4 4', key: '22kx64' }],
@@ -12485,13 +14651,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm14 4 6 6', key: 'yqp9t2' }],
   ],
   'table-2': [
-    [
-      'path',
-      {
-        d: 'M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18',
-        key: 'gugj83',
-      },
-    ],
+    ['path', { d: 'M3 9h18', key: '1pudct' }],
+    ['path', { d: 'M9 3v18', key: 'fh3hqa' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'table-cells-merge': [
     ['path', { d: 'M12 21v-6', key: 'lihzve' }],
@@ -12566,6 +14728,30 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '17', cy: '17', r: '5', key: '1op1d2' }],
     ['path', { d: 'M12 17h10', key: 'ls21zv' }],
     ['path', { d: 'm3.46 10.54 7.08-7.08', key: '1rehiu' }],
+  ],
+  'tag-plus': [
+    ['path', { d: 'M16 13h6', key: '1um0mj' }],
+    [
+      'path',
+      {
+        d: 'm16.5 6.5-3.914-3.914A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l1.79-1.79',
+        key: 'dp0yc9',
+      },
+    ],
+    ['path', { d: 'M19 10v6', key: '13mz7b' }],
+    ['circle', { cx: '7.5', cy: '7.5', r: '.5', fill: 'currentColor', key: 'kqv944' }],
+  ],
+  'tag-x': [
+    [
+      'path',
+      {
+        d: 'm16.5 6.5-3.914-3.914A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.43 2.43 0 0 0 3.42 0l1.79-1.79',
+        key: 'hu94c9',
+      },
+    ],
+    ['path', { d: 'm16.5 10.5 5 5', key: '1jo8bf' }],
+    ['path', { d: 'm21.5 10.5-5 5', key: 'jzei60' }],
+    ['circle', { cx: '7.5', cy: '7.5', r: '.5', fill: 'currentColor', key: 'kqv944' }],
   ],
   tag: [
     [
@@ -12690,6 +14876,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M21 12H9', key: 'dn1m92' }],
     ['path', { d: 'M21 19H7', key: '4cu937' }],
   ],
+  'text-align-justify-center': [
+    ['path', { d: 'M3 5h18', key: '1u36vt' }],
+    ['path', { d: 'M3 12h18', key: '1i2n21' }],
+    ['path', { d: 'M7 19h10', key: 'lpd9lt' }],
+  ],
+  'text-align-justify-end': [
+    ['path', { d: 'M3 5h18', key: '1u36vt' }],
+    ['path', { d: 'M3 12h18', key: '1i2n21' }],
+    ['path', { d: 'M11 19h10', key: '11t30w' }],
+  ],
+  'text-align-justify-start': [
+    ['path', { d: 'M3 5h18', key: '1u36vt' }],
+    ['path', { d: 'M3 12h18', key: '1i2n21' }],
+    ['path', { d: 'M3 19h10', key: 'ctrkv9' }],
+  ],
   'text-align-justify': [
     ['path', { d: 'M3 5h18', key: '1u36vt' }],
     ['path', { d: 'M3 12h18', key: '1i2n21' }],
@@ -12787,6 +14988,16 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
     ['path', { d: 'M7 10v12', key: '1qc93n' }],
+  ],
+  'tic-tac-toe': [
+    ['path', { d: 'M12 2v20', key: 't6zp3m' }],
+    ['path', { d: 'm21 16-5 5', key: 'kplof2' }],
+    ['path', { d: 'm21 21-5-5', key: 't60xrr' }],
+    ['path', { d: 'M22 12H2', key: 'v4uh5a' }],
+    ['path', { d: 'M8 3 3 8', key: '3mf1mf' }],
+    ['path', { d: 'M8 8 3 3', key: '176qcj' }],
+    ['circle', { cx: '18.5', cy: '5.5', r: '2.5', key: '1soi6c' }],
+    ['circle', { cx: '5.5', cy: '18.5', r: '2.5', key: 's5276v' }],
   ],
   'ticket-check': [
     [
@@ -12944,33 +15155,66 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ],
     ['path', { d: 'M8 18a5 5 0 0 1-5-5V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8', key: '1tqs57' }],
   ],
+  tombstone: [
+    ['path', { d: 'M11 10h2', key: '1d6wy4' }],
+    ['path', { d: 'M19 21V10a7 7 0 00-14 0v11', key: '1f1hiz' }],
+    ['path', { d: 'M2 21h20', key: '1nyx9w' }],
+    ['path', { d: 'M9 14h6', key: '159ibu' }],
+  ],
   'tool-case': [
     ['path', { d: 'M10 15h4', key: '192ueg' }],
     [
       'path',
-      {
-        d: 'm14.817 10.995-.971-1.45 1.034-1.232a2 2 0 0 0-2.025-3.238l-1.82.364L9.91 3.885a2 2 0 0 0-3.625.748L6.141 6.55l-1.725.426a2 2 0 0 0-.19 3.756l.657.27',
-        key: 'xbnumr',
-      },
+      { d: 'm14.5 4.058.571-1.429a1 1 0 011.3-.558l5 2a1 1 0 01.549.534.88.88 0 01.01.765l-2.332 5.83', key: '1nkiiy' },
     ],
     [
       'path',
-      { d: 'm18.822 10.995 2.26-5.38a1 1 0 0 0-.557-1.318L16.954 2.9a1 1 0 0 0-1.281.533l-.924 2.122', key: 'eaw7gc' },
+      {
+        d: 'M15.634 11a2 2 0 00-.186-.34l-1.17-1.757 1.31-1.656a2 2 0 00-2.109-3.165l-2.032.57-1.17-1.758a2 2 0 00-3.664 1.028l-.086 2.11-2.032.568a2 2 0 00-.155 3.8l1.617.6',
+        key: '7rml5f',
+      },
     ],
-    ['path', { d: 'M4 12.006A1 1 0 0 1 4.994 11H19a1 1 0 0 1 1 1v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z', key: '1vaooh' }],
+    ['path', { d: 'M4 12.006A1 1 0 014.994 11H19a1 1 0 011 1v7a2 2 0 01-2 2H6a2 2 0 01-2-2z', key: '1y761e' }],
   ],
   toolbox: [
     ['path', { d: 'M16 12v4', key: 'vf1vip' }],
+    ['path', { d: 'M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2', key: 'llnzfg' }],
     [
       'path',
       {
-        d: 'M16 6a2 2 0 0 1 1.414.586l4 4A2 2 0 0 1 22 12v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 .586-1.414l4-4A2 2 0 0 1 8 6z',
-        key: '1h1rvn',
+        d: 'M17 6a2 2 0 011.414.586l3 3A2 2 0 0122 11v8a2 2 0 01-2 2H4a2 2 0 01-2-2v-8a2 2 0 01.586-1.414l3-3A2 2 0 017 6z',
+        key: '1hprxj',
       },
     ],
-    ['path', { d: 'M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2', key: '1ksdt3' }],
     ['path', { d: 'M2 14h20', key: 'myj16y' }],
     ['path', { d: 'M8 12v4', key: '1w4uao' }],
+  ],
+  'toothbrush-sparkles': [
+    ['path', { d: 'M10 3H8', key: 'mzdi2d' }],
+    ['path', { d: 'M14.586 11.414 22 4', key: 'swnl64' }],
+    ['path', { d: 'M15 11a8 8 0 01-.429.4', key: '3uwied' }],
+    [
+      'path',
+      {
+        d: 'm2 22 7-7c1.857-1.857 3.714-1.99 5.571-3.6l-1.985-1.986A2 2 0 0114 6a2 2 0 012-2 2 2 0 013.262-1.552l2.152 2.138',
+        key: '1kper6',
+      },
+    ],
+    ['path', { d: 'M20 15v4', key: 'nmhudv' }],
+    ['path', { d: 'M22 17h-4', key: '1sj068' }],
+    ['path', { d: 'M4 5v4', key: '13jjxc' }],
+    ['path', { d: 'M6 7H2', key: '8zbtv0' }],
+    ['path', { d: 'M9 2v2', key: '165o2o' }],
+  ],
+  toothbrush: [
+    ['path', { d: 'M15 11c-2 2-4 2-6 4l-7 7', key: '887gyg' }],
+    [
+      'path',
+      {
+        d: 'm22 4-7.414 7.414-2-2A2 2 0 0114 6c0-.512.196-1.024.586-1.414A2 2 0 0116 4a2 2 0 013.262-1.552l2.152 2.138',
+        key: '1lv77q',
+      },
+    ],
   ],
   tornado: [
     ['path', { d: 'M21 4H3', key: '1hwok0' }],
@@ -13044,6 +15288,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M16.949 14.14a5 2.5 0 1 1-9.9 0L10.063 3.5a2 2 0 0 1 3.874 0z', key: 'vap8c8' }],
     ['path', { d: 'M9.194 6.57a5 2.5 0 0 0 5.61 0', key: '15hn5c' }],
   ],
+  trailer: [
+    ['path', { d: 'M10 11.341V10', key: '1vu6ku' }],
+    ['path', { d: 'M14 13v-3', key: 'ywspeg' }],
+    ['path', { d: 'M18 17V8a2 2 0 00-2-2H4a2 2 0 00-2 2v7a2 2 0 002 2h2', key: '19481b' }],
+    ['path', { d: 'M22 15v1a1 1 0 01-1 1H10', key: '1lvljf' }],
+    ['path', { d: 'M6 11.341V10', key: '1dkezj' }],
+    ['circle', { cx: '8', cy: '17', r: '2', key: '5kbc0u' }],
+  ],
   'train-front-tunnel': [
     ['path', { d: 'M2 22V12a10 10 0 1 1 20 0v10', key: 'o0fyp0' }],
     ['path', { d: 'M15 6.8v1.4a3 2.8 0 1 1-6 0V6.8', key: 'm8q3n9' }],
@@ -13089,14 +15341,19 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M8 5 5 8', key: 'mgbjhz' }],
     ['circle', { cx: '12', cy: '12', r: '4', key: '4exip2' }],
   ],
-  'trash-2': [
+  'trash-off': [
     ['path', { d: 'M10 11v6', key: 'nco0om' }],
-    ['path', { d: 'M14 11v6', key: 'outv1u' }],
-    ['path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6', key: 'miytrc' }],
-    ['path', { d: 'M3 6h18', key: 'd0wm0j' }],
-    ['path', { d: 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', key: 'e791ji' }],
+    ['path', { d: 'M14 17v-3', key: '14u96h' }],
+    ['path', { d: 'M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-1.576.768', key: 'zo55d0' }],
+    ['path', { d: 'M19 6v7.344', key: 'q0pkd1' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M21 6h-9.344', key: 'pvjear' }],
+    ['path', { d: 'M3 6h3', key: '155dbl' }],
+    ['path', { d: 'M5 6v14a2 2 0 002 2h10a2 2 0 002-2v-1', key: '1ouqfz' }],
   ],
   trash: [
+    ['path', { d: 'M10 11v6', key: 'nco0om' }],
+    ['path', { d: 'M14 11v6', key: 'outv1u' }],
     ['path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6', key: 'miytrc' }],
     ['path', { d: 'M3 6h18', key: 'd0wm0j' }],
     ['path', { d: 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', key: 'e791ji' }],
@@ -13179,13 +15436,32 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M22 18a2 2 0 0 1-2 2H3c-1.1 0-1.3-.6-.4-1.3L20.4 4.3c.9-.7 1.6-.4 1.6.7Z', key: '183wce' }],
   ],
   triangle: [['path', { d: 'M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z', key: '14u9p9' }]],
+  'triangles-centerline-dashed-horizontal': [
+    ['path', { d: 'M10 12H8', key: 's88cx1' }],
+    ['path', { d: 'M16 12h-2', key: '10asgb' }],
+    ['path', { d: 'M22 12h-2', key: '14jgyd' }],
+    ['path', { d: 'M4 12H2', key: 'rhcxmi' }],
+    ['path', { d: 'M7.298 20.288A1 1 0 008 22h8a1 1 0 00.703-1.712l-3.991-3.99a1 1 0 00-1.424-.001z', key: '15ue1v' }],
+    ['path', { d: 'M7.298 3.712A1 1 0 018 2h8a1 1 0 01.703 1.712l-3.991 3.99a1 1 0 01-1.424.001z', key: 'lzh03e' }],
+  ],
+  'triangles-centerline-dashed-vertical': [
+    ['path', { d: 'M12 14v2', key: '8jcxud' }],
+    ['path', { d: 'M12 20v2', key: '1lh1kg' }],
+    ['path', { d: 'M12 2v2', key: 'tus03m' }],
+    ['path', { d: 'M12 8v2', key: '1woqiv' }],
+    [
+      'path',
+      { d: 'M20.288 16.703A1 1 0 0022 16V8a1 1 0 00-1.712-.703l-3.99 3.991a1 1 0 00-.001 1.424z', key: '1ewq2t' },
+    ],
+    ['path', { d: 'M3.712 16.703A1 1 0 012 16V8a1 1 0 011.712-.703l3.99 3.991a1 1 0 01.001 1.424z', key: '1c1klx' }],
+  ],
   trophy: [
-    ['path', { d: 'M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978', key: '1n3hpd' }],
-    ['path', { d: 'M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978', key: 'rfe1zi' }],
-    ['path', { d: 'M18 9h1.5a1 1 0 0 0 0-5H18', key: '7xy6bh' }],
+    ['path', { d: 'M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2', key: 'pwuv1l' }],
+    ['path', { d: 'M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2', key: '1y54w1' }],
+    ['path', { d: 'M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3', key: 'e30mpu' }],
     ['path', { d: 'M4 22h16', key: '57wxv0' }],
     ['path', { d: 'M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z', key: '1mhfuq' }],
-    ['path', { d: 'M6 9H4.5a1 1 0 0 1 0-5H6', key: 'tex48p' }],
+    ['path', { d: 'M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3', key: 'i0yafy' }],
   ],
   'truck-electric': [
     ['path', { d: 'M14 19V7a2 2 0 0 0-2-2H9', key: '15peso' }],
@@ -13203,10 +15479,21 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '17', cy: '18', r: '2', key: '332jqn' }],
     ['circle', { cx: '7', cy: '18', r: '2', key: '19iecd' }],
   ],
+  'tube-lotion': [
+    ['path', { d: 'M15 18v3a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-3', key: 'b580kr' }],
+    [
+      'path',
+      {
+        d: 'M17 2a2 2 0 0 1 1.6 3.2A8 8 0 0 0 17 10v6a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-6a8 8 0 0 0-1.6-4.8A2 2 0 0 1 7 2z',
+        key: 'ih942v',
+      },
+    ],
+    ['path', { d: 'M7 10a6.47 6.47 0 0 1 5 0 6.47 6.47 0 0 0 5 0', key: '1fwxph' }],
+  ],
   'turkish-lira': [
-    ['path', { d: 'M15 4 5 9', key: '14bkc9' }],
-    ['path', { d: 'm15 8.5-10 5', key: '1grtsx' }],
-    ['path', { d: 'M18 12a9 9 0 0 1-9 9V3', key: '1sst7f' }],
+    ['path', { d: 'm14 10-8 4', key: 'q2jxyq' }],
+    ['path', { d: 'M14 5 6 9', key: '3luqa0' }],
+    ['path', { d: 'M18 12a8 8 0 01-7.003 7.937c-.547.07-.997-.385-.997-.937V4', key: '18c6as' }],
   ],
   turntable: [
     ['path', { d: 'M10 12.01h.01', key: '7rp0yl' }],
@@ -13309,8 +15596,8 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm15 5-3-3-3 3', key: 'itvq4r' }],
   ],
   ungroup: [
-    ['rect', { width: '8', height: '6', x: '5', y: '4', rx: '1', key: 'nzclkv' }],
-    ['rect', { width: '8', height: '6', x: '11', y: '14', rx: '1', key: '4tytwb' }],
+    ['rect', { x: '11', y: '14', width: '10', height: '7', rx: '2', key: 'nfm8rk' }],
+    ['rect', { x: '3', y: '3', width: '10', height: '7', rx: '2', key: '1ljebb' }],
   ],
   university: [
     ['path', { d: 'M14 21v-3a2 2 0 0 0-4 0v3', key: '1rgiei' }],
@@ -13358,6 +15645,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm17 8-5-5-5 5', key: '7q97r8' }],
     ['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', key: 'ih7n3h' }],
   ],
+  'usb-c-port': [
+    ['path', { d: 'M6 12h12', key: '8npq4p' }],
+    ['rect', { x: '2', y: '8', width: '20', height: '8', rx: '4', key: '86l77p' }],
+  ],
   usb: [
     ['circle', { cx: '10', cy: '7', r: '1', key: 'dypaad' }],
     ['circle', { cx: '4', cy: '20', r: '1', key: '22iqad' }],
@@ -13384,6 +15675,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm20.772 16.148.924.383', key: '1g6xey' }],
     ['circle', { cx: '18', cy: '15', r: '3', key: 'gjjjvw' }],
     ['circle', { cx: '9', cy: '7', r: '4', key: 'nufk8' }],
+  ],
+  'user-group': [
+    ['path', { d: 'M17 21v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1', key: '13eq7e' }],
+    ['path', { d: 'M19 10h1a2 2 0 012 2v1', key: '172ugw' }],
+    ['path', { d: 'M5 10H4a2 2 0 00-2 2v1', key: '1yb089' }],
+    ['circle', { cx: '12', cy: '11', r: '3', key: 'itu57m' }],
+    ['circle', { cx: '18', cy: '4', r: '2', key: 'bubz31' }],
+    ['circle', { cx: '6', cy: '4', r: '2', key: 'lisof6' }],
   ],
   'user-key': [
     ['path', { d: 'M20 11v6', key: 'd77pzp' }],
@@ -13420,6 +15719,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['line', { x1: '19', x2: '19', y1: '8', y2: '14', key: '1bvyxn' }],
     ['line', { x1: '22', x2: '16', y1: '11', y2: '11', key: '1shjgl' }],
   ],
+  'user-round-arrow-left': [
+    ['path', { d: 'm19 16-3 3', key: 'lp3y45' }],
+    ['path', { d: 'M2 21a8 8 0 0 1 12.664-6.5', key: '1ap0vn' }],
+    ['path', { d: 'M22 19h-6l3 3', key: '13fjle' }],
+    ['circle', { cx: '10', cy: '8', r: '5', key: 'o932ke' }],
+  ],
   'user-round-check': [
     ['path', { d: 'M2 21a8 8 0 0 1 13.292-6', key: 'bjp14o' }],
     ['circle', { cx: '10', cy: '8', r: '5', key: 'o932ke' }],
@@ -13437,6 +15742,14 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm20.772 19.148.924.383', key: '9w9pjp' }],
     ['circle', { cx: '10', cy: '8', r: '5', key: 'o932ke' }],
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
+  ],
+  'user-round-group': [
+    ['path', { d: 'M17 21a5 5 0 00-10 0', key: '35qx9b' }],
+    ['path', { d: 'M22 10.5a3.5 3.5 0 00-5.507-2.868', key: '1nguyj' }],
+    ['path', { d: 'M7.507 7.632A3.5 3.5 0 002 10.5', key: '19g32s' }],
+    ['circle', { cx: '12', cy: '13', r: '3', key: '1vg3eu' }],
+    ['circle', { cx: '18.5', cy: '4.5', r: '2.5', key: '1ona2d' }],
+    ['circle', { cx: '5.5', cy: '4.5', r: '2.5', key: '1sh5th' }],
   ],
   'user-round-key': [
     ['path', { d: 'M19 11v6', key: 'rcqigv' }],
@@ -13473,11 +15786,32 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
     ['path', { d: 'm22 22-1.9-1.9', key: '1e5ubv' }],
   ],
+  'user-round-shield': [
+    ['path', { d: 'M2 21a8 8 0 0 1 8-8 5 5 0 1 1 4.845-3.759', key: 'oh9qqr' }],
+    [
+      'path',
+      {
+        d: 'M22 17.5c0 2.5-1.75 3.75-3.83 4.474a.5.5 0 0 1-.335-.005C15.75 21.25 14 20 14 17.5V14a.5.5 0 0 1 .5-.499c1 0 2.25-.6 3.12-1.36a.6.6 0 0 1 .76-.001c.875.765 2.12 1.36 3.12 1.36a.5.5 0 0 1 .5.5z',
+        key: 'k1mb52',
+      },
+    ],
+  ],
+  'user-round-star': [
+    [
+      'path',
+      {
+        d: 'M16.051 12.616a1 1 0 0 1 1.909.024l.737 1.452a1 1 0 0 0 .737.535l1.634.256a1 1 0 0 1 .588 1.806l-1.172 1.168a1 1 0 0 0-.282.866l.259 1.613a1 1 0 0 1-1.541 1.134l-1.465-.75a1 1 0 0 0-.912 0l-1.465.75a1 1 0 0 1-1.539-1.133l.258-1.613a1 1 0 0 0-.282-.867l-1.156-1.152a1 1 0 0 1 .572-1.822l1.633-.256a1 1 0 0 0 .737-.535z',
+        key: 'tuod8t',
+      },
+    ],
+    ['path', { d: 'M2 21a8 8 0 0 1 6.778-7.905', key: 's0gndq' }],
+    ['path', { d: 'M8.927 12.885a5 5 0 1 1 6.061-4.535', key: 'k6654v' }],
+  ],
   'user-round-x': [
-    ['path', { d: 'M2 21a8 8 0 0 1 11.873-7', key: '74fkxq' }],
+    ['path', { d: 'm16.5 16.5 5 5', key: 'zc9lw7' }],
+    ['path', { d: 'M2 21a8 8 0 0 1 11.531-7.18', key: 'x5izle' }],
+    ['path', { d: 'm21.5 16.5-5 5', key: '1empo3' }],
     ['circle', { cx: '10', cy: '8', r: '5', key: 'o932ke' }],
-    ['path', { d: 'm17 17 5 5', key: 'p7ous7' }],
-    ['path', { d: 'm22 17-5 5', key: 'gqnmv0' }],
   ],
   'user-round': [
     ['circle', { cx: '12', cy: '8', r: '5', key: '1hypcn' }],
@@ -13488,6 +15822,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M10.3 15H7a4 4 0 0 0-4 4v2', key: '3bnktk' }],
     ['circle', { cx: '17', cy: '17', r: '3', key: '18b49y' }],
     ['path', { d: 'm21 21-1.9-1.9', key: '1g2n9r' }],
+  ],
+  'user-shield': [
+    ['path', { d: 'M10 15H6a4 4 0 0 0-4 4v2', key: '1nfge6' }],
+    [
+      'path',
+      {
+        d: 'M22 17.5c0 2.499-1.75 3.749-3.83 4.474a.5.5 0 0 1-.335-.005c-2.085-.72-3.835-1.97-3.835-4.47V14a.5.5 0 0 1 .5-.499c1 0 2.25-.6 3.12-1.36a.6.6 0 0 1 .76-.001c.875.765 2.12 1.36 3.12 1.36a.5.5 0 0 1 .5.5z',
+        key: '16j3tf',
+      },
+    ],
+    ['circle', { cx: '9', cy: '7', r: '4', key: 'nufk8' }],
   ],
   'user-star': [
     [
@@ -13509,6 +15854,22 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
   user: [
     ['path', { d: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2', key: '975kel' }],
     ['circle', { cx: '12', cy: '7', r: '4', key: '17ys0d' }],
+  ],
+  'users-collaboration': [
+    ['path', { d: 'M12.925 3.047a9 9 0 017.616 6.11', key: '1ddf43' }],
+    ['path', { d: 'M13 22a2 2 0 012-2h4a2 2 0 012 2', key: 'vzh6pw' }],
+    ['path', { d: 'M3 12a2 2 0 012-2h4a2 2 0 012 2', key: 'jlrnkm' }],
+    ['path', { d: 'M3.889 15.9a9 9 0 005.247 4.632', key: 'r3hf9y' }],
+    ['circle', { cx: '17', cy: '14', r: '2', key: '1bjkuo' }],
+    ['circle', { cx: '7', cy: '4', r: '2', key: 'ra7k3' }],
+  ],
+  'users-round-collaboration': [
+    ['path', { d: 'M20.453 8.911a9 9 0 00-6.696-5.738', key: 'lzos5t' }],
+    ['path', { d: 'M21 22a4 4 0 00-8 0', key: '1vli7n' }],
+    ['path', { d: 'M3 12a4 4 0 017.963-.543', key: 'tu5poj' }],
+    ['path', { d: 'M3.889 15.9a9 9 0 005.247 4.632', key: 'r3hf9y' }],
+    ['circle', { cx: '17', cy: '15', r: '3', key: '1upz2a' }],
+    ['circle', { cx: '7', cy: '5', r: '3', key: 'ka0amb' }],
   ],
   'users-round': [
     ['path', { d: 'M18 21a8 8 0 0 0-16 0', key: '3ypg7q' }],
@@ -13572,15 +15933,25 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm13.4 13.4 2.7 2.7', key: 'abhel3' }],
     ['circle', { cx: '12', cy: '12', r: '2', key: '1c9p78' }],
   ],
+  'vector-polygon': [
+    ['path', { d: 'm12.828 4.813 5.344 2.375', key: 'd72xd9' }],
+    ['path', { d: 'm15.769 18.153 3.461-8.306', key: '1m86ed' }],
+    ['path', { d: 'm5.687 14.074 7.625 4.852', key: '16trhu' }],
+    ['path', { d: 'M9.772 5.579 5.228 11.42', key: '1sledj' }],
+    ['circle', { cx: '11', cy: '4', r: '2', key: 'vol9p0' }],
+    ['circle', { cx: '15', cy: '20', r: '2', key: '1gio96' }],
+    ['circle', { cx: '20', cy: '8', r: '2', key: 'auwzcq' }],
+    ['circle', { cx: '4', cy: '13', r: '2', key: 'd2v72u' }],
+  ],
   'vector-square': [
-    ['path', { d: 'M19.5 7a24 24 0 0 1 0 10', key: '8n60xe' }],
-    ['path', { d: 'M4.5 7a24 24 0 0 0 0 10', key: '2lmadr' }],
-    ['path', { d: 'M7 19.5a24 24 0 0 0 10 0', key: '1q94o2' }],
-    ['path', { d: 'M7 4.5a24 24 0 0 1 10 0', key: '2z8ypa' }],
-    ['rect', { x: '17', y: '17', width: '5', height: '5', rx: '1', key: '1ac74s' }],
-    ['rect', { x: '17', y: '2', width: '5', height: '5', rx: '1', key: '1e7h5j' }],
-    ['rect', { x: '2', y: '17', width: '5', height: '5', rx: '1', key: '1t4eah' }],
-    ['rect', { x: '2', y: '2', width: '5', height: '5', rx: '1', key: '940dhs' }],
+    ['path', { d: 'M17.055 4.533a24 24 0 00-10.11 0', key: '1rchew' }],
+    ['path', { d: 'M19.467 17.055a24 24 0 000-10.11', key: 'oh3qan' }],
+    ['path', { d: 'M4.533 6.945a24 24 0 000 10.11', key: 'jtuody' }],
+    ['path', { d: 'M6.945 19.467a24 24 0 0010.11 0', key: '2x0uq2' }],
+    ['circle', { cx: '19', cy: '19', r: '2', key: '17f5cg' }],
+    ['circle', { cx: '19', cy: '5', r: '2', key: 'mhkx31' }],
+    ['circle', { cx: '5', cy: '19', r: '2', key: 'v8kfzx' }],
+    ['circle', { cx: '5', cy: '5', r: '2', key: '1gwv83' }],
   ],
   vegan: [
     ['path', { d: 'M16 8q6 0 6-6-6 0-6 6', key: 'qsyyc4' }],
@@ -13650,6 +16021,50 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'virus-off': [
+    ['path', { d: 'M10.01 10h.01', key: '1a2j31' }],
+    ['path', { d: 'M12 14.991h.01', key: 'csw8q1' }],
+    ['path', { d: 'M12 22v-3', key: 'kmzjlo' }],
+    ['path', { d: 'M12 2v3', key: 'qbqxhf' }],
+    ['path', { d: 'M13 22h-2', key: '191ugt' }],
+    ['path', { d: 'M13 2h-2', key: 'mj6ths' }],
+    ['path', { d: 'm16.5 19.794-1-1.733', key: '165y8t' }],
+    ['path', { d: 'm16.5 4.205-1 1.732', key: '1v0drn' }],
+    ['path', { d: 'M18.891 13.235a7 7 0 00-8.126-8.126', key: 'ols27d' }],
+    ['path', { d: 'm19.794 7.5-1.732 1', key: '1f81wk' }],
+    ['path', { d: 'M2 12h3', key: '1wrr53' }],
+    ['path', { d: 'M2 13v-2', key: 'v9793i' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M22 12h-3', key: 'silwxu' }],
+    ['path', { d: 'M22 13v-2', key: '1nj1a6' }],
+    ['path', { d: 'm4.206 16.5 1.732-1', key: '1b8gjo' }],
+    ['path', { d: 'm4.206 7.5 1.732 1', key: 'paipwt' }],
+    ['path', { d: 'M7.05 7.05a7 7 0 009.9 9.9', key: '1rpkjt' }],
+    ['path', { d: 'm7.5 19.794 1-1.733', key: '199mim' }],
+    ['path', { d: 'M9 12h.01', key: '157uk2' }],
+  ],
+  virus: [
+    ['path', { d: 'M12 14.991h.01', key: 'csw8q1' }],
+    ['path', { d: 'M12 22v-3', key: 'kmzjlo' }],
+    ['path', { d: 'M12 2v3', key: 'qbqxhf' }],
+    ['path', { d: 'M13 22h-2', key: '191ugt' }],
+    ['path', { d: 'M13 2h-2', key: 'mj6ths' }],
+    ['path', { d: 'M13.99 10H14', key: 'djkarb' }],
+    ['path', { d: 'm16.5 19.794-1-1.733', key: '165y8t' }],
+    ['path', { d: 'm16.5 4.205-1 1.732', key: '1v0drn' }],
+    ['path', { d: 'm19.794 16.5-1.732-1', key: '2ukevj' }],
+    ['path', { d: 'm19.794 7.5-1.732 1', key: '1f81wk' }],
+    ['path', { d: 'M2 12h3', key: '1wrr53' }],
+    ['path', { d: 'M2 13v-2', key: 'v9793i' }],
+    ['path', { d: 'M22 12h-3', key: 'silwxu' }],
+    ['path', { d: 'M22 13v-2', key: '1nj1a6' }],
+    ['path', { d: 'm4.206 16.5 1.732-1', key: '1b8gjo' }],
+    ['path', { d: 'm4.206 7.5 1.732 1', key: 'paipwt' }],
+    ['path', { d: 'm7.5 19.794 1-1.733', key: '199mim' }],
+    ['path', { d: 'm7.5 4.205 1 1.732', key: '1dzlgs' }],
+    ['path', { d: 'M9 12h.01', key: '157uk2' }],
+    ['circle', { cx: '12', cy: '12', r: '7', key: 'fim9np' }],
+  ],
   voicemail: [
     ['circle', { cx: '6', cy: '12', r: '4', key: '1ehtga' }],
     ['circle', { cx: '18', cy: '12', r: '4', key: '4vafl8' }],
@@ -13701,12 +16116,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     [
       'path',
       {
-        d: 'M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z',
-        key: 'uqj9uw',
+        d: 'M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z',
+        key: '1p7khw',
       },
     ],
-    ['line', { x1: '22', x2: '16', y1: '9', y2: '15', key: '1ewh16' }],
-    ['line', { x1: '16', x2: '22', y1: '9', y2: '15', key: '5ykzw1' }],
+    ['path', { d: 'm16.5 14.5 5-5', key: 'cul3yw' }],
+    ['path', { d: 'm16.5 9.5 5 5', key: '1akey5' }],
   ],
   volume: [
     [
@@ -13723,12 +16138,9 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M22 19H2', key: 'nuriw5' }],
   ],
   'wallet-cards': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2', key: 'afitv7' }],
-    ['path', { d: 'M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2', key: '4125el' }],
-    [
-      'path',
-      { d: 'M3 11h3c.8 0 1.6.3 2.1.9l1.1.9c1.6 1.6 4.1 1.6 5.7 0l1.1-.9c.5-.5 1.3-.9 2.1-.9H21', key: '1dpki6' },
-    ],
+    ['path', { d: 'M3 11h3.75a2 2 0 0 1 1.6.8l.45.6a4 4 0 0 0 6.4 0l.45-.6a2 2 0 0 1 1.6-.8H21', key: '1vwh6y' }],
+    ['path', { d: 'M3 7h18', key: '1uiuf2' }],
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'h1oib' }],
   ],
   'wallet-minimal': [
     ['path', { d: 'M17 14h.01', key: '7oqj8z' }],
@@ -13862,6 +16274,15 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['circle', { cx: '20', cy: '12', r: '2', key: '1xzzfp' }],
     ['circle', { cx: '4', cy: '12', r: '2', key: '1hvhnz' }],
   ],
+  'webcam-off': [
+    ['path', { d: 'M12 22v-4', key: '1utk9m' }],
+    ['path', { d: 'M12.754 7.096a3 3 0 0 1 2.15 2.15', key: '1v0qsm' }],
+    ['path', { d: 'M12.863 12.873a3 3 0 0 1-3.736-3.735', key: '13aqxl' }],
+    ['path', { d: 'M16.566 16.57A8 8 0 0 1 5.43 5.433', key: '1hliph' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+    ['path', { d: 'M7 22h10', key: '10w4w3' }],
+    ['path', { d: 'M8.478 2.817a8 8 0 0 1 10.705 10.705', key: 'r097k8' }],
+  ],
   webcam: [
     ['circle', { cx: '12', cy: '10', r: '8', key: '1gshiw' }],
     ['circle', { cx: '12', cy: '10', r: '3', key: 'ilqhr7' }],
@@ -13949,6 +16370,10 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       { d: 'M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z', key: 'vex3ng' },
     ],
   ],
+  whistle: [
+    ['path', { d: 'M10 6v4', key: '1sdd75' }],
+    ['path', { d: 'M21 6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-5.675A7 7 0 1 1 9 6z', key: 'kuzxl1' }],
+  ],
   'whole-word': [
     ['circle', { cx: '7', cy: '12', r: '3', key: '12clwm' }],
     ['path', { d: 'M10 9v6', key: '17i7lo' }],
@@ -13963,17 +16388,24 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm16.852 20.772-.383.924', key: 'dpfhf9' }],
     ['path', { d: 'm19.148 15.228.383-.923', key: '1reyyz' }],
     ['path', { d: 'm19.53 21.696-.382-.924', key: '1goivc' }],
-    ['path', { d: 'M2 7.82a15 15 0 0 1 20 0', key: '1ovjuk' }],
+    ['path', { d: 'M2 8.82a15 15 0 0120 0', key: '1nil1f' }],
     ['path', { d: 'm20.772 16.852.924-.383', key: 'htqkph' }],
     ['path', { d: 'm20.772 19.148.924.383', key: '9w9pjp' }],
-    ['path', { d: 'M5 11.858a10 10 0 0 1 11.5-1.785', key: '3sn16i' }],
-    ['path', { d: 'M8.5 15.429a5 5 0 0 1 2.413-1.31', key: '1pxovh' }],
+    ['path', { d: 'M5 12.859a10 10 0 0110.18-2.342', key: '1tqyl2' }],
+    ['path', { d: 'M8.5 16.429a5 5 0 011.998-1.2', key: 'vrrh85' }],
     ['circle', { cx: '18', cy: '18', r: '3', key: '1xkwt0' }],
   ],
   'wifi-high': [
     ['path', { d: 'M12 20h.01', key: 'zekei9' }],
     ['path', { d: 'M5 12.859a10 10 0 0 1 14 0', key: '1x1e6c' }],
     ['path', { d: 'M8.5 16.429a5 5 0 0 1 7 0', key: '1bycff' }],
+  ],
+  'wifi-lock': [
+    ['path', { d: 'M2 8.82a15 15 0 0120 0', key: '1nil1f' }],
+    ['path', { d: 'M20 16v-2a2 2 0 00-4 0v2', key: '1xumi5' }],
+    ['path', { d: 'M5 12.859a10 10 0 018.436-2.756', key: 'a6z9e1' }],
+    ['path', { d: 'M8.5 16.429a5 5 0 011.794-1.13', key: '5vajuv' }],
+    ['rect', { x: '14', y: '16', width: '8', height: '5', rx: '1', key: '1rp9x2' }],
   ],
   'wifi-low': [
     ['path', { d: 'M12 20h.01', key: 'zekei9' }],
@@ -14022,6 +16454,12 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'M17.5 10a2.5 2.5 0 1 1 2 4H2', key: '19kpjc' }],
     ['path', { d: 'm6 6 4 4 4-4', key: 'k13n16' }],
   ],
+  'wind-arrow-up': [
+    ['path', { d: 'M10 2v8', key: 'd4bbey' }],
+    ['path', { d: 'M12.8 21.6A2 2 0 1 0 14 18H2', key: '19kp1d' }],
+    ['path', { d: 'M17.5 10a2.5 2.5 0 1 1 2 4H2', key: '19kpjc' }],
+    ['path', { d: 'm6 6 4 -4 4 4', key: 'ym80l6' }],
+  ],
   wind: [
     ['path', { d: 'M12.8 19.6A2 2 0 1 0 14 16H2', key: '148xed' }],
     ['path', { d: 'M17.5 8a2.5 2.5 0 1 1 2 4H2', key: '1u4tom' }],
@@ -14062,6 +16500,17 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
       },
     ],
   ],
+  'wrench-off': [
+    [
+      'path',
+      {
+        d: 'M10.747 5.093a6 6 0 0 1 6.841-2.882c.438.12.54.662.219.984L14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-2.882 6.842',
+        key: 'sded7h',
+      },
+    ],
+    ['path', { d: 'm13.5 13.5-7.88 7.88a1 1 0 0 1-2.999-3l7.88-7.88', key: '66etnh' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
+  ],
   wrench: [
     [
       'path',
@@ -14081,23 +16530,23 @@ export const LUCIDE_ICON_NODES: Readonly<Partial<Record<IconName, IconNode>>> = 
     ['path', { d: 'm6 6 12 12', key: 'd8bk6v' }],
   ],
   'zap-off': [
-    ['path', { d: 'M10.513 4.856 13.12 2.17a.5.5 0 0 1 .86.46l-1.377 4.317', key: '193nxd' }],
-    ['path', { d: 'M15.656 10H20a1 1 0 0 1 .78 1.63l-1.72 1.773', key: '27a7lr' }],
+    ['path', { d: 'M10.768 5.111 13.44 2.44a1.5 1.5 0 012.474 1.561l-1.633 4.625', key: 'l6h226' }],
+    ['path', { d: 'm18.889 13.232.672-.672A1.5 1.5 0 0018.5 10h-2.844', key: '1717b9' }],
+    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
     [
       'path',
       {
-        d: 'M16.273 16.273 10.88 21.83a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14H4a1 1 0 0 1-.78-1.63l4.507-4.643',
-        key: '1e0qe9',
+        d: 'm7.94 7.94-3.5 3.499A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l5.5-5.5',
+        key: '1bjzrh',
       },
     ],
-    ['path', { d: 'm2 2 20 20', key: '1ooewy' }],
   ],
   zap: [
     [
       'path',
       {
-        d: 'M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z',
-        key: '1xq2db',
+        d: 'M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z',
+        key: '1v7up4',
       },
     ],
   ],
