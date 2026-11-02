@@ -157,6 +157,12 @@ export default defineConfig({
       on('task', createNexusTasks(String(cypressConfig.env['nexusUrl'])));
     },
     experimentalModifyObstructiveThirdPartyCode: true,
+    // Chrome's native network path (Cypress 16) instruments the service worker script on the
+    // registration fetch but not on the browser's update check, so an unchanged sw.js reaches the
+    // browser as different bytes and installs a second worker that waits behind the app's
+    // "Update available" toast (cypress-io/cypress#34943). The HTTP/1 proxy rewrites every fetch
+    // alike. Remove once that issue is fixed.
+    forceHttp1: true,
     chromeWebSecurity: false,
     pageLoadTimeout: 60000,
   },
