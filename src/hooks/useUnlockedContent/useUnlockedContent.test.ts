@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { REPLICA_READ_HOLD_MS } from '@/config/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import type { LockFile, TUnlockedAttachment, TUnlockedContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -19,7 +20,12 @@ vi.mock('@/controllers/locks/locks', () => ({
 }));
 // Mutable so a test can sign the user out or hold the session restore; vi.hoisted beats the vi.mock
 // hoist (plain const would be TDZ).
-const authState = vi.hoisted(() => ({ currentUserPubky: 'me' as string | null, session: {} as object | null }));
+const authState = vi.hoisted(() => ({
+  currentUserPubky: 'me' as string | null,
+  session: {} as object | null,
+  restoreStatus: 'ready' as string,
+  sessionReference: null as object | null,
+}));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
 }));
@@ -29,6 +35,7 @@ vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
 }));
 afterEach(() => {
   sessionNeedsUpgrade.value = false;
+  Object.assign(authState, { restoreStatus: 'ready', sessionReference: null });
 });
 
 const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
@@ -39,8 +46,7 @@ describe('useUnlockedContent (replica resolution)', () => {
     vi.clearAllMocks();
     vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(null);
     vi.mocked(LocksController.getOwnPost).mockResolvedValue(null);
-    authState.currentUserPubky = 'me';
-    authState.session = {};
+    Object.assign(authState, { currentUserPubky: 'me', session: {}, restoreStatus: 'ready', sessionReference: null });
   });
 
   // Callers act on the absence of content (re-downloading a purchase), so "not known yet" has to
@@ -78,6 +84,86 @@ describe('useUnlockedContent (replica resolution)', () => {
     await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
     sessionNeedsUpgrade.value = false;
+  });
+
+  // After a reload the pubky is back before the session: the read has not started, but it will.
+  it.each([
+    ['restoring', null],
+    ['idle', { sessionStoreId: 'saved' }],
+  ])('is resolving while the session restore is pending (%s)', (restoreStatus, sessionReference) => {
+    Object.assign(authState, { session: null, restoreStatus, sessionReference });
+
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }));
+
+    expect(result.current.isResolvingReplica).toBe(true);
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+  });
+
+  it.each(['reauth-required', 'temporary-error', 'idle'])(
+    'is not resolving without a session once the restore is %s',
+    (restoreStatus) => {
+      Object.assign(authState, { session: null, restoreStatus, sessionReference: null });
+
+      const { result } = renderHook(() =>
+        useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }),
+      );
+
+      expect(result.current.isResolvingReplica).toBe(false);
+    },
+  );
+
+  it('is not resolving for a signed-out reader', () => {
+    Object.assign(authState, { currentUserPubky: null, session: null, restoreStatus: 'idle' });
+
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }));
+
+    expect(result.current.isResolvingReplica).toBe(false);
+  });
+
+  // The homeserver reads carry no deadline of their own. Past the deadline the read is reported overdue,
+  // so the pill can stop waiting, but it still counts as resolving: purchase recovery waits for the
+  // read to settle, or a slow but healthy read downloads and replicates the purchase a second time.
+  it('reports an overdue read past the deadline and keeps resolving until it settles', async () => {
+    vi.useFakeTimers();
+    try {
+      const read = Promise.withResolvers<TUnlockedContent | null>();
+      vi.mocked(LocksController.fetchReplicatedContent).mockReturnValue(read.promise);
+
+      const { result } = renderHook(() =>
+        useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }),
+      );
+      await act(async () => {});
+      expect(result.current.isResolvingReplica).toBe(true);
+      expect(result.current.isReplicaReadOverdue).toBe(false);
+
+      await act(async () => vi.advanceTimersByTime(REPLICA_READ_HOLD_MS - 1));
+      expect(result.current.isReplicaReadOverdue).toBe(false);
+      await act(async () => vi.advanceTimersByTime(1));
+      expect(result.current.isReplicaReadOverdue).toBe(true);
+      expect(result.current.isResolvingReplica).toBe(true);
+
+      await act(async () => read.resolve(null));
+      expect(result.current.isResolvingReplica).toBe(false);
+      expect(result.current.isReplicaReadOverdue).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('is never overdue while the session restore is pending', async () => {
+    vi.useFakeTimers();
+    try {
+      Object.assign(authState, { session: null, restoreStatus: 'restoring' });
+
+      const { result } = renderHook(() =>
+        useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }),
+      );
+      await act(async () => vi.advanceTimersByTime(REPLICA_READ_HOLD_MS));
+      expect(result.current.isResolvingReplica).toBe(true);
+      expect(result.current.isReplicaReadOverdue).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // An own post has no replica to wait for, so nothing should be gated on one.
