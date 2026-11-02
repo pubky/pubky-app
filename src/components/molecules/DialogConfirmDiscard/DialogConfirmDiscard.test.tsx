@@ -176,7 +176,7 @@ describe('DialogConfirmDiscard', () => {
     const discardButton = screen.getByRole('button', { name: /discard/i });
     const trashIcon = discardButton.querySelector('svg');
     expect(trashIcon).toBeInTheDocument();
-    expect(trashIcon).toHaveClass('lucide-trash2');
+    expect(trashIcon).toHaveClass('lucide-trash-2');
   });
 
   it('applies correct button variants', () => {

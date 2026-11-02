@@ -147,6 +147,7 @@ export function DialogLockContent({
                   <Input
                     {...field}
                     id="lock-amount"
+                    data-cy="lock-amount-input"
                     inputMode={asset === 'BTC' ? 'numeric' : 'decimal'}
                     value={
                       asset === 'BTC' && field.value && !isAmountFocused
