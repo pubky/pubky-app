@@ -1,7 +1,6 @@
 'use client';
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
-import { REPLICA_READ_HOLD_MS } from '@/config/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
@@ -104,9 +103,6 @@ export function useUnlockedContent({
   // Until the replica read settles, "no content" means "not known yet". Callers that would act on
   // its absence — re-downloading a purchase, say — have to be able to tell the two apart.
   const [isReplicaReadPending, setIsReplicaReadPending] = useState(true);
-  // Set once the replica read outlives `REPLICA_READ_HOLD_MS`. Only the Unlock pill stops waiting then;
-  // the read stays pending for purchase recovery, which would otherwise download the purchase twice.
-  const [isReplicaReadOverdue, setIsReplicaReadOverdue] = useState(false);
   // Starts true so an own lock renders its layout on the first render that has lock.json, before the
   // effect below has started the read.
   const [isOwnReadPending, setIsOwnReadPending] = useState(true);
@@ -139,8 +135,6 @@ export function useUnlockedContent({
     currentUserPubky !== null &&
     authorId !== currentUserPubky &&
     (session ? !needsUpgrade && isReplicaReadPending : isRestorePending);
-  // A running read past its deadline. A pending restore is never overdue: no read has started.
-  const isReplicaReadOverdueNow = isResolvingReplica && Boolean(session) && isReplicaReadOverdue;
 
   // Content belongs to one post read by one account: a different post, account or session starts
   // from nothing, so the previous post's text and media never show under the new one.
@@ -174,13 +168,6 @@ export function useUnlockedContent({
 
     let cancelled = false;
     setIsReplicaReadPending(true);
-    setIsReplicaReadOverdue(false);
-    // The homeserver reads have no deadline, and the Unlock pill must not wait on a stalled one forever.
-    // Past this one the read is overdue: the pill stops waiting, the read goes on and still renders a
-    // late copy, and purchase recovery keeps waiting for it to settle.
-    const deadline = setTimeout(() => {
-      if (!cancelled) setIsReplicaReadOverdue(true);
-    }, REPLICA_READ_HOLD_MS);
     readContent({
       getCached: () => LocksController.getUnlockedPost({ lockUrl: lock }),
       fetchRemote: () =>
@@ -194,14 +181,11 @@ export function useUnlockedContent({
     })
       .catch(() => undefined) // already reported by the Err factory; fall back to the lock card
       .finally(() => {
-        clearTimeout(deadline);
         if (cancelled) return;
         setIsReplicaReadPending(false);
-        setIsReplicaReadOverdue(false);
       });
     return () => {
       cancelled = true;
-      clearTimeout(deadline);
     };
   }, [lock, currentUserPubky, session, needsUpgrade, authorId, preview]);
 
@@ -288,6 +272,5 @@ export function useUnlockedContent({
     isOwnLock,
     isResolvingOwn,
     isResolvingReplica,
-    isReplicaReadOverdue: isReplicaReadOverdueNow,
   };
 }
