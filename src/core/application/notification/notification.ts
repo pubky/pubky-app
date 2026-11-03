@@ -98,7 +98,8 @@ export class NotificationApplication {
     bodyJson: Record<string, unknown>,
   ): Promise<number> {
     return await retryHomeserverWriteAfterReread(fence, async () => {
-      const published = await this.readPublishedLastRead(url);
+      // Past the browser cache: a stale cached copy could let an older mark overwrite another device's newer one.
+      const published = await this.fetchLastReadFromHomeserver(url);
       if (published !== null && published >= timestamp) return published;
       await HomeserverService.request({
         method: HttpMethod.PUT,
@@ -108,21 +109,6 @@ export class NotificationApplication {
       });
       return timestamp;
     });
-  }
-
-  /** The published `last_read` timestamp, or null when the file is missing or unreadable. */
-  private static async readPublishedLastRead(url: string): Promise<number | null> {
-    try {
-      const published = await HomeserverService.request<{ timestamp?: unknown } | undefined>({
-        method: HttpMethod.GET,
-        url,
-      });
-      const value = Number(published?.timestamp);
-      return Number.isFinite(value) ? value : null;
-    } catch (error) {
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
-      throw error;
-    }
   }
 
   /**

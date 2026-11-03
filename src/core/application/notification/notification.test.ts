@@ -556,12 +556,26 @@ describe('NotificationApplication.markAllAsRead', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+    // Fresh reads land in the `request` spy as GETs, so each test reads its calls as one ordered sequence.
+    vi.spyOn(HomeserverService, 'getFreshJson').mockImplementation((url) =>
+      HomeserverService.request({ method: HttpMethod.GET, url }),
+    );
   });
 
   afterEach(() => {
     installHomeserverWriteRetryDependenciesForTests(null);
     useAuthStore.setState({ isLoggingOut: false });
     vi.restoreAllMocks();
+  });
+
+  it('checks the published lastRead past the browser cache, so a stale cached copy cannot let an older mark through', async () => {
+    const fresh = vi.spyOn(HomeserverService, 'getFreshJson').mockResolvedValue({ timestamp: mockTimestamp + 1 });
+    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: mockTimestamp - 1 });
+
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).resolves.toBe(mockTimestamp + 1);
+
+    expect(fresh).toHaveBeenCalledWith(mockLastReadUrl);
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('reads the published lastRead, then sends this one as a single fenced attempt and returns it', async () => {
