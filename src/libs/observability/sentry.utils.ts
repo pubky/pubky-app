@@ -8,6 +8,7 @@ import {
   EMAIL_PATTERN,
   EMAIL_REDACTED,
   HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+  LOCKS_UNLOCK_POLL_CALL_SITES,
   NEXUS_POST_TAGS_PATH_PATTERN,
   PHONE_PATTERN,
   PHONE_REDACTED,
@@ -61,6 +62,8 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
   return endpointPath ? pattern.test(endpointPath) : false;
 }
 
+const LOCKS_UNLOCK_POLL_CALL_SITE_SET: ReadonlySet<unknown> = new Set(Object.values(LOCKS_UNLOCK_POLL_CALL_SITES));
+
 /**
  * Expected-error drop rules (ADR-0015 §5.1 Challenge 3).
  *
@@ -106,6 +109,21 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
     matches: (error) =>
       error.category === ErrorCategory.RateLimit &&
       error.context?.statusCode === HttpStatusCode.TOO_MANY_REQUESTS &&
+      error.context?.reportSuppressed === true,
+  },
+  {
+    name: 'locks-unlock-poll-repeat-reports',
+    reason:
+      'While a reader waits in the Pay to Unlock modal, usePayToUnlock polls the verification task every 3 s and the ' +
+      'Paykit link every 1 s, so a Lock Server outage built one AppError per tick, ~240 events per 3-minute wait (issue ' +
+      '#2641). The loops back off and tag every failure after the first of a streak with context.reportSuppressed, ' +
+      'so the first failure of each outage stays reportable; untagged reads (the open-time lookup, the purchase ' +
+      'resume) and other Locks operations are untouched. A streak does not tell failures apart: a different failure ' +
+      'during one (a response the schema rejects after a run of 503s, say) is tagged too until the streak ends on an ' +
+      'answer, a return to the tab or a new wait, while a reader who opens the dialog afterwards reports it.',
+    matches: (error) =>
+      error.service === ErrorService.Locks &&
+      LOCKS_UNLOCK_POLL_CALL_SITE_SET.has(error.context?.callSite) &&
       error.context?.reportSuppressed === true,
   },
   {
@@ -258,8 +276,9 @@ function deepScrubTelemetryStrings<T>(value: T, seen: WeakSet<object>): T {
  * Defensive PII filter — redacts user-provided identifiers across application-owned
  * event surfaces (messages, exception values, breadcrumb data, extras, and AppError context).
  *
- * The browser/server initializers also set sendDefaultPii: false; this hook is a
- * second line of defense for application payloads we attach ourselves.
+ * SDK-side collection is already minimized by the `dataCollection` mapping in
+ * `getSentryInitBase()` (no IP inference, no `user.ip_address`, no IP-bearing headers);
+ * this hook is the second line of defense for application payloads we attach ourselves.
  */
 export function scrubSensitiveData(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
   event.message = event.message ? scrubSensitiveString(event.message) : event.message;
