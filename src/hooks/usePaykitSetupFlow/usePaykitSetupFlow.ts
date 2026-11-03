@@ -3,14 +3,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
 import type { AppError } from '@/libs/error/error';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import type { TLockPriceAsset, TPaykitSetupStatus } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { PaykitSetupFlowStatus, type UsePaykitSetupFlowReturn } from './usePaykitSetupFlow.types';
-import { readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
+import { isPaykitSetupReadyMessage, readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
+
+/**
+ * How long the `/setup` iframe may stay silent after its `load` event. Paykit's page posts
+ * `paykit-setup-ready` before its first poll, so a page that rendered says so at once; one that
+ * loaded and stayed silent is an error body or a proxy page (#3027).
+ */
+export const SETUP_READY_AFTER_LOAD_MS = 5_000;
+
+/**
+ * How long the `/setup` iframe may take to report it rendered, counted from its mount. Covers a
+ * request that never fires `load` (a stalled connection), where the 5 s limit above never starts.
+ */
+export const SETUP_MOUNT_TIMEOUT_MS = 20_000;
+
+/** The error for a `/setup` page that never reported it rendered, counted from `mount` or `load`. */
+const setupPageTimeout = (countedFrom: 'mount' | 'load'): AppError =>
+  Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Paykit setup page did not render', {
+    service: ErrorService.Locks,
+    operation: 'usePaykitSetupFlow.awaitSetupPage',
+    context: { countedFrom },
+  });
 
 /**
  * Drives the iframe-based Paykit setup flow, where a creator connects the account that receives
@@ -21,11 +42,17 @@ import { readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
  * `/setup` URL for the modal to load in an iframe. The Paykit page posts the outcome back to the
  * parent; the message is validated (origin / iframe source / schema), `state` is checked, and a
  * success is recorded on the Locks session.
+ *
+ * The iframe stays hidden (`isSetupReady` false) until the page posts `paykit-setup-ready`. A page
+ * that failed to render never posts it, so after `SETUP_READY_AFTER_LOAD_MS` from `load`, or
+ * `SETUP_MOUNT_TIMEOUT_MS` from mount, the flow moves to `ERROR` instead of showing the raw body.
  */
 export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowReturn {
   const [status, setStatus] = useState<PaykitSetupFlowStatus>(PaykitSetupFlowStatus.IDLE);
   const [setupUrl, setSetupUrl] = useState<string | null>(null);
   const [error, setError] = useState<AppError | null>(null);
+  const [isSetupReady, setIsSetupReady] = useState(false);
+  const [isSetupLoaded, setIsSetupLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const stateRef = useRef<string | null>(null);
   // The only origin allowed to post the callback — derived from the setup URL.
@@ -47,11 +74,15 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     sessionSecretRef.current = null;
     setSetupUrl(null);
     setError(null);
+    setIsSetupReady(false);
+    setIsSetupLoaded(false);
     setStatus(PaykitSetupFlowStatus.IDLE);
   }, []);
 
   const start = useCallback(() => {
     setError(null);
+    setIsSetupReady(false);
+    setIsSetupLoaded(false);
     const setupState = crypto.randomUUID();
     stateRef.current = setupState;
     sessionSecretRef.current = useLocksAuthStore.getState().selectLocksSessionSecret();
@@ -142,5 +173,46 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     return () => window.removeEventListener('message', handler);
   }, [status, check]);
 
-  return { status, setupUrl, error, iframeRef, check, start, reset };
+  const onSetupLoad = useCallback(() => setIsSetupLoaded(true), []);
+
+  const isWaitingForSetupPage = status === PaykitSetupFlowStatus.AWAITING_APPROVAL && !isSetupReady;
+
+  // Until the page reports it rendered: listen for that report, and cap the wait from mount.
+  useEffect(() => {
+    if (!isWaitingForSetupPage) return;
+
+    const onMessage = (event: MessageEvent) => {
+      if (
+        isPaykitSetupReadyMessage(
+          event,
+          iframeRef.current?.contentWindow ?? null,
+          paykitOriginRef.current ?? '',
+          stateRef.current,
+        )
+      ) {
+        setIsSetupReady(true);
+      }
+    };
+    const timer = setTimeout(() => {
+      setError(setupPageTimeout('mount'));
+      setStatus(PaykitSetupFlowStatus.ERROR);
+    }, SETUP_MOUNT_TIMEOUT_MS);
+    window.addEventListener('message', onMessage);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+    };
+  }, [isWaitingForSetupPage]);
+
+  // `load` fires for an error body too, so it only starts the short wait for the report.
+  useEffect(() => {
+    if (!isWaitingForSetupPage || !isSetupLoaded) return;
+    const timer = setTimeout(() => {
+      setError(setupPageTimeout('load'));
+      setStatus(PaykitSetupFlowStatus.ERROR);
+    }, SETUP_READY_AFTER_LOAD_MS);
+    return () => clearTimeout(timer);
+  }, [isWaitingForSetupPage, isSetupLoaded]);
+
+  return { status, setupUrl, error, iframeRef, isSetupReady, onSetupLoad, check, start, reset };
 }

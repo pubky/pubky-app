@@ -89,6 +89,8 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
     status: paykitStatus,
     setupUrl,
     iframeRef: paykitIframeRef,
+    isSetupReady,
+    onSetupLoad,
     check: checkPaykit,
     reset: resetPaykit,
   } = usePaykitSetupFlow(asset);
@@ -268,8 +270,10 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
 
         {isBitkitStep && (
           <Container className="flex flex-col items-center justify-center gap-6 py-3">
-            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
-              {setupUrl ? (
+            <Container className="relative flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
+              {/* Mounted but invisible until the page posts `paykit-setup-ready`: a page that failed to
+                  render (a JSON error body) never sends it and is never shown (#3027). */}
+              {setupUrl && (
                 <iframe
                   ref={paykitIframeRef}
                   src={setupUrl}
@@ -278,11 +282,11 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
                   // sandboxed postMessage arrives as origin "null" and is rejected. allow-popups is
                   // for the Bitkit deep link Paykit's page opens on touch devices.
                   sandbox="allow-scripts allow-same-origin allow-popups"
-                  className="h-48 w-full pointer-coarse:h-15"
+                  onLoad={onSetupLoad}
+                  className={cn('h-48 w-full pointer-coarse:h-15', !isSetupReady && 'invisible absolute inset-0')}
                 />
-              ) : (
-                <LoaderCircle className="size-8 animate-spin text-brand" />
               )}
+              {!(setupUrl && isSetupReady) && <LoaderCircle className="size-8 animate-spin text-brand" />}
             </Container>
             {setupUrl && (
               <AppDownload
