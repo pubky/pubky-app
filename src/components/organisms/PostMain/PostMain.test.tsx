@@ -459,6 +459,7 @@ describe('PostMain', () => {
       isDeleting: false,
       deletePost: mockDeletePost,
       needsLocksSignIn: false,
+      clearLocksSignIn: vi.fn(),
     });
   });
 
@@ -936,6 +937,7 @@ describe('PostMain', () => {
       isDeleting: true,
       deletePost: mockDeletePost,
       needsLocksSignIn: false,
+      clearLocksSignIn: vi.fn(),
     });
 
     render(<PostMain postId="me:simple-repost-1" />);

@@ -24,7 +24,9 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [locksSignInOpen, setLocksSignInOpen] = useState(false);
-  const { deletePost, isDeleting, needsLocksSignIn } = useDeletePost({ active: deleteConfirmOpen || locksSignInOpen });
+  const { deletePost, isDeleting, needsLocksSignIn, clearLocksSignIn } = useDeletePost({
+    active: deleteConfirmOpen || locksSignInOpen,
+  });
   const { requireAuth } = useRequireAuth();
   const { postDetails } = usePostDetails(postId);
   // Collection posts use a dedicated form dialog because their content is a
@@ -47,13 +49,19 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
     setDeleteConfirmOpen(true);
   };
 
+  // A closed confirm dialog forgets the sign-in offer: the creator may sign in elsewhere before reopening it.
+  const handleDeleteConfirmOpenChange = (nextOpen: boolean) => {
+    setDeleteConfirmOpen(nextOpen);
+    if (!nextOpen) clearLocksSignIn();
+  };
+
   const handleDeleteConfirm = () => {
     return deletePost(postId);
   };
 
   // The Lock Server refused the lock deletion: sign in to it alone, then retry the delete.
   const handleLocksSignInSuccess = async () => {
-    if (await deletePost(postId)) setDeleteConfirmOpen(false);
+    if (await deletePost(postId)) handleDeleteConfirmOpenChange(false);
   };
 
   // Handle open/close with auth check - opens sign-in dialog for unauthenticated users
@@ -117,7 +125,7 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
       )}
       <DialogConfirmDelete
         open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
+        onOpenChange={handleDeleteConfirmOpenChange}
         onConfirm={handleDeleteConfirm}
         description={
           postDetails?.lock
