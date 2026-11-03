@@ -1,6 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PubchiQuerySuccess } from '@/application/pubchi/pubchi.types';
+import { AppError } from '@/libs/error/error';
+import { NetworkErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import type { FeedProposalV1 } from '@/libs/pubchi/schemas/feed';
 import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
@@ -229,6 +232,94 @@ describe('usePubchiQuery', () => {
     });
 
     expect(localStorage.length).toBe(0);
+  });
+
+  it.each([
+    [
+      'CONNECTION_FAILED',
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'Failed to fetch https://private.example',
+        service: ErrorService.Pubchi,
+        operation: 'query',
+      }),
+    ],
+    [
+      'REQUEST_TIMEOUT',
+      new AppError({
+        category: ErrorCategory.Timeout,
+        code: TimeoutErrorCode.REQUEST_ABORTED,
+        message: 'Request was aborted',
+        service: ErrorService.Pubchi,
+        operation: 'query',
+        context: { signalAborted: true },
+      }),
+    ],
+  ])('exposes %s with connection recovery copy for a structured transport failure', async (code, error) => {
+    mocks.fetchPubchiQuery.mockRejectedValueOnce(error);
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      await expect(result.current.submit('ask')).resolves.toBe(false);
+    });
+
+    expect(result.current.errorCode).toBe(code);
+    expect(mocks.toast).toHaveBeenCalledExactlyOnceWith({
+      variant: 'error',
+      title: "I couldn't reach the Pubchi service. Check your connection and try again in a minute.",
+      dismissButton: true,
+    });
+  });
+
+  it('continues to ignore caller abort errors', async () => {
+    mocks.fetchPubchiQuery.mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'));
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      await result.current.submit('ask');
+    });
+
+    expect(result.current.errorCode).toBeUndefined();
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  it('keeps a transport failure quiet after the caller clears the conversation', async () => {
+    let rejectQuery!: (reason: unknown) => void;
+    mocks.fetchPubchiQuery.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectQuery = reject;
+      }),
+    );
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+    let pending!: Promise<boolean>;
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      pending = result.current.submit('ask');
+    });
+    await waitFor(() => expect(mocks.fetchPubchiQuery).toHaveBeenCalledOnce());
+
+    await act(async () => {
+      usePubchiStore.getState().clearConversation();
+      rejectQuery(
+        new AppError({
+          category: ErrorCategory.Timeout,
+          code: TimeoutErrorCode.REQUEST_ABORTED,
+          message: 'Request was aborted',
+          service: ErrorService.Pubchi,
+          operation: 'query',
+        }),
+      );
+      await pending;
+    });
+
+    expect(result.current.errorCode).toBeUndefined();
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it('does not advance the cursor when the query errors', async () => {

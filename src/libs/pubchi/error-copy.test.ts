@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PUBCHI_ERROR_CODES, PUBCHI_ERROR_COPY_BY_CODE, pubchiErrorCopy } from './error-copy';
+import { AppError } from '@/libs/error/error';
+import { NetworkErrorCode, ServerErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { PUBCHI_ERROR_CODES, PUBCHI_ERROR_COPY_BY_CODE, pubchiErrorCopy, pubchiQueryErrorCode } from './error-copy';
 import { ERROR_CODES } from './schemas/codes';
 
 describe('pubchiErrorCopy', () => {
@@ -20,12 +23,12 @@ describe('pubchiErrorCopy', () => {
     });
   });
 
-  it('keeps unknown codes out of the message while retaining them for support', () => {
-    expect(pubchiErrorCopy('NEW_SERVICE_CODE')).toEqual({
-      message: 'Something went wrong on the Pubchi service.',
-      supportCode: 'NEW_SERVICE_CODE',
-    });
-  });
+  it.each(['NEW_SERVICE_CODE', 'Failed to fetch https://private.example', 'private backend detail'])(
+    'does not display unknown text: %s',
+    (code) => {
+      expect(pubchiErrorCopy(code)).toEqual({ message: 'Something went wrong on the Pubchi service.' });
+    },
+  );
 
   it('uses a separate message for network failures', () => {
     expect(pubchiErrorCopy('CONNECTION_FAILED').message).toBe(
@@ -46,5 +49,53 @@ describe('pubchiErrorCopy', () => {
       message: "The brain didn't answer. If you run a local model, check that it is up and try again in a minute.",
     });
     expect(pubchiErrorCopy('BRAIN_UNAVAILABLE').message).not.toBe(pubchiErrorCopy('UPSTREAM_UNAVAILABLE').message);
+  });
+});
+
+describe('pubchiQueryErrorCode', () => {
+  it.each(Object.values(NetworkErrorCode))('maps network code %s without relying on its message', (code) => {
+    const error = new AppError({
+      category: ErrorCategory.Network,
+      code,
+      message: 'private browser detail',
+      service: ErrorService.Pubchi,
+      operation: 'query',
+    });
+    expect(pubchiQueryErrorCode(error)).toBe('CONNECTION_FAILED');
+  });
+
+  it.each(Object.values(TimeoutErrorCode))('maps timeout code %s to retry guidance', (code) => {
+    const error = new AppError({
+      category: ErrorCategory.Timeout,
+      code,
+      message: 'Request was aborted',
+      service: ErrorService.Pubchi,
+      operation: 'query',
+    });
+    expect(pubchiQueryErrorCode(error)).toBe('REQUEST_TIMEOUT');
+  });
+
+  it('uses only closed protocol metadata and never classifies an arbitrary message as a protocol code', () => {
+    const error = new AppError({
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
+      message: 'UNAUTHORIZED',
+      service: ErrorService.Pubchi,
+      operation: 'query',
+      context: { pubchiCode: 'unknown backend detail' },
+    });
+    expect(pubchiQueryErrorCode(error)).toBe('SCHEMA_INVALID');
+  });
+
+  it('keeps unknown structured failures generic', () => {
+    const error = new AppError({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.UNKNOWN_ERROR,
+      message: 'private backend detail',
+      service: ErrorService.Pubchi,
+      operation: 'query',
+    });
+    expect(pubchiQueryErrorCode(error)).toBe('SCHEMA_INVALID');
+    expect(pubchiQueryErrorCode(new Error('private browser detail'))).toBe('SCHEMA_INVALID');
   });
 });

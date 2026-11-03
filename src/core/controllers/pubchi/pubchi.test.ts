@@ -212,6 +212,7 @@ describe('PubchiController', () => {
     ).resolves.toEqual(success);
     expect(querySpy).toHaveBeenCalledWith({
       owner: OWNER,
+      isCurrent: expect.any(Function),
       question: 'who tagged me?',
       purpose: 'who-tagged-me',
     });
@@ -230,12 +231,18 @@ describe('PubchiController', () => {
     await PubchiController.fetchPubchiQuery({ question: 'and what about last month?', purpose: 'ask', conversation });
     expect(querySpy).toHaveBeenLastCalledWith({
       owner: OWNER,
+      isCurrent: expect.any(Function),
       question: 'and what about last month?',
       purpose: 'ask',
       conversation,
     });
     await PubchiController.fetchPubchiQuery({ question: 'how are you?', purpose: 'ask', conversation: { turns: [] } });
-    expect(querySpy).toHaveBeenLastCalledWith({ owner: OWNER, question: 'how are you?', purpose: 'ask' });
+    expect(querySpy).toHaveBeenLastCalledWith({
+      owner: OWNER,
+      isCurrent: expect.any(Function),
+      question: 'how are you?',
+      purpose: 'ask',
+    });
   });
 
   it('commitCreateBinding rejects an invalid bot pubky before writing', async () => {

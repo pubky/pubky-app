@@ -7,6 +7,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { canonicalJson, sha256Hex } from '@/libs/pubchi/schemas/canonical';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { installHomeserverWriteRetryDependenciesForTests } from '@/services/homeserver/write-retry';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 
 vi.mock('@/services/homeserver/homeserver', () => ({
@@ -24,11 +25,16 @@ const tag: TCreateTagInput = {
   tagJson: { uri: 'pubky://author/pub/pubky.app/posts/post', label: 'builder', created_at: 200 },
 };
 let generation = 1;
+const retrySleep = vi.fn<(delayMs: number) => Promise<void>>();
 const commit = () => TagApplication.commitCreate({ tagList: [tag], preserveExisting: true });
 
 describe('Pubchi tag adoption', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // Native WebCrypto can finish after a fake-timer drain. Control only retry
+    // backoff so every operation settles before the next test uses the tag queue.
+    retrySleep.mockResolvedValue();
+    installHomeserverWriteRetryDependenciesForTests({ sleep: retrySleep });
     generation = 1;
     vi.mocked(LocalPostTagService.create).mockResolvedValue(true);
     vi.mocked(LocalPostTagService.delete).mockResolvedValue(true);
@@ -46,7 +52,7 @@ describe('Pubchi tag adoption', () => {
     });
   });
   afterEach(() => {
-    vi.useRealTimers();
+    installHomeserverWriteRetryDependenciesForTests(null);
   });
 
   it('reports an existing tag and preserves its creation time and extension fields', async () => {
@@ -62,7 +68,6 @@ describe('Pubchi tag adoption', () => {
   });
 
   it('rereads a changed extension before a retry instead of replaying an older body', async () => {
-    vi.useFakeTimers();
     vi.mocked(HomeserverService.requestRawText)
       .mockResolvedValueOnce(JSON.stringify({ ...tag.tagJson, extension: 1 }))
       .mockResolvedValueOnce(JSON.stringify({ ...tag.tagJson, extension: 2 }));
@@ -73,10 +78,8 @@ describe('Pubchi tag adoption', () => {
         context: { statusCode: 503 },
       }),
     );
-    const result = commit();
-    const assertion = expect(result).resolves.toMatchObject({ alreadyExisted: true });
-    await vi.runAllTimersAsync();
-    await assertion;
+    await expect(commit()).resolves.toMatchObject({ alreadyExisted: true });
+    expect(retrySleep).toHaveBeenCalledOnce();
     expect(HomeserverService.requestRawText).toHaveBeenCalledTimes(2);
     expect(HomeserverService.request).toHaveBeenLastCalledWith(
       expect.objectContaining({ bodyJson: expect.objectContaining({ extension: 2 }) }),
@@ -84,19 +87,19 @@ describe('Pubchi tag adoption', () => {
   });
 
   it('does not retry or write after the session changes during backoff', async () => {
-    vi.useFakeTimers();
     vi.mocked(HomeserverService.requestRawText).mockResolvedValue(JSON.stringify(tag.tagJson));
-    vi.mocked(HomeserverService.request).mockImplementation(async () => {
+    retrySleep.mockImplementation(async () => {
       generation += 1;
-      throw Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'busy', {
+    });
+    vi.mocked(HomeserverService.request).mockRejectedValueOnce(
+      Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'busy', {
         service: ErrorService.Homeserver,
         operation: 'test',
         context: { statusCode: 503 },
-      });
-    });
-    const assertion = expect(commit()).rejects.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
-    await vi.runAllTimersAsync();
-    await assertion;
+      }),
+    );
+    await expect(commit()).rejects.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
+    expect(retrySleep).toHaveBeenCalledOnce();
     expect(HomeserverService.requestRawText).toHaveBeenCalledOnce();
     expect(HomeserverService.request).toHaveBeenCalledOnce();
     expect(LocalPostTagService.delete).toHaveBeenCalledWith(
@@ -155,7 +158,6 @@ describe('Pubchi tag adoption', () => {
   });
 
   it('rereads a replacement after a transient DELETE failure and refuses a second DELETE', async () => {
-    vi.useFakeTimers();
     const proof = await sha256Hex(canonicalJson(tag.tagJson));
     vi.mocked(HomeserverService.requestRawText)
       .mockResolvedValueOnce(JSON.stringify(tag.tagJson))
@@ -167,9 +169,8 @@ describe('Pubchi tag adoption', () => {
         context: { statusCode: 503 },
       }),
     );
-    const assertion = expect(TagApplication.commitDeleteIfUnchanged(tag, proof)).rejects.toThrow('Tag changed');
-    await vi.runAllTimersAsync();
-    await assertion;
+    await expect(TagApplication.commitDeleteIfUnchanged(tag, proof)).rejects.toThrow('Tag changed');
+    expect(retrySleep).toHaveBeenCalledOnce();
 
     expect(HomeserverService.requestRawText).toHaveBeenCalledTimes(2);
     expect(HomeserverService.request).toHaveBeenCalledOnce();

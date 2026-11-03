@@ -5,11 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import type { PubchiQuerySuccess } from '@/application/pubchi/pubchi.types';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
-import { AppError } from '@/libs/error/error';
 import { Logger } from '@/libs/logger/logger';
 import { PUBCHI_PRIVATE_DIRECTORY, sessionCovers } from '@/libs/pubchi/capabilities';
 import { readLocalCursor, writeLocalCursor } from '@/libs/pubchi/capabilities-v1';
-import { pubchiErrorCopy } from '@/libs/pubchi/error-copy';
+import { pubchiErrorCopy, pubchiQueryErrorCode } from '@/libs/pubchi/error-copy';
 import { isPubchiPanelEnabled } from '@/libs/pubchi/flags';
 import type { PubchiTarget } from '@/libs/pubchi/schemas/ask-body';
 import type { Phase0Purpose } from '@/libs/pubchi/schemas/request';
@@ -189,7 +188,7 @@ export function usePubchiQuery() {
           ok = true;
         } catch (error) {
           if (!isCurrent() || isAbortError(error)) return;
-          const code = error instanceof AppError ? error.message : 'SCHEMA_INVALID';
+          const code = pubchiQueryErrorCode(error);
           const { message } = pubchiErrorCopy(code);
           setErrorCode(code);
           setResult(undefined);

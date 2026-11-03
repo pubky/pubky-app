@@ -14,6 +14,7 @@ import {
 } from '@/libs/pubchi/schemas/feed-provenance';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 
 async function requestPubchiDocumentText(url: string): Promise<string> {
   if (typeof HomeserverService.requestRawText === 'function') {
@@ -29,74 +30,78 @@ export async function recordPubchiBuiltFeed(
   provenanceFeedId = feed.id,
 ): Promise<boolean> {
   const url = provenanceUri(owner, provenanceFeedId);
-  let existing: (PubchiFeedProvenanceV1 & Record<string, unknown>) | undefined;
-  try {
-    let rawExisting: unknown;
-    const parsedExisting = parsePubchiDocumentText(await requestPubchiDocumentText(url), (value) => {
-      rawExisting = value;
-      return parsePubchiFeedProvenanceV1(value);
-    });
-    if (parsedExisting.ok) {
-      existing = parsedExisting.value as PubchiFeedProvenanceV1 & Record<string, unknown>;
-    } else {
-      if (parsedExisting.code !== 'SCHEMA_INVALID') {
-        throw Err.validation(ValidationErrorCode.INVALID_INPUT, parsedExisting.code, {
-          service: ErrorService.Pubchi,
-          operation: 'recordPubchiBuiltFeed',
-        });
+  const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
+  return retryHomeserverWriteAfterReread(fence, async () => {
+    let existing: (PubchiFeedProvenanceV1 & Record<string, unknown>) | undefined;
+    try {
+      let rawExisting: unknown;
+      const parsedExisting = parsePubchiDocumentText(await requestPubchiDocumentText(url), (value) => {
+        rawExisting = value;
+        return parsePubchiFeedProvenanceV1(value);
+      });
+      if (parsedExisting.ok) {
+        existing = parsedExisting.value as PubchiFeedProvenanceV1 & Record<string, unknown>;
+      } else {
+        if (parsedExisting.code !== 'SCHEMA_INVALID') {
+          throw Err.validation(ValidationErrorCode.INVALID_INPUT, parsedExisting.code, {
+            service: ErrorService.Pubchi,
+            operation: 'recordPubchiBuiltFeed',
+          });
+        }
+        const lenientExisting = PubchiFeedProvenanceV1Schema.passthrough().safeParse(rawExisting);
+        if (!lenientExisting.success) {
+          return false;
+        }
+        existing = lenientExisting.data;
       }
-      const lenientExisting = PubchiFeedProvenanceV1Schema.passthrough().safeParse(rawExisting);
-      if (!lenientExisting.success) {
+    } catch (error) {
+      if (error instanceof SyntaxError) {
         return false;
       }
-      existing = lenientExisting.data;
+      if (!hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
+        throw error;
+      }
     }
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      return false;
-    }
-    if (!hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-      throw error;
-    }
-  }
-  const record: PubchiFeedProvenanceV1 & Record<string, unknown> = {
-    ...existing,
-    schema: 'pubchi-feed-provenance',
-    version: 1,
-    feed_id: feed.id,
-    created_at: Math.floor(Date.now() / 1000),
-    ...(existing ? { created_at: existing.created_at, updated_at: Math.floor(Date.now() / 1000) } : {}),
-    proposal_hash: await sha256Hex(canonicalJson(proposal)),
-    bot: proposal.bot,
-  };
-  const parsed = parsePubchiFeedProvenanceV1({
-    schema: record.schema,
-    version: record.version,
-    feed_id: record.feed_id,
-    created_at: record.created_at,
-    ...(record.updated_at !== undefined ? { updated_at: record.updated_at } : {}),
-    proposal_hash: record.proposal_hash,
-    bot: record.bot,
-  });
-  if (!parsed.ok) {
-    throw Err.validation(ValidationErrorCode.TYPE_ERROR, parsed.code, {
-      service: ErrorService.Pubchi,
-      operation: 'recordPubchiBuiltFeed',
+    const record: PubchiFeedProvenanceV1 & Record<string, unknown> = {
+      ...existing,
+      schema: 'pubchi-feed-provenance',
+      version: 1,
+      feed_id: feed.id,
+      created_at: Math.floor(Date.now() / 1000),
+      ...(existing ? { created_at: existing.created_at, updated_at: Math.floor(Date.now() / 1000) } : {}),
+      proposal_hash: await sha256Hex(canonicalJson(proposal)),
+      bot: proposal.bot,
+    };
+    const parsed = parsePubchiFeedProvenanceV1({
+      schema: record.schema,
+      version: record.version,
+      feed_id: record.feed_id,
+      created_at: record.created_at,
+      ...(record.updated_at !== undefined ? { updated_at: record.updated_at } : {}),
+      proposal_hash: record.proposal_hash,
+      bot: record.bot,
     });
-  }
-  const size = validatePubchiDocumentSize(record);
-  if (!size.ok) {
-    throw Err.validation(ValidationErrorCode.INVALID_INPUT, size.code, {
-      service: ErrorService.Pubchi,
-      operation: 'recordPubchiBuiltFeed',
+    if (!parsed.ok) {
+      throw Err.validation(ValidationErrorCode.TYPE_ERROR, parsed.code, {
+        service: ErrorService.Pubchi,
+        operation: 'recordPubchiBuiltFeed',
+      });
+    }
+    const size = validatePubchiDocumentSize(record);
+    if (!size.ok) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, size.code, {
+        service: ErrorService.Pubchi,
+        operation: 'recordPubchiBuiltFeed',
+      });
+    }
+    await HomeserverService.request({
+      method: HttpMethod.PUT,
+      url,
+      bodyJson: record,
+      fence,
     });
-  }
-  await HomeserverService.request({
-    method: HttpMethod.PUT,
-    url,
-    bodyJson: record,
+    return true;
   });
-  return true;
 }
 
 export async function deletePubchiFeedProvenance(owner: string, feedId: string): Promise<void> {

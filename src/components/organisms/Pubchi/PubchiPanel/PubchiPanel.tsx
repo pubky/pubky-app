@@ -70,6 +70,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   const prefill = usePubchiStore((state) => state.flyout.prefill);
   const quickQuestionsOpen = usePubchiStore((state) => state.quickQuestionsOpen);
   const conversation = usePubchiStore((state) => state.conversation);
+  const conversationGeneration = usePubchiStore((state) => state.conversationGeneration);
   const databaseBlocked = usePubchiStore((state) => state.databaseBlocked);
   const feedBuilderOpen = usePubchiStore((state) => state.feedBuilder.open);
   const feedBuilderProposal = usePubchiStore((state) => state.feedBuilder.proposal);
@@ -92,6 +93,8 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   const [editFeed, setEditFeed] = useState<FeedModelSchema | undefined>();
   const [showDatabaseBlockedNotice, setShowDatabaseBlockedNotice] = useState(false);
   const [approvalOpen, setApprovalOpen] = useState(false);
+  const [feedBuilderRevision, setFeedBuilderRevision] = useState(0);
+  const preparedPrefillRef = useRef<{ prefill: typeof prefill; generation: number } | undefined>(undefined);
   const lastFeedResultRef = useRef<typeof result>(undefined);
   const consumedFeedResultRef = useRef<typeof result>(undefined);
   const initialTier = effectiveTier({
@@ -108,25 +111,46 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
 
   useEffect(() => {
     if (!open) {
+      if (prefill) PubchiController.consumePrefill(currentUserPubky);
+      preparedPrefillRef.current = undefined;
       setSuggestionTarget(undefined);
       setPrefilledQuestion(undefined);
       return;
     }
+    if (!prefill) return;
+    if (prefill.ownerPubky !== currentUserPubky) {
+      PubchiController.consumePrefill(currentUserPubky);
+      return;
+    }
+    if (preparedPrefillRef.current?.prefill !== prefill) {
+      preparedPrefillRef.current = { prefill, generation: conversationGeneration };
+      setEditFeed(undefined);
+      setSuggestionTarget(prefill.target);
+      setPrefilledQuestion(prefill.question);
+      if (prefill.feedId) {
+        void FeedController.get({ feedId: prefill.feedId }).then((feed) => setEditFeed(feed));
+      }
+      form.setValue(QUERY_FORM_FIELDS.QUESTION, prefill.question, { shouldValidate: true });
+      document.getElementById(QUERY_FORM_FIELDS.QUESTION)?.focus();
+    } else if (
+      preparedPrefillRef.current.generation !== conversationGeneration ||
+      form.getValues(QUERY_FORM_FIELDS.QUESTION) !== prefill.question
+    ) {
+      // Editing the question or resetting its context cancels the queued action.
+      PubchiController.consumePrefill(currentUserPubky);
+      return;
+    }
+    // A freshly mounted query hook prepares its signer asynchronously. Keep the
+    // action in the store until it can submit, and consume it before submitting
+    // so a readiness rerender cannot start a duplicate request.
+    if (prefill.source === 'post-menu' && !signingAvailable) return;
     const nextPrefill = PubchiController.consumePrefill(currentUserPubky);
     if (!nextPrefill) return;
-    setEditFeed(undefined);
-    setSuggestionTarget(nextPrefill.target);
-    setPrefilledQuestion(nextPrefill.question);
-    if (nextPrefill.feedId) {
-      void FeedController.get({ feedId: nextPrefill.feedId }).then((feed) => setEditFeed(feed));
-    }
-    form.setValue(QUERY_FORM_FIELDS.QUESTION, nextPrefill.question, { shouldValidate: true });
-    document.getElementById(QUERY_FORM_FIELDS.QUESTION)?.focus();
     if (nextPrefill.source === 'post-menu') {
       const target = nextPrefill.target?.kind === 'post' ? nextPrefill.target : undefined;
       void submit('ask', { target });
     }
-  }, [currentUserPubky, form, open, prefill, submit]);
+  }, [conversationGeneration, currentUserPubky, form, open, prefill, question, signingAvailable, submit]);
 
   useEffect(() => {
     if (
@@ -148,6 +172,9 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
     if (result?.kind !== 'feed-v2') return;
     if (consumedFeedResultRef.current === result) return;
     consumedFeedResultRef.current = result;
+    // Successful interpretation starts a new form draft, even when the service
+    // returns the same proposal twice. Failures leave the existing form mounted.
+    setFeedBuilderRevision((revision) => revision + 1);
     if (result.result.mode === 'create') setEditFeed(undefined);
     PubchiController.openFeedBuilder(result.result);
     onOpenChange(false);
@@ -182,6 +209,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
       ? 'This Pubchi service returned an older feed format. Your draft is unchanged. Edit its settings manually or try again after the service is updated.'
       : undefined;
   const clearPanelConversation = () => {
+    PubchiController.consumePrefill(currentUserPubky);
     setSuggestionTarget(undefined);
     setPrefilledQuestion(undefined);
     consumedFeedResultRef.current = undefined;
@@ -192,6 +220,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
     purpose: Parameters<typeof submit>[0],
     requestOptions?: Parameters<typeof submit>[1],
   ): Promise<boolean> => {
+    PubchiController.consumePrefill(currentUserPubky);
     if (!requestOptions?.targetFeedId) setEditFeed(undefined);
     return submit(purpose, requestOptions);
   };
@@ -560,6 +589,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
       />
       {feedBuilderProposal ? (
         <PubchiFeedBuilder
+          key={feedBuilderRevision}
           proposal={feedBuilderProposal}
           interpreting={loading}
           interpretationError={feedInterpretationError}

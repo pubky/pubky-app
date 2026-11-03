@@ -182,6 +182,7 @@ describe('PubchiApplication', () => {
     const querySpy = vi.spyOn(PubchiService, 'query').mockResolvedValue(QUERY_RESULT);
 
     const result = await PubchiApplication.query({
+      isCurrent: () => true,
       owner: OWNER,
       question: 'who tagged me?',
       purpose: 'who-tagged-me',
@@ -213,6 +214,7 @@ describe('PubchiApplication', () => {
     };
 
     await PubchiApplication.query({
+      isCurrent: () => true,
       owner: OWNER,
       question: 'what matters?',
       purpose: 'ask',
@@ -225,6 +227,7 @@ describe('PubchiApplication', () => {
     });
 
     await PubchiApplication.query({
+      isCurrent: () => true,
       owner: OWNER,
       question: 'who tagged me?',
       purpose: 'who-tagged-me',
@@ -237,6 +240,7 @@ describe('PubchiApplication', () => {
   it('captures the signed ask body with its bounded conversation window', async () => {
     const querySpy = vi.spyOn(PubchiService, 'query').mockResolvedValue(QUERY_RESULT);
     await PubchiApplication.query({
+      isCurrent: () => true,
       owner: OWNER,
       question: 'What about last month?',
       purpose: 'ask',
@@ -427,6 +431,7 @@ describe('PubchiApplication', () => {
 
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner: OWNER,
         question: 'who tagged me?',
         purpose: 'who-tagged-me',
@@ -441,6 +446,7 @@ describe('PubchiApplication', () => {
     vi.spyOn(PubchiService, 'query').mockResolvedValue({ code });
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner: OWNER,
         question: 'who tagged me?',
         purpose: 'who-tagged-me',
@@ -453,6 +459,7 @@ describe('PubchiApplication', () => {
     vi.spyOn(PubchiService, 'query').mockResolvedValue({ hello: 'world' });
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner: OWNER,
         question: 'who tagged me?',
         purpose: 'who-tagged-me',
@@ -466,6 +473,7 @@ describe('PubchiApplication', () => {
     const querySpy = vi.spyOn(PubchiService, 'query');
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner: OWNER,
         question: 'who tagged me?',
         purpose: 'who-tagged-me',
@@ -507,6 +515,7 @@ describe('PubchiApplication', () => {
     };
     vi.spyOn(PubchiService, 'query').mockResolvedValue(feedProposal);
     const result = await PubchiApplication.query({
+      isCurrent: () => true,
       owner: OWNER,
       question: 'build a feed of builders',
       purpose: 'build-feed',
@@ -520,6 +529,7 @@ describe('PubchiApplication', () => {
     const querySpy = vi.spyOn(PubchiService, 'query');
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner: OWNER,
         question: 'who tagged me in my feedreader?',
         purpose,
@@ -532,6 +542,7 @@ describe('PubchiApplication', () => {
   it('does not infer build-feed from the question text', async () => {
     vi.spyOn(PubchiService, 'query').mockResolvedValue(QUERY_RESULT);
     await PubchiApplication.query({
+      isCurrent: () => true,
       owner: OWNER,
       question: 'who tagged me in my feedreader?',
       purpose: 'who-tagged-me',
@@ -561,6 +572,7 @@ describe('PubchiApplication', () => {
       installed_user_feed_id: null,
     });
     const result = await PubchiApplication.query({
+      isCurrent: () => true,
       owner: OWNER,
       question: 'build a feed of likes',
       purpose: 'build-feed',
@@ -573,6 +585,7 @@ describe('PubchiApplication', () => {
     const querySpy = vi.spyOn(PubchiService, 'query');
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner: OWNER,
         question: 'x'.repeat(501),
         purpose: 'who-tagged-me',

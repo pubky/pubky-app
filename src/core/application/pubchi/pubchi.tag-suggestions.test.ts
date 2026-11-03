@@ -300,6 +300,7 @@ describe('Pubchi tag suggestion applications', () => {
       asOpaque<Awaited<ReturnType<typeof PubchiService.query>>>(response),
     );
     const result = await PubchiApplication.query({
+      isCurrent: () => true,
       owner,
       question: response.question,
       purpose: 'ask',
@@ -333,6 +334,7 @@ describe('Pubchi tag suggestion applications', () => {
     );
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner,
         question: response.question,
         purpose: 'ask',

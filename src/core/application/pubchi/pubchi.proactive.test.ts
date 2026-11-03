@@ -191,10 +191,11 @@ describe('PubchiApplication app-open proactive', () => {
     documents.set(`pubky://${OWNER}/pub/app.pubchi/v1/config.json`, JSON.stringify(config(true)));
     const query = vi.spyOn(PubchiApplication, 'query').mockResolvedValue({ kind: 'answer', result: answer() });
 
-    const listed = await PubchiApplication.runAppOpenProactive(OWNER, noon, true);
+    const listed = await PubchiApplication.runAppOpenProactive(OWNER, () => true, noon, true);
 
     expect(query).toHaveBeenCalledWith({
       owner: OWNER,
+      isCurrent: expect.any(Function),
       question: PROACTIVE_QUESTION,
       purpose: 'ask',
       nowSeconds: Math.floor(noon / 1000),
@@ -210,14 +211,14 @@ describe('PubchiApplication app-open proactive', () => {
     documents.set(`pubky://${OWNER}/pub/app.pubchi/v1/config.json`, JSON.stringify(config(true)));
     const query = vi.spyOn(PubchiApplication, 'query').mockResolvedValue({ kind: 'answer', result: answer() });
 
-    await PubchiApplication.runAppOpenProactive(OWNER, quietHour, true);
+    await PubchiApplication.runAppOpenProactive(OWNER, () => true, quietHour, true);
     expect(query).not.toHaveBeenCalled();
 
-    await PubchiApplication.runAppOpenProactive(OWNER, noon, true);
+    await PubchiApplication.runAppOpenProactive(OWNER, () => true, noon, true);
     expect(query).toHaveBeenCalledTimes(1);
 
     query.mockClear();
-    await PubchiApplication.runAppOpenProactive(OWNER, noon, true);
+    await PubchiApplication.runAppOpenProactive(OWNER, () => true, noon, true);
     expect(query).not.toHaveBeenCalled();
     expect(
       vi.mocked(HomeserverService.request).mock.calls.filter((call) => call[0].method === HttpMethod.PUT),
@@ -258,8 +259,8 @@ describe('PubchiApplication app-open proactive', () => {
       return { kind: 'answer', result: answer() };
     });
 
-    const tab1 = PubchiApplication.runAppOpenProactive(OWNER, noon, true);
-    const tab2 = PubchiApplication.runAppOpenProactive(OWNER, noon, true);
+    const tab1 = PubchiApplication.runAppOpenProactive(OWNER, () => true, noon, true);
+    const tab2 = PubchiApplication.runAppOpenProactive(OWNER, () => true, noon, true);
     await vi.waitFor(() => expect(query).toHaveBeenCalledTimes(1));
     releaseQuery();
     await Promise.all([tab1, tab2]);

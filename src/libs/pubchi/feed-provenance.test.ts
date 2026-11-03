@@ -39,6 +39,7 @@ const PROPOSAL: FeedProposalV1 = {
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
+    createWriteFence: () => ({ enter: () => undefined, assertCurrent: () => undefined }),
     listAll: vi.fn(),
   },
 }));
@@ -62,6 +63,7 @@ describe('Pubchi feed provenance', () => {
     await recordPubchiBuiltFeed(OWNER, PROPOSAL, FEED);
 
     expect(HomeserverService.request).toHaveBeenCalledWith({
+      fence: expect.objectContaining({ enter: expect.any(Function), assertCurrent: expect.any(Function) }),
       method: HttpMethod.PUT,
       url: `pubky://${OWNER}/priv/app.pubchi/v1/feeds/${FEED.id}.json`,
       bodyJson: expect.objectContaining({
@@ -89,6 +91,7 @@ describe('Pubchi feed provenance', () => {
     await recordPubchiBuiltFeed(OWNER, PROPOSAL, FEED);
 
     expect(HomeserverService.request).toHaveBeenLastCalledWith({
+      fence: expect.objectContaining({ enter: expect.any(Function), assertCurrent: expect.any(Function) }),
       method: HttpMethod.PUT,
       url: `pubky://${OWNER}/priv/app.pubchi/v1/feeds/${FEED.id}.json`,
       bodyJson: expect.objectContaining({ future_field: existing.future_field }),

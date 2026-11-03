@@ -39,6 +39,7 @@ export type DiscoveredTagSuggestion = {
 
 export type PubchiQueryApplicationParams = {
   owner: Pubky;
+  isCurrent: () => boolean;
   question: string;
   purpose: Phase0Purpose;
   nowSeconds?: number;

@@ -492,12 +492,16 @@ export class PubchiApplication {
 
   static async runAppOpenProactive(
     owner: string,
+    isCurrent: () => boolean,
     nowMs = Date.now(),
     visible = isAppForeground(),
   ): Promise<PubchiSuggestionV1[]> {
+    if (!isCurrent()) return [];
     const nowSeconds = Math.floor(nowMs / 1000);
     const listed = await this.listProactiveSuggestions(owner, nowSeconds);
+    if (!isCurrent()) return [];
     const config = await this.loadPubchiConfig(owner, false);
+    if (!isCurrent()) return [];
     const proactive = proactiveFromConfig(config);
     const suggestionId = proactiveSuggestionId(nowMs);
     const session = HomeserverService.getCurrentSessionInfo();
@@ -514,8 +518,10 @@ export class PubchiApplication {
     if (!gate.ok) return listed;
 
     const locked = await withProactiveDayLock(nowMs, async () => {
+      if (!isCurrent()) return [];
       if (hasProactiveDayClaim(owner, nowMs)) return this.listProactiveSuggestions(owner, nowSeconds);
       const existing = await this.loadPubchiSuggestion(owner, suggestionId);
+      if (!isCurrent()) return [];
       if (existing) return this.listProactiveSuggestions(owner, nowSeconds);
       if (readAttemptState(owner, nowMs).count >= proactive.max_suggestions_per_day) {
         return this.listProactiveSuggestions(owner, nowSeconds);
@@ -526,14 +532,17 @@ export class PubchiApplication {
       try {
         result = await this.query({
           owner,
+          isCurrent,
           question: PROACTIVE_QUESTION,
           purpose: PROACTIVE_PURPOSE,
           nowSeconds,
         });
       } catch (error) {
+        if (!isCurrent()) return [];
         Logger.warn('Pubchi app-open proactive query failed', { error, owner });
         return this.listProactiveSuggestions(owner, nowSeconds);
       }
+      if (!isCurrent()) return [];
       if (result.kind !== 'answer') return this.listProactiveSuggestions(owner, nowSeconds);
       const built = suggestionFromAnswer(result.result, { suggestionId, nowSeconds });
       if (!built) return this.listProactiveSuggestions(owner, nowSeconds);
@@ -2469,11 +2478,15 @@ export class PubchiApplication {
       });
     }
 
+    const assertCurrent = () => assertQueryCurrent(params.isCurrent);
+    assertCurrent();
     const binding = await LocalPubchiBindingService.readActive(params.owner);
+    assertCurrent();
     if (!binding || binding.status !== 'active') {
       throw Err.auth(AuthErrorCode.FORBIDDEN, 'BOT_MISMATCH', {
         service: ErrorService.Pubchi,
         operation: 'query',
+        context: { pubchiCode: 'BOT_MISMATCH' },
       });
     }
     const question = params.question.trim();
@@ -2481,12 +2494,14 @@ export class PubchiApplication {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'REQUEST_MALFORMED', {
         service: ErrorService.Pubchi,
         operation: 'query',
+        context: { pubchiCode: 'REQUEST_MALFORMED' },
       });
     }
     if (question.length > PUBCHI_QUESTION_MAX_LENGTH) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'REQUEST_MALFORMED', {
         service: ErrorService.Pubchi,
         operation: 'query',
+        context: { pubchiCode: 'REQUEST_MALFORMED' },
       });
     }
 
@@ -2524,16 +2539,27 @@ export class PubchiApplication {
       nonce: randomNonce(),
       ...(servedPurpose === 'who-tagged-me' || !params.context ? {} : { context: contextForRequest(params.context) }),
     };
+    assertCurrent();
     const device = await getCurrentDeviceKey(params.owner, issuedAt);
+    assertCurrent();
     if (!device) throw pubchiValidationError('SIGNATURE_INVALID', 'query');
     const request = await signRequestObjectV2({ ...unsigned, signer: device.signer }, device.key);
+    assertCurrent();
     assertRequestSignerIsStoredDevice(request.signer, device.signer);
 
     const response = await PubchiService.query({ request, body });
+    assertCurrent();
     const interpreted = interpretQueryResponse(response);
     if (interpreted.kind !== 'answer') return interpreted;
     if (servedPurpose === 'ask' && interpreted.result.section === 'draft_post' && interpreted.result.draft_post) {
-      return this.persistDraftPostQuery(params.owner, binding.bot, body.question, submittedAt, interpreted.result);
+      return this.persistDraftPostQuery(
+        params.owner,
+        binding.bot,
+        body.question,
+        submittedAt,
+        interpreted.result,
+        assertCurrent,
+      );
     }
     if (servedPurpose !== 'ask' || !body.target) return interpreted;
     const responseBinding = {
@@ -2555,20 +2581,23 @@ export class PubchiApplication {
       ]),
     ) as Record<number, 'proposed' | 'superseded'>;
     try {
-      await LocalPubchiRecordService.putTagApplication({
-        id: recordId,
-        owner: responseBinding.owner,
-        bot: responseBinding.bot,
-        served_purpose: responseBinding.servedPurpose,
-        question: responseBinding.question,
-        target: responseBinding.target,
-        submitted_at: responseBinding.submitted_at,
-        response_run_id: interpreted.result.run_id,
-        response: interpreted.result,
-        response_sha256: responseSha256,
-        statuses,
-        updated_at: Date.now(),
-      });
+      await LocalPubchiRecordService.putTagApplication(
+        {
+          id: recordId,
+          owner: responseBinding.owner,
+          bot: responseBinding.bot,
+          served_purpose: responseBinding.servedPurpose,
+          question: responseBinding.question,
+          target: responseBinding.target,
+          submitted_at: responseBinding.submitted_at,
+          response_run_id: interpreted.result.run_id,
+          response: interpreted.result,
+          response_sha256: responseSha256,
+          statuses,
+          updated_at: Date.now(),
+        },
+        assertCurrent,
+      );
     } catch (cause) {
       if (cause instanceof AppError) throw cause;
       throw Err.database(DatabaseErrorCode.TRANSACTION_FAILED, 'Could not persist Pubchi tag suggestions', {
@@ -2592,6 +2621,7 @@ export class PubchiApplication {
     question: string,
     submittedAt: number,
     result: PubchiAnswerV1,
+    assertCurrent: () => void,
   ): Promise<PubchiQuerySuccess> {
     const responseSha256 = await sha256Hex(canonicalJson(result));
     const responseBinding = {
@@ -2605,19 +2635,22 @@ export class PubchiApplication {
       canonicalJson({ ...responseBinding, response_sha256: responseSha256, run_id: result.run_id }),
     );
     try {
-      await LocalPubchiRecordService.putDraftPost({
-        id: recordId,
-        owner,
-        bot,
-        served_purpose: 'ask',
-        question,
-        submitted_at: submittedAt,
-        response_run_id: result.run_id,
-        response: result,
-        response_sha256: responseSha256,
-        status: 'proposed',
-        updated_at: Date.now(),
-      });
+      await LocalPubchiRecordService.putDraftPost(
+        {
+          id: recordId,
+          owner,
+          bot,
+          served_purpose: 'ask',
+          question,
+          submitted_at: submittedAt,
+          response_run_id: result.run_id,
+          response: result,
+          response_sha256: responseSha256,
+          status: 'proposed',
+          updated_at: Date.now(),
+        },
+        assertCurrent,
+      );
     } catch (cause) {
       if (cause instanceof AppError) throw cause;
       throw Err.database(DatabaseErrorCode.TRANSACTION_FAILED, 'Could not persist Pubchi draft post', {
@@ -2635,6 +2668,14 @@ export class PubchiApplication {
       },
     };
   }
+}
+
+function assertQueryCurrent(isCurrent: () => boolean): void {
+  if (isCurrent()) return;
+  throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session ended before the Pubchi query completed.', {
+    service: ErrorService.Pubchi,
+    operation: 'query',
+  });
 }
 
 async function putAndVerifyOwnerBinding(owner: string, candidate: OwnerBindingV1) {

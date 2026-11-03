@@ -84,7 +84,7 @@ export class PubchiService {
       return parsed;
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'REQUEST_EXPIRED', {
+        throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'REQUEST_TIMEOUT', {
           service: ErrorService.Pubchi,
           operation: 'query',
         });

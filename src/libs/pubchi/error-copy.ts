@@ -1,4 +1,7 @@
-import { RUNTIME_ERROR_CODES } from './errors';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
+import { isPubchiErrorCode as isProtocolErrorCode, RUNTIME_ERROR_CODES } from './errors';
 import { ERROR_CODES, type ErrorCode } from './schemas/codes';
 
 export const PUBCHI_ERROR_CODES = [...ERROR_CODES, ...RUNTIME_ERROR_CODES] as const;
@@ -49,6 +52,20 @@ export const PUBCHI_ERROR_COPY_BY_CODE: Record<PubchiErrorCode, string> = Object
   PUBCHI_ERROR_CODES.map((code) => [code, COPY_BY_CODE[code] ?? 'Something went wrong on the Pubchi service.']),
 ) as Record<PubchiErrorCode, string>;
 
+/** Maps structured failures to public copy without exposing transport or backend messages. */
+export function pubchiQueryErrorCode(
+  error: unknown,
+): PubchiErrorCode | 'CONNECTION_FAILED' | 'REQUEST_TIMEOUT' | 'PUBCHI_UNAVAILABLE' {
+  if (!(error instanceof AppError)) return 'SCHEMA_INVALID';
+  if (error.category === ErrorCategory.Network) return 'CONNECTION_FAILED';
+  if (error.category === ErrorCategory.Timeout) return 'REQUEST_TIMEOUT';
+  if (isProtocolErrorCode(error.context?.pubchiCode)) return error.context.pubchiCode;
+  if (error.category === ErrorCategory.Server && error.code === ServerErrorCode.SERVICE_UNAVAILABLE) {
+    return 'PUBCHI_UNAVAILABLE';
+  }
+  return 'SCHEMA_INVALID';
+}
+
 export function pubchiErrorCopy(code: string | undefined): PubchiErrorCopy {
   if (!code) {
     return { message: 'Something went wrong on the Pubchi service.' };
@@ -70,10 +87,7 @@ export function pubchiErrorCopy(code: string | undefined): PubchiErrorCopy {
   if (code in PUBCHI_ERROR_COPY_BY_CODE) {
     return { message: PUBCHI_ERROR_COPY_BY_CODE[code as PubchiErrorCode] };
   }
-  return {
-    message: 'Something went wrong on the Pubchi service.',
-    supportCode: code,
-  };
+  return { message: 'Something went wrong on the Pubchi service.' };
 }
 
 export function isPubchiErrorCode(code: string): code is PubchiErrorCode {

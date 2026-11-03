@@ -56,12 +56,19 @@ export class PubchiRecordModel {
     );
   }
 
-  static putTagApplication(record: PubchiTagApplicationRecord) {
+  static putTagApplication(record: PubchiTagApplicationRecord, assertCurrent: () => void) {
     return query(
       'putTagApplication',
       () => {
         const db = getPubchiDatabase();
-        return db.transaction('rw', db.tagApplications, () => db.tagApplications.put(record));
+        return db.transaction('rw', db.tagApplications, async () => {
+          assertCurrent();
+          const id = await db.tagApplications.put(record);
+          // The native transaction may have queued behind logout cleanup. Throwing here
+          // aborts the write if the generation changed while IndexedDB was waiting.
+          assertCurrent();
+          return id;
+        });
       },
       DatabaseErrorCode.TRANSACTION_FAILED,
     );
@@ -79,12 +86,19 @@ export class PubchiRecordModel {
     );
   }
 
-  static putDraftPost(record: PubchiDraftPostRecord) {
+  static putDraftPost(record: PubchiDraftPostRecord, assertCurrent: () => void) {
     return query(
       'putDraftPost',
       () => {
         const db = getPubchiDatabase();
-        return db.transaction('rw', db.draftPosts, () => db.draftPosts.put(record));
+        return db.transaction('rw', db.draftPosts, async () => {
+          assertCurrent();
+          const id = await db.draftPosts.put(record);
+          // The native transaction may have queued behind logout cleanup. Throwing here
+          // aborts the write if the generation changed while IndexedDB was waiting.
+          assertCurrent();
+          return id;
+        });
       },
       DatabaseErrorCode.TRANSACTION_FAILED,
     );

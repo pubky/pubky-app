@@ -230,7 +230,8 @@ export class AuthController {
     await wait;
   }
 
-  private static isCurrentGeneration(generation: string): boolean {
+  /** Checks the durable generation too, before a cross-tab storage event reaches this tab. */
+  static isCurrentGeneration(generation: string): boolean {
     try {
       return (
         useAuthStore.getState().generation === generation &&

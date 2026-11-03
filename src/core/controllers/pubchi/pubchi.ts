@@ -126,8 +126,9 @@ export class PubchiController {
     if (!isPubchiEnabled() || !isPubchiPanelEnabled()) return [];
     const ownerAtStart = useAuthStore.getState().currentUserPubky;
     if (!ownerAtStart) return [];
-    const suggestions = await PubchiApplication.runAppOpenProactive(ownerAtStart);
-    if (useAuthStore.getState().currentUserPubky === ownerAtStart) {
+    const isCurrent = this.captureQueryGeneration(ownerAtStart);
+    const suggestions = await PubchiApplication.runAppOpenProactive(ownerAtStart, isCurrent);
+    if (isCurrent()) {
       usePubchiStore.getState().setProactiveSuggestions(suggestions, ownerAtStart);
     }
     return suggestions;
@@ -206,6 +207,7 @@ export class PubchiController {
     const context = usePubchiStore.getState().ownerPubky === owner ? usePubchiStore.getState().context : null;
     return PubchiApplication.query({
       owner,
+      isCurrent: this.captureQueryGeneration(owner),
       question: params.question,
       purpose: params.purpose,
       ...(params.purpose === 'ask' && params.conversation?.turns.length ? { conversation: params.conversation } : {}),
@@ -215,6 +217,20 @@ export class PubchiController {
       ...(params.target ? { target: params.target } : {}),
       ...(context ? { context } : {}),
     });
+  }
+
+  /** Retain the original generation even if this owner signs out and back in. */
+  private static captureQueryGeneration(owner: string): () => boolean {
+    const generation = useAuthStore.getState().generation;
+    return () => {
+      const current = useAuthStore.getState();
+      return (
+        generation !== '' &&
+        !current.isLoggingOut &&
+        current.currentUserPubky === owner &&
+        AuthController.isCurrentGeneration(generation)
+      );
+    };
   }
 
   static async applyTagSuggestion(

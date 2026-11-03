@@ -197,6 +197,7 @@ describe('Pubchi draft post applications', () => {
       asOpaque<Awaited<ReturnType<typeof PubchiService.query>>>(response),
     );
     const result = await PubchiApplication.query({
+      isCurrent: () => true,
       owner,
       question: response.question,
       purpose: 'ask',
@@ -303,6 +304,7 @@ describe('Pubchi draft post applications', () => {
       asOpaque<Awaited<ReturnType<typeof PubchiService.query>>>(response),
     );
     const result = await PubchiApplication.query({
+      isCurrent: () => true,
       owner,
       question: response.question,
       purpose: 'ask',
@@ -334,6 +336,7 @@ describe('Pubchi draft post applications', () => {
     );
     await expect(
       PubchiApplication.query({
+        isCurrent: () => true,
         owner,
         question: response.question,
         purpose: 'ask',
