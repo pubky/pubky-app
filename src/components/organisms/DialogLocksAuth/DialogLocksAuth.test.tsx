@@ -83,11 +83,21 @@ const signInWithNarrowSession = () =>
 const signIn = ({ paykitConnected = false } = {}) =>
   useLocksAuthStore.setState({ session: fakeSession, locksSessionSecret: 'secret-abc', paykitConnected });
 
-function renderDialog(overrides?: { open?: boolean; onOpenChange?: () => void; onSuccess?: () => void }) {
+function renderDialog(overrides?: {
+  open?: boolean;
+  onOpenChange?: () => void;
+  onSuccess?: () => void;
+  mode?: 'setup' | 'signin';
+}) {
   const onOpenChange = overrides?.onOpenChange ?? vi.fn();
   const onSuccess = overrides?.onSuccess ?? vi.fn();
   const view = render(
-    <DialogLocksAuth open={overrides?.open ?? true} onOpenChange={onOpenChange} onSuccess={onSuccess} />,
+    <DialogLocksAuth
+      open={overrides?.open ?? true}
+      onOpenChange={onOpenChange}
+      onSuccess={onSuccess}
+      mode={overrides?.mode}
+    />,
   );
   return { ...view, onOpenChange, onSuccess };
 }
@@ -454,6 +464,44 @@ describe('DialogLocksAuth', () => {
       expect(screen.queryByText(message)).not.toBeInTheDocument();
     },
   );
+
+  describe('sign-in only mode (#2980)', () => {
+    it('stops at the success step once the Lock Server is authorized, without checking Paykit', () => {
+      signIn({ paykitConnected: false });
+      const { onSuccess } = renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Locks Enabled')).toBeInTheDocument();
+      expect(screen.queryByText('Enable Payments')).not.toBeInTheDocument();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the session step for a session minted before /priv', () => {
+      signInWithNarrowSession();
+      signIn({ paykitConnected: false });
+      renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Locks Enabled')).toBeInTheDocument();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+    });
+
+    it('opens at the Lock Server step with no Locks session', () => {
+      renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Lock Content')).toBeInTheDocument();
+      expect(mocks.prepare).toHaveBeenCalled();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+    });
+
+    it('still moves on to the Bitkit step in the default mode (control)', () => {
+      signIn({ paykitConnected: false });
+      renderDialog();
+
+      expect(screen.getByText('Enable Payments')).toBeInTheDocument();
+      expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+    });
+  });
 
   it('requests close when Cancel is clicked', () => {
     const { onOpenChange } = renderDialog();
