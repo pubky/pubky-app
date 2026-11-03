@@ -33,6 +33,7 @@ import type {
   TGetConnectUrlParams,
   TGetPaykitSetupUrlParams,
   TLockPriceAsset,
+  TLocksPollReport,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -374,14 +375,23 @@ export class LocksController {
     return LocksApplication.startPayment(params);
   }
 
-  /** One read of the Paykit link for a submitted payment. Needs the task the submission created. */
-  static fetchPaykitConnectionState(params: TPaymentBundleParams): Promise<TPaykitConnectionState> {
-    return LocksApplication.fetchPaykitConnectionState(params);
+  /**
+   * One read of the Paykit link for a submitted payment. Needs the task the submission created.
+   * A polling loop passes `report` to tag its errors; see `TLocksPollReport`.
+   */
+  static fetchPaykitConnectionState(
+    params: TPaymentBundleParams,
+    report?: TLocksPollReport,
+  ): Promise<TPaykitConnectionState> {
+    return LocksApplication.fetchPaykitConnectionState(params, report);
   }
 
   /** One read of the payment's verification task, or null when the submission never reached the server. */
-  static fetchPaymentStatus(params: TPaymentBundleParams): Promise<TVerificationTask | null> {
-    return LocksApplication.fetchPaymentStatus(params);
+  static fetchPaymentStatus(
+    params: TPaymentBundleParams,
+    report?: TLocksPollReport,
+  ): Promise<TVerificationTask | null> {
+    return LocksApplication.fetchPaymentStatus(params, report);
   }
 
   /** Lock ids the reader has started a payment for (pending and failed included) — one listing serves every lock post on screen. */

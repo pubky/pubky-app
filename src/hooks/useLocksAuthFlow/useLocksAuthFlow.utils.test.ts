@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { LOCKS_AUTH_MESSAGE_TYPE, readLocksAuthBridgeMessage } from './useLocksAuthFlow.utils';
+import {
+  isLocksAuthReadyMessage,
+  LOCKS_AUTH_MESSAGE_TYPE,
+  LOCKS_AUTH_RESIZE_MESSAGE_TYPE,
+  readLocksAuthBridgeMessage,
+} from './useLocksAuthFlow.utils';
 
 const LOCK_SERVER_ORIGIN = 'https://lock-server.example';
 const iframeWindow = asOpaque<Window>({ name: 'iframe' });
@@ -78,5 +83,39 @@ describe('readLocksAuthBridgeMessage', () => {
   it('rejects non-object data', () => {
     expect(readLocksAuthBridgeMessage(makeEvent({ data: 'string' }), iframeWindow, LOCK_SERVER_ORIGIN)).toBeNull();
     expect(readLocksAuthBridgeMessage(makeEvent({ data: null }), iframeWindow, LOCK_SERVER_ORIGIN)).toBeNull();
+  });
+});
+
+describe('isLocksAuthReadyMessage', () => {
+  const readyData = { type: LOCKS_AUTH_RESIZE_MESSAGE_TYPE, height: 192 };
+
+  it('accepts the shell height report from the lock server iframe', () => {
+    expect(isLocksAuthReadyMessage(makeEvent({ data: readyData }), iframeWindow, LOCK_SERVER_ORIGIN)).toBe(true);
+  });
+
+  it('rejects a height report from another origin', () => {
+    expect(
+      isLocksAuthReadyMessage(
+        makeEvent({ origin: 'https://evil.example', data: readyData }),
+        iframeWindow,
+        LOCK_SERVER_ORIGIN,
+      ),
+    ).toBe(false);
+  });
+
+  it('rejects a height report from a window other than the expected iframe', () => {
+    const otherWindow = asOpaque<Window>({ name: 'other' });
+    expect(
+      isLocksAuthReadyMessage(makeEvent({ source: otherWindow, data: readyData }), iframeWindow, LOCK_SERVER_ORIGIN),
+    ).toBe(false);
+    expect(isLocksAuthReadyMessage(makeEvent({ source: null, data: readyData }), null, LOCK_SERVER_ORIGIN)).toBe(false);
+  });
+
+  it('rejects other message types and non-object data', () => {
+    expect(isLocksAuthReadyMessage(makeEvent({ data: successData }), iframeWindow, LOCK_SERVER_ORIGIN)).toBe(false);
+    expect(isLocksAuthReadyMessage(makeEvent({ data: 'locks-auth-resize' }), iframeWindow, LOCK_SERVER_ORIGIN)).toBe(
+      false,
+    );
+    expect(isLocksAuthReadyMessage(makeEvent({ data: null }), iframeWindow, LOCK_SERVER_ORIGIN)).toBe(false);
   });
 });

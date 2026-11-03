@@ -60,14 +60,17 @@ export function usePurchaseResume({
           setStatus('none');
           return;
         }
-        setStatus('recoverable');
-        if (purchase.task.status === 'completed') {
-          // Preserve recoverability if only the download fails; the modal can retry that read.
-          const content = await LocksController.fetchPaidContent({ lockFile, bundleId: purchase.bundleId }).catch(
-            () => null,
-          );
-          if (content && isCurrent()) onResumed(content);
+        if (purchase.task.status !== 'completed') {
+          setStatus('recoverable');
+          return;
         }
+        setStatus('recovering');
+        // Preserve recoverability if only the download fails; the modal can retry that read.
+        const content = await LocksController.fetchPaidContent({ lockFile, bundleId: purchase.bundleId }).catch(
+          () => null,
+        );
+        if (content && isCurrent()) onResumed(content);
+        setStatus('recoverable');
       } catch {
         // An unknown task is not permission to pay. The modal may retry this read, but its
         // submission guard still applies if it turns out that a new payment would be needed.

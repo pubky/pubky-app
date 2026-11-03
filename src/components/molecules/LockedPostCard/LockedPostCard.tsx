@@ -74,7 +74,9 @@ export function LockedPostCard({
   const priceContent = (
     <>
       <Wallet className="size-4 shrink-0" aria-hidden />
-      <span className="text-xs leading-4 font-medium tracking-[1.2px]">{priceLabel}</span>
+      <span className="text-xs leading-4 font-medium tracking-[1.2px]" data-cy="locked-post-price">
+        {priceLabel}
+      </span>
     </>
   );
 
@@ -131,6 +133,7 @@ export function LockedPostCard({
         className,
       )}
       data-testid="locked-post-card"
+      data-cy="locked-post-card"
     >
       {/* No `min-w-0`: the column keeps at least the pill's width, so the pill never runs under the shield
           and the default title stays on one line. A long custom title still wraps (`wrap-anywhere`). */}
@@ -186,7 +189,10 @@ export function LockedPostCard({
           ) : (
             <>
               <KindIcon className="size-6 shrink-0 text-muted-foreground" aria-hidden />
-              <h4 className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground">
+              <h4
+                className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground"
+                data-cy="locked-post-title"
+              >
                 <LockTitle title={title?.trim() || defaultTitle} mentionClassName="text-xl" />
               </h4>
             </>
@@ -212,6 +218,7 @@ export function LockedPostCard({
               !onChangePrice && 'disabled:opacity-100',
               isLoading && 'invisible',
             )}
+            data-cy="locked-post-unlock-btn"
           >
             <LockOpen className="size-4 shrink-0" aria-hidden />
             {'Unlock'}
