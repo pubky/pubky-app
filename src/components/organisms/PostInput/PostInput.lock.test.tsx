@@ -1,7 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TLockConfig } from '@/application/locks/locks.types';
-import { LOCK_ATTACHMENT_MAX_FILES, LOCK_ATTACHMENT_MAX_SIZE, LOCK_TEASER_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import {
+  LOCK_ATTACHMENT_MAX_FILES,
+  LOCK_ATTACHMENT_MAX_SIZE,
+  LOCK_TEASER_MAX_CHARACTER_LENGTH,
+  LOCK_TITLE_MAX_CHARACTER_LENGTH,
+  POST_MAX_CHARACTER_LENGTH,
+} from '@/config/posts';
 import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -28,6 +34,8 @@ const mocks = vi.hoisted(() => ({
   serializeArticleForLock: vi.fn(),
   // What the title and body inputs hold while the composer state still trails them. Null once it caught up.
   latestArticle: null as { title: string; body: string } | null,
+  // Renders the real LockedPostCard instead of the probe, for what the card itself shows.
+  realLockCard: false,
   // Last options PostInput handed to usePostInput.
   postInputOptions: {} as { keepInlineMedia?: boolean },
   // Test handle into the fake composer state, refreshed on every render.
@@ -219,9 +227,11 @@ vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onApplied: (config: TLockConfig) => void;
+    appliedPrice?: TLockConfig | null;
   }) =>
     props.open ? (
       <div data-testid="lock-dialog">
+        <span data-testid="lock-dialog-applied-price">{props.appliedPrice?.amount ?? ''}</span>
         <button data-testid="apply-lock" onClick={() => props.onApplied({ amount: '1234', asset: 'BTC' as const })} />
         <button data-testid="cancel-lock" onClick={() => props.onOpenChange(false)} />
       </div>
@@ -231,29 +241,38 @@ vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
   DialogLocksAuth: (props: { open: boolean; onSuccess: (session: unknown) => void }) =>
     props.open ? <div data-testid="auth-dialog" /> : null,
 }));
-vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
-  LockedPostCard: ({
-    title,
-    price,
-    editableTitle,
-  }: {
-    title?: string;
-    price?: TLockPrice | null;
-    editableTitle?: { value: string; onChange: (value: string) => void };
-  }) =>
-    editableTitle ? (
-      <>
-        <input
-          aria-label="Lock title"
-          value={editableTitle.value}
-          onChange={(event) => editableTitle.onChange(event.target.value)}
-        />
-        <span data-testid="lock-card-price">{price?.amount ?? ''}</span>
-      </>
-    ) : (
-      <div data-testid="locked-post-card">{title}</div>
-    ),
-}));
+vi.mock('@/molecules/LockedPostCard/LockedPostCard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/LockedPostCard/LockedPostCard')>();
+  return {
+    LockedPostCard: (props: React.ComponentProps<typeof actual.LockedPostCard>) =>
+      mocks.realLockCard ? <actual.LockedPostCard {...props} /> : <LockedPostCardProbe {...props} />,
+  };
+});
+function LockedPostCardProbe({
+  title,
+  price,
+  editableTitle,
+  onChangePrice,
+}: {
+  title?: string;
+  price?: TLockPrice | null;
+  editableTitle?: { value: string; onChange: (value: string) => void };
+  onChangePrice?: () => void;
+}) {
+  return editableTitle ? (
+    <>
+      <input
+        aria-label="Lock title"
+        value={editableTitle.value}
+        onChange={(event) => editableTitle.onChange(event.target.value)}
+      />
+      <span data-testid="lock-card-price">{price?.amount ?? ''}</span>
+      {onChangePrice && <button aria-label="Change price" onClick={onChangePrice} />}
+    </>
+  ) : (
+    <div data-testid="locked-post-card">{title}</div>
+  );
+}
 vi.mock('@/molecules/MentionPopover/MentionPopover', () => ({ MentionPopover: () => null }));
 vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({ PostInputAttachments: () => null }));
 vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => ({ PostPreviewCard: () => null }));
@@ -613,6 +632,19 @@ describe('PostInput lock wiring', () => {
     expect(screen.getByTestId('lock-card-price')).toHaveTextContent('1234');
   });
 
+  it('reopens the lock dialog with the applied price from the card, and keeps the lock on cancel', async () => {
+    renderComposer();
+    await configureLock();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change price' }));
+    expect(screen.getByTestId('lock-dialog-applied-price')).toHaveTextContent('1234');
+    fireEvent.click(screen.getByTestId('cancel-lock'));
+
+    expect(screen.queryByTestId('lock-dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('lock-card-price')).toHaveTextContent('1234');
+    expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue('my teaser');
+  });
+
   it('shows an editable lock teaser, title, and read-only price in edit mode', () => {
     renderEditLock();
 
@@ -621,6 +653,7 @@ describe('PostInput lock wiring', () => {
       'Public teaser',
     );
     expect(screen.getByTestId('lock-card-price')).toHaveTextContent('4321');
+    expect(screen.queryByRole('button', { name: 'Change price' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('lock-switch')).not.toBeInTheDocument();
   });
 
@@ -702,6 +735,54 @@ describe('PostInput lock wiring', () => {
     expect(screen.getByTestId('post-button')).toBeDisabled();
   });
 
+  // #2433: the edit composer shows the stored kind on the real card, and its max follows the kind written.
+  describe('edit lock content kind', () => {
+    const renderEditLockKind = (contentKind?: string, title = 'Private note') =>
+      render(
+        <PostInput
+          variant={POST_INPUT_VARIANT.EDIT}
+          editPostId="alice:POST1"
+          editContent="Public teaser"
+          editIsArticle={false}
+          editAttachments={[]}
+          editLock={{ lockUrl: 'pubky://alice/pub/app.locks/LOCK1.json', title, contentKind }}
+          expanded
+        />,
+      );
+
+    beforeEach(() => {
+      mocks.realLockCard = true;
+    });
+    afterEach(() => {
+      mocks.realLockCard = false;
+    });
+
+    it('shows the file placeholder and icon for a stored file lock', () => {
+      const { container } = renderEditLockKind('file', '');
+
+      expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveAttribute('placeholder', 'Locked file');
+      expect(container.querySelector('svg.lucide-download')).toBeInTheDocument();
+    });
+
+    // Fills the post exactly without a `content_kind` entry, so only the stored kind pushes it over.
+    const fullTitle = 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH);
+    const fullTeaser = 'b'.repeat(POST_MAX_CHARACTER_LENGTH - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41);
+
+    it('disables Save when the stored kind pushes a full announcement over', () => {
+      renderEditLockKind('article', fullTitle);
+      act(() => mocks.composer.setContent(fullTeaser));
+
+      expect(screen.getByTestId('post-button')).toBeDisabled();
+    });
+
+    it('leaves Save enabled for the same announcement with no stored kind', () => {
+      renderEditLockKind(undefined, fullTitle);
+      act(() => mocks.composer.setContent(fullTeaser));
+
+      expect(screen.getByTestId('post-button')).toBeEnabled();
+    });
+  });
+
   // The single most important rule: while the switch is on, the composer body is the content to be
   // locked. Publishing before the price is applied would put that content out in the clear.
   it('publishes nothing once the lock title is cleared', async () => {
@@ -745,7 +826,7 @@ describe('PostInput lock wiring', () => {
     expect(mocks.commitCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         authorId: 'alice',
-        content: JSON.stringify({ lock_title: 'My title', teaser_description: 'my teaser' }),
+        content: JSON.stringify({ lock_title: 'My title', teaser_description: 'my teaser', content_kind: 'note' }),
         lock: 'pubky://bob/pub/app.locks/L1.json',
       }),
     );

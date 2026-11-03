@@ -2,13 +2,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ScreenshotMatcherOptions } from '@vitest/browser/context';
 import type { ReactNode } from 'react';
 import { expect, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { type Locator, page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { THEME_CLASSES } from '@/config/theme';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { freezeNow } from './vrt.clock';
-import type { VrtViewport } from './vrt.viewports';
+import { VRT_CAPTURE_MAX_SIZE, type VrtViewport } from './vrt.viewports';
 
 export type VrtTheme = 'dark' | 'light';
 
@@ -86,7 +86,44 @@ async function moveCursorToTopLeftCorner() {
 export async function matchVrtFrameScreenshot(name: string, options?: ScreenshotMatcherOptions) {
   await moveCursorToTopLeftCorner();
   await waitForImagesReady(document.documentElement);
-  await expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options);
+  await withCaptureScale(() => expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options));
+}
+
+/** Element-level counterpart of `matchVrtFrameScreenshot` (e.g. RepostHeader crops), at the same capture scale. */
+export async function matchVrtElementScreenshot(locator: Locator, name: string, options?: ScreenshotMatcherOptions) {
+  await withCaptureScale(() => expect(locator).toMatchScreenshot(name, options));
+}
+
+/**
+ * Scale the tester iframe down to fit `VRT_CAPTURE_MAX_SIZE` for the duration
+ * of a capture, so every baseline keeps the same dimensions on every viewport
+ * (desktop 1152x720, mobile 333x720, tablet 540x720, element crops likewise).
+ * Vitest 5 has no capture-scale option and would store 1440x900 / 390x844 at
+ * natural size.
+ *
+ * The transform sits on the `<iframe>` element in the parent document, not
+ * inside the tested page: layout, media queries and every in-page coordinate
+ * stay at the real viewport, so floating UI (popovers, tooltips) measuring
+ * `getBoundingClientRect` during the capture is not repositioned. The iframe
+ * comes from the parent realm, so an `instanceof` check from this realm would
+ * always fail; hence the cast.
+ */
+async function withCaptureScale<T>(capture: () => Promise<T>): Promise<T> {
+  const scale = Math.min(
+    1,
+    VRT_CAPTURE_MAX_SIZE.width / window.innerWidth,
+    VRT_CAPTURE_MAX_SIZE.height / window.innerHeight,
+  );
+  const frame = window.frameElement as HTMLIFrameElement | null;
+  if (scale === 1 || !frame) return capture();
+  frame.style.transform = `scale(${scale})`;
+  frame.style.transformOrigin = 'left top';
+  try {
+    return await capture();
+  } finally {
+    frame.style.removeProperty('transform');
+    frame.style.removeProperty('transform-origin');
+  }
 }
 
 interface VRTProvidersProps {
@@ -117,6 +154,20 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
   );
 }
 
+/**
+ * Give the tester iframe focus in the parent document, as a user's page has.
+ *
+ * Vitest mounts a new iframe per test file and does not focus it, so the
+ * parent can be left with `<body>` active, depending on the files before it.
+ * In that state Firefox does not move focus into the child frame on a
+ * Playwright mousedown: the click reaches the `<input>` but
+ * `document.activeElement` stays `<body>`. Chromium and WebKit focus the frame
+ * on that mousedown, so this only makes Firefox start from the same state.
+ */
+function focusTesterFrame() {
+  if (window.frameElement && !document.hasFocus()) window.focus();
+}
+
 /** The iframe resize ack has no timeout of its own. A lost `viewport:done` must not consume the test. */
 const VIEWPORT_READY_TIMEOUT_MS = 5_000;
 
@@ -131,6 +182,7 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
   // next (dark) test in the same browser document.
   const theme = options.theme ?? 'dark';
   for (const themeClass of THEME_CLASSES) document.documentElement.classList.toggle(themeClass, themeClass === theme);
+  focusTesterFrame();
   await moveCursorToTopLeftCorner();
   freezeNow();
   mockMathRandom(0xdeadbeef);

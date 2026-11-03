@@ -143,9 +143,11 @@ describe('SearchSuggestions', () => {
     render(<SearchSuggestions {...defaultProps} />);
 
     const dropdown = screen.getByTestId('search-suggestions');
-    expect(dropdown).toHaveStyle({
-      background: 'linear-gradient(180deg, var(--background) 0%, var(--search-expanded-fade) 100%)',
-    });
+    // Inline-style assertion: jsdom's getComputedStyle drops shorthands whose
+    // gradient contains var(), so toHaveStyle cannot see this background.
+    expect(dropdown.style.background).toBe(
+      'linear-gradient(180deg, var(--background) 0%, var(--search-expanded-fade) 100%)',
+    );
   });
 
   it('has correct aria-label and role', () => {

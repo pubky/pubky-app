@@ -13,7 +13,6 @@ import {
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   LOCK_ATTACHMENT_MAX_FILES,
   LOCK_ATTACHMENT_MAX_SIZE,
-  LOCK_TEASER_MAX_CHARACTER_LENGTH,
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
@@ -35,7 +34,7 @@ import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
-import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
+import { getLockTeaserMaxLength, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount, resolveUserDisplayName } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { ArticleComposerTabs } from '@/molecules/ArticleComposerTabs/ArticleComposerTabs';
@@ -268,8 +267,10 @@ export function PostInput({
     isLockDialogOpen,
     closeLockDialog,
     handleLockApplied,
+    changeLockPrice,
     lockTitle,
     setLockTitle,
+    lockContentKind,
     submitOrPublish,
     isPublishing: isPublishingLock,
   } = usePostInputLock({
@@ -317,6 +318,7 @@ export function PostInput({
   const { price: editLockPrice } = useLockFile(editSeed.lock?.lockUrl);
   const isLockMode = isLockEnabled || editSeed.lock != null;
   const activeLockTitle = editSeed.lock ? editLockTitle : lockTitle;
+  const activeLockContentKind = editSeed.lock ? editSeed.lock.contentKind : lockContentKind;
 
   const isValid = () => {
     // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
@@ -335,7 +337,11 @@ export function PostInput({
       // empty one reads as set and would be written as an empty string.
       (!isLockMode ||
         (activeLockTitle.trim().length > 0 &&
-          isLockTeaserWithinLimit({ lock_title: activeLockTitle, teaser_description: content })))
+          isLockTeaserWithinLimit({
+            lock_title: activeLockTitle,
+            teaser_description: content,
+            content_kind: activeLockContentKind,
+          })))
     );
   };
 
@@ -427,7 +433,8 @@ export function PostInput({
   }, []);
 
   // With the lock on the body is the teaser, sharing the post budget with the title in one envelope.
-  const composerMaxLength = isLockMode ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
+  // The teaser max follows the envelope actually written: an old lock with no kind keeps the old limit (#2433).
+  const composerMaxLength = isLockMode ? getLockTeaserMaxLength(activeLockContentKind) : POST_MAX_CHARACTER_LENGTH;
   const characterLimit =
     isExpanded && !isArticle ? { count: getEnforcedCharacterCount(content), max: composerMaxLength } : undefined;
   useCharacterLimitWarning(characterLimit);
@@ -786,12 +793,15 @@ export function PostInput({
                           isLockConfigured || editSeed.lock ? (
                             <LockedPostCard
                               price={editSeed.lock ? editLockPrice : lockConfig}
+                              contentKind={activeLockContentKind}
                               editableTitle={{
                                 value: activeLockTitle,
                                 onChange: editSeed.lock ? setEditLockTitle : setLockTitle,
                                 disabled: editSeed.lock ? isSubmitting : isPublishingLock,
                                 maxLength: LOCK_TITLE_MAX_CHARACTER_LENGTH,
                               }}
+                              // A published lock keeps its price; a new one can change it until Post.
+                              onChangePrice={editSeed.lock || isPublishingLock ? undefined : changeLockPrice}
                             />
                           ) : undefined
                         }
@@ -843,6 +853,7 @@ export function PostInput({
               open={isLockDialogOpen}
               onOpenChange={closeLockDialog}
               onApplied={handleLockApplied}
+              appliedPrice={lockConfig}
               focusAfterApplyRef={textareaRef}
             />
           </>

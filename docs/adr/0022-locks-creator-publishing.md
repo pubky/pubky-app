@@ -10,6 +10,15 @@ Covers the creator side of Locks Phase 1. The reader/unlock side is a separate, 
 to the account signed in to pubky.app. The two-identities decision below is unchanged; the check is
 temporary.
 
+**Amendment (#2433, 2026-10-29):** the announcement envelope gains an optional `content_kind`, the locked
+post's kind in its pubky-app-specs v1.0.0-rc.1 name (`note | article | image | video | link | file`), mapped from the
+internal kind by an explicit list that never follows a rename of it, so the card and the unlock dialog show
+what is locked before anyone unlocks it, with the content filter's icons. It stays app-owned and leniently
+parsed: a missing or unknown value shows as generic locked content and never fails the parse, and an edit
+writes the stored value back unchanged, including one this build does not know. The teaser max is
+`LOCK_TEASER_MAX_CHARACTER_LENGTH` minus the length of the `content_kind` entry actually written, so locks
+without one keep the old limit. The lock file is unchanged.
+
 ## Context
 
 Locks lets a creator publish content that readers can only open after satisfying a payment proof.
@@ -51,6 +60,7 @@ frontend must handle both cases.
 - The announcement is a teaser: `long`/`collection` kinds are rejected for it. The guarded content
   itself may be **any** kind.
 - The announcement `content` is an app-owned JSON envelope `{ lock_title, teaser_description }`
+  (plus an optional `content_kind` since #2433, see the amendment above)
   (same embed-JSON approach as collections). The spec validates only the `lock` URL, not the
   envelope; the reader parses it leniently.
 - Because A ≠ B is legal, **every URL is built from the account that owns the bytes**: the lock URL

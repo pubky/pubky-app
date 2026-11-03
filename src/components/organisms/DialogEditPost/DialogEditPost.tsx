@@ -59,7 +59,9 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           editContent={teaserBody}
           editIsArticle={isArticle}
           editAttachments={postDetails.attachments ?? []}
-          editLock={lockUrl ? { lockUrl, title: teaser?.lock_title ?? '' } : undefined}
+          editLock={
+            lockUrl ? { lockUrl, title: teaser?.lock_title ?? '', contentKind: teaser?.content_kind } : undefined
+          }
           layoutOverride="inline"
         />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

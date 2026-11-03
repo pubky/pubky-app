@@ -174,9 +174,9 @@ When the icon is chosen at runtime from data (a kebab-case Lucide name like `"fo
 <DynamicLucideIcon name={feed.icon} className="size-5" />
 ```
 
-Icon state lives in a module-level store in **`@/libs/lucide/lucideIcons`** (`subscribeToLucideIcons`, `getLucideIconState`, `requestLucideIcon`, `preloadLucideIcons`), read through `useSyncExternalStore`. The full Lucide catalog (`lucide-react/dynamic.js`, ~116KB raw) and the picker's alias/tag metadata are lazily-loaded chunks — nothing icon-related ships in the initial bundle; sync callers can only normalize a name's shape (`toLucideIconName`, which lowercases so an icon another client stored as `Activity` still resolves), and the store answers unknown names once the catalog is resident. Once an icon has resolved anywhere in the session it renders synchronously everywhere, a loaded icon carries the same `lucide-<name>` class as a static import, and a failed chunk heals every mounted instance when any retry succeeds. While a valid name is still loading, the atom renders an empty size-preserving svg — never a wrong icon; the `fallback` prop (default `Activity`) covers missing, unknown, and failed names. Call `preloadLucideIcons(names)` when the icon names become known (e.g. when feed data lands) so mounts hit the cache. Never use this path for static UI icons — those stay named imports.
+Icon state lives in a module-level store in **`@/libs/lucide/lucideIcons`** (`subscribeToLucideIcons`, `getLucideIconState`, `requestLucideIcon`, `preloadLucideIcons`), read through `useSyncExternalStore`. The full Lucide catalog (`lucide-react/dynamic.js`, ~136KB raw) and the picker's alias/tag metadata are lazily-loaded chunks — nothing icon-related ships in the initial bundle; sync callers can only normalize a name's shape (`toLucideIconName`, which lowercases so an icon another client stored as `Activity` still resolves), and the store answers unknown names once the catalog is resident. Once an icon has resolved anywhere in the session it renders synchronously everywhere, a loaded icon carries the same `lucide-<name>` class as a static import, and a failed chunk heals every mounted instance when any retry succeeds. While a valid name is still loading, the atom renders an empty size-preserving svg — never a wrong icon; the `fallback` prop (default `Activity`) covers missing, unknown, and failed names. Call `preloadLucideIcons(names)` when the icon names become known (e.g. when feed data lands) so mounts hit the cache. Never use this path for static UI icons — those stay named imports.
 
-The icon picker takes a different route on purpose: it loads **all** canonical icon nodes in a single lazy chunk (`lucideIcons.nodes.ts`) instead of one chunk per cell, because it renders ~1700 of them and the per-icon path would cost ~1700 requests. Feed tabs keep the per-icon path — they render a handful of icons and must not pull the whole set.
+The icon picker takes a different route on purpose: it loads **all** canonical icon nodes in a single lazy chunk (`lucideIcons.nodes.ts`) instead of one chunk per cell, because it renders ~2000 of them and the per-icon path would cost ~2000 requests. Feed tabs keep the per-icon path — they render a handful of icons and must not pull the whole set.
 
 Three files under `@/libs/lucide` are generated from the installed `lucide-react` and must be regenerated after a lucide upgrade:
 
@@ -185,6 +185,14 @@ Three files under `@/libs/lucide` are generated from the installed `lucide-react
 | `lucideIcons.nodes.ts`   | every canonical icon's node, for the picker's single-chunk load                                              |
 | `lucideIcons.aliases.ts` | deprecated alias → canonical name, so the grid hides duplicate glyphs and search still finds old names       |
 | `lucideIcons.tags.ts`    | search synonyms pruned from `lucide-static`'s `tags.json`, hyphenated to match the picker's normalized query |
+
+Regenerate all three from the installed packages, never by hand:
+
+- Load every `dynamicIconImports` entry from `lucide-react/dynamic.js`. An entry whose module's `__iconData.name` equals its key is canonical: its `__iconData.node` goes into `LUCIDE_ICON_NODES`, in catalog order. Every other entry is a deprecated alias: key → `__iconData.name` goes into `LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL`, sorted by key.
+- Take `tags.json` from `lucide-static` at exactly the installed `lucide-react` version (`npm pack lucide-static@<version>`). Keep canonical names only and drop a tag equal to its icon's name. Tags keep their spaces; the picker hyphenates them at load.
+- Run Prettier on the three files.
+
+`lucideIcons.test.ts` compares the nodes and aliases with the installed package, so a lucide bump without regeneration fails the unit suite.
 
 ### Custom / brand icons
 

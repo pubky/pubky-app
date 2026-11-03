@@ -14,6 +14,7 @@ import { usePurchaseResume } from '@/hooks/usePurchaseResume/usePurchaseResume';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
+import { useUnlockPillHold } from '@/hooks/useUnlockPillHold/useUnlockPillHold';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -122,6 +123,17 @@ export function LockedPostContent({
     !canRecover &&
     paidUnlocks.status !== 'available' &&
     (paidUnlocks.status === 'checking' || isPurchaseChecking);
+  // A reader who already unlocked this post is about to see their replicated copy, so the pill must not go
+  // live in between (#2795), nor while recovery looks up a listed purchase whose copy was not found.
+  const isUnlockPillHeld = useUnlockPillHold({
+    lock,
+    isPayableReader,
+    isPayOpen,
+    isResolvingReplica,
+    purchasesStatus,
+    isListedPurchase: hasPurchase(lockId),
+    purchaseStatus,
+  });
   const regionBlock =
     isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
       ? paidUnlocks
@@ -173,8 +185,10 @@ export function LockedPostContent({
       {unlockedPost || isResolvingOwn ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
-          {isOwnLock && <LockedPostCard title={lockContent.lock_title} price={price} />}
-          <div className="flex w-full flex-col gap-4">
+          {isOwnLock && (
+            <LockedPostCard title={lockContent.lock_title} contentKind={lockContent.content_kind} price={price} />
+          )}
+          <div className="flex w-full flex-col gap-4" data-cy="locked-post-unlocked-content">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
             <div className="flex items-center gap-1.5 text-brand">
@@ -183,7 +197,10 @@ export function LockedPostContent({
               ) : (
                 <Check className="size-4 shrink-0" aria-hidden />
               )}
-              <span className="text-xs leading-4 font-medium tracking-[1.2px] uppercase">
+              <span
+                className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+                data-cy="locked-post-access-label"
+              >
                 {isOwnLock ? 'My locked content' : 'Unlocked'}
               </span>
             </div>
@@ -218,8 +235,9 @@ export function LockedPostContent({
           {regionBlock && <LocksRegionNotice cause={regionBlock.cause} />}
           <LockedPostCard
             title={lockContent.lock_title}
+            contentKind={lockContent.content_kind}
             price={price}
-            isLoading={isLockFileLoading || isRegionChecking}
+            isLoading={isLockFileLoading || isRegionChecking || isUnlockPillHeld}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
             // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
@@ -233,6 +251,7 @@ export function LockedPostContent({
           open={isPayOpen}
           onOpenChange={setIsPayOpen}
           lockTitle={lockContent.lock_title}
+          contentKind={lockContent.content_kind}
           authorId={authorId}
           price={price}
           stage={stage}

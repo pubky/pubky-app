@@ -1,10 +1,10 @@
 import { createServer } from 'node:http';
-import { fetch as undiciFetch } from 'undici';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
+import { nativeFetch } from '@/test-utils/native-fetch';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 // ---------------------------------------------------------------------------
@@ -566,9 +566,7 @@ describe('NextJsOgMetadataService', () => {
       .mockResolvedValueOnce(
         new Response(null, { status: 302, headers: { location: 'http://redirect-rebind.example.test/' } }),
       )
-      .mockImplementationOnce((input, init) =>
-        undiciFetch(input as Parameters<typeof undiciFetch>[0], init as Parameters<typeof undiciFetch>[1]),
-      );
+      .mockImplementationOnce((input: RequestInfo | URL, init?: RequestInit) => nativeFetch(input, init));
     mockResolve4
       .mockResolvedValueOnce(['1.1.1.1'])
       .mockResolvedValueOnce(['1.1.1.1'])
@@ -693,7 +691,7 @@ describe('NextJsOgMetadataService', () => {
   it('should block when any connection-time DNS answer is unsafe', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
     const loggerErrorSpy = await spyOnLoggerError();
-    global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
+    global.fetch = nativeFetch;
     mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockResolvedValueOnce(['1.1.1.1', '127.0.0.2']);
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
@@ -730,7 +728,7 @@ describe('NextJsOgMetadataService', () => {
       const address = server.address();
       if (!address || typeof address === 'string') throw new Error('Expected a TCP server address');
 
-      global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
+      global.fetch = nativeFetch;
       mockResolve4.mockResolvedValue(['127.0.0.1']);
       mockIsIpSafe.mockReturnValue(true);
       mockReadResponseBody.mockImplementationOnce(async (response: Response) => response.text());
@@ -745,10 +743,54 @@ describe('NextJsOgMetadataService', () => {
     }
   });
 
+  // Production calls Node's global fetch, which runs on the Undici bundled with Node, with a
+  // dispatcher from the `undici` package. A dispatcher that Node's fetch cannot drive surfaces as
+  // a `network` fallback (null title and image) rather than an error, so only real tags prove it.
+  it("should read Open Graph tags through Node's built-in fetch and the guarded dispatcher", async () => {
+    expect(vi.isMockFunction(nativeFetch)).toBe(false);
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    let origin = '';
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      response.end(simpleHtml('Native fetch preview', `${origin}/cover.png`));
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Expected a TCP server address');
+      origin = `http://og.example.test:${address.port}`;
+
+      global.fetch = nativeFetch;
+      mockResolve4.mockResolvedValue(['127.0.0.1']);
+      mockIsIpSafe.mockReturnValue(true);
+      mockReadResponseBody.mockImplementationOnce(async (response: Response) => response.text());
+
+      await expect(NextJsOgMetadataService.fetch(new URL(`${origin}/`))).resolves.toEqual({
+        url: `${origin}/`,
+        title: 'Native fetch preview',
+        image: `${origin}/cover.png`,
+        type: 'website',
+      });
+      expect(loggerWarnSpy).not.toHaveBeenCalledWith(
+        '[og-metadata:fetch]',
+        expect.objectContaining({ outcome: 'fallback' }),
+      );
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+
   it('should return fallback metadata when connection-time DNS resolution fails', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
     const loggerErrorSpy = await spyOnLoggerError();
-    global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
+    global.fetch = nativeFetch;
     mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockRejectedValueOnce(createDnsError());
 
     await expect(NextJsOgMetadataService.fetch(new URL('http://dns-change.example.test/'))).resolves.toEqual({
