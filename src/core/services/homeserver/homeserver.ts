@@ -1,4 +1,14 @@
-import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
+import {
+  Address,
+  Client,
+  Keypair,
+  Pubky,
+  PublicKey,
+  resolvePubky,
+  Session,
+  type SessionInfo,
+  Signer,
+} from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import {
@@ -67,6 +77,11 @@ export class HomeserverService {
   private constructor() {}
 
   private static pubkySdk: Pubky | null = null;
+
+  /** Public session metadata for application capability checks; never exposes credentials. */
+  static getCurrentSessionInfo(): SessionInfo | null {
+    return useAuthStore.getState().session?.info ?? null;
+  }
 
   private static sessionFailureListeners = new Set<(failure: ActiveSessionFailure) => void>();
 
@@ -937,6 +952,17 @@ export class HomeserverService {
       return new Uint8Array(await response.arrayBuffer());
     } catch (error) {
       return handleError({ error, additionalContext: { url, method: HttpMethod.GET, operation: 'getBytes' } });
+    }
+  }
+
+  /** Preserve the original document text so strict parsers can reject duplicate JSON keys. */
+  static async requestRawText(url: string): Promise<string> {
+    try {
+      const response = await this.get(url);
+      await assertOk({ response, url, operation: 'requestRawText' });
+      return await response.text();
+    } catch (error) {
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET, operation: 'requestRawText' } });
     }
   }
 

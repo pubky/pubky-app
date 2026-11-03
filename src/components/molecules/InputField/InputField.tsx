@@ -28,6 +28,9 @@ interface InputFieldProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+  autoComplete?: string;
+  autoCorrect?: 'on' | 'off';
+  spellCheck?: boolean;
   maxLength?: number;
   iconPosition?: 'left' | 'right';
   iconClassName?: React.HTMLAttributes<HTMLDivElement>['className'];
@@ -58,6 +61,9 @@ export function InputField({
   onBlur,
   onKeyDown,
   onPaste,
+  autoComplete,
+  autoCorrect,
+  spellCheck,
   maxLength,
   iconPosition = 'left',
   iconClassName,
@@ -149,6 +155,9 @@ export function InputField({
           onBlur={onBlur}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
+          autoComplete={autoComplete}
+          autoCorrect={autoCorrect}
+          spellCheck={spellCheck}
           maxLength={maxLength}
           aria-invalid={status === 'error'}
           aria-describedby={messageId}

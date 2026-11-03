@@ -1,6 +1,14 @@
-import { Bell, CircleHelp, MegaphoneOff, Shield, UserRound } from 'lucide-react';
+import { Bell, Bot, CircleHelp, MegaphoneOff, Shield, UserRound } from 'lucide-react';
 import { SETTINGS_ROUTES } from '@/app/routes';
+import { isPubchiEnabled } from '@/libs/pubchi/flags';
 import type { SettingsMenuItem } from './SettingsMenu.types';
+
+const PUBCHI_MENU_ITEM: SettingsMenuItem = {
+  icon: Bot,
+  id: 'pubchi',
+  label: 'Pubchi',
+  path: SETTINGS_ROUTES.PUBCHI,
+};
 
 export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
   {
@@ -34,3 +42,9 @@ export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
     path: SETTINGS_ROUTES.HELP,
   },
 ];
+
+export function getSettingsMenuItems(): SettingsMenuItem[] {
+  if (!isPubchiEnabled()) return SETTINGS_MENU_ITEMS;
+  const helpIndex = SETTINGS_MENU_ITEMS.findIndex((item) => item.id === 'help');
+  return [...SETTINGS_MENU_ITEMS.slice(0, helpIndex), PUBCHI_MENU_ITEM, ...SETTINGS_MENU_ITEMS.slice(helpIndex)];
+}

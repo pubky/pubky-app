@@ -10,7 +10,13 @@ import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 import { TagApplication } from './tag';
 import { TagKind, type TCreateTagInput } from './tag.types';
 
-vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { request: vi.fn() } }));
+vi.mock('@/services/homeserver/homeserver', () => ({
+  HomeserverService: {
+    request: vi.fn(),
+    requestRawText: vi.fn(),
+    createWriteFence: () => ({ enter: () => undefined, assertCurrent: () => undefined }),
+  },
+}));
 vi.mock('@/services/local/tag/post/tag.post', () => ({ LocalPostTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/user/tag.user', () => ({ LocalUserTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/tag-cache', () => ({

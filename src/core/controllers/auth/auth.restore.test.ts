@@ -2,6 +2,7 @@ import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { PubchiApplication } from '@/application/pubchi/pubchi';
 import { UserApplication } from '@/application/user/user';
 import { SettingsController } from '@/controllers/settings/settings';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
@@ -27,6 +28,13 @@ import { signInInitialState } from '@/stores/signIn/signIn.types';
 import { mockGrantReference, mockPubky, mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { AuthController } from './auth';
+
+vi.mock('@/application/pubchi/pubchi', () => ({
+  PubchiApplication: {
+    unpublishKnownDelegations: vi.fn().mockResolvedValue({ failed: [] }),
+    clearOwnerData: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 const pubkyA = mockPubky('5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y');
 const pubkyB = mockPubky('o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo');
@@ -309,6 +317,42 @@ describe('AuthController restored session lifecycle', () => {
     expect(request).not.toHaveBeenCalled();
     expect(useAuthStore.getState().session).toBeNull();
     expect(databaseHelpers.clearDatabase).toHaveBeenCalledOnce();
+  });
+
+  it('revokes Pubchi device access before dropping its session, then clears only the outgoing owner', async () => {
+    useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
+    persistState();
+    vi.mocked(PubchiApplication.unpublishKnownDelegations).mockImplementationOnce(async (owner, options) => {
+      expect(owner).toBe(pubkyA);
+      expect(options).toEqual({ attemptRemote: true });
+      expect(useAuthStore.getState().session).toBe(sessionA);
+      expect(HomeserverService.logout).not.toHaveBeenCalled();
+      return { failed: [] };
+    });
+    vi.mocked(PubchiApplication.clearOwnerData).mockImplementationOnce(async (owner, isCurrent) => {
+      expect(owner).toBe(pubkyA);
+      expect(isCurrent?.()).toBe(true);
+      expect(useAuthStore.getState().session).toBeNull();
+    });
+    localStorage.setItem(`pubchi-cursor:${pubkyA}`, 'old-account');
+    localStorage.setItem(`pubchi-cursor:${pubkyB}`, 'other-account');
+
+    await AuthController.logout();
+
+    expect(PubchiApplication.clearOwnerData).toHaveBeenCalledWith(pubkyA, expect.any(Function));
+    expect(localStorage.getItem(`pubchi-cursor:${pubkyA}`)).toBeNull();
+    expect(localStorage.getItem(`pubchi-cursor:${pubkyB}`)).toBe('other-account');
+  });
+
+  it('finishes local logout when Pubchi revocation fails', async () => {
+    useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
+    persistState();
+    vi.mocked(PubchiApplication.unpublishKnownDelegations).mockRejectedValueOnce(new Error('offline'));
+
+    await expect(AuthController.logout()).resolves.toBeUndefined();
+
+    expect(useAuthStore.getState().session).toBeNull();
+    expect(PubchiApplication.clearOwnerData).toHaveBeenCalledWith(pubkyA, expect.any(Function));
   });
 
   it('loads saved preferences and finishes bootstrap before granting authenticated access', async () => {

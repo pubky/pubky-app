@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Flame, Home, Library, Search, Settings, Store, UserRoundPlus } from 'lucide-react';
+import { Bot, Flame, Home, Library, Search, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -9,9 +9,11 @@ import { Container } from '@/atoms/Container/Container';
 import { InternalLink as Link } from '@/atoms/Link/Link.navigation';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FileController } from '@/controllers/file/file';
+import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { isPubchiPanelEnabled } from '@/libs/pubchi/flags';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
@@ -19,6 +21,7 @@ import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 
 export interface MobileFooterProps {
   className?: string;
@@ -31,6 +34,7 @@ export interface MobileFooterProps {
  * following pubky-app pattern.
  */
 export function MobileFooter({ className }: MobileFooterProps) {
+  const pubchiOpen = usePubchiStore((state) => state.flyout.open);
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
@@ -127,6 +131,24 @@ export function MobileFooter({ className }: MobileFooterProps) {
             </Link>
           );
         })}
+        {isAuthenticated && isPubchiPanelEnabled() ? (
+          <>
+            <Button
+              type="button"
+              aria-label="Pubchi"
+              data-testid="mobile-pubchi-btn"
+              variant="secondary"
+              size="icon"
+              className={cn(
+                'size-12 rounded-full',
+                pubchiOpen ? 'bg-secondary' : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
+              )}
+              onClick={() => PubchiController.openFlyout()}
+            >
+              <Bot className="size-6" />
+            </Button>
+          </>
+        ) : null}
         {isAuthenticated ? (
           <Link
             data-cy="footer-nav-profile-btn"

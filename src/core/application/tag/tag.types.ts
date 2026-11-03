@@ -8,6 +8,7 @@ export interface TCreateTagInput extends TTagEventParams {
 export interface TCreateTagListInput {
   tagList: TCreateTagInput[];
   isCurrent?: () => boolean;
+  preserveExisting?: boolean;
 }
 
 export type TDeleteTagInput = Omit<TCreateTagInput, 'tagJson'> & { isCurrent?: () => boolean };
@@ -15,4 +16,11 @@ export type TDeleteTagInput = Omit<TCreateTagInput, 'tagJson'> & { isCurrent?: (
 export enum TagKind {
   USER = 'user',
   POST = 'post',
+}
+
+export interface TCreateTagResult {
+  tagUrl: string;
+  alreadyExisted: boolean;
+  /** Present only for assisted writes whose exact document can later be compared before undo. */
+  tagDocumentSha256?: string;
 }

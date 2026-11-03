@@ -1,0 +1,34 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay",
+  "owner": "4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o",
+  "generated_at": 1788600000,
+  "run_id": "c6-missing-section",
+  "purpose": "ask",
+  "question": "Draft a post",
+  "summary": "draft_post without section.",
+  "evidence": [
+    {
+      "kind": "user",
+      "label": "Owner profile",
+      "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json",
+      "claimants": [],
+      "claimant_count": 0,
+      "in_your_graph": true
+    }
+  ],
+  "sources": [],
+  "tool_trace_summary": {
+    "tools": [],
+    "call_count": 0,
+    "truncated": false
+  },
+  "policy_version": 1,
+  "draft_post": {
+    "content": "A draft missing its section tag.",
+    "kind": "short",
+    "rationale": "Section is required with draft_post.",
+    "evidence": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json"]
+  }
+}

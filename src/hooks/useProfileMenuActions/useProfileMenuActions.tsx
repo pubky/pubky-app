@@ -1,7 +1,9 @@
 'use client';
 
-import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
+import { Bot, Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
+import { userUriBuilder } from 'pubky-app-specs';
 import { PROFILE_ROUTES } from '@/app/routes';
+import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
@@ -10,8 +12,11 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
+import { isPubchiEnabled } from '@/libs/pubchi/flags';
 import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './useProfileMenuActions.types';
 
@@ -44,6 +49,9 @@ export function useProfileMenuActions(userId: string, active = true): UseProfile
   const username = truncateString(rawUsername, 15);
   const isLoading = isProfileLoading || isFollowingLoading;
   const profileUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${PROFILE_ROUTES.PROFILE}/${userId}`;
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const pubchi = usePubchiStore((state) => state.pubchi);
+  const ownerPubky = usePubchiStore((state) => state.ownerPubky);
   const menuItems: ProfileMenuActionItem[] = [];
 
   // Follow/Unfollow
@@ -57,6 +65,21 @@ export function useProfileMenuActions(userId: string, active = true): UseProfile
     },
     disabled: isFollowLoading || isUserLoading(userId),
   });
+
+  if (isPubchiEnabled() && currentUserPubky && ownerPubky === currentUserPubky && pubchi?.verified) {
+    menuItems.push({
+      id: PROFILE_MENU_ACTION_IDS.SUGGEST_TAGS_WITH_PUBCHI,
+      label: 'Suggest tags',
+      icon: Bot,
+      onClick: () => {
+        PubchiController.openFlyout({
+          question: 'Suggest tags for this user',
+          source: 'chip',
+          target: { kind: 'user', uri: userUriBuilder(userId) },
+        });
+      },
+    });
+  }
 
   // Copy pubky
   menuItems.push({

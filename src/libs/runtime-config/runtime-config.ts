@@ -238,3 +238,6 @@ export const getAuthClientId = (): string => {
   const config = getRuntimeConfig();
   return config.authClientId ?? (config.deployEnv === 'production' ? 'pubky.app' : 'staging.pubky.app');
 };
+
+export const getPubchiEnabled = (): boolean => getRuntimeConfig().pubchiEnabled;
+export const getPubchiApiUrl = (): string => getRuntimeConfig().pubchiApiUrl;

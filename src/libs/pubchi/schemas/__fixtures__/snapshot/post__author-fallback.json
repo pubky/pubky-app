@@ -1,0 +1,24 @@
+{
+  "input": {
+    "target": {
+      "kind": "post",
+      "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/posts/ABC123DEF4567",
+      "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "post": {
+      "details": {
+        "content": "Missing author",
+        "kind": "short"
+      }
+    },
+    "user": null
+  },
+  "projection": {
+    "kind": "post",
+    "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/posts/ABC123DEF4567",
+    "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content": "Missing author",
+    "post_kind": "short"
+  },
+  "snapshot_sha256": "62328756c3ec7eeae06fa6f7a40f5d65deb498e79607b60530186f8532dc69c5"
+}

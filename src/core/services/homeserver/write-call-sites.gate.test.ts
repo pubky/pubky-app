@@ -115,6 +115,7 @@ describe('homeserver write call sites', () => {
       'ProfileApplication.commitCreate': 'the first profile.json, built from the form, not a read',
       'ProfileApplication.deleteFile': 'account deletion: a DELETE has no body to go stale',
       'LocksApplication.replicateUnlockedContent': 'the replica bytes are fixed by the unlocked content',
+      'TagApplication.writeFixedTag': 'ordinary tag actions have fixed bodies; assisted read-derived writes use fences',
     };
     const offenders = files
       .filter(({ path, code }) => path !== HOMESERVER_SERVICE && /\bretryHomeserverWriteAfterReread\s*\(/.test(code))

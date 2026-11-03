@@ -1,0 +1,16 @@
+export const DRAFT_POST_COPY = {
+  title: 'Draft post',
+  publishAsYou: 'Publish as you',
+  approve: 'Approve',
+  reject: 'Reject',
+  revert: 'Revert',
+  retry: 'Retry',
+  checkAgain: 'Check again',
+  applying: 'Publishing…',
+  rejecting: 'Rejecting…',
+  checking: 'Checking…',
+  published: 'Published as you',
+  rejected: 'Rejected',
+  reverted: 'Reverted',
+  reconcile: 'Pubchi could not confirm the result of this draft. Check again, or manage the post from your profile.',
+} as const;

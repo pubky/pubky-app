@@ -1,0 +1,22 @@
+{
+  "input": {
+    "target": {
+      "kind": "user",
+      "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/profile.json",
+      "pubky": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "post": null,
+    "user": {
+      "name": "Alice",
+      "bio": ""
+    }
+  },
+  "projection": {
+    "kind": "user",
+    "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/profile.json",
+    "pubky": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "name": "Alice",
+    "bio": ""
+  },
+  "snapshot_sha256": "595d98d51406a6648bc82273cc7491caa9efebb2612e856aefcf243e1f8e8f7c"
+}

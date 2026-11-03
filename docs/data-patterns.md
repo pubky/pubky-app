@@ -258,11 +258,19 @@ Article bodies (`kind: long`) embed images, videos, audio and PDFs with one mark
 
 ## Data Model Reference
 
-All tables defined in `src/core/database/franky/franky.ts`.
+Main App cache tables are defined in `src/core/database/franky/franky.ts`.
 
 ### Schema changes
 
 `franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
+
+The Pubchi draft integration proposes one scoped exception in
+[ADR 0026](adr/0026-pubchi-assisted-integration.md): `src/core/database/pubchi/pubchi.ts`
+holds durable, owner-scoped device keys and pending write records in a separate
+`pubchi` database. Its version history preserves those records; a main-cache reset
+must not delete it. Explicit logout/account replacement clears the outgoing owner,
+with pending delegation revocations retained for retry. This exception does not
+change `DB_VERSION` or permit migration chains for ordinary cache domains.
 
 ### User Tables
 
