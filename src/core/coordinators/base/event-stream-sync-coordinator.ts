@@ -98,6 +98,8 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
    */
   private consecutiveStreamFailures = 0;
   private failureStreakPubky: Pubky | undefined;
+  /** Refreshes that failed in a row since the last success; drives the refresh retry backoff only. */
+  private consecutiveRefreshFailures = 0;
 
   protected constructor(private readonly config: TEventStreamSyncConfig) {
     this.setupListeners();
@@ -106,7 +108,10 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
   /** Opens the owner's event stream for the synced path, resuming after `cursor` when one is stored. */
   protected abstract subscribe(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TEvent>>;
 
-  /** Re-reads the synced data after a change event. A rejection is retried after the base backoff. */
+  /**
+   * Re-reads the synced data after a change event. A rejection is retried with the reconnect backoff: the base delay
+   * doubled per refresh failure in a row, capped at `reconnectBackoffMaxMs`.
+   */
   protected abstract refresh(pubky: Pubky): Promise<unknown>;
 
   /**
@@ -401,7 +406,12 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
 
   /** Reconnect delay doubles per consecutive failure, capped, so an outage is not hammered at a fixed 1s. */
   private currentReconnectBackoffMs(): number {
-    const exponent = Math.max(0, this.consecutiveStreamFailures - 1);
+    return this.backoffMs(this.consecutiveStreamFailures);
+  }
+
+  /** The base delay doubled per failure after the first, capped at `reconnectBackoffMaxMs`. */
+  private backoffMs(failures: number): number {
+    const exponent = Math.max(0, failures - 1);
     return Math.min(this.config.reconnectBackoffMs * 2 ** exponent, this.config.reconnectBackoffMaxMs);
   }
 
@@ -441,14 +451,20 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
   private async refreshFromHomeserver(pending: PendingRefresh): Promise<void> {
     try {
       await this.refresh(pending.pubky);
+      this.consecutiveRefreshFailures = 0;
       if (this.isCurrentPendingRefresh(pending)) {
         this.persistCursor(pending.pubky, pending.cursor);
         this.pendingRefresh = undefined;
       }
     } catch (error) {
-      Logger.error(`${this.config.streamLabel} refresh after homeserver event failed`, { error });
+      this.consecutiveRefreshFailures += 1;
+      Logger.error(`${this.config.streamLabel} refresh after homeserver event failed`, {
+        error,
+        consecutiveFailures: this.consecutiveRefreshFailures,
+      });
+      // Same doubling and cap as the reconnect, so a homeserver that keeps failing this read is not hit every second.
       if (this.isCurrentPendingRefresh(pending) && this.shouldRetryRefresh(pending.pubky)) {
-        this.scheduleDebouncedRefresh(pending.pubky, pending.cursor, this.config.reconnectBackoffMs);
+        this.scheduleDebouncedRefresh(pending.pubky, pending.cursor, this.backoffMs(this.consecutiveRefreshFailures));
       }
     }
   }
@@ -487,6 +503,7 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
     clearTimeout(this.debounceTimer);
     this.debounceTimer = undefined;
     this.pendingRefresh = undefined;
+    this.consecutiveRefreshFailures = 0;
     this.cancelReconnectBackoffAwait();
     if (this.activeReader) {
       await this.activeReader.cancel().catch(() => {});

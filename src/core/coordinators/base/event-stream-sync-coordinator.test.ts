@@ -125,6 +125,45 @@ describe('EventStreamSyncCoordinator', () => {
     expect(sessionStorage.getItem(`${config.cursorStoragePrefix}${pubky}`)).toBe('c8');
   });
 
+  it('backs a failing refresh off by doubling up to the cap, and starts over after one succeeds', async () => {
+    coordinator = new TestStreamSyncCoordinator();
+    let open: ReadableStreamDefaultController<TEventStreamSyncEvent> | undefined;
+    coordinator.subscribeSpy.mockResolvedValue(
+      new ReadableStream({
+        start(controller) {
+          open = controller;
+          controller.enqueue({ cursor: 'c1', eventType: 'PUT' });
+        },
+      }),
+    );
+    coordinator.refreshSpy.mockRejectedValue(new Error('read failed'));
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+    await flushPromises();
+
+    const callsAfter = async (ms: number) => {
+      await vi.advanceTimersByTimeAsync(ms);
+      return coordinator!.refreshSpy.mock.calls.length;
+    };
+    expect(await callsAfter(config.debounceMs)).toBe(1);
+    // 100, 200, 400, then held at the 400 cap.
+    expect(await callsAfter(99)).toBe(1);
+    expect(await callsAfter(1)).toBe(2);
+    expect(await callsAfter(199)).toBe(2);
+    expect(await callsAfter(1)).toBe(3);
+    expect(await callsAfter(399)).toBe(3);
+    expect(await callsAfter(1)).toBe(4);
+    expect(await callsAfter(400)).toBe(5);
+
+    coordinator.refreshSpy.mockResolvedValueOnce(undefined);
+    expect(await callsAfter(400)).toBe(6);
+    expect(sessionStorage.getItem(`${config.cursorStoragePrefix}${pubky}`)).toBe('c1');
+
+    open?.enqueue({ cursor: 'c2', eventType: 'PUT' });
+    expect(await callsAfter(config.debounceMs)).toBe(7);
+    expect(await callsAfter(config.reconnectBackoffMs)).toBe(8);
+  });
+
   it('reports the outage once under the configured operation at the configured threshold', async () => {
     const serverSpy = vi.spyOn(Err, 'server');
     coordinator = new TestStreamSyncCoordinator();
