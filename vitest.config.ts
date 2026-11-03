@@ -22,6 +22,9 @@ export default defineConfig({
       }
       return true;
     },
+    // Vitest 5 defaults to `.vitest/attachments`; vrt.yml uploads failure
+    // screenshots from this path and `.gitignore` excludes it.
+    attachmentsDir: '.vitest-attachments',
     dangerouslyIgnoreUnhandledErrors: false,
     silent: false,
     projects: [

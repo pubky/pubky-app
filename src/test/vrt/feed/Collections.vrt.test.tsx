@@ -1071,7 +1071,9 @@ describe('Cards cards — browser coverage', () => {
 
   it('keeps failed media usable', async () => {
     await renderCardsPosts(VRT_VIEWPORT_MOBILE, true);
-    await expect.element(page.getByRole('status')).toHaveTextContent('Media unavailable');
+    // Partial match: the status element also contains the 'Open original' button
+    // text, and Vitest 5's toHaveTextContent compares the whole text content.
+    await expect.element(page.getByRole('status')).toMatchTextContent(/Media unavailable/);
     await expect.element(page.getByRole('button', { name: 'Open original' })).toBeVisible();
     await expect.element(page.getByRole('button', { name: 'Reply to post (22)', exact: true })).toBeVisible();
     await expect.element(page.getByRole('button', { name: 'More options' }).first()).toBeVisible();

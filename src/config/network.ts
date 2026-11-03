@@ -3,6 +3,7 @@ import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES, SOCIAL_V1_APP_
 import {
   getDefaultHttpRelay,
   getDeployEnv,
+  getE2eLocksStubUrl,
   getExchangeRateApi,
   getHomegateUrl,
   getHomeserver,
@@ -19,6 +20,7 @@ import {
 export {
   getDefaultHttpRelay,
   getDeployEnv,
+  getE2eLocksStubUrl,
   getExchangeRateApi,
   getHomegateUrl,
   getHomeserver,

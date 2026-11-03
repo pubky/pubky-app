@@ -78,8 +78,9 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
   const {
     status: locksStatus,
     connectUrl,
-    error: locksError,
     iframeRef: locksIframeRef,
+    isConnectReady,
+    onConnectLoad,
     prepare,
     start: startLocks,
     reset: resetLocks,
@@ -87,7 +88,6 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
   const {
     status: paykitStatus,
     setupUrl,
-    error: paykitError,
     iframeRef: paykitIframeRef,
     check: checkPaykit,
     reset: resetPaykit,
@@ -150,6 +150,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
     (locksStatus === LocksAuthFlowStatus.CONNECTING ||
       locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL ||
       locksStatus === LocksAuthFlowStatus.EXCHANGING);
+  const mountedConnectUrl = locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL ? connectUrl : null;
   const isSessionStep = step === 'session';
   const isBitkitStep = step === 'bitkit' && !isPaykitError && !isPaykitUnavailable;
 
@@ -233,21 +234,23 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
             {/* The shell's embed layout is the 192px QR panel, or two stacked 60px deep-link buttons
                 on touch. It also posts a `locks-auth-resize` height we could adopt instead, but a
                 fixed box keeps the loader from collapsing before the iframe mounts. */}
-            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-33">
-              {locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL && connectUrl ? (
+            <Container className="relative flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-33">
+              {/* Mounted but invisible until the shell's first `locks-auth-resize` report: a page that
+                  failed to render (a JSON error body) never sends one and is never shown (#3027). */}
+              {mountedConnectUrl && (
                 <iframe
                   ref={locksIframeRef}
-                  src={connectUrl}
+                  src={mountedConnectUrl}
                   title={'Lock Server authorization'}
                   // The parent accepts the auth code only from the configured Lock Server origin.
                   // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
                   // The other flags let /connect run JS, submit its approval form, and open the signer apps.
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                  className="h-48 w-full pointer-coarse:h-33"
+                  onLoad={onConnectLoad}
+                  className={cn('h-48 w-full pointer-coarse:h-33', !isConnectReady && 'invisible absolute inset-0')}
                 />
-              ) : (
-                <LoaderCircle className="size-8 animate-spin text-brand" />
               )}
+              {!(mountedConnectUrl && isConnectReady) && <LoaderCircle className="size-8 animate-spin text-brand" />}
             </Container>
             {/* The embedded shell draws no logos, and on touch its buttons already name each app. */}
             <Container overrideDefaults className="flex items-center gap-3.5 pointer-coarse:hidden">
@@ -295,9 +298,12 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
 
         {isError && (
           <Typography size="sm" className="text-destructive">
+            {/* Raw error messages are diagnostic text that already reaches logs and Sentry, so the dialog shows fixed copy only (#3028). */}
             {isPaykitUnavailable
               ? 'Payments are unavailable right now. Please try again later.'
-              : ((isPaykitError ? paykitError?.message : locksError?.message) ?? 'Lock authorization failed.')}
+              : isPaykitError
+                ? "Couldn't connect your Bitkit wallet. Please try again."
+                : "Couldn't authorize the Lock Server. Please try again."}
           </Typography>
         )}
 
@@ -313,6 +319,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
               className="flex-1 disabled:pointer-events-auto disabled:cursor-not-allowed"
               disabled={locksStatus !== LocksAuthFlowStatus.IDLE}
               onClick={startLocks}
+              data-cy="locks-auth-intro-continue"
             >
               {isCheckingServer ? <LoaderCircle className="size-5 animate-spin" /> : 'Continue'}
             </Button>
@@ -332,6 +339,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
                 onSuccess();
                 close();
               }}
+              data-cy="locks-auth-success-continue"
             >
               {'Continue'}
             </Button>

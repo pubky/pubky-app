@@ -17,8 +17,9 @@ interaction tests for those).
   only. Nobody browses with WebKit on Linux, so `vitest.config.ts` omits the
   webkit instance when `process.platform === 'linux'` and there are no
   `*-webkit-linux.png` files; do not add them.
-- Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
-  `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
+- Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`,
+  `matchVrtElementScreenshot`), `vrt.setup.ts` (global mocks), `vrt.clock.ts`,
+  `vrt.viewports.ts`.
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
 - Run one browser only: `npx vitest run --project "vrt (chromium)"` (CI runs one
   job per browser this way).
@@ -39,6 +40,30 @@ await matchVrtFrameScreenshot('name-desktop');
 exactly the viewport, not full scroll height), freezes the clock, seeds
 `Math.random`, and waits for fonts + successfully loaded images. Mock every
 data dependency (store/hook/fetch/router) so the pixels are deterministic.
+
+## Capture dimensions
+
+Every capture is scaled down to fit `VRT_CAPTURE_MAX_SIZE` (`vrt.viewports.ts`,
+1280x720) by `min(1, 1280/width, 720/height)`: desktop 1440x900 is stored at
+1152x720, mobile 390x844 at 333x720, tablet 768x1024 at 540x720, and element
+crops by the same factor as their viewport. A viewport that already fits is
+stored at natural size. These are the dimensions the baselines have had since
+Vitest 4, whose 1280x720 headless window produced them; Vitest 5 sizes the
+window to the viewport and has no capture-scale option.
+
+`withCaptureScale` in `vrt.tsx` applies the scale as a `transform` on the
+tester `<iframe>` (`window.frameElement`) for the duration of the capture
+only. Nothing inside the tested page changes: layout, media queries and
+in-page coordinates stay at the real viewport. Do not move the transform into
+the page (e.g. onto `<html>`): popovers and tooltips measure
+`getBoundingClientRect` and would reposition mid-capture. A mobile width
+scales to a fractional raster width (390 → 332.7px), so the last column of
+mobile baselines is a blend whose exact colour depends on the browser version.
+
+Always capture through `matchVrtFrameScreenshot` (frame) or
+`matchVrtElementScreenshot` (element). ESLint rejects a raw
+`toMatchScreenshot` in `*.vrt.test.tsx`, which would store a natural-size PNG
+no baseline has.
 
 ## Determinism
 

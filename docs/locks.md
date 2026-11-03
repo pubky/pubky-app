@@ -395,6 +395,14 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
    interpreting `terminal_reason`. **Try again** starts a new payment as in step 3;
    `failed` keeps its existing wallet-related guidance and retry handling.
+   A read that rejects backs its own loop off: each consecutive failure doubles that loop's
+   interval up to `POLL_BACKOFF_MAX_MS` (15 s), so the link read goes 1, 2, 4, 8, 15 s and the task
+   lookup 3, 6, 12, 15 s. Any answer (a null task included) and a return to the tab restore full
+   speed. `addLoop` owns the streak: each loop passes `{ callSite, reportSuppressed }` down to
+   `LocksService` as the AppError's context, set at construction; every failure after the first of
+   a streak carries `reportSuppressed`, and the
+   `locks-unlock-poll-repeat-reports` drop rule keeps those out of Sentry (#2641). The first failure
+   of each outage, the open-time lookup and the purchase-resume read stay reportable.
 7. A completed payment enters `finishing` while the credential and content are fetched. The modal
    shows **PAYMENT RECEIVED**, "Opening your content…" and a spinner, without asking the reader
    to confirm in Bitkit. A failed content read enters `unopened`, and **Check again** runs it again.
@@ -624,6 +632,15 @@ Never commit either.
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
   (testnet + Lock Server + nexus) is driven manually. How to run it, approve as Bitkit and pay from
   the terminal: [`locks/locks-local-stack/README.md`](locks/locks-local-stack/README.md).
+- `cypress/e2e/locks.cy.ts` covers publish, owner view and payment unlock against the real Nexus and
+  homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
+  (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
+  `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
+  answers with `cy.intercept`, and writes the guarded bytes and `lock.json` to the creator's homeserver
+  itself. The pubky-e2e project will replace it with real end-to-end coverage. Every stubbed answer is
+  a `[locks-stub]` entry in the Cypress command log, with the redacted request and response in its
+  console details, and the same lines are printed in the terminal after each `[locks-step]` marker
+  (`cypress/support/locks-log.ts`).
 
 ## References
 
@@ -640,3 +657,5 @@ Never commit either.
 This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69), generated from [Locks source `c692fb70522c`](https://github.com/pubky/locks/commit/c692fb70522cf75025b86ad72a3b98fa7ef84e72). A normal `npm ci` installs the JS/WASM files; no SDK release or local build overlay is required. The artifact README records its source and checksums.
 
 Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
+
+The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`CONNECT_READY_AFTER_LOAD_MS`, `CONNECT_MOUNT_TIMEOUT_MS`). A page that failed to render, such as a JSON error body, is never shown (#3027).

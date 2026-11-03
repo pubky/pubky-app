@@ -187,6 +187,19 @@ const eslintConfig = [
       'no-restricted-syntax': 'off',
     },
   },
+  {
+    files: ['**/*.vrt.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          property: 'toMatchScreenshot',
+          message:
+            'Capture through matchVrtFrameScreenshot / matchVrtElementScreenshot from @/test-utils/vrt so every baseline uses the shared capture scale.',
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

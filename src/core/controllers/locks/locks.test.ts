@@ -940,7 +940,7 @@ describe('LocksController (payment delegation)', () => {
     const controller = asOpaque<Record<string, (arg?: unknown) => Promise<unknown>>>(LocksController);
 
     await expect(controller[method](params)).resolves.toEqual(result);
-    expect(application[target]).toHaveBeenCalledWith(params);
+    expect(application[target].mock.calls[0][0]).toEqual(params);
   });
 });
 
