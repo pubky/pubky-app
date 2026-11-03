@@ -15,5 +15,9 @@ export interface UsePurchaseResumeParams {
   onResumed: (content: TUnlockedContent) => void;
 }
 
-/** Only a running/completed server task permits recovery without starting a new payment. */
-export type PurchaseResumeStatus = 'checking' | 'recoverable' | 'none' | 'unknown';
+/**
+ * Only a running/completed server task permits recovery without starting a new payment.
+ * `'recovering'` is `'recoverable'` while the content of a completed purchase is being downloaded:
+ * the content is on its way, so the Unlock pill waits instead of offering a second download (#3038).
+ */
+export type PurchaseResumeStatus = 'checking' | 'recovering' | 'recoverable' | 'none' | 'unknown';
