@@ -12,7 +12,7 @@ describe('LegalPage', () => {
 
     const main = screen.getByRole('main');
     expect(main).toContainElement(screen.getByRole('heading', { level: 1, name: 'Privacy Policy' }));
-    expect(main).toHaveTextContent(/built by Synonym Software, S\.A\. de C\.V\. ©2026/);
+    expect(main).toHaveTextContent('built by Synonym Software, S.A. de C.V. ©2026');
     expect(screen.getByAltText('Synonym')).toBeInTheDocument();
   });
 });
