@@ -167,8 +167,7 @@ a kept lock would only be orphaned content in the creator's `/priv`.
 `useDeletePost` reads the stored row and, when it carries a `lock` URL, calls
 `LocksController.deleteLockContent` **before** `PostController.commitDelete`. The order matters: a
 lock deletion that fails keeps the announcement (the optimistic removal is rolled back and the
-toast says so), instead of leaving a lock nobody can delete any more. A rejected or missing Locks
-session is cleared as on publish, and the toast asks the creator to sign in to the Lock Server. The
+toast says so), instead of leaving a lock nobody can delete any more. A Locks session the server rejects is cleared as on publish; a missing one is left alone, so a restore still in flight keeps its stored secret. Either way the dialog offers **Sign in**, which opens the Lock Server sign-in only (no Paykit step) and retries the delete. The
 reverse failure, a local post delete that fails after the Lock Server already accepted, leaves the
 announcement pointing at a tombstone; deleting it again is safe because the server answers a repeated
 delete with the job's status instead of a new job. A `lock` URL with no lock id in it (no `.json`

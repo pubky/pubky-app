@@ -14,10 +14,15 @@ import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/T
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.types';
 
+/** The Lock Server refused the lock deletion for want of a valid Locks session: a sign-in, not a retry, fixes it. */
+function isLocksAuthFailure(error: unknown): boolean {
+  return isAppError(error) && error.service === ErrorService.Locks && isAuthError(error);
+}
+
 /** Null unless the Lock Server refused the lock deletion; a rejected Locks session needs a sign-in, not a retry. */
 function lockFailureDescription(error: unknown): string | null {
   if (!isAppError(error) || error.service !== ErrorService.Locks) return null;
-  return isAuthError(error)
+  return isLocksAuthFailure(error)
     ? 'Sign in to the Lock Server to delete this post.'
     : 'Could not delete the locked content. Try again.';
 }
@@ -44,6 +49,7 @@ function lockFailureDescription(error: unknown): string | null {
  */
 export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [needsLocksSignIn, setNeedsLocksSignIn] = useState(false);
   const inFlight = useRef(false);
   const timelineFeed = useTimelineFeedContext();
   const { waitForAuth } = useRequireAuth(options?.active ?? true, { outlivesOwner: options?.outlivesOwner });
@@ -59,6 +65,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
       Logger.warn('[useDeletePost] Delete already in progress, ignoring request', { postId });
       return false;
     }
+    setNeedsLocksSignIn(false);
 
     if (!postId || !postId.trim()) {
       Logger.error('[useDeletePost] Invalid post ID provided', { postId });
@@ -171,6 +178,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
         });
       }
 
+      setNeedsLocksSignIn(isLocksAuthFailure(error));
       toast({
         variant: 'error',
         description: lockFailureDescription(error) ?? deleteFailedDesc,
@@ -184,6 +192,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
 
   return {
     isDeleting,
+    needsLocksSignIn,
     deletePost,
   };
 }

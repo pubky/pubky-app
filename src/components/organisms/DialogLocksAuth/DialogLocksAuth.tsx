@@ -19,6 +19,10 @@
  *
  * Which step shows is derived from the stores, so a creator who is already signed in, but whose
  * Paykit setup this Locks session has not confirmed yet, opens straight at Enable Payments.
+ *
+ * `mode="signin"` stops after the Lock Server step (no session or Paykit step, no Paykit check): a
+ * fresh Locks session resets `paykitConnected`, and a caller that only needs the Lock Server (such
+ * as deleting a lock announcement) must not be held up by Paykit.
  */
 import { type ReactNode, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
@@ -63,6 +67,8 @@ type DialogLocksAuthProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** 'signin' asks for the Lock Server sign-in only; 'setup' (default) also runs the session and Paykit steps. */
+  mode?: 'setup' | 'signin';
 };
 
 // Frames the 192px step illustration.
@@ -74,7 +80,13 @@ function StepImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }: DialogLocksAuthProps) {
+export function DialogLocksAuth({
+  open,
+  onOpenChange,
+  onSuccess,
+  asset = 'BTC',
+  mode = 'setup',
+}: DialogLocksAuthProps) {
   const {
     status: locksStatus,
     connectUrl,
@@ -98,17 +110,19 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
 
   let step: 'locks' | 'session' | 'bitkit' | 'done' = 'done';
   if (!isLocksAuthenticated) step = 'locks';
+  else if (mode === 'signin') step = 'done';
   else if (needsSessionUpgrade) step = 'session';
   else if (!isPaykitConnected) step = 'bitkit';
 
   // Fixed when the dialog opens (adjusted during render, so the first frame already carries it):
   // once the Lock Server step completes only the session step is left, and a count taken then
   // would never show "(2/2)".
-  const [isNumbered, setIsNumbered] = useState(() => open && !isLocksAuthenticated && needsSessionUpgrade);
+  const hasSessionStep = mode === 'setup' && needsSessionUpgrade;
+  const [isNumbered, setIsNumbered] = useState(() => open && !isLocksAuthenticated && hasSessionStep);
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setIsNumbered(!isLocksAuthenticated && needsSessionUpgrade);
+    if (open) setIsNumbered(!isLocksAuthenticated && hasSessionStep);
   }
 
   // Probe the Lock Server's readiness when the modal opens; reset when it closes. "Continue" only

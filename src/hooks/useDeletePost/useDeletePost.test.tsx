@@ -151,6 +151,36 @@ describe('useDeletePost', () => {
       });
     });
 
+    it('flags a Lock Server sign-in after a Locks auth failure and clears it on the next success (#2980)', async () => {
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+      expect(result.current.needsLocksSignIn).toBe(true);
+
+      await act(async () => {
+        await expect(result.current.deletePost(mockPostId)).resolves.toBe(true);
+      });
+      expect(result.current.needsLocksSignIn).toBe(false);
+    });
+
+    it('does not flag a sign-in when the Lock Server fails for another reason', async () => {
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.server(ServerErrorCode.INTERNAL_ERROR, 'refused', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(result.current.needsLocksSignIn).toBe(false);
+    });
+
     it('keeps the generic copy for a homeserver failure after the lock was deleted', async () => {
       mockDelete.mockRejectedValueOnce(
         Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Homeserver, operation: 'test' }),
