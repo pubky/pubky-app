@@ -14,6 +14,9 @@ export interface UseUnlockPillHoldParams {
   purchasesStatus: UsePurchasedLocksResult['status'];
   /** The purchase list names this lock. */
   isListedPurchase: boolean;
-  /** `usePurchaseResume`: `'checking'` while a listed purchase whose copy was not found is looked up. */
+  /**
+   * `usePurchaseResume`: `'checking'` while a listed purchase whose copy was not found is looked up, then
+   * `'recovering'` while a completed one is downloaded.
+   */
   purchaseStatus: PurchaseResumeStatus;
 }

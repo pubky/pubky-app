@@ -1,7 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
-import { useLocksAuthFlow } from './useLocksAuthFlow';
+import { ErrorCategory } from '@/libs/error/error.types';
+import { CONNECT_MOUNT_TIMEOUT_MS, CONNECT_READY_AFTER_LOAD_MS, useLocksAuthFlow } from './useLocksAuthFlow';
 import { LocksAuthFlowStatus } from './useLocksAuthFlow.types';
 
 const mocks = vi.hoisted(() => ({
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 const LOCKS_AUTH_MESSAGE_TYPE = 'locks-auth-callback';
+const LOCKS_AUTH_RESIZE_MESSAGE_TYPE = 'locks-auth-resize';
 const LOCK_SERVER_ORIGIN = 'https://lock.server';
 
 vi.mock('@/controllers/locks/locks', () => ({
@@ -23,7 +25,9 @@ vi.mock('@/controllers/locks/locks', () => ({
   },
 }));
 
-vi.mock('./useLocksAuthFlow.utils', () => ({
+// The ready check stays real: it is the contract under test in the readiness block below.
+vi.mock('./useLocksAuthFlow.utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./useLocksAuthFlow.utils')>()),
   readLocksAuthBridgeMessage: mocks.readBridge,
 }));
 
@@ -291,5 +295,129 @@ describe('useLocksAuthFlow', () => {
     });
     expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
     expect(result.current.error).not.toBeNull();
+  });
+
+  // #3027: a `/connect` page that failed (a JSON error body, a proxy page) still fires `load` but never
+  // posts anything, so the shell's first `locks-auth-resize` report is the only sign it rendered.
+  describe('waiting for the /connect page to render', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const advance = async (ms: number) => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+    const fireLoad = (result: { current: ReturnType<typeof useLocksAuthFlow> }) =>
+      act(() => result.current.onConnectLoad());
+    const postReady = (origin = LOCK_SERVER_ORIGIN) =>
+      postCallback({ type: LOCKS_AUTH_RESIZE_MESSAGE_TYPE, height: 192 }, origin);
+
+    it('shows the page once the shell posts its first height report, and keeps waiting for approval', async () => {
+      const { result } = renderHook(() => useLocksAuthFlow());
+      await startFlow(result);
+      attachIframeSource(result);
+      expect(result.current.isConnectReady).toBe(false);
+
+      fireLoad(result);
+      await postReady();
+      expect(result.current.isConnectReady).toBe(true);
+
+      await advance(CONNECT_MOUNT_TIMEOUT_MS + CONNECT_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('moves to ERROR when no height report arrives within the limit after the load event', async () => {
+      const { result } = renderHook(() => useLocksAuthFlow());
+      await startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+
+      await advance(CONNECT_READY_AFTER_LOAD_MS - 1);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
+
+      await advance(1);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
+      expect(result.current.error?.category).toBe(ErrorCategory.Timeout);
+      expect(result.current.isConnectReady).toBe(false);
+    });
+
+    it('moves to ERROR when the page never fires load', async () => {
+      const { result } = renderHook(() => useLocksAuthFlow());
+      await startFlow(result);
+      attachIframeSource(result);
+
+      await advance(CONNECT_MOUNT_TIMEOUT_MS - 1);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
+
+      await advance(1);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
+      expect(result.current.error?.category).toBe(ErrorCategory.Timeout);
+    });
+
+    it('exchanges the code when the callback follows the ready report', async () => {
+      const { result } = renderHook(() => useLocksAuthFlow());
+      const state = await startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+      await postReady();
+
+      await advance(CONNECT_MOUNT_TIMEOUT_MS); // the creator takes a while to scan
+      await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
+
+      expect(result.current.status).toBe(LocksAuthFlowStatus.SUCCESS);
+      expect(mocks.completeAuthFromCallback).toHaveBeenCalledWith({ code: 'CODE', state });
+    });
+
+    it('accepts a callback that arrives before any height report', async () => {
+      const { result } = renderHook(() => useLocksAuthFlow());
+      const state = await startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+
+      await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
+      await advance(CONNECT_MOUNT_TIMEOUT_MS);
+
+      expect(result.current.status).toBe(LocksAuthFlowStatus.SUCCESS);
+    });
+
+    it('does not count a height report from another origin as ready', async () => {
+      const { result } = renderHook(() => useLocksAuthFlow());
+      await startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+
+      await postReady('https://evil.example');
+      expect(result.current.isConnectReady).toBe(false);
+
+      await advance(CONNECT_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
+    });
+
+    it('waits for a fresh ready report after Try again', async () => {
+      const { result } = renderHook(() => useLocksAuthFlow());
+      await startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+      await advance(CONNECT_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
+
+      await act(() => result.current.start());
+      expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
+      expect(result.current.error).toBeNull();
+      expect(result.current.isConnectReady).toBe(false);
+
+      // The new page gets its own limits: the old load does not carry over.
+      await advance(CONNECT_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
+      fireLoad(result);
+      await postReady();
+      expect(result.current.isConnectReady).toBe(true);
+    });
   });
 });
