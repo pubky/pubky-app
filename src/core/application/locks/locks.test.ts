@@ -1295,6 +1295,36 @@ describe('LocksApplication (payment unlock)', () => {
         expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
       });
 
+      // A deliberate retry (Check again) must not join the request it is retrying: with no Lock Server
+      // time limit yet (#3026), a hung credential or guarded read would otherwise park the reader for good.
+      it('starts a fresh request when asked, and later callers join the fresh one', async () => {
+        const stuck = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        const second = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValueOnce(stuck.promise).mockReturnValueOnce(second.promise);
+        mocks.proxyReadGuardedResource.mockResolvedValue(
+          new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+        );
+
+        const first = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        const retry = LocksApplication.fetchPaidContent(
+          { lockFile: withPrimary(), bundleId: 'bundle-1' },
+          { fresh: true },
+        );
+        expect(retry).not.toBe(first);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+
+        // The replaced request settling late must not evict the fresh one.
+        stuck.reject(new Error('hung read finally gave up'));
+        await expect(first).rejects.toThrow('hung read finally gave up');
+        const later = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        expect(later).toBe(retry);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+
+        second.resolve({ credential: 'cred-2', expires_at: 'e' });
+        await expect(later).resolves.toMatchObject({ post: { content: 'paid' } });
+        expect(mocks.proxyReadGuardedResource.mock.calls).toEqual([['cred-2', 'a.json']]);
+      });
+
       it('never shares a request between different bundle ids or creators', async () => {
         const held = Promise.withResolvers<{ credential: string; expires_at: string }>();
         mocks.issueAccessCredential.mockReturnValue(held.promise);

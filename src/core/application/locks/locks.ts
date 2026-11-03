@@ -45,6 +45,7 @@ import type {
   TCreateLockContentParams,
   TDeleteLockContentParams,
   TFetchOwnContentParams,
+  TFetchPaidContentOptions,
   TFetchReplicatedAttachmentsParams,
   TFetchReplicatedContentParams,
   TFetchUnlockedContentParams,
@@ -285,13 +286,21 @@ export class LocksApplication {
    *
    * The credential is short-lived and never stored, so an expired one is not a state to detect:
    * this mints a new one on every call, and a mid-read expiry is answered by calling again.
+   *
+   * `fresh` is a deliberate retry (Check again on a parked download): it skips the request in flight,
+   * which may be the one that hung (Lock Server calls have no time limit yet, #3026), and takes its
+   * place, so later callers join the new one.
    */
-  static fetchPaidContent({ lockFile, bundleId }: TPaymentBundleParams): Promise<TUnlockedContent> {
+  static fetchPaidContent(
+    { lockFile, bundleId }: TPaymentBundleParams,
+    { fresh = false }: TFetchPaidContentOptions = {},
+  ): Promise<TUnlockedContent> {
     // Single-flight per purchase (#3047): a second caller while the first is running gets the same
     // promise. The entry goes when it settles, so a retry after a failure starts a fresh request.
+    // A replaced request that settles later leaves the newer entry alone (the identity check below).
     const key = `${lockFile.creator}:${bundleId}`;
     const inFlight = this.inFlightPaidContent.get(key);
-    if (inFlight) return inFlight;
+    if (inFlight && !fresh) return inFlight;
 
     const request = this.downloadPaidContent({ lockFile, bundleId }).finally(() => {
       if (this.inFlightPaidContent.get(key) === request) this.inFlightPaidContent.delete(key);

@@ -259,7 +259,10 @@ describe('purchase-aware region gate', () => {
       expect(LocksController.fetchResolvedPurchase).toHaveBeenCalledTimes(1);
       expect(LocksController.startPayment).not.toHaveBeenCalled();
       if (status === 'completed')
-        expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'saved-bundle' });
+        expect(LocksController.fetchPaidContent).toHaveBeenCalledWith(
+          { lockFile, bundleId: 'saved-bundle' },
+          { fresh: false },
+        );
     },
   );
 
