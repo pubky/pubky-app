@@ -22,12 +22,13 @@ const mocks = vi.hoisted(() => ({
   checkPaykit: vi.fn(),
   startPaykit: vi.fn(),
   resetPaykit: vi.fn(),
+  onConnectLoad: vi.fn(),
   flow: {
-    status: 'idle' as string,
-    connectUrl: null as string | null,
-    session: null as unknown,
-    error: null as unknown,
-  },
+    status: 'idle',
+    connectUrl: null,
+    session: null,
+    error: null,
+  } as { status: string; connectUrl: string | null; session: unknown; error: unknown; isConnectReady?: boolean },
   paykitFlow: {
     status: 'idle' as string,
     setupUrl: null as string | null,
@@ -39,6 +40,7 @@ vi.mock('@/hooks/useLocksAuthFlow/useLocksAuthFlow', () => ({
   useLocksAuthFlow: () => ({
     ...mocks.flow,
     iframeRef: { current: null },
+    onConnectLoad: mocks.onConnectLoad,
     prepare: mocks.prepare,
     start: mocks.start,
     reset: mocks.reset,
@@ -142,6 +144,56 @@ describe('DialogLocksAuth', () => {
     expect(iframe).toHaveAttribute('src', 'https://lock.server/connect?delivery=postmessage');
     expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
+  });
+
+  // #3027: a `/connect` page that failed to render must never be shown, not even briefly.
+  describe('until the /connect page reports it rendered', () => {
+    const awaiting = (isConnectReady: boolean) => ({
+      status: LocksAuthFlowStatus.AWAITING_APPROVAL,
+      connectUrl: 'https://lock.server/connect?delivery=postmessage',
+      session: null,
+      error: null,
+      isConnectReady,
+    });
+
+    it('keeps the iframe mounted but invisible behind the spinner', () => {
+      mocks.flow = awaiting(false);
+      renderDialog();
+
+      const iframe = screen.getByTitle('Lock Server authorization');
+      expect(iframe).toHaveClass('invisible');
+      expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).toBeInTheDocument();
+    });
+
+    it('reports the iframe load event to the flow', () => {
+      mocks.flow = awaiting(false);
+      renderDialog();
+
+      fireEvent.load(screen.getByTitle('Lock Server authorization'));
+      expect(mocks.onConnectLoad).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the iframe and drops the spinner once the page is ready', () => {
+      mocks.flow = awaiting(true);
+      renderDialog();
+
+      expect(screen.getByTitle('Lock Server authorization')).not.toHaveClass('invisible');
+      expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).not.toBeInTheDocument();
+    });
+
+    it('replaces the hidden iframe with the error step and Try again when the page never reports', () => {
+      mocks.flow = awaiting(false);
+      const { rerender } = renderDialog();
+      expect(screen.getByTitle('Lock Server authorization')).toBeInTheDocument();
+
+      mocks.flow = { ...awaiting(false), status: LocksAuthFlowStatus.ERROR, error: { message: 'did not render' } };
+      rerender(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+
+      expect(screen.queryByTitle('Lock Server authorization')).not.toBeInTheDocument();
+      expect(screen.getByText("Couldn't authorize the Lock Server. Please try again.")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(mocks.start).toHaveBeenCalledTimes(1);
+    });
   });
 
   it.each([
