@@ -372,6 +372,7 @@ describe('NotificationController', () => {
             if (!pubky) throw new Error('No pubky');
             return pubky;
           },
+          session,
           selectSession: () => session,
         }),
       );
@@ -438,6 +439,42 @@ describe('NotificationController', () => {
       await NotificationController.markAllAsRead();
 
       expect(setLastRead).toHaveBeenCalledWith(mockTimestamp + 9_000);
+    });
+
+    it('drops the result when another account signed in while the write ran', async () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId);
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(buildLastReadResult());
+      vi.spyOn(NotificationApplication, 'markAllAsRead').mockImplementation(async () => {
+        vi.mocked(useAuthStore.getState).mockReturnValue(
+          mockAuthStore({
+            currentUserPubky: 'other-user' as Pubky,
+            session: asOpaque<Session>({}),
+            selectSession: () => asOpaque<Session>({}),
+          }),
+        );
+        return mockTimestamp;
+      });
+
+      await NotificationController.markAllAsRead();
+
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+    });
+
+    it('drops the result when the session was cleared while the write ran', async () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId);
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(buildLastReadResult());
+      vi.spyOn(NotificationApplication, 'markAllAsRead').mockImplementation(async () => {
+        vi.mocked(useAuthStore.getState).mockReturnValue(
+          mockAuthStore({ currentUserPubky: mockUserId, session: null, selectSession: () => null }),
+        );
+        return mockTimestamp;
+      });
+
+      await NotificationController.markAllAsRead();
+
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
     });
 
     it('should skip processing when no user is authenticated', async () => {

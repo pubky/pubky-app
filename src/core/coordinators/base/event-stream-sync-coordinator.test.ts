@@ -89,6 +89,42 @@ describe('EventStreamSyncCoordinator', () => {
     expect(sessionStorage.getItem(`${config.cursorStoragePrefix}${pubky}`)).toBe('c7');
   });
 
+  it('reconciles on every connect, and a failed reconcile reconnects instead of reading the stream', async () => {
+    const reconcile = vi.fn<(pubky: Pubky) => Promise<unknown>>().mockRejectedValueOnce(new Error('read failed'));
+    reconcile.mockResolvedValue(undefined);
+    class ReconcilingCoordinator extends TestStreamSyncCoordinator {
+      protected reconcileOnConnect(pubky: Pubky): Promise<unknown> {
+        return reconcile(pubky);
+      }
+    }
+    coordinator = new ReconcilingCoordinator();
+    coordinator.subscribeSpy.mockImplementation(
+      async () =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue({ cursor: 'c8', eventType: 'PUT' });
+          },
+        }),
+    );
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+    await flushPromises();
+    await flushPromises();
+
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(config.debounceMs);
+    expect(coordinator.refreshSpy).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(`${config.cursorStoragePrefix}${pubky}`)).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(config.reconnectBackoffMs);
+    await flushPromises();
+    expect(coordinator.subscribeSpy).toHaveBeenCalledTimes(2);
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(config.debounceMs);
+    expect(coordinator.refreshSpy).toHaveBeenCalledWith(pubky);
+    expect(sessionStorage.getItem(`${config.cursorStoragePrefix}${pubky}`)).toBe('c8');
+  });
+
   it('reports the outage once under the configured operation at the configured threshold', async () => {
     const serverSpy = vi.spyOn(Err, 'server');
     coordinator = new TestStreamSyncCoordinator();

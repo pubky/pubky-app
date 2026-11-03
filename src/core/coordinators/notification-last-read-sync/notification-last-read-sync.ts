@@ -58,4 +58,12 @@ export class NotificationLastReadSyncCoordinator extends EventStreamSyncCoordina
   protected refresh(pubky: Pubky): Promise<unknown> {
     return NotificationController.fetchLastReadFromHomeserver(pubky);
   }
+
+  /**
+   * The persisted `lastRead` is shared by every tab, and a tab can overwrite it with an older snapshot after this
+   * one acknowledged a newer event. The stored cursor would skip that event on resume, so read the file again.
+   */
+  protected reconcileOnConnect(pubky: Pubky): Promise<unknown> {
+    return NotificationController.fetchLastReadFromHomeserver(pubky);
+  }
 }

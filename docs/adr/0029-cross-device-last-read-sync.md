@@ -29,6 +29,16 @@ calls `NotificationController.fetchLastReadFromHomeserver`, which:
    is still newer and that the viewer did not change. A local mark-as-read that lands during the count is never
    rolled back, and a sign-out or account switch during the read drops the result.
 
+The same read runs on every stream connection, after the stream is open and before its first event
+(`reconcileOnConnect`, a base-class hook that is a no-op for the mute list). The persisted `lastRead` is shared by
+every tab, so another tab can write back an older snapshot after this one acknowledged a newer event; a stream
+resumed from the stored cursor would never replay that event. Reading the file on connect repairs it, and opening
+the stream first means a change after the read still arrives as an event.
+
+The boundary belongs to one account. `markAllAsRead` drops its result when the account or its session changed
+during the write, so a sign-out or account switch cannot leave the previous account's timestamp in the store for
+the next account's bootstrap to keep.
+
 Stream gating (signed in with a profile, not on auth/onboarding routes, paused while the tab is hidden when the
 runtime visibility flag is set), reconnect backoff and the one-shot outage report
 (`notificationLastReadEventStreamExhausted`) come from the base class. The per-user `sessionStorage` cursor is
@@ -40,7 +50,8 @@ The path is one constant so the social v1 port, which moves the file, changes on
 
 - ✅ A read on one device clears the badge on every open session within about a second, with no extra polling.
 - ✅ The read boundary is monotonic: concurrent marks, out-of-order events and replays cannot move it backward.
-- ⚠️ One more long-lived SSE connection per visible signed-in tab.
+- ⚠️ One more long-lived SSE connection per visible signed-in tab, and one `last_read` read per connection (sign-in,
+  reload, each return to a hidden tab, each reconnect).
 - ⚠️ `getFreshJson` reads without the session. That holds for the public file today; a private `last_read` needs an
   authenticated fresh read when it moves.
 

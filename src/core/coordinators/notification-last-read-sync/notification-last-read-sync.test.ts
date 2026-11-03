@@ -61,11 +61,30 @@ describe('NotificationLastReadSyncCoordinator', () => {
     await flushPromises();
 
     expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledWith(pubky, null);
+    // One read when the stream connects, one after the debounced event.
+    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS);
 
-    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledTimes(1);
+    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledTimes(2);
     expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledWith(pubky);
     expect(sessionStorage.getItem(`${NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX}${pubky}`)).toBe('c1');
+  });
+
+  it('re-reads last_read when it resumes from a stored cursor, before any event arrives', async () => {
+    // The local boundary can be older than the one the stored cursor acknowledged (another tab persisted a stale
+    // snapshot); the resumed stream will not replay the event that corrected it.
+    sessionStorage.setItem(`${NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX}${pubky}`, 'c1');
+    vi.mocked(NotificationController.subscribeLastReadEventStream).mockImplementation(async () => new ReadableStream());
+    signIn();
+    const coordinator = NotificationLastReadSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+    await flushPromises();
+    await flushPromises();
+
+    expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledWith(pubky, 'c1');
+    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledTimes(1);
+    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledWith(pubky);
   });
 
   it('does not open the stream on disabled auth routes', async () => {

@@ -109,6 +109,15 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
   /** Re-reads the synced data after a change event. A rejection is retried after the base backoff. */
   protected abstract refresh(pubky: Pubky): Promise<unknown>;
 
+  /**
+   * Runs on every connection, after the stream is open and before any event is read. A resumed stream does not
+   * replay events before its stored cursor, so a subclass whose local copy can lose an acknowledged change re-reads
+   * it here. A rejection fails the connection and reconnects after the backoff. Default: nothing to reconcile.
+   */
+  protected reconcileOnConnect(_pubky: Pubky): Promise<unknown> {
+    return Promise.resolve();
+  }
+
   public start(): void {
     this.state.isStarted = true;
     this.evaluateStreaming();
@@ -252,9 +261,11 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
             .catch(() => {});
           break;
         }
-        connection = { connectedAt: Date.now(), receivedEvent: false, settled: false };
         reader = stream.getReader();
         this.activeReader = reader;
+        // Opened first, so a change after this read still arrives as an event.
+        await this.reconcileOnConnect(pubky);
+        connection = { connectedAt: Date.now(), receivedEvent: false, settled: false };
 
         for (;;) {
           if (!this.isLoopCurrent(generation)) {

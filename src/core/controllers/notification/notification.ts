@@ -84,6 +84,9 @@ export class NotificationController {
       // Create new lastRead with current timestamp using normalizer
       const lastRead = LastReadNormalizer.to(pubky);
       const published = await NotificationApplication.markAllAsRead(lastRead);
+      // The store holds the signed-in account's boundary: a sign-out or account switch during the write
+      // must not leave this account's timestamp behind for the next one.
+      if (!NotificationController.isSameAccountSession(pubky)) return;
       // Never move the local boundary backward: a newer mark may have landed while this one waited.
       notificationStore.setLastRead(Math.max(useNotificationStore.getState().lastRead, published));
       notificationStore.setUnread(0);
