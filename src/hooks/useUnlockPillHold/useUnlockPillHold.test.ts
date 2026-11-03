@@ -151,8 +151,8 @@ describe('useUnlockPillHold', () => {
     expect(result.current).toBe(false);
   });
 
-  it('releases once the download is done or a running task is found', () => {
-    for (const purchaseStatus of ['recoverable', 'unknown', 'none'] as const) {
+  it('releases once the download has finished', () => {
+    for (const purchaseStatus of ['recoverable', 'unknown'] as const) {
       const { result, rerender, unmount } = renderHold({ ...lookingUp, purchaseStatus: 'recovering' });
       expect(result.current).toBe(true);
       rerender({ ...lookingUp, purchaseStatus });
@@ -161,5 +161,15 @@ describe('useUnlockPillHold', () => {
       expect(result.current).toBe(false);
       unmount();
     }
+  });
+
+  // A running task has nothing to download yet: the lookup goes straight from 'checking' to 'recoverable'.
+  it('releases when the lookup finds a running task', () => {
+    const { result, rerender } = renderHold(lookingUp);
+    expect(result.current).toBe(true);
+    rerender({ ...lookingUp, purchaseStatus: 'recoverable' });
+    expect(result.current).toBe(false);
+    rerender(lookingUp);
+    expect(result.current).toBe(false);
   });
 });

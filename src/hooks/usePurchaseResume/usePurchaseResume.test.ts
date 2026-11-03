@@ -202,12 +202,21 @@ describe('usePurchaseResume', () => {
       bundleId: 'saved-bundle',
       task: { status, walletSetupNeeded: false, admissionDeadlineAt: null },
     });
+    // Recorded on every render: a status that lives between two waitFor polls must still be seen.
     const seen: string[] = [];
-    const { result } = renderResume();
-    await waitFor(() => {
-      seen.push(result.current);
-      expect(result.current).toBe('recoverable');
+    const { result } = renderHook(() => {
+      const status = usePurchaseResume({
+        lock: LOCK_URL,
+        lockFile,
+        isPurchased: true,
+        hasContent: false,
+        isResolvingContent: false,
+        onResumed: vi.fn(),
+      });
+      seen.push(status);
+      return status;
     });
+    await waitFor(() => expect(result.current).toBe('recoverable'));
     expect(seen).not.toContain('recovering');
   });
 

@@ -24,8 +24,8 @@ type HoldPhase = 'waiting' | 'timing' | 'released';
  * moment with a session (a reload's session restore is bounded on its own and not counted), so a slow
  * read cannot add a second limit for the lookup after it. Once the pill is live, because nothing is left
  * to wait for, the limit passed, or the pay dialog opened, it is not taken back for that post and account.
- * Releasing early is safe: the pay dialog re-reads the saved bundle id before it offers to pay, and
- * recovery keeps running.
+ * Releasing early is safe for payment: the pay dialog re-reads the saved bundle id before it offers to
+ * pay. Recovery keeps running until a click opens the dialog; then the dialog downloads the content itself.
  */
 export function useUnlockPillHold({
   lock,

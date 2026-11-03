@@ -153,6 +153,8 @@ describe('purchase-aware region gate', () => {
 
     await waitFor(() => expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('button', { name: 'Unlock', hidden: true })).toBeDisabled();
+    // Held, not inert: an inert pill is disabled too, but dimmed and without a spinner.
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
     expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
 
     download.resolve(content);
