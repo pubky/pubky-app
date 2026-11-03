@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LocksApplication } from '@/application/locks/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import type { PaidUnlockAvailability } from '@/libs/region/paidUnlockAvailability';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
-import type { LockFile, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
+import { LocksService } from '@/services/locks/locks';
+import type { LockFile, TAccessCredential, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
 
@@ -21,6 +23,21 @@ vi.mock('@/controllers/locks/locks', () => ({
     startPayment: vi.fn(),
   },
 }));
+// #3047 drives the real `LocksApplication.fetchPaidContent` against these two Lock Server calls.
+vi.mock('@/services/locks/locks', () => ({
+  LocksService: { issueAccessCredential: vi.fn(), proxyReadGuardedResource: vi.fn() },
+}));
+// A short pill hold lets a test outlive it the way a slow download does; the default stays real.
+const hold = vi.hoisted(() => ({ ms: undefined as number | undefined }));
+vi.mock('@/config/locks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/locks')>();
+  return {
+    ...actual,
+    get UNLOCK_PILL_HOLD_MS() {
+      return hold.ms ?? actual.UNLOCK_PILL_HOLD_MS;
+    },
+  };
+});
 const authState = vi.hoisted(() => ({ currentUserPubky: 'reader1', session: {}, restoreStatus: 'ready' }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: Object.assign((selector: (state: typeof authState) => unknown) => selector(authState), {
@@ -56,11 +73,22 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
 vi.mock('../PostBody/PostBody', () => ({ PostBody: ({ content }: { content: string }) => <p>{content}</p> }));
 vi.mock('../PostArticle/PostArticle', () => ({ PostArticle: () => null }));
 vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
-  DialogPayToUnlock: ({ open, stage, onRetry }: { open: boolean; stage: string; onRetry: () => void }) =>
+  DialogPayToUnlock: ({
+    open,
+    stage,
+    onRetry,
+    onViewContent,
+  }: {
+    open: boolean;
+    stage: string;
+    onRetry: () => void;
+    onViewContent: () => void;
+  }) =>
     open ? (
       <div data-testid="pay-dialog">
         {stage}
         <button onClick={onRetry}>Retry</button>
+        <button onClick={onViewContent}>View Content</button>
       </div>
     ) : null,
 }));
@@ -98,6 +126,7 @@ const renderCard = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  hold.ms = undefined;
   authState.currentUserPubky = `reader-${Math.random()}`;
   authState.session = {};
   availability.value = { status: 'blocked', cause: 'region' };
@@ -167,6 +196,53 @@ describe('purchase-aware region gate', () => {
       expect(LocksController.startPayment).not.toHaveBeenCalled();
     },
   );
+
+  // #3047: a download that outlives the pill hold. The click cancels recovery and the pay dialog asks for
+  // the same purchase; through the real application both share one credential and one download.
+  it('shares the running recovery download with the pay dialog once the pill goes live', async () => {
+    hold.ms = 50;
+    availability.value = { status: 'available' };
+    const paidLockFile = asOpaque<LockFile>({
+      ...lockFile,
+      primary_resource: {
+        path: '/priv/app.locks/content/a.json',
+        hash: 'h',
+        content_type: 'application/json',
+        size: 1,
+      },
+      secondary_resources: {},
+    });
+    vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue(reusable('completed'));
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+    vi.mocked(LocksController.fetchPaidContent).mockImplementation((params) =>
+      LocksApplication.fetchPaidContent({ ...params, lockFile: paidLockFile }),
+    );
+    const credential = Promise.withResolvers<TAccessCredential>();
+    vi.mocked(LocksService.issueAccessCredential).mockReturnValue(credential.promise);
+    vi.mocked(LocksService.proxyReadGuardedResource).mockResolvedValue(
+      new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+    );
+    renderCard();
+
+    await waitFor(() => expect(LocksService.issueAccessCredential).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(2));
+
+    credential.resolve({ credential: 'cred-abc', expires_at: 'e' });
+    // The dialog holds the content behind its paid screen until the reader chooses View Content.
+    await waitFor(() => expect(screen.getByTestId('pay-dialog')).toHaveTextContent('paid'));
+    // Both callers asked; the Lock Server saw one credential and one download.
+    expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(2);
+    expect(LocksService.issueAccessCredential).toHaveBeenCalledTimes(1);
+    expect(LocksService.proxyReadGuardedResource).toHaveBeenCalledTimes(1);
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
+    // Counted before View Content: `applyUnlockedContent` is mocked here, so the card never holds the
+    // content and recovery would start again once the dialog closes.
+    fireEvent.click(screen.getByRole('button', { name: 'View Content' }));
+    await waitFor(() => expect(applyUnlockedContent).toHaveBeenCalledTimes(1));
+    expect(applyUnlockedContent.mock.calls[0][0]).toMatchObject({ post: { content: 'paid' } });
+  });
 
   it.each(['pending', 'completed'] as const)(
     'recovers a %s purchase after the shared listing fails',
