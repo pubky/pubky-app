@@ -34,6 +34,11 @@ export interface GrantFlowRequest {
   capabilities: Capabilities;
   generation: string;
   expectedPubky?: string;
+  /**
+   * Signed-in pubky the link names (`spk`), so Pubky Ring opens it instead of its picker.
+   * Only for links shown to Ring or Bitkit: Pubky Passport rejects unknown link parameters.
+   */
+  expectedSigner?: string;
   inviteCode?: string;
   fresh?: boolean;
   xCallback?: XCallbackParams;
@@ -136,6 +141,7 @@ export class GrantFlowService {
       xCallback: request.xCallback,
       capabilities: request.capabilities,
       expectedPubky: request.expectedPubky,
+      expectedSigner: request.expectedSigner,
       generation: request.generation,
       clientId: getAuthClientId(),
       homeserver: getHomeserver(),
@@ -280,6 +286,7 @@ export class GrantFlowService {
           clientId: getAuthClientId(),
           relay: getDefaultHttpRelay(),
           xCallback: request.xCallback,
+          expectedSigner: request.expectedSigner,
         });
         assertCurrent();
         try {

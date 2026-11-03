@@ -65,6 +65,7 @@ describe('pending Ring grant flow', () => {
     { purpose: 'upgrade' as const },
     { capabilities: '/pub/pubky.app/:rw,/priv/social/:rw' as const },
     { expectedPubky: 'another-account' },
+    { expectedSigner: 'another-account' },
     { purpose: 'signup' as const, inviteCode: 'invite' },
     { fresh: true },
     { xCallback: { xSource: 'Pubky', xSuccess: 'https://app.example/passport/return?attempt=2' } },
@@ -74,6 +75,21 @@ describe('pending Ring grant flow', () => {
     await GrantFlowService.start(sdk, { ...request, ...change });
     expect(sdk.startGrantAuthFlow).toHaveBeenCalledTimes(2);
     expect(sdk.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+  });
+  it('passes the expected signer to the SDK only when the request names one', async () => {
+    const sdk = makeSdk();
+    await GrantFlowService.start(sdk, { ...request, purpose: 'upgrade', expectedSigner: 'signed-in-pubky' });
+    expect(sdk.startGrantAuthFlow).toHaveBeenLastCalledWith(
+      APP_CAPABILITIES,
+      expect.anything(),
+      expect.objectContaining({ expectedSigner: 'signed-in-pubky' }),
+    );
+    await GrantFlowService.start(sdk, { ...request, fresh: true });
+    expect(sdk.startGrantAuthFlow).toHaveBeenLastCalledWith(
+      APP_CAPABILITIES,
+      expect.anything(),
+      expect.not.objectContaining({ expectedSigner: expect.anything() }),
+    );
   });
   it('passes Passport callbacks to the SDK and binds resume to the popup attempt', async () => {
     const sdk = makeSdk();
