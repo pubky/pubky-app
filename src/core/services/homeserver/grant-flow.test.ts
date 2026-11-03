@@ -91,6 +91,18 @@ describe('pending Ring grant flow', () => {
       expect.not.objectContaining({ expectedSigner: expect.anything() }),
     );
   });
+  it('does not resume a hinted flow for a request without the hint', async () => {
+    const sdk = makeSdk();
+    await GrantFlowService.start(sdk, { ...request, expectedSigner: 'signed-in-pubky' });
+    await GrantFlowService.start(sdk, request);
+    expect(sdk.startGrantAuthFlow).toHaveBeenCalledTimes(2);
+    expect(sdk.startGrantAuthFlow).toHaveBeenLastCalledWith(
+      APP_CAPABILITIES,
+      expect.anything(),
+      expect.not.objectContaining({ expectedSigner: expect.anything() }),
+    );
+    expect(sdk.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+  });
   it('passes Passport callbacks to the SDK and binds resume to the popup attempt', async () => {
     const sdk = makeSdk();
     const xCallback = { xSource: 'Pubky', xSuccess: 'https://app.example/passport/return?attempt=1' };
