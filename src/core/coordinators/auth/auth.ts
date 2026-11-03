@@ -108,6 +108,10 @@ export class AuthCoordinator {
     window.addEventListener('pubky-session-changed', this.sessionRemoved);
     window.addEventListener('online', this.online);
     document.addEventListener('visibilitychange', this.recover);
+    // Stopped, this tab heard no storage events: a public document renders outside RouteGuardProvider, and another tab
+    // may have signed in or out meanwhile. A hydrated store adopts what was persisted since; one still hydrating reads
+    // storage itself.
+    if (useAuthStore.getState().hasHydrated) void AuthController.syncSessionFromStorage().catch(() => {});
     this.onAuthChange();
   }
 

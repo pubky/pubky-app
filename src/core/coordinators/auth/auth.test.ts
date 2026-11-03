@@ -91,6 +91,20 @@ describe('AuthCoordinator', () => {
     expect(AuthController.syncRemovedSession).not.toHaveBeenCalled();
     expect(AuthController.retrySessionRetirement).not.toHaveBeenCalled();
   });
+  it('adopts auth persisted while it was stopped when it starts again on a hydrated store', () => {
+    useAuthStore.setState({ hasHydrated: true });
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).toHaveBeenCalledOnce();
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).toHaveBeenCalledOnce();
+    coordinator.stop();
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).toHaveBeenCalledTimes(2);
+  });
+  it('leaves a store that is still hydrating to read storage itself', () => {
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).not.toHaveBeenCalled();
+  });
   it('synchronizes auth storage changes and SDK removals only', () => {
     coordinator.start();
     for (const key of [AUTH_PERSIST_KEY, null, 'unrelated']) window.dispatchEvent(new StorageEvent('storage', { key }));
