@@ -142,6 +142,32 @@ describe('purchase-aware region gate', () => {
     expect(LocksController.startPayment).not.toHaveBeenCalled();
   });
 
+  // #3038: the real recovery and pill hooks together. A click while the download runs would cancel it and
+  // have the pay dialog download the same content again. A reader in a blocked region already paid, so the
+  // region notice stays hidden while their content downloads.
+  it.each<PaidUnlockAvailability>([{ status: 'available' }, { status: 'blocked', cause: 'region' }])(
+    'keeps Unlock busy while recovery downloads a completed purchase, then shows the content: %j',
+    async (paidUnlocks) => {
+      availability.value = paidUnlocks;
+      vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue(reusable('completed'));
+      const download = Promise.withResolvers<TUnlockedContent>();
+      vi.mocked(LocksController.fetchPaidContent).mockReturnValue(download.promise);
+      renderCard();
+
+      await waitFor(() => expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('button', { name: 'Unlock', hidden: true })).toBeDisabled();
+      // Held, not inert: an inert pill is disabled too, but dimmed and without a spinner.
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+
+      download.resolve(content);
+      await waitFor(() => expect(applyUnlockedContent).toHaveBeenCalledWith(content));
+      expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(1);
+      expect(LocksController.startPayment).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(['pending', 'completed'] as const)(
     'recovers a %s purchase after the shared listing fails',
     async (status) => {

@@ -328,7 +328,8 @@ describe('DialogLocksAuth', () => {
     mocks.paykitFlow = { status: PaykitSetupFlowStatus.ERROR, setupUrl: null, error: { message: 'paykit-boom' } };
     renderDialog();
 
-    expect(screen.getByText('paykit-boom')).toBeInTheDocument();
+    expect(screen.getByText("Couldn't connect your Bitkit wallet. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByText('paykit-boom')).not.toBeInTheDocument();
     expect(screen.queryByText('locks-boom')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -375,6 +376,32 @@ describe('DialogLocksAuth', () => {
 
     expect(mocks.start).toHaveBeenCalledTimes(1);
   });
+
+  // Raw AppError messages are diagnostic text for logs and Sentry, never dialog copy (#3028).
+  it.each([
+    'frontend session exchange failed with HTTP 410',
+    'Lock auth failed: connect-failed',
+    'Lock auth callback state mismatch',
+  ])('shows fixed copy, not the raw message, when the Lock Server step fails with %s', (message) => {
+    mocks.flow = { status: LocksAuthFlowStatus.ERROR, connectUrl: null, session: null, error: { message } };
+    renderDialog();
+
+    expect(screen.getByText("Couldn't authorize the Lock Server. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/HTTP \d{3}/);
+  });
+
+  it.each(['Paykit setup failed: setup-failed', 'Locks session changed while Paykit setup was open'])(
+    'shows fixed copy, not the raw message, when the Bitkit step fails with %s',
+    (message) => {
+      signIn();
+      mocks.paykitFlow = { status: PaykitSetupFlowStatus.ERROR, setupUrl: null, error: { message } };
+      renderDialog();
+
+      expect(screen.getByText("Couldn't connect your Bitkit wallet. Please try again.")).toBeInTheDocument();
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    },
+  );
 
   it('requests close when Cancel is clicked', () => {
     const { onOpenChange } = renderDialog();

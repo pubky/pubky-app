@@ -116,7 +116,8 @@ export function LockedPostContent({
   // available for recovery, with new submissions guarded independently inside the pay hook.
   const paidUnlocks = usePaidUnlockAvailability();
   const isPayableReader = Boolean(price) && !isOwnLock;
-  const canRecover = purchasesStatus === 'error' || purchaseStatus === 'unknown' || purchaseStatus === 'recoverable';
+  const isRecoverable = purchaseStatus === 'recoverable' || purchaseStatus === 'recovering';
+  const canRecover = purchasesStatus === 'error' || purchaseStatus === 'unknown' || isRecoverable;
   const isPurchaseChecking = purchasesStatus === 'loading' || purchaseStatus === 'checking';
   const isRegionChecking =
     isPayableReader &&
@@ -124,7 +125,8 @@ export function LockedPostContent({
     paidUnlocks.status !== 'available' &&
     (paidUnlocks.status === 'checking' || isPurchaseChecking);
   // A reader who already unlocked this post is about to see their replicated copy, so the pill must not go
-  // live in between (#2795), nor while recovery looks up a listed purchase whose copy was not found.
+  // live in between (#2795), nor while recovery looks up, or downloads, a listed purchase whose copy was not
+  // found (#3038).
   const isUnlockPillHeld = useUnlockPillHold({
     lock,
     isPayableReader,
@@ -135,9 +137,7 @@ export function LockedPostContent({
     purchaseStatus,
   });
   const regionBlock =
-    isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
-      ? paidUnlocks
-      : null;
+    isPayableReader && !isRecoverable && !isRegionChecking && paidUnlocks.status === 'blocked' ? paidUnlocks : null;
 
   const {
     stage,
