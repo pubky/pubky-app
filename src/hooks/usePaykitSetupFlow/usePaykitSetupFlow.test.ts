@@ -1,9 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IFRAME_MOUNT_TIMEOUT_MS, IFRAME_READY_AFTER_LOAD_MS } from '@/hooks/useIframeReady/useIframeReady';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
-import { SETUP_MOUNT_TIMEOUT_MS, SETUP_READY_AFTER_LOAD_MS, usePaykitSetupFlow } from './usePaykitSetupFlow';
+import { usePaykitSetupFlow } from './usePaykitSetupFlow';
 import { PaykitSetupFlowStatus } from './usePaykitSetupFlow.types';
 
 const mocks = vi.hoisted(() => ({
@@ -292,6 +293,10 @@ describe('usePaykitSetupFlow', () => {
   describe('waiting for the /setup page to render', () => {
     beforeEach(() => {
       vi.useFakeTimers();
+      // Each start() carries a fresh `state` in the URL, which keys the wait for the page.
+      mocks.getPaykitSetupUrl.mockImplementation(({ state }: { state: string }) => {
+        return `${PAYKIT_ORIGIN}/setup?return_to=https://app.example&state=${state}`;
+      });
     });
     afterEach(() => {
       vi.useRealTimers();
@@ -317,7 +322,7 @@ describe('usePaykitSetupFlow', () => {
       await postReady(state);
       expect(result.current.isSetupReady).toBe(true);
 
-      await advance(SETUP_MOUNT_TIMEOUT_MS + SETUP_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_MOUNT_TIMEOUT_MS + IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
       expect(result.current.error).toBeNull();
     });
@@ -328,7 +333,7 @@ describe('usePaykitSetupFlow', () => {
       attachIframeSource(result);
       fireLoad(result);
 
-      await advance(SETUP_READY_AFTER_LOAD_MS - 1);
+      await advance(IFRAME_READY_AFTER_LOAD_MS - 1);
       expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
 
       await advance(1);
@@ -342,7 +347,7 @@ describe('usePaykitSetupFlow', () => {
       startFlow(result);
       attachIframeSource(result);
 
-      await advance(SETUP_MOUNT_TIMEOUT_MS - 1);
+      await advance(IFRAME_MOUNT_TIMEOUT_MS - 1);
       expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
 
       await advance(1);
@@ -357,7 +362,7 @@ describe('usePaykitSetupFlow', () => {
       fireLoad(result);
       await postReady(state);
 
-      await advance(SETUP_MOUNT_TIMEOUT_MS); // the creator takes a while to scan
+      await advance(IFRAME_MOUNT_TIMEOUT_MS); // the creator takes a while to scan
       await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state });
 
       expect(result.current.status).toBe(PaykitSetupFlowStatus.SUCCESS);
@@ -374,7 +379,7 @@ describe('usePaykitSetupFlow', () => {
       await postReady('OTHER-STATE');
       expect(result.current.isSetupReady).toBe(false);
 
-      await advance(SETUP_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
     });
 
@@ -383,7 +388,7 @@ describe('usePaykitSetupFlow', () => {
       startFlow(result);
       attachIframeSource(result);
       fireLoad(result);
-      await advance(SETUP_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
 
       act(() => result.current.start());
@@ -392,7 +397,7 @@ describe('usePaykitSetupFlow', () => {
       expect(result.current.isSetupReady).toBe(false);
 
       // The new page gets its own limits: the old load does not carry over.
-      await advance(SETUP_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
       fireLoad(result);
       await postReady(retryState);
