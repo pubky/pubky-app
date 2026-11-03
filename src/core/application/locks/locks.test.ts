@@ -1226,6 +1226,125 @@ describe('LocksApplication (payment unlock)', () => {
       await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
       expect(mocks.putBlob).not.toHaveBeenCalled();
     });
+
+    // #3047: purchase recovery and the pay dialog can ask for the same completed purchase at once.
+    describe('single flight per purchase', () => {
+      const withAttachment = () =>
+        asOpaque<LockFile>({
+          ...withPrimary(),
+          secondary_resources: {
+            '/priv/app.locks/content/b.png': { hash: 'h', content_type: 'image/png', size: 1 },
+          },
+        });
+      const postWithAttachment = new TextEncoder().encode(
+        '{"content":"paid","kind":"image","attachments":["pubky://pubkybob/priv/app.locks/content/b.png"]}',
+      );
+      const readsOf = (path: string) =>
+        mocks.proxyReadGuardedResource.mock.calls.filter(([, readPath]) => readPath === path).length;
+
+      it('shares one credential and one download between concurrent callers', async () => {
+        const credential = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValue(credential.promise);
+        mocks.proxyReadGuardedResource.mockImplementation(async (_credential: string, path: string) =>
+          path === 'a.json' ? postWithAttachment : new Uint8Array([1]),
+        );
+        const lockFile = withAttachment();
+
+        const first = LocksApplication.fetchPaidContent({ lockFile, bundleId: 'bundle-1' });
+        const second = LocksApplication.fetchPaidContent({ lockFile, bundleId: 'bundle-1' });
+        credential.resolve({ credential: 'cred-abc', expires_at: 'e' });
+        const [a, b] = await Promise.all([first, second]);
+
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(1);
+        expect(readsOf('a.json')).toBe(1);
+        expect(readsOf('b.png')).toBe(1);
+        expect(b).toBe(a);
+        expect(a.attachments).toHaveLength(1);
+      });
+
+      it('gives every waiting caller the same failure, then starts fresh on the next call', async () => {
+        const credential = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValueOnce(credential.promise);
+        const failure = new Error('lock server down');
+
+        const first = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        const second = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        credential.reject(failure);
+        await expect(first).rejects.toBe(failure);
+        await expect(second).rejects.toBe(failure);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(1);
+
+        mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-2', expires_at: 'e' });
+        mocks.proxyReadGuardedResource.mockResolvedValue(
+          new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+        );
+        await expect(
+          LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' }),
+        ).resolves.toMatchObject({ post: { content: 'paid' } });
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+        expect(mocks.proxyReadGuardedResource).toHaveBeenLastCalledWith('cred-2', 'a.json');
+      });
+
+      it('starts a new download after a successful one settles', async () => {
+        mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-abc', expires_at: 'e' });
+        mocks.proxyReadGuardedResource.mockResolvedValue(
+          new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+        );
+        await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+      });
+
+      // A deliberate retry (Check again) must not join the request it is retrying: with no Lock Server
+      // time limit yet (#3026), a hung credential or guarded read would otherwise park the reader for good.
+      it('starts a fresh request when asked, and later callers join the fresh one', async () => {
+        const stuck = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        const second = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValueOnce(stuck.promise).mockReturnValueOnce(second.promise);
+        mocks.proxyReadGuardedResource.mockResolvedValue(
+          new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+        );
+
+        const first = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        const retry = LocksApplication.fetchPaidContent(
+          { lockFile: withPrimary(), bundleId: 'bundle-1' },
+          { fresh: true },
+        );
+        expect(retry).not.toBe(first);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+
+        // The replaced request settling late must not evict the fresh one.
+        stuck.reject(new Error('hung read finally gave up'));
+        await expect(first).rejects.toThrow('hung read finally gave up');
+        const later = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        expect(later).toBe(retry);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+
+        second.resolve({ credential: 'cred-2', expires_at: 'e' });
+        await expect(later).resolves.toMatchObject({ post: { content: 'paid' } });
+        expect(mocks.proxyReadGuardedResource.mock.calls).toEqual([['cred-2', 'a.json']]);
+      });
+
+      it('never shares a request between different bundle ids or creators', async () => {
+        const held = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValue(held.promise);
+        const runs = [
+          LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' }),
+          LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-2' }),
+          LocksApplication.fetchPaidContent({
+            lockFile: asOpaque<LockFile>({ ...withPrimary(), creator: 'pubkycarol' }),
+            bundleId: 'bundle-1',
+          }),
+        ];
+        expect(mocks.issueAccessCredential.mock.calls).toEqual([
+          ['pubkybob', 'bundle-1'],
+          ['pubkybob', 'bundle-2'],
+          ['pubkycarol', 'bundle-1'],
+        ]);
+        held.reject(new Error('settle'));
+        await Promise.allSettled(runs);
+      });
+    });
   });
 
   describe('fetchPaymentStatus', () => {

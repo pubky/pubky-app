@@ -176,7 +176,7 @@ describe('usePayToUnlock (opening)', () => {
 
     const { result, onCompleted } = renderPay();
     await waitFor(() => expect(result.current.stage).toBe('paid'));
-    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' }, { fresh: false });
     expect(onCompleted).not.toHaveBeenCalled();
 
     act(() => result.current.viewContent());
@@ -981,7 +981,7 @@ describe('usePayToUnlock (waiting)', () => {
 
     await advance(POLL_INTERVAL_MS);
     expect(result.current.stage).toBe('paid');
-    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' }, { fresh: false });
   });
 
   // The submission reports no link state, so the wait is "checking" until the first read answers;
@@ -1018,7 +1018,7 @@ describe('usePayToUnlock (waiting)', () => {
 
     await advance(POLL_INTERVAL_MS);
     expect(result.current.stage).toBe('finishing');
-    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' }, { fresh: false });
     expect(result.current.isConnectionPending).toBe(false);
   });
 
@@ -1088,6 +1088,11 @@ describe('usePayToUnlock (waiting)', () => {
       vi.mocked(LocksController.fetchPaidContent).mockResolvedValue(unlockedContent);
       act(() => result.current.recheck());
       await advance(0);
+      // The first download joins whatever is in flight; Check again must not join the one that parked.
+      expect(vi.mocked(LocksController.fetchPaidContent).mock.calls).toEqual([
+        [{ lockFile, bundleId: 'stored-1' }, { fresh: false }],
+        [{ lockFile, bundleId: 'stored-1' }, { fresh: true }],
+      ]);
       expect(result.current.stage).toBe('paid');
       expect(result.current.isStalled).toBe(false);
     });
