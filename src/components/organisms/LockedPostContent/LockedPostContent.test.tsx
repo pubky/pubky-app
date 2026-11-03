@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { REPLICA_READ_HOLD_MS } from '@/config/locks';
+import { UNLOCK_PILL_HOLD_MS } from '@/config/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import type { UsePurchasedLocksResult } from '@/hooks/usePurchasedLocks/usePurchasedLocks.types';
@@ -98,7 +98,12 @@ const resumeMocks = vi.hoisted(() => ({
 vi.mock('@/hooks/usePurchaseResume/usePurchaseResume', () => ({
   usePurchaseResume: (params: ResumeParams) => {
     resumeMocks.params = params;
-    return resumeMocks.status ?? (params.isPurchased ? 'recoverable' : 'none');
+    // As the real hook: nothing to resume without a listed purchase, content already read is recoverable,
+    // and nothing is known while the read runs.
+    if (!params.isPurchased) return 'none';
+    if (params.hasContent) return 'recoverable';
+    if (params.isResolvingContent) return 'checking';
+    return resumeMocks.status ?? 'recoverable';
   },
 }));
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
@@ -233,6 +238,46 @@ const liveUnlock = async () => {
   await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled());
   return screen.getByRole('button', { name: 'Unlock' });
 };
+
+const renderReader = () => render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+const rerenderReader = (rerender: (ui: React.ReactElement) => void) =>
+  rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+/** The read of a possible earlier unlock holds the pill too; settle it so a test sees what comes after. */
+const settleReplicaRead = async () => {
+  await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+  await waitFor(() => expect(resumeMocks.params?.isResolvingContent).toBe(false));
+};
+/** Holds the read of the reader's replicated copy open until the test settles it. */
+const holdReplicaRead = () => {
+  const read = Promise.withResolvers<Awaited<ReturnType<typeof LocksController.fetchReplicatedContent>>>();
+  vi.mocked(LocksController.fetchReplicatedContent).mockReturnValue(read.promise);
+  return read;
+};
+
+/** Records whether an Unlock in the given state was ever in the DOM, including between two assertions. */
+const watchUnlock = (root: HTMLElement, wantEnabled: boolean) => {
+  const matches = (node: Node | null) =>
+    node instanceof HTMLButtonElement && node.textContent?.includes('Unlock') === true && node.disabled !== wantEnabled;
+  let seen = matches(screen.queryByRole('button', { name: 'Unlock', hidden: true }));
+  const record = (records: MutationRecord[]) => {
+    seen ||= records.some(
+      (record) =>
+        matches(record.target) ||
+        [...record.addedNodes].some(
+          (node) => matches(node) || (node instanceof Element && [...node.querySelectorAll('button')].some(matches)),
+        ),
+    );
+  };
+  const observer = new MutationObserver(record);
+  observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] });
+  return () => {
+    record(observer.takeRecords());
+    observer.disconnect();
+    return seen;
+  };
+};
+const watchUnlockEnabled = (root: HTMLElement) => watchUnlock(root, true);
+const watchUnlockDisabled = (root: HTMLElement) => watchUnlock(root, false);
 
 /** jsdom reports every offset as 0, which would make the slide-over a no-op no test could see. */
 const useSlideGeometry = () => {
@@ -794,38 +839,7 @@ describe('LockedPostContent', () => {
   });
 
   describe('reader who may already have unlocked it (#2795)', () => {
-    /** Holds the read of the reader's replicated copy open until the test settles it. */
-    const holdReplicaRead = () => {
-      const read = Promise.withResolvers<Awaited<ReturnType<typeof LocksController.fetchReplicatedContent>>>();
-      vi.mocked(LocksController.fetchReplicatedContent).mockReturnValue(read.promise);
-      return read;
-    };
     const unlock = () => screen.getByRole('button', { name: 'Unlock' });
-    /** Records whether an enabled Unlock was ever in the DOM, including between two assertions. */
-    const watchUnlockEnabled = (root: HTMLElement) => {
-      const isEnabledUnlock = (node: Node | null) =>
-        node instanceof HTMLButtonElement && node.textContent?.includes('Unlock') === true && !node.disabled;
-      const enabledNow = () => isEnabledUnlock(screen.queryByRole('button', { name: 'Unlock' }));
-      let wasEnabled = enabledNow();
-      const record = (records: MutationRecord[]) => {
-        wasEnabled ||= records.some(
-          (record) =>
-            isEnabledUnlock(record.target) ||
-            [...record.addedNodes].some(
-              (node) =>
-                isEnabledUnlock(node) ||
-                (node instanceof Element && [...node.querySelectorAll('button')].some(isEnabledUnlock)),
-            ),
-        );
-      };
-      const observer = new MutationObserver(record);
-      observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] });
-      return () => {
-        record(observer.takeRecords());
-        observer.disconnect();
-        return wasEnabled;
-      };
-    };
 
     it('keeps the pill busy while the copy of a listed purchase is read, then shows the content', async () => {
       const read = holdReplicaRead();
@@ -850,16 +864,24 @@ describe('LockedPostContent', () => {
         purchasedMocks.hasPurchase.mockReturnValue(false);
         const read = holdReplicaRead();
         paymentData();
-        render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+        const { rerender } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
         await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
         expect(screen.getByTestId('spinner')).toBeInTheDocument();
         expect(unlock()).toBeDisabled();
 
-        // No copy after all: the pill goes live as soon as the read says so.
+        // No copy after all. A failed list can never name this lock, so the pill goes live as soon as the
+        // read says so; a list still loading may yet name it, so the pill keeps waiting for it.
         await act(async () => read.resolve(null));
-        await waitFor(() => expect(unlock()).toBeEnabled());
-        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+        if (status === 'error') {
+          await waitFor(() => expect(unlock()).toBeEnabled());
+          expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+        } else {
+          expect(unlock()).toBeDisabled();
+          purchasedMocks.status = 'ready';
+          rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+          expect(unlock()).toBeEnabled();
+        }
       },
     );
 
@@ -944,7 +966,7 @@ describe('LockedPostContent', () => {
         expect(unlock()).toBeDisabled();
         expect(resumeMocks.params?.isResolvingContent).toBe(true);
 
-        await act(async () => vi.advanceTimersByTime(REPLICA_READ_HOLD_MS));
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS));
         expect(unlock()).toBeEnabled();
         expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
         expect(resumeMocks.params?.isResolvingContent).toBe(true);
@@ -981,14 +1003,122 @@ describe('LockedPostContent', () => {
     });
   });
 
-  describe("paid unlocks held for the reader's region", () => {
-    const renderReader = () => render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
-    /** The read of a possible earlier unlock holds the pill too; settle it so only the region gates are tested. */
-    const settleReplicaRead = async () => {
-      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
-      await act(async () => {});
-    };
+  describe('listed purchase whose copy was not found, while recovery looks it up', () => {
+    const unlock = () => screen.getByRole('button', { name: 'Unlock', hidden: true });
 
+    it('keeps the pill busy while recovery checks the purchase, then releases it when nothing is found', async () => {
+      resumeMocks.status = 'checking';
+      paymentData();
+      const { rerender } = renderReader();
+      await settleReplicaRead();
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(unlock()).toBeDisabled();
+
+      resumeMocks.status = 'none';
+      rerenderReader(rerender);
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    // While the read runs, recovery also says 'checking'. That must not stretch the read's limit.
+    it('releases the pill at the limit while the read of a listed purchase is still running', async () => {
+      vi.useFakeTimers();
+      try {
+        holdReplicaRead();
+        paymentData();
+        renderReader();
+        await act(async () => {});
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+        expect(unlock()).toBeDisabled();
+
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS));
+        expect(unlock()).toBeEnabled();
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('counts the lookup against the limit the read started', async () => {
+      vi.useFakeTimers();
+      try {
+        resumeMocks.status = 'checking';
+        const read = holdReplicaRead();
+        paymentData();
+        renderReader();
+        await act(async () => {});
+        await act(async () => vi.advanceTimersByTime(4_000));
+        await act(async () => read.resolve(null));
+        expect(resumeMocks.params?.isResolvingContent).toBe(false);
+        expect(unlock()).toBeDisabled();
+
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS - 4_000 - 1));
+        expect(unlock()).toBeDisabled();
+        await act(async () => vi.advanceTimersByTime(1));
+        expect(unlock()).toBeEnabled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // Review path 1: a read slower than the limit, then the lookup.
+    it('does not take the pill back when a slow read hands over to the lookup', async () => {
+      vi.useFakeTimers();
+      try {
+        resumeMocks.status = 'checking';
+        const read = holdReplicaRead();
+        paymentData();
+        const { container } = renderReader();
+        await act(async () => {});
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS));
+        expect(unlock()).toBeEnabled();
+
+        const wasDisabled = watchUnlockDisabled(container);
+        await act(async () => read.resolve(null));
+        expect(resumeMocks.params?.isResolvingContent).toBe(false);
+        expect(unlock()).toBeEnabled();
+        expect(wasDisabled()).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // Review path 2: the read settles empty before the list is in, then the list names this lock.
+    it('keeps the pill busy from the read until a late list hands over to the lookup', async () => {
+      purchasedMocks.status = 'loading';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      resumeMocks.status = 'checking';
+      paymentData();
+      const { container, rerender } = renderReader();
+      await settleReplicaRead();
+      const wasEnabled = watchUnlockEnabled(container);
+      expect(unlock()).toBeDisabled();
+
+      purchasedMocks.status = 'ready';
+      purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+      rerenderReader(rerender);
+      expect(unlock()).toBeDisabled();
+      expect(wasEnabled()).toBe(false);
+    });
+
+    // Review path 3: the dialog takes the purchase over; closing it must not start another hold.
+    it('does not hold the pill again after the pay dialog closes', async () => {
+      paymentData();
+      const { container } = renderReader();
+      fireEvent.click(await liveUnlock());
+      await screen.findByTestId('pay-dialog');
+
+      resumeMocks.status = 'checking';
+      const wasDisabled = watchUnlockDisabled(container);
+      act(() => payMocks.params?.onSessionExpired());
+      expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
+      expect(resumeMocks.params?.isPurchased).toBe(true);
+      expect(unlock()).toBeEnabled();
+      expect(wasDisabled()).toBe(false);
+    });
+  });
+
+  describe("paid unlocks held for the reader's region", () => {
     beforeEach(() => {
       // A reader who has not started this payment: the `lock1` default would count as in flight.
       purchasedMocks.hasPurchase.mockReturnValue(false);
@@ -1069,9 +1199,14 @@ describe('LockedPostContent', () => {
       async (failure) => {
         paidUnlocks.value = { status: 'blocked', cause: 'region' };
         if (failure === 'listing') purchasedMocks.status = 'error';
-        else resumeMocks.status = 'unknown';
+        else {
+          // Only a listed purchase gets a task read.
+          purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+          resumeMocks.status = 'unknown';
+        }
         paymentData();
         renderReader();
+        await settleReplicaRead();
         expect(screen.getByTestId('locks-region-notice')).toBeInTheDocument();
         fireEvent.click(await liveUnlock());
         expect(await screen.findByTestId('pay-dialog')).toBeInTheDocument();
@@ -1082,7 +1217,10 @@ describe('LockedPostContent', () => {
     it.each(['listing', 'task'])('waits for the %s before deciding whether recovery is possible', async (pending) => {
       paidUnlocks.value = { status: 'blocked', cause: 'region' };
       if (pending === 'listing') purchasedMocks.status = 'loading';
-      else resumeMocks.status = 'checking';
+      else {
+        purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+        resumeMocks.status = 'checking';
+      }
       paymentData();
       renderReader();
       await settleReplicaRead();
