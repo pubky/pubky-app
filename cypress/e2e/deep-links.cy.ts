@@ -3,7 +3,14 @@ import 'cypress-slow-down/commands';
 import { waitForServiceWorker } from '../support/common';
 import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { seededStreamIndexed } from '../support/pagination';
-import { createCollectionViaApi, createPostViaApi, replyViaApi, repostViaApi, seedUserViaApi } from '../support/seed';
+import {
+  createCollectionViaApi,
+  createImagePostViaApi,
+  createPostViaApi,
+  replyViaApi,
+  repostViaApi,
+  seedUserViaApi,
+} from '../support/seed';
 import type { SeededPost } from '../support/types/seed';
 
 const username = 'Mr Deep Link';
@@ -27,6 +34,17 @@ const assertWriteAsksToSignIn = (trigger: string) => {
   cy.get('[data-cy="sign-in-dialog-sign-in-btn"]:visible').should('have.length', 1);
   cy.get('[data-cy="dialog-close"]:visible').should('have.length', 1).click();
   cy.get('[data-cy="sign-in-dialog-join-btn"]:visible').should('not.exist');
+};
+
+// Any write under either root of any namespace: a signed-out visitor makes none
+const expectNoHomeserverWrites = () => {
+  beforeEach(() => {
+    cy.intercept('PUT', '**/{pub,priv}/**').as('homeserverWrite');
+  });
+
+  afterEach(() => {
+    cy.get('@homeserverWrite.all').should('have.length', 0);
+  });
 };
 
 const LAYOUTS = [
@@ -65,14 +83,7 @@ LAYOUTS.forEach(({ title, legacy }) => {
       waitForServiceWorker();
     });
 
-    beforeEach(() => {
-      // Any write under either root of any namespace: a signed-out visitor makes none
-      cy.intercept('PUT', '**/{pub,priv}/**').as('homeserverWrite');
-    });
-
-    afterEach(() => {
-      cy.get('@homeserverWrite.all').should('have.length', 0);
-    });
+    expectNoHomeserverWrites();
 
     it('opens a post and asks to sign in before replying or saving', () => {
       cy.visit(`/post/${authorId}/${postId}`);
@@ -116,13 +127,23 @@ LAYOUTS.forEach(({ title, legacy }) => {
       cy.get('[data-cy="post-not-found"]:visible', NOT_FOUND_TIMEOUT).should('have.length', 1);
       cy.get('[data-cy="single-post-card"]:visible').should('not.exist');
     });
+  });
+});
 
-    it('shows the not-found view for a profile that does not exist', () => {
-      cy.visit(`/profile/${UNKNOWN_PUBKY}`);
+describe('logged-out deep link to an unknown profile', () => {
+  before(() => {
+    slowCypressDown();
+    cy.visit('/');
+    waitForServiceWorker();
+  });
 
-      cy.get('[data-cy="profile-not-found"]:visible', NOT_FOUND_TIMEOUT).should('have.length', 1);
-      cy.get('[data-cy="profile-username-header"]:visible').should('not.exist');
-    });
+  expectNoHomeserverWrites();
+
+  it('shows the not-found view for a profile that does not exist', () => {
+    cy.visit(`/profile/${UNKNOWN_PUBKY}`);
+
+    cy.get('[data-cy="profile-not-found"]:visible', NOT_FOUND_TIMEOUT).should('have.length', 1);
+    cy.get('[data-cy="profile-username-header"]:visible').should('not.exist');
   });
 });
 
@@ -137,11 +158,13 @@ describe('logged-out deep links across both data layouts', () => {
   const legacyReplyText = `layouts ${runId} reply by an un-migrated account`;
   const v1QuoteText = `layouts ${runId} repost by a migrated account`;
   const legacyQuoteText = `layouts ${runId} repost by an un-migrated account`;
+  const legacyImageText = `layouts ${runId} image by an un-migrated account`;
 
   let v1Post: SeededPost;
   let legacyPost: SeededPost;
   let v1Quote: SeededPost;
   let legacyQuote: SeededPost;
+  let legacyImage: SeededPost;
 
   before(() => {
     slowCypressDown();
@@ -154,6 +177,9 @@ describe('logged-out deep links across both data layouts', () => {
         });
         createPostViaApi(legacyUser, legacyText).then((post) => {
           legacyPost = post;
+        });
+        createImagePostViaApi(legacyUser, legacyImageText).then((post) => {
+          legacyImage = post;
         });
         cy.then(() => {
           replyViaApi(legacyUser, v1Post, legacyReplyText).then((legacyReply) => {
@@ -172,6 +198,7 @@ describe('logged-out deep links across both data layouts', () => {
                   postIndexed(v1Reply),
                   postIndexed(legacyQuote),
                   postIndexed(v1Quote),
+                  postIndexed(legacyImage),
                 );
               });
             });
@@ -206,5 +233,17 @@ describe('logged-out deep links across both data layouts', () => {
     cy.visit(`/post/${v1Quote.authorId}/${v1Quote.id}`);
 
     cy.get(singlePost).should('contain.text', v1QuoteText).and('contain.text', legacyText);
+  });
+
+  // A 0.x file is served from its own route, and the served bytes are the point: v1 media needs a Nexus route
+  // the 0.x path does not, so this is the one attachment that must load on every stack.
+  it("loads the image of an un-migrated account's post", () => {
+    cy.visit(`/post/${legacyImage.authorId}/${legacyImage.id}`);
+
+    cy.get(singlePost).should('contain.text', legacyImageText);
+    cy.get(singlePost)
+      .find('[data-cy="post-attachment-image"]')
+      .should('be.visible')
+      .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
   });
 });

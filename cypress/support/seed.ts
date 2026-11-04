@@ -13,8 +13,10 @@ import type { SeedCreatePostArgs, SeededCollectionLayout, SeededPost, SeededUser
 // check for every record the phase's assertions read from Nexus, all polled together.
 //
 // Nexus indexes a write by reading the record's current state from the homeserver when it gets to
-// the event. A record edited or deleted before then is indexed as its final state, and the edit or
-// deletion is lost: wait for every record an edit or deletion depends on before writing it.
+// the event. A record deleted before then, or a 0.x record edited in place before then, is indexed
+// as its final state, and the edit or deletion is lost; a v1 edit is a new version file with an event
+// of its own, but it still needs the post indexed first. Wait for every record an edit or deletion
+// depends on before writing it.
 // Consecutive seed writes are a few milliseconds apart, so records seeded in order also sort in
 // that order wherever a surface orders them by time.
 

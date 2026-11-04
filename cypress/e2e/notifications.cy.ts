@@ -441,6 +441,41 @@ describe('notifications', () => {
     });
   });
 
+  it('can be notified when an un-migrated profile edits and deletes a post you replied to', () => {
+    // * the receiver replies to two posts by a 0.x account, which overwrites one and deletes the other in place
+    const timestamp = Date.now();
+    seedUserViaApi(uniqueName('Unmigrated'), { legacy: true }).then((author) => {
+      createPostViaApi(author, `This post from the old layout will be edited! ${timestamp}`).then((edited) => {
+        createPostViaApi(author, `This post from the old layout will be deleted! ${timestamp}`).then((deleted) => {
+          replyViaApi(receiver, edited, 'I replied to the post you will edit!').then((firstReply) => {
+            replyViaApi(receiver, deleted, 'I replied to the post you will delete!').then((secondReply) => {
+              waitForNexus(
+                postIndexed(edited),
+                postIndexed(deleted),
+                postIndexed(firstReply),
+                postIndexed(secondReply),
+              );
+            });
+          });
+          editPostViaApi(author, edited, `This post from the old layout has been edited! ${timestamp}`);
+          deletePostViaApi(author, deleted);
+        });
+      });
+      waitForNexus(
+        notificationsIndexed(receiver, 'post_edited', { actor: author }),
+        notificationsIndexed(receiver, 'post_deleted', { actor: author }),
+      );
+
+      // * the receiver checks both, newest first
+      signInAsReceiver();
+      verifyNotificationCounter(2);
+      goToProfilePageFromHeader();
+      verifyNotificationCounter(0);
+      checkNotificationAt(0, [author.name, 'deleted a post'], LatestNotificationReadState.Unread);
+      checkNotificationAt(1, [author.name, 'edited a post'], LatestNotificationReadState.Unread);
+    });
+  });
+
   it('can display counter for multiple new notifications', () => {
     // * a profile tags the receiver's post, replies to it, and creates a post mentioning the receiver
     seedActorViaApi('Busy').then((actor) => {

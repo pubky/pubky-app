@@ -95,8 +95,8 @@ const parseRequestBody = (body: unknown): unknown => {
 // Reads the tagged post's author and id from a homeserver tag PUT interception.
 export const taggedPostFromInterception = (interception: { request: { body: unknown } }) => {
   const { uri } = parseRequestBody(interception.request.body) as { uri: string };
-  // The app writes a versionless reference; a migrated tag keeps its target's spelling
-  const match = /^pubky:\/\/([^/]+)\/pub\/(?:social\/v1|pubky\.app)\/posts\/([^/]+)$/.exec(uri);
+  // The app always writes the versionless v1 reference, whichever layout the post itself is in
+  const match = /^pubky:\/\/([^/]+)\/pub\/social\/v1\/posts\/([^/]+)$/.exec(uri);
   expect(match, `tagged uri ${uri}`).to.not.equal(null);
   return { authorId: match![1], postId: match![2] };
 };

@@ -65,10 +65,9 @@ const readImage = (imagePath: string) => {
 export const v1Writer = (owner: string, session: Session): SeedWriter => {
   const put = ({ path, body }: { path: string; body: Uint8Array }) => session.storage.putBytes(path as Path, body);
 
-  const postRoot = (postId: string) => `${V1_SEGMENT}posts/${postId}/` as Path;
-
   // A post is a directory of versions, one URL each, whose names sort by the time they were written
-  const listVersions = async (postId: string) => (await session.storage.list(postRoot(postId))).sort();
+  const listVersions = async (postId: string) =>
+    (await session.storage.list(`${toPath(buildUri(owner, 'post', postId))}/` as Path)).sort();
 
   return {
     writeProfile: async (name, bio) => {
