@@ -446,3 +446,25 @@ export const getOwnedResponse = async ({ session, path, url }: TGetOwnedResponse
   await assertOk({ response, url, operation: 'getOwnedResponse' });
   return response;
 };
+
+/**
+ * Like {@link getOwnedResponse}, but a 404 (as a response or an SDK rejection) resolves to `null`
+ * before any error is created. Every other status and failure is handled the same way.
+ */
+export const getOwnedResponseIfExists = async ({
+  session,
+  path,
+  url,
+}: TGetOwnedResponseParams): Promise<Response | null> => {
+  let response: Response;
+  try {
+    response = await session.storage.get(path);
+  } catch (error) {
+    if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
+    return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
+  }
+
+  if (response.status === HttpStatusCode.NOT_FOUND) return null;
+  await assertOk({ response, url, operation: 'getOwnedResponse' });
+  return response;
+};

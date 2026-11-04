@@ -78,6 +78,12 @@ export type THomeserverRequestParams = {
   /** One attempt, for a caller that runs its own retry loop around this write. */
   singleAttempt?: boolean;
   /**
+   * GET only: a 404 resolves to `null` instead of creating an error. For a read whose missing
+   * file is an expected state (a new account has no profile, settings or last_read yet), so the
+   * absence never reaches Sentry. Every other failure still rejects.
+   */
+  notFoundAsNull?: boolean;
+  /**
    * The fence of the read-check-write this write belongs to (`HomeserverService.createWriteFence`).
    * A fenced write makes one attempt: its body was built from a read, so
    * `retryHomeserverWriteAfterReread` retries it from that read instead of replaying it.

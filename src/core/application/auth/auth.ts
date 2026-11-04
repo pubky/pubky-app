@@ -234,8 +234,13 @@ export class AuthApplication {
    */
   static async userIsSignedUp({ pubky }: { pubky: Pubky }): Promise<boolean> {
     try {
-      await HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
-      return true;
+      // A new account has no profile.json yet: the 404 is the answer, not an error to report.
+      const profile = await HomeserverService.request({
+        method: HttpMethod.GET,
+        url: userUriBuilder(pubky),
+        notFoundAsNull: true,
+      });
+      return profile !== null;
     } catch (error) {
       const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');
       if (isNotFound(appError)) return false;
