@@ -88,12 +88,20 @@ _SVG files._ A locked SVG is stored without its image type, so it does not rende
 Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
 
 _Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
-10,000,000 bytes per file. It refuses a lock only after its files were uploaded, which leaves them
-orphaned, so the composer mirrors both limits (`LOCK_ATTACHMENT_MAX_FILES` and
-`LOCK_ATTACHMENT_MAX_SIZE` in `@/config/posts`) and checks them when the switch goes on: a draft
+10,000,000 bytes per file. It refuses a lock only after its files were uploaded, so a draft over the
+limits would upload every file for nothing. The composer therefore mirrors both limits
+(`LOCK_ATTACHMENT_MAX_FILES` and `LOCK_ATTACHMENT_MAX_SIZE` in `@/config/posts`) and checks them when the switch goes on: a draft
 over them gets a toast and the switch stays off. The check waits for the switch so that a creator
 who is not locking anything never hears about lock limits. The values are the server's defaults: it
 offers no way to read them.
+
+_Failed publish (#2039)._ Before the lock exists, a failed publish deletes every upload the Lock
+Server confirmed. After it exists, a failed announcement queues the lock's deletion, and the Lock
+Server removes its files in the background. An announcement already on the homeserver keeps its lock,
+even when its tags then fail. If the announcement landed and only its answer was lost, it now points
+at a deleted lock that the creator can see and delete. Files or the lock still stay behind when an
+upload's answer was lost, when a delete request fails (a rejected Locks session, a network or server
+error), and when the tab closes mid-publish (server-side reaping, pubky/locks#107).
 
 **2. Unlock (reader).** The lock card opens Pay to Unlock. The FE submits a **proof** to the
 Lock Server, waits until the reader has paid in Bitkit, gets a short-lived credential,
@@ -165,10 +173,10 @@ without the other: nothing in the app can reference a lock again once its announ
 a kept lock would only be orphaned content in the creator's `/priv`.
 
 `useDeletePost` reads the stored row and, when it carries a `lock` URL, calls
-`LocksController.deleteLockContent` **before** `PostController.commitDelete`. The order matters: a
-lock deletion that fails keeps the announcement (the optimistic removal is rolled back and the
-toast says so), instead of leaving a lock nobody can delete any more. A rejected or missing Locks
-session is cleared as on publish, and the toast asks the creator to sign in to the Lock Server. The
+`LocksController.deleteLockContent` **before** it removes the row from the feed and calls
+`PostController.commitDelete`; a post without a lock is removed at once, as before. The order matters: a
+lock deletion that fails keeps the announcement (the row never leaves the feed, the confirm dialog
+stays open and the toast says so), instead of leaving a lock nobody can delete any more. A Locks session the server rejects is cleared as on publish; a missing one is left alone, so a restore still in flight keeps its stored secret. Either way the dialog offers **Sign in**, which opens the Lock Server sign-in only (no Paykit step) and retries the delete; closing the dialog drops the offer. The
 reverse failure, a local post delete that fails after the Lock Server already accepted, leaves the
 announcement pointing at a tombstone; deleting it again is safe because the server answers a repeated
 delete with the job's status instead of a new job. A `lock` URL with no lock id in it (no `.json`

@@ -2,15 +2,9 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import {
-  APP_ROUTES,
-  COPYRIGHT_ROUTES,
-  isCustomFeedRoute,
-  isLegalRoute,
-  isLogoLandingRoute,
-  ROOT_ROUTES,
-} from '@/app/routes';
+import { APP_ROUTES, isCustomFeedRoute, isLogoLandingRoute, isPublicDocumentRoute, ROOT_ROUTES } from '@/app/routes';
 import { Link } from '@/atoms/Link/Link';
+import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
@@ -50,10 +44,14 @@ export function Logo({
   ...props
 }: LogoProps & React.HTMLAttributes<HTMLAnchorElement>) {
   const pathname = usePathname();
-  const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
+  const isHydrated = useIsHydrated();
+  const hasDisplayUser = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
+  // The public documents are server-rendered (`AppShell`) and the auth store only exists in the browser, so the
+  // member href waits for hydration to keep the first client render equal to the server's HTML.
+  const isAuthenticated = isHydrated && hasDisplayUser;
   // Members open the public documents from Settings. For them `/` redirects to `/home`, which leaves `/` in
   // the history and turns Back into a loop, so their logo goes straight to `/home`.
-  const isPublicDocument = pathname === COPYRIGHT_ROUTES.COPYRIGHT || isLegalRoute(pathname);
+  const isPublicDocument = isPublicDocumentRoute(pathname);
   const isLandingRoute = isLogoLandingRoute(pathname) && !(isAuthenticated && isPublicDocument);
   // A custom feed lives at `/feed/<id>` in the same persistent feed cluster as
   // `/home`. From there the logo is already on the user's feed, so it scrolls to

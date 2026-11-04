@@ -641,6 +641,12 @@ body {
     scrollbar-gutter: stable;
   }
 
+  /* The embedded Shop scrolls its own document. A reserved gutter here would sit outside the
+     frame, as a strip the wheel cannot scroll, with Shop's scrollbar drawn one gutter in. */
+  html:has([data-slot='shop-shell']) {
+    scrollbar-gutter: auto;
+  }
+
   html::-webkit-scrollbar,
   body::-webkit-scrollbar {
     width: var(--scrollbar-size);

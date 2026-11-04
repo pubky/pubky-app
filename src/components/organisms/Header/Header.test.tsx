@@ -1,3 +1,4 @@
+import { renderToString } from 'react-dom/server';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, HOME_ROUTES, LEGAL_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
@@ -889,7 +890,7 @@ describe('Header', () => {
     );
 
     it.each([LEGAL_ROUTES.TERMS_OF_USE, LEGAL_ROUTES.PRIVACY_POLICY])(
-      'keeps the header on mobile when signed in on %s, which has no mobile app shell',
+      'shows only the logo, on every viewport, when signed in on %s, which renders outside the app shell',
       (pathname) => {
         mockCurrentUserPubky = 'test-pubky-123';
         mockIsPublicRoute.mockReturnValue(false);
@@ -898,8 +899,23 @@ describe('Header', () => {
 
         render(<Header />);
 
-        expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
-        expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name', '');
+        expect(screen.getByTestId('logo')).toBeInTheDocument();
+        expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
+        expect(screen.getByTestId('header-container')).not.toHaveAttribute('data-class-name');
+      },
+    );
+
+    it.each([LEGAL_ROUTES.TERMS_OF_USE, LEGAL_ROUTES.PRIVACY_POLICY])(
+      'server-renders only the logo on %s, before the auth store is known',
+      (pathname) => {
+        mockCurrentUserPubky = null;
+        mockUsePathname.mockReturnValue(pathname);
+
+        const html = renderToString(<Header />);
+
+        expect(html).toContain('data-testid="logo"');
+        expect(html).not.toContain('data-testid="header-home"');
       },
     );
 

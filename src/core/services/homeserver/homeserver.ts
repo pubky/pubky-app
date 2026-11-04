@@ -46,6 +46,7 @@ import {
   assertOk,
   extractPubkyZ32,
   getOwnedResponse,
+  getOwnedResponseIfExists,
   isHttpUrl,
   parseResponseOrUndefined,
   PUBKY_PREFIX,
@@ -669,7 +670,14 @@ export class HomeserverService {
    * @param {string} url - Pubky URL.
    * @param {Record<string, unknown>} [bodyJson] - JSON body to serialize and send.
    */
-  static async request<T>({ method, url, bodyJson, singleAttempt, fence }: THomeserverRequestParams): Promise<T> {
+  static async request<T>({
+    method,
+    url,
+    bodyJson,
+    singleAttempt,
+    fence,
+    notFoundAsNull,
+  }: THomeserverRequestParams): Promise<T> {
     const owned = this.resolveOwnedSessionPath(url);
     // A fenced write belongs to a read-check-write, whose loop retries it from the read.
     const retryOptions = singleAttempt || fence ? { maxRetries: 0 } : {};
@@ -680,7 +688,12 @@ export class HomeserverService {
 
       switch (method) {
         case HttpMethod.GET: {
-          const response = await this.withActiveSession(session, () => getOwnedResponse({ session, path, url }));
+          const response = await this.withActiveSession<Response | null>(session, () =>
+            notFoundAsNull
+              ? getOwnedResponseIfExists({ session, path, url })
+              : getOwnedResponse({ session, path, url }),
+          );
+          if (response === null) return null as T;
           return (await parseResponseOrUndefined<T>({ response })) as T;
         }
         case HttpMethod.PUT: {
@@ -739,7 +752,13 @@ export class HomeserverService {
             retryOptions,
           );
 
-    const response = await fetchPromise.catch((error) => handleError({ error, additionalContext: { url, method } }));
+    const response = await fetchPromise.catch((error) => {
+      if (notFoundAsNull && method === HttpMethod.GET && extractStatusCode(error) === HttpStatusCode.NOT_FOUND) {
+        return null;
+      }
+      return handleError({ error, additionalContext: { url, method } });
+    });
+    if (response === null || (notFoundAsNull && response.status === HttpStatusCode.NOT_FOUND)) return null as T;
 
     await assertOk({ response, url, operation: 'request' });
 
