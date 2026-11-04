@@ -22,6 +22,10 @@ export class MuteApplication {
   /** Commits settled so far: a LIST that spans a settle may predate that commit's write. */
   private static settledMuteCommits = 0;
 
+  /** LISTs started so far, and the newest one whose answer counted: an older LIST that answers late must not undo it. */
+  private static listsStarted = 0;
+  private static newestListApplied = 0;
+
   /**
    * Handles muting or unmuting a user.
    * Performs local database operations and syncs with the homeserver, one commit at a time per pair.
@@ -67,21 +71,26 @@ export class MuteApplication {
    * Only the v1 private tree is listed: the migration gate guarantees every 0.x mute was copied there,
    * and an unmute deletes both copies, so the 0.x tree has nothing the v1 one lacks (ADR-0014).
    *
-   * The sync coordinator calls this on a timer, so the local write stands down in three cases: the session
+   * The sync coordinator calls this on a timer, so the local write stands down in four cases: the session
    * the fetch started for ended; a commit ran during the LIST or is still running, because its local write is
-   * newer than the listing and would be undone until the next refresh; or the members are unchanged, because a
-   * rewrite wakes every `useMutedUsers` reader on each poll.
+   * newer than the listing and would be undone until the next refresh; a LIST started later has already answered,
+   * because this listing is older than that one; or the members are unchanged, because a rewrite wakes every
+   * `useMutedUsers` reader on each poll.
    * @param pubky - The user's pubky to fetch mutes for
    * @returns Array of muted user pubkeys
    */
   static async fetchMutedUsers(pubky: Pubky, { isCurrent }: TMuteFetchOptions = {}): Promise<Pubky[]> {
     const settledBeforeList = this.settledMuteCommits;
+    this.listsStarted += 1;
+    const list = this.listsStarted;
     const muteUris = await HomeserverService.listAll({ baseDirectory: `${listPrefix(pubky, 'private')}mutes/` });
     const stream = muteUris.map(mutedKey).filter((id): id is Pubky => id !== null);
 
     const local = await LocalStreamUsersService.findById(UserStreamTypes.MUTED);
     if (isCurrent && !isCurrent()) return stream;
     if (this.inFlightMutes.size > 0 || this.settledMuteCommits !== settledBeforeList) return stream;
+    if (list < this.newestListApplied) return stream;
+    this.newestListApplied = list;
     if (local && xor(local.stream, stream).length === 0) return stream;
 
     await LocalStreamUsersService.upsert({

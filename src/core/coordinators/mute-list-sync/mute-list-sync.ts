@@ -9,7 +9,6 @@ import {
 } from '@/coordinators/base/coordinators.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
 import { Logger } from '@/libs/logger/logger';
-import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
@@ -21,7 +20,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * the SDK's bearer refresh for as long as it stays open (ADR-0014).
  *
  * Policy (aligned with {@link NotificationCoordinator}):
- * - Requires authenticated session with profile and current {@link Pubky}.
+ * - Requires authenticated session with profile and current pubky.
  * - Disabled on onboarding / sign-in / logout routes.
  * - Uses runtime notification visibility config: when true, pauses while the tab is hidden.
  * - Moving between allowed routes keeps the running interval; crossing into an allowed route refreshes.
@@ -37,10 +36,10 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
 
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   /**
-   * The account whose LIST is out, so a slow LIST does not stack up.
-   * Cleared on stop, so a LIST that never settles cannot end polling.
+   * The LIST still out, so a slow one does not stack up. Cleared on stop, so one that never settles cannot end
+   * polling; `MuteApplication.fetchMutedUsers` keeps an older LIST that answers late from undoing a newer one.
    */
-  private refreshingPubky: Pubky | null = null;
+  private activeRefresh: symbol | null = null;
   private accountUnsubscribe: (() => void) | null = null;
 
   /** A return to the network or to the tab: the interval alone could leave the list a full period behind. */
@@ -95,7 +94,7 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
   protected stopPolling(reason: PollingInactiveReason): void {
     clearTimeout(this.debounceTimer);
     this.debounceTimer = undefined;
-    this.refreshingPubky = null;
+    this.activeRefresh = null;
     super.stopPolling(reason);
   }
 
@@ -111,16 +110,17 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
 
   private async refreshMutedUsers(): Promise<void> {
     const pubky = useAuthStore.getState().currentUserPubky;
-    if (!pubky || this.refreshingPubky === pubky) return;
+    if (!pubky || this.activeRefresh) return;
 
-    this.refreshingPubky = pubky;
+    const refresh = Symbol('mute-list-refresh');
+    this.activeRefresh = refresh;
     try {
       await MuteController.fetchMutedUsers(pubky);
     } catch (error) {
       // Don't stop polling on error: the next trigger retries.
       Logger.error('Mute list refresh failed', { error });
     } finally {
-      if (this.refreshingPubky === pubky) this.refreshingPubky = null;
+      if (this.activeRefresh === refresh) this.activeRefresh = null;
     }
   }
 }

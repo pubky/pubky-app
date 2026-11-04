@@ -86,7 +86,9 @@ function bindsSessionToEventStream(code: string): boolean {
   if (direct.test(code)) return true;
 
   const holders = new Set<string>();
-  const assignment = (source: string) => new RegExp(String.raw`(\w+)\s*=\s*(?:await\s+)?${source}`, 'g');
+  // The optional part is a type annotation; it stops at the punctuation of a signature so `f(a: string) { const b =` names `b`.
+  const assignment = (source: string) =>
+    new RegExp(String.raw`(\w+)\s*(?::[^;(){}=]*)?=\s*(?:await\s+)?${source}`, 'g');
   for (const [, name] of code.matchAll(assignment(String.raw`(?:[\w.]+\.)?${EVENT_STREAM_BUILDER.source}`))) {
     holders.add(name);
   }
@@ -183,6 +185,16 @@ describe('social v1 compliance gate', () => {
         'const a = sdk.eventStreamForUser(pk);\nconst b = a.live();\nb.session(s);',
       ],
       ['optional chaining', 'sdk.eventStreamForUser(pk)?.session(s);'],
+      [
+        'a typed variable',
+        'const b: ReturnType<typeof sdk.eventStreamForUser> = sdk.eventStreamForUser(pk, null);\nb.session(s);',
+      ],
+      ['a typed nullable variable', 'let b: EventStreamBuilder | null = sdk.eventStreamForUser(pk);\nb.session(s);'],
+      ['a typed second variable', 'const a = sdk.eventStreamForUser(pk);\nconst b: Builder = a.live();\nb.session(s);'],
+      [
+        'a variable after a typed signature',
+        'function open(pk: PublicKey) {\n  const b = sdk.eventStreamForUser(pk);\n  return b.session(s);\n}',
+      ],
     ])('flags %s', (_name, code) => {
       expect(bindsSessionToEventStream(code)).toBe(true);
     });

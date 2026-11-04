@@ -346,6 +346,30 @@ describe('MuteListSyncCoordinator', () => {
       expect(fetchMuted()).toHaveBeenCalledTimes(2);
     });
 
+    it('does not let an older LIST that settles late free the slot of the newer one', async () => {
+      const finish: Array<(value: Pubky[]) => void> = [];
+      const pendingList = () =>
+        new Promise<Pubky[]>((resolve) => {
+          finish.push(resolve);
+        });
+      fetchMuted().mockImplementationOnce(pendingList).mockImplementationOnce(pendingList);
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
+
+      finish[0]([]);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
+
+      finish[1]([]);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(3);
+    });
+
     it("does not let a previous account's slow LIST hold back the new account", async () => {
       fetchMuted().mockImplementationOnce(() => new Promise<Pubky[]>(() => {}));
       signIn();

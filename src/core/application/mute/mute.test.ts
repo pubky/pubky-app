@@ -450,6 +450,60 @@ describe('MuteApplication.fetchMutedUsers', () => {
       await expect(mutedStream()).resolves.toEqual([OTHER]);
     });
 
+    describe('two LISTs out at once', () => {
+      /** Two LISTs the test answers by hand, in the order they were started. */
+      function twoPendingLists() {
+        const answers: Array<(urls: string[]) => void> = [];
+        const pending = () =>
+          new Promise<string[]>((resolve) => {
+            answers.push(resolve);
+          });
+        vi.spyOn(HomeserverService, 'listAll').mockImplementationOnce(pending).mockImplementationOnce(pending);
+        return answers;
+      }
+
+      it('drops an older LIST that answers after a newer one', async () => {
+        const answers = twoPendingLists();
+        const older = MuteApplication.fetchMutedUsers(MUTER);
+        const newer = MuteApplication.fetchMutedUsers(MUTER);
+
+        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
+        await newer;
+        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
+        await older;
+
+        await expect(mutedStream()).resolves.toEqual([OTHER]);
+      });
+
+      it('drops an older LIST after a newer one that found nothing to rewrite', async () => {
+        await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [OTHER] });
+        const answers = twoPendingLists();
+        const older = MuteApplication.fetchMutedUsers(MUTER);
+        const newer = MuteApplication.fetchMutedUsers(MUTER);
+
+        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
+        await newer;
+        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
+        await older;
+
+        await expect(mutedStream()).resolves.toEqual([OTHER]);
+      });
+
+      it('applies both when they answer in order, so a sign-in LIST still persists before a later poll', async () => {
+        const answers = twoPendingLists();
+        const older = MuteApplication.fetchMutedUsers(MUTER);
+        const newer = MuteApplication.fetchMutedUsers(MUTER);
+
+        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
+        await older;
+        await expect(mutedStream()).resolves.toEqual([MUTEE]);
+
+        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
+        await newer;
+        await expect(mutedStream()).resolves.toEqual([OTHER]);
+      });
+    });
+
     it('writes nothing once the session the fetch started for has ended', async () => {
       vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([buildUri(MUTER, 'mute', MUTEE)]);
 
