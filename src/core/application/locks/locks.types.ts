@@ -26,18 +26,22 @@ export type TStartPaymentParams = TPaymentLockParams & { isRetry: boolean };
  * The saved bundle id a payment continues with, by the Lock Server's view of every id the reader
  * saved for the lock. `reusable` carries the task (null when the server never received the
  * submission). `terminal` means every saved id ended `failed`/`expired`, so only a fresh one can pay.
+ * `region-blocked` means the Lock Server refused to look the saved ids up (HTTP 451): their state is
+ * unknown, and so is whether anything can be done from here.
  */
 export type TResolvedPurchase =
   | { kind: 'reusable'; bundleId: string; task: TVerificationTask | null }
-  | { kind: 'terminal'; bundleId: string; status: 'failed' | 'expired' };
+  | { kind: 'terminal'; bundleId: string; status: 'failed' | 'expired' }
+  | { kind: 'region-blocked' };
 
 /**
  * The bundle id and lifecycle status returned by proof submission, or the ended one an automatic start
  * found. `regionBlocked` means the Lock Server refused the submission (HTTP 451) because paid unlocks are
- * not available in the reader's region: no payment was created, and the saved bundle id stays reusable.
+ * not available in the reader's region, on the submission or on the lookup of a saved id: no payment was
+ * created, and the saved bundle id stays reusable. The id is absent when the refusal came from the lookup.
  */
 export type TStartPaymentResult =
-  { bundleId: string; status: TVerificationStatus; regionBlocked?: false } | { bundleId: string; regionBlocked: true };
+  { bundleId: string; status: TVerificationStatus; regionBlocked?: false } | { bundleId?: string; regionBlocked: true };
 
 /** A submitted payment: the lock file and the bundle id the proof was submitted with. */
 export type TPaymentBundleParams = {
@@ -63,10 +67,13 @@ export type TReplicateUnlockedContentParams = {
   announcementUri: string;
 };
 
+/** A preview card renders an article's cover and none of its body media, so a preview read skips those bytes. */
+export type TPreviewRead = { preview?: boolean };
+
 export type TFetchReplicatedContentParams = {
   lockUrl: string;
   readerPubky: string;
-};
+} & TPreviewRead;
 
 export type TFetchUnlockedListParams = {
   readerPubky: string;
@@ -74,12 +81,19 @@ export type TFetchUnlockedListParams = {
 
 export type TFetchReplicatedAttachmentsParams = {
   post: ReplicatedPost;
-};
+} & TPreviewRead;
 
 export type TFetchOwnContentParams = {
   lockUrl: string;
   lockFile: LockFile;
-};
+} & TPreviewRead;
+
+/**
+ * The viewer session a call started under. `isCurrent()` turns false once that viewer logged out or the
+ * account was replaced; a cache write is then skipped, so a late response cannot put a signed-out
+ * reader's content back into IndexedDB after logout cleared it (#2797).
+ */
+export type TViewerScope = { isCurrent?: () => boolean };
 
 /** The creator's price, in the selected denomination's smallest unit. */
 export type TLockConfig = TLockPrice;
@@ -103,8 +117,11 @@ export type TLockContentFile = {
  * attachments land.
  */
 export type TCreateLockContentParams = {
-  /** Attachments (images, video, …). Uploaded first, so `buildPost` can reference their paths. */
-  attachments?: TLockContentFile[];
+  /**
+   * Attachments (images, video, …) as the author picked them. Cleaned like a normal upload, then
+   * uploaded first, so `buildPost` can reference their paths.
+   */
+  attachments?: File[];
   /**
    * Builds the JSON file holding the `PubkyAppPost` object from the uploaded attachment descriptors.
    * Called with an empty array when there are no attachments. `ownerPubky` is the account the guarded
@@ -115,3 +132,6 @@ export type TCreateLockContentParams = {
   /** How the content is gated. The criterion is assembled from it at publish time. */
   lockConfig: TLockConfig;
 };
+
+/** The announcement's top-level `lock` URL; the lock id is parsed from it. */
+export type TDeleteLockContentParams = { lockUrl: string };

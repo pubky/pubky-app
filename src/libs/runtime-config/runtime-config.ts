@@ -176,6 +176,9 @@ export const getPaykitServerUrl = (): string | undefined => getRuntimeConfig().p
 /** The `SELECTOR=MODE` list of regions where paid unlocks are held; `undefined` = no region check. */
 export const getRegionModes = (): string | undefined => getRuntimeConfig().regionModes;
 
+// Cypress E2E only: the stubbed Lock Server origin (undefined = the real Locks SDK).
+export const getE2eLocksStubUrl = (): string | undefined => getRuntimeConfig().e2eLocksStubUrl;
+
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;
 export const getPulseEndpoint = (): string | undefined => getRuntimeConfig().pulseEndpoint;
@@ -219,7 +222,8 @@ export const getType = (): string => getRuntimeConfig().type;
 export const getCreator = (): string => getRuntimeConfig().creator;
 export const getDefaultUrl = (): string => getRuntimeConfig().defaultUrl;
 export const getPubkyRingUrl = (): string => getRuntimeConfig().pubkyRingUrl;
-export const getPubkyCoreUrl = (): string => getRuntimeConfig().pubkyCoreUrl;
+/** Pubky protocol link; the config key mirrors its deploy variable `PUBKY_RUNTIME_PUBKY_CORE_URL`. */
+export const getPubkyProtocolUrl = (): string => getRuntimeConfig().pubkyCoreUrl;
 export const getNexusScoutUrl = (): string => getRuntimeConfig().nexusScoutUrl;
 export const getTwitterUrl = (): string => getRuntimeConfig().twitterUrl;
 export const getTwitterGetpubkyUrl = (): string => getRuntimeConfig().twitterGetpubkyUrl;

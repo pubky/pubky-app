@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { isPostDeleted, isValidPostCompositeId } from '@/libs/utils/utils';
@@ -48,7 +49,7 @@ export function Collection({ postId }: CollectionProps) {
       showRightSidebar={false}
       showLeftMobileButton={false}
       showRightMobileButton={false}
-      className="pb-24 lg:pb-12 xl:px-0!"
+      className={`${MOBILE_FAB_CLEARANCE_CLASS} lg:pb-12 xl:px-0!`}
     >
       <Container overrideDefaults className="flex w-full flex-col gap-12">
         {collectionMissing ? (

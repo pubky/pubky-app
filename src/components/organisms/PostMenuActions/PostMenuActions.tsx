@@ -112,6 +112,11 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={handleDeleteConfirm}
+        description={
+          postDetails?.lock
+            ? 'This action cannot be undone. The post and its locked content will be permanently deleted. Readers who already unlocked it keep their copy.'
+            : undefined
+        }
       />
     </>
   );

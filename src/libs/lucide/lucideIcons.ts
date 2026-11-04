@@ -3,8 +3,8 @@ import type { IconName } from 'lucide-react/dynamic.js';
 import { LUCIDE_ICON_NAME_PATTERN } from '@/config/feed';
 import { Logger } from '@/libs/logger/logger';
 
-// The full Lucide catalog ('lucide-react/dynamic.js', ~1960 dynamic-import
-// stubs, ~116KB raw) lives behind a lazy import so feed pages that render at
+// The full Lucide catalog ('lucide-react/dynamic.js', ~2280 dynamic-import
+// stubs, ~136KB raw) lives behind a lazy import so feed pages that render at
 // most a handful of icons do not ship it in their initial bundle. Sync
 // callers can therefore only check a name's *shape*; real validation happens
 // against the catalog once it is resident.
@@ -82,7 +82,7 @@ export function getLucideIconState(name: IconName): LucideIconState | undefined 
 
 /**
  * Own-property check only: `'constructor' in dynamicIconImports` is true and
- * resolves to `Object`, whose "module" has no `__iconNode` — rendering that
+ * resolves to `Object`, whose "module" has no `__iconData` — rendering that
  * would throw. Feed icons are peer-controlled, so this is reachable input.
  */
 function hasCatalogEntry(catalog: LucideCatalog, name: IconName): boolean {
@@ -119,13 +119,16 @@ export function requestLucideIcon(name: IconName): void {
       if (getLucideIconState(name)?.status === 'loaded') return;
 
       const iconModule = await catalog.dynamicIconImports[name]();
-      if (!iconModule?.__iconNode) {
+      // lucide-react 1.65 chunks export `__iconData` ({ name, node }); the old
+      // flat `__iconNode` export is gone at runtime though the types still declare it.
+      const node = iconModule?.__iconData?.node;
+      if (!node) {
         iconStates.delete(name);
         notifyIconStateChange();
         return;
       }
 
-      iconStates.set(name, { status: 'loaded', node: iconModule.__iconNode });
+      iconStates.set(name, { status: 'loaded', node });
       notifyIconStateChange();
     } catch (error: unknown) {
       Logger.warn('Failed to load Lucide icon chunk', { name, error });
@@ -173,9 +176,9 @@ let allIconNodesLoad: Promise<readonly IconName[]> | null = null;
 /**
  * Loads every canonical icon in one chunk and fills the store with it.
  *
- * The picker renders up to ~1700 cells and lucide ships one chunk per icon, so
- * the per-icon path costs one request per cell (~539B on the wire, ~920KB over
- * a full scroll). This is a single ~109KB chunk, after which every cell renders
+ * The picker renders up to ~2000 cells and lucide ships one chunk per icon, so
+ * the per-icon path costs one request per cell (~539B on the wire, ~1MB over
+ * a full scroll). This is a single ~130KB chunk, after which every cell renders
  * synchronously and issues no request at all. Returns the canonical names so
  * the picker can enumerate without also pulling the catalog.
  */

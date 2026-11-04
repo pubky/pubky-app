@@ -12,6 +12,7 @@ interface IllustratedEmptyStateProps {
   title: string;
   subtitle: string | React.ReactNode;
   children?: React.ReactNode;
+  dataCy?: string;
 }
 
 export function IllustratedEmptyState({
@@ -21,9 +22,10 @@ export function IllustratedEmptyState({
   title,
   subtitle,
   children,
+  dataCy,
 }: IllustratedEmptyStateProps) {
   return (
-    <Container className="relative flex flex-col items-center justify-center gap-6 p-6">
+    <Container data-cy={dataCy} className="relative flex flex-col items-center justify-center gap-6 p-6">
       {/* Background image */}
       <Image
         src={imageSrc}

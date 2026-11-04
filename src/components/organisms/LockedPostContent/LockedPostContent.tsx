@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Check, Lock } from 'lucide-react';
-import { matchPostRoute } from '@/app/routes';
+import { isPostRoute, matchPostRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
@@ -14,6 +14,7 @@ import { usePurchaseResume } from '@/hooks/usePurchaseResume/usePurchaseResume';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
+import { useUnlockPillHold } from '@/hooks/useUnlockPillHold/useUnlockPillHold';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -59,12 +60,16 @@ export function LockedPostContent({
   const [isPayOpen, setIsPayOpen] = useState(false);
   const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
   const isNestedPostPreview = useIsNestedPostPreview();
-  const routeParams = matchPostRoute(usePathname());
+  const pathname = usePathname();
+  const routeParams = matchPostRoute(pathname);
   // Only the post the route names opens in full: the same page renders embeds and thread parents
   // through this component, and the reply/repost dialogs preview the focused post itself — which
   // matches the route ids, so the nesting flag is what keeps those compact.
   const isFocusedPostPage =
     routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
+  // Fixed at mount: the feed stays mounted, hidden, under the post modal, whose route names this post,
+  // and must not read the full article there (#2686). The post page and the modal mount their own copy.
+  const [preview] = useState(!isFocusedPostPage);
   const lockContent = LocksController.getLockContent(content);
   const { lockFile, price, isLoading: isLockFileLoading } = useLockFile(lock);
   const {
@@ -76,7 +81,7 @@ export function LockedPostContent({
     isOwnLock,
     isResolvingOwn,
     isResolvingReplica,
-  } = useUnlockedContent({ lock, lockFile, postId });
+  } = useUnlockedContent({ lock, lockFile, postId, preview });
   const { waitForAuth, isAuthenticated } = useRequireAuth();
   // A session from before the app asked for `/priv` cannot read whether this reader already
   // unlocked, so ask for the permission first and keep the card inert: a second unlock would
@@ -118,6 +123,17 @@ export function LockedPostContent({
     !canRecover &&
     paidUnlocks.status !== 'available' &&
     (paidUnlocks.status === 'checking' || isPurchaseChecking);
+  // A reader who already unlocked this post is about to see their replicated copy, so the pill must not go
+  // live in between (#2795), nor while recovery looks up a listed purchase whose copy was not found.
+  const isUnlockPillHeld = useUnlockPillHold({
+    lock,
+    isPayableReader,
+    isPayOpen,
+    isResolvingReplica,
+    purchasesStatus,
+    isListedPurchase: hasPurchase(lockId),
+    purchaseStatus,
+  });
   const regionBlock =
     isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
       ? paidUnlocks
@@ -169,8 +185,10 @@ export function LockedPostContent({
       {unlockedPost || isResolvingOwn ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
-          {isOwnLock && <LockedPostCard title={lockContent.lock_title} price={price} />}
-          <div className="flex w-full flex-col gap-4">
+          {isOwnLock && (
+            <LockedPostCard title={lockContent.lock_title} contentKind={lockContent.content_kind} price={price} />
+          )}
+          <div className="flex w-full flex-col gap-4" data-cy="locked-post-unlocked-content">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
             <div className="flex items-center gap-1.5 text-brand">
@@ -179,7 +197,10 @@ export function LockedPostContent({
               ) : (
                 <Check className="size-4 shrink-0" aria-hidden />
               )}
-              <span className="text-xs leading-4 font-medium tracking-[1.2px] uppercase">
+              <span
+                className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+                data-cy="locked-post-access-label"
+              >
                 {isOwnLock ? 'My locked content' : 'Unlocked'}
               </span>
             </div>
@@ -198,6 +219,10 @@ export function LockedPostContent({
                 content={unlockedPost.content}
                 attachments={null}
                 localAttachments={media}
+                // One row of media off the post page, so a many-image lock does not stretch the feed (#2868).
+                // On a post page everything expands, replies, embeds and thread parents included, as PostText
+                // truncates text only off post pages.
+                collapseMedia={!isPostRoute(pathname)}
                 textClassName={textClassName}
                 pendingAttachments={pendingAttachments}
               />
@@ -210,8 +235,9 @@ export function LockedPostContent({
           {regionBlock && <LocksRegionNotice cause={regionBlock.cause} />}
           <LockedPostCard
             title={lockContent.lock_title}
+            contentKind={lockContent.content_kind}
             price={price}
-            isLoading={isLockFileLoading || isRegionChecking}
+            isLoading={isLockFileLoading || isRegionChecking || isUnlockPillHeld}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
             // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
@@ -225,6 +251,7 @@ export function LockedPostContent({
           open={isPayOpen}
           onOpenChange={setIsPayOpen}
           lockTitle={lockContent.lock_title}
+          contentKind={lockContent.content_kind}
           authorId={authorId}
           price={price}
           stage={stage}

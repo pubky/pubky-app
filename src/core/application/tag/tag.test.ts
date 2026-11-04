@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -83,15 +83,53 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
   });
 
-  it('does not compensate in a replaced session, even if the account is unchanged', async () => {
-    let current = true;
-    vi.mocked(HomeserverService.request).mockImplementation(async () => {
-      current = false;
-      throw new Error('offline');
-    });
-    await expect(TagApplication.commitCreate({ tagList: [data], isCurrent: () => current })).rejects.toThrow('offline');
-    expect(local.delete).not.toHaveBeenCalled();
-  });
+  it.each(['create', 'delete'] as const)(
+    'compensates a rejected %s after the 401 handling ended the session',
+    async (action) => {
+      // The session failure listener nulls the session before the rejection reaches the catch. The
+      // undo is bound to its operation id instead; the local services' ownership tests cover how
+      // that keeps another account's database untouched.
+      let current = true;
+      const isCurrent = () => current;
+      const rejected = Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+        service: ErrorService.Homeserver,
+        operation: 'request',
+      });
+      vi.mocked(HomeserverService.request).mockImplementation(async () => {
+        current = false;
+        throw rejected;
+      });
+      const result =
+        action === 'create'
+          ? TagApplication.commitCreate({ tagList: [data], isCurrent })
+          : TagApplication.commitDelete({ ...data, isCurrent });
+      await expect(result).rejects.toBe(rejected);
+      const original = vi.mocked(local[action]).mock.calls[0][0];
+      const undo = vi.mocked(local[action === 'create' ? 'delete' : 'create']).mock.calls[0][0];
+      expect(undo).toMatchObject({ expectedMutationId: original.mutationId, synced: true });
+      expect(undo.isCurrent).toBeUndefined();
+      expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['create', 'delete'] as const)(
+    'undoes an optimistic %s when the session ends before its request starts',
+    async (action) => {
+      let current = true;
+      vi.mocked(local[action]).mockImplementation(async () => {
+        current = false;
+        return true;
+      });
+      if (action === 'create') await TagApplication.commitCreate({ tagList: [data], isCurrent: () => current });
+      else await TagApplication.commitDelete({ ...data, isCurrent: () => current });
+      expect(HomeserverService.request).not.toHaveBeenCalled();
+      const original = vi.mocked(local[action]).mock.calls[0][0];
+      const undo = vi.mocked(local[action === 'create' ? 'delete' : 'create']).mock.calls[0][0];
+      expect(undo).toMatchObject({ expectedMutationId: original.mutationId, synced: true });
+      expect(undo.isCurrent).toBeUndefined();
+      expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
+    },
+  );
 
   it('accepts DELETE 404 and settles the deletion without restoring a ghost tag', async () => {
     vi.mocked(HomeserverService.request).mockRejectedValue(

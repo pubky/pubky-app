@@ -190,7 +190,7 @@ export const APP_RUNTIME_DEFAULTS = {
   siteName: 'Pubky App',
   locale: 'en_US',
   author: 'Pubky Team',
-  keywords: 'pubky, social media, decentralized, key, pkarr, pubky core',
+  keywords: 'pubky, social media, decentralized, key, pkarr',
   type: 'website',
   creator: '@getpubky',
   defaultUrl: 'https://pubky.app',
@@ -228,7 +228,7 @@ export const networkConfigValueSchema = z.object({
   nexusUrl: urlValue,
   cdnUrl: urlValue,
   homeserver: homeserverValue,
-  /** Homeserver HTTP base URL: the homeserver pubkey has no resolvable HTTPS endpoint (pubky-core#410) */
+  /** Homeserver HTTP base URL: the homeserver pubkey has no resolvable HTTPS endpoint (pubky-homeserver#410) */
   homeserverUrl: urlValue,
   homegateUrl: urlValue,
   defaultHttpRelay: urlValue,
@@ -307,6 +307,11 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
    * same value the Shop reads as `PUBKY_RUNTIME_REGION_MODES`. Absent = no region check and no request.
    */
   regionModes: regionModesValue.optional(),
+  /**
+   * Cypress E2E only: origin of the stubbed Lock Server that replaces the Locks SDK client
+   * (`locks.e2eStub.ts`). Never set in a deploy; absent = the real SDK.
+   */
+  e2eLocksStubUrl: urlValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -338,6 +343,7 @@ export const runtimeEnvInputSchema = z
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
     regionModes: optionalTrimmedString,
+    e2eLocksStubUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -388,7 +394,16 @@ export const runtimeEnvInputSchema = z
     appStoreUrl: optionalUrlFromString,
     playStoreUrl: optionalUrlFromString,
   })
-  .pipe(runtimeConfigValueSchema);
+  .pipe(runtimeConfigValueSchema)
+  .superRefine((config, ctx) => {
+    if (config.deployEnv === 'production' && config.e2eLocksStubUrl) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['e2eLocksStubUrl'],
+        message: 'E2E Locks stub URL must not be set in production',
+      });
+    }
+  });
 
 /**
  * Canonical staging defaults for the required network tier (single source of truth, parsed shape).
@@ -424,6 +439,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
     regionModes: optionalTrimmedString,
+    e2eLocksStubUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -507,6 +523,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
   paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
   regionModes: 'PUBKY_RUNTIME_REGION_MODES',
+  e2eLocksStubUrl: 'PUBKY_RUNTIME_E2E_LOCKS_STUB_URL',
   pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
   pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',

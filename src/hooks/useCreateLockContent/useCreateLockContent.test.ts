@@ -6,9 +6,11 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY } from '@/libs/image/imageUploadSizeLimit';
+import { getLockTeaserMaxLength, type TLockTeaser } from '@/libs/post/lockTeaser';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useCreateLockContent } from './useCreateLockContent';
 
@@ -78,15 +80,47 @@ describe('useCreateLockContent', () => {
     mocks.commitCreate.mockResolvedValue('POST1');
   });
 
-  it('uploads the locked attachments as bytes', async () => {
-    const { result } = renderHook(() => useCreateLockContent(params([makeFile('a.png', 'image/png')])));
+  describe('locked file clean-up (#2685)', () => {
+    // The clean-up itself runs in `LocksApplication.createLockContent`; the hook hands the files over
+    // as picked and turns a size-limit failure into the kind-specific message.
+    const sanitizationError = (kind?: string) =>
+      Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+        service: ErrorService.Local,
+        operation: 'createLockContent',
+        context: kind ? { [IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY]: kind } : undefined,
+      });
 
-    await act(() => result.current.publish());
+    it('hands the locked files to the controller as the author picked them', async () => {
+      const photo = new File(['raw-with-gps'], 'IMG_0001.jpg', { type: 'image/jpeg' });
+      const doc = makeFile('notes.pdf', 'application/pdf');
+      const { result } = renderHook(() => useCreateLockContent(params([photo, doc])));
 
-    const [{ attachments }] = mocks.createLockContent.mock.calls[0];
-    expect(attachments).toHaveLength(1);
-    expect(attachments[0].contentType).toBe('image/png');
-    expect(attachments[0].bytes).toBeInstanceOf(Uint8Array);
+      await act(() => result.current.publish());
+
+      const [{ attachments }] = mocks.createLockContent.mock.calls[0];
+      expect(attachments).toEqual([photo, doc]);
+    });
+
+    it('fails with the size-limit message and posts no announcement when an image cannot be brought under the cap', async () => {
+      mocks.createLockContent.mockRejectedValue(sanitizationError('gif'));
+      const { result } = renderHook(() => useCreateLockContent(params([makeFile('big.gif', 'image/gif')])));
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed', description: expect.stringContaining('This GIF exceeds') });
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
+
+    it('fails with the generic outcome when the clean-up breaks for another reason', async () => {
+      mocks.createLockContent.mockRejectedValue(sanitizationError());
+      const { result } = renderHook(() => useCreateLockContent(params([makeFile('a.png', 'image/png')])));
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed' });
+      expect(result.current.error).toMatchObject({ category: ErrorCategory.Validation, service: ErrorService.Local });
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
   });
 
   it('builds the locked post JSON pointing at the uploaded attachment paths', async () => {
@@ -270,7 +304,7 @@ describe('useCreateLockContent', () => {
   });
 
   describe('announcement length guard', () => {
-    const withTeaser = (teaserOverride: { lock_title: string; teaser_description: string }) => ({
+    const withTeaser = (teaserOverride: TLockTeaser) => ({
       ...params(),
       announcement: { teaser: teaserOverride, attachments: [], tags: [] },
     });
@@ -303,12 +337,32 @@ describe('useCreateLockContent', () => {
       expect(mocks.createLockContent).not.toHaveBeenCalled();
     });
 
+    // #2433: content_kind is part of what is measured, before the lock exists.
+    it('never creates the lock when only the content kind pushes the announcement over', async () => {
+      const { result } = renderHook(() =>
+        useCreateLockContent(
+          withTeaser({
+            lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
+            teaser_description: 'b'.repeat(POST_MAX_CHARACTER_LENGTH - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41),
+            content_kind: 'note',
+          }),
+        ),
+      );
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed' });
+      expect(mocks.createLockContent).not.toHaveBeenCalled();
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
+
     it('publishes when both fields are filled to their maxLengths', async () => {
       const { result } = renderHook(() =>
         useCreateLockContent(
           withTeaser({
             lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
-            teaser_description: 'b'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH),
+            teaser_description: 'b'.repeat(getLockTeaserMaxLength('article')),
+            content_kind: 'article',
           }),
         ),
       );

@@ -9,6 +9,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
@@ -253,16 +254,29 @@ export function HeaderExploreNavigationButtons({
         );
       })}
 
-      <Button
-        variant="secondary"
-        size="icon"
-        className="h-12 w-12 border bg-white/5"
-        onClick={() => setShowSignInDialog(true)}
-        aria-label="Join Pubky"
-        data-testid="header-explore-join-button"
-      >
-        <UserRoundPlus className="size-6" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-12 w-12 border bg-white/5"
+            onClick={() => setShowSignInDialog(true)}
+            aria-label="Join Pubky"
+            data-testid="header-explore-join-button"
+          >
+            <UserRoundPlus className="size-6" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipPortal>
+          {/*
+            Hidden on touch: Radix opens on the focus that lands after a tap, so the hint would
+            flash open as the sign-in dialog takes over. The `aria-label` still names the button.
+          */}
+          <TooltipContent variant="accent" className="pointer-coarse:hidden">
+            {'Sign in'}
+          </TooltipContent>
+        </TooltipPortal>
+      </Tooltip>
     </Container>
   );
 }

@@ -2,6 +2,7 @@
 
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
+import { isPostDeleted } from '@/libs/utils/utils';
 import type { UsePostHeaderVisibilityResult } from './usePostHeaderVisibility.types';
 
 /**
@@ -47,7 +48,16 @@ export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibility
   // Replies with an embed retain their own identity and thread, even without text or attachments.
   // A "simple repost" has no content or parent relationship and belongs to the current user.
   // When postDetails is undefined/null, we can't determine content, so treat as not simple repost
-  const isContentlessRepost = isRepost && !isReply && postDetails !== undefined && postDetails !== null && !hasContent;
+  // A tombstone keeps its own identity too: Nexus clears its content (`content: ''`, `deleted: true`)
+  // but keeps the repost relationship, so without this check its thread, replies and navigation
+  // would point at the live original.
+  const isContentlessRepost =
+    isRepost &&
+    !isReply &&
+    postDetails !== undefined &&
+    postDetails !== null &&
+    !isPostDeleted(postDetails) &&
+    !hasContent;
   const isSimpleRepostByCurrentUser = isContentlessRepost && isCurrentUserRepost;
 
   // Show repost header only for simple reposts (no content) by current user

@@ -2,8 +2,10 @@ import { editProfileAndVerify, addLinks, addProfileTags } from '../support/profi
 import { slowCypressDown } from 'cypress-slow-down';
 import { BackupType, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath } from '../support/auth';
-import { searchForProfileByName } from '../support/contacts';
+import { searchForProfileByName, searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
+import { userIndexed, userTagsIndexed, waitForNexus } from '../support/nexus';
+import { seedUserViaApi } from '../support/seed';
 
 describe('profile', () => {
   before(() => {
@@ -132,6 +134,49 @@ describe('profile', () => {
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-tagged-section"]').contains('them-1');
     cy.get('[data-cy="profile-tagged-section"]').contains('them-2');
+  });
+
+  it('can tag other profile from the tag button on their profile', () => {
+    // the profile to tag only needs to exist, so it is seeded through the API
+    seedUserViaApi(`${Cypress._.random(100_000)}-Tag My Button`, { bio: 'Tag me from my profile header' }).then(
+      (target) => {
+        waitForNexus(userIndexed(target));
+        searchForProfileByPubky(target.pubky, target.name);
+
+        // the tag button opens their Tagged tab
+        cy.get('[data-cy="profile-tag-btn"]:visible').click();
+        cy.location('pathname').should('eq', `/profile/${target.id}/tagged`);
+        addProfileTags(['button-1']);
+
+        // verify the tag is displayed on 'Tagged' tab content and in the sidebar tagged section (Posts tab)
+        cy.get('[data-cy="profile-tab-content"]').contains('button-1');
+        cy.get('[data-cy="profile-filter-item-posts"]').click();
+        cy.get('[data-cy="profile-tagged-section"]').contains('button-1');
+        waitForNexus(userTagsIndexed(target, ['button-1']));
+      },
+    );
+  });
+
+  it('rolls back the follow state when homeserver fails to save the follow', () => {
+    const profileToFollowName = `${Cypress._.random(100_000)}-Follow Me`;
+    cy.signOut(HasBackedUp.Yes);
+    cy.onboardAsNewUser(profileToFollowName, 'This profile is never actually followed');
+    cy.signOut(HasBackedUp.No);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+
+    searchForProfileByName(profileToFollowName);
+
+    cy.intercept('PUT', '**/pub/pubky.app/follows/**', { statusCode: 507 }).as('followFailed');
+    cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow').click();
+    cy.wait('@followFailed');
+
+    cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Could not follow user. Try again.');
+    cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow');
+
+    // the rolled back local follow does not come back from Dexie after a reload
+    cy.reload();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileToFollowName);
+    cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow');
   });
 
   // todo: enable once decided on correct behaviour for searching using pubky of non-existent user

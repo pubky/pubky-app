@@ -8,6 +8,18 @@ export const VISUAL_PENDING_TAIL_LIMIT = 3;
 export const VISUAL_SQUARE_MAX_RATIO = 1;
 export const VISUAL_WIDE_ELIGIBLE_MIN_RATIO = 4 / 3;
 export const VISUAL_WIDE_MIN_RATIO = 16 / 9;
+/**
+ * Frame of a link-only video tile: the 16:9 the YouTube and Vimeo embeds render.
+ * Link tiles carry it as their metadata size, so they are never probed (a probe
+ * would contact the video host even for a blurred post) and their place in the
+ * row does not change when the media fails and the fallback card shows instead.
+ */
+export const VISUAL_LINK_VIDEO_WIDTH = 16;
+export const VISUAL_LINK_VIDEO_HEIGHT = 9;
+// i.ytimg answers a missing thumbnail variant, or an unknown video id, with a 404
+// carrying a 120x90 placeholder image. `default.jpg` has the same size and is never requested.
+const YOUTUBE_PLACEHOLDER_THUMBNAIL_WIDTH = 120;
+const YOUTUBE_PLACEHOLDER_THUMBNAIL_HEIGHT = 90;
 const VISUAL_ROW_PREFERRED_SIZE_SCORE = 3;
 const VISUAL_ROW_ALTERNATE_SIZE_SCORE = 1;
 const VISUAL_ROW_COMPLEX_PATTERN_BONUS = 5;
@@ -77,6 +89,19 @@ export function isVisualMediaContentType(contentType: string): boolean {
 
 export function getVisualMediaKind(contentType: string): 'image' | 'video' {
   return contentType.startsWith('video/') ? 'video' : 'image';
+}
+
+/**
+ * YouTube's thumbnail for a video id. `hq720` (1280x720) is sharp on wide tiles but
+ * missing for some older uploads; `mqdefault` (320x180) exists for every video. Both
+ * are 16:9, unlike `hqdefault` and `sddefault`, which add letterbox bars.
+ */
+export function getVisualYouTubeThumbnailUrl(videoId: string, variant: 'hq720' | 'mqdefault'): string {
+  return `https://i.ytimg.com/vi/${videoId}/${variant}.jpg`;
+}
+
+export function isVisualYouTubePlaceholderThumbnail(width: number, height: number): boolean {
+  return width === YOUTUBE_PLACEHOLDER_THUMBNAIL_WIDTH && height === YOUTUBE_PLACEHOLDER_THUMBNAIL_HEIGHT;
 }
 
 export function parseMediaDimension(value?: string | number | null): number | undefined {

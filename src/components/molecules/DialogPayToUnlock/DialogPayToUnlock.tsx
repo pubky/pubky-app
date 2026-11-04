@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CircleCheck, Newspaper } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -12,11 +12,12 @@ import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLi
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
-import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
+import { getLockContentDisplay } from '@/libs/post/lockContentKind';
 import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNotice';
+import { LockTitle } from '@/molecules/LockTitle/LockTitle';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { QR_HOVER_OPACITY } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import type { DialogPayToUnlockProps } from './DialogPayToUnlock.types';
@@ -73,6 +74,7 @@ export function DialogPayToUnlock({
   open,
   onOpenChange,
   lockTitle,
+  contentKind,
   authorId,
   price,
   stage,
@@ -86,6 +88,7 @@ export function DialogPayToUnlock({
   onRecheck,
   onViewContent,
 }: DialogPayToUnlockProps) {
+  const { title: defaultTitle, Icon: KindIcon } = getLockContentDisplay(contentKind);
   // The install screen comes before any submission, so it never has a Noise link state to show.
   const isInstall = stage === 'install';
   const handshakeValue = handshakePubky ? withPubkyPrefix(handshakePubky) : null;
@@ -143,13 +146,15 @@ export function DialogPayToUnlock({
         onClick={(e) => e.stopPropagation()}
       >
         <DialogHeader>
-          <DialogTitle>{stage === 'paid' ? 'Unlocked' : 'Pay to Unlock'}</DialogTitle>
+          {/* The header tells the same story as the body (#2516): "Unlocked" only once the content is ready.
+              While it opens, or after it failed to, the payment is received but nothing is unlocked yet. */}
+          <DialogTitle>{stage === 'paid' ? 'Unlocked' : isPaid ? 'Payment received' : 'Pay to Unlock'}</DialogTitle>
         </DialogHeader>
 
         <Container overrideDefaults className="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6">
-          <Newspaper className="size-6 shrink-0 text-muted-foreground" aria-hidden />
+          <KindIcon className="size-6 shrink-0 text-muted-foreground" aria-hidden />
           <Typography className="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground">
-            {lockTitle || DEFAULT_LOCK_TITLE}
+            <LockTitle title={lockTitle || defaultTitle} mentionClassName="text-xl" interactive={false} />
           </Typography>
           <CreatorAvatar authorId={authorId} />
         </Container>
@@ -163,7 +168,7 @@ export function DialogPayToUnlock({
               <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>
                 {isPaid ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
               </Typography>
-              <Typography className="text-2xl font-bold text-foreground">
+              <Typography className="text-2xl font-bold text-foreground" data-cy="pay-to-unlock-price">
                 {formatLockPrice(price, { space: true })}
               </Typography>
             </Container>

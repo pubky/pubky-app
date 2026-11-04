@@ -5,6 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import {
   FilterHeader,
   FilterItem,
+  FilterItemCheck,
   FilterItemIcon,
   FilterItemLabel,
   FilterList,
@@ -98,6 +99,7 @@ export function FilterRadioGroup<T extends string = string>({
                 >
                   <FilterItemIcon icon={Icon} />
                   <FilterItemLabel>{label}</FilterItemLabel>
+                  {isSelected && <FilterItemCheck />}
                 </FilterItem>
                 {itemExtras?.[key]}
               </React.Fragment>

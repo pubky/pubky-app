@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { TAG_INPUT_MAX_SUGGESTIONS } from './useTagInput.constants';
-import { filterSuggestions, mergeTagSuggestions } from './useTagInput.utils';
+import { filterSuggestions, isTagAddFailure, mergeTagSuggestions } from './useTagInput.utils';
+
+describe('isTagAddFailure', () => {
+  it('reports a failed add from a { success: false } result', () => {
+    expect(isTagAddFailure({ success: false })).toBe(true);
+    expect(isTagAddFailure({ success: false, error: 'Failed to add tag' })).toBe(true);
+  });
+
+  it('treats a successful or opaque result as added', () => {
+    expect(isTagAddFailure({ success: true })).toBe(false);
+    expect(isTagAddFailure(undefined)).toBe(false);
+    expect(isTagAddFailure(null)).toBe(false);
+    expect(isTagAddFailure('done')).toBe(false);
+    expect(isTagAddFailure({})).toBe(false);
+  });
+});
 
 describe('filterSuggestions', () => {
   const tags = [

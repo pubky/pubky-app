@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from '@/controllers/auth/auth';
+import { createAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import * as shopSignIn from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
@@ -554,6 +555,99 @@ describe('DialogRestoreRecoveryPhrase', () => {
         expect(screen.queryByText('Restoring...')).not.toBeInTheDocument();
         expect(restoreButton).not.toBeDisabled();
         inputs.forEach((input) => expect(input).not.toBeDisabled());
+      });
+      expect(mockOnRestore).not.toHaveBeenCalled();
+    });
+
+    it('shows a connection toast and exits loading when the sign-in cannot reach the network', async () => {
+      mockLoginWithMnemonic.mockRejectedValue(
+        new AppError({
+          category: ErrorCategory.Network,
+          code: NetworkErrorCode.CONNECTION_FAILED,
+          message: 'Offline',
+          service: ErrorService.Homeserver,
+          operation: 'signIn',
+        }),
+      );
+      render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);
+
+      const inputs = screen.getAllByTestId('word-input');
+      const restoreButton = screen.getByText('Restore').closest('button')!;
+      inputs.forEach((input) => fireEvent.change(input, { target: { value: 'abandon' } }));
+      fireEvent.click(restoreButton);
+
+      await waitFor(() => {
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'Could not connect. Check your connection and try again.',
+        });
+        expect(screen.queryByText('Restoring...')).not.toBeInTheDocument();
+        expect(restoreButton).not.toBeDisabled();
+        inputs.forEach((input) => expect(input).not.toBeDisabled());
+      });
+      expect(mockOnRestore).not.toHaveBeenCalled();
+    });
+
+    it('shows the connection toast when the sign-in times out', async () => {
+      mockLoginWithMnemonic.mockRejectedValue(
+        new AppError({
+          category: ErrorCategory.Timeout,
+          code: TimeoutErrorCode.REQUEST_TIMEOUT,
+          message: 'Timed out',
+          service: ErrorService.Homeserver,
+          operation: 'signIn',
+        }),
+      );
+      render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);
+
+      screen.getAllByTestId('word-input').forEach((input) => fireEvent.change(input, { target: { value: 'abandon' } }));
+      fireEvent.click(screen.getByText('Restore').closest('button')!);
+
+      await waitFor(() => {
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'Could not connect. Check your connection and try again.',
+        });
+      });
+      expect(mockOnRestore).not.toHaveBeenCalled();
+    });
+
+    it('shows the Shop toast when the approved key does not match the signed-in one', async () => {
+      mockLoginWithMnemonic.mockRejectedValue(createAuthApprovalMismatchError());
+      render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);
+
+      screen.getAllByTestId('word-input').forEach((input) => fireEvent.change(input, { target: { value: 'abandon' } }));
+      fireEvent.click(screen.getByText('Restore').closest('button')!);
+
+      await waitFor(() => {
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'Use the key you are already signed in with to enable Shop.',
+        });
+      });
+      expect(mockOnRestore).not.toHaveBeenCalled();
+    });
+
+    it('keeps the generic toast for a homeserver auth failure', async () => {
+      mockLoginWithMnemonic.mockRejectedValue(
+        new AppError({
+          category: ErrorCategory.Auth,
+          code: AuthErrorCode.UNAUTHORIZED,
+          message: 'Unauthorized',
+          service: ErrorService.Homeserver,
+          operation: 'signIn',
+        }),
+      );
+      render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);
+
+      screen.getAllByTestId('word-input').forEach((input) => fireEvent.change(input, { target: { value: 'abandon' } }));
+      fireEvent.click(screen.getByText('Restore').closest('button')!);
+
+      await waitFor(() => {
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'Could not sign in. Try again.',
+        });
       });
       expect(mockOnRestore).not.toHaveBeenCalled();
     });

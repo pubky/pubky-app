@@ -10,14 +10,12 @@ vi.mock('@/atoms/Image/Image', () => {
       src,
       alt,
       className,
-      id,
       onLoad,
       'data-testid': dataTestId,
     }: {
       src: string;
       alt: string;
       className?: string;
-      id?: string;
       onLoad?: () => void;
       'data-testid'?: string;
     }) => (
@@ -26,7 +24,6 @@ vi.mock('@/atoms/Image/Image', () => {
         src={src}
         alt={alt}
         className={className}
-        id={id}
         onLoad={onLoad}
       />
     ),
@@ -57,14 +54,14 @@ describe('PostAttachmentsCarouselImage', () => {
   describe('Basic rendering', () => {
     it('renders without crashing', () => {
       const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       expect(screen.getByTestId('image-main')).toBeInTheDocument();
     });
 
     it('renders both feed and main images initially for non-GIF images', () => {
       const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       expect(screen.getByTestId('image-feed')).toBeInTheDocument();
       expect(screen.getByTestId('image-main')).toBeInTheDocument();
@@ -72,7 +69,7 @@ describe('PostAttachmentsCarouselImage', () => {
 
     it('renders only main image for GIF images', () => {
       const gif = createMockGif();
-      render(<PostAttachmentsCarouselImage image={gif} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={gif} />);
 
       expect(screen.queryByTestId('image-feed')).not.toBeInTheDocument();
       expect(screen.getByTestId('image-main')).toBeInTheDocument();
@@ -80,7 +77,7 @@ describe('PostAttachmentsCarouselImage', () => {
 
     it('renders with correct alt text', () => {
       const image = createMockImage({ name: 'my-photo.jpg' });
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const feedImage = screen.getByTestId('image-feed');
       const mainImage = screen.getByTestId('image-main');
@@ -96,7 +93,7 @@ describe('PostAttachmentsCarouselImage', () => {
           feed: 'https://example.com/feed-low-res.jpg',
         },
       });
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const feedImage = screen.getByTestId('image-feed');
       const mainImage = screen.getByTestId('image-main');
@@ -109,11 +106,11 @@ describe('PostAttachmentsCarouselImage', () => {
   describe('Loading states', () => {
     it('shows feed image as placeholder before main image loads', () => {
       const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const feedImage = screen.getByTestId('image-feed');
       expect(feedImage).toBeInTheDocument();
-      expect(feedImage).toHaveClass('max-h-[75dvh]');
+      expect(feedImage).toHaveClass('max-h-full');
       expect(feedImage).toHaveClass('w-full');
       expect(feedImage).toHaveClass('rounded-md');
       expect(feedImage).toHaveClass('object-contain');
@@ -121,23 +118,15 @@ describe('PostAttachmentsCarouselImage', () => {
 
     it('hides main image before it loads (size-0 class)', () => {
       const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const mainImage = screen.getByTestId('image-main');
       expect(mainImage).toHaveClass('size-0');
     });
 
-    it('does not have id on main image before it loads', () => {
-      const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
-
-      const mainImage = screen.getByTestId('image-main');
-      expect(mainImage).not.toHaveAttribute('id');
-    });
-
     it('hides feed image after main image loads', () => {
       const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const mainImage = screen.getByTestId('image-main');
       fireEvent.load(mainImage);
@@ -147,52 +136,34 @@ describe('PostAttachmentsCarouselImage', () => {
 
     it('shows main image with full styling after it loads', () => {
       const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const mainImage = screen.getByTestId('image-main');
       fireEvent.load(mainImage);
 
-      expect(mainImage).toHaveClass('max-h-[75dvh]');
+      expect(mainImage).toHaveClass('max-h-full');
       expect(mainImage).toHaveClass('w-full');
       expect(mainImage).toHaveClass('rounded-md');
       expect(mainImage).toHaveClass('object-contain');
       expect(mainImage).not.toHaveClass('size-0');
-    });
-
-    it('sets id on main image after it loads', () => {
-      const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id="carousel-image-1" />);
-
-      const mainImage = screen.getByTestId('image-main');
-      fireEvent.load(mainImage);
-
-      expect(mainImage).toHaveAttribute('id', 'carousel-image-1');
     });
   });
 
   describe('GIF handling', () => {
     it('shows main image immediately for GIFs with full styling', () => {
       const gif = createMockGif();
-      render(<PostAttachmentsCarouselImage image={gif} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={gif} />);
 
       const mainImage = screen.getByTestId('image-main');
-      expect(mainImage).toHaveClass('max-h-[75dvh]');
+      expect(mainImage).toHaveClass('max-h-full');
       expect(mainImage).not.toHaveClass('size-0');
-    });
-
-    it('has id set immediately for GIFs', () => {
-      const gif = createMockGif();
-      render(<PostAttachmentsCarouselImage image={gif} id="gif-carousel-1" />);
-
-      const mainImage = screen.getByTestId('image-main');
-      expect(mainImage).toHaveAttribute('id', 'gif-carousel-1');
     });
   });
 
   describe('Image types', () => {
     it('handles PNG images correctly', () => {
       const png = createMockImage({ type: 'image/png' });
-      render(<PostAttachmentsCarouselImage image={png} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={png} />);
 
       expect(screen.getByTestId('image-feed')).toBeInTheDocument();
       expect(screen.getByTestId('image-main')).toBeInTheDocument();
@@ -200,7 +171,7 @@ describe('PostAttachmentsCarouselImage', () => {
 
     it('handles WebP images correctly', () => {
       const webp = createMockImage({ type: 'image/webp' });
-      render(<PostAttachmentsCarouselImage image={webp} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={webp} />);
 
       expect(screen.getByTestId('image-feed')).toBeInTheDocument();
       expect(screen.getByTestId('image-main')).toBeInTheDocument();
@@ -208,7 +179,7 @@ describe('PostAttachmentsCarouselImage', () => {
 
     it('handles SVG images correctly', () => {
       const svg = createMockImage({ type: 'image/svg+xml' });
-      render(<PostAttachmentsCarouselImage image={svg} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={svg} />);
 
       expect(screen.getByTestId('image-feed')).toBeInTheDocument();
       expect(screen.getByTestId('image-main')).toBeInTheDocument();
@@ -218,7 +189,7 @@ describe('PostAttachmentsCarouselImage', () => {
   describe('Edge cases', () => {
     it('handles image with special characters in name', () => {
       const image = createMockImage({ name: 'my photo (1).jpg' });
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const mainImage = screen.getByTestId('image-main');
       expect(mainImage).toHaveAttribute('alt', 'my photo (1).jpg');
@@ -231,7 +202,7 @@ describe('PostAttachmentsCarouselImage', () => {
           feed: 'https://example.com/feed-image.jpg?token=abc123&size=small',
         },
       });
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const mainImage = screen.getByTestId('image-main');
       expect(mainImage).toHaveAttribute('src', 'https://example.com/main-image.jpg?token=abc123&size=large');
@@ -244,7 +215,7 @@ describe('PostAttachmentsCarouselImage', () => {
           feed: 'https://example.com/my%20feed-image.jpg',
         },
       });
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const mainImage = screen.getByTestId('image-main');
       expect(mainImage).toHaveAttribute('src', 'https://example.com/my%20main-image.jpg');
@@ -252,33 +223,46 @@ describe('PostAttachmentsCarouselImage', () => {
 
     it('handles empty string name', () => {
       const image = createMockImage({ name: '' });
-      render(<PostAttachmentsCarouselImage image={image} id="test-id" />);
+      render(<PostAttachmentsCarouselImage image={image} />);
 
       const mainImage = screen.getByTestId('image-main');
       expect(mainImage).toHaveAttribute('alt', '');
-    });
-
-    it('handles very long id', () => {
-      const longId = 'carousel-image-' + 'a'.repeat(100);
-      const image = createMockImage();
-      render(<PostAttachmentsCarouselImage image={image} id={longId} />);
-
-      const mainImage = screen.getByTestId('image-main');
-      fireEvent.load(mainImage);
-
-      expect(mainImage).toHaveAttribute('id', longId);
     });
   });
 });
 describe('local attachment fallback', () => {
   it('opens a local attachment that has no separate feed thumbnail', () => {
     render(
-      <PostAttachmentsCarouselImage
-        id="local"
-        image={{ type: 'image/png', name: 'Local image', urls: { main: '/local.png' } }}
-      />,
+      <PostAttachmentsCarouselImage image={{ type: 'image/png', name: 'Local image', urls: { main: '/local.png' } }} />,
     );
     const images = screen.getAllByAltText('Local image');
     expect(images.every((image) => image.getAttribute('src') === '/local.png')).toBe(true);
+  });
+});
+
+describe('PostAttachmentsCarouselImage zoom', () => {
+  it('lets the frame own touch gestures, fills the available lightbox height, and starts fitted', () => {
+    render(<PostAttachmentsCarouselImage image={createMockImage()} />);
+
+    const frame = screen.getByTestId('carousel-image-zoom-frame');
+    expect(frame).toHaveClass('touch-none', 'h-[75dvh]', 'overflow-hidden', 'rounded-md');
+    expect(frame).toHaveAttribute('data-zoomed', 'false');
+    expect(screen.getByTestId('carousel-image-zoom-content').style.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('zooms on a double tap and shows it on data-zoomed, then resets when the slide stops being active', () => {
+    const image = createMockImage();
+    const { rerender } = render(<PostAttachmentsCarouselImage image={image} />);
+
+    const frame = screen.getByTestId('carousel-image-zoom-frame');
+    for (let i = 0; i < 2; i++) {
+      fireEvent.pointerDown(frame, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'touch' });
+      fireEvent.pointerUp(frame, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'touch' });
+    }
+
+    expect(frame).toHaveAttribute('data-zoomed', 'true');
+
+    rerender(<PostAttachmentsCarouselImage image={image} isActive={false} />);
+    expect(frame).toHaveAttribute('data-zoomed', 'false');
   });
 });

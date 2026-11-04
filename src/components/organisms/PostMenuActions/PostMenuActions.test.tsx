@@ -87,7 +87,7 @@ const { mockUseIsMobile, mockDeletePost, mockUsePostMenuActions, mockRequireAuth
   mockRequireAuth: vi.fn((action: () => void) => action()),
 }));
 const mockUsePostDetails = vi.fn((_postId: string) => ({
-  postDetails: { kind: 'short' } as { kind: string } | null,
+  postDetails: { kind: 'short' } as { kind: string; lock?: string } | null,
   isLoading: false,
 }));
 
@@ -166,12 +166,15 @@ vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => {
     DialogConfirmDelete: ({
       open,
       onConfirm,
+      description,
     }: {
       open: boolean;
       onOpenChange: (open: boolean) => void;
       onConfirm: () => void;
+      description?: string;
     }) => (
       <div data-testid="dialog-confirm-delete" data-open={open.toString()}>
+        <p data-testid="confirm-delete-description">{description}</p>
         <button onClick={onConfirm} data-testid="confirm-delete-button">
           Confirm Delete
         </button>
@@ -365,6 +368,24 @@ describe('PostMenuActions', () => {
     await user.click(confirmButton);
 
     expect(mockDeletePost).toHaveBeenCalledWith('pk:test123:post456');
+  });
+
+  it('warns that a lock announcement takes its locked content with it', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { kind: 'short', lock: 'pubky://creator/pub/app.locks/LOCK1.json' },
+      isLoading: false,
+    });
+    render(<PostMenuActions postId="pk:test123:post456" trigger={<button>Menu</button>} />);
+
+    expect(screen.getByTestId('confirm-delete-description')).toHaveTextContent(
+      'The post and its locked content will be permanently deleted. Readers who already unlocked it keep their copy.',
+    );
+  });
+
+  it('leaves the default delete copy to the dialog for a plain post', () => {
+    render(<PostMenuActions postId="pk:test123:post456" trigger={<button>Menu</button>} />);
+
+    expect(screen.getByTestId('confirm-delete-description')).toBeEmptyDOMElement();
   });
 
   it('requires authentication before opening the menu', async () => {

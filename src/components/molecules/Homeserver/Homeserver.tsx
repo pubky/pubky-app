@@ -1,13 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { LEGAL_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
+import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
-import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
-import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
 import { PageTitle } from '../Page/Page';
 
@@ -24,9 +23,16 @@ export const HomeserverHeader = () => {
 
 export const HomeserverFooter = () => {
   return (
-    <FooterLinks>
-      By creating an account on the Pubky homeserver, you agree to the <DialogTerms />,
-      <DialogPrivacy />, and you confirm that you are
+    <FooterLinks className="[&_a]:no-underline">
+      By creating an account on the Pubky homeserver, you agree to the{' '}
+      <Link href={LEGAL_ROUTES.TERMS_OF_USE} target="_blank">
+        {'Terms of Service'}
+      </Link>
+      ,
+      <Link href={LEGAL_ROUTES.PRIVACY_POLICY} target="_blank">
+        {'Privacy Policy'}
+      </Link>
+      , and you confirm that you are
       <DialogAge />
     </FooterLinks>
   );

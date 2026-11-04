@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
-import { NetworkErrorCode } from '@/libs/error/error.codes';
+import type { SessionRestoreStatus } from '@/libs/auth/session.types';
+import { AuthErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
@@ -14,10 +15,16 @@ const mockMocks = vi.hoisted(() => {
   const mockGetOrFetchTags = vi.fn();
   const mockTagCreate = vi.fn();
   const mockTagDelete = vi.fn();
+  const authState = {
+    currentUserPubky: 'mock-current-user',
+    selectCurrentUserPubky: () => 'mock-current-user',
+    restoreStatus: 'ready' as SessionRestoreStatus,
+  };
   return {
     mockGetOrFetchTags,
     mockTagCreate,
     mockTagDelete,
+    authState,
   };
 });
 
@@ -31,17 +38,10 @@ vi.mock('@/controllers/tag/tag', () => ({
     commitDelete: mockMocks.mockTagDelete,
   },
 }));
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: vi.fn(
-    (selector?: (state: { currentUserPubky: string; selectCurrentUserPubky: () => string }) => unknown) => {
-      const mockState = {
-        currentUserPubky: 'mock-current-user',
-        selectCurrentUserPubky: () => 'mock-current-user',
-      };
-      return selector ? selector(mockState) : mockState;
-    },
-  ),
-}));
+vi.mock('@/stores/auth/auth.store', async () => {
+  const { createZustandLikeHook } = await import('@/test-utils/stores');
+  return { useAuthStore: createZustandLikeHook(mockMocks.authState) };
+});
 
 // Mock useProfileStats
 const defaultProfileStats = {
@@ -83,6 +83,7 @@ describe('useTagged', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocalTags = null;
+    mockMocks.authState.restoreStatus = 'ready';
     mockUseProfileStats.mockReturnValue(defaultProfileStats);
     mockMocks.mockGetOrFetchTags.mockResolvedValue(undefined);
     mockMocks.mockTagCreate.mockResolvedValue(undefined);
@@ -255,6 +256,135 @@ describe('useTagged', () => {
     });
   });
 
+  it('prompts sign-in instead of the generic copy when the add is rejected as unauthenticated (#2890)', async () => {
+    mockLocalTags = [];
+    mockMocks.mockTagCreate.mockRejectedValueOnce(
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      }),
+    );
+
+    const { result } = renderHook(() => useTagged(mockUserId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let addResult: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
+    await act(async () => {
+      addResult = await result.current.handleTagAdd('unauthed');
+    });
+
+    expect(addResult!).toEqual({ success: false, error: 'Failed to add tag' });
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Session expired. Please sign in.',
+    });
+  });
+
+  it('still prompts sign-in when the rejected add settles after the view unmounted (#2957)', async () => {
+    mockLocalTags = [];
+    const pending = Promise.withResolvers<void>();
+    mockMocks.mockTagCreate.mockReturnValueOnce(pending.promise);
+
+    const { result, unmount } = renderHook(() => useTagged(mockUserId));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let add!: ReturnType<typeof result.current.handleTagAdd>;
+    act(() => {
+      add = result.current.handleTagAdd('unauthed');
+    });
+    await waitFor(() => expect(mockMocks.mockTagCreate).toHaveBeenCalled());
+    // The 401 ends the session; the route guard redirects a guarded profile route to the landing page.
+    mockMocks.authState.restoreStatus = 'reauth-required';
+    unmount();
+    let addResult: Awaited<typeof add>;
+    await act(async () => {
+      pending.reject(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+      addResult = await add;
+    });
+
+    expect(addResult!).toEqual({ success: false });
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Session expired. Please sign in.',
+    });
+  });
+
+  it('stays silent when any other add failure settles after the view unmounted', async () => {
+    mockLocalTags = [];
+    const pending = Promise.withResolvers<void>();
+    mockMocks.mockTagCreate.mockReturnValueOnce(pending.promise);
+
+    const { result, unmount } = renderHook(() => useTagged(mockUserId));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let add!: ReturnType<typeof result.current.handleTagAdd>;
+    act(() => {
+      add = result.current.handleTagAdd('offline');
+    });
+    await waitFor(() => expect(mockMocks.mockTagCreate).toHaveBeenCalled());
+    // Even once another write's 401 ended the session, a generic failure of a closed view stays silent.
+    mockMocks.authState.restoreStatus = 'reauth-required';
+    unmount();
+    let addResult: Awaited<typeof add>;
+    await act(async () => {
+      pending.reject(
+        Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+      addResult = await add;
+    });
+
+    expect(addResult!).toEqual({ success: false });
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it("stays silent when a write ended by the user's own logout settles after the view unmounted (#2957)", async () => {
+    mockLocalTags = [];
+    const pending = Promise.withResolvers<void>();
+    mockMocks.mockTagCreate.mockReturnValueOnce(pending.promise);
+
+    const { result, unmount } = renderHook(() => useTagged(mockUserId));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let add!: ReturnType<typeof result.current.handleTagAdd>;
+    act(() => {
+      add = result.current.handleTagAdd('logout');
+    });
+    await waitFor(() => expect(mockMocks.mockTagCreate).toHaveBeenCalled());
+    // Logout resets the store (no reauth needed) and the queued write throws SESSION_EXPIRED.
+    mockMocks.authState.restoreStatus = 'idle';
+    unmount();
+    await act(async () => {
+      pending.reject(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session ended before the homeserver write completed.', {
+          service: ErrorService.Homeserver,
+          operation: 'queuedWrite',
+        }),
+      );
+      await add;
+    });
+
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
   it('does not show a success toast when removing a tag', async () => {
     mockLocalTags = [
       {
@@ -342,6 +472,73 @@ describe('useTagged', () => {
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Could not remove tag',
+    });
+  });
+
+  it('prompts sign-in when removing a tag is rejected as UNAUTHORIZED (#2890)', async () => {
+    mockLocalTags = [
+      {
+        label: 'bitcoin',
+        taggers: ['mock-current-user'],
+        taggers_count: 1,
+        relationship: true,
+      },
+    ];
+    mockMocks.mockTagDelete.mockRejectedValueOnce(
+      Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+        service: ErrorService.Homeserver,
+        operation: 'commitDelete',
+      }),
+    );
+
+    const { result } = renderHook(() => useTagged(mockUserId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.handleTagToggle({ label: 'bitcoin', relationship: true });
+    });
+
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Session expired. Please sign in.',
+    });
+  });
+
+  it('still prompts sign-in when a rejected toggle settles after the view unmounted (#2957)', async () => {
+    mockLocalTags = [{ label: 'bitcoin', taggers: ['mock-current-user'], taggers_count: 1, relationship: true }];
+    const pending = Promise.withResolvers<void>();
+    mockMocks.mockTagDelete.mockReturnValueOnce(pending.promise);
+
+    const { result, unmount } = renderHook(() => useTagged(mockUserId));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let toggle!: Promise<void>;
+    act(() => {
+      toggle = result.current.handleTagToggle({ label: 'bitcoin', relationship: true });
+    });
+    await waitFor(() => expect(mockMocks.mockTagDelete).toHaveBeenCalled());
+    mockMocks.authState.restoreStatus = 'reauth-required';
+    unmount();
+    await act(async () => {
+      pending.reject(
+        Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+          service: ErrorService.Homeserver,
+          operation: 'commitDelete',
+        }),
+      );
+      await toggle;
+    });
+
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Session expired. Please sign in.',
     });
   });
 

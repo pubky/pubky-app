@@ -11,6 +11,10 @@ vi.mock('../useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
 }));
 
+vi.mock('@/libs/logger/logger', () => ({
+  Logger: { error: vi.fn() },
+}));
+
 function createPasteEvent(text: string): React.ClipboardEvent {
   return mockClipboardEvent({
     preventDefault: vi.fn(),
@@ -96,6 +100,157 @@ describe('useTagInput', () => {
 
     expect(mockOnTagAdd).toHaveBeenCalledWith('new-tag');
     expect(result.current.inputValue).toBe('');
+  });
+
+  it('clears the input when onTagAdd resolves with success: true', async () => {
+    mockOnTagAdd.mockResolvedValueOnce({ success: true });
+    const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'new-tag' } } as React.ChangeEvent<HTMLInputElement>);
+    });
+    await act(async () => {
+      await result.current.handleTagSubmit();
+    });
+
+    expect(result.current.inputValue).toBe('');
+  });
+
+  it('keeps the typed value when onTagAdd resolves with success: false (#2890)', async () => {
+    mockOnTagAdd.mockResolvedValueOnce({ success: false, error: 'Failed to add tag' });
+    const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'unauthed' } } as React.ChangeEvent<HTMLInputElement>);
+    });
+    await act(async () => {
+      await result.current.handleTagSubmit();
+    });
+
+    expect(mockOnTagAdd).toHaveBeenCalledWith('unauthed');
+    expect(result.current.inputValue).toBe('unauthed');
+  });
+
+  it('keeps the typed value when onTagAdd rejects', async () => {
+    mockOnTagAdd.mockRejectedValueOnce(new Error('write failed'));
+    const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'unauthed' } } as React.ChangeEvent<HTMLInputElement>);
+    });
+    await act(async () => {
+      await result.current.handleTagSubmit();
+    });
+
+    expect(result.current.inputValue).toBe('unauthed');
+  });
+
+  describe('addTag', () => {
+    it('adds the given label and clears the input when the add went through', async () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({ target: { value: 'bit' } } as React.ChangeEvent<HTMLInputElement>);
+      });
+      await act(async () => {
+        await result.current.addTag('bitcoin');
+      });
+
+      expect(mockOnTagAdd).toHaveBeenCalledWith('bitcoin');
+      expect(result.current.inputValue).toBe('');
+      expect(result.current.showSuggestions).toBe(false);
+    });
+
+    it('keeps the typed value when the add resolves with success: false (#2890)', async () => {
+      mockOnTagAdd.mockResolvedValueOnce({ success: false });
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({ target: { value: 'bit' } } as React.ChangeEvent<HTMLInputElement>);
+      });
+      await act(async () => {
+        await result.current.addTag('bitcoin');
+      });
+
+      expect(mockOnTagAdd).toHaveBeenCalledWith('bitcoin');
+      expect(result.current.inputValue).toBe('bit');
+    });
+
+    it('keeps text typed while the add was pending and clears only the originating draft', async () => {
+      let resolveAdd!: (value: unknown) => void;
+      mockOnTagAdd.mockImplementationOnce(() => new Promise((resolve) => (resolveAdd = resolve)));
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({ target: { value: 'bit' } } as React.ChangeEvent<HTMLInputElement>);
+      });
+      let pending!: Promise<void>;
+      act(() => {
+        pending = result.current.addTag('bitcoin');
+      });
+      act(() => {
+        result.current.handleInputChange({ target: { value: 'second-tag' } } as React.ChangeEvent<HTMLInputElement>);
+      });
+      await act(async () => {
+        resolveAdd({ success: true });
+        await pending;
+      });
+
+      expect(mockOnTagAdd).toHaveBeenCalledWith('bitcoin');
+      expect(result.current.inputValue).toBe('second-tag');
+      expect(result.current.showSuggestions).toBe(true);
+    });
+
+    it('keeps the same text retyped while the add was pending', async () => {
+      let resolveAdd!: (value: unknown) => void;
+      mockOnTagAdd.mockImplementationOnce(() => new Promise((resolve) => (resolveAdd = resolve)));
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({ target: { value: 'bit' } } as React.ChangeEvent<HTMLInputElement>);
+      });
+      let pending!: Promise<void>;
+      act(() => {
+        pending = result.current.addTag('bitcoin');
+      });
+      // Cleared and retyped for another suggestion: the same string, but a new draft
+      act(() => {
+        result.current.handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
+      });
+      act(() => {
+        result.current.handleInputChange({ target: { value: 'bit' } } as React.ChangeEvent<HTMLInputElement>);
+      });
+      await act(async () => {
+        resolveAdd({ success: true });
+        await pending;
+      });
+
+      expect(result.current.inputValue).toBe('bit');
+    });
+  });
+
+  it('keeps text typed while a submit was pending', async () => {
+    let resolveAdd!: (value: unknown) => void;
+    mockOnTagAdd.mockImplementationOnce(() => new Promise((resolve) => (resolveAdd = resolve)));
+    const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'first-tag' } } as React.ChangeEvent<HTMLInputElement>);
+    });
+    let pending!: Promise<unknown>;
+    act(() => {
+      pending = result.current.handleTagSubmit();
+    });
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'second-tag' } } as React.ChangeEvent<HTMLInputElement>);
+    });
+    await act(async () => {
+      resolveAdd(undefined);
+      await pending;
+    });
+
+    expect(mockOnTagAdd).toHaveBeenCalledWith('first-tag');
+    expect(result.current.inputValue).toBe('second-tag');
   });
 
   it('does not add duplicate tags (case-insensitive)', () => {

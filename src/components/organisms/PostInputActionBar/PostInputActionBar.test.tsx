@@ -97,6 +97,8 @@ vi.mock('@/molecules/LocksRegionNotice/LocksRegionNotice', () => ({
   ),
 }));
 
+const LOCK_HELP_HEADING = 'Sell your content';
+
 describe('PostInputActionBar', () => {
   const mockUseIsMobile = vi.mocked(useIsMobile);
 
@@ -271,6 +273,39 @@ describe('PostInputActionBar', () => {
     expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
   });
 
+  it('shows the lock help beside a lock switch that is available, explaining it on open', async () => {
+    render(
+      <PostInputActionBar
+        hideArticleButton={false}
+        lockSwitch={{ checked: false, onCheckedChange: vi.fn(), showHelp: true }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: LOCK_HELP_HEADING }));
+
+    expect(
+      await screen.findByText(
+        'Let people pay to unlock the value you create. Add content first, then switch on the lock.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(LOCK_HELP_HEADING, { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['the lock is on', { checked: true }],
+    ['the region is still being read', { checked: false, disabled: true }],
+  ])('shows no lock help when %s', (_state, lockSwitch) => {
+    render(
+      <PostInputActionBar
+        hideArticleButton={false}
+        lockSwitch={{ ...lockSwitch, onCheckedChange: vi.fn(), showHelp: false }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: LOCK_HELP_HEADING })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+  });
+
   it.each(['region', 'unknown'] as const)(
     'disables the lock switch and shows the icon-only region notice when held (%s)',
     (cause) => {
@@ -286,6 +321,7 @@ describe('PostInputActionBar', () => {
       expect(lockSwitch).toBeDisabled();
       expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-cause', cause);
       expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-variant', 'icon');
+      expect(screen.queryByRole('button', { name: LOCK_HELP_HEADING })).not.toBeInTheDocument();
       fireEvent.click(lockSwitch);
       expect(onCheckedChange).not.toHaveBeenCalled();
     },

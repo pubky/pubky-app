@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { FileText, HelpCircle, LockKeyhole, MessageCircle, MessageSquare, Send } from 'lucide-react';
+import { LEGAL_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
 import { DialogFeedback } from '@/organisms/DialogFeedback/DialogFeedback';
-import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
-import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { FAQAccordion } from '../../FAQAccordion/FAQAccordion';
 import type { FAQAccordionItem } from '../../FAQAccordion/FAQAccordion.types';
 import { SettingsDivider } from '../SettingsDivider/SettingsDivider';
@@ -225,22 +225,18 @@ export function HelpContent() {
             {'Please read our terms carefully.'}
           </Typography>
           <Container overrideDefaults className="flex flex-wrap gap-2">
-            <DialogTerms
-              trigger={
-                <Button id="tos-btn" variant="secondary" size="default">
-                  <FileText size={16} />
-                  {'Terms of service'}
-                </Button>
-              }
-            />
-            <DialogPrivacy
-              trigger={
-                <Button id="privacy-btn" variant="secondary" size="default">
-                  <LockKeyhole size={16} />
-                  {'Privacy policy'}
-                </Button>
-              }
-            />
+            <Button id="tos-btn" variant="secondary" size="default" asChild>
+              <Link href={LEGAL_ROUTES.TERMS_OF_USE}>
+                <FileText size={16} />
+                {'Terms of service'}
+              </Link>
+            </Button>
+            <Button id="privacy-btn" variant="secondary" size="default" asChild>
+              <Link href={LEGAL_ROUTES.PRIVACY_POLICY}>
+                <LockKeyhole size={16} />
+                {'Privacy policy'}
+              </Link>
+            </Button>
           </Container>
         </Container>
       </Container>
