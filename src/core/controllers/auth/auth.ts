@@ -606,6 +606,8 @@ export class AuthController {
    */
   private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
     const isCurrent = captureViewerSession();
+    // A boundary already in the store may have been hydrated from storage another account's tab wrote: it has no owner.
+    const lastReadBeforeBootstrap = useNotificationStore.getState().selectLastRead();
     const signInStore = useSignInStore.getState();
     const {
       meta: { url },
@@ -642,9 +644,14 @@ export class AuthController {
       onProgress,
     );
     if (!isCurrent()) return;
-    // The last_read sync may have adopted a newer boundary while bootstrap ran: never move it back, recount instead.
+    // The last_read sync or a mark may have set a newer boundary for this session while bootstrap ran: never move it
+    // back, recount instead. Only a value written after bootstrap started counts; the earlier one is dropped.
     let state = notification;
-    while (useNotificationStore.getState().selectLastRead() > state.lastRead) {
+    const adoptedDuringBootstrap = () => {
+      const current = useNotificationStore.getState().selectLastRead();
+      return current !== lastReadBeforeBootstrap && current > state.lastRead;
+    };
+    while (adoptedDuringBootstrap()) {
       const lastRead = useNotificationStore.getState().selectLastRead();
       const unread = await NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
       if (!isCurrent()) return;

@@ -367,6 +367,47 @@ describe('AuthController restored session lifecycle', () => {
     expect(countSpy).toHaveBeenCalledWith(2_000, expect.any(Array));
   });
 
+  it('drops a read boundary that was already in the store before bootstrap started', async () => {
+    // A snapshot hydrated from storage carries no account owner: another account's tab may have persisted it.
+    useNotificationStore.getState().setState({ lastRead: 2_000, unread: 0, lastPolledTimestamp: 9 });
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(0);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    bootstrap.resolve({ lastRead: 1_000, unread: 1, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 1_000, unread: 1, lastPolledTimestamp: 5 });
+    expect(countSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps a boundary adopted during bootstrap even when the store already held an older one', async () => {
+    useNotificationStore.getState().setState({ lastRead: 2_000, unread: 0, lastPolledTimestamp: 9 });
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(2);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    // The last_read sync adopts this account's newer read while bootstrap runs.
+    useNotificationStore.getState().setLastRead(3_000);
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 3_000, unread: 2, lastPolledTimestamp: 5 });
+    expect(countSpy).toHaveBeenCalledWith(3_000, expect.any(Array));
+  });
+
   it('applies the bootstrap read boundary without recounting when the store is not newer', async () => {
     const bootstrap = deferred<typeof notificationInitialState>();
     vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
