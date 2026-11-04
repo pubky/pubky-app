@@ -182,7 +182,7 @@ Nexus data requested after the local edit can confirm it early; expiry alone doe
 
 ### Homeserver mute list sync
 
-Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.
+Cross-session mute alignment polls the private mute directory on the homeserver. The poll interval and the debounce are fixed in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_POLL_INTERVAL_MS`, `MUTE_SYNC_DEBOUNCE_MS`), not environment variables. The page-visibility pause follows `PUBKY_RUNTIME_NOTIFICATION_RESPECT_PAGE_VISIBILITY`.
 
 Where the app keeps its own files on the homeserver (`/priv/app.pubky/v1/settings.json`, `last_read.json`, and the 0.x `settings.json` it still reads as a fallback) is product policy in [`src/config/app-files.ts`](../src/config/app-files.ts), not an environment variable: every deployment of one version writes the same paths, and a deployment-specific namespace would split one account's settings across versions (`docs/data-patterns.md`, _Homeserver Trees and App Files_).
 

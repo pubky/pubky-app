@@ -67,6 +67,39 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
  */
 const LEGACY_RATCHET: readonly string[] = [];
 
+/**
+ * No session on an event stream, anywhere, so no allow-list. In `@synonymdev/pubky` 0.16.2 a session-bound
+ * request holds the shared session Web Lock, and an open SSE holds it for the stream's whole lifetime. The SDK's
+ * exclusive bearer refresh after any 401 then never resolves and every session request queues behind it, so writes
+ * hang with no toast and no rollback (ADR-0014). Private directories are polled instead. Lift this once the SDK
+ * releases the lock for streams.
+ */
+const EVENT_STREAM_BUILDER = /\beventStreamFor(?:User)?\s*\(/;
+/** A method call on a builder, with up to one level of nested parentheses in its arguments. */
+const CALL_ARGUMENTS = String.raw`\((?:[^()]|\([^()]*\))*\)`;
+const CHAINED_CALLS = String.raw`(?:\s*\??\.\s*\w+\s*${CALL_ARGUMENTS})*`;
+const DOT_SESSION = String.raw`\s*\??\.\s*session\s*\(`;
+
+/** Whether `code` chains `.session(` onto an event stream builder, directly or through variables holding one. */
+function bindsSessionToEventStream(code: string): boolean {
+  const direct = new RegExp(`${EVENT_STREAM_BUILDER.source}(?:[^()]|\\([^()]*\\))*\\)${CHAINED_CALLS}${DOT_SESSION}`);
+  if (direct.test(code)) return true;
+
+  const holders = new Set<string>();
+  const assignment = (source: string) => new RegExp(String.raw`(\w+)\s*=\s*(?:await\s+)?${source}`, 'g');
+  for (const [, name] of code.matchAll(assignment(String.raw`(?:[\w.]+\.)?${EVENT_STREAM_BUILDER.source}`))) {
+    holders.add(name);
+  }
+  // `const a = sdk.eventStreamForUser(...); const b = a.path(...);` hands the builder on.
+  for (let size = -1; size !== holders.size;) {
+    size = holders.size;
+    for (const holder of [...holders]) {
+      for (const [, name] of code.matchAll(assignment(String.raw`${holder}\b`))) holders.add(name);
+    }
+  }
+  return [...holders].some((holder) => new RegExp(String.raw`\b${holder}${CHAINED_CALLS}${DOT_SESSION}`).test(code));
+}
+
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const path = join(dir, entry);
@@ -122,6 +155,47 @@ describe('social v1 compliance gate', () => {
     if (found.length > 0) matches.set(file, found);
   }
   const describeMatch = (file: string) => `${file}: ${matches.get(file)!.join(', ')}`;
+
+  it('lets no file hold a session-bound event stream open', () => {
+    const offenders = sourceFiles(SRC)
+      .filter((path) => bindsSessionToEventStream(withoutComments(readFileSync(path, 'utf8'))))
+      .map((path) => relative(ROOT, path));
+
+    expect(offenders).toEqual([]);
+  });
+
+  describe('session-bound event stream detection', () => {
+    it.each([
+      ['a direct chain', 'sdk.eventStreamForUser(pk, cursor).session(session).live().subscribe();'],
+      [
+        'a chain across lines',
+        'pubky\n  .eventStreamForUser(PublicKey.from(z32), null)\n  .session(session)\n  .live();',
+      ],
+      ['a chain with calls in between', "sdk.eventStreamForUser(pk, null).path('/priv/x/').live().session(session);"],
+      ['the other builder entry point', 'sdk.eventStreamFor(homeserver).session(session);'],
+      [
+        'the builder held in a variable',
+        'let builder = sdk.eventStreamForUser(pk, null);\nbuilder = builder.session(s);',
+      ],
+      ['a variable with calls in between', "const b = sdk.eventStreamForUser(pk);\nb.path('/priv/').session(s);"],
+      [
+        'a builder handed to a second variable',
+        'const a = sdk.eventStreamForUser(pk);\nconst b = a.live();\nb.session(s);',
+      ],
+      ['optional chaining', 'sdk.eventStreamForUser(pk)?.session(s);'],
+    ])('flags %s', (_name, code) => {
+      expect(bindsSessionToEventStream(code)).toBe(true);
+    });
+
+    it.each([
+      ['a public stream', "sdk.eventStreamForUser(pk, null).path('/pub/x/').live().subscribe();"],
+      ['a public stream in a variable', 'const b = sdk.eventStreamForUser(pk);\nb.live().subscribe();'],
+      ['a session call on something else', 'const b = sdk.eventStreamForUser(pk);\nb.live();\nother.session(s);'],
+      ['a session call with no stream in the file', 'signer.session(s);'],
+    ])('ignores %s', (_name, code) => {
+      expect(bindsSessionToEventStream(code)).toBe(false);
+    });
+  });
 
   it('lets no file outside the allow-lists use the 0.x package, its paths or the Nexus bookmark fields', () => {
     const offenders = [...matches.keys()].filter((file) => !LEGACY_RATCHET.includes(file)).sort();

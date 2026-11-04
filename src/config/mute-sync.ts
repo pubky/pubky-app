@@ -1,38 +1,13 @@
 /**
- * Homeserver event-stream filter for the social v1 mute entries, in the owner's private tree.
- * Passed to `@synonymdev/pubky` `eventStreamForUser(...).path(...)`; a `/priv/` filter needs the
- * owner's session attached, which `HomeserverService.subscribeUserEventStreamForPath` does.
+ * How often `MuteListSyncCoordinator` re-lists the private mute directory while the tab is visible.
+ * It polls because a session-bound event stream deadlocks the SDK's bearer refresh (ADR-0014).
+ * Fixed (not configurable via env); see `docs/environment.md`.
  */
-export const MUTE_HOMESERVER_EVENTS_PATH_PREFIX = '/priv/social/v1/mutes/';
+export const MUTE_SYNC_POLL_INTERVAL_MS = 30_000;
 
 /**
- * Delay before calling `MuteController.fetchMutedUsers` after mute-directory SSE events.
+ * Delay before calling `MuteController.fetchMutedUsers` after a refresh trigger, so triggers that land together
+ * (a return to the tab and `online`, a route and an auth change) make one LIST.
  * Fixed (not configurable via env); see `docs/environment.md`.
  */
 export const MUTE_SYNC_DEBOUNCE_MS = 500;
-
-/** Prefix for `sessionStorage` keys storing the last HS events-stream cursor per user. */
-export const MUTE_SYNC_CURSOR_STORAGE_PREFIX = 'pubky-app:mute-sync-cursor:';
-
-/** Wait before reconnecting the SDK event stream after a network/end error or disconnect. */
-export const MUTE_SYNC_RECONNECT_BACKOFF_MS = 1000;
-
-/**
- * Cap for the reconnect delay while the event stream keeps failing.
- * Delay doubles per consecutive failure from {@link MUTE_SYNC_RECONNECT_BACKOFF_MS} up to this value.
- */
-export const MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS = 30_000;
-
-/**
- * A stream connection that stayed open at least this long is considered healthy: a failure after it starts a
- * new failure streak instead of extending the previous one. Needed because a healthy idle stream (no mute
- * changes) never completes a `read()`, so completed reads alone cannot mark it healthy.
- */
-export const MUTE_SYNC_STREAM_HEALTHY_AFTER_MS = 30_000;
-
-/**
- * Consecutive stream failures (no healthy read or sustained connection in between) after which the coordinator
- * reports the outage to Sentry once. Routine reconnects are dropped by the `homeserver-event-stream-connect`
- * rule; with the doubling backoff this threshold corresponds to roughly one minute of continuous failure.
- */
-export const MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD = 6;

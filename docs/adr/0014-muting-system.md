@@ -4,7 +4,8 @@
 
 Accepted — 2026-01-12  
 Updated — 2026-05-06 (homeserver event-stream cross-session mute sync; Nexus mute APIs removed from client)  
-Updated — 2026-10-30 (social v1: mutes are private at `/priv/social/v1/mutes/{mutee}.json`; an unmute deletes both copies; the event stream is session-bound; no union with the 0.x directory)
+Updated — 2026-10-30 (social v1: mutes are private at `/priv/social/v1/mutes/{mutee}.json`; an unmute deletes both copies; the event stream is session-bound; no union with the 0.x directory)  
+Updated — 2026-11-04 (open sessions poll the private directory: a session-bound event stream deadlocks the SDK's bearer refresh)
 
 ## Context
 
@@ -76,11 +77,15 @@ Mutes sync to the homeserver for cross-device persistence, as `pubky-social-spec
 
 - **URL Pattern**: `pubky://{muter}/priv/social/v1/mutes/{mutee}.json` (`MuteNormalizer.to` → `buildMute`), under the owner's **private** root: only a session of the owner can read, list or delete it, and no indexer (Nexus) ever sees it. The 0.x copy at `pubky://{muter}/pub/pubky.app/mutes/{mutee}` was public; the app never writes it again, and the migration gate (ADR-0026) copies it into the private tree once.
 - **Sequence**: Local database first (atomicity), then homeserver (durability). A mute PUTs the built bytes (`HomeserverService.putBlob`). An unmute deletes **both copies**, the 0.x one first (`MuteNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'mute' })`), each through `HomeserverService.deleteIdempotent`, so a copy that was never there (a mute made after the migration) is not an error. The grant keeps `/pub/pubky.app/:rw` for this.
-- **Reads**: `MuteApplication.fetchMutedUsers` LISTs `/priv/social/v1/mutes/` **only** and reads the muted key from each `{mutee}.json` name (`parseUri(url).kind === 'mute'`; any other file in the directory is skipped). There is no union with the 0.x directory: the gate guarantees every 0.x mute was copied, an unmute deletes both copies, and the one writer left on the 0.x directory, a stale 0.x tab, is closed by the forced service-worker takeover (ADR-0021 amendment). A second LIST per bootstrap and per event would buy nothing.
+- **Reads**: `MuteApplication.fetchMutedUsers` LISTs `/priv/social/v1/mutes/` **only** and reads the muted key from each `{mutee}.json` name (`parseUri(url).kind === 'mute'`; any other file in the directory is skipped). There is no union with the 0.x directory: the gate guarantees every 0.x mute was copied, an unmute deletes both copies, and the one writer left on the 0.x directory, a stale 0.x tab, is closed by the forced service-worker takeover (ADR-0021 amendment). A second LIST per bootstrap and per poll would buy nothing.
 
-**Cross-session consistency (open sessions):** While the app is running, `MuteListSyncCoordinator` (started from `CoordinatorsManager`) subscribes to the homeserver **event stream** via `@synonymdev/pubky` (`eventStreamForUser`, path prefix `/priv/social/v1/mutes/` from `src/config/mute-sync.ts`, live mode). A `/priv/` prefix is served only to a session of the tree's owner, so `HomeserverService.subscribeUserEventStreamForPath` attaches the signed-in session and fails as `Err.auth(SESSION_EXPIRED)` without one (`UNAUTHORIZED` for another owner's tree) before any request; the coordinator treats that like any other stream failure (reconnect with backoff, one outage report after the threshold). PUT/DEL events debounce to `MuteController.fetchMutedUsers`, which re-lists the private `mutes/` directory on the homeserver and refreshes the Dexie `UserStreamTypes.MUTED` stream. This keeps mute lists aligned across devices **without** Nexus mute APIs — mute lists are not indexed for the client there, and a private object never will be. The coordinator tears down and reopens that stream when navigating across disabled auth/onboarding routes and the rest of the app (and when auth or tab visibility policy changes), not on every in-app pathname change among allowed routes.
+**Cross-session consistency (open sessions):** While the app is running, `MuteListSyncCoordinator` (started from `CoordinatorsManager`, on the polling `Coordinator` base) calls `MuteController.fetchMutedUsers` on start, when the tab becomes visible, on `online`, and every `MUTE_SYNC_POLL_INTERVAL_MS` (30 s, fixed, `src/config/mute-sync.ts`). Triggers debounce into one LIST (`MUTE_SYNC_DEBOUNCE_MS`), a LIST still out is not stacked on, and the coordinator keeps the runtime visibility pause and stops on the auth and onboarding routes. The refresh re-lists the private `mutes/` directory and updates the Dexie `UserStreamTypes.MUTED` stream. This keeps mute lists aligned across devices **without** Nexus mute APIs: mute lists are not indexed for the client there, and a private object never will be.
 
-Bootstrap and migration still call `MuteApplication.fetchMutedUsers` for initial hydration (see ADR-0009), which also covers a `/priv/` event the homeserver did not deliver.
+Because a refresh now runs on a timer, `MuteApplication.fetchMutedUsers` skips its local write in three cases: the session it started for ended (the MUTED stream would belong to the next account); a commit ran during the LIST or is still running (the optimistic local write is newer than the listing, and overwriting it would undo the user's mute until the next poll); or the members are unchanged (a rewrite wakes every `useMutedUsers` reader on each poll).
+
+**Why polling and not the event stream (amended 2026-11-04):** the port first moved the event stream to the private tree, which needs `eventStreamForUser(...).session(session)`. In `@synonymdev/pubky` 0.16.2 (nothing in the 0.17.1 notes changes this) a session-bound request holds the Web Lock `pubky-shared-session:<homeserver>:<grantId>` in `shared` mode, and an open SSE holds it for the stream's whole lifetime, although the SDK's own `docs/grant-session-lifecycle.md` says open event streams do not retain the lock. Any session write that gets a 401 then requests the same lock `exclusive` for its bearer refresh, which never resolves while the stream is open: `putBytes` and `putJson` never settle, the composer stays on "Posting…" with no toast and no rollback, and by the Web Locks ordering every later session request queues behind the pending exclusive one. The upstream report is separate; the app does not depend on the fix. So no session-bound request may stay open: `HomeserverService.subscribeUserEventStreamForPath` refuses a `/priv/` prefix with `Err.client`, and the compliance gate (`social-v1-compliance.gate.test.ts`) fails on `.session(` chained onto an event stream builder anywhere in non-test `src/**`. **Restore the event stream when the SDK releases the lease for streams.** Until then a mute change made on another device appears within the poll interval or on focus, not live.
+
+Bootstrap and migration still call `MuteApplication.fetchMutedUsers` for initial hydration (see ADR-0009).
 
 ### Post Filtering
 
@@ -183,6 +188,7 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 - Only user-level muting (no keyword/hashtag muting)
 - Muted users' posts still fetched from API (filtered client-side)
 - A mute is private, so Nexus can never derive a notification or a count from it
+- A mute change made on another device appears within the poll interval or on focus, not live
 - Filter changes don't retroactively update already-rendered posts
 - Deleted post filtering requires async DB lookups (slightly slower than sync mute filter)
 
@@ -190,7 +196,7 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 
 - Requires PostStreamQueue for efficient filtered pagination
 - Mute list loaded into memory for O(1) lookup during filtering
-- Bootstrap (and DB migration resync) fetch mutes from the homeserver; **active sessions** also refresh via `MuteListSyncCoordinator` + homeserver event stream (see Homeserver Sync above)
+- Bootstrap (and DB migration resync) fetch mutes from the homeserver; **active sessions** also refresh via `MuteListSyncCoordinator` polling (see Homeserver Sync above)
 - Deleted post filtering uses fail-open strategy (posts without cached details are shown)
 
 ## Alternatives Considered
@@ -229,8 +235,7 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 
 - Mute controller: `src/core/controllers/mute/mute.ts`
 - Mute application: `src/core/application/mute/mute.ts`
-- Homeserver event-stream helper: `HomeserverService.subscribeUserEventStreamForPath` in `src/core/services/homeserver/homeserver.ts`
-- Debounce / path constants: `src/config/mute-sync.ts`
+- Poll interval / debounce constants: `src/config/mute-sync.ts`
 - Coordinator: `src/core/coordinators/mute-list-sync/mute-list-sync.ts` (`MuteListSyncCoordinator`; wired from `CoordinatorsManager`)
 - Mute service: `src/core/services/local/mute/mute.ts`
 - Mute normalizer: `src/core/pipes/mute/mute.normalizer.ts` (`to` → `buildMute`, `toDeleteUrls` → `deletionPaths`)

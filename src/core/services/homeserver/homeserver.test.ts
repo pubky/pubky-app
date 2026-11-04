@@ -18,7 +18,6 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isRetryable } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { shouldDropAppErrorFromSentry } from '@/libs/observability/sentry.utils';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -2747,74 +2746,39 @@ describe('HomeserverService', () => {
         expect(path).toHaveBeenCalledWith('/pub/pubky.app/mutes/');
       });
 
-      it('attaches the owner session to a private prefix, which the homeserver serves only to its owner', async () => {
-        mockState.currentSession = createMockSession();
-        const session = vi.fn().mockReturnThis();
-        const path = vi.fn().mockReturnThis();
-        const live = vi.fn().mockReturnThis();
-        const subscribe = vi.fn().mockResolvedValue(new ReadableStream());
-        mockState.eventStreamForUser.mockReturnValue({ session, path, live, subscribe });
+      it.each(['/priv/social/v1/mutes/', '/priv/'])(
+        'refuses the private prefix %s before any request: a session-bound stream would hang every bearer refresh',
+        async (pathPrefix) => {
+          mockState.currentSession = createMockSession();
+          const session = vi.fn().mockReturnThis();
+          const subscribe = vi.fn();
+          mockState.eventStreamForUser.mockReturnValue({
+            session,
+            path: vi.fn().mockReturnThis(),
+            live: vi.fn().mockReturnThis(),
+            subscribe,
+          });
 
-        await HomeserverService.subscribeUserEventStreamForPath({
-          userZ32: 'user',
-          cursor: 'cursor-0',
-          pathPrefix: '/priv/social/v1/mutes/',
-        });
+          const error = (await HomeserverService.subscribeUserEventStreamForPath({
+            userZ32: 'user',
+            cursor: null,
+            pathPrefix,
+          }).catch((caught: unknown) => caught)) as AppError;
 
-        expect(session).toHaveBeenCalledWith(mockState.currentSession);
-        expect(session.mock.invocationCallOrder[0]).toBeLessThan(path.mock.invocationCallOrder[0]);
-        expect(path).toHaveBeenCalledWith('/priv/social/v1/mutes/');
-        expect(subscribe).toHaveBeenCalled();
-      });
+          expect(error).toMatchObject({
+            category: ErrorCategory.Client,
+            code: ClientErrorCode.BAD_REQUEST,
+            service: ErrorService.Homeserver,
+            operation: 'subscribeUserEventStreamForPath',
+          });
+          expect(error.message).toContain('ADR-0014');
+          expect(mockState.eventStreamForUser).not.toHaveBeenCalled();
+          expect(session).not.toHaveBeenCalled();
+          expect(subscribe).not.toHaveBeenCalled();
+        },
+      );
 
-      it('fails a private prefix as SESSION_EXPIRED without a session, before any request', async () => {
-        mockState.currentSession = null;
-        const subscribe = vi.fn();
-        mockState.eventStreamForUser.mockReturnValue({ path: vi.fn().mockReturnThis(), live: vi.fn(), subscribe });
-
-        const error = (await HomeserverService.subscribeUserEventStreamForPath({
-          userZ32: 'user',
-          cursor: null,
-          pathPrefix: '/priv/social/v1/mutes/',
-        }).catch((caught: unknown) => caught)) as AppError;
-
-        expect(error).toMatchObject({
-          category: ErrorCategory.Auth,
-          code: AuthErrorCode.SESSION_EXPIRED,
-          service: ErrorService.Homeserver,
-          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
-        });
-        expect(subscribe).not.toHaveBeenCalled();
-        expect(shouldDropAppErrorFromSentry(error)).toBe(false);
-      });
-
-      it("refuses a private prefix of another user's tree as UNAUTHORIZED instead of sending the session", async () => {
-        mockState.currentSession = createMockSession();
-        const session = vi.fn().mockReturnThis();
-        const subscribe = vi.fn();
-        mockState.eventStreamForUser.mockReturnValue({
-          session,
-          path: vi.fn().mockReturnThis(),
-          live: vi.fn(),
-          subscribe,
-        });
-
-        const error = (await HomeserverService.subscribeUserEventStreamForPath({
-          userZ32: 'someone-else',
-          cursor: null,
-          pathPrefix: '/priv/social/v1/mutes/',
-        }).catch((caught: unknown) => caught)) as AppError;
-
-        expect(error).toMatchObject({
-          category: ErrorCategory.Auth,
-          code: AuthErrorCode.UNAUTHORIZED,
-          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
-        });
-        expect(session).not.toHaveBeenCalled();
-        expect(subscribe).not.toHaveBeenCalled();
-      });
-
-      it('maps SDK connect failures to a Server AppError tagged with the subscribe operation and drops it from Sentry', async () => {
+      it('maps SDK connect failures to a Server AppError tagged with the subscribe operation', async () => {
         const path = vi.fn().mockReturnThis();
         const live = vi.fn().mockReturnThis();
         const subscribe = vi
@@ -2834,14 +2798,13 @@ describe('HomeserverService', () => {
 
         expect(error).toMatchObject({
           service: ErrorService.Homeserver,
-          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+          operation: 'subscribeUserEventStreamForPath',
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
         });
-        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
       });
 
-      it('keeps SDK authentication failures on subscribe reportable', async () => {
+      it('keeps SDK authentication failures on subscribe as auth errors', async () => {
         const path = vi.fn().mockReturnThis();
         const live = vi.fn().mockReturnThis();
         const subscribe = vi
@@ -2857,15 +2820,13 @@ describe('HomeserverService', () => {
 
         expect(error).toMatchObject({
           service: ErrorService.Homeserver,
-          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+          operation: 'subscribeUserEventStreamForPath',
           category: ErrorCategory.Auth,
         });
-        expect(shouldDropAppErrorFromSentry(error)).toBe(false);
       });
 
-      it('drops SDK PKARR resolution failures on subscribe from Sentry like other connect failures', async () => {
-        // The subscribe resolves the user's homeserver from PKARR first; a relay failure there
-        // rejects with PkarrError (Network), and the coordinator reconnects with backoff by design.
+      it('maps SDK PKARR resolution failures on subscribe to a Network AppError', async () => {
+        // The subscribe resolves the user's homeserver from PKARR first; a relay failure there rejects with PkarrError.
         const path = vi.fn().mockReturnThis();
         const live = vi.fn().mockReturnThis();
         const subscribe = vi.fn().mockRejectedValue({ name: 'PkarrError', message: 'relay unreachable' });
@@ -2879,11 +2840,10 @@ describe('HomeserverService', () => {
 
         expect(error).toMatchObject({
           service: ErrorService.Homeserver,
-          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+          operation: 'subscribeUserEventStreamForPath',
           category: ErrorCategory.Network,
           code: NetworkErrorCode.CONNECTION_FAILED,
         });
-        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
       });
     });
 

@@ -1,36 +1,38 @@
-import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES, PROFILE_ROUTES } from '@/app/routes';
-import {
-  MUTE_SYNC_CURSOR_STORAGE_PREFIX,
-  MUTE_SYNC_DEBOUNCE_MS,
-  MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS,
-  MUTE_SYNC_RECONNECT_BACKOFF_MS,
-  MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
-  MUTE_SYNC_STREAM_HEALTHY_AFTER_MS,
-} from '@/config/mute-sync';
+import { MUTE_SYNC_DEBOUNCE_MS, MUTE_SYNC_POLL_INTERVAL_MS } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
-import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
-import type { AppError } from '@/libs/error/error';
-import { ServerErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
-import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockSession } from '@/test-utils/pubky';
 
-async function flushPromises() {
-  await Promise.resolve();
-  await Promise.resolve();
-}
+const PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+const OTHER_PUBKY = 'c5nr657md9g8mut1xb7pyj8fuhm1aukwpmkqqjhiwsp9wdhmwzay' as Pubky;
 
 function setVisibilityState(visibilityState: DocumentVisibilityState): void {
   Object.defineProperty(document, 'visibilityState', {
     configurable: true,
     get: () => visibilityState,
   });
+  document.dispatchEvent(new Event('visibilitychange'));
 }
+
+function signIn(pubky: Pubky = PUBKY): void {
+  useAuthStore.getState().init({ session: mockSession(), currentUserPubky: pubky, hasProfile: true });
+}
+
+function startOn(route: string): MuteListSyncCoordinator {
+  const coordinator = MuteListSyncCoordinator.getInstance();
+  void coordinator.setRoute(route);
+  void coordinator.start();
+  return coordinator;
+}
+
+const fetchMuted = () => vi.mocked(MuteController.fetchMutedUsers);
+
+/** Runs the debounce after a trigger. */
+const settleDebounce = () => vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS);
 
 describe('MuteListSyncCoordinator', () => {
   beforeEach(() => {
@@ -38,612 +40,316 @@ describe('MuteListSyncCoordinator', () => {
     setVisibilityState('visible');
     MuteListSyncCoordinator.resetInstance();
     useAuthStore.getState().reset();
-    sessionStorage.clear();
-    vi.spyOn(MuteController, 'subscribeMuteDirectoryEventStream').mockImplementation(async () => {
-      return new ReadableStream({
-        start(controller) {
-          controller.enqueue({ cursor: 'c1', eventType: 'PUT' });
-        },
-      });
-    });
     vi.spyOn(MuteController, 'fetchMutedUsers').mockResolvedValue([]);
   });
 
   afterEach(() => {
     MuteListSyncCoordinator.resetInstance();
     useAuthStore.getState().reset();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
-  it('calls fetchMutedUsers after debounce when homeserver events arrive', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
+  describe('triggers', () => {
+    it('refreshes on start, once the debounce has passed', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+
+      expect(fetchMuted()).not.toHaveBeenCalled();
+
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledExactlyOnceWith(PUBKY);
     });
 
-    const fetchMuted = vi.mocked(MuteController.fetchMutedUsers);
+    it('refreshes every poll interval while visible', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
 
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(APP_ROUTES.HOME);
-    coordinator.start();
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
 
-    await flushPromises();
-    expect(MuteController.subscribeMuteDirectoryEventStream).toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(3);
+    });
 
-    await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS);
-    expect(fetchMuted).toHaveBeenCalledTimes(1);
-    expect(fetchMuted).toHaveBeenCalledWith(pubky);
+    it('refreshes on online', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      fetchMuted().mockClear();
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledExactlyOnceWith(PUBKY);
+    });
+
+    it('refreshes when the tab becomes visible and restarts the interval from there', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      fetchMuted().mockClear();
+
+      setVisibilityState('hidden');
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS * 3);
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS - MUTE_SYNC_DEBOUNCE_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
+    });
+
+    it('refreshes once the persisted session is restored after start', async () => {
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(fetchMuted()).not.toHaveBeenCalled();
+
+      signIn();
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledExactlyOnceWith(PUBKY);
+    });
   });
 
-  it('debounces bursty PUT events into a single fetch', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-      return new ReadableStream({
-        start(controller) {
-          controller.enqueue({ cursor: 'c1', eventType: 'PUT' });
-          controller.enqueue({ cursor: 'c2', eventType: 'PUT' });
-        },
-      });
+  describe('debounce', () => {
+    it('makes one LIST of triggers that land together', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      window.dispatchEvent(new Event('online'));
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
     });
 
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
-    });
+    it('waits the full debounce after the last trigger', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
 
-    const fetchMuted = vi.mocked(MuteController.fetchMutedUsers);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS - 1);
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS - 1);
+      expect(fetchMuted()).not.toHaveBeenCalled();
 
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(APP_ROUTES.HOME);
-    coordinator.start();
-
-    await flushPromises();
-    await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS);
-    expect(fetchMuted).toHaveBeenCalledTimes(1);
-  });
-
-  it('retries failed mute refreshes and stores the cursor after success', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    const cursorKey = `${MUTE_SYNC_CURSOR_STORAGE_PREFIX}${pubky}`;
-    vi.mocked(MuteController.fetchMutedUsers).mockRejectedValueOnce(new Error('temporary')).mockResolvedValueOnce([]);
-
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
-    });
-
-    const fetchMuted = vi.mocked(MuteController.fetchMutedUsers);
-
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(APP_ROUTES.HOME);
-    coordinator.start();
-
-    await flushPromises();
-    await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS);
-
-    expect(fetchMuted).toHaveBeenCalledTimes(1);
-    expect(sessionStorage.getItem(cursorKey)).toBeNull();
-
-    await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS);
-
-    expect(fetchMuted).toHaveBeenCalledTimes(2);
-    expect(sessionStorage.getItem(cursorKey)).toBe('c1');
-  });
-
-  it('does not reconnect the homeserver stream when moving between allowed routes', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
-    });
-
-    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(APP_ROUTES.HOME);
-    coordinator.start();
-
-    await flushPromises();
-    expect(subscribe).toHaveBeenCalledTimes(1);
-
-    coordinator.setRoute(PROFILE_ROUTES.PROFILE);
-    await flushPromises();
-    expect(subscribe).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the homeserver stream after navigating from a disabled route to an allowed route', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
-    });
-
-    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(AUTH_ROUTES.SIGN_IN);
-    coordinator.start();
-
-    await flushPromises();
-    expect(subscribe).not.toHaveBeenCalled();
-
-    coordinator.setRoute(APP_ROUTES.HOME);
-    await flushPromises();
-    expect(subscribe).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the homeserver stream once the persisted session is restored after start()', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-    // Public-route reload: the persisted identity hydrates first, the live session lands later.
-    useAuthStore.getState().setCurrentUserPubky(pubky);
-    useAuthStore.getState().setHasProfile(true);
-
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(APP_ROUTES.HOME);
-    coordinator.start();
-
-    await flushPromises();
-    expect(subscribe).not.toHaveBeenCalled();
-
-    // Session restore writes back the same pubky / hasProfile — only the session changes.
-    useAuthStore.getState().init({ session: mockSession(), currentUserPubky: pubky, hasProfile: true });
-
-    await flushPromises();
-    expect(subscribe).toHaveBeenCalledTimes(1);
-    expect(subscribe.mock.calls[0][0]).toBe(pubky);
-    coordinator.stop();
-  });
-
-  it('does not open the homeserver stream on disabled auth routes', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
-    });
-
-    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(AUTH_ROUTES.SIGN_IN);
-    coordinator.start();
-
-    await flushPromises();
-    await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS + 50);
-
-    expect(subscribe).not.toHaveBeenCalled();
-    coordinator.stop();
-  });
-
-  it('clears reconnect backoff on stop so a second subscribe is not scheduled after backoff', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-      return new ReadableStream({
-        start(controller) {
-          controller.close();
-        },
-      });
-    });
-
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
-    });
-
-    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(APP_ROUTES.HOME);
-    coordinator.start();
-
-    await flushPromises();
-    expect(subscribe).toHaveBeenCalledTimes(1);
-
-    coordinator.stop();
-
-    await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS + 100);
-    expect(subscribe).toHaveBeenCalledTimes(1);
-  });
-
-  it('pauses the homeserver stream while hidden and resumes when visible', async () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-    const cancelFirstStream = vi.fn();
-
-    vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-      return new ReadableStream({
-        cancel: cancelFirstStream,
-      });
-    });
-
-    useAuthStore.getState().init({
-      session: mockSession(),
-      currentUserPubky: pubky,
-      hasProfile: true,
-    });
-
-    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-    const coordinator = MuteListSyncCoordinator.getInstance();
-    coordinator.setRoute(APP_ROUTES.HOME);
-    coordinator.start();
-
-    await flushPromises();
-    expect(subscribe).toHaveBeenCalledTimes(1);
-
-    setVisibilityState('hidden');
-    document.dispatchEvent(new Event('visibilitychange'));
-    await flushPromises();
-
-    expect(cancelFirstStream).toHaveBeenCalledTimes(1);
-
-    setVisibilityState('visible');
-    document.dispatchEvent(new Event('visibilitychange'));
-    await flushPromises();
-
-    expect(subscribe).toHaveBeenCalledTimes(2);
-  });
-
-  describe('persistent stream failures', () => {
-    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-
-    function subscribeConnectFailure(): AppError {
-      return Err.server(ServerErrorCode.INTERNAL_ERROR, 'HTTP transport error: error sending request', {
-        service: ErrorService.Homeserver,
-        operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
-      });
-    }
-
-    /** Backoff after the n-th consecutive failure (1-based), as scheduled by the coordinator. */
-    function backoffAfterFailure(n: number): number {
-      return Math.min(MUTE_SYNC_RECONNECT_BACKOFF_MS * 2 ** (n - 1), MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS);
-    }
-
-    function startCoordinator(): void {
-      useAuthStore.getState().init({ session: mockSession(), currentUserPubky: pubky, hasProfile: true });
-      const coordinator = MuteListSyncCoordinator.getInstance();
-      coordinator.setRoute(APP_ROUTES.HOME);
-      coordinator.start();
-    }
-
-    type ErrServerSpy = MockInstance<typeof Err.server>;
-
-    function escalationReports(serverSpy: ErrServerSpy): number {
-      return serverSpy.mock.calls.filter(([, , params]) => params.operation === 'muteListEventStreamExhausted').length;
-    }
-
-    it('reports the outage to Sentry exactly once when the failure streak reaches the threshold', async () => {
-      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-        throw subscribeConnectFailure();
-      });
-      const serverSpy = vi.spyOn(Err, 'server');
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-      startCoordinator();
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(1);
-
-      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
-        expect(escalationReports(serverSpy)).toBe(0);
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
-        await flushPromises();
-        expect(subscribe).toHaveBeenCalledTimes(failure + 1);
-      }
-
-      expect(escalationReports(serverSpy)).toBe(1);
-      const [, , params] = serverSpy.mock.calls.find(([, , p]) => p.operation === 'muteListEventStreamExhausted')!;
-      expect(params).toMatchObject({
-        service: ErrorService.Homeserver,
-        context: {
-          consecutiveFailures: MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
-          lastErrorCode: ServerErrorCode.INTERNAL_ERROR,
-          lastErrorOperation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
-        },
-      });
-      expect(params.cause).toBeUndefined();
-
-      // Keeps reconnecting past the threshold without reporting again.
-      await vi.advanceTimersByTimeAsync(backoffAfterFailure(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD));
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
-      expect(escalationReports(serverSpy)).toBe(1);
-    });
-
-    it('doubles the reconnect delay per consecutive failure up to the cap', async () => {
-      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-        throw subscribeConnectFailure();
-      });
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-      startCoordinator();
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(1);
-
-      // Second failure is scheduled at 2 × base: not yet at base, present just after 2 × base.
-      await vi.advanceTimersByTimeAsync(backoffAfterFailure(1));
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(2);
-      await vi.advanceTimersByTimeAsync(backoffAfterFailure(2) - 1);
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(2);
       await vi.advanceTimersByTimeAsync(1);
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(3);
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+    });
+  });
 
-      // Walk to the cap and confirm the delay stops growing.
-      let failures = 3;
-      while (backoffAfterFailure(failures) < MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS) {
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failures));
-        await flushPromises();
-        failures += 1;
-        expect(subscribe).toHaveBeenCalledTimes(failures);
-      }
-      await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS - 1);
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(failures);
-      await vi.advanceTimersByTimeAsync(1);
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(failures + 1);
+  describe('page visibility', () => {
+    it('pauses while hidden: no interval, no online refresh and a pending refresh is dropped', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+
+      setVisibilityState('hidden');
+      expect(vi.getTimerCount()).toBe(0);
+
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS * 3);
+
+      expect(fetchMuted()).not.toHaveBeenCalled();
     });
 
-    it('ignores a rejection from a stale loop generation so the new loop does not inherit the failure', async () => {
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-      let rejectStale: ((error: unknown) => void) | undefined;
-      subscribe.mockImplementationOnce(
+    it('does not start polling while the tab loads hidden', async () => {
+      setVisibilityState('hidden');
+      MuteListSyncCoordinator.resetInstance();
+      signIn();
+      startOn(APP_ROUTES.HOME);
+
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).not.toHaveBeenCalled();
+
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps polling while hidden when the runtime config does not respect visibility, and refreshes on return', async () => {
+      signIn();
+      const coordinator = startOn(APP_ROUTES.HOME);
+      coordinator.configure({ respectPageVisibility: false });
+      await settleDebounce();
+      fetchMuted().mockClear();
+
+      setVisibilityState('hidden');
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+      fetchMuted().mockClear();
+
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('route gating', () => {
+    it.each([AUTH_ROUTES.SIGN_IN, AUTH_ROUTES.LOGOUT, '/onboarding/profile'])('does not poll on %s', async (route) => {
+      signIn();
+      startOn(route);
+
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS * 2);
+
+      expect(fetchMuted()).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('refreshes after crossing from a disabled route to an allowed one', async () => {
+      signIn();
+      const coordinator = startOn(AUTH_ROUTES.SIGN_IN);
+
+      void coordinator.setRoute(APP_ROUTES.HOME);
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+    });
+
+    it('neither refreshes nor restarts the interval when moving between allowed routes', async () => {
+      signIn();
+      const coordinator = startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      fetchMuted().mockClear();
+
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS / 2);
+      void coordinator.setRoute(PROFILE_ROUTES.PROFILE);
+      await settleDebounce();
+      expect(fetchMuted()).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS / 2);
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops polling and drops a pending refresh when moving to a disabled route', async () => {
+      signIn();
+      const coordinator = startOn(APP_ROUTES.HOME);
+
+      void coordinator.setRoute(AUTH_ROUTES.LOGOUT);
+
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('auth', () => {
+    it('does not poll without a profile', async () => {
+      useAuthStore.getState().init({ session: mockSession(), currentUserPubky: PUBKY, hasProfile: false });
+      startOn(APP_ROUTES.HOME);
+
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+
+      expect(fetchMuted()).not.toHaveBeenCalled();
+    });
+
+    it('stops polling when the session ends', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      fetchMuted().mockClear();
+
+      useAuthStore.getState().reset();
+
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).not.toHaveBeenCalled();
+    });
+
+    it('refreshes the new account right away when the account changes', async () => {
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      fetchMuted().mockClear();
+
+      signIn(OTHER_PUBKY);
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledExactlyOnceWith(OTHER_PUBKY);
+    });
+  });
+
+  describe('a refresh that fails or takes long', () => {
+    it('keeps polling after a failed refresh, and the next tick retries', async () => {
+      fetchMuted().mockRejectedValueOnce(new Error('temporary'));
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not stack a LIST on one still out, and resumes once it settles', async () => {
+      let finish: (value: Pubky[]) => void = () => {};
+      fetchMuted().mockImplementationOnce(
         () =>
-          new Promise<ReadableStream<TMuteDirectoryEvent>>((_, reject) => {
-            rejectStale = reject;
+          new Promise<Pubky[]>((resolve) => {
+            finish = resolve;
           }),
       );
-      subscribe.mockImplementation(async () => {
-        throw subscribeConnectFailure();
-      });
-      const serverSpy = vi.spyOn(Err, 'server');
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
 
-      startCoordinator();
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(1);
-      expect(rejectStale).toBeDefined();
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS * 2);
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
 
-      // Restart while the first subscribe is still pending: generation 1 is now stale.
-      const coordinator = MuteListSyncCoordinator.getInstance();
+      finish([]);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not let a previous account's slow LIST hold back the new account", async () => {
+      fetchMuted().mockImplementationOnce(() => new Promise<Pubky[]>(() => {}));
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledWith(PUBKY);
+
+      signIn(OTHER_PUBKY);
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenLastCalledWith(OTHER_PUBKY);
+    });
+  });
+
+  describe('stop and destroy', () => {
+    it('stop clears the interval and a pending refresh, and start resumes', async () => {
+      signIn();
+      const coordinator = startOn(APP_ROUTES.HOME);
+
       coordinator.stop();
-      coordinator.start();
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(2);
 
-      // The stale generation rejects after the new loop already failed once.
-      rejectStale!(subscribeConnectFailure());
-      await flushPromises();
-
-      // New loop: 1 own failure + 0 inherited. If the stale rejection had counted, the streak would be 2 and the
-      // threshold-th own failure would report one early; walk exactly (threshold - 1) more failures and assert
-      // no report, then one more and assert the report.
-      for (let ownFailures = 1; ownFailures < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; ownFailures += 1) {
-        expect(escalationReports(serverSpy)).toBe(0);
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(ownFailures));
-        await flushPromises();
-      }
-      expect(subscribe).toHaveBeenCalledTimes(1 + MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
-      expect(escalationReports(serverSpy)).toBe(1);
-    });
-
-    /** Subscribe resolves to an idle stream (read never completes) that can be errored later from the test. */
-    function subscribeIdleStreams(): { dropCurrent: () => void } {
-      let controller: ReadableStreamDefaultController<TMuteDirectoryEvent> | undefined;
-      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-        return new ReadableStream<TMuteDirectoryEvent>({
-          start(c) {
-            controller = c;
-          },
-        });
-      });
-      return {
-        dropCurrent: () => {
-          controller?.error(subscribeConnectFailure());
-          controller = undefined;
-        },
-      };
-    }
-
-    it('does not treat drops of long-lived idle connections as an accumulating outage', async () => {
-      const idle = subscribeIdleStreams();
-      const serverSpy = vi.spyOn(Err, 'server');
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-      const tenMinutes = 10 * 60 * 1000;
-
-      startCoordinator();
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(1);
-
-      // Reproduction from review: six healthy idle connections of ten minutes each, each ending in a drop.
-      for (let connection = 1; connection <= MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1; connection += 1) {
-        await vi.advanceTimersByTimeAsync(tenMinutes);
-        idle.dropCurrent();
-        await flushPromises();
-        // Each drop starts a fresh streak of 1, so the reconnect delay stays at the base value.
-        await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS);
-        await flushPromises();
-        expect(subscribe).toHaveBeenCalledTimes(connection + 1);
-      }
-
-      expect(escalationReports(serverSpy)).toBe(0);
-    });
-
-    it('still reports when connections are established but drop again before the healthy window', async () => {
-      const idle = subscribeIdleStreams();
-      const serverSpy = vi.spyOn(Err, 'server');
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-      startCoordinator();
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(1);
-
-      for (let failure = 1; failure <= MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
-        await vi.advanceTimersByTimeAsync(MUTE_SYNC_STREAM_HEALTHY_AFTER_MS - 1);
-        idle.dropCurrent();
-        await flushPromises();
-        expect(escalationReports(serverSpy)).toBe(failure === MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD ? 1 : 0);
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
-        await flushPromises();
-      }
-
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
-      expect(escalationReports(serverSpy)).toBe(1);
-    });
-
-    it('resets the failure streak after a healthy read so a later blip does not report', async () => {
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-      let call = 0;
-      subscribe.mockImplementation(async () => {
-        call += 1;
-        // Fail (threshold - 1) times, then deliver one event and close, then fail again.
-        if (call === MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD) {
-          return new ReadableStream({
-            start(controller) {
-              controller.enqueue({ cursor: 'c1', eventType: 'CURSOR' });
-              controller.close();
-            },
-          });
-        }
-        throw subscribeConnectFailure();
-      });
-      const serverSpy = vi.spyOn(Err, 'server');
-
-      startCoordinator();
-      await flushPromises();
-
-      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
-        await flushPromises();
-      }
-      // The threshold-th connect succeeded and read an event: streak reset, no report.
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
-      expect(escalationReports(serverSpy)).toBe(0);
-
-      // Stream closed cleanly → reconnect after the base delay (streak is 0) → fails once.
-      await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS);
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
-      expect(escalationReports(serverSpy)).toBe(0);
-    });
-
-    it('treats a stream that closes before delivering an event as a failure: backoff grows and the outage reports', async () => {
-      // Reproduction from review: the homeserver accepts every subscribe and closes the stream cleanly at once.
-      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-        return new ReadableStream<TMuteDirectoryEvent>({
-          start(controller) {
-            controller.close();
-          },
-        });
-      });
-      const serverSpy = vi.spyOn(Err, 'server');
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-
-      startCoordinator();
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(1);
-
-      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
-        expect(escalationReports(serverSpy)).toBe(0);
-        // Not yet reconnected just before the (growing) backoff elapses…
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure) - 1);
-        await flushPromises();
-        expect(subscribe).toHaveBeenCalledTimes(failure);
-        // …and reconnected right after it.
-        await vi.advanceTimersByTimeAsync(1);
-        await flushPromises();
-        expect(subscribe).toHaveBeenCalledTimes(failure + 1);
-      }
-
-      expect(escalationReports(serverSpy)).toBe(1);
-      const [, , params] = serverSpy.mock.calls.find(([, , p]) => p.operation === 'muteListEventStreamExhausted')!;
-      expect(params.context).toMatchObject({
-        consecutiveFailures: MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
-        lastFailure: 'prematureClose',
-      });
-    });
-
-    it('lets a healthy connection torn down by hide/show clear earlier failures instead of carrying them over', async () => {
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
-      const tenMinutes = 10 * 60 * 1000;
-      let call = 0;
-      subscribe.mockImplementation(async () => {
-        call += 1;
-        // Fail (threshold - 1) times, then hand out an idle stream that stays healthy until torn down, then fail.
-        if (call === MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD) {
-          return new ReadableStream<TMuteDirectoryEvent>({ start() {} });
-        }
-        throw subscribeConnectFailure();
-      });
-      const serverSpy = vi.spyOn(Err, 'server');
-
-      startCoordinator();
-      await flushPromises();
-      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
-        await flushPromises();
-      }
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
-      expect(escalationReports(serverSpy)).toBe(0);
-
-      // Healthy idle connection for ten minutes, then the tab is hidden (controlled teardown) and shown again.
-      await vi.advanceTimersByTimeAsync(tenMinutes);
-      setVisibilityState('hidden');
-      document.dispatchEvent(new Event('visibilitychange'));
-      await flushPromises();
+      expect(vi.getTimerCount()).toBe(0);
+      window.dispatchEvent(new Event('online'));
       setVisibilityState('visible');
-      document.dispatchEvent(new Event('visibilitychange'));
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).not.toHaveBeenCalled();
 
-      // The reconnect after show failed once: with the streak cleared by the healthy connection, that is 1, not
-      // threshold — no report, and the next reconnect is scheduled at the base delay.
-      expect(escalationReports(serverSpy)).toBe(0);
-      await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS);
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 2);
-      expect(escalationReports(serverSpy)).toBe(0);
+      void coordinator.start();
+      await settleDebounce();
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
     });
 
-    it('scopes the failure streak to the signed-in user so a second user’s outage is reported on its own', async () => {
-      const otherPubky = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy' as Pubky;
-      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
-        throw subscribeConnectFailure();
-      });
-      const serverSpy = vi.spyOn(Err, 'server');
-      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+    it('destroy clears the timers and removes every listener', async () => {
+      signIn();
+      const coordinator = startOn(APP_ROUTES.HOME);
 
-      startCoordinator();
-      await flushPromises();
-      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
-        await flushPromises();
-      }
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
-      expect(escalationReports(serverSpy)).toBe(1);
+      coordinator.destroy();
 
-      // Switch users mid-outage: the new loop starts a streak of its own instead of inheriting the exhausted one.
-      useAuthStore.getState().setCurrentUserPubky(otherPubky);
-      await flushPromises();
-      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
-      expect(subscribe).toHaveBeenLastCalledWith(otherPubky, null);
-      expect(escalationReports(serverSpy)).toBe(1);
-
-      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
-        expect(escalationReports(serverSpy)).toBe(1);
-        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
-        await flushPromises();
-      }
-      expect(subscribe).toHaveBeenCalledTimes(2 * MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
-      expect(escalationReports(serverSpy)).toBe(2);
+      expect(vi.getTimerCount()).toBe(0);
+      window.dispatchEvent(new Event('online'));
+      setVisibilityState('visible');
+      signIn(OTHER_PUBKY);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).not.toHaveBeenCalled();
     });
   });
 });
