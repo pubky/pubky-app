@@ -122,16 +122,25 @@ export function useCreateLockContent({
       // path already does; the publish path does not, and the announcement below cannot be undone.
       const lockUrl = `pubky://${stripPubkyPrefix(lock.creator)}${lock.content_lock_path}`;
 
-      // TODO:[Locks] #2181 — the lock and its public lock file already exist. If the announcement below
-      // fails, nothing references them: the lock is undiscoverable and cannot be cleaned up by the
-      // creator. The error reaches Sentry through the `Err.*` factory, but the lock is left behind.
-      const announcementPostId = await PostController.commitCreate({
-        authorId: pubky,
-        content: buildLockTeaserContent(announcement.teaser),
-        attachments: announcement.attachments,
-        tags: announcement.tags,
-        lock: lockUrl,
-      });
+      let announcementPostId: string;
+      let isAnnouncementSynced = false;
+      try {
+        announcementPostId = await PostController.commitCreate({
+          authorId: pubky,
+          content: buildLockTeaserContent(announcement.teaser),
+          attachments: announcement.attachments,
+          tags: announcement.tags,
+          lock: lockUrl,
+          onPostSynced: () => {
+            isAnnouncementSynced = true;
+          },
+        });
+      } catch (announcementError) {
+        // A live announcement (only its tags failed) keeps its lock. Awaited so closing the tab on the
+        // error toast cannot cancel the delete (#2039).
+        if (!isAnnouncementSynced) await LocksController.deleteLockContent({ lockUrl }).catch(() => undefined);
+        throw announcementError;
+      }
 
       return { status: 'published', postId: announcementPostId };
     } catch (caught) {

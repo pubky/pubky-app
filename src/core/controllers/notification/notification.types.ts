@@ -11,3 +11,9 @@ export type TGetNotificationsParams = {
   olderThan?: number;
   limit?: number;
 };
+
+/** One homeserver event on the current user's `last_read` file. */
+export type TLastReadEvent = {
+  cursor: string;
+  eventType: string;
+};

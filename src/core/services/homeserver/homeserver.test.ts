@@ -1900,6 +1900,130 @@ describe('HomeserverService', () => {
         });
       });
 
+      describe('GET with notFoundAsNull', () => {
+        // Every Err.* factory captures to Sentry at construction, so no factory call means no report.
+        const spyOnErrFactories = async () => {
+          const { Err } = await import('@/libs/error/error.factories');
+          return (Object.keys(Err) as (keyof typeof Err)[]).map((factory) => vi.spyOn(Err, factory));
+        };
+        const callsTo = (spies: Awaited<ReturnType<typeof spyOnErrFactories>>) =>
+          spies.reduce((total, spy) => total + spy.mock.calls.length, 0);
+
+        it('resolves null for an owned 404 response without creating an error', async () => {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageGet.mockResolvedValue(new Response('Not Found', { status: 404 }));
+
+          const created = await spyOnErrFactories();
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://user/pub/missing.json',
+              notFoundAsNull: true,
+            }),
+          ).resolves.toBeNull();
+          expect(callsTo(created)).toBe(0);
+        });
+
+        it('resolves null for an owned 404 the SDK rejects with, without creating an error', async () => {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageGet.mockRejectedValue({
+            name: 'RequestError',
+            message: 'Request failed: Server responded with an error: 404 Not Found - Not Found',
+            data: { statusCode: 404 },
+          });
+
+          const created = await spyOnErrFactories();
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://user/pub/missing.json',
+              notFoundAsNull: true,
+            }),
+          ).resolves.toBeNull();
+          expect(callsTo(created)).toBe(0);
+        });
+
+        it('resolves null for a public 404 without creating an error', async () => {
+          mockState.publicStorageGet.mockResolvedValue(new Response('Not Found', { status: 404 }));
+
+          const created = await spyOnErrFactories();
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://other/pub/missing.json',
+              notFoundAsNull: true,
+            }),
+          ).resolves.toBeNull();
+          expect(callsTo(created)).toBe(0);
+        });
+
+        it('still returns the parsed JSON when the resource exists', async () => {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageGet.mockResolvedValue(new Response(JSON.stringify({ a: 1 }), { status: 200 }));
+
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://user/pub/data.json',
+              notFoundAsNull: true,
+            }),
+          ).resolves.toEqual({ a: 1 });
+        });
+
+        it.each([403, 500, 503])('still rejects and reports an owned HTTP %i', async (status) => {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageGet.mockResolvedValue(new Response('Error', { status }));
+          const created = await spyOnErrFactories();
+
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://user/pub/data.json',
+              notFoundAsNull: true,
+            }),
+          ).rejects.toMatchObject({ name: 'AppError', context: expect.objectContaining({ statusCode: status }) });
+          expect(callsTo(created)).toBeGreaterThan(0);
+        });
+
+        it('still treats an owned 401 as an expired session', async () => {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageGet.mockResolvedValue(new Response('Unauthorized', { status: 401 }));
+
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://user/pub/data.json',
+              notFoundAsNull: true,
+            }),
+          ).rejects.toMatchObject({ category: ErrorCategory.Auth, code: AuthErrorCode.SESSION_EXPIRED });
+        });
+
+        it('still rejects transport failures', async () => {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageGet.mockRejectedValue(new Error('Network error'));
+
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://user/pub/data.json',
+              notFoundAsNull: true,
+            }),
+          ).rejects.toMatchObject({ category: ErrorCategory.Server, code: ServerErrorCode.INTERNAL_ERROR });
+        });
+
+        it('still rejects a public 500', async () => {
+          mockState.publicStorageGet.mockResolvedValue(new Response('Error', { status: 500 }));
+
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://other/pub/data.json',
+              notFoundAsNull: true,
+            }),
+          ).rejects.toMatchObject({ name: 'AppError', context: expect.objectContaining({ statusCode: 500 }) });
+        });
+      });
+
       describe('Error handling', () => {
         it('should throw NOT_FOUND error for 404 response', async () => {
           mockState.currentSession = createMockSession();
