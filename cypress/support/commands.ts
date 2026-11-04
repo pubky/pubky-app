@@ -261,7 +261,7 @@ Cypress.Commands.add(
     }
     cy.get('#encrypted-file-restore-btn').click();
 
-    // An account with a 0.x tree stops on the gate's progress screen; any other passes it unseen
+    // An account with a 0.x tree stops on the gate's progress screen; any other only checks and moves on
     if (migrates) {
       cy.location('pathname').should('eq', '/migration');
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');

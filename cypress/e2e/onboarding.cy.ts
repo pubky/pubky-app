@@ -121,9 +121,11 @@ describe('Onboarding', () => {
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-tab-content"]').should('contain.text', postContent);
 
-    // A second sign-in finds the done flag and passes the gate with no screen
+    // A second sign-in goes through the gate's route while it checks, finds the done flag and writes no
+    // second one: the flag is the last write of a run, so a repeated migration would show here.
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+    cy.get('@migrationDone.all').should('have.length', 1);
     cy.signOut(HasBackedUp.Yes);
   });
 

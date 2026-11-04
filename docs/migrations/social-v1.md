@@ -239,7 +239,8 @@ the specs now assume:
 - Removed by product decision: the "followed collection updated" notification scenario (D7), with the
   `seedBookmark` and `seedAddToCollection` tasks and the `bookmarkIndexed` check that only it used. Bookmarks are
   private, so Nexus never sees them.
-- The gate: a sign-in waits for its destination route and passes unseen for an empty or v1-only tree.
+- The gate: a sign-in waits for its destination route. An empty or v1-only tree, or one already migrated, goes through
+  `/migration` only while the check runs, with no progress screen.
   `cy.signInWithEncryptedFile(path, passcode, { migrates: true })` also asserts the progress screen for a 0.x account;
   `onboarding.cy.ts` covers that flow once.
 
