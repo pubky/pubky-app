@@ -97,14 +97,14 @@ describe('renderPostOg', () => {
   it('draws an invalid emoji ZWJ sequence as its component emoji, in the header and the mention', async () => {
     // MAGE + ZWJ + TROLL is not an RGI sequence: the emoji provider has no joined glyph.
     vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse({ ...author, name: 'Miguel 🧙‍🧌' }))
+      .mockResolvedValueOnce(jsonResponse({ ...author, name: 'Maya 🧙‍🧌' }))
       .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: `hi pk:${MENTIONED} 👨‍👩‍👧` }))
       .mockResolvedValueOnce(jsonResponse({ id: MENTIONED, name: 'Bob 🧙‍🧌' }));
 
     await renderPostOg({ userId: AUTHOR, postId: 'post-1' });
 
     const html = renderedMarkup();
-    expect(html).toContain('Miguel 🧙🧌');
+    expect(html).toContain('Maya 🧙🧌');
     expect(html).toContain(brandSpan('@Bob '));
     expect(html).toContain(brandSpan('🧙🧌 '));
     expect(html).toContain('👨‍👩‍👧');

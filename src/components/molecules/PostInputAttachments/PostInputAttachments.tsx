@@ -117,6 +117,7 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
           multiple={!isArticle}
           onChange={handleFileChange}
           className="hidden"
+          data-cy="post-input-file-input"
         />
 
         {/* Article cover slot, empty: the add control sits centred in the frame the cover will fill */}

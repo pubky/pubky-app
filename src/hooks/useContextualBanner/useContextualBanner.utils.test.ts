@@ -13,7 +13,7 @@ type CopyUser = NonNullable<ContextualBannerCopyInput['user']>;
 
 const AUTHOR = PUBKY_52_STAGING_FIXTURE;
 const POST_ID = POST_ID_STAGING_FIXTURE;
-const NAME = 'John Carvalho';
+const NAME = 'Jane Whitlock';
 
 const GENERIC = {
   headline: 'Join the conversation',

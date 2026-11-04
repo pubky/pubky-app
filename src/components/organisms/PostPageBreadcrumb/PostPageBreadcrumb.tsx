@@ -43,6 +43,7 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
           className={isLast ? 'max-w-[50%] min-w-0 shrink-0 overflow-hidden' : 'min-w-0 shrink overflow-hidden'}
           onClick={isLast ? undefined : () => onNavigate(ancestor.postId)}
           data-testid={`breadcrumb-item-${index}`}
+          data-cy={`breadcrumb-item-${index}`}
         >
           {userName}
         </BreadcrumbItem>
@@ -52,7 +53,7 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
   };
 
   return (
-    <Breadcrumb size="md" className="w-full min-w-0" data-testid="post-breadcrumb">
+    <Breadcrumb size="md" className="w-full min-w-0" data-testid="post-breadcrumb" data-cy="post-breadcrumb">
       {/* Case 1: No Truncation needed */}
       {!shouldTruncate && ancestors.map((ancestor, index) => renderItem(ancestor, index, ancestors.length))}
 
@@ -68,15 +69,21 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
               <DropdownMenuTrigger
                 className="flex items-center gap-1 outline-none"
                 data-testid="breadcrumb-ellipsis-trigger"
+                data-cy="breadcrumb-ellipsis-trigger"
               >
                 <BreadcrumbEllipsis className="h-4 w-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" data-testid="breadcrumb-dropdown-content">
+              <DropdownMenuContent
+                align="start"
+                data-testid="breadcrumb-dropdown-content"
+                data-cy="breadcrumb-dropdown-content"
+              >
                 {ancestors.slice(1, -2).map((ancestor) => (
                   <DropdownMenuItem
                     key={ancestor.postId}
                     onClick={() => onNavigate(ancestor.postId)}
                     data-testid={`breadcrumb-dropdown-item-${ancestor.postId}`}
+                    data-cy="breadcrumb-dropdown-item"
                   >
                     {userDetailsMap.get(ancestor.userId) || 'Unknown'}
                   </DropdownMenuItem>

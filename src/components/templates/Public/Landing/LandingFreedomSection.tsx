@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -32,7 +33,7 @@ const FEATURES: Array<{ key: string; backgroundImage: string; title: string; des
   },
   {
     key: 'tagging',
-    backgroundImage: '/images/landing-experience4.png',
+    backgroundImage: '/images/landing-experience4.webp',
     title: 'Tag everything',
     description: 'Tag posts, media, and profiles to add context, find better content, discover people, and react quickly.',
   },
@@ -41,6 +42,18 @@ const FEATURES: Array<{ key: string; backgroundImage: string; title: string; des
     backgroundImage: '/images/landing-experience5.png',
     title: 'Collect what matters',
     description: 'Save posts worth keeping, curate your own ideas, and share your collections with others.',
+  },
+  {
+    key: 'locks',
+    backgroundImage: '/images/landing-experience6.webp',
+    title: 'Sell your content',
+    description: 'Put a price on your content with Pubky Locks. Let people pay to unlock the value you create.',
+  },
+  {
+    key: 'market',
+    backgroundImage: '/images/landing-experience7.webp',
+    title: 'Make a living',
+    description: 'Sell products on Pubky Market. Turn your key into a shop and connect directly with buyers.',
   },
 ];
 
@@ -82,9 +95,8 @@ export function LandingFreedomSection() {
     const timeoutId = window.setTimeout(handleNextSlide, SLIDE_DURATION_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeSlide, handleNextSlide, isSectionVisible]);
+  }, [activeSlide, carouselRun, handleNextSlide, isSectionVisible]);
 
-  const activeFeature = FEATURES[activeSlide];
   const slideNumber = String(activeSlide + 1).padStart(2, '0');
 
   return (
@@ -108,18 +120,18 @@ export function LandingFreedomSection() {
             {'Nobody feeds you. Create, shape, and experience the web on your terms.'}
           </Typography>
         </Container>
-        <article className="relative min-h-[560px] overflow-hidden rounded-md bg-card/80 p-12 shadow-sm backdrop-blur-sm md:min-h-[368px]">
+        <article className="relative min-h-[560px] overflow-hidden rounded-md bg-card/80 p-12 pb-80 shadow-sm backdrop-blur-sm md:min-h-[368px] md:pb-24">
           {FEATURES.map(({ key, backgroundImage }, index) => (
             <div
               key={key}
-              className={`absolute inset-x-0 bottom-0 h-[58%] bg-[length:auto_100%] bg-no-repeat opacity-0 transition-opacity duration-500 ease-in-out [background-position:calc(50%+100px)_100%] md:inset-0 md:h-auto md:bg-cover md:bg-center ${
+              className={`absolute inset-x-0 bottom-0 h-80 bg-[length:auto_100%] bg-no-repeat opacity-0 transition-opacity duration-500 ease-in-out [background-position:calc(50%+100px)_100%] md:inset-0 md:h-auto md:bg-cover md:bg-center ${
                 activeSlide === index ? 'opacity-100' : ''
               }`}
               style={{ backgroundImage: `url(${backgroundImage})` }}
               aria-hidden
             />
           ))}
-          <div className="relative z-10 flex items-start gap-5 md:ml-auto md:w-[30%]">
+          <div className="relative z-10 flex items-start gap-5 md:ml-auto md:w-3/10 md:min-w-80">
             <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-brand/15 text-brand">
               <div
                 key={`${carouselRun}-${activeSlide}`}
@@ -130,23 +142,62 @@ export function LandingFreedomSection() {
                 {slideNumber}
               </Typography>
             </div>
-            <div className="min-w-0">
-              <Typography as="h3" size="lg" className="text-xl">
-                {activeFeature.title}
-              </Typography>
-              <Typography size="sm" className="mt-1 text-muted-foreground sm:text-base">
-                {activeFeature.description}
-              </Typography>
+            <div className="grid min-w-0 flex-1">
+              {FEATURES.map(({ key, title, description }, index) => (
+                <div
+                  key={key}
+                  className={cn('col-start-1 row-start-1', activeSlide !== index && 'invisible')}
+                  aria-hidden={activeSlide !== index}
+                >
+                  <Typography as="h3" size="lg" className="text-xl">
+                    {title}
+                  </Typography>
+                  <Typography size="sm" className="mt-1 text-muted-foreground sm:text-base">
+                    {description}
+                  </Typography>
+                </div>
+              ))}
             </div>
           </div>
-          <button
-            type="button"
-            className="absolute right-8 bottom-8 z-20 flex size-12 cursor-pointer items-center justify-center text-brand transition-all duration-200 hover:scale-110 hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none md:right-10 md:bottom-10"
-            onClick={handleNextSlide}
-            aria-label={'Next slide'}
-          >
-            <ChevronRight className="size-10" strokeWidth={2.5} />
-          </button>
+          <div className="mt-4 md:absolute md:inset-x-12 md:bottom-10 md:z-10 md:mt-0">
+            <div className="pl-12 md:ml-auto md:w-3/10 md:min-w-80">
+              <div className="-mr-4 ml-5 flex items-center md:-mr-2">
+                <div role="group" aria-label="Slide navigation" className="relative z-10 -ml-2.25 flex w-42 shrink-0">
+                  {FEATURES.map(({ key, title }, index) => (
+                    <Button
+                      key={key}
+                      overrideDefaults
+                      type="button"
+                      className="group/dot flex h-12 w-6 shrink-0 cursor-pointer items-center justify-center rounded-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                      aria-label={`Go to slide ${index + 1}: ${title}`}
+                      aria-current={activeSlide === index ? 'true' : undefined}
+                      onClick={() => {
+                        setActiveSlide(index);
+                        setCarouselRun((currentRun) => currentRun + 1);
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'size-1.5 shrink-0 rounded-full bg-brand transition-all duration-200 group-hover/dot:scale-125',
+                          activeSlide === index ? 'opacity-100' : 'opacity-30 group-hover/dot:opacity-50',
+                        )}
+                      />
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  overrideDefaults
+                  type="button"
+                  className="absolute right-8 bottom-8 z-10 ml-auto flex size-12 shrink-0 cursor-pointer items-center justify-center text-brand transition-all duration-200 hover:scale-110 hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none md:static"
+                  onClick={handleNextSlide}
+                  aria-label={'Next slide'}
+                >
+                  <ChevronRight className="size-10" strokeWidth={2.5} />
+                </Button>
+              </div>
+            </div>
+          </div>
         </article>
       </Container>
     </section>

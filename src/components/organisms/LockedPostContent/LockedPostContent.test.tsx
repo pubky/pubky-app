@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { UNLOCK_PILL_HOLD_MS } from '@/config/locks';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
+import type { UsePurchasedLocksResult } from '@/hooks/usePurchasedLocks/usePurchasedLocks.types';
+import type { PurchaseResumeStatus } from '@/hooks/usePurchaseResume/usePurchaseResume.types';
+import type { PaidUnlockAvailability } from '@/libs/region/paidUnlockAvailability';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type {
   LockFile,
@@ -13,7 +17,7 @@ import type {
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
 
-const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
+const { toastMock, payDialogProps } = vi.hoisted(() => ({ toastMock: vi.fn(), payDialogProps: vi.fn() }));
 const pathname = vi.hoisted(() => ({ value: '/home' }));
 
 vi.mock('next/navigation', () => ({ usePathname: () => pathname.value }));
@@ -23,6 +27,7 @@ vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: vi.fn() }));
 // component passed so a test can drive `onCompleted` as if the payment finished.
 type PayParams = {
   open: boolean;
+  paymentAvailability: PaidUnlockAvailability['status'];
   onPurchased: (lockId: string) => void;
   onCompleted: (content: unknown) => void;
   onSessionExpired: () => void;
@@ -65,22 +70,40 @@ vi.mock('@/hooks/usePayToUnlock/usePayToUnlock', () => ({
 // 'lock1' is the id in LOCK_URL, so the payment-lock tests start from an already purchased lock.
 const purchasedMocks = vi.hoisted(() => ({
   params: null as null | { enabled: boolean },
+  status: 'ready' as UsePurchasedLocksResult['status'],
   hasPurchase: vi.fn((lockId: string | null) => lockId === 'lock1'),
   markPurchased: vi.fn(),
 }));
 vi.mock('@/hooks/usePurchasedLocks/usePurchasedLocks', () => ({
   usePurchasedLocks: (params: { enabled: boolean }) => {
     purchasedMocks.params = params;
-    return { hasPurchase: purchasedMocks.hasPurchase, markPurchased: purchasedMocks.markPurchased };
+    return {
+      hasPurchase: purchasedMocks.hasPurchase,
+      markPurchased: purchasedMocks.markPurchased,
+      status: purchasedMocks.status,
+    };
   },
 }));
 // The resume hook has its own tests; here only the wiring matters — capture what it was handed.
+type ResumeParams = {
+  onResumed: (content: unknown) => void;
+  isPurchased: boolean;
+  hasContent: boolean;
+  isResolvingContent: boolean;
+};
 const resumeMocks = vi.hoisted(() => ({
-  params: null as null | { onResumed: (content: unknown) => void; isPurchased: boolean; hasContent: boolean },
+  status: null as PurchaseResumeStatus | null,
+  params: null as null | ResumeParams,
 }));
 vi.mock('@/hooks/usePurchaseResume/usePurchaseResume', () => ({
-  usePurchaseResume: (params: { onResumed: (content: unknown) => void; isPurchased: boolean; hasContent: boolean }) => {
+  usePurchaseResume: (params: ResumeParams) => {
     resumeMocks.params = params;
+    // As the real hook: nothing to resume without a listed purchase, content already read is recoverable,
+    // and nothing is known while the read runs.
+    if (!params.isPurchased) return 'none';
+    if (params.hasContent) return 'recoverable';
+    if (params.isResolvingContent) return 'checking';
+    return resumeMocks.status ?? 'recoverable';
   },
 }));
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
@@ -91,25 +114,22 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   }),
 }));
 vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
-  DialogPayToUnlock: ({
-    open,
-    price,
-    handshakePubky,
-    connectionState,
-    onViewContent,
-  }: {
+  DialogPayToUnlock: (props: {
     open: boolean;
     price: TLockPrice;
     handshakePubky: string | null;
     connectionState: string | null;
     onViewContent: () => void;
-  }) =>
-    open ? (
+  }) => {
+    payDialogProps(props);
+    const { open, price, handshakePubky, connectionState, onViewContent } = props;
+    return open ? (
       <div data-testid="pay-dialog" data-handshake-pubky={handshakePubky} data-connection-state={connectionState}>
         {price.amount}
         <button onClick={onViewContent}>{'Mock view content'}</button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
@@ -131,14 +151,22 @@ const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
 vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
   useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
 }));
+// The availability hook has its own tests; here only what the card does with each answer matters.
+const paidUnlocks = vi.hoisted(() => ({ value: { status: 'available' } as PaidUnlockAvailability }));
+vi.mock('@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability', () => ({
+  usePaidUnlockAvailability: () => paidUnlocks.value,
+}));
 afterEach(() => {
   sessionNeedsUpgrade.value = false;
+  paidUnlocks.value = { status: 'available' };
 });
 // One state object, as in the real store: a fresh `session` per render would re-run every effect that
 // depends on it.
 const authState = vi.hoisted(() => ({
   currentUserPubky: 'pubkyreader' as string | null,
   session: {} as object | null,
+  restoreStatus: 'ready' as string,
+  sessionReference: null as object | null,
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
@@ -163,15 +191,18 @@ vi.mock('../PostBody/PostBody', () => ({
     content,
     localAttachments,
     pendingAttachments,
+    collapseMedia,
   }: {
     content: string;
     localAttachments?: unknown[];
     pendingAttachments?: unknown[];
+    collapseMedia?: boolean;
   }) => (
     <div
       data-testid="post-body"
       data-media={localAttachments?.length ?? 0}
       data-pending={pendingAttachments?.length ?? 0}
+      data-collapse-media={String(collapseMedia ?? false)}
     >
       {content}
     </div>
@@ -195,6 +226,59 @@ const mockLockData = ({
 
 const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
 
+/** A payment lock by someone else, so the reader is offered Unlock. */
+const paymentData = () =>
+  mockLockData({
+    lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
+    price: { amount: '1000', asset: 'BTC' as const },
+  });
+
+/** The pill stays busy until a possible earlier unlock is ruled out (#2795); click it once it is live. */
+const liveUnlock = async () => {
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled());
+  return screen.getByRole('button', { name: 'Unlock' });
+};
+
+const renderReader = () => render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+const rerenderReader = (rerender: (ui: React.ReactElement) => void) =>
+  rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+/** The read of a possible earlier unlock holds the pill too; settle it so a test sees what comes after. */
+const settleReplicaRead = async () => {
+  await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+  await waitFor(() => expect(resumeMocks.params?.isResolvingContent).toBe(false));
+};
+/** Holds the read of the reader's replicated copy open until the test settles it. */
+const holdReplicaRead = () => {
+  const read = Promise.withResolvers<Awaited<ReturnType<typeof LocksController.fetchReplicatedContent>>>();
+  vi.mocked(LocksController.fetchReplicatedContent).mockReturnValue(read.promise);
+  return read;
+};
+
+/** Records whether an Unlock in the given state was ever in the DOM, including between two assertions. */
+const watchUnlock = (root: HTMLElement, wantEnabled: boolean) => {
+  const matches = (node: Node | null) =>
+    node instanceof HTMLButtonElement && node.textContent?.includes('Unlock') === true && node.disabled !== wantEnabled;
+  let seen = matches(screen.queryByRole('button', { name: 'Unlock', hidden: true }));
+  const record = (records: MutationRecord[]) => {
+    seen ||= records.some(
+      (record) =>
+        matches(record.target) ||
+        [...record.addedNodes].some(
+          (node) => matches(node) || (node instanceof Element && [...node.querySelectorAll('button')].some(matches)),
+        ),
+    );
+  };
+  const observer = new MutationObserver(record);
+  observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] });
+  return () => {
+    record(observer.takeRecords());
+    observer.disconnect();
+    return seen;
+  };
+};
+const watchUnlockEnabled = (root: HTMLElement) => watchUnlock(root, true);
+const watchUnlockDisabled = (root: HTMLElement) => watchUnlock(root, false);
+
 /** jsdom reports every offset as 0, which would make the slide-over a no-op no test could see. */
 const useSlideGeometry = () => {
   const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetLeft');
@@ -216,8 +300,16 @@ describe('LockedPostContent', () => {
     toastMock.mockClear();
     purchasedMocks.hasPurchase.mockReset(); // back to the `lock1` implementation
     purchasedMocks.markPurchased.mockClear();
+    purchasedMocks.status = 'ready';
+    resumeMocks.status = null;
     payMocks.viewContent.mockClear();
     authMocks.isAuthenticated = true;
+    Object.assign(authState, {
+      currentUserPubky: 'pubkyreader',
+      session: {},
+      restoreStatus: 'ready',
+      sessionReference: null,
+    });
     authMocks.waitForAuth.mockImplementation(async () => authMocks.requireAuth(() => true) === true);
     authMocks.requireAuth.mockClear();
     authMocks.setShowSignInDialog.mockClear();
@@ -264,18 +356,48 @@ describe('LockedPostContent', () => {
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
-  describe('payment lock', () => {
-    const paymentData = () =>
+  // #2433: the saved kind reaches all three places that show the lock: the reader card, the pay dialog,
+  // and the creator's own card.
+  describe('content kind', () => {
+    const untitledVideo = { lock_title: '', teaser_description: 'A teaser', content_kind: 'video' };
+
+    it('shows an untitled video lock as "Locked video" with the video icon, and tells the pay dialog', () => {
       mockLockData({
+        lockContent: untitledVideo,
         lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
         price: { amount: '1000', asset: 'BTC' as const },
       });
+      const { container } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
+      expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked video');
+      expect(container.querySelector('svg.lucide-circle-play')).toBeInTheDocument();
+      expect(payDialogProps).toHaveBeenCalledWith(expect.objectContaining({ contentKind: 'video' }));
+    });
+
+    it('passes the kind to the card of an own lock', async () => {
+      mockLockData({
+        lockContent: untitledVideo,
+        lockFile: asOpaque<LockFile>({ creator: 'pubkypubkyreader' }),
+        price: { amount: '1000', asset: 'BTC' as const },
+      });
+      vi.mocked(LocksController.fetchOwnContent).mockResolvedValue({
+        post: { content: 'my own locked content', kind: 'video', attachments: null },
+        attachments: [],
+      });
+      const { container } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkyreader:POST1" />);
+
+      await waitFor(() => expect(screen.getByText('My locked content')).toBeInTheDocument());
+      expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked video');
+      expect(container.querySelector('svg.lucide-circle-play')).toBeInTheDocument();
+    });
+  });
+
+  describe('payment lock', () => {
     it('opens the pay dialog behind the auth gate', async () => {
       paymentData();
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      fireEvent.click(await liveUnlock());
       // The card defers onUnlock until its slide-over finishes; findBy waits that out.
       expect(await screen.findByTestId('pay-dialog')).toHaveTextContent('1000');
       expect(screen.getByTestId('pay-dialog')).toHaveAttribute('data-handshake-pubky', 'pubkybob');
@@ -292,7 +414,7 @@ describe('LockedPostContent', () => {
       });
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      fireEvent.click(await liveUnlock());
       await waitFor(() => expect(authMocks.waitForAuth).toHaveBeenCalledOnce());
       expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
       await act(async () => auth.resolve(ready));
@@ -307,10 +429,12 @@ describe('LockedPostContent', () => {
       const restoreGeometry = useSlideGeometry();
       try {
         authMocks.isAuthenticated = false;
+        authState.currentUserPubky = null;
+        authState.session = null;
         paymentData();
         render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+        fireEvent.click(await liveUnlock());
         await waitFor(() => expect(authMocks.setShowSignInDialog).toHaveBeenCalledWith(true));
 
         expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
@@ -366,7 +490,7 @@ describe('LockedPostContent', () => {
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
       expect(resumeMocks.params?.isPurchased).toBe(true);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      fireEvent.click(await liveUnlock());
       await screen.findByTestId('pay-dialog');
 
       expect(resumeMocks.params?.isPurchased).toBe(false);
@@ -384,7 +508,7 @@ describe('LockedPostContent', () => {
       paymentData();
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      fireEvent.click(await liveUnlock());
       await screen.findByTestId('pay-dialog');
       fireEvent.click(screen.getByRole('button', { name: 'Mock view content' }));
 
@@ -395,7 +519,7 @@ describe('LockedPostContent', () => {
       paymentData();
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      fireEvent.click(await liveUnlock());
       await screen.findByTestId('pay-dialog');
       act(() => payMocks.params?.onSessionExpired());
 
@@ -406,7 +530,7 @@ describe('LockedPostContent', () => {
       paymentData();
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      fireEvent.click(await liveUnlock());
       await screen.findByTestId('pay-dialog');
       act(() =>
         payMocks.params?.onCompleted({
@@ -428,13 +552,13 @@ describe('LockedPostContent', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('enables Unlock when the lock file resolved', () => {
+  it('enables Unlock when the lock file resolved', async () => {
     mockLockData({
       lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
       price: { amount: '1000', asset: 'BTC' as const },
     });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
-    expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
+    await liveUnlock();
   });
 
   it('disables Unlock when the lock file fetch failed', () => {
@@ -472,11 +596,34 @@ describe('LockedPostContent', () => {
 
     const { unmount } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
+    // A preview reads only the cover, so the body media is read on the post page alone (#2686).
+    expect(LocksController.fetchReplicatedContent).toHaveBeenLastCalledWith(expect.objectContaining({ preview: true }));
     unmount();
 
     pathname.value = '/post/pubkycreator/POST1';
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'full');
+    expect(LocksController.fetchReplicatedContent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ preview: false }),
+    );
+  });
+
+  it('keeps reading a preview while the feed stays mounted under the post modal', async () => {
+    // The intercepted post modal hides the feed without unmounting it, and the route then names this post.
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: JSON.stringify({ title: 'My Essay', body: 'the body' }), kind: 'long', attachments: null },
+      attachments: [],
+    });
+    const { rerender } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    await screen.findByTestId('post-article');
+
+    pathname.value = '/post/pubkycreator/POST1';
+    rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'full');
+    expect(LocksController.fetchReplicatedContent).toHaveBeenCalledOnce();
+    expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith(expect.objectContaining({ preview: true }));
   });
 
   it('keeps the focused post compact inside a preview, as the reply and repost dialogs render it', async () => {
@@ -509,6 +656,46 @@ describe('LockedPostContent', () => {
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
     expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
+  });
+
+  it('collapses the unlocked media to one row in the feed, and shows it all on the post page (#2868)', async () => {
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: 'the body', kind: 'image', attachments: null },
+      attachments: [],
+    });
+    const unlockedBody = async () => (await screen.findByText('the body')).closest('[data-testid="post-body"]');
+
+    const { unmount } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    expect(await unlockedBody()).toHaveAttribute('data-collapse-media', 'true');
+    // The public teaser above the lock is a normal post body and never collapses.
+    expect(screen.getByText('A teaser').closest('[data-testid="post-body"]')).toHaveAttribute(
+      'data-collapse-media',
+      'false',
+    );
+    unmount();
+
+    pathname.value = '/post/pubkycreator/POST1';
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    expect(await unlockedBody()).toHaveAttribute('data-collapse-media', 'false');
+  });
+
+  it('expands a different post on a post page too: replies, embeds and thread parents never collapse', async () => {
+    // Collapsing only saves room in the feed. A locked reply under the focused post is not the post the
+    // route names, and still shows all its media.
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: 'the reply body', kind: 'image', attachments: null },
+      attachments: [],
+    });
+    pathname.value = '/post/pubkyparent/PARENT1';
+
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:REPLY1" />);
+
+    expect((await screen.findByText('the reply body')).closest('[data-testid="post-body"]')).toHaveAttribute(
+      'data-collapse-media',
+      'false',
+    );
   });
 
   it('keeps plain body text on the body renderer even when the kind is long', async () => {
@@ -546,6 +733,7 @@ describe('LockedPostContent', () => {
     expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith({
       lockUrl: LOCK_URL,
       readerPubky: 'pubkyreader',
+      preview: true,
     });
     expect(screen.queryByRole('button', { name: 'Unlock' })).not.toBeInTheDocument();
   });
@@ -561,7 +749,7 @@ describe('LockedPostContent', () => {
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkyreader:POST1" />);
 
     await waitFor(() => expect(screen.getByText('my own locked content')).toBeInTheDocument());
-    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile });
+    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile, preview: true });
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
     // Own lock keeps the lock card (Unlock present but disabled) + a "My locked content" label.
     expect(screen.getByText('My locked content')).toBeInTheDocument();
@@ -647,6 +835,438 @@ describe('LockedPostContent', () => {
       expect(await screen.findByTestId('locks-permission-notice')).toBeInTheDocument();
       expect(container.querySelector('[data-slot="skeleton"]')).toBeNull();
       expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+    });
+  });
+
+  describe('reader who may already have unlocked it (#2795)', () => {
+    const unlock = () => screen.getByRole('button', { name: 'Unlock' });
+
+    it('keeps the pill busy while the copy of a listed purchase is read, then shows the content', async () => {
+      const read = holdReplicaRead();
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(unlock()).toBeDisabled();
+
+      await act(async () =>
+        read.resolve({ post: { content: 'the paid secret', kind: 'short', attachments: null }, attachments: [] }),
+      );
+      expect(await screen.findByText('the paid secret')).toBeInTheDocument();
+      expect(screen.queryByTestId('locked-post-card')).not.toBeInTheDocument();
+    });
+
+    it.each(['loading', 'error'] as const)(
+      'keeps the pill busy while the purchase list status is %s',
+      async (status) => {
+        purchasedMocks.status = status;
+        purchasedMocks.hasPurchase.mockReturnValue(false);
+        const read = holdReplicaRead();
+        paymentData();
+        const { rerender } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+        await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+        expect(screen.getByTestId('spinner')).toBeInTheDocument();
+        expect(unlock()).toBeDisabled();
+
+        // No copy after all. A failed list can never name this lock, so the pill goes live as soon as the
+        // read says so; a list still loading may yet name it, so the pill keeps waiting for it.
+        await act(async () => read.resolve(null));
+        if (status === 'error') {
+          await waitFor(() => expect(unlock()).toBeEnabled());
+          expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+        } else {
+          expect(unlock()).toBeDisabled();
+          purchasedMocks.status = 'ready';
+          rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+          expect(unlock()).toBeEnabled();
+        }
+      },
+    );
+
+    it('does not wait on the read for a reader the purchase list rules out', async () => {
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      holdReplicaRead();
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    it('never holds the pill for a signed-out reader, whose replica read never runs', () => {
+      authMocks.isAuthenticated = false;
+      authState.currentUserPubky = null;
+      authState.session = null;
+      purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    // After a reload the pubky is back at once, the session only once the restore finishes, and the
+    // purchase list stays 'idle' until then: the reader may still be one who unlocked this post.
+    it.each([
+      ['restoring', null],
+      ['idle', { sessionStoreId: 'saved' }],
+    ])('keeps the pill busy while the session restore is pending (%s)', (restoreStatus, sessionReference) => {
+      Object.assign(authState, { session: null, restoreStatus, sessionReference });
+      purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(unlock()).toBeDisabled();
+    });
+
+    it.each(['reauth-required', 'temporary-error'])('releases the pill when the restore ends in %s', (status) => {
+      Object.assign(authState, { session: null, restoreStatus: status, sessionReference: null });
+      purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    it('releases the pill once the list arrives without this lock, with the read still out', async () => {
+      purchasedMocks.status = 'loading';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      holdReplicaRead();
+      paymentData();
+      const { rerender } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      expect(unlock()).toBeDisabled();
+
+      purchasedMocks.status = 'ready';
+      rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    // The pill stops waiting at the deadline, but purchase recovery does not: a slow but healthy read
+    // would otherwise download the purchase again and re-upload every attachment.
+    it('releases the pill past the deadline while recovery still waits on the read', async () => {
+      vi.useFakeTimers();
+      try {
+        holdReplicaRead();
+        paymentData();
+        render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+        await act(async () => {});
+        expect(LocksController.fetchReplicatedContent).toHaveBeenCalled();
+        expect(unlock()).toBeDisabled();
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS));
+        expect(unlock()).toBeEnabled();
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // The flash #2795 reports: the restore finishes, the read starts, the copy lands. Unlock stays
+    // busy through every step until the content replaces the card.
+    it('never enables Unlock between a pending restore and the copy it then reads', async () => {
+      Object.assign(authState, { session: null, restoreStatus: 'restoring' });
+      purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      const read = holdReplicaRead();
+      paymentData();
+      const { container, rerender } = render(
+        <LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />,
+      );
+      const wasEnabled = watchUnlockEnabled(container);
+
+      Object.assign(authState, { session: {}, restoreStatus: 'ready' });
+      purchasedMocks.status = 'ready';
+      purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+      rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      expect(unlock()).toBeDisabled();
+
+      await act(async () =>
+        read.resolve({ post: { content: 'the paid secret', kind: 'short', attachments: null }, attachments: [] }),
+      );
+      expect(await screen.findByText('the paid secret')).toBeInTheDocument();
+      expect(wasEnabled()).toBe(false);
+    });
+  });
+
+  describe('listed purchase whose copy was not found, while recovery looks it up', () => {
+    const unlock = () => screen.getByRole('button', { name: 'Unlock', hidden: true });
+
+    it('keeps the pill busy while recovery checks the purchase, then releases it when nothing is found', async () => {
+      resumeMocks.status = 'checking';
+      paymentData();
+      const { rerender } = renderReader();
+      await settleReplicaRead();
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(unlock()).toBeDisabled();
+
+      resumeMocks.status = 'none';
+      rerenderReader(rerender);
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    // While the read runs, recovery also says 'checking'. That must not stretch the read's limit.
+    it('releases the pill at the limit while the read of a listed purchase is still running', async () => {
+      vi.useFakeTimers();
+      try {
+        holdReplicaRead();
+        paymentData();
+        renderReader();
+        await act(async () => {});
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+        expect(unlock()).toBeDisabled();
+
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS));
+        expect(unlock()).toBeEnabled();
+        expect(resumeMocks.params?.isResolvingContent).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('counts the lookup against the limit the read started', async () => {
+      vi.useFakeTimers();
+      try {
+        resumeMocks.status = 'checking';
+        const read = holdReplicaRead();
+        paymentData();
+        renderReader();
+        await act(async () => {});
+        await act(async () => vi.advanceTimersByTime(4_000));
+        await act(async () => read.resolve(null));
+        expect(resumeMocks.params?.isResolvingContent).toBe(false);
+        expect(unlock()).toBeDisabled();
+
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS - 4_000 - 1));
+        expect(unlock()).toBeDisabled();
+        await act(async () => vi.advanceTimersByTime(1));
+        expect(unlock()).toBeEnabled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // Review path 1: a read slower than the limit, then the lookup.
+    it('does not take the pill back when a slow read hands over to the lookup', async () => {
+      vi.useFakeTimers();
+      try {
+        resumeMocks.status = 'checking';
+        const read = holdReplicaRead();
+        paymentData();
+        const { container } = renderReader();
+        await act(async () => {});
+        await act(async () => vi.advanceTimersByTime(UNLOCK_PILL_HOLD_MS));
+        expect(unlock()).toBeEnabled();
+
+        const wasDisabled = watchUnlockDisabled(container);
+        await act(async () => read.resolve(null));
+        expect(resumeMocks.params?.isResolvingContent).toBe(false);
+        expect(unlock()).toBeEnabled();
+        expect(wasDisabled()).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // Review path 2: the read settles empty before the list is in, then the list names this lock.
+    it('keeps the pill busy from the read until a late list hands over to the lookup', async () => {
+      purchasedMocks.status = 'loading';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      resumeMocks.status = 'checking';
+      paymentData();
+      const { container, rerender } = renderReader();
+      await settleReplicaRead();
+      const wasEnabled = watchUnlockEnabled(container);
+      expect(unlock()).toBeDisabled();
+
+      purchasedMocks.status = 'ready';
+      purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+      rerenderReader(rerender);
+      expect(unlock()).toBeDisabled();
+      expect(wasEnabled()).toBe(false);
+    });
+
+    // Review path 3: the dialog takes the purchase over; closing it must not start another hold.
+    it('does not hold the pill again after the pay dialog closes', async () => {
+      paymentData();
+      const { container } = renderReader();
+      fireEvent.click(await liveUnlock());
+      await screen.findByTestId('pay-dialog');
+
+      resumeMocks.status = 'checking';
+      const wasDisabled = watchUnlockDisabled(container);
+      act(() => payMocks.params?.onSessionExpired());
+      expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
+      expect(resumeMocks.params?.isPurchased).toBe(true);
+      expect(unlock()).toBeEnabled();
+      expect(wasDisabled()).toBe(false);
+    });
+  });
+
+  describe("paid unlocks held for the reader's region", () => {
+    beforeEach(() => {
+      // A reader who has not started this payment: the `lock1` default would count as in flight.
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+    });
+
+    it('says so up front and disables Unlock, so the reader never reaches the pay dialog', () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      paymentData();
+      renderReader();
+
+      expect(screen.getByTestId('locks-region-notice')).toHaveTextContent(
+        "Paid unlocks aren't available in your region yet.",
+      );
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      expect(authMocks.waitForAuth).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
+      // The price and the teaser stay visible: nothing is hidden, only the action is held.
+      expect(screen.getByText('₿1,000')).toBeInTheDocument();
+      expect(screen.getByText('A teaser')).toBeInTheDocument();
+    });
+
+    it('says it cannot tell where the reader is when the region is unreadable and unknown readers are held', () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'unknown' };
+      paymentData();
+      renderReader();
+
+      expect(screen.getByTestId('locks-region-notice')).toHaveTextContent(
+        "We can't tell where you are, so paid unlocks are paused.",
+      );
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+    });
+
+    it('holds Unlock behind the card spinner, with no notice, while the region is still being read', () => {
+      paidUnlocks.value = { status: 'checking' };
+      paymentData();
+      renderReader();
+
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+      expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+    });
+
+    it('changes nothing for a reader whose region is available', async () => {
+      paymentData();
+      renderReader();
+
+      expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+      fireEvent.click(await liveUnlock());
+      expect(await screen.findByTestId('pay-dialog')).toBeInTheDocument();
+    });
+
+    // A block stops new commerce, not an order already in flight: that reader opens the dialog to finish it.
+    it('leaves Unlock live for a reader who already started this payment', async () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+      paymentData();
+      renderReader();
+
+      expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+      fireEvent.click(await liveUnlock());
+      expect(await screen.findByTestId('pay-dialog')).toBeInTheDocument();
+    });
+
+    it('holds a saved bundle whose resolved task is absent or ended', async () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      purchasedMocks.hasPurchase.mockReturnValue(true);
+      resumeMocks.status = 'none';
+      paymentData();
+      renderReader();
+      await settleReplicaRead();
+      expect(screen.getByTestId('locks-region-notice')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+    });
+
+    it.each(['listing', 'task'])(
+      'keeps recovery available after an unreadable %s without permitting new payments',
+      async (failure) => {
+        paidUnlocks.value = { status: 'blocked', cause: 'region' };
+        if (failure === 'listing') purchasedMocks.status = 'error';
+        else {
+          // Only a listed purchase gets a task read.
+          purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+          resumeMocks.status = 'unknown';
+        }
+        paymentData();
+        renderReader();
+        await settleReplicaRead();
+        expect(screen.getByTestId('locks-region-notice')).toBeInTheDocument();
+        fireEvent.click(await liveUnlock());
+        expect(await screen.findByTestId('pay-dialog')).toBeInTheDocument();
+        expect(payMocks.params?.paymentAvailability).toBe('blocked');
+      },
+    );
+
+    it.each(['listing', 'task'])('waits for the %s before deciding whether recovery is possible', async (pending) => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      if (pending === 'listing') purchasedMocks.status = 'loading';
+      else {
+        purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+        resumeMocks.status = 'checking';
+      }
+      paymentData();
+      renderReader();
+      await settleReplicaRead();
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Unlock', hidden: true })).toBeDisabled();
+    });
+
+    it("does not hold the creator's own lock, which never offers Unlock", async () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      mockLockData({
+        lockFile: asOpaque<LockFile>({ creator: 'pubkypubkyreader' }),
+        price: { amount: '1000', asset: 'BTC' },
+      });
+      vi.mocked(LocksController.fetchOwnContent).mockResolvedValue({
+        post: { content: 'my own locked content', kind: 'short', attachments: null },
+        attachments: [],
+      });
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkyreader:POST1" />);
+
+      expect(await screen.findByText('my own locked content')).toBeInTheDocument();
+      expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+      expect(screen.getByText('My locked content')).toBeInTheDocument();
+    });
+
+    it('does not touch content the reader already unlocked', async () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), price: { amount: '1000', asset: 'BTC' } });
+      vi.mocked(LocksController.getUnlockedPost).mockResolvedValue({
+        content: 'already unlocked',
+        kind: 'short',
+        attachments: null,
+      });
+      renderReader();
+
+      expect(await screen.findByText('already unlocked')).toBeInTheDocument();
+      expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+    });
+
+    it('keeps the permission notice too, since a reader who unlocked elsewhere still needs it to read', () => {
+      sessionNeedsUpgrade.value = true;
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      paymentData();
+      renderReader();
+
+      expect(screen.getByTestId('locks-permission-notice')).toBeInTheDocument();
+      expect(screen.getByTestId('locks-region-notice')).toBeInTheDocument();
     });
   });
 

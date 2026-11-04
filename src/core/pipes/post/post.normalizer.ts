@@ -118,12 +118,8 @@ export class PostNormalizer {
         }
       }
 
-      // Final attachment order: uploaded files first (article cover), then
-      // pre-uploaded URIs (article inline images, already on the homeserver).
-      const attachmentList = [
-        ...(post.attachments ?? []).map((attachment) => attachment.fileResult.meta.url),
-        ...(post.attachmentUris ?? []),
-      ];
+      // The uploads in the order given: an article's cover first, then its body files
+      const attachmentList = (post.attachments ?? []).map((attachment) => attachment.fileResult.meta.url);
       const attachments = attachmentList.length > 0 ? attachmentList : null;
 
       return builder.createPost(

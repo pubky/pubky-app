@@ -75,9 +75,7 @@ export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof pr
 export const clickFollowButton = () => {
   cy.get('[data-cy="profile-follow-toggle-btn"]')
     .filter(':visible')
-    .should('have.length.at.least', 1)
-    .first()
-    .should('be.visible')
+    .should('have.length', 1)
     .then(($btn) => {
       expect($btn.text().trim()).to.match(/^Follow\b/);
       cy.wrap($btn).click();
@@ -86,17 +84,26 @@ export const clickFollowButton = () => {
   // Check follow button has moved to followed/unfollow state.
   cy.get('[data-cy="profile-follow-toggle-btn"]')
     .filter(':visible')
-    .should('have.length.at.least', 1)
-    .first()
-    .should('be.visible')
+    .should('have.length', 1)
     .invoke('text')
     .should('match', /Following|Unfollow/);
 };
 
 export const clickUnfollowButton = () => {
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Following').click();
-  // Check follow button is now follow
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Follow');
+  // The followed state renders both "Following" and a hover "Unfollow", so the
+  // button's text is not exactly "Following".
+  cy.get('[data-cy="profile-follow-toggle-btn"]')
+    .filter(':visible')
+    .should('have.length', 1)
+    .and(($btn) => {
+      expect($btn.text()).to.match(/Following/);
+    })
+    .click();
+
+  cy.get('[data-cy="profile-follow-toggle-btn"]')
+    .filter(':visible')
+    .should('have.length', 1)
+    .and('have.text', 'Follow');
 };
 
 // wait for notifications to load profile names (prevents 'no longer attached to the DOM' error when checking list of notifications)
@@ -187,7 +194,7 @@ export const unfollowUserByUsername = (username: string) => {
   cy.get('[data-cy="profile-filter-item-following"]').closest('[data-selected="true"]').should('exist');
   // Find the user by name and click their follow toggle button
   cy.contains('[data-cy="profile-follower-item-name"]', username)
-    .closest('[data-testid^="user-list-item-"]')
+    .closest('[data-cy="user-list-item"]')
     .find('[data-cy="user-list-item-follow-toggle-btn"]')
     .filter(':visible') // Filter to only the visible button (desktop or mobile)
     .should('be.visible')
@@ -195,13 +202,34 @@ export const unfollowUserByUsername = (username: string) => {
       expect($btn.attr('aria-label')).to.match(/^Unfollow\b/);
       cy.wrap($btn).click();
     });
-  // Verify the button now shows "Follow" (unfollowed state)
+  // Own following/friends lists keep an unfollowed row so it can be followed again.
+  // The toggle is what changes immediately; the row goes once Nexus has indexed the unfollow.
   cy.contains('[data-cy="profile-follower-item-name"]', username)
-    .closest('[data-testid^="user-list-item-"]')
+    .closest('[data-cy="user-list-item"]')
     .find('[data-cy="user-list-item-follow-toggle-btn"]')
-    .filter(':visible') // Filter to only the visible button (desktop or mobile)
+    .filter(':visible')
     .should('have.attr', 'aria-label')
     .and('match', /^Follow\b/);
+};
+
+// A following list shorter than one page is always loaded from Nexus, once per page load, so a
+// reload straight after an unfollow can still list the user. Run on /profile/following: reloads
+// until Nexus returns an empty following stream.
+export const reloadUntilOwnFollowingIsEmpty = (attempts = 10) => {
+  cy.intercept({ method: 'GET', pathname: '/v0/stream/users/ids', query: { source: 'following' } }).as(
+    'followingStream',
+  );
+  const reloadUntilEmpty = (remaining: number) => {
+    cy.reload();
+    cy.wait('@followingStream').then(({ response }) => {
+      const ids: unknown[] = response?.statusCode === 200 && Array.isArray(response.body) ? response.body : [];
+      if (ids.length === 0) return;
+      expect(remaining, 'reloads left while Nexus still lists a followed user').to.be.greaterThan(1);
+      reloadUntilEmpty(remaining - 1);
+    });
+  };
+
+  reloadUntilEmpty(attempts);
 };
 
 export const waitForPutLastRead = () => {

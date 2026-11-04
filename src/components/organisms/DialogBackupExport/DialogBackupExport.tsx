@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Link } from '@/atoms/Link/Link';
-import { getAppStoreLink, getPlayStoreLink, getPubkyCoreLink } from '@/config/externalLinks';
+import { getAppStoreLink, getPlayStoreLink, getPubkyProtocolLink } from '@/config/externalLinks';
 import { generatePubkyRingDeeplink } from '@/libs/deeplink/deeplink';
 import type { TMnemonicWords } from '@/libs/identity/identity.types';
 
@@ -47,15 +47,15 @@ const MOBILE_IMPORT_DESCRIPTION =
   'Tap the button below to import your recovery phrase into Pubky Ring for a safer and easier sign-in experience.';
 
 export function DialogBackupExport({ mnemonic, children }: DialogBackupExportProps) {
-  const pubkyCoreUrl = getPubkyCoreLink();
-  const qrValue = mnemonic ? generatePubkyRingDeeplink(mnemonic) : pubkyCoreUrl;
+  const pubkyProtocolUrl = getPubkyProtocolLink();
+  const qrValue = mnemonic ? generatePubkyRingDeeplink(mnemonic) : pubkyProtocolUrl;
   const descriptionContent = mnemonic ? IMPORT_DESCRIPTION : EXPORT_DESCRIPTION;
   const mobileDescription = mnemonic ? MOBILE_IMPORT_DESCRIPTION : MOBILE_EXPORT_DESCRIPTION;
   const dialogTitle = mnemonic ? 'Import recovery phrase' : 'Pubky Ring export';
 
   const handleMobileButtonClick = () => {
     if (typeof window !== 'undefined') {
-      const url = mnemonic ? generatePubkyRingDeeplink(mnemonic) : pubkyCoreUrl;
+      const url = mnemonic ? generatePubkyRingDeeplink(mnemonic) : pubkyProtocolUrl;
       window.open(url, '_blank');
     }
   };

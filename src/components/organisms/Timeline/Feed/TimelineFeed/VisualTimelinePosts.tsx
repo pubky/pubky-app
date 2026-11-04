@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { CirclePlay } from 'lucide-react';
 import { TagKind } from '@/application/tag/tag.types';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
 import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
+import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
@@ -35,6 +38,7 @@ import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../../../PostContentBlurred/PostContentBlurred';
 import {
   appendVisualTrailingCell,
+  isVisualYouTubePlaceholderThumbnail,
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
   VISUAL_TILE_COLUMN_SPANS,
@@ -43,7 +47,11 @@ import { useVisualFeedTiles } from './useVisualFeedTiles';
 import { VisualTimelinePostsSkeleton } from './VisualTimelinePosts.skeleton';
 import type {
   VisualTileImageProps,
+  VisualTileLinkVideoFallbackProps,
+  VisualTileLinkVideoFileProps,
+  VisualTileLinkVideoProps,
   VisualTileVideoProps,
+  VisualTileYouTubeThumbnailProps,
   VisualTimelinePlaceholderTileProps,
   VisualTimelinePostsProps,
   VisualTimelineRowProps,
@@ -55,7 +63,7 @@ function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
 
-function VisualTileVideo({ tile }: VisualTileVideoProps) {
+function VisualTileVideo({ tile, onMediaError }: VisualTileVideoProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const { ref, isVisible } = useViewportObserver({
     rootMargin: '300px 0px 300px 0px',
@@ -99,7 +107,8 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
         pauseVideo={!isVisible}
         preload="metadata"
         onTimeUpdate={handleTimeUpdate}
-        className="h-full w-full rounded-none object-cover"
+        onError={onMediaError}
+        className={cn('h-full w-full rounded-none object-cover', onMediaError && 'bg-transparent')}
       />
     </Container>
   );
@@ -124,6 +133,117 @@ function VisualTileImage({ tile }: VisualTileImageProps) {
   };
 
   return <Image src={currentSrc} alt={tile.attachmentName} fill className="object-cover" onError={handleError} />;
+}
+
+/** Card a link video tile shows under its media, and instead of it when the media is missing or fails. */
+function VisualTileLinkVideoFallback({ hostLabel }: VisualTileLinkVideoFallbackProps) {
+  return (
+    <Container
+      overrideDefaults
+      data-testid="visual-tile-link-video-fallback"
+      className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted p-4"
+    >
+      <CirclePlay aria-hidden="true" className="size-10 text-muted-foreground" />
+      {hostLabel ? (
+        <Typography as="span" size="sm" className="max-w-full truncate text-muted-foreground">
+          {hostLabel}
+        </Typography>
+      ) : null}
+    </Container>
+  );
+}
+
+/**
+ * Tries the sharp `hq720` thumbnail, then `mqdefault`. i.ytimg answers a missing
+ * one with a 404 that browsers report either as an error or as a load of its
+ * 120x90 placeholder, so both move on. The image stays transparent until a real
+ * thumbnail has loaded, leaving the fallback card visible until then.
+ */
+function VisualTileYouTubeThumbnail({ tile, onUnavailable }: VisualTileYouTubeThumbnailProps) {
+  const [currentSrc, setCurrentSrc] = React.useState(tile.previewSrc);
+  const [isLoaded, setIsLoaded] = React.useState(false);
+
+  const handleMissing = () => {
+    if (currentSrc === tile.mainSrc) {
+      onUnavailable();
+      return;
+    }
+
+    setCurrentSrc(tile.mainSrc);
+  };
+
+  const handleLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    if (!naturalWidth || !naturalHeight || isVisualYouTubePlaceholderThumbnail(naturalWidth, naturalHeight)) {
+      handleMissing();
+      return;
+    }
+
+    setIsLoaded(true);
+  };
+
+  return (
+    <>
+      <Image
+        // A fresh element per candidate, so a late load event from the previous one is dropped.
+        key={currentSrc}
+        src={currentSrc}
+        alt=""
+        fill
+        referrerPolicy="no-referrer"
+        className={cn('object-cover transition-opacity duration-200', !isLoaded && 'opacity-0')}
+        onLoad={handleLoad}
+        onError={handleMissing}
+      />
+      {isLoaded ? (
+        <CirclePlay
+          aria-hidden="true"
+          data-testid="visual-tile-play-badge"
+          className="pointer-events-none absolute inset-0 m-auto size-12 text-white drop-shadow-md"
+        />
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * A direct video file plays only once the server's guarded preview reports a video, the gate
+ * GenericPreview applies in List: the og-metadata route resolves the host on every redirect hop
+ * and answers a private address with a non-video fallback, so a link that names or resolves to
+ * the viewer's own network keeps the card. Until then, and for anything else, the card stays.
+ */
+function VisualTileLinkVideoFile({ tile, onMediaError }: VisualTileLinkVideoFileProps) {
+  const { metadata } = useOgMetadata(tile.mainSrc);
+
+  if (metadata?.type !== 'video') {
+    return null;
+  }
+
+  return <VisualTileVideo tile={tile} onMediaError={onMediaError} />;
+}
+
+/**
+ * Media for a post whose video is a link: the fallback card first, then the
+ * YouTube thumbnail or the video file on top of it. Vimeo has no thumbnail
+ * without an API request, so it keeps the card.
+ */
+function VisualTileLinkVideo({ tile, linkVideo }: VisualTileLinkVideoProps) {
+  const [hasMediaFailed, setHasMediaFailed] = React.useState(false);
+
+  const handleMediaFailed = () => {
+    setHasMediaFailed(true);
+  };
+
+  return (
+    <>
+      <VisualTileLinkVideoFallback hostLabel={linkVideo.hostLabel} />
+      {hasMediaFailed || !tile.mainSrc ? null : linkVideo.provider === 'youtube' ? (
+        <VisualTileYouTubeThumbnail tile={tile} onUnavailable={handleMediaFailed} />
+      ) : (
+        <VisualTileLinkVideoFile tile={tile} onMediaError={handleMediaFailed} />
+      )}
+    </>
+  );
 }
 
 function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: VisualTimelineTileOverlayProps) {
@@ -257,6 +377,8 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
       >
         {tile.isBlurred ? (
           <PostContentBlurred postId={tile.postId} className="h-full rounded-none" />
+        ) : tile.linkVideo ? (
+          <VisualTileLinkVideo tile={tile} linkVideo={tile.linkVideo} />
         ) : tile.mediaKind === 'video' ? (
           <VisualTileVideo tile={tile} />
         ) : (
@@ -376,34 +498,30 @@ export function VisualTimelinePosts({
       hasMore,
       showUnavailablePosts,
     });
-  const initialBackfillInFlightRef = React.useRef(false);
   const hasRows = rows.length > 0;
-  const shouldBackfillInitialRows =
-    !loading && !loadingMore && !error && !hasPendingSnapshot && postIds.length > 0 && !hasRows && hasMore;
+  // Loaded ids whose rows are still unresolved. Before the tile snapshot's first emission
+  // empty rows say nothing about those ids, so the skeleton holds and nothing loads (a
+  // Grid→Visual switch of a partially-paged collection with cached tiles would otherwise
+  // fetch a page it may not need). Once it has emitted and more pages exist, the wrapper's
+  // empty-but-`hasMore` state owns the case: it keeps the skeleton beside the children, so
+  // the sentinel below the empty mosaic requests the next page under the unproductive-load
+  // budget and the manual Load more replaces the skeleton once it is spent (#2538). Only an
+  // exhausted stream waits here for the pending probes to settle, so the filtered empty
+  // state never shows before the pipeline has had its say.
   const isResolvingInitialRows =
     !error &&
     postIds.length > 0 &&
     !hasRows &&
-    (hasPendingSnapshot || hasMore || loadingMore || hasPendingTiles || hasPendingFiles || hasPendingPostDetails);
+    (hasPendingSnapshot || (!hasMore && (loadingMore || hasPendingTiles || hasPendingFiles || hasPendingPostDetails)));
   const isInitialLoading = loading || isResolvingInitialRows;
 
-  useEffect(() => {
-    if (!shouldBackfillInitialRows) return;
-    if (initialBackfillInFlightRef.current) return;
-
-    initialBackfillInFlightRef.current = true;
-    void Promise.resolve()
-      .then(() => loadMore())
-      .finally(() => {
-        initialBackfillInFlightRef.current = false;
-      });
-  }, [loadMore, shouldBackfillInitialRows]);
-
-  // `hasRows` keeps the observer quiet while the tile pipeline resolves rows for
-  // existing postIds (the backfill effect owns that case). A fully-filtered stream
-  // region leaves postIds itself empty — there the sentinel must stay armed so
-  // load rounds keep chaining toward the first visible posts, within the budget of
-  // rounds that grow nothing; past it the manual Load more below takes over (#2523).
+  // The sentinel owns every automatic load, including the backfill of a stream whose loaded
+  // ids yield no tile yet (a text-only profile, a text-heavy custom feed, a content filter
+  // that drops every post's media): a separate effect used to chain `loadMore` there outside
+  // the budget, page after page, until the stream ended or a tile appeared (#2538). A
+  // fully-filtered stream region leaves postIds itself empty — the sentinel stays armed
+  // there too, so load rounds keep chaining toward the first visible posts, within the
+  // budget of rounds that grow nothing; past it the manual Load more below takes over (#2523).
   // The budget measures mosaic progress, not ids: with content set to All a page of
   // text-only posts grows `postIds` while the tile pipeline drops every one of them, and a
   // budget keyed on ids would keep resetting (#2523). It counts every tile the pipeline
@@ -415,7 +533,7 @@ export function VisualTimelinePosts({
   // them would hold every load behind a slow probe, which dev never did.
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
-    hasMore: hasMore && (hasRows || postIds.length === 0),
+    hasMore,
     isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,

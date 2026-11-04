@@ -300,13 +300,89 @@ describe('Post Application', () => {
         };
 
         const { commitCreateSpy, saveSpy, requestSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
         commitCreateSpy.mockRejectedValue(new Error('File upload failed: quota exceeded'));
 
         await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed: quota exceeded');
 
         expect(commitCreateSpy).toHaveBeenCalledWith({ fileAttachments: mockFileAttachments });
+        // A half-uploaded file (blob in, record missing) is swept by its known URLs
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
         expect(saveSpy).not.toHaveBeenCalled();
         expect(requestSpy).not.toHaveBeenCalled();
+      });
+
+      it('should roll back the whole batch when one upload of several fails', async () => {
+        // An article sends its cover and body files together; the uploads run in
+        // parallel, so the siblings of the failed one are already on the homeserver
+        const mockFileAttachments = [
+          createMockFileAttachment('cover'),
+          createMockFileAttachment('body-1'),
+          createMockFileAttachment('body-2'),
+        ];
+
+        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockData: TCreatePostInput = {
+          compositePostId: 'author:article-partial-upload',
+          post: mockPost,
+          postUrl: 'pubky://author/pub/pubky.app/posts/article-partial-upload',
+          fileAttachments: mockFileAttachments,
+        };
+
+        const { commitCreateSpy, saveSpy, requestSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+        commitCreateSpy.mockRejectedValue(new Error('File upload failed: 507'));
+
+        await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed: 507');
+
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
+        expect(saveSpy).not.toHaveBeenCalled();
+        expect(requestSpy).not.toHaveBeenCalled();
+      });
+
+      it('should roll back the uploads when the local post write fails', async () => {
+        const mockFileAttachments = [createMockFileAttachment('cover'), createMockFileAttachment('body-1')];
+
+        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockData: TCreatePostInput = {
+          compositePostId: 'author:article-local-write-fail',
+          post: mockPost,
+          postUrl: 'pubky://author/pub/pubky.app/posts/article-local-write-fail',
+          fileAttachments: mockFileAttachments,
+        };
+
+        const { commitCreateSpy, saveSpy, requestSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+        saveSpy.mockRejectedValue(new Error('Dexie write failed'));
+
+        await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('Dexie write failed');
+
+        expect(commitCreateSpy).toHaveBeenCalledWith({ fileAttachments: mockFileAttachments });
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
+        expect(requestSpy).not.toHaveBeenCalled();
+      });
+
+      it('should propagate the upload error when the batch rollback also fails', async () => {
+        const mockFileAttachments = [createMockFileAttachment('cover'), createMockFileAttachment('body-1')];
+
+        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockData: TCreatePostInput = {
+          compositePostId: 'author:article-rollback-fail',
+          post: mockPost,
+          postUrl: 'pubky://author/pub/pubky.app/posts/article-rollback-fail',
+          fileAttachments: mockFileAttachments,
+        };
+
+        const { commitCreateSpy, saveSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi
+          .spyOn(FileApplication, 'commitDeleteUploaded')
+          .mockRejectedValue(new Error('File rollback failed'));
+        commitCreateSpy.mockRejectedValue(new Error('File upload failed: 507'));
+
+        await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed: 507');
+
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
+        expect(saveSpy).not.toHaveBeenCalled();
       });
     });
 
@@ -353,11 +429,13 @@ describe('Post Application', () => {
           undefined,
           undefined,
         );
+        const onPostSynced = vi.fn();
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-with-tags-fail',
           post: mockPost,
           postUrl: 'pubky://author/pub/pubky.app/posts/post-with-tags-fail',
           tags: mockTags,
+          onPostSynced,
         };
 
         const { saveSpy, requestSpy, tagCreateSpy } = setupCreateSpies();
@@ -378,6 +456,8 @@ describe('Post Application', () => {
           }),
         });
         expect(tagCreateSpy).toHaveBeenCalledWith({ tagList: mockTags });
+        // The caller may treat the post as live once this runs, so it must come before the tag write.
+        expect(onPostSynced.mock.invocationCallOrder[0]).toBeLessThan(tagCreateSpy.mock.invocationCallOrder[0]);
       });
     });
 
@@ -442,6 +522,7 @@ describe('Post Application', () => {
           postUrl: 'pubky://author/pub/pubky.app/posts/post-fail',
           fileAttachments: mockFileAttachments,
           tags: mockTags,
+          onPostSynced: vi.fn(),
         };
 
         const { commitCreateSpy, saveSpy, requestSpy, tagCreateSpy } = setupCreateSpies();
@@ -470,6 +551,7 @@ describe('Post Application', () => {
         // Rollback deletes by the known record + blob URLs, not by record URI
         expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
         expect(tagCreateSpy).not.toHaveBeenCalled();
+        expect(mockData.onPostSynced).not.toHaveBeenCalled();
       });
 
       it('should propagate original error when file rollback also fails', async () => {

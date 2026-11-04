@@ -2877,7 +2877,17 @@ describe('missing SDK grant material', () => {
     mockState.listGrants.mockResolvedValue([]);
     await expect(HomeserverService.restoreReference(reference)).rejects.toMatchObject({
       code: AuthErrorCode.SESSION_EXPIRED,
-      context: { reason: 'missing_local_grant' },
+      context: { reason: 'missing_local_grant', material: 'record' },
+    });
+  });
+  it('says when the record survived but its delegated signing key is gone', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.restoreGrant.mockRejectedValue({
+      name: 'ClientStateError',
+      message: 'Delegated grant key not found: proof-key',
+    });
+    await expect(HomeserverService.restoreReference(reference)).rejects.toMatchObject({
+      context: { reason: 'missing_local_grant', material: 'key' },
     });
   });
   it('classifies unavailable IndexedDB as local recovery instead of a retryable server failure', async () => {

@@ -138,7 +138,7 @@ describe('ProfileTagged', () => {
     const enrichedTags = [
       {
         label: 'bitcoin',
-        taggers: [{ id: 'user1', name: 'Not Vlada', avatarUrl: 'https://cdn.example.com/avatar/user1' }],
+        taggers: [{ id: 'user1', name: 'Other User', avatarUrl: 'https://cdn.example.com/avatar/user1' }],
         taggers_count: 1,
         relationship: false,
       },
@@ -148,7 +148,7 @@ describe('ProfileTagged', () => {
     render(<ProfileTagged />);
 
     expect(mockUseEnrichedTags).toHaveBeenCalledWith(mockTaggedOneTag.tags);
-    expect(screen.getByTestId('tagged-section')).toHaveAttribute('data-tagger-name', 'Not Vlada');
+    expect(screen.getByTestId('tagged-section')).toHaveAttribute('data-tagger-name', 'Other User');
   });
 
   it('passes the profile entity context to TaggedSection', () => {

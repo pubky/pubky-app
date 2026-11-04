@@ -1,4 +1,5 @@
-import type { SpanJSON, TransactionEvent } from '@sentry/core';
+import * as SentryBrowser from '@sentry/browser';
+import type { SpanJSON, StreamedSpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
@@ -71,7 +72,9 @@ function runBeforeSendSpan(span: SpanJSON): SpanJSON {
 
   expect(beforeSendSpan).toBeTypeOf('function');
 
-  return beforeSendSpan!(span);
+  // getSentryInitBase() pins traceLifecycle 'static' and wraps the callback in withStaticSpan,
+  // so the stored callback still receives and returns a static SpanJSON at runtime.
+  return asOpaque<SpanJSON>(beforeSendSpan!(asOpaque<StreamedSpanJSON>(span)));
 }
 
 async function withEnabledSentryCapture(
@@ -98,6 +101,8 @@ async function withEnabledSentryCapture(
   vi.doMock('@sentry/nextjs', () => ({
     withScope,
     captureException,
+    // Mirrors the SDK's withStaticSpan: tags the callback and returns it unchanged.
+    withStaticSpan: <T>(callback: T): T => callback,
   }));
   vi.doMock('@/libs/env/env', () => ({
     Env: {
@@ -227,6 +232,35 @@ describe('shouldEnableSentry', () => {
 });
 
 describe('captureAppError filtering', () => {
+  it('reports a lost saved session even though its restoreGrant error is dropped (#2942)', async () => {
+    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
+      const dropped = new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.SESSION_EXPIRED,
+        message: 'Authorize this account again to restore its session.',
+        service: ErrorService.Homeserver,
+        operation: 'restoreGrant',
+        context: { reason: 'missing_local_grant', material: 'record' },
+      });
+      const lost = new AppError({
+        category: ErrorCategory.Database,
+        code: DatabaseErrorCode.RECORD_NOT_FOUND,
+        message: 'Saved session disappeared without a logout in this tab',
+        service: ErrorService.Local,
+        operation: 'savedSessionLost',
+        context: { trigger: 'restore', material: 'record', shopFrameLoaded: true },
+      });
+
+      captureAppError(dropped);
+      captureAppError(lost);
+
+      expect(shouldDropAppErrorFromSentry(dropped)).toBe(true);
+      expect(shouldDropAppErrorFromSentry(lost)).toBe(false);
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(lost);
+    });
+  });
+
   it('keeps OG metadata fetch errors reportable unless handled before Err creation', async () => {
     await withEnabledSentryCapture(({ captureAppError, captureException }) => {
       const error = new AppError({
@@ -734,6 +768,119 @@ describe('once-per-chain and drop rules enforced in beforeSend', () => {
 
   it('still delivers ordinary exceptions through the same pipeline', async () => {
     expect(await captureThroughRealSdk([new TypeError('native failure')])).toEqual(['native failure']);
+  });
+});
+
+/**
+ * Regression for the v10 → v11 upgrade: removing `sendDefaultPii: false` without a
+ * `dataCollection` mapping re-enabled IP collection, because v11's defaults collect MORE
+ * than v10's. The browser client sets `infer_ip: 'auto'` (Relay infers the connecting IP)
+ * and the server RequestData integration attaches `user.ip_address` and IP-bearing headers
+ * such as `x-forwarded-for`. Both probes run the REAL SDK clients against inert
+ * transports — nothing leaves the process — and each pairs the app config with a
+ * default-config control, so the assertions measure the SDK's actual defaults rather
+ * than a vacuous fixture.
+ */
+describe('Sentry dataCollection privacy (v11 regression)', () => {
+  const CLIENT_IP = '2001:db8::1';
+
+  function inertTransport(onEvent: (event: Sentry.ErrorEvent) => void) {
+    return Sentry.createTransport({ recordDroppedEvent: () => {} }, async (request) => {
+      // Envelope: header line, item header line, item payload line.
+      const [, , payload] = String(request.body).split('\n');
+      onEvent(JSON.parse(payload) as Sentry.ErrorEvent);
+      return { statusCode: 200 };
+    });
+  }
+
+  describe('browser client IP inference', () => {
+    function createBrowserClient(dataCollection: Sentry.BrowserOptions['dataCollection']): SentryBrowser.BrowserClient {
+      return new SentryBrowser.BrowserClient({
+        ...getSentryInitBase(),
+        dsn: TEST_DSN,
+        transport: () => inertTransport(() => {}),
+        stackParser: SentryBrowser.defaultStackParser,
+        integrations: [],
+        sendClientReports: false,
+        // Last on purpose: `undefined` means "SDK v11 defaults" (the control case).
+        dataCollection,
+      });
+    }
+
+    function inferIp(client: SentryBrowser.BrowserClient): 'auto' | 'never' | undefined {
+      return client.getOptions()._metadata?.sdk?.settings?.infer_ip;
+    }
+
+    it('keeps Relay IP inference disabled (infer_ip: never)', () => {
+      const client = createBrowserClient(getSentryInitBase().dataCollection);
+
+      expect(client.getDataCollectionOptions().userInfo).toBe(false);
+      expect(inferIp(client)).toBe('never');
+    });
+
+    it('pins the SDK v11 default the mapping guards against (infer_ip: auto)', () => {
+      expect(inferIp(createBrowserClient(undefined))).toBe('auto');
+    });
+  });
+
+  describe('server request data', () => {
+    async function captureServerEvent(
+      dataCollection: Sentry.NodeOptions['dataCollection'],
+    ): Promise<Sentry.ErrorEvent[]> {
+      const events: Sentry.ErrorEvent[] = [];
+      const client = new Sentry.NodeClient({
+        ...getSentryInitBase(),
+        dsn: TEST_DSN,
+        transport: () => inertTransport((event) => events.push(event)),
+        stackParser: Sentry.defaultStackParser,
+        // Production server init uses the SDK's default integrations, which include
+        // RequestData; named explicitly so the probe identifies the integration under test.
+        integrations: [Sentry.requestDataIntegration()],
+        sendClientReports: false,
+        // Last on purpose: `undefined` means "SDK v11 defaults" (the control case).
+        dataCollection,
+      });
+      client.init();
+      const scope = new Sentry.Scope();
+      scope.setClient(client);
+      // What Next.js hands the SDK for a route-handler/server-component capture: the
+      // incoming request, normalized, on the scope's processing metadata.
+      scope.setSDKProcessingMetadata({
+        normalizedRequest: {
+          method: 'GET',
+          url: 'https://app.pubky.app/home',
+          headers: {
+            'x-forwarded-for': CLIENT_IP,
+            'user-agent': 'pubky-app-probe',
+          },
+        },
+      });
+      scope.captureException(new Error('server capture probe'));
+      await client.flush(2000);
+      await client.close(0);
+      return events;
+    }
+
+    it('attaches no user.ip_address and no x-forwarded-for with the app config', async () => {
+      const events = await captureServerEvent(getSentryInitBase().dataCollection);
+
+      expect(events).toHaveLength(1);
+      const [event] = events;
+      expect(event.user?.ip_address).toBeUndefined();
+      expect(event.request?.headers?.['x-forwarded-for']).toBeUndefined();
+      expect(JSON.stringify(event)).not.toContain(CLIENT_IP);
+      // Non-PII headers are still attached — the deny list is surgical, not a blackout.
+      expect(event.request?.headers?.['user-agent']).toBe('pubky-app-probe');
+    });
+
+    it('pins the SDK v11 default the mapping guards against (IP attached)', async () => {
+      const events = await captureServerEvent(undefined);
+
+      expect(events).toHaveLength(1);
+      const [event] = events;
+      expect(event.user?.ip_address).toBe(CLIENT_IP);
+      expect(event.request?.headers?.['x-forwarded-for']).toBe(CLIENT_IP);
+    });
   });
 });
 

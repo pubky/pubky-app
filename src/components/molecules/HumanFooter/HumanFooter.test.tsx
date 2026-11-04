@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { LEGAL_ROUTES } from '@/app/routes';
 import { HumanFooter } from './HumanFooter';
 
 // Mock organisms
@@ -9,22 +10,9 @@ vi.mock('@/organisms/DialogAge/DialogAge', () => {
   };
 });
 
-vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
-  return {
-    DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
-  };
-});
-
-vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
-  return {
-    DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
-  };
-});
-
 // Mock config
 vi.mock('@/config/externalLinks', () => ({
-  PUBKY_CORE_URL: 'https://pubky.core',
-  getPubkyCoreLink: () => 'https://pubky.core',
+  getPubkyProtocolLink: () => 'https://pubky.example/protocol',
 }));
 
 // Mock atoms
@@ -66,20 +54,33 @@ describe('HumanFooter', () => {
     expect(container.querySelector('.text-brand')).toBeNull();
   });
 
-  it('renders the terms and privacy dialogs', () => {
+  it('opens the Terms of Service and Privacy Policy in a new tab so the sign-up step is kept', () => {
     render(<HumanFooter />);
 
-    expect(screen.getByTestId('dialog-terms')).toBeInTheDocument();
-    expect(screen.getByTestId('dialog-privacy')).toBeInTheDocument();
+    const terms = screen.getByRole('link', { name: 'Terms of Service' });
+    expect(terms).toHaveAttribute('href', LEGAL_ROUTES.TERMS_OF_USE);
+    expect(terms).toHaveAttribute('target', '_blank');
+    const privacy = screen.getByRole('link', { name: 'Privacy Policy' });
+    expect(privacy).toHaveAttribute('href', LEGAL_ROUTES.PRIVACY_POLICY);
+    expect(privacy).toHaveAttribute('target', '_blank');
     expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
   });
 
-  it('renders the Pubky Core link', () => {
+  it('keeps the Terms of Service and Privacy Policy links without an underline, like the age confirmation beside them', () => {
     render(<HumanFooter />);
 
-    const pubkyCoreLink = screen.getByText('Pubky Core');
-    expect(pubkyCoreLink).toBeInTheDocument();
-    expect(pubkyCoreLink.closest('a')).toHaveAttribute('target', '_blank');
+    const [legalLinks, protocolLinks] = screen.getAllByTestId('footer-links');
+    expect(legalLinks).toHaveClass('[&_a]:no-underline');
+    expect(protocolLinks).not.toHaveClass('[&_a]:no-underline');
+  });
+
+  it('renders the Pubky Protocol link', () => {
+    render(<HumanFooter />);
+
+    const protocolLink = screen.getByText('Pubky Protocol');
+    expect(protocolLink).toBeInTheDocument();
+    expect(protocolLink.closest('a')).toHaveAttribute('href', 'https://pubky.example/protocol');
+    expect(protocolLink.closest('a')).toHaveAttribute('target', '_blank');
   });
 
   it('renders the company information', () => {

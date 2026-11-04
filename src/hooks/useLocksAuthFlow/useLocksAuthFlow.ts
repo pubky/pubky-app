@@ -5,12 +5,33 @@ import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { LocksController } from '@/controllers/locks/locks';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import type { AppError } from '@/libs/error/error';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { LocksAuthFlowStatus, type UseLocksAuthFlowReturn } from './useLocksAuthFlow.types';
-import { readLocksAuthBridgeMessage } from './useLocksAuthFlow.utils';
+import { isLocksAuthReadyMessage, readLocksAuthBridgeMessage } from './useLocksAuthFlow.utils';
+
+/**
+ * How long the `/connect` iframe may stay silent after its `load` event. The shell's script posts a
+ * `locks-auth-resize` height report before anything else, so a page that rendered says so at once;
+ * one that loaded and stayed silent is an error body or a proxy page (#3027).
+ */
+export const CONNECT_READY_AFTER_LOAD_MS = 5_000;
+
+/**
+ * How long the `/connect` iframe may take to report it rendered, counted from its mount. Covers a
+ * request that never fires `load` (a stalled connection), where the 5 s limit above never starts.
+ */
+export const CONNECT_MOUNT_TIMEOUT_MS = 20_000;
+
+/** The error for a `/connect` page that never reported it rendered, counted from `mount` or `load`. */
+const connectPageTimeout = (countedFrom: 'mount' | 'load'): AppError =>
+  Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Lock Server connect page did not render', {
+    service: ErrorService.Locks,
+    operation: 'useLocksAuthFlow.awaitConnectPage',
+    context: { countedFrom },
+  });
 
 /**
  * Drives the iframe-based Lock Server auth flow.
@@ -19,12 +40,19 @@ import { readLocksAuthBridgeMessage } from './useLocksAuthFlow.utils';
  * for the modal to load in an iframe. The `/connect` page posts the one-time `code` + `state` back
  * to the parent; the message is validated (origin / iframe source / schema), `state` is checked,
  * and the code is exchanged for a session.
+ *
+ * The iframe stays hidden (`isConnectReady` false) until the shell posts its first
+ * `locks-auth-resize` report, validated like the callback. A page that failed to render never posts
+ * it, so after `CONNECT_READY_AFTER_LOAD_MS` from `load`, or `CONNECT_MOUNT_TIMEOUT_MS` from mount,
+ * the flow moves to `ERROR` and the dialog offers Try again instead of the page's raw body.
  */
 export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
   const [status, setStatus] = useState<LocksAuthFlowStatus>(LocksAuthFlowStatus.IDLE);
   const [connectUrl, setConnectUrl] = useState<string | null>(null);
   const [session, setSession] = useState<LocksSdkSession | null>(null);
   const [error, setError] = useState<AppError | null>(null);
+  const [isConnectReady, setIsConnectReady] = useState(false);
+  const [isConnectLoaded, setIsConnectLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const stateRef = useRef<string | null>(null);
   // The only origin allowed to post the callback — derived from the connect URL the server returned.
@@ -43,6 +71,8 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
     setConnectUrl(null);
     setSession(null);
     setError(null);
+    setIsConnectReady(false);
+    setIsConnectLoaded(false);
     setStatus(LocksAuthFlowStatus.IDLE);
   }, []);
 
@@ -66,6 +96,8 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
 
   const start = useCallback(async () => {
     setError(null);
+    setIsConnectReady(false);
+    setIsConnectLoaded(false);
     setStatus(LocksAuthFlowStatus.CONNECTING);
 
     const authState = crypto.randomUUID();
@@ -138,5 +170,39 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
     return () => window.removeEventListener('message', handler);
   }, [status]);
 
-  return { status, connectUrl, session, error, iframeRef, prepare, start, reset };
+  const onConnectLoad = useCallback(() => setIsConnectLoaded(true), []);
+
+  const isWaitingForConnectPage = status === LocksAuthFlowStatus.AWAITING_APPROVAL && !isConnectReady;
+
+  // Until the page reports it rendered: listen for that report, and cap the wait from mount.
+  useEffect(() => {
+    if (!isWaitingForConnectPage) return;
+
+    const onMessage = (event: MessageEvent) => {
+      if (isLocksAuthReadyMessage(event, iframeRef.current?.contentWindow ?? null, lockServerOriginRef.current ?? '')) {
+        setIsConnectReady(true);
+      }
+    };
+    const timer = setTimeout(() => {
+      setError(connectPageTimeout('mount'));
+      setStatus(LocksAuthFlowStatus.ERROR);
+    }, CONNECT_MOUNT_TIMEOUT_MS);
+    window.addEventListener('message', onMessage);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+    };
+  }, [isWaitingForConnectPage]);
+
+  // `load` fires for an error body too, so it only starts the short wait for the report.
+  useEffect(() => {
+    if (!isWaitingForConnectPage || !isConnectLoaded) return;
+    const timer = setTimeout(() => {
+      setError(connectPageTimeout('load'));
+      setStatus(LocksAuthFlowStatus.ERROR);
+    }, CONNECT_READY_AFTER_LOAD_MS);
+    return () => clearTimeout(timer);
+  }, [isWaitingForConnectPage, isConnectLoaded]);
+
+  return { status, connectUrl, session, error, iframeRef, isConnectReady, onConnectLoad, prepare, start, reset };
 }

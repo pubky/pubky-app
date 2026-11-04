@@ -115,4 +115,14 @@ describe('Settings', () => {
     expect(screen.getByTestId('content-layout')).toHaveClass('pt-(--settings-mobile-chrome-height)', 'lg:pt-0');
     expect(screen.getByTestId('content-layout-content')).toHaveClass('pt-6', 'lg:pt-0');
   });
+
+  it('keeps bottom clearance for the floating action button on mobile only', () => {
+    render(
+      <Settings>
+        <div>Test content</div>
+      </Settings>,
+    );
+
+    expect(screen.getByTestId('content-layout-content')).toHaveClass('pb-32', 'lg:pb-0');
+  });
 });

@@ -24,6 +24,8 @@ const GRANT_QUERY =
   'caps=%2Fpub%2Fpaykit%2F%3Arw&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=a%2Bb_c&cid=pubky.app&cpk=key';
 const GRANT_URL = `pubkyauth://signin_grant?${GRANT_QUERY}`;
 const BITKIT_IOS_URL = `bitkit://pubky-auth/signin?${GRANT_QUERY}`;
+const RING_ANDROID_INTENT_URL = `intent://signin_grant?${GRANT_QUERY}#Intent;scheme=pubkyauth;package=to.pubky.ring;end`;
+const BITKIT_ANDROID_INTENT_URL = `intent://signin_grant?${GRANT_QUERY}#Intent;scheme=pubkyauth;package=to.bitkit;end`;
 const PAGE_URL = 'https://example.test/shop';
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15';
 const ANDROID = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/140.0 Mobile';
@@ -82,7 +84,7 @@ describe.each([
     expect(approval.flow.cancelAuthFlow).not.toHaveBeenCalled();
   });
 
-  it('keeps the original grant URL on Android and resets the launch state on handoff', async () => {
+  it('opens each signer package via an intent URL on Android and resets the launch state on handoff', async () => {
     vi.stubGlobal('navigator', { userAgent: ANDROID, platform: 'Linux armv8l', maxTouchPoints: 5 });
     upgradeRequest.mockResolvedValue(pendingApproval().flow);
     render(<SessionUpgradePanel requiredCapabilities={requiredCapabilities} />);
@@ -91,10 +93,14 @@ describe.each([
 
     fireEvent.click(bitkit);
 
-    expect(window.location.href).toBe(GRANT_URL);
+    expect(window.location.href).toBe(BITKIT_ANDROID_INTENT_URL);
     expect(screen.getByRole('button', { name: 'Opening Bitkit...' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Pubky Ring' }));
+    expect(window.location.href).toBe(RING_ANDROID_INTENT_URL);
+    expect(screen.getByRole('button', { name: 'Opening Pubky Ring...' })).toBeDisabled();
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
     act(() => document.dispatchEvent(new Event('visibilitychange')));
+    expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
     expect(upgradeRequest).toHaveBeenCalledOnce();
   });

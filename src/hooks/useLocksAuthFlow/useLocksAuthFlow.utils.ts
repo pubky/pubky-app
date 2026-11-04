@@ -10,6 +10,13 @@
 /** postMessage `type` discriminator for the callback message (must match the Lock Server shell). */
 export const LOCKS_AUTH_MESSAGE_TYPE = 'locks-auth-callback';
 
+/**
+ * postMessage `type` of the height report the `/connect` shell posts as the first thing its script
+ * does, and again on every layout change. The app uses the first one as the sign that the page
+ * rendered: an error body or a proxy page loads without ever posting it.
+ */
+export const LOCKS_AUTH_RESIZE_MESSAGE_TYPE = 'locks-auth-resize';
+
 /** Validated success payload: the one-time code + the echoed CSRF state. */
 type TLocksAuthBridgeSuccess = { code: string; state: string };
 /** Validated failure payload from the Lock Server shell (connect failed / expired). */
@@ -51,4 +58,22 @@ export function readLocksAuthBridgeMessage(
   }
 
   return null;
+}
+
+/**
+ * True when a `message` event is the `/connect` shell's `locks-auth-resize` report, checked the same
+ * way as the callback: the Lock Server origin, the expected iframe window, and the `type`.
+ */
+export function isLocksAuthReadyMessage(
+  event: MessageEvent,
+  expectedSource: Window | null,
+  lockServerOrigin: string,
+): boolean {
+  if (event.origin !== lockServerOrigin) return false;
+  if (!expectedSource) return false;
+  if (event.source !== expectedSource) return false;
+
+  const data: unknown = event.data;
+  if (typeof data !== 'object' || data === null) return false;
+  return (data as Record<string, unknown>).type === LOCKS_AUTH_RESIZE_MESSAGE_TYPE;
 }

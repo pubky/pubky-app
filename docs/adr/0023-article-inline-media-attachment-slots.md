@@ -4,6 +4,8 @@
 
 Accepted — 2026-10-02
 
+Amended — 2026-10-16 (#2687, #2684): the composer no longer uploads at insert time. A file inserted this session is staged in memory under a placeholder author-owned file URI (`pubky://{author}/pub/pubky.app/files/draft-{7 hex}`, the length of a real id) and uploaded when the article is published, so nothing reaches public storage before then and a locked article's files never leave the lock. The composer-form contract (an author-owned `pubky://…/files/{id}` destination) and the published form are unchanged; see `docs/data-patterns.md`.
+
 ## Context
 
 Articles (`kind: long`) embed media in their markdown body. PR #2437 introduced inline images with a contract that keeps the body host-agnostic: the composer writes `![alt](pubky://{author}/pub/pubky.app/files/{id})` after uploading at insert time, and publishing rewrites each destination to `![alt](attachment:{n})`, a slot of `post.attachments` (`[cover?, ...inline first-appearance, ...unreferenced originals]`, capped by the spec at 10). Slot 0 is the cover unless the body references `attachment:0`.
@@ -15,7 +17,7 @@ Users asked for inline video, audio and PDF. Markdown has no syntax for them, th
 - **One syntax for every kind.** Images, videos, audio files and PDFs all use markdown image syntax. The published body is `![alt](attachment:{n})` whatever the kind; the composer body is the author's `pubky://…/files/{id}` URI. `serializeArticleBody`, `deserializeArticleBody`, the slot-0 cover rule and the controller contract are unchanged (`src/libs/post/articleInlineMedia.ts`).
 - **The kind lives in file metadata, never in the body.** The reader types each slot from `file_details.content_type` (`useAttachmentsMetadata`, matched by `uri`, never by index), a same-session publish from the local files store entry, unlocked (paid) content from the bytes the reader holds, and an external `https:` URL from its file extension. Unknown stays an image, which keeps today's placeholder behaviour; a row of a type the reader has no player for is a placeholder that requests nothing.
 - **The ownership invariant is unchanged.** A slot renders only if `attachments[n]` is a file URI owned by the author; the cover remains image-only.
-- **The editor keeps `imagePlugin` for images** and adds a plugin whose import visitor runs ahead of it, claiming only the image-syntax nodes whose file type the composer knows is not an image (session uploads, the edited post's attachments) or whose `https:` URL has a video/audio/PDF extension. The node exports back to a plain mdast `image`, so the markdown is byte-identical to an image's. An edit holds the editor behind its skeleton until the referenced attachments' metadata has settled, because the import runs once.
+- **The editor keeps `imagePlugin` for images** and adds a plugin whose import visitor runs ahead of it, claiming only the image-syntax nodes whose file type the composer knows is not an image (session files, the edited post's attachments) or whose `https:` URL has a video/audio/PDF extension. The node exports back to a plain mdast `image`, so the markdown is byte-identical to an image's. An edit holds the editor behind its skeleton until the referenced attachments' metadata has settled, because the import runs once.
 - **Caps follow post attachments.** Images keep `IMAGE_MAX_RAW_SIZE`; other kinds the spec's file size limit (`ATTACHMENT_MAX_OTHER_SIZE`). Locked articles keep the lock's own caps.
 
 ## Consequences
@@ -53,7 +55,7 @@ Rejected in ADR-era discussions of #2437 and unchanged here: host coupling, no o
 ## Implementation Notes
 
 - Reader: `ArticleInlineMedia` routes to `ArticleInlineImage` (unchanged), the `Video`/`Audio` atoms or a PDF card; `PostArticleDetail` resolves the inline slots' rows; each player pauses itself once it leaves the viewport.
-- Composer: `inlineMediaPlugin`, `InlineMediaNode`, `InlineMediaEditor`, `MarkdownEditorMediaDialog`; `useInlineMediaUpload` validates per kind; `usePostInput` types the edited post's inline attachments through `useAttachmentsMetadata`.
+- Composer: `inlineMediaPlugin`, `InlineMediaNode`, `InlineMediaEditor`, `MarkdownEditorMediaDialog`; `useInlineMediaUpload` validates per kind and stages the file until the publish (see the amendment under Status); `usePostInput` types the edited post's inline attachments through `useAttachmentsMetadata`.
 - Config: `ARTICLE_INLINE_SUPPORTED_MIME_TYPES` (images plus the spec's video, audio and PDF types); the cover list is untouched.
 
 ## Related Decisions

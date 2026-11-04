@@ -275,7 +275,7 @@ describe('PostPage (cover preload)', () => {
   it('preloads both cover variants, one per media query, so the browser starts the one it renders', async () => {
     await renderPost({
       kind: 'long',
-      content: JSON.stringify({ title: 'How to Think About Names', body: 'My name is John Carvalho.' }),
+      content: JSON.stringify({ title: 'How to Think About Names', body: 'My name is Jane Whitlock.' }),
       attachments: [FILE_URI],
     });
 

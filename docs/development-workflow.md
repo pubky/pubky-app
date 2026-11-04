@@ -12,6 +12,13 @@ How to make a change to this repo that a maintainer would write: right layer, ri
 6. Verify at the right level (see [Verification](#verification)), then read your own diff for drift: a stray `useMemo`, a hex colour, a new `index.ts`, an unrelated rename, a raw `Error`, a direct `process.env` read.
 7. If the change alters a UI surface with a VRT baseline, say so; if it needs an ADR-worthy decision, mention it rather than silently inventing a pattern.
 
+## People and names
+
+- In code, comments, docs, fixtures, commit messages and PR text, refer to people only by GitHub handle. Never use real names.
+- Do not attribute opinions, decisions or personal matters to people.
+- Test fixtures use clearly fictional names (`Alice Example`, `Bob Example`).
+- This is a public repo and history is kept forever: a scrubbed name stays in earlier commits, so get it right the first time.
+
 ## Worked Example: Create a Collection
 
 `src/hooks/useCreateCollection/useCreateCollection.ts` → `src/core/controllers/post/post.ts` (`commitCreateCollection`) → `src/core/application/post/post.ts` (`commitCreate`):
@@ -52,7 +59,7 @@ Styling, tokens, z-index, atomic tiers, file layout and Figma parity are in `com
 - **Streams and TTL:** streams are caches (ADR-0003) with TTL-driven staleness (ADR-0005); local services update `*_ttl.lastUpdatedAt` on every write, and forgetting it leaves a cache that never refreshes. TTL values are runtime-configurable (`PUBKY_RUNTIME_TTL_*`) via `src/config/sync.ts`. Persist dependencies before dependents (author, then post, then tags). Deferred stream invalidation goes through `postStreamDirtyRegistry` (`local-first.md`).
 - **State:** Zustand stores in `src/core/stores/<domain>/*.store.ts` with `*.selectors.ts` companions hold global UI state; local component state stays local. Stores hold no business logic and are read by controllers and coordinators (`useAuthStore.getState().selectCurrentUserPubky()`). A new **persisted** store key must be registered in `src/core/stores/persistedKeys.ts`: `PERSISTED_STORE_KEYS` drives the logout/clear sweep.
 - **Server data:** TanStack Query (`src/libs/query-client`) for query-shaped fetches, with retry decisions derived from `AppError.category`; Dexie `useLiveQuery` for local reads.
-- **HTTP:** never raw `fetch` with ad-hoc error handling. Browser → `/api/*` calls use `src/libs/api/client-request.ts` (see `useFeedback`, `useReportPost`); service calls use the service's own `*.utils.ts` over `safeFetch`.
+- **HTTP:** never raw `fetch` with ad-hoc error handling. Browser → `/api/*` calls use `src/libs/api/client-request.ts` (see `useFeedback`, `useReportPost`); service calls use the service's own `*.utils.ts` over `safeFetch`. The optional `ClientRegionService.fetchCountry` probe has a narrow non-reporting exception in [error handling](error-handling.md#non-reporting-availability-probes).
 - **Identities:** pubky public keys are normalized (`stripPubkyPrefix`); session/auth lives in `src/core/services/homeserver` + `useAuthStore`; unauthenticated browsing uses the explore routes and `useRequireAuth().requireAuth()` for gated actions (`components.md`, _Explore mode_).
 
 ## Services Map
@@ -94,6 +101,8 @@ Right-sized verification:
 - Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack`) and runs on push to `master`/`dev` in CI. Do not attempt it from a bare checkout, and do not report an e2e result you did not obtain.
 
 Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT (`visual-regression-testing.md`); no snapshot tests. For mobile layout branches driven by `useIsMobile`, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
+
+Cypress e2e data: seed what a test only observes, drive what it tests. Preconditions a spec only reads (other users, their posts, follows, tags, notifications to receive) may be written through the homeserver API with the helpers in `cypress/support/seed.ts`, but every flow seeded that way keeps a named UI test in the spec that owns it, so seeding never reduces coverage. After each phase of seeds, a spec makes one `waitForNexus` call (`cypress/support/nexus.ts`) with a check for every record the phase's assertions read from Nexus, and none for records they do not; the checks are polled together, so a phase costs one indexing delay. Nexus indexes a record as it stands when it processes the write, so a record is waited for before it is edited or deleted. Where a test asserts order, it relies on seeded records being written a few milliseconds apart or compares against the order Nexus returns.
 
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 

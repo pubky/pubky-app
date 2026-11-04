@@ -131,6 +131,7 @@ function CompactVariant({
       overrideDefaults
       className={cn('flex w-full items-center gap-2 pr-1', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
+      data-cy="user-list-item"
     >
       {/* Clickable user area */}
       <Button
@@ -210,6 +211,7 @@ function FullVariant({
       ref={ttlRef}
       className={cn('gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
+      data-cy="user-list-item"
     >
       {/* Main row */}
       <Container overrideDefaults className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap">
@@ -307,6 +309,7 @@ function CardVariant({
       aria-label={displayName}
       className={cn('flex w-full flex-col gap-3 rounded-md bg-card p-4', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
+      data-cy="user-list-item"
     >
       <Container overrideDefaults className="flex items-center justify-between gap-3">
         <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">

@@ -5,6 +5,7 @@ import { toMarkdown } from 'mdast-util-to-markdown';
 import { gfm } from 'micromark-extension-gfm';
 import { visit } from 'unist-util-visit';
 import { parsePubkyUri } from '@/models/models.utils';
+import { parseArticleContent } from './articleContent';
 
 /**
  * Inline article media — the attachment-mapping scheme for `kind: long` posts.
@@ -377,4 +378,14 @@ export function articleHasInlineSlotZero(body: string): boolean {
   // an entity-escaped ref (e.g. `attachment:&#48;`) decodes to a valid slot-0
   // reference that no literal substring check would catch
   return collectAttachmentRefIndexes(body).has(0);
+}
+
+/**
+ * Slots an article preview renders: the cover alone, or none when slot 0 is inline media. Null for a
+ * post that is not an article, whose preview renders all of its media.
+ */
+export function getArticlePreviewSlots({ kind, content }: { kind: string; content: string }): number[] | null {
+  const article = kind === 'long' ? parseArticleContent(content) : null;
+  if (!article) return null;
+  return articleHasInlineSlotZero(article.body) ? [] : [0];
 }

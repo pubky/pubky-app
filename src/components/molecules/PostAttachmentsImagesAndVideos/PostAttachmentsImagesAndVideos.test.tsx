@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { toast } from '@/molecules/Toaster/toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
 
@@ -44,6 +43,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       showCloseButton,
       overrideDefaults,
       centered,
+      className,
       onClick,
       'aria-describedby': ariaDescribedBy,
       'data-testid': dataTestId,
@@ -53,6 +53,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       showCloseButton?: boolean;
       overrideDefaults?: boolean;
       centered?: boolean;
+      className?: string;
       onClick?: (e: React.MouseEvent) => void;
       'aria-describedby'?: string;
       'data-testid'?: string;
@@ -68,6 +69,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
           data-show-close-button={showCloseButton}
           data-override-defaults={overrideDefaults}
           data-centered={centered}
+          className={className}
           aria-describedby={ariaDescribedBy}
           onClick={onClick}
         >
@@ -88,23 +90,27 @@ vi.mock('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage',
     await importOriginal<typeof import('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage')>();
   return {
     ...actual,
-    PostAttachmentsCarouselImage: ({
-      id,
+    // Keeps its own zoom and shows it on `data-zoomed`, as the real frame does
+    PostAttachmentsCarouselImage: function MockCarouselImage({
       image,
+      isActive,
       'data-testid': dataTestId,
     }: {
-      id: string;
       image: AttachmentConstructed;
+      isActive?: boolean;
       'data-testid'?: string;
-    }) => (
-      <div data-testid={dataTestId || 'carousel-image'} id={id}>
-        <img src={image.urls.main} alt={image.name} />
-      </div>
-    ),
+    }) {
+      const [isZoomed, setIsZoomed] = useState(false);
+      return (
+        <div data-testid={dataTestId || 'carousel-image'} data-active={isActive} data-zoomed={isZoomed}>
+          <img src={image.urls.main} alt={image.name} />
+          <button data-testid={`zoom-in-${image.name}`} onClick={() => setIsZoomed(true)} />
+          <button data-testid={`zoom-out-${image.name}`} onClick={() => setIsZoomed(false)} />
+        </div>
+      );
+    },
   };
 });
-
-vi.mock('@/molecules/Toaster/toast');
 
 // Track dialog open state for conditional rendering
 // When set to true by a test, it won't be overridden by the component
@@ -150,9 +156,25 @@ vi.mock('@/atoms/Button/Button', () => {
 
 // Controllable carousel API state so tests can drive embla events ('select',
 // 'reInit') and the selected snap position
-const carouselApiState: { handlers: Record<string, () => void>; selectedSnap: number } = {
+type WatchDrag = boolean | ((api: unknown, event: MouseEvent | TouchEvent) => boolean | void);
+const carouselApiState: {
+  handlers: Record<string, () => void>;
+  selectedSnap: number;
+  opts?: { watchDrag?: WatchDrag };
+} = {
   handlers: {},
   selectedSnap: 0,
+};
+
+/** The picture inside a lightbox slide; the grid thumbnail carries the same alt text. */
+const slidePicture = (name: string) =>
+  screen.getAllByTestId('carousel-image').flatMap((slide) => [...slide.querySelectorAll(`img[alt="${name}"]`)])[0];
+
+/** What embla would decide for a drag starting now on `target`: watchDrag is read per pointer down, as embla does. */
+const canSwipe = (target?: Element, event: MouseEvent | TouchEvent = new MouseEvent('mousedown')) => {
+  if (target) Object.defineProperty(event, 'target', { value: target });
+  const watchDrag = carouselApiState.opts?.watchDrag ?? true;
+  return typeof watchDrag === 'function' ? watchDrag(undefined, event) !== false : watchDrag;
 };
 
 vi.mock('@/atoms/Carousel/Carousel', () => {
@@ -166,12 +188,13 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
       tabIndex = 0,
     }: {
       children: React.ReactNode;
-      opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: boolean };
+      opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: WatchDrag };
       setApi?: (api: unknown) => void;
       className?: string;
       ref?: React.Ref<HTMLDivElement>;
       tabIndex?: number;
     }) => {
+      carouselApiState.opts = opts;
       // Simulate setting the API in useEffect to avoid infinite re-renders
       useEffect(() => {
         if (setApi) {
@@ -192,7 +215,6 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
           data-start-index={opts?.startIndex}
           data-loop={opts?.loop}
           data-duration={opts?.duration}
-          data-watch-drag={opts?.watchDrag}
           className={className}
         >
           {children}
@@ -343,11 +365,7 @@ describe('PostAttachmentsImagesAndVideos', () => {
     dialogOpenStateSetByTest = false;
     carouselApiState.handlers = {};
     carouselApiState.selectedSnap = 0;
-    // Mock fullscreenEnabled
-    Object.defineProperty(document, 'fullscreenEnabled', {
-      value: true,
-      writable: true,
-    });
+    carouselApiState.opts = undefined;
   });
 
   afterEach(() => {
@@ -536,21 +554,23 @@ describe('PostAttachmentsImagesAndVideos', () => {
       expect(screen.getByTestId('carousel')).toBeInTheDocument();
     });
 
-    it('renders dialog close button when open', () => {
+    it('renders no close button, so the lightbox is dismissed by tapping outside it', () => {
       setDialogOpen(true);
       const imagesAndVideos = [createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
-      expect(screen.getByTestId('dialog-close')).toBeInTheDocument();
+      expect(screen.getByTestId('dialog-content')).toHaveAttribute('data-show-close-button', 'false');
+      expect(screen.queryByTestId('dialog-close')).not.toBeInTheDocument();
     });
 
-    it('renders X icon in close button when open', () => {
+    it('spans the full mobile width with no horizontal gutter', () => {
       setDialogOpen(true);
       const imagesAndVideos = [createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
-      const close = screen.getByTestId('dialog-close');
-      expect(close.querySelector('.lucide-x')).toBeInTheDocument();
+      expect(screen.getByTestId('dialog-content')).toHaveClass('mx-0', 'w-full', 'sm:mx-4', 'sm:w-auto');
+      expect(screen.getByTestId('carousel')).toHaveClass('w-full', 'max-w-full');
+      expect(screen.getByTestId('carousel')).not.toHaveClass('max-w-80');
     });
 
     it('renders dialog content with hidden title for accessibility', () => {
@@ -661,153 +681,88 @@ describe('PostAttachmentsImagesAndVideos', () => {
     });
   });
 
-  describe('Fullscreen functionality', () => {
-    it('renders fullscreen button when dialog is open', () => {
+  describe('Zoom swipe disable', () => {
+    it('turns swiping off while the visible image is zoomed, so a drag pans it', () => {
       setDialogOpen(true);
-      const imagesAndVideos = [createMockImage()];
+      const imagesAndVideos = [createMockImage({ name: 'image-0.jpg' }), createMockImage({ name: 'image-1.jpg' })];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+      const picture = slidePicture('image-0.jpg');
 
-      const buttons = screen.getAllByTestId('button');
-      const fullscreenButton = buttons.find((btn) => btn.textContent?.includes('Fullscreen'));
-      expect(fullscreenButton).toBeInTheDocument();
+      expect(canSwipe(picture)).toBe(true);
+
+      fireEvent.click(screen.getByTestId('zoom-in-image-0.jpg'));
+      expect(canSwipe(picture)).toBe(false);
+
+      fireEvent.click(screen.getByTestId('zoom-out-image-0.jpg'));
+      expect(canSwipe(picture)).toBe(true);
     });
 
-    it('renders maximize icon in fullscreen button', () => {
+    it('keeps swiping off on the zoomed image when another slide is removed', () => {
       setDialogOpen(true);
-      const imagesAndVideos = [createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+      const images = [
+        createMockImage({ name: 'image-0.jpg', urls: { main: 'https://example.com/0.jpg' } }),
+        createMockImage({ name: 'image-1.jpg', urls: { main: 'https://example.com/1.jpg' } }),
+        createMockImage({ name: 'image-2.jpg', urls: { main: 'https://example.com/2.jpg' } }),
+      ];
+      const { rerender } = render(<PostAttachmentsImagesAndVideos imagesAndVideos={images} />);
 
-      const fullscreenButton = screen
-        .getAllByTestId('button')
-        .find((btn) => btn.textContent?.includes('Fullscreen')) as HTMLButtonElement;
-      expect(fullscreenButton.querySelector('.lucide-maximize')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('zoom-in-image-0.jpg'));
+      expect(canSwipe(slidePicture('image-0.jpg'))).toBe(false);
+
+      rerender(<PostAttachmentsImagesAndVideos imagesAndVideos={images.slice(0, 2)} />);
+      expect(canSwipe(slidePicture('image-0.jpg'))).toBe(false);
     });
 
-    it('fullscreen button is enabled when fullscreenEnabled is true', () => {
+    it('decides swiping per drag, so zooming in or out never re-initialises the carousel', () => {
       setDialogOpen(true);
-      Object.defineProperty(document, 'fullscreenEnabled', { value: true });
-      const imagesAndVideos = [createMockImage()];
+      const imagesAndVideos = [createMockImage({ name: 'image-0.jpg' }), createMockImage({ name: 'image-1.jpg' })];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+      const before = carouselApiState.opts?.watchDrag;
 
-      const buttons = screen.getAllByTestId('button');
-      const fullscreenButton = buttons.find((btn) => btn.textContent?.includes('Fullscreen'));
-      expect(fullscreenButton).not.toBeDisabled();
+      fireEvent.click(screen.getByTestId('zoom-in-image-0.jpg'));
+      const after = carouselApiState.opts?.watchDrag;
+      expect(canSwipe(slidePicture('image-0.jpg'))).toBe(false);
+      // embla re-initialises when an option changes, and compares a function option by its source text
+      expect(typeof after).toBe('function');
+      expect(String(after)).toBe(String(before));
     });
 
-    it('fullscreen button is disabled when fullscreenEnabled is false', () => {
+    it('does not start a swipe on the second finger of a pinch at the fitted size', () => {
       setDialogOpen(true);
-      Object.defineProperty(document, 'fullscreenEnabled', { value: false });
-      const imagesAndVideos = [createMockImage()];
+      const imagesAndVideos = [createMockImage(), createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+      // jsdom has TouchEvent but no Touch constructor, so the finger list is set on the event directly
+      const touchStart = (fingers: number) => {
+        const event = new TouchEvent('touchstart');
+        Object.defineProperty(event, 'touches', { value: { length: fingers } });
+        return event;
+      };
 
-      const buttons = screen.getAllByTestId('button');
-      const fullscreenButton = buttons.find((btn) => btn.textContent?.includes('Fullscreen'));
-      expect(fullscreenButton).toBeDisabled();
+      expect(canSwipe(undefined, touchStart(1))).toBe(true);
+      expect(canSwipe(undefined, touchStart(2))).toBe(false);
     });
 
-    it('calls requestFullscreen when fullscreen button is clicked', () => {
+    it('gives a slide a fresh image component when another attachment takes its place, so no zoom carries over', () => {
       setDialogOpen(true);
-      const mockRequestFullscreen = vi.fn().mockResolvedValue(undefined);
-      const mockElement = document.createElement('div');
-      mockElement.requestFullscreen = mockRequestFullscreen;
-      mockElement.id = 'media-item-0';
-      document.body.appendChild(mockElement);
+      const first = createMockImage({ urls: { main: 'https://example.com/first.jpg' } });
+      const second = createMockImage({ urls: { main: 'https://example.com/second.jpg' } });
+      const { rerender } = render(<PostAttachmentsImagesAndVideos imagesAndVideos={[first, second]} />);
+      const before = screen.getAllByTestId('carousel-image')[0];
 
-      const imagesAndVideos = [createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      const buttons = screen.getAllByTestId('button');
-      const fullscreenButton = buttons.find((btn) => btn.textContent?.includes('Fullscreen'));
-      fireEvent.click(fullscreenButton!);
-
-      expect(mockRequestFullscreen).toHaveBeenCalled();
-
-      document.body.removeChild(mockElement);
+      rerender(<PostAttachmentsImagesAndVideos imagesAndVideos={[second]} />);
+      const after = screen.getAllByTestId('carousel-image')[0];
+      expect(after.querySelector('img')).toHaveAttribute('src', 'https://example.com/second.jpg');
+      expect(after).not.toBe(before);
     });
 
-    it('shows toast error when fullscreen fails', async () => {
+    it('lets only the visible slide zoom', () => {
       setDialogOpen(true);
-      const mockError = new Error('Fullscreen not allowed');
-      const mockRequestFullscreen = vi.fn().mockRejectedValue(mockError);
-      const mockElement = document.createElement('div');
-      mockElement.requestFullscreen = mockRequestFullscreen;
-      mockElement.id = 'media-item-0';
-      document.body.appendChild(mockElement);
-
-      const imagesAndVideos = [createMockImage()];
+      const imagesAndVideos = [createMockImage(), createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
-      const buttons = screen.getAllByTestId('button');
-      const fullscreenButton = buttons.find((btn) => btn.textContent?.includes('Fullscreen'));
-      fireEvent.click(fullscreenButton!);
-
-      // Wait for the promise rejection to be handled
-      await vi.waitFor(() => {
-        expect(vi.mocked(toast)).toHaveBeenCalledWith({
-          variant: 'error',
-          description: mockError.message,
-        });
-      });
-
-      document.body.removeChild(mockElement);
-    });
-  });
-
-  describe('Fullscreen swipe disable', () => {
-    it('sets watchDrag to true when exiting fullscreen', () => {
-      setDialogOpen(true);
-      const imagesAndVideos = [createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      // Simulate entering fullscreen first
-      Object.defineProperty(document, 'fullscreenElement', {
-        value: document.createElement('div'),
-        configurable: true,
-      });
-      fireEvent(document, new Event('fullscreenchange'));
-
-      // Simulate exiting fullscreen
-      Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
-      fireEvent(document, new Event('fullscreenchange'));
-
-      const carousel = screen.getByTestId('carousel');
-      expect(carousel).toHaveAttribute('data-watch-drag', 'true');
-    });
-
-    it('sets watchDrag to false when entering fullscreen', () => {
-      setDialogOpen(true);
-      const imagesAndVideos = [createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      // Simulate entering fullscreen
-      Object.defineProperty(document, 'fullscreenElement', {
-        value: document.createElement('div'),
-        configurable: true,
-      });
-      fireEvent(document, new Event('fullscreenchange'));
-
-      const carousel = screen.getByTestId('carousel');
-      expect(carousel).toHaveAttribute('data-watch-drag', 'false');
-    });
-
-    it('adds fullscreenchange event listener on mount', () => {
-      const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
-      const imagesAndVideos = [createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      expect(addEventListenerSpy).toHaveBeenCalledWith('fullscreenchange', expect.any(Function));
-      addEventListenerSpy.mockRestore();
-    });
-
-    it('removes fullscreenchange event listener on unmount', () => {
-      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
-      const imagesAndVideos = [createMockImage()];
-      const { unmount } = render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      unmount();
-
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('fullscreenchange', expect.any(Function));
-      removeEventListenerSpy.mockRestore();
+      const slides = screen.getAllByTestId('carousel-image');
+      expect(slides[0]).toHaveAttribute('data-active', 'true');
+      expect(slides[1]).toHaveAttribute('data-active', 'false');
     });
   });
 
@@ -1003,26 +958,6 @@ describe('PostAttachmentsImagesAndVideos', () => {
       const containers = screen.getAllByTestId('container');
       const gridContainer = containers.find((c) => c.getAttribute('data-display') === 'grid');
       expect(gridContainer).toHaveClass('gap-3');
-    });
-
-    it('fullscreen button has secondary variant', () => {
-      setDialogOpen(true);
-      const imagesAndVideos = [createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      const buttons = screen.getAllByTestId('button');
-      const fullscreenButton = buttons.find((btn) => btn.textContent?.includes('Fullscreen'));
-      expect(fullscreenButton).toHaveAttribute('data-variant', 'secondary');
-    });
-
-    it('fullscreen button has sm size', () => {
-      setDialogOpen(true);
-      const imagesAndVideos = [createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      const buttons = screen.getAllByTestId('button');
-      const fullscreenButton = buttons.find((btn) => btn.textContent?.includes('Fullscreen'));
-      expect(fullscreenButton).toHaveAttribute('data-size', 'sm');
     });
   });
 

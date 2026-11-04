@@ -44,3 +44,13 @@ export const FULL_BLEED_GUTTER_CLASS = '-mx-4 lg:mx-0';
  * flex-col spacing whether or not a page wraps them in TimelineFeedWithStream.
  */
 export const CONTENT_AREA_STACK_CLASS = 'min-w-0 flex-1 gap-4 lg:overflow-hidden';
+
+/**
+ * Bottom clearance below `lg` for a page that shows the floating new-post
+ * button (`Fab`, `bottom-18 size-20`, `md:bottom-20`): its top edge sits
+ * 152px above the viewport bottom (160px from `md`), so 176px lets the last
+ * card, row or action scroll fully clear of it. From `lg` the button moves
+ * to `lg:bottom-6` beside the content column, so each shell keeps its own
+ * `lg:pb-*` and the button is never hidden.
+ */
+export const MOBILE_FAB_CLEARANCE_CLASS = 'pb-44';

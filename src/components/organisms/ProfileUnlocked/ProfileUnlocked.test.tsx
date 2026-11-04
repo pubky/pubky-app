@@ -73,7 +73,7 @@ describe('ProfileUnlocked', () => {
     renderWith({});
 
     expect(screen.getByTestId('locks-permission-notice')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring or Bitkit' })).toBeInTheDocument();
     expect(screen.queryByText("You haven't unlocked any content yet.")).not.toBeInTheDocument();
   });
 

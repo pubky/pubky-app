@@ -1,11 +1,12 @@
 import { Locks, LocksOptions, type Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/network';
+import { getE2eLocksStubUrl, getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/network';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { toAppError } from '@/libs/error/error.utils';
+import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
+import type { TLocksReads } from './locks.e2eStub';
 
 /**
  * The SDK reports HTTP failures as `Lock Server request failed with HTTP <status>` and exposes no
@@ -26,8 +27,28 @@ export function toLocksError(error: unknown, operation: string) {
   return toAppError(error, ErrorService.Locks, operation);
 }
 
+/**
+ * The Lock Server answers a proof submission with HTTP 451 (Unavailable For Legal Reasons) from a
+ * region where paid unlocks are not offered. That is an expected, permanent answer, not a failure:
+ * callers turn it into a state of its own before any `Err.*` is built, because the factories log and
+ * report to Sentry on construction. The pinned SDK 0.1.0 exposes no status field: its browser binding
+ * emits an `InvalidInput` Error with this exact message. Match only that contract, covered by
+ * locks.region.contract.test.ts; an `AppError` was already reported and must be preserved.
+ */
+export function isLockServerRegionBlocked(error: unknown): boolean {
+  if (isAppError(error)) return false;
+  return (
+    error instanceof Error &&
+    error.name === 'InvalidInput' &&
+    error.message === 'Lock Server viewer request failed with HTTP 451'
+  );
+}
+
 /** One-time wasm init promise; see `ensureLocksSdkReady`. */
 let sdkReady: Promise<void> | null = null;
+
+/** Loaded by `ensureLocksSdkReady` only when the E2E stub URL is set, so deploys never fetch its chunk. */
+let e2eStub: typeof import('./locks.e2eStub') | null = null;
 
 /**
  * Runs the locks-sdk's wasm `init()` (its default export) once, on the first call. The `pkg`
@@ -43,10 +64,16 @@ let sdkReady: Promise<void> | null = null;
  */
 export function ensureLocksSdkReady(): Promise<void> {
   if (!sdkReady) {
-    sdkReady = import('@synonymdev/locks-sdk')
-      .then(async ({ default: init }) => {
-        await init();
-      })
+    const e2eStubUrl = getE2eLocksStubUrl();
+    sdkReady = Promise.all([
+      import('@synonymdev/locks-sdk').then(({ default: init }) => init()),
+      e2eStubUrl
+        ? import('./locks.e2eStub').then((stub) => {
+            e2eStub = stub;
+          })
+        : undefined,
+    ])
+      .then(() => undefined)
       .catch((error) => {
         sdkReady = null;
         throw error;
@@ -120,11 +147,34 @@ export function buildLocksOptions(): LocksOptions {
   return options;
 }
 
+/** The E2E stub module; callers have awaited `ensureLocksSdkReady`, which loads it when the stub URL is set. */
+function loadedE2eStub(operation: string): typeof import('./locks.e2eStub') {
+  if (!e2eStub) {
+    throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'E2E Locks stub used before ensureLocksSdkReady', {
+      service: ErrorService.Locks,
+      operation,
+    });
+  }
+  return e2eStub;
+}
+
 /**
  * Builds a Locks client for the configured Lock Server.
  * TODO:[Locks] today there is one server, taken from env. Once multiple lock servers exist,
  * the reader must use each lock's `lock_server.override`; take the server pubky as a param again then.
  */
 export function initLockClient(): Locks {
+  const e2eStubUrl = getE2eLocksStubUrl();
+  if (e2eStubUrl) return loadedE2eStub('initLockClient').createE2eLocksClient(e2eStubUrl);
   return Locks.forServerWithOptions(getLockServerPubky(), buildLocksOptions());
+}
+
+/** The SDK's session-less static reads, swapped like `initLockClient` when the E2E stub is on. */
+export function getLocksReads(): TLocksReads {
+  const e2eStubUrl = getE2eLocksStubUrl();
+  if (e2eStubUrl) return loadedE2eStub('getLocksReads').createE2eLocksReads(e2eStubUrl);
+  return {
+    readContentLock: (resource) => Locks.readContentLockWithOptions(resource, buildLocksOptions()),
+    hasPaykitData: (user) => Locks.hasPaykitDataWithOptions(user, buildLocksOptions()),
+  };
 }

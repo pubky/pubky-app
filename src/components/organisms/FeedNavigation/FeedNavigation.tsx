@@ -173,6 +173,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
 
   return (
     <Container
+      data-cy="feed-navigation"
       className={cn(
         // Full-bleed below lg: cancel ContentLayout's mobile gutter so the tab
         // strip runs edge-to-edge; w-auto lets the negative margins widen the
@@ -197,6 +198,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           overrideDefaults
           href={APP_ROUTES.HOME}
           aria-label={reachLabel}
+          data-cy="feed-navigation-home-tab"
           aria-current={isHomeActive ? 'page' : undefined}
           onClick={(event) =>
             handleFeedNavClick(event, {
@@ -239,6 +241,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 overrideDefaults
                 href={href}
                 aria-label={feed.name}
+                data-cy="feed-navigation-custom-tab"
                 aria-current={isActive ? 'page' : undefined}
                 onClick={(event) =>
                   handleFeedNavClick(event, {
@@ -261,6 +264,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 overrideDefaults
                 type="button"
                 aria-label={`Edit ${feed.name}`}
+                data-cy="feed-navigation-edit-btn"
                 onClick={() => setEditingFeed(feed)}
                 className={cn(FEED_TAB_PENCIL_CLASS, !isActive && 'hidden lg:block')}
               >
@@ -272,7 +276,12 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
 
         {isAuthenticated ? (
           <CustomFeedDialog mode="create">
-            <Button overrideDefaults aria-label="Create feed" className={createFeedButtonClass}>
+            <Button
+              overrideDefaults
+              aria-label="Create feed"
+              data-cy="feed-navigation-create-btn"
+              className={createFeedButtonClass}
+            >
               <PlusCircle className="size-5 shrink-0" />
               <Typography overrideDefaults className={cn(FEED_TAB_LABEL_CLASS, 'hidden lg:inline')}>
                 {'Feed'}
@@ -283,6 +292,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           <Button
             overrideDefaults
             aria-label="Create feed"
+            data-cy="feed-navigation-create-btn"
             className={createFeedButtonClass}
             onClick={() => requireAuth(() => undefined)}
           >

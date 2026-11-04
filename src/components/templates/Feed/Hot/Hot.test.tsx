@@ -210,7 +210,7 @@ describe('Hot', () => {
 
   it('passes bottom padding className to ContentLayout', () => {
     render(<Hot />);
-    expect(screen.getByTestId('content-layout')).toHaveClass('pb-24', 'lg:pb-12');
+    expect(screen.getByTestId('content-layout')).toHaveClass('pb-44', 'lg:pb-12');
   });
 
   it('defaults to tags as active section', () => {

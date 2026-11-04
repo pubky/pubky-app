@@ -15,7 +15,7 @@ vi.mock('@/libs/utils/utils', async (importOriginal) => {
 });
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (args: unknown) => mocks.toast(args) }));
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
-  useUserProfile: () => ({ profile: { name: 'John Carvalho', avatarUrl: undefined }, isLoading: false }),
+  useUserProfile: () => ({ profile: { name: 'Jane Whitlock', avatarUrl: undefined }, isLoading: false }),
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: { currentUserPubky: string | null }) => unknown) =>
@@ -40,6 +40,8 @@ type DialogOverrides = {
   onRecheck?: () => void;
   onViewContent?: () => void;
   onOpenChange?: (open: boolean) => void;
+  lockTitle?: string;
+  contentKind?: React.ComponentProps<typeof DialogPayToUnlock>['contentKind'];
   wrapper?: React.JSXElementConstructor<{ children: React.ReactNode }>;
 };
 
@@ -47,7 +49,8 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
   <DialogPayToUnlock
     open={overrides.open ?? true}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
-    lockTitle="My locked post"
+    lockTitle={overrides.lockTitle ?? 'My locked post'}
+    contentKind={overrides.contentKind}
     authorId="pubkycreator"
     price={overrides.price ?? { amount: '1000', asset: 'BTC' }}
     stage={stage}
@@ -134,6 +137,27 @@ describe('DialogPayToUnlock', () => {
     renderDialog('retry');
     expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
+  });
+
+  // The Lock Server's 451: nothing to retry and nothing to install, so the screen only says why.
+  it('region-blocked: says paid unlocks are not available here, with no retry and no Bitkit', () => {
+    const onOpenChange = vi.fn();
+    renderDialog('region-blocked', { onOpenChange });
+
+    expect(screen.getByRole('status')).toHaveTextContent("Paid unlocks aren't available in your region yet.");
+    expect(screen.getByRole('button', { name: 'About this limit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pay-to-unlock-retry')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Google Play' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bitkit/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.queryByText('PAYMENT RECEIVED')).not.toBeInTheDocument();
+
+    const close = document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement;
+    expect(close).toHaveTextContent('Close');
+    fireEvent.click(close);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('retry: shows the Bitkit instruction and the Try again button', () => {
@@ -380,6 +404,22 @@ describe('DialogPayToUnlock', () => {
     expect(screen.queryByRole('button', { name: /Try again|I completed the steps/ })).not.toBeInTheDocument();
   });
 
+  // #2516: the header follows the body. Only a payment whose content is ready reads "Unlocked"; a received
+  // payment still opening, or one whose content failed to open, says so instead.
+  it.each([
+    ['checking', 'Pay to Unlock'],
+    ['waiting', 'Pay to Unlock'],
+    ['retry', 'Pay to Unlock'],
+    ['finishing', 'Payment received'],
+    ['unopened', 'Payment received'],
+    ['paid', 'Unlocked'],
+  ] as const)('titles the %s stage "%s"', (stage, title) => {
+    renderDialog(stage);
+
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(title);
+    expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
+  });
+
   it('blocked: explains the failed check and offers no way to pay', () => {
     renderDialog('blocked');
     expect(screen.getByText(/could not be checked/)).toBeInTheDocument();
@@ -601,5 +641,30 @@ describe('DialogPayToUnlock', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(cardClick).not.toHaveBeenCalled();
+  });
+
+  it('shows a user key in the lock title as @<display name>, as text inside the dialog (#2681)', () => {
+    const key = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    renderDialog('retry', { lockTitle: `hello pubky${key}` });
+
+    const mention = screen.getByText('@Jane Whitlock');
+    expect(mention.tagName).toBe('SPAN');
+    expect(mention.parentElement).toHaveTextContent('hello @Jane Whitlock');
+    expect(screen.queryByText(new RegExp(key))).not.toBeInTheDocument();
+  });
+
+  // #2433: the header card uses the same mapping as LockedPostCard.
+  it.each([
+    ['image', 'Locked image', 'lucide-image'],
+    ['article', 'Locked article', 'lucide-newspaper'],
+    ['video', 'Locked video', 'lucide-circle-play'],
+    ['file', 'Locked file', 'lucide-download'],
+    ['link', 'Locked content', 'lucide-link'],
+    [undefined, 'Locked content', 'lucide-sticky-note'],
+  ] as const)('shows an untitled %s lock as "%s" with its icon', (contentKind, title, iconClass) => {
+    renderDialog('waiting', { lockTitle: '', contentKind });
+
+    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(document.querySelector(`svg.${iconClass}`)).toBeInTheDocument();
   });
 });

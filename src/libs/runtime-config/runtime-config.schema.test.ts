@@ -76,6 +76,33 @@ describe('runtimeEnvInputSchema', () => {
     expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, deployEnv: 'staging' }).deployEnv).toBe('staging');
   });
 
+  it('rejects the E2E Locks stub URL in production', () => {
+    const result = runtimeEnvInputSchema.safeParse({
+      ...VALID_ENV_INPUT,
+      e2eLocksStubUrl: 'http://lock-server.e2e.test',
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ['e2eLocksStubUrl'],
+        message: 'E2E Locks stub URL must not be set in production',
+      }),
+    ]);
+  });
+
+  it('accepts the E2E Locks stub URL in staging', () => {
+    const parsed = runtimeEnvInputSchema.parse({
+      ...VALID_ENV_INPUT,
+      deployEnv: 'staging',
+      e2eLocksStubUrl: 'http://lock-server.e2e.test',
+    });
+    expect(parsed.e2eLocksStubUrl).toBe('http://lock-server.e2e.test');
+  });
+
+  it('accepts production without the E2E Locks stub URL', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).e2eLocksStubUrl).toBeUndefined();
+  });
+
   it('throws on malformed PKARR_RELAYS JSON', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pkarrRelays: 'not-json' })).toThrow();
   });
@@ -168,6 +195,44 @@ describe('runtimeEnvInputSchema', () => {
   it('treats an empty Paykit Server URL as unset, and throws on a malformed one', () => {
     expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: '  ' }).paykitServerUrl).toBeUndefined();
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: 'not-a-url' })).toThrow();
+  });
+
+  describe('region modes (PUBKY_RUNTIME_REGION_MODES)', () => {
+    it('is unset by default, and blank counts as unset', () => {
+      expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).regionModes).toBeUndefined();
+      expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, regionModes: '   ' }).regionModes).toBeUndefined();
+      expect(runtimeEnvInputSchemaWithDefaults.parse({}).regionModes).toBeUndefined();
+    });
+
+    it('accepts the launch value, a later outcome and none, trimmed', () => {
+      for (const regionModes of ['EU=blocked,GB=blocked,US=blocked', 'EU=nuanced,US=open', 'none']) {
+        expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, regionModes: ` ${regionModes} ` }).regionModes).toBe(
+          regionModes,
+        );
+      }
+    });
+
+    it('throws at startup on a list the Shop would reject, instead of guessing', () => {
+      for (const regionModes of ['EU', 'UK=blocked', 'EU=closed', 'US=blocked,', 'USA=blocked']) {
+        expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, regionModes })).toThrow(/REGION_MODES/);
+        expect(() => runtimeEnvInputSchemaWithDefaults.parse({ regionModes })).toThrow(/REGION_MODES/);
+      }
+    });
+
+    it('validates the injected browser config the same way', () => {
+      const parsed = runtimeEnvInputSchema.parse(VALID_ENV_INPUT);
+      expect(runtimeConfigValueSchema.parse({ ...parsed, regionModes: 'US=blocked' }).regionModes).toBe('US=blocked');
+      expect(() => runtimeConfigValueSchema.parse({ ...parsed, regionModes: 'US' })).toThrow(/REGION_MODES/);
+    });
+  });
+
+  it('leaves the E2E Locks stub off unless a valid URL is set', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).e2eLocksStubUrl).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, e2eLocksStubUrl: '  ' }).e2eLocksStubUrl).toBeUndefined();
+    expect(
+      runtimeEnvInputSchemaWithDefaults.parse({ e2eLocksStubUrl: 'http://lock-server.e2e.test' }).e2eLocksStubUrl,
+    ).toBe('http://lock-server.e2e.test');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, e2eLocksStubUrl: 'not-a-url' })).toThrow();
   });
 
   it('throws on invalid optional boolean values', () => {
@@ -275,6 +340,12 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(Array.isArray(parsed.pkarrRelays)).toBe(true);
     expect(typeof parsed.testnet).toBe('boolean');
     expect(parsed.moderationId).toBe(APP_RUNTIME_DEFAULTS.moderationId);
+  });
+
+  it('keeps the E2E Locks stub URL with the default (staging) deploy identity', () => {
+    const parsed = runtimeEnvInputSchemaWithDefaults.parse({ e2eLocksStubUrl: 'http://lock-server.e2e.test' });
+    expect(parsed.deployEnv).toBe('staging');
+    expect(parsed.e2eLocksStubUrl).toBe('http://lock-server.e2e.test');
   });
 
   it('honors provided values over defaults', () => {

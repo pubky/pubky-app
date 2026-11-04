@@ -16,7 +16,16 @@ const routeState = vi.hoisted(() => ({
   unavailable: false,
   upgradeOpen: false,
   signedIn: true,
+  loading: false,
 }));
+
+// Shop's own column inside the frame: centred at 1200px with `px-6 xl:px-0`, measured against the frame's width.
+const shopColumnDocument = vi.hoisted(
+  () => (content: string) => `<!doctype html><html><head><style>
+      main{box-sizing:border-box;max-width:1200px;margin:0 auto;padding:24px}
+      @media (min-width:1280px){main{padding:24px 0}}
+    </style></head><body style="margin:0;background:transparent;color:white;font:16px sans-serif"><main>${content}</main></body></html>`,
+);
 
 const SHOP_CHROME_IMAGE_URLS = [
   '/pubky-logo.svg',
@@ -242,7 +251,9 @@ vi.mock('@/hooks/useShopEmbed/useShopEmbed', () => ({
   useShopEmbed: () => ({
     iframe: { current: null },
     // A real iframe with deterministic local content: no Shop server, auth, signer or payment dependency.
-    initialSrc: `data:text/html,${encodeURIComponent('<!doctype html><html><body style="margin:0;padding:24px;background:transparent;color:white;font:16px sans-serif"><h1>Shop fixture</h1><p>Marketplace content</p></body></html>')}`,
+    initialSrc: routeState.loading
+      ? null
+      : `data:text/html,${encodeURIComponent(shopColumnDocument('<h1>Shop fixture</h1><p>Marketplace content</p>'))}`,
     unavailable: routeState.unavailable,
     upgradeOpen: routeState.upgradeOpen,
     closeUpgrade: () => {},
@@ -252,13 +263,17 @@ vi.mock('@/hooks/useShopEmbed/useShopEmbed', () => ({
 }));
 async function renderShop(
   viewport: { width: number; height: number },
-  unavailable = false,
-  upgradeOpen = false,
-  signedIn = true,
+  {
+    unavailable = false,
+    upgradeOpen = false,
+    signedIn = true,
+    loading = false,
+  }: { unavailable?: boolean; upgradeOpen?: boolean; signedIn?: boolean; loading?: boolean } = {},
 ) {
   routeState.unavailable = unavailable;
   routeState.upgradeOpen = upgradeOpen;
   routeState.signedIn = signedIn;
+  routeState.loading = loading;
   await preloadImages(SHOP_CHROME_IMAGE_URLS);
   return renderForVRT(
     <>
@@ -267,6 +282,78 @@ async function renderShop(
     </>,
     { viewport },
   );
+}
+
+/** The App document's own `scrollbar-gutter`, read past the VRT stabiliser that forces `auto`. */
+function appScrollbarGutter() {
+  const stabilizer = (document.getElementById('__vrt_stabilizer__') as HTMLStyleElement | null)?.sheet;
+  if (stabilizer) stabilizer.disabled = true;
+  try {
+    return getComputedStyle(document.documentElement).getPropertyValue('scrollbar-gutter');
+  } finally {
+    if (stabilizer) stabilizer.disabled = false;
+  }
+}
+
+async function withUnclippedDocument(root: HTMLElement | SVGElement, check: () => Promise<void>) {
+  const elements = [root, document.documentElement, document.body];
+  const originalStyles = elements.map((element) => element.style.cssText);
+  try {
+    // Undo the screenshot harness's clipping: an overflowing page must fail
+    // these geometry checks instead of merely being cropped to the viewport.
+    root.style.width = '100%';
+    root.style.height = 'auto';
+    root.style.overflow = 'visible';
+    document.documentElement.style.setProperty('overflow', 'visible', 'important');
+    document.body.style.setProperty('overflow-y', 'auto', 'important');
+    await check();
+  } finally {
+    elements.forEach((element, index) => {
+      element.style.cssText = originalStyles[index];
+    });
+  }
+}
+
+function expectShopViewport(root: HTMLElement | SVGElement, content: HTMLElement) {
+  const shell = root.querySelector<HTMLElement>('[data-testid="shop-shell"]')!;
+  const bounds = content.getBoundingClientRect();
+  const desktop = window.matchMedia('(min-width: 1024px)').matches;
+  const header = desktop ? root.querySelector('header')! : shell.firstElementChild!;
+  const footer = shell.querySelector('a[aria-label="Home"]')!.parentElement!.parentElement!;
+  const bottom = desktop ? window.innerHeight : footer.getBoundingClientRect().top;
+
+  expect(bounds.top).toBeCloseTo(header.getBoundingClientRect().bottom, 0);
+  expect(bounds.bottom).toBeCloseTo(bottom, 0);
+  expect(bounds.height).toBeGreaterThan(0);
+  expect(bounds.left).toBeCloseTo(0, 0);
+  expect(bounds.width).toBeCloseTo(window.innerWidth, 0);
+  // The wheel scrolls whatever is under the pointer: beside a centred column it must still be Shop.
+  const middle = bounds.top + bounds.height / 2;
+  expect(document.elementFromPoint(4, middle)).toBe(content);
+  expect(document.elementFromPoint(window.innerWidth - 4, middle)).toBe(content);
+  // Headless browsers hide scrollbars, so the hit tests above cannot see a reserved gutter.
+  if (CSS.supports('scrollbar-gutter', 'stable')) expect(appScrollbarGutter()).toBe('auto');
+  if (!desktop) expect(footer.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
+  expect(shell.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
+  expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(window.innerHeight + 1);
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  expect(window.scrollY).toBe(0);
+  return bounds;
+}
+
+async function resizeShopViewport(width: number, height: number) {
+  // The Vitest viewport acknowledgment has no timeout of its own.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      page.viewport(width, height),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Shop viewport resize timed out (${width}x${height})`)), 5_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 describe('embedded Shop shell — visual regression', () => {
@@ -285,20 +372,17 @@ describe('embedded Shop shell — visual regression', () => {
     { name: 'landscape', viewport: { width: 844, height: 390 }, signedIn: true },
     { name: 'guest portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: false },
     { name: 'guest landscape', viewport: { width: 844, height: 390 }, signedIn: false },
+    { name: 'desktop', viewport: VRT_VIEWPORT_DESKTOP, signedIn: true },
+    { name: 'guest desktop', viewport: VRT_VIEWPORT_DESKTOP, signedIn: false },
+    { name: 'tall desktop', viewport: { width: 1728, height: 1080 }, signedIn: true },
+    { name: 'guest tall desktop', viewport: { width: 1728, height: 1080 }, signedIn: false },
+    { name: 'short desktop', viewport: { width: 1024, height: 600 }, signedIn: true },
+    { name: 'guest short desktop', viewport: { width: 1024, height: 600 }, signedIn: false },
   ])('keeps one reachable Shop scroll area in $name', async ({ viewport, signedIn }) => {
-    const screen = await renderShop(viewport, false, false, signedIn);
+    const screen = await renderShop(viewport, { signedIn });
     const root = screen.getByTestId(VRT_ROOT_TESTID).element();
     const frame = screen.getByTitle('Pubky Shop').element() as HTMLIFrameElement;
-    const shell = screen.getByTestId('shop-shell').element();
-    const footer = screen.getByRole('link', { name: 'Home', exact: true }).element().parentElement!.parentElement!;
-    const originalStyles = [root, document.documentElement, document.body].map((element) => element.style.cssText);
-    try {
-      // Undo the screenshot harness's clipping. This must prove a real document
-      // fits, not merely that an overflowing page can be cropped to the viewport.
-      root.style.height = 'auto';
-      root.style.overflow = 'visible';
-      document.documentElement.style.setProperty('overflow', 'visible', 'important');
-      document.body.style.setProperty('overflow-y', 'auto', 'important');
+    await withUnclippedDocument(root, async () => {
       frame.srcdoc = `<!doctype html><html><body style="margin:0;min-width:375px">
         <main style="box-sizing:border-box;padding:24px">
           <h1>Long marketplace listing</h1>
@@ -306,16 +390,7 @@ describe('embedded Shop shell — visual regression', () => {
           <button id="checkout">Continue to checkout</button>
         </main></body></html>`;
       await expect.poll(() => Boolean(frame.contentDocument?.getElementById('checkout'))).toBe(true);
-      const frameBounds = frame.getBoundingClientRect();
-      const footerBounds = footer.getBoundingClientRect();
-      expect(frameBounds.left).toBeCloseTo(0, 0);
-      expect(frameBounds.width).toBeCloseTo(viewport.width, 0);
-      expect(frameBounds.top).toBeGreaterThan(0);
-      expect(frameBounds.height).toBeGreaterThan(0);
-      expect(frameBounds.bottom).toBeCloseTo(footerBounds.top, 0);
-      expect(footerBounds.bottom).toBeCloseTo(viewport.height, 0);
-      expect(shell.scrollHeight).toBeLessThanOrEqual(viewport.height + 1);
-      expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(viewport.height + 1);
+      expectShopViewport(root, frame);
       expect(frame.contentDocument!.documentElement.scrollWidth).toBeLessThanOrEqual(frame.clientWidth);
       if (!signedIn) await expect.element(screen.getByRole('button', { name: 'Join Pubky' })).toBeVisible();
 
@@ -325,27 +400,81 @@ describe('embedded Shop shell — visual regression', () => {
       const checkout = frame.contentDocument!.getElementById('checkout')!.getBoundingClientRect();
       expect(checkout.top).toBeGreaterThanOrEqual(0);
       expect(checkout.bottom).toBeLessThanOrEqual(frame.clientHeight);
-      expect(frameBounds.top + checkout.bottom).toBeLessThanOrEqual(footerBounds.top);
-      expect(window.scrollY).toBe(0);
-      expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(viewport.height + 1);
-    } finally {
-      [root, document.documentElement, document.body].forEach((element, index) => {
-        element.style.cssText = originalStyles[index];
-      });
-    }
+      // The final action must receive pointer hits inside the child viewport.
+      expect(
+        frame.contentDocument!.elementFromPoint(checkout.left + checkout.width / 2, checkout.top + checkout.height / 2)
+          ?.id,
+      ).toBe('checkout');
+      expectShopViewport(root, frame);
+    });
+  });
+  it.each([
+    { name: 'desktop', viewport: VRT_VIEWPORT_DESKTOP, signedIn: true },
+    { name: 'guest short desktop', viewport: { width: 1024, height: 600 }, signedIn: false },
+    { name: 'portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: true },
+    { name: 'guest landscape', viewport: { width: 844, height: 390 }, signedIn: false },
+  ])('fills the available Shop viewport while loading in $name', async ({ viewport, signedIn }) => {
+    const screen = await renderShop(viewport, { signedIn, loading: true });
+    const root = screen.getByTestId(VRT_ROOT_TESTID).element();
+    const skeleton = screen.getByTestId('shop-shell').element().querySelector<HTMLElement>('[data-slot="skeleton"]')!;
+    await withUnclippedDocument(root, async () => {
+      expectShopViewport(root, skeleton);
+      expect(root.querySelector('iframe')).toBeNull();
+    });
+  });
+  it('keeps the same iframe and its document when resizing across desktop breakpoints', async () => {
+    const screen = await renderShop(VRT_VIEWPORT_DESKTOP);
+    const root = screen.getByTestId(VRT_ROOT_TESTID).element();
+    const frame = screen.getByTitle('Pubky Shop').element() as HTMLIFrameElement;
+    await withUnclippedDocument(root, async () => {
+      frame.srcdoc = '<!doctype html><html><body><input id="draft" value="Retain this draft"></body></html>';
+      await expect.poll(() => Boolean(frame.contentDocument?.getElementById('draft'))).toBe(true);
+      const childDocument = frame.contentDocument;
+      for (const viewport of [
+        { width: 1023, height: 600 },
+        { width: 1024, height: 600 },
+        { width: 1279, height: 720 },
+        { width: 1280, height: 720 },
+        VRT_VIEWPORT_MOBILE,
+        { width: 1728, height: 906 },
+      ]) {
+        await resizeShopViewport(viewport.width, viewport.height);
+        await expect.poll(() => window.innerWidth).toBe(viewport.width);
+        expectShopViewport(root, frame);
+        expect(screen.getByTitle('Pubky Shop').element()).toBe(frame);
+        expect(frame.contentDocument).toBe(childDocument);
+        expect(frame.contentDocument!.querySelector<HTMLInputElement>('#draft')!.value).toBe('Retain this draft');
+      }
+    });
+  });
+  it.each([
+    { name: 'lg', viewport: { width: 1024, height: 720 } },
+    { name: 'xl', viewport: VRT_VIEWPORT_DESKTOP },
+  ])('lines Shop content up with the App header column at $name', async ({ viewport }) => {
+    const screen = await renderShop(viewport);
+    const root = screen.getByTestId(VRT_ROOT_TESTID).element();
+    const frame = screen.getByTitle('Pubky Shop').element() as HTMLIFrameElement;
+    await withUnclippedDocument(root, async () => {
+      frame.srcdoc = shopColumnDocument('<h1 id="shop-heading">Market</h1>');
+      await expect.poll(() => Boolean(frame.contentDocument?.getElementById('shop-heading'))).toBe(true);
+      const nav = root.querySelector('header nav')!;
+      const navContentLeft = nav.getBoundingClientRect().left + parseFloat(getComputedStyle(nav).paddingLeft);
+      const heading = frame.contentDocument!.getElementById('shop-heading')!;
+      expect(frame.getBoundingClientRect().left + heading.getBoundingClientRect().left).toBeCloseTo(navContentLeft, 0);
+    });
   });
   it('renders the unavailable Shop in the desktop App shell', async () => {
-    const screen = await renderShop(VRT_VIEWPORT_DESKTOP, true);
+    const screen = await renderShop(VRT_VIEWPORT_DESKTOP, { unavailable: true });
     await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
     await matchVrtFrameScreenshot('shop-unavailable-desktop');
   });
   it('renders the unavailable Shop in the mobile App shell', async () => {
-    const screen = await renderShop(VRT_VIEWPORT_MOBILE, true);
+    const screen = await renderShop(VRT_VIEWPORT_MOBILE, { unavailable: true });
     await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
     await matchVrtFrameScreenshot('shop-unavailable-mobile');
   });
   it('renders the Enable Shop dialog in the desktop App shell', async () => {
-    await renderShop(VRT_VIEWPORT_DESKTOP, false, true);
+    await renderShop(VRT_VIEWPORT_DESKTOP, { upgradeOpen: true });
     await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
     await expect.element(page.getByTestId('session-upgrade-qr')).toBeVisible();
     await expect
@@ -370,7 +499,7 @@ describe('embedded Shop shell — visual regression', () => {
       try {
         await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
         await expect.poll(() => window.matchMedia('(pointer: coarse)').matches).toBe(true);
-        await renderShop(VRT_VIEWPORT_MOBILE, false, true);
+        await renderShop(VRT_VIEWPORT_MOBILE, { upgradeOpen: true });
         await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();

@@ -16,27 +16,30 @@ export function ShopEmbed() {
   const { iframe, initialSrc, unavailable, upgradeOpen, closeUpgrade, requestLogin, handleFrameLoad } = useShopEmbed();
   if (unavailable) return <ShopUnavailable />;
   return (
-    <Container overrideDefaults className="flex h-dvh flex-col lg:block lg:h-auto" data-testid="shop-shell">
+    <Container
+      overrideDefaults
+      className="flex h-dvh flex-col lg:h-[calc(100dvh-var(--header-offset-main))]"
+      data-slot="shop-shell"
+      data-testid="shop-shell"
+    >
       <MobileHeader showLeftButton={false} showRightButton={false} />
-      {/* Shop owns document scrolling. On mobile, keep its viewport between the
-          actual chrome heights instead of placing a 75dvh frame in a scrolling page. */}
-      <Container
-        overrideDefaults
-        className="flex min-h-0 flex-1 flex-col lg:container lg:mx-auto lg:w-full lg:max-w-(--container-max-width) lg:px-6 lg:pb-12 xl:px-0"
-      >
+      {/* Shop owns document scrolling. Desktop reserves space for the App header;
+          mobile chrome shares the full-height shell with the frame. The frame spans the
+          window width so the wheel reaches Shop beside its content; Shop centres its own column. */}
+      <Container overrideDefaults className="flex min-h-0 flex-1 flex-col">
         {initialSrc ? (
           <iframe
             ref={iframe}
             src={initialSrc}
             title="Pubky Shop"
             onLoad={handleFrameLoad}
-            className="min-h-0 w-full flex-1 border-0 lg:min-h-[75dvh]"
+            className="min-h-0 w-full flex-1 border-0"
             // Trusted first-party code shares this origin. Payments may navigate the top window
             // after asynchronous approval, so a user-activation sandbox would break their return flow.
             allow="clipboard-write"
           />
         ) : (
-          <Skeleton className="min-h-0 w-full flex-1 lg:min-h-[75dvh]" />
+          <Skeleton className="min-h-0 w-full flex-1" />
         )}
       </Container>
       <MobileFooter className="relative shrink-0" />

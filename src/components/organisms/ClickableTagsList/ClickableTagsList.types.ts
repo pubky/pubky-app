@@ -44,8 +44,11 @@ export interface ClickableTagsListProps {
   onTagClick?: (tag: TagWithAvatars, index: number, event: MouseEvent) => void;
   /** Callback when a tag close button is clicked */
   onTagClose?: (tag: TagWithAvatars, index: number, event: MouseEvent) => void;
-  /** Callback when a new tag is added. If not provided, uses internal handleTagAdd. */
-  onTagAdd?: (label: string) => void;
+  /**
+   * Callback when a new tag is added. If not provided, uses internal handleTagAdd. A result of
+   * `{ success: false }` keeps the typed label in the input; anything else clears it.
+   */
+  onTagAdd?: (label: string) => void | Promise<unknown>;
   /** Callback when add button is clicked */
   onAddButtonClick?: () => void;
 }

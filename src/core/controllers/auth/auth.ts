@@ -28,6 +28,7 @@ import {
   type PersistedAuth,
   type SessionReference,
 } from '@/libs/auth/session.types';
+import { reportSavedSessionLoss } from '@/libs/auth/session-loss';
 import {
   createAuthApprovalMismatchError,
   createCanceledError,
@@ -397,6 +398,8 @@ export class AuthController {
         }
         if (!isCurrent()) return false;
         if (result.status !== 'restored') {
+          if (snapshot.sessionReference && result.error?.context?.reason === 'missing_local_grant')
+            this.reportSavedSessionLoss('restore', snapshot.sessionReference, result.error.context.material);
           useAuthStore.getState().setRestoreStatus(result.status === 'none' ? 'idle' : result.status);
           return false;
         }
@@ -421,10 +424,13 @@ export class AuthController {
         if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
         return isCurrent();
       } catch (error) {
-        if (isCurrent())
+        if (isCurrent()) {
+          // The retained session needs a fresh sign-in: clear the primed progress steps so /sign-in offers choices.
+          useSignInStore.getState().reset();
           useAuthStore
             .getState()
             .setRestoreStatus(isWrongEnvironmentHomeserverError(error) ? 'reauth-required' : 'temporary-error');
+        }
         if (isWrongEnvironmentHomeserverError(error)) throw error;
         return false;
       }
@@ -441,7 +447,11 @@ export class AuthController {
             await this.syncSessionFromStorage();
           }
         } catch {
-          useAuthStore.getState().setRestoreStatus('temporary-error');
+          // Storage sync may have adopted a newer generation; leave that flow's state alone.
+          if (useAuthStore.getState().generation === generation) {
+            useSignInStore.getState().reset();
+            useAuthStore.getState().setRestoreStatus('temporary-error');
+          }
         }
       }
     }
@@ -472,11 +482,28 @@ export class AuthController {
     return true;
   }
 
+  /** Diagnostics for #2942; a removal this tab's own logout caused is expected and not reported. */
+  private static reportSavedSessionLoss(
+    trigger: 'removed' | 'cleared' | 'restore',
+    reference: SessionReference,
+    material?: unknown,
+  ): void {
+    if (useAuthStore.getState().isLoggingOut) return;
+    reportSavedSessionLoss({
+      trigger,
+      sessionStoreId: reference.sessionStoreId,
+      ...((material === 'record' || material === 'key') && { material }),
+      localRetirement: this.retirementTasks.has(reference.sessionStoreId),
+      grantExpiresInS: Math.round(reference.grantExpiresAt - Date.now() / 1000),
+    });
+  }
+
   /** SDK notifications also cover removal outside this app's localStorage transitions. */
   static async syncRemovedSession(id: string | null): Promise<void> {
     await this.syncSessionFromStorage();
     const snapshot = useAuthStore.getState();
     if (!snapshot.sessionReference || (id !== null && snapshot.sessionReference.sessionStoreId !== id)) return;
+    this.reportSavedSessionLoss(id === null ? 'cleared' : 'removed', snapshot.sessionReference);
     this.cancelActiveAuthFlow();
     const version = ++this.restoreVersion;
     this.sessionRestore = null;
@@ -554,7 +581,14 @@ export class AuthController {
     this.cancelActiveAuthFlow();
     const epoch = this.epoch;
     void this.retrySessionRetirement();
-    const result = await AuthApplication.signIn({ keypair });
+    let result: THomeserverSessionResult | undefined;
+    try {
+      result = await AuthApplication.signIn({ keypair, isCurrent: () => epoch === this.epoch });
+    } catch (error) {
+      // A newer flow owns sign-in: its outcome matters, not this one's last failure.
+      if (epoch !== this.epoch) throw createCanceledError();
+      throw error;
+    }
     if (epoch !== this.epoch) throw createCanceledError();
     if (!result) return false;
     await this.completeAuthenticatedSession(result, { epoch, expectedPubky });
@@ -733,8 +767,11 @@ export class AuthController {
         useAuthStore.getState().setRestoreStatus('ready');
     } catch (error) {
       // The replacement is already durable. Never resurrect the previous session or erase this grant.
-      if (useAuthStore.getState().generation === generation && useAuthStore.getState().session === session)
+      if (useAuthStore.getState().generation === generation && useAuthStore.getState().session === session) {
+        // The retained session needs a fresh sign-in: clear the primed progress steps so /sign-in offers choices.
+        useSignInStore.getState().reset();
         useAuthStore.getState().setRestoreStatus('temporary-error');
+      }
       throw error;
     }
   }

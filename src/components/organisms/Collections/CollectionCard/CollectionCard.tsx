@@ -47,6 +47,13 @@ interface CollectionCardProps {
    * share/repost dialogs; feed embeds keep the default (`true`).
    */
   interactiveActions?: boolean;
+  /**
+   * When `false`, the card renders without its link wrapper: no link role,
+   * href or pointer navigation. Use for the collection original inside the
+   * Repost/Share dialog, where a navigation would land behind the open modal;
+   * every other surface keeps the default (`true`).
+   */
+  navigable?: boolean;
 }
 
 /**
@@ -56,7 +63,8 @@ interface CollectionCardProps {
  * landing sections (`presentation="landing"`) and nested embed surfaces
  * (`presentation="embed"` — repost, share dialog, inline post body).
  * Use `interactiveActions={false}` on dialog embeds so tags stay visible but
- * non-interactive. Card-level collection actions live on the dedicated page header.
+ * non-interactive, and `navigable={false}` so the card is not a link there.
+ * Card-level collection actions live on the dedicated page header.
  * Self-contained: derives title / description / cover / item count / owner profile / tags
  * locally from `(authorPubky, postId)`, so callers stay thin.
  *
@@ -82,6 +90,7 @@ export function CollectionCard({
   className,
   presentation = 'landing',
   interactiveActions = true,
+  navigable = true,
 }: CollectionCardProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
   const isMobile = useIsMobile();
@@ -130,6 +139,7 @@ export function CollectionCard({
       isMobile={isMobile}
       isWideLayout={isWideLayout}
       interactiveActions={interactiveActions}
+      navigable={navigable}
       ttlRef={ttlRef}
     />
   );
@@ -145,6 +155,7 @@ interface CollectionCardContentProps {
   isMobile: boolean;
   isWideLayout: boolean;
   interactiveActions: boolean;
+  navigable: boolean;
   /** Viewport-observer ref from `useTtlSubscription`; attached to the card root. */
   ttlRef: UseTtlSubscriptionResult['ref'];
 }
@@ -159,6 +170,7 @@ function CollectionCardContent({
   isMobile,
   isWideLayout,
   interactiveActions,
+  navigable,
   ttlRef,
 }: CollectionCardContentProps) {
   const isEmbed = presentation === 'embed';
@@ -183,6 +195,115 @@ function CollectionCardContent({
   const ownerAvatarUrl = ownerProfile?.avatarUrl;
 
   const href = getCollectionRoute(authorPubky, postId);
+  const wrapperClassName = cn('group relative block h-full w-full', isEmbed && 'overflow-hidden rounded-md', className);
+
+  const card = (
+    <Card
+      className={cn(
+        // `isolate` creates a new stacking context so the cover image at `-z-10`
+        // stays behind this card's content but does not slip behind an enclosing
+        // post card's opaque background when nested in `PostContentBase`.
+        // In preview embeds the Link wrapper owns clip + radius so a square
+        // ancestor (quoted post shell) does not fight the cover at the corners.
+        'relative isolate h-full gap-0 overflow-hidden py-0',
+        isEmbed ? 'rounded-none shadow-none' : 'rounded-md',
+        coverImage && 'border-transparent bg-card/40',
+        // Embed without a cover uses `bg-muted` (Figma embed chrome).
+        // With a cover, `bg-card/40` + the gradient overlay handle contrast.
+        isEmbed && !coverImage && 'bg-muted',
+      )}
+    >
+      {coverImage && (
+        <Container
+          overrideDefaults
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.35)), url(${coverImage})`,
+          }}
+        />
+      )}
+
+      <CardContent className={cn('flex h-full flex-col gap-3', isWideLayout ? 'p-12' : 'p-6')}>
+        {/* Mobile: title row, then metadata. Desktop: title (left) | metadata (right). */}
+        <Container
+          overrideDefaults
+          data-cy="collection-card-header"
+          className="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
+        >
+          <Container overrideDefaults className="flex w-full min-w-0 items-center gap-2 lg:flex-1">
+            <Library className="size-6 shrink-0 text-foreground" />
+            <Typography
+              as="span"
+              overrideDefaults
+              className={cn(
+                'min-w-0 truncate font-bold text-foreground',
+                isWideLayout ? 'text-2xl leading-8' : 'text-xl leading-7',
+              )}
+            >
+              {title}
+            </Typography>
+          </Container>
+
+          <Container overrideDefaults data-cy="collection-card-metadata" className="flex shrink-0 items-center gap-2">
+            <CollectionCountBadge
+              count={itemCount}
+              showLabelOnMobile
+              tone={coverImage ? 'on-cover' : embeddedOnMuted ? 'on-muted' : 'on-card'}
+            />
+            <AvatarWithFallback
+              avatarUrl={ownerAvatarUrl}
+              name={ownerName}
+              fallbackSeed={authorPubky}
+              size={isWideLayout ? 'lg' : 'sm'}
+              alt={ownerName}
+            />
+          </Container>
+        </Container>
+
+        {/* Description */}
+        {description && (
+          <Typography
+            overrideDefaults
+            className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
+          >
+            {description}
+          </Typography>
+        )}
+
+        {/* Tags stay visible but read-only in non-interactive share/repost previews. */}
+        <Container overrideDefaults data-cy="collection-card-bottom-row" className="mt-auto w-full">
+          <PostTagsExpandableRow
+            postId={compositeId}
+            preventDefaultOnClick
+            showTagToggle={false}
+            showAddButton={showTagAddButton}
+            tagsReadOnly={!interactiveActions}
+            maxVisibleTags={isMobile ? 3 : undefined}
+            className="w-full min-w-0"
+          />
+        </Container>
+      </CardContent>
+    </Card>
+  );
+
+  // Dialog embeds are not links: the route must not change behind the open modal.
+  // The wrapper keeps the same box, data attributes and TTL ref as the link.
+  if (!navigable) {
+    return (
+      <Container
+        ref={ttlRef}
+        overrideDefaults
+        data-cy="collection-card"
+        data-presentation={presentation}
+        data-interactive-actions={interactiveActions ? 'true' : 'false'}
+        data-layout={isWideLayout ? 'wide' : 'default'}
+        className={wrapperClassName}
+      >
+        {card}
+      </Container>
+    );
+  }
 
   return (
     <Link
@@ -194,95 +315,9 @@ function CollectionCardContent({
       data-presentation={presentation}
       data-interactive-actions={interactiveActions ? 'true' : 'false'}
       data-layout={isWideLayout ? 'wide' : 'default'}
-      className={cn('group relative block h-full w-full', isEmbed && 'overflow-hidden rounded-md', className)}
+      className={wrapperClassName}
     >
-      <Card
-        className={cn(
-          // `isolate` creates a new stacking context so the cover image at `-z-10`
-          // stays behind this card's content but does not slip behind an enclosing
-          // post card's opaque background when nested in `PostContentBase`.
-          // In preview embeds the Link wrapper owns clip + radius so a square
-          // ancestor (quoted post shell) does not fight the cover at the corners.
-          'relative isolate h-full gap-0 overflow-hidden py-0',
-          isEmbed ? 'rounded-none shadow-none' : 'rounded-md',
-          coverImage && 'border-transparent bg-card/40',
-          // Embed without a cover uses `bg-muted` (Figma embed chrome).
-          // With a cover, `bg-card/40` + the gradient overlay handle contrast.
-          isEmbed && !coverImage && 'bg-muted',
-        )}
-      >
-        {coverImage && (
-          <Container
-            overrideDefaults
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.35)), url(${coverImage})`,
-            }}
-          />
-        )}
-
-        <CardContent className={cn('flex h-full flex-col gap-3', isWideLayout ? 'p-12' : 'p-6')}>
-          {/* Mobile: title row, then metadata. Desktop: title (left) | metadata (right). */}
-          <Container
-            overrideDefaults
-            data-cy="collection-card-header"
-            className="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
-          >
-            <Container overrideDefaults className="flex w-full min-w-0 items-center gap-2 lg:flex-1">
-              <Library className="size-6 shrink-0 text-foreground" />
-              <Typography
-                as="span"
-                overrideDefaults
-                className={cn(
-                  'min-w-0 truncate font-bold text-foreground',
-                  isWideLayout ? 'text-2xl leading-8' : 'text-xl leading-7',
-                )}
-              >
-                {title}
-              </Typography>
-            </Container>
-
-            <Container overrideDefaults data-cy="collection-card-metadata" className="flex shrink-0 items-center gap-2">
-              <CollectionCountBadge
-                count={itemCount}
-                showLabelOnMobile
-                tone={coverImage ? 'on-cover' : embeddedOnMuted ? 'on-muted' : 'on-card'}
-              />
-              <AvatarWithFallback
-                avatarUrl={ownerAvatarUrl}
-                name={ownerName}
-                fallbackSeed={authorPubky}
-                size={isWideLayout ? 'lg' : 'sm'}
-                alt={ownerName}
-              />
-            </Container>
-          </Container>
-
-          {/* Description */}
-          {description && (
-            <Typography
-              overrideDefaults
-              className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
-            >
-              {description}
-            </Typography>
-          )}
-
-          {/* Tags stay visible but read-only in non-interactive share/repost previews. */}
-          <Container overrideDefaults data-cy="collection-card-bottom-row" className="mt-auto w-full">
-            <PostTagsExpandableRow
-              postId={compositeId}
-              preventDefaultOnClick
-              showTagToggle={false}
-              showAddButton={showTagAddButton}
-              tagsReadOnly={!interactiveActions}
-              maxVisibleTags={isMobile ? 3 : undefined}
-              className="w-full min-w-0"
-            />
-          </Container>
-        </CardContent>
-      </Card>
+      {card}
     </Link>
   );
 }

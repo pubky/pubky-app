@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import { usePostHeaderVisibility } from './usePostHeaderVisibility';
-import { getDisplayedPostId } from './usePostHeaderVisibility.utils';
+import { getDisplayedPostId, getInteractionPostId } from './usePostHeaderVisibility.utils';
 
 // Mock the hooks that usePostHeaderVisibility depends on
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
@@ -17,7 +18,7 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
 
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
-  overrides: Partial<{ content: string; attachments: string[] | null }> = {},
+  overrides: Partial<{ content: string; attachments: string[] | null; deleted: boolean }> = {},
 ): EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
@@ -236,5 +237,78 @@ describe('usePostHeaderVisibility', () => {
     expect(result.current.showRepostHeader).toBe(false);
     expect(getDisplayedPostId('current:post', result.current)).toBe('current:post');
     expect(result.current.shouldShowPostHeader).toBe(true);
+  });
+
+  // Nexus tombstones a repost as `content: ''` + `deleted: true` and keeps its repost relationship,
+  // so the empty content alone would make it look contentless and route its thread to the original.
+  describe.each([
+    { shape: 'Nexus-shaped (empty content, flag set)', tombstone: { content: '', deleted: true } },
+    { shape: 'legacy sentinel', tombstone: { content: DELETED } },
+  ])('a $shape repost tombstone', ({ tombstone }) => {
+    it("keeps another user's deleted repost as its own interaction target", () => {
+      mockUsePostDetails.mockReturnValue({
+        postDetails: createMockPostDetails(tombstone),
+        isLoading: false,
+      });
+      mockUseRepostInfo.mockReturnValue({
+        isRepost: true,
+        repostAuthorId: 'other-user',
+        isReply: false,
+        isCurrentUserRepost: false,
+        originalPostId: 'orig',
+        isLoading: false,
+        hasError: false,
+      });
+
+      const { result } = renderHook(() => usePostHeaderVisibility('other-user:repost-1'));
+
+      expect(result.current.isContentlessRepost).toBe(false);
+      expect(getInteractionPostId('other-user:repost-1', result.current)).toBe('other-user:repost-1');
+      expect(getDisplayedPostId('other-user:repost-1', result.current)).toBe('other-user:repost-1');
+    });
+
+    it("does not flatten the current user's deleted repost onto the original", () => {
+      mockUsePostDetails.mockReturnValue({
+        postDetails: createMockPostDetails(tombstone),
+        isLoading: false,
+      });
+      mockUseRepostInfo.mockReturnValue({
+        isRepost: true,
+        repostAuthorId: 'me',
+        isReply: false,
+        isCurrentUserRepost: true,
+        originalPostId: 'orig',
+        isLoading: false,
+        hasError: false,
+      });
+
+      const { result } = renderHook(() => usePostHeaderVisibility('me:repost-1'));
+
+      expect(result.current.isContentlessRepost).toBe(false);
+      expect(result.current.showRepostHeader).toBe(false);
+      expect(getDisplayedPostId('me:repost-1', result.current)).toBe('me:repost-1');
+      expect(getInteractionPostId('me:repost-1', result.current)).toBe('me:repost-1');
+    });
+  });
+
+  it('still treats a live repost with empty content as contentless', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({ content: '', deleted: false }),
+      isLoading: false,
+    });
+    mockUseRepostInfo.mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'other-user',
+      isReply: false,
+      isCurrentUserRepost: false,
+      originalPostId: 'orig',
+      isLoading: false,
+      hasError: false,
+    });
+
+    const { result } = renderHook(() => usePostHeaderVisibility('other-user:repost-1'));
+
+    expect(result.current.isContentlessRepost).toBe(true);
+    expect(getInteractionPostId('other-user:repost-1', result.current)).toBe('orig');
   });
 });

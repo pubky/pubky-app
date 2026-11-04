@@ -81,6 +81,15 @@ jobs:
     steps:
       - name: Checkout this repository
         uses: actions/checkout@v7
+        with:
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__. This job only edits the
+          # Cloud Run service file.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3

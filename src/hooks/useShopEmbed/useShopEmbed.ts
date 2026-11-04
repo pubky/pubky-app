@@ -21,6 +21,7 @@ import {
   type ShopFrameHistory,
   type ShopFrameSnapshot,
 } from '@/libs/shop-embed/frame-history';
+import { markShopFrameLoaded } from '@/libs/shop-embed/frame-presence';
 import { clearShopHostNavigation, isShopHostNavigationPending } from '@/libs/shop-embed/navigation';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
@@ -133,6 +134,7 @@ export function useShopEmbed() {
   const handleFrameLoad = () => {
     installFrameHistory();
     markLoaded();
+    markShopFrameLoaded();
     publishSession();
   };
   const publish = useEffectEvent(publishSession);
