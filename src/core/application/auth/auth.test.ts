@@ -408,7 +408,14 @@ describe('AuthApplication', () => {
       expect(requestSpy).toHaveBeenCalledWith({
         method: HttpMethod.GET,
         url: `pubky://${testPubky}/pub/pubky.app/profile.json`,
+        notFoundAsNull: true,
       });
+    });
+
+    it('should return false when the homeserver reads profile.json as missing (null)', async () => {
+      vi.spyOn(HomeserverService, 'request').mockResolvedValue(null);
+
+      await expect(AuthApplication.userIsSignedUp({ pubky: testPubky })).resolves.toBe(false);
     });
 
     it('should return false when profile.json is not found (404)', async () => {

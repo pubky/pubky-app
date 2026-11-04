@@ -338,6 +338,7 @@ describe('SettingsApplication', () => {
       expect(requestSpy).toHaveBeenCalledWith({
         method: HttpMethod.GET,
         url: `pubky://${testPubky}/pub/pubky.app/settings.json`,
+        notFoundAsNull: true,
       });
       expect(result).toEqual(remoteSettings);
     });
