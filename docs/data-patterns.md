@@ -295,6 +295,18 @@ fresh Nexus `by_ids` view of every post a LIST of the owner's public `posts/` na
 failed check, or a listed post Nexus does not serve, keeps it with a `Logger.warn`. A rollback deletes only what
 the failed write created (`preexisting` stays). Orphans accumulate until server-side media GC (follow-up).
 
+**Media reads.** A file row's key is `owner:id`, the id being a v1 hash or a 0.x id, and the URL builder takes the row's
+`uri` as well: a v1 route needs the whole name (`{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}`, a bare hash is a
+400), a 0.x route the id (`{nexus}/static/files/{owner}/{id}/{variant}`). Nexus keeps no metadata for v1 files, so only
+a file this device uploaded has a row; `FileApplication.getMetadata` answers any other v1 file with what its URI says
+(`FileNormalizer.toV1FileDetails`: the type from the extension, the filename as its name, no size or dimensions), a real
+row winning, and `FileApplication.fetchFiles` never sends Nexus a v1 address.
+
+**Signup order (Nexus "A7").** Nexus ignores a new user's file uploads until their first v1 `profile.json` is indexed, and
+for good: `useProfileForm`'s create path hashes the avatar first, PUTs the profile naming it, then uploads the bytes. An
+upload that fails leaves a profile naming a file that is not there yet; the avatar falls back until the retry (the form's
+"Try again!", which writes both again) or a later change. An existing user's avatar change uploads first, as before.
+
 **Account delete and export** (`ProfileApplication.commitDelete` / `downloadData`) walk all five trees:
 `listPrefix(pubky, 'legacy')`, `listPrefix(pubky, 'public')`, the whole `/priv/social/` (the v1 tree, the flag and
 the Locks reader directories) and `/priv/app.pubky/v1/`. The export names every file by its path under the account.
