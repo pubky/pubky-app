@@ -99,11 +99,14 @@ describe('viewer tag address', () => {
       mutations: { 'alice:x': { ...create, uri: written } },
     };
 
-    it('is kept while the same viewer response still reports the file the viewer deleted', () => {
+    it('is kept, with its address on the row, while the same viewer response reports the deleted file', () => {
       const stale = [{ ...tag(1, true), taggers: ['alice'], tag_uri: tagUri }];
       const result = reconcileTagWindow(stale, row, 100, 'alice');
       expect(result.mutations['alice:x']).toMatchObject({ synced: true, uri: written });
+      expect(result.tags[0]).toMatchObject({ relationship: true, tag_uri: written });
       expect(getViewerTagUri({ ...row, ...result }, 'x', 'alice', 100)).toBe(written);
+      // Past the create's expiry with no refresh since, the row is all that is left; it must not say A.
+      expect(getViewerTagUri({ ...row, ...result }, 'x', 'alice', 201)).toBe(written);
     });
 
     it.each([

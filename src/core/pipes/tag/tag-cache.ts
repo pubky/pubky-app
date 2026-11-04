@@ -85,11 +85,14 @@ export function reconcileTagWindow(
     }
     const taggers = tag.taggers.filter((tagger) => tagger !== mutation.viewerId);
     if (mutation.relationship) taggers.push(mutation.viewerId);
+    const ownWrite = mutation.viewerId === viewerId;
     tags.set(label, {
       ...tag,
       taggers,
       taggers_count: count,
-      relationship: mutation.viewerId === viewerId ? mutation.relationship : tag.relationship,
+      relationship: ownWrite ? mutation.relationship : tag.relationship,
+      // The row carries the kept create's address, so it outlives the create when Nexus is still behind.
+      ...(ownWrite && mutation.relationship && mutation.uri && { tag_uri: mutation.uri }),
     });
   }
   return { tags: [...tags.values()], mutations };
