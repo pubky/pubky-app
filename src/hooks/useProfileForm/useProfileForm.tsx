@@ -376,19 +376,16 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       }
 
       // Handle avatar upload
-      let image: string | null = null;
+      let avatarAttachment: Awaited<ReturnType<typeof FileController.toFileAttachment>> | null = null;
       // Edit mode sends only what changed; everything else keeps its published value
       const changes: TCommitUpdateDetailsParams['changes'] =
         mode === 'edit' ? getProfileChanges(user, links, userDetails) : {};
 
       if (mode === 'create') {
+        // Nexus ignores a new user's file uploads until their first profile is indexed, and for good:
+        // the bytes go after the profile. Hashing names the URI the first profile already carries.
         if (avatarFile) {
-          setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
-          image = await FileController.commitCreate({ file: avatarFile, pubky });
-          if (!image) {
-            setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
-            return;
-          }
+          avatarAttachment = await FileController.toFileAttachment({ file: avatarFile, pubky });
         }
       } else if (avatarChanged) {
         if (avatarFile) {
@@ -407,7 +404,11 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setSubmitText(PROFILE_SUBMIT_TEXT.savingProfile);
 
       if (mode === 'create') {
-        await ProfileController.commitCreate({ profile: user, image, pubky });
+        await ProfileController.commitCreate({ profile: user, image: avatarAttachment?.media.url ?? null, pubky });
+        if (avatarAttachment) {
+          setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
+          await FileController.commitCreateAttachment(avatarAttachment);
+        }
         // Store a NEW blob URL globally so all avatar components show the new avatar instantly
         // We create a separate blob URL so the form's cleanup can safely revoke its own
         if (avatarFile) {
