@@ -19,6 +19,10 @@
  *
  * Which step shows is derived from the stores, so a creator who is already signed in, but whose
  * Paykit setup this Locks session has not confirmed yet, opens straight at Enable Payments.
+ *
+ * `mode="signin"` stops after the Lock Server step (no session or Paykit step, no Paykit check): a
+ * fresh Locks session resets `paykitConnected`, and a caller that only needs the Lock Server (such
+ * as deleting a lock announcement) must not be held up by Paykit.
  */
 import { type ReactNode, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
@@ -63,6 +67,8 @@ type DialogLocksAuthProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** 'signin' asks for the Lock Server sign-in only; 'setup' (default) also runs the session and Paykit steps. */
+  mode?: 'setup' | 'signin';
 };
 
 // Frames the 192px step illustration.
@@ -74,12 +80,19 @@ function StepImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }: DialogLocksAuthProps) {
+export function DialogLocksAuth({
+  open,
+  onOpenChange,
+  onSuccess,
+  asset = 'BTC',
+  mode = 'setup',
+}: DialogLocksAuthProps) {
   const {
     status: locksStatus,
     connectUrl,
-    error: locksError,
     iframeRef: locksIframeRef,
+    isConnectReady,
+    onConnectLoad,
     prepare,
     start: startLocks,
     reset: resetLocks,
@@ -87,7 +100,6 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
   const {
     status: paykitStatus,
     setupUrl,
-    error: paykitError,
     iframeRef: paykitIframeRef,
     check: checkPaykit,
     reset: resetPaykit,
@@ -98,17 +110,19 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
 
   let step: 'locks' | 'session' | 'bitkit' | 'done' = 'done';
   if (!isLocksAuthenticated) step = 'locks';
+  else if (mode === 'signin') step = 'done';
   else if (needsSessionUpgrade) step = 'session';
   else if (!isPaykitConnected) step = 'bitkit';
 
   // Fixed when the dialog opens (adjusted during render, so the first frame already carries it):
   // once the Lock Server step completes only the session step is left, and a count taken then
   // would never show "(2/2)".
-  const [isNumbered, setIsNumbered] = useState(() => open && !isLocksAuthenticated && needsSessionUpgrade);
+  const hasSessionStep = mode === 'setup' && needsSessionUpgrade;
+  const [isNumbered, setIsNumbered] = useState(() => open && !isLocksAuthenticated && hasSessionStep);
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setIsNumbered(!isLocksAuthenticated && needsSessionUpgrade);
+    if (open) setIsNumbered(!isLocksAuthenticated && hasSessionStep);
   }
 
   // Probe the Lock Server's readiness when the modal opens; reset when it closes. "Continue" only
@@ -150,6 +164,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
     (locksStatus === LocksAuthFlowStatus.CONNECTING ||
       locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL ||
       locksStatus === LocksAuthFlowStatus.EXCHANGING);
+  const mountedConnectUrl = locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL ? connectUrl : null;
   const isSessionStep = step === 'session';
   const isBitkitStep = step === 'bitkit' && !isPaykitError && !isPaykitUnavailable;
 
@@ -233,21 +248,23 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
             {/* The shell's embed layout is the 192px QR panel, or two stacked 60px deep-link buttons
                 on touch. It also posts a `locks-auth-resize` height we could adopt instead, but a
                 fixed box keeps the loader from collapsing before the iframe mounts. */}
-            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-33">
-              {locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL && connectUrl ? (
+            <Container className="relative flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-33">
+              {/* Mounted but invisible until the shell's first `locks-auth-resize` report: a page that
+                  failed to render (a JSON error body) never sends one and is never shown (#3027). */}
+              {mountedConnectUrl && (
                 <iframe
                   ref={locksIframeRef}
-                  src={connectUrl}
+                  src={mountedConnectUrl}
                   title={'Lock Server authorization'}
                   // The parent accepts the auth code only from the configured Lock Server origin.
                   // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
                   // The other flags let /connect run JS, submit its approval form, and open the signer apps.
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                  className="h-48 w-full pointer-coarse:h-33"
+                  onLoad={onConnectLoad}
+                  className={cn('h-48 w-full pointer-coarse:h-33', !isConnectReady && 'invisible absolute inset-0')}
                 />
-              ) : (
-                <LoaderCircle className="size-8 animate-spin text-brand" />
               )}
+              {!(mountedConnectUrl && isConnectReady) && <LoaderCircle className="size-8 animate-spin text-brand" />}
             </Container>
             {/* The embedded shell draws no logos, and on touch its buttons already name each app. */}
             <Container overrideDefaults className="flex items-center gap-3.5 pointer-coarse:hidden">
@@ -295,9 +312,12 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
 
         {isError && (
           <Typography size="sm" className="text-destructive">
+            {/* Raw error messages are diagnostic text that already reaches logs and Sentry, so the dialog shows fixed copy only (#3028). */}
             {isPaykitUnavailable
               ? 'Payments are unavailable right now. Please try again later.'
-              : ((isPaykitError ? paykitError?.message : locksError?.message) ?? 'Lock authorization failed.')}
+              : isPaykitError
+                ? "Couldn't connect your Bitkit wallet. Please try again."
+                : "Couldn't authorize the Lock Server. Please try again."}
           </Typography>
         )}
 
