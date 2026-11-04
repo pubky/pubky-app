@@ -21,5 +21,7 @@ export type TFetchFilesParams = {
 export type TGetFileUrlParams = {
   // Composite ID: author:fileId
   fileId: string;
+  /** The file's URI: a v1 file's route takes its `{hash}.{ext}` filename, which the composite id drops. */
+  uri: string;
   variant: FileVariant;
 };

@@ -1,4 +1,4 @@
-import { getCdnUrl, getNexusUrl } from '@/config/nexus';
+import { getCdnUrl, getNexusUrl, getV1CdnUrl } from '@/config/nexus';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
@@ -19,6 +19,10 @@ export function buildNexusUrl(endpoint: string): string {
 
 export function buildCdnUrl(endpoint: string): string {
   return `${getCdnUrl()}/${endpoint}`;
+}
+
+export function buildV1CdnUrl(endpoint: string): string {
+  return `${getV1CdnUrl()}/${endpoint}`;
 }
 
 /**

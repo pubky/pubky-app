@@ -12,7 +12,14 @@ import {
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeId, buildCompositeIdFromPubkyUri, isV1MediaUri, parseCompositeId } from '@/models/models.utils';
+import {
+  buildCompositeId,
+  buildCompositeIdFromPubkyUri,
+  isV1Address,
+  isV1MediaUri,
+  mediaFilenameFromUri,
+  parseCompositeId,
+} from '@/models/models.utils';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { pickListedPostIds } from '@/pipes/post/post.head';
@@ -229,7 +236,9 @@ export class FileApplication {
   }
 
   /**
-   * Gets the metadata for a list of file attachments.
+   * Gets the metadata for a list of file attachments: the local rows, and for v1 media without one
+   * what its URI says. Nexus keeps no metadata for v1 files, so only a file this device uploaded has
+   * a row, and that row wins. A 0.x file without a row stays missing, for `fetchFiles` to complete.
    * @param fileAttachments - The file attachments to get the metadata for
    * @returns The metadata for the file attachments
    */
@@ -239,7 +248,12 @@ export class FileApplication {
       return compositeId ? [compositeId] : [];
     });
     const files = await LocalFileService.findByIds(compositeFileIds);
-    return files;
+    const stored = new Set(files.map(({ id }) => id));
+    const synthesized = [...new Set(fileAttachments)].flatMap((uri) => {
+      const details = FileNormalizer.toV1FileDetails(uri);
+      return details && !stored.has(details.id) ? [details] : [];
+    });
+    return [...files, ...synthesized];
   }
 
   /**
@@ -253,15 +267,16 @@ export class FileApplication {
   }
 
   /**
-   * Gets the CDN URL for a file: `files/{owner}/{id}/{variant}`, the id being the v1 media hash
-   * (or a 0.x file id) the composite id carries.
+   * Gets the Nexus URL for a file: `v1/static/files/{owner}/{hash}.{ext}/{variant}` for v1 media,
+   * `static/files/{owner}/{id}/{variant}` for a 0.x file.
    * @param fileId - The composite file id, `owner:id`
+   * @param uri - The file's URI, whose filename a v1 route takes
    * @param variant - The variant of the file
    * @returns The file URL
    */
-  static getFileUrl({ fileId, variant }: TGetFileUrlParams): string {
+  static getFileUrl({ fileId, uri, variant }: TGetFileUrlParams): string {
     const { pubky, id } = parseCompositeId(fileId);
-    return filesApi.getFileUrl({ pubky, file_id: id, variant });
+    return filesApi.getFileUrl({ pubky, file_id: mediaFilenameFromUri(uri) ?? id, variant });
   }
 
   /**
@@ -306,16 +321,18 @@ export class FileApplication {
 
   /**
    * Fetches file metadata from nexus by URIs and persists them locally.
-   * Used by bootstrap where file metadata is not available inline.
+   * Used by bootstrap where file metadata is not available inline. Nexus keeps no metadata for v1
+   * files and answers a request naming a v1 address with a 400, so only 0.x files are ever asked for.
    *
    * @param fileUris - Array of file URIs to fetch and persist
    */
   static async fetchFiles(fileUris: string[]) {
-    if (fileUris.length === 0) {
+    const legacyFileUris = fileUris.filter((uri) => !isV1Address(uri));
+    if (legacyFileUris.length === 0) {
       return;
     }
 
-    const nexusFiles = await NexusFileService.fetchFiles(fileUris);
+    const nexusFiles = await NexusFileService.fetchFiles(legacyFileUris);
     await this.persistFiles(nexusFiles);
   }
 }

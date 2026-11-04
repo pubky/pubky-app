@@ -235,13 +235,13 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
           type: fileMetadata.content_type,
           name: fileMetadata.name,
           urls: {
-            main: FileController.getFileUrl({ fileId: fileMetadata.id, variant: FileVariant.MAIN }),
+            main: FileController.getFileUrl({ fileId: fileMetadata.id, uri, variant: FileVariant.MAIN }),
             feed: isImage
-              ? FileController.getFileUrl({ fileId: fileMetadata.id, variant: FileVariant.FEED })
+              ? FileController.getFileUrl({ fileId: fileMetadata.id, uri, variant: FileVariant.FEED })
               : undefined,
             // A kept cover renders from here, so the desktop hero needs its derived variant too.
             large: isImage
-              ? FileController.getFileUrl({ fileId: fileMetadata.id, variant: FileVariant.LARGE })
+              ? FileController.getFileUrl({ fileId: fileMetadata.id, uri, variant: FileVariant.LARGE })
               : undefined,
           },
         };

@@ -400,8 +400,12 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: FileVariant.MAIN });
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: FileVariant.FEED });
+        expect(mockGetFileUrl).toHaveBeenCalledWith(
+          expect.objectContaining({ fileId: 'user1:image1', variant: FileVariant.MAIN }),
+        );
+        expect(mockGetFileUrl).toHaveBeenCalledWith(
+          expect.objectContaining({ fileId: 'user1:image1', variant: FileVariant.FEED }),
+        );
       });
     });
 
@@ -412,7 +416,9 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:video1', variant: FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith(
+          expect.objectContaining({ fileId: 'user1:video1', variant: FileVariant.MAIN }),
+        );
       });
 
       // Videos should not have feed variant
@@ -429,7 +435,9 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:audio1', variant: FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith(
+          expect.objectContaining({ fileId: 'user1:audio1', variant: FileVariant.MAIN }),
+        );
       });
     });
 
@@ -440,7 +448,9 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:doc1', variant: FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith(
+          expect.objectContaining({ fileId: 'user1:doc1', variant: FileVariant.MAIN }),
+        );
       });
     });
   });

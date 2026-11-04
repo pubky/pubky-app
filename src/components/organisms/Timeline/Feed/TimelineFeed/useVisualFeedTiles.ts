@@ -144,11 +144,11 @@ function buildRemoteTile(post: EnrichedPostDetails, file: FileDetailsModelSchema
 
   const metadataWidth = parseMediaDimension(file.metadata?.width);
   const metadataHeight = parseMediaDimension(file.metadata?.height);
-  const mainSrc = FileController.getFileUrl({ fileId: file.id, variant: FileVariant.MAIN });
+  const mainSrc = FileController.getFileUrl({ fileId: file.id, uri: file.uri, variant: FileVariant.MAIN });
   const previewSrc =
     file.content_type === 'image/gif'
       ? mainSrc
-      : FileController.getFileUrl({ fileId: file.id, variant: FileVariant.FEED });
+      : FileController.getFileUrl({ fileId: file.id, uri: file.uri, variant: FileVariant.FEED });
 
   return {
     id: `${post.id}:${file.id}`,

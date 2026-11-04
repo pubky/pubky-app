@@ -1,9 +1,12 @@
 import * as React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import { getVisualYouTubeThumbnailUrl, resolvePreferredVisualTileSize } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
 import { getVisualTileProbeCacheEntry, resetVisualTileCaches } from './TimelineFeedVisualMedia.utils';
@@ -258,6 +261,39 @@ describe('useVisualFeedTiles', () => {
         fileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
       });
     });
+  });
+
+  it('builds tiles for v1 media without a row from what the URI says, and asks Nexus for nothing', async () => {
+    const owner = fakeOwner(2);
+    const image = buildFile(owner, { bytes: new Uint8Array([1]), type: 'image/webp' });
+    const pdf = buildFile(owner, { bytes: new Uint8Array([2]), type: 'application/pdf' });
+    mockFindByIdsPreserveOrder.mockResolvedValue([
+      createPostDetails({ id: 'author:post-image', attachments: [image.url] }),
+      createPostDetails({ id: 'author:post-pdf', attachments: [pdf.url] }),
+    ]);
+    // What `FileController.getMetadata` answers when no row exists.
+    mockGetMetadata.mockImplementation(async ({ fileAttachments }: { fileAttachments: string[] }) =>
+      fileAttachments.flatMap((uri) => FileNormalizer.toV1FileDetails(uri) ?? []),
+    );
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: ['author:post-image', 'author:post-pdf'], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(snapshot.tiles).toEqual([
+      expect.objectContaining({
+        postId: 'author:post-image',
+        attachmentName: `${image.id}.webp`,
+        contentType: 'image/webp',
+        mediaKind: 'image',
+        // No dimensions to read: the renderer probes the image.
+        probeState: 'pending',
+      }),
+    ]);
+    expect(snapshot.missingFileUris).toEqual([]);
+    // A file type the visual layout does not show hides the post, as a real row of that type does.
+    expect(snapshot.hiddenPostCount).toBe(1);
+    expect(mockFetchFiles).not.toHaveBeenCalled();
   });
 
   it('fetches post details for each requested post id', async () => {

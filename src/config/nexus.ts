@@ -4,6 +4,16 @@ import { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs } from '@/libs/runtime-c
 // dev/test). See @/libs/runtime-config.
 export { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs };
 
+/**
+ * The path Nexus serves v1 files under, in place of the `/static` the CDN runtime value ends in:
+ * `{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}`. 0.x files and avatars stay on the CDN value itself.
+ * The prefix is staged (tipogi/pubky-nexus#18) and may still move: this is the one value to change.
+ */
+export const NEXUS_V1_STATIC_PATH = '/v1/static';
+
+/** The base of the v1 file routes, derived from the CDN runtime value: it has no env var of its own. */
+export const getV1CdnUrl = (): string => `${getCdnUrl().replace(/(?:\/static)?\/?$/, '')}${NEXUS_V1_STATIC_PATH}`;
+
 export const NEXUS_NOTIFICATIONS_LIMIT = 30;
 export const NEXUS_POSTS_PER_PAGE = 10; // Number of posts to fetch per page in streams
 export const NEXUS_STREAM_MAX_LIMIT = 50; // Hard cap Nexus enforces on a single post stream `limit`; requests above this are rejected

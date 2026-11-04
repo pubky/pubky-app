@@ -175,10 +175,12 @@ describe('usePostArticle', () => {
       });
 
       expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: attachments });
-      expect(mockGetFileUrl).toHaveBeenCalledWith({
-        fileId: 'user123:file456',
-        variant: FileVariant.FEED,
-      });
+      expect(mockGetFileUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileId: 'user123:file456',
+          variant: FileVariant.FEED,
+        }),
+      );
       expect(result.current.coverImage).toEqual({
         src: 'https://cdn.example.com/user123:file456/feed',
         alt: 'beautiful-cover.jpg',
@@ -206,10 +208,12 @@ describe('usePostArticle', () => {
         expect(result.current.coverImage?.alt).toBe('cover.jpg');
       });
 
-      expect(mockGetFileUrl).toHaveBeenCalledWith({
-        fileId: 'user123:file456',
-        variant: FileVariant.MAIN,
-      });
+      expect(mockGetFileUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileId: 'user123:file456',
+          variant: FileVariant.MAIN,
+        }),
+      );
     });
 
     it('resolves the desktop source from the desktop variant of the same file', async () => {
@@ -263,7 +267,9 @@ describe('usePostArticle', () => {
       });
 
       // The hero needs a desktop size it can degrade to when `large` is not served yet.
-      expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user123:file456', variant: FileVariant.MAIN });
+      expect(mockGetFileUrl).toHaveBeenCalledWith(
+        expect.objectContaining({ fileId: 'user123:file456', variant: FileVariant.MAIN }),
+      );
       expect(result.current.coverImage).toEqual({
         src: 'https://cdn.example.com/user123:file456/feed',
         desktopSrc: 'https://cdn.example.com/user123:file456/large',
@@ -531,18 +537,22 @@ describe('usePostArticle', () => {
         expect(result.current.coverImage?.alt).toBe('image.jpg');
       });
 
-      expect(mockGetFileUrl).toHaveBeenLastCalledWith({
-        fileId: 'user123:file1',
-        variant: FileVariant.FEED,
-      });
+      expect(mockGetFileUrl).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          fileId: 'user123:file1',
+          variant: FileVariant.FEED,
+        }),
+      );
 
       rerender({ variant: FileVariant.MAIN });
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenLastCalledWith({
-          fileId: 'user123:file1',
-          variant: FileVariant.MAIN,
-        });
+        expect(mockGetFileUrl).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            fileId: 'user123:file1',
+            variant: FileVariant.MAIN,
+          }),
+        );
       });
     });
   });

@@ -1,6 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { TFileBody, TFileParams } from '@/services/nexus/file/file.types';
-import { buildCdnUrl, buildNexusUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
+import { buildCdnUrl, buildNexusUrl, buildV1CdnUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
 
 /**
  * Files API Endpoints
@@ -30,7 +30,9 @@ export const filesApi = {
   getFileUrl: ({ pubky, file_id, variant }: TFileParams) => {
     const encodedPubky = encodePathSegment(pubky);
     const encodedFileId = encodePathSegment(file_id);
-    return buildCdnUrl(`${STATIC_PREFIX}/${encodedPubky}/${encodedFileId}/${variant}`);
+    const path = `${STATIC_PREFIX}/${encodedPubky}/${encodedFileId}/${variant}`;
+    // The form of the id picks the route: `{hash}.{ext}` is v1 (a bare hash is a 400), a 0.x id has no dot.
+    return file_id.includes('.') ? buildV1CdnUrl(path) : buildCdnUrl(path);
   },
   getFiles: (fileUris: Pubky[]) => ({
     body: buildFileBodyUrl(fileUris),
