@@ -153,10 +153,12 @@ export const CONTENT_SEARCH_STREAM_PREFIX = 'content_search' as const;
 // satisfy any legacy segment-based classifier (reserved words like 'bookmarks'/'author'/'wot').
 const CONTENT_SEARCH_QUERY_MARKER = 'q~' as const;
 const CONTENT_SEARCH_REACH_MARKER = 'reach' as const;
+/** Nexus text search has no lock filter (#3046), so a content-search stream never carries `locked`. */
+export type ContentSearchKindSegment = Exclude<PostStreamKindSegment, 'locked'>;
 // Optional scope suffix: `:<authorPubky>` for profile "Filter posts", or
 // `:reach:<following|friends|wot>` for Search. Pubkys contain no ':'.
 export type ContentSearchStreamId =
-  `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${typeof CONTENT_SEARCH_QUERY_MARKER}${string}:${PostStreamKindSegment}${'' | `:${string}`}`;
+  `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${typeof CONTENT_SEARCH_QUERY_MARKER}${string}:${ContentSearchKindSegment}${'' | `:${string}`}`;
 
 type ContentSearchScope = { type: 'author'; author: Pubky } | { type: 'reach'; reach: NexusSearchReach };
 
@@ -230,7 +232,7 @@ export function buildPostCollectionsStreamId(authorPubky: Pubky, postId: string)
 
 export function buildContentSearchStreamId(
   query: string,
-  kind: PostStreamKindSegment = 'all',
+  kind: ContentSearchKindSegment = 'all',
   scope?: ContentSearchScope,
 ): ContentSearchStreamId {
   // Keyed case-insensitively so casing never splits one search into separate stream caches.
@@ -243,13 +245,14 @@ export function buildContentSearchStreamId(
 
 export function parseContentSearchStreamId(
   streamId: string,
-): { query: string; kind: PostStreamKindSegment; author?: Pubky; reach?: NexusSearchReach } | null {
+): { query: string; kind: ContentSearchKindSegment; author?: Pubky; reach?: NexusSearchReach } | null {
   const [prefix, markedQuery, kind, ...scope] = streamId.split(':');
   const parsedKind = toPostStreamKindSegment(kind);
   if (
     prefix !== CONTENT_SEARCH_STREAM_PREFIX ||
     !markedQuery?.startsWith(CONTENT_SEARCH_QUERY_MARKER) ||
     !parsedKind ||
+    parsedKind === 'locked' ||
     scope.length > 2 ||
     scope.some((segment) => !segment)
   ) {
@@ -335,7 +338,7 @@ function toPostStreamKindSegment(segment: string | undefined): PostStreamKindSeg
  * `post_collections:<pubky>:<postId>`).
  *
  * This is the canonical kind parser: consumers gating posts by kind (e.g.
- * `postKindBelongsToStream`) must use it instead of splitting the id themselves.
+ * `postBelongsToStream`) must use it instead of splitting the id themselves.
  */
 export function getPostStreamKind(streamId: string): PostStreamKindSegment | undefined {
   const contentSearch = parseContentSearchStreamId(streamId);

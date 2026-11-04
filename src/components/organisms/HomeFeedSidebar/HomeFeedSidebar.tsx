@@ -14,8 +14,8 @@ import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ReachFilterValue } from '@/stores/home/home.types';
-import { CONTENT, type ContentType, REACH, type ReachType, type SortType } from '@/stores/home/home.types';
-import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
+import { type ContentType, REACH, type ReachType, type SortType } from '@/stores/home/home.types';
+import { getHomeStreamIdFromFilters, resolveEnabledContent } from '@/stores/home/home.utils';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
@@ -130,7 +130,7 @@ function HomeFeedFilters({
 
   const disabledContentTabs = isVisualActive ? VISUAL_DISABLED_CONTENT : disabledContent;
   // Shown only: the store keeps the choice for the surfaces that allow it.
-  const selectedContent = disabledContentTabs.includes(resolvedContent) ? CONTENT.ALL : resolvedContent;
+  const selectedContent = resolveEnabledContent(resolvedContent, disabledContentTabs);
   const showVisualLayout = allowVisualLayout && !isPhoneViewport;
   const showCardsLayout = feedVariant === TIMELINE_FEED_VARIANT.HOME || feedVariant === TIMELINE_FEED_VARIANT.SEARCH;
 

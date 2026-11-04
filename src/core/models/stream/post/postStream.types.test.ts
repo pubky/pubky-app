@@ -36,6 +36,15 @@ const TEST_POST_ID = 'post-pubky-id';
 
 describe('post-stream id builders', () => {
   describe('buildContentSearchStreamId', () => {
+    it('never carries locked, because Nexus text search cannot filter by lock', () => {
+      // @ts-expect-error A content-search stream has no locked kind.
+      const streamId = buildContentSearchStreamId('bitcoin', 'locked');
+
+      expect(parseContentSearchStreamId(streamId)).toBeNull();
+      expect(parseContentSearchStreamId(`${streamId}:reach:wot`)).toBeNull();
+      expect(getPostStreamKind(streamId)).toBeUndefined();
+    });
+
     it.each(['following', 'friends', 'wot'] as const)(
       'keeps %s search separate from All and profile search',
       (reach) => {

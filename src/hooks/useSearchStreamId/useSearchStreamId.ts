@@ -5,8 +5,8 @@ import { useSearchReach } from '@/hooks/useSearchReach/useSearchReach';
 import { buildContentSearchStreamId, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, type ContentType } from '@/stores/home/home.types';
-import { getKindFromContent, getStreamIdFromFilters, TEXT_SEARCH_DISABLED_CONTENT } from '@/stores/home/home.utils';
+import type { ContentType } from '@/stores/home/home.types';
+import { getStreamIdFromFilters, getTextSearchKind } from '@/stores/home/home.utils';
 
 /**
  * Custom hook that returns the search streamId based on the URL search criteria,
@@ -31,7 +31,7 @@ export function useSearchStreamId(contentOverride?: ContentType): PostStreamId |
   if (criteria.mode === 'content') {
     return buildContentSearchStreamId(
       criteria.query,
-      getKindFromContent(TEXT_SEARCH_DISABLED_CONTENT.includes(content) ? CONTENT.ALL : content),
+      getTextSearchKind(content),
       nexusReach ? { type: 'reach', reach: nexusReach } : undefined,
     );
   }

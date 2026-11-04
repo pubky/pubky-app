@@ -39,7 +39,7 @@ import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import { postKindBelongsToStream } from '@/stores/home/home.utils';
+import { postBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
@@ -541,7 +541,7 @@ export function usePostInput({
             }
 
             const details = await PostController.getDetails({ compositeId: createdPostId });
-            if (!details?.kind || postKindBelongsToStream(details.kind, streamId, details.lock)) {
+            if (!details?.kind || postBelongsToStream(details, streamId)) {
               await timelineFeed.prependPosts(createdPostId);
             }
           } catch (error) {

@@ -1576,6 +1576,21 @@ describe('NexusPostStreamService', () => {
       expect(mockQueryNexus).not.toHaveBeenCalled();
     });
 
+    it('rejects a locked content-search stream instead of searching unfiltered', async () => {
+      const fetchParams = createPostStreamParams({
+        streamId: 'content_search:q~bitcoin:locked' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 10,
+        viewerId: null,
+      });
+
+      await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toThrow(
+        'Search query is required for content_search stream',
+      );
+      expect(mockQueryNexus).not.toHaveBeenCalled();
+    });
+
     it('throws an AppError validation error when CONTENT_SEARCH is missing a query', async () => {
       const fetchParams: TPostStreamFetchParams = {
         params: { limit: 10 },

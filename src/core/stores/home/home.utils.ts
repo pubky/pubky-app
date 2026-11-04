@@ -1,7 +1,9 @@
 import type { Pubky } from '@/models/models.types';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import {
   buildSortedAuthorStreamId,
   buildWotDomainStreamId,
+  type ContentSearchKindSegment,
   getPostStreamKind,
   type PostStreamId,
   type PostStreamKindSegment,
@@ -69,6 +71,18 @@ export function getKindFromContent(content: ContentType): PostStreamKindSegment 
 
 /** Content filters Nexus text search cannot apply (#3046). */
 export const TEXT_SEARCH_DISABLED_CONTENT: ContentType[] = [CONTENT.LOCKS];
+
+/** A surface shows and applies All in place of a content filter it has disabled. */
+export function resolveEnabledContent(content: ContentType, disabledContent: ContentType[]): ContentType {
+  return disabledContent.includes(content) ? CONTENT.ALL : content;
+}
+
+/** The kind a text search applies, which is the filter the sidebar shows there. */
+export function getTextSearchKind(content: ContentType): ContentSearchKindSegment {
+  const kind = getKindFromContent(resolveEnabledContent(content, TEXT_SEARCH_DISABLED_CONTENT));
+  // Unreachable while Locks is disabled above; keeps `locked` out by type if that list changes.
+  return kind === 'locked' ? 'all' : kind;
+}
 
 /**
  * Tagged as is a standalone depth-2 Home feed in the V1 UI. Depth 0/1 domain
@@ -212,13 +226,13 @@ const POST_KIND_TO_CONTENT = {
 } as const satisfies Record<string, ContentType>;
 
 /**
- * Returns whether a post kind belongs in a stream identified by streamId.
+ * Returns whether a post belongs in a stream identified by streamId.
  * Kind extraction is delegated to the canonical model-layer parser, which
  * covers timeline, tag, wot_domain, and author-kind shapes. Stream ids that
  * encode no kind (replies, single-collection items, plain author feeds)
  * accept all kinds.
  */
-export function postKindBelongsToStream(postKind: string, streamId: string, lock: string | null | undefined): boolean {
+export function postBelongsToStream(post: Pick<PostDetailsModelSchema, 'kind' | 'lock'>, streamId: string): boolean {
   const kindSegment = getPostStreamKind(streamId);
   if (!kindSegment) {
     return true;
@@ -226,7 +240,7 @@ export function postKindBelongsToStream(postKind: string, streamId: string, lock
 
   // A lock post's kind is its teaser's, so a Locks stream can only go by the lock.
   if (kindSegment === 'locked') {
-    return Boolean(lock);
+    return Boolean(post.lock);
   }
 
   const streamContent = KIND_TO_CONTENT[kindSegment];
@@ -234,7 +248,7 @@ export function postKindBelongsToStream(postKind: string, streamId: string, lock
     return true;
   }
 
-  const postContent = POST_KIND_TO_CONTENT[postKind as keyof typeof POST_KIND_TO_CONTENT];
+  const postContent = POST_KIND_TO_CONTENT[post.kind as keyof typeof POST_KIND_TO_CONTENT];
   if (!postContent) {
     return false;
   }
