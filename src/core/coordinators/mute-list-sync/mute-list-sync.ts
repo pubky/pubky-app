@@ -36,15 +36,20 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
   ];
 
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
-  /** The account whose LIST is out: a slow LIST must not stack up, nor hold back another account's. */
+  /**
+   * The account whose LIST is out, so a slow LIST does not stack up.
+   * Cleared on stop, so a LIST that never settles cannot end polling.
+   */
   private refreshingPubky: Pubky | null = null;
   private accountUnsubscribe: (() => void) | null = null;
 
-  /** A return to the tab or to the network: the interval alone could leave the list a full period behind. */
-  private readonly refreshOnReturn = () => {
-    if (document.visibilityState === 'visible' && this.shouldPoll()) {
-      void this.poll();
-    }
+  /** A return to the network or to the tab: the interval alone could leave the list a full period behind. */
+  private readonly refreshIfActive = () => {
+    if (this.shouldPoll()) void this.poll();
+  };
+
+  private readonly refreshIfVisible = () => {
+    if (document.visibilityState === 'visible') this.refreshIfActive();
   };
 
   private constructor() {
@@ -56,8 +61,8 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
       this.evaluateAndStartPolling();
     });
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', this.refreshOnReturn);
-      document.addEventListener('visibilitychange', this.refreshOnReturn);
+      window.addEventListener('online', this.refreshIfActive);
+      document.addEventListener('visibilitychange', this.refreshIfVisible);
     }
   }
 
@@ -90,6 +95,7 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
   protected stopPolling(reason: PollingInactiveReason): void {
     clearTimeout(this.debounceTimer);
     this.debounceTimer = undefined;
+    this.refreshingPubky = null;
     super.stopPolling(reason);
   }
 
@@ -98,8 +104,8 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
     this.accountUnsubscribe?.();
     this.accountUnsubscribe = null;
     if (typeof window !== 'undefined') {
-      window.removeEventListener('online', this.refreshOnReturn);
-      document.removeEventListener('visibilitychange', this.refreshOnReturn);
+      window.removeEventListener('online', this.refreshIfActive);
+      document.removeEventListener('visibilitychange', this.refreshIfVisible);
     }
   }
 

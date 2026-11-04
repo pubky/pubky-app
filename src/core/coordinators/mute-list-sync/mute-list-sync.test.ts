@@ -186,6 +186,20 @@ describe('MuteListSyncCoordinator', () => {
       await settleDebounce();
       expect(fetchMuted()).toHaveBeenCalledTimes(1);
     });
+
+    it('refreshes on online while hidden when the runtime config does not respect visibility', async () => {
+      signIn();
+      const coordinator = startOn(APP_ROUTES.HOME);
+      coordinator.configure({ respectPageVisibility: false });
+      await settleDebounce();
+      fetchMuted().mockClear();
+
+      setVisibilityState('hidden');
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('route gating', () => {
@@ -303,6 +317,32 @@ describe('MuteListSyncCoordinator', () => {
 
       finish([]);
       await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
+    });
+
+    it('recovers from a LIST that never settles after a return to the tab', async () => {
+      fetchMuted().mockImplementationOnce(() => new Promise<Pubky[]>(() => {}));
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+
+      expect(fetchMuted()).toHaveBeenCalledTimes(2);
+    });
+
+    it('recovers from a LIST that never settles when the same account signs in again', async () => {
+      fetchMuted().mockImplementationOnce(() => new Promise<Pubky[]>(() => {}));
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+
+      useAuthStore.getState().reset();
+      signIn();
+      await settleDebounce();
+
       expect(fetchMuted()).toHaveBeenCalledTimes(2);
     });
 
