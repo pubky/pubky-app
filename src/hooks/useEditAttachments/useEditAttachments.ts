@@ -22,10 +22,10 @@ const toResolvedAttachment = (uri: string, metadata: FileMetadata): ExistingAtta
     type: metadata.content_type,
     name: metadata.name,
     urls: {
-      main: FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.MAIN }),
-      feed: isImage ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.FEED }) : undefined,
+      main: FileController.getFileUrl({ fileId: metadata.id, uri, variant: FileVariant.MAIN }),
+      feed: isImage ? FileController.getFileUrl({ fileId: metadata.id, uri, variant: FileVariant.FEED }) : undefined,
       // A kept article cover is seeded from here, and the desktop hero renders `large`.
-      large: isImage ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.LARGE }) : undefined,
+      large: isImage ? FileController.getFileUrl({ fileId: metadata.id, uri, variant: FileVariant.LARGE }) : undefined,
     },
   };
 };

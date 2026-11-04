@@ -185,9 +185,15 @@ describe('usePostAttachmentsMedia', () => {
       main: 'https://cdn.example.com/pk:test:video/main',
       feed: undefined,
     });
-    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'pk:test:photo', variant: FileVariant.MAIN });
-    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'pk:test:photo', variant: FileVariant.FEED });
-    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'pk:test:video', variant: FileVariant.MAIN });
+    expect(mockGetFileUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:photo', variant: FileVariant.MAIN }),
+    );
+    expect(mockGetFileUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:photo', variant: FileVariant.FEED }),
+    );
+    expect(mockGetFileUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:video', variant: FileVariant.MAIN }),
+    );
   });
 
   it('falls back to an empty list when remote metadata fails', async () => {

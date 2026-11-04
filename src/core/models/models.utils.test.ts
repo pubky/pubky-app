@@ -5,6 +5,7 @@ import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import {
   buildCompositeId,
   buildCompositeIdFromPubkyUri,
+  isV1Address,
   isV1MediaUri,
   mediaFilenameFromUri,
   parseCompositeId,
@@ -164,5 +165,29 @@ describe('isV1MediaUri and mediaFilenameFromUri', () => {
   it.each([undefined, null, 42])('is false and null for the non-string value %s', (uri) => {
     expect(isV1MediaUri(uri)).toBe(false);
     expect(mediaFilenameFromUri(uri)).toBeNull();
+  });
+});
+
+describe('isV1Address', () => {
+  const owner = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+
+  it.each([
+    `pubky://${owner}/pub/social/v1/files/7BKXG1FPF2D680NCPW5D82BAGM.png`,
+    `pubky://${owner}/priv/social/v1/files/7BKXG1FPF2D680NCPW5D82BAGM.png`,
+    // Names the data model refuses are still v1 addresses, which `by_ids` answers with a 400.
+    `pubky://${owner}/pub/social/v1/files/7BKXG1FPF2D680NCPW5D82BAGM.PNG`,
+    `pubky://${owner}/pub/social/v1/files/7BKXG1FPF2D680NCPW5D82BAGM`,
+    'pubky://not-a-key/pub/social/v1/files/file.png',
+  ])('is true for %s', (uri) => {
+    expect(isV1Address(uri)).toBe(true);
+  });
+
+  it.each([
+    `pubky://${owner}/pub/pubky.app/files/0034A0X7NJ52C`,
+    'https://example.com/pub/social/v1/files/a.png',
+    '',
+    7,
+  ])('is false for %s', (uri) => {
+    expect(isV1Address(uri)).toBe(false);
   });
 });

@@ -178,6 +178,30 @@ describe('FileController', () => {
     });
   });
 
+  describe('toFileAttachment and commitCreateAttachment', () => {
+    it('names the upload without uploading, then uploads what it named', async () => {
+      const file = new MockFile(['avatar'], 'avatar.png', { type: 'image/png' });
+      const media = buildFile(testPubky, { bytes: new Uint8Array([1]), type: 'image/png' });
+      const fileAttachment: TFileAttachmentResult = {
+        media,
+        bytes: new Uint8Array([1]),
+        name: 'avatar.png',
+        contentType: 'image/png',
+      };
+      mockFileApplication.toFileAttachment.mockResolvedValue(fileAttachment);
+      mockFileApplication.commitCreate.mockResolvedValue(undefined);
+
+      await expect(FileController.toFileAttachment({ file, pubky: testPubky })).resolves.toBe(fileAttachment);
+
+      expect(mockFileApplication.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
+      expect(mockFileApplication.commitCreate).not.toHaveBeenCalled();
+
+      await FileController.commitCreateAttachment({ fileAttachment });
+
+      expect(mockFileApplication.commitCreate).toHaveBeenCalledWith({ fileAttachments: [fileAttachment] });
+    });
+  });
+
   describe('getFileUrl', () => {
     it('delegates to FileApplication.getFileUrl with correct parameters', () => {
       const fileId = 'user123:file456';
@@ -186,13 +210,16 @@ describe('FileController', () => {
 
       mockFileApplication.getFileUrl.mockReturnValue(expectedUrl);
 
+      const uri = 'pubky://user123/pub/pubky.app/files/file456';
       const result = FileController.getFileUrl({
         fileId,
+        uri,
         variant,
       });
 
       expect(mockFileApplication.getFileUrl).toHaveBeenCalledWith({
         fileId,
+        uri,
         variant,
       });
       expect(result).toBe(expectedUrl);
@@ -207,7 +234,7 @@ describe('FileController', () => {
         throw error;
       });
 
-      expect(() => FileController.getFileUrl({ fileId: invalidFileId, variant })).toThrow(
+      expect(() => FileController.getFileUrl({ fileId: invalidFileId, uri: 'unused', variant })).toThrow(
         'Invalid composite id: invalid-file-id',
       );
     });

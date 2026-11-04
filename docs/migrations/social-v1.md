@@ -208,7 +208,16 @@ Reductions, reported to the team:
 
 Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
 
-- v1 media and avatars through the CDN (N5), including other users' files, `files/by_ids` metadata and OG images.
+- v1 files on the N5 route, `{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}` for every variant, including other
+  users' files and OG images; 0.x files stay on `/static/files/{owner}/{tsid}/{variant}` and avatars (v1 images too) on
+  `/static/avatar/{user}`. The prefix is staged and may still move: it is one constant, `NEXUS_V1_STATIC_PATH` in
+  `src/config/nexus.ts`, derived from `PUBKY_RUNTIME_CDN_URL`. The production proxy has to forward `/v1/static/*`.
+- Other users' v1 attachments without metadata: `attachments_metadata` is empty for v1 and migrated posts and `by_ids` is
+  a 400 for v1 addresses, so the app reads the type from the extension and the name from the filename, with no size or
+  dimensions, and requests `by_ids` for 0.x files only. A real row (own upload) wins. SVG `main` downloads and its WebP
+  `small` displays (`nosniff`); PDFs get the file card, and other non-media types show nothing, as with a real row.
+- A new user's avatar (A7): signup writes `profile.json`, already naming the avatar, before the avatar's bytes, so
+  Nexus indexes the file instead of ignoring it for good. Check the avatar serves once the flip is indexed.
 - The epoch flip on the v1 `profile.json` and the per-user backfill (N3/N4): posts, tags and follows written before
   the profile appear.
 - The "post edited" notification burst a migration's PUTs may emit.

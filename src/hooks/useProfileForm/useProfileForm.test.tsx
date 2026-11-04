@@ -1,4 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { FileController } from '@/controllers/file/file';
@@ -20,7 +22,12 @@ vi.mock('@/controllers/auth/auth', () => ({
 }));
 
 vi.mock('@/controllers/file/file', () => ({
-  FileController: { commitCreate: vi.fn(), getAvatarUrl: vi.fn() },
+  FileController: {
+    commitCreate: vi.fn(),
+    commitCreateAttachment: vi.fn(),
+    getAvatarUrl: vi.fn(),
+    toFileAttachment: vi.fn(),
+  },
 }));
 
 vi.mock('@/controllers/profile/profile', () => ({
@@ -162,6 +169,109 @@ describe('useProfileForm post-save navigation', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('signup write order', () => {
+    const avatarFile = new File(['a'], 'avatar.jpg', { type: 'image/jpeg' });
+    const media = buildFile(fakeOwner(1), { bytes: new Uint8Array([1]), type: 'image/jpeg' });
+    const avatarUri = media.url;
+    const avatarAttachment = { media, bytes: new Uint8Array([1]), name: 'avatar.jpg', contentType: 'image/jpeg' };
+
+    const submitSignup = async (withAvatar = true) => {
+      const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+      act(() => {
+        result.current.handlers.setName('Valid User');
+        if (withAvatar) result.current.handlers.handleCropComplete(avatarFile, 'blob:preview');
+      });
+      await act(async () => {
+        await result.current.handlers.handleSubmit();
+      });
+      return result;
+    };
+
+    beforeEach(() => {
+      vi.mocked(FileController.toFileAttachment).mockResolvedValue(avatarAttachment);
+    });
+
+    it('puts the first profile, already carrying the image URI, before the avatar bytes', async () => {
+      await submitSignup();
+
+      expect(ProfileController.commitCreate).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ image: avatarUri, pubky }),
+      );
+      expect(FileController.commitCreateAttachment).toHaveBeenCalledExactlyOnceWith({
+        fileAttachment: avatarAttachment,
+      });
+      const [hashed] = vi.mocked(FileController.toFileAttachment).mock.invocationCallOrder;
+      const [profile] = vi.mocked(ProfileController.commitCreate).mock.invocationCallOrder;
+      const [upload] = vi.mocked(FileController.commitCreateAttachment).mock.invocationCallOrder;
+      expect(hashed).toBeLessThan(profile);
+      expect(profile).toBeLessThan(upload);
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+    });
+
+    it('shows each step as it runs: the profile, then the upload', async () => {
+      const profile = Promise.withResolvers<void>();
+      const upload = Promise.withResolvers<void>();
+      vi.mocked(ProfileController.commitCreate).mockReturnValueOnce(profile.promise);
+      vi.mocked(FileController.commitCreateAttachment).mockReturnValueOnce(upload.promise);
+      const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+      act(() => {
+        result.current.handlers.setName('Valid User');
+        result.current.handlers.handleCropComplete(avatarFile, 'blob:preview');
+      });
+
+      act(() => {
+        void result.current.handlers.handleSubmit();
+      });
+
+      await waitFor(() => expect(result.current.state.submitText).toBe('Saving profile...'));
+      await act(async () => profile.resolve());
+      await waitFor(() => expect(result.current.state.submitText).toBe('Uploading avatar...'));
+      await act(async () => upload.resolve());
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS));
+    });
+
+    it('writes the profile alone when no avatar was chosen', async () => {
+      await submitSignup(false);
+
+      expect(ProfileController.commitCreate).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ image: null, pubky }),
+      );
+      expect(FileController.toFileAttachment).not.toHaveBeenCalled();
+      expect(FileController.commitCreateAttachment).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when the avatar cannot be prepared', async () => {
+      vi.mocked(FileController.toFileAttachment).mockRejectedValueOnce(new Error('too large'));
+
+      const result = await submitSignup();
+
+      expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+      expect(FileController.commitCreateAttachment).not.toHaveBeenCalled();
+      expect(result.current.state.submitText).toBe('Try again!');
+    });
+
+    it('offers a retry that writes both again in order when the upload fails', async () => {
+      vi.mocked(FileController.commitCreateAttachment).mockRejectedValueOnce(new Error('offline'));
+
+      const result = await submitSignup();
+
+      expect(result.current.state.submitText).toBe('Try again!');
+      expect(routerPush).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.handlers.handleSubmit();
+      });
+
+      expect(ProfileController.commitCreate).toHaveBeenCalledTimes(2);
+      expect(FileController.commitCreateAttachment).toHaveBeenCalledTimes(2);
+      const profiles = vi.mocked(ProfileController.commitCreate).mock.invocationCallOrder;
+      const uploads = vi.mocked(FileController.commitCreateAttachment).mock.invocationCallOrder;
+      expect(profiles[1]).toBeLessThan(uploads[1]);
+      expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+    });
   });
 
   it('redirects to the onboarding tags step after a successful create', async () => {
@@ -313,6 +423,10 @@ describe('useProfileForm edit sends only the fields the user changed', () => {
     await submit(result);
 
     expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { image: uploaded } });
+    // An existing user's files are indexed either way: the edit path uploads first, as it always did.
+    expect(vi.mocked(FileController.commitCreate).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(ProfileController.commitUpdate).mock.invocationCallOrder[0],
+    );
   });
 
   it('sends an empty link list when every link is removed', async () => {

@@ -21,11 +21,15 @@ vi.mock('@/libs/image/stripImageMetadata', () => ({
   stripImageMetadata: vi.fn(),
 }));
 
-vi.mock('@/pipes/file/file.normalizer', () => ({
-  FileNormalizer: {
-    toFileAttachment: vi.fn(),
-  },
-}));
+vi.mock('@/pipes/file/file.normalizer', async (importOriginal) => {
+  const { FileNormalizer } = await importOriginal<typeof import('@/pipes/file/file.normalizer')>();
+  return {
+    FileNormalizer: {
+      toFileAttachment: vi.fn(),
+      toV1FileDetails: FileNormalizer.toV1FileDetails,
+    },
+  };
+});
 
 // Mock HomeserverService methods
 vi.mock('@/services/homeserver/homeserver', () => ({
@@ -387,6 +391,74 @@ describe('FileApplication', () => {
       expect(result).toEqual([]);
     });
 
+    describe('v1 media, which Nexus keeps no metadata for', () => {
+      const OWNER = fakeOwner(7) as Pubky;
+      const png = buildFile(OWNER, { bytes: new Uint8Array([1]), type: 'image/png' });
+      const pdf = buildFile(OWNER, { bytes: new Uint8Array([2]), type: 'application/pdf' });
+
+      it('answers a file without a row with what its URI says', async () => {
+        vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([]);
+
+        const result = await FileApplication.getMetadata({ fileAttachments: [png.url, pdf.url] });
+
+        expect(result.map(({ id, uri, content_type, name, size }) => ({ id, uri, content_type, name, size }))).toEqual([
+          {
+            id: `${OWNER}:${png.id}`,
+            uri: png.url,
+            content_type: 'image/png',
+            name: `${png.id}.png`,
+            size: 0,
+          },
+          {
+            id: `${OWNER}:${pdf.id}`,
+            uri: pdf.url,
+            content_type: 'application/pdf',
+            name: `${pdf.id}.pdf`,
+            size: 0,
+          },
+        ]);
+      });
+
+      it('prefers a real row, keeping its name, size and type', async () => {
+        const row = createMockFile(`${OWNER}:${png.id}`, 'holiday.png', png.url, {
+          content_type: 'image/png',
+          size: 1234,
+        });
+        vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([row]);
+
+        const result = await FileApplication.getMetadata({ fileAttachments: [png.url, pdf.url] });
+
+        expect(result.find(({ uri }) => uri === png.url)).toBe(row);
+        expect(result.filter(({ uri }) => uri === png.url)).toHaveLength(1);
+        expect(result.find(({ uri }) => uri === pdf.url)?.name).toBe(`${pdf.id}.pdf`);
+      });
+
+      it('keeps the order asked for when only some files have a row', async () => {
+        const row = createMockFile(`${OWNER}:${pdf.id}`, 'paper.pdf', pdf.url, { content_type: 'application/pdf' });
+        vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([row]);
+
+        const result = await FileApplication.getMetadata({ fileAttachments: [png.url, pdf.url] });
+
+        expect(result.map(({ uri }) => uri)).toEqual([png.url, pdf.url]);
+      });
+
+      it('answers a repeated URI once', async () => {
+        vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([]);
+
+        await expect(FileApplication.getMetadata({ fileAttachments: [png.url, png.url] })).resolves.toHaveLength(1);
+      });
+
+      it('synthesizes nothing for a 0.x file: its row comes from Nexus', async () => {
+        vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([]);
+
+        const result = await FileApplication.getMetadata({
+          fileAttachments: [`pubky://${OWNER}/pub/pubky.app/files/0034A0X7NJ52C`],
+        });
+
+        expect(result).toEqual([]);
+      });
+    });
+
     it('propagates errors from LocalFileService', async () => {
       const fileId = 'file-123';
       const uri = createFileUri(fileId);
@@ -422,10 +494,25 @@ describe('FileApplication', () => {
 
       vi.spyOn(filesApi, 'getFileUrl').mockReturnValue(expectedUrl);
 
-      const result = FileApplication.getFileUrl({ fileId: compositeId, variant });
+      const result = FileApplication.getFileUrl({ fileId: compositeId, uri: createFileUri(fileId), variant });
 
       expect(filesApi.getFileUrl).toHaveBeenCalledWith({ pubky: TEST_PUBKY, file_id: fileId, variant });
       expect(result).toBe(expectedUrl);
+    });
+
+    it('hands the route the whole `{hash}.{ext}` filename of v1 media, keyed by the hash alone', () => {
+      const owner = fakeOwner(7) as Pubky;
+      const { id, url } = buildFile(owner, { bytes: new Uint8Array([1]), type: 'video/mp4' });
+
+      vi.spyOn(filesApi, 'getFileUrl').mockReturnValue('url');
+
+      FileApplication.getFileUrl({ fileId: `${owner}:${id}`, uri: url, variant: FileVariant.MAIN });
+
+      expect(filesApi.getFileUrl).toHaveBeenCalledWith({
+        pubky: owner,
+        file_id: `${id}.mp4`,
+        variant: FileVariant.MAIN,
+      });
     });
 
     it('propagates errors from parseCompositeId', async () => {
@@ -436,7 +523,7 @@ describe('FileApplication', () => {
         throw new Error(`Invalid composite id: ${invalidCompositeId}`);
       });
 
-      expect(() => FileApplication.getFileUrl({ fileId: invalidCompositeId, variant })).toThrow(
+      expect(() => FileApplication.getFileUrl({ fileId: invalidCompositeId, uri: 'unused', variant })).toThrow(
         `Invalid composite id: ${invalidCompositeId}`,
       );
       expect(filesApi.getFileUrl).not.toHaveBeenCalled();

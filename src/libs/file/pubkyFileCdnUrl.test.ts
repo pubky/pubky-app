@@ -20,6 +20,19 @@ describe('pubkyUriToCdnUrl', () => {
     );
   });
 
+  it('keys a v1 file by its hash and carries the URI, whose filename the route takes', async () => {
+    const { FileController } = await import('@/controllers/file/file');
+    const uri = `pubky://${PUBKY}/pub/social/v1/files/7BKXG1FPF2D680NCPW5D82BAGM.png`;
+
+    pubkyUriToCdnUrl(`  ${uri}  `, FileVariant.MAIN);
+
+    expect(FileController.getFileUrl).toHaveBeenLastCalledWith({
+      fileId: `${PUBKY}:7BKXG1FPF2D680NCPW5D82BAGM`,
+      uri,
+      variant: FileVariant.MAIN,
+    });
+  });
+
   it('trims surrounding whitespace', () => {
     expect(pubkyUriToCdnUrl(`  pubky://${PUBKY}/pub/pubky.app/files/file123  `, FileVariant.MAIN)).toBe(
       `cdn://${PUBKY}:file123?v=main`,

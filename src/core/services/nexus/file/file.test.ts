@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getCdnUrl, getNexusUrl } from '@/config/nexus';
+import { getCdnUrl, getNexusUrl, getV1CdnUrl } from '@/config/nexus';
 import { buildFileBodyUrl, filesApi } from './file.api';
 import { FileVariant, type TFileBody, type TFileParams } from './file.types';
 
@@ -23,6 +23,35 @@ describe('File API', () => {
   });
 
   describe('filesApi.getFileUrl', () => {
+    const HASH = '7BKXG1FPF2D680NCPW5D82BAGM';
+    const TSID = '0034A0X7NJ52C';
+
+    it.each(Object.values(FileVariant))('routes a 0.x file id to the 0.x static base (%s)', (variant) => {
+      expect(filesApi.getFileUrl({ pubky, file_id: TSID, variant })).toBe(
+        `${getCdnUrl()}/files/${encodedPubky}/${TSID}/${variant}`,
+      );
+    });
+
+    it.each(Object.values(FileVariant))('routes a `{hash}.{ext}` id to the v1 static base (%s)', (variant) => {
+      expect(filesApi.getFileUrl({ pubky, file_id: `${HASH}.png`, variant })).toBe(
+        `${getV1CdnUrl()}/files/${encodedPubky}/${HASH}.png/${variant}`,
+      );
+    });
+
+    it('spells both routes as the Nexus contract does', () => {
+      const nexus = 'https://nexus.staging.pubky.app';
+      expect(filesApi.getFileUrl({ pubky, file_id: TSID, variant: FileVariant.MAIN })).toBe(
+        `${nexus}/static/files/${encodedPubky}/${TSID}/main`,
+      );
+      expect(filesApi.getFileUrl({ pubky, file_id: `${HASH}.png`, variant: FileVariant.MAIN })).toBe(
+        `${nexus}/v1/static/files/${encodedPubky}/${HASH}.png/main`,
+      );
+    });
+
+    it('keeps avatars on the existing static base', () => {
+      expect(filesApi.getAvatarUrl(pubky)).toBe(`https://nexus.staging.pubky.app/static/avatar/${encodedPubky}`);
+    });
+
     it('should generate correct URL for SMALL variant', () => {
       const params: TFileParams = {
         pubky,

@@ -1,5 +1,6 @@
 import { FileApplication } from '@/application/file/file';
 import type {
+  TCommitCreateAttachmentParams,
   TDeleteFilesParams,
   TFetchFilesParams,
   TGetFileUrlParams,
@@ -7,6 +8,7 @@ import type {
   TUploadFileParams,
 } from '@/controllers/file/file.types';
 import type { Pubky } from '@/models/models.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 
 /**
  * File Controller
@@ -32,6 +34,29 @@ export class FileController {
     // 2. Upload to homeserver
     await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
     return fileAttachment.media.url;
+  }
+
+  /**
+   * Cleans and hashes a picked file and names where it goes, without uploading it, for a write
+   * that has to reference the file's URI before its bytes are on the homeserver.
+   *
+   * @param params - Parameters for file upload
+   * @param params.file - The file to upload
+   * @param params.pubky - User's public key
+   * @returns Promise resolving to the upload to pass to `commitCreateAttachment`
+   */
+  static async toFileAttachment({ file, pubky }: TUploadFileParams): Promise<TFileAttachmentResult> {
+    return await FileApplication.toFileAttachment({ file, pubky });
+  }
+
+  /**
+   * Uploads a file `toFileAttachment` prepared to the homeserver.
+   *
+   * @param params - Parameters for the upload
+   * @param params.fileAttachment - The prepared upload
+   */
+  static async commitCreateAttachment({ fileAttachment }: TCommitCreateAttachmentParams): Promise<void> {
+    await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
   }
 
   /**
@@ -66,11 +91,12 @@ export class FileController {
    * @param params - Parameters for file URL
    * @param params.pubky - User's public key
    * @param params.fileId - File identifier
+   * @param params.uri - The file's URI
    * @param params.variant - File variant (small, feed, main)
    * @returns CDN URL string
    */
-  static getFileUrl({ fileId, variant }: TGetFileUrlParams): string {
-    return FileApplication.getFileUrl({ fileId, variant });
+  static getFileUrl({ fileId, uri, variant }: TGetFileUrlParams): string {
+    return FileApplication.getFileUrl({ fileId, uri, variant });
   }
 
   /**

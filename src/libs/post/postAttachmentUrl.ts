@@ -1,6 +1,6 @@
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { buildCompositeIdFromPubkyUri, mediaFilenameFromUri, parseCompositeId } from '@/models/models.utils';
 import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
 
@@ -35,7 +35,7 @@ export function resolvePostAttachmentUrl(
     });
     if (!compositeId) return null;
     const { pubky, id } = parseCompositeId(compositeId);
-    return filesApi.getFileUrl({ pubky, file_id: id, variant });
+    return filesApi.getFileUrl({ pubky, file_id: mediaFilenameFromUri(trimmed) ?? id, variant });
   } catch (error) {
     Logger.warn('[postAttachmentUrl] Failed to resolve attachment pubky URI', { uri: trimmed, error });
     return null;

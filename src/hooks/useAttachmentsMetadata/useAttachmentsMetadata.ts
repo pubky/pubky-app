@@ -43,6 +43,9 @@ interface UseAttachmentsMetadataResult {
  * 2. asks Nexus for the URIs the local table does not have yet, so a post whose
  *    file metadata was never persisted still resolves without navigation.
  *
+ * v1 media always resolves: Nexus keeps no metadata for it, so `getMetadata` answers a file without
+ * a row with what its URI says, and only 0.x files are ever requested.
+ *
  * Partial arrival renders: rows that already exist are returned while the rest
  * are still being fetched. A URI whose request settled with no row is not
  * requested again by this instance — Nexus omits files it no longer serves, and

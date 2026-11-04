@@ -6,6 +6,7 @@ import type { CompositeIdParams, CompositeIdResult } from './models.types';
 const PUBKY_URI_PREFIX = 'pubky://';
 /** A pubky authority is a bare public key: userinfo (`@`) or a port (`:`) would corrupt ids built from it. */
 const PUBKY_AUTHORITY = /^[^:@]+$/;
+const V1_TREE_PATH = /^\/(?:pub|priv)\/social\/v1\//;
 
 /**
  * Splits a `pubky://` URI into its authority and path, without `URL`:
@@ -85,6 +86,12 @@ export function mediaFilenameFromUri(uri: unknown): string | null {
 /** Whether `uri` names a v1 public media file (see `mediaFilenameFromUri`). */
 export function isV1MediaUri(uri: unknown): boolean {
   return mediaFilenameFromUri(uri) !== null;
+}
+
+/** Whether `uri` addresses the v1 tree at all, public or private and whether or not the data model accepts the name. */
+export function isV1Address(uri: unknown): boolean {
+  const parsed = parsePubkyUri(uri);
+  return parsed !== null && V1_TREE_PATH.test(parsed.path);
 }
 
 export function buildCompositeId({ pubky, id }: CompositeIdResult): string {
