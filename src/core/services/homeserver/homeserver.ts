@@ -1082,7 +1082,7 @@ export class HomeserverService {
 
   /**
    * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
-   * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   * Used for mute-list and notification `last_read` sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
    */
   static async subscribeUserEventStreamForPath(params: {
     userZ32: TPubkyModel;
@@ -1101,7 +1101,7 @@ export class HomeserverService {
       return this.normalizeUserEventStream(stream);
     } catch (error) {
       // `operation` is matched by the `homeserver-event-stream-connect` Sentry drop rule:
-      // the mute-list coordinator reconnects on connect failures by design.
+      // the mute-list and `last_read` sync coordinators reconnect on connect failures by design.
       return handleError({
         error,
         additionalContext: { pathPrefix: params.pathPrefix, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
