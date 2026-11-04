@@ -16,6 +16,7 @@ export const HeaderSignIn = ({ ...props }: React.HTMLAttributes<HTMLDivElement>)
     <Container className="min-w-0 flex-1 flex-row items-center justify-end gap-3" {...props}>
       <SearchInput />
       <HeaderNavigationButtons
+        includePubchi
         avatarImage={
           currentUserPubky && userDetails?.image
             ? FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)

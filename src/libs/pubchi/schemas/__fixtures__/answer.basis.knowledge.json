@@ -1,0 +1,25 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "owner": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "generated_at": 1760000000,
+  "run_id": "answer-basis-knowledge",
+  "purpose": "ask",
+  "question": "what is a homeserver?",
+  "summary": "A homeserver stores a user's public documents.",
+  "evidence": [],
+  "sources": [],
+  "tool_trace_summary": { "tools": [], "call_count": 0, "truncated": false },
+  "policy_version": 1,
+  "scope": { "time": null, "graph": { "kind": "none" }, "filters": [], "complete": true },
+  "basis": "knowledge",
+  "citations": [
+    {
+      "kind": "knowledge",
+      "title": "Pubky documentation",
+      "url": "https://docs.pubky.org/guide",
+      "corpus_version": "2026-09"
+    }
+  ]
+}

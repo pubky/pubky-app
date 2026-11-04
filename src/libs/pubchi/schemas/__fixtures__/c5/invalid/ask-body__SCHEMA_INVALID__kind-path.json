@@ -1,0 +1,7 @@
+{
+  "question": "Suggest tags for this post",
+  "target": {
+    "kind": "user",
+    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/posts/0035NV17R994G"
+  }
+}

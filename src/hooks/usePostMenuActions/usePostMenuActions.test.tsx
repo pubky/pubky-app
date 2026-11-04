@@ -1,9 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { mockSession } from '@/test-utils/pubky';
 import { usePostMenuActions } from './usePostMenuActions';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
@@ -77,6 +78,11 @@ vi.mock('@/hooks/useShareUrl/useShareUrl', () => ({
   useShareUrl: mockUseShareUrl,
 }));
 
+vi.mock('@/libs/pubchi/flags', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/libs/pubchi/flags')>()),
+  isPubchiEnabled: () => true,
+}));
+
 // Mock Molecules
 vi.mock('@/molecules/Toaster/toast');
 
@@ -128,6 +134,7 @@ describe('usePostMenuActions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    usePubchiStore.getState().clear();
     useAuthStore.setState({
       ...authInitialState,
       currentUserPubky: mockCurrentUserId,
@@ -247,6 +254,125 @@ describe('usePostMenuActions', () => {
       expect(defaultMocks.shareUrl).toHaveBeenCalledWith('https://example.com/post/author123/post456');
       expect(useAuthStore.getState().showSignInDialog).toBe(false);
     });
+  });
+
+  it('offers summarization only for a verified Pubchi', async () => {
+    usePubchiStore.getState().setPubchi(
+      {
+        bot: mockAuthorId,
+        displayName: 'Pubchi',
+        createdAt: 1,
+        backupConfirmedAt: 1,
+        verified: true,
+      },
+      mockCurrentUserId,
+    );
+
+    const { result } = renderHook(() =>
+      usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+    );
+    const item = result.current.menuItems.find((entry) => entry.id === POST_MENU_ACTION_IDS.SUMMARIZE_WITH_PUBCHI);
+
+    expect(item?.label).toBe('Summarize with Pubchi');
+    await act(async () => item?.onClick());
+    expect(usePubchiStore.getState().flyout).toEqual({
+      open: true,
+      prefill: {
+        question: 'Summarize this thread pubky://author123/pub/pubky.app/posts/post456',
+        source: 'post-menu',
+        ownerPubky: mockCurrentUserId,
+        target: {
+          kind: 'post',
+          uri: 'pubky://author123/pub/pubky.app/posts/post456',
+        },
+      },
+    });
+    expect(usePubchiStore.getState().conversation.turns).toEqual([]);
+  });
+
+  it('starts a fresh conversation when summarizing a second post from the menu', async () => {
+    usePubchiStore.getState().setPubchi(
+      {
+        bot: mockAuthorId,
+        displayName: 'Pubchi',
+        createdAt: 1,
+        backupConfirmedAt: 1,
+        verified: true,
+      },
+      mockCurrentUserId,
+    );
+    usePubchiStore
+      .getState()
+      .addConversationTurn({ role: 'user', text: 'Summarize this thread pubky://a/posts/1' }, mockCurrentUserId);
+    usePubchiStore.getState().addConversationTurn({ role: 'assistant', text: 'First summary' }, mockCurrentUserId);
+
+    const { result } = renderHook(() =>
+      usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+    );
+    const item = result.current.menuItems.find((entry) => entry.id === POST_MENU_ACTION_IDS.SUMMARIZE_WITH_PUBCHI);
+
+    await act(async () => item?.onClick());
+
+    expect(usePubchiStore.getState().conversation.turns).toEqual([]);
+    expect(usePubchiStore.getState().flyout.prefill?.source).toBe('post-menu');
+    expect(usePubchiStore.getState().flyout.prefill?.target).toEqual({
+      kind: 'post',
+      uri: 'pubky://author123/pub/pubky.app/posts/post456',
+    });
+  });
+
+  it('shows summarization after bootstrap hydrates the store without mounting a Pubchi surface', async () => {
+    const { result } = renderHook(() =>
+      usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      usePubchiStore.getState().setPubchi(
+        {
+          bot: mockAuthorId,
+          displayName: 'Pubchi',
+          createdAt: 1,
+          backupConfirmedAt: 1,
+          verified: true,
+        },
+        mockCurrentUserId,
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.menuItems.some((entry) => entry.id === POST_MENU_ACTION_IDS.SUMMARIZE_WITH_PUBCHI)).toBe(
+        true,
+      );
+    });
+  });
+
+  it.each([
+    ['signed out', null],
+    ['a foreign owner', 'different-owner'],
+  ])('does not offer a Pubchi prefill for %s', (_, ownerPubky) => {
+    const pubchiOwner = ownerPubky ?? mockCurrentUserId;
+    usePubchiStore.getState().setPubchi(
+      {
+        bot: mockAuthorId,
+        displayName: 'Pubchi',
+        createdAt: 1,
+        backupConfirmedAt: 1,
+        verified: true,
+      },
+      pubchiOwner,
+    );
+    if (ownerPubky === null) {
+      mockUseCurrentUserProfile.mockReturnValue({ currentUserPubky: null });
+    }
+
+    const { result } = renderHook(() =>
+      usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+    );
+    const item = result.current.menuItems.find((entry) => entry.id === POST_MENU_ACTION_IDS.SUMMARIZE_WITH_PUBCHI);
+
+    expect(item).toBeUndefined();
+    expect(usePubchiStore.getState().flyout.prefill).toBeUndefined();
   });
 
   describe('Menu items for other user posts', () => {

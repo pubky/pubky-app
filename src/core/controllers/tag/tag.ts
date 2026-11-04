@@ -24,6 +24,26 @@ export class TagController {
     await TagApplication.commitCreate({ tagList: [tag], isCurrent: captureViewerSession() });
   }
 
+  static async commitCreatePreservingExisting(params: TTagEventParams) {
+    return TagApplication.commitCreate({
+      tagList: [TagNormalizer.from(params)],
+      isCurrent: captureViewerSession(),
+      preserveExisting: true,
+    });
+  }
+
+  static async materializeForDelete(params: TTagEventParams): Promise<void> {
+    await TagApplication.materializeForDelete({ ...params, isCurrent: captureViewerSession() });
+  }
+
+  static async commitDeleteIfUnchanged(params: TTagEventParams, expectedHash: string): Promise<void> {
+    const { tagUrl, label, taggerId, taggedId, taggedKind } = TagNormalizer.from(params);
+    await TagApplication.commitDeleteIfUnchanged(
+      { tagUrl, label, taggerId, taggedId, taggedKind, isCurrent: captureViewerSession() },
+      expectedHash,
+    );
+  }
+
   /**
    * Delete a tag
    * @param params - Parameters object

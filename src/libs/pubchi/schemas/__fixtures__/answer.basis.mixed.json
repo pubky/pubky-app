@@ -1,0 +1,33 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "owner": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "generated_at": 1760000000,
+  "run_id": "answer-basis-mixed",
+  "purpose": "ask",
+  "question": "what is happening around Bitcoin?",
+  "summary": "The graph and current sources both mention Bitcoin.",
+  "evidence": [
+    {
+      "kind": "post",
+      "label": "A Bitcoin post",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/ABC1234567890",
+      "claimants": ["o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo"],
+      "claimant_count": 1,
+      "in_your_graph": true
+    }
+  ],
+  "sources": ["pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/ABC1234567890"],
+  "tool_trace_summary": { "tools": ["top_posts"], "call_count": 1, "truncated": false },
+  "policy_version": 1,
+  "scope": { "time": null, "graph": { "kind": "whole_graph" }, "filters": [], "complete": true },
+  "basis": "mixed",
+  "citations": [
+    {
+      "kind": "web",
+      "title": "Current source",
+      "url": "https://example.com/source"
+    }
+  ]
+}

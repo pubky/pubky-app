@@ -1,0 +1,25 @@
+{
+  "input": {
+    "target": {
+      "kind": "post",
+      "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/posts/ABC123DEF4567",
+      "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "post": {
+      "details": {
+        "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "content": "A public post.",
+        "kind": "short"
+      }
+    },
+    "user": null
+  },
+  "projection": {
+    "kind": "post",
+    "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/posts/ABC123DEF4567",
+    "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content": "A public post.",
+    "post_kind": "short"
+  },
+  "snapshot_sha256": "136f88ca37b686b7f58d9b82c7d37dd3320950ed268b0950f3ec8f83ef120e9b"
+}

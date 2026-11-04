@@ -29,4 +29,5 @@ export enum ErrorService {
   PubkyAppSpecs = 'pubky-app-specs',
   Local = 'local', // Client-side operations
   NextJsServer = 'nextjs-server', // Server-side operations
+  Pubchi = 'pubchi',
 }

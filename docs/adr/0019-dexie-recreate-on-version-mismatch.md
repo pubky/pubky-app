@@ -4,6 +4,10 @@
 
 Accepted — 2026-09-15
 
+The proposed [ADR 0026](0026-pubchi-assisted-integration.md) limits this policy to the
+main App cache and introduces an isolated durable Pubchi database for device keys
+and pending write records. Main-cache recreation must not erase that state.
+
 ## Context
 
 [ADR-0007](./0007-dexie-version-normalization.md) assumed normalized schema versions with migrations

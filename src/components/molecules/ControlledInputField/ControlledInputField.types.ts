@@ -36,6 +36,9 @@ export interface ControlledInputFieldProps<T extends FieldValues> {
   loadingText?: string;
   /** Optional paste handler */
   onPaste?: (event: React.ClipboardEvent<HTMLInputElement>) => void;
+  autoComplete?: string;
+  autoCorrect?: 'on' | 'off';
+  spellCheck?: boolean;
   /** Optional input wrapper class */
   className?: string;
   /** Optional class applied to the inner input element */
