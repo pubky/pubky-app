@@ -63,7 +63,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - Call controllers (like UI does)
 - **NEVER** call application directly
 - **NEVER** call services directly
-- **Mute list (homeserver events stream)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/pub/pubky.app/mutes/`; see `docs/adr/0014-muting-system.md`.
+- **Mute list (homeserver poll)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/priv/social/v1/mutes/`, by polling; no session-bound request may stay open. See `docs/adr/0014-muting-system.md`.
 
 ### Application (`src/core/application/`)
 

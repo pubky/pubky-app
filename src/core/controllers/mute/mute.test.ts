@@ -118,23 +118,25 @@ describe('MuteController', () => {
       const result = await MuteController.fetchMutedUsers(MUTER);
 
       expect(result).toEqual(mockMutedUsers);
-      expect(fetchSpy).toHaveBeenCalledWith(MUTER);
+      expect(fetchSpy).toHaveBeenCalledWith(MUTER, { isCurrent: expect.any(Function) });
+    });
+
+    it('passes a guard that expires when the session ends', async () => {
+      useAuthStore.getState().init({ session: mockSession(), currentUserPubky: MUTER, hasProfile: true });
+      const fetchSpy = vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+
+      await MuteController.fetchMutedUsers(MUTER);
+      const { isCurrent } = fetchSpy.mock.calls[0][1] as { isCurrent: () => boolean };
+
+      expect(isCurrent()).toBe(true);
+      useAuthStore.getState().reset();
+      expect(isCurrent()).toBe(false);
     });
 
     it('should propagate errors from application layer', async () => {
       vi.spyOn(MuteApplication, 'fetchMutedUsers').mockRejectedValue(new Error('fetch-fail'));
 
       await expect(MuteController.fetchMutedUsers(MUTER)).rejects.toThrow('fetch-fail');
-    });
-  });
-
-  describe('subscribeMuteDirectoryEventStream', () => {
-    it('delegates the private mute directory stream to the application', async () => {
-      const stream = new ReadableStream();
-      const subscribe = vi.spyOn(MuteApplication, 'subscribeMuteDirectoryEventStream').mockResolvedValue(stream);
-
-      await expect(MuteController.subscribeMuteDirectoryEventStream(MUTER, 'cursor')).resolves.toBe(stream);
-      expect(subscribe).toHaveBeenCalledWith(MUTER, 'cursor');
     });
   });
 });

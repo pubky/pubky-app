@@ -42,7 +42,6 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
-import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -562,7 +561,6 @@ export class AuthController {
     if (previous.currentUserPubky !== current.currentUserPubky) {
       clearAllQueryClients();
       postStreamQueue.clear();
-      clearMuteSyncCursorSessionStorage();
       useLocalFilesStore.getState().reset();
       useSignInStore.getState().reset();
       resetTabStore(useSettingsStore);
@@ -1105,16 +1103,12 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
-   * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * and mute-sync `sessionStorage` cursors.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues and persisted localStorage keys.
    * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
-    // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
-    clearMuteSyncCursorSessionStorage();
-
     // Reset singletons. CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
