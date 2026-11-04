@@ -14,7 +14,7 @@ export interface TCreateTagListInput {
 export type TDeleteTagInput = TTagEventParams & {
   isCurrent?: () => boolean;
   /** Whether the session's capabilities cover the resolved tag file; a Ring session covers only `/pub/pubky.app/`. */
-  canWrite?: (tagUri: string) => boolean;
+  canWrite: (tagUri: string) => boolean;
 };
 
 export enum TagKind {

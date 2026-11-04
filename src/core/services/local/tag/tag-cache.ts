@@ -6,7 +6,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import type { TagCollectionModelSchema, TagMutation } from '@/models/shared/tag/tag.schema';
 import { findTagMutation, getTagCursor, getTagMutationEntries, getViewerTagUri } from '@/models/shared/tag/tag.utils';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel } from '@/models/user/tags/userTags';
@@ -55,9 +55,13 @@ export class LocalTagCacheService {
     return getViewerTagUri(await this.read(entity), label, viewerId);
   }
 
-  /** Whether the viewer's latest write for the label is still this operation, or a newer one replaced it. */
-  static async ownsMutation(entity: TagEntity, label: string, viewerId: string, mutationId: string) {
-    return findTagMutation(await this.read(entity), label, viewerId)?.id === mutationId;
+  /** The viewer's latest local write for a label, whatever its age, or `undefined` when none is recorded. */
+  static async findViewerMutation(
+    entity: TagEntity,
+    label: string,
+    viewerId: string,
+  ): Promise<TagMutation | undefined> {
+    return findTagMutation(await this.read(entity), label, viewerId);
   }
 
   /** A completed request may settle only the operation it originally wrote. */

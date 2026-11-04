@@ -11,7 +11,7 @@ import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { TagApplication } from './tag';
-import { TagKind, type TCreateTagInput } from './tag.types';
+import { TagKind, type TCreateTagInput, type TDeleteTagInput } from './tag.types';
 
 vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { request: vi.fn() } }));
 vi.mock('@/services/local/tag/post/tag.post', () => ({ LocalPostTagService: { create: vi.fn(), delete: vi.fn() } }));
@@ -21,7 +21,7 @@ vi.mock('@/services/local/tag/tag-cache', () => ({
     completeMutation: vi.fn(),
     getViewerMutations: vi.fn(),
     getViewerTagUri: vi.fn(),
-    ownsMutation: vi.fn(),
+    findViewerMutation: vi.fn(),
   },
 }));
 vi.mock('@/services/nexus/post/post', () => ({ NexusPostService: { getPostTaggers: vi.fn() } }));
@@ -37,6 +37,13 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     tagUrl: 'pubky://viewer/pub/pubky.app/tags/tag',
     tagJson: { label: 'bitcoin' },
   };
+  const deletion: TDeleteTagInput = {
+    taggedKind,
+    taggedId: data.taggedId,
+    taggerId: data.taggerId,
+    label: data.label,
+    canWrite: () => true,
+  };
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(local.create).mockResolvedValue(true);
@@ -44,7 +51,15 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     vi.mocked(HomeserverService.request).mockResolvedValue(undefined);
     vi.mocked(LocalTagCacheService.completeMutation).mockResolvedValue(undefined);
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(data.tagUrl);
-    vi.mocked(LocalTagCacheService.ownsMutation).mockResolvedValue(true);
+    // Until a newer write replaces it, the viewer's latest local write for the label is the delete itself.
+    vi.mocked(LocalTagCacheService.findViewerMutation).mockImplementation(async (_entity, label, viewerId) => ({
+      id: vi.mocked(local.delete).mock.calls[0]?.[0].mutationId ?? 'none',
+      label,
+      viewerId,
+      relationship: false,
+      synced: false,
+      expiresAt: Date.now() + 1,
+    }));
   });
 
   const fetchTaggers = () =>
@@ -57,7 +72,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
   it.each(['create', 'delete'] as const)('can %s on an origin without randomUUID', async (action) => {
     vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) });
     if (action === 'create') await TagApplication.commitCreate({ tagList: [data] });
-    else await TagApplication.commitDelete(data);
+    else await TagApplication.commitDelete(deletion);
     expect(local[action]).toHaveBeenCalledWith(expect.objectContaining({ mutationId: expect.any(String) }));
     expect(HomeserverService.request).toHaveBeenCalledOnce();
   });
@@ -69,7 +84,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
       return true;
     });
     const result =
-      action === 'create' ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(data);
+      action === 'create' ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(deletion);
     expect(HomeserverService.request).not.toHaveBeenCalled();
     pending.resolve();
     await result;
@@ -91,7 +106,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     const failure = new Error('homeserver offline');
     vi.mocked(HomeserverService.request).mockRejectedValue(failure);
     const result =
-      action === 'create' ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(data);
+      action === 'create' ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(deletion);
     await expect(result).rejects.toBe(failure);
     const original = vi.mocked(local[action]).mock.calls[0][0];
     const undo = vi.mocked(local[action === 'create' ? 'delete' : 'create']).mock.calls[0][0];
@@ -119,7 +134,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
       const result =
         action === 'create'
           ? TagApplication.commitCreate({ tagList: [data], isCurrent })
-          : TagApplication.commitDelete({ ...data, isCurrent });
+          : TagApplication.commitDelete({ ...deletion, isCurrent });
       await expect(result).rejects.toBe(rejected);
       const original = vi.mocked(local[action]).mock.calls[0][0];
       const undo = vi.mocked(local[action === 'create' ? 'delete' : 'create']).mock.calls[0][0];
@@ -138,7 +153,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
         return true;
       });
       if (action === 'create') await TagApplication.commitCreate({ tagList: [data], isCurrent: () => current });
-      else await TagApplication.commitDelete({ ...data, isCurrent: () => current });
+      else await TagApplication.commitDelete({ ...deletion, isCurrent: () => current });
       expect(HomeserverService.request).not.toHaveBeenCalled();
       const original = vi.mocked(local[action]).mock.calls[0][0];
       const undo = vi.mocked(local[action === 'create' ? 'delete' : 'create']).mock.calls[0][0];
@@ -155,14 +170,14 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
         operation: 'delete',
       }),
     );
-    await TagApplication.commitDelete(data);
+    await TagApplication.commitDelete(deletion);
     expect(local.create).not.toHaveBeenCalled();
     expect(LocalTagCacheService.completeMutation).toHaveBeenCalledOnce();
   });
 
   it('does not send an idempotent local delete', async () => {
     vi.mocked(local.delete).mockResolvedValue(false);
-    await TagApplication.commitDelete(data);
+    await TagApplication.commitDelete(deletion);
     expect(HomeserverService.request).not.toHaveBeenCalled();
   });
 
@@ -201,7 +216,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
   it('deletes the stored address, even one written by another app, without asking Nexus', async () => {
     const tagUri = 'pubky://viewer/pub/mapky/tags/MAPKY01';
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(tagUri);
-    await TagApplication.commitDelete(data);
+    await TagApplication.commitDelete(deletion);
     expect(LocalTagCacheService.getViewerTagUri).toHaveBeenCalledWith(
       { kind: taggedKind, id: data.taggedId },
       data.label,
@@ -218,7 +233,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     const tagUri = 'pubky://viewer/pub/social/v1/tags/SOCIAL01';
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(localUri);
     fetchTaggers().mockResolvedValue({ users: ['viewer'], relationship: true, tag_uri: tagUri });
-    await TagApplication.commitDelete(data);
+    await TagApplication.commitDelete(deletion);
     expect(fetchTaggers()).toHaveBeenCalledWith(
       taggedKind === TagKind.POST
         ? { compositeId: data.taggedId, label: data.label, limit: 1, viewerId: data.taggerId, notFoundRetries: 0 }
@@ -231,7 +246,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
   it('keeps the deletion when Nexus reports the viewer no longer tags the label', async () => {
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
     fetchTaggers().mockResolvedValue({ users: [], relationship: false, tag_uri: null });
-    await TagApplication.commitDelete(data);
+    await TagApplication.commitDelete(deletion);
     expect(HomeserverService.request).not.toHaveBeenCalled();
     expect(local.create).not.toHaveBeenCalled();
     expect(LocalTagCacheService.completeMutation).toHaveBeenCalledOnce();
@@ -245,7 +260,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     async (_case, tagUri) => {
       vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
       fetchTaggers().mockResolvedValue({ users: ['viewer'], relationship: true, tag_uri: tagUri });
-      await expect(TagApplication.commitDelete(data)).rejects.toMatchObject({
+      await expect(TagApplication.commitDelete(deletion)).rejects.toMatchObject({
         code: ServerErrorCode.INVALID_RESPONSE,
       });
       expect(HomeserverService.request).not.toHaveBeenCalled();
@@ -265,7 +280,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
       current = false;
       return { users: ['viewer'], relationship: true, tag_uri: tagUri };
     });
-    await TagApplication.commitDelete({ ...data, isCurrent: () => current });
+    await TagApplication.commitDelete({ ...deletion, isCurrent: () => current });
     expect(HomeserverService.request).not.toHaveBeenCalled();
     const original = vi.mocked(local.delete).mock.calls[0][0];
     expect(local.create).toHaveBeenCalledWith(
@@ -274,25 +289,34 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
   });
 
-  it('sends no delayed DELETE for a label the viewer re-added while Nexus was asked', async () => {
+  const readd = (uri: string) => ({
+    id: 'readd',
+    label: data.label,
+    viewerId: data.taggerId,
+    relationship: true,
+    synced: false,
+    expiresAt: Date.now() + 1,
+    uri,
+  });
+
+  it('sends no delayed DELETE for the same file the viewer re-added while Nexus was asked', async () => {
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
     const lookup = Promise.withResolvers<NexusTaggers>();
     fetchTaggers().mockReturnValue(lookup.promise);
     // The re-add replaces the delete's mutation on the row; its PUT is queued before the lookup answers.
-    vi.mocked(LocalTagCacheService.ownsMutation).mockImplementation(
-      async () => vi.mocked(local.create).mock.calls.length === 0,
+    vi.mocked(LocalTagCacheService.findViewerMutation).mockImplementation(async () =>
+      readd(vi.mocked(local.create).mock.calls[0][0].tagUri!),
     );
-    const deletion = TagApplication.commitDelete(data);
+    const removal = TagApplication.commitDelete(deletion);
     await vi.waitFor(() => expect(fetchTaggers()).toHaveBeenCalledOnce());
     await TagApplication.commitCreate({ tagList: [data] });
     lookup.resolve({ users: ['viewer'], relationship: true, tag_uri: data.tagUrl });
-    await deletion;
+    await removal;
     const deleteMutation = vi.mocked(local.delete).mock.calls[0][0];
-    expect(LocalTagCacheService.ownsMutation).toHaveBeenCalledWith(
+    expect(LocalTagCacheService.findViewerMutation).toHaveBeenCalledWith(
       { kind: taggedKind, id: data.taggedId },
       data.label,
       data.taggerId,
-      deleteMutation.mutationId,
     );
     expect(deleteRequest()).toBeUndefined();
     expect(local.create).toHaveBeenCalledOnce();
@@ -302,15 +326,39 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     });
   });
 
+  it('still deletes the Nexus file when the re-add during the lookup wrote another app folder', async () => {
+    const mapky = 'pubky://viewer/pub/mapky/tags/MAPKY01';
+    vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
+    fetchTaggers().mockResolvedValue({ users: ['viewer'], relationship: true, tag_uri: mapky });
+    vi.mocked(LocalTagCacheService.findViewerMutation).mockResolvedValue(readd(data.tagUrl));
+    await TagApplication.commitDelete(deletion);
+    expect(deleteRequest()?.url).toBe(mapky);
+  });
+
+  it('still deletes the Nexus file when the re-add during the lookup was undone', async () => {
+    vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
+    fetchTaggers().mockResolvedValue({ users: ['viewer'], relationship: true, tag_uri: data.tagUrl });
+    // A failed re-add leaves its synced undo as the latest write: the viewer still wants the label gone.
+    vi.mocked(LocalTagCacheService.findViewerMutation).mockResolvedValue({
+      ...readd(data.tagUrl),
+      id: 'undo',
+      relationship: false,
+      synced: true,
+      uri: undefined,
+    });
+    await TagApplication.commitDelete(deletion);
+    expect(deleteRequest()?.url).toBe(data.tagUrl);
+  });
+
   it('undoes the optimistic delete without a request for a session replaced during the ownership read', async () => {
     let current = true;
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
     fetchTaggers().mockResolvedValue({ users: ['viewer'], relationship: true, tag_uri: data.tagUrl });
-    vi.mocked(LocalTagCacheService.ownsMutation).mockImplementation(async () => {
+    vi.mocked(LocalTagCacheService.findViewerMutation).mockImplementation(async () => {
       current = false;
-      return true;
+      return undefined;
     });
-    await TagApplication.commitDelete({ ...data, isCurrent: () => current });
+    await TagApplication.commitDelete({ ...deletion, isCurrent: () => current });
     expect(HomeserverService.request).not.toHaveBeenCalled();
     const original = vi.mocked(local.delete).mock.calls[0][0];
     expect(local.create).toHaveBeenCalledWith(
@@ -319,9 +367,9 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
   });
 
-  it('does not re-read ownership when the address was already stored', async () => {
-    await TagApplication.commitDelete(data);
-    expect(LocalTagCacheService.ownsMutation).not.toHaveBeenCalled();
+  it('does not re-read the latest write when the address was already stored', async () => {
+    await TagApplication.commitDelete(deletion);
+    expect(LocalTagCacheService.findViewerMutation).not.toHaveBeenCalled();
     expect(deleteRequest()?.url).toBe(data.tagUrl);
   });
 
@@ -330,7 +378,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     fetchTaggers().mockRejectedValue(
       Err.client(ClientErrorCode.NOT_FOUND, 'Absent', { service: ErrorService.Nexus, operation: 'taggers' }),
     );
-    await expect(TagApplication.commitDelete(data)).rejects.toMatchObject({ code: ClientErrorCode.NOT_FOUND });
+    await expect(TagApplication.commitDelete(deletion)).rejects.toMatchObject({ code: ClientErrorCode.NOT_FOUND });
     expect(local.create).toHaveBeenCalledOnce();
     expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
   });
@@ -339,7 +387,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     const tagUri = 'pubky://viewer/pub/mapky/tags/MAPKY01';
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(tagUri);
     const canWrite = vi.fn(() => false);
-    await expect(TagApplication.commitDelete({ ...data, canWrite })).rejects.toMatchObject({
+    await expect(TagApplication.commitDelete({ ...deletion, canWrite })).rejects.toMatchObject({
       code: AuthErrorCode.FORBIDDEN,
     });
     expect(canWrite).toHaveBeenCalledWith(tagUri);
@@ -349,14 +397,14 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
   });
 
   it('deletes when the session can write the app folder of the address', async () => {
-    await TagApplication.commitDelete({ ...data, canWrite: () => true });
+    await TagApplication.commitDelete({ ...deletion, canWrite: () => true });
     expect(deleteRequest()?.url).toBe(data.tagUrl);
     expect(LocalTagCacheService.completeMutation).toHaveBeenCalledOnce();
   });
 
   it('leaves local state and the homeserver untouched when the stored address cannot be read', async () => {
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockRejectedValue(new Error('database unavailable'));
-    await expect(TagApplication.commitDelete(data)).rejects.toThrow('database unavailable');
+    await expect(TagApplication.commitDelete(deletion)).rejects.toThrow('database unavailable');
     expect(local.delete).not.toHaveBeenCalled();
     expect(HomeserverService.request).not.toHaveBeenCalled();
   });
@@ -364,14 +412,14 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
   it('asks Nexus when the stored address is the viewer own file but not a tag', async () => {
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue('pubky://viewer/pub/pubky.app/posts/POST01');
     fetchTaggers().mockResolvedValue({ users: ['viewer'], relationship: true, tag_uri: data.tagUrl });
-    await TagApplication.commitDelete(data);
+    await TagApplication.commitDelete(deletion);
     expect(fetchTaggers()).toHaveBeenCalledOnce();
     expect(deleteRequest()?.url).toBe(data.tagUrl);
   });
 
   it('restores the tag with the address it failed to delete', async () => {
     vi.mocked(HomeserverService.request).mockRejectedValue(new Error('offline'));
-    await expect(TagApplication.commitDelete(data)).rejects.toThrow('offline');
+    await expect(TagApplication.commitDelete(deletion)).rejects.toThrow('offline');
     expect(local.create).toHaveBeenCalledWith(expect.objectContaining({ tagUri: data.tagUrl }));
   });
 });
