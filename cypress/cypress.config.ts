@@ -18,6 +18,9 @@ export default defineConfig({
     downloadsFolder: 'download',
     fixturesFolder: 'fixtures',
     defaultCommandTimeout: process.env['CI'] ? 60_000 : 15_000,
+    // cy.wait('@alias') uses requestTimeout (default 5s) for the request to start, and slow CI VMs
+    // sometimes need longer.
+    requestTimeout: 10_000,
     video: true, // Firefox videos are not working, see https://github.com/cypress-io/cypress/issues/18415
     viewportWidth: 1920,
     viewportHeight: 1080,
