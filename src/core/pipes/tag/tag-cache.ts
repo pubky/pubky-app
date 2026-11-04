@@ -32,7 +32,14 @@ export function reconcileTagWindow(
       : options.complete
         ? false
         : undefined;
-    if (mutation.synced && acknowledged === mutation.relationship) continue;
+    // A same-viewer response acknowledges a create only once it reports the file that create wrote: until Nexus
+    // indexes the new file it can still report one the viewer already deleted, and the next untag would target it.
+    const addressConfirmed =
+      !mutation.uri ||
+      mutation.viewerId !== viewerId ||
+      remote?.tag_uri === undefined ||
+      remote.tag_uri === mutation.uri;
+    if (mutation.synced && acknowledged === mutation.relationship && addressConfirmed) continue;
     mutations[key] = mutation;
     if (mutation.expiresAt <= now) continue;
 

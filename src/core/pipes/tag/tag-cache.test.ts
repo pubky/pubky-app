@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import { getViewerTagUri } from '@/models/shared/tag/tag.utils';
 import { reconcileTagCounts, reconcileTagWindow } from '@/pipes/tag/tag-cache';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
@@ -87,6 +88,43 @@ describe('viewer tag address', () => {
   ])('does not carry the stored tag_uri to %s', (_case, row, relationship) => {
     const result = reconcileTagWindow([{ ...tag(1, relationship), taggers: ['bob'] }], row, 100, 'alice');
     expect(result.tags[0]).not.toHaveProperty('tag_uri');
+  });
+
+  describe('a synced create whose file Nexus has not indexed yet', () => {
+    const written = 'pubky://alice/pub/pubky.app/tags/NEW01';
+    const create = { id: 'c', label: 'x', viewerId: 'alice', relationship: true, expiresAt: 200, synced: true };
+    const row: TagCollectionModelSchema<string> = {
+      ...existing('alice'),
+      tags: [{ ...tag(1, true), taggers: ['alice'], tag_uri: written }],
+      mutations: { 'alice:x': { ...create, uri: written } },
+    };
+
+    it('is kept while the same viewer response still reports the file the viewer deleted', () => {
+      const stale = [{ ...tag(1, true), taggers: ['alice'], tag_uri: tagUri }];
+      const result = reconcileTagWindow(stale, row, 100, 'alice');
+      expect(result.mutations['alice:x']).toMatchObject({ synced: true, uri: written });
+      expect(getViewerTagUri({ ...row, ...result }, 'x', 'alice', 100)).toBe(written);
+    });
+
+    it.each([
+      ['reports the written file', { tag_uri: written }],
+      ['predates tag_uri', {}],
+    ])('is settled once the same viewer response %s', (_case, address) => {
+      const result = reconcileTagWindow([{ ...tag(1, true), taggers: ['alice'], ...address }], row, 100, 'alice');
+      expect(result.mutations).not.toHaveProperty('alice:x');
+      expect(getViewerTagUri({ ...row, ...result }, 'x', 'alice', 100)).toBe(written);
+    });
+
+    it('is settled by another viewer response through membership alone', () => {
+      const other = { ...row, cache: { ...row.cache!, viewerId: 'bob' } };
+      const result = reconcileTagWindow([{ ...tag(1, true), taggers: ['alice'], tag_uri: null }], other, 100, 'bob');
+      expect(result.mutations).not.toHaveProperty('alice:x');
+    });
+
+    it('is retired once it expires, whatever the response reports', () => {
+      const stale = [{ ...tag(1, true), taggers: ['alice'], tag_uri: tagUri }];
+      expect(reconcileTagWindow(stale, row, 201, 'alice').mutations).not.toHaveProperty('alice:x');
+    });
   });
 });
 
