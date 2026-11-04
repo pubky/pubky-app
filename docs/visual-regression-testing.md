@@ -130,8 +130,11 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
   (see the Landing VRT's header/brand logos).
 - **App chrome** — the header nav (Home, Hot, Shop, Collections, Settings,
   avatar) renders synchronously from the auth store mock and the runtime-config
-  defaults, so it needs no wait. The own-profile sidebar's **Unlocked** row is
-  the exception: `useUnlockedList` reads the reader's `/priv` from the
+  defaults, so it needs no wait. An auth snapshot passed to
+  `createZustandLikeHook` that omits `session` is read as `null`, the store's
+  signed-out value (`authInitialState`), so DialogLocksAuth can mount from the
+  post menu. The own-profile sidebar's **Unlocked** row is the exception:
+  `useUnlockedList` reads the reader's `/priv` from the
   homeserver and shows a spinner until that read settles. `vrt.setup.ts` mocks
   it to a settled empty read (count `0`) for every file, so no capture depends
   on whether a real request has failed yet. Mock any other hook that does IO
