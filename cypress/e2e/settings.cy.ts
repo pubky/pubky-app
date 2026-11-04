@@ -113,8 +113,13 @@ describe('settings', () => {
     cy.get('@pubky1').then((text) => {
       searchForProfileByPubky(`${text}`, 'Mr Muted');
     });
+    cy.intercept('PUT', '**/priv/social/v1/mutes/**').as('createMute');
+    cy.intercept('PUT', '**/pub/**/mutes/**').as('publicMute');
     cy.get('[data-cy="profile-menu-btn"]').click();
     cy.get('[data-cy="profile-menu-action-mute"]').click();
+    cy.wait('@createMute').its('response.statusCode').should('eq', 201);
+    // A mute is private, in no public layout beside the private one
+    cy.get('@publicMute.all').should('have.length', 0);
 
     // Check user 1's post is no longer seen in feed
     goToHomePage();
@@ -147,11 +152,18 @@ describe('settings', () => {
 
     navigateToNotificationsPage();
 
+    cy.intercept('PUT', '**/priv/app.pubky/v1/settings.json').as('settingsWrite');
+    cy.intercept('PUT', '**/pub/**/settings.json').as('publicSettings');
+
     // Disable some notifications
     cy.get('#notification-switch-follow').click();
     cy.get('#notification-switch-tagProfile').click();
     cy.get('#notification-switch-reply').click();
     cy.get('#notification-switch-postDeleted').click();
+
+    // Settings go to the app's private namespace, and never back to the public 0.x file
+    cy.wait('@settingsWrite').its('response.statusCode').should('eq', 201);
+    cy.get('@publicSettings.all').should('have.length', 0);
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);

@@ -1,9 +1,17 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { waitForServiceWorker } from '../support/common';
-import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
-import { seededStreamIndexed } from '../support/pagination';
-import { createCollectionViaApi, createPostViaApi, seedUserViaApi } from '../support/seed';
+import { postIndexed, repliesIndexed, streamIndexed, userIndexed, waitForNexus } from '../support/nexus';
+import {
+  createArticleViaApi,
+  createCollectionViaApi,
+  createImagePostViaApi,
+  createPostViaApi,
+  replyViaApi,
+  repostViaApi,
+  seedUserViaApi,
+} from '../support/seed';
+import type { SeededPost } from '../support/types/seed';
 
 const username = 'Mr Deep Link';
 const userBio = 'Shared links should open for everyone';
@@ -11,17 +19,17 @@ const runId = Date.now().toString();
 const postText = `deep link ${runId} post`;
 const collectionName = `Deep link ${runId} collection`;
 const collectionItemText = `deep link ${runId} collection item`;
+const articleTitle = `deep link ${runId} article`;
+const articleBody = `deep link ${runId} article body`;
 
 // A valid pubky (52 z-base-32 characters) that no homeserver or Nexus knows about
 const UNKNOWN_PUBKY = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
 // A well-formed post id that the author never wrote
 const UNKNOWN_POST_ID = '0000000000000';
+// More than the one item a spec's collection holds
+const COLLECTION_STREAM_LIMIT = 20;
 // Not-found views no longer wait out the 15s indexing retry (#2602); stay well below it
 const NOT_FOUND_TIMEOUT = { timeout: 10_000 };
-
-let authorId = '';
-let postId = '';
-let collectionId = '';
 
 // Opens the sign-in prompt from a write action, then dismisses it
 const assertWriteAsksToSignIn = (trigger: string) => {
@@ -32,86 +40,256 @@ const assertWriteAsksToSignIn = (trigger: string) => {
   cy.get('[data-cy="sign-in-dialog-join-btn"]:visible').should('not.exist');
 };
 
-describe('logged-out deep links', () => {
-  // Seeded through the API: onboarding, posting and creating a collection in the UI are covered in
-  // onboarding.cy.ts, posts.cy.ts and collections.cy.ts. Nothing is signed in, as a shared link opens.
-  before(() => {
-    slowCypressDown();
-    // Installs the app while the seeds index, so the not-found views are not timed mid-install
-    cy.visit('/');
-
-    seedUserViaApi(username, { bio: userBio }).then((author) => {
-      authorId = author.id;
-      createPostViaApi(author, postText).then((post) => {
-        postId = post.id;
-        createPostViaApi(author, collectionItemText).then((item) =>
-          createCollectionViaApi(author, collectionName, { items: [item], layout: 'list' }).then((collection) => {
-            collectionId = collection.id;
-            waitForNexus(
-              userIndexed(author),
-              postIndexed(post),
-              postIndexed(collection),
-              seededStreamIndexed({ source: 'collection', author_id: authorId, post_id: collectionId }, [item.id]),
-            );
-          }),
-        );
-      });
-    });
-    waitForServiceWorker();
-  });
-
+// Any write or delete under either root of any namespace: a signed-out visitor makes none
+const expectNoHomeserverWrites = () => {
   beforeEach(() => {
-    cy.intercept('PUT', '**/pub/pubky.app/**').as('homeserverWrite');
+    cy.intercept({ method: /^(PUT|DELETE)$/, url: '**/{pub,priv}/**' }).as('homeserverWrite');
   });
 
   afterEach(() => {
     cy.get('@homeserverWrite.all').should('have.length', 0);
   });
+};
 
-  it('opens a post and asks to sign in before replying or saving', () => {
-    cy.visit(`/post/${authorId}/${postId}`);
+const LAYOUTS = [
+  { title: 'logged-out deep links', legacy: false },
+  // A 0.x account stays in the old layout until it signs in; the app still reads it through Nexus
+  { title: 'logged-out deep links to an un-migrated account', legacy: true },
+];
 
-    cy.get('[data-cy="single-post-card"]:visible')
-      .should('have.length', 1)
-      .find('[data-cy="post-text"]')
-      .first()
-      .should('contain.text', postText);
-    cy.get('[data-cy="single-post-card"]:visible').find('[data-cy="post-reply-btn"]').as('replyButton');
-    assertWriteAsksToSignIn('@replyButton');
-    cy.get('[data-cy="single-post-card"]:visible').find('[data-cy="post-bookmark-btn"]').as('saveButton');
-    assertWriteAsksToSignIn('@saveButton');
-  });
+LAYOUTS.forEach(({ title, legacy }) => {
+  describe(title, () => {
+    let authorId = '';
+    let postId = '';
+    let collectionId = '';
+    let collectionItemId = '';
+    let articleId = '';
 
-  it('opens a profile and asks to sign in before following', () => {
-    cy.visit(`/profile/${authorId}`);
+    // Seeded through the API: onboarding, posting and creating a collection in the UI are covered in
+    // onboarding.cy.ts, posts.cy.ts and collections.cy.ts. Nothing is signed in, as a shared link opens.
+    before(() => {
+      slowCypressDown();
+      // Installs the app while the seeds index, so the not-found views are not timed mid-install
+      cy.visit('/');
 
-    cy.get('[data-cy="profile-username-header"]:visible').should('have.length', 1).and('contain.text', username);
-    assertWriteAsksToSignIn('[data-cy="profile-follow-toggle-btn"]:visible');
-  });
-
-  it('opens a collection and asks to sign in before following it', () => {
-    cy.visit(`/collections/${authorId}/${collectionId}`);
-
-    cy.get('[data-cy="collection-hero"]:visible').should('have.length', 1).and('contain.text', collectionName);
-    // The list layout renders each item as a one-line snippet row, not a full post body
-    cy.get('[data-cy="post-card"]:visible [data-cy="post-list-snippet"]:visible').should(($snippets) => {
-      const snippets = $snippets.toArray().map((snippet) => snippet.textContent?.trim());
-      expect(snippets, 'collection items').to.include(collectionItemText);
+      seedUserViaApi(username, { bio: userBio, legacy }).then((author) => {
+        authorId = author.id;
+        createPostViaApi(author, postText).then((post) => {
+          postId = post.id;
+          createArticleViaApi(author, articleTitle, articleBody, { coverFixture: 'mustache-you.png' }).then(
+            (article) => {
+              articleId = article.id;
+              createPostViaApi(author, collectionItemText).then((item) => {
+                collectionItemId = item.id;
+                createCollectionViaApi(author, collectionName, { items: [item], layout: 'list' }).then((collection) => {
+                  collectionId = collection.id;
+                  // The page lists the items its envelope names and reads each from Nexus by id
+                  waitForNexus(
+                    userIndexed(author),
+                    postIndexed(post),
+                    postIndexed(article),
+                    postIndexed(item),
+                    postIndexed(collection),
+                  );
+                });
+              });
+            },
+          );
+        });
+      });
+      waitForServiceWorker();
     });
-    assertWriteAsksToSignIn('[data-cy="collection-hero-follow-btn"]:visible');
+
+    expectNoHomeserverWrites();
+
+    it('opens a post and asks to sign in before replying or saving', () => {
+      cy.visit(`/post/${authorId}/${postId}`);
+
+      cy.get('[data-cy="single-post-card"]:visible')
+        .should('have.length', 1)
+        .find('[data-cy="post-text"]')
+        .first()
+        .should('contain.text', postText);
+      cy.get('[data-cy="single-post-card"]:visible').find('[data-cy="post-reply-btn"]').as('replyButton');
+      assertWriteAsksToSignIn('@replyButton');
+      cy.get('[data-cy="single-post-card"]:visible').find('[data-cy="post-bookmark-btn"]').as('saveButton');
+      assertWriteAsksToSignIn('@saveButton');
+    });
+
+    it('opens a profile and asks to sign in before following', () => {
+      cy.visit(`/profile/${authorId}`);
+
+      cy.get('[data-cy="profile-username-header"]:visible').should('have.length', 1).and('contain.text', username);
+      assertWriteAsksToSignIn('[data-cy="profile-follow-toggle-btn"]:visible');
+    });
+
+    it('opens a collection and asks to sign in before following it', () => {
+      cy.visit(`/collections/${authorId}/${collectionId}`);
+
+      cy.get('[data-cy="collection-hero"]:visible').should('have.length', 1).and('contain.text', collectionName);
+      // The list layout renders each item as a one-line snippet row, not a full post body
+      cy.get('[data-cy="post-card"]:visible [data-cy="post-list-snippet"]:visible').should(($snippets) => {
+        const snippets = $snippets.toArray().map((snippet) => snippet.textContent?.trim());
+        expect(snippets, 'collection items').to.include(collectionItemText);
+      });
+      assertWriteAsksToSignIn('[data-cy="collection-hero-follow-btn"]:visible');
+    });
+
+    // The page does not read this stream since it reads membership from the envelope (#2744), but the client still
+    // wires it. Nexus reads only the 0.x envelope and answers it empty for a v1 collection (the "v1 collection items"
+    // point of the Nexus contract), so that layout waits for the fix.
+    (legacy ? it : it.skip)('lists the items of a collection in its stream', () => {
+      waitForNexus(
+        streamIndexed(
+          { source: 'collection', author_id: authorId, post_id: collectionId },
+          [collectionItemId],
+          COLLECTION_STREAM_LIMIT,
+        ),
+      );
+    });
+
+    it('opens an article with its title, body and cover', () => {
+      cy.visit(`/post/${authorId}/${articleId}`);
+
+      cy.contains('h1', articleTitle).should('be.visible');
+      cy.get('[data-cy="post-text"]:visible').should('contain.text', articleBody);
+      // Only the article's cover is a <picture>. Whatever the layout, the slot is there; bytes of a 0.x file are
+      // served from its own route, those of a v1 cover need a Nexus route the stack does not have yet.
+      cy.get('picture img').should('have.length', 1);
+      if (legacy) {
+        cy.get('picture img')
+          .should('be.visible')
+          .and(($cover) => expect(($cover[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
+      }
+    });
+
+    it('shows the not-found view for a post that does not exist', () => {
+      cy.visit(`/post/${authorId}/${UNKNOWN_POST_ID}`);
+
+      cy.get('[data-cy="post-not-found"]:visible', NOT_FOUND_TIMEOUT).should('have.length', 1);
+      cy.get('[data-cy="single-post-card"]:visible').should('not.exist');
+    });
+  });
+});
+
+describe('logged-out deep link to an unknown profile', () => {
+  before(() => {
+    slowCypressDown();
+    cy.visit('/');
+    waitForServiceWorker();
   });
 
-  it('shows the not-found view for a post that does not exist', () => {
-    cy.visit(`/post/${authorId}/${UNKNOWN_POST_ID}`);
-
-    cy.get('[data-cy="post-not-found"]:visible', NOT_FOUND_TIMEOUT).should('have.length', 1);
-    cy.get('[data-cy="single-post-card"]:visible').should('not.exist');
-  });
+  expectNoHomeserverWrites();
 
   it('shows the not-found view for a profile that does not exist', () => {
     cy.visit(`/profile/${UNKNOWN_PUBKY}`);
 
     cy.get('[data-cy="profile-not-found"]:visible', NOT_FOUND_TIMEOUT).should('have.length', 1);
     cy.get('[data-cy="profile-username-header"]:visible').should('not.exist');
+  });
+});
+
+// Each client spells a reference to a post its own way, whichever layout the post itself is in:
+// a 0.x client writes `/pub/pubky.app/posts/{id}`, this app `/pub/social/v1/posts/{id}`.
+describe('logged-out deep links across both data layouts', () => {
+  const singlePost = '[data-cy="single-post-card"]:visible';
+  const threadReply = '[data-cy="thread-reply"]:visible';
+  const v1Text = `layouts ${runId} post by a migrated account`;
+  const legacyText = `layouts ${runId} post by an un-migrated account`;
+  const v1ReplyText = `layouts ${runId} reply by a migrated account`;
+  const legacyReplyText = `layouts ${runId} reply by an un-migrated account`;
+  const v1QuoteText = `layouts ${runId} repost by a migrated account`;
+  const legacyQuoteText = `layouts ${runId} repost by an un-migrated account`;
+  const legacyImageText = `layouts ${runId} image by an un-migrated account`;
+
+  let v1Post: SeededPost;
+  let legacyPost: SeededPost;
+  let v1Quote: SeededPost;
+  let legacyQuote: SeededPost;
+  let legacyImage: SeededPost;
+
+  before(() => {
+    slowCypressDown();
+    cy.visit('/');
+
+    seedUserViaApi('Ms New Layout').then((v1User) => {
+      seedUserViaApi('Mr Old Layout', { legacy: true }).then((legacyUser) => {
+        createPostViaApi(v1User, v1Text).then((post) => {
+          v1Post = post;
+        });
+        createPostViaApi(legacyUser, legacyText).then((post) => {
+          legacyPost = post;
+        });
+        createImagePostViaApi(legacyUser, legacyImageText).then((post) => {
+          legacyImage = post;
+        });
+        cy.then(() => {
+          replyViaApi(legacyUser, v1Post, legacyReplyText).then((legacyReply) => {
+            replyViaApi(v1User, legacyPost, v1ReplyText).then((v1Reply) => {
+              repostViaApi(legacyUser, v1Post, legacyQuoteText).then((quote) => {
+                legacyQuote = quote;
+              });
+              repostViaApi(v1User, legacyPost, v1QuoteText).then((quote) => {
+                v1Quote = quote;
+              });
+              cy.then(() => {
+                waitForNexus(
+                  postIndexed(v1Post),
+                  postIndexed(legacyPost),
+                  postIndexed(legacyReply),
+                  postIndexed(v1Reply),
+                  repliesIndexed(v1Post, [legacyReply]),
+                  repliesIndexed(legacyPost, [v1Reply]),
+                  postIndexed(legacyQuote),
+                  postIndexed(v1Quote),
+                  postIndexed(legacyImage),
+                );
+              });
+            });
+          });
+        });
+      });
+    });
+    waitForServiceWorker();
+  });
+
+  expectNoHomeserverWrites();
+
+  it("shows an un-migrated account's reply under a migrated account's post", () => {
+    cy.visit(`/post/${v1Post.authorId}/${v1Post.id}`);
+
+    cy.get(singlePost).find('[data-cy="post-text"]').first().should('contain.text', v1Text);
+    cy.contains(threadReply, legacyReplyText).should('exist');
+  });
+
+  it("shows a migrated account's reply under an un-migrated account's post", () => {
+    cy.visit(`/post/${legacyPost.authorId}/${legacyPost.id}`);
+
+    cy.get(singlePost).find('[data-cy="post-text"]').first().should('contain.text', legacyText);
+    cy.contains(threadReply, v1ReplyText).should('exist');
+  });
+
+  it("embeds a migrated account's post in an un-migrated account's repost", () => {
+    cy.visit(`/post/${legacyQuote.authorId}/${legacyQuote.id}`);
+
+    cy.get(singlePost).should('contain.text', legacyQuoteText).and('contain.text', v1Text);
+  });
+
+  it("embeds an un-migrated account's post in a migrated account's repost", () => {
+    cy.visit(`/post/${v1Quote.authorId}/${v1Quote.id}`);
+
+    cy.get(singlePost).should('contain.text', v1QuoteText).and('contain.text', legacyText);
+  });
+
+  // A 0.x file is served from its own route, and the served bytes are the point: v1 media needs a Nexus route
+  // the 0.x path does not, so this is the one attachment that must load on every stack.
+  it("loads the image of an un-migrated account's post", () => {
+    cy.visit(`/post/${legacyImage.authorId}/${legacyImage.id}`);
+
+    cy.get(singlePost).should('contain.text', legacyImageText);
+    cy.get(singlePost)
+      .find('[data-cy="post-attachment-image"]')
+      .should('be.visible')
+      .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
   });
 });

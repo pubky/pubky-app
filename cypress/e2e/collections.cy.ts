@@ -201,11 +201,14 @@ describe('collections', () => {
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
     // * open the collection and follow it from the dedicated page header
-    cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('followCollection');
+    cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('followCollection');
+    cy.intercept('PUT', '**/pub/**/bookmarks/**').as('publicBookmark');
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Follow').click();
     cy.wait('@followCollection').its('response.statusCode').should('eq', 201);
+    // Following a collection is a private bookmark of it: its creator never learns of it
+    cy.get('@publicBookmark.all').should('have.length', 0);
 
     // * the collection moves to Followed Collections and leaves Discover Collections
     goToCollectionsPage();
@@ -235,7 +238,7 @@ describe('collections', () => {
 
     // * unfollowing from the dedicated page header returns the collection to Discover Collections
     goToCollectionsPage();
-    cy.intercept('DELETE', '**/pub/pubky.app/bookmarks/**').as('unfollowCollection');
+    cy.intercept('DELETE', '**/priv/social/v1/bookmarks/**').as('unfollowCollection');
     findCollectionCardInSection(FOLLOWED_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Unfollow').click();
@@ -378,7 +381,7 @@ describe('collections', () => {
       .should('be.visible')
       .within(() => {
         cy.get('textarea').should('have.value', '').type(shareComment);
-        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionShared');
+        cy.intercept('PUT', '**/pub/social/v1/posts/**').as('collectionShared');
         cy.get('[data-cy="post-input-action-bar-share"]').click();
         cy.wait('@collectionShared').its('response.statusCode').should('eq', 201);
       });

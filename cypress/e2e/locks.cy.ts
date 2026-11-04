@@ -279,7 +279,7 @@ describe('locks', () => {
       cy.wrap(lockServer).then(() => {
         const articles = registeredGuardedPosts(lockServer).filter((post) => post.content.includes(articleTitle));
         expect(articles, 'the locked article').to.have.length(1);
-        expect(articles[0]?.kind).to.eq('long');
+        expect(articles[0]?.kind).to.eq('article');
         expect(articles[0]?.content).to.contain(body).and.not.contain(draftBody);
       });
       cy.wrap(postId).as('postId');

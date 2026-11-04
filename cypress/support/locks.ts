@@ -10,6 +10,7 @@
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
+import { postIdFromWriteUrl } from './nexus';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
@@ -307,7 +308,7 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
   cy.then(() => expect(lockServerCalls, 'payment or guarded reads after the reload').to.be.empty);
 };
 
-export type TGuardedPost = { content: string; kind: string; attachments: string[] | null };
+export type TGuardedPost = { content: string; kind: string; attachments: { uri: string; name?: string }[] };
 
 /** Every guarded post (a lock's primary resource) registered so far; attachment bytes are skipped. */
 export const registeredGuardedPosts = (state: TLockServerState): TGuardedPost[] =>
@@ -431,14 +432,12 @@ export const fillLockAnnouncement = (title: string, teaser: string) => {
  * from its homeserver PUT.
  */
 export const publishLock = (): Cypress.Chainable<string> => {
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('announcementCreated');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('announcementCreated');
   homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
   cy.wait('@createContentLock');
   return cy.wait('@announcementCreated').then((interception) => {
     expect(interception.response?.statusCode).to.eq(201);
-    const postId = new URL(interception.request.url).pathname.split('/').pop() ?? '';
-    expect(postId, 'announcement post id').to.not.eq('');
-    return postId;
+    return postIdFromWriteUrl(interception.request.url);
   });
 };
 

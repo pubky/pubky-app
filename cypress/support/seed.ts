@@ -13,8 +13,10 @@ import type { SeedCreatePostArgs, SeededCollectionLayout, SeededPost, SeededUser
 // check for every record the phase's assertions read from Nexus, all polled together.
 //
 // Nexus indexes a write by reading the record's current state from the homeserver when it gets to
-// the event. A record edited or deleted before then is indexed as its final state, and the edit or
-// deletion is lost: wait for every record an edit or deletion depends on before writing it.
+// the event. A record deleted before then, or a 0.x record edited in place before then, is indexed
+// as its final state, and the edit or deletion is lost; a v1 edit is a new version file with an event
+// of its own, but it still needs the post indexed first. Wait for every record an edit or deletion
+// depends on before writing it.
 // Consecutive seed writes are a few milliseconds apart, so records seeded in order also sort in
 // that order wherever a surface orders them by time.
 
@@ -23,12 +25,15 @@ import type { SeedCreatePostArgs, SeededCollectionLayout, SeededPost, SeededUser
  * onboarding (covered by onboarding.cy.ts).
  * With `withRecoveryFile`, also saves their encrypted recovery file where the UI backup would land,
  * so the spec can sign in as them with `cy.signInWithEncryptedFile(backupDownloadFilePath(name))`.
+ * With `legacy`, everything seeded for them is written in the 0.x layout, as an account that has
+ * not migrated yet. Signing in as them runs the migration; every other account has nothing to move.
  */
-export const seedUserViaApi = (name: string, { bio = '', withRecoveryFile = false } = {}) =>
+export const seedUserViaApi = (name: string, { bio = '', withRecoveryFile = false, legacy = false } = {}) =>
   cy.task<SeededUser>('seedCreateUser', {
     name,
     bio,
     recoveryFilePath: withRecoveryFile ? backupDownloadFilePath(name) : undefined,
+    legacy,
   });
 
 const createPost = (args: SeedCreatePostArgs) => cy.task<SeededPost>('seedCreatePost', args);
@@ -38,7 +43,7 @@ const createPost = (args: SeedCreatePostArgs) => cy.task<SeededPost>('seedCreate
  * the author right after, as tagging in the composer does.
  */
 export const createPostViaApi = (author: SeededUser, content: string, { tags }: { tags?: string[] } = {}) =>
-  createPost({ authorId: author.id, content, kind: 'short', tags });
+  createPost({ authorId: author.id, content, kind: 'note', tags });
 
 /** Uploads a fixture image and publishes an image post attaching it, as the composer's image upload does. */
 export const createImagePostViaApi = (
@@ -54,13 +59,28 @@ export const createImagePostViaApi = (
     tags,
   });
 
+/** Publishes an article as `author`, with `coverFixture` as its cover (the article composer is covered in posts.cy.ts). */
+export const createArticleViaApi = (
+  author: SeededUser,
+  title: string,
+  body: string,
+  { coverFixture }: { coverFixture?: string } = {},
+) =>
+  createPost({
+    authorId: author.id,
+    title,
+    content: body,
+    kind: 'article',
+    imageFixturePath: coverFixture ? `${Cypress.config('fixturesFolder')}/${coverFixture}` : undefined,
+  });
+
 /** Replies to `parent` as `author` (the reply dialogs are covered in posts.cy.ts). */
 export const replyViaApi = (author: SeededUser, parent: SeededPost, content: string) =>
-  createPost({ authorId: author.id, content, kind: 'short', parentUri: parent.uri });
+  createPost({ authorId: author.id, content, kind: 'note', parentUri: parent.uri });
 
 /** Reposts `original` as `author`, with optional quote `content` (the repost dialog is covered in posts.cy.ts). */
 export const repostViaApi = (author: SeededUser, original: SeededPost, content = '') =>
-  createPost({ authorId: author.id, content, kind: 'short', embed: { uri: original.uri, kind: original.kind } });
+  createPost({ authorId: author.id, content, kind: 'note', embed: { uri: original.uri, kind: original.kind } });
 
 /** The text the @mention autocomplete inserts for `user`; Nexus turns it into a mention of them. */
 export const mentionOf = (user: SeededUser) => user.pubky;
@@ -96,6 +116,14 @@ export const tagUserViaApi = (tagger: SeededUser, user: SeededUser, labels: stri
 export const followUserViaApi = (follower: SeededUser, followee: SeededUser) =>
   cy.task<{ id: string }>('seedFollow', { followerId: follower.id, followeeId: followee.id });
 
+/** `user` bookmarks `post` (bookmarking in the UI is covered in posts.cy.ts). */
+export const bookmarkViaApi = (user: SeededUser, post: SeededPost) =>
+  cy.task('seedBookmark', { userId: user.id, uri: post.uri });
+
+/** `user` mutes `mutee` (muting in the UI is covered in settings.cy.ts). */
+export const muteViaApi = (user: SeededUser, mutee: SeededUser) =>
+  cy.task('seedMute', { userId: user.id, muteeId: mutee.id });
+
 /**
  * Creates a collection holding `items` as `author`, shown in `layout` by default (creating one in
  * the UI is covered in collections.cy.ts).
@@ -117,22 +145,14 @@ export const createCollectionViaApi = (
     layout,
   });
 
-/** Adds `post` to `collection`, rewriting the collection post as saving into it in the app does. */
-export const addPostToCollectionViaApi = (author: SeededUser, collection: SeededPost, post: SeededPost) =>
-  cy.task<{ id: string }>('seedAddToCollection', {
-    authorId: author.id,
-    collectionId: collection.id,
-    itemUri: post.uri,
-  });
-
-/** `user` follows `collection`, which the app stores as a bookmark of the collection post. */
-export const followCollectionViaApi = (user: SeededUser, collection: SeededPost) =>
-  cy.task<{ id: string }>('seedBookmark', { userId: user.id, uri: collection.uri });
-
 /**
  * Moves `user`'s last-read marker to now, so only notifications created afterwards count as unread.
  * Without one, the app's first sign-in creates the marker at sign-in time and would mark as read
  * every notification seeded before it.
  */
 export const markNotificationsReadViaApi = (user: SeededUser) =>
-  cy.task('seedMarkNotificationsRead', { userId: user.id });
+  cy.task<{ timestamp: number }>('seedMarkNotificationsRead', { userId: user.id });
+
+/** Writes `user`'s settings file, in the place their data layout keeps it (toggling them is covered in settings.cy.ts). */
+export const writeSettingsViaApi = (user: SeededUser, settings: Record<string, unknown>) =>
+  cy.task('seedSettings', { userId: user.id, settings });

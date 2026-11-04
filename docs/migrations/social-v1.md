@@ -2,8 +2,7 @@
 
 **Status: in progress** on the integration branch `feat/social-v1` (cut from `dev`; child PRs merge into it, one
 final PR merges it into `dev`). The port is complete: PR-F removed `pubky-app-specs` from the app and emptied the
-compliance ratchet; the docs sweep (PR-G), QA-3 against a complete Nexus, QA's Cypress update and the final PR
-remain. The approved plan, its decisions D1–D19 and the design documents behind them live
+compliance ratchet; the docs sweep (PR-G), QA-3 against a complete Nexus and the final PR remain. The approved plan, its decisions D1–D19 and the design documents behind them live
 outside the repository (`~/.claude/plans/ok-we-have-a-majestic-rivest.md`, `social-v1/{reports,designs}`); this
 file is the in-repo record and is kept current by every child PR.
 
@@ -116,9 +115,8 @@ QUOTA, offline (auto-retry then Retry), summary with a dropped profile image; `/
 to `/migration` while gated; logout from `/migration` works with the backup prompt.
 
 Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (ten
-states × desktop/mobile), CI-owned baselines. Cypress (QA-owned, flag only): every pre-seeded account lands on
-`/migration` after the forced sign-out; `cy.signOut` and the sign-in specs see the gate; a freshly signed-up account sees
-no screen.
+states × desktop/mobile), CI-owned baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
+never reaches `/migration`, and an empty or v1-only one only passes through it while the check runs (see _Cypress_).
 
 ## Compliance gate and dev-sync routine
 
@@ -134,8 +132,8 @@ Two gate tests keep the branch honest while it lives, and ship to `dev` with the
   matched when the gate landed (55 files on 2026-10-30), each child PR shrank it, and PR-F emptied it. A file that
   matches outside `PERMANENT` fails the gate.
 - ESLint `no-restricted-imports` bans `pubky-app-specs` and `pubky-app-specs/*` everywhere linted (`cypress/` is not),
-  and the compliance gate also catches a dynamic `import('pubky-app-specs')`. The package itself stays a
-  devDependency only for the Cypress seed plugin (see _Cypress hand-off_).
+  and the compliance gate also catches a dynamic `import('pubky-app-specs')`. The package itself is uninstalled (see
+  _Cypress_).
 
 Dev-sync routine (its own short-lived session, daily or before a child PR merges, in the integration worktree):
 fetch, record the sync SHA, list the merged `dev` PRs, merge, resolve, then a narrow compliance sweep of the
@@ -162,8 +160,9 @@ bookmarks/mutes/feeds or auth capabilities should be written against `pubky-soci
 
 ## Cleanup (PR-F)
 
-`pubky-app-specs` is no longer used by the app: it moved to `devDependencies` (npm regenerated the lockfile), only
-for the QA-owned Cypress seed plugin, and is banned in `src/**` by ESLint and the compliance gate. Gone with it: the wasm builder
+`pubky-app-specs` is gone: PR-F moved it to `devDependencies` for the Cypress seed plugin only, and the e2e port
+(PR #3055) ported that plugin and uninstalled it, so it is in neither `package.json` nor the lockfile. ESLint and the
+compliance gate still ban it in `src/**` as a guard. Gone with it in PR-F: the wasm builder
 singleton `src/core/pipes/pipes.builder.ts` and its test, the builder double in `pipes.test-utils.ts`, the unused 0.x
 kind helper `src/core/services/local/post/post.helpers.ts`, every `vi.mock('pubky-app-specs')`, the
 `@/config/posts` preload in `src/config/test.ts`, and the last `LEGACY_RATCHET` entries (the list is empty).
@@ -177,8 +176,8 @@ kind helper `src/core/services/local/post/post.helpers.ts`, every `vi.mock('pubk
 - Tests: the WebAssembly console and unhandled-rejection suppressions in `src/config/test.ts` and `vitest.config.ts`
   are removed; the full suite printed the same output with and without them. The jsdom navigation filter stays.
 
-Follow-ups (not in PR-F): `npm uninstall pubky-app-specs` once QA ports `cypress/plugins/seed.ts`; `.github/dependabot.yml` still lists `pubky-app-specs` in the `pubky-sdk` group (a CI
-task; `pubky-social-specs` and `pubky-social-migrator` could join that group); the `@synonymdev/pubky` chunk (3.4 MB
+Follow-ups (not in PR-F): `pubky-social-specs` and `pubky-social-migrator` could join the `pubky-sdk` group in
+`.github/dependabot.yml` (a CI task; the e2e port only removed `pubky-app-specs` from it); the `@synonymdev/pubky` chunk (3.4 MB
 since SDK 0.16) is over `maximumFileSizeToCacheInBytes` (3 MiB), so it is left out of the precache, on `dev` too;
 `src/core/utils/pubky-app-spec-feed-mappers.ts` keeps its old file name although it maps `pubky-social-specs` values.
 
@@ -226,34 +225,44 @@ Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
 - Nexus notification URI forms; the resources stream without `app`; `details.uri` after a URI-only change.
 - Bookmarks on a live homeserver: the LIST of `/priv/social/v1/bookmarks/` through the session, the GETs of their
   times, and the DELETE of a file already gone answering 404.
-- The Cypress suite on `dev` after QA's update.
+- The Cypress suite on `dev`, against pubky-stack with the carrier Nexus, in Chrome (the local port ran headed Electron).
+- `source=collection` for a v1 collection (`nexus-contract` point 16): un-skip the test in `deep-links.cy.ts`, and
+  confirm no screen depends on the stream while it is empty.
+- v1 media bytes: once N5 is on the stack, extend the image tests in `posts.cy.ts` with `naturalWidth > 0` and the
+  `/v1/static/files/` prefix. Until then the 0.x tests in `deep-links.cy.ts` are the only ones that load media bytes.
 
-## Cypress hand-off (QA-owned, flag only)
+## Cypress (ported in PR #3055)
 
-Specs invalidated by the port, to be updated by QA with or before the final PR (e2e runs on push to `dev`):
-`cypress/e2e/{posts,collections,notifications,feed,onboarding,profile,pagination,deep-links}.cy.ts` and
-`cypress/support/{posts,collections,profile,pagination,nexus}.ts` (the URI regex in `nexus.ts`,
-`postIdFromWriteUrl`). Seeded accounts now land on `/migration`; the "followed collection updated" scenario is
-removed by product decision (D7); the settings and `last_read` paths move to `/priv/app.pubky/v1/`. Bookmark writes
-moved to `/priv/social/v1/bookmarks/` (the `PUT`/`DELETE` intercepts on `**/pub/pubky.app/bookmarks/**` in
-`posts.cy.ts`, `collections.cy.ts` and `notifications.cy.ts`), and a bookmark made in another browser session shows
-only after the next sign-in (a reload restores the session without the listing).
-Added by the first dev-sync: `cypress/plugins/seed.ts` (#2897) seeds supporting users through `pubky-app-specs`
-(`PubkySpecsBuilder`, `PubkyAppPost`, `PubkyAppPostKind`, `PubkyAppPostEmbed`, `/pub/pubky.app/` paths), so they are
-un-migrated 0.x accounts. It is the only Cypress file that imports the old package, and the root `tsconfig.json`
-type-checks `cypress/**` (`npm run typecheck` and `next build`), and `cypress/cypress.config.ts` loads the plugin
-in `setupNodeEvents`, so PR-F keeps `pubky-app-specs` as a devDependency for it. Once QA ports the plugin to
-`pubky-social-specs`, `npm uninstall pubky-app-specs` finishes the removal. `cypress/support/{seed,feeds}.ts` and
-`cypress/plugins/nexus.ts` depend on it. e2e runs only on pushes to `dev`/`master`, so the port should land with or
-before the final PR.
+The suite was QA-owned while the port ran; it was ported to v1 in PR #3055 and `cypress/**` moved with it. What
+the specs now assume:
 
-Added by the second dev-sync: #2896 adds `cypress/e2e/locks.cy.ts` and `cypress/support/{locks,locks-log}.ts` to the
-e2e matrix, written against 0.x. `publishLock` in `cypress/support/locks.ts` waits for a `PUT` on
-`**/pub/pubky.app/posts/**` (posts now go to `/pub/social/v1/posts/`), `locks.cy.ts` expects a registered guarded
-article with `kind` `long` (the guarded post is now encoded with the stored kind `article`), and its seeded creator
-and reader land on `/migration`. The `/priv/social/unlocked/`, `/pub/app.locks/` and `/priv/app.locks/content/`
-paths it uses are unchanged. #3039 only sets `forceHttp1` in `cypress/cypress.config.ts` and invalidates nothing.
-`cypress/plugins/seed.ts` still imports `pubky-app-specs`, so the devDependency stays.
+- Paths: posts, files, tags, follows and the profile under `/pub/social/v1/` (a post write is one version,
+  `posts/{id}/{editId}.json`, and `postIdFromWriteUrl` in `cypress/support/nexus.ts` reads the post id from it);
+  bookmarks and feeds under `/priv/social/v1/`; settings and `last_read` under `/priv/app.pubky/v1/`.
+- Kinds: a guarded Locks post stores the v1 kind of its content (`note`, `article` or `image`), and seeded posts use
+  `note`, `image`, `article` and `collection`.
+- Bodies: `expectV1PostWrite` in `cypress/support/nexus.ts` decodes what the composers and the migration write with
+  `pubky-social-specs`, on the Node side, so a 0.x shape on a v1 path fails.
+- Removed by product decision: the "followed collection updated" notification scenario (D7), with the
+  `seedBookmark` and `seedAddToCollection` tasks and the `bookmarkIndexed` check that only it used. Bookmarks are
+  private, so Nexus never sees them.
+- The gate: a sign-in waits for its destination route. An empty or v1-only tree, or one already migrated, goes through
+  `/migration` only while the check runs, with no progress screen.
+  `cy.signInWithEncryptedFile(path, passcode, { migrates: true })` also asserts the progress screen for a 0.x account,
+  and `acknowledgesSummary` clicks through the summary. `onboarding.cy.ts` covers a clean run over every kind of object
+  with what it writes and what reads back, the same account's later edits, deletes and new writes reaching Nexus, the
+  summary, and a signup that never reaches `/migration`. The other stages are at the unit level and in the QA matrix.
+
+Seeding (`cypress/plugins/seed.ts`, `cypress/plugins/seed.writers.ts`): `seedUserViaApi` writes v1 through
+`pubky-social-specs`. `{ legacy: true }` writes the 0.x layout by hand under `/pub/pubky.app/`, so a supporting user
+who never signs in stays un-migrated, and each writer spells references the way its own clients do. That is the
+backwards-compatibility coverage: `deep-links.cy.ts` opens a 0.x account's post, article, profile and collection and a
+thread and reposts across both layouts, and `notifications.cy.ts` receives a 0.x account's follow, tag and reply. A signed-in
+test account seeds v1 or empty, except the one that exercises the migration.
+
+e2e runs only on pushes to `dev`/`master`, against the private pubky-stack, whose Nexus submodule must move to the
+carrier before the final PR. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
+otherwise the invite check answers 400 and onboarding stops at Continue.
 
 ## Reductions and follow-ups
 
