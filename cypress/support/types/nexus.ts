@@ -12,11 +12,15 @@ export type NexusNotificationType =
   | 'post_deleted'
   | 'post_edited';
 
-// What a 200 response must hold for the record to count as indexed
+// What a response must hold for the record to count as indexed: a 200 with this, or for `gone` a 404
 export type NexusExpectation =
   | { kind: 'found' }
+  | { kind: 'gone' }
+  | { kind: 'content'; text: string }
   | { kind: 'includes'; value: string }
+  | { kind: 'excludes'; value: string }
   | { kind: 'tags'; labels: string[] }
+  | { kind: 'noTag'; label: string }
   | { kind: 'notifications'; type: NexusNotificationType; actorId?: string; count: number }
   | { kind: 'streamKeys'; postIds: string[] };
 

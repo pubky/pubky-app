@@ -7,7 +7,7 @@ declare global {
       signInWithEncryptedFile(
         backupFilepath: string,
         passcode?: string,
-        options?: { migrates?: boolean },
+        options?: { migrates?: boolean; acknowledgesSummary?: boolean },
       ): Chainable<void>;
       signInWithRecoveryPhrase(recoveryPhrase: string): Chainable<void>;
       completeOnboardingFromInstall(

@@ -2,8 +2,10 @@ import { readFileSync } from 'fs';
 import { basename, extname } from 'path';
 import type { Path, Session } from '@synonymdev/pubky';
 import {
+  buildBookmark,
   buildFile,
   buildFollow,
+  buildMute,
   buildPost,
   buildTag,
   buildUri,
@@ -14,6 +16,12 @@ import {
   editPost,
   toPath,
 } from 'pubky-social-specs';
+import {
+  APP_LAST_READ_FILE,
+  APP_PRIVATE_PATH,
+  APP_SETTINGS_FILE,
+  LEGACY_SETTINGS_PATH,
+} from '../../src/config/app-files';
 import type { SeedCreateCollectionArgs, SeedCreatePostArgs, SeededPostKind } from '../support/types/seed';
 
 /**
@@ -30,7 +38,7 @@ import type { SeedCreateCollectionArgs, SeedCreatePostArgs, SeededPostKind } fro
  */
 
 type StoredPost = { id: string; uri: string };
-type PostInput = Pick<SeedCreatePostArgs, 'content' | 'kind' | 'parentUri' | 'embed' | 'imageFixturePath'>;
+type PostInput = Pick<SeedCreatePostArgs, 'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath'>;
 type CollectionInput = Pick<SeedCreateCollectionArgs, 'name' | 'description' | 'items' | 'layout'>;
 
 export type SeedWriter = {
@@ -41,7 +49,11 @@ export type SeedWriter = {
   deletePost: (postId: string) => Promise<void>;
   writeTag: (uri: string, label: string) => Promise<string>;
   writeFollow: (followeeId: string) => Promise<void>;
+  writeBookmark: (uri: string) => Promise<void>;
+  writeMute: (muteeId: string) => Promise<void>;
   writeCollection: (collection: CollectionInput) => Promise<StoredPost>;
+  writeLastRead: (timestamp: number) => Promise<void>;
+  writeSettings: (settings: Record<string, unknown>) => Promise<void>;
 };
 
 const LEGACY_SEGMENT = '/pub/pubky.app/';
@@ -75,22 +87,33 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
       return buildUri(owner, 'user');
     },
 
-    // Same two writes as the app's upload: the media under its content hash, then the post pointing at it
-    writePost: async ({ content, kind, parentUri, embed, imageFixturePath }) => {
-      const attachments = [];
-      if (imageFixturePath) {
-        const { bytes, type, name } = readImage(imageFixturePath);
-        const media = buildFile(owner, { bytes, type });
-        await session.storage.putBytes(media.path as Path, bytes);
-        attachments.push({ uri: media.url, name });
+    // Same two writes as the app's upload: the media under its content hash, then the post pointing at it.
+    // An article names its image as the cover, in its envelope; any other post attaches it.
+    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath }) => {
+      const image = imageFixturePath ? readImage(imageFixturePath) : null;
+      const media = image ? buildFile(owner, { bytes: image.bytes, type: image.type }) : null;
+      if (image && media) {
+        await session.storage.putBytes(media.path as Path, image.bytes);
       }
-      const post = buildPost(owner, {
-        kind: kind === 'image' ? 'image' : 'note',
-        content,
-        parent: parentUri ? toV1Reference(parentUri) : null,
-        embed: embed ? toV1Reference(embed.uri) : null,
-        attachments,
-      });
+      const parent = parentUri ? toV1Reference(parentUri) : null;
+      const embedded = embed ? toV1Reference(embed.uri) : null;
+      const post =
+        kind === 'article'
+          ? buildPost(owner, {
+              kind,
+              title: title ?? '',
+              body: content,
+              cover_image: media?.url ?? null,
+              parent,
+              embed: embedded,
+            })
+          : buildPost(owner, {
+              kind: kind === 'image' ? 'image' : 'note',
+              content,
+              parent,
+              embed: embedded,
+              attachments: image && media ? [{ uri: media.url, name: image.name }] : [],
+            });
       await put(post);
       return { id: post.id, uri: buildUri(owner, 'post', post.id) };
     },
@@ -121,6 +144,22 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
       await put(buildFollow(owner, followeeId));
     },
 
+    writeBookmark: async (uri) => {
+      await put(buildBookmark(owner, toV1Reference(uri)));
+    },
+
+    writeMute: async (muteeId) => {
+      await put(buildMute(owner, muteeId));
+    },
+
+    writeLastRead: async (timestamp) => {
+      await session.storage.putJson(`${APP_PRIVATE_PATH}${APP_LAST_READ_FILE}` as Path, { timestamp });
+    },
+
+    writeSettings: async (settings) => {
+      await session.storage.putJson(`${APP_PRIVATE_PATH}${APP_SETTINGS_FILE}` as Path, settings);
+    },
+
     writeCollection: async ({ name, description, items, layout }) => {
       const collection = buildPost(owner, {
         kind: 'collection',
@@ -135,7 +174,20 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
   };
 };
 
-const LEGACY_POST_KINDS: Record<SeededPostKind, string> = { note: 'short', image: 'image', collection: 'collection' };
+const LEGACY_POST_KINDS: Record<SeededPostKind, string> = {
+  note: 'short',
+  image: 'image',
+  article: 'long',
+  collection: 'collection',
+};
+
+// `buildTag` hashes a tag as 0.x did only for these inputs: 0.x also normalised a web URL target and lower-cased
+// non-ASCII labels. No spec seeds either, and an id that drifted from the 0.x one would not fail anywhere else.
+const assertLegacyTagHashesAlike = (target: string, label: string) => {
+  if (!target.startsWith('pubky://') || !/^[ -~]*$/.test(label)) {
+    throw new Error(`the legacy writer cannot spell a 0.x tag id for ${target} as '${label}'`);
+  }
+};
 
 export const legacyWriter = (owner: string, session: Session): SeedWriter => {
   const legacyPath = (rest: string) => `${LEGACY_SEGMENT}${rest}` as Path;
@@ -157,9 +209,13 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
       return legacyUrl('profile.json');
     },
 
-    // Same three writes as a 0.x client's upload: the blob, its file record, then the post pointing at the file
-    writePost: async ({ content, kind, parentUri, embed, imageFixturePath }) => {
-      const body: Record<string, unknown> = { content, kind: LEGACY_POST_KINDS[kind] };
+    // Same three writes as a 0.x client's upload: the blob, its file record, then the post pointing at the file.
+    // A 0.x article keeps its cover in the first attachment and its title and body in an envelope.
+    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath }) => {
+      const body: Record<string, unknown> = {
+        content: kind === 'article' ? JSON.stringify({ title: title ?? '', body: content }) : content,
+        kind: LEGACY_POST_KINDS[kind],
+      };
       if (parentUri) body['parent'] = toLegacyReference(parentUri);
       if (embed) body['embed'] = { uri: toLegacyReference(embed.uri), kind: LEGACY_POST_KINDS[embed.kind] };
       if (imageFixturePath) {
@@ -192,6 +248,7 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
 
     writeTag: async (uri, label) => {
       const target = toLegacyReference(uri);
+      assertLegacyTagHashesAlike(target, label);
       // A 0.x tag id hashes its target and label the way a v1 one does
       const { id, object } = buildTag(owner, target, label);
       await session.storage.putJson(legacyPath(`tags/${id}`), {
@@ -204,6 +261,25 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
 
     writeFollow: async (followeeId) => {
       await session.storage.putJson(legacyPath(`follows/${followeeId}`), { created_at: nowMicros() });
+    },
+
+    writeBookmark: async (uri) => {
+      const target = toLegacyReference(uri);
+      // A 0.x bookmark id hashes its target the way a v1 media id hashes its bytes
+      const { id } = buildFile(owner, { bytes: new TextEncoder().encode(target), type: 'image/png' });
+      await session.storage.putJson(legacyPath(`bookmarks/${id}`), { uri: target, created_at: nowMicros() });
+    },
+
+    writeMute: async (muteeId) => {
+      await session.storage.putJson(legacyPath(`mutes/${muteeId}`), { created_at: nowMicros() });
+    },
+
+    writeLastRead: async (timestamp) => {
+      await session.storage.putJson(legacyPath('last_read'), { timestamp });
+    },
+
+    writeSettings: async (settings) => {
+      await session.storage.putJson(LEGACY_SETTINGS_PATH as Path, settings);
     },
 
     writeCollection: ({ name, description, items, layout }) =>

@@ -202,10 +202,13 @@ describe('collections', () => {
 
     // * open the collection and follow it from the dedicated page header
     cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('followCollection');
+    cy.intercept('PUT', '**/pub/**/bookmarks/**').as('publicBookmark');
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Follow').click();
     cy.wait('@followCollection').its('response.statusCode').should('eq', 201);
+    // Following a collection is a private bookmark of it: its creator never learns of it
+    cy.get('@publicBookmark.all').should('have.length', 0);
 
     // * the collection moves to Followed Collections and leaves Discover Collections
     goToCollectionsPage();

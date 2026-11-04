@@ -6,6 +6,8 @@ const NEXUS_WAIT_TIMEOUT_MS = 60_000;
 const NOTIFICATIONS_LIMIT = 100;
 // The most labels a spec puts on one post or profile (feed.cy.ts tags Profile 3's post five times)
 const TAGS_LIMIT = 5;
+// More than a spec's thread holds
+const REPLIES_LIMIT = 20;
 
 /**
  * Waits until Nexus has indexed every record in `checks`, polling them together (plugins/nexus.ts),
@@ -41,10 +43,29 @@ export const postIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>): NexusChe
   expect: { kind: 'found' },
 });
 
+// The post as an edit left it, which a post that was already indexed answers `found` to long before
+export const postContentIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>, text: string): NexusCheck => ({
+  description: `post ${post.id} holding "${text}"`,
+  path: `/v0/post/${post.authorId}/${post.id}`,
+  expect: { kind: 'content', text },
+});
+
+export const postGone = (post: Pick<SeededPost, 'id' | 'authorId'>): NexusCheck => ({
+  description: `post ${post.id} deleted`,
+  path: `/v0/post/${post.authorId}/${post.id}`,
+  expect: { kind: 'gone' },
+});
+
 export const followIndexed = (follower: SeededUser, followee: SeededUser): NexusCheck => ({
   description: `'${follower.name}' following '${followee.name}'`,
   path: `/v0/user/${followee.id}/followers`,
   expect: { kind: 'includes', value: follower.id },
+});
+
+export const followGone = (follower: SeededUser, followee: SeededUser): NexusCheck => ({
+  description: `'${follower.name}' no longer following '${followee.name}'`,
+  path: `/v0/user/${followee.id}/followers`,
+  expect: { kind: 'excludes', value: follower.id },
 });
 
 export const postTagsIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>, labels: string[]): NexusCheck => ({
@@ -52,6 +73,13 @@ export const postTagsIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>, label
   path: `/v0/post/${post.authorId}/${post.id}/tags`,
   qs: { limit_tags: String(TAGS_LIMIT) },
   expect: { kind: 'tags', labels },
+});
+
+export const postTagGone = (post: Pick<SeededPost, 'id' | 'authorId'>, label: string): NexusCheck => ({
+  description: `no tag ${label} on post ${post.id}`,
+  path: `/v0/post/${post.authorId}/${post.id}/tags`,
+  qs: { limit_tags: String(TAGS_LIMIT) },
+  expect: { kind: 'noTag', label },
 });
 
 export const userTagsIndexed = (user: SeededUser, labels: string[]): NexusCheck => ({
@@ -84,8 +112,16 @@ export const streamIndexed = (query: Record<string, string>, postIds: string[], 
   expect: { kind: 'streamKeys', postIds },
 });
 
+// The replies under `parent`, which is what a thread renders from
+export const repliesIndexed = (parent: Pick<SeededPost, 'id' | 'authorId'>, replies: Pick<SeededPost, 'id'>[]) =>
+  streamIndexed(
+    { source: 'post_replies', author_id: parent.authorId, post_id: parent.id },
+    replies.map((reply) => reply.id),
+    REPLIES_LIMIT,
+  );
+
 // Homeserver write bodies reach the intercept as a string, raw bytes or parsed JSON depending on the browser.
-const parseRequestBody = (body: unknown): unknown => {
+export const parseRequestBody = (body: unknown): unknown => {
   if (typeof body === 'string') return JSON.parse(body);
   if (body instanceof ArrayBuffer) return JSON.parse(new TextDecoder().decode(body));
   if (ArrayBuffer.isView(body)) return JSON.parse(new TextDecoder().decode(body));
@@ -101,9 +137,50 @@ export const taggedPostFromInterception = (interception: { request: { body: unkn
   return { authorId: match![1], postId: match![2] };
 };
 
-// The post a homeserver post write belongs to. Its URL names one version, `posts/{id}/{editId}.json`.
-export const postIdFromWriteUrl = (url: string) => {
-  const match = /\/pub\/social\/v1\/posts\/([^/]+)\/[^/]+\.json$/.exec(new URL(url).pathname);
+// The version a homeserver post write stores. Its URL is `posts/{id}/{editId}.json`: a new post's edit id is its
+// own id, and every edit adds a version with a higher one.
+export const postVersionFromWriteUrl = (url: string) => {
+  const match = /\/pub\/social\/v1\/posts\/([^/]+)\/([^/]+)\.json$/.exec(new URL(url).pathname);
   expect(match, `post write url ${url}`).to.not.equal(null);
-  return match![1];
+  return { postId: match![1], editId: match![2] };
+};
+
+export const postIdFromWriteUrl = (url: string) => postVersionFromWriteUrl(url).postId;
+
+const V1_POST_REFERENCE = /^pubky:\/\/[^/]+\/pub\/social\/v1\/posts\/[^/]+$/;
+const V1_FILE_REFERENCE = /^pubky:\/\/[^/]+\/pub\/social\/v1\/files\/[^/]+$/;
+
+type StoredPost = {
+  kind: string;
+  content: string;
+  parent: string | null;
+  embed: string | null;
+  attachments: { uri: string }[];
+};
+
+/**
+ * Checks what an intercepted post write carried, as a stored v1 post: a 0.x shape on a v1 path (a `short` kind,
+ * string attachments, an `{uri, kind}` embed) fails to decode. The spec also reads a 0.x spelling of a reference,
+ * but this app only ever writes the versionless v1 one, and an article or collection envelope names v1 objects.
+ * Yields the post.
+ */
+export const expectV1PostWrite = (interception: { request: { body: unknown }; response?: { statusCode: number } }) => {
+  expect(interception.response?.statusCode, 'post write status').to.eq(201);
+  return cy
+    .task<StoredPost>('decodeStoredPost', { body: JSON.stringify(parseRequestBody(interception.request.body)) })
+    .then((post) => {
+      [post.parent, post.embed].forEach((reference) => {
+        if (reference !== null) expect(reference, 'post reference').to.match(V1_POST_REFERENCE);
+      });
+      post.attachments.forEach(({ uri }) => expect(uri, 'post attachment').to.match(V1_FILE_REFERENCE));
+      if (post.kind === 'collection') {
+        const { items } = JSON.parse(post.content) as { items: { uri: string }[] };
+        items.forEach(({ uri }) => expect(uri, 'collection item').to.match(V1_POST_REFERENCE));
+      }
+      if (post.kind === 'article') {
+        const { cover_image: cover } = JSON.parse(post.content) as { cover_image?: string | null };
+        if (cover) expect(cover, 'article cover').to.match(V1_FILE_REFERENCE);
+      }
+      return post;
+    });
 };

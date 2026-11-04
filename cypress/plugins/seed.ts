@@ -1,8 +1,9 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
-import { Keypair, Pubky, PublicKey, type Path, type Session } from '@synonymdev/pubky';
-import { APP_LAST_READ_FILE, APP_PRIVATE_PATH } from '../../src/config/app-files';
+import { Keypair, Pubky, PublicKey, type Session } from '@synonymdev/pubky';
+import { decodeObject } from 'pubky-social-specs';
 import type {
+  SeedBookmarkArgs,
   SeedCreateCollectionArgs,
   SeedCreatePostArgs,
   SeedCreateUserArgs,
@@ -12,6 +13,8 @@ import type {
   SeededUser,
   SeedFollowArgs,
   SeedMarkNotificationsReadArgs,
+  SeedMuteArgs,
+  SeedSettingsArgs,
   SeedTagArgs,
 } from '../support/types/seed';
 import { legacyWriter, v1Writer, type SeedWriter } from './seed.writers';
@@ -41,8 +44,6 @@ const SEED_CLIENT_ID = 'e2e-seed.pubky.app';
 // Consecutive seed writes start at least this far apart, so records a test orders by time
 // (timelines, threads, notifications) never share a timestamp
 const SEED_WRITE_SPACING_MS = 5;
-
-const LAST_READ_PATH = `${APP_PRIVATE_PATH}${APP_LAST_READ_FILE}` as Path;
 
 type SeededSession = { name: string; session: Session; writer: SeedWriter };
 
@@ -152,13 +153,34 @@ export const createSeedTasks = (config: SeedConfig) => {
         return { id: followeeId };
       }),
 
-    // The cursor is the app's own file, in the same place for an account on either epoch
+    seedBookmark: ({ userId, uri }: SeedBookmarkArgs) =>
+      step(`bookmark ${uri} by '${nameOf(userId)}'`, async () => {
+        await sessionFor(userId).writer.writeBookmark(uri);
+        return { uri };
+      }),
+
+    seedMute: ({ userId, muteeId }: SeedMuteArgs) =>
+      step(`'${nameOf(userId)}' mutes '${nameOf(muteeId)}'`, async () => {
+        await sessionFor(userId).writer.writeMute(muteeId);
+        return { id: muteeId };
+      }),
+
     seedMarkNotificationsRead: ({ userId }: SeedMarkNotificationsReadArgs) =>
       step(`mark notifications read for '${nameOf(userId)}'`, async () => {
         const timestamp = Date.now();
-        await sessionFor(userId).session.storage.putJson(LAST_READ_PATH, { timestamp });
+        await sessionFor(userId).writer.writeLastRead(timestamp);
         return { timestamp };
       }),
+
+    seedSettings: ({ userId, settings }: SeedSettingsArgs) =>
+      step(`write settings of '${nameOf(userId)}'`, async () => {
+        await sessionFor(userId).writer.writeSettings(settings);
+        return settings;
+      }),
+
+    // Not a seed: reads a post an intercepted write carried with the library the seeds build posts with, which
+    // stays on this side so the specs do not bundle it. Rejects a body that is not a stored v1 post.
+    decodeStoredPost: ({ body }: { body: string }) => decodeObject({ kind: 'post' }, new TextEncoder().encode(body)),
 
     seedCreateCollection: ({ authorId, ...collection }: SeedCreateCollectionArgs): Promise<SeededPost> =>
       step(`create collection '${collection.name}' by '${nameOf(authorId)}'`, async () => ({

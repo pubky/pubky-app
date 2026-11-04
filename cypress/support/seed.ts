@@ -59,6 +59,21 @@ export const createImagePostViaApi = (
     tags,
   });
 
+/** Publishes an article as `author`, with `coverFixture` as its cover (the article composer is covered in posts.cy.ts). */
+export const createArticleViaApi = (
+  author: SeededUser,
+  title: string,
+  body: string,
+  { coverFixture }: { coverFixture?: string } = {},
+) =>
+  createPost({
+    authorId: author.id,
+    title,
+    content: body,
+    kind: 'article',
+    imageFixturePath: coverFixture ? `${Cypress.config('fixturesFolder')}/${coverFixture}` : undefined,
+  });
+
 /** Replies to `parent` as `author` (the reply dialogs are covered in posts.cy.ts). */
 export const replyViaApi = (author: SeededUser, parent: SeededPost, content: string) =>
   createPost({ authorId: author.id, content, kind: 'note', parentUri: parent.uri });
@@ -101,6 +116,14 @@ export const tagUserViaApi = (tagger: SeededUser, user: SeededUser, labels: stri
 export const followUserViaApi = (follower: SeededUser, followee: SeededUser) =>
   cy.task<{ id: string }>('seedFollow', { followerId: follower.id, followeeId: followee.id });
 
+/** `user` bookmarks `post` (bookmarking in the UI is covered in posts.cy.ts). */
+export const bookmarkViaApi = (user: SeededUser, post: SeededPost) =>
+  cy.task('seedBookmark', { userId: user.id, uri: post.uri });
+
+/** `user` mutes `mutee` (muting in the UI is covered in settings.cy.ts). */
+export const muteViaApi = (user: SeededUser, mutee: SeededUser) =>
+  cy.task('seedMute', { userId: user.id, muteeId: mutee.id });
+
 /**
  * Creates a collection holding `items` as `author`, shown in `layout` by default (creating one in
  * the UI is covered in collections.cy.ts).
@@ -128,4 +151,8 @@ export const createCollectionViaApi = (
  * every notification seeded before it.
  */
 export const markNotificationsReadViaApi = (user: SeededUser) =>
-  cy.task('seedMarkNotificationsRead', { userId: user.id });
+  cy.task<{ timestamp: number }>('seedMarkNotificationsRead', { userId: user.id });
+
+/** Writes `user`'s settings file, in the place their data layout keeps it (toggling them is covered in settings.cy.ts). */
+export const writeSettingsViaApi = (user: SeededUser, settings: Record<string, unknown>) =>
+  cy.task('seedSettings', { userId: user.id, settings });

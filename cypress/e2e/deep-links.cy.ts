@@ -1,8 +1,9 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { waitForServiceWorker } from '../support/common';
-import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
+import { postIndexed, repliesIndexed, streamIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import {
+  createArticleViaApi,
   createCollectionViaApi,
   createImagePostViaApi,
   createPostViaApi,
@@ -18,11 +19,15 @@ const runId = Date.now().toString();
 const postText = `deep link ${runId} post`;
 const collectionName = `Deep link ${runId} collection`;
 const collectionItemText = `deep link ${runId} collection item`;
+const articleTitle = `deep link ${runId} article`;
+const articleBody = `deep link ${runId} article body`;
 
 // A valid pubky (52 z-base-32 characters) that no homeserver or Nexus knows about
 const UNKNOWN_PUBKY = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
 // A well-formed post id that the author never wrote
 const UNKNOWN_POST_ID = '0000000000000';
+// More than the one item a spec's collection holds
+const COLLECTION_STREAM_LIMIT = 20;
 // Not-found views no longer wait out the 15s indexing retry (#2602); stay well below it
 const NOT_FOUND_TIMEOUT = { timeout: 10_000 };
 
@@ -35,10 +40,10 @@ const assertWriteAsksToSignIn = (trigger: string) => {
   cy.get('[data-cy="sign-in-dialog-join-btn"]:visible').should('not.exist');
 };
 
-// Any write under either root of any namespace: a signed-out visitor makes none
+// Any write or delete under either root of any namespace: a signed-out visitor makes none
 const expectNoHomeserverWrites = () => {
   beforeEach(() => {
-    cy.intercept('PUT', '**/{pub,priv}/**').as('homeserverWrite');
+    cy.intercept({ method: /^(PUT|DELETE)$/, url: '**/{pub,priv}/**' }).as('homeserverWrite');
   });
 
   afterEach(() => {
@@ -57,6 +62,8 @@ LAYOUTS.forEach(({ title, legacy }) => {
     let authorId = '';
     let postId = '';
     let collectionId = '';
+    let collectionItemId = '';
+    let articleId = '';
 
     // Seeded through the API: onboarding, posting and creating a collection in the UI are covered in
     // onboarding.cy.ts, posts.cy.ts and collections.cy.ts. Nothing is signed in, as a shared link opens.
@@ -69,12 +76,24 @@ LAYOUTS.forEach(({ title, legacy }) => {
         authorId = author.id;
         createPostViaApi(author, postText).then((post) => {
           postId = post.id;
-          createPostViaApi(author, collectionItemText).then((item) =>
-            createCollectionViaApi(author, collectionName, { items: [item], layout: 'list' }).then((collection) => {
-              collectionId = collection.id;
-              // The page lists the items its envelope names and reads each from Nexus by id
-              waitForNexus(userIndexed(author), postIndexed(post), postIndexed(item), postIndexed(collection));
-            }),
+          createArticleViaApi(author, articleTitle, articleBody, { coverFixture: 'mustache-you.png' }).then(
+            (article) => {
+              articleId = article.id;
+              createPostViaApi(author, collectionItemText).then((item) => {
+                collectionItemId = item.id;
+                createCollectionViaApi(author, collectionName, { items: [item], layout: 'list' }).then((collection) => {
+                  collectionId = collection.id;
+                  // The page lists the items its envelope names and reads each from Nexus by id
+                  waitForNexus(
+                    userIndexed(author),
+                    postIndexed(post),
+                    postIndexed(article),
+                    postIndexed(item),
+                    postIndexed(collection),
+                  );
+                });
+              });
+            },
           );
         });
       });
@@ -114,6 +133,34 @@ LAYOUTS.forEach(({ title, legacy }) => {
         expect(snippets, 'collection items').to.include(collectionItemText);
       });
       assertWriteAsksToSignIn('[data-cy="collection-hero-follow-btn"]:visible');
+    });
+
+    // The page does not read this stream since it reads membership from the envelope (#2744), but the client still
+    // wires it. Nexus reads only the 0.x envelope and answers it empty for a v1 collection (the "v1 collection items"
+    // point of the Nexus contract), so that layout waits for the fix.
+    (legacy ? it : it.skip)('lists the items of a collection in its stream', () => {
+      waitForNexus(
+        streamIndexed(
+          { source: 'collection', author_id: authorId, post_id: collectionId },
+          [collectionItemId],
+          COLLECTION_STREAM_LIMIT,
+        ),
+      );
+    });
+
+    it('opens an article with its title, body and cover', () => {
+      cy.visit(`/post/${authorId}/${articleId}`);
+
+      cy.contains('h1', articleTitle).should('be.visible');
+      cy.get('[data-cy="post-text"]:visible').should('contain.text', articleBody);
+      // Only the article's cover is a <picture>. Whatever the layout, the slot is there; bytes of a 0.x file are
+      // served from its own route, those of a v1 cover need a Nexus route the stack does not have yet.
+      cy.get('picture img').should('have.length', 1);
+      if (legacy) {
+        cy.get('picture img')
+          .should('be.visible')
+          .and(($cover) => expect(($cover[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
+      }
     });
 
     it('shows the not-found view for a post that does not exist', () => {
@@ -191,6 +238,8 @@ describe('logged-out deep links across both data layouts', () => {
                   postIndexed(legacyPost),
                   postIndexed(legacyReply),
                   postIndexed(v1Reply),
+                  repliesIndexed(v1Post, [legacyReply]),
+                  repliesIndexed(legacyPost, [v1Reply]),
                   postIndexed(legacyQuote),
                   postIndexed(v1Quote),
                   postIndexed(legacyImage),
@@ -203,6 +252,8 @@ describe('logged-out deep links across both data layouts', () => {
     });
     waitForServiceWorker();
   });
+
+  expectNoHomeserverWrites();
 
   it("shows an un-migrated account's reply under a migrated account's post", () => {
     cy.visit(`/post/${v1Post.authorId}/${v1Post.id}`);

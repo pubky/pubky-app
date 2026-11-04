@@ -1,5 +1,6 @@
 // import { CheckIndexed } from '../support/types/enums';
 
+import { expectV1PostWrite } from './nexus';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 export const MAX_POST_LENGTH = 2000;
@@ -56,7 +57,7 @@ export const createQuickPost = (postContent: string, tags?: string[], expectedPo
       cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
       // submit the post
       cy.get('[data-cy="post-input-action-bar-post"]').click();
-      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@postCreated').then(expectV1PostWrite);
       // verify textarea is empty
       cy.get('textarea').should('have.value', '');
     });
@@ -74,7 +75,7 @@ export const createQuickPostWithImage = (postContent: string) => {
       });
       cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
       cy.get('[data-cy="post-input-action-bar-post"]').click();
-      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@postCreated').then(expectV1PostWrite);
       cy.get('textarea').should('have.value', '');
     });
 };
@@ -94,7 +95,7 @@ export const createQuickPostWithMention = (mentionUsername: string) => {
   cy.get('[data-cy="home-post-input"]').within(() => {
     cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
     cy.get('[data-cy="post-input-action-bar-post"]').click();
-    cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@postCreated').then(expectV1PostWrite);
     cy.get('textarea').should('have.value', '');
   });
 };
@@ -123,7 +124,7 @@ export const createPostFromDialog = (postContent: string, expectedPostLength?: n
       cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
       // submit
       cy.get('[data-cy="post-input-action-bar-post"]').click();
-      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@postCreated').then(expectV1PostWrite);
     });
   // verify dialog is closed
   cy.get('[data-cy="dialog-content"]').should('not.exist');
@@ -220,7 +221,7 @@ export const createQuickArticle = (title: string, body: string, withImage = fals
       fillArticleFields({ title, body, imageAction: withImage ? { action: 'add' } : undefined });
       cy.intercept('PUT', '**/pub/social/v1/posts/**').as('articleCreated');
       cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
-      cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@articleCreated').then(expectV1PostWrite);
     });
 };
 
@@ -234,7 +235,7 @@ export const createArticleFromDialog = (title: string, body: string) => {
     fillArticleFields({ title, body });
     cy.intercept('PUT', '**/pub/social/v1/posts/**').as('articleCreated');
     cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
-    cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@articleCreated').then(expectV1PostWrite);
   });
 
   cy.get('[data-cy="dialog-content"]').should('not.exist');
@@ -315,7 +316,7 @@ export const replyToPost = ({
     cy.get('textarea').should('have.value', '').type(replyContent);
     cy.intercept('PUT', '**/pub/social/v1/posts/**').as('replyCreated');
     cy.get('[data-cy="post-input-action-bar-reply"]').click();
-    cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@replyCreated').then(expectV1PostWrite);
   });
 
   // Wait for dialog to close
@@ -346,7 +347,7 @@ export const repostPost = ({
     cy.intercept('PUT', '**/pub/social/v1/posts/**').as('repostCreated');
     // Submit the repost
     cy.get('[data-cy="post-input-action-bar-repost"]').click();
-    cy.wait('@repostCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@repostCreated').then(expectV1PostWrite);
   });
 
   // Wait for dialog to close

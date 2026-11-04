@@ -1,4 +1,5 @@
 import { goToCollectionsPage } from './header';
+import { expectV1PostWrite } from './nexus';
 import { fastTagPost, waitForFeedToLoad } from './posts';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
@@ -50,7 +51,7 @@ export const createCollection = (
 
   cy.intercept('PUT', '**/pub/social/v1/posts/**').as('collectionCreated');
   cy.get('[data-cy="collection-form-save-btn"]').should('not.be.disabled').click();
-  cy.wait('@collectionCreated').its('response.statusCode').should('eq', 201);
+  cy.wait('@collectionCreated').then(expectV1PostWrite);
 
   // saving navigates to the new collection page
   cy.location('pathname', { timeout: 30_000 }).should('match', /^\/collections\/[^/]+\/[^/]+$/);

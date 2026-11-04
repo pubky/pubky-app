@@ -239,7 +239,7 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
 
 Cypress.Commands.add(
   'signInWithEncryptedFile',
-  (backupFilepath: string, passcode = '123456', { migrates = false } = {}) => {
+  (backupFilepath: string, passcode = '123456', { migrates = false, acknowledgesSummary = false } = {}) => {
     cy.location('pathname').then((pathname) => {
       if (pathname !== '/') cy.visit('/');
     });
@@ -265,6 +265,11 @@ Cypress.Commands.add(
     if (migrates) {
       cy.location('pathname').should('eq', '/migration');
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+    }
+    // A run that left something behind waits on its summary for a click
+    if (acknowledgesSummary) {
+      cy.get('[data-testid="social-migration"]').should('contain.text', 'Your account is up to date');
+      cy.get('#social-migration-summary-navigation-continue-btn').click();
     }
     cy.location('pathname').should('eq', '/home');
     waitForFeedToLoad();

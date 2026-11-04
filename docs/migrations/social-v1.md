@@ -115,8 +115,8 @@ QUOTA, offline (auto-retry then Retry), summary with a dropped profile image; `/
 to `/migration` while gated; logout from `/migration` works with the backup prompt.
 
 Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (ten
-states × desktop/mobile), CI-owned baselines. Cypress: a seeded 0.x account shows `/migration` on sign-in; an empty or v1-only account and a freshly signed-up one
-see no screen (see _Cypress_).
+states × desktop/mobile), CI-owned baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
+never reaches `/migration`, and an empty or v1-only one only passes through it while the check runs (see _Cypress_).
 
 ## Compliance gate and dev-sync routine
 
@@ -225,7 +225,11 @@ Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
 - Nexus notification URI forms; the resources stream without `app`; `details.uri` after a URI-only change.
 - Bookmarks on a live homeserver: the LIST of `/priv/social/v1/bookmarks/` through the session, the GETs of their
   times, and the DELETE of a file already gone answering 404.
-- The Cypress suite on `dev`, against pubky-stack with the carrier Nexus.
+- The Cypress suite on `dev`, against pubky-stack with the carrier Nexus, in Chrome (the local port ran headed Electron).
+- `source=collection` for a v1 collection (`nexus-contract` point 16): un-skip the test in `deep-links.cy.ts`, and
+  confirm no screen depends on the stream while it is empty.
+- v1 media bytes: once N5 is on the stack, extend the image tests in `posts.cy.ts` with `naturalWidth > 0` and the
+  `/v1/static/files/` prefix. Until then the 0.x tests in `deep-links.cy.ts` are the only ones that load media bytes.
 
 ## Cypress (ported in PR #3055)
 
@@ -235,20 +239,25 @@ the specs now assume:
 - Paths: posts, files, tags, follows and the profile under `/pub/social/v1/` (a post write is one version,
   `posts/{id}/{editId}.json`, and `postIdFromWriteUrl` in `cypress/support/nexus.ts` reads the post id from it);
   bookmarks and feeds under `/priv/social/v1/`; settings and `last_read` under `/priv/app.pubky/v1/`.
-- Kinds: a guarded Locks post stores `article` or `note`, and seeded posts use `note`, `image` and `collection`.
+- Kinds: a guarded Locks post stores the v1 kind of its content (`note`, `article` or `image`), and seeded posts use
+  `note`, `image`, `article` and `collection`.
+- Bodies: `expectV1PostWrite` in `cypress/support/nexus.ts` decodes what the composers and the migration write with
+  `pubky-social-specs`, on the Node side, so a 0.x shape on a v1 path fails.
 - Removed by product decision: the "followed collection updated" notification scenario (D7), with the
   `seedBookmark` and `seedAddToCollection` tasks and the `bookmarkIndexed` check that only it used. Bookmarks are
   private, so Nexus never sees them.
 - The gate: a sign-in waits for its destination route. An empty or v1-only tree, or one already migrated, goes through
   `/migration` only while the check runs, with no progress screen.
-  `cy.signInWithEncryptedFile(path, passcode, { migrates: true })` also asserts the progress screen for a 0.x account;
-  `onboarding.cy.ts` covers that flow once.
+  `cy.signInWithEncryptedFile(path, passcode, { migrates: true })` also asserts the progress screen for a 0.x account,
+  and `acknowledgesSummary` clicks through the summary. `onboarding.cy.ts` covers a clean run over every kind of object
+  with what it writes and what reads back, the same account's later edits, deletes and new writes reaching Nexus, the
+  summary, and a signup that never reaches `/migration`. The other stages are at the unit level and in the QA matrix.
 
 Seeding (`cypress/plugins/seed.ts`, `cypress/plugins/seed.writers.ts`): `seedUserViaApi` writes v1 through
 `pubky-social-specs`. `{ legacy: true }` writes the 0.x layout by hand under `/pub/pubky.app/`, so a supporting user
 who never signs in stays un-migrated, and each writer spells references the way its own clients do. That is the
-backwards-compatibility coverage: `deep-links.cy.ts` opens a 0.x account's post, profile and collection and a thread
-and reposts across both layouts, and `notifications.cy.ts` receives a 0.x account's follow, tag and reply. A signed-in
+backwards-compatibility coverage: `deep-links.cy.ts` opens a 0.x account's post, article, profile and collection and a
+thread and reposts across both layouts, and `notifications.cy.ts` receives a 0.x account's follow, tag and reply. A signed-in
 test account seeds v1 or empty, except the one that exercises the migration.
 
 e2e runs only on pushes to `dev`/`master`, against the private pubky-stack, whose Nexus submodule must move to the

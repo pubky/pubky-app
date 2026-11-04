@@ -31,7 +31,13 @@ import {
   switchToArticleMode,
   waitForFeedToLoad,
 } from '../support/posts';
-import { postIdFromWriteUrl, taggedPostFromInterception } from '../support/nexus';
+import {
+  expectV1PostWrite,
+  parseRequestBody,
+  postIdFromWriteUrl,
+  postVersionFromWriteUrl,
+  taggedPostFromInterception,
+} from '../support/nexus';
 import {
   expectTimelineContains,
   expectTimelineOmits,
@@ -72,11 +78,10 @@ const submitHomePost = (postContent: string, files?: Cypress.FileReference | Cyp
       cy.get('[data-cy="post-input-textarea"]:visible').type(postContent).should('have.value', postContent);
       // A post version is `posts/{id}/{editId}.json`, which media uploads under `/files/` never match.
       cy.intercept('PUT', '**/pub/social/v1/posts/*/*', (req) => {
-        const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-        if (body.includes(postContent)) req.alias = alias;
+        if (JSON.stringify(parseRequestBody(req.body)).includes(postContent)) req.alias = alias;
       });
       cy.get('[data-cy="post-input-action-bar-post"]:visible').should('not.be.disabled').click();
-      cy.wait(`@${alias}`).its('response.statusCode').should('eq', 201);
+      cy.wait(`@${alias}`).then(expectV1PostWrite);
       cy.get('[data-cy="post-input-textarea"]:visible').should('have.value', '');
     });
 };
@@ -199,12 +204,23 @@ describe('posts', () => {
     const postContent = `I can edit this post! ${Date.now()}`;
     const editedContent = `I have edited this post! ${Date.now()}`;
 
+    cy.intercept('PUT', '**/pub/social/v1/posts/*/*').as('postVersion');
     createQuickPost(postContent);
     latestPostInFeedContentEq(postContent);
 
     editPost({ newPostContent: editedContent, filterText: postContent });
 
     latestPostInFeedContentEq(editedContent);
+
+    // A post is a directory of versions: its first is named after it, and an edit adds a later one beside it
+    cy.get<Interception[]>('@postVersion.all')
+      .should('have.length', 2)
+      .then((writes) => {
+        const [created, edited] = writes.map(({ request }) => postVersionFromWriteUrl(request.url));
+        expect(created?.editId, 'first version').to.eq(created?.postId);
+        expect(edited?.postId, 'edited post').to.eq(created?.postId);
+        expect(String(edited?.editId) > String(created?.editId), 'edit sorts after the post').to.eq(true);
+      });
 
     // Reload and check post is still displayed with edited content
     cy.reload();
@@ -406,8 +422,11 @@ describe('posts', () => {
     editPost({ newPostContent: editedContent, filterText: postContent });
     cy.findFirstPostInFeedFiltered(editedContent).should('be.visible');
 
+    cy.intercept('DELETE', '**/pub/social/v1/posts/*/*').as('versionDeleted');
     deletePost({ filterText: editedContent });
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', editedContent);
+    // The post and its edit are one version each
+    cy.get('@versionDeleted.all').should('have.length', 2);
 
     // Reload and check post is still deleted
     cy.reload();
@@ -771,8 +790,11 @@ describe('posts', () => {
       });
       cy.get('[data-cy="post-save-bookmarks-option"]').should('be.visible');
       cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('createBookmark');
+      cy.intercept('PUT', '**/pub/**/bookmarks/**').as('publicBookmark');
       cy.get('[data-cy="post-save-bookmarks-option"]').click();
       cy.wait('@createBookmark').its('response.statusCode').should('eq', 201);
+      // A bookmark is private, in no public layout beside the private one
+      cy.get('@publicBookmark.all').should('have.length', 0);
       // click away to dismiss collections popover list
       cy.get('body').click({ force: true });
       cy.get('[data-cy="post-save-bookmarks-option"]').should('not.exist');
