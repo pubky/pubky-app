@@ -260,6 +260,9 @@ export function DialogLocksAuth({
                   // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
                   // The other flags let /connect run JS, submit its approval form, and open the signer apps.
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  // The embedded QR copies its URL on click. Chromium blocks that clipboard write
+                  // from a cross-origin frame unless clipboard-write is allowed.
+                  allow="clipboard-write"
                   onLoad={onConnectLoad}
                   className={cn('h-48 w-full pointer-coarse:h-33', !isConnectReady && 'invisible absolute inset-0')}
                 />
@@ -292,6 +295,8 @@ export function DialogLocksAuth({
                   // sandboxed postMessage arrives as origin "null" and is rejected. allow-popups is
                   // for the Bitkit deep link Paykit's page opens on touch devices.
                   sandbox="allow-scripts allow-same-origin allow-popups"
+                  // Same reason as the Lock Server iframe above.
+                  allow="clipboard-write"
                   className="h-48 w-full pointer-coarse:h-15"
                 />
               ) : (
