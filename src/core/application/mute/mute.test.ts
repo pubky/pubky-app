@@ -1,11 +1,9 @@
 import { buildUri, listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MUTE_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/mute-sync';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
+import { ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
@@ -364,35 +362,177 @@ describe('MuteApplication.fetchMutedUsers', () => {
 
     await expect(MuteApplication.fetchMutedUsers(MUTER)).rejects.toThrow('network-fail');
   });
-});
 
-describe('MuteApplication.subscribeMuteDirectoryEventStream', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  describe('the local write of a refresh', () => {
+    const built = MuteNormalizer.to({ muter: MUTER, mutee: MUTEE });
+    const mute = {
+      eventType: HttpMethod.PUT,
+      muteUrl: built.url,
+      muteBody: built.body,
+      muter: MUTER,
+      mutee: MUTEE,
+    } as const;
 
-  it('subscribes to the private v1 mutes prefix, which the service serves only with the owner session', async () => {
-    const stream = new ReadableStream();
-    const subscribe = vi.spyOn(HomeserverService, 'subscribeUserEventStreamForPath').mockResolvedValue(stream);
+    /** A LIST the test answers by hand, so a commit can run while it is out. */
+    function pendingList() {
+      let answer: (urls: string[]) => void = () => {};
+      vi.spyOn(HomeserverService, 'listAll').mockImplementation(
+        () =>
+          new Promise<string[]>((resolve) => {
+            answer = resolve;
+          }),
+      );
+      return (urls: string[]) => answer(urls);
+    }
 
-    await expect(MuteApplication.subscribeMuteDirectoryEventStream(MUTER, 'c1')).resolves.toBe(stream);
+    /** A homeserver write the test finishes by hand. */
+    function pendingPut() {
+      let finish: () => void = () => {};
+      vi.spyOn(HomeserverService, 'putBlob').mockImplementation(
+        () =>
+          new Promise<undefined>((resolve) => {
+            finish = () => resolve(undefined);
+          }),
+      );
+      return () => finish();
+    }
 
-    expect(MUTE_HOMESERVER_EVENTS_PATH_PREFIX).toBe('/priv/social/v1/mutes/');
-    expect(subscribe).toHaveBeenCalledExactlyOnceWith({
-      userZ32: MUTER,
-      cursor: 'c1',
-      pathPrefix: MUTE_HOMESERVER_EVENTS_PATH_PREFIX,
+    const flushIndexedDb = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+    it('keeps a mute whose homeserver write is still running when the LIST answers', async () => {
+      const finishPut = pendingPut();
+      const commit = MuteApplication.commitMute(mute);
+      await flushIndexedDb();
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
+
+      vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([]);
+      await expect(MuteApplication.fetchMutedUsers(MUTER)).resolves.toEqual([]);
+
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
+      finishPut();
+      await commit;
     });
-  });
 
-  it('lets the auth failure of a missing session through untouched, for the coordinator to report', async () => {
-    // `HomeserverService.subscribeUserEventStreamForPath` throws this before any request for a `/priv/` prefix.
-    const expired = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'A private event stream needs a signed-in session.', {
-      service: ErrorService.Homeserver,
-      operation: 'subscribeUserEventStream',
+    it('keeps a mute that started and finished while the LIST was out', async () => {
+      vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+      const answerList = pendingList();
+      const refresh = MuteApplication.fetchMutedUsers(MUTER);
+
+      await MuteApplication.commitMute(mute);
+      answerList([]);
+      await refresh;
+
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
     });
-    vi.spyOn(HomeserverService, 'subscribeUserEventStreamForPath').mockRejectedValue(expired);
 
-    await expect(MuteApplication.subscribeMuteDirectoryEventStream(MUTER, null)).rejects.toBe(expired);
+    it('keeps a mute that started before the LIST and finished while it was out', async () => {
+      const finishPut = pendingPut();
+      const commit = MuteApplication.commitMute(mute);
+      await flushIndexedDb();
+
+      const answerList = pendingList();
+      const refresh = MuteApplication.fetchMutedUsers(MUTER);
+      finishPut();
+      await commit;
+      answerList([]);
+      await refresh;
+
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
+    });
+
+    it('writes again on the next refresh once no commit overlaps it', async () => {
+      vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+      await MuteApplication.commitMute(mute);
+
+      vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([buildUri(MUTER, 'mute', OTHER)]);
+      await MuteApplication.fetchMutedUsers(MUTER);
+
+      await expect(mutedStream()).resolves.toEqual([OTHER]);
+    });
+
+    describe('two LISTs out at once', () => {
+      /** Two LISTs the test answers by hand, in the order they were started. */
+      function twoPendingLists() {
+        const answers: Array<(urls: string[]) => void> = [];
+        const pending = () =>
+          new Promise<string[]>((resolve) => {
+            answers.push(resolve);
+          });
+        vi.spyOn(HomeserverService, 'listAll').mockImplementationOnce(pending).mockImplementationOnce(pending);
+        return answers;
+      }
+
+      it('drops an older LIST that answers after a newer one', async () => {
+        const answers = twoPendingLists();
+        const older = MuteApplication.fetchMutedUsers(MUTER);
+        const newer = MuteApplication.fetchMutedUsers(MUTER);
+
+        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
+        await newer;
+        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
+        await older;
+
+        await expect(mutedStream()).resolves.toEqual([OTHER]);
+      });
+
+      it('drops an older LIST after a newer one that found nothing to rewrite', async () => {
+        await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [OTHER] });
+        const answers = twoPendingLists();
+        const older = MuteApplication.fetchMutedUsers(MUTER);
+        const newer = MuteApplication.fetchMutedUsers(MUTER);
+
+        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
+        await newer;
+        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
+        await older;
+
+        await expect(mutedStream()).resolves.toEqual([OTHER]);
+      });
+
+      it('applies both when they answer in order, so a sign-in LIST still persists before a later poll', async () => {
+        const answers = twoPendingLists();
+        const older = MuteApplication.fetchMutedUsers(MUTER);
+        const newer = MuteApplication.fetchMutedUsers(MUTER);
+
+        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
+        await older;
+        await expect(mutedStream()).resolves.toEqual([MUTEE]);
+
+        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
+        await newer;
+        await expect(mutedStream()).resolves.toEqual([OTHER]);
+      });
+    });
+
+    it('writes nothing once the session the fetch started for has ended', async () => {
+      vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([buildUri(MUTER, 'mute', MUTEE)]);
+
+      await expect(MuteApplication.fetchMutedUsers(MUTER, { isCurrent: () => false })).resolves.toEqual([MUTEE]);
+
+      await expect(LocalStreamUsersService.findById(UserStreamTypes.MUTED)).resolves.toBeNull();
+    });
+
+    it('does not rewrite unchanged members, whatever their order, so readers are not woken on every poll', async () => {
+      await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [OTHER, MUTEE] });
+      vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([
+        buildUri(MUTER, 'mute', MUTEE),
+        buildUri(MUTER, 'mute', OTHER),
+      ]);
+      const upsert = vi.spyOn(LocalStreamUsersService, 'upsert');
+
+      await MuteApplication.fetchMutedUsers(MUTER);
+
+      expect(upsert).not.toHaveBeenCalled();
+      await expect(mutedStream()).resolves.toEqual([OTHER, MUTEE]);
+    });
+
+    it('applies a mute and an unmute made on another device', async () => {
+      await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [MUTEE] });
+      vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([buildUri(MUTER, 'mute', OTHER)]);
+
+      await MuteApplication.fetchMutedUsers(MUTER);
+
+      await expect(mutedStream()).resolves.toEqual([OTHER]);
+    });
   });
 });

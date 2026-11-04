@@ -11,7 +11,13 @@ import {
 } from '@/config/network';
 import type { ActiveSessionFailure, SessionReference } from '@/libs/auth/session.types';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, DatabaseErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import {
+  AuthErrorCode,
+  ClientErrorCode,
+  DatabaseErrorCode,
+  ServerErrorCode,
+  ValidationErrorCode,
+} from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -19,7 +25,6 @@ import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
-import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky as TPubkyModel } from '@/models/models.types';
 import type {
@@ -1142,53 +1147,38 @@ export class HomeserverService {
   }
 
   /**
-   * Subscribe to homeserver `/events-stream` for a user's directory subtree (SDK SSE wrapper).
-   * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   * Subscribe to homeserver `/events-stream` for a user's public directory subtree (SDK SSE wrapper).
+   * Callers own {@link ReadableStreamDefaultReader} lifecycle.
    *
-   * A `/priv/` prefix is served only to a session of the tree's owner (SDK 0.16.2 `path()`), so
-   * the signed-in session is attached when it is that owner's, and the call fails as an auth
-   * error otherwise instead of letting the homeserver answer 401.
+   * Public prefixes only. A `/priv/` prefix needs a session, and in `@synonymdev/pubky` 0.16.2 a
+   * session-bound stream keeps the shared session Web Lock for its whole lifetime, so the SDK's exclusive
+   * bearer refresh after any 401 never resolves and every session request hangs behind it (ADR-0014).
    */
   static async subscribeUserEventStreamForPath(params: {
     userZ32: TPubkyModel;
     cursor: string | null;
     pathPrefix: string;
   }): Promise<ReadableStream<THomeserverUserEvent>> {
+    const operation = 'subscribeUserEventStreamForPath';
+    if (params.pathPrefix.startsWith(PRIVATE_STORAGE_PREFIX)) {
+      throw Err.client(
+        ClientErrorCode.BAD_REQUEST,
+        'A private event stream would hold the SDK session lock and hang every bearer refresh; poll instead (ADR-0014).',
+        { service: ErrorService.Homeserver, operation, context: { pathPrefix: params.pathPrefix } },
+      );
+    }
     try {
       const pubkySdk = this.getPubkySdk();
       const pk = PublicKey.from(params.userZ32);
-      let builder = pubkySdk.eventStreamForUser(pk, params.cursor);
-      if (params.pathPrefix.startsWith(PRIVATE_STORAGE_PREFIX)) {
-        const session = useAuthStore.getState().selectSession();
-        if (!session) {
-          throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'A private event stream needs a signed-in session.', {
-            service: ErrorService.Homeserver,
-            operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
-            context: { pathPrefix: params.pathPrefix },
-          });
-        }
-        if (session.info.publicKey.z32() !== params.userZ32) {
-          throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'A private event stream is served only to its owner.', {
-            service: ErrorService.Homeserver,
-            operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
-            context: { pathPrefix: params.pathPrefix },
-          });
-        }
-        builder = builder.session(session);
-      }
-      const stream = (await builder
+      const stream = (await pubkySdk
+        .eventStreamForUser(pk, params.cursor)
         .path(params.pathPrefix)
         .live()
         .subscribe()) as ReadableStream<HomeserverSdkUserEvent>;
 
       return this.normalizeUserEventStream(stream);
     } catch (error) {
-      // `operation` is matched by the `homeserver-event-stream-connect` Sentry drop rule:
-      // the mute-list coordinator reconnects on connect failures by design.
-      return handleError({
-        error,
-        additionalContext: { pathPrefix: params.pathPrefix, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
-      });
+      return handleError({ error, additionalContext: { pathPrefix: params.pathPrefix, operation } });
     }
   }
 

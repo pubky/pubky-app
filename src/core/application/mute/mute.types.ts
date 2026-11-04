@@ -1,6 +1,11 @@
 import type { TMuteParams } from '@/controllers/mute/mute.types';
 import type { HttpMethod } from '@/libs/http/http.types';
 
+export type TMuteFetchOptions = {
+  /** Whether the session the fetch started for is still the current one; checked before the local write. */
+  isCurrent?: () => boolean;
+};
+
 export type TMuteApplicationCommitParams = TMuteParams & {
   /** The session that asked: a commit queued behind another must not write after a logout replaced it. */
   isCurrent?: () => boolean;

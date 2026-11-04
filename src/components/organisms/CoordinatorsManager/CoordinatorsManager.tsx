@@ -22,7 +22,7 @@ function applyRouteToCoordinators(pathname: string): void {
   const coordinators = getAppCoordinators();
   void coordinators.notification.setRoute(pathname);
   void coordinators.stream.setRoute(pathname);
-  coordinators.muteListSync.setRoute(pathname);
+  void coordinators.muteListSync.setRoute(pathname);
 }
 
 function startAppCoordinators(): void {
@@ -30,7 +30,7 @@ function startAppCoordinators(): void {
   void coordinators.notification.start();
   void coordinators.stream.start();
   coordinators.ttl.start();
-  coordinators.muteListSync.start();
+  void coordinators.muteListSync.start();
 }
 
 function stopAppCoordinators(): void {

@@ -50,8 +50,8 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
 - **Config policy (D19):** accepted widenings, no visible reduction: article body cap = `articleBodyMaxLength`
   (body only, title has its own 100), collection item URI 200 → 1024, cover URL 200 → 300, the MIME table from
   the package minus `text/csv` (deferred, see follow-ups); `src/config/bookmarks.ts` retired with its mechanism;
-  the mute SSE prefix is `/priv/social/v1/mutes/`; new `src/config/social-migration.ts` and
-  `src/config/app-files.ts`.
+  the mute SSE prefix was replaced by a poll of `/priv/social/v1/mutes/` (`MUTE_SYNC_POLL_INTERVAL_MS`, 30 s, a config
+  addition; ADR-0014); new `src/config/social-migration.ts` and `src/config/app-files.ts`.
 
 ## Child PRs (into `feat/social-v1`)
 
@@ -270,11 +270,13 @@ Reductions (reported, not built around): bookmark-derived notifications ("post y
 "followed collection updated"); cross-device bookmark changes visible at the next sign-in only; `/feed/<id>`
 deep links change once (a feed id is the hash of its filter, and the migrator re-derives every id when it copies a
 0.x feed); forced sign-out and forced reload on upgrade; migrated articles with the rc.1 off-by-one render through
-the migrated-article reader rule until the migrator fix lands.
+the migrated-article reader rule until the migrator fix lands; mute changes made on another device appear within the
+poll interval or on focus, not live (a session-bound event stream deadlocks the SDK's bearer refresh, ADR-0014).
 
 Follow-ups (not in this round): private drafts and `planPublish`, slugs, attachment alt text UI, collection item
 notes UI, published feeds, `createSocialClient`, the 0.x tree sunset (who deletes `/pub/pubky.app/`, when legacy
-reads stop, the `rescan` schedule), bookmark SSE, the auth-store v4 cut-over (contingency only), 1.1 kinds; generic
+reads stop, the `rescan` schedule), bookmark SSE, restoring the mute SSE once the SDK releases the session lock for
+streams, the auth-store v4 cut-over (contingency only), 1.1 kinds; generic
 file card renders only PDFs; CSV/zip/txt uploads show no card (pre-existing); text/csv attachments (spec allows
 them; deferred); media GC for orphaned files (server-side or Nexus-backed reference counting): edits and avatar
 changes never delete media and a post delete skips any file it cannot verify unreferenced (ADR-0027), so orphaned
