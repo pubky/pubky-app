@@ -165,10 +165,10 @@ without the other: nothing in the app can reference a lock again once its announ
 a kept lock would only be orphaned content in the creator's `/priv`.
 
 `useDeletePost` reads the stored row and, when it carries a `lock` URL, calls
-`LocksController.deleteLockContent` **before** `PostController.commitDelete`. The order matters: a
-lock deletion that fails keeps the announcement (the optimistic removal is rolled back and the
-toast says so), instead of leaving a lock nobody can delete any more. A rejected or missing Locks
-session is cleared as on publish, and the toast asks the creator to sign in to the Lock Server. The
+`LocksController.deleteLockContent` **before** it removes the row from the feed and calls
+`PostController.commitDelete`; a post without a lock is removed at once, as before. The order matters: a
+lock deletion that fails keeps the announcement (the row never leaves the feed, the confirm dialog
+stays open and the toast says so), instead of leaving a lock nobody can delete any more. A Locks session the server rejects is cleared as on publish; a missing one is left alone, so a restore still in flight keeps its stored secret. Either way the dialog offers **Sign in**, which opens the Lock Server sign-in only (no Paykit step) and retries the delete; closing the dialog drops the offer. The
 reverse failure, a local post delete that fails after the Lock Server already accepted, leaves the
 announcement pointing at a tombstone; deleting it again is safe because the server answers a repeated
 delete with the job's status instead of a new job. A `lock` URL with no lock id in it (no `.json`
@@ -650,3 +650,5 @@ Never commit either.
 This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69), generated from [Locks source `c692fb70522c`](https://github.com/pubky/locks/commit/c692fb70522cf75025b86ad72a3b98fa7ef84e72). A normal `npm ci` installs the JS/WASM files; no SDK release or local build overlay is required. The artifact README records its source and checksums.
 
 Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
+
+The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`CONNECT_READY_AFTER_LOAD_MS`, `CONNECT_MOUNT_TIMEOUT_MS`). A page that failed to render, such as a JSON error body, is never shown (#3027).
