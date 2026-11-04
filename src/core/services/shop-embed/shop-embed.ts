@@ -1,6 +1,9 @@
+import { z } from 'zod';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { getMarketplaceUrl } from '@/libs/runtime-config/runtime-config';
 import { LocalAuthService } from '@/services/local/auth/auth';
 
 // Shared deployment contract with Shop; see ADR 0025. Never enumerate/delete other databases.
@@ -47,15 +50,25 @@ const PRIVATE_TABLES = [
   'chat_messages',
   'chat_sync_state',
 ];
+// Records of the bearers Shop holds for the marketplace service: the purchase session and the Studio session.
+const MARKETPLACE_SESSION_KEYS = ['pubky.marketplace.session.v1', 'pubky.marketplace.inventory-session.v1'];
 const SERVICE_KEYS = [
-  'pubky.marketplace.session.v1',
-  'pubky.marketplace.inventory-session.v1',
+  ...MARKETPLACE_SESSION_KEYS,
   'pubky.marketplace.locks-frontend-session.v1',
   'pubky.messaging.session.v1',
   'shop-chat-inbox-session:v1',
 ];
 const TEARDOWN_PENDING = 'pubky-messaging-keys-teardown-pending';
 const CLEANUP_TIMEOUT_MS = 4000;
+
+// The service issues 32-byte URL-safe base64 bearers and canonical lowercase uuid text session ids. The records
+// are written by Shop, possibly an older build or another tab, so each field is checked before it is sent.
+const heldMarketplaceSessionSchema = z.object({
+  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  sessionId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/),
+  expiresAt: z.string().optional(),
+});
+type HeldMarketplaceSession = z.infer<typeof heldMarketplaceSessionSchema>;
 
 /** Shop BFF readiness and best-effort logout cleanup; the durable epoch keeps failed cleanup retryable. */
 export class ShopEmbedService {
@@ -125,6 +138,8 @@ export class ShopEmbedService {
         if (!isCurrent()) return;
         if (localStorage.getItem('shop-host-cleanup-epoch-v1') === epoch && !localStorage.getItem(TEARDOWN_PENDING))
           return;
+        // The bearers exist only in these records once Shop's frame is gone, so read them before they are removed.
+        const held = this.readHeldMarketplaceSessions();
         for (const key of SERVICE_KEYS) localStorage.removeItem(key);
         localStorage.setItem(TEARDOWN_PENDING, '1');
         await Promise.allSettled([
@@ -143,6 +158,7 @@ export class ShopEmbedService {
           }),
           // Existing Shop BFF owns the HttpOnly session and flow cookies. No App SDK grant is removed here.
           this.clearSession(abort.signal),
+          this.revokeMarketplaceSessions(held, abort.signal),
         ]);
       });
     } catch {
@@ -150,6 +166,69 @@ export class ShopEmbedService {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /** Distinct, unexpired bearers that the persisted purchase and Studio records can still address at the service. */
+  private static readHeldMarketplaceSessions(): HeldMarketplaceSession[] {
+    const held = new Map<string, HeldMarketplaceSession>();
+    for (const key of MARKETPLACE_SESSION_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+      let value: unknown;
+      try {
+        value = JSON.parse(raw);
+      } catch {
+        continue;
+      }
+      // A record without a session id comes from a service that predates it and cannot be addressed.
+      const parsed = heldMarketplaceSessionSchema.safeParse(value);
+      if (!parsed.success) continue;
+      const expiresAtMs = parsed.data.expiresAt === undefined ? Number.NaN : Date.parse(parsed.data.expiresAt);
+      if (expiresAtMs <= Date.now()) continue;
+      held.set(parsed.data.token, parsed.data);
+    }
+    return [...held.values()];
+  }
+
+  /**
+   * Ends held marketplace sessions at the service. The service keeps a session valid until its TTL unless it
+   * is revoked, so deleting the record from the browser leaves a copied bearer usable. Failures are reported
+   * by the shared factories and never stop the rest of the logout cleanup.
+   */
+  private static async revokeMarketplaceSessions(held: HeldMarketplaceSession[], signal: AbortSignal): Promise<void> {
+    if (!held.length) return;
+    const origin = getMarketplaceUrl();
+    if (!origin) {
+      Logger.warn('Marketplace URL is not configured; Shop marketplace sessions will expire on their own');
+      return;
+    }
+    await Promise.allSettled(
+      held.map(async ({ token, sessionId }) => {
+        const url = `${origin.replace(/\/+$/, '')}/v1/auth/sessions/${sessionId}`;
+        const response = await safeFetch(
+          url,
+          {
+            method: HttpMethod.DELETE,
+            headers: { authorization: `Bearer ${token}` },
+            cache: 'no-store',
+            credentials: 'omit',
+            // Lets the request outlive a page that is torn down right after sign-out.
+            keepalive: true,
+            signal,
+          },
+          ErrorService.Shop,
+          'revokeMarketplaceSession',
+        );
+        // The bearer authenticates its own revocation, so an unknown session (401, 404) is already ended.
+        if (
+          response.ok ||
+          response.status === HttpStatusCode.UNAUTHORIZED ||
+          response.status === HttpStatusCode.NOT_FOUND
+        )
+          return;
+        throw httpResponseToError(response, ErrorService.Shop, 'revokeMarketplaceSession', url);
+      }),
+    );
   }
 
   private static async clearSession(signal: AbortSignal): Promise<void> {
