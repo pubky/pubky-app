@@ -40,6 +40,20 @@ describe('CopyrightForm', () => {
     expect(html).not.toContain(formatUSDate());
   });
 
+  it("server-renders a POST form whose submit stays disabled until hydration, so it can't submit natively", () => {
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(<CopyrightForm />);
+
+    expect(container.querySelector('form')).toHaveAttribute('method', 'post');
+    expect(container.querySelector('button[type="submit"]')).toBeDisabled();
+  });
+
+  it('enables submit once mounted', () => {
+    render(<CopyrightForm />);
+
+    expect(screen.getByRole('button', { name: 'Submit Form' })).toBeEnabled();
+  });
+
   it('renders all form fields', () => {
     render(<CopyrightForm />);
 
