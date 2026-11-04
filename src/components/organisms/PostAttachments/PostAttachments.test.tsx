@@ -183,6 +183,60 @@ describe('PostAttachments', () => {
       expect(screen.queryByTestId('post-attachments-images-and-videos')).not.toBeInTheDocument();
     });
 
+    // #2868: a collapsed lock in the feed must not draw every tile while its bytes load and then jump to one row.
+    it('collapses pending media skeleton tiles like the grid when collapseMedia is set', () => {
+      const pendingAttachments = [0, 1, 2, 3, 4].map((slot) => ({ slot, type: 'image/png' }));
+      const { container } = render(
+        <PostAttachments
+          attachments={null}
+          localAttachments={[]}
+          pendingAttachments={pendingAttachments}
+          collapseMedia
+        />,
+      );
+
+      const tiles = [...container.querySelectorAll('[data-slot="skeleton"].h-52')];
+      expect(tiles).toHaveLength(5);
+      expect(tiles[0]).not.toHaveClass('hidden');
+      expect(tiles[0]).not.toHaveClass('max-sm:hidden');
+      expect(tiles[1]).toHaveClass('max-sm:hidden');
+      tiles.slice(2).forEach((tile) => expect(tile).toHaveClass('hidden'));
+      // The Show more row is reserved too, so the toggle does not push the post down when it appears.
+      // Centred like the Show more button it stands in for, so it does not jump sideways on load.
+      expect(container.querySelector('[data-slot="skeleton"].h-8')).toHaveClass('self-center');
+    });
+
+    it('reserves the toggle row on mobile only for two pending media tiles', () => {
+      const { container } = render(
+        <PostAttachments
+          attachments={null}
+          localAttachments={[]}
+          pendingAttachments={[
+            { slot: 0, type: 'image/png' },
+            { slot: 1, type: 'video/mp4' },
+          ]}
+          collapseMedia
+        />,
+      );
+
+      expect(container.querySelector('[data-slot="skeleton"].h-8')).toHaveClass('sm:hidden');
+    });
+
+    it('keeps every pending media skeleton tile and no toggle row without collapseMedia', () => {
+      const pendingAttachments = [0, 1, 2].map((slot) => ({ slot, type: 'image/png' }));
+      const { container } = render(
+        <PostAttachments attachments={null} localAttachments={[]} pendingAttachments={pendingAttachments} />,
+      );
+
+      const tiles = [...container.querySelectorAll('[data-slot="skeleton"].h-52')];
+      expect(tiles).toHaveLength(3);
+      tiles.forEach((tile) => {
+        expect(tile).not.toHaveClass('hidden');
+        expect(tile).not.toHaveClass('max-sm:hidden');
+      });
+      expect(container.querySelector('[data-slot="skeleton"].h-8')).not.toBeInTheDocument();
+    });
+
     it('renders nothing when attachments is null', () => {
       const { container } = render(<PostAttachments attachments={null} localAttachments={undefined} />);
       expect(container.firstChild).toBeNull();

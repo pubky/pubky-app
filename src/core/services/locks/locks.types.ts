@@ -1,5 +1,6 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { z } from 'zod';
+import type { TLocksUnlockPollCallSite } from '@/libs/observability/sentry.constants';
 import { POST_KINDS } from '@/models/models.types';
 
 /** A price in the denomination's smallest unit: sats or USD cents. */
@@ -227,15 +228,35 @@ export interface LockFile {
 }
 
 /**
+ * The locked post's kind, saved in the announcement as `content_kind` so the card and the unlock dialog can
+ * show what is locked before anyone unlocks it (#2433). These are the pubky-app-specs v1.0.0-rc.1 kind names. They are
+ * stored in published posts, so the list is its own and is never derived from the app's internal post kinds:
+ * renaming an internal kind must not change what a lock saves. `toLockContentKind` maps one to the other.
+ */
+// exported for tests
+export const LOCK_CONTENT_KINDS = ['note', 'article', 'image', 'video', 'link', 'file'] as const;
+export type TLockContentKind = (typeof LOCK_CONTENT_KINDS)[number];
+
+/** Narrows a stored `content_kind` to one this build can show. Anything else is carried raw and shown as generic. */
+export function isLockContentKind(kind: string | undefined): kind is TLockContentKind {
+  return (LOCK_CONTENT_KINDS as readonly string[]).includes(kind ?? '');
+}
+
+/**
  * Creator-authored teaser content stored (stringified) in a lock post's `content`
  * field. FE-owned — pubky-app-specs does not manage it yet, so we validate it at
  * runtime here (Zod).
  * - `lock_title`: title of the locked content (shown in the lock card).
  * - `teaser_description`: preview/announcement text shown above the lock card.
+ * - `content_kind` (optional): the locked post's kind, for the card's icon and default title.
  */
 export const lockPostContentSchema = z.object({
   lock_title: z.string().catch(''),
   teaser_description: z.string().catch(''),
+  // Any string is kept raw, so an edit writes a kind a newer app added back unchanged; only the display narrows
+  // it (`getLockContentDisplay`). A non-string reads as unset rather than failing: a failed parse would blank
+  // the whole lock post (`LockedPostContent` renders nothing for it).
+  content_kind: z.string().optional().catch(undefined),
 });
 
 export type LockPostContent = z.infer<typeof lockPostContentSchema>;
@@ -393,6 +414,17 @@ export type TSubmitProofOutcome = (TSubmitProofResult & { regionBlocked?: false 
  * does so for its viewer calls alike, so the lookup of a saved bundle id is refused as well.
  */
 export type TVerificationLookup = TVerificationTask | null | { regionBlocked: true };
+
+/**
+ * Passed by a polling loop as the context of the AppErrors one Lock Server read builds, unchanged:
+ * `callSite` names the loop, `reportSuppressed` marks a repeat failure of a streak, which the
+ * `locks-unlock-poll-repeat-reports` drop rule keeps out of Sentry (#2641). One-shot reads pass
+ * nothing and stay untagged.
+ */
+export type TLocksPollReport = {
+  callSite: TLocksUnlockPollCallSite;
+  reportSuppressed?: true;
+};
 
 export const isRegionBlockedLookup = (lookup: TVerificationLookup): lookup is { regionBlocked: true } =>
   lookup !== null && 'regionBlocked' in lookup;

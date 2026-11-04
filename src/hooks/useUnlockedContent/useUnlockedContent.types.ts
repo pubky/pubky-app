@@ -8,6 +8,8 @@ export interface UseUnlockedContentParams {
   lockFile: LockFile | null;
   /** Composite id of the announcement post. Its author is the pubky.app account that posted the lock. */
   postId: string;
+  /** Rendered as a preview card, so an article loads its cover and none of its body media. */
+  preview?: boolean;
 }
 
 export interface UseUnlockedContentResult {
@@ -20,14 +22,19 @@ export interface UseUnlockedContentResult {
   /** `unlockedPost` is on screen while these attachments' bytes still download; empty once they are in `media`. */
   pendingAttachments: PendingAttachment[];
   /**
-   * Text and bytes are both on screen. False while a cached post's bytes are pending or could not be
-   * read: that post is not "received", so a paid reader's purchase recovery may still run.
+   * Text and the bytes this view shows (a preview's cover, or all of them) are on screen. False while a
+   * cached post's bytes are pending or could not be read: that post is not "received", so a paid
+   * reader's purchase recovery may still run.
    */
   hasCompleteContent: boolean;
   /** Whether the signed-in user is the lock's creator (owns the guarded storage). */
   isOwnLock: boolean;
   /** The own-lock read has not settled: render the own layout with a text skeleton, never the unlock card. */
   isResolvingOwn: boolean;
-  /** The replica read has not settled, so an empty `unlockedPost` means "not known yet". */
+  /**
+   * The replica read has not settled (or a session restore it will follow is pending), so an empty
+   * `unlockedPost` means "not known yet". False when no read will run. No deadline: purchase recovery
+   * waits on this, and a slow read it gave up on would download the purchase a second time.
+   */
   isResolvingReplica: boolean;
 }

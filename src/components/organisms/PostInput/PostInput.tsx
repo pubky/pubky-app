@@ -13,7 +13,6 @@ import {
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   LOCK_ATTACHMENT_MAX_FILES,
   LOCK_ATTACHMENT_MAX_SIZE,
-  LOCK_TEASER_MAX_CHARACTER_LENGTH,
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
@@ -35,7 +34,7 @@ import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
-import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
+import { getLockTeaserMaxLength, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount, resolveUserDisplayName } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { ArticleComposerTabs } from '@/molecules/ArticleComposerTabs/ArticleComposerTabs';
@@ -102,6 +101,19 @@ export function PostInput({
   layoutOverride,
 }: PostInputProps) {
   const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
+  // The edit dialog reads its post through a live query (`usePostDetails`): a failed save writes the
+  // row with the new content and attachments and reverts it, and another device or a background
+  // refresh can change it under an open dialog. The composer seeds from the row once per mount and
+  // ignores later values, or a refused save would reset the editor to the published body and a retry
+  // would write that body over the user's edit (#2877). A new seed takes a new mount: the dialog
+  // unmounts its content when closed and keys the composer on `resetKey` after a discard.
+  // `useEditAttachments` snapshots the attachment list for the same reason.
+  const [editSeed] = useState(() => ({
+    content: editContent,
+    isArticle: editIsArticle,
+    attachments: editAttachments,
+    lock: editLock,
+  }));
   const isMobile = useIsMobile();
 
   const {
@@ -164,10 +176,10 @@ export function PostInput({
     postId,
     originalPostId,
     editPostId,
-    editLock,
-    editAttachmentUris: editAttachments,
-    editContent,
-    editIsArticle,
+    editLock: editSeed.lock,
+    editAttachmentUris: editSeed.attachments,
+    editContent: editSeed.content,
+    editIsArticle: editSeed.isArticle,
     onSuccess,
     placeholder,
     successToastTitle,
@@ -215,8 +227,7 @@ export function PostInput({
     removeExistingAttachment,
   });
   const isSubmitting = isWriting || isWaiting;
-  const restoreStatus = useAuthStore((state) => state.restoreStatus);
-  const displayUserPubky = selectDisplayUserPubky({ currentUserPubky, restoreStatus });
+  const displayUserPubky = useAuthStore((state) => selectDisplayUserPubky({ ...state, currentUserPubky }));
 
   const isPostVariant = variant === POST_INPUT_VARIANT.POST;
 
@@ -256,8 +267,10 @@ export function PostInput({
     isLockDialogOpen,
     closeLockDialog,
     handleLockApplied,
+    changeLockPrice,
     lockTitle,
     setLockTitle,
+    lockContentKind,
     submitOrPublish,
     isPublishing: isPublishingLock,
   } = usePostInputLock({
@@ -302,9 +315,10 @@ export function PostInput({
     onNormalSubmit: handleSubmitWithAuth,
   });
 
-  const { price: editLockPrice } = useLockFile(editLock?.lockUrl);
-  const isLockMode = isLockEnabled || editLock != null;
-  const activeLockTitle = editLock ? editLockTitle : lockTitle;
+  const { price: editLockPrice } = useLockFile(editSeed.lock?.lockUrl);
+  const isLockMode = isLockEnabled || editSeed.lock != null;
+  const activeLockTitle = editSeed.lock ? editLockTitle : lockTitle;
+  const activeLockContentKind = editSeed.lock ? editSeed.lock.contentKind : lockContentKind;
 
   const isValid = () => {
     // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
@@ -323,7 +337,11 @@ export function PostInput({
       // empty one reads as set and would be written as an empty string.
       (!isLockMode ||
         (activeLockTitle.trim().length > 0 &&
-          isLockTeaserWithinLimit({ lock_title: activeLockTitle, teaser_description: content })))
+          isLockTeaserWithinLimit({
+            lock_title: activeLockTitle,
+            teaser_description: content,
+            content_kind: activeLockContentKind,
+          })))
     );
   };
 
@@ -351,53 +369,52 @@ export function PostInput({
   const dissolveVariants = getComposerDissolveVariants(shouldReduceMotion);
 
   useEffect(() => {
-    if (isEdit) {
-      if (editIsArticle) {
-        setIsArticle(true);
+    if (!isEdit) return;
+    if (editSeed.isArticle) {
+      setIsArticle(true);
 
-        const parsed = parseArticleContent(editContent);
-        if (parsed) {
-          setArticleTitle(parsed.title);
-          // Resolve published attachment:{n} image references back to their
-          // homeserver file URIs so the composer edits real destinations.
-          // Unresolvable references are removed (never a hard failure — the
-          // article must stay editable so the user can repair it).
-          let articleAuthorPubky = '';
-          try {
-            articleAuthorPubky = editPostId ? parseCompositeId(editPostId).pubky : '';
-          } catch {
-            // Malformed composite id — no reference can resolve to an author-owned file
-          }
-          const deserialized = deserializeArticleBody({
-            body: parsed.body,
-            attachments: editAttachments ?? [],
-            authorPubky: articleAuthorPubky,
-          });
-          setContent(deserialized.body);
-          if (deserialized.warnings.length > 0) {
-            toast({
-              variant: 'warning',
-              description:
-                deserialized.warnings.length === 1
-                  ? 'An attachment with a broken reference was removed from the article.'
-                  : `${deserialized.warnings.length} attachments with broken references were removed from the article.`,
-            });
-          }
-        } else {
+      const parsed = parseArticleContent(editSeed.content);
+      if (parsed) {
+        setArticleTitle(parsed.title);
+        // Resolve published attachment:{n} image references back to their
+        // homeserver file URIs so the composer edits real destinations.
+        // Unresolvable references are removed (never a hard failure — the
+        // article must stay editable so the user can repair it).
+        let articleAuthorPubky = '';
+        try {
+          articleAuthorPubky = editPostId ? parseCompositeId(editPostId).pubky : '';
+        } catch {
+          // Malformed composite id — no reference can resolve to an author-owned file
+        }
+        const deserialized = deserializeArticleBody({
+          body: parsed.body,
+          attachments: editSeed.attachments ?? [],
+          authorPubky: articleAuthorPubky,
+        });
+        setContent(deserialized.body);
+        if (deserialized.warnings.length > 0) {
           toast({
-            variant: 'error',
-            description: 'Could not parse article content',
+            variant: 'warning',
+            description:
+              deserialized.warnings.length === 1
+                ? 'An attachment with a broken reference was removed from the article.'
+                : `${deserialized.warnings.length} attachments with broken references were removed from the article.`,
           });
         }
       } else {
-        setContent(editContent);
+        toast({
+          variant: 'error',
+          description: 'Could not parse article content',
+        });
       }
-      // Seeded with the body: a failed save rolls the stored row back, and reverting only one of the
-      // two would let the next save write the new title over the old body.
-      setEditLockTitle(editLock?.title ?? '');
+    } else {
+      setContent(editSeed.content ?? '');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
-  }, [variant, editContent, editIsArticle, editLock?.title]);
+    // Seeded with the body from the same snapshot, so the title and the body always describe one
+    // version of the post.
+    setEditLockTitle(editSeed.lock?.title ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seeds once per mount from the editSeed snapshot (#2877): editPostId is fixed for the mount and the composer setters are stable
+  }, []);
 
   // Pre-fill content from share target or other external sources
   useEffect(() => {
@@ -416,7 +433,8 @@ export function PostInput({
   }, []);
 
   // With the lock on the body is the teaser, sharing the post budget with the title in one envelope.
-  const composerMaxLength = isLockMode ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
+  // The teaser max follows the envelope actually written: an old lock with no kind keeps the old limit (#2433).
+  const composerMaxLength = isLockMode ? getLockTeaserMaxLength(activeLockContentKind) : POST_MAX_CHARACTER_LENGTH;
   const characterLimit =
     isExpanded && !isArticle ? { count: getEnforcedCharacterCount(content), max: composerMaxLength } : undefined;
   useCharacterLimitWarning(characterLimit);
@@ -772,15 +790,18 @@ export function PostInput({
                         submitIcon={submitIcon}
                         lockSwitch={lockSwitch}
                         lockCard={
-                          isLockConfigured || editLock ? (
+                          isLockConfigured || editSeed.lock ? (
                             <LockedPostCard
-                              price={editLock ? editLockPrice : lockConfig}
+                              price={editSeed.lock ? editLockPrice : lockConfig}
+                              contentKind={activeLockContentKind}
                               editableTitle={{
                                 value: activeLockTitle,
-                                onChange: editLock ? setEditLockTitle : setLockTitle,
-                                disabled: editLock ? isSubmitting : isPublishingLock,
+                                onChange: editSeed.lock ? setEditLockTitle : setLockTitle,
+                                disabled: editSeed.lock ? isSubmitting : isPublishingLock,
                                 maxLength: LOCK_TITLE_MAX_CHARACTER_LENGTH,
                               }}
+                              // A published lock keeps its price; a new one can change it until Post.
+                              onChangePrice={editSeed.lock || isPublishingLock ? undefined : changeLockPrice}
                             />
                           ) : undefined
                         }
@@ -828,7 +849,13 @@ export function PostInput({
               }}
               onSuccess={handleAuthSuccess}
             />
-            <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onApplied={handleLockApplied} />
+            <DialogLockContent
+              open={isLockDialogOpen}
+              onOpenChange={closeLockDialog}
+              onApplied={handleLockApplied}
+              appliedPrice={lockConfig}
+              focusAfterApplyRef={textareaRef}
+            />
           </>
         )}
       </Container>

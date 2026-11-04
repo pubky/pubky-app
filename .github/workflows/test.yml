@@ -29,6 +29,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__. VRT workflows still fetch them.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -71,6 +79,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__. VRT workflows still fetch them.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
 
       - name: Download all coverage artifacts
         uses: actions/download-artifact@v8

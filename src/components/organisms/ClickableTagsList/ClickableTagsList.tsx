@@ -86,16 +86,14 @@ export function ClickableTagsList({
   // This allows adding a tag that others have used but the viewer hasn't
   const viewerTags = enrichedTags.filter((t) => isViewerTagger(t));
 
-  // Handle tag add from input
+  // Handle tag add from input. The result goes back to TagInput, which clears the typed
+  // label only when the add went through (issue #2890).
   const handleTagAddFromInput = (label: string) => {
-    if (onTagAdd) {
-      onTagAdd(label);
-    } else {
-      void handleTagAdd(label);
-    }
+    const result = onTagAdd ? onTagAdd(label) : handleTagAdd(label);
     if (!addMode) {
       setIsAdding(false);
     }
+    return result;
   };
 
   // Handle tag click with auth requirement (toggle or custom handler)

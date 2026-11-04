@@ -9,6 +9,9 @@
  * and rendering move together.
  *
  * The kind is a single value: a post is `video` or `link`, never both.
+ *
+ * `parseVideoUrl` also tells the Visual layout which tile to build for a post
+ * whose only video is such a link (a YouTube thumbnail, the file itself, or a card).
  */
 
 /**
@@ -159,27 +162,39 @@ const parseHttpUrl = (value: string): URL | null => {
   }
 };
 
+/** Which player a video link belongs to; `file` is a direct video file. */
+export type VideoUrlMatch =
+  { provider: 'youtube'; videoId: string } | { provider: 'vimeo'; videoId: string } | { provider: 'file' };
+
 /**
- * True when the URL is one a video embed provider plays, or a direct video file.
+ * The provider and video id of a URL an embed provider plays, `{ provider: 'file' }`
+ * for a direct video file, or null.
  *
  * The hostname is matched against the same domain lists the providers register,
  * then the provider's own id extraction decides. A channel, playlist or about
- * page on a video host has no id and stays a link.
+ * page on a video host has no id and is not a video.
  */
-export function isVideoUrl(value: string): boolean {
+export function parseVideoUrl(value: string): VideoUrlMatch | null {
   const url = parseHttpUrl(value);
-  if (!url) return false;
+  if (!url) return null;
 
   const hostname = url.hostname.toLowerCase();
 
   if ((YOUTUBE_DOMAINS as readonly string[]).includes(hostname)) {
-    return extractYouTubeVideoId(value.trim()) !== null;
+    const videoId = extractYouTubeVideoId(value.trim());
+    return videoId ? { provider: 'youtube', videoId } : null;
   }
 
   if ((VIMEO_DOMAINS as readonly string[]).includes(hostname)) {
-    return extractVimeoVideoId(value.trim()) !== null;
+    const videoId = extractVimeoVideoId(value.trim());
+    return videoId ? { provider: 'vimeo', videoId } : null;
   }
 
   const pathname = url.pathname.toLowerCase();
-  return VIDEO_FILE_EXTENSIONS.some((extension) => pathname.endsWith(extension));
+  return VIDEO_FILE_EXTENSIONS.some((extension) => pathname.endsWith(extension)) ? { provider: 'file' } : null;
+}
+
+/** True when the URL is one a video embed provider plays, or a direct video file. */
+export function isVideoUrl(value: string): boolean {
+  return parseVideoUrl(value) !== null;
 }

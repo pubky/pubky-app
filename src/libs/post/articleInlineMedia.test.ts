@@ -4,6 +4,7 @@ import {
   collectAttachmentRefIndexes,
   countInlineMediaUris,
   deserializeArticleBody,
+  getArticlePreviewSlots,
   isAttachmentRefScheme,
   isAuthorFileUri,
   parseAttachmentRef,
@@ -433,5 +434,22 @@ describe('collectAttachmentRefIndexes / articleHasInlineSlotZero', () => {
     expect(collectAttachmentRefIndexes('![a](attachment:&#49;)')).toEqual(new Set([1]));
     // Ampersands in prose alone never fabricate a ref
     expect(articleHasInlineSlotZero('R&D notes, no images')).toBe(false);
+  });
+});
+
+describe('getArticlePreviewSlots', () => {
+  const article = (body: string) => JSON.stringify({ title: 'Title', body });
+
+  it('keeps only the cover slot of an article', () => {
+    expect(getArticlePreviewSlots({ kind: 'long', content: article('![a](attachment:1)') })).toEqual([0]);
+  });
+
+  it('keeps no slot when the body uses slot 0 inline, as the article then has no cover', () => {
+    expect(getArticlePreviewSlots({ kind: 'long', content: article('![a](attachment:0)') })).toEqual([]);
+  });
+
+  it('keeps every slot of a post that is not an article', () => {
+    expect(getArticlePreviewSlots({ kind: 'image', content: article('text') })).toBeNull();
+    expect(getArticlePreviewSlots({ kind: 'long', content: 'plain long text' })).toBeNull();
   });
 });

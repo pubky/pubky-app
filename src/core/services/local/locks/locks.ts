@@ -57,6 +57,10 @@ export class LocalLocksService {
     }
   }
 
+  static async delete(lockId: string): Promise<void> {
+    await LockModel.deleteById(lockId);
+  }
+
   static async getUnlockedList(): Promise<TUnlockedListItem[]> {
     const rows = await LockModel.findAllUnlocked();
     // TODO:[Locks] #2283 — ownership of a != b locks needs an explicit announcement author.

@@ -35,7 +35,8 @@ export type TPublishResult =
   | { status: 'published'; postId: string }
   | { status: 'auth-expired' } // the Lock Server rejected the session; the creator must sign in again
   | { status: 'setup-required' }
-  | { status: 'failed' }
+  /** `description` is set when retrying cannot help, e.g. an image over the upload limit; show it as is. */
+  | { status: 'failed'; description?: string }
   | { status: 'canceled' };
 
 export type TUseCreateLockContentReturn = {

@@ -197,6 +197,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: createZustandLikeHook({
     secretKey: null as string | null,
+    signupAttempt: null,
     showWelcomeDialog: false,
     setShowWelcomeDialog: () => {},
     hasHydrated: true,
@@ -687,7 +688,9 @@ async function expandFirstQuickReply(screen: Awaited<ReturnType<typeof renderFor
 async function waitForArticleComposer() {
   await expect.element(page.getByRole('tablist', { name: 'Article sections' })).toBeVisible();
   await expect.element(page.getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
-  await expect.element(page.getByText('Publish')).toBeVisible();
+  // Role + full accessible name: Vitest 5's getByText matches exactly, so the
+  // old substring 'Publish' no longer finds the 'Publish Article' button.
+  await expect.element(page.getByRole('button', { name: 'Publish Article' })).toBeVisible();
   await waitForMarkdownEditorReady();
 }
 

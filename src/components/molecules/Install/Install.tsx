@@ -12,7 +12,7 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getPubkyCoreLink, getPubkyRingLink } from '@/config/externalLinks';
+import { getPubkyProtocolLink, getPubkyRingLink } from '@/config/externalLinks';
 import { cn } from '@/libs/utils/utils';
 import { DialogDownloadPubkyRing } from '@/organisms/DialogDownloadPubkyRing/DialogDownloadPubkyRing';
 import { ContentCard } from '../Content/Content';
@@ -55,10 +55,10 @@ export const InstallFooter = () => {
         {'Pubky Ring'}
       </Link>
       {' or any other '}
-      <Link href={getPubkyCoreLink()} target="_blank">
-        {'Pubky Core'}
+      <Link href={getPubkyProtocolLink()} target="_blank">
+        {'Pubky'}
       </Link>
-      {'–powered keychain, or create your keys in the browser (less secure).'}
+      {'-powered keychain, or create your keys in the browser (less secure).'}
     </FooterLinks>
   );
 };

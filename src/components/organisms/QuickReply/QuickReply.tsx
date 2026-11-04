@@ -100,8 +100,7 @@ export function QuickReply({
     handlePaste,
   });
   const isSubmitting = isWriting || isWaiting;
-  const restoreStatus = useAuthStore((state) => state.restoreStatus);
-  const displayUserPubky = selectDisplayUserPubky({ currentUserPubky, restoreStatus });
+  const displayUserPubky = useAuthStore((state) => selectDisplayUserPubky({ ...state, currentUserPubky }));
 
   const { ref: cardRef, height: cardHeight } = useElementHeight();
   const shouldReduceMotion = useReducedMotion();

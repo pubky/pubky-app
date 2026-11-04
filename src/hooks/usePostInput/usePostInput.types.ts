@@ -17,9 +17,9 @@ export interface UsePostInputOptions {
   editPostId?: string;
   /** Existing lock announcement metadata (edit variant only). */
   editLock?: EditLock;
-  /** The post's current attachment URIs (edit variant only) */
+  /** The post's attachment URIs as the composer mounted (edit variant only); the composer never passes a later value */
   editAttachmentUris?: string[];
-  /** The post's current content (edit variant only) — used to derive the article cover slot */
+  /** The post's content as the composer mounted (edit variant only) — used to derive the article cover slot */
   editContent?: string;
   /** Whether the post being edited is an article (edit variant only) */
   editIsArticle?: boolean;
