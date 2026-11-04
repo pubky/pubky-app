@@ -136,4 +136,40 @@ describe('useUnlockPillHold', () => {
     rerender({ ...reading });
     expect(result.current).toBe(true);
   });
+
+  // #3038: recovery found a completed payment and is downloading it.
+  it('keeps holding while recovery downloads a completed purchase, inside the same limit', async () => {
+    const { result, rerender } = renderHold(reading);
+    await advance(4000);
+    rerender(lookingUp);
+    await advance(2000);
+    rerender({ ...lookingUp, purchaseStatus: 'recovering' });
+    expect(result.current).toBe(true);
+    await advance(UNLOCK_PILL_HOLD_MS - 6000 - 1);
+    expect(result.current).toBe(true);
+    await advance(1);
+    expect(result.current).toBe(false);
+  });
+
+  it('releases once the download has finished', () => {
+    for (const purchaseStatus of ['recoverable', 'unknown'] as const) {
+      const { result, rerender, unmount } = renderHold({ ...lookingUp, purchaseStatus: 'recovering' });
+      expect(result.current).toBe(true);
+      rerender({ ...lookingUp, purchaseStatus });
+      expect(result.current).toBe(false);
+      rerender({ ...lookingUp, purchaseStatus: 'recovering' });
+      expect(result.current).toBe(false);
+      unmount();
+    }
+  });
+
+  // A running task has nothing to download yet: the lookup goes straight from 'checking' to 'recoverable'.
+  it('releases when the lookup finds a running task', () => {
+    const { result, rerender } = renderHold(lookingUp);
+    expect(result.current).toBe(true);
+    rerender({ ...lookingUp, purchaseStatus: 'recoverable' });
+    expect(result.current).toBe(false);
+    rerender(lookingUp);
+    expect(result.current).toBe(false);
+  });
 });
