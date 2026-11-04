@@ -16,7 +16,7 @@ import {
   installHomeserverWriteRetryDependenciesForTests,
 } from '@/services/homeserver/write-retry';
 import type { LockFile, ReplicatedPost, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
-import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
+import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile, mockVerificationTask } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksApplication } from './locks';
 
@@ -773,7 +773,7 @@ describe('LocksApplication (payment unlock)', () => {
   const BUNDLE_A = 'A'.repeat(26);
   const BUNDLE_B = 'B'.repeat(26);
   const purchaseFile = (bundleId: string) => `${purchaseRoot}${bundleId}.json`;
-  const task = (status: string) => ({ status, walletSetupNeeded: false, admissionDeadlineAt: null });
+  const task = mockVerificationTask;
   /** Answers each id's lookup from the map; an id outside it reads as "never received". */
   const lookups = (byId: Record<string, ReturnType<typeof task> | null>) =>
     mocks.lookupVerificationTask.mockImplementation(async (_creator: string, id: string) => byId[id] ?? null);
@@ -869,6 +869,59 @@ describe('LocksApplication (payment unlock)', () => {
         kind: 'terminal',
         bundleId: BUNDLE_B,
         status: 'failed',
+        readerNotPayable: false,
+      });
+    });
+
+    describe('readerNotPayable on an ended purchase', () => {
+      const OLDER = '2026-10-08T09:52:51.22186Z';
+      const NEWER = '2026-10-08T14:07:15.417445Z';
+      const notPayable = (completedAt: string) => task('failed', { readerNotPayable: true, completedAt });
+
+      it('reports the only saved id', async () => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+        lookups({ [BUNDLE_A]: notPayable(OLDER) });
+
+        await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+          kind: 'terminal',
+          bundleId: BUNDLE_A,
+          status: 'failed',
+          readerNotPayable: true,
+        });
+      });
+
+      // A reader who fixed their wallet and then failed for another reason must not go back to the wallet screen.
+      // Ids are not time-ordered, so each pair runs both ways round.
+      it.each([
+        ['a later generic failure', notPayable(OLDER), task('failed', { completedAt: NEWER }), false],
+        ['a later rejection in Bitkit', notPayable(OLDER), task('expired', { completedAt: NEWER }), false],
+        ['an earlier generic failure', notPayable(NEWER), task('failed', { completedAt: OLDER }), true],
+        ['an earlier rejection in Bitkit', notPayable(NEWER), task('expired', { completedAt: OLDER }), true],
+        ['a time that cannot be parsed', notPayable(OLDER), task('failed', { completedAt: 'soon' }), true],
+      ])('lets the attempt that ended last decide, against %s', async (_label, wallet, other, readerNotPayable) => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+
+        for (const [a, b] of [
+          [wallet, other],
+          [other, wallet],
+        ]) {
+          lookups({ [BUNDLE_A]: a, [BUNDLE_B]: b });
+          await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toMatchObject({
+            kind: 'terminal',
+            status: 'failed',
+            readerNotPayable,
+          });
+        }
+      });
+
+      it('leaves the rank in charge of the id', async () => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+        lookups({ [BUNDLE_A]: task('failed', { completedAt: OLDER }), [BUNDLE_B]: notPayable(NEWER) });
+
+        await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toMatchObject({
+          bundleId: BUNDLE_A,
+          readerNotPayable: true,
+        });
       });
     });
 
@@ -1070,10 +1123,48 @@ describe('LocksApplication (payment unlock)', () => {
       mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
       lookups({ [BUNDLE_A]: task('expired') });
 
-      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: BUNDLE_A, status: 'expired' });
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({
+        bundleId: BUNDLE_A,
+        status: 'expired',
+        readerNotPayable: false,
+      });
       expect(mocks.generateBundleId).not.toHaveBeenCalled();
       expect(mocks.putBlob).not.toHaveBeenCalled();
       expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
+    it('passes on a not-payable reader when an automatic start finds the ended id', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      lookups({ [BUNDLE_A]: task('failed', { readerNotPayable: true }) });
+
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({
+        bundleId: BUNDLE_A,
+        status: 'failed',
+        readerNotPayable: true,
+      });
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
+    it('passes on a not-payable reader from the submission', async () => {
+      mocks.submitProof.mockResolvedValue({ status: 'failed', readerNotPayable: true });
+
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({
+        bundleId: 'fresh-1',
+        status: 'failed',
+        readerNotPayable: true,
+      });
+    });
+
+    // The reader may have fixed the wallet, and the ended id stays failed either way.
+    it('mints a fresh id past a not-payable one when the reader asks', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      lookups({ [BUNDLE_A]: task('failed', { readerNotPayable: true }) });
+
+      await expect(LocksApplication.startPayment({ ...params, isRetry: true })).resolves.toMatchObject({
+        bundleId: 'fresh-1',
+        status: 'pending',
+      });
+      expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'fresh-1' }));
     });
 
     // failed/expired cannot be retried — a fresh id gets its own file; the ended one stays as the
@@ -1444,7 +1535,10 @@ describe('LocksApplication (payment unlock)', () => {
     });
 
     it('returns the task the server holds', async () => {
-      const task = { status: 'pending', walletSetupNeeded: true, admissionDeadlineAt: '2026-10-08T12:10:00Z' };
+      const task = mockVerificationTask('pending', {
+        walletSetupNeeded: true,
+        admissionDeadlineAt: '2026-10-08T12:10:00Z',
+      });
       mocks.lookupVerificationTask.mockResolvedValue(task);
       await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toEqual(task);
     });
