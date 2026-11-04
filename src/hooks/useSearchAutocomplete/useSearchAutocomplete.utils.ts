@@ -13,7 +13,8 @@ interface SearchAutocompletePlan {
 }
 
 const USER_ID_PREFIX_PATTERN = /^[a-z0-9]+$/i;
-const WHITESPACE_PATTERN = /\s/;
+// Match Rust char::is_whitespace in pubky-app-specs: NEL is whitespace, U+FEFF is not.
+const WHITESPACE_PATTERN = /\p{White_Space}/u;
 
 /**
  * A tag can never hold whitespace or a tag-banned character, and Nexus answers
