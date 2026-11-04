@@ -5,9 +5,13 @@ import {
   appendVisualTrailingCell,
   composeVisualRows,
   getVisualPendingOverflowFallbackIds,
+  getVisualYouTubeThumbnailUrl,
+  isVisualYouTubePlaceholderThumbnail,
   resolvePreferredVisualTileSize,
   resolveVisualFeedContent,
   resolveVisualTileSizeOptions,
+  VISUAL_LINK_VIDEO_HEIGHT,
+  VISUAL_LINK_VIDEO_WIDTH,
 } from './TimelineFeedVisual.helpers';
 import type { VisualRow, VisualTile } from './TimelineFeedVisual.types';
 
@@ -270,5 +274,28 @@ describe('getVisualPendingOverflowFallbackIds', () => {
     ]);
 
     expect(fallbackIds).toEqual(['a', 'c']);
+  });
+});
+
+describe('link video tile helpers', () => {
+  it('builds the i.ytimg thumbnail URL for a video id and variant', () => {
+    expect(getVisualYouTubeThumbnailUrl('dQw4w9WgXcQ', 'hq720')).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/hq720.jpg');
+    expect(getVisualYouTubeThumbnailUrl('dQw4w9WgXcQ', 'mqdefault')).toBe(
+      'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+    );
+  });
+
+  it("recognises only i.ytimg's 120x90 placeholder", () => {
+    expect(isVisualYouTubePlaceholderThumbnail(120, 90)).toBe(true);
+    expect(isVisualYouTubePlaceholderThumbnail(320, 180)).toBe(false);
+    expect(isVisualYouTubePlaceholderThumbnail(1280, 720)).toBe(false);
+    expect(isVisualYouTubePlaceholderThumbnail(0, 0)).toBe(false);
+  });
+
+  it('gives the 16:9 link video frame the wide and medium sizes, never square', () => {
+    expect(resolveVisualTileSizeOptions('tile:link', VISUAL_LINK_VIDEO_WIDTH, VISUAL_LINK_VIDEO_HEIGHT)).toEqual([
+      'wide',
+      'medium',
+    ]);
   });
 });

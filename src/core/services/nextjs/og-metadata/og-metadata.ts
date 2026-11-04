@@ -1,6 +1,6 @@
 import type { LookupFunction } from 'node:net';
 import type { Dispatcher } from 'undici';
-import { Agent } from 'undici';
+import { Agent, Dispatcher1Wrapper } from 'undici';
 import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { AppError } from '@/libs/error/error';
 import { NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -83,9 +83,17 @@ class OgMetadataBlockedIpError extends Error {
   }
 }
 
-const SAFE_OG_METADATA_DISPATCHER: Dispatcher = new Agent({
-  connect: { lookup: safeOgMetadataLookup },
-});
+/**
+ * The global `fetch` runs on the Undici bundled with Node (7.x on Node 24), which dispatches with
+ * the legacy handler API that the `undici` package's v8 `Agent` rejects (`invalid onRequestStart
+ * method`). `Dispatcher1Wrapper` adapts legacy handlers and passes v8 handlers through unchanged, so
+ * the guarded `Agent` keeps working whichever Undici major Node bundles.
+ */
+const SAFE_OG_METADATA_DISPATCHER: Dispatcher = new Dispatcher1Wrapper(
+  new Agent({
+    connect: { lookup: safeOgMetadataLookup },
+  }),
+);
 
 /**
  * Next.js OG Metadata Service

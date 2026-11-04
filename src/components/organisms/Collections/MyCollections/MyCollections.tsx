@@ -164,7 +164,13 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
 
       {showShowMore && (
         <Container overrideDefaults className="flex w-full justify-center">
-          <Button variant="default" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+            data-cy="my-collections-show-more"
+          >
             {loadingMore && <Loader2 className="size-4 animate-spin" />}
             {'Show more'}
           </Button>

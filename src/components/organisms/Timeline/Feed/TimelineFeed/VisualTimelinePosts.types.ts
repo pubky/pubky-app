@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { VisualRowCell, VisualTile } from './TimelineFeedVisual.types';
+import type { VisualLinkVideo, VisualRowCell, VisualTile } from './TimelineFeedVisual.types';
 
 export interface VisualTimelinePostsProps {
   postIds: string[];
@@ -24,6 +24,32 @@ export interface VisualTimelinePostsProps {
 
 export interface VisualTileVideoProps {
   tile: VisualTile;
+  /**
+   * Set by link video tiles, which draw a fallback card underneath: the player
+   * turns transparent so the card shows until the first frame, and this fires
+   * once the Video atom has given up loading the file.
+   */
+  onMediaError?: () => void;
+}
+
+export interface VisualTileLinkVideoProps {
+  tile: VisualTile;
+  linkVideo: VisualLinkVideo;
+}
+
+export interface VisualTileLinkVideoFileProps {
+  tile: VisualTile;
+  onMediaError: () => void;
+}
+
+export interface VisualTileYouTubeThumbnailProps {
+  tile: VisualTile;
+  /** Fires when neither thumbnail variant exists, so the fallback card stays. */
+  onUnavailable: () => void;
+}
+
+export interface VisualTileLinkVideoFallbackProps {
+  hostLabel: string;
 }
 
 export interface VisualTileImageProps {

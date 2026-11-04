@@ -7,12 +7,14 @@ import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
+import type { SessionReference } from '@/libs/auth/session.types';
 import {
   readServerConfig,
   resetRuntimeConfigForTests,
   RUNTIME_CONFIG_WINDOW_KEY,
 } from '@/libs/runtime-config/runtime-config';
 import type { AuthState } from '@/stores/auth/auth.types';
+import { mockGrantReference } from '@/test-utils/pubky';
 import { MobileFooter } from './MobileFooter';
 
 const collectionsDiscoveryMock = vi.hoisted(() => ({
@@ -20,6 +22,7 @@ const collectionsDiscoveryMock = vi.hoisted(() => ({
 }));
 
 let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
+let mockSessionReference: SessionReference | null = null;
 let mockRestoreStatus: AuthState['restoreStatus'] = 'ready';
 let mockIsPublicRoute = false;
 let mockIsCoreExploreRoute = false;
@@ -141,12 +144,16 @@ vi.mock('@/stores/auth/auth.store', () => ({
     (
       selector: (state: {
         currentUserPubky: string | null;
+        session: null;
+        sessionReference: SessionReference | null;
         restoreStatus: AuthState['restoreStatus'];
         setShowSignInDialog: (open: boolean) => void;
       }) => unknown,
     ) =>
       selector({
         currentUserPubky: mockCurrentUserPubky,
+        session: null,
+        sessionReference: mockSessionReference,
         restoreStatus: mockRestoreStatus,
         setShowSignInDialog: collectionsDiscoveryMock.setShowSignInDialog,
       }),
@@ -169,6 +176,7 @@ describe('MobileFooter', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
+    mockSessionReference = null;
     mockRestoreStatus = 'ready';
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
@@ -617,5 +625,32 @@ describe('MobileFooter', () => {
     const { container } = render(<MobileFooter />);
 
     expect(container.firstChild).toBeNull();
+  });
+
+  it('renders no member navigation after the key step generated a pubky without a session (#2882)', () => {
+    mockCurrentUserPubky = 'generated-key';
+    mockRestoreStatus = 'idle';
+    vi.mocked(usePathname).mockReturnValue('/');
+
+    const { container, rerender } = render(<MobileFooter />);
+    expect(container.firstChild).toBeNull();
+
+    mockIsCoreExploreRoute = true;
+    vi.mocked(usePathname).mockReturnValue('/home');
+    rerender(<MobileFooter />);
+    expect(screen.queryByRole('link', { name: 'Profile' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('avatar-with-fallback')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join Pubky' })).toBeInTheDocument();
+  });
+
+  it('keeps member navigation while a saved session is still pending restoration', () => {
+    mockSessionReference = mockGrantReference();
+    mockRestoreStatus = 'idle';
+    mockIsCoreExploreRoute = true;
+
+    render(<MobileFooter />);
+
+    expect(screen.getByRole('link', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join Pubky' })).not.toBeInTheDocument();
   });
 });

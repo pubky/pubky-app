@@ -11,6 +11,7 @@ import {
 } from '@/libs/image/imageUploadSizeLimit';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { Logger } from '@/libs/logger/logger';
+import { sleep } from '@/libs/utils/utils';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
@@ -22,6 +23,18 @@ import { filesApi } from '@/services/nexus/file/file.api';
 import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.types';
 
 /**
+ * File ids are millisecond timestamps (pubky-app-specs `createFile`), so two
+ * attachments normalized within the same millisecond would share an id: both
+ * records would PUT to one homeserver path (the second overwriting the first)
+ * and the local insert would then throw on the duplicate key. Every id this
+ * tab has issued is remembered and an attachment minted with one of them is
+ * normalized again once the clock has moved on. Remembering all of them, not
+ * only the last, keeps a clock that stepped back into earlier ids from
+ * re-issuing one.
+ */
+const FILE_ID_RETRY_DELAY_MS = 1;
+
+/**
  * File Application
  *
  * Orchestrates file operations including upload and read workflows.
@@ -29,6 +42,8 @@ import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.typ
  */
 export class FileApplication {
   private constructor() {} // Prevent instantiation
+
+  private static readonly issuedFileIds = new Set<string>();
 
   static async toFileAttachment({ file, pubky }: TUploadFileParams): Promise<TFileAttachmentResult> {
     let sanitizedFile: File;
@@ -55,7 +70,17 @@ export class FileApplication {
         cause: error,
       });
     }
-    return FileNormalizer.toFileAttachment({ file: sanitizedFile, blobData, pubky });
+    // Normalizing, checking and remembering run with no await in between, so
+    // concurrent callers can never both claim the same id.
+    for (;;) {
+      const fileAttachment = FileNormalizer.toFileAttachment({ file: sanitizedFile, blobData, pubky });
+      const fileId = fileAttachment.fileResult.meta.id;
+      if (!this.issuedFileIds.has(fileId)) {
+        this.issuedFileIds.add(fileId);
+        return fileAttachment;
+      }
+      await sleep(FILE_ID_RETRY_DELAY_MS);
+    }
   }
 
   /**

@@ -10,7 +10,11 @@ import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
+import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
+import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
+import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
 import { isPostDeleted } from '@/libs/utils/utils';
+import { parseVideoUrl } from '@/libs/utils/videoUrl';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
@@ -23,10 +27,13 @@ import {
   composeVisualRows,
   getVisualMediaKind,
   getVisualPendingOverflowFallbackIds,
+  getVisualYouTubeThumbnailUrl,
   isVisualMediaContentType,
   parseMediaDimension,
   resolvePreferredVisualTileSize,
   resolveVisualTileSizeOptions,
+  VISUAL_LINK_VIDEO_HEIGHT,
+  VISUAL_LINK_VIDEO_WIDTH,
 } from './TimelineFeedVisual.helpers';
 import type { VisualPlaceholderKind, VisualTile } from './TimelineFeedVisual.types';
 import {
@@ -40,10 +47,10 @@ type VisualFeedSnapshot = {
   tiles: VisualTile[];
   missingFileUris: string[];
   /**
-   * Posts that definitively carry no image/video media and are therefore
-   * invisible in the Visual layout. Only counted once resolved: posts still
-   * fetching or awaiting file metadata are excluded so the count never
-   * retracts. Deleted and not-found posts are excluded because they render as
+   * Posts that definitively carry no image/video media and no playable video
+   * link, and are therefore invisible in the Visual layout. Only counted once
+   * resolved: posts still fetching or awaiting file metadata are excluded so
+   * the count never retracts. Deleted and not-found posts are excluded because they render as
    * placeholder tiles (Grid/List parity) rather than being hidden.
    */
   hiddenPostCount: number;
@@ -157,6 +164,64 @@ function buildRemoteTile(post: EnrichedPostDetails, file: FileDetailsModelSchema
     probeState: metadataWidth && metadataHeight ? 'ready' : 'pending',
     isBlurred: post.is_blurred,
     content: post.content,
+    indexedAt: post.indexed_at,
+  };
+}
+
+/**
+ * Tile for a post whose video is a link (YouTube, Vimeo, a direct video file)
+ * rather than an attachment: the link its text is about, which is the one kind
+ * inference classifies and PostLinkEmbeds plays. Null when that link is not a
+ * playable video. Articles and collections store JSON and never embed a link.
+ */
+function buildLinkVideoTile(post: EnrichedPostDetails): VisualTile | null {
+  if (post.kind === 'long' || post.kind === 'collection') {
+    return null;
+  }
+
+  // A lock's content is its JSON teaser envelope; List and Grid embed the link in the teaser text.
+  const text = post.lock ? (parseLockTeaserContent(post.content)?.teaser_description ?? '') : post.content;
+  const url = getFirstLinkUrl(text);
+  if (!url) {
+    return null;
+  }
+
+  try {
+    new URL(url);
+  } catch {
+    // PostLinkEmbeds embeds nothing for a link `new URL` cannot read, such as a protocol-relative `//host/clip.mp4`.
+    return null;
+  }
+
+  const match = parseVideoUrl(url);
+  if (!match) {
+    return null;
+  }
+
+  // A file's sources are the link itself; the renderer plays it only once the server's guarded
+  // preview reports a video, as List does.
+  const [previewSrc, mainSrc] =
+    match.provider === 'youtube'
+      ? [getVisualYouTubeThumbnailUrl(match.videoId, 'hq720'), getVisualYouTubeThumbnailUrl(match.videoId, 'mqdefault')]
+      : match.provider === 'file'
+        ? [url, url]
+        : ['', ''];
+
+  return {
+    id: `${post.id}:link:${url}`,
+    postId: post.id,
+    linkVideo: { provider: match.provider, hostLabel: getUrlHostLabel(url) ?? '' },
+    attachmentId: '',
+    attachmentName: '',
+    contentType: '',
+    mediaKind: 'video',
+    previewSrc,
+    mainSrc,
+    metadataWidth: VISUAL_LINK_VIDEO_WIDTH,
+    metadataHeight: VISUAL_LINK_VIDEO_HEIGHT,
+    probeState: 'ready',
+    isBlurred: post.is_blurred,
+    content: text,
     indexedAt: post.indexed_at,
   };
 }
@@ -338,6 +403,16 @@ export function useVisualFeedTiles({
 
       let hiddenPostCount = 0;
       let pendingDetailPostCount = 0;
+      // A post without visual media still gets a tile for its playable video
+      // link; only a post with neither is hidden.
+      const tilesWithoutMedia = (post: EnrichedPostDetails): VisualTile[] => {
+        const linkTile = buildLinkVideoTile(post);
+        if (linkTile) {
+          return [linkTile];
+        }
+        hiddenPostCount += 1;
+        return [];
+      };
       const tiles = postIds.flatMap((postId) => {
         const post = enrichedPostsById.get(postId);
         if (!post) {
@@ -361,16 +436,12 @@ export function useVisualFeedTiles({
             const tile = buildLocalTile(post, attachment, index);
             return tile ? [tile] : [];
           });
-          if (postTiles.length === 0) {
-            hiddenPostCount += 1;
-          }
-          return postTiles;
+          return postTiles.length > 0 ? postTiles : tilesWithoutMedia(post);
         }
 
         const attachmentUris = visualMediaAttachments(post, post.attachments ?? []);
         if (attachmentUris.length === 0) {
-          hiddenPostCount += 1;
-          return [];
+          return tilesWithoutMedia(post);
         }
 
         let hasUnresolvedFile = false;
@@ -394,10 +465,9 @@ export function useVisualFeedTiles({
           const tile = buildRemoteTile(post, file);
           return tile ? [tile] : [];
         });
-        if (postTiles.length === 0 && !hasUnresolvedFile) {
-          hiddenPostCount += 1;
-        }
-        return postTiles;
+        // While a file's metadata is unresolved the post waits: it may still
+        // turn out to carry media, and attachments win over the link.
+        return postTiles.length === 0 && !hasUnresolvedFile ? tilesWithoutMedia(post) : postTiles;
       });
 
       return {

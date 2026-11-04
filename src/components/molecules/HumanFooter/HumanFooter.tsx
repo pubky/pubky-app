@@ -3,7 +3,7 @@ import { LEGAL_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
-import { getPubkyCoreLink } from '@/config/externalLinks';
+import { getPubkyProtocolLink } from '@/config/externalLinks';
 import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
@@ -26,8 +26,8 @@ export const HumanFooter = () => {
       </FooterLinks>
       <FooterLinks>
         {'Pubky is powered by '}
-        <Link href={getPubkyCoreLink()} target="_blank">
-          {'Pubky Core'}
+        <Link href={getPubkyProtocolLink()} target="_blank">
+          {'Pubky Protocol'}
         </Link>
         {` and was built by ${LEGAL_ENTITY_NAME} ©2026. All rights reserved.`}
       </FooterLinks>

@@ -18,7 +18,7 @@ interface PostNotFoundDiscoveryViewProps {
  */
 export function PostNotFoundDiscoveryView({ postId }: PostNotFoundDiscoveryViewProps) {
   return (
-    <Container overrideDefaults className="flex flex-col gap-12">
+    <Container overrideDefaults className="flex flex-col gap-12" data-cy="post-not-found">
       <PostNotFound postId={postId} />
       <Container overrideDefaults className="flex flex-col gap-2">
         <Heading level={5} size="lg" className="font-light text-muted-foreground">

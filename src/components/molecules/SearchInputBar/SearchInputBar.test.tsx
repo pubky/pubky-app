@@ -261,9 +261,9 @@ describe('SearchInputBar', () => {
       render(<SearchInputBar {...defaultProps} isFocused />);
 
       const container = screen.getByTestId('search-input-bar');
-      expect(container).toHaveStyle({
-        background: 'linear-gradient(180deg, var(--background) 0%, var(--background) 100%)',
-      });
+      // Inline-style assertion: jsdom's getComputedStyle drops shorthands whose
+      // gradient contains var(), so toHaveStyle cannot see this background.
+      expect(container.style.background).toBe('linear-gradient(180deg, var(--background) 0%, var(--background) 100%)');
     });
   });
 });

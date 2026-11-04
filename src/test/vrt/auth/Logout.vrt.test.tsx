@@ -35,6 +35,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: createZustandLikeHook({
     secretKey: '',
+    signupAttempt: null,
     hasHydrated: true,
     clearSecrets: vi.fn(),
   }),
@@ -60,8 +61,10 @@ for (const [name, viewport] of [
     it.each(['backup', 'canceled', 'success', 'loading', 'error'] as const)('renders %s logout', async (state) => {
       logoutFailure.kind = state === 'error' ? 'error' : 'canceled';
       Object.assign(useOnboardingStore.getState(), { secretKey: state === 'backup' ? 'fixture-key' : '' });
+      // Every state but 'success' is reached signed in; a pubky with no session and 'idle' would be a guest (#2882).
       Object.assign(useAuthStore.getState(), {
         currentUserPubky: state === 'success' ? null : 'vrt-account',
+        restoreStatus: state === 'success' ? 'idle' : 'ready',
         isLoggingOut: state === 'loading',
       });
       await renderForVRT(

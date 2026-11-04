@@ -241,7 +241,7 @@ const publishLock = async () => {
 /** The locked post as `useCreateLockContent` builds it from the uploaded attachment descriptors. */
 const lockedPost = () => {
   const { attachments, buildPost } = mocks.createLockContent.mock.calls[0][0] as {
-    attachments: { contentType: string; bytes: Uint8Array }[];
+    attachments: File[];
     buildPost: (resources: TGuardedResource[], owner?: string) => unknown;
   };
   buildPost(
@@ -284,7 +284,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
 
     const { attachments, body, uris } = lockedPost();
     expect(attachments).toHaveLength(1);
-    expect(new TextDecoder().decode(attachments[0].bytes)).toBe('image bytes');
+    expect(await attachments[0].text()).toBe('image bytes');
     expect(body).toBe('Intro\n\n![shot](attachment:0)\n\nOutro');
     expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0']);
     // The published lock lets go of the staged file: nothing was uploaded publicly, nothing to delete
@@ -301,10 +301,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
     await publishLock();
 
     const { attachments, body, uris } = lockedPost();
-    expect(attachments.map((attachment) => new TextDecoder().decode(attachment.bytes))).toEqual([
-      'cover bytes',
-      'image bytes',
-    ]);
+    expect(await Promise.all(attachments.map((a) => a.text()))).toEqual(['cover bytes', 'image bytes']);
     expect(body).toBe('Intro\n\n![shot](attachment:1)\n\nOutro');
     expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0', 'pubky://owner/priv/app.locks/content/file1']);
   });

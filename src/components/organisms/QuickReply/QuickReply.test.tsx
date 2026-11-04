@@ -5,6 +5,7 @@ import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockGrantReference } from '@/test-utils/pubky';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
 
@@ -288,6 +289,21 @@ describe('QuickReply', () => {
       expect(textarea).toHaveValue('Keep this reply');
     },
   );
+
+  it('shows guest identity after the key step generated a pubky without a session (#2882)', () => {
+    render(<QuickReply parentPostId="author:post1" />);
+    expect(screen.getByTestId('quick-reply-stable-avatar')).toBeInTheDocument();
+
+    act(() => useAuthStore.setState({ session: null, sessionReference: null, restoreStatus: 'idle' }));
+    expect(screen.getByTestId('quick-reply-fallback-avatar')).toBeInTheDocument();
+    expect(screen.queryByTestId('quick-reply-stable-avatar')).not.toBeInTheDocument();
+
+    // A saved session that is still pending restoration keeps the account identity.
+    act(() => useAuthStore.setState({ sessionReference: mockGrantReference() }));
+    expect(screen.getByTestId('quick-reply-stable-avatar')).toBeInTheDocument();
+
+    act(() => useAuthStore.setState({ sessionReference: null, restoreStatus: 'ready' }));
+  });
 
   it('picks a placeholder from the prompt list on mount', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0); // first prompt
