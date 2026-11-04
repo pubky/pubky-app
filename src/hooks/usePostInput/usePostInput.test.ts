@@ -3719,9 +3719,7 @@ describe('usePostInput', () => {
       // normalized to LF by the browser.
       mockContent = 'A\r\nB';
 
-      const { result } = renderHook(() =>
-        usePostInput({ variant: 'post' }),
-      );
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
 
       result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
         value: 'A\nB',
