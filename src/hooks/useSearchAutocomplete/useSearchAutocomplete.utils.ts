@@ -1,4 +1,5 @@
 import { TAG_MAX_LENGTH } from '@/config/posts';
+import { sanitizeTagInput } from '@/libs/utils/utils';
 import {
   COMPACT_USER_ID_PREFIX,
   DELIMITED_USER_ID_PREFIXES,
@@ -12,6 +13,19 @@ interface SearchAutocompletePlan {
 }
 
 const USER_ID_PREFIX_PATTERN = /^[a-z0-9]+$/i;
+const WHITESPACE_PATTERN = /\s/;
+
+/**
+ * A tag can never hold whitespace or a tag-banned character, and Nexus answers
+ * the `by_prefix` lookup for such a prefix with a 400 (PUBKY-APP-1E), so the
+ * lookup is skipped instead of sent.
+ */
+function getValidTagPrefix(candidate: string): string | null {
+  if (candidate.length > TAG_MAX_LENGTH) return null;
+  if (WHITESPACE_PATTERN.test(candidate) || sanitizeTagInput(candidate) !== candidate) return null;
+
+  return candidate;
+}
 
 function getValidUserIdPrefix(candidate: string): string | null {
   if (candidate.length < MIN_USER_ID_SEARCH_LENGTH || !USER_ID_PREFIX_PATTERN.test(candidate)) {
@@ -49,7 +63,7 @@ export function resolveSearchAutocompletePlan(searchQuery: string): SearchAutoco
   const isProgressiveCompactPrefix = COMPACT_USER_ID_PREFIX.startsWith(normalizedSearchQuery);
 
   return {
-    tagPrefix: searchQuery.length <= TAG_MAX_LENGTH ? searchQuery : null,
+    tagPrefix: getValidTagPrefix(searchQuery),
     userNamePrefix: searchQuery,
     userIdPrefix: isProgressiveCompactPrefix ? null : getValidUserIdPrefix(userIdCandidate),
   };

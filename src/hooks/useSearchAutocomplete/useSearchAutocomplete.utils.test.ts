@@ -104,6 +104,19 @@ describe('resolveSearchAutocompletePlan', () => {
     expect(resolveSearchAutocompletePlan(query)).toEqual(expected);
   });
 
+  // Nexus validates the `by_prefix` segment as a tag label and answers 400 for
+  // whitespace or a banned character, which no tag can contain (PUBKY-APP-1E).
+  it.each(['near me', 'near\tme', 'near\u00a0me', 'bitcoin,', 'key:value'])(
+    'skips the tag lookup but keeps the user search for "%s", which no tag can match',
+    (query) => {
+      expect(resolveSearchAutocompletePlan(query)).toEqual({
+        tagPrefix: null,
+        userNamePrefix: query,
+        userIdPrefix: null,
+      });
+    },
+  );
+
   it('preserves user searches while skipping tags over the tag length limit', () => {
     const query = 'a'.repeat(TAG_MAX_LENGTH + 1);
 
