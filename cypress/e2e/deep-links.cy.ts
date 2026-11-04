@@ -2,7 +2,6 @@ import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { waitForServiceWorker } from '../support/common';
 import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
-import { seededStreamIndexed } from '../support/pagination';
 import {
   createCollectionViaApi,
   createImagePostViaApi,
@@ -58,7 +57,6 @@ LAYOUTS.forEach(({ title, legacy }) => {
     let authorId = '';
     let postId = '';
     let collectionId = '';
-    let collectionItemId = '';
 
     // Seeded through the API: onboarding, posting and creating a collection in the UI are covered in
     // onboarding.cy.ts, posts.cy.ts and collections.cy.ts. Nothing is signed in, as a shared link opens.
@@ -74,8 +72,8 @@ LAYOUTS.forEach(({ title, legacy }) => {
           createPostViaApi(author, collectionItemText).then((item) =>
             createCollectionViaApi(author, collectionName, { items: [item], layout: 'list' }).then((collection) => {
               collectionId = collection.id;
-              collectionItemId = item.id;
-              waitForNexus(userIndexed(author), postIndexed(post), postIndexed(collection));
+              // The page lists the items its envelope names and reads each from Nexus by id
+              waitForNexus(userIndexed(author), postIndexed(post), postIndexed(item), postIndexed(collection));
             }),
           );
         });
@@ -107,9 +105,6 @@ LAYOUTS.forEach(({ title, legacy }) => {
     });
 
     it('opens a collection and asks to sign in before following it', () => {
-      waitForNexus(
-        seededStreamIndexed({ source: 'collection', author_id: authorId, post_id: collectionId }, [collectionItemId]),
-      );
       cy.visit(`/collections/${authorId}/${collectionId}`);
 
       cy.get('[data-cy="collection-hero"]:visible').should('have.length', 1).and('contain.text', collectionName);
