@@ -10,6 +10,7 @@ import { NotificationController } from '@/controllers/notification/notification'
 import type { TLastReadEvent } from '@/controllers/notification/notification.types';
 import { EventStreamSyncCoordinator } from '@/coordinators/base/event-stream-sync-coordinator';
 import type { Pubky } from '@/models/models.types';
+import type { AuthState } from '@/stores/auth/auth.types';
 
 /**
  * Keeps the notification read boundary (`lastRead`) and the unread badge aligned with the homeserver when another
@@ -49,6 +50,11 @@ export class NotificationLastReadSyncCoordinator extends EventStreamSyncCoordina
       NotificationLastReadSyncCoordinator.instance.destroy();
       NotificationLastReadSyncCoordinator.instance = null;
     }
+  }
+
+  /** Bootstrap replaces the notification snapshot; reconcile only after it can no longer overwrite this read. */
+  protected isReadyToSync(auth: AuthState): boolean {
+    return auth.restoreStatus === 'ready' && !auth.needsAccountSync;
   }
 
   protected subscribe(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TLastReadEvent>> {

@@ -9,6 +9,7 @@ import { getNotificationRespectPageVisibility } from '@/libs/runtime-config/runt
 import type { Pubky } from '@/models/models.types';
 import { isAuthenticatedState } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { AuthState } from '@/stores/auth/auth.types';
 
 /** One event read from a homeserver event stream; the cursor resumes the stream after it. */
 export type TEventStreamSyncEvent = {
@@ -123,6 +124,11 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
     return Promise.resolve();
   }
 
+  /** Additional readiness gate. Compare snapshot fields, not selectors that read the live store. */
+  protected isReadyToSync(_auth: AuthState): boolean {
+    return true;
+  }
+
   public start(): void {
     this.state.isStarted = true;
     this.evaluateStreaming();
@@ -166,7 +172,8 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
       const wasAuthenticated = isAuthenticatedState(prevState);
       const profileChanged = state.hasProfile !== prevState.hasProfile;
       const userChanged = state.currentUserPubky !== prevState.currentUserPubky;
-      if (isAuthenticated !== wasAuthenticated || profileChanged || userChanged) {
+      const readinessChanged = this.isReadyToSync(state) !== this.isReadyToSync(prevState);
+      if (isAuthenticated !== wasAuthenticated || profileChanged || userChanged || readinessChanged) {
         this.evaluateStreaming();
       }
     });
@@ -228,7 +235,7 @@ export abstract class EventStreamSyncCoordinator<TEvent extends TEventStreamSync
 
   private shouldSyncStream(): boolean {
     const auth = useAuthStore.getState();
-    if (!auth.selectIsAuthenticated() || !auth.hasProfile) {
+    if (!auth.selectIsAuthenticated() || !auth.hasProfile || !this.isReadyToSync(auth)) {
       return false;
     }
     const pubky = auth.currentUserPubky;

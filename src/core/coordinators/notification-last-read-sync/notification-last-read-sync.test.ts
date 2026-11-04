@@ -87,6 +87,87 @@ describe('NotificationLastReadSyncCoordinator', () => {
     expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledWith(pubky);
   });
 
+  it.each(['idle', 'restoring', 'temporary-error', 'reauth-required'] as const)(
+    'waits for a ready session before opening the stream from %s',
+    async (restoreStatus) => {
+      signIn();
+      useAuthStore.getState().setRestoreStatus(restoreStatus);
+      const coordinator = NotificationLastReadSyncCoordinator.getInstance();
+      coordinator.setRoute(APP_ROUTES.HOME);
+      coordinator.start();
+      await flushPromises();
+
+      expect(NotificationController.subscribeLastReadEventStream).not.toHaveBeenCalled();
+      expect(NotificationController.fetchLastReadFromHomeserver).not.toHaveBeenCalled();
+
+      useAuthStore.getState().setRestoreStatus('ready');
+      await flushPromises();
+      expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledOnce();
+      expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('waits for account sync even after the session becomes ready', async () => {
+    signIn();
+    useAuthStore.setState({ restoreStatus: 'restoring', needsAccountSync: true });
+    const coordinator = NotificationLastReadSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+    await flushPromises();
+
+    useAuthStore.getState().setRestoreStatus('ready');
+    await flushPromises();
+    expect(NotificationController.subscribeLastReadEventStream).not.toHaveBeenCalled();
+
+    useAuthStore.getState().setNeedsAccountSync(false);
+    await flushPromises();
+    expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledOnce();
+    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledOnce();
+  });
+
+  it('starts reconciliation when profile creation finishes for a ready session', async () => {
+    signIn();
+    useAuthStore.getState().setHasProfile(false);
+    const coordinator = NotificationLastReadSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+    await flushPromises();
+    expect(NotificationController.subscribeLastReadEventStream).not.toHaveBeenCalled();
+
+    useAuthStore.getState().setHasProfile(true);
+    await flushPromises();
+    expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledOnce();
+    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledOnce();
+  });
+
+  it.each(['restore', 'account sync'] as const)('pauses and reconciles again across %s', async (reason) => {
+    const cancel = vi.fn();
+    vi.mocked(NotificationController.subscribeLastReadEventStream).mockImplementation(
+      async () => new ReadableStream({ cancel }),
+    );
+    signIn();
+    const coordinator = NotificationLastReadSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+    await flushPromises();
+
+    useAuthStore.getState().setShowSignInDialog(true);
+    await flushPromises();
+    expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledOnce();
+
+    if (reason === 'restore') useAuthStore.getState().setRestoreStatus('restoring');
+    else useAuthStore.getState().setNeedsAccountSync(true);
+    await flushPromises();
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledOnce();
+
+    if (reason === 'restore') useAuthStore.getState().setRestoreStatus('ready');
+    else useAuthStore.getState().setNeedsAccountSync(false);
+    await flushPromises();
+    expect(NotificationController.subscribeLastReadEventStream).toHaveBeenCalledTimes(2);
+    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledTimes(2);
+  });
+
   it('does not open the stream on disabled auth routes', async () => {
     signIn();
     const coordinator = NotificationLastReadSyncCoordinator.getInstance();

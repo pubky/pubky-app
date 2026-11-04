@@ -35,6 +35,12 @@ every tab, so another tab can write back an older snapshot after this one acknow
 resumed from the stored cursor would never replay that event. Reading the file on connect repairs it, and opening
 the stream first means a change after the read still arrives as an event.
 
+The notification stream waits until session restoration is ready and `needsAccountSync` is false. A public page
+can remain mounted while an incoming account is still bootstrapping, even when its persisted `hasProfile` is true.
+Starting the stream earlier would let bootstrap replace a freshly reconciled boundary with an older cached one.
+The readiness transition starts the stream and its fresh read after bootstrap has applied the account's snapshot;
+returning to account synchronization pauses it. The mute stream keeps its existing authentication gate.
+
 The boundary belongs to one account. `markAllAsRead` drops its result when the account or its session changed
 during the write, so a sign-out or account switch cannot leave the previous account's timestamp in the store for
 the next account's bootstrap to keep.

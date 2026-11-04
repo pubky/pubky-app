@@ -3,8 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { NotificationApplication } from '@/application/notification/notification';
+import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
+import { NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX } from '@/config/notification-last-read-sync';
 import { SettingsController } from '@/controllers/settings/settings';
+import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -13,6 +16,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import * as utils from '@/libs/utils/utils';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -127,6 +131,7 @@ function startFreshRecoveryLogin() {
 describe('AuthController restored session lifecycle', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.stubGlobal('navigator', { locks: { request: async (_name: string, callback: () => unknown) => callback() } });
     useAuthStore.setState(authInitialState);
     useSettingsStore.getState().reset();
@@ -156,6 +161,7 @@ describe('AuthController restored session lifecycle', () => {
   });
 
   afterEach(() => {
+    NotificationLastReadSyncCoordinator.resetInstance();
     AuthController.cancelModerationFollow();
     useSignInStore.getState().reset();
     useOnboardingStore.getState().reset();
@@ -348,6 +354,62 @@ describe('AuthController restored session lifecycle', () => {
     });
   });
 
+  it('reconciles last_read after a restored account finishes profile lookup and bootstrap', async () => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    // A public page stays mounted when it adopts an already-profiled account from another tab.
+    useAuthStore.setState({ hasProfile: true, needsAccountSync: true });
+    persistState();
+    const profile = deferred<boolean>();
+    const profileLookup = vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockReturnValue(profile.promise);
+    vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(
+      asOpaque<LastReadResult>({ meta: { url: `pubky://${pubkyA}/pub/pubky.app/last_read` } }),
+    );
+    const freshRead = vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2_000);
+    vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(0);
+    const stream = vi.spyOn(NotificationApplication, 'subscribeLastReadEventStream').mockImplementation(
+      async () =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue({ cursor: 'fresh-boundary', eventType: 'PUT' });
+          },
+        }),
+    );
+    const cursorKey = `${NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX}${pubkyA}`;
+    const coordinator = NotificationLastReadSyncCoordinator.getInstance();
+    coordinator.setRoute(`/post/${pubkyA}/post-id`);
+    coordinator.start();
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(profileLookup).toHaveBeenCalledOnce());
+
+    const whileProfilePending = {
+      connections: stream.mock.calls.length,
+      reads: freshRead.mock.calls.length,
+      cursor: sessionStorage.getItem(cursorKey),
+    };
+
+    profile.resolve(true);
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+    const whileBootstrapPending = {
+      connections: stream.mock.calls.length,
+      cursor: sessionStorage.getItem(cursorKey),
+    };
+
+    // Bootstrap's ordinary GET may return an older cached boundary than the stream's fresh read.
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+    await expect(restore).resolves.toBe(true);
+    // Let restoration settle before asserting, so a failing gate cannot leave bootstrap pending for later tests.
+    expect(whileProfilePending).toEqual({ connections: 0, reads: 0, cursor: null });
+    expect(whileBootstrapPending).toEqual({ connections: 0, cursor: null });
+    await vi.waitFor(() => expect(useNotificationStore.getState()).toMatchObject({ lastRead: 2_000, unread: 0 }));
+    await vi.waitFor(() => expect(sessionStorage.getItem(cursorKey)).toBe('fresh-boundary'));
+
+    expect(stream).toHaveBeenCalledOnce();
+    expect(useNotificationStore.getState().lastPolledTimestamp).toBe(5);
+  });
+
   it('keeps a newer read boundary adopted while bootstrap was running', async () => {
     const bootstrap = deferred<typeof notificationInitialState>();
     vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
@@ -359,7 +421,7 @@ describe('AuthController restored session lifecycle', () => {
     const restore = AuthController.restorePersistedSession();
     await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
 
-    // What the last_read sync coordinator does when it adopts another device's read.
+    // A mark or an already-running read may still complete while bootstrap is pending.
     useNotificationStore.getState().setLastRead(2_000);
     bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
 
@@ -400,7 +462,7 @@ describe('AuthController restored session lifecycle', () => {
     const restore = AuthController.restorePersistedSession();
     await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
 
-    // The last_read sync adopts this account's newer read while bootstrap runs.
+    // This account's mark or already-running read completes while bootstrap is pending.
     useNotificationStore.getState().setLastRead(3_000);
     bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
 
