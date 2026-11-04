@@ -25,6 +25,14 @@ export type UseLocksAuthFlowReturn = {
   error: AppError | null;
   /** Attach to the auth iframe so the bridge can verify the message source. */
   iframeRef: RefObject<HTMLIFrameElement | null>;
+  /**
+   * True once the `/connect` shell has posted its first `locks-auth-resize` message, which it does as
+   * soon as it renders. Until then the iframe stays hidden: a page that failed (a JSON error body,
+   * a proxy page) never posts it, and must never be shown.
+   */
+  isConnectReady: boolean;
+  /** Attach to the auth iframe's `onLoad`: starts the short wait for the ready message. */
+  onConnectLoad: () => void;
   /** Probes the Lock Server's readiness (run when the modal opens); gates `start`. */
   prepare: () => Promise<void>;
   /** Begins the flow: generates CSRF state + the connect URL. */

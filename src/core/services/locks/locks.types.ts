@@ -1,5 +1,6 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { z } from 'zod';
+import type { TLocksUnlockPollCallSite } from '@/libs/observability/sentry.constants';
 import { POST_KINDS } from '@/models/models.types';
 
 /** A price in the denomination's smallest unit: sats or USD cents. */
@@ -396,6 +397,17 @@ export type TSubmitProofOutcome = (TSubmitProofResult & { regionBlocked?: false 
  * does so for its viewer calls alike, so the lookup of a saved bundle id is refused as well.
  */
 export type TVerificationLookup = TVerificationTask | null | { regionBlocked: true };
+
+/**
+ * Passed by a polling loop as the context of the AppErrors one Lock Server read builds, unchanged:
+ * `callSite` names the loop, `reportSuppressed` marks a repeat failure of a streak, which the
+ * `locks-unlock-poll-repeat-reports` drop rule keeps out of Sentry (#2641). One-shot reads pass
+ * nothing and stay untagged.
+ */
+export type TLocksPollReport = {
+  callSite: TLocksUnlockPollCallSite;
+  reportSuppressed?: true;
+};
 
 export const isRegionBlockedLookup = (lookup: TVerificationLookup): lookup is { regionBlocked: true } =>
   lookup !== null && 'regionBlocked' in lookup;

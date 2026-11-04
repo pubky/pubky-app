@@ -5,6 +5,7 @@ import type {
   TCreateLockContentParams,
   TDeleteLockContentParams,
   TFetchOwnContentParams,
+  TFetchPaidContentOptions,
   TFetchReplicatedAttachmentsParams,
   TFetchReplicatedContentParams,
   TFetchUnlockedListParams,
@@ -33,6 +34,7 @@ import type {
   TGetConnectUrlParams,
   TGetPaykitSetupUrlParams,
   TLockPriceAsset,
+  TLocksPollReport,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -374,14 +376,23 @@ export class LocksController {
     return LocksApplication.startPayment(params);
   }
 
-  /** One read of the Paykit link for a submitted payment. Needs the task the submission created. */
-  static fetchPaykitConnectionState(params: TPaymentBundleParams): Promise<TPaykitConnectionState> {
-    return LocksApplication.fetchPaykitConnectionState(params);
+  /**
+   * One read of the Paykit link for a submitted payment. Needs the task the submission created.
+   * A polling loop passes `report` to tag its errors; see `TLocksPollReport`.
+   */
+  static fetchPaykitConnectionState(
+    params: TPaymentBundleParams,
+    report?: TLocksPollReport,
+  ): Promise<TPaykitConnectionState> {
+    return LocksApplication.fetchPaykitConnectionState(params, report);
   }
 
   /** One read of the payment's verification task, or null when the submission never reached the server. */
-  static fetchPaymentStatus(params: TPaymentBundleParams): Promise<TVerificationTask | null> {
-    return LocksApplication.fetchPaymentStatus(params);
+  static fetchPaymentStatus(
+    params: TPaymentBundleParams,
+    report?: TLocksPollReport,
+  ): Promise<TVerificationTask | null> {
+    return LocksApplication.fetchPaymentStatus(params, report);
   }
 
   /** Lock ids the reader has started a payment for (pending and failed included) — one listing serves every lock post on screen. */
@@ -389,9 +400,12 @@ export class LocksController {
     return LocksApplication.fetchPurchasedLockIds(params);
   }
 
-  /** Gets an access credential for a paid bundle id from the Lock Server, then downloads the post + attachments with it. */
-  static fetchPaidContent(params: TPaymentBundleParams): Promise<TUnlockedContent> {
-    return LocksApplication.fetchPaidContent(params);
+  /**
+   * Gets an access credential for a paid bundle id from the Lock Server, then downloads the post + attachments with it.
+   * Concurrent callers share one download; `fresh` (Check again) starts a new one in its place.
+   */
+  static fetchPaidContent(params: TPaymentBundleParams, options?: TFetchPaidContentOptions): Promise<TUnlockedContent> {
+    return LocksApplication.fetchPaidContent(params, options);
   }
 
   /** Copies unlocked content into the reader's own `/priv`, so later reads need no credential. */

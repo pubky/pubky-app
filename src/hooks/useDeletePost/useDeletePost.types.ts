@@ -17,6 +17,10 @@ export interface UseDeletePostOptions {
 export interface UseDeletePostResult {
   /** Whether deletion is in progress */
   isDeleting: boolean;
+  /** The last delete failed because the Lock Server needs a sign-in; cleared when a delete starts. */
+  needsLocksSignIn: boolean;
+  /** Drops a stale sign-in offer, e.g. when the confirm dialog closes. */
+  clearLocksSignIn: () => void;
   /** Deletes the post with the given ID */
   deletePost: (postId: string) => Promise<boolean>;
 }
