@@ -11,14 +11,11 @@ import { HasBackedUp, LatestNotificationReadState } from '../support/types/enums
 import type { SeededUser } from '../support/types/seed';
 import { verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
-import { bookmarkIndexed, notificationsIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
+import { notificationsIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import {
-  addPostToCollectionViaApi,
-  createCollectionViaApi,
   createPostViaApi,
   deletePostViaApi,
   editPostViaApi,
-  followCollectionViaApi,
   followUserViaApi,
   markNotificationsReadViaApi,
   mentionOf,
@@ -68,8 +65,8 @@ describe('notifications', () => {
       signInAsReceiver();
       verifyNotificationCounter(1);
       // Match the homeserver transport URL the same way as the other writes.
-      // An exact `/pub/pubky.app/last_read` url does not.
-      cy.intercept('PUT', '**/pub/pubky.app/last_read*').as('putLastRead');
+      // An exact `/priv/app.pubky/v1/last_read.json` url does not.
+      cy.intercept('PUT', '**/priv/app.pubky/v1/last_read*').as('putLastRead');
       goToProfilePageFromHeader();
       cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
       verifyNotificationCounter(0);
@@ -417,44 +414,30 @@ describe('notifications', () => {
     });
   });
 
-  it('can be notified when a followed collection is updated with a new post', () => {
-    const collectionName = `Notif collection ${Date.now()}`;
-    const seedPostContent = `Seed post for followed collection ${Date.now()}`;
-    const addedPostContent = `Post added after follow ${Date.now()}`;
+  it('can be notified by an un-migrated profile', () => {
+    // * a 0.x account, which never signs in, follows the receiver, tags and replies to their post
+    seedUserViaApi(uniqueName('Unmigrated'), { legacy: true }).then((actor) => {
+      followUserViaApi(actor, receiver);
+      createPostViaApi(receiver, `An un-migrated profile will notify me about this post! ${Date.now()}`).then(
+        (post) => {
+          tagPostViaApi(actor, post, ['old-layout']);
+          replyViaApi(actor, post, 'Replying from the old layout!');
+        },
+      );
+      waitForNexus(
+        notificationsIndexed(receiver, 'follow', { actor }),
+        notificationsIndexed(receiver, 'tag_post', { actor }),
+        notificationsIndexed(receiver, 'reply', { actor }),
+      );
 
-    // * a profile creates a collection, the receiver follows it, then the profile adds a new post to it
-    seedActorViaApi('Curator').then((curator) => {
-      createPostViaApi(curator, seedPostContent).then((seedPost) => {
-        createCollectionViaApi(curator, collectionName, {
-          description: 'Follow me for collection update notifications.',
-          items: [seedPost],
-        }).then((collection) => {
-          followCollectionViaApi(receiver, collection);
-          createPostViaApi(curator, addedPostContent).then((addedPost) => {
-            // Nexus notifies the collection's followers of the edit, so the follow goes in first
-            waitForNexus(postIndexed(collection), bookmarkIndexed(receiver, collection), postIndexed(addedPost));
-            addPostToCollectionViaApi(curator, collection, addedPost);
-          });
-          waitForNexus(notificationsIndexed(receiver, 'post_edited', { actor: curator }));
-
-          // * the receiver checks for notification that the collection was updated
-          signInAsReceiver();
-          verifyNotificationCounter(1);
-          goToProfilePageFromHeader();
-          verifyNotificationCounter(0);
-          checkLatestNotification([curator.name, 'updated collection'], LatestNotificationReadState.Unread);
-
-          // * toggle tabs to check unread dot disappears
-          causeNotificationsToBeRead();
-          verifyNotificationCounter(0);
-          checkLatestNotification([curator.name, 'updated collection'], LatestNotificationReadState.Read);
-
-          // clean up so the collection does not linger in Discover for later runs/retries, and wait for the
-          // deletion notice so it cannot arrive unread in the next test
-          deletePostViaApi(curator, collection);
-          waitForNexus(notificationsIndexed(receiver, 'post_deleted', { actor: curator }));
-        });
-      });
+      // * the receiver checks all three, newest first, with the actor's name read through Nexus
+      signInAsReceiver();
+      verifyNotificationCounter(3);
+      goToProfilePageFromHeader();
+      verifyNotificationCounter(0);
+      checkNotificationAt(0, [actor.name, 'replied to your post'], LatestNotificationReadState.Unread);
+      checkNotificationAt(1, [actor.name, 'tagged your post'], LatestNotificationReadState.Unread);
+      checkNotificationAt(2, [actor.name, 'followed you'], LatestNotificationReadState.Unread);
     });
   });
 

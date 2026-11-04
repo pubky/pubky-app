@@ -1,7 +1,7 @@
 // Shapes shared by the Node seed tasks (cypress/plugins/seed.ts) and the spec-side helpers
 // (cypress/support/seed.ts). Everything here crosses `cy.task`, so it stays plain JSON.
 
-export type SeededPostKind = 'short' | 'long' | 'image' | 'collection';
+export type SeededPostKind = 'note' | 'image' | 'collection';
 
 export type SeededUser = {
   // z32 public key, as Nexus and app routes use it
@@ -20,7 +20,7 @@ export type SeededPost = {
   kind: SeededPostKind;
 };
 
-export type SeedCreateUserArgs = { name: string; bio: string; recoveryFilePath?: string };
+export type SeedCreateUserArgs = { name: string; bio: string; recoveryFilePath?: string; legacy?: boolean };
 
 export type SeedCreatePostArgs = {
   authorId: string;
@@ -36,7 +36,6 @@ export type SeedEditPostArgs = { authorId: string; postId: string; content: stri
 export type SeedDeletePostArgs = { authorId: string; postId: string };
 export type SeedTagArgs = { taggerId: string; uri: string; label: string };
 export type SeedFollowArgs = { followerId: string; followeeId: string };
-export type SeedBookmarkArgs = { userId: string; uri: string };
 export type SeedMarkNotificationsReadArgs = { userId: string };
 export type SeededCollectionLayout = 'grid' | 'list';
 
@@ -47,4 +46,3 @@ export type SeedCreateCollectionArgs = {
   items: string[];
   layout: SeededCollectionLayout;
 };
-export type SeedAddToCollectionArgs = { authorId: string; collectionId: string; itemUri: string };

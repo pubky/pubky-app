@@ -1,30 +1,31 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { basename, dirname, extname } from 'path';
+import { mkdirSync, writeFileSync } from 'fs';
+import { dirname } from 'path';
 import { Keypair, Pubky, PublicKey, type Path, type Session } from '@synonymdev/pubky';
-import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind, PubkySpecsBuilder } from 'pubky-app-specs';
+import { APP_LAST_READ_FILE, APP_PRIVATE_PATH } from '../../src/config/app-files';
 import type {
-  SeedAddToCollectionArgs,
-  SeedBookmarkArgs,
   SeedCreateCollectionArgs,
   SeedCreatePostArgs,
   SeedCreateUserArgs,
   SeedDeletePostArgs,
   SeedEditPostArgs,
   SeededPost,
-  SeededPostKind,
   SeededUser,
   SeedFollowArgs,
   SeedMarkNotificationsReadArgs,
   SeedTagArgs,
 } from '../support/types/seed';
+import { legacyWriter, v1Writer, type SeedWriter } from './seed.writers';
 
 /**
  * Node side of the spec seeding helpers in `cypress/support/seed.ts`.
  *
  * Specs set up the users and activity a test only observes through the same Pubky libraries the
- * app writes with (`@synonymdev/pubky` + `pubky-app-specs`), straight against the test stack's
+ * app writes with (`@synonymdev/pubky` + `pubky-social-specs`), straight against the test stack's
  * homeserver. Nexus indexes those writes exactly as it indexes the app's, so feeds, notifications
  * and pagination are still exercised end to end; only the setup clicks are skipped.
+ *
+ * A user is on one data epoch for the whole run, picked when they are created: v1, or `legacy` for
+ * an un-migrated 0.x account (see `seed.writers.ts`).
  */
 
 export type SeedConfig = {
@@ -40,26 +41,10 @@ const SEED_CLIENT_ID = 'e2e-seed.pubky.app';
 // Consecutive seed writes start at least this far apart, so records a test orders by time
 // (timelines, threads, notifications) never share a timestamp
 const SEED_WRITE_SPACING_MS = 5;
-// Matches the `mustache-*.png` fixtures; extend when a spec seeds another image type
-const IMAGE_CONTENT_TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg' };
 
-const POST_KINDS: Record<SeededPostKind, PubkyAppPostKind> = {
-  short: PubkyAppPostKind.Short,
-  long: PubkyAppPostKind.Long,
-  image: PubkyAppPostKind.Image,
-  collection: PubkyAppPostKind.Collection,
-};
+const LAST_READ_PATH = `${APP_PRIVATE_PATH}${APP_LAST_READ_FILE}` as Path;
 
-type SeededSession = { name: string; session: Session; builder: PubkySpecsBuilder };
-
-const toPath = (path: string): Path => {
-  if (!path.startsWith('/pub/')) {
-    throw new Error(`expected a /pub/ homeserver path, got ${path}`);
-  }
-  return path as Path;
-};
-
-const postPath = (postId: string) => toPath(`/pub/pubky.app/posts/${postId}`);
+type SeededSession = { name: string; session: Session; writer: SeedWriter };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -113,138 +98,73 @@ export const createSeedTasks = (config: SeedConfig) => {
     return (await response.text()).trim();
   };
 
-  const putTag = async (tagger: SeededSession, uri: string, label: string) => {
-    const tag = tagger.builder.createTag(uri, label);
-    await tagger.session.storage.putJson(toPath(tag.meta.path), tag.tag.toJson());
-    return tag.meta.id;
-  };
-
-  // Same three writes as the app's image upload: the blob, its file record, then the post points at the file
-  const uploadImage = async (author: SeededSession, imagePath: string) => {
-    const contentType = IMAGE_CONTENT_TYPES[extname(imagePath).toLowerCase()];
-    if (!contentType) {
-      throw new Error(`no content type for ${imagePath}`);
-    }
-    const bytes = new Uint8Array(readFileSync(imagePath));
-    const blob = author.builder.createBlob(bytes);
-    await author.session.storage.putBytes(toPath(blob.meta.path), blob.blob.data);
-    const file = author.builder.createFile(basename(imagePath), blob.meta.url, contentType, bytes.length);
-    await author.session.storage.putJson(toPath(file.meta.path), file.file.toJson());
-    return file.meta.url;
-  };
-
-  const readPost = async (author: SeededSession, postId: string) =>
-    PubkyAppPost.fromJson(await author.session.storage.getJson(postPath(postId)));
-
   return {
-    seedCreateUser: ({ name, bio, recoveryFilePath }: SeedCreateUserArgs): Promise<SeededUser> =>
-      step(`create user '${name}'`, async () => {
+    seedCreateUser: ({ name, bio, recoveryFilePath, legacy = false }: SeedCreateUserArgs): Promise<SeededUser> =>
+      step(`create ${legacy ? 'un-migrated ' : ''}user '${name}'`, async () => {
         const keypair = Keypair.random();
         const signer = pubky().signer(keypair);
         await signer.signup(PublicKey.from(config.homeserverPublicKey), await fetchSignupToken());
         const session = await signer.signin(SEED_CLIENT_ID);
         const id = keypair.publicKey.z32();
-        const builder = new PubkySpecsBuilder(id);
-        // profile.json is what makes the app treat the key as signed up
-        const profile = builder.createUser(name, bio, null, null, null);
-        await session.storage.putJson(toPath(profile.meta.path), profile.user.toJson());
+        const writer = legacy ? legacyWriter(id, session) : v1Writer(id, session);
+        const uri = await writer.writeProfile(name, bio);
         if (recoveryFilePath) {
           mkdirSync(dirname(recoveryFilePath), { recursive: true });
           writeFileSync(recoveryFilePath, keypair.createRecoveryFile(RECOVERY_FILE_PASSCODE));
         }
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
         await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v0/ingest/${id}`, { method: 'PUT' }).catch(() => null);
-        sessions.set(id, { name, session, builder });
-        return { id, pubky: `pubky${id}`, uri: profile.meta.url, name };
+        sessions.set(id, { name, session, writer });
+        return { id, pubky: `pubky${id}`, uri, name };
       }),
 
     seedCreatePost: (args: SeedCreatePostArgs): Promise<SeededPost> =>
       step(`create ${args.kind} post by '${nameOf(args.authorId)}': "${preview(args.content)}"`, async () => {
-        const author = sessionFor(args.authorId);
-        const attachments = args.imageFixturePath ? [await uploadImage(author, args.imageFixturePath)] : null;
-        const embed = args.embed ? new PubkyAppPostEmbed(args.embed.uri, POST_KINDS[args.embed.kind]) : null;
-        const post = author.builder.createPost(
-          args.content,
-          POST_KINDS[args.kind],
-          args.parentUri ?? null,
-          embed,
-          attachments,
-        );
-        await author.session.storage.putJson(toPath(post.meta.path), post.post.toJson());
+        const { writer } = sessionFor(args.authorId);
+        const post = await writer.writePost(args);
         // The app tags a post created with tags as its author, after the post itself
         for (const label of args.tags ?? []) {
-          await putTag(author, post.meta.url, label);
+          await writer.writeTag(post.uri, label);
         }
-        return { id: post.meta.id, authorId: args.authorId, uri: post.meta.url, kind: args.kind };
+        return { ...post, authorId: args.authorId, kind: args.kind };
       }),
 
     seedEditPost: ({ authorId, postId, content }: SeedEditPostArgs) =>
       step(`edit post ${postId} by '${nameOf(authorId)}'`, async () => {
-        const author = sessionFor(authorId);
-        const edited = author.builder.editPost(await readPost(author, postId), postId, content);
-        await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
+        await sessionFor(authorId).writer.editPost(postId, content);
         return { id: postId };
       }),
 
     seedDeletePost: ({ authorId, postId }: SeedDeletePostArgs) =>
       step(`delete post ${postId} by '${nameOf(authorId)}'`, async () => {
-        await sessionFor(authorId).session.storage.delete(postPath(postId));
+        await sessionFor(authorId).writer.deletePost(postId);
         return { id: postId };
       }),
 
     seedTag: ({ taggerId, uri, label }: SeedTagArgs) =>
       step(`tag ${uri} as '${label}' by '${nameOf(taggerId)}'`, async () => ({
-        id: await putTag(sessionFor(taggerId), uri, label),
+        id: await sessionFor(taggerId).writer.writeTag(uri, label),
       })),
 
     seedFollow: ({ followerId, followeeId }: SeedFollowArgs) =>
       step(`'${nameOf(followerId)}' follows '${nameOf(followeeId)}'`, async () => {
-        const follower = sessionFor(followerId);
-        const follow = follower.builder.createFollow(followeeId);
-        await follower.session.storage.putJson(toPath(follow.meta.path), follow.follow.toJson());
+        await sessionFor(followerId).writer.writeFollow(followeeId);
         return { id: followeeId };
       }),
 
-    seedBookmark: ({ userId, uri }: SeedBookmarkArgs) =>
-      step(`bookmark ${uri} by '${nameOf(userId)}'`, async () => {
-        const user = sessionFor(userId);
-        const bookmark = user.builder.createBookmark(uri);
-        await user.session.storage.putJson(toPath(bookmark.meta.path), bookmark.bookmark.toJson());
-        return { id: bookmark.meta.id };
-      }),
-
+    // The cursor is the app's own file, in the same place for an account on either epoch
     seedMarkNotificationsRead: ({ userId }: SeedMarkNotificationsReadArgs) =>
       step(`mark notifications read for '${nameOf(userId)}'`, async () => {
-        const user = sessionFor(userId);
-        const lastRead = user.builder.createLastRead();
-        await user.session.storage.putJson(toPath(lastRead.meta.path), lastRead.last_read.toJson());
-        return { timestamp: Number(lastRead.last_read.timestamp) };
+        const timestamp = Date.now();
+        await sessionFor(userId).session.storage.putJson(LAST_READ_PATH, { timestamp });
+        return { timestamp };
       }),
 
-    seedCreateCollection: ({
-      authorId,
-      name,
-      description,
-      items,
-      layout,
-    }: SeedCreateCollectionArgs): Promise<SeededPost> =>
-      step(`create collection '${name}' by '${nameOf(authorId)}'`, async () => {
-        const author = sessionFor(authorId);
-        const collection = author.builder.createCollectionPost(name, description, items, null, layout);
-        await author.session.storage.putJson(toPath(collection.meta.path), collection.post.toJson());
-        return { id: collection.meta.id, authorId, uri: collection.meta.url, kind: 'collection' };
-      }),
-
-    // Rewrites the collection post with the item first, as saving a post into a collection does in the app
-    seedAddToCollection: ({ authorId, collectionId, itemUri }: SeedAddToCollectionArgs) =>
-      step(`add ${itemUri} to collection ${collectionId} by '${nameOf(authorId)}'`, async () => {
-        const author = sessionFor(authorId);
-        const current = await readPost(author, collectionId);
-        const content = JSON.parse(current.content);
-        const nextContent = JSON.stringify({ ...content, items: [itemUri, ...(content.items ?? [])] });
-        const edited = author.builder.editPost(current, collectionId, nextContent);
-        await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
-        return { id: collectionId };
-      }),
+    seedCreateCollection: ({ authorId, ...collection }: SeedCreateCollectionArgs): Promise<SeededPost> =>
+      step(`create collection '${collection.name}' by '${nameOf(authorId)}'`, async () => ({
+        ...(await sessionFor(authorId).writer.writeCollection(collection)),
+        authorId,
+        kind: 'collection',
+      })),
   };
 };

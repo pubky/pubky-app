@@ -1,9 +1,13 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import { backupDownloadFilePath, extendedTimeout } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
+import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { addProfileTags } from '../support/profile';
+import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
+
+const MIGRATION_SCREEN_HOLD_MS = 3000;
 
 const waitUntilStarterPackHasUsers = (tag: string) => {
   const deadline = Date.now() + 90_000;
@@ -87,6 +91,39 @@ describe('Onboarding', () => {
     });
     checkOwnProfile(profileName, profileBio);
 
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  it('migrates a 0.x account on sign-in and lands on home with its content', () => {
+    const profileName = `Unmigrated ${Cypress._.random(100_000)}`;
+    const postContent = `Written before the migration ${Date.now()}`;
+
+    seedUserViaApi(profileName, { bio: 'Still in the old layout', legacy: true, withRecoveryFile: true }).then(
+      (user) => {
+        createPostViaApi(user, postContent).then((post) => {
+          waitForNexus(userIndexed(user), postIndexed(post));
+        });
+      },
+    );
+
+    // A tree this small migrates in a moment. The done flag is written last, so holding its answer
+    // back keeps the progress screen up long enough to see it.
+    cy.intercept('PUT', '**/priv/social/v1/_migrated.json', (req) => {
+      req.on('response', (res) => {
+        res.setDelay(MIGRATION_SCREEN_HOLD_MS);
+      });
+    }).as('migrationDone');
+
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, { migrates: true });
+    cy.wait('@migrationDone').its('response.statusCode').should('eq', 201);
+
+    checkOwnProfile(profileName, 'Still in the old layout');
+    cy.get('[data-cy="profile-filter-item-posts"]').click();
+    cy.get('[data-cy="profile-tab-content"]').should('contain.text', postContent);
+
+    // A second sign-in finds the done flag and passes the gate with no screen
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
     cy.signOut(HasBackedUp.Yes);
   });
 
@@ -175,7 +212,7 @@ describe('Onboarding', () => {
     cy.get('[data-cy="suggested-user-card"]', extendedTimeout()).should('have.length.greaterThan', 0);
 
     // Finish writes the Interests feed before it navigates, so any feed write happens before /home.
-    cy.intercept('PUT', '**/pub/pubky.app/feeds/**').as('feedPut');
+    cy.intercept('PUT', '**/priv/social/v1/feeds/**').as('feedPut');
     cy.finishFollowBestMatchesStep();
 
     // With zero follows the landing feed stays on All

@@ -23,12 +23,15 @@ import type { SeedCreatePostArgs, SeededCollectionLayout, SeededPost, SeededUser
  * onboarding (covered by onboarding.cy.ts).
  * With `withRecoveryFile`, also saves their encrypted recovery file where the UI backup would land,
  * so the spec can sign in as them with `cy.signInWithEncryptedFile(backupDownloadFilePath(name))`.
+ * With `legacy`, everything seeded for them is written in the 0.x layout, as an account that has
+ * not migrated yet. Signing in as them runs the migration; every other account has nothing to move.
  */
-export const seedUserViaApi = (name: string, { bio = '', withRecoveryFile = false } = {}) =>
+export const seedUserViaApi = (name: string, { bio = '', withRecoveryFile = false, legacy = false } = {}) =>
   cy.task<SeededUser>('seedCreateUser', {
     name,
     bio,
     recoveryFilePath: withRecoveryFile ? backupDownloadFilePath(name) : undefined,
+    legacy,
   });
 
 const createPost = (args: SeedCreatePostArgs) => cy.task<SeededPost>('seedCreatePost', args);
@@ -38,7 +41,7 @@ const createPost = (args: SeedCreatePostArgs) => cy.task<SeededPost>('seedCreate
  * the author right after, as tagging in the composer does.
  */
 export const createPostViaApi = (author: SeededUser, content: string, { tags }: { tags?: string[] } = {}) =>
-  createPost({ authorId: author.id, content, kind: 'short', tags });
+  createPost({ authorId: author.id, content, kind: 'note', tags });
 
 /** Uploads a fixture image and publishes an image post attaching it, as the composer's image upload does. */
 export const createImagePostViaApi = (
@@ -56,11 +59,11 @@ export const createImagePostViaApi = (
 
 /** Replies to `parent` as `author` (the reply dialogs are covered in posts.cy.ts). */
 export const replyViaApi = (author: SeededUser, parent: SeededPost, content: string) =>
-  createPost({ authorId: author.id, content, kind: 'short', parentUri: parent.uri });
+  createPost({ authorId: author.id, content, kind: 'note', parentUri: parent.uri });
 
 /** Reposts `original` as `author`, with optional quote `content` (the repost dialog is covered in posts.cy.ts). */
 export const repostViaApi = (author: SeededUser, original: SeededPost, content = '') =>
-  createPost({ authorId: author.id, content, kind: 'short', embed: { uri: original.uri, kind: original.kind } });
+  createPost({ authorId: author.id, content, kind: 'note', embed: { uri: original.uri, kind: original.kind } });
 
 /** The text the @mention autocomplete inserts for `user`; Nexus turns it into a mention of them. */
 export const mentionOf = (user: SeededUser) => user.pubky;
@@ -116,18 +119,6 @@ export const createCollectionViaApi = (
     items: items.map((item) => item.uri),
     layout,
   });
-
-/** Adds `post` to `collection`, rewriting the collection post as saving into it in the app does. */
-export const addPostToCollectionViaApi = (author: SeededUser, collection: SeededPost, post: SeededPost) =>
-  cy.task<{ id: string }>('seedAddToCollection', {
-    authorId: author.id,
-    collectionId: collection.id,
-    itemUri: post.uri,
-  });
-
-/** `user` follows `collection`, which the app stores as a bookmark of the collection post. */
-export const followCollectionViaApi = (user: SeededUser, collection: SeededPost) =>
-  cy.task<{ id: string }>('seedBookmark', { userId: user.id, uri: collection.uri });
 
 /**
  * Moves `user`'s last-read marker to now, so only notifications created afterwards count as unread.

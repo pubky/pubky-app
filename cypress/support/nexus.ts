@@ -47,14 +47,6 @@ export const followIndexed = (follower: SeededUser, followee: SeededUser): Nexus
   expect: { kind: 'includes', value: follower.id },
 });
 
-// The post view only carries the viewer's bookmark when asked for that viewer
-export const bookmarkIndexed = (user: SeededUser, post: SeededPost): NexusCheck => ({
-  description: `'${user.name}' bookmarking post ${post.id}`,
-  path: `/v0/post/${post.authorId}/${post.id}`,
-  qs: { viewer_id: user.id },
-  expect: { kind: 'bookmark' },
-});
-
 export const postTagsIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>, labels: string[]): NexusCheck => ({
   description: `tags ${labels.join(', ')} on post ${post.id}`,
   path: `/v0/post/${post.authorId}/${post.id}/tags`,
@@ -103,7 +95,15 @@ const parseRequestBody = (body: unknown): unknown => {
 // Reads the tagged post's author and id from a homeserver tag PUT interception.
 export const taggedPostFromInterception = (interception: { request: { body: unknown } }) => {
   const { uri } = parseRequestBody(interception.request.body) as { uri: string };
-  const match = /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/posts\/([^/]+)$/.exec(uri);
+  // The app writes a versionless reference; a migrated tag keeps its target's spelling
+  const match = /^pubky:\/\/([^/]+)\/pub\/(?:social\/v1|pubky\.app)\/posts\/([^/]+)$/.exec(uri);
   expect(match, `tagged uri ${uri}`).to.not.equal(null);
   return { authorId: match![1], postId: match![2] };
+};
+
+// The post a homeserver post write belongs to. Its URL names one version, `posts/{id}/{editId}.json`.
+export const postIdFromWriteUrl = (url: string) => {
+  const match = /\/pub\/social\/v1\/posts\/([^/]+)\/[^/]+\.json$/.exec(new URL(url).pathname);
+  expect(match, `post write url ${url}`).to.not.equal(null);
+  return match![1];
 };

@@ -237,31 +237,39 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
   cy.location('pathname').should('eq', '/');
 });
 
-Cypress.Commands.add('signInWithEncryptedFile', (backupFilepath: string, passcode = '123456') => {
-  cy.location('pathname').then((pathname) => {
-    if (pathname !== '/') cy.visit('/');
-  });
-  cy.location('pathname').should('eq', '/');
-  waitForServiceWorker();
+Cypress.Commands.add(
+  'signInWithEncryptedFile',
+  (backupFilepath: string, passcode = '123456', { migrates = false } = {}) => {
+    cy.location('pathname').then((pathname) => {
+      if (pathname !== '/') cy.visit('/');
+    });
+    cy.location('pathname').should('eq', '/');
+    waitForServiceWorker();
 
-  cy.get('[data-cy="header-sign-in-btn"]').click();
-  cy.location('pathname').should('eq', '/sign-in');
+    cy.get('[data-cy="header-sign-in-btn"]').click();
+    cy.location('pathname').should('eq', '/sign-in');
 
-  cy.get('#restore-encrypted-file-btn').click();
+    cy.get('#restore-encrypted-file-btn').click();
 
-  cy.get('#encrypted-file-input').selectFile(
-    backupFilepath,
-    { force: true }, // force to bypass visibility check of hidden input field
-  );
+    cy.get('#encrypted-file-input').selectFile(
+      backupFilepath,
+      { force: true }, // force to bypass visibility check of hidden input field
+    );
 
-  if (passcode) {
-    cy.get('#restore-password').type(passcode);
-  }
-  cy.get('#encrypted-file-restore-btn').click();
+    if (passcode) {
+      cy.get('#restore-password').type(passcode);
+    }
+    cy.get('#encrypted-file-restore-btn').click();
 
-  cy.location('pathname').should('eq', '/home');
-  waitForFeedToLoad();
-});
+    // An account with a 0.x tree stops on the gate's progress screen; any other passes it unseen
+    if (migrates) {
+      cy.location('pathname').should('eq', '/migration');
+      cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+    }
+    cy.location('pathname').should('eq', '/home');
+    waitForFeedToLoad();
+  },
+);
 
 Cypress.Commands.add('signInWithRecoveryPhrase', (recoveryPhrase: string) => {
   cy.location('pathname').then((pathname) => {

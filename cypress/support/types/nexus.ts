@@ -18,7 +18,6 @@ export type NexusExpectation =
   | { kind: 'includes'; value: string }
   | { kind: 'tags'; labels: string[] }
   | { kind: 'notifications'; type: NexusNotificationType; actorId?: string; count: number }
-  | { kind: 'bookmark' }
   | { kind: 'streamKeys'; postIds: string[] };
 
 export type NexusCheck = {

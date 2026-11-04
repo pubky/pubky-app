@@ -34,8 +34,6 @@ const isIndexed = (expectation: NexusExpectation, { status, body }: NexusAnswer)
           return notificationBody['type'] === expectation.type && isFrom(notificationBody, expectation.actorId);
         }).length >= expectation.count
       );
-    case 'bookmark':
-      return Boolean(recordOf(body)['bookmark']);
     case 'streamKeys': {
       const keys = arrayOf(recordOf(body)['post_keys']).map(String);
       return expectation.postIds.every((postId) => keys.some((key) => key.endsWith(`:${postId}`)));
