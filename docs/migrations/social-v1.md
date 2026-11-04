@@ -161,7 +161,7 @@ bookmarks/mutes/feeds or auth capabilities should be written against `pubky-soci
 ## Cleanup (PR-F)
 
 `pubky-app-specs` is gone: PR-F moved it to `devDependencies` for the Cypress seed plugin only, and the e2e port
-(PR #PR_NUMBER) ported that plugin and uninstalled it, so it is in neither `package.json` nor the lockfile. ESLint and the
+(PR #3055) ported that plugin and uninstalled it, so it is in neither `package.json` nor the lockfile. ESLint and the
 compliance gate still ban it in `src/**` as a guard. Gone with it in PR-F: the wasm builder
 singleton `src/core/pipes/pipes.builder.ts` and its test, the builder double in `pipes.test-utils.ts`, the unused 0.x
 kind helper `src/core/services/local/post/post.helpers.ts`, every `vi.mock('pubky-app-specs')`, the
@@ -227,9 +227,9 @@ Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
   times, and the DELETE of a file already gone answering 404.
 - The Cypress suite on `dev`, against pubky-stack with the carrier Nexus.
 
-## Cypress (ported in PR #PR_NUMBER)
+## Cypress (ported in PR #3055)
 
-The suite was QA-owned while the port ran; it was ported to v1 in PR #PR_NUMBER and `cypress/**` moved with it. What
+The suite was QA-owned while the port ran; it was ported to v1 in PR #3055 and `cypress/**` moved with it. What
 the specs now assume:
 
 - Paths: posts, files, tags, follows and the profile under `/pub/social/v1/` (a post write is one version,
