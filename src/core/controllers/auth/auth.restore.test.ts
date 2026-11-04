@@ -325,6 +325,7 @@ describe('AuthController restored session lifecycle', () => {
     expect(request).toHaveBeenCalledWith({
       method: HttpMethod.GET,
       url: `pubky://${pubkyA}/pub/pubky.app/settings.json`,
+      notFoundAsNull: true,
     });
     expect(useAuthStore.getState()).toMatchObject({ hasProfile: null, isRestoringSession: true });
 
