@@ -199,7 +199,9 @@ describe('useProfileForm post-save navigation', () => {
       expect(ProfileController.commitCreate).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({ image: avatarUri, pubky }),
       );
-      expect(FileController.commitCreateAttachment).toHaveBeenCalledExactlyOnceWith(avatarAttachment);
+      expect(FileController.commitCreateAttachment).toHaveBeenCalledExactlyOnceWith({
+        fileAttachment: avatarAttachment,
+      });
       const [hashed] = vi.mocked(FileController.toFileAttachment).mock.invocationCallOrder;
       const [profile] = vi.mocked(ProfileController.commitCreate).mock.invocationCallOrder;
       const [upload] = vi.mocked(FileController.commitCreateAttachment).mock.invocationCallOrder;

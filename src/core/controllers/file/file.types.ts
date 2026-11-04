@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import type { FileVariant } from '@/services/nexus/file/file.types';
 
 export type TUploadFileParams = {
@@ -16,6 +17,10 @@ export type TGetMetadataParams = {
 
 export type TFetchFilesParams = {
   fileUris: string[];
+};
+
+export type TCommitCreateAttachmentParams = {
+  fileAttachment: TFileAttachmentResult;
 };
 
 export type TGetFileUrlParams = {

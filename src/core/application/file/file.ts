@@ -243,17 +243,15 @@ export class FileApplication {
    * @returns The metadata for the file attachments
    */
   static async getMetadata({ fileAttachments }: TGetMetadataParams) {
-    const compositeFileIds = fileAttachments.flatMap((uri) => {
+    const uriByFileId = new Map<string, string>();
+    for (const uri of fileAttachments) {
       const compositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
-      return compositeId ? [compositeId] : [];
-    });
-    const files = await LocalFileService.findByIds(compositeFileIds);
-    const stored = new Set(files.map(({ id }) => id));
-    const synthesized = [...new Set(fileAttachments)].flatMap((uri) => {
-      const details = FileNormalizer.toV1FileDetails(uri);
-      return details && !stored.has(details.id) ? [details] : [];
-    });
-    return [...files, ...synthesized];
+      if (compositeId && !uriByFileId.has(compositeId)) uriByFileId.set(compositeId, uri);
+    }
+    const rows = await LocalFileService.findByIds([...uriByFileId.keys()]);
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    // In the order asked for, which rows and URIs share: a post mixes both after an edit on another device.
+    return [...uriByFileId].flatMap(([id, uri]) => rowById.get(id) ?? FileNormalizer.toV1FileDetails(uri) ?? []);
   }
 
   /**

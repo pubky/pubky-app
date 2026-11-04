@@ -433,6 +433,15 @@ describe('FileApplication', () => {
         expect(result.find(({ uri }) => uri === pdf.url)?.name).toBe(`${pdf.id}.pdf`);
       });
 
+      it('keeps the order asked for when only some files have a row', async () => {
+        const row = createMockFile(`${OWNER}:${pdf.id}`, 'paper.pdf', pdf.url, { content_type: 'application/pdf' });
+        vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([row]);
+
+        const result = await FileApplication.getMetadata({ fileAttachments: [png.url, pdf.url] });
+
+        expect(result.map(({ uri }) => uri)).toEqual([png.url, pdf.url]);
+      });
+
       it('answers a repeated URI once', async () => {
         vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([]);
 

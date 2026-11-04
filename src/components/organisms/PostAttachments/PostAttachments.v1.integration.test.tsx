@@ -126,8 +126,8 @@ describe('PostAttachments for another user v1 attachments', () => {
     await waitFor(() => expect(result.current.imagesAndVideos).toHaveLength(2));
     expect(byIds).toHaveBeenCalledExactlyOnceWith([legacyUri]);
     expect(result.current.imagesAndVideos.map(({ urls }) => urls.main)).toEqual([
-      `${getCdnUrl()}/files/${OTHER}/${LEGACY_ID}/main`,
       v1Url(png, 'png', 'main'),
+      `${getCdnUrl()}/files/${OTHER}/${LEGACY_ID}/main`,
     ]);
   });
 

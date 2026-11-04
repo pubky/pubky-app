@@ -196,7 +196,7 @@ describe('FileController', () => {
       expect(mockFileApplication.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
       expect(mockFileApplication.commitCreate).not.toHaveBeenCalled();
 
-      await FileController.commitCreateAttachment(fileAttachment);
+      await FileController.commitCreateAttachment({ fileAttachment });
 
       expect(mockFileApplication.commitCreate).toHaveBeenCalledWith({ fileAttachments: [fileAttachment] });
     });

@@ -1,5 +1,6 @@
 import { FileApplication } from '@/application/file/file';
 import type {
+  TCommitCreateAttachmentParams,
   TDeleteFilesParams,
   TFetchFilesParams,
   TGetFileUrlParams,
@@ -51,9 +52,10 @@ export class FileController {
   /**
    * Uploads a file `toFileAttachment` prepared to the homeserver.
    *
-   * @param fileAttachment - The prepared upload
+   * @param params - Parameters for the upload
+   * @param params.fileAttachment - The prepared upload
    */
-  static async commitCreateAttachment(fileAttachment: TFileAttachmentResult): Promise<void> {
+  static async commitCreateAttachment({ fileAttachment }: TCommitCreateAttachmentParams): Promise<void> {
     await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
   }
 
