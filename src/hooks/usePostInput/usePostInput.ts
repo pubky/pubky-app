@@ -470,7 +470,7 @@ export function usePostInput({
             }
 
             const details = await PostController.getDetails({ compositeId: createdPostId });
-            if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+            if (!details?.kind || postKindBelongsToStream(details.kind, streamId, details.lock)) {
               await timelineFeed.prependPosts(createdPostId);
             }
           } catch (error) {

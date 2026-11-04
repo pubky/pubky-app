@@ -549,6 +549,14 @@ describe('TimelineFeed', () => {
       vi.mocked(window.scrollTo).mockRestore();
       useAuthStore.setState({ currentUserPubky: null });
       useSearchStore.getState().reset();
+      useHomeStore.setState({ content: CONTENT.ALL });
+    });
+    it('leaves a stored Locks choice untouched', () => {
+      useHomeStore.setState({ content: CONTENT.LOCKS });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
+
+      expect(useHomeStore.getState().content).toBe(CONTENT.LOCKS);
     });
     it('renders the scoped empty action and switches only Search to All', () => {
       useAuthStore.setState({ currentUserPubky: 'viewer' });

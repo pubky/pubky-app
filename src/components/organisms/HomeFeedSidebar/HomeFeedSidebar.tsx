@@ -14,7 +14,7 @@ import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ReachFilterValue } from '@/stores/home/home.types';
-import { type ContentType, REACH, type ReachType, type SortType } from '@/stores/home/home.types';
+import { CONTENT, type ContentType, REACH, type ReachType, type SortType } from '@/stores/home/home.types';
 import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 import {
   resolveVisualFeedContent,
@@ -26,6 +26,7 @@ interface HomeFeedSidebarProps {
   reachFilter?: ReactNode;
   hideSortFilter?: boolean;
   hideLayoutFilter?: boolean;
+  disabledContent?: ContentType[];
   allowVisualLayout?: boolean;
   feedVariant?: TimelineFeedVariant;
   variant?: 'sidebar' | 'drawer';
@@ -44,6 +45,7 @@ function HomeFeedFilters({
   reachFilter,
   hideSortFilter = false,
   hideLayoutFilter = false,
+  disabledContent = [],
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
   variant = 'drawer',
@@ -126,7 +128,9 @@ function HomeFeedFilters({
     isVisualActive,
   });
 
-  const disabledContentTabs = isVisualActive ? VISUAL_DISABLED_CONTENT : [];
+  const disabledContentTabs = isVisualActive ? VISUAL_DISABLED_CONTENT : disabledContent;
+  // Shown only: the store keeps the choice for the surfaces that allow it.
+  const selectedContent = disabledContentTabs.includes(resolvedContent) ? CONTENT.ALL : resolvedContent;
   const showVisualLayout = allowVisualLayout && !isPhoneViewport;
   const showCardsLayout = feedVariant === TIMELINE_FEED_VARIANT.HOME || feedVariant === TIMELINE_FEED_VARIANT.SEARCH;
 
@@ -157,7 +161,7 @@ function HomeFeedFilters({
             />
           )}
           <FilterContent
-            selectedTab={resolvedContent}
+            selectedTab={selectedContent}
             onTabChange={handleContentChange}
             disabledTabs={disabledContentTabs}
           />
@@ -173,7 +177,7 @@ function HomeFeedFilters({
             />
           )}
           <FilterContent
-            selectedTab={resolvedContent}
+            selectedTab={selectedContent}
             onTabChange={handleContentChange}
             disabledTabs={disabledContentTabs}
           />
@@ -192,6 +196,7 @@ function HomeFeedFilters({
 export function HomeFeedSidebar({
   reachFilter,
   hideSortFilter = false,
+  disabledContent,
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
 }: HomeFeedSidebarProps) {
@@ -199,6 +204,7 @@ export function HomeFeedSidebar({
     <HomeFeedFilters
       reachFilter={reachFilter}
       hideSortFilter={hideSortFilter}
+      disabledContent={disabledContent}
       allowVisualLayout={allowVisualLayout}
       feedVariant={feedVariant}
       variant="sidebar"
@@ -214,6 +220,7 @@ export function HomeFeedSidebar({
 export function HomeFeedDrawer({
   reachFilter,
   hideSortFilter = false,
+  disabledContent,
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
 }: HomeFeedSidebarProps) {
@@ -221,6 +228,7 @@ export function HomeFeedDrawer({
     <HomeFeedFilters
       reachFilter={reachFilter}
       hideSortFilter={hideSortFilter}
+      disabledContent={disabledContent}
       allowVisualLayout={allowVisualLayout}
       feedVariant={feedVariant}
       variant="drawer"
@@ -237,6 +245,7 @@ export function HomeFeedDrawer({
 export function HomeFeedDrawerMobile({
   reachFilter,
   hideSortFilter = false,
+  disabledContent,
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
 }: HomeFeedSidebarProps) {
@@ -244,6 +253,7 @@ export function HomeFeedDrawerMobile({
     <HomeFeedFilters
       reachFilter={reachFilter}
       hideSortFilter={hideSortFilter}
+      disabledContent={disabledContent}
       hideLayoutFilter
       allowVisualLayout={allowVisualLayout}
       feedVariant={feedVariant}

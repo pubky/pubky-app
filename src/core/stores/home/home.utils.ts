@@ -59,12 +59,16 @@ const CONTENT_TO_KIND = {
   [CONTENT.VIDEOS]: StreamKind.VIDEO,
   [CONTENT.LINKS]: StreamKind.LINK,
   [CONTENT.FILES]: StreamKind.FILE,
+  [CONTENT.LOCKS]: 'locked',
 } as const satisfies Record<ContentType, PostStreamKindSegment>;
 
 /** Maps a CONTENT filter directly to the stream-id kind segment. */
 export function getKindFromContent(content: ContentType): PostStreamKindSegment {
   return CONTENT_TO_KIND[content];
 }
+
+/** Content filters Nexus text search cannot apply (#3046). */
+export const TEXT_SEARCH_DISABLED_CONTENT: ContentType[] = [CONTENT.LOCKS];
 
 /**
  * Tagged as is a standalone depth-2 Home feed in the V1 UI. Depth 0/1 domain
@@ -91,7 +95,7 @@ interface HomeStreamFilters {
  * Pattern breakdown:
  * - SORTING: timeline (recent), total_engagement (popularity)
  * - SOURCE: all, following, friends, me
- * - KIND: all, short (posts), long (articles), collection, image, video, link, file
+ * - KIND: all, short (posts), long (articles), collection, image, video, link, file, locked
  *
  * @example
  * getStreamIdFromFilters('recent', 'all', 'all') // => 'timeline:all:all'
@@ -214,10 +218,15 @@ const POST_KIND_TO_CONTENT = {
  * encode no kind (replies, single-collection items, plain author feeds)
  * accept all kinds.
  */
-export function postKindBelongsToStream(postKind: string, streamId: string): boolean {
+export function postKindBelongsToStream(postKind: string, streamId: string, lock: string | null | undefined): boolean {
   const kindSegment = getPostStreamKind(streamId);
   if (!kindSegment) {
     return true;
+  }
+
+  // A lock post's kind is its teaser's, so a Locks stream can only go by the lock.
+  if (kindSegment === 'locked') {
+    return Boolean(lock);
   }
 
   const streamContent = KIND_TO_CONTENT[kindSegment];

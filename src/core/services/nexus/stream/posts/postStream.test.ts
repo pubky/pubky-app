@@ -217,6 +217,10 @@ describe('Stream API URL Generation', () => {
   });
 
   describe('Parameter handling', () => {
+    test('adds locked=true to the stream url', () => {
+      expect(postStreamApi.all({ locked: true })).toContain('locked=true');
+    });
+
     test.each([
       { param: 'viewer_id', value: undefined, shouldExclude: true },
       { param: 'sorting', value: null, shouldExclude: true },
@@ -428,6 +432,41 @@ describe('createPostStreamParams', () => {
       expect(result.params.viewer_id).toBe(mockViewerId);
       expect(result.params.limit).toBe(20);
       expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
+    });
+  });
+
+  describe('Locked streams', () => {
+    it.each([
+      ['all', 'timeline:all:locked'],
+      ['following', 'total_engagement:following:locked'],
+      ['wot', 'timeline:wot:locked'],
+      ['wot_domain', 'timeline:wot_domain:2:locked:bitcoiner'],
+      ['author', `timeline:author:${mockViewerId}:locked`],
+      ['tag', 'timeline:all:locked:bitcoin'],
+    ])('sends locked instead of a kind on a %s stream', (_label, streamId) => {
+      const result = createPostStreamParams({
+        streamId: streamId as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.locked).toBe(true);
+      expect(result.params.kind).toBeUndefined();
+    });
+
+    it('does not send locked on a kind stream', () => {
+      const result = createPostStreamParams({
+        streamId: PostStreamTypes.TIMELINE_ALL_SHORT,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.locked).toBeUndefined();
+      expect(result.params.kind).toBe(StreamKind.SHORT);
     });
   });
 

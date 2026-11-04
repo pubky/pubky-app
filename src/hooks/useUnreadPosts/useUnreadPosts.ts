@@ -37,7 +37,7 @@ export function useUnreadPosts({ streamId }: UseUnreadPostsOptions): UseUnreadPo
       const details = await PostController.getDetailsByIds({ compositeIds: stream.stream });
       const readyPostIds = stream.stream.filter((_id, index) => {
         const detail = details[index];
-        return detail !== undefined && postKindBelongsToStream(detail.kind, streamId);
+        return detail !== undefined && postKindBelongsToStream(detail.kind, streamId, detail.lock);
       });
       const filteredStream = await StreamPostsController.filterStreamPosts({ streamId, postIds: readyPostIds });
       return { streamId, stream: filteredStream };

@@ -7,7 +7,7 @@ import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStre
 // Post Stream ID Pattern: sorting:source:kind
 // - SORTING: timeline (recent), total_engagement (popularity)
 // - SOURCE: all, following, friends, me, bookmarks, post_replies, author, author_replies
-// - KIND: all, short (posts), long (articles), image, video, link, file, collection
+// - KIND: all, short (posts), long (articles), image, video, link, file, collection, locked (posts with a lock, any kind)
 //
 // Dynamic Post Reply Stream ID Pattern: postReplies:compositePostId
 // - compositePostId format: author:postId (e.g., "did:key:abc123:post456")
@@ -31,6 +31,7 @@ export enum PostStreamTypes {
   TIMELINE_ALL_LINK = 'timeline:all:link',
   TIMELINE_ALL_FILE = 'timeline:all:file',
   TIMELINE_ALL_COLLECTION = 'timeline:all:collection',
+  TIMELINE_ALL_LOCKED = 'timeline:all:locked',
 
   // ============================================
   // TIMELINE (Recent) - FOLLOWING Source
@@ -43,6 +44,7 @@ export enum PostStreamTypes {
   TIMELINE_FOLLOWING_LINK = 'timeline:following:link',
   TIMELINE_FOLLOWING_FILE = 'timeline:following:file',
   TIMELINE_FOLLOWING_COLLECTION = 'timeline:following:collection',
+  TIMELINE_FOLLOWING_LOCKED = 'timeline:following:locked',
 
   // ============================================
   // TIMELINE (Recent) - FRIENDS Source
@@ -55,6 +57,7 @@ export enum PostStreamTypes {
   TIMELINE_FRIENDS_LINK = 'timeline:friends:link',
   TIMELINE_FRIENDS_FILE = 'timeline:friends:file',
   TIMELINE_FRIENDS_COLLECTION = 'timeline:friends:collection',
+  TIMELINE_FRIENDS_LOCKED = 'timeline:friends:locked',
 
   // ============================================
   // TIMELINE (Recent) - BOOKMARKS Source
@@ -77,6 +80,7 @@ export enum PostStreamTypes {
   POPULARITY_ALL_LINK = 'total_engagement:all:link',
   POPULARITY_ALL_FILE = 'total_engagement:all:file',
   POPULARITY_ALL_COLLECTION = 'total_engagement:all:collection',
+  POPULARITY_ALL_LOCKED = 'total_engagement:all:locked',
 
   // ============================================
   // POPULARITY (Total Engagement) - FOLLOWING Source
@@ -89,6 +93,7 @@ export enum PostStreamTypes {
   POPULARITY_FOLLOWING_LINK = 'total_engagement:following:link',
   POPULARITY_FOLLOWING_FILE = 'total_engagement:following:file',
   POPULARITY_FOLLOWING_COLLECTION = 'total_engagement:following:collection',
+  POPULARITY_FOLLOWING_LOCKED = 'total_engagement:following:locked',
 
   // ============================================
   // POPULARITY (Total Engagement) - FRIENDS Source
@@ -101,12 +106,13 @@ export enum PostStreamTypes {
   POPULARITY_FRIENDS_LINK = 'total_engagement:friends:link',
   POPULARITY_FRIENDS_FILE = 'total_engagement:friends:file',
   POPULARITY_FRIENDS_COLLECTION = 'total_engagement:friends:collection',
+  POPULARITY_FRIENDS_LOCKED = 'total_engagement:friends:locked',
 }
 
 export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
 export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
-export type PostStreamKindSegment = 'all' | StreamKind;
+export type PostStreamKindSegment = 'all' | 'locked' | StreamKind;
 export type WotDomainDepth = 0 | 1 | 2;
 export type StreamDependencyScope = 'follow_graph' | 'friends' | 'profile_tag';
 export type WotStreamId =
@@ -314,7 +320,7 @@ export function isViewerExcludedWotStream(streamId: string): boolean {
   return isWotStream(streamId) || isWotDomainStream(streamId);
 }
 
-const POST_STREAM_KIND_SEGMENTS: ReadonlySet<string> = new Set(['all', ...Object.values<string>(StreamKind)]);
+const POST_STREAM_KIND_SEGMENTS: ReadonlySet<string> = new Set(['all', 'locked', ...Object.values<string>(StreamKind)]);
 
 function toPostStreamKindSegment(segment: string | undefined): PostStreamKindSegment | undefined {
   return segment !== undefined && POST_STREAM_KIND_SEGMENTS.has(segment)

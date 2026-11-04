@@ -148,7 +148,7 @@ export function usePostInputLock({
         // in `usePostInput` (#2308, #2714).
         if (isViewerExcludedWotStream(streamId)) return;
         const details = await PostController.getDetails({ compositeId: postId });
-        if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+        if (!details?.kind || postKindBelongsToStream(details.kind, streamId, details.lock)) {
           await timelineFeed.prependPosts(postId);
         }
       } catch (error) {

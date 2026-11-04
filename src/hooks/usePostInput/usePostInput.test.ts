@@ -1063,6 +1063,29 @@ describe('usePostInput', () => {
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 
+    it('does not prependPosts a post without a lock on a Locks stream', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: PostStreamTypes.TIMELINE_ALL_LOCKED,
+      });
+      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short', lock: null } as never);
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: 'created-post-id' });
+      });
+      expect(mockPrependPosts).not.toHaveBeenCalled();
+    });
+
     /*
       WoT-sourced streams are gated before the kind lookup (#2308), which also
       covers the former kind-mismatch case on `timeline:wot_domain:…:image`.

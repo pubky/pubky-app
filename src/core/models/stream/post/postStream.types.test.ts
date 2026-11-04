@@ -425,6 +425,13 @@ describe('getPostStreamKind', () => {
     expect(getPostStreamKind('timeline:bookmarks:collection')).toBe(StreamKind.COLLECTION);
   });
 
+  it('extracts the locked segment from every stream shape that has a kind', () => {
+    expect(getPostStreamKind('timeline:all:locked')).toBe('locked');
+    expect(getPostStreamKind('timeline:all:locked:bitcoin')).toBe('locked');
+    expect(getPostStreamKind(buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'locked', ['bitcoin']))).toBe('locked');
+    expect(getPostStreamKind(buildSortedAuthorStreamId(StreamSorting.TIMELINE, TEST_PUBKY, 'locked'))).toBe('locked');
+  });
+
   it('extracts the kind from 4-segment tag stream ids', () => {
     expect(getPostStreamKind('timeline:all:image:bitcoin')).toBe(StreamKind.IMAGE);
     expect(getPostStreamKind('timeline:all:all:bitcoin,dev')).toBe('all');

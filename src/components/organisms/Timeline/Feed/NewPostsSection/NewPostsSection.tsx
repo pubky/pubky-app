@@ -80,7 +80,7 @@ export function NewPostsSection({
         const details = await PostController.getDetailsByIds({ compositeIds: postsToAdd });
         postsToAdd = postsToAdd.filter((id, index) => {
           const kind = details[index]?.kind;
-          return !kind || postKindBelongsToStream(kind, streamId);
+          return !kind || postKindBelongsToStream(kind, streamId, details[index]?.lock);
         });
       }
 
