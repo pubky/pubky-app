@@ -129,7 +129,7 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
 
   // Only `setup_required` opens the setup: `unavailable` or a failed check never does, because Paykit
   // may already hold this creator's account. A creator Paykit is known to hold goes to the reconnect
-  // instead; if Paykit cannot say, the setup opens and a failure is diagnosed again.
+  // instead; if Paykit cannot say, the existing unavailable state offers a retry without guessing.
   const check = useCallback(async () => {
     const run = (checkRef.current += 1);
     const sessionSecret = useLocksAuthStore.getState().selectLocksSessionSecret();
@@ -153,10 +153,16 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
       LocksController.markPaykitConnected();
       setStatus(PaykitSetupFlowStatus.SUCCESS);
     } else if (setupStatus === 'setup_required') {
-      const { held } = await readPaykitHeld('usePaykitSetupFlow.check');
+      const { held, failure } = await readPaykitHeld('usePaykitSetupFlow.check');
       if (isOutdated(run, sessionSecret)) return;
-      if (held) setStatus(PaykitSetupFlowStatus.RECONNECT_REQUIRED);
-      else start();
+      if (held === null) {
+        setError(failure);
+        setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
+      } else if (held) {
+        setStatus(PaykitSetupFlowStatus.RECONNECT_REQUIRED);
+      } else {
+        start();
+      }
     } else {
       setError(failure);
       setStatus(PaykitSetupFlowStatus.UNAVAILABLE);

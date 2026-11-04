@@ -331,7 +331,7 @@ describe('usePaykitSetupFlow', () => {
         expect(mocks.getPaykitReconnectUrl).not.toHaveBeenCalled();
       });
 
-      it('opens the setup as before when Paykit cannot say', async () => {
+      it('reports unavailable without opening either page when Paykit cannot say', async () => {
         mocks.fetchPaykitCreatorHeld.mockRejectedValue(new Error('probe failed'));
         const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
 
@@ -339,8 +339,11 @@ describe('usePaykitSetupFlow', () => {
           await result.current.check();
         });
 
-        expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
-        expect(mocks.getPaykitSetupUrl).toHaveBeenCalledTimes(1);
+        expect(result.current.status).toBe(PaykitSetupFlowStatus.UNAVAILABLE);
+        expect(result.current.error).not.toBeNull();
+        expect(result.current.setupUrl).toBeNull();
+        expect(mocks.getPaykitSetupUrl).not.toHaveBeenCalled();
+        expect(mocks.getPaykitReconnectUrl).not.toHaveBeenCalled();
       });
 
       it('keeps the checking state while Paykit is asked', async () => {

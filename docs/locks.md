@@ -574,8 +574,8 @@ setup fails:
   `/setup`.
 - Paykit does not hold the creator, after a failed setup: the dialog says nothing was set up and offers
   **Connect Bitkit**, which checks again and opens `/setup`.
-- Paykit cannot say: before `/setup` the setup opens as before; after a failed setup the dialog says payments
-  are unavailable.
+- Paykit cannot say: the dialog says payments are unavailable and offers **Try again**, both before setup
+  and after a failed setup. Neither setup nor reconnect opens until a later check answers held or not held.
 
 The probe opens a throwaway in-memory flow on Paykit and counts against its per-IP rate limit (ten setup starts a
 minute by default), which all callers of the route share, because Paykit has no held-status read that skips it. The
@@ -584,10 +584,12 @@ holds the creator, fifteen seconds when it does not) and lets concurrent callers
 reopened dialog or the diagnosis after a failed setup does not spend more of the budget; a failed probe is not
 kept. The cache is per server instance and does not help when many different creators ask within one minute:
 the eleventh distinct creator through one App egress still gets Paykit's 429, which reads as "Paykit cannot say"
-(the setup opens as before, and a diagnosis after a failure shows the unavailable copy). Removing that limit needs a
-read-only held-status contract on the Paykit Server with its own budget. Paykit also checks `return_to`, so a
-rejected origin reads as "not held". A `reconnect_required`
-value in the Lock Server's setup status would make the probe unnecessary; until then the probe is the signal.
+(the dialog offers a retry without opening either setup flow). Removing that limit still needs a read-only
+held-status contract on the Paykit Server with its own budget, tracked in
+[Paykit Server #119](https://github.com/pubky/paykit-server/issues/119). The retry keeps an unknown creator out of
+a possibly refused setup; it does not remove the shared setup-start quota or pending-flow cost of the probe.
+Paykit also checks `return_to`, so a rejected origin reads as "not held". A `reconnect_required` value in the
+Lock Server's setup status would make the probe unnecessary; until then the probe is the signal.
 
 Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
 USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify

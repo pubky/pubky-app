@@ -161,13 +161,55 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     expect(probe.searchParams.get('return_to')).toBe(window.location.origin);
   });
 
-  // The prod log of 23 Oct 2026: auth_complete, session_export, relay_receive, claim_verify,
-  // lock_acquire and creator_load all `succeeded`, then no further stage. The refusal of a held
-  // creator reaches the iframe as 422 `setup_failed`, which its script posts as `setup-failed`.
-  it('setup-failed after auth, claim and creator_load succeed: reconnects instead of looping on Try again', async () => {
+  it.each([429, 503])(
+    'presence lookup returns %i: offers a retry and reconnects only after a held answer',
+    async (status) => {
+      signIn();
+      mocks.paykitSetupStatus.mockResolvedValue({ status: 'setup_required' });
+      mocks.probe.mockImplementation(async () => Response.json({ error: 'unavailable' }, { status }));
+      renderDialog();
+
+      expect(
+        await screen.findByText('Payments are unavailable right now. Please try again later.'),
+      ).toBeInTheDocument();
+      expect(setupIframe()).not.toBeInTheDocument();
+      expect(reconnectIframe()).not.toBeInTheDocument();
+      expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
+
+      answerProbe('held');
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+      expect(await screen.findByRole('button', { name: 'Reconnect Bitkit' })).toBeInTheDocument();
+      expect(setupIframe()).not.toBeInTheDocument();
+      expect(reconnectIframe()).not.toBeInTheDocument();
+      expect(mocks.probe).toHaveBeenCalledTimes(2);
+      fireEvent.click(screen.getByRole('button', { name: 'Reconnect Bitkit' }));
+      expect(await screen.findByTitle('Bitkit payout account reconnect')).toBeInTheDocument();
+    },
+  );
+
+  it('retries an unavailable presence lookup and opens setup only after a not-held answer', async () => {
+    signIn();
+    mocks.paykitSetupStatus.mockResolvedValue({ status: 'setup_required' });
+    answerProbe('unavailable');
+    renderDialog();
+
+    expect(await screen.findByText('Payments are unavailable right now. Please try again later.')).toBeInTheDocument();
+    expect(setupIframe()).not.toBeInTheDocument();
+
+    answerProbe('not-held');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByTitle('Bitkit payout account setup')).toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+    expect(mocks.probe).toHaveBeenCalledTimes(2);
+  });
+
+  // Another attempt can finish between the initial presence check and the setup callback.
+  it('setup-failed after the creator becomes held: reconnects instead of looping on Try again', async () => {
     signIn();
     mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'setup_required' });
-    answerProbe('unavailable'); // Paykit cannot say before the setup opens, so `/setup` opens as before
+    answerProbe('not-held');
     renderDialog();
 
     const setup = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account setup');
