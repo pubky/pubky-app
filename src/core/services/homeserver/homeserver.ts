@@ -20,7 +20,6 @@ import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
-import type { Pubky as TPubkyModel } from '@/models/models.types';
 import type {
   TGenerateAuthUrlResult,
   THomeserverSessionResult,
@@ -39,6 +38,7 @@ import type {
   THomeserverPublicKeyParams,
   THomeserverRequestParams,
   THomeserverUserEvent,
+  THomeserverUserEventStreamParams,
   TOwnedSessionPath,
   TPutBlobParams,
 } from './homeserver.types';
@@ -60,9 +60,24 @@ const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
 const LIST_DEFAULT_LIMIT = 500;
 
-type HomeserverSdkUserEvent = THomeserverUserEvent & {
+type HomeserverSdkUserEvent = Omit<THomeserverUserEvent, 'path'> & {
+  /** Each read of the getter hands out a new WASM object that must be freed. */
+  readonly resource: { readonly path: string; free(): void };
   free(): void;
 };
+
+function readResourcePath(event: HomeserverSdkUserEvent): string {
+  const resource = event.resource;
+  try {
+    return resource.path;
+  } finally {
+    try {
+      resource.free();
+    } catch {
+      // Ignore WASM dispose errors.
+    }
+  }
+}
 
 export class HomeserverService {
   private constructor() {}
@@ -1081,44 +1096,56 @@ export class HomeserverService {
   }
 
   /**
-   * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
-   * Used for mute-list and notification `last_read` sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   * Subscribe to one live homeserver `/events-stream` for the union of `paths` under a user's storage (SDK SSE
+   * wrapper). Every long-lived stream holds one of the browser's few HTTP/1.1 connections to the homeserver, the
+   * pool CORS preflights wait in, so callers share one subscription per tab instead of opening one per path.
+   *
+   * The SDK takes no `AbortSignal`: cancelling its stream drops the response, which aborts the fetch. Aborting
+   * `signal` does that, also for a stream that resolves after the abort, so the caller never has to win a race.
    */
-  static async subscribeUserEventStreamForPath(params: {
-    userZ32: TPubkyModel;
-    cursor: string | null;
-    pathPrefix: string;
-  }): Promise<ReadableStream<THomeserverUserEvent>> {
+  static async subscribeUserEventStream(
+    params: THomeserverUserEventStreamParams,
+  ): Promise<ReadableStream<THomeserverUserEvent>> {
     try {
       const pubkySdk = this.getPubkySdk();
       const pk = PublicKey.from(params.userZ32);
-      const stream = (await pubkySdk
-        .eventStreamForUser(pk, params.cursor)
-        .path(params.pathPrefix)
-        .live()
-        .subscribe()) as ReadableStream<HomeserverSdkUserEvent>;
+      let builder = pubkySdk.eventStreamForUser(pk, params.cursor);
+      for (const path of params.paths) {
+        builder = builder.path(path);
+      }
+      const stream = (await builder.live().subscribe()) as ReadableStream<HomeserverSdkUserEvent>;
 
-      return this.normalizeUserEventStream(stream);
+      return this.normalizeUserEventStream(stream, params.signal);
     } catch (error) {
       // `operation` is matched by the `homeserver-event-stream-connect` Sentry drop rule:
-      // the mute-list and `last_read` sync coordinators reconnect on connect failures by design.
+      // HomeserverEventStreamCoordinator reconnects on connect failures by design.
       return handleError({
         error,
-        additionalContext: { pathPrefix: params.pathPrefix, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
+        additionalContext: { paths: params.paths, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
       });
     }
   }
 
   private static normalizeUserEventStream(
     stream: ReadableStream<HomeserverSdkUserEvent>,
+    signal: AbortSignal,
   ): ReadableStream<THomeserverUserEvent> {
     const reader = stream.getReader();
+    const cancelSdkStream = () => {
+      void reader.cancel(signal.reason).catch(() => {});
+    };
+    if (signal.aborted) {
+      cancelSdkStream();
+    } else {
+      signal.addEventListener('abort', cancelSdkStream, { once: true });
+    }
 
     return new ReadableStream<THomeserverUserEvent>({
       async pull(controller) {
         const { done, value } = await reader.read();
 
         if (done) {
+          signal.removeEventListener('abort', cancelSdkStream);
           controller.close();
           return;
         }
@@ -1127,6 +1154,7 @@ export class HomeserverService {
           controller.enqueue({
             cursor: value.cursor,
             eventType: value.eventType,
+            path: readResourcePath(value),
           });
         } finally {
           try {
@@ -1137,6 +1165,7 @@ export class HomeserverService {
         }
       },
       async cancel(reason) {
+        signal.removeEventListener('abort', cancelSdkStream);
         await reader.cancel(reason).catch(() => {});
       },
     });

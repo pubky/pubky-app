@@ -314,7 +314,7 @@ describe('HomeserverService', () => {
         'exists',
         'generateSignupToken',
         'restoreReference',
-        'subscribeUserEventStreamForPath',
+        'subscribeUserEventStream',
       ] as const;
 
       expectedMethods.forEach((method) => {
@@ -2783,55 +2783,115 @@ describe('HomeserverService', () => {
       });
     });
 
-    describe('subscribeUserEventStreamForPath', () => {
-      it('normalizes SDK events and disposes raw WASM objects internally', async () => {
-        const free = vi.fn();
+    describe('subscribeUserEventStream', () => {
+      const MUTES = '/pub/pubky.app/mutes/';
+      const LAST_READ = '/pub/pubky.app/last_read';
+
+      function mockSdkStream(subscribe: ReturnType<typeof vi.fn>) {
         const path = vi.fn().mockReturnThis();
         const live = vi.fn().mockReturnThis();
+        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+        return { path, live };
+      }
+
+      it('subscribes once to the union of paths, normalizes events and disposes raw WASM objects', async () => {
+        const free = vi.fn();
+        const freeResource = vi.fn();
         const subscribe = vi.fn().mockResolvedValue(
           new ReadableStream({
             start(controller) {
-              controller.enqueue({ cursor: 'cursor-1', eventType: 'PUT', free });
+              controller.enqueue({
+                cursor: 'cursor-1',
+                eventType: 'PUT',
+                resource: { path: LAST_READ, free: freeResource },
+                free,
+              });
               controller.close();
             },
           }),
         );
+        const { path, live } = mockSdkStream(subscribe);
 
-        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
-
-        const stream = await HomeserverService.subscribeUserEventStreamForPath({
+        const stream = await HomeserverService.subscribeUserEventStream({
           userZ32: 'user-pubky',
           cursor: 'cursor-0',
-          pathPrefix: '/pub/pubky.app/mutes/',
+          paths: [MUTES, LAST_READ],
+          signal: new AbortController().signal,
         });
         const reader = stream.getReader();
 
         const result = await reader.read();
 
-        expect(path).toHaveBeenCalledWith('/pub/pubky.app/mutes/');
+        expect(mockState.eventStreamForUser).toHaveBeenCalledWith(expect.anything(), 'cursor-0');
+        expect(path.mock.calls).toEqual([[MUTES], [LAST_READ]]);
         expect(live).toHaveBeenCalled();
-        expect(subscribe).toHaveBeenCalled();
-        expect(result.value).toEqual({ cursor: 'cursor-1', eventType: 'PUT' });
+        expect(subscribe).toHaveBeenCalledOnce();
+        expect(result.value).toEqual({ cursor: 'cursor-1', eventType: 'PUT', path: LAST_READ });
         expect(result.value).not.toHaveProperty('free');
-        expect(free).toHaveBeenCalledTimes(1);
+        expect(free).toHaveBeenCalledOnce();
+        expect(freeResource).toHaveBeenCalledOnce();
+      });
+
+      it('cancels the SDK stream when the signal aborts, ending a pending read', async () => {
+        const cancel = vi.fn();
+        mockSdkStream(vi.fn().mockResolvedValue(new ReadableStream({ cancel })));
+        const abort = new AbortController();
+
+        const stream = await HomeserverService.subscribeUserEventStream({
+          userZ32: 'user-pubky',
+          cursor: null,
+          paths: [MUTES],
+          signal: abort.signal,
+        });
+        const pending = stream.getReader().read();
+        abort.abort();
+
+        await expect(pending).resolves.toEqual({ done: true, value: undefined });
+        expect(cancel).toHaveBeenCalledOnce();
+      });
+
+      it('cancels a stream that resolves after the signal already aborted', async () => {
+        const cancel = vi.fn();
+        let resolveSubscribe!: (stream: ReadableStream) => void;
+        mockSdkStream(
+          vi.fn().mockReturnValue(
+            new Promise<ReadableStream>((resolve) => {
+              resolveSubscribe = resolve;
+            }),
+          ),
+        );
+        const abort = new AbortController();
+
+        const subscribing = HomeserverService.subscribeUserEventStream({
+          userZ32: 'user-pubky',
+          cursor: null,
+          paths: [MUTES],
+          signal: abort.signal,
+        });
+        abort.abort();
+        resolveSubscribe(new ReadableStream({ cancel }));
+        const stream = await subscribing;
+
+        expect(cancel).toHaveBeenCalledOnce();
+        await expect(stream.getReader().read()).resolves.toEqual({ done: true, value: undefined });
       });
 
       it('maps SDK connect failures to a Server AppError tagged with the subscribe operation and drops it from Sentry', async () => {
-        const path = vi.fn().mockReturnThis();
-        const live = vi.fn().mockReturnThis();
-        const subscribe = vi
-          .fn()
-          .mockRejectedValue(
-            Object.assign(new Error('HTTP transport error: error sending request'), { name: 'RequestError' }),
-          );
-        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+        mockSdkStream(
+          vi
+            .fn()
+            .mockRejectedValue(
+              Object.assign(new Error('HTTP transport error: error sending request'), { name: 'RequestError' }),
+            ),
+        );
 
         // beforeEach resets modules, so the service's AppError class is a different instance
         // from this file's static import: assert structurally, like the rest of this file.
-        const error = (await HomeserverService.subscribeUserEventStreamForPath({
+        const error = (await HomeserverService.subscribeUserEventStream({
           userZ32: 'user-pubky',
           cursor: null,
-          pathPrefix: '/pub/pubky.app/mutes/',
+          paths: [MUTES],
+          signal: new AbortController().signal,
         }).catch((caught: unknown) => caught)) as AppError;
 
         expect(error).toMatchObject({
@@ -2844,17 +2904,15 @@ describe('HomeserverService', () => {
       });
 
       it('keeps SDK authentication failures on subscribe reportable', async () => {
-        const path = vi.fn().mockReturnThis();
-        const live = vi.fn().mockReturnThis();
-        const subscribe = vi
-          .fn()
-          .mockRejectedValue(Object.assign(new Error('session expired'), { name: 'AuthenticationError' }));
-        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+        mockSdkStream(
+          vi.fn().mockRejectedValue(Object.assign(new Error('session expired'), { name: 'AuthenticationError' })),
+        );
 
-        const error = (await HomeserverService.subscribeUserEventStreamForPath({
+        const error = (await HomeserverService.subscribeUserEventStream({
           userZ32: 'user-pubky',
           cursor: null,
-          pathPrefix: '/pub/pubky.app/mutes/',
+          paths: [MUTES],
+          signal: new AbortController().signal,
         }).catch((caught: unknown) => caught)) as AppError;
 
         expect(error).toMatchObject({
@@ -2868,15 +2926,13 @@ describe('HomeserverService', () => {
       it('drops SDK PKARR resolution failures on subscribe from Sentry like other connect failures', async () => {
         // The subscribe resolves the user's homeserver from PKARR first; a relay failure there
         // rejects with PkarrError (Network), and the coordinator reconnects with backoff by design.
-        const path = vi.fn().mockReturnThis();
-        const live = vi.fn().mockReturnThis();
-        const subscribe = vi.fn().mockRejectedValue({ name: 'PkarrError', message: 'relay unreachable' });
-        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+        mockSdkStream(vi.fn().mockRejectedValue({ name: 'PkarrError', message: 'relay unreachable' }));
 
-        const error = (await HomeserverService.subscribeUserEventStreamForPath({
+        const error = (await HomeserverService.subscribeUserEventStream({
           userZ32: 'user-pubky',
           cursor: null,
-          pathPrefix: '/pub/pubky.app/mutes/',
+          paths: [MUTES],
+          signal: new AbortController().signal,
         }).catch((caught: unknown) => caught)) as AppError;
 
         expect(error).toMatchObject({
