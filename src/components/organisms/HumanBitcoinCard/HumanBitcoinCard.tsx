@@ -145,7 +145,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
         <Container
           overrideDefaults
           data-testid="geo-block-alert"
-          className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
+          className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive-button px-6 py-3 shadow-xl"
         >
           <Container overrideDefaults className="pt-0.5">
             <TriangleAlert className="size-4 text-destructive-foreground" />
@@ -161,7 +161,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
         <Container
           overrideDefaults
           data-testid="service-error-alert"
-          className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
+          className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive-button px-6 py-3 shadow-xl"
         >
           <Container overrideDefaults className="pt-0.5">
             <TriangleAlert className="size-4 text-destructive-foreground" />

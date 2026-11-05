@@ -83,7 +83,7 @@ export function InputField({
     default: 'text-muted-foreground',
     info: 'text-blue-500',
     alert: 'text-yellow-500',
-    error: 'text-red-500',
+    error: 'text-error-foreground',
     success: 'text-brand',
   } as const;
   const messageId = id && message ? `${id}-message` : undefined;
