@@ -885,6 +885,40 @@ describe('usePostInput', () => {
       }
     });
 
+    it('discards the pending title and body at once, including a timer an earlier render armed', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleTitleChange({
+            target: { value: 'Edited title' },
+          } as React.ChangeEvent<HTMLInputElement>);
+          result.current.handleArticleBodyChange('Edited body', false);
+        });
+        // A render in between hands out new debounces; the timers armed above are still running
+        rerender();
+
+        // The composer is emptied for the lock with article mode still on: no render has run yet
+        act(() => {
+          result.current.discardPendingArticle();
+        });
+        expect(result.current.getLatestArticle()).toEqual({ title: 'Title', body: '' });
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mockSetContent).not.toHaveBeenCalled();
+        expect(mockSetArticleTitle).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('submits an article whose body only the editor holds yet', async () => {
       // The first keystrokes have not reached `content` through the debounce
       mockContent = '';
@@ -1061,6 +1095,29 @@ describe('usePostInput', () => {
       });
       expect(mockPrependPosts).not.toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('does not prependPosts a post without a lock on a Locks stream', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: PostStreamTypes.TIMELINE_ALL_LOCKED,
+      });
+      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short', lock: null } as never);
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: 'created-post-id' });
+      });
+      expect(mockPrependPosts).not.toHaveBeenCalled();
     });
 
     /*

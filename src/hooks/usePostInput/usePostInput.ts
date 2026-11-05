@@ -39,7 +39,7 @@ import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import { postKindBelongsToStream } from '@/stores/home/home.utils';
+import { postBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
@@ -541,7 +541,7 @@ export function usePostInput({
             }
 
             const details = await PostController.getDetails({ compositeId: createdPostId });
-            if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+            if (!details?.kind || postBelongsToStream(details, streamId)) {
               await timelineFeed.prependPosts(createdPostId);
             }
           } catch (error) {
@@ -661,6 +661,13 @@ export function usePostInput({
     pendingArticleBodyRef.current = null;
     setContent(markdown);
   }, 500);
+
+  // Lock Apply empties the composer outside a render; null the refs now so a debounce that fires
+  // before `useEffect([isArticle])` cannot write the body into the teaser (#3021).
+  const discardPendingArticle = () => {
+    pendingArticleTitleRef.current = null;
+    pendingArticleBodyRef.current = null;
+  };
 
   // Handle article body change - length validation is handled via MDXEditor's maxLength plugin.
   // Rich text and markdown mode both report here; the rich text editor knows nothing of markdown mode.
@@ -948,6 +955,7 @@ export function usePostInput({
     isEditInlineMediaLoading,
     serializeArticleForLock,
     getLatestArticle,
+    discardPendingArticle,
 
     // Mention autocomplete state
     mentionUsers,

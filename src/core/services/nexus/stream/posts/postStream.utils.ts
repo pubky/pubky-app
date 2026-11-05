@@ -79,7 +79,11 @@ export function createPostStreamParams({
   }
   // REPLIES, COLLECTION and POST_COLLECTIONS use the third segment for an entity id (postId), not a kind.
   if (kind && !isPostAnchoredSource(invokeEndpoint)) {
-    params.kind = parseContent(kind);
+    if (kind === 'locked') {
+      params.locked = true;
+    } else {
+      params.kind = parseContent(kind);
+    }
   }
   params.limit = limit;
   params.order = order;
