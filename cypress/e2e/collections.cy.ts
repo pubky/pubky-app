@@ -1,4 +1,4 @@
-import { backupDownloadFilePath } from '../support/common';
+import { backupDownloadFilePath, waitForServiceWorker } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
@@ -60,6 +60,17 @@ describe('collections', () => {
     // create the follower profile
     cy.onboardAsNewUser(follower.username, follower.bio, [BackupType.EncryptedFile]);
     cy.signOut(HasBackedUp.Yes);
+
+    // todo: remove reload workaround once https://github.com/pubky/pubky-app/issues/3066
+    // aborts these streams on logout under Cypress. Sign-out leaves homeserver SSE
+    // streams open. This hook opens two sessions and beforeEach signs the curator
+    // in as a third: six streams, Chrome's HTTP/1.1 per-host limit, before the
+    // first write. A full reload drops the signed-out sessions. Logged out on `/`,
+    // so the signed-in session-ready check (`new-post-btn`) does not apply.
+    cy.reload();
+    cy.location('pathname').should('eq', '/');
+    waitForServiceWorker();
+    cy.get('[data-cy="header-sign-in-btn"]').filter(':visible').should('be.visible');
   });
 
   beforeEach(() => {
