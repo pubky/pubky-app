@@ -591,14 +591,9 @@ export function usePostInput({
     setContent(markdown);
   }, 500);
 
-  // Drops the title and body still on their debounce, at once. A caller that empties the composer
-  // outside a render (the lock's Apply runs after react-hook-form's async submit) must not leave a
-  // commit armed until `useEffect([isArticle])` runs: firing in between, it writes the body back into
-  // `content`, which is then the public teaser (#3021). Clearing the pending values is what stops it:
-  // `cancel` reaches only this render's debounce, not a timer an earlier render's one still holds.
+  // Lock Apply empties the composer outside a render; null the refs now so a debounce that fires
+  // before `useEffect([isArticle])` cannot write the body into the teaser (#3021).
   const discardPendingArticle = () => {
-    commitArticleTitle.cancel();
-    commitArticleBody.cancel();
     pendingArticleTitleRef.current = null;
     pendingArticleBodyRef.current = null;
   };
