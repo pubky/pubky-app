@@ -498,7 +498,13 @@ describe('LocksService (reader unlock)', () => {
     expect(mocks.fakeViewer.lookupVerificationTask).toHaveBeenCalledWith(
       expect.objectContaining({ creator: 'creator-b', bundle_id: 'b1' }),
     );
-    expect(task).toEqual({ status: 'completed', walletSetupNeeded: false, admissionDeadlineAt: null });
+    expect(task).toEqual({
+      status: 'completed',
+      walletSetupNeeded: false,
+      readerNotPayable: false,
+      admissionDeadlineAt: null,
+      completedAt: null,
+    });
   });
 
   it('lookupVerificationTask reports the wallet setup notice and the invoice deadline', async () => {
@@ -511,9 +517,38 @@ describe('LocksService (reader unlock)', () => {
     await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({
       status: 'pending',
       walletSetupNeeded: true,
+      readerNotPayable: false,
       admissionDeadlineAt: '2026-10-08T12:10:00Z',
+      completedAt: null,
     });
   });
+
+  const FAILURE_MESSAGES = [
+    ['reader is not payable', true],
+    ['invoice admission deadline exceeded', false],
+    ['paykit invoice admission failed', false],
+    ['Reader is not payable', false],
+    ['reader is not payable.', false],
+  ] as const;
+
+  it.each(FAILURE_MESSAGES)(
+    'lookupVerificationTask matches the failure message %j exactly',
+    async (failureMessage, readerNotPayable) => {
+      mocks.fakeViewer.lookupVerificationTask.mockResolvedValueOnce({
+        status: 'failed',
+        failure_message: failureMessage,
+        completed_at: '2026-10-08T09:52:51Z',
+      } as never);
+
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({
+        status: 'failed',
+        walletSetupNeeded: false,
+        readerNotPayable,
+        admissionDeadlineAt: null,
+        completedAt: '2026-10-08T09:52:51Z',
+      });
+    },
+  );
 
   it('lookupVerificationTask rejects an unknown lifecycle status', async () => {
     mocks.fakeViewer.lookupVerificationTask.mockResolvedValueOnce({ status: 'refunded' } as never);
@@ -529,8 +564,22 @@ describe('LocksService (reader unlock)', () => {
     const task = await LocksService.submitProof(bundle);
 
     expect(mocks.fakeViewer.submitProofBundle).toHaveBeenCalledWith(bundle);
-    expect(task).toEqual({ status: 'pending' });
+    expect(task).toEqual({ status: 'pending', readerNotPayable: false });
   });
+
+  // A replayed submission answers with the task it already has, which may have failed.
+  it.each(FAILURE_MESSAGES)(
+    'submitProof matches the failure message %j exactly',
+    async (failureMessage, readerNotPayable) => {
+      const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
+      mocks.fakeViewer.submitProofBundle.mockResolvedValueOnce({
+        status: 'failed',
+        failure_message: failureMessage,
+      } as never);
+
+      await expect(LocksService.submitProof(bundle)).resolves.toEqual({ status: 'failed', readerNotPayable });
+    },
+  );
 
   describe('submitProof when the Lock Server answers 451', () => {
     const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
