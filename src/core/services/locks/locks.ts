@@ -64,7 +64,7 @@ const READER_WALLET_SETUP_NEEDED = 'Reader wallet setup needed';
  * The Lock Server's `failure_message` for Paykit's `reader_not_payable`, from its closed invoice-admission list
  * (`docs/API.md` in pubky/locks). The SDK only requires a non-empty message, so a rewording would silently bring back
  * the generic failure screen; `docs/locks.md` (Pay to Unlock, step 6) says when to re-check it.
- * TODO:[Locks] match a structured failure code once the Lock Server sends one.
+ * TODO:[Locks] locks#99 — match a typed failure reason once the Lock Server and SDK expose one.
  */
 const READER_NOT_PAYABLE = 'reader is not payable';
 
