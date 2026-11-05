@@ -1,5 +1,6 @@
+import { renderToString } from 'react-dom/server';
 import { usePathname } from 'next/navigation';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COPYRIGHT_ROUTES, LEGAL_ROUTES, LOGO_LANDING_ROUTES } from '@/app/routes';
 import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
@@ -140,6 +141,27 @@ describe('Logo on the public documents', () => {
 
     expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/home');
   });
+
+  it.each(PUBLIC_DOCUMENT_ROUTES)(
+    'hydrates the server-rendered landing link on %s, then takes a member to /home',
+    async (pathname) => {
+      vi.mocked(usePathname).mockReturnValue(pathname);
+      useAuthStore.setState({ currentUserPubky: 'account', restoreStatus: 'ready' });
+      const onRecoverableError = vi.fn();
+      const container = document.createElement('div');
+      container.innerHTML = renderToString(<Logo />);
+      document.body.appendChild(container);
+      expect(container.querySelector('a')).toHaveAttribute('href', '/');
+
+      await act(async () => {
+        render(<Logo />, { container, hydrate: true, onRecoverableError });
+      });
+
+      expect(onRecoverableError).not.toHaveBeenCalled();
+      expect(container.querySelector('a')).toHaveAttribute('href', '/home');
+      container.remove();
+    },
+  );
 
   it.each(PUBLIC_DOCUMENT_ROUTES)('takes a guest to the landing page on %s', (pathname) => {
     vi.mocked(usePathname).mockReturnValue(pathname);

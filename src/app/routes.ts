@@ -286,6 +286,14 @@ export function isLegalRoute(pathname: string | null): boolean {
   return pathname === LEGAL_ROUTES.TERMS_OF_USE || pathname === LEGAL_ROUTES.PRIVACY_POLICY;
 }
 
+/**
+ * The public documents: `/copyright` and the legal routes. They render outside the app's database and auth gate
+ * (`AppShell`), so their text is in the server's HTML and they open without IndexedDB.
+ */
+export function isPublicDocumentRoute(pathname: string | null): boolean {
+  return pathname === COPYRIGHT_ROUTES.COPYRIGHT || isLegalRoute(pathname);
+}
+
 // ============================================================================
 // Profile Route Helpers
 // ============================================================================
