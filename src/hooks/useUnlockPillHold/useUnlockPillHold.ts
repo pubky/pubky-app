@@ -16,14 +16,16 @@ type HoldPhase = 'waiting' | 'timing' | 'released';
  * - their replicated copy is read, unless the purchase list is in and does not name this lock (a failed
  *   list cannot rule anyone out);
  * - after that read, the purchase list is still loading, since it may yet name this lock;
- * - a listed purchase whose copy was not found is looked up by purchase recovery (`'checking'`).
+ * - a listed purchase whose copy was not found is looked up by purchase recovery (`'checking'`), and, when
+ *   that finds a completed payment, its content is downloaded (`'recovering'`, #3038). A click then would
+ *   cancel that download and the pay dialog would download it again.
  *
  * There is one hold per post and account, across all three. Its time limit runs from the first busy
  * moment with a session (a reload's session restore is bounded on its own and not counted), so a slow
  * read cannot add a second limit for the lookup after it. Once the pill is live, because nothing is left
  * to wait for, the limit passed, or the pay dialog opened, it is not taken back for that post and account.
- * Releasing early is safe: the pay dialog re-reads the saved bundle id before it offers to pay, and
- * recovery keeps running.
+ * Releasing early is safe for payment: the pay dialog re-reads the saved bundle id before it offers to
+ * pay. Recovery keeps running until a click opens the dialog; then the dialog downloads the content itself.
  */
 export function useUnlockPillHold({
   lock,
@@ -45,7 +47,7 @@ export function useUnlockPillHold({
     !isPayOpen &&
     (isResolvingReplica
       ? purchasesStatus !== 'ready' || isListedPurchase
-      : purchasesStatus === 'loading' || purchaseStatus === 'checking');
+      : purchasesStatus === 'loading' || purchaseStatus === 'checking' || purchaseStatus === 'recovering');
 
   useEffect(() => {
     if (key === null || !isPayableReader || phase === 'released') return;
