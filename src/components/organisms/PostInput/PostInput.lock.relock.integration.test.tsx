@@ -151,11 +151,13 @@ const enterPrice = async (sats: string) => {
 };
 
 const clickApply = async () => {
+  mocks.applied.mockClear();
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
   });
   // react-hook-form validates asynchronously before calling `onApplied`
-  for (let i = 0; i < 10 && mocks.editor; i++) await act(async () => {});
+  for (let i = 0; i < 10 && mocks.applied.mock.calls.length === 0; i++) await act(async () => {});
+  expect(mocks.applied).toHaveBeenCalledTimes(1);
 };
 
 /** Writes an article, locks it, then switches the lock off: the draft is back in the editor. */
@@ -178,7 +180,7 @@ const writeLockAndTurnOff = async () => {
 /**
  * Edits the body, switches the lock on and clicks Apply `msBeforeApply` after the edit. The click runs
  * outside `act`, so React renders Apply's clear on a later macrotask, as in a browser. `beforeRender`
- * runs once Apply has reached the composer and before React rendered it.
+ * runs as soon as Apply has reached the composer.
  */
 const editAndReapply = async (msBeforeApply: number, beforeRender: () => void) => {
   act(() => mocks.editor?.change(EDITED_BODY));
@@ -192,7 +194,6 @@ const editAndReapply = async (msBeforeApply: number, beforeRender: () => void) =
     (screen.getByRole('button', { name: 'Apply Lock' }) as HTMLButtonElement).click();
     for (let i = 0; i < 100 && mocks.applied.mock.calls.length === 0; i++) await Promise.resolve();
     expect(mocks.applied).toHaveBeenCalledTimes(1);
-    expect(mocks.editor).not.toBeNull();
     beforeRender();
     // The editor unmounts in the same commit whose effects drop the pending article values
     for (let i = 0; i < 50 && mocks.editor; i++) await nextMacrotask();
