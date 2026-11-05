@@ -662,6 +662,13 @@ export function usePostInput({
     setContent(markdown);
   }, 500);
 
+  // Lock Apply empties the composer outside a render; null the refs now so a debounce that fires
+  // before `useEffect([isArticle])` cannot write the body into the teaser (#3021).
+  const discardPendingArticle = () => {
+    pendingArticleTitleRef.current = null;
+    pendingArticleBodyRef.current = null;
+  };
+
   // Handle article body change - length validation is handled via MDXEditor's maxLength plugin.
   // Rich text and markdown mode both report here; the rich text editor knows nothing of markdown mode.
   const handleArticleBodyChange: NonNullable<MDXEditorProps['onChange']> = (markdown) => {
@@ -948,6 +955,7 @@ export function usePostInput({
     isEditInlineMediaLoading,
     serializeArticleForLock,
     getLatestArticle,
+    discardPendingArticle,
 
     // Mention autocomplete state
     mentionUsers,

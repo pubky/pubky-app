@@ -885,6 +885,40 @@ describe('usePostInput', () => {
       }
     });
 
+    it('discards the pending title and body at once, including a timer an earlier render armed', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleTitleChange({
+            target: { value: 'Edited title' },
+          } as React.ChangeEvent<HTMLInputElement>);
+          result.current.handleArticleBodyChange('Edited body', false);
+        });
+        // A render in between hands out new debounces; the timers armed above are still running
+        rerender();
+
+        // The composer is emptied for the lock with article mode still on: no render has run yet
+        act(() => {
+          result.current.discardPendingArticle();
+        });
+        expect(result.current.getLatestArticle()).toEqual({ title: 'Title', body: '' });
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mockSetContent).not.toHaveBeenCalled();
+        expect(mockSetArticleTitle).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('submits an article whose body only the editor holds yet', async () => {
       // The first keystrokes have not reached `content` through the debounce
       mockContent = '';
