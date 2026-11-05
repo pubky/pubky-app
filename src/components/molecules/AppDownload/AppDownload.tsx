@@ -3,7 +3,7 @@ import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 
 interface AppDownloadProps {
-  logo: { src: string; alt: string; width: number };
+  logo: { src: string; alt: string; width: number; className?: string };
   appStoreUrl: string;
   playStoreUrl: string;
   layout?: 'row' | 'column';
@@ -27,7 +27,7 @@ export function AppDownload({ logo, appStoreUrl, playStoreUrl, layout = 'column'
       overrideDefaults={layout === 'row'}
       className={layout === 'row' ? 'flex flex-wrap items-center gap-3.5' : 'flex flex-col items-center gap-4'}
     >
-      <Image src={logo.src} alt={logo.alt} width={logo.width} height={32} />
+      <Image src={logo.src} alt={logo.alt} width={logo.width} height={32} className={logo.className} />
       {layout === 'row' ? (
         badges
       ) : (
