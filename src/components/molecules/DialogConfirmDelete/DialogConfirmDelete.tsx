@@ -55,7 +55,7 @@ export function DialogConfirmDelete({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <Typography className="text-base tracking-wide text-white/80">{description}</Typography>
+        <Typography className="text-base tracking-wide text-foreground/80">{description}</Typography>
         {signInNotice && onSignIn && (
           <div className="flex items-center justify-between gap-4">
             <Typography className="text-sm text-destructive">{signInNotice}</Typography>

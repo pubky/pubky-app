@@ -62,6 +62,12 @@ vi.mock('@/molecules/HeaderButtonSignIn/HeaderButtonSignIn', () => {
   };
 });
 
+vi.mock('../ThemeToggle/ThemeToggle', () => {
+  return {
+    ThemeToggle: () => <button data-testid="header-theme-toggle">Toggle appearance</button>,
+  };
+});
+
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -94,8 +100,12 @@ describe('HeaderHome', () => {
   it('renders Learn, Explore and Sign in on the landing page (social links live in the hero footer)', () => {
     render(<HeaderHome />);
 
+    const themeToggle = screen.getByTestId('header-theme-toggle');
+    const learn = screen.getByTestId('header-learn-btn');
+
     expect(screen.queryByTestId('header-social-links')).not.toBeInTheDocument();
-    expect(screen.getByTestId('header-learn-btn')).toBeInTheDocument();
+    expect(themeToggle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(learn).toBeInTheDocument();
     expect(screen.getByTestId('header-explore-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /join/i })).not.toBeInTheDocument();
@@ -107,6 +117,7 @@ describe('HeaderHome', () => {
     render(<HeaderHome />);
 
     expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
+    expect(screen.queryByTestId('header-theme-toggle')).not.toBeInTheDocument();
     expect(screen.queryByTestId('header-learn-btn')).not.toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
   });
@@ -116,8 +127,12 @@ describe('HeaderHome', () => {
 
     render(<HeaderHome />);
 
+    const themeToggle = screen.getByTestId('header-theme-toggle');
+    const learn = screen.getByTestId('header-learn-btn');
+
     expect(screen.queryByTestId('header-social-links')).not.toBeInTheDocument();
-    expect(screen.getByTestId('header-learn-btn')).toBeInTheDocument();
+    expect(themeToggle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(learn).toBeInTheDocument();
     expect(screen.getByTestId('header-explore-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
   });

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { getTagDayPalette } from '@/libs/utils/tagPalette';
 import { PostTag } from './PostTag';
 
 describe('PostTag', () => {
@@ -85,7 +86,12 @@ describe('PostTag', () => {
     render(<PostTag label="bitcoin" color="#123456" />);
     const tag = screen.getByRole('button');
 
-    expect(tag).toHaveStyle({ backgroundImage: expect.stringContaining('#123456') });
+    expect(tag).toHaveClass('tag-palette');
+    expect(tag.style.backgroundImage).toBe('var(--tag-fill)');
+    expect(tag.style.getPropertyValue('--tag-night-fill')).toContain('#123456');
+    expect(tag.style.getPropertyValue('--tag-night-edge')).toBe('#123456');
+    expect(tag.style.getPropertyValue('--tag-day-fill')).toContain(getTagDayPalette('#123456').background);
+    expect(tag.style.getPropertyValue('--tag-day-edge')).toBe(getTagDayPalette('#123456').accent);
     expect(tag).toHaveAttribute('data-tag-label', 'bitcoin');
     expect(tag).toHaveAttribute('data-cy', 'post-tag');
   });
@@ -106,7 +112,7 @@ describe('PostTag', () => {
     const tag = screen.getByRole('button');
     expect(tag).toHaveAttribute('aria-pressed', 'true');
     expect(tag).toHaveAttribute('data-state', 'on');
-    expect(tag.style.boxShadow).toContain('#123456');
+    expect(tag.style.boxShadow).toBe('inset 0 0 0 1px var(--tag-edge)');
     const overlay = container.querySelector('.border-solid.absolute');
     expect(overlay).not.toBeNull();
     expect(overlay).toHaveAttribute('aria-hidden', 'true');
