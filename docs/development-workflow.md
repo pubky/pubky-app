@@ -106,6 +106,18 @@ Cypress e2e data: seed what a test only observes, drive what it tests. Precondit
 
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 
+## Dependency Security
+
+Dependabot security updates are the first layer and open fix PRs automatically (`.github/dependabot.yml`); the daily audit below is the second, repo-owned detection signal — it exists because `GITHUB_TOKEN` has no scope to read Dependabot alerts, so a repo-owned signal has to re-audit the lockfile.
+
+- **Daily audit** (`.github/workflows/security-audit.yml`, also `workflow_dispatch`) runs `npm audit` on the lockfile for critical and high severities and maintains a single tracking issue in the private `pubky/internal-issues` repo (`scripts/security-audit/security-audit.ts`): created when findings appear, updated as they evolve, closed when resolved.
+- **Privacy (hard rule)**: advisory details — GHSA ids, titles, package names, exploitability notes — must never land on public surfaces: no public pubky-app issue, no public workflow comment, not even the step summary. Public output is aggregate counts plus a bare pointer to the internal issue. The script has no code path that writes to the origin repo, refuses to sync if `ISSUES_REPO` would point at it, and fails closed in CI when the token is missing rather than falling back to a public issue.
+- **Required secret**: `INTERNAL_ISSUES_TOKEN` — a fine-grained PAT (repo access: `pubky/internal-issues` only, Issues: read and write) or a GitHub App token with the same scope. It is passed via the environment only and never printed. `GITHUB_TOKEN` itself needs no write permission in this workflow (`contents: read` for checkout only).
+- **Notifications**: issue edits notify nobody, so on any change to the advisory set the script posts a comment on the internal issue (new and resolved advisories, new criticals highlighted); creates, reopens and closes also comment. Watch the internal issue (or repo) to receive these.
+- **Production vs dev-only**: the `--omit=dev` pass is a conservative proxy for exposure — the Docker runner image ships the Next.js standalone output (`.next/standalone`), a traced subset of production dependencies, so production findings over-approximate what ships (the safe direction). Reachability still needs a human or agent to confirm.
+
+Triage order for a new finding: production direct pins first, then transitive production, then dev-only. Run the audit locally with `npm audit --json > /tmp/all.json; npm audit --omit=dev --json > /tmp/prod.json; node scripts/security-audit/security-audit.ts /tmp/all.json /tmp/prod.json report.md` — without `ISSUES_TOKEN` it renders the report and stops.
+
 ## Code Quality
 
 These apply to every diff and are what a reviewer (human or Greptile) checks first.
