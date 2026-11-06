@@ -64,8 +64,8 @@ visible tabs filled it, and every homeserver write then waited on its preflight 
 
 `HomeserverEventStreamCoordinator` (`src/core/coordinators/homeserver-event-stream/`) now holds the tab's only
 homeserver event stream. `EventStreamSyncCoordinator` is a channel of it: `start()` registers the channel's path,
-`stop()` removes it. The coordinator subscribes once to the union of the ready channels' paths (the SDK's
-`path()` is repeatable and the homeserver returns the union of `path=` filters), hands every event to every channel,
+`stop()` removes it. The coordinator subscribes once to the union of the ready channels' paths (the request
+repeats `path=` and the homeserver returns the union of the filters), hands every event to every channel,
 and each channel acts on events under its own path:
 
 - **Resume.** The stream resumes from the earliest channel cursor, so no channel misses an event; a channel skips
@@ -75,11 +75,15 @@ and each channel acts on events under its own path:
 - **Readiness.** A channel joins the path set only while its readiness gate passes (this one waits for a ready,
   synced session, the mute list does not). A change in the set reconnects the stream once.
 - **One connection at a time.** A new connection waits until the previous loop has exited. A subscribe still in
-  flight at sign-out or an account switch is cancelled when it resolves, never stacked under the next session's.
-- **Teardown.** Each connection owns an `AbortController`. The SDK's `subscribe()` takes no signal, so
-  `HomeserverService.subscribeUserEventStream` cancels the SDK stream when the signal aborts, also for a stream
-  that resolves after the abort; cancelling it drops the response and aborts the fetch. Every teardown (sign-out,
-  account switch, auth route, hidden tab, `stop()`) aborts the controller and cancels the open reader.
+  flight at sign-out or an account switch is aborted, never stacked under the next session's.
+- **Teardown.** Each connection owns an `AbortController`. SDK 0.17.1's `subscribe()` takes no signal and its WASM
+  transport has no timeout, so a request waiting for response headers could hold the loop indefinitely.
+  `HomeserverService.subscribeUserEventStream` therefore sends the SDK's anonymous `/events-stream` request itself,
+  through `client.fetch` with the signal, and decodes the SSE body as the SDK does. Only the PKARR lookups before
+  it cannot be aborted; they go to the relays, not the homeserver, under PKARR's per-request timeout. Every
+  teardown (sign-out, account switch, auth route, hidden tab, `stop()`) aborts the controller, stops waiting for
+  the connection-time `last_read` read (`NotificationController` still drops a stale result), and cancels the open
+  reader. An SDK `subscribe({ signal })` would let the service return to the SDK's transport.
 - **Reporting.** One failure streak and one outage report per stream: `homeserverEventStreamExhausted`, with the
   stream's paths in its context. The routine connect failures it follows stay dropped by
   `homeserver-event-stream-connect`.
