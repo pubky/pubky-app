@@ -53,7 +53,7 @@ PostController.getDetails({ compositeId }); // Always local
 PostController.getOrFetchDetails({ compositeId, viewerId }); // Local first, fallback
 UserController.getManyDetails({ userIds }); // Bulk local
 UserController.getManyTagsOrFetch({ userIds }); // Bulk with fallback
-MuteController.subscribeMuteDirectoryEventStream(pubky, cursor); // Live stream subscription
+HomeserverEventController.subscribeUserEventStream({ pubky, cursor, paths, signal }); // Live stream subscription
 
 // Bad naming
 PostController.loadDetails(id); // Unclear source
