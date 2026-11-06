@@ -47,6 +47,16 @@ type StreamFailure = { kind: 'exception'; error: unknown } | { kind: 'prematureC
 
 const EXHAUSTED_OPERATION = 'homeserverEventStreamExhausted';
 
+function whenAborted(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    signal.addEventListener('abort', () => resolve(), { once: true });
+  });
+}
+
 /**
  * Holds the tab's one homeserver event stream and shares it between the channels registered with it (mute list,
  * notification `last_read`), subscribing once to the union of their paths.
@@ -58,7 +68,8 @@ const EXHAUSTED_OPERATION = 'homeserverEventStreamExhausted';
  * - at most one connection per tab at any time: a new connection waits until the previous loop has exited, so
  *   a subscribe still in flight when the stream restarts (sign-out, account switch) is cancelled, not stacked;
  * - every teardown aborts the connection's `AbortController`, which cancels the SDK stream even when it
- *   resolves after the abort, and cancels the reader of an open stream.
+ *   resolves after the abort, stops waiting for its connection-time reconcile, and cancels the reader of an open
+ *   stream.
  *
  * Policy (aligned with {@link NotificationCoordinator}):
  * - Requires authenticated session with profile and current {@link Pubky}, and at least one ready channel.
@@ -286,8 +297,12 @@ export class HomeserverEventStreamCoordinator {
           break;
         }
         this.activeReader = reader;
-        // Opened first, so a change after this read still arrives as an event.
-        await Promise.all(channels.map((channel) => channel.reconcileOnConnect(pubky)));
+        // Opened first, so a change after this read still arrives as an event. A teardown stops waiting for it,
+        // so the next connection never queues behind a read whose result its controller still guards.
+        await Promise.race([
+          Promise.all(channels.map((channel) => channel.reconcileOnConnect(pubky))),
+          whenAborted(abort.signal),
+        ]);
         connection = { connectedAt: Date.now(), receivedEvent: false, settled: false };
 
         for (;;) {
@@ -463,7 +478,7 @@ export class HomeserverEventStreamCoordinator {
 
   /**
    * Ends the current connection whatever state it is in: the abort cancels a subscribe still in flight as soon as
-   * it resolves, and cancelling the reader ends a pending read.
+   * it resolves and releases the connection-time reconcile, and cancelling the reader ends a pending read.
    */
   private teardownConnection(): void {
     this.connectionAbort?.abort();

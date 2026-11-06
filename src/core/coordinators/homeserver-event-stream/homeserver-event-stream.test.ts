@@ -322,6 +322,43 @@ describe('HomeserverEventStreamCoordinator', () => {
       expect(order).toEqual([`open ${pubky}`, `close ${pubky}`, `open ${otherPubky}`]);
     });
 
+    it('reopens after hide and show without waiting for a connection-time reconcile that never settled', async () => {
+      const order: string[] = [];
+      let connections = 0;
+      subscribe.mockImplementation(async () => {
+        connections += 1;
+        const connection = connections;
+        order.push(`open ${connection}`);
+        return new ReadableStream<THomeserverEvent>({ cancel: () => void order.push(`close ${connection}`) });
+      });
+      const staleRead = deferred<unknown>();
+      const mutes = createChannel(MUTES_PATH);
+      const lastRead = createChannel(LAST_READ_PATH);
+      lastRead.reconcileOnConnect.mockReturnValueOnce(staleRead.promise);
+      signIn();
+      startWith(mutes, lastRead);
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledOnce();
+
+      setVisibilityState('hidden');
+      document.dispatchEvent(new Event('visibilitychange'));
+      await flushPromises();
+      setVisibilityState('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+      await flushPromises();
+
+      expect(order).toEqual(['open 1', 'close 1', 'open 2']);
+      expect(subscribeParams(0).signal.aborted).toBe(true);
+      expect(lastRead.reconcileOnConnect).toHaveBeenCalledTimes(2);
+
+      // The stale read failing later neither fails nor restarts the replacement.
+      staleRead.reject(new Error('read failed'));
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(HOMESERVER_EVENT_STREAM_RECONNECT_BACKOFF_MAX_MS);
+      expect(subscribe).toHaveBeenCalledTimes(2);
+      expect(subscribeParams(1).signal.aborted).toBe(false);
+    });
+
     it('stops streaming on stop() and schedules no reconnect', async () => {
       subscribe.mockImplementation(
         async () =>
