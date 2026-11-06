@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FilterRadioGroup } from './FilterRadioGroup';
@@ -124,6 +124,43 @@ describe('FilterRadioGroup', () => {
 
     expect(screen.getByRole('radiogroup')).toContainElement(editor);
     expect(option2.nextElementSibling).toBe(editor);
+  });
+
+  describe('Selected check', () => {
+    it('renders the check on the selected option only', () => {
+      render(<FilterRadioGroup title="Test Filter" items={mockItems} defaultValue="option2" />);
+
+      expect(within(screen.getByLabelText('Option 2')).getByTestId('filter-item-check')).toBeInTheDocument();
+      expect(within(screen.getByLabelText('Option 1')).queryByTestId('filter-item-check')).not.toBeInTheDocument();
+      expect(within(screen.getByLabelText('Option 3')).queryByTestId('filter-item-check')).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('filter-item-check')).toHaveLength(1);
+    });
+
+    it('moves the check to the newly selected option', () => {
+      render(<FilterRadioGroup title="Test Filter" items={mockItems} defaultValue="option1" />);
+
+      fireEvent.click(screen.getByLabelText('Option 3'));
+
+      expect(within(screen.getByLabelText('Option 1')).queryByTestId('filter-item-check')).not.toBeInTheDocument();
+      expect(within(screen.getByLabelText('Option 3')).getByTestId('filter-item-check')).toBeInTheDocument();
+    });
+
+    it('follows the controlled value', () => {
+      const { rerender } = render(<FilterRadioGroup title="Test Filter" items={mockItems} selectedValue="option1" />);
+
+      expect(within(screen.getByLabelText('Option 1')).getByTestId('filter-item-check')).toBeInTheDocument();
+
+      rerender(<FilterRadioGroup title="Test Filter" items={mockItems} selectedValue="option2" />);
+
+      expect(within(screen.getByLabelText('Option 1')).queryByTestId('filter-item-check')).not.toBeInTheDocument();
+      expect(within(screen.getByLabelText('Option 2')).getByTestId('filter-item-check')).toBeInTheDocument();
+    });
+
+    it('hides the check from the lg breakpoint up so the desktop sidebar renders as before', () => {
+      render(<FilterRadioGroup title="Test Filter" items={mockItems} />);
+
+      expect(screen.getByTestId('filter-item-check')).toHaveClass('lg:hidden');
+    });
   });
 
   describe('Disabled items', () => {

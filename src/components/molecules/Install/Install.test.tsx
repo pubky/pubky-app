@@ -85,11 +85,11 @@ describe('InstallFooter', () => {
     render(<InstallFooter />);
 
     const ringLink = screen.getByRole('link', { name: 'Pubky Ring' });
-    const coreLink = screen.getByRole('link', { name: 'Pubky Core' });
+    const pubkyLink = screen.getByRole('link', { name: 'Pubky' });
 
     expect(ringLink).toHaveAttribute('target', '_blank');
-    expect(coreLink).toHaveAttribute('target', '_blank');
+    expect(pubkyLink).toHaveAttribute('target', '_blank');
     expect(ringLink.closest('p')).toHaveClass('[&_a]:underline');
-    expect(coreLink.closest('p')).toBe(ringLink.closest('p'));
+    expect(pubkyLink.closest('p')).toBe(ringLink.closest('p'));
   });
 });

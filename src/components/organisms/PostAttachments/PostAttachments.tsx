@@ -17,6 +17,7 @@ export const PostAttachments = ({
   attachments,
   localAttachments,
   mediaVariant = 'default',
+  collapseMedia = false,
   className,
   children,
   pendingAttachments = [],
@@ -36,7 +37,9 @@ export const PostAttachments = ({
     : splitAttachmentsByMediaType(files);
 
   if (pendingAttachments.length > 0 && mediaVariant === 'default') {
-    return <PostAttachmentsSkeleton attachments={pendingAttachments} className={className} />;
+    return (
+      <PostAttachmentsSkeleton attachments={pendingAttachments} collapseMedia={collapseMedia} className={className} />
+    );
   }
 
   const isContentPending = mediaVariant === 'cards' && isLoading;
@@ -52,6 +55,7 @@ export const PostAttachments = ({
         <PostAttachmentsImagesAndVideos
           imagesAndVideos={imagesAndVideos}
           {...(mediaVariant === 'list' ? { variant: mediaVariant } : {})}
+          {...(collapseMedia && mediaVariant === 'default' ? { collapsible: true } : {})}
           renderTrigger={
             mediaVariant === 'cards'
               ? ({ imagesAndVideos, openPreview, isPreviewOpen }) => (

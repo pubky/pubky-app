@@ -81,8 +81,7 @@ vi.mock('@/organisms/DialogAge/DialogAge', () => {
 
 // Mock config
 vi.mock('@/config/externalLinks', () => ({
-  PUBKY_CORE_URL: 'https://github.com/pubky/pubky-core',
-  getPubkyCoreLink: () => 'https://github.com/pubky/pubky-core',
+  getPubkyProtocolLink: () => 'https://pubky.example/protocol',
   getGithubLink: () => 'https://github.com/pubky',
   getTwitterGetpubkyLink: () => 'https://x.com/getpubky',
   getTelegramLink: () => 'https://t.me/pubkychat',
@@ -292,7 +291,7 @@ describe('HomeFooter', () => {
     render(<HomeFooter />);
 
     const link = screen.getByRole('link', { name: 'Pubky Protocol' });
-    expect(link).toHaveAttribute('href', 'https://github.com/pubky/pubky-core');
+    expect(link).toHaveAttribute('href', 'https://pubky.example/protocol');
     expect(link).toHaveClass('font-semibold');
     expect(link.closest('[data-testid="footer-links"]')).toBeInTheDocument();
     expect(screen.getByTestId('footer-links')).toHaveClass('[&_a]:no-underline');

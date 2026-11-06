@@ -46,6 +46,7 @@ import {
   assertOk,
   extractPubkyZ32,
   getOwnedResponse,
+  getOwnedResponseIfExists,
   isHttpUrl,
   parseResponseOrUndefined,
   PUBKY_PREFIX,
@@ -470,7 +471,13 @@ export class HomeserverService {
         throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
           service: ErrorService.Homeserver,
           operation: 'restoreGrant',
-          context: { reason },
+          context: {
+            reason,
+            // Diagnostics for #2942: which half of the saved grant was gone.
+            ...(reason === 'missing_local_grant' && {
+              material: this.isMissingSessionRecord(error, reference.sessionStoreId) ? 'record' : 'key',
+            }),
+          },
         });
       }
       if (isPubkyErrorLike(error) && error.name === 'ClientStateError') {
@@ -663,7 +670,14 @@ export class HomeserverService {
    * @param {string} url - Pubky URL.
    * @param {Record<string, unknown>} [bodyJson] - JSON body to serialize and send.
    */
-  static async request<T>({ method, url, bodyJson, singleAttempt, fence }: THomeserverRequestParams): Promise<T> {
+  static async request<T>({
+    method,
+    url,
+    bodyJson,
+    singleAttempt,
+    fence,
+    notFoundAsNull,
+  }: THomeserverRequestParams): Promise<T> {
     const owned = this.resolveOwnedSessionPath(url);
     // A fenced write belongs to a read-check-write, whose loop retries it from the read.
     const retryOptions = singleAttempt || fence ? { maxRetries: 0 } : {};
@@ -674,7 +688,12 @@ export class HomeserverService {
 
       switch (method) {
         case HttpMethod.GET: {
-          const response = await this.withActiveSession(session, () => getOwnedResponse({ session, path, url }));
+          const response = await this.withActiveSession<Response | null>(session, () =>
+            notFoundAsNull
+              ? getOwnedResponseIfExists({ session, path, url })
+              : getOwnedResponse({ session, path, url }),
+          );
+          if (response === null) return null as T;
           return (await parseResponseOrUndefined<T>({ response })) as T;
         }
         case HttpMethod.PUT: {
@@ -733,7 +752,13 @@ export class HomeserverService {
             retryOptions,
           );
 
-    const response = await fetchPromise.catch((error) => handleError({ error, additionalContext: { url, method } }));
+    const response = await fetchPromise.catch((error) => {
+      if (notFoundAsNull && method === HttpMethod.GET && extractStatusCode(error) === HttpStatusCode.NOT_FOUND) {
+        return null;
+      }
+      return handleError({ error, additionalContext: { url, method } });
+    });
+    if (response === null || (notFoundAsNull && response.status === HttpStatusCode.NOT_FOUND)) return null as T;
 
     await assertOk({ response, url, operation: 'request' });
 
@@ -1057,7 +1082,7 @@ export class HomeserverService {
 
   /**
    * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
-   * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   * Used for mute-list and notification `last_read` sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
    */
   static async subscribeUserEventStreamForPath(params: {
     userZ32: TPubkyModel;
@@ -1076,7 +1101,7 @@ export class HomeserverService {
       return this.normalizeUserEventStream(stream);
     } catch (error) {
       // `operation` is matched by the `homeserver-event-stream-connect` Sentry drop rule:
-      // the mute-list coordinator reconnects on connect failures by design.
+      // the mute-list and `last_read` sync coordinators reconnect on connect failures by design.
       return handleError({
         error,
         additionalContext: { pathPrefix: params.pathPrefix, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },

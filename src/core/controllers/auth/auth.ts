@@ -4,6 +4,7 @@ import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
@@ -28,6 +29,7 @@ import {
   type PersistedAuth,
   type SessionReference,
 } from '@/libs/auth/session.types';
+import { reportSavedSessionLoss } from '@/libs/auth/session-loss';
 import {
   createAuthApprovalMismatchError,
   createCanceledError,
@@ -41,6 +43,7 @@ import { isAppError, isNotFound, isWrongEnvironmentHomeserverError, toAppError }
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
+import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -397,6 +400,8 @@ export class AuthController {
         }
         if (!isCurrent()) return false;
         if (result.status !== 'restored') {
+          if (snapshot.sessionReference && result.error?.context?.reason === 'missing_local_grant')
+            this.reportSavedSessionLoss('restore', snapshot.sessionReference, result.error.context.material);
           useAuthStore.getState().setRestoreStatus(result.status === 'none' ? 'idle' : result.status);
           return false;
         }
@@ -479,11 +484,28 @@ export class AuthController {
     return true;
   }
 
+  /** Diagnostics for #2942; a removal this tab's own logout caused is expected and not reported. */
+  private static reportSavedSessionLoss(
+    trigger: 'removed' | 'cleared' | 'restore',
+    reference: SessionReference,
+    material?: unknown,
+  ): void {
+    if (useAuthStore.getState().isLoggingOut) return;
+    reportSavedSessionLoss({
+      trigger,
+      sessionStoreId: reference.sessionStoreId,
+      ...((material === 'record' || material === 'key') && { material }),
+      localRetirement: this.retirementTasks.has(reference.sessionStoreId),
+      grantExpiresInS: Math.round(reference.grantExpiresAt - Date.now() / 1000),
+    });
+  }
+
   /** SDK notifications also cover removal outside this app's localStorage transitions. */
   static async syncRemovedSession(id: string | null): Promise<void> {
     await this.syncSessionFromStorage();
     const snapshot = useAuthStore.getState();
     if (!snapshot.sessionReference || (id !== null && snapshot.sessionReference.sessionStoreId !== id)) return;
+    this.reportSavedSessionLoss(id === null ? 'cleared' : 'removed', snapshot.sessionReference);
     this.cancelActiveAuthFlow();
     const version = ++this.restoreVersion;
     this.sessionRestore = null;
@@ -525,6 +547,7 @@ export class AuthController {
       clearAllQueryClients();
       postStreamQueue.clear();
       clearMuteSyncCursorSessionStorage();
+      clearNotificationLastReadSyncCursorSessionStorage();
       useLocalFilesStore.getState().reset();
       useSignInStore.getState().reset();
       resetTabStore(useSettingsStore);
@@ -561,7 +584,14 @@ export class AuthController {
     this.cancelActiveAuthFlow();
     const epoch = this.epoch;
     void this.retrySessionRetirement();
-    const result = await AuthApplication.signIn({ keypair });
+    let result: THomeserverSessionResult | undefined;
+    try {
+      result = await AuthApplication.signIn({ keypair, isCurrent: () => epoch === this.epoch });
+    } catch (error) {
+      // A newer flow owns sign-in: its outcome matters, not this one's last failure.
+      if (epoch !== this.epoch) throw createCanceledError();
+      throw error;
+    }
     if (epoch !== this.epoch) throw createCanceledError();
     if (!result) return false;
     await this.completeAuthenticatedSession(result, { epoch, expectedPubky });
@@ -576,6 +606,8 @@ export class AuthController {
    */
   private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
     const isCurrent = captureViewerSession();
+    // A boundary already in the store may have been hydrated from storage another account's tab wrote: it has no owner.
+    const lastReadBeforeBootstrap = useNotificationStore.getState().selectLastRead();
     const signInStore = useSignInStore.getState();
     const {
       meta: { url },
@@ -612,7 +644,20 @@ export class AuthController {
       onProgress,
     );
     if (!isCurrent()) return;
-    useNotificationStore.getState().setState(notification);
+    // The last_read sync or a mark may have set a newer boundary for this session while bootstrap ran: never move it
+    // back, recount instead. Only a value written after bootstrap started counts; the earlier one is dropped.
+    let state = notification;
+    const adoptedDuringBootstrap = () => {
+      const current = useNotificationStore.getState().selectLastRead();
+      return current !== lastReadBeforeBootstrap && current > state.lastRead;
+    };
+    while (adoptedDuringBootstrap()) {
+      const lastRead = useNotificationStore.getState().selectLastRead();
+      const unread = await NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
+      if (!isCurrent()) return;
+      state = { ...state, lastRead, unread };
+    }
+    useNotificationStore.getState().setState(state);
 
     // Apply remote settings to store (store mutation stays in Controller layer)
     if (remoteSettings) {
@@ -1036,14 +1081,15 @@ export class AuthController {
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
    * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * and mute-sync `sessionStorage` cursors.
+   * and the mute-sync and last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
-    // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
+    // Mute-list and last_read SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
+    clearNotificationLastReadSyncCursorSessionStorage();
 
     // Reset singletons
     PubkySpecsSingleton.reset();

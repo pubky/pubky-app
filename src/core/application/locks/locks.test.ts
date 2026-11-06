@@ -4,7 +4,11 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
-import { ErrorService } from '@/libs/error/error.types';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import {
+  getImageUploadSizeLimitToastMessage,
+  IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
+} from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import {
@@ -17,6 +21,7 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksApplication } from './locks';
 
 const mocks = vi.hoisted(() => ({
+  strip: vi.fn<(file: File) => Promise<File>>(),
   registerGuardedResource: vi.fn(),
   creatorCreateContentLock: vi.fn(),
   getLockSession: vi.fn(),
@@ -35,7 +40,14 @@ const mocks = vi.hoisted(() => ({
   cacheGet: vi.fn().mockResolvedValue(null),
   cacheDescriptor: vi.fn().mockResolvedValue(undefined),
   cachePost: vi.fn().mockResolvedValue(undefined),
+  cacheDelete: vi.fn().mockResolvedValue(undefined),
   cacheUnlockedList: vi.fn().mockResolvedValue([]),
+  deleteContentLock: vi.fn(),
+  deleteGuardedResource: vi.fn(),
+}));
+
+vi.mock('@/libs/image/stripImageMetadata', () => ({
+  stripImageMetadata: (file: File) => mocks.strip(file),
 }));
 
 vi.mock('@/services/local/locks/locks', () => ({
@@ -43,6 +55,7 @@ vi.mock('@/services/local/locks/locks', () => ({
     get: mocks.cacheGet,
     upsertDescriptor: mocks.cacheDescriptor,
     upsertPost: mocks.cachePost,
+    delete: mocks.cacheDelete,
     getUnlockedList: mocks.cacheUnlockedList,
   },
 }));
@@ -64,6 +77,8 @@ vi.mock('@/services/locks/locks', async (importOriginal) => {
       registerGuardedResource: mocks.registerGuardedResource,
       // Publishing uses the production service and SDK builder; only creator transport is mocked.
       createContentLock: actual.LocksService.createContentLock,
+      deleteContentLock: mocks.deleteContentLock,
+      deleteGuardedResource: mocks.deleteGuardedResource,
       generateBundleId: mocks.generateBundleId,
       submitProof: mocks.submitProof,
       lookupPaykitConnectionState: mocks.lookupPaykitConnectionState,
@@ -92,6 +107,8 @@ beforeEach(() => {
 });
 
 const file = (contentType = 'application/json') => ({ contentType, bytes: new Uint8Array([1]) });
+/** A picked attachment, as the composer hands it over. */
+const picked = (type: string, body = 'x') => new File([body], 'picked', { type });
 const resourceMetadata = { hash: '07'.repeat(32), content_type: 'application/json', size: 1 };
 const descriptor = (path: string) => ({ path: `/priv/app.locks/content/${path}`, ...resourceMetadata });
 /** Default builder: ignores the attachment paths and returns a fixed post JSON. */
@@ -136,6 +153,7 @@ describe('LocksApplication (content)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.strip.mockImplementation(async (f) => f);
     mocks.getLockSession.mockReturnValue({
       lockServer: () => LOCK_SERVER_PUBKY,
       creator: { createContentLock: mocks.creatorCreateContentLock },
@@ -159,11 +177,69 @@ describe('LocksApplication (content)', () => {
     vi.unstubAllGlobals();
   });
 
+  describe('deleteLockContent', () => {
+    const lockUrl = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/LOCK1.json`;
+
+    it('deletes the lock by the id parsed from the URL, then drops the cached original', async () => {
+      mocks.deleteContentLock.mockResolvedValue(undefined);
+
+      await expect(LocksApplication.deleteLockContent({ lockUrl })).resolves.toBeUndefined();
+
+      expect(mocks.deleteContentLock).toHaveBeenCalledWith('LOCK1');
+      expect(mocks.cacheDelete).toHaveBeenCalledWith('LOCK1');
+      expect(mocks.deleteContentLock.mock.invocationCallOrder[0]).toBeLessThan(
+        mocks.cacheDelete.mock.invocationCallOrder[0],
+      );
+    });
+
+    it.each([
+      'not-a-url',
+      'pubky://not-a-pubky/pub/app.locks/LOCK1.json',
+      `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/`,
+    ])('skips %s so the announcement stays deletable, without calling the Lock Server', async (badUrl) => {
+      await expect(LocksApplication.deleteLockContent({ lockUrl: badUrl })).resolves.toBeUndefined();
+
+      expect(mocks.deleteContentLock).not.toHaveBeenCalled();
+      expect(mocks.cacheDelete).not.toHaveBeenCalled();
+    });
+
+    it('skips the cache delete when the viewer logged out while the Lock Server call was in flight (#2797)', async () => {
+      let current = true;
+      mocks.deleteContentLock.mockImplementationOnce(async () => {
+        current = false;
+      });
+
+      await LocksApplication.deleteLockContent({ lockUrl, isCurrent: () => current });
+
+      expect(mocks.deleteContentLock).toHaveBeenCalledWith('LOCK1');
+      expect(mocks.cacheDelete).not.toHaveBeenCalled();
+    });
+
+    it('keeps the cached original when the Lock Server refuses', async () => {
+      const refused = Err.server(ServerErrorCode.INTERNAL_ERROR, 'refused', {
+        service: ErrorService.Locks,
+        operation: 'test',
+      });
+      mocks.deleteContentLock.mockRejectedValueOnce(refused);
+
+      await expect(LocksApplication.deleteLockContent({ lockUrl })).rejects.toBe(refused);
+
+      expect(mocks.cacheDelete).not.toHaveBeenCalled();
+    });
+
+    it('resolves when only the cache delete fails: the server already accepted the deletion', async () => {
+      mocks.deleteContentLock.mockResolvedValue(undefined);
+      mocks.cacheDelete.mockRejectedValueOnce(new Error('IndexedDB closed'));
+
+      await expect(LocksApplication.deleteLockContent({ lockUrl })).resolves.toBeUndefined();
+    });
+  });
+
   it('uploads the attachments first, then the post built from their paths', async () => {
     const seen: TGuardedResource[][] = [];
     let seenOwner: string | undefined;
     const result = await LocksApplication.createLockContent({
-      attachments: [file('image/png'), file('video/mp4')],
+      attachments: [picked('image/png'), picked('video/mp4')],
       buildPost: (attachmentResources, ownerPubky) => {
         seen.push(attachmentResources);
         seenOwner = ownerPubky;
@@ -200,7 +276,7 @@ describe('LocksApplication (content)', () => {
     const builder = vi.fn(() => file());
 
     const publish = LocksApplication.createLockContent({
-      attachments: [file('image/png'), file('video/mp4'), file('image/jpeg'), file('image/webp')],
+      attachments: [picked('image/png'), picked('video/mp4'), picked('image/jpeg'), picked('image/webp')],
       buildPost: builder,
       lockConfig: paymentConfig,
     });
@@ -248,7 +324,7 @@ describe('LocksApplication (content)', () => {
     let settled = false;
 
     const publish = LocksApplication.createLockContent({
-      attachments: [file('image/png'), file('video/mp4'), file('image/jpeg'), file('image/webp')],
+      attachments: [picked('image/png'), picked('video/mp4'), picked('image/jpeg'), picked('image/webp')],
       buildPost: builder,
       lockConfig: paymentConfig,
     }).finally(() => {
@@ -273,7 +349,7 @@ describe('LocksApplication (content)', () => {
 
   it('gives identical files distinct paths, so neither overwrites the other', async () => {
     await LocksApplication.createLockContent({
-      attachments: [file('image/png'), file('image/png')],
+      attachments: [picked('image/png'), picked('image/png')],
       buildPost,
       lockConfig: paymentConfig,
     });
@@ -319,7 +395,7 @@ describe('LocksApplication (content)', () => {
 
     await expect(
       LocksApplication.createLockContent({
-        attachments: [file('image/png')],
+        attachments: [picked('image/png')],
         buildPost: builder,
         lockConfig: paymentConfig,
       }),
@@ -329,29 +405,140 @@ describe('LocksApplication (content)', () => {
     expect(mocks.creatorCreateContentLock).not.toHaveBeenCalled();
   });
 
-  it('keeps a successful publication successful if the immediate descriptor read fails', async () => {
-    mocks.creatorCreateContentLock.mockResolvedValue({
-      lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
-      content_lock: { creator: CREATOR_PUBKY },
+  describe('clean-up after a failed publish (#2039)', () => {
+    const deletedPaths = () => mocks.deleteGuardedResource.mock.calls.map(([path]) => path);
+
+    it('deletes no upload when the publish succeeds', async () => {
+      await LocksApplication.createLockContent({
+        attachments: [picked('image/png')],
+        buildPost,
+        lockConfig: paymentConfig,
+      });
+
+      expect(mocks.deleteGuardedResource).not.toHaveBeenCalled();
     });
-    mocks.readContentLock.mockRejectedValue(new Error('homeserver not ready'));
-    await expect(LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig })).resolves.toMatchObject({
-      lock_id: 'LOCK1',
+
+    it('deletes the attachments that finished, including the ones in flight when another failed', async () => {
+      const uploads = deferUploads();
+      const publish = LocksApplication.createLockContent({
+        attachments: [picked('image/png'), picked('video/mp4'), picked('image/jpeg'), picked('image/webp')],
+        buildPost,
+        lockConfig: paymentConfig,
+      });
+      await vi.waitFor(() => expect(uploads.pending.size).toBe(3));
+
+      uploads.fail('id-2', new Error('upload failed'));
+      uploads.settle('id-1');
+      uploads.settle('id-3');
+
+      await expect(publish).rejects.toThrow('upload failed');
+      // `id-2` never landed, so it is not deleted.
+      expect(deletedPaths()).toEqual(['id-1', 'id-3']);
     });
-    expect(mocks.creatorCreateContentLock).toHaveBeenCalledOnce();
-    await vi.waitFor(() => expect(mocks.readContentLock).toHaveBeenCalledOnce());
+
+    it('deletes the attachments when the post cannot be built from them', async () => {
+      const refused = new Error('no owner');
+
+      await expect(
+        LocksApplication.createLockContent({
+          attachments: [picked('image/png'), picked('video/mp4')],
+          buildPost: () => {
+            throw refused;
+          },
+          lockConfig: paymentConfig,
+        }),
+      ).rejects.toBe(refused);
+
+      expect(deletedPaths()).toEqual(['id-1', 'id-2']);
+    });
+
+    it('deletes the attachments and the post when the Lock Server rejects the lock', async () => {
+      mocks.creatorCreateContentLock.mockRejectedValue(new Error('Lock Server request failed with HTTP 413'));
+
+      await expect(
+        LocksApplication.createLockContent({
+          attachments: [picked('image/png'), picked('video/mp4')],
+          buildPost,
+          lockConfig: paymentConfig,
+        }),
+      ).rejects.toThrow('HTTP 413');
+
+      expect(deletedPaths()).toEqual(['id-1', 'id-2', 'id-3']);
+    });
+
+    it('deletes only the attachments when the post upload fails', async () => {
+      const uploadAttachment = mocks.registerGuardedResource.getMockImplementation()!;
+      mocks.registerGuardedResource.mockImplementation((params: { path: string }) =>
+        params.path === 'id-3' ? Promise.reject(new Error('post upload failed')) : uploadAttachment(params),
+      );
+
+      await expect(
+        LocksApplication.createLockContent({
+          attachments: [picked('image/png'), picked('video/mp4')],
+          buildPost,
+          lockConfig: paymentConfig,
+        }),
+      ).rejects.toThrow('post upload failed');
+
+      expect(deletedPaths()).toEqual(['id-1', 'id-2']);
+    });
+
+    // The lock references these files now; removing them is the lock deletion's job, not this clean-up's.
+    it('deletes nothing once the lock exists, even if a later step throws', async () => {
+      vi.spyOn(GuardedContentParser, 'parsePost').mockImplementationOnce(() => {
+        throw new Error('parse failed');
+      });
+
+      await expect(
+        LocksApplication.createLockContent({
+          attachments: [picked('image/png')],
+          buildPost,
+          lockConfig: paymentConfig,
+        }),
+      ).rejects.toThrow('parse failed');
+
+      expect(mocks.deleteGuardedResource).not.toHaveBeenCalled();
+    });
+
+    it('skips the clean-up when the Lock Server rejects the session, since every delete would fail too', async () => {
+      mocks.creatorCreateContentLock.mockRejectedValue(new Error('Lock Server request failed with HTTP 401'));
+
+      const error = await LocksApplication.createLockContent({
+        attachments: [picked('image/png')],
+        buildPost,
+        lockConfig: paymentConfig,
+      }).catch((caught: unknown) => caught);
+
+      expect(error).toMatchObject({ category: ErrorCategory.Auth, service: ErrorService.Locks });
+      expect(mocks.deleteGuardedResource).not.toHaveBeenCalled();
+    });
+
+    it('surfaces the publish error, not a failed delete', async () => {
+      const rejected = new Error('Lock Server request failed with HTTP 413');
+      mocks.creatorCreateContentLock.mockRejectedValue(rejected);
+      mocks.deleteGuardedResource.mockRejectedValueOnce(new Error('delete failed'));
+
+      const error = await LocksApplication.createLockContent({
+        attachments: [picked('image/png')],
+        buildPost,
+        lockConfig: paymentConfig,
+      }).catch((caught: unknown) => caught);
+
+      expect(error).toMatchObject({ message: rejected.message });
+      // The first delete failing does not stop the next one.
+      expect(deletedPaths()).toEqual(['id-1', 'id-2']);
+    });
   });
 
-  it('caches the published descriptor and post without re-reading the guarded original', async () => {
+  // The announcement card reads lock.json itself; a read here could cache a lock that a failed
+  // announcement has just deleted (#2039).
+  it('caches the published post without reading the lock file or the guarded original', async () => {
     const creator = `pubky${MOCK_LOCK_AUTHOR_PUBKY}`;
-    const publicFile = mockLockFile({ creator });
     mocks.creatorCreateContentLock.mockResolvedValue({
       lock_id: 'LOCK1',
       content_lock_path: '/pub/locks.app/LOCK1.json',
       content_lock: { creator },
     });
-    mocks.readContentLock.mockResolvedValue(publicFile);
     const buildPost = () => ({
       contentType: 'application/json',
       bytes: new TextEncoder().encode(JSON.stringify({ content: 'my secret', kind: 'short', attachments: null })),
@@ -359,9 +546,8 @@ describe('LocksApplication (content)', () => {
 
     await LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig });
 
-    await vi.waitFor(() =>
-      expect(mocks.cacheDescriptor).toHaveBeenCalledWith({ lockId: 'LOCK1', descriptor: publicFile }),
-    );
+    expect(mocks.readContentLock).not.toHaveBeenCalled();
+    expect(mocks.cacheDescriptor).not.toHaveBeenCalled();
     expect(mocks.cachePost).toHaveBeenCalledWith({
       lockId: 'LOCK1',
       creator,
@@ -370,27 +556,99 @@ describe('LocksApplication (content)', () => {
     expect(mocks.getBytes).not.toHaveBeenCalled();
   });
 
-  it('does not wait for the descriptor read before finishing publication', async () => {
-    const creator = `pubky${MOCK_LOCK_AUTHOR_PUBKY}`;
-    mocks.creatorCreateContentLock.mockResolvedValue({
-      lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
-      content_lock: { creator },
-    });
-    let resolveRead: (value: LockFile) => void = () => undefined;
-    mocks.readContentLock.mockReturnValue(
-      new Promise<LockFile>((resolve) => {
-        resolveRead = resolve;
-      }),
-    );
+  describe('locked file clean-up (#2685)', () => {
+    const decodeBytes = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+    const uploaded = () =>
+      mocks.registerGuardedResource.mock.calls.map(([params]) => ({
+        contentType: params.contentType,
+        body: decodeBytes(params.bytes),
+      }));
 
-    await expect(LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig })).resolves.toMatchObject({
-      lock_id: 'LOCK1',
-    });
-    expect(mocks.cacheDescriptor).not.toHaveBeenCalled();
+    it('uploads each file as the clean-up returned it, with its own type and bytes', async () => {
+      const photo = picked('image/jpeg', 'raw-with-gps');
+      const doc = picked('application/pdf', 'pdf');
+      const cleaned = new File(['clean'], 'a1b2c3.webp', { type: 'image/webp' });
+      mocks.strip.mockImplementation(async (f) => (f === photo ? cleaned : f));
 
-    resolveRead(mockLockFile({ creator }));
-    await vi.waitFor(() => expect(mocks.cacheDescriptor).toHaveBeenCalledOnce());
+      await LocksApplication.createLockContent({ attachments: [photo, doc], buildPost, lockConfig: paymentConfig });
+
+      expect(mocks.strip.mock.calls.map(([f]) => f)).toEqual([photo, doc]);
+      // Two attachments, then the post.
+      expect(uploaded().slice(0, 2)).toEqual([
+        { contentType: 'image/webp', body: 'clean' },
+        { contentType: 'application/pdf', body: 'pdf' },
+      ]);
+    });
+
+    it('cleans one file at a time, never two at once', async () => {
+      let active = 0;
+      let peak = 0;
+      mocks.strip.mockImplementation(async (f) => {
+        peak = Math.max(peak, ++active);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        active--;
+        return f;
+      });
+
+      await LocksApplication.createLockContent({
+        attachments: [picked('image/png'), picked('image/png'), picked('image/png')],
+        buildPost,
+        lockConfig: paymentConfig,
+      });
+
+      expect(mocks.strip).toHaveBeenCalledTimes(3);
+      expect(peak).toBe(1);
+    });
+
+    it('wraps a size-limit failure as a local validation error carrying the kind, before any upload', async () => {
+      const cause = new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif');
+      mocks.strip.mockRejectedValue(cause);
+
+      const error = await LocksApplication.createLockContent({
+        attachments: [picked('image/gif')],
+        buildPost,
+        lockConfig: paymentConfig,
+      }).catch((caught: unknown) => caught);
+
+      expect(error).toMatchObject({
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.INVALID_INPUT,
+        service: ErrorService.Local,
+        context: { [IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY]: 'gif' },
+        cause,
+      });
+      expect(getImageUploadSizeLimitToastMessage(error)).toContain('This GIF exceeds');
+      expect(mocks.registerGuardedResource).not.toHaveBeenCalled();
+      expect(mocks.creatorCreateContentLock).not.toHaveBeenCalled();
+    });
+
+    it('wraps any other clean-up failure as a local validation error, not a Lock Server one', async () => {
+      mocks.strip.mockRejectedValue(new Error('decode failed'));
+
+      const error = await LocksApplication.createLockContent({
+        attachments: [picked('image/png')],
+        buildPost,
+        lockConfig: paymentConfig,
+      }).catch((caught: unknown) => caught);
+
+      expect(error).toMatchObject({ category: ErrorCategory.Validation, service: ErrorService.Local });
+      expect(getImageUploadSizeLimitToastMessage(error)).toBeNull();
+      expect(mocks.registerGuardedResource).not.toHaveBeenCalled();
+    });
+
+    it('uploads nothing when a later file fails the clean-up', async () => {
+      mocks.strip.mockImplementationOnce(async (f) => f).mockRejectedValueOnce(new Error('decode failed'));
+
+      await expect(
+        LocksApplication.createLockContent({
+          attachments: [picked('image/png'), picked('image/png')],
+          buildPost,
+          lockConfig: paymentConfig,
+        }),
+      ).rejects.toMatchObject({ category: ErrorCategory.Validation });
+
+      expect(mocks.registerGuardedResource).not.toHaveBeenCalled();
+    });
   });
 });
 const VALID_LOCK_HOST = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
@@ -1009,7 +1267,7 @@ describe('LocksApplication (payment unlock)', () => {
         'handshake',
       );
 
-      expect(mocks.lookupPaykitConnectionState).toHaveBeenCalledWith('pubkybob', 'saved-1');
+      expect(mocks.lookupPaykitConnectionState).toHaveBeenCalledWith('pubkybob', 'saved-1', undefined);
       // Read-only: it must not touch the purchase file or submit anything.
       expect(mocks.getBytesIfExists).not.toHaveBeenCalled();
       expect(mocks.submitProof).not.toHaveBeenCalled();
@@ -1057,13 +1315,132 @@ describe('LocksApplication (payment unlock)', () => {
       await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
       expect(mocks.putBlob).not.toHaveBeenCalled();
     });
+
+    // #3047: purchase recovery and the pay dialog can ask for the same completed purchase at once.
+    describe('single flight per purchase', () => {
+      const withAttachment = () =>
+        asOpaque<LockFile>({
+          ...withPrimary(),
+          secondary_resources: {
+            '/priv/app.locks/content/b.png': { hash: 'h', content_type: 'image/png', size: 1 },
+          },
+        });
+      const postWithAttachment = new TextEncoder().encode(
+        '{"content":"paid","kind":"image","attachments":["pubky://pubkybob/priv/app.locks/content/b.png"]}',
+      );
+      const readsOf = (path: string) =>
+        mocks.proxyReadGuardedResource.mock.calls.filter(([, readPath]) => readPath === path).length;
+
+      it('shares one credential and one download between concurrent callers', async () => {
+        const credential = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValue(credential.promise);
+        mocks.proxyReadGuardedResource.mockImplementation(async (_credential: string, path: string) =>
+          path === 'a.json' ? postWithAttachment : new Uint8Array([1]),
+        );
+        const lockFile = withAttachment();
+
+        const first = LocksApplication.fetchPaidContent({ lockFile, bundleId: 'bundle-1' });
+        const second = LocksApplication.fetchPaidContent({ lockFile, bundleId: 'bundle-1' });
+        credential.resolve({ credential: 'cred-abc', expires_at: 'e' });
+        const [a, b] = await Promise.all([first, second]);
+
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(1);
+        expect(readsOf('a.json')).toBe(1);
+        expect(readsOf('b.png')).toBe(1);
+        expect(b).toBe(a);
+        expect(a.attachments).toHaveLength(1);
+      });
+
+      it('gives every waiting caller the same failure, then starts fresh on the next call', async () => {
+        const credential = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValueOnce(credential.promise);
+        const failure = new Error('lock server down');
+
+        const first = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        const second = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        credential.reject(failure);
+        await expect(first).rejects.toBe(failure);
+        await expect(second).rejects.toBe(failure);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(1);
+
+        mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-2', expires_at: 'e' });
+        mocks.proxyReadGuardedResource.mockResolvedValue(
+          new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+        );
+        await expect(
+          LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' }),
+        ).resolves.toMatchObject({ post: { content: 'paid' } });
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+        expect(mocks.proxyReadGuardedResource).toHaveBeenLastCalledWith('cred-2', 'a.json');
+      });
+
+      it('starts a new download after a successful one settles', async () => {
+        mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-abc', expires_at: 'e' });
+        mocks.proxyReadGuardedResource.mockResolvedValue(
+          new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+        );
+        await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+      });
+
+      // A deliberate retry (Check again) must not join the request it is retrying: with no Lock Server
+      // time limit yet (#3026), a hung credential or guarded read would otherwise park the reader for good.
+      it('starts a fresh request when asked, and later callers join the fresh one', async () => {
+        const stuck = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        const second = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValueOnce(stuck.promise).mockReturnValueOnce(second.promise);
+        mocks.proxyReadGuardedResource.mockResolvedValue(
+          new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+        );
+
+        const first = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        const retry = LocksApplication.fetchPaidContent(
+          { lockFile: withPrimary(), bundleId: 'bundle-1' },
+          { fresh: true },
+        );
+        expect(retry).not.toBe(first);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+
+        // The replaced request settling late must not evict the fresh one.
+        stuck.reject(new Error('hung read finally gave up'));
+        await expect(first).rejects.toThrow('hung read finally gave up');
+        const later = LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+        expect(later).toBe(retry);
+        expect(mocks.issueAccessCredential).toHaveBeenCalledTimes(2);
+
+        second.resolve({ credential: 'cred-2', expires_at: 'e' });
+        await expect(later).resolves.toMatchObject({ post: { content: 'paid' } });
+        expect(mocks.proxyReadGuardedResource.mock.calls).toEqual([['cred-2', 'a.json']]);
+      });
+
+      it('never shares a request between different bundle ids or creators', async () => {
+        const held = Promise.withResolvers<{ credential: string; expires_at: string }>();
+        mocks.issueAccessCredential.mockReturnValue(held.promise);
+        const runs = [
+          LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' }),
+          LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-2' }),
+          LocksApplication.fetchPaidContent({
+            lockFile: asOpaque<LockFile>({ ...withPrimary(), creator: 'pubkycarol' }),
+            bundleId: 'bundle-1',
+          }),
+        ];
+        expect(mocks.issueAccessCredential.mock.calls).toEqual([
+          ['pubkybob', 'bundle-1'],
+          ['pubkybob', 'bundle-2'],
+          ['pubkycarol', 'bundle-1'],
+        ]);
+        held.reject(new Error('settle'));
+        await Promise.allSettled(runs);
+      });
+    });
   });
 
   describe('fetchPaymentStatus', () => {
     it('passes the null through when the submission never reached the server', async () => {
       mocks.lookupVerificationTask.mockResolvedValue(null);
       await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toBeNull();
-      expect(mocks.lookupVerificationTask).toHaveBeenCalledWith('pubkybob', 'bundle-1');
+      expect(mocks.lookupVerificationTask).toHaveBeenCalledWith('pubkybob', 'bundle-1', undefined);
     });
 
     it('returns the task the server holds', async () => {
@@ -1348,6 +1725,48 @@ describe('LocksApplication.fetchReplicatedAttachments', () => {
 
     await expect(LocksApplication.fetchReplicatedAttachments({ post: post(['image/png']) })).rejects.toThrow();
   });
+
+  describe('preview', () => {
+    const article = (body: string) => ({
+      ...post(['image/png', 'image/png', 'image/png']),
+      kind: 'long' as const,
+      content: JSON.stringify({ title: 'Title', body }),
+    });
+
+    it('reads only the cover of an article', async () => {
+      mocks.getBytes.mockResolvedValueOnce(new Uint8Array([1]));
+
+      const result = await LocksApplication.fetchReplicatedAttachments({
+        post: article('![a](attachment:1)\n\n![b](attachment:2)'),
+        preview: true,
+      });
+
+      expect(mocks.getBytes).toHaveBeenCalledOnce();
+      expect(mocks.getBytes).toHaveBeenCalledWith('pubky://reader/priv/social/unlocked/LOCK1/file0');
+      expect(result.map((attachment) => attachment.slot)).toEqual([0]);
+    });
+
+    it('reads nothing when the body uses slot 0 inline, as the article then has no cover', async () => {
+      const result = await LocksApplication.fetchReplicatedAttachments({
+        post: article('![a](attachment:0)'),
+        preview: true,
+      });
+
+      expect(result).toEqual([]);
+      expect(mocks.getBytes).not.toHaveBeenCalled();
+    });
+
+    it('reads every attachment of a post that is not an article', async () => {
+      mocks.getBytes.mockResolvedValue(new Uint8Array([1]));
+
+      const result = await LocksApplication.fetchReplicatedAttachments({
+        post: post(['image/png', 'image/png']),
+        preview: true,
+      });
+
+      expect(result).toHaveLength(2);
+    });
+  });
 });
 
 describe('LocksApplication.fetchReplicatedContent', () => {
@@ -1368,6 +1787,31 @@ describe('LocksApplication.fetchReplicatedContent', () => {
     expect(result?.post.content).toBe('secret');
     expect(mocks.readContentLock).not.toHaveBeenCalled();
     expect(mocks.cacheGet).not.toHaveBeenCalled();
+  });
+
+  it('reads only the cover of an article for a preview', async () => {
+    const file = (name: string) => `pubky://${READER}/priv/social/unlocked/LOCK1/${name}`;
+    mocks.getBytesIfExists.mockResolvedValueOnce(
+      marker({
+        content: JSON.stringify({ title: 'Title', body: '![b](attachment:1)' }),
+        kind: 'long',
+        attachments: [
+          { url: file('cover'), content_type: 'image/png' },
+          { url: file('body'), content_type: 'image/png' },
+        ],
+      }),
+    );
+    mocks.getBytes.mockResolvedValueOnce(new Uint8Array([1]));
+
+    const result = await LocksApplication.fetchReplicatedContent({
+      lockUrl: LOCK_URL,
+      readerPubky: READER,
+      preview: true,
+    });
+
+    expect(mocks.getBytes).toHaveBeenCalledOnce();
+    expect(mocks.getBytes).toHaveBeenCalledWith(file('cover'));
+    expect(result?.attachments.map((attachment) => attachment.slot)).toEqual([0]);
   });
 
   it('returns null (not unlocked) when the post.json marker is absent (404 → null, no error)', async () => {
@@ -1676,6 +2120,51 @@ describe('LocksApplication.fetchOwnContent', () => {
       expect.objectContaining({ lockId: 'lock1', post: expect.any(Object) }),
     );
     expect(mocks.cachePost.mock.calls[0]?.[0]).not.toHaveProperty('unlockedAt');
+  });
+
+  it('reads only the cover of an article for a preview', async () => {
+    const cover = 'pubky://owner/priv/app.locks/content/img1';
+    const lockFile = asOpaque<LockFile>({
+      ...ownLockFile,
+      secondary_resources: {
+        '/priv/app.locks/content/img1': { content_type: 'image/png', hash: 'h', size: 2 },
+        '/priv/app.locks/content/img2': { content_type: 'image/png', hash: 'h', size: 2 },
+      },
+    });
+    mocks.getBytes
+      .mockResolvedValueOnce(
+        encode({
+          content: JSON.stringify({ title: 'Title', body: '![a](attachment:1)' }),
+          kind: 'long',
+          attachments: [cover, 'pubky://owner/priv/app.locks/content/img2'],
+        }),
+      )
+      .mockResolvedValueOnce(new Uint8Array([5]));
+
+    const result = await LocksApplication.fetchOwnContent({ lockUrl: VALID_LOCK_URL, lockFile, preview: true });
+
+    expect(mocks.getBytes).toHaveBeenCalledTimes(2);
+    expect(mocks.getBytes).toHaveBeenLastCalledWith(cover);
+    expect(result.attachments.map((attachment) => attachment.slot)).toEqual([0]);
+  });
+
+  it('reads no attachment for a preview of an article whose slot 0 is inline', async () => {
+    mocks.getBytes.mockResolvedValueOnce(
+      encode({
+        content: JSON.stringify({ title: 'Title', body: '![a](attachment:0)' }),
+        kind: 'long',
+        attachments: ['pubky://owner/priv/app.locks/content/img1'],
+      }),
+    );
+
+    const result = await LocksApplication.fetchOwnContent({
+      lockUrl: VALID_LOCK_URL,
+      lockFile: ownLockFile,
+      preview: true,
+    });
+
+    expect(mocks.getBytes).toHaveBeenCalledOnce();
+    expect(result.attachments).toEqual([]);
   });
 
   it('returns a mismatched original without caching it when secondary resources are absent', async () => {

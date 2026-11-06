@@ -12,12 +12,15 @@ import { LocksController } from '@/controllers/locks/locks';
 import { ProfileController } from '@/controllers/profile/profile';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { pendingRetirements, type SessionReference } from '@/libs/auth/session.types';
+import { resetSavedSessionLossReports } from '@/libs/auth/session-loss';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import { markShopFrameLoaded, resetShopFramePresence } from '@/libs/shop-embed/frame-presence';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -2066,7 +2069,7 @@ describe('final review session ownership regressions', () => {
               password: 'password',
             });
       expect(result).toBe(true);
-      expect(signin).toHaveBeenCalledWith({ keypair });
+      expect(signin).toHaveBeenCalledWith({ keypair, isCurrent: expect.any(Function) });
       expect(useAuthStore.getState()).toMatchObject({ currentUserPubky: OTHER_PUBKY, session, restoreStatus: 'ready' });
       expect(clearDatabase).toHaveBeenCalledOnce();
     },
@@ -2128,4 +2131,97 @@ describe('identity-bound Shop reauthorization', () => {
       expect(AuthApplication.saveSession).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('saved session loss diagnostics (#2942)', () => {
+  const lossReports = (spy: { mock: { calls: Parameters<typeof Err.database>[] } }) =>
+    spy.mock.calls.filter(([, , params]) => params.operation === 'savedSessionLost').map(([, , params]) => params);
+
+  beforeEach(() => {
+    resetSavedSessionLossReports();
+    resetShopFramePresence();
+  });
+
+  it('reports once when another context removes the active grant, with Shop presence', async () => {
+    markShopFrameLoaded();
+    const spy = vi.spyOn(Err, 'database');
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+      status: 'reauth-required',
+      error: expired(),
+    });
+    await AuthController.syncRemovedSession(narrowReference.sessionStoreId);
+    await AuthController.syncRemovedSession(narrowReference.sessionStoreId);
+    const reports = lossReports(spy);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({
+      service: ErrorService.Local,
+      context: { trigger: 'removed', shopFrameLoaded: true, localRetirement: false },
+    });
+    expect(reports[0].cause).toBeUndefined();
+  });
+
+  it('does not report a removal of an unrelated grant or one during this tab’s logout', async () => {
+    const spy = vi.spyOn(Err, 'database');
+    await AuthController.syncRemovedSession('unrelated');
+    useAuthStore.getState().setIsLoggingOut(true);
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ status: 'reauth-required' });
+    await AuthController.syncRemovedSession(narrowReference.sessionStoreId);
+    expect(lossReports(spy)).toHaveLength(0);
+  });
+
+  it('reports a reload that finds the saved grant missing, with the missing material', async () => {
+    seed(null, narrowReference);
+    const spy = vi.spyOn(Err, 'database');
+    vi.spyOn(HomeserverService, 'restoreReference').mockRejectedValue(
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
+        service: ErrorService.Homeserver,
+        operation: 'restoreGrant',
+        context: { reason: 'missing_local_grant', material: 'key' },
+      }),
+    );
+    expect(await AuthController.restorePersistedSession()).toBe(false);
+    expect(useAuthStore.getState().restoreStatus).toBe('reauth-required');
+    const reports = lossReports(spy);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({
+      context: { trigger: 'restore', material: 'key', shopFrameLoaded: false },
+    });
+  });
+
+  it('reports Shop presence on the restore trigger when Shop loaded before the reload', async () => {
+    // The previous page (or another tab) loaded Shop; this page's module never saw the mark.
+    vi.resetModules();
+    const previousPage = await import('@/libs/shop-embed/frame-presence');
+    previousPage.markShopFrameLoaded();
+    seed(null, narrowReference);
+    const spy = vi.spyOn(Err, 'database');
+    vi.spyOn(HomeserverService, 'restoreReference').mockRejectedValue(
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
+        service: ErrorService.Homeserver,
+        operation: 'restoreGrant',
+        context: { reason: 'missing_local_grant', material: 'record' },
+      }),
+    );
+    expect(await AuthController.restorePersistedSession()).toBe(false);
+    const reports = lossReports(spy);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({
+      context: { trigger: 'restore', material: 'record', shopFrameLoaded: true },
+    });
+    expect(reports[0].context?.shopFrameLoadedAgoS).toEqual(expect.any(Number));
+  });
+
+  it('does not report a grant the homeserver rejected', async () => {
+    seed(null, narrowReference);
+    const spy = vi.spyOn(Err, 'database');
+    vi.spyOn(HomeserverService, 'restoreReference').mockRejectedValue(
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
+        service: ErrorService.Homeserver,
+        operation: 'restoreGrant',
+        context: { reason: 'invalid_grant' },
+      }),
+    );
+    expect(await AuthController.restorePersistedSession()).toBe(false);
+    expect(lossReports(spy)).toHaveLength(0);
+  });
 });

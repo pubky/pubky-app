@@ -42,7 +42,7 @@ const { mockTagInputToggle, mockTagInput, mockPostTagAddButton } = vi.hoisted(()
       showCloseButton,
       onClick,
     }: {
-      onTagAdd: (tag: string) => void;
+      onTagAdd: (tag: string) => void | Promise<unknown>;
       onBlur?: () => void;
       onClose?: () => void;
       showCloseButton?: boolean;
@@ -603,6 +603,31 @@ describe('ClickableTagsList', () => {
       fireEvent.change(screen.getByTestId('tag-input'), { target: { value: 'nostr' } });
 
       expect(mockHandleTagAdd).toHaveBeenCalledWith('nostr');
+    });
+
+    it('hands the internal handleTagAdd result to the input so a failed add keeps the typed label (#2890)', async () => {
+      mockHandleTagAdd.mockResolvedValueOnce({ success: false, error: 'Failed to add tag' });
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showInput={true} />);
+
+      const { onTagAdd } = vi.mocked(mockTagInput).mock.calls.at(-1)![0];
+      await expect(onTagAdd('nostr')).resolves.toEqual({ success: false, error: 'Failed to add tag' });
+    });
+
+    it('hands a custom onTagAdd result to the input as well', async () => {
+      const customOnTagAdd = vi.fn().mockResolvedValue({ success: false });
+      render(
+        <ClickableTagsList
+          taggedId="post-123"
+          taggedKind={TagKind.POST}
+          tags={mockTags}
+          showInput={true}
+          onTagAdd={customOnTagAdd}
+        />,
+      );
+
+      const { onTagAdd } = vi.mocked(mockTagInput).mock.calls.at(-1)![0];
+      await expect(onTagAdd('nostr')).resolves.toEqual({ success: false });
+      expect(mockHandleTagAdd).not.toHaveBeenCalled();
     });
 
     it('opens sign-in dialog when unauthenticated user clicks input', () => {

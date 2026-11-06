@@ -40,7 +40,11 @@ vi.mock('@/organisms/Collections/CollectionsSections/CollectionsSections', () =>
 }));
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
-  ContentLayout: ({ children }: { children: ReactNode }) => <div data-testid="content-layout">{children}</div>,
+  ContentLayout: ({ children, className }: { children: ReactNode; className?: string }) => (
+    <div data-testid="content-layout" className={className}>
+      {children}
+    </div>
+  ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -140,5 +144,11 @@ describe('Collection (template)', () => {
     expect(screen.getByTestId('collection-not-found')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-items')).not.toBeInTheDocument();
     expect(mockUsePostDetails).toHaveBeenCalledWith('garbage', { enabled: false });
+  });
+
+  it('keeps bottom clearance for the floating action button on mobile only', () => {
+    render(<Collection postId={COMPOSITE} />);
+
+    expect(screen.getByTestId('content-layout')).toHaveClass('pb-44', 'lg:pb-12');
   });
 });

@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import type { OnboardingState } from '@/stores/onboarding/onboarding.types';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { Logout } from './Logout';
 
@@ -23,6 +24,7 @@ const mocks = vi.hoisted(() => {
 
   const onboardingState = {
     secretKey: '',
+    signupAttempt: null as OnboardingState['signupAttempt'],
     hasHydrated: true,
   };
 
@@ -196,6 +198,53 @@ describe('Logout', () => {
     expect(screen.queryByText('Backup controls')).not.toBeInTheDocument();
     expect(mocks.mockLogout).toHaveBeenCalledOnce();
   });
+  it('signs a guest out without a backup prompt when the stored key has no account (#2955)', async () => {
+    // The onboarding key step stores a generated pubky with no session and nothing to restore.
+    const key = Keypair.random();
+    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
+    mocks.authState.currentUserPubky = key.publicKey.z32();
+    mocks.authState.session = null;
+    mocks.authState.sessionReference = null;
+    mocks.authState.restoreStatus = 'idle';
+    mocks.mockLogout.mockResolvedValue(undefined);
+    render(<Logout />);
+    expect(screen.queryByText('Back up your key before signing out')).not.toBeInTheDocument();
+    expect(screen.queryByText('Backup controls')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
+    expect(mocks.mockLogout).toHaveBeenCalledOnce();
+  });
+  it.each(['reauth-required', 'temporary-error'] as const)(
+    'keeps the backup prompt for a member whose restore ended in %s (#2955)',
+    (restoreStatus) => {
+      // The auth store merge yields reauth-required for a persisted pubky without a reference: no session, nothing
+      // to restore, but an account whose only key may still be in this browser.
+      const key = Keypair.random();
+      mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
+      mocks.authState.currentUserPubky = key.publicKey.z32();
+      mocks.authState.session = null;
+      mocks.authState.sessionReference = null;
+      mocks.authState.restoreStatus = restoreStatus;
+      render(<Logout />);
+      expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
+      expect(screen.getByText('Backup controls')).toBeInTheDocument();
+      expect(mocks.mockLogout).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps the backup prompt when the stored key has a sign-up attempt but no session yet (#2955)', () => {
+    // AuthController.signUp records the attempt before signing the created account in; that key may own an account.
+    const key = Keypair.random();
+    const pubky = key.publicKey.z32();
+    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
+    mocks.onboardingState.signupAttempt = { pubky, homeserver: 'homeserver', environment: 'staging', phase: 'created' };
+    mocks.authState.currentUserPubky = pubky;
+    mocks.authState.session = null;
+    mocks.authState.sessionReference = null;
+    mocks.authState.restoreStatus = 'idle';
+    render(<Logout />);
+    expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
+    expect(screen.getByText('Backup controls')).toBeInTheDocument();
+    expect(mocks.mockLogout).not.toHaveBeenCalled();
+  });
   it('waits for a controller-owned logout even after the account fields are cleared', () => {
     mocks.authState.currentUserPubky = null;
     mocks.authState.session = null;
@@ -218,6 +267,7 @@ describe('Logout', () => {
     vi.clearAllMocks();
     mocks.onboardingState.hasHydrated = true;
     mocks.onboardingState.secretKey = '';
+    mocks.onboardingState.signupAttempt = null;
     mocks.authState.hasHydrated = true;
     mocks.authState.generation = 'original';
     mocks.authState.restoreStatus = 'idle';

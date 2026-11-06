@@ -1,9 +1,6 @@
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '../../src/config/collections';
 import { DEFAULT_MAX_THREAD_REPLIES } from '../../src/hooks/useThreadReplies/useThreadReplies.constants';
-
-// Nexus indexes homeserver writes asynchronously (watcher_sleep = 500ms in CI); poll at that pace.
-const NEXUS_POLL_INTERVAL_MS = 500;
-const NEXUS_POLL_ATTEMPTS = 120;
+import { streamIndexed, waitForNexus } from './nexus';
 
 // `NEXUS_POSTS_PER_PAGE` and `NEXUS_STREAM_MAX_LIMIT` in src/config/nexus.ts, which the spec bundle
 // cannot import (it pulls in the `@/` runtime config). Every page assertion checks the `limit` the
@@ -25,61 +22,25 @@ export type RecordedStreamPage = {
 const toStreamQuery = (query: Record<string, string | number>): StreamQuery =>
   Object.fromEntries(Object.entries(query).map(([key, value]) => [key, String(value)]));
 
-// Reads the post id from a homeserver post PUT URL (`.../pub/pubky.app/posts/<id>`)
-export const postIdFromWriteUrl = (url: string): string => {
-  const postId = new URL(url).pathname.split('/').pop();
-  expect(postId, `post id in ${url}`).to.be.a('string').and.not.be.empty;
-  return postId as string;
-};
-
 export const keyMatchesPostId = (key: string, postId: string) => key.endsWith(`:${postId}`);
 
+// A `waitForNexus` check that every id in `postIds` is listed by the stream `query`
+export const seededStreamIndexed = (query: StreamQuery, postIds: string[]) =>
+  streamIndexed(query, postIds, NEXUS_STREAM_MAX_LIMIT);
+
 /**
- * Polls `/v0/stream/posts/keys` with `query` until every id in `postIds` is indexed,
- * then yields the full stream as Nexus orders it: the ground truth a paginated surface
- * must reproduce page by page.
+ * The stream a `seededStreamIndexed` check answered, as Nexus orders it: the ground truth a
+ * paginated surface must reproduce page by page.
  */
+export const seededStreamKeys = (body: unknown): string[] => {
+  const keys = (body as { post_keys?: string[] } | null)?.post_keys ?? [];
+  expect(keys.length, 'seeded stream fits one Nexus page').to.be.lessThan(NEXUS_STREAM_MAX_LIMIT);
+  return keys;
+};
+
+// Waits for every id in `postIds` to be listed by the stream `query`, then yields the stream's keys
 export const waitForNexusStream = (query: StreamQuery, postIds: string[]): Cypress.Chainable<string[]> =>
-  cy.env(['nexusUrl']).then(({ nexusUrl }) => {
-    const url = `${String(nexusUrl).replace(/\/$/, '')}/v0/stream/posts/keys`;
-    const qs = { ...query, limit: String(NEXUS_STREAM_MAX_LIMIT) };
-    const poll = (attemptsLeft: number): Cypress.Chainable<string[]> =>
-      cy.request({ url, qs, failOnStatusCode: false, log: false }).then((response) => {
-        const keys: string[] =
-          response.status === 200 && Array.isArray(response.body?.post_keys) ? response.body.post_keys : [];
-        const missing = postIds.filter((postId) => !keys.some((key) => keyMatchesPostId(key, postId)));
-        if (missing.length === 0) {
-          expect(keys.length, 'seeded stream fits one Nexus page').to.be.lessThan(NEXUS_STREAM_MAX_LIMIT);
-          return cy.wrap(keys, { log: false });
-        }
-        if (attemptsLeft <= 1) {
-          throw new Error(
-            `Nexus did not index ${missing.length} of ${postIds.length} posts for ${JSON.stringify(query)}`,
-          );
-        }
-        cy.wait(NEXUS_POLL_INTERVAL_MS, { log: false });
-        return poll(attemptsLeft - 1);
-      });
-    return poll(NEXUS_POLL_ATTEMPTS);
-  });
-
-// Polls a Nexus GET endpoint (e.g. `/v0/post/<author>/<id>`) until it answers 200
-export const waitForNexusResource = (path: string) =>
-  cy.env(['nexusUrl']).then(({ nexusUrl }) => {
-    const url = `${String(nexusUrl).replace(/\/$/, '')}${path}`;
-    const poll = (attemptsLeft: number) => {
-      cy.request({ url, failOnStatusCode: false, log: false }).then((response) => {
-        if (response.status === 200) return;
-        if (attemptsLeft <= 1) {
-          throw new Error(`Nexus did not index ${path}`);
-        }
-        cy.wait(NEXUS_POLL_INTERVAL_MS, { log: false });
-        poll(attemptsLeft - 1);
-      });
-    };
-    poll(NEXUS_POLL_ATTEMPTS);
-  });
-
+  waitForNexus(seededStreamIndexed(query, postIds)).then(([body]) => seededStreamKeys(body));
 /**
  * Records every `/v0/stream/posts/keys` response the app receives whose query passes `matches`,
  * in arrival order. Register before the page loads so the first page is captured.

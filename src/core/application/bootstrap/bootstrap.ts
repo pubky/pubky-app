@@ -9,6 +9,7 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
+import type { Pubky } from '@/models/models.types';
 import type { NotificationType } from '@/models/notification/notification.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
@@ -137,18 +138,18 @@ export class BootstrapApplication {
    */
   private static async fetchOrPutLastRead({ pubky, lastReadUrl }: TBootstrapParams): Promise<number> {
     try {
-      const { timestamp } = await HomeserverService.request<{ timestamp: number }>({
+      // A new account has no last_read yet: the 404 resolves to null instead of an error.
+      const lastReadJson = await HomeserverService.request<{ timestamp: number } | null>({
         method: HttpMethod.GET,
         url: lastReadUrl,
+        notFoundAsNull: true,
       });
-      return timestamp;
+      if (lastReadJson !== null) return lastReadJson.timestamp;
+      return this.createLastRead(pubky);
     } catch (error) {
-      // Only handle 404 errors (resource not found), rethrow everything else
+      // A 404 from a path the null option does not cover, rethrow everything else
       if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-        Logger.info('Last read file not found, creating new one...', { pubky });
-        const lastRead = LastReadNormalizer.to(pubky);
-        void this.createMissingLastRead(lastRead.meta.url, lastRead.last_read.toJson());
-        return Number(lastRead.last_read.timestamp);
+        return this.createLastRead(pubky);
       } else {
         // Network errors, timeouts, server errors, etc. should bubble up
         Logger.error('Failed to fetch last read timestamp', error);
@@ -156,6 +157,14 @@ export class BootstrapApplication {
         throw error;
       }
     }
+  }
+
+  /** Starts creating a missing last-read file and returns its initial timestamp. */
+  private static createLastRead(pubky: Pubky): number {
+    Logger.info('Last read file not found, creating new one...', { pubky });
+    const lastRead = LastReadNormalizer.to(pubky);
+    void this.createMissingLastRead(lastRead.meta.url, lastRead.last_read.toJson());
+    return Number(lastRead.last_read.timestamp);
   }
 
   /**

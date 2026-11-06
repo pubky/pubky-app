@@ -31,6 +31,7 @@ const VISUAL_CONTENT_LONG = 'long' as ContentType;
 const VISUAL_CONTENT_COLLECTIONS = 'collections' as ContentType;
 const VISUAL_CONTENT_LINKS = 'links' as ContentType;
 const VISUAL_CONTENT_FILES = 'files' as ContentType;
+const VISUAL_CONTENT_LOCKS = 'locks' as ContentType;
 
 export const VISUAL_DISABLED_CONTENT: ContentType[] = [
   VISUAL_CONTENT_SHORT,
@@ -38,6 +39,7 @@ export const VISUAL_DISABLED_CONTENT: ContentType[] = [
   VISUAL_CONTENT_COLLECTIONS,
   VISUAL_CONTENT_LINKS,
   VISUAL_CONTENT_FILES,
+  VISUAL_CONTENT_LOCKS,
 ];
 
 const VISUAL_INTERACTIVE_CONTENT_VARIANTS = new Set<TimelineFeedVariant>([
