@@ -14,6 +14,7 @@ import type {
   TUnlockedAttachment,
   TUnlockedContent,
 } from '@/services/locks/locks.types';
+import { stubUnlockSlideGeometry } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
 
@@ -279,20 +280,6 @@ const watchUnlock = (root: HTMLElement, wantEnabled: boolean) => {
 const watchUnlockEnabled = (root: HTMLElement) => watchUnlock(root, true);
 const watchUnlockDisabled = (root: HTMLElement) => watchUnlock(root, false);
 
-/** jsdom reports every offset as 0, which would make the slide-over a no-op no test could see. */
-const useSlideGeometry = () => {
-  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetLeft');
-  Object.defineProperty(HTMLElement.prototype, 'offsetLeft', {
-    configurable: true,
-    get(this: HTMLElement) {
-      return this.tagName === 'BUTTON' ? 0 : 120;
-    },
-  });
-  return () => {
-    if (original) Object.defineProperty(HTMLElement.prototype, 'offsetLeft', original);
-  };
-};
-
 describe('LockedPostContent', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -426,7 +413,7 @@ describe('LockedPostContent', () => {
     // Signed out, Unlock opens the sign-in dialog and no unlock modal follows — so the card never
     // gets the close that snaps the slid-over button back, and it would sit over the price for good.
     it('leaves the Unlock button in place for a signed-out reader', async () => {
-      const restoreGeometry = useSlideGeometry();
+      const restoreGeometry = stubUnlockSlideGeometry();
       try {
         authMocks.isAuthenticated = false;
         authState.currentUserPubky = null;
@@ -442,6 +429,49 @@ describe('LockedPostContent', () => {
       } finally {
         restoreGeometry();
       }
+    });
+
+    describe('dragging Unlock to the end', () => {
+      const dragToEnd = (button: HTMLElement) => {
+        const pointer = { pointerId: 1, isPrimary: true, buttons: 1, clientY: 0 };
+        fireEvent.pointerDown(button, { ...pointer, clientX: 0 });
+        fireEvent.pointerMove(button, { ...pointer, clientX: 120 });
+        fireEvent.pointerUp(button, { ...pointer, clientX: 120 });
+      };
+
+      it('opens the pay dialog with the button parked over the price', async () => {
+        const restoreGeometry = stubUnlockSlideGeometry();
+        try {
+          paymentData();
+          render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+          dragToEnd(await liveUnlock());
+
+          expect(await screen.findByTestId('pay-dialog')).toHaveTextContent('1000');
+          expect(screen.getByRole('button', { name: 'Unlock' })).toHaveStyle({ transform: 'translateX(120px)' });
+        } finally {
+          restoreGeometry();
+        }
+      });
+
+      it('opens the sign-in dialog for a signed-out reader and returns the button', async () => {
+        const restoreGeometry = stubUnlockSlideGeometry();
+        try {
+          authMocks.isAuthenticated = false;
+          authState.currentUserPubky = null;
+          authState.session = null;
+          paymentData();
+          render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+          dragToEnd(await liveUnlock());
+          await waitFor(() => expect(authMocks.setShowSignInDialog).toHaveBeenCalledWith(true));
+
+          expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
+          expect(screen.getByRole('button', { name: 'Unlock' })).toHaveStyle({ transform: 'translateX(0px)' });
+        } finally {
+          restoreGeometry();
+        }
+      });
     });
 
     // Paid while away: the content arrives without the reader pressing anything.
