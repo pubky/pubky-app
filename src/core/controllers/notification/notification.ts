@@ -1,7 +1,7 @@
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
 import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
-import type { TGetNotificationsParams, TLastReadEvent } from '@/controllers/notification/notification.types';
+import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { isAppError } from '@/libs/error/error.utils';
@@ -143,14 +143,6 @@ export class NotificationController {
   private static isSameAccountSession(pubky: Pubky): boolean {
     const { currentUserPubky, session } = useAuthStore.getState();
     return currentUserPubky === pubky && !!session;
-  }
-
-  /**
-   * Homeserver `/events-stream` (live) for the current user's `last_read` file.
-   * @see NotificationApplication.subscribeLastReadEventStream
-   */
-  static subscribeLastReadEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TLastReadEvent>> {
-    return NotificationApplication.subscribeLastReadEventStream(pubky, cursor);
   }
 
   /**

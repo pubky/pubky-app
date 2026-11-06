@@ -12,10 +12,8 @@ import type {
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import { TagCacheApplication } from '@/application/tag/tag-cache';
-import { NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/notification-last-read-sync';
 import { getTtlPostMs, getTtlUserMs } from '@/config/sync';
 import { POST_TAGS_PER_PAGE, USER_TAGS_PER_PAGE } from '@/config/tags';
-import type { TLastReadEvent } from '@/controllers/notification/notification.types';
 import { hasHttpStatus, isAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -127,18 +125,6 @@ export class NotificationApplication {
       if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
       throw error;
     }
-  }
-
-  /**
-   * Homeserver `/events-stream` (live) for the current user's `last_read` file only.
-   * @see HomeserverService.subscribeUserEventStreamForPath
-   */
-  static subscribeLastReadEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TLastReadEvent>> {
-    return HomeserverService.subscribeUserEventStreamForPath({
-      userZ32: pubky,
-      cursor,
-      pathPrefix: NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
-    });
   }
 
   /**
