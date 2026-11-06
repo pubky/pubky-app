@@ -29,10 +29,12 @@ const mockGetPassportAuthUrl = vi.fn();
 const mockInitializeAuthenticatedSession = vi.fn();
 const mockLoggerError = vi.fn();
 const mockGetPassportUrl = vi.fn();
+const mockIsPassportAppleEnabled = vi.fn(() => false);
 
 vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/config/network', () => ({
   getPassportUrl: () => mockGetPassportUrl(),
+  isPassportAppleEnabled: () => mockIsPassportAppleEnabled(),
 }));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
@@ -135,6 +137,7 @@ describe('usePassportAuth', () => {
     vi.clearAllMocks();
     attemptIds.length = 0;
     mockGetPassportUrl.mockReturnValue(PASSPORT_URL);
+    mockIsPassportAppleEnabled.mockReturnValue(false);
     mockInitializeAuthenticatedSession.mockResolvedValue(undefined);
     popup = createFakePopup();
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => asOpaque<Window>(popup));
@@ -677,5 +680,105 @@ describe('usePassportAuth', () => {
     expect(openSpy).toHaveBeenCalledOnce();
     await flushMicrotasks();
     expect(mockGetPassportAuthUrl).toHaveBeenCalledWith(expect.objectContaining({ expectedPubky: 'alice' }));
+  });
+
+  describe('when Passport also offers Apple', () => {
+    beforeEach(() => {
+      mockIsPassportAppleEnabled.mockReturnValue(true);
+    });
+
+    it('still opens /authorize with only d in the fragment', async () => {
+      const flow = createFlow();
+      mockGetPassportAuthUrl.mockResolvedValue(flow);
+      const hook = renderHook(() => usePassportAuth());
+
+      await startAttempt(hook);
+
+      expect(popup.location.replace).toHaveBeenCalledWith(
+        `${PASSPORT_ORIGIN}/authorize#d=${encodeURIComponent(flow.authorizationUrl)}`,
+      );
+    });
+
+    it.each([
+      ['cancel', 'Passport sign-in was cancelled.'],
+      ['error', 'Passport could not complete the sign-in. Try again.'],
+    ])('names Passport, not Google, on a %s outcome', async (outcome, copy) => {
+      mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+      const hook = renderHook(() => usePassportAuth());
+      await startAttempt(hook);
+
+      await act(async () => {
+        deliver(listeners, { origin: PASSPORT_ORIGIN, source: popup, data: passportOutcome(outcome) });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'error', description: copy });
+    });
+
+    it('keeps the provider-free copy when the popup is closed early', async () => {
+      mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+      const hook = renderHook(() => usePassportAuth());
+      await startAttempt(hook);
+
+      popup.closed = true;
+      await act(async () => {
+        vi.advanceTimersByTime(PASSPORT_POPUP_CLOSED_POLL_MS * (PASSPORT_POPUP_CLOSED_CONFIRMATIONS + 1));
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'The Passport window was closed before sign-in finished.',
+      });
+    });
+
+    it('names Passport when the popup is blocked', async () => {
+      openSpy.mockImplementation(() => null);
+      const hook = renderHook(() => usePassportAuth());
+
+      await startAttempt(hook);
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Allow pop-ups for this site to continue with Passport.',
+      });
+    });
+
+    it('names Passport on timeout', async () => {
+      mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+      const hook = renderHook(() => usePassportAuth());
+      await startAttempt(hook);
+
+      await act(async () => {
+        vi.advanceTimersByTime(PASSPORT_ATTEMPT_TIMEOUT_MS);
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Passport sign-in timed out. Try again.',
+      });
+    });
+
+    it('names Passport when the flow fails', async () => {
+      mockGetPassportAuthUrl.mockRejectedValue(new Error('relay down'));
+      const hook = renderHook(() => usePassportAuth());
+
+      await startAttempt(hook);
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Sign in with Passport failed. Try again.',
+      });
+    });
+
+    it('names Passport when no Passport origin is configured', async () => {
+      mockGetPassportUrl.mockReturnValue(undefined);
+      const hook = renderHook(() => usePassportAuth());
+
+      await startAttempt(hook);
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Sign in with Passport is not available right now.',
+      });
+    });
   });
 });

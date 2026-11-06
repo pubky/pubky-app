@@ -1,19 +1,22 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { useId } from 'react';
+import { Loader2, LogIn } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
+import { isPassportAppleEnabled } from '@/config/network';
 import { Google } from '@/icons';
 import { cn } from '@/libs/utils/utils';
 import { PopoverGoogleSignIn } from '@/molecules/PopoverGoogleSignIn/PopoverGoogleSignIn';
 import type { ContinueWithPassportProps } from './ContinueWithPassport.types';
 
 /**
- * "Continue with Google" entry point for Pubky Passport.
- *
- * Google is the only provider Passport supports today, so this renders a single button. The
- * parent owns the `usePassportAuth` attempt and passes its pending state down so the button can
- * be disabled for the whole attempt, including session initialization.
+ * The one entry point for Pubky Passport: "Continue with Google", or, when the deploy's Passport
+ * offers Apple (`isPassportAppleEnabled`), "Continue with Passport" with a neutral sign-in icon and a
+ * muted line under the pill naming the accounts Passport accepts. The person picks the provider in
+ * Passport, so the app never shows the Apple logo: Apple allows it only inside a Sign in with Apple
+ * button. The parent owns the `usePassportAuth` attempt and passes its pending state down so the
+ * button can be disabled for the whole attempt, including session initialization.
  *
  * The help mark explaining what Google does here renders centred with the icon and label as one
  * group, yet stays a sibling of the pill, never nested in it, so it remains reachable while an
@@ -22,10 +25,14 @@ import type { ContinueWithPassportProps } from './ContinueWithPassport.types';
  * the real mark on that slot. The overlay follows the pending label so the two never drift.
  */
 export function ContinueWithPassport({ onContinue, isPending, className }: ContinueWithPassportProps) {
-  const label = isPending ? 'Waiting for Passport...' : 'Continue with Google';
+  const withApple = isPassportAppleEnabled();
+  const hintId = useId();
+  const ProviderIcon = withApple ? LogIn : Google;
+  const idleLabel = withApple ? 'Continue with Passport' : 'Continue with Google';
+  const label = isPending ? 'Waiting for Passport...' : idleLabel;
 
-  return (
-    <div className={cn('relative flex', className)}>
+  const pill = (
+    <div className={cn('relative flex', !withApple && className)}>
       <Button
         type="button"
         variant={ButtonVariant.SECONDARY}
@@ -34,9 +41,14 @@ export function ContinueWithPassport({ onContinue, isPending, className }: Conti
         onClick={onContinue}
         disabled={isPending}
         aria-busy={isPending}
+        aria-describedby={withApple ? hintId : undefined}
         data-testid="continue-with-google"
       >
-        {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Google className="size-4" />}
+        {isPending ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <ProviderIcon className="size-4" />
+        )}
         <Typography as="span" overrideDefaults aria-live="polite">
           {label}
         </Typography>
@@ -52,6 +64,22 @@ export function ContinueWithPassport({ onContinue, isPending, className }: Conti
         </Typography>
         <PopoverGoogleSignIn className="pointer-events-auto" />
       </div>
+    </div>
+  );
+
+  if (!withApple) return pill;
+
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      {pill}
+      <Typography
+        id={hintId}
+        size="xs"
+        className="text-center text-muted-foreground"
+        data-testid="passport-providers-hint"
+      >
+        {'Sign in with your Google or Apple account'}
+      </Typography>
     </div>
   );
 }

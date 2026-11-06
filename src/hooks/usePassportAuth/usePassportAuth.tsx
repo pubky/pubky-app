@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getPassportUrl } from '@/config/network';
+import { getPassportUrl, isPassportAppleEnabled } from '@/config/network';
 import {
   PASSPORT_ATTEMPT_TIMEOUT_MS,
   PASSPORT_POPUP_CLOSED_CONFIRMATIONS,
@@ -65,6 +65,19 @@ const FAILURE_TOAST_COPY: Record<PassportFailureReason, string> = {
   'flow-error': 'Sign in with Google failed. Try again.',
 };
 
+/** Same copy without a provider name when Passport also offers Apple (`isPassportAppleEnabled`). */
+const FAILURE_TOAST_COPY_WITH_APPLE: Record<PassportFailureReason, string> = {
+  'popup-blocked': 'Allow pop-ups for this site to continue with Passport.',
+  cancel: 'Passport sign-in was cancelled.',
+  error: 'Passport could not complete the sign-in. Try again.',
+  'popup-closed': 'The Passport window was closed before sign-in finished.',
+  timeout: 'Passport sign-in timed out. Try again.',
+  'flow-error': 'Sign in with Passport failed. Try again.',
+};
+
+const failureToastCopy = (reason: PassportFailureReason): string =>
+  (isPassportAppleEnabled() ? FAILURE_TOAST_COPY_WITH_APPLE : FAILURE_TOAST_COPY)[reason];
+
 /**
  * Drive one Pubky Passport ("Continue with Google") attempt.
  *
@@ -105,7 +118,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
   const fail = (attempt: PassportAttempt, reason: PassportFailureReason) => {
     if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
     attempt.cancelAuthFlow?.();
-    toast({ variant: 'error', description: FAILURE_TOAST_COPY[reason] });
+    toast({ variant: 'error', description: failureToastCopy(reason) });
     settle(attempt, 'failed');
   };
 
@@ -261,7 +274,12 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
 
     const passportUrl = getPassportUrl();
     if (!passportUrl) {
-      toast({ variant: 'error', description: 'Sign in with Google is not available right now.' });
+      toast({
+        variant: 'error',
+        description: isPassportAppleEnabled()
+          ? 'Sign in with Passport is not available right now.'
+          : 'Sign in with Google is not available right now.',
+      });
       return;
     }
 
@@ -271,7 +289,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     if (!popup) {
       // No auth flow was started and nothing else was touched: report it as its own outcome so
       // callers do not regenerate a Ring request that is still perfectly valid.
-      toast({ variant: 'error', description: FAILURE_TOAST_COPY['popup-blocked'] });
+      toast({ variant: 'error', description: failureToastCopy('popup-blocked') });
       onAttemptSettledRef.current?.({ attemptId, result: 'popup-blocked' });
       return;
     }

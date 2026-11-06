@@ -34,7 +34,9 @@ export function ActionButtons({
 
   return (
     <Container className={cn('gap-4', className)} {...props}>
-      <Container className="flex-col gap-3 sm:flex-row sm:items-center">
+      {/* Baseline, not centre: both buttons start with a size-4 icon, so their baselines sit at their
+          centres and "Join now" stays centred on the Passport pill even when a line sits under it. */}
+      <Container className="flex-col gap-3 sm:flex-row sm:items-baseline">
         <Button
           id="create-account-btn"
           variant="brand"

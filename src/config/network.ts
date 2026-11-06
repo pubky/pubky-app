@@ -9,6 +9,7 @@ import {
   getHomeserver,
   getHomeserverUrl,
   getLockServer,
+  getPassportApple,
   getPassportUrl,
   getPaykitServerUrl,
   getPkarrRelays,
@@ -41,6 +42,17 @@ export {
  */
 export function isPassportConfigured(): boolean {
   return Boolean(getPassportUrl());
+}
+
+/**
+ * True when the Passport button is generic ("Continue with Passport") and names Google and Apple
+ * as the accounts behind it: a Passport origin is configured and
+ * `PUBKY_RUNTIME_PASSPORT_APPLE=true`. Copy only; the person picks the provider in Passport. Off by
+ * default, because Passport keeps Apple login off until its Apple setup is done for that deploy. Same
+ * purity as {@link isPassportConfigured}: the HTTPS check still comes from `usePassportEligibility`.
+ */
+export function isPassportAppleEnabled(): boolean {
+  return isPassportConfigured() && getPassportApple();
 }
 
 /**

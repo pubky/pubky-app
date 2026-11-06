@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
+import { isPassportAppleEnabled } from '@/config/network';
 import { Google } from '@/icons';
 import { cn } from '@/libs/utils/utils';
 import type { ContextualBannerProps } from './ContextualBanner.types';
@@ -20,8 +21,11 @@ const OUTLINE_BUTTON_CLASS = cn('flex-1 bg-input/30 font-bold text-brand-foregro
  * Lime "Join Pubky" bar fixed to the bottom of the viewport (Figma: `Pubky / Contextual banner`).
  * Desktop: one row, full bleed, flush with the viewport, under a fading scrim. Below `lg` it sits
  * on top of the mobile footer as a stacked card (a single row on landscape phones, where height is
- * scarce), and "Continue with Google" is icon-only below `sm`. Only the bar takes pointer input:
- * the scrim is decoration and must not block the page under it.
+ * scarce), and "Continue with Google" is icon-only below `sm`. When the deploy's Passport offers
+ * Apple (`isPassportAppleEnabled`) that button reads "Continue with Passport" with a neutral sign-in
+ * icon instead of the Google logo, and its accessible name adds "(Google or Apple)" (the Apple logo
+ * belongs only in Passport's Sign in with Apple button). Only the bar takes pointer input: the scrim
+ * is decoration and must not block the page under it.
  * Presentational only: `GuestContextualBanner` decides when it shows and what it says.
  */
 export function ContextualBanner({
@@ -33,7 +37,11 @@ export function ContextualBanner({
   isGooglePending = false,
   className,
 }: ContextualBannerProps) {
-  const googleLabel = isGooglePending ? 'Waiting for Passport...' : 'Continue with Google';
+  const withApple = isPassportAppleEnabled();
+  const PassportIcon = withApple ? LogIn : Google;
+  const idleGoogleLabel = withApple ? 'Continue with Passport' : 'Continue with Google';
+  const googleLabel = isGooglePending ? 'Waiting for Passport...' : idleGoogleLabel;
+  const googleAccessibleName = withApple && !isGooglePending ? 'Continue with Passport (Google or Apple)' : googleLabel;
 
   return (
     <section
@@ -86,13 +94,13 @@ export function ContextualBanner({
                   onClick={onContinueWithGoogle}
                   disabled={isGooglePending}
                   aria-busy={isGooglePending}
-                  aria-label={googleLabel}
+                  aria-label={googleAccessibleName}
                   data-testid="contextual-banner-google"
                 >
                   {isGooglePending ? (
                     <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Google className="size-4" aria-hidden="true" />
+                    <PassportIcon className="size-4" aria-hidden="true" />
                   )}
                   <span className="hidden sm:inline">{googleLabel}</span>
                 </Button>
