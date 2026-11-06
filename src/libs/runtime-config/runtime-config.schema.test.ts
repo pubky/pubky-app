@@ -423,4 +423,42 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     ).toBe('https://marketplace.example.com');
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, marketplaceUrl: 'not-a-url' })).toThrow();
   });
+
+  it('leaves moderationDecisionsUrl unset in both modes, so no statements are requested', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).moderationDecisionsUrl).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).moderationDecisionsUrl).toBeUndefined();
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: '  ' }).moderationDecisionsUrl,
+    ).toBeUndefined();
+  });
+
+  it('honors a provided moderationDecisionsUrl and rejects a malformed one', () => {
+    expect(
+      runtimeEnvInputSchemaWithDefaults.parse({ moderationDecisionsUrl: 'https://moderation.example.com' })
+        .moderationDecisionsUrl,
+    ).toBe('https://moderation.example.com');
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: 'https://moderation.example.com' })
+        .moderationDecisionsUrl,
+    ).toBe('https://moderation.example.com');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: 'not-a-url' })).toThrow();
+  });
+
+  it.each([
+    'http://moderation.example.com',
+    'https://moderation.example.com/api',
+    'https://moderation.example.com/?a=1',
+    'https://moderation.example.com/#x',
+    'https://user:pass@moderation.example.com',
+    'ftp://moderation.example.com',
+  ])('rejects %s as a moderationDecisionsUrl, which must be an HTTPS origin', (moderationDecisionsUrl) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl })).toThrow();
+  });
+
+  it('accepts a loopback HTTP moderationDecisionsUrl for development', () => {
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: 'http://localhost:8091' })
+        .moderationDecisionsUrl,
+    ).toBe('http://localhost:8091');
+  });
 });

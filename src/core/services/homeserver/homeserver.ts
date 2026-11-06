@@ -1,4 +1,15 @@
-import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
+import {
+  Address,
+  Client,
+  type CustomPop,
+  type JsonValue,
+  Keypair,
+  Pubky,
+  PublicKey,
+  resolvePubky,
+  Session,
+  Signer,
+} from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import {
@@ -211,6 +222,21 @@ export class HomeserverService {
       }
     }
     return this.pubkySdk;
+  }
+
+  /**
+   * Signs `data` with the signed-in grant session's client key, for a service that must know which user is
+   * asking (a custom proof of possession: it carries the root-signed grant and verifies offline). Makes no
+   * request. Returns `null` when no grant session is signed in; a session restored from a cookie has none.
+   */
+  static async createCustomPop(data: JsonValue): Promise<CustomPop | null> {
+    const grant = useAuthStore.getState().selectSession()?.grant;
+    if (!grant) return null;
+    try {
+      return await grant.createCustomPop(data);
+    } catch (error) {
+      return handleError({ error, additionalContext: { operation: 'createCustomPop' } });
+    }
   }
 
   private static resolveOwnedSessionPath(url: string): TOwnedSessionPath | null {

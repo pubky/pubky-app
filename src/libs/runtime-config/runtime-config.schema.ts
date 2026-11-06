@@ -31,6 +31,22 @@ import { parseRegionModes } from '@/libs/region/regionModes';
 const urlValue = z.url();
 const homeserverValue = z.string().min(1);
 /**
+ * An origin that a signed request is sent to: HTTPS (HTTP only for loopback development), with no credentials,
+ * path, query or fragment, so the request path is the one that was signed.
+ */
+const originValue = z.url().refine((value) => {
+  const url = new URL(value);
+  const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
+  return (
+    (url.protocol === 'https:' || (url.protocol === 'http:' && loopback)) &&
+    url.username === '' &&
+    url.password === '' &&
+    url.pathname === '/' &&
+    url.search === '' &&
+    url.hash === ''
+  );
+}, 'Expected an HTTPS origin (HTTP only for localhost) with no credentials, path, query or fragment');
+/**
  * Declared deploy identity. Drives environment-gated behavior (e.g. the staging
  * homeserver sign-in guard) — declared explicitly instead of inferred from
  * network values, so config drift can never silently flip it (see
@@ -282,6 +298,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   ttlRetryDelayMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlRetryDelayMs),
   profileLocalEditTtlMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.profileLocalEditTtlMs),
   moderationId: pubkyValue.optional(),
+  /** Moderation service origin. Absent leaves moderation statements of reasons unread (nothing is requested). */
+  moderationDecisionsUrl: originValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
   preludeSdkKey: nonEmptyStringValue.optional(),
@@ -380,6 +398,7 @@ export const runtimeEnvInputSchema = z
     ttlRetryDelayMs: optionalPositiveIntFromString,
     profileLocalEditTtlMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
+    moderationDecisionsUrl: optionalUrlFromString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
     preludeSdkKey: optionalTrimmedString,
@@ -477,6 +496,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     ttlRetryDelayMs: optionalPositiveIntFromString,
     profileLocalEditTtlMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
+    moderationDecisionsUrl: optionalUrlFromString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
     preludeSdkKey: optionalTrimmedString,
@@ -567,6 +587,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ttlRetryDelayMs: 'PUBKY_RUNTIME_TTL_RETRY_DELAY_MS',
   profileLocalEditTtlMs: 'PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS',
   moderationId: 'PUBKY_RUNTIME_MODERATION_ID',
+  moderationDecisionsUrl: 'PUBKY_RUNTIME_MODERATION_DECISIONS_URL',
   moderatedTags: 'PUBKY_RUNTIME_MODERATED_TAGS',
   exchangeRateApi: 'PUBKY_RUNTIME_EXCHANGE_RATE_API',
   preludeSdkKey: 'PUBKY_RUNTIME_PRELUDE_SDK_KEY',
