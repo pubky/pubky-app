@@ -1,8 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { ContextualBanner } from './ContextualBanner';
 import type { ContextualBannerProps } from './ContextualBanner.types';
+
+const mockIsPassportAppleEnabled = vi.fn(() => false);
+
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  isPassportAppleEnabled: () => mockIsPassportAppleEnabled(),
+}));
 
 const HEADLINE = 'Get to know Satoshi';
 const BODY = 'Join Pubky to follow Satoshi and take part in the conversation.';
@@ -20,6 +27,10 @@ function renderBanner(overrides: Partial<ContextualBannerProps> = {}) {
 }
 
 describe('ContextualBanner', () => {
+  beforeEach(() => {
+    mockIsPassportAppleEnabled.mockReturnValue(false);
+  });
+
   it('renders a region named "Join Pubky" with the headline and body', () => {
     renderBanner();
 
@@ -143,5 +154,31 @@ describe('ContextualBanner', () => {
     const region = screen.getByRole('region', { name: 'Join Pubky' });
     expect(region).toHaveClass('custom-banner-class');
     expect(region).toHaveClass('fixed', 'inset-x-0', 'z-40');
+  });
+
+  it('reads "Continue with Passport" with a neutral icon when Passport also offers Apple', () => {
+    mockIsPassportAppleEnabled.mockReturnValue(true);
+    const onContinueWithGoogle = vi.fn();
+    renderBanner({ onContinueWithGoogle });
+
+    const button = screen.getByRole('button', { name: 'Continue with Passport (Google or Apple)' });
+    // Icon-only below `sm`: the aria-label carries the full text.
+    expect(button).toHaveAttribute('aria-label', 'Continue with Passport (Google or Apple)');
+    expect(button).toHaveTextContent('Continue with Passport');
+    const icons = button.querySelectorAll('svg');
+    expect(icons).toHaveLength(1);
+    expect(icons[0]).toHaveClass('lucide-log-in');
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+
+    fireEvent.click(button);
+    expect(onContinueWithGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the pending label as the name while an attempt runs with Apple on', () => {
+    mockIsPassportAppleEnabled.mockReturnValue(true);
+    renderBanner({ onContinueWithGoogle: vi.fn(), isGooglePending: true });
+
+    const button = screen.getByRole('button', { name: 'Waiting for Passport...' });
+    expect(button).toBeDisabled();
   });
 });

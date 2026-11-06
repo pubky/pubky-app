@@ -213,6 +213,8 @@ export const getPlausibleDomain = (): string | undefined => getRuntimeConfig().p
 export const getPlausibleScriptUrl = (): string | undefined => getRuntimeConfig().plausibleScriptUrl;
 /** Pubky Passport signer origin; `undefined` disables every "Continue with Google" entry point. */
 export const getPassportUrl = (): string | undefined => getRuntimeConfig().passportUrl;
+/** Whether the Passport button is generic and names Google and Apple (`PUBKY_RUNTIME_PASSPORT_APPLE`, default off). */
+export const getPassportApple = (): boolean => getRuntimeConfig().passportApple;
 /** Marketplace transaction service origin; `undefined` leaves sign-out unable to revoke Shop sessions there. */
 export const getMarketplaceUrl = (): string | undefined => getRuntimeConfig().marketplaceUrl;
 export const getPreviewImage = (): string => getRuntimeConfig().previewImage;

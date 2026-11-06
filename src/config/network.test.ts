@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES, isStagingHomeserverDeploy } from '@/config/network';
+import {
+  getHomeserverCapabilities,
+  HOMESERVER_CAPABILITIES,
+  isPassportAppleEnabled,
+  isStagingHomeserverDeploy,
+} from '@/config/network';
 import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 
 /** Run with PUBKY_RUNTIME_* overrides, restoring env and memoized config after. */
@@ -46,6 +51,38 @@ describe('isStagingHomeserverDeploy', () => {
       },
       () => {
         expect(isStagingHomeserverDeploy()).toBe(true);
+      },
+    );
+  });
+});
+
+describe('isPassportAppleEnabled', () => {
+  it('is off by default', () => {
+    withRuntimeEnv({ PUBKY_RUNTIME_PASSPORT_APPLE: undefined }, () => {
+      expect(isPassportAppleEnabled()).toBe(false);
+    });
+  });
+
+  it('is on when the flag is true and a Passport origin is configured', () => {
+    withRuntimeEnv(
+      { PUBKY_RUNTIME_PASSPORT_APPLE: 'true', PUBKY_RUNTIME_PASSPORT_URL: 'https://passport.example.com' },
+      () => {
+        expect(isPassportAppleEnabled()).toBe(true);
+      },
+    );
+  });
+
+  it('stays off without a Passport origin even when the flag is true', () => {
+    withRuntimeEnv({ PUBKY_RUNTIME_PASSPORT_APPLE: 'true', PUBKY_RUNTIME_PASSPORT_URL: '' }, () => {
+      expect(isPassportAppleEnabled()).toBe(false);
+    });
+  });
+
+  it('is off when the flag is false', () => {
+    withRuntimeEnv(
+      { PUBKY_RUNTIME_PASSPORT_APPLE: 'false', PUBKY_RUNTIME_PASSPORT_URL: 'https://passport.example.com' },
+      () => {
+        expect(isPassportAppleEnabled()).toBe(false);
       },
     );
   });
