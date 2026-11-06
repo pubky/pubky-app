@@ -26,6 +26,9 @@ updates:
       # (e.g. 2026-10-22: next, @sentry/nextjs, sharp) lands as a single
       # reviewable change. Exact pins in package.json do not block security
       # updates: Dependabot bumps the pin to the minimum patched version.
+      # Trade-off: one failing update in the group (e.g. a semver-major fix)
+      # holds the others back, and there is no native ungroup — split the PR
+      # manually when a critical is blocked.
       security:
         applies-to: security-updates
         patterns:
@@ -68,7 +71,7 @@ updates:
 
   # The Dockerfile pins `node:lts-alpine`, a floating tag, so Dependabot has no
   # version to bump and this entry is inert until the base image is pinned by
-  # version or digest (see the security checklist in docs/development-workflow.md).
+  # version or digest (see docs/development-workflow.md, "Dependency Security").
   # Base-image freshness today comes from rebuilding the image.
   - package-ecosystem: docker
     directory: /
