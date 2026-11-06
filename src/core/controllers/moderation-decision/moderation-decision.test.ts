@@ -144,16 +144,17 @@ describe('ModerationDecisionController.fetchDecisions', () => {
           finishFirst = resolve;
         }),
       )
+      .mockResolvedValueOnce({ status: 'ready', decisions: [] })
       .mockResolvedValueOnce({ status: 'ready', decisions: [null] });
 
     const first = ModerationDecisionController.fetchDecisions(ALICE);
-    vi.advanceTimersByTime(MODERATION_DECISION_FRESH_MS);
-    // The first read is still in flight, so a second call is refused; settle it first to allow a refresh.
+    await ModerationDecisionController.fetchDecisions(BOB);
+    await ModerationDecisionController.fetchDecisions(ALICE);
+    expect(useModerationDecisionStore.getState().decisions).toEqual([null]);
+
     finishFirst({ status: 'ready', decisions: [decision] });
     await first;
-    vi.advanceTimersByTime(MODERATION_DECISION_FRESH_MS);
-    await ModerationDecisionController.fetchDecisions(ALICE);
 
-    expect(useModerationDecisionStore.getState().decisions).toEqual([null]);
+    expect(useModerationDecisionStore.getState()).toMatchObject({ forPubky: ALICE, decisions: [null] });
   });
 });
