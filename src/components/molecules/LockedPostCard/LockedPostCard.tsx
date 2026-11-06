@@ -1,6 +1,6 @@
 'use client';
 
-import { type MouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent, type PointerEvent, useEffect, useRef, useState } from 'react';
 import { LockOpen, Pencil, Wallet } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
@@ -52,6 +52,12 @@ const HIDDEN_REQUIREMENT_MASK = '••••••';
  *  Exported for tests (they advance fake timers by exactly this). */
 export const SLIDE_MS = 200;
 
+/** Releasing a drag this far along the slide unlocks; releasing earlier slides the button back. */
+const DRAG_UNLOCK_RATIO = 0.9;
+
+/** Less movement than this is still a click, so an unsteady tap is not lost. */
+const DRAG_SLOP_PX = 10;
+
 /** The shared lock card. */
 export function LockedPostCard({
   contentKind,
@@ -85,7 +91,11 @@ export function LockedPostCard({
   const lockInfoRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const slideTimer = useRef<number | null>(null);
+  const dragPress = useRef<{ pointerId: number; x: number; y: number; travel: number } | null>(null);
+  // Outlives the release: the browser's click comes after pointerup and must not unlock as well.
+  const didDrag = useRef(false);
   const [slideX, setSlideX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   // Snap the button back once the modal closes; it stays parked (slideX kept) while open.
@@ -100,23 +110,83 @@ export function LockedPostCard({
     };
   }, []);
 
-  const handleUnlock = (event: MouseEvent) => {
-    event.stopPropagation();
-    // The ref guard also blocks a double-click: a second click during the slide is a no-op.
-    if (isDisabled || slideTimer.current !== null) return;
+  // A disabled button may never get the pointerup, and a release after this point must not unlock.
+  useEffect(() => {
+    if (!isDisabled || !dragPress.current) return;
+    dragPress.current = null;
+    setIsDragging(false);
+    setSlideX(0);
+  }, [isDisabled]);
+
+  // From the button's left edge to the price/mask's, so the button covers it.
+  const getSlideDistance = () => {
+    const button = buttonRef.current;
+    const lockInfo = lockInfoRef.current;
+    return button && lockInfo ? lockInfo.offsetLeft - button.offsetLeft : 0;
+  };
+
+  const startUnlock = () => {
+    // One slide at a time: a second click, or a keyboard press during a drag, is a no-op.
+    if (slideTimer.current !== null) return;
     if (!slideOnUnlock) {
+      // A drag has to return by itself here: no modal follows to snap the button back.
+      setSlideX(0);
       onUnlock?.();
       return;
     }
 
-    const button = buttonRef.current;
-    const lockInfo = lockInfoRef.current;
-    // Slide the button's left edge onto the price/mask's, covering it; then open the modal.
-    if (button && lockInfo) setSlideX(lockInfo.offsetLeft - button.offsetLeft);
+    setSlideX(getSlideDistance());
     slideTimer.current = window.setTimeout(() => {
       slideTimer.current = null;
       onUnlock?.();
     }, SLIDE_MS);
+  };
+
+  const handleUnlock = (event: MouseEvent) => {
+    event.stopPropagation();
+    // A touch drag sends no click, so `didDrag` can still be set when a keyboard press (`detail` 0) arrives.
+    if (didDrag.current && event.detail > 0) {
+      didDrag.current = false;
+      return;
+    }
+    if (isDisabled) return;
+    startUnlock();
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    if (isDisabled || !event.isPrimary || event.button !== 0 || slideTimer.current !== null) return;
+    didDrag.current = false;
+    dragPress.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, travel: getSlideDistance() };
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // A pointer the browser already released cannot be captured; a click still works without it.
+    }
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    const press = dragPress.current;
+    if (press?.pointerId !== event.pointerId) return;
+    if (!didDrag.current) {
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= DRAG_SLOP_PX) return;
+      didDrag.current = true;
+      setIsDragging(true);
+    }
+    setSlideX(Math.max(0, Math.min(event.clientX - press.x, press.travel)));
+  };
+
+  // Also runs on pointercancel, which the browser sends when it takes a touch over to scroll the page.
+  const handlePointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
+    const press = dragPress.current;
+    if (press?.pointerId !== event.pointerId) return;
+    dragPress.current = null;
+    if (!didDrag.current) return;
+    setIsDragging(false);
+    // No click follows a cancel, so nothing else would clear `didDrag` for a click without a pointerdown.
+    if (event.type === 'pointercancel') didDrag.current = false;
+    const reachedEnd = event.type === 'pointerup' && event.clientX - press.x >= press.travel * DRAG_UNLOCK_RATIO;
+    if (reachedEnd) startUnlock();
+    else setSlideX(0);
   };
 
   return (
@@ -212,9 +282,15 @@ export function LockedPostCard({
             variant={ButtonVariant.BRAND}
             disabled={isDisabled}
             onClick={handleUnlock}
-            style={{ transform: `translateX(${slideX}px)`, transitionDuration: `${SLIDE_MS}ms` }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerEnd}
+            onPointerCancel={handlePointerEnd}
+            // No transition during a drag, or the button would trail the pointer by SLIDE_MS.
+            style={{ transform: `translateX(${slideX}px)`, transitionDuration: isDragging ? '0ms' : `${SLIDE_MS}ms` }}
             className={cn(
-              'relative z-10 h-10 gap-2 rounded-full px-4 transition-transform ease-out',
+              // `touch-pan-y`: the page still scrolls from here, and the horizontal drag stays with us.
+              'relative z-10 h-10 touch-pan-y gap-2 rounded-full px-4 transition-transform ease-out select-none',
               !onChangePrice && 'disabled:opacity-100',
               isLoading && 'invisible',
             )}
