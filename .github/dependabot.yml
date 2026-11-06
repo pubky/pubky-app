@@ -30,8 +30,8 @@ updates:
       # is no native ungroup — split a PR manually when a critical is blocked.
       # Exact pins in package.json do not block security updates: Dependabot
       # bumps the pin to the minimum patched version. The type is the
-      # package.json declaration: since #3073 moved the vitest packages to
-      # devDependencies, test tooling groups as development automatically.
+      # package.json declaration: the vitest packages are declared in
+      # devDependencies, so test tooling groups as development.
       security-production:
         applies-to: security-updates
         dependency-type: production
