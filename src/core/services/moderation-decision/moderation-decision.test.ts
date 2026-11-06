@@ -45,7 +45,7 @@ describe('ModerationDecisionService.fetchDecisions', () => {
       path: '/v1/decisions',
     });
     expect(mockFetch).toHaveBeenCalledWith(
-      `${ORIGIN}/v1/decisions`,
+      new URL(`${ORIGIN}/v1/decisions`),
       expect.objectContaining({
         method: 'GET',
         headers: { Authorization: 'Pubky-Pop grant=aaa.bbb.ccc, pop=ddd.eee.fff' },
@@ -63,7 +63,7 @@ describe('ModerationDecisionService.fetchDecisions', () => {
 
     await ModerationDecisionService.fetchDecisions();
 
-    expect(mockFetch).toHaveBeenCalledWith(`${ORIGIN}/v1/decisions`, expect.anything());
+    expect(mockFetch).toHaveBeenCalledWith(new URL(`${ORIGIN}/v1/decisions`), expect.anything());
   });
 
   it('reads every statement the service sent, as it sent them', async () => {
@@ -125,6 +125,22 @@ describe('ModerationDecisionService.fetchDecisions', () => {
       null,
       'account_disabled',
     ]);
+  });
+
+  it('ignores statements beyond the 100 the service returns', async () => {
+    mockFetch.mockResolvedValue(json({ decisions: Array.from({ length: 150 }, () => wire.content_removed) }));
+
+    const result = await ModerationDecisionService.fetchDecisions();
+
+    expect(result.status === 'ready' && result.decisions.length).toBe(100);
+  });
+
+  it('logs the name of a failure, never the error itself', async () => {
+    mockFetch.mockRejectedValue(new TypeError('Failed to fetch Authorization: Pubky-Pop grant=aaa.bbb.ccc'));
+
+    await ModerationDecisionService.fetchDecisions();
+
+    expect(warn).toHaveBeenCalledWith(expect.any(String), { name: 'TypeError' });
   });
 
   it('is ready and empty for a user with no statements', async () => {

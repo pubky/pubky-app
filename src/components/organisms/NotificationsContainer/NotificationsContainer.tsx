@@ -62,19 +62,27 @@ export function NotificationsContainer() {
   }, [markAllAsRead, isAuthenticated]);
 
   if (isLoading) {
-    return <NotificationsContainerSkeleton />;
+    return (
+      <>
+        <ModerationDecisionNotices />
+        <NotificationsContainerSkeleton />
+      </>
+    );
   }
 
   // A failure with nothing loaded yet is a dead end, so it owns the page. A failure
   // with rows on screen must not throw them away — it renders inline below the list.
   if (error && notifications.length === 0) {
     return (
-      <Container overrideDefaults={true} className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">{error}</p>
-        <Button variant={ButtonVariant.SECONDARY} type="button" onClick={refresh} data-cy="notifications-retry">
-          {'Try again'}
-        </Button>
-      </Container>
+      <>
+        <ModerationDecisionNotices />
+        <Container overrideDefaults={true} className="flex flex-col items-center justify-center gap-4 py-12">
+          <p className="text-muted-foreground">{error}</p>
+          <Button variant={ButtonVariant.SECONDARY} type="button" onClick={refresh} data-cy="notifications-retry">
+            {'Try again'}
+          </Button>
+        </Container>
+      </>
     );
   }
 

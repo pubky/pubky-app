@@ -31,6 +31,22 @@ import { parseRegionModes } from '@/libs/region/regionModes';
 const urlValue = z.url();
 const homeserverValue = z.string().min(1);
 /**
+ * An origin that a signed request is sent to: HTTPS (HTTP only for loopback development), with no credentials,
+ * path, query or fragment, so the request path is the one that was signed.
+ */
+const originValue = z.url().refine((value) => {
+  const url = new URL(value);
+  const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
+  return (
+    (url.protocol === 'https:' || (url.protocol === 'http:' && loopback)) &&
+    url.username === '' &&
+    url.password === '' &&
+    url.pathname === '/' &&
+    url.search === '' &&
+    url.hash === ''
+  );
+}, 'Expected an HTTPS origin (HTTP only for localhost) with no credentials, path, query or fragment');
+/**
  * Declared deploy identity. Drives environment-gated behavior (e.g. the staging
  * homeserver sign-in guard) — declared explicitly instead of inferred from
  * network values, so config drift can never silently flip it (see
@@ -283,7 +299,7 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   profileLocalEditTtlMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.profileLocalEditTtlMs),
   moderationId: pubkyValue.optional(),
   /** Moderation service origin. Absent leaves moderation statements of reasons unread (nothing is requested). */
-  moderationDecisionsUrl: urlValue.optional(),
+  moderationDecisionsUrl: originValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
   preludeSdkKey: nonEmptyStringValue.optional(),

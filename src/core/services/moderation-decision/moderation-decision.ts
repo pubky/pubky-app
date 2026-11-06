@@ -7,6 +7,8 @@ export const DECISIONS_PATH = '/v1/decisions';
 
 const AUDIENCE = 'pubky-moderation';
 const TIMEOUT_MS = 8000;
+/** The service never returns more; anything beyond is ignored. */
+const MAX_DECISIONS = 100;
 const UNAVAILABLE: TModerationDecisionsResult = { status: 'unavailable' };
 
 /**
@@ -32,7 +34,7 @@ export class ModerationDecisionService {
         path: DECISIONS_PATH,
       });
       if (!credentials) return UNAVAILABLE;
-      const response = await fetch(`${origin.replace(/\/+$/, '')}${DECISIONS_PATH}`, {
+      const response = await fetch(new URL(DECISIONS_PATH, origin), {
         method: 'GET',
         headers: { Authorization: `Pubky-Pop grant=${credentials.grant}, pop=${credentials.pop}` },
         credentials: 'omit',
@@ -50,13 +52,16 @@ export class ModerationDecisionService {
       }
       return {
         status: 'ready',
-        decisions: body.decisions.map((entry: unknown) => {
+        decisions: body.decisions.slice(0, MAX_DECISIONS).map((entry: unknown) => {
           const parsed = moderationDecisionSchema.safeParse(entry);
           return parsed.success ? parsed.data : null;
         }),
       };
     } catch (error) {
-      Logger.warn('[ModerationDecisionService:fetchDecisions] failed', { error });
+      // Name only: an error object could carry the request it failed on, and the request carries the proof.
+      Logger.warn('[ModerationDecisionService:fetchDecisions] failed', {
+        name: error instanceof Error ? error.name : 'unknown',
+      });
       return UNAVAILABLE;
     } finally {
       clearTimeout(timer);

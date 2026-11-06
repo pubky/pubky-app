@@ -5,6 +5,9 @@ import { useModerationDecisionStore } from '@/stores/moderationDecision/moderati
 /** A read, successful or not, is reused for this long, so opening the page twice does not ask twice. */
 export const MODERATION_DECISION_FRESH_MS = 60_000;
 
+/** Counts reads, so only the latest one may commit its result. */
+let latestRead = 0;
+
 export class ModerationDecisionController {
   private constructor() {}
 
@@ -20,9 +23,10 @@ export class ModerationDecisionController {
       if (store.status !== 'idle' && Date.now() - store.settledAt < MODERATION_DECISION_FRESH_MS) return;
     }
     store.markLoading(pubky);
+    const read = ++latestRead;
     const result = await ModerationDecisionApplication.fetchDecisions();
-    // Signing out or switching accounts while the read was in flight must not hand these to the next user.
-    if (useModerationDecisionStore.getState().forPubky !== pubky) return;
+    // A newer read, or another account taking over while this one was in flight, owns the store now.
+    if (read !== latestRead || useModerationDecisionStore.getState().forPubky !== pubky) return;
     if (result.status === 'ready') store.markReady(pubky, result.decisions, Date.now());
     else store.markFailed(pubky, Date.now());
   }

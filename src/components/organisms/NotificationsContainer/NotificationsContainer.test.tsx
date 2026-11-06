@@ -152,6 +152,36 @@ describe('NotificationsContainer', () => {
     expect(screen.queryByTestId('moderation-decision-card')).not.toBeInTheDocument();
   });
 
+  it('shows the statements of reasons while notifications load and when they fail with nothing loaded', () => {
+    const base = {
+      notifications: [],
+      unreadNotifications: [],
+      count: 0,
+      unreadCount: 0,
+      isLoadingMore: false,
+      hasMore: false,
+      loadMore: vi.fn(),
+      refresh: vi.fn(),
+      markAllAsRead: vi.fn(),
+      isNotificationUnread: vi.fn(() => false),
+    };
+    vi.mocked(useModerationDecisions).mockReturnValue([null]);
+    vi.mocked(useNotifications).mockReturnValueOnce({ ...base, isLoading: true, error: null });
+    const { unmount } = render(<NotificationsContainer />);
+    expect(screen.getByTestId('moderation-decision-card')).toBeInTheDocument();
+    unmount();
+
+    vi.mocked(useNotifications).mockReturnValueOnce({
+      ...base,
+      isLoading: false,
+      error: 'Failed to load notifications',
+    });
+    render(<NotificationsContainer />);
+    expect(screen.getByTestId('moderation-decision-card')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load notifications')).toBeInTheDocument();
+    vi.mocked(useModerationDecisions).mockReturnValue([]);
+  });
+
   it('shows loading state', () => {
     vi.mocked(useNotifications).mockReturnValueOnce({
       notifications: [],

@@ -135,4 +135,25 @@ describe('ModerationDecisionController.fetchDecisions', () => {
 
     expect(useModerationDecisionStore.getState()).toMatchObject({ forPubky: BOB, status: 'ready', decisions: [] });
   });
+
+  it('lets only the latest read commit, so an older one settling late cannot overwrite it', async () => {
+    let finishFirst: (value: { status: 'ready'; decisions: TModerationDecision[] }) => void = () => {};
+    vi.mocked(ModerationDecisionApplication.fetchDecisions)
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishFirst = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({ status: 'ready', decisions: [null] });
+
+    const first = ModerationDecisionController.fetchDecisions(ALICE);
+    vi.advanceTimersByTime(MODERATION_DECISION_FRESH_MS);
+    // The first read is still in flight, so a second call is refused; settle it first to allow a refresh.
+    finishFirst({ status: 'ready', decisions: [decision] });
+    await first;
+    vi.advanceTimersByTime(MODERATION_DECISION_FRESH_MS);
+    await ModerationDecisionController.fetchDecisions(ALICE);
+
+    expect(useModerationDecisionStore.getState().decisions).toEqual([null]);
+  });
 });

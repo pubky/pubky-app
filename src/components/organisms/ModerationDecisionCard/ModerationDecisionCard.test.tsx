@@ -135,6 +135,64 @@ describe('ModerationDecisionCard', () => {
   });
 });
 
+describe('ModerationDecisionCard basis and automation', () => {
+  const combos: [TModerationDecision['basis'], boolean, boolean, string][] = [
+    ['own_initiative', true, true, 'Automated means detected this and took the decision.'],
+    [
+      'own_initiative',
+      true,
+      false,
+      'Automated means detected this. A person on the moderation team took the decision.',
+    ],
+    ['own_initiative', false, true, 'A person found this. The decision was taken by automated means.'],
+    [
+      'own_initiative',
+      false,
+      false,
+      'A person on the moderation team found this and took the decision. No automated means were used.',
+    ],
+    ['notice', true, true, 'Automated means detected this and took the decision.'],
+    ['notice', true, false, 'Automated means detected this. A person on the moderation team took the decision.'],
+    ['notice', false, true, 'The decision was taken by automated means.'],
+    ['notice', false, false, 'A person on the moderation team took the decision. No automated means were used.'],
+  ];
+
+  it.each(combos)(
+    'on %s, detection %s, decision %s, says only what is true',
+    (basis, detection, decision, expected) => {
+      render(
+        <ModerationDecisionCard
+          decision={{
+            ...removed,
+            basis,
+            automatedDetection: detection,
+            automatedDecision: decision,
+            automatedMeans: detection || decision ? 'x' : null,
+          }}
+        />,
+      );
+
+      expect(text('moderation-decision-automation')).toBe(expected);
+      if (basis === 'notice') expect(screen.queryByText(/found this/)).not.toBeInTheDocument();
+    },
+  );
+});
+
+describe('ModerationDecisionCard post link', () => {
+  it.each([
+    'pubky://../pub/pubky.app/posts/..',
+    `pubky://${'l'.repeat(52)}/pub/pubky.app/posts/0035Z5M4Q4ZJR`,
+    'pubky://pj4zgncghi4yiexja4q3gb8d9fa18kk5uehpuyugfag3q6ia4azo/pub/pubky.app/posts/..',
+    'pubky://pj4zgncghi4yiexja4q3gb8d9fa18kk5uehpuyugfag3q6ia4azo/pub/pubky.app/posts/0035Z5M4Q4Z?x',
+    'pubky://pj4zgncghi4yiexja4q3gb8d9fa18kk5uehpuyugfag3q6ia4azo/pub/pubky.app/posts/%2e%2e%2f%2e%2e',
+    'pubky://pj4zgncghi4yiexja4q3gb8d9fa18kk5uehpuyugfag3q6ia4azo/pub/pubky.app/posts/0035Z5M4Q4ZJR/extra',
+  ])('offers no link for %s', (targetUri) => {
+    render(<ModerationDecisionCard decision={{ ...tagged, targetUri }} />);
+
+    expect(screen.queryByRole('link', { name: 'View the post' })).not.toBeInTheDocument();
+  });
+});
+
 describe('moderationAppealHref', () => {
   it('encodes the subject', () => {
     expect(moderationAppealHref('a b')).toBe('mailto:report@synonym.to?subject=Appeal%20a%20b');

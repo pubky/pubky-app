@@ -443,4 +443,22 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     ).toBe('https://moderation.example.com');
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: 'not-a-url' })).toThrow();
   });
+
+  it.each([
+    'http://moderation.example.com',
+    'https://moderation.example.com/api',
+    'https://moderation.example.com/?a=1',
+    'https://moderation.example.com/#x',
+    'https://user:pass@moderation.example.com',
+    'ftp://moderation.example.com',
+  ])('rejects %s as a moderationDecisionsUrl, which must be an HTTPS origin', (moderationDecisionsUrl) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl })).toThrow();
+  });
+
+  it('accepts a loopback HTTP moderationDecisionsUrl for development', () => {
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: 'http://localhost:8091' })
+        .moderationDecisionsUrl,
+    ).toBe('http://localhost:8091');
+  });
 });

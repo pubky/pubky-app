@@ -27,15 +27,25 @@ const BASIS_COPY: Record<TModerationDecision['basis'], string> = {
 
 const OTHER_REDRESS =
   'You can also take the decision to a certified out-of-court dispute settlement body, or to a court.';
-const POST_URI_PATTERN = /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/posts\/([^/]+)$/;
+const POST_URI_PATTERN = /^pubky:\/\/([ybndrfg8ejkmcpqxot1uwisza345h769]{52})\/pub\/pubky\.app\/posts\/([0-9A-Z]{13})$/;
 
-function automationCopy(decision: Pick<TModerationDecision, 'automatedDetection' | 'automatedDecision'>): string {
+/**
+ * How the decision was taken. The basis line already says whether a report started it, so a decision on a report
+ * never claims that a person found the content.
+ */
+function automationCopy(
+  decision: Pick<TModerationDecision, 'automatedDetection' | 'automatedDecision' | 'basis'>,
+): string {
+  const found = decision.basis === 'own_initiative';
   if (decision.automatedDetection && decision.automatedDecision)
     return 'Automated means detected this and took the decision.';
   if (decision.automatedDetection)
     return 'Automated means detected this. A person on the moderation team took the decision.';
-  if (decision.automatedDecision) return 'A person found this. The decision was taken by automated means.';
-  return 'A person on the moderation team found this and took the decision. No automated means were used.';
+  if (decision.automatedDecision)
+    return `${found ? 'A person found this. ' : ''}The decision was taken by automated means.`;
+  return found
+    ? 'A person on the moderation team found this and took the decision. No automated means were used.'
+    : 'A person on the moderation team took the decision. No automated means were used.';
 }
 
 /** The appeal email, with the decision's reference in the subject when it is known. */
