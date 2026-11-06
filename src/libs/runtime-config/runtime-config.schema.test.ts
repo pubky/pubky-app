@@ -423,4 +423,24 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     ).toBe('https://marketplace.example.com');
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, marketplaceUrl: 'not-a-url' })).toThrow();
   });
+
+  it('leaves moderationDecisionsUrl unset in both modes, so no statements are requested', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).moderationDecisionsUrl).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).moderationDecisionsUrl).toBeUndefined();
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: '  ' }).moderationDecisionsUrl,
+    ).toBeUndefined();
+  });
+
+  it('honors a provided moderationDecisionsUrl and rejects a malformed one', () => {
+    expect(
+      runtimeEnvInputSchemaWithDefaults.parse({ moderationDecisionsUrl: 'https://moderation.example.com' })
+        .moderationDecisionsUrl,
+    ).toBe('https://moderation.example.com');
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: 'https://moderation.example.com' })
+        .moderationDecisionsUrl,
+    ).toBe('https://moderation.example.com');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationDecisionsUrl: 'not-a-url' })).toThrow();
+  });
 });

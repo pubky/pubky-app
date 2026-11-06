@@ -1,0 +1,50 @@
+{
+  "account_disabled": {
+    "automated_decision": true,
+    "automated_detection": true,
+    "automated_means": "Checkstep's automated content analysis detected the violations, and the moderation service applied the account policy automatically.",
+    "basis": "own_initiative",
+    "decided_at": "2026-11-06T07:25:37Z",
+    "ends_at": null,
+    "explanation": "The Terms allow Synonym to suspend or disable access to the Platform for repeatedly providing prohibited content or otherwise breaching the Terms.",
+    "facts": "The account reached the limit that the moderation policy sets for personal information content: 3 confirmed violations.",
+    "ground": "terms",
+    "ground_reference": "Pubky Terms of Service, Termination and No Liability for Termination",
+    "id": "38b58009-cae4-8e7d-b3cf-564ebd999bb5",
+    "restriction": "account_disabled",
+    "target_uri": null,
+    "territorial_scope": "Everywhere pubky.app is offered"
+  },
+  "content_removed": {
+    "automated_decision": false,
+    "automated_detection": true,
+    "automated_means": "Checkstep's automated content analysis detected this content. A person on the moderation team reviewed it and took the decision.",
+    "basis": "own_initiative",
+    "decided_at": "2026-11-06T07:25:36Z",
+    "ends_at": null,
+    "explanation": "The Community Guidelines do not allow content that posts or discloses personally identifying information about any person.",
+    "facts": "The content was identified as personal information content by Checkstep's content analysis, and a person on the moderation team confirmed it.",
+    "ground": "terms",
+    "ground_reference": "Pubky Terms of Service, Community Guidelines: disclosing personally identifying information about any person",
+    "id": "38c2731a-d8e5-890c-ad6c-6172fdb67488",
+    "restriction": "content_removed",
+    "target_uri": "pubky://x1twpeg3zprgf8cj4sw66hjc1h6xf5536r5zfmgzfubjkjxyj58o/pub/pubky.app/posts/0035Z5M4QEJ8A",
+    "territorial_scope": "Everywhere pubky.app is offered"
+  },
+  "content_visibility_restricted": {
+    "automated_decision": true,
+    "automated_detection": true,
+    "automated_means": "Checkstep's automated content analysis detected this content and the decision was taken by automated means.",
+    "basis": "own_initiative",
+    "decided_at": "2026-11-06T07:25:36Z",
+    "ends_at": null,
+    "explanation": "The Community Guidelines do not allow offensive content, including harassment and discrimination, or content that promotes, supports or incites groups that engage in hateful acts.",
+    "facts": "The content was identified as hate speech content by Checkstep's content analysis.",
+    "ground": "terms",
+    "ground_reference": "Pubky Terms of Service, Community Guidelines: offensive content, including harassment and discrimination, and content that promotes hateful acts",
+    "id": "481d54f9-bdbf-83f3-9ec3-39ffc2891179",
+    "restriction": "content_visibility_restricted",
+    "target_uri": "pubky://pj4zgncghi4yiexja4q3gb8d9fa18kk5uehpuyugfag3q6ia4azo/pub/pubky.app/posts/0035Z5M4Q4ZJR",
+    "territorial_scope": "Everywhere pubky.app is offered"
+  }
+}

@@ -8,6 +8,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { NotificationsEmpty } from '@/molecules/NotificationsEmpty/NotificationsEmpty';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { ModerationDecisionNotices } from '../ModerationDecisionNotices/ModerationDecisionNotices';
 import { NotificationsList } from '../NotificationsList/NotificationsList';
 import { groupNotifications } from '../NotificationsList/NotificationsList.utils';
 import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from './NotificationsContainer.skeleton';
@@ -79,11 +80,17 @@ export function NotificationsContainer() {
 
   // Empty state
   if (notifications.length === 0) {
-    return <NotificationsEmpty />;
+    return (
+      <>
+        <ModerationDecisionNotices />
+        <NotificationsEmpty />
+      </>
+    );
   }
 
   return (
     <>
+      <ModerationDecisionNotices />
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Notifications {unreadNotifications.length > 0 && `(${unreadNotifications.length})`}
       </Heading>
