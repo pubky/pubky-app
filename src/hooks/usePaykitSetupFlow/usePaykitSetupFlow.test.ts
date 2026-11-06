@@ -1,5 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IFRAME_MOUNT_TIMEOUT_MS, IFRAME_READY_AFTER_LOAD_MS } from '@/hooks/useIframeReady/useIframeReady';
+import { ErrorCategory } from '@/libs/error/error.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { usePaykitSetupFlow } from './usePaykitSetupFlow';
@@ -13,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 const PAYKIT_SETUP_MESSAGE_TYPE = 'paykit-setup-callback';
+const PAYKIT_SETUP_READY_MESSAGE_TYPE = 'paykit-setup-ready';
 const PAYKIT_ORIGIN = 'https://paykit.server';
 
 vi.mock('@/controllers/locks/locks', () => ({
@@ -23,7 +26,9 @@ vi.mock('@/controllers/locks/locks', () => ({
   },
 }));
 
-vi.mock('./usePaykitSetupFlow.utils', () => ({
+// The ready check stays real: it is the contract under test in the readiness block below.
+vi.mock('./usePaykitSetupFlow.utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./usePaykitSetupFlow.utils')>()),
   readPaykitSetupBridgeMessage: mocks.readBridge,
 }));
 
@@ -54,7 +59,9 @@ describe('usePaykitSetupFlow', () => {
     useLocksAuthStore.setState({ ...locksAuthInitialState, locksSessionSecret: 'secret-abc' });
     mocks.getPaykitSetupUrl.mockReturnValue(`${PAYKIT_ORIGIN}/setup?return_to=https://app.example&state=STATE`);
     mocks.readBridge.mockImplementation((_event: MessageEvent, _source: MessageEventSource | null, _origin: string) => {
-      const data = _event.data as Partial<{ state: string; error: string }>;
+      const data = _event.data as Partial<{ type: string; state: string; error: string }>;
+      // Like the real bridge: only the callback type counts, so a ready report is never a callback.
+      if (data.type === PAYKIT_SETUP_READY_MESSAGE_TYPE) return null;
       return data.error ? { state: data.state, error: data.error } : { state: data.state };
     });
   });
@@ -280,6 +287,121 @@ describe('usePaykitSetupFlow', () => {
 
       expect(mocks.markPaykitConnected).not.toHaveBeenCalled();
       expect(result.current.status).toBe(PaykitSetupFlowStatus.IDLE);
+    });
+  });
+
+  describe('waiting for the /setup page to render', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      // Each start() carries a fresh `state` in the URL, which keys the wait for the page.
+      mocks.getPaykitSetupUrl.mockImplementation(({ state }: { state: string }) => {
+        return `${PAYKIT_ORIGIN}/setup?return_to=https://app.example&state=${state}`;
+      });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const advance = async (ms: number) => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+    const fireLoad = (result: { current: ReturnType<typeof usePaykitSetupFlow> }) =>
+      act(() => result.current.onSetupLoad());
+    const postReady = (state: string, origin = PAYKIT_ORIGIN) =>
+      postCallback({ type: PAYKIT_SETUP_READY_MESSAGE_TYPE, state }, origin);
+
+    it('shows the page once it posts the ready report, and keeps waiting for approval', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      const state = startFlow(result);
+      attachIframeSource(result);
+      expect(result.current.isSetupReady).toBe(false);
+
+      fireLoad(result);
+      await postReady(state);
+      expect(result.current.isSetupReady).toBe(true);
+
+      await advance(IFRAME_MOUNT_TIMEOUT_MS + IFRAME_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('moves to ERROR when no ready report arrives within the limit after the load event', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+
+      await advance(IFRAME_READY_AFTER_LOAD_MS - 1);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
+
+      await advance(1);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
+      expect(result.current.error?.category).toBe(ErrorCategory.Timeout);
+      expect(mocks.markPaykitConnected).not.toHaveBeenCalled();
+    });
+
+    it('moves to ERROR when the page never fires load', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      startFlow(result);
+      attachIframeSource(result);
+
+      await advance(IFRAME_MOUNT_TIMEOUT_MS - 1);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
+
+      await advance(1);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
+      expect(result.current.error?.category).toBe(ErrorCategory.Timeout);
+    });
+
+    it('records the connection when the callback follows the ready report', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      const state = startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+      await postReady(state);
+
+      await advance(IFRAME_MOUNT_TIMEOUT_MS); // the creator takes a while to scan
+      await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state });
+
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.SUCCESS);
+      expect(mocks.markPaykitConnected).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not count a ready report from another origin or for another state', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      const state = startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+
+      await postReady(state, 'https://evil.example');
+      await postReady('OTHER-STATE');
+      expect(result.current.isSetupReady).toBe(false);
+
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
+    });
+
+    it('waits for a fresh ready report after Try again', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
+
+      act(() => result.current.start());
+      const retryState = mocks.getPaykitSetupUrl.mock.calls[1][0].state as string;
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
+      expect(result.current.isSetupReady).toBe(false);
+
+      // The new page gets its own limits: the old load does not carry over.
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
+      fireLoad(result);
+      await postReady(retryState);
+      expect(result.current.isSetupReady).toBe(true);
     });
   });
 });

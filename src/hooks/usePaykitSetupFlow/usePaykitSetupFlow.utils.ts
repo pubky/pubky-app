@@ -43,3 +43,31 @@ export function readPaykitSetupBridgeMessage(
   if (typeof error === 'string' && error.length > 0) return { state, error };
   return { state };
 }
+
+/**
+ * postMessage `type` of the report Paykit's `/setup` page posts once, as soon as it renders and before
+ * its first poll. The app uses it as the sign that the page rendered: an error body (429, 503, a proxy
+ * page) loads without ever posting it (#3027).
+ */
+export const PAYKIT_SETUP_READY_MESSAGE_TYPE = 'paykit-setup-ready';
+
+/**
+ * True when a `message` event is the `/setup` page's ready report for this flow, checked the same way
+ * as the callback: the Paykit origin, the expected iframe window, the `type`, and the echoed `state`.
+ */
+export function isPaykitSetupReadyMessage(
+  event: MessageEvent,
+  expectedSource: Window | null,
+  paykitOrigin: string,
+  expectedState: string | null,
+): boolean {
+  if (event.origin !== paykitOrigin) return false;
+  if (!expectedSource) return false;
+  if (event.source !== expectedSource) return false;
+  if (!expectedState) return false;
+
+  const data: unknown = event.data;
+  if (typeof data !== 'object' || data === null) return false;
+  const message = data as Record<string, unknown>;
+  return message.type === PAYKIT_SETUP_READY_MESSAGE_TYPE && message.state === expectedState;
+}

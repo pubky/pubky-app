@@ -2,15 +2,25 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
+import { useIframeReady } from '@/hooks/useIframeReady/useIframeReady';
+import type { IframeReadyCountedFrom } from '@/hooks/useIframeReady/useIframeReady.types';
 import type { AppError } from '@/libs/error/error';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import type { TLockPriceAsset, TPaykitSetupStatus } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { PaykitSetupFlowStatus, type UsePaykitSetupFlowReturn } from './usePaykitSetupFlow.types';
-import { readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
+import { isPaykitSetupReadyMessage, readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
+
+/** The error for a `/setup` page that never reported it rendered, counted from `mount` or `load`. */
+const setupPageTimeout = (countedFrom: IframeReadyCountedFrom): AppError =>
+  Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Paykit setup page did not render', {
+    service: ErrorService.Locks,
+    operation: 'usePaykitSetupFlow.awaitSetupPage',
+    context: { countedFrom },
+  });
 
 /**
  * Drives the iframe-based Paykit setup flow, where a creator connects the account that receives
@@ -21,6 +31,11 @@ import { readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
  * `/setup` URL for the modal to load in an iframe. The Paykit page posts the outcome back to the
  * parent; the message is validated (origin / iframe source / schema), `state` is checked, and a
  * success is recorded on the Locks session.
+ *
+ * The iframe stays hidden (`isSetupReady` false) until the page posts `paykit-setup-ready`. A page
+ * that failed to render never posts it, so after `IFRAME_READY_AFTER_LOAD_MS` from `load`, or
+ * `IFRAME_MOUNT_TIMEOUT_MS` from mount (`useIframeReady`), the flow moves to `ERROR` instead of showing
+ * the raw body.
  */
 export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowReturn {
   const [status, setStatus] = useState<PaykitSetupFlowStatus>(PaykitSetupFlowStatus.IDLE);
@@ -142,5 +157,22 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     return () => window.removeEventListener('message', handler);
   }, [status, check]);
 
-  return { status, setupUrl, error, iframeRef, check, start, reset };
+  // A new setup URL (each `start()` carries a fresh `state`) starts a fresh wait for the page.
+  const { isReady: isSetupReady, onLoad: onSetupLoad } = useIframeReady({
+    key: setupUrl,
+    isWaiting: status === PaykitSetupFlowStatus.AWAITING_APPROVAL,
+    isReadyMessage: (event) =>
+      isPaykitSetupReadyMessage(
+        event,
+        iframeRef.current?.contentWindow ?? null,
+        paykitOriginRef.current ?? '',
+        stateRef.current,
+      ),
+    onTimeout: (countedFrom) => {
+      setError(setupPageTimeout(countedFrom));
+      setStatus(PaykitSetupFlowStatus.ERROR);
+    },
+  });
+
+  return { status, setupUrl, error, iframeRef, isSetupReady, onSetupLoad, check, start, reset };
 }
