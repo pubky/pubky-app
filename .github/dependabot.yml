@@ -22,39 +22,49 @@ updates:
     cooldown:
       default-days: 7
     groups:
-      # One grouped PR for all npm security fixes, so a burst of advisories
-      # (e.g. 2026-10-22: next, @sentry/nextjs, sharp) lands as a single
-      # reviewable change. Exact pins in package.json do not block security
-      # updates: Dependabot bumps the pin to the minimum patched version.
-      # Trade-off: one failing update in the group (e.g. a semver-major fix)
-      # holds the others back, and there is no native ungroup — split the PR
-      # manually when a critical is blocked.
-      security:
+      # npm security fixes arrive as two grouped PRs split by declared
+      # dependency type, so a burst of advisories lands as two reviewable
+      # changes: production first (triage priority — what ships), development
+      # second (test/build tooling). The split also halves the group-blocking
+      # trade-off: one failing update holds back only its own group, and there
+      # is no native ungroup — split a PR manually when a critical is blocked.
+      # Exact pins in package.json do not block security updates: Dependabot
+      # bumps the pin to the minimum patched version. Note the type comes from
+      # the package.json declaration, not from what a package is: vitest is
+      # declared in `dependencies`, so it groups as production — reclassifying
+      # it is a package.json decision, not a Dependabot one.
+      security-production:
         applies-to: security-updates
+        dependency-type: production
         patterns:
-          - "*"
+          - '*'
+      security-development:
+        applies-to: security-updates
+        dependency-type: development
+        patterns:
+          - '*'
       nextjs:
         applies-to: version-updates
         patterns:
           - next
-          - "@next/*"
+          - '@next/*'
       react:
         applies-to: version-updates
         patterns:
           - react
           - react-dom
-          - "@types/react"
-          - "@types/react-dom"
+          - '@types/react'
+          - '@types/react-dom'
       vitest:
         applies-to: version-updates
         patterns:
           - vitest
-          - "@vitest/*"
+          - '@vitest/*'
           - vitest-browser-react
       pubky-sdk:
         applies-to: version-updates
         patterns:
-          - "@synonymdev/*"
+          - '@synonymdev/*'
           - pubky-app-specs
       production-minor-patch:
         applies-to: version-updates
