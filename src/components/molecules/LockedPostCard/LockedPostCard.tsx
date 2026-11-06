@@ -150,6 +150,13 @@ export function LockedPostCard({
       return;
     }
     if (isDisabled) return;
+    // A click during a press comes from the keyboard. It ends the press, so neither the release nor the click after
+    // it can unlock again once the slide's timer has run.
+    if (dragPress.current) {
+      dragPress.current = null;
+      didDrag.current = true;
+      setIsDragging(false);
+    }
     startUnlock();
   };
 

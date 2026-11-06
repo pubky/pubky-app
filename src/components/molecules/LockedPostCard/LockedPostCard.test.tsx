@@ -309,12 +309,18 @@ describe('LockedPostCard', () => {
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
 
-    it('unlocks once when a keyboard press lands during a drag that then reaches the end', () => {
-      const { onUnlock, button, unmount } = renderUnlock();
+    // Holding past SLIDE_MS lets the slide's timer run, and clear its guard, before the release.
+    it.each([
+      ['a drag', true, 60],
+      ['a drag', false, 60],
+      ['a press that has not moved', true, 0],
+    ])('unlocks once when a keyboard press lands during %s (slideOnUnlock: %s)', (_, slideOnUnlock, x) => {
+      const { onUnlock, button, unmount } = renderUnlock({ slideOnUnlock });
 
       press(button);
-      moveTo(button, 60);
+      moveTo(button, x);
       fireEvent.click(button);
+      vi.advanceTimersByTime(SLIDE_MS);
       moveTo(button, 120);
       release(button, 120);
       pointerClick(button);
