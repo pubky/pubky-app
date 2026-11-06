@@ -175,13 +175,18 @@ describe('LockedPostCard', () => {
     const pointer = (clientX: number, overrides: PointerEventInit = {}) => ({
       pointerId: 1,
       isPrimary: true,
+      buttons: 1,
       clientX,
       clientY: 0,
       ...overrides,
     });
     const press = (button: HTMLElement) => fireEvent.pointerDown(button, pointer(0));
     const moveTo = (button: HTMLElement, x: number) => fireEvent.pointerMove(button, pointer(x));
-    const release = (button: HTMLElement, x: number) => fireEvent.pointerUp(button, pointer(x));
+    // A browser releases the capture right after the pointerup.
+    const release = (button: HTMLElement, x: number) => {
+      fireEvent.pointerUp(button, pointer(x, { buttons: 0 }));
+      fireEvent.lostPointerCapture(button, pointer(x, { buttons: 0 }));
+    };
     const drag = (button: HTMLElement, x: number) => {
       press(button);
       moveTo(button, x);
@@ -343,6 +348,54 @@ describe('LockedPostCard', () => {
 
       vi.advanceTimersByTime(SLIDE_MS);
       expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    // The modal's close is what returns a button parked at the end.
+    it('returns after a drag once the modal closes, and unlocks again on the next drag', () => {
+      const { onUnlock, button, rerender } = renderUnlock();
+
+      drag(button, 120);
+      pointerClick(button);
+      vi.advanceTimersByTime(SLIDE_MS);
+      rerender(<LockedPostCard title="" onUnlock={onUnlock} unlockOpen />);
+      expect(button).toHaveStyle({ transform: 'translateX(120px)' });
+
+      rerender(<LockedPostCard title="" onUnlock={onUnlock} unlockOpen={false} />);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      drag(button, 120);
+      pointerClick(button);
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(2);
+    });
+
+    // A release that never reached the button, for example after a pointer capture that failed.
+    it('ends a press on a move with no button held, so later moves and a release do nothing', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 60);
+      fireEvent.pointerMove(button, pointer(80, { buttons: 0 }));
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      moveTo(button, 120);
+      release(button, 120);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
+
+    it('slides back without unlocking when the browser drops the pointer capture during a drag', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 120);
+      fireEvent.lostPointerCapture(button, pointer(120));
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      release(button, 120);
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
     });
 
     it('slides back without unlocking when the browser cancels the press to scroll', () => {

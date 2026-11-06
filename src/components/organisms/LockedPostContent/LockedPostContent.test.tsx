@@ -433,7 +433,7 @@ describe('LockedPostContent', () => {
 
     describe('dragging Unlock to the end', () => {
       const dragToEnd = (button: HTMLElement) => {
-        const pointer = { pointerId: 1, isPrimary: true, clientY: 0 };
+        const pointer = { pointerId: 1, isPrimary: true, buttons: 1, clientY: 0 };
         fireEvent.pointerDown(button, { ...pointer, clientX: 0 });
         fireEvent.pointerMove(button, { ...pointer, clientX: 120 });
         fireEvent.pointerUp(button, { ...pointer, clientX: 120 });

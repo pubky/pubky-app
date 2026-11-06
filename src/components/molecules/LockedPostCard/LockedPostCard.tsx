@@ -56,7 +56,7 @@ export const SLIDE_MS = 200;
 const DRAG_UNLOCK_RATIO = 0.9;
 
 /** Less movement than this is still a click, so an unsteady tap is not lost. */
-const DRAG_SLOP_PX = 10;
+const TAP_SLOP_PX = 10;
 
 /** The shared lock card. */
 export function LockedPostCard({
@@ -126,7 +126,7 @@ export function LockedPostCard({
   };
 
   const startUnlock = () => {
-    // One slide at a time: a second click, or a keyboard press during a drag, is a no-op.
+    // One slide at a time: a second click or key press during the slide is a no-op.
     if (slideTimer.current !== null) return;
     if (!slideOnUnlock) {
       // A drag has to return by itself here: no modal follows to snap the button back.
@@ -174,15 +174,21 @@ export function LockedPostCard({
   const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
     const press = dragPress.current;
     if (press?.pointerId !== event.pointerId) return;
+    // No button held: the release never reached the button, so this move ends the press instead.
+    if (event.buttons === 0) {
+      handlePointerEnd(event);
+      return;
+    }
     if (!didDrag.current) {
-      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= DRAG_SLOP_PX) return;
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= TAP_SLOP_PX) return;
       didDrag.current = true;
       setIsDragging(true);
     }
     setSlideX(Math.max(0, Math.min(event.clientX - press.x, press.travel)));
   };
 
-  // Also runs on pointercancel, which the browser sends when it takes a touch over to scroll the page.
+  // Also runs on pointercancel (the browser took a touch over to scroll the page) and on lostpointercapture, which
+  // finds no press after a normal pointerup.
   const handlePointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
     const press = dragPress.current;
     if (press?.pointerId !== event.pointerId) return;
@@ -293,6 +299,7 @@ export function LockedPostCard({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerEnd}
             onPointerCancel={handlePointerEnd}
+            onLostPointerCapture={handlePointerEnd}
             // No transition during a drag, or the button would trail the pointer by SLIDE_MS.
             style={{ transform: `translateX(${slideX}px)`, transitionDuration: isDragging ? '0ms' : `${SLIDE_MS}ms` }}
             className={cn(
