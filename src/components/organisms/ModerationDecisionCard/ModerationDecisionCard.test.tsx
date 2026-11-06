@@ -20,6 +20,9 @@ describe('ModerationDecisionCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Moderation decision' })).toBeInTheDocument();
     expect(text('moderation-decision-restriction')).toContain('We restricted the visibility of your content.');
+    expect(text('moderation-decision-restriction')).toContain(
+      'It is not deleted from your homeserver. Files attached to it may still be served on pubky.app.',
+    );
     expect(screen.getByText('Everywhere pubky.app is offered')).toBeInTheDocument();
     expect(text('moderation-decision-duration')).toBe('Until the decision is lifted');
     expect(text('moderation-decision-ground')).toBe(`It breaks our Terms: ${tagged.groundReference}.`);
@@ -42,11 +45,11 @@ describe('ModerationDecisionCard', () => {
     expect(screen.queryByRole('link', { name: 'View the post' })).not.toBeInTheDocument();
   });
 
-  it('says the content was deleted, and that the person decided, for a removal', () => {
+  it('says the record was deleted and attached files may still be served, and that the person decided, for a removal', () => {
     render(<ModerationDecisionCard decision={removed} />);
 
     expect(text('moderation-decision-restriction')).toBe(
-      'We deleted your content from our homeserver. It no longer exists there.',
+      'We deleted the record of your content from our homeserver. Files attached to it, such as images, may still be served on pubky.app until they are removed.',
     );
     expect(text('moderation-decision-automation')).toBe(
       'Automated means detected this. A person on the moderation team took the decision.',

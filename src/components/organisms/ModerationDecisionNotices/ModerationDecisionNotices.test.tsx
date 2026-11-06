@@ -29,7 +29,7 @@ describe('ModerationDecisionNotices', () => {
 
     const cards = screen.getAllByTestId('moderation-decision-card');
     expect(cards).toHaveLength(3);
-    expect(cards[0]).toHaveTextContent('We deleted your content');
+    expect(cards[0]).toHaveTextContent('We deleted the record of your content');
     expect(cards[1]).toHaveTextContent('cannot show');
     expect(cards[2]).toHaveTextContent('We disabled your account');
   });

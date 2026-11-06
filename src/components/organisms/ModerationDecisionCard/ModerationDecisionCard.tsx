@@ -9,8 +9,9 @@ import type { TModerationDecision } from '@/services/moderation-decision/moderat
 
 const RESTRICTION_COPY: Record<TModerationDecision['restriction'], string> = {
   content_visibility_restricted:
-    'We restricted the visibility of your content. Other people see it behind a notice, or do not see it in feeds and search. It is not deleted from your homeserver.',
-  content_removed: 'We deleted your content from our homeserver. It no longer exists there.',
+    'We restricted the visibility of your content. Other people see it behind a notice, or do not see it in feeds and search. It is not deleted from your homeserver. Files attached to it may still be served on pubky.app.',
+  content_removed:
+    'We deleted the record of your content from our homeserver. Files attached to it, such as images, may still be served on pubky.app until they are removed.',
   account_disabled:
     'We disabled your account on our homeserver. It refuses requests from your account until the decision is lifted.',
 };
