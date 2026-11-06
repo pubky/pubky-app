@@ -67,9 +67,8 @@ function whenAborted(signal: AbortSignal): Promise<void> {
  * - one subscription per tab, whatever the number of channels;
  * - at most one connection per tab at any time: a new connection waits until the previous loop has exited, so
  *   a subscribe still in flight when the stream restarts (sign-out, account switch) is cancelled, not stacked;
- * - every teardown aborts the connection's `AbortController`, which cancels the SDK stream even when it
- *   resolves after the abort, stops waiting for its connection-time reconcile, and cancels the reader of an open
- *   stream.
+ * - every teardown aborts the connection's `AbortController`, which ends its request even while it waits for
+ *   response headers, stops waiting for its connection-time reconcile, and cancels the reader of an open stream.
  *
  * Policy (aligned with {@link NotificationCoordinator}):
  * - Requires authenticated session with profile and current {@link Pubky}, and at least one ready channel.
@@ -477,8 +476,8 @@ export class HomeserverEventStreamCoordinator {
   }
 
   /**
-   * Ends the current connection whatever state it is in: the abort cancels a subscribe still in flight as soon as
-   * it resolves and releases the connection-time reconcile, and cancelling the reader ends a pending read.
+   * Ends the current connection whatever state it is in: the abort ends a subscribe still in flight and releases
+   * the connection-time reconcile, and cancelling the reader ends a pending read.
    */
   private teardownConnection(): void {
     this.connectionAbort?.abort();

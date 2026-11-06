@@ -120,8 +120,15 @@ export type THomeserverUserEventStreamParams = {
   cursor: string | null;
   /** Union of path filters: a trailing slash matches a directory subtree, otherwise one exact file. */
   paths: readonly string[];
-  /** Aborting it cancels the SDK stream, including one that resolves after the abort. */
+  /** Aborts the request in every phase, including one still waiting for response headers. */
   signal: AbortSignal;
+};
+
+export type TBuildUserEventStreamUrlParams = {
+  homeserverZ32: string;
+  userZ32: string;
+  cursor: string | null;
+  paths: readonly string[];
 };
 
 // Utility function parameter types

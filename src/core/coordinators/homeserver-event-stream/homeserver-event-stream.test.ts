@@ -322,6 +322,42 @@ describe('HomeserverEventStreamCoordinator', () => {
       expect(order).toEqual([`open ${pubky}`, `close ${pubky}`, `open ${otherPubky}`]);
     });
 
+    it('opens the next account’s connection as soon as the previous handshake ends on abort', async () => {
+      const order: string[] = [];
+      subscribe.mockImplementationOnce(({ pubky: user, signal }) => {
+        order.push(`open ${user}`);
+        // Waits for response headers until aborted, then resolves closed, as the service does.
+        return new Promise<ReadableStream<THomeserverEvent>>((resolve) => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              order.push(`abort ${user}`);
+              resolve(
+                new ReadableStream<THomeserverEvent>({
+                  start(controller) {
+                    controller.close();
+                  },
+                }),
+              );
+            },
+            { once: true },
+          );
+        });
+      });
+      subscribe.mockImplementation(async ({ pubky: user }) => {
+        order.push(`open ${user}`);
+        return new ReadableStream<THomeserverEvent>();
+      });
+      signIn();
+      startWith(createChannel(MUTES_PATH));
+      await flushPromises();
+
+      useAuthStore.getState().setCurrentUserPubky(otherPubky);
+      await flushPromises();
+
+      expect(order).toEqual([`open ${pubky}`, `abort ${pubky}`, `open ${otherPubky}`]);
+    });
+
     it('reopens after hide and show without waiting for a connection-time reconcile that never settled', async () => {
       const order: string[] = [];
       let connections = 0;

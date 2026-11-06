@@ -13,6 +13,6 @@ export type TSubscribeUserEventStreamParams = {
   cursor: string | null;
   /** Union of path filters: a trailing slash matches a directory subtree, otherwise one exact file. */
   paths: readonly string[];
-  /** Aborting it cancels the stream, including one that resolves after the abort. */
+  /** Aborts the request in every phase, including one still waiting for response headers. */
   signal: AbortSignal;
 };
