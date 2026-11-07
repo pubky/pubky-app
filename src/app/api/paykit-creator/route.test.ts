@@ -11,7 +11,7 @@ import { GET } from './route';
 const request = (query: Record<string, string>) =>
   new NextRequest(`http://localhost/api/paykit-creator?${new URLSearchParams(query)}`);
 
-const validQuery = { creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}`, return_to: 'https://pubky.app' };
+const validQuery = { creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}` };
 
 describe('API Route: /api/paykit-creator', () => {
   beforeEach(() => {
@@ -35,12 +35,12 @@ describe('API Route: /api/paykit-creator', () => {
     await expect(response.json()).resolves.toEqual({ held: false });
   });
 
-  it('hands the raw query values to the controller', async () => {
+  it('hands the raw creator to the controller', async () => {
     const probe = vi.spyOn(PaykitCreatorController, 'fetchCreatorHeld').mockResolvedValue({ ok: true, held: false });
 
     await GET(request(validQuery));
 
-    expect(probe).toHaveBeenCalledWith({ creator: validQuery.creator, returnTo: validQuery.return_to });
+    expect(probe).toHaveBeenCalledWith({ creator: validQuery.creator });
   });
 
   it('never lets a CDN or the browser cache the answer', async () => {
@@ -58,7 +58,7 @@ describe('API Route: /api/paykit-creator', () => {
       statusCode: HttpStatusCode.BAD_REQUEST,
     });
 
-    const response = await GET(request({ return_to: 'https://pubky.app' }));
+    const response = await GET(request({}));
 
     expect(response.status).toBe(HttpStatusCode.BAD_REQUEST);
     expect(response.headers.get('Cache-Control')).toBe('no-store');

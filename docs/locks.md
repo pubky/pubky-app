@@ -566,9 +566,9 @@ Paykit Server refuses the initial `/setup` for a creator it already holds (`422 
 setup page posts as `setup-failed`), for example after an earlier approval stopped before it finished. The
 failure callback carries no reason, and the Lock Server's `setup_required` is the same answer for a held
 and an unknown creator, so the Enable Payments step asks Paykit directly through `GET /api/paykit-creator`:
-a server-side read of Paykit's public `GET /setup/reconnect` (200 when Paykit holds the creator, 400 when it
-does not), needed because Paykit sends no CORS headers. It is asked before `/setup` opens and again when a
-setup fails:
+a server-side read of Paykit's `GET /setup/creator-held?creator=…`, which answers `{ "held": true | false }`
+and nothing else, needed because Paykit sends no CORS headers. It is asked before `/setup` opens and again when
+a setup fails:
 
 - Paykit holds the creator: the dialog offers **Reconnect Bitkit** as its main action (no **Try again**), which
   loads `/setup/reconnect?creator=…&return_to=…&state=…` in the same iframe. A reconnect moves Bitcoin receiving
@@ -579,19 +579,20 @@ setup fails:
 - Paykit cannot say: the dialog says payments are unavailable and offers **Try again**, both before setup
   and after a failed setup. Neither setup nor reconnect opens until a later check answers held or not held.
 
-The probe opens a throwaway in-memory flow on Paykit and counts against its per-IP rate limit (ten setup starts a
-minute by default), which all callers of the route share, because Paykit has no held-status read that skips it. The
-service behind the route therefore reuses an answer for the same creator and return origin (two minutes when Paykit
-holds the creator, fifteen seconds when it does not) and lets concurrent callers share one request, so a retry, a
-reopened dialog or the diagnosis after a failed setup does not spend more of the budget; a failed probe is not
-kept. The cache is per server instance and does not help when many different creators ask within one minute:
-the eleventh distinct creator through one App egress still gets Paykit's 429, which reads as "Paykit cannot say"
-(the dialog offers a retry without opening either setup flow). Removing that limit still needs a read-only
-held-status contract on the Paykit Server with its own budget, tracked in
-[Paykit Server #119](https://github.com/pubky/paykit-server/issues/119). The retry keeps an unknown creator out of
-a possibly refused setup; it does not remove the shared setup-start quota or pending-flow cost of the probe.
-Paykit also checks `return_to`, so a rejected origin reads as "not held". A `reconnect_required` value in the
-Lock Server's setup status would make the probe unnecessary; until then the probe is the signal.
+`/setup/creator-held` starts no setup flow and spends neither Paykit's setup-start budget nor its pending-flow
+capacity. It has its own per-client-IP read limit (600 a minute by default). A refused read is `429`
+(`Retry-After: 60`) and storage trouble is `503` (`Retry-After: 1`), so neither is read as "not held"; a `400`
+means Paykit rejected the query and is not an answer either. The service behind the route asks once more after a
+`503` when its `Retry-After` is at most two seconds and fits the six-second timeout; a `429` is not retried
+server-side, so the dialog's **Try again** is the retry. Every caller of the route shares the app server's
+address and so that read limit, which is why the service reuses an answer per creator (two minutes when Paykit
+holds the creator, fifteen seconds when it does not) and lets concurrent callers share one request. A failed read
+is not kept. The cache is per server instance. Presence is not payment readiness: the Lock Server still confirms
+readiness after either flow.
+
+`/setup/creator-held` first shipped in Paykit Server v0.1.1-rc2. An older Paykit Server answers it with `404`,
+which reads as "Paykit cannot say", so no creator could open setup: the Paykit Server behind an environment must
+run v0.1.1-rc2 or later before this app does.
 
 Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
 USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify

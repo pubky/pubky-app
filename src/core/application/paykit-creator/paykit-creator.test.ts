@@ -3,7 +3,7 @@ import { NextJsPaykitCreatorService } from '@/services/nextjs/paykit-creator/pay
 import { MOCK_LOCK_AUTHOR_PUBKY } from '@/test-utils/locks';
 import { PaykitCreatorApplication } from './paykit-creator';
 
-const params = { creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}`, returnTo: 'https://pubky.app' };
+const params = { creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}` };
 
 describe('PaykitCreatorApplication.isCreatorHeld', () => {
   beforeEach(() => {

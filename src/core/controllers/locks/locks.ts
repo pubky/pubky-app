@@ -110,7 +110,6 @@ export class LocksController {
   static async fetchPaykitCreatorHeld(): Promise<boolean> {
     return LocksApplication.fetchPaykitCreatorHeld({
       creator: this.requireCreatorPubky('LocksController.fetchPaykitCreatorHeld'),
-      returnTo: window.location.origin,
     });
   }
 

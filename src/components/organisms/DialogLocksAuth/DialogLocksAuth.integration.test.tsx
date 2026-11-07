@@ -158,7 +158,7 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
     const probe: URL = mocks.probe.mock.calls[0][0];
     expect(probe.searchParams.get('creator')).toBe(`pubky${MOCK_LOCK_AUTHOR_PUBKY}`);
-    expect(probe.searchParams.get('return_to')).toBe(window.location.origin);
+    expect([...probe.searchParams.keys()]).toEqual(['creator']);
   });
 
   it.each([429, 503])(

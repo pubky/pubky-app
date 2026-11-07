@@ -10,21 +10,17 @@ describe('PaykitCreatorController.fetchCreatorHeld', () => {
     vi.spyOn(PaykitCreatorApplication, 'isCreatorHeld').mockResolvedValue(true);
   });
 
-  it('asks Paykit with the validated creator and origin, and returns its answer', async () => {
-    const result = await PaykitCreatorController.fetchCreatorHeld({
-      creator: MOCK_LOCK_AUTHOR_PUBKY,
-      returnTo: 'https://pubky.app/some/path',
-    });
+  it('asks Paykit with the validated creator, and returns its answer', async () => {
+    const result = await PaykitCreatorController.fetchCreatorHeld({ creator: MOCK_LOCK_AUTHOR_PUBKY });
 
     expect(result).toEqual({ ok: true, held: true });
     expect(PaykitCreatorApplication.isCreatorHeld).toHaveBeenCalledWith({
       creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}`,
-      returnTo: 'https://pubky.app',
     });
   });
 
   it('returns a validation failure without asking Paykit', async () => {
-    const result = await PaykitCreatorController.fetchCreatorHeld({ creator: 'nope', returnTo: 'https://pubky.app' });
+    const result = await PaykitCreatorController.fetchCreatorHeld({ creator: 'nope' });
 
     expect(result).toEqual({ ok: false, message: 'Invalid creator', statusCode: HttpStatusCode.BAD_REQUEST });
     expect(PaykitCreatorApplication.isCreatorHeld).not.toHaveBeenCalled();
@@ -33,8 +29,8 @@ describe('PaykitCreatorController.fetchCreatorHeld', () => {
   it('lets a Paykit failure through for the route to report', async () => {
     vi.mocked(PaykitCreatorApplication.isCreatorHeld).mockRejectedValue(new Error('Paykit down'));
 
-    await expect(
-      PaykitCreatorController.fetchCreatorHeld({ creator: MOCK_LOCK_AUTHOR_PUBKY, returnTo: 'https://pubky.app' }),
-    ).rejects.toThrow('Paykit down');
+    await expect(PaykitCreatorController.fetchCreatorHeld({ creator: MOCK_LOCK_AUTHOR_PUBKY })).rejects.toThrow(
+      'Paykit down',
+    );
   });
 });

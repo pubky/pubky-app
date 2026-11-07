@@ -14,11 +14,16 @@ vi.mock('@/config/network', async (importOriginal) => ({
 
 // The service reuses answers per creator, so every test asks about a creator of its own.
 let creatorCount = 0;
-const freshParams = (returnTo = 'https://pubky.app') => ({
-  creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}-${++creatorCount}`,
-  returnTo,
-});
+const freshParams = () => ({ creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}-${++creatorCount}` });
 let params = freshParams();
+
+/** Paykit's `/setup/creator-held` answers, as paykit-server v0.1.1-rc2 sends them. */
+const heldAnswer = (held: boolean) => Response.json({ held }, { headers: { 'Cache-Control': 'no-store' } });
+const refused = (status: 429 | 503) =>
+  Response.json(
+    { error: status === 429 ? 'rate_limited' : 'unavailable' },
+    { status, headers: { 'Retry-After': status === 429 ? '60' : '1' } },
+  );
 
 describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
   beforeEach(() => {
@@ -32,16 +37,14 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
     vi.restoreAllMocks();
   });
 
-  it('reads 200 from /setup/reconnect as "held", and sends what the setup iframe sends', async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response('<html></html>', { status: 200 }));
+  it('asks /setup/creator-held with the creator alone and reads { held: true }', async () => {
+    vi.mocked(fetch).mockResolvedValue(heldAnswer(true));
 
     await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).resolves.toBe(true);
 
     const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
-    expect(`${url.origin}${url.pathname}`).toBe('https://paykit.server/setup/reconnect');
-    expect(url.searchParams.get('creator')).toBe(params.creator);
-    expect(url.searchParams.get('return_to')).toBe('https://pubky.app');
-    expect(url.searchParams.get('state')).toMatch(/^[0-9a-f-]{36}$/);
+    expect(`${url.origin}${url.pathname}`).toBe('https://paykit.server/setup/creator-held');
+    expect([...url.searchParams.entries()]).toEqual([['creator', params.creator]]);
     expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
       method: 'GET',
       credentials: 'omit',
@@ -50,37 +53,82 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
     });
   });
 
-  it('reads 400 invalid_request as "not held"', async () => {
-    vi.mocked(fetch).mockResolvedValue(Response.json({ error: 'invalid_request' }, { status: 400 }));
+  it('reads { held: false } as "not held"', async () => {
+    vi.mocked(fetch).mockResolvedValue(heldAnswer(false));
 
     await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).resolves.toBe(false);
   });
 
-  it('uses a new state for every probe', async () => {
-    vi.mocked(fetch).mockImplementation(async () => new Response('', { status: 200 }));
+  it('never opens a setup flow to find out', async () => {
+    vi.mocked(fetch).mockResolvedValue(heldAnswer(true));
 
     await NextJsPaykitCreatorService.isCreatorHeld(params);
-    await NextJsPaykitCreatorService.isCreatorHeld(freshParams());
 
-    const states = vi.mocked(fetch).mock.calls.map(([url]) => new URL(String(url)).searchParams.get('state'));
-    expect(new Set(states).size).toBe(2);
+    const paths = vi.mocked(fetch).mock.calls.map(([url]) => new URL(String(url)).pathname);
+    expect(paths).toEqual(['/setup/creator-held']);
   });
 
-  it('does not download the HTML page a held creator gets', async () => {
-    const cancel = vi.fn();
-    vi.mocked(fetch).mockResolvedValue(new Response(new ReadableStream({ cancel }), { status: 200 }));
+  it('throws on 400, which is a rejected query and not "not held"', async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ error: 'invalid_request' }, { status: 400 }));
 
-    await NextJsPaykitCreatorService.isCreatorHeld(params);
+    await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).rejects.toMatchObject({
+      category: ErrorCategory.Client,
+      context: expect.objectContaining({ statusCode: 400 }),
+    });
+  });
 
-    expect(cancel).toHaveBeenCalled();
+  it('throws on 429 at once, without waiting the minute Paykit asks for', async () => {
+    vi.mocked(fetch).mockResolvedValue(refused(429));
+
+    await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).rejects.toMatchObject({
+      category: ErrorCategory.RateLimit,
+      context: expect.objectContaining({ statusCode: 429 }),
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks once more after a 503 and its one-second Retry-After', async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetch).mockResolvedValueOnce(refused(503)).mockResolvedValueOnce(heldAnswer(true));
+
+    const answer = NextJsPaykitCreatorService.isCreatorHeld(params);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(answer).resolves.toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws when the retry after a 503 is refused again', async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetch).mockResolvedValueOnce(refused(503)).mockResolvedValueOnce(refused(503));
+
+    const answer = NextJsPaykitCreatorService.isCreatorHeld(params);
+    const settled = expect(answer).rejects.toMatchObject({
+      category: ErrorCategory.Server,
+      context: expect.objectContaining({ statusCode: 503 }),
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await settled;
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not wait out a 503 whose Retry-After is longer than two seconds', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({ error: 'unavailable' }, { status: 503, headers: { 'Retry-After': '30' } }),
+    );
+
+    await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).rejects.toMatchObject({
+      context: expect.objectContaining({ statusCode: 503 }),
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it.each([
-    [429, ErrorCategory.RateLimit],
     [502, ErrorCategory.Server],
-    [503, ErrorCategory.Server],
     [404, ErrorCategory.Client],
-    [422, ErrorCategory.Client],
   ])('throws on %i instead of guessing an answer', async (status, category) => {
     vi.mocked(fetch).mockResolvedValue(new Response('', { status }));
 
@@ -88,6 +136,18 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
       category,
       context: expect.objectContaining({ statusCode: status }),
     });
+  });
+
+  it.each([
+    ['an HTML page', () => new Response('<html></html>', { status: 200 })],
+    ['a non-boolean held', () => Response.json({ held: 'yes' })],
+    ['no held field', () => Response.json({})],
+  ])('throws on a 200 with %s', async (_label, answer) => {
+    vi.mocked(fetch).mockResolvedValue(answer());
+
+    await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).rejects.toThrow(
+      'Paykit creator-held response is invalid',
+    );
   });
 
   it('throws on a redirect, which Paykit never answers with', async () => {
@@ -105,7 +165,7 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
   });
 
   it('bounds the request with a timeout signal', async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response('', { status: 400 }));
+    vi.mocked(fetch).mockResolvedValue(heldAnswer(false));
 
     await NextJsPaykitCreatorService.isCreatorHeld(params);
 
@@ -119,19 +179,9 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  describe('answer reuse, so held-status reads do not spend the shared setup-start budget', () => {
-    /** Paykit's per-IP setup limit: ten starts per window from one address, then 429. */
-    const fakePaykit = (held: boolean, limit = 10) => {
-      let starts = 0;
-      vi.mocked(fetch).mockImplementation(async () => {
-        starts += 1;
-        if (starts > limit) return new Response('', { status: 429 });
-        return held ? new Response('<html></html>', { status: 200 }) : new Response('', { status: 400 });
-      });
-    };
-
-    it('answers eleven checks of a held creator in one window from one probe', async () => {
-      fakePaykit(true);
+  describe('answer reuse, so callers sharing the app server spare its read limit', () => {
+    it('answers eleven checks of a held creator in one window from one read', async () => {
+      vi.mocked(fetch).mockImplementation(async () => heldAnswer(true));
 
       const answers = [];
       for (let check = 0; check < 11; check += 1) {
@@ -142,20 +192,22 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('answers eleven checks of a creator Paykit does not hold from one probe', async () => {
-      fakePaykit(false);
+    it('answers eleven distinct creators with one read each and no setup start', async () => {
+      vi.mocked(fetch).mockImplementation(async () => heldAnswer(true));
 
       const answers = [];
-      for (let check = 0; check < 11; check += 1) {
-        answers.push(await NextJsPaykitCreatorService.isCreatorHeld(params));
+      for (let creator = 0; creator < 11; creator += 1) {
+        answers.push(await NextJsPaykitCreatorService.isCreatorHeld(freshParams()));
       }
 
-      expect(answers).toEqual(Array(11).fill(false));
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(answers).toEqual(Array(11).fill(true));
+      const paths = new Set(vi.mocked(fetch).mock.calls.map(([url]) => new URL(String(url)).pathname));
+      expect(fetch).toHaveBeenCalledTimes(11);
+      expect(paths).toEqual(new Set(['/setup/creator-held']));
     });
 
-    it('shares one probe between checks that arrive together', async () => {
-      fakePaykit(true);
+    it('shares one read between checks that arrive together', async () => {
+      vi.mocked(fetch).mockImplementation(async () => heldAnswer(true));
 
       const answers = await Promise.all(
         Array.from({ length: 11 }, () => NextJsPaykitCreatorService.isCreatorHeld(params)),
@@ -165,19 +217,9 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('asks again for another creator and for another return origin', async () => {
-      fakePaykit(true);
-
-      await NextJsPaykitCreatorService.isCreatorHeld(params);
-      await NextJsPaykitCreatorService.isCreatorHeld(freshParams());
-      await NextJsPaykitCreatorService.isCreatorHeld({ ...params, returnTo: 'https://preview.pubky.app' });
-
-      expect(fetch).toHaveBeenCalledTimes(3);
-    });
-
     it('asks again after a held answer is two minutes old', async () => {
       vi.useFakeTimers();
-      fakePaykit(true);
+      vi.mocked(fetch).mockImplementation(async () => heldAnswer(true));
 
       await NextJsPaykitCreatorService.isCreatorHeld(params);
       vi.advanceTimersByTime(119_000);
@@ -191,8 +233,7 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
 
     it('asks again after a not-held answer is fifteen seconds old, since a setup may have finished', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetch).mockResolvedValueOnce(new Response('', { status: 400 }));
-      vi.mocked(fetch).mockResolvedValueOnce(new Response('', { status: 200 }));
+      vi.mocked(fetch).mockResolvedValueOnce(heldAnswer(false)).mockResolvedValueOnce(heldAnswer(true));
 
       await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).resolves.toBe(false);
       vi.advanceTimersByTime(14_000);
@@ -202,19 +243,18 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
       expect(fetch).toHaveBeenCalledTimes(2);
     });
 
-    it.each([429, 503])('does not keep a %i, so the next check asks again', async (status) => {
-      vi.mocked(fetch).mockResolvedValueOnce(new Response('', { status }));
-      vi.mocked(fetch).mockResolvedValueOnce(new Response('', { status: 200 }));
+    it('does not keep a 429, so the next check asks again', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(refused(429)).mockResolvedValueOnce(heldAnswer(true));
 
       await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).rejects.toMatchObject({
-        context: expect.objectContaining({ statusCode: status }),
+        context: expect.objectContaining({ statusCode: 429 }),
       });
       await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).resolves.toBe(true);
     });
 
     it('does not keep a network failure, and the checks waiting on it fail together', async () => {
       vi.mocked(fetch).mockRejectedValueOnce(new TypeError('fetch failed'));
-      vi.mocked(fetch).mockResolvedValueOnce(new Response('', { status: 400 }));
+      vi.mocked(fetch).mockResolvedValueOnce(heldAnswer(false));
 
       const settled = await Promise.allSettled([
         NextJsPaykitCreatorService.isCreatorHeld(params),
@@ -227,7 +267,7 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
     });
 
     it('keeps at most 500 answers, dropping the oldest first', async () => {
-      vi.mocked(fetch).mockImplementation(async () => new Response('', { status: 200 }));
+      vi.mocked(fetch).mockImplementation(async () => heldAnswer(true));
       const first = freshParams();
       await NextJsPaykitCreatorService.isCreatorHeld(first);
       for (let creator = 0; creator < 500; creator += 1) {

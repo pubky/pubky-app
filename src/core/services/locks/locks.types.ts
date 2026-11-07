@@ -53,8 +53,6 @@ export type TGeneratePaykitReconnectUrlParams = TGeneratePaykitSetupUrlParams & 
 export type TLookupPaykitCreatorHeldParams = {
   /** The creator's pubky, with or without the `pubky` prefix. */
   creator: string;
-  /** Parent (pubky-app) origin: Paykit checks it, so the probe must send the one the iframe sends. */
-  returnTo: string;
 };
 
 /** The same-origin probe's answer: `true` when the Paykit Server holds the creator. */

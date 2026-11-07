@@ -547,10 +547,7 @@ describe('LocksController (auth)', () => {
       mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);
 
       await expect(LocksController.fetchPaykitCreatorHeld()).resolves.toBe(true);
-      expect(mocks.fetchPaykitCreatorHeld).toHaveBeenCalledWith({
-        creator: MOCK_LOCK_AUTHOR_PUBKY,
-        returnTo: window.location.origin,
-      });
+      expect(mocks.fetchPaykitCreatorHeld).toHaveBeenCalledWith({ creator: MOCK_LOCK_AUTHOR_PUBKY });
     });
 
     it('refuses both without a creator, rather than probing for nobody', async () => {

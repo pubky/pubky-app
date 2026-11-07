@@ -1,5 +1,4 @@
-/** A validated creator probe: Paykit's canonical `pubky<z32>` creator and the bare app origin. */
+/** A validated creator lookup: Paykit's canonical `pubky<z32>` creator. */
 export interface TPaykitCreatorProbeParams {
   creator: string;
-  returnTo: string;
 }

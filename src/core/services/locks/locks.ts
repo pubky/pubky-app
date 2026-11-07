@@ -318,11 +318,10 @@ export class LocksService {
    * `/api/paykit-creator` (the Paykit Server sends no CORS headers, so a browser cannot ask it).
    * Throws when the answer is unavailable; that says nothing about the creator.
    */
-  static async lookupPaykitCreatorHeld({ creator, returnTo }: TLookupPaykitCreatorHeldParams): Promise<boolean> {
+  static async lookupPaykitCreatorHeld({ creator }: TLookupPaykitCreatorHeldParams): Promise<boolean> {
     const operation = 'LocksService.lookupPaykitCreatorHeld';
     const endpoint = new URL('/api/paykit-creator', window.location.origin);
     endpoint.searchParams.set('creator', withPubkyPrefix(creator));
-    endpoint.searchParams.set('return_to', returnTo);
     try {
       const response = await safeFetch(
         endpoint.href,

@@ -753,7 +753,7 @@ describe('LocksService.generatePaykitReconnectUrl', () => {
 
 describe('LocksService.lookupPaykitCreatorHeld', () => {
   const creator = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
-  const params = { creator, returnTo: 'https://app.example' };
+  const params = { creator };
 
   beforeEach(() => {
     vi.spyOn(globalThis, 'fetch');
@@ -763,7 +763,7 @@ describe('LocksService.lookupPaykitCreatorHeld', () => {
     vi.restoreAllMocks();
   });
 
-  it('asks the same-origin probe with the prefixed creator and the return origin', async () => {
+  it('asks the same-origin route with the prefixed creator only', async () => {
     vi.mocked(fetch).mockResolvedValue(Response.json({ held: true }));
 
     await expect(LocksService.lookupPaykitCreatorHeld(params)).resolves.toBe(true);
@@ -772,7 +772,7 @@ describe('LocksService.lookupPaykitCreatorHeld', () => {
     expect(url.origin).toBe(window.location.origin);
     expect(url.pathname).toBe('/api/paykit-creator');
     expect(url.searchParams.get('creator')).toBe(`pubky${creator}`);
-    expect(url.searchParams.get('return_to')).toBe('https://app.example');
+    expect([...url.searchParams.keys()]).toEqual(['creator']);
     expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({ method: 'GET', credentials: 'omit', cache: 'no-store' });
   });
 
