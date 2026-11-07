@@ -14,7 +14,11 @@
  *  3. Enable Payments — iframe loads Paykit's `/setup` page, where the creator connects the account
  *                      that receives payments. The Lock Server is asked first whether this creator's
  *                      Paykit setup is already done (#2627): `ready` skips the step, and `unavailable`
- *                      offers a retry instead of the page.
+ *                      offers a retry instead of the page. Paykit refuses `/setup` for a creator it
+ *                      already holds, so it is asked too (before the page opens, and again when the
+ *                      setup fails): a held creator gets "Reconnect Bitkit", which loads
+ *                      `/setup/reconnect`, and a failed setup for one Paykit does not hold says
+ *                      nothing was set up and offers "Connect Bitkit" again.
  *  4. Enabled        — success; "Continue" notifies the caller via `onSuccess` and closes.
  *
  * Which step shows is derived from the stores, so a creator who is already signed in, but whose
@@ -100,8 +104,10 @@ export function DialogLocksAuth({
   const {
     status: paykitStatus,
     setupUrl,
+    mode: paykitMode,
     iframeRef: paykitIframeRef,
     check: checkPaykit,
+    reconnect: reconnectPaykit,
     reset: resetPaykit,
   } = usePaykitSetupFlow(asset);
   const isLocksAuthenticated = isLocksAuthenticatedState(useLocksAuthStore((state) => state.session));
@@ -155,6 +161,10 @@ export function DialogLocksAuth({
   const isLocksError = step === 'locks' && locksStatus === LocksAuthFlowStatus.ERROR;
   const isPaykitError = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.ERROR;
   const isPaykitUnavailable = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.UNAVAILABLE;
+  const isReconnectRequired = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.RECONNECT_REQUIRED;
+  const isSetupIncomplete = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.SETUP_INCOMPLETE;
+  const isReconnectFailed = isPaykitError && paykitMode === 'reconnect';
+  const isReconnecting = paykitMode === 'reconnect';
   const isError = isLocksError || isPaykitError || isPaykitUnavailable;
   // Intro step: the readiness probe (checking / ready / unavailable), before the auth iframe.
   const isIntroPhase =
@@ -166,7 +176,8 @@ export function DialogLocksAuth({
       locksStatus === LocksAuthFlowStatus.EXCHANGING);
   const mountedConnectUrl = locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL ? connectUrl : null;
   const isSessionStep = step === 'session';
-  const isBitkitStep = step === 'bitkit' && !isPaykitError && !isPaykitUnavailable;
+  const isBitkitStep =
+    step === 'bitkit' && !isPaykitError && !isPaykitUnavailable && !isReconnectRequired && !isSetupIncomplete;
 
   let title = 'Lock Content';
   let description: ReactNode = 'Pubky Locks allows you to lock content with payments.';
@@ -194,7 +205,7 @@ export function DialogLocksAuth({
     title = isNumbered ? 'Enable Locks (2/2)' : 'Enable Locks';
     description = <SessionUpgradeDescription />;
   } else if (isBitkitStep) {
-    title = 'Enable Payments';
+    title = isReconnecting && setupUrl ? 'Reconnect Bitkit' : 'Enable Payments';
     // No setup URL yet: the setup-status check is running, and there is no QR to scan.
     description = setupUrl ? (
       <>
@@ -202,11 +213,22 @@ export function DialogLocksAuth({
         <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
           {'Bitkit'}
         </Link>
-        {' wallet to enable payments.'}
+        {isReconnecting ? ' wallet to reconnect payments.' : ' wallet to enable payments.'}
       </>
     ) : (
       'Checking whether your Bitkit wallet is connected.'
     );
+  } else if (isReconnectRequired) {
+    title = 'Reconnect Bitkit';
+    description =
+      'Paykit already has a Bitkit setup for your account, so it has to be reconnected instead of set up again.';
+  } else if (isSetupIncomplete) {
+    title = 'Enable Payments';
+    description =
+      'The Bitkit setup did not finish, so nothing was set up yet. Connect Bitkit to start again, and approve it in Bitkit within 5 minutes.';
+  } else if (isReconnectFailed) {
+    title = 'Reconnect Bitkit';
+    description = 'Reconnecting your Bitkit wallet did not finish. Approve it in Bitkit within 5 minutes.';
   } else if (isPaykitError) {
     title = 'Enable Payments';
     description = 'Something went wrong while connecting your Bitkit wallet.';
@@ -296,7 +318,7 @@ export function DialogLocksAuth({
                 <iframe
                   ref={paykitIframeRef}
                   src={setupUrl}
-                  title={'Bitkit payout account setup'}
+                  title={isReconnecting ? 'Bitkit payout account reconnect' : 'Bitkit payout account setup'}
                   // Same origin rule as the Lock Server iframe above: without allow-same-origin a
                   // sandboxed postMessage arrives as origin "null" and is rejected. allow-popups is
                   // for the Bitkit deep link Paykit's page opens on touch devices.
@@ -321,14 +343,24 @@ export function DialogLocksAuth({
 
         {isSuccess && <StepImage src="/images/locks-enabled.webp" alt={title} />}
 
+        {isReconnectRequired && (
+          <Typography size="sm" className="text-center text-secondary-foreground">
+            {
+              "Approve the reconnect in Bitkit. Bitkit gives Paykit a new Bitcoin account, which can cancel a buyer's pending Bitcoin request that has not been accepted yet."
+            }
+          </Typography>
+        )}
+
         {isError && (
           <Typography size="sm" className="text-destructive">
             {/* Raw error messages are diagnostic text that already reaches logs and Sentry, so the dialog shows fixed copy only (#3028). */}
             {isPaykitUnavailable
               ? 'Payments are unavailable right now. Please try again later.'
-              : isPaykitError
-                ? "Couldn't connect your Bitkit wallet. Please try again."
-                : "Couldn't authorize the Lock Server. Please try again."}
+              : isReconnectFailed
+                ? 'Reconnecting Bitkit failed.'
+                : isPaykitError
+                  ? "Couldn't connect your Bitkit wallet. Please try again."
+                  : "Couldn't authorize the Lock Server. Please try again."}
           </Typography>
         )}
 
@@ -371,19 +403,40 @@ export function DialogLocksAuth({
           </DialogFooter>
         )}
 
-        {isError && (
-          <DialogFooter className="flex-row gap-4">
+        {(isReconnectRequired || isSetupIncomplete) && (
+          <DialogFooter className="flex-row flex-wrap gap-4">
             <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={close}>
               {'Cancel'}
             </Button>
-            {/* A failed setup retries through the server check before opening another approval. */}
+            {/* The main action is the one that can work: a held creator is refused `/setup`, and a creator
+                Paykit does not hold has no reconnect. */}
             <Button
               variant={ButtonVariant.DEFAULT}
               size="lg"
               className="flex-1"
-              onClick={isPaykitUnavailable || isPaykitError ? checkPaykit : startLocks}
+              onClick={isReconnectRequired ? reconnectPaykit : checkPaykit}
             >
-              {'Try again'}
+              {isReconnectRequired ? 'Reconnect Bitkit' : 'Connect Bitkit'}
+            </Button>
+          </DialogFooter>
+        )}
+
+        {isError && (
+          <DialogFooter className="flex-row flex-wrap gap-4">
+            <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={close}>
+              {'Cancel'}
+            </Button>
+            {/* A failed reconnect tries the reconnect again, never `/setup`, which Paykit refuses for a held
+                creator. Any other failed step retries through the server check before opening another approval. */}
+            <Button
+              variant={ButtonVariant.DEFAULT}
+              size="lg"
+              className="flex-1"
+              onClick={
+                isReconnectFailed ? reconnectPaykit : isPaykitUnavailable || isPaykitError ? checkPaykit : startLocks
+              }
+            >
+              {isReconnectFailed ? 'Reconnect Bitkit' : 'Try again'}
             </Button>
           </DialogFooter>
         )}
