@@ -144,7 +144,7 @@ describe('DialogLocksAuth', () => {
     expect(mocks.start).not.toHaveBeenCalled();
   });
 
-  it('renders the Lock Server iframe with the postMessage sandbox on the Enable step', () => {
+  it('renders the Lock Server iframe with the postMessage sandbox and clipboard-write allowed on the Enable step', () => {
     mocks.flow = {
       status: LocksAuthFlowStatus.AWAITING_APPROVAL,
       connectUrl: 'https://lock.server/connect?delivery=postmessage',
@@ -156,6 +156,7 @@ describe('DialogLocksAuth', () => {
     const iframe = screen.getByTitle('Lock Server authorization');
     expect(iframe).toHaveAttribute('src', 'https://lock.server/connect?delivery=postmessage');
     expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+    expect(iframe).toHaveAttribute('allow', 'clipboard-write');
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
   });
 
@@ -354,7 +355,7 @@ describe('DialogLocksAuth', () => {
     expect(link).toHaveClass('text-base', 'font-bold');
   });
 
-  it('renders the Paykit iframe with the postMessage sandbox on the Bitkit step', () => {
+  it('renders the Paykit iframe with the postMessage sandbox and clipboard-write allowed on the Bitkit step', () => {
     signIn();
     mocks.paykitFlow = {
       status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
@@ -367,6 +368,7 @@ describe('DialogLocksAuth', () => {
     const iframe = screen.getByTitle('Bitkit payout account setup');
     expect(iframe).toHaveAttribute('src', 'https://paykit.server/setup?state=STATE');
     expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+    expect(iframe).toHaveAttribute('allow', 'clipboard-write');
   });
 
   it('links the store badges to Bitkit on the Bitkit step', () => {

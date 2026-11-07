@@ -1,5 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { LocksService } from '@/services/locks/locks';
@@ -297,6 +297,7 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
       .mockReturnValueOnce(previousCheck.promise)
       .mockResolvedValueOnce({ status: 'setup_required' })
       .mockResolvedValueOnce({ status: 'ready' });
+    const addWindowListener = vi.spyOn(window, 'addEventListener');
     const props = { onOpenChange: vi.fn(), onSuccess: vi.fn() };
     const { rerender } = render(<DialogLocksAuth {...props} open />);
 
@@ -304,6 +305,9 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     rerender(<DialogLocksAuth {...props} open />);
 
     const iframe = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account setup');
+    // The callback listener is attached by a passive effect that can run after the iframe is in the
+    // DOM. The real Paykit page can only post once it has loaded, so wait for the listener first.
+    await waitFor(() => expect(addWindowListener).toHaveBeenCalledWith('message', expect.any(Function)));
     act(() => {
       window.dispatchEvent(
         new MessageEvent('message', {

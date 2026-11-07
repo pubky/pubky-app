@@ -22,7 +22,8 @@
 // unstyled blank page and the baseline is useless.
 import '@/app/globals.css';
 
-import { vi } from 'vitest';
+import { afterAll, vi } from 'vitest';
+import { cdp, server } from 'vitest/browser';
 import type { UsePassportAuthReturn } from '@/hooks/usePassportAuth/usePassportAuth.types';
 import type { PassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility.types';
 import type { UseUnlockedListResult } from '@/hooks/useUnlockedList/useUnlockedList.types';
@@ -167,6 +168,18 @@ const inertPopup = asOpaque<Window>({
   location: { assign: () => {}, replace: () => {} },
 });
 window.open = () => inertPopup;
+
+// 2e. Force a GC after every file on Chromium. Chromium keeps a 2 MiB
+//     shared-memory block per 304-revalidated script load until a forced GC
+//     (vitest-dev/vitest#9437), and each file's iframe re-validates the module
+//     graph, so a long run exhausts it and the browser connection closes
+//     between files. Vitest's own mitigation is Linux-only and gated on low
+//     /tmp space, so it never runs on macOS.
+afterAll(async () => {
+  if (server.browser === 'chromium') {
+    await cdp().send('HeapProfiler.collectGarbage');
+  }
+});
 
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm
 //    dep; same font as the real app's `next/font/google` Inter Tight, just

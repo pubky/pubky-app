@@ -182,7 +182,11 @@ Nexus data requested after the local edit can confirm it early; expiry alone doe
 
 ### Homeserver mute list sync
 
-Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.
+Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable. The stream itself is shared with the notification `last_read` sync; its reconnect backoff, healthy-after time and alert threshold are fixed in [`src/config/homeserver-event-stream.ts`](../src/config/homeserver-event-stream.ts).
+
+### Homeserver notification last_read sync
+
+Cross-session alignment of the notification read boundary uses the same homeserver **event stream** connection. Its debounce is fixed in [`src/config/notification-last-read-sync.ts`](../src/config/notification-last-read-sync.ts), the shared stream's timing in [`src/config/homeserver-event-stream.ts`](../src/config/homeserver-event-stream.ts), not environment variables. See ADR-0029.
 
 ## Setting Variables
 

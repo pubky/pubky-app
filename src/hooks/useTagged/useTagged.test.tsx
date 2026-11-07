@@ -1,3 +1,4 @@
+import type { Session } from '@synonymdev/pubky';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
@@ -19,6 +20,8 @@ const mockMocks = vi.hoisted(() => {
     currentUserPubky: 'mock-current-user',
     selectCurrentUserPubky: () => 'mock-current-user',
     restoreStatus: 'ready' as SessionRestoreStatus,
+    // A ready viewer holds a session. An omitted one is `null` (signed out) in `createZustandLikeHook`.
+    session: null as Session | null,
   };
   return {
     mockGetOrFetchTags,
@@ -39,6 +42,8 @@ vi.mock('@/controllers/tag/tag', () => ({
   },
 }));
 vi.mock('@/stores/auth/auth.store', async () => {
+  const { mockSession } = await import('@/test-utils/pubky');
+  mockMocks.authState.session = mockSession();
   const { createZustandLikeHook } = await import('@/test-utils/stores');
   return { useAuthStore: createZustandLikeHook(mockMocks.authState) };
 });

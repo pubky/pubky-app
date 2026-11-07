@@ -8,6 +8,7 @@ import {
   getPlausibleScriptUrl,
   serializeRuntimeConfig,
 } from '@/libs/runtime-config/runtime-config';
+import { ThemeProvider } from '@/providers/ThemeProvider/ThemeProvider';
 import { PageContainer } from '../Page/Page';
 
 const interTight = Inter_Tight({
@@ -31,7 +32,7 @@ export function RootContainer({ children }: RootContainerProps) {
   const nexusOrigin = new URL(getNexusUrl()).origin;
 
   return (
-    <Container as="html" lang="en-US" dir="ltr">
+    <Container as="html" lang="en-US" dir="ltr" suppressHydrationWarning>
       <Container as="body" className={`${interTight.variable} antialiased`}>
         {/*
           Publish runtime config before any Next.js bundle executes. This must stay a RAW
@@ -62,7 +63,9 @@ export function RootContainer({ children }: RootContainerProps) {
             {...{ 'event-locale': 'en-US' }}
           />
         )}
-        <PageContainer>{children}</PageContainer>
+        <ThemeProvider>
+          <PageContainer>{children}</PageContainer>
+        </ThemeProvider>
       </Container>
     </Container>
   );
