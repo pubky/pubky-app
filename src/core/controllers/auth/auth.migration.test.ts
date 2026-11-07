@@ -334,6 +334,36 @@ describe('grant-only session lifecycle', () => {
       expect.objectContaining({ purpose: 'signin', capabilities: getHomeserverCapabilities() }),
     );
   });
+  describe('signer key hint', () => {
+    const noHint = expect.not.objectContaining({ expectedSigner: expect.anything() });
+    it('names the signed-in pubky when requesting more permissions', async () => {
+      startFlow();
+      await AuthController.requestCapabilities(['/priv/pubky.app/example/:rw'], true);
+      expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
+        expect.objectContaining({ purpose: 'upgrade', expectedPubky: PUBKY, expectedSigner: PUBKY }),
+      );
+    });
+    it('names the expected pubky when the Shop asks to reauthorize', async () => {
+      startFlow();
+      await AuthController.getAuthUrl(false, PUBKY);
+      expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
+        expect.objectContaining({ purpose: 'signin', expectedPubky: PUBKY, expectedSigner: PUBKY }),
+      );
+    });
+    it('leaves first sign-in and signup to the signer picker', async () => {
+      startFlow();
+      await AuthController.getAuthUrl();
+      await AuthController.getSignupAuthUrl('invite');
+      expect(AuthApplication.startGrantFlow).toHaveBeenNthCalledWith(1, noHint);
+      expect(AuthApplication.startGrantFlow).toHaveBeenNthCalledWith(2, noHint);
+    });
+    it('never sends the hint to Pubky Passport, which rejects unknown link parameters', async () => {
+      startFlow();
+      await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' }, expectedPubky: PUBKY });
+      expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(expect.objectContaining({ expectedPubky: PUBKY }));
+      expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(noHint);
+    });
+  });
   it('requests the current App, Locks and Shop scopes during Ring signup too', async () => {
     startFlow();
     await AuthController.getSignupAuthUrl('invite');
