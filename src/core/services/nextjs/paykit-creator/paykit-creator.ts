@@ -7,6 +7,7 @@ import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseRetryAfterHeader } from '@/libs/http/response.utils';
+import { sleep } from '@/libs/utils/utils';
 
 const PROBE_TIMEOUT_MS = 6000;
 const OPERATION = 'NextJsPaykitCreatorService.isCreatorHeld';
@@ -100,13 +101,14 @@ export class NextJsPaykitCreatorService {
     if (response.status === HttpStatusCode.SERVICE_UNAVAILABLE) {
       const waitMs = (parseRetryAfterHeader(response.headers.get('retry-after')) ?? 1) * 1000;
       if (waitMs <= MAX_UNAVAILABLE_WAIT_MS && Date.now() + waitMs < deadline) {
-        void response.body?.cancel().catch(() => {});
-        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+        discardBody(response);
+        await sleep(waitMs);
         response = await this.ask(url.href, signal);
       }
     }
 
     if (response.status !== HttpStatusCode.OK) {
+      discardBody(response);
       throw httpResponseToError(response, ErrorService.Locks, OPERATION, endpoint);
     }
     const body = creatorHeldResponseSchema.safeParse(await response.json().catch(() => undefined));
@@ -128,4 +130,9 @@ export class NextJsPaykitCreatorService {
       OPERATION,
     );
   }
+}
+
+/** Releases the connection behind an answer that is not read. */
+function discardBody(response: Response): void {
+  void response.body?.cancel().catch(() => {});
 }

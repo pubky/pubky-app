@@ -100,6 +100,32 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('releases the first 503 before asking again', async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(new ReadableStream({ cancel }), { status: 503, headers: { 'Retry-After': '1' } }),
+      )
+      .mockResolvedValueOnce(heldAnswer(true));
+
+    const answer = NextJsPaykitCreatorService.isCreatorHeld(params);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(cancel).toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(answer).resolves.toBe(true);
+  });
+
+  it.each([400, 404, 429, 502, 302])('releases the body of a %i it does not read', async (status) => {
+    const cancel = vi.fn();
+    vi.mocked(fetch).mockResolvedValue(new Response(new ReadableStream({ cancel }), { status }));
+
+    await expect(NextJsPaykitCreatorService.isCreatorHeld(params)).rejects.toThrow();
+    expect(cancel).toHaveBeenCalled();
+  });
+
   it('throws when the retry after a 503 is refused again', async () => {
     vi.useFakeTimers();
     vi.mocked(fetch).mockResolvedValueOnce(refused(503)).mockResolvedValueOnce(refused(503));
@@ -164,12 +190,37 @@ describe('NextJsPaykitCreatorService.isCreatorHeld', () => {
     });
   });
 
-  it('bounds the request with a timeout signal', async () => {
-    vi.mocked(fetch).mockResolvedValue(heldAnswer(false));
+  it('bounds both attempts with one six-second deadline', async () => {
+    vi.useFakeTimers();
+    // Node's own timeout signal ignores fake timers; this one fires on the faked clock.
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException('timed out', 'TimeoutError')), ms);
+      return controller.signal;
+    });
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(refused(503))
+      .mockImplementationOnce(
+        (_url, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+          }),
+      );
 
-    await NextJsPaykitCreatorService.isCreatorHeld(params);
+    const answer = NextJsPaykitCreatorService.isCreatorHeld(params);
+    const settled = expect(answer).rejects.toThrow();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const [first, second] = vi.mocked(fetch).mock.calls.map(([, init]) => init?.signal);
+    expect(second).toBe(first);
+    expect(timeout).toHaveBeenCalledTimes(1);
+    expect(timeout).toHaveBeenCalledWith(6000);
 
-    expect(vi.mocked(fetch).mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    const signal = timeout.mock.results[0].value as AbortSignal;
+    expect(signal.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(5000);
+    await settled;
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('fails without a configured Paykit Server and sends nothing', async () => {
