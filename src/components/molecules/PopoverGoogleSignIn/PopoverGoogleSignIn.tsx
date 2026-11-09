@@ -50,7 +50,7 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
             {'Sign in with Apple or Google'}
           </Heading>
           <Typography size="sm" className="text-muted-foreground">
-            {'Use an account you already have to create or access your pubky through Pubky Passport.'}
+            {'Use an existing account to create or access your pubky with Pubky Passport.'}
           </Typography>
           {POINTS.map((point) => (
             <Typography key={point.term} size="sm" className="text-muted-foreground">

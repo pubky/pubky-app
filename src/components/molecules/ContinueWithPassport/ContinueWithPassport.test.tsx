@@ -22,7 +22,7 @@ describe('ContinueWithPassport', () => {
     expect(onContinue).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'Sign in with Apple or Google' })).toBeInTheDocument();
     expect(
-      screen.getByText('Use an account you already have to create or access your pubky through Pubky Passport.'),
+      screen.getByText('Use an existing account to create or access your pubky with Pubky Passport.'),
     ).toBeInTheDocument();
     expect(screen.getByText('Your keys:')).toBeInTheDocument();
     expect(screen.getByText('Recovery:')).toBeInTheDocument();
