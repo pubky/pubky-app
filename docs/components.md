@@ -49,6 +49,15 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 
 - **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
+- **App shell and public documents:** `AppShell` (`src/components/organisms/AppShell/AppShell.tsx`, mounted by
+  `src/app/layout.tsx`) puts every route behind `DatabaseProvider` → `RouteGuardProvider` with the coordinators, the
+  Fab, the guest banner and the sign-in dialog. The server's HTML holds only the gate's spinner. The public documents
+  (`isPublicDocumentRoute`: `/terms-of-use`, `/privacy-policy`, `/copyright`) skip the gate and render with only
+  `<Header />`, so their text is in the first HTML and they open without IndexedDB. Anything they render must read
+  nothing from Dexie, controllers or the session restore. The header shows members only the logo there, and anything
+  that reads browser-only state (the auth store, the visitor's clock) waits for `useIsHydrated()` so the hydrating
+  render matches the server's markup. Moving between a public document and an app route remounts the gate (database
+  init, coordinators).
 - **Active nav state:** a nav item that links to a default child route (footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay active on sibling routes (`/settings/notifications`) needs active detection on the parent prefix (`activePrefix: APP_ROUTES.SETTINGS`, see `MobileFooter`), not only `href` or `pathname.startsWith(href + '/')`.
 
 `MobileFooter` always disables prefetch for Search. With Next.js 16.3.6, any `/search` prefetch from the footer after a
@@ -346,6 +355,26 @@ Build forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Cano
 ```
 
 An arbitrary value is fine only when the scale cannot express it: a viewport fraction with no named utility (`max-h-[75dvh]`; the full viewport is `h-dvh`, `max-h-screen`, `max-w-screen`), a `calc()` over the viewport or a CSS variable (`max-h-[calc(100dvh-2rem)]` in the `Dialog` atom), or a CSS variable set by a library (`translate-x-[var(--radix-toast-swipe-move-x)]`). Fixed lengths and colours always come from the scale and the tokens.
+
+### Light and dark themes
+
+The dark theme is the `:root` token set in `src/app/globals.css`; the light theme overrides the same tokens under `.light`. next-themes (`ThemeProvider`) puts `dark` or `light` on `<html>` from the Settings choice (Auto resolves `prefers-color-scheme` to one of them). Prefer tokens over per-theme classes: a token such as `bg-card` or `text-brand-foreground` is already right in both themes.
+
+When a surface really differs per theme, use the `light:` and `dark:` variants declared with `@custom-variant` in `globals.css`. Both follow the class on `<html>`, not the OS setting. Do not write the arbitrary `[.light_&]:` form.
+
+```tsx
+// Per-theme exception
+<Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" className="light:invert" />
+
+// Same colour in both themes: say it once
+<div className="bg-white" /> // QR plate, not `bg-foreground light:bg-white`
+
+// Text on a brand-green fill
+<Button variant="brand" /> // uses `text-brand-foreground`
+<div className="bg-brand text-brand-foreground" />
+```
+
+The document sets no `color-scheme` (`enableColorScheme={false}`, none in `globals.css`). If it did, the browser would paint an opaque backdrop behind iframes whose page uses a different scheme, and transparent embeds such as Shop would turn into a white box.
 
 ### Spacing
 

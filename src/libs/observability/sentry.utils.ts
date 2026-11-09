@@ -8,6 +8,7 @@ import {
   EMAIL_PATTERN,
   EMAIL_REDACTED,
   HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+  LOCKS_UNLOCK_POLL_CALL_SITES,
   NEXUS_POST_TAGS_PATH_PATTERN,
   PHONE_PATTERN,
   PHONE_REDACTED,
@@ -61,6 +62,8 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
   return endpointPath ? pattern.test(endpointPath) : false;
 }
 
+const LOCKS_UNLOCK_POLL_CALL_SITE_SET: ReadonlySet<unknown> = new Set(Object.values(LOCKS_UNLOCK_POLL_CALL_SITES));
+
 /**
  * Expected-error drop rules (ADR-0015 §5.1 Challenge 3).
  *
@@ -109,6 +112,21 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.context?.reportSuppressed === true,
   },
   {
+    name: 'locks-unlock-poll-repeat-reports',
+    reason:
+      'While a reader waits in the Pay to Unlock modal, usePayToUnlock polls the verification task every 3 s and the ' +
+      'Paykit link every 1 s, so a Lock Server outage built one AppError per tick, ~240 events per 3-minute wait (issue ' +
+      '#2641). The loops back off and tag every failure after the first of a streak with context.reportSuppressed, ' +
+      'so the first failure of each outage stays reportable; untagged reads (the open-time lookup, the purchase ' +
+      'resume) and other Locks operations are untouched. A streak does not tell failures apart: a different failure ' +
+      'during one (a response the schema rejects after a run of 503s, say) is tagged too until the streak ends on an ' +
+      'answer, a return to the tab or a new wait, while a reader who opens the dialog afterwards reports it.',
+    matches: (error) =>
+      error.service === ErrorService.Locks &&
+      LOCKS_UNLOCK_POLL_CALL_SITE_SET.has(error.context?.callSite) &&
+      error.context?.reportSuppressed === true,
+  },
+  {
     name: 'aborted-requests',
     reason:
       'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException. When the ' +
@@ -133,13 +151,14 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'homeserver-event-stream-connect',
     reason:
-      'The mute-list SSE subscribe drops routinely (homeserver deploys, idle timeouts, mobile backgrounding) and ' +
-      'MuteListSyncCoordinator reconnects with backoff by design. Connect failures reach here as ' +
+      'The shared homeserver SSE subscribe (mute list and notification last_read) drops routinely (homeserver ' +
+      'deploys, idle timeouts, mobile backgrounding) and HomeserverEventStreamCoordinator reconnects with backoff ' +
+      'by design. Connect failures reach here as ' +
       'handleError → httpStatusCodeToError(500) → Err.server(INTERNAL_ERROR) tagged with the subscribe operation ' +
       '(PUBKY-APP-11/1Y/6G/CX), or as Err.network(CONNECTION_FAILED) when the SDK cannot resolve the homeserver ' +
       "from PKARR first ('PkarrError', @synonymdev/pubky >= 0.10). Auth/validation failures on the same operation and every other Homeserver " +
-      'operation stay reportable, and the coordinator reports a persistent outage once via the ' +
-      "'muteListEventStreamExhausted' operation after MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD consecutive failures.",
+      'operation stay reportable, and the coordinator reports a persistent outage once via its own operation ' +
+      "('homeserverEventStreamExhausted') after HOMESERVER_EVENT_STREAM_FAILURE_ALERT_THRESHOLD.",
     matches: (error) =>
       error.service === ErrorService.Homeserver &&
       error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&
