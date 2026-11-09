@@ -307,7 +307,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
     bootstrapData.ids.hot_tags,
   );
   expect(mocks.upsertTagsStream).toHaveBeenCalledWith(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
-  expect(mocks.persistFiles).toHaveBeenCalledWith(bootstrapData.files);
+  expect(mocks.persistFiles).toHaveBeenCalledWith(bootstrapData.files ?? []);
   const flatNotifications = bootstrapData.notifications.map((n) => createFlatNotification(n.timestamp));
   expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications });
   expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
@@ -757,6 +757,17 @@ describe('BootstrapApplication', () => {
       );
 
       expect(mocks.upsertTagsStream).toHaveBeenCalledWith(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
+    });
+
+    it('persists nothing for files when the page carries none, as a /v1 page never does', async () => {
+      const bootstrapData = createMockBootstrapData();
+      delete bootstrapData.files;
+      const mocks = setupMocks({ bootstrapData, unreadCount: 0 });
+
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(mocks.persistFiles).toHaveBeenCalledWith([]);
+      expect(mocks.persistPosts).toHaveBeenCalledWith(expect.objectContaining({ posts: bootstrapData.posts }));
     });
 
     it('should persist files from bootstrap payload', async () => {

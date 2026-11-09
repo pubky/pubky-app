@@ -13,7 +13,7 @@ import {
  * All API endpoints related to post operations
  */
 
-const PREFIX = 'v0/post';
+const PREFIX = 'post';
 
 export const postApi = {
   view: (params: TPostViewParams) => {

@@ -705,7 +705,6 @@ describe('FileApplication', () => {
       });
       expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledWith({
         post_ids: [buildCompositeId({ pubky: TEST_PUBKY, id: other.id })],
-        include_attachment_metadata: false,
         force: true,
       });
       expect(deleteIdempotentSpy).toHaveBeenCalledExactlyOnceWith(url);

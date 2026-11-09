@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getCdnUrl, getNexusUrl } from '@/config/nexus';
+import { getCdnUrl, getNexusUrl, NEXUS_API_VERSION } from '@/config/nexus';
 import { ClientErrorCode, RateLimitErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { filesApi } from '@/services/nexus/file/file.api';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { mockResponse } from '@/test-utils/dom';
@@ -12,8 +13,11 @@ import {
   buildCdnUrl,
   buildNexusUrl,
   buildUrlWithQuery,
+  carryNexusResponseStartedAt,
   createFetchOptions,
   getNexusResponseStartedAt,
+  mapNexusResponse,
+  markNexusResponseStartedAt,
   queryNexus,
 } from './nexus.utils';
 
@@ -55,8 +59,52 @@ describe('nexus.utils', () => {
   });
 
   describe('buildNexusUrl', () => {
-    it('should build correct Nexus URL', () => {
-      expect(buildNexusUrl('v0/users')).toBe(`${getNexusUrl()}/v0/users`);
+    it('builds every route under the current API version, /v1', () => {
+      expect(NEXUS_API_VERSION).toBe('v1');
+      expect(buildNexusUrl('users')).toBe(`${getNexusUrl()}/v1/users`);
+      expect(buildNexusUrl('stream/posts/keys?source=all')).toBe(`${getNexusUrl()}/v1/stream/posts/keys?source=all`);
+    });
+
+    it('builds a route under the frozen /v0 only when the caller names that version', () => {
+      expect(buildNexusUrl('files/by_ids', { version: 'v0' })).toBe(`${getNexusUrl()}/v0/files/by_ids`);
+    });
+
+    it('is the one /v0 call: file details of 0.x attachments', () => {
+      expect(filesApi.getFiles(['pubky://o/pub/pubky.app/files/0032TSID']).url).toBe(
+        `${getNexusUrl()}/v0/files/by_ids`,
+      );
+    });
+  });
+
+  describe('carryNexusResponseStartedAt', () => {
+    it('stamps the derived response with the start time of the one it was mapped from', () => {
+      const response = [{ id: 1 }];
+      markNexusResponseStartedAt(response, 1_000);
+      const derived = carryNexusResponseStartedAt(
+        response,
+        response.map((row) => ({ ...row })),
+      );
+
+      expect(derived).not.toBe(response);
+      expect(getNexusResponseStartedAt(derived)).toBe(1_000);
+    });
+
+    it('leaves the derived response unstamped when the source carries no start time', () => {
+      const derived = carryNexusResponseStartedAt([{ id: 1 }], [{ id: 1 }]);
+
+      expect(getNexusResponseStartedAt(derived)).toBeUndefined();
+    });
+  });
+
+  describe('mapNexusResponse', () => {
+    it('maps every item and keeps the start time of the list response', () => {
+      const response = [{ kind: 'note' }, { kind: 'article' }];
+      markNexusResponseStartedAt(response, 2_000);
+
+      const mapped = mapNexusResponse(response, (item) => item.kind.toUpperCase());
+
+      expect(mapped).toEqual(['NOTE', 'ARTICLE']);
+      expect(getNexusResponseStartedAt(mapped)).toBe(2_000);
     });
   });
 
@@ -68,14 +116,15 @@ describe('nexus.utils', () => {
 
   describe('buildUrlWithQuery', () => {
     it('should build URL with query parameters', () => {
-      const result = buildUrlWithQuery({ baseRoute: 'v0/posts', params: { limit: 10, offset: 0 } });
+      const result = buildUrlWithQuery({ baseRoute: 'posts', params: { limit: 10, offset: 0 } });
+      expect(result).toContain(`${getNexusUrl()}/v1/posts?`);
       expect(result).toContain('limit=10');
       expect(result).toContain('offset=0');
     });
 
     it('should exclude path parameters from query string', () => {
       const result = buildUrlWithQuery({
-        baseRoute: 'v0/posts',
+        baseRoute: 'posts',
         params: { post_id: '123', limit: 10 },
         excludeKeys: ['post_id'],
       });
@@ -85,7 +134,7 @@ describe('nexus.utils', () => {
 
     it('should exclude undefined and null values', () => {
       const result = buildUrlWithQuery({
-        baseRoute: 'v0/posts',
+        baseRoute: 'posts',
         params: { limit: 10, offset: undefined, filter: null },
       });
       expect(result).toContain('limit=10');
@@ -296,7 +345,7 @@ describe('nexus.utils', () => {
     });
 
     it('collapses two concurrent identical posts/by_ids calls into one request', async () => {
-      const posts = [{ details: { author: 'author1', id: 'post1' } }];
+      const posts = [{ details: { author: 'author1', id: 'post1', kind: 'short' }, tags: [] }];
       mockFetch.mockResolvedValueOnce(nexusResponse(posts));
 
       const [first, second] = await Promise.all([
@@ -310,7 +359,7 @@ describe('nexus.utils', () => {
     });
 
     it('collapses two concurrent identical users/by_ids calls into one request', async () => {
-      const users = [{ details: { id: 'user1' } }];
+      const users = [{ details: { id: 'user1' }, tags: [] }];
       mockFetch.mockResolvedValueOnce(nexusResponse(users));
 
       await Promise.all([
@@ -322,7 +371,7 @@ describe('nexus.utils', () => {
     });
 
     it('does not reuse a forced revalidation that is already fetching, and starts the follow-up after it settles', async () => {
-      const posts = [{ details: { author: 'author1', id: 'post1' } }];
+      const posts = [{ details: { author: 'author1', id: 'post1', kind: 'short' }, tags: [] }];
       const inFlight = Promise.withResolvers<Response>();
       const url = `${getNexusUrl()}/forced-follow-up-after-start-test`;
       mockFetch.mockReturnValueOnce(inFlight.promise).mockImplementation(() => Promise.resolve(nexusResponse(posts)));
@@ -527,7 +576,7 @@ describe('nexus.utils', () => {
 
     /** A syntactically valid pubky that Nexus does not know (valid-format unknown key). */
     const unknownPubky = 'pperrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rdo';
-    const detailsUrl = (suffix = '') => `${getNexusUrl()}/v0/user/${unknownPubky}/details${suffix}`;
+    const detailsUrl = (suffix = '') => `${getNexusUrl()}/v1/user/${unknownPubky}/details${suffix}`;
 
     const notFoundResponse = () => new Response('Not Found', { status: 404 });
 

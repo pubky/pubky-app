@@ -4,16 +4,26 @@ import type {
   NexusHotTag,
   NexusNotification,
   NexusPost,
+  NexusPostWire,
   NexusUser,
+  NexusUserWire,
 } from '@/services/nexus/nexus.types';
 
+/** The bootstrap page past the read boundary: local post kinds, tags with `relationship`. */
 export type NexusBootstrapResponse = {
   users: NexusUser[];
   posts: NexusPost[];
-  files: NexusFileDetails[];
+  /** `/v0` only: `/v1` serves no file details (0.x attachment metadata comes from `filesApi.getFiles`). */
+  files?: NexusFileDetails[];
   ids: NexusBootstrapList;
   indexed: boolean;
   notifications: NexusNotification[];
+};
+
+/** The bootstrap page as Nexus serves it (see `NexusPostWire`, `NexusUserWire`). */
+export type NexusBootstrapWire = Omit<NexusBootstrapResponse, 'users' | 'posts'> & {
+  users: NexusUserWire[];
+  posts: NexusPostWire[];
 };
 
 export type NexusBootstrapList = {

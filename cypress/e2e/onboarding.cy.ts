@@ -65,7 +65,7 @@ const waitUntilStarterPackHasUsers = (tag: string) => {
     const nexusOrigin = String(nexusUrl).replace(/\/$/, '');
     const poll = () => {
       cy.request({
-        url: `${nexusOrigin}/v0/stream/users/ids?source=starter_pack&tags=${encodeURIComponent(tag)}&skip=0&limit=10`,
+        url: `${nexusOrigin}/v1/stream/users/ids?source=starter_pack&tags=${encodeURIComponent(tag)}&skip=0&limit=10`,
         failOnStatusCode: false,
       }).then((response) => {
         const ids = Array.isArray(response.body) ? response.body : [];

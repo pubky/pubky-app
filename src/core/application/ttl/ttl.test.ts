@@ -34,6 +34,9 @@ vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
 
 const mockQueryNexus = vi.mocked(queryNexus);
 
+/** A Nexus `/v1` post as the read boundary hands it on: `note` folded into the local `short`. */
+const withLocalKind = (post: NexusPost): NexusPost => ({ ...post, details: { ...post.details, kind: 'short' } });
+
 describe('TtlApplication', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -183,9 +186,10 @@ describe('TtlApplication', () => {
         method: 'POST',
         body: JSON.stringify({ post_ids: postIds, viewer_id: viewerId }),
       });
-      // persistPosts handles TTL updates internally
+      // persistPosts handles TTL updates internally, and receives the posts past the read boundary
+      // (the /v1 kind `note` folded into the local `short`)
       expect(persistPostsSpy).toHaveBeenCalledWith({
-        posts: nexusPosts,
+        posts: nexusPosts.map(withLocalKind),
         tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
         refreshGuard: { fetchStartedAt: expect.any(Number) },
       });
@@ -222,7 +226,7 @@ describe('TtlApplication', () => {
       // local-first edit can slip between the check and the bulk save.
       expect(persistPostsSpy).toHaveBeenCalledTimes(1);
       expect(persistPostsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ posts: nexusPosts, refreshGuard: { fetchStartedAt } }),
+        expect.objectContaining({ posts: nexusPosts.map(withLocalKind), refreshGuard: { fetchStartedAt } }),
       );
     });
 

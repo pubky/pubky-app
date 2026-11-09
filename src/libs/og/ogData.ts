@@ -26,7 +26,6 @@ const EMPTY_COUNTS: NexusUserCounts = {
   following: 0,
   followers: 0,
   friends: 0,
-  bookmarks: 0,
 };
 
 /**

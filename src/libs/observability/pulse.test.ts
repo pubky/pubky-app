@@ -176,7 +176,7 @@ describe('shared capture and privacy policy', () => {
     const error = Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
       service: ErrorService.Nexus,
       operation: 'fetchNexus',
-      context: { statusCode: 404, endpoint: 'https://example.com/v0/post/user/post/tags' },
+      context: { statusCode: 404, endpoint: 'https://example.com/v1/post/user/post/tags' },
     });
     expect(beforeSendPulse(event(), { originalException: error })).toBeNull();
   });

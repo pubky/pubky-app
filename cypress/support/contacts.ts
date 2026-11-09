@@ -49,7 +49,7 @@ export const searchAndFollowProfile = (pubky: string, profileName: string, inter
 
   // for waiting for data to index
   if (interceptAlias) {
-    cy.intercept('GET', '**/v0/stream/users/ids*').as(interceptAlias);
+    cy.intercept('GET', '**/v1/stream/users/ids*').as(interceptAlias);
   }
 
   // follow profile

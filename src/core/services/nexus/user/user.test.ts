@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNexusUrl } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag, NexusUserCounts, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { buildUrlWithQuery } from '../nexus.utils';
 import { userApi } from './user.api';
@@ -37,10 +37,10 @@ describe('User API', () => {
         depth: 2,
         viewer_id: testViewerId,
       };
-      const baseRoute = 'v0/user/test';
+      const baseRoute = 'user/test';
 
       const result = buildUrlWithQuery({ baseRoute, params, excludeKeys: USER_PATH_PARAMS });
-      expect(result).toBe(`${getNexusUrl()}/v0/user/test?depth=2&viewer_id=${testViewerId}`);
+      expect(result).toBe(`${getNexusUrl()}/v1/user/test?depth=2&viewer_id=${testViewerId}`);
     });
 
     it('should exclude path parameters from query string', () => {
@@ -48,7 +48,7 @@ describe('User API', () => {
         user_id: testUserId,
         depth: 1,
       };
-      const baseRoute = 'v0/user/test';
+      const baseRoute = 'v1/user/test';
 
       const result = buildUrlWithQuery({ baseRoute, params, excludeKeys: USER_PATH_PARAMS });
       expect(result).not.toContain('user_id=');
@@ -60,8 +60,8 @@ describe('User API', () => {
     it('should generate correct URLs for basic endpoints', () => {
       const params: TUserId = { user_id: testUserId };
 
-      expect(userApi.counts(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/counts`);
-      expect(userApi.details(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/details`);
+      expect(userApi.counts(params)).toBe(`${getNexusUrl()}/v1/user/${testUserId}/counts`);
+      expect(userApi.details(params)).toBe(`${getNexusUrl()}/v1/user/${testUserId}/details`);
     });
 
     it('should generate correct URLs for view endpoints', () => {
@@ -71,12 +71,12 @@ describe('User API', () => {
         viewer_id: testViewerId,
       };
 
-      expect(userApi.view(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}?depth=2&viewer_id=${testViewerId}`);
+      expect(userApi.view(params)).toBe(`${getNexusUrl()}/v1/user/${testUserId}?depth=2&viewer_id=${testViewerId}`);
       expect(userApi.followers(params)).toBe(
-        `${getNexusUrl()}/v0/user/${testUserId}/followers?depth=2&viewer_id=${testViewerId}`,
+        `${getNexusUrl()}/v1/user/${testUserId}/followers?depth=2&viewer_id=${testViewerId}`,
       );
       expect(userApi.following(params)).toBe(
-        `${getNexusUrl()}/v0/user/${testUserId}/following?depth=2&viewer_id=${testViewerId}`,
+        `${getNexusUrl()}/v1/user/${testUserId}/following?depth=2&viewer_id=${testViewerId}`,
       );
     });
 
@@ -86,7 +86,7 @@ describe('User API', () => {
         viewer_id: testViewerId,
       };
 
-      expect(userApi.relationship(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/relationship/${testViewerId}`);
+      expect(userApi.relationship(params)).toBe(`${getNexusUrl()}/v1/user/${testUserId}/relationship/${testViewerId}`);
     });
 
     it('should generate correct URL for friends endpoint', () => {
@@ -97,7 +97,7 @@ describe('User API', () => {
       };
 
       expect(userApi.friends(params)).toBe(
-        `${getNexusUrl()}/v0/user/${testUserId}/friends?depth=2&viewer_id=${testViewerId}`,
+        `${getNexusUrl()}/v1/user/${testUserId}/friends?depth=2&viewer_id=${testViewerId}`,
       );
     });
 
@@ -111,7 +111,7 @@ describe('User API', () => {
       };
 
       expect(userApi.notifications(params)).toBe(
-        `${getNexusUrl()}/v0/user/${testUserId}/notifications?skip=0&limit=10&start=1000&end=2000`,
+        `${getNexusUrl()}/v1/user/${testUserId}/notifications?skip=0&limit=10&start=1000&end=2000`,
       );
     });
 
@@ -123,7 +123,7 @@ describe('User API', () => {
         limit: 10,
       };
 
-      expect(userApi.taggers(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/taggers/test-tag?skip=0&limit=10`);
+      expect(userApi.taggers(params)).toBe(`${getNexusUrl()}/v1/user/${testUserId}/taggers/test-tag?skip=0&limit=10`);
     });
 
     it('should generate correct URL for tags endpoint', () => {
@@ -133,7 +133,7 @@ describe('User API', () => {
         limit_tags: 10,
       };
 
-      expect(userApi.tags(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/tags?skip_tags=0&limit_tags=10`);
+      expect(userApi.tags(params)).toBe(`${getNexusUrl()}/v1/user/${testUserId}/tags?skip_tags=0&limit_tags=10`);
     });
   });
 
@@ -178,12 +178,46 @@ describe('NexusUserService', () => {
 
       expect(result).toEqual(mockTags);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${getNexusUrl()}/v0/user/${testUserId}/tags?skip_tags=5&limit_tags=20`,
+        url: `${getNexusUrl()}/v1/user/${testUserId}/tags?skip_tags=5&limit_tags=20`,
       });
+    });
+
+    it('derives each tag relationship from tag_uri, which /v1 serves in place of the field, and keeps the stamp', async () => {
+      const wireTags = [
+        { label: 'own', taggers: ['viewer'], taggers_count: 1, tag_uri: 'pubky://viewer/pub/social/v1/tags/T1' },
+        { label: 'foreign', taggers: ['other'], taggers_count: 1, tag_uri: null },
+      ];
+      markNexusResponseStartedAt(wireTags, 1_000);
+      mockQueryNexus.mockResolvedValue(wireTags);
+
+      const result = await NexusUserService.tags({ user_id: testUserId, viewer_id: 'viewer' as Pubky });
+
+      expect(result.map((tag) => [tag.label, tag.relationship])).toEqual([
+        ['own', true],
+        ['foreign', false],
+      ]);
+      expect(result).not.toBe(wireTags);
+      expect(getNexusResponseStartedAt(result)).toBe(1_000);
     });
   });
 
   describe('taggers', () => {
+    it('derives relationship from tag_uri when /v1 serves none', async () => {
+      mockQueryNexus.mockResolvedValue({ users: ['viewer'], tag_uri: 'pubky://viewer/pub/social/v1/tags/T1' });
+
+      const result = await NexusUserService.taggers({
+        user_id: testUserId,
+        label: 'rust',
+        viewer_id: 'viewer' as Pubky,
+      });
+
+      expect(result).toEqual({
+        users: ['viewer'],
+        tag_uri: 'pubky://viewer/pub/social/v1/tags/T1',
+        relationship: true,
+      });
+    });
+
     it('should construct correct URL with encoded label', async () => {
       const queryNexusSpy = mockQueryNexus.mockResolvedValue({ users: [], relationship: false });
 
@@ -220,7 +254,7 @@ describe('NexusUserService', () => {
 
       expect(result).toEqual(mockUserDetails);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${getNexusUrl()}/v0/user/${testUserId}/details`,
+        url: `${getNexusUrl()}/v1/user/${testUserId}/details`,
       });
     });
 
@@ -228,7 +262,7 @@ describe('NexusUserService', () => {
       await NexusUserService.details({ user_id: testUserId, profileLookup: true });
 
       expect(mockQueryNexus).toHaveBeenCalledWith({
-        url: `${getNexusUrl()}/v0/user/${testUserId}/details`,
+        url: `${getNexusUrl()}/v1/user/${testUserId}/details`,
         notFoundRetries: PROFILE_LOOKUP_NOT_FOUND_RETRIES,
       });
     });
@@ -271,7 +305,7 @@ describe('NexusUserService', () => {
 
       await NexusUserService.counts({ user_id: testUserId });
 
-      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v0/user/${testUserId}/counts` });
+      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v1/user/${testUserId}/counts` });
     });
   });
 });

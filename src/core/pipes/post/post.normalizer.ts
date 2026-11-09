@@ -21,8 +21,10 @@ import type { CollectionContentInput } from '@/models/post/collection/collection
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostValidatorData, TPostEdit } from '@/pipes/pipes.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
-import { toLocalPostKind } from '@/pipes/post/post.kind';
+import { toLocalPostKind, toLocalPostKindFromNexus } from '@/pipes/post/post.kind';
 import { toSpecsValidationError } from '@/pipes/specs.errors';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import type { NexusPost, NexusPostWire } from '@/services/nexus/nexus.types';
 
 /** The newest stored version of a post: where it is, and what it holds. */
 export type TPostHead = {
@@ -62,6 +64,21 @@ const EMPTY_STORED_COLLECTION: StoredCollectionContent = {
 
 export class PostNormalizer {
   private constructor() {}
+
+  /**
+   * A post as the app holds it, from a post as Nexus `/v1` serves it: `details.kind` folded into
+   * the local vocabulary (`note` → `short`, `article` → `long`, anything else kept as served) and
+   * every tag given its `relationship`. The Nexus services apply it to each post they return, so
+   * the local tables and every read site past them see one vocabulary (D16). Members this function
+   * does not name (`counts`, `relationships`, ...) pass through unchanged.
+   */
+  static fromNexus({ details, tags, ...rest }: NexusPostWire): NexusPost {
+    return {
+      ...rest,
+      details: { ...details, kind: toLocalPostKindFromNexus(details.kind) },
+      tags: tags.map((tag) => TagNormalizer.fromNexus(tag)),
+    };
+  }
 
   /** The first version of a collection: `buildPost` spells its envelope. */
   static toCollection(collection: CollectionContentInput, specsPubky: Pubky): BuiltPost {

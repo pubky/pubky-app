@@ -114,7 +114,7 @@ export const createSeedTasks = (config: SeedConfig) => {
           writeFileSync(recoveryFilePath, keypair.createRecoveryFile(RECOVERY_FILE_PASSCODE));
         }
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
-        await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v0/ingest/${id}`, { method: 'PUT' }).catch(() => null);
+        await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v1/ingest/${id}`, { method: 'PUT' }).catch(() => null);
         sessions.set(id, { name, session, writer });
         return { id, pubky: `pubky${id}`, uri, name };
       }),

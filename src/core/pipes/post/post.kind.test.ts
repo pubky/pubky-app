@@ -7,7 +7,9 @@ import {
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
   toLocalPostKind,
+  toLocalPostKindFromNexus,
   toLockContentKind,
+  toNexusPostKindFilter,
   toStoredPostKind,
 } from '@/pipes/post/post.kind';
 
@@ -375,5 +377,54 @@ describe('toLockContentKind', () => {
   ])('names %s', (_name, types, name) => {
     const attachments = types.map((type, i) => new File(['x'], `f${i}`, { type }));
     expect(toLockContentKind(inferPostKindForCreate({ content: '', attachments, isArticle: false }))).toBe(name);
+  });
+});
+
+describe('toLocalPostKindFromNexus', () => {
+  it.each([
+    ['note', 'short'],
+    ['article', 'long'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ])('folds the /v1 kind %s into the local kind %s', (wire, local) => {
+    expect(toLocalPostKindFromNexus(wire)).toBe(local);
+  });
+
+  it.each(['short', 'long'])('leaves the local kind %s, which /v0 served, in place', (kind) => {
+    expect(toLocalPostKindFromNexus(kind)).toBe(kind);
+  });
+
+  it.each(['unknown', 'poll', ''])(
+    'fails open on %j: kept as served, so the post renders and is never hidden',
+    (kind) => {
+      expect(toLocalPostKindFromNexus(kind)).toBe(kind);
+    },
+  );
+
+  it('lands every kind the data model can store in the local vocabulary', () => {
+    for (const kind of postKinds) {
+      expect(POST_KINDS).toContain(toLocalPostKindFromNexus(kind));
+    }
+  });
+});
+
+describe('toNexusPostKindFilter', () => {
+  it.each([
+    ['short', 'note'],
+    ['long', 'article'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ])('sends the local stream kind %s as the /v1 filter %s', (local, wire) => {
+    expect(toNexusPostKindFilter(local)).toBe(wire);
+  });
+
+  it('sends a kind it does not know as is, for Nexus to reject', () => {
+    expect(toNexusPostKindFilter('poll')).toBe('poll');
   });
 });

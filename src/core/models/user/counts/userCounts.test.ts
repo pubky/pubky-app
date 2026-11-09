@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { generateTestUserId } from '@/models/user/users.helpers';
 import type { NexusUserCounts } from '@/services/nexus/nexus.types';
 
@@ -13,7 +14,7 @@ describe('UserCountsModel', () => {
   const testUserId1 = generateTestUserId(1);
   const testUserId2 = generateTestUserId(2);
 
-  const MOCK_NEXUS_USER_COUNTS: NexusUserCounts = {
+  const MOCK_NEXUS_USER_COUNTS: NexusUserCounts & Pick<UserCountsModelSchema, 'bookmarks'> = {
     tagged: 3,
     tags: 7,
     unique_tags: 6,
@@ -46,6 +47,16 @@ describe('UserCountsModel', () => {
       expect(userCounts.followers).toBe(mockUserCountsData.followers);
       expect(userCounts.friends).toBe(mockUserCountsData.friends);
       expect(userCounts.bookmarks).toBe(mockUserCountsData.bookmarks);
+    });
+
+    it('toSchema stores bookmarks as 0 when Nexus served none, as /v1 never does (no schema change)', () => {
+      const { bookmarks: _served, ...withoutBookmarks } = MOCK_NEXUS_USER_COUNTS;
+
+      expect(UserCountsModel.toSchema([testUserId1, withoutBookmarks])).toEqual({
+        id: testUserId1,
+        ...withoutBookmarks,
+        bookmarks: 0,
+      });
     });
   });
 

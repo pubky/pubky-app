@@ -6,9 +6,9 @@ import { describe, expect, it } from 'vitest';
 /**
  * Social v1 compliance gate (`docs/migrations/social-v1.md`): the app is ported from `pubky-app-specs`
  * 0.8 to `pubky-social-specs` 1.x, so no file outside the allow-lists below may use the 0.x package,
- * its URI builders, its hard-coded homeserver paths or the Nexus bookmark fields. `LEGACY_RATCHET`
- * held every file that matched when the gate landed and shrank with each port until the cleanup PR
- * emptied it. `PERMANENT` names the 0.x spellings that stay after the port, with the reason.
+ * its URI builders, its hard-coded homeserver paths, the Nexus bookmark fields or the frozen Nexus `/v0`
+ * API. `LEGACY_RATCHET` held every file that matched when the gate landed and shrank with each port until
+ * the cleanup PR emptied it. `PERMANENT` names the 0.x spellings that stay after the port, with the reason.
  */
 
 const ROOT = join(__dirname, '../../../..');
@@ -35,6 +35,11 @@ const PATTERNS = {
   specsImport: /(?:from\s+|import\s*\(\s*)['"]pubky-app-specs(?:\/[^'"]*)?['"]/g,
   /** The Nexus bookmark field on a post view: bookmarks are locally owned after the port. */
   nexusBookmark: /\.bookmark\b(?!\s*\()/g,
+  /**
+   * The frozen Nexus API version, as a path segment (`v0/stream`) or a version literal (`'v0'`): every call
+   * is built under `NEXUS_API_VERSION` (`/v1`), and the one `/v0` call names its version where it is made.
+   */
+  nexusV0: /(?<![\w.])v0(?![\w.])/g,
 } as const;
 
 type PatternName = keyof typeof PATTERNS;
@@ -42,9 +47,20 @@ type PatternName = keyof typeof PATTERNS;
 /** 0.x spellings that outlive the port, per file, with the reason each stays. */
 const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: string }> = {
   'src/config/auth.ts': {
-    patterns: ['legacyTree'],
+    patterns: ['legacyTree', 'nexusV0'],
     reason:
-      '`/pub/pubky.app/:rw` stays in the grant (`MIGRATION_CAPS`): deleting a migrated object reaches its 0.x copy',
+      '`/pub/pubky.app/:rw` stays in the grant (`MIGRATION_CAPS`): deleting a migrated object reaches its 0.x copy; ' +
+      "`/pub/chat/v0/:rw` and `/priv/chat/v0/:rw` are the chat app's homeserver scopes, not a Nexus API version",
+  },
+  'src/config/nexus.ts': {
+    patterns: ['nexusV0'],
+    reason: '`NexusApiVersion` names the frozen `v0` beside `NEXUS_API_VERSION`, so the one legacy call can ask for it',
+  },
+  'src/core/services/nexus/file/file.api.ts': {
+    patterns: ['nexusV0'],
+    reason:
+      '`POST v0/files/by_ids` stays: the file details of 0.x attachments, which `/v1` does not serve; sunset when `/v0` ' +
+      'gets a removal date or every author has migrated (ADR-0027)',
   },
   'src/config/app-files.ts': {
     patterns: ['legacyTree'],
@@ -209,7 +225,7 @@ describe('social v1 compliance gate', () => {
     });
   });
 
-  it('lets no file outside the allow-lists use the 0.x package, its paths or the Nexus bookmark fields', () => {
+  it('lets no file outside the allow-lists use the 0.x package, its paths, the Nexus bookmark fields or the Nexus /v0 API', () => {
     const offenders = [...matches.keys()].filter((file) => !LEGACY_RATCHET.includes(file)).sort();
 
     expect(offenders.map(describeMatch)).toEqual([]);

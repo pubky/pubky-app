@@ -1,12 +1,15 @@
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import type {
   NexusNotification,
   NexusTag,
   NexusTaggers,
+  NexusTaggersWire,
+  NexusTagWire,
   NexusUserCounts,
   NexusUserDetails,
   TUserId,
 } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
 import type { TQueryNexusParams } from '@/services/nexus/nexus.utils.types';
 import { userApi } from '@/services/nexus/user/user.api';
 import {
@@ -42,7 +45,8 @@ export class NexusUserService {
    */
   static async tags({ force = false, ...params }: TUserTagsParams & { force?: boolean }): Promise<NexusTag[]> {
     const url = userApi.tags(params);
-    return await queryNexus<NexusTag[]>({ url, ...(force ? { force: true } : {}) });
+    const tags = await queryNexus<NexusTagWire[]>({ url, ...(force ? { force: true } : {}) });
+    return mapNexusResponse(tags, (tag) => TagNormalizer.fromNexus(tag));
   }
 
   /**
@@ -58,7 +62,8 @@ export class NexusUserService {
   }: TUserTaggersParams & Pick<TQueryNexusParams, 'notFoundRetries'>): Promise<NexusTaggers> {
     const url = userApi.taggers(params);
     // Tagger lists revalidate after local mutations or count changes.
-    return await queryNexus<NexusTaggers>({ url, staleTime: 0, notFoundRetries });
+    const taggers = await queryNexus<NexusTaggersWire>({ url, staleTime: 0, notFoundRetries });
+    return TagNormalizer.fromNexus(taggers);
   }
 
   /**

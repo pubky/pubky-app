@@ -11,14 +11,23 @@ export { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs };
  */
 export const NEXUS_V1_STATIC_PATH = '/v1/static';
 
+/**
+ * The Nexus API version every call is built for (`buildNexusUrl`). `/v1` serves the stored kind names (`note`,
+ * `article`), no bookmark fields, no file details and no tag `relationship`; `/v0` is frozen and still served. The
+ * one call that stays on `/v0` names its version explicitly: `filesApi.getFiles` (`POST files/by_ids`), the file
+ * details of 0.x attachments (ADR-0027, _Nexus API version_).
+ */
+export const NEXUS_API_VERSION = 'v1';
+export type NexusApiVersion = typeof NEXUS_API_VERSION | 'v0';
+
 /** The base of the v1 file routes, derived from the CDN runtime value: it has no env var of its own. */
 export const getV1CdnUrl = (): string => `${getCdnUrl().replace(/(?:\/static)?\/?$/, '')}${NEXUS_V1_STATIC_PATH}`;
 
 export const NEXUS_NOTIFICATIONS_LIMIT = 30;
 export const NEXUS_POSTS_PER_PAGE = 10; // Number of posts to fetch per page in streams
 export const NEXUS_STREAM_MAX_LIMIT = 50; // Hard cap Nexus enforces on a single post stream `limit`; requests above this are rejected
-export const NEXUS_USER_STREAM_MAX_LIMIT = 20; // Hard cap Nexus enforces on a single `/v0/stream/users/ids` `limit`; requests above this are rejected
-export const NEXUS_USERS_BY_IDS_MAX_IDS = 100; // Hard cap Nexus enforces on the user_ids in one `/v0/stream/users/by_ids` request (OpenAPI `UserIds` max=100); requests with more are rejected
+export const NEXUS_USER_STREAM_MAX_LIMIT = 20; // Hard cap Nexus enforces on a single `/v1/stream/users/ids` `limit`; requests above this are rejected
+export const NEXUS_USERS_BY_IDS_MAX_IDS = 100; // Hard cap Nexus enforces on the user_ids in one `/v1/stream/users/by_ids` request (OpenAPI `UserIds` max=100); requests with more are rejected
 export const NEXUS_USERS_PER_PAGE = 10; // Number of users to fetch per page in streams
 
 /**

@@ -1,3 +1,4 @@
+import type { NexusApiVersion } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import type { TFileBody, TFileParams } from '@/services/nexus/file/file.types';
 import { buildCdnUrl, buildNexusUrl, buildV1CdnUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
@@ -8,8 +9,23 @@ import { buildCdnUrl, buildNexusUrl, buildV1CdnUrl, encodePathSegment } from '@/
  * All API endpoints related to files operations
  */
 
-const API_PREFIX = 'v0/files';
+const API_PREFIX = 'files';
 const STATIC_PREFIX = 'files';
+
+/**
+ * The one Nexus call that stays on the frozen `/v0` API. A 0.x attachment URI
+ * (`pubky://{owner}/pub/pubky.app/files/{tsid}`) carries no extension and no type, and only Nexus
+ * knows its `content_type`, `name`, `size` and variant URLs; `/v1` serves no file details (neither
+ * `attachments_metadata` nor `files/by_ids`, a 404 there). Un-migrated authors keep such posts for as
+ * long as they have not opened the new app, so without this call their images would render as generic
+ * file cards for every viewer (D10). The callers send 0.x addresses only (`FileApplication.fetchFiles`
+ * drops every v1 address, which the route would skip with a server-side warning).
+ *
+ * Sunset: remove this call, with `NexusFileService.fetchFiles` and `attachments_metadata`, when `/v0`
+ * gets a removal date or every author has migrated (ADR-0027, _Nexus API version_). The compliance
+ * gate (`social-v1-compliance.gate.test.ts`) lets no other file name this version.
+ */
+const FILE_DETAILS_API_VERSION: NexusApiVersion = 'v0';
 
 /**
  * Files by IDs endpoint (POST request)
@@ -36,7 +52,7 @@ export const filesApi = {
   },
   getFiles: (fileUris: Pubky[]) => ({
     body: buildFileBodyUrl(fileUris),
-    url: buildNexusUrl(`${API_PREFIX}/by_ids`),
+    url: buildNexusUrl(`${API_PREFIX}/by_ids`, { version: FILE_DETAILS_API_VERSION }),
   }),
 };
 

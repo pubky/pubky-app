@@ -170,9 +170,7 @@ describe('content-addressed media lifetime', () => {
       await PostController.commitDelete({ compositePostId: post });
 
       expect(await stored(file)).toBe(false);
-      expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledWith(
-        expect.objectContaining({ force: true, include_attachment_metadata: false }),
-      );
+      expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledWith(expect.objectContaining({ force: true }));
     });
 
     it('keeps the file the published profile uses as its avatar', async () => {

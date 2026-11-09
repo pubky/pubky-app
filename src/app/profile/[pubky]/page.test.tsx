@@ -74,8 +74,8 @@ describe('generateMetadata', () => {
 
     expect(metadata.alternates?.canonical).toBe(`/profile/${rawKey}`);
     expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
-      `https://nexus.staging.pubky.app/v0/user/${rawKey}/details`,
-      `https://nexus.staging.pubky.app/v0/user/${rawKey}/counts`,
+      `https://nexus.staging.pubky.app/v1/user/${rawKey}/details`,
+      `https://nexus.staging.pubky.app/v1/user/${rawKey}/counts`,
     ]);
   });
 

@@ -4,8 +4,8 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { buildContentSearchStreamId, type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
-import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { type NexusFileDetails, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
 import {
   StreamSource,
   type TPostStreamFetchParams,
@@ -20,6 +20,8 @@ import {
   type TStreamWithObserverParams,
 } from '@/services/nexus/stream/posts/postStream.types';
 import { POST_STREAM_GRAMMAR_FIXTURES } from '@/test/fixtures/stream/postStreamIds';
+import { mockNexusPostWire } from '@/test-utils/nexus';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { NexusPostStreamService } from './postStream';
 import { postStreamApi } from './postStream.api';
 import { StreamKind, StreamOrder } from './postStream.types';
@@ -118,13 +120,14 @@ describe('Stream API URL Generation', () => {
         name: 'friends',
         endpoint: 'friends' as const,
         params: { observer_id: mockObserverId, tags: 'dev,opensource', kind: StreamKind.SHORT },
-        expectedInUrl: ['source=friends', `observer_id=${mockObserverId}`, 'tags=dev%2Copensource', 'kind=short'],
+        // `/v1` takes the stored kind names; the StreamKind values stay local (D16).
+        expectedInUrl: ['source=friends', `observer_id=${mockObserverId}`, 'tags=dev%2Copensource', 'kind=note'],
       },
       {
         name: 'wot',
         endpoint: 'wot' as const,
         params: { observer_id: mockObserverId, depth: 2, kind: StreamKind.LONG },
-        expectedInUrl: ['source=wot', `observer_id=${mockObserverId}`, 'depth=2', 'kind=long'],
+        expectedInUrl: ['source=wot', `observer_id=${mockObserverId}`, 'depth=2', 'kind=article'],
       },
       {
         name: 'wot_domain',
@@ -170,7 +173,7 @@ describe('Stream API URL Generation', () => {
     ])('$name endpoint generates correct URL with all parameters', ({ endpoint, params, expectedInUrl }) => {
       const url = callStreamEndpoint(endpoint, params);
 
-      expect(url).toContain('v0/stream/posts/keys?');
+      expect(url).toContain('v1/stream/posts/keys?');
       expectedInUrl.forEach((fragment) => {
         expect(url).toContain(fragment);
       });
@@ -270,7 +273,7 @@ describe('Stream API URL Generation', () => {
         'sorting=timeline',
         'order=descending',
         'tags=dev%2Ctest',
-        'kind=short',
+        'kind=note',
         'skip=0',
         'limit=10',
         'start=1000',
@@ -293,10 +296,7 @@ describe('Stream API URL Generation', () => {
       });
 
       expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
-      expect(request.body).toEqual({
-        post_ids: mockPostIds,
-        include_attachment_metadata: true,
-      });
+      expect(request.body).toEqual({ post_ids: mockPostIds });
     });
 
     it('should generate correct POST request with post IDs and viewer_id', () => {
@@ -306,11 +306,7 @@ describe('Stream API URL Generation', () => {
       });
 
       expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
-      expect(request.body).toEqual({
-        post_ids: mockPostIds,
-        include_attachment_metadata: true,
-        viewer_id: mockViewerId,
-      });
+      expect(request.body).toEqual({ post_ids: mockPostIds, viewer_id: mockViewerId });
     });
 
     it('should handle empty post IDs array', () => {
@@ -334,42 +330,64 @@ describe('Stream API URL Generation', () => {
       expect(request.body.viewer_id).toBe(mockViewerId);
     });
 
-    it('should include include_attachment_metadata when true', () => {
-      const request = postStreamApi.postsByIds({
-        post_ids: mockPostIds,
-        viewer_id: mockViewerId,
-        include_attachment_metadata: true,
-      });
+    it('sends no /v0 flag: the body names the posts and the viewer only', () => {
+      const request = postStreamApi.postsByIds({ post_ids: mockPostIds, viewer_id: mockViewerId });
 
-      expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
-      expect(request.body).toEqual({
-        post_ids: mockPostIds,
-        viewer_id: mockViewerId,
-        include_attachment_metadata: true,
-      });
+      expect(Object.keys(request.body).sort()).toEqual(['post_ids', 'viewer_id']);
+      expect(request.body).not.toHaveProperty('include_attachment_metadata');
+    });
+  });
+
+  describe('/v1 query surface', () => {
+    const { postsByIds: _postsByIds, ...keyStreams } = postStreamApi;
+    const everyKeyStream = () =>
+      Object.entries(keyStreams).map(([name, build]) => [
+        name,
+        new URL(
+          build({
+            observer_id: mockObserverId,
+            author_id: 'author',
+            post_id: 'post',
+            viewer_id: mockViewerId,
+            kind: StreamKind.LONG,
+            tags: 'dev',
+            skip: 0,
+            limit: 10,
+          }),
+        ),
+      ]) as [string, URL][];
+
+    it('is served under the current API version', () => {
+      for (const [, url] of everyKeyStream()) expect(url.pathname).toBe('/v1/stream/posts/keys');
     });
 
-    it('should default include_attachment_metadata to true when not provided', () => {
-      const request = postStreamApi.postsByIds({
-        post_ids: mockPostIds,
-      });
+    it.each([
+      [StreamKind.SHORT, 'note'],
+      [StreamKind.LONG, 'article'],
+      [StreamKind.IMAGE, 'image'],
+      [StreamKind.VIDEO, 'video'],
+      [StreamKind.LINK, 'link'],
+      [StreamKind.FILE, 'file'],
+      [StreamKind.COLLECTION, 'collection'],
+    ])('sends the local stream kind %s as the /v1 filter %s', (kind, wire) => {
+      const url = new URL(postStreamApi.all({ kind }));
 
-      expect(request.body).toEqual({
-        post_ids: mockPostIds,
-        include_attachment_metadata: true,
-      });
+      expect(url.searchParams.get('kind')).toBe(wire);
     });
 
-    it('should allow explicitly setting include_attachment_metadata to false', () => {
-      const request = postStreamApi.postsByIds({
-        post_ids: mockPostIds,
-        include_attachment_metadata: false,
-      });
+    it('never sends exclude_kinds or source=bookmarks: the app filters nothing client-side and bookmarks are local', () => {
+      for (const [, url] of everyKeyStream()) {
+        expect(url.searchParams.has('exclude_kinds')).toBe(false);
+        expect(url.searchParams.get('source')).not.toBe('bookmarks');
+      }
+      expect(Object.keys(postStreamApi)).not.toContain('bookmarks');
+    });
 
-      expect(request.body).toEqual({
-        post_ids: mockPostIds,
-        include_attachment_metadata: false,
-      });
+    it('sends locked=true unchanged (the filter exists on /v1 with the same rules) and no kind beside it', () => {
+      const url = new URL(postStreamApi.all({ locked: true, viewer_id: mockViewerId }));
+
+      expect(url.searchParams.get('locked')).toBe('true');
+      expect(url.searchParams.has('kind')).toBe(false);
     });
   });
 
@@ -1369,7 +1387,7 @@ describe('NexusPostStreamService', () => {
       });
       const result = await NexusPostStreamService.fetch(request);
       const url = new URL(mockQueryNexus.mock.calls[0][0].url);
-      expect(url.pathname).toBe('/v0/search/posts/by_content');
+      expect(url.pathname).toBe('/v1/search/posts/by_content');
       expect(Object.fromEntries(url.searchParams)).toEqual({
         q: 'bitcoin: wallets',
         kind: 'collection',
@@ -1597,10 +1615,10 @@ describe('NexusPostStreamService', () => {
     it('should fetch posts by IDs with viewer_id', async () => {
       // Arrange
       const mockPostIds = ['author1:post1', 'author1:post2', 'author2:post3'];
-      const mockPosts: NexusPost[] = [
-        { details: { id: 'post1', author: 'author1' } } as NexusPost,
-        { details: { id: 'post2', author: 'author1' } } as NexusPost,
-        { details: { id: 'post3', author: 'author2' } } as NexusPost,
+      const mockPosts = [
+        mockNexusPostWire({ id: 'post1', author: 'author1' }),
+        mockNexusPostWire({ id: 'post2', author: 'author1' }),
+        mockNexusPostWire({ id: 'post3', author: 'author2' }),
       ];
       const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockPosts);
 
@@ -1613,17 +1631,18 @@ describe('NexusPostStreamService', () => {
       // Assert
       expect(queryNexusSpy).toHaveBeenCalledTimes(1);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: expect.stringContaining('/stream/posts/by_ids'),
+        url: expect.stringContaining('/v1/stream/posts/by_ids'),
         method: 'POST',
-        body: JSON.stringify({ post_ids: mockPostIds, include_attachment_metadata: true, viewer_id: mockViewerId }),
+        body: JSON.stringify({ post_ids: mockPostIds, viewer_id: mockViewerId }),
       });
-      expect(result).toEqual(mockPosts);
+      // Past the read boundary: the /v1 kind `note` is the local `short`
+      expect(result).toEqual(mockPosts.map((post) => ({ ...post, details: { ...post.details, kind: 'short' } })));
     });
 
     it('should fetch posts by IDs without viewer_id', async () => {
       // Arrange
       const mockPostIds = ['author1:post1'];
-      const mockPosts: NexusPost[] = [{ details: { id: 'post1', author: 'author1' } } as NexusPost];
+      const mockPosts = [mockNexusPostWire({ id: 'post1', author: 'author1' })];
       const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockPosts);
 
       // Act
@@ -1631,11 +1650,84 @@ describe('NexusPostStreamService', () => {
 
       // Assert
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: expect.stringContaining('/stream/posts/by_ids'),
+        url: expect.stringContaining('/v1/stream/posts/by_ids'),
         method: 'POST',
-        body: JSON.stringify({ post_ids: mockPostIds, include_attachment_metadata: true }),
+        body: JSON.stringify({ post_ids: mockPostIds }),
       });
-      expect(result).toEqual(mockPosts);
+      expect(result).toEqual(mockPosts.map((post) => ({ ...post, details: { ...post.details, kind: 'short' } })));
+    });
+
+    // The read boundary (D16): `/v1` spells `note`/`article`, the local tables keep `short`/`long`.
+    it.each([
+      ['note', 'short'],
+      ['article', 'long'],
+      ['image', 'image'],
+      ['collection', 'collection'],
+    ])('folds the /v1 kind %s into the local kind %s', async (wire, local) => {
+      mockQueryNexus.mockResolvedValue([mockNexusPostWire({ id: 'post1', author: 'author1', kind: wire })]);
+
+      const [post] = await NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+
+      expect(post.details.kind).toBe(local);
+    });
+
+    it('keeps a kind it cannot classify as served (unknown renders as a note, is never hidden)', async () => {
+      mockQueryNexus.mockResolvedValue([
+        mockNexusPostWire({ id: 'post1', author: 'author1', kind: 'unknown' }),
+        mockNexusPostWire({ id: 'post2', author: 'author1', kind: 'poll' }),
+      ]);
+
+      const result = await NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1', 'author1:post2'] });
+
+      expect(result.map((post) => post.details.kind)).toEqual(['unknown', 'poll']);
+    });
+
+    it('derives each tag relationship from tag_uri, which /v1 serves in place of the field', async () => {
+      const post = mockNexusPostWire({ id: 'post1', author: 'author1' });
+      post.tags = [
+        {
+          label: 'own',
+          taggers: [mockViewerId],
+          taggers_count: 1,
+          tag_uri: `pubky://${mockViewerId}/pub/social/v1/tags/T1`,
+        },
+        { label: 'foreign', taggers: ['other'], taggers_count: 1, tag_uri: null },
+        { label: 'legacy', taggers: ['other'], taggers_count: 1, relationship: true },
+      ];
+      mockQueryNexus.mockResolvedValue([post]);
+
+      const [result] = await NexusPostStreamService.fetchByIds({
+        post_ids: ['author1:post1'],
+        viewer_id: mockViewerId,
+      });
+
+      expect(result.tags.map((tag) => [tag.label, tag.relationship])).toEqual([
+        ['own', true],
+        ['foreign', false],
+        ['legacy', true],
+      ]);
+    });
+
+    it('carries the response start time onto the folded posts', async () => {
+      const mockPosts = [mockNexusPostWire({ id: 'post1', author: 'author1' })];
+      markNexusResponseStartedAt(mockPosts, 1_000);
+      mockQueryNexus.mockResolvedValue(mockPosts);
+
+      const result = await NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+
+      expect(result).not.toBe(mockPosts);
+      expect(getNexusResponseStartedAt(result)).toBe(1_000);
+    });
+
+    it('passes attachments_metadata through when a response carries it', async () => {
+      const metadata = asOpaque<NexusFileDetails[]>([{ id: 'file-1' }]);
+      mockQueryNexus.mockResolvedValue([
+        { ...mockNexusPostWire({ id: 'post1', author: 'author1' }), attachments_metadata: metadata },
+      ]);
+
+      const [post] = await NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+
+      expect(post.attachments_metadata).toEqual(metadata);
     });
 
     it.each([undefined, false, true])('canonicalizes the body and forwards force=%s separately', async (force) => {
@@ -1647,7 +1739,6 @@ describe('NexusPostStreamService', () => {
       await NexusPostStreamService.fetchByIds({
         post_ids: postIds,
         viewer_id: mockViewerId,
-        include_attachment_metadata: false,
         force,
       });
 
@@ -1657,7 +1748,6 @@ describe('NexusPostStreamService', () => {
         method: 'POST',
         body: JSON.stringify({
           post_ids: ['author1:post1', 'author1:post2', 'author2:post3'],
-          include_attachment_metadata: false,
           viewer_id: mockViewerId,
         }),
         force,
@@ -1676,7 +1766,7 @@ describe('NexusPostStreamService', () => {
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringContaining('/stream/posts/by_ids'),
         method: 'POST',
-        body: JSON.stringify({ post_ids: [], include_attachment_metadata: true }),
+        body: JSON.stringify({ post_ids: [] }),
       });
       expect(result).toEqual([]);
     });

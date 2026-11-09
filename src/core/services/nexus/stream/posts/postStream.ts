@@ -2,8 +2,9 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
-import type { NexusPostsKeyStream, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import type { NexusPostsKeyStream, NexusPostWire, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
+import { mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
 import { searchApi } from '@/services/nexus/search/search.api';
 import type { TContentSearchResult } from '@/services/nexus/search/search.types';
 import { toSearchReachParams } from '@/services/nexus/search/search.utils';
@@ -30,7 +31,7 @@ export class NexusPostStreamService {
    * Fetches posts by their IDs from Nexus API
    *
    * @param params - Parameters containing post IDs and optional viewer ID
-   * @returns Array of posts
+   * @returns Array of posts, past the read boundary (local kinds, tags with `relationship`)
    */
   static async fetchByIds({
     force,
@@ -39,12 +40,13 @@ export class NexusPostStreamService {
     // Canonicalize (sorted post_ids) so identical concurrent batches share one query key and
     // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
     const { url, body } = postStreamApi.postsByIds({ ...params, post_ids: [...params.post_ids].sort() });
-    return await queryNexus<NexusPostWithAttachmentMetadata[]>({
+    const posts = await queryNexus<NexusPostWire[]>({
       url,
       method: HttpMethod.POST,
       body: JSON.stringify(body),
       force,
     });
+    return mapNexusResponse(posts, (post) => PostNormalizer.fromNexus(post));
   }
 
   /**

@@ -99,7 +99,7 @@ describe('src/sw.ts', () => {
 
     expect(route.matcher(navigationContext('https://pubky.app/home'))).toBe(true);
     expect(route.matcher(navigationContext('https://pubky.app/home', { mode: 'cors' }))).toBe(false);
-    expect(route.matcher(navigationContext('https://nexus.pubky.app/v0/stream', { sameOrigin: false }))).toBe(false);
+    expect(route.matcher(navigationContext('https://nexus.pubky.app/v1/stream', { sameOrigin: false }))).toBe(false);
     expect(route.matcher(navigationContext('https://pubky.app/api/feedback'))).toBe(false);
     for (const path of [
       '/shop-embed',

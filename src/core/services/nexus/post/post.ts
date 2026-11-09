@@ -1,7 +1,16 @@
 import type { TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { parseCompositeId } from '@/models/models.utils';
-import type { NexusPost, NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import type {
+  NexusPost,
+  NexusPostWire,
+  NexusTag,
+  NexusTaggers,
+  NexusTaggersWire,
+  NexusTagWire,
+} from '@/services/nexus/nexus.types';
+import { carryNexusResponseStartedAt, mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
 import type { TQueryNexusParams } from '@/services/nexus/nexus.utils.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import type { TCompositeId, TFetchPostTagsParams } from '@/services/nexus/post/post.types';
@@ -13,14 +22,15 @@ export class NexusPostService {
    * Fetches a single post with all related data from Nexus
    *
    * @param compositeId - Composite post ID in format "authorId:postId"
-   * @returns Complete post view (details, tags, counts, relationships)
+   * @returns Complete post view (details, tags, counts, relationships), past the read boundary
    * @throws {NexusError} When post is not found or request fails
    */
   static async getPost({ compositeId }: TCompositeId): Promise<NexusPost> {
     const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
     const url = postApi.view({ author_id, post_id });
-    return await queryNexus<NexusPost>({ url });
+    const post = await queryNexus<NexusPostWire>({ url });
+    return carryNexusResponseStartedAt(post, PostNormalizer.fromNexus(post));
   }
 
   /**
@@ -41,7 +51,8 @@ export class NexusPostService {
     const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
     const url = postApi.tags({ author_id, post_id, skip_tags: skip, limit_tags: limit, viewer_id: viewerId });
-    return await queryNexus<NexusTag[]>({ url, ...(force ? { force: true } : {}) });
+    const tags = await queryNexus<NexusTagWire[]>({ url, ...(force ? { force: true } : {}) });
+    return mapNexusResponse(tags, (tag) => TagNormalizer.fromNexus(tag));
   }
 
   /**
@@ -73,6 +84,7 @@ export class NexusPostService {
       viewer_id: viewerId,
     });
     // Tagger lists revalidate after local mutations or count changes.
-    return await queryNexus<NexusTaggers>({ url, staleTime: 0, notFoundRetries });
+    const taggers = await queryNexus<NexusTaggersWire>({ url, staleTime: 0, notFoundRetries });
+    return TagNormalizer.fromNexus(taggers);
   }
 }

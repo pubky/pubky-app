@@ -16,7 +16,7 @@ describe('Tag API', () => {
       };
 
       const result = tagApi.view(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/tags/${testTaggerId}/${testTagId}`);
+      expect(result).toBe(`${getNexusUrl()}/v1/tags/${testTaggerId}/${testTagId}`);
     });
 
     it('should handle different parameters', () => {
@@ -26,7 +26,7 @@ describe('Tag API', () => {
       };
 
       const result = tagApi.view(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/tags/${testTaggerId}/differentTag`);
+      expect(result).toBe(`${getNexusUrl()}/v1/tags/${testTaggerId}/differentTag`);
     });
   });
 
@@ -38,7 +38,7 @@ describe('Tag API', () => {
         limit: 20,
       };
       const result = tagApi.hot(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/tags/hot?user_id=test_user&reach=followers&limit=20`);
+      expect(result).toBe(`${getNexusUrl()}/v1/tags/hot?user_id=test_user&reach=followers&limit=20`);
     });
   });
 
@@ -50,7 +50,7 @@ describe('Tag API', () => {
         limit: 30,
       };
       const result = tagApi.taggers(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/tags/taggers/test_label?reach=friends&limit=30`);
+      expect(result).toBe(`${getNexusUrl()}/v1/tags/taggers/test_label?reach=friends&limit=30`);
     });
   });
 

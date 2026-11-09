@@ -5,14 +5,14 @@ import { buildNexusUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
  * All API endpoints related to bootstrap operations
  */
 
-const PREFIX = 'v0/bootstrap';
+const PREFIX = 'bootstrap';
 
 export const bootstrapApi = {
   get: (pubky: string) => {
     const encodedPubky = encodePathSegment(pubky);
     return buildNexusUrl(`${PREFIX}/${encodedPubky}`);
   },
-  ingest: (pubky: string) => buildNexusUrl(`v0/ingest/${encodePathSegment(pubky)}`),
+  ingest: (pubky: string) => buildNexusUrl(`ingest/${encodePathSegment(pubky)}`),
 };
 
 export type BootstrapApiEndpoint = keyof typeof bootstrapApi;

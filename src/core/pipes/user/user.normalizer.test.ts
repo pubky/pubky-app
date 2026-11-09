@@ -7,6 +7,8 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import type { UserValidatorData } from '@/pipes/pipes.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
+import type { NexusUserWire } from '@/services/nexus/nexus.types';
+import { mockNexusUserWire } from '@/test-utils/nexus';
 import { asInvalid } from '@/test-utils/type-assertions';
 
 const owner = fakeOwner(1) as Pubky;
@@ -262,5 +264,28 @@ describe('UserNormalizer.applyChanges', () => {
     const edited = UserNormalizer.applyChanges(stored, { bio: 'x'.repeat(161) });
 
     expect(() => encodeObject(profileUrl, edited)).toThrow(/bio/);
+  });
+});
+
+describe('UserNormalizer.fromNexus', () => {
+  const wireUser = (tags: NexusUserWire['tags']) => mockNexusUserWire({ id: owner, tags });
+
+  it('gives every tag its relationship, from tag_uri when /v1 serves none', () => {
+    const user = wireUser([
+      { label: 'own', taggers: [other], taggers_count: 1, tag_uri: `pubky://${other}/pub/social/v1/tags/T1` },
+      { label: 'foreign', taggers: [owner], taggers_count: 1, tag_uri: null },
+    ]);
+
+    expect(UserNormalizer.fromNexus(user).tags.map((tag) => [tag.label, tag.relationship])).toEqual([
+      ['own', true],
+      ['foreign', false],
+    ]);
+  });
+
+  it('passes every other member through unchanged, a counts object without bookmarks included', () => {
+    const user = wireUser([]);
+
+    expect(UserNormalizer.fromNexus(user)).toEqual(user);
+    expect(UserNormalizer.fromNexus(user).counts).not.toHaveProperty('bookmarks');
   });
 });

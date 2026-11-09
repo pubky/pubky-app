@@ -9,6 +9,7 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import type { NexusTaggersWire, NexusTagWire } from '@/services/nexus/nexus.types';
 import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 import { asInvalid } from '@/test-utils/type-assertions';
 
@@ -193,6 +194,67 @@ describe('TagNormalizer', () => {
 
       expectValidationError(error, 'buildTag');
       expect((error as AppError).context).toMatchObject({ label: 'two words', code: 'format' });
+    });
+  });
+
+  describe('fromNexus', () => {
+    const OWN_TAG_URI = `pubky://${TAGGER}/pub/social/v1/tags/0032PARTQP4G0`;
+    const wire = (overrides: Partial<NexusTagWire>): NexusTagWire => ({
+      label: 'rust',
+      taggers: [TAGGER],
+      taggers_count: 1,
+      ...overrides,
+    });
+
+    it('derives relationship from tag_uri when /v1 serves none: the viewer tagged the label', () => {
+      expect(TagNormalizer.fromNexus(wire({ tag_uri: OWN_TAG_URI }))).toEqual({
+        ...wire({ tag_uri: OWN_TAG_URI }),
+        relationship: true,
+      });
+    });
+
+    it('reads a null tag_uri as no relationship: the viewer, or a guest, has not tagged the label', () => {
+      expect(TagNormalizer.fromNexus(wire({ tag_uri: null })).relationship).toBe(false);
+    });
+
+    it('reads a missing tag_uri as no relationship', () => {
+      expect(TagNormalizer.fromNexus(wire({})).relationship).toBe(false);
+    });
+
+    it.each([true, false])('keeps a relationship Nexus did send (%s) over tag_uri', (relationship) => {
+      expect(
+        TagNormalizer.fromNexus(wire({ relationship, tag_uri: relationship ? null : OWN_TAG_URI })).relationship,
+      ).toBe(relationship);
+    });
+
+    it('keeps every other member as served', () => {
+      const tag = wire({ taggers: [TAGGER, AUTHOR], taggers_count: 7, tag_uri: OWN_TAG_URI });
+
+      expect(TagNormalizer.fromNexus(tag)).toMatchObject({
+        label: 'rust',
+        taggers: [TAGGER, AUTHOR],
+        taggers_count: 7,
+      });
+    });
+  });
+
+  describe('fromNexus on a taggers page', () => {
+    const wire = (overrides: Partial<NexusTaggersWire>): NexusTaggersWire => ({ users: [TAGGER], ...overrides });
+
+    it('derives relationship from tag_uri when /v1 serves none', () => {
+      expect(TagNormalizer.fromNexus(wire({ tag_uri: `pubky://${TAGGER}/pub/social/v1/tags/T` })).relationship).toBe(
+        true,
+      );
+      expect(TagNormalizer.fromNexus(wire({ tag_uri: null })).relationship).toBe(false);
+      expect(TagNormalizer.fromNexus(wire({})).relationship).toBe(false);
+    });
+
+    it('keeps a relationship Nexus did send, and the users', () => {
+      expect(TagNormalizer.fromNexus(wire({ relationship: true, tag_uri: null }))).toEqual({
+        users: [TAGGER],
+        relationship: true,
+        tag_uri: null,
+      });
     });
   });
 

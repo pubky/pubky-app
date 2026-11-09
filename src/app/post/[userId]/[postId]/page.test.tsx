@@ -93,8 +93,8 @@ describe('generateMetadata', () => {
     expect(metadata.title).toBe('Alice on Pubky');
     expect(metadata.alternates?.canonical).toBe(`/post/${userId}/${postId}`);
     expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
-      `https://nexus.staging.pubky.app/v0/user/${userId}/details`,
-      `https://nexus.staging.pubky.app/v0/post/${userId}/${postId}/details`,
+      `https://nexus.staging.pubky.app/v1/user/${userId}/details`,
+      `https://nexus.staging.pubky.app/v1/post/${userId}/${postId}/details`,
     ]);
   });
 
@@ -144,7 +144,7 @@ describe('generateMetadata', () => {
 
     expect(metadata.description).toBe('gm @Bob and @Bob');
     expect(metadata.openGraph?.description).toBe('gm @Bob and @Bob');
-    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v0/user/${mentioned}/details`);
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v1/user/${mentioned}/details`);
   });
 
   it('keeps an article title verbatim without looking up mentions', async () => {

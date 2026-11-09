@@ -115,7 +115,8 @@ export class BootstrapApplication {
         streamId: UserStreamTypes.RECOMMENDED,
         stream: bootstrapData.ids.recommended,
       }),
-      FileApplication.persistFiles(bootstrapData.files),
+      // `/v0` only: `/v1` serves no file details (0.x attachment metadata comes from `filesApi.getFiles`).
+      FileApplication.persistFiles(bootstrapData.files ?? []),
       // Both features: hot tags and tag streams
       LocalHotService.upsert(buildHotTagsId(UserStreamTimeframe.TODAY, 'all'), bootstrapData.ids.hot_tags),
       LocalStreamTagsService.upsert(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),

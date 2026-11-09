@@ -4,9 +4,9 @@ import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@
 import type { NexusSearchReach } from '@/services/nexus/search/search.types';
 
 export enum STREAM_PREFIX {
-  POSTS = 'v0/stream/posts',
-  POSTS_KEYS = 'v0/stream/posts/keys',
-  POSTS_BY_IDS = 'v0/stream/posts/by_ids',
+  POSTS = 'stream/posts',
+  POSTS_KEYS = 'stream/posts/keys',
+  POSTS_BY_IDS = 'stream/posts/by_ids',
 }
 
 export enum StreamSource {
@@ -93,11 +93,10 @@ export type TStreamPostCollectionsParams = TStreamBase &
 
 export type TStreamAllParams = TStreamBase;
 
-// Posts by IDs endpoint
+// Posts by IDs endpoint. `/v1` serves no attachment metadata, so the `/v0` flag that asked for it is gone.
 export type TStreamPostsByIdsParams = {
   post_ids: string[]; // Required array of post IDs
   viewer_id?: Pubky; // Optional viewer ID
-  include_attachment_metadata?: boolean; // Optional include attachment metadata
 };
 
 export type TStreamQueryParams =

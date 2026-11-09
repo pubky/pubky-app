@@ -35,9 +35,12 @@ export class UserCountsModel extends TupleModelBase<Pubky, UserCountsModelSchema
     this.bookmarks = userCounts.bookmarks;
   }
 
-  // Adapter function to convert NexusUserCounts to UserCountsModelSchema
+  /**
+   * The row for a Nexus counts response. `bookmarks` is `0` unless Nexus served it (`/v0` only, ADR-0028):
+   * the field stays on every row, so no schema changes.
+   */
   static toSchema(data: NexusModelTuple<NexusUserCounts>): UserCountsModelSchema {
-    return { id: data[0], ...data[1] };
+    return { id: data[0], ...data[1], bookmarks: data[1].bookmarks ?? 0 };
   }
 
   static async updateCounts({ userId, countChanges }: TUserCountsParams): Promise<void> {

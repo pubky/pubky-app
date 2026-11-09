@@ -198,11 +198,7 @@ export class FileApplication {
       // One batch at a time: `by_ids` is rate limited, and a reference found early ends the scan.
       for (let start = 0; start < postIds.length && remaining.length > 0; start += NEXUS_STREAM_MAX_LIMIT) {
         const batch = postIds.slice(start, start + NEXUS_STREAM_MAX_LIMIT);
-        const posts = await NexusPostStreamService.fetchByIds({
-          post_ids: batch,
-          include_attachment_metadata: false,
-          force: true,
-        });
+        const posts = await NexusPostStreamService.fetchByIds({ post_ids: batch, force: true });
         const served = new Set(posts.map(({ details }) => buildCompositeId({ pubky: details.author, id: details.id })));
         const unindexed = batch.filter((postId) => !served.has(postId));
         if (unindexed.length > 0) {
@@ -319,8 +315,9 @@ export class FileApplication {
 
   /**
    * Fetches file metadata from nexus by URIs and persists them locally.
-   * Used by bootstrap where file metadata is not available inline. Nexus keeps no metadata for v1
-   * files and answers a request naming a v1 address with a 400, so only 0.x files are ever asked for.
+   * Used where file metadata is not available inline. Nexus keeps no metadata for v1 files and skips
+   * a v1 address with a server-side warning, so only 0.x files are ever asked for (the one `/v0` call,
+   * see `filesApi.getFiles`).
    *
    * @param fileUris - Array of file URIs to fetch and persist
    */

@@ -402,8 +402,8 @@ describe('UserApplication.commitFollow - Dexie', () => {
   const seedCounts = (counts: { follower?: Partial<NexusUserCounts>; followee?: Partial<NexusUserCounts> }) =>
     db.transaction('rw', [UserCountsModel.table], () =>
       UserCountsModel.table.bulkPut([
-        { id: follower, ...emptyCounts, ...counts.follower },
-        { id: followee, ...emptyCounts, ...counts.followee },
+        UserCountsModel.toSchema([follower, { ...emptyCounts, ...counts.follower }]),
+        UserCountsModel.toSchema([followee, { ...emptyCounts, ...counts.followee }]),
       ]),
     );
 

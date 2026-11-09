@@ -43,7 +43,7 @@ describe('claimRateLimitReport', () => {
 });
 
 describe('httpResponseToError 429 reporting', () => {
-  const url = 'https://nexus.pubky.app/v0/hot';
+  const url = 'https://nexus.pubky.app/v1/hot';
 
   it('reports the first 429 and tags repeats of the same operation', () => {
     const first = httpResponseToError(rateLimitedResponse(), ErrorService.Nexus, 'wiringRepeat', url);

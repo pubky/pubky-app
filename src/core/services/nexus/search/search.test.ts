@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusSearchService } from './search';
+import { searchApi } from './search.api';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
@@ -13,6 +15,23 @@ vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
 });
 
 const mockQueryNexus = vi.mocked(queryNexus);
+
+describe('searchApi.byContent', () => {
+  it.each([
+    [StreamKind.SHORT, 'note'],
+    [StreamKind.LONG, 'article'],
+    [StreamKind.COLLECTION, 'collection'],
+  ])('sends the local stream kind %s as the /v1 filter %s', (kind, wire) => {
+    const url = new URL(searchApi.byContent({ q: 'rust', kind }));
+
+    expect(url.pathname).toBe('/v1/search/posts/by_content');
+    expect(url.searchParams.get('kind')).toBe(wire);
+  });
+
+  it('sends no kind when none is asked', () => {
+    expect(new URL(searchApi.byContent({ q: 'rust' })).searchParams.has('kind')).toBe(false);
+  });
+});
 
 describe('NexusSearchService', () => {
   beforeEach(() => {
@@ -27,7 +46,7 @@ describe('NexusSearchService', () => {
       const result = await NexusSearchService.usersById({ prefix: 'pxnu33', skip: 0, limit: 5 });
 
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: expect.stringContaining('/v0/search/users/by_id/pxnu33'),
+        url: expect.stringContaining('/v1/search/users/by_id/pxnu33'),
       });
       expect(result).toEqual(mockUserIds);
     });
@@ -62,7 +81,7 @@ describe('NexusSearchService', () => {
       const result = await NexusSearchService.usersByName({ prefix: 'Test', skip: 0, limit: 5 });
 
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: expect.stringContaining('/v0/search/users/by_name/Test'),
+        url: expect.stringContaining('/v1/search/users/by_name/Test'),
       });
       expect(result).toEqual(mockUserIds);
     });
@@ -84,7 +103,7 @@ describe('NexusSearchService', () => {
       const result = await NexusSearchService.tags({ prefix: 'bit', skip: 0, limit: 5 });
 
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: expect.stringContaining('/v0/search/tags/by_prefix/bit'),
+        url: expect.stringContaining('/v1/search/tags/by_prefix/bit'),
       });
       expect(result).toEqual(mockTags);
     });
@@ -151,7 +170,7 @@ describe('NexusSearchService', () => {
       const result = await NexusSearchService.usersByTags({ tags: 'synonym,rust', skip: 0, limit: 20 });
 
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: expect.stringContaining('/v0/search/users/by_tags'),
+        url: expect.stringContaining('/v1/search/users/by_tags'),
       });
       expect(result).toEqual(mockResults);
     });
