@@ -76,7 +76,7 @@ Mutes sync to the homeserver for cross-device persistence:
 - **URL Pattern**: `pubky://{muter}/pub/pubky.app/mutes/{mutee}`
 - **Sequence**: Local database first (atomicity), then homeserver (durability)
 
-**Cross-session consistency (open sessions):** While the app is running, `MuteListSyncCoordinator` (started from `CoordinatorsManager`) subscribes to the homeserver **event stream** via `@synonymdev/pubky` (`eventStreamForUser`, path prefix `/pub/pubky.app/mutes/`, live mode). PUT/DEL events debounce to `MuteController.fetchMutedUsers`, which re-lists `mutes/` on the homeserver and refreshes the Dexie `UserStreamTypes.MUTED` stream. This keeps mute lists aligned across devices **without** Nexus mute APIs — mute lists are not indexed for the client there. The coordinator tears down and reopens that stream when navigating across disabled auth/onboarding routes and the rest of the app (and when auth or tab visibility policy changes), not on every in-app pathname change among allowed routes.
+**Cross-session consistency (open sessions):** While the app is running, `MuteListSyncCoordinator` (started from `CoordinatorsManager`) follows the homeserver **event stream** (`/events-stream`, path prefix `/pub/pubky.app/mutes/`, live mode). It is a channel of `HomeserverEventStreamCoordinator`, which holds one stream per tab for every homeserver-synced path (ADR-0029). PUT/DEL events debounce to `MuteController.fetchMutedUsers`, which re-lists `mutes/` on the homeserver and refreshes the Dexie `UserStreamTypes.MUTED` stream. This keeps mute lists aligned across devices **without** Nexus mute APIs — mute lists are not indexed for the client there. The shared stream tears down and reopens when navigating across disabled auth/onboarding routes and the rest of the app (and when auth or tab visibility policy changes), not on every in-app pathname change among allowed routes.
 
 Bootstrap and migration still call `MuteApplication.fetchMutedUsers` for initial hydration (see ADR-0009).
 
@@ -226,7 +226,7 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 
 - Mute controller: `src/core/controllers/mute/mute.ts`
 - Mute application: `src/core/application/mute/mute.ts`
-- Homeserver event-stream helper: `HomeserverService.subscribeUserEventStreamForPath` in `src/core/services/homeserver/homeserver.ts`
+- Homeserver event-stream helper: `HomeserverService.subscribeUserEventStream` in `src/core/services/homeserver/homeserver.ts`, opened by `HomeserverEventStreamCoordinator` (`src/core/coordinators/homeserver-event-stream/homeserver-event-stream.ts`)
 - Debounce / path constants: `src/config/mute-sync.ts`
 - Coordinator: `src/core/coordinators/mute-list-sync/mute-list-sync.ts` (`MuteListSyncCoordinator`; wired from `CoordinatorsManager`)
 - Mute service: `src/core/services/local/mute/mute.ts`

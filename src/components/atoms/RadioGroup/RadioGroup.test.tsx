@@ -48,6 +48,37 @@ describe('RadioGroup', () => {
     expect(handleValueChange).toHaveBeenCalledWith('one');
   });
 
+  it('clicking the description selects the radio', () => {
+    const handleValueChange = vi.fn();
+    render(
+      <RadioGroup onValueChange={handleValueChange}>
+        <RadioGroupItem value="one" label="One" description="The first option" />
+      </RadioGroup>,
+    );
+
+    fireEvent.click(screen.getByText('The first option'));
+
+    expect(handleValueChange).toHaveBeenCalledWith('one');
+  });
+
+  it('selects a box item when anywhere on its card is clicked', () => {
+    const handleValueChange = vi.fn();
+    render(
+      <RadioGroup onValueChange={handleValueChange}>
+        <RadioGroupItem value="dark" label="Dark" description="Always use the dark interface." variant="box" />
+        <RadioGroupItem value="light" label="Light" description="Always use the light interface." variant="box" />
+      </RadioGroup>,
+    );
+
+    const card = screen.getByText('Light').closest('label');
+    expect(card).not.toBeNull();
+    fireEvent.click(card as HTMLLabelElement);
+
+    expect(handleValueChange).toHaveBeenCalledWith('light');
+    expect(screen.getByRole('radio', { name: 'Light' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Light' })).toHaveAccessibleDescription('Always use the light interface.');
+  });
+
   it('renders a standalone item without label/description', () => {
     render(
       <RadioGroup defaultValue="solo">

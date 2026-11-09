@@ -885,6 +885,40 @@ describe('usePostInput', () => {
       }
     });
 
+    it('discards the pending title and body at once, including a timer an earlier render armed', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleTitleChange({
+            target: { value: 'Edited title' },
+          } as React.ChangeEvent<HTMLInputElement>);
+          result.current.handleArticleBodyChange('Edited body', false);
+        });
+        // A render in between hands out new debounces; the timers armed above are still running
+        rerender();
+
+        // The composer is emptied for the lock with article mode still on: no render has run yet
+        act(() => {
+          result.current.discardPendingArticle();
+        });
+        expect(result.current.getLatestArticle()).toEqual({ title: 'Title', body: '' });
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mockSetContent).not.toHaveBeenCalled();
+        expect(mockSetArticleTitle).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('submits an article whose body only the editor holds yet', async () => {
       // The first keystrokes have not reached `content` through the debounce
       mockContent = '';
@@ -1061,6 +1095,29 @@ describe('usePostInput', () => {
       });
       expect(mockPrependPosts).not.toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('does not prependPosts a post without a lock on a Locks stream', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: PostStreamTypes.TIMELINE_ALL_LOCKED,
+      });
+      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short', lock: null } as never);
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: 'created-post-id' });
+      });
+      expect(mockPrependPosts).not.toHaveBeenCalled();
     });
 
     /*
@@ -2499,10 +2556,12 @@ describe('usePostInput', () => {
       expect(mockSetContent).toHaveBeenLastCalledWith('first, then more');
     });
 
-    it('goes back to the composer state once the debounce has fired', () => {
+    it('returns the typed values after the debounce fired, until that commit has rendered (#3030)', () => {
+      mockArticleTitle = 'Stored title';
       mockContent = 'Stored body';
-      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+      const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
       act(() => {
+        result.current.handleArticleTitleChange(titleEvent('Typed title'));
         result.current.handleArticleBodyChange('Typed body', false);
       });
 
@@ -2510,9 +2569,40 @@ describe('usePostInput', () => {
         vi.advanceTimersByTime(500);
       });
 
-      // The mocked state never changes, so a stale pending value would still read 'Typed body'.
+      // The mocked state has not changed: this is the render the commits are still waiting for
+      expect(mockSetArticleTitle).toHaveBeenCalledWith('Typed title');
       expect(mockSetContent).toHaveBeenCalledWith('Typed body');
-      expect(result.current.getLatestArticle().body).toBe('Stored body');
+      expect(result.current.getLatestArticle()).toEqual({ title: 'Typed title', body: 'Typed body' });
+
+      mockArticleTitle = 'Typed title';
+      mockContent = 'Typed body';
+      rerender();
+      // A later write from elsewhere (a draft restore) is not hidden behind the old pending values
+      mockArticleTitle = 'Restored title';
+      mockContent = 'Restored body';
+      rerender();
+
+      expect(result.current.getLatestArticle()).toEqual({ title: 'Restored title', body: 'Restored body' });
+    });
+
+    it('keeps a newer value pending when an older commit renders', () => {
+      mockContent = 'Stored body';
+      const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+      act(() => {
+        result.current.handleArticleBodyChange('first', false);
+      });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      // Typed again before the commit of 'first' rendered
+      act(() => {
+        result.current.handleArticleBodyChange('first, then more', false);
+      });
+      mockContent = 'first';
+      rerender();
+
+      expect(result.current.getLatestArticle().body).toBe('first, then more');
     });
 
     it('ignores a title over the character limit, as the state does', () => {

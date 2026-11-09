@@ -47,8 +47,8 @@ export const AlertBackup = () => {
   return (
     <Container className="flex-row flex-wrap items-center gap-3 rounded-lg bg-brand px-6 py-3">
       <Container className="flex-1 flex-row items-center gap-3">
-        <TriangleAlert className="h-4 w-4 font-bold text-primary-foreground" />
-        <Typography size="sm" className="font-bold whitespace-nowrap text-primary-foreground">
+        <TriangleAlert className="h-4 w-4 font-bold text-brand-foreground" />
+        <Typography size="sm" className="font-bold whitespace-nowrap text-brand-foreground">
           <span className="md:hidden">{'Back up now'}</span>
           <span className="hidden md:inline">{'Back up now to avoid losing your account!'}</span>
         </Typography>
@@ -56,7 +56,7 @@ export const AlertBackup = () => {
       <DialogBackup />
       <DialogConfirmBackup onConfirm={handleDismiss} />
       {needsSignIn && (
-        <Typography size="sm" className="basis-full text-primary-foreground">
+        <Typography size="sm" className="basis-full text-brand-foreground">
           Save your recovery phrase or encrypted file using Backup, then use it on the Sign In page to access your
           account again. If you already have a backup, you can use that instead.
         </Typography>

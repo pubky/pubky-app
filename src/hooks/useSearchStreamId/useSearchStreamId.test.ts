@@ -93,6 +93,16 @@ describe('useSearchStreamId', () => {
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('content_search:q~bitcoin%20wallets:all');
     });
+
+    it('should never build a Locks text search stream, with or without an override', () => {
+      mockQueryParam.value = 'bitcoin';
+      act(() => {
+        useHomeStore.setState({ content: CONTENT.LOCKS });
+      });
+
+      expect(renderHook(() => useSearchStreamId()).result.current).toBe('content_search:q~bitcoin:all');
+      expect(renderHook(() => useSearchStreamId(CONTENT.LOCKS)).result.current).toBe('content_search:q~bitcoin:all');
+    });
   });
 
   describe('when tags are provided in URL', () => {
@@ -216,6 +226,15 @@ describe('useSearchStreamId', () => {
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:collection:pubky');
+    });
+
+    it('should use the locked segment for LOCKS content', () => {
+      mockGet.mockReturnValue('pubky');
+      act(() => {
+        useHomeStore.setState({ content: CONTENT.LOCKS });
+      });
+      const { result } = renderHook(() => useSearchStreamId());
+      expect(result.current).toBe('timeline:all:locked:pubky');
     });
   });
 

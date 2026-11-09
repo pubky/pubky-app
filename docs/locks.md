@@ -49,8 +49,10 @@ Three things break the usual pubky-app mental model:
   Lock Server session that belongs to the account signed in to pubky.app (#2758).
 - **Nexus indexes the announcement, not the lock.** The announcement is an ordinary Nexus
   post and behaves like one; the locked payload and everything about the lock itself never
-  reach Nexus. Locks have no Nexus streams. Their immutable descriptors and readable posts
-  are cached in Dexie's `locks` table; purchase bundle ids remain on the reader's homeserver.
+  reach Nexus. Locks have no Nexus streams of their own: the feed's Locks content filter
+  (`locked=true`) selects announcements, and Nexus text search cannot apply it, so the option is
+  disabled there (#3046). Their immutable descriptors and readable posts are cached in Dexie's
+  `locks` table; purchase bundle ids remain on the reader's homeserver.
 - **Content lives under homeserver `/priv`.** Both the creator's originals and the
   reader's unlocked copies sit on `/priv` paths, readable only by their owner with a
   restored session — unlike everything under `/pub/pubky.app`.
