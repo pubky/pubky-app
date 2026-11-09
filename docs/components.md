@@ -360,12 +360,12 @@ An arbitrary value is fine only when the scale cannot express it: a viewport fra
 
 The dark theme is the `:root` token set in `src/app/globals.css`; the light theme overrides the same tokens under `.light`. next-themes (`ThemeProvider`) puts `dark` or `light` on `<html>` from the Settings choice (Auto resolves `prefers-color-scheme` to one of them). Prefer tokens over per-theme classes: a token such as `bg-card` or `text-brand-foreground` is already right in both themes.
 
-Light mode is for signed-in members only, and Settings → Appearance is the only place to change it; no header carries a theme toggle. `ThemeProvider` forces `SIGNED_OUT_THEME` (dark, `src/config/theme.ts`) whenever no one is signed in (no account in the auth store, the same test the header uses for its guest chrome), and on `SIGNED_OUT_ROUTES` (`src/app/routes.ts`: landing, sign-in, logout and every onboarding step) in any auth state. It forces the theme through next-themes' `forcedTheme`, so the stored `pubky-theme` preference is never written or cleared and returns after sign-in. Before the auth store rehydrates, a pre-paint script beside next-themes' own reads the route and the persisted session reference from `localStorage`, so a signed-out page never flashes light. Code that needs the theme on screen reads `forcedTheme ?? resolvedTheme` from next-themes (or `isLightApplied` from `useThemePreference`), never `resolvedTheme` alone. Signed-out-only surfaces need no `light:` styles.
+Light mode is for signed-in members only, chosen in Settings → Appearance (no header toggle). `ThemeProvider` forces dark on the landing, sign-in, logout and onboarding pages and whenever no one is signed in, without touching the stored preference, so signed-out-only surfaces need no `light:` styles. Read the theme on screen as `forcedTheme ?? resolvedTheme`.
 
 When a surface really differs per theme, use the `light:` and `dark:` variants declared with `@custom-variant` in `globals.css`. Both follow the class on `<html>`, not the OS setting. Do not write the arbitrary `[.light_&]:` form.
 
 ```tsx
-// Per-theme exception (Session upgrade panel, a signed-in surface)
+// Per-theme exception
 <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" className="light:invert" />
 
 // Same colour in both themes: say it once
