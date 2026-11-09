@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PassportMethodCard, PassportMethodSection } from './PassportMethodCard';
+
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@/config/network', () => ({ isPassportAppleEnabled: mockAppleEnabled }));
+beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 
 vi.mock('next/image', () => ({
   __esModule: true,
@@ -40,5 +44,15 @@ describe('PassportMethodSection', () => {
 
     fireEvent.click(screen.getByTestId('continue-with-google'));
     expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe.each([PassportMethodCard, PassportMethodSection])('Passport method flag wiring', (Component) => {
+  it.each([false, true])('uses the runtime-selected label for Apple flag=%s', (enabled) => {
+    mockAppleEnabled.mockReturnValue(enabled);
+    render(<Component onContinue={vi.fn()} isPending={false} />);
+    expect(screen.getByTestId('continue-with-google')).toHaveAccessibleName(
+      enabled ? 'Continue with Google or Apple' : 'Continue with Google',
+    );
   });
 });

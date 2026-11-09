@@ -5,11 +5,12 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Typography } from '@/atoms/Typography/Typography';
+import { isPassportAppleEnabled } from '@/config/network';
 import { cn } from '@/libs/utils/utils';
 
 const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/README.md';
 
-const POINTS = [
+const APPLE_POINTS = [
   {
     term: 'Your keys:',
     text: 'Created in your browser, with an encrypted backup stored in your iCloud or Google Drive.',
@@ -17,6 +18,25 @@ const POINTS = [
   {
     term: 'Recovery:',
     text: 'Restoring your pubky requires your encrypted backup and a separate key from Passport.',
+  },
+];
+
+const GOOGLE_POINTS = [
+  {
+    term: "Google's role:",
+    text: 'Helps identify you and securely retrieve your encrypted backup. It does not create or control your pubky.',
+  },
+  {
+    term: 'Your keys:',
+    text: 'Keys are created in your browser and encrypted before storage on Google Drive. Google never sees the private key.',
+  },
+  {
+    term: 'Recovery:',
+    text: 'Recovery requires both your encrypted Google Drive backup and a separate recovery key from Passport.',
+  },
+  {
+    term: 'Split security:',
+    text: 'Neither Google nor Passport can recover your pubky on its own, reducing reliance on either one.',
   },
 ];
 
@@ -28,13 +48,16 @@ const POINTS = [
  * rather than hover, so an icon-only trigger stays reachable by keyboard, and on touch devices.
  */
 export function PopoverGoogleSignIn({ className }: { className?: string }) {
+  const appleEnabled = isPassportAppleEnabled();
+  const points = appleEnabled ? APPLE_POINTS : GOOGLE_POINTS;
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="About signing in with Apple or Google"
+          aria-label={appleEnabled ? 'About signing in with Apple or Google' : 'About signing in with Google'}
           data-cy="passport-google-help-btn"
           className={cn(
             'size-8 text-secondary-foreground/70 hover:bg-secondary-foreground/10 hover:text-foreground',
@@ -47,12 +70,14 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
       <PopoverContent className="w-80 p-6">
         <Container className="gap-4">
           <Heading level={4} size="sm" className="text-popover-foreground">
-            {'Sign in with Apple or Google'}
+            {appleEnabled ? 'Sign in with Apple or Google' : 'Continue with Google, powered by Pubky Passport.'}
           </Heading>
-          <Typography size="sm" className="text-muted-foreground">
-            {'Use an existing account to create or access your pubky with Pubky Passport.'}
-          </Typography>
-          {POINTS.map((point) => (
+          {appleEnabled && (
+            <Typography size="sm" className="text-muted-foreground">
+              {'Use an existing account to create or access your pubky with Pubky Passport.'}
+            </Typography>
+          )}
+          {points.map((point) => (
             <Typography key={point.term} size="sm" className="text-muted-foreground">
               <Typography as="strong" size="sm" className="font-semibold text-secondary-foreground">
                 {point.term}

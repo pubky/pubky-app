@@ -128,15 +128,15 @@ vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => ({
   },
 }));
 vi.mock('@/organisms/PassportMethodCard/PassportMethodCard', () => ({
-  PassportMethodCard: ({ onContinue, isPending, variant }: PassportMethodCardProps) => (
-    <div data-testid="passport-method-card" data-variant={variant}>
+  PassportMethodCard: ({ onContinue, isPending }: PassportMethodCardProps) => (
+    <div data-testid="passport-method-card">
       <button data-testid="continue-with-google" onClick={onContinue} disabled={isPending}>
         {'Continue with Google'}
       </button>
     </div>
   ),
-  PassportMethodSection: ({ onContinue, isPending, variant }: PassportMethodCardProps) => (
-    <div data-testid="passport-method-section" data-variant={variant}>
+  PassportMethodSection: ({ onContinue, isPending }: PassportMethodCardProps) => (
+    <div data-testid="passport-method-section">
       <button data-testid="continue-with-google" onClick={onContinue} disabled={isPending}>
         {'Continue with Google'}
       </button>
@@ -634,8 +634,8 @@ describe('SignInContent - Passport enabled', () => {
 
     // Desktop: sovereign card + Passport card; mobile: labelled sections (Container mock drops test ids).
     expect(screen.getByTestId('sign-in-ring-card')).toBeInTheDocument();
-    expect(screen.getByTestId('passport-method-card')).toHaveAttribute('data-variant', 'providers');
-    expect(screen.getByTestId('passport-method-section')).toHaveAttribute('data-variant', 'providers');
+    expect(screen.getByTestId('passport-method-card')).toBeInTheDocument();
+    expect(screen.getByTestId('passport-method-section')).toBeInTheDocument();
     expect(screen.queryByTestId('sign-in-qr-card')).not.toBeInTheDocument();
     expect(screen.getAllByText('Choose your preferred method to sign in.')).toHaveLength(2);
     expect(screen.getAllByText('Sovereign & Secure')).toHaveLength(2);

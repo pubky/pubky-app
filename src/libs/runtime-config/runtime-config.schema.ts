@@ -214,6 +214,11 @@ export const APP_RUNTIME_DEFAULTS = {
  */
 export const PASSPORT_RUNTIME_DEFAULTS = {
   passportUrl: 'https://passport.staging.pubky.app',
+  /**
+   * The Passport button shows Google and Apple provider marks. Off in every mode
+   * until Passport's Apple login is set up and cleared for the target deploy.
+   */
+  passportApple: false,
 } as const;
 
 /**
@@ -290,6 +295,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   plausibleScriptUrl: urlValue.optional(),
   /** Pubky Passport origin. Absent disables Passport ("Continue with Google") everywhere. */
   passportUrl: urlValue.optional(),
+  /** Passport button showing Google and Apple provider marks. Has no effect without `passportUrl`. */
+  passportApple: z.boolean().default(PASSPORT_RUNTIME_DEFAULTS.passportApple),
   /** Marketplace transaction service origin. Absent leaves sign-out unable to revoke Shop sessions there. */
   marketplaceUrl: urlValue.optional(),
   previewImage: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.previewImage),
@@ -387,6 +394,7 @@ export const runtimeEnvInputSchema = z
     plausibleDomain: optionalTrimmedString,
     plausibleScriptUrl: optionalUrlFromString,
     passportUrl: optionalUrlFromString,
+    passportApple: optionalBooleanFromString,
     marketplaceUrl: optionalUrlFromString,
     previewImage: optionalTrimmedString,
     siteName: optionalTrimmedString,
@@ -489,6 +497,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
       .default(PASSPORT_RUNTIME_DEFAULTS.passportUrl)
       .transform((val) => (val.trim() !== '' ? val : undefined))
       .pipe(urlValue.optional()),
+    passportApple: optionalBooleanFromString,
     // Lenient-only local default; an explicit empty value still disables the revocation in dev.
     marketplaceUrl: z
       .string()
@@ -574,6 +583,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   plausibleDomain: 'PUBKY_RUNTIME_PLAUSIBLE_DOMAIN',
   plausibleScriptUrl: 'PUBKY_RUNTIME_PLAUSIBLE_SCRIPT_URL',
   passportUrl: 'PUBKY_RUNTIME_PASSPORT_URL',
+  passportApple: 'PUBKY_RUNTIME_PASSPORT_APPLE',
   marketplaceUrl: 'PUBKY_RUNTIME_MARKETPLACE_URL',
   previewImage: 'PUBKY_RUNTIME_PREVIEW_IMAGE',
   siteName: 'PUBKY_RUNTIME_SITE_NAME',

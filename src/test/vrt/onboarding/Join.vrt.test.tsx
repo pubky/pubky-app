@@ -102,3 +102,9 @@ for (const [name, viewport] of [
     });
   });
 }
+
+// Preserve the provider presentation covered by the existing baselines.
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  isPassportAppleEnabled: () => true,
+}));

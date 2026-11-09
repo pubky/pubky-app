@@ -3,6 +3,7 @@
 import { Loader2 } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
+import { isPassportAppleEnabled } from '@/config/network';
 import { Apple, Google } from '@/icons';
 import { cn } from '@/libs/utils/utils';
 import { PopoverGoogleSignIn } from '@/molecules/PopoverGoogleSignIn/PopoverGoogleSignIn';
@@ -20,12 +21,8 @@ import type { ContinueWithPassportProps } from './ContinueWithPassport.types';
  * mirrors the icon, label and gaps (invisible, hidden from assistive tech, click-through) places
  * the real mark on that slot. The overlay follows the pending label so the two never drift.
  */
-export function ContinueWithPassport({
-  onContinue,
-  isPending,
-  variant = 'google',
-  className,
-}: ContinueWithPassportProps) {
+export function ContinueWithPassport({ onContinue, isPending, className }: ContinueWithPassportProps) {
+  const variant = isPassportAppleEnabled() ? 'providers' : 'google';
   const showProviderIcons = variant === 'providers' && !isPending;
   const label = isPending ? 'Waiting for Passport...' : showProviderIcons ? 'Continue with' : 'Continue with Google';
 
