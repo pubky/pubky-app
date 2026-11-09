@@ -61,6 +61,20 @@ describe('useThemePreference', () => {
     expect(result.current.isLightApplied).toBe(expected);
   });
 
+  it('reports the light interface as off while the signed-out theme is forced', () => {
+    mockUseTheme.mockReturnValue({
+      theme: 'light',
+      resolvedTheme: 'light',
+      forcedTheme: 'dark',
+      setTheme: mockSetTheme,
+    });
+
+    const { result } = renderHook(() => useThemePreference());
+
+    expect(result.current.theme).toBe('light');
+    expect(result.current.isLightApplied).toBe(false);
+  });
+
   it('delegates setTheme to next-themes', () => {
     const { result } = renderHook(() => useThemePreference());
 

@@ -37,8 +37,16 @@ export const THEME_CLASSES = ['dark', 'light'] as const;
 
 export type ThemeOption = (typeof THEME_OPTIONS)[number];
 
+export type ThemeClass = (typeof THEME_CLASSES)[number];
+
 /** Theme applied until the user chooses one. Dark is the brand, so the system setting is opt-in via Auto. */
 export const DEFAULT_THEME: ThemeOption = 'dark';
+
+/**
+ * Theme forced whenever no one is signed in, and on the signed-out pages (`SIGNED_OUT_ROUTES`) in any auth state,
+ * whatever the stored preference. Light mode is a signed-in feature, chosen only in Settings → Appearance.
+ */
+export const SIGNED_OUT_THEME: ThemeClass = 'dark';
 
 /** localStorage key next-themes persists the chosen `ThemeOption` under */
 export const THEME_STORAGE_KEY = 'pubky-theme';

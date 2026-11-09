@@ -24,6 +24,7 @@ import {
   isPostRoute,
   isPublicDocumentRoute,
   isPublicExploreRoute,
+  isSignedOutRoute,
   LEGAL_ROUTES,
   LOGO_LANDING_ROUTES,
   matchesAllowedRoute,
@@ -34,6 +35,7 @@ import {
   PROFILE_ROUTES,
   PUBLIC_ROUTES,
   SETTINGS_ROUTES,
+  SIGNED_OUT_ROUTES,
   UNAUTHENTICATED_ROUTES,
 } from './routes';
 
@@ -270,6 +272,23 @@ describe('LEGAL_ROUTES', () => {
   it.each([null, '/copyright', '/privacy', '/terms-of-use/extra'])('does not treat %s as a legal route', (route) => {
     expect(isLegalRoute(route)).toBe(false);
   });
+});
+
+describe('isSignedOutRoute', () => {
+  it.each(['/', ...Object.values(AUTH_ROUTES), ...Object.values(ONBOARDING_ROUTES)])(
+    'recognises %s as a signed-out page',
+    (route) => {
+      expect(SIGNED_OUT_ROUTES).toContain(route);
+      expect(isSignedOutRoute(route)).toBe(true);
+    },
+  );
+
+  it.each([null, '/home', '/hot', '/settings/appearance', '/copyright', '/terms-of-use', '/onboarding', '/sign-in/x'])(
+    'does not treat %s as a signed-out page',
+    (route) => {
+      expect(isSignedOutRoute(route)).toBe(false);
+    },
+  );
 });
 
 describe('isPublicDocumentRoute', () => {

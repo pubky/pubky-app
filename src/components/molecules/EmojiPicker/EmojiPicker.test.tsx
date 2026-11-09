@@ -12,14 +12,15 @@ const mockPickerInstance = {
 };
 
 let mockResolvedTheme = 'dark';
+let mockForcedTheme: string | undefined;
 vi.mock('next-themes', () => ({
-  useTheme: () => ({ resolvedTheme: mockResolvedTheme }),
+  useTheme: () => ({ resolvedTheme: mockResolvedTheme, forcedTheme: mockForcedTheme }),
 }));
 
 vi.mock('emoji-mart', () => ({
   Picker: class {
-    constructor() {
-      MockPickerSpy();
+    constructor(options: unknown) {
+      MockPickerSpy(options);
       return mockPickerInstance;
     }
   },
@@ -35,6 +36,7 @@ describe('EmojiPicker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResolvedTheme = 'dark';
+    mockForcedTheme = undefined;
   });
 
   it('renders picker container', () => {
@@ -113,5 +115,21 @@ describe('EmojiPicker', () => {
 
     expect(mockPickerInstance.update).toHaveBeenLastCalledWith({ theme: 'light' });
     expect(MockPickerSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds a dark picker while the signed-out theme is forced over a light preference', async () => {
+    mockResolvedTheme = 'light';
+    mockForcedTheme = 'dark';
+
+    const { rerender } = render(<EmojiPicker onEmojiSelect={mockOnEmojiSelect} />);
+
+    await waitFor(() => {
+      expect(MockPickerSpy).toHaveBeenCalledWith(expect.objectContaining({ theme: 'dark' }));
+    });
+
+    mockForcedTheme = undefined;
+    rerender(<EmojiPicker onEmojiSelect={mockOnEmojiSelect} />);
+
+    expect(mockPickerInstance.update).toHaveBeenLastCalledWith({ theme: 'light' });
   });
 });

@@ -17,7 +17,7 @@ function isThemeOption(value: string | undefined): value is ThemeOption {
  * the value reflects what is actually stored.
  */
 export function useThemePreference(): UseThemePreferenceResult {
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, forcedTheme, setTheme } = useTheme();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function useThemePreference(): UseThemePreferenceResult {
   return {
     theme: isReady && isThemeOption(theme) ? theme : DEFAULT_THEME,
     isReady,
-    isLightApplied: isReady && resolvedTheme === 'light',
+    isLightApplied: isReady && (forcedTheme ?? resolvedTheme) === 'light',
     setTheme,
   };
 }

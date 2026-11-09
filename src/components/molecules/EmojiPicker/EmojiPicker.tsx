@@ -7,17 +7,18 @@ import { useTheme } from 'next-themes';
 import { Container } from '@/atoms/Container/Container';
 import type { EmojiData, EmojiPickerProps, PickerOptions } from './EmojiPicker.types';
 
-function toPickerTheme(resolvedTheme: string | undefined): 'light' | 'dark' {
-  return resolvedTheme === 'light' ? 'light' : 'dark';
+function toPickerTheme(appliedTheme: string | undefined): 'light' | 'dark' {
+  return appliedTheme === 'light' ? 'light' : 'dark';
 }
 
 export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: EmojiPickerProps) {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, forcedTheme } = useTheme();
+  const appliedTheme = forcedTheme ?? resolvedTheme;
   const pickerRef = useRef<HTMLDivElement>(null);
   const onEmojiSelectRef = useRef(onEmojiSelect);
   const maxLengthRef = useRef(maxLength);
   const currentInputRef = useRef(currentInput);
-  const resolvedThemeRef = useRef(resolvedTheme);
+  const appliedThemeRef = useRef(appliedTheme);
   const pickerInstanceRef = useRef<Picker | null>(null);
 
   // Keep refs in sync with props
@@ -25,13 +26,13 @@ export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: EmojiPic
     onEmojiSelectRef.current = onEmojiSelect;
     maxLengthRef.current = maxLength;
     currentInputRef.current = currentInput;
-    resolvedThemeRef.current = resolvedTheme;
-  }, [onEmojiSelect, maxLength, currentInput, resolvedTheme]);
+    appliedThemeRef.current = appliedTheme;
+  }, [onEmojiSelect, maxLength, currentInput, appliedTheme]);
 
   // Follow later theme changes (e.g. Auto tracking the OS) on the live instance
   useEffect(() => {
-    pickerInstanceRef.current?.update({ theme: toPickerTheme(resolvedTheme) });
-  }, [resolvedTheme]);
+    pickerInstanceRef.current?.update({ theme: toPickerTheme(appliedTheme) });
+  }, [appliedTheme]);
 
   useEffect(() => {
     const pickerElement = pickerRef.current;
@@ -55,11 +56,11 @@ export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: EmojiPic
     pickerElement.innerHTML = '';
 
     // Initialize emoji-mart picker. It renders in its own Shadow DOM, out of reach of the
-    // `.light` tokens, so it takes the resolved scheme. The picker initialises asynchronously,
+    // `.light` tokens, so it takes the scheme on screen (a forced theme wins over the preference). The picker initialises asynchronously,
     // so it is built once per mount: rebuilding it into the same parent races the first build.
     pickerInstanceRef.current = new Picker({
       data,
-      theme: toPickerTheme(resolvedThemeRef.current),
+      theme: toPickerTheme(appliedThemeRef.current),
       onEmojiSelect: handleEmojiSelect,
       parent: pickerElement,
     } as PickerOptions);
