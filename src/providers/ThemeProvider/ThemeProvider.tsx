@@ -36,8 +36,8 @@ const SIGNED_OUT_THEME_SCRIPT = `if(!(${hasStoredSession})(${JSON.stringify(AUTH
  * dark `:root` tokens without a flash.
  *
  * Light mode is for signed-in members: the default theme is forced on the signed-out pages and whenever no one is
- * signed in, without touching the stored preference. The server cannot see the session, so a pre-paint script
- * checks the stored one.
+ * signed in, without touching the stored preference (sign-out removes it). The server cannot see the session, so a
+ * pre-paint script checks the stored one.
  *
  * No `color-scheme` is set on the document (`enableColorScheme={false}`, and none in globals.css):
  * when an iframe's colour scheme differs from its embedded document's, the browser paints the frame
