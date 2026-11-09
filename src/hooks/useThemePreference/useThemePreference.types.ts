@@ -5,7 +5,7 @@ export interface UseThemePreferenceResult {
   theme: ThemeOption;
   /** False during SSR and the first client render, when the stored preference is not yet known. */
   isReady: boolean;
-  /** True once hydrated when the light interface is on screen: Light, or Auto on a light system, and not forced dark. */
+  /** True once hydrated when the light interface is on screen: Light, or Auto on a light system. */
   isLightApplied: boolean;
   setTheme: (theme: ThemeOption) => void;
 }

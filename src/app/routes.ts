@@ -282,21 +282,6 @@ export function isLogoLandingRoute(pathname: string | null): boolean {
   return pathname != null && LOGO_LANDING_ROUTES.includes(pathname);
 }
 
-/**
- * Pages built for visitors who are not signed in: the landing page, sign-in, logout and every onboarding step,
- * including the profile and Experience steps reached right after sign-up. They always render in the dark theme
- * (`SIGNED_OUT_THEME`). Exact paths only: `ThemeProvider` matches them in its pre-paint script too.
- */
-export const SIGNED_OUT_ROUTES: readonly string[] = [
-  ROOT_ROUTES,
-  ...Object.values(AUTH_ROUTES),
-  ...Object.values(ONBOARDING_ROUTES),
-];
-
-export function isSignedOutRoute(pathname: string | null): boolean {
-  return pathname != null && SIGNED_OUT_ROUTES.includes(pathname);
-}
-
 /** `/terms-of-use` or `/privacy-policy`. */
 export function isLegalRoute(pathname: string | null): boolean {
   return pathname === LEGAL_ROUTES.TERMS_OF_USE || pathname === LEGAL_ROUTES.PRIVACY_POLICY;
