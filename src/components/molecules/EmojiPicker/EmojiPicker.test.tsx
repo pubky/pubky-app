@@ -8,7 +8,13 @@ const MockPickerSpy = vi.fn();
 // Mock emoji-mart
 const mockPickerInstance = {
   destroy: vi.fn(),
+  update: vi.fn(),
 };
+
+let mockResolvedTheme = 'dark';
+vi.mock('next-themes', () => ({
+  useTheme: () => ({ resolvedTheme: mockResolvedTheme }),
+}));
 
 vi.mock('emoji-mart', () => ({
   Picker: class {
@@ -28,6 +34,7 @@ describe('EmojiPicker', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockResolvedTheme = 'dark';
   });
 
   it('renders picker container', () => {
@@ -92,5 +99,19 @@ describe('EmojiPicker', () => {
 
     // Component should unmount successfully
     expect(MockPickerSpy).toHaveBeenCalled();
+  });
+
+  it('updates the open picker theme in place when the resolved theme changes', async () => {
+    const { rerender } = render(<EmojiPicker onEmojiSelect={mockOnEmojiSelect} />);
+
+    await waitFor(() => {
+      expect(MockPickerSpy).toHaveBeenCalledTimes(1);
+    });
+
+    mockResolvedTheme = 'light';
+    rerender(<EmojiPicker onEmojiSelect={mockOnEmojiSelect} />);
+
+    expect(mockPickerInstance.update).toHaveBeenLastCalledWith({ theme: 'light' });
+    expect(MockPickerSpy).toHaveBeenCalledTimes(1);
   });
 });

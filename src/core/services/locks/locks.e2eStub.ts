@@ -76,7 +76,11 @@ const handle = (options: VerificationTaskHandleOptions) => ({
 function createCreator(stubUrl: string, owner: string): Creator {
   const creator: Pick<
     Creator,
-    'setLockServicePointer' | 'paykitSetupStatus' | 'registerGuardedResource' | 'createContentLock'
+    | 'setLockServicePointer'
+    | 'paykitSetupStatus'
+    | 'registerGuardedResource'
+    | 'createContentLock'
+    | 'deleteContentLock'
   > = {
     setLockServicePointer: async (options) => {
       await post(stubUrl, 'creator/lock-service-pointer', { owner, default_lock_server: options.defaultLockServer });
@@ -106,6 +110,11 @@ function createCreator(stubUrl: string, owner: string): Creator {
         blob: new TextEncoder().encode(JSON.stringify(response.content_lock)),
       });
       return response;
+    },
+    // The Lock Server takes the public `lock.json` down only once it has accepted the deletion.
+    deleteContentLock: async (lockId) => {
+      await post(stubUrl, 'creator/content-locks/delete', { owner, lock_id: lockId });
+      await HomeserverService.delete(`pubky://${owner}/pub/app.locks/${lockId}.json`);
     },
   };
   return creator as Creator;

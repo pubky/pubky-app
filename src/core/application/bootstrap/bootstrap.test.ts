@@ -245,7 +245,11 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
 
 const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapResponse) => {
   expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
-  expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+  expect(mocks.homeserverRequest).toHaveBeenCalledWith({
+    method: HttpMethod.GET,
+    url: MOCK_LAST_READ_URL,
+    notFoundAsNull: true,
+  });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.persistUsers).toHaveBeenCalledWith(
@@ -434,6 +438,43 @@ describe('BootstrapApplication', () => {
       });
     });
 
+    it('reads a missing lastRead as null without creating an error, then creates it', async () => {
+      const bootstrapData = emptyBootstrap();
+      const MOCK_NORMALIZED_TIMESTAMP = 9876543210;
+      const MOCK_NORMALIZED_LAST_READ_URL = 'pubky://test-pubky/pub/pubky.app/last-read';
+      const mockLastReadResult = {
+        last_read: {
+          timestamp: MOCK_NORMALIZED_TIMESTAMP,
+          toJson: vi.fn(() => ({ timestamp: MOCK_NORMALIZED_TIMESTAMP })),
+        },
+        meta: { url: MOCK_NORMALIZED_LAST_READ_URL },
+      };
+
+      const mocks = setupMocks({ bootstrapData });
+      const homeserverRequestSpy = vi
+        .spyOn(HomeserverService, 'request')
+        .mockImplementation(({ method, notFoundAsNull }) =>
+          Promise.resolve(method === HttpMethod.GET && notFoundAsNull ? null : undefined),
+        );
+      mocks.homeserverRequest = homeserverRequestSpy;
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(asOpaque<LastReadResult>(mockLastReadResult));
+
+      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: MOCK_LAST_READ_URL,
+        notFoundAsNull: true,
+      });
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.PUT,
+        url: MOCK_NORMALIZED_LAST_READ_URL,
+        bodyJson: mockLastReadResult.last_read.toJson(),
+        fence: expect.anything(),
+      });
+      expect(result).toMatchObject({ lastRead: MOCK_NORMALIZED_TIMESTAMP });
+    });
+
     it('should handle 404 homeserver error gracefully and create new lastRead', async () => {
       const bootstrapData = emptyBootstrap();
       const MOCK_NORMALIZED_TIMESTAMP = 9876543210;
@@ -472,7 +513,11 @@ describe('BootstrapApplication', () => {
         pubky: TEST_PUBKY,
       });
       expect(lastReadNormalizerSpy).toHaveBeenCalledWith(TEST_PUBKY);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: MOCK_LAST_READ_URL,
+        notFoundAsNull: true,
+      });
       expect(homeserverRequestSpy).toHaveBeenCalledWith({
         method: HttpMethod.PUT,
         url: MOCK_NORMALIZED_LAST_READ_URL,
@@ -530,7 +575,11 @@ describe('BootstrapApplication', () => {
         }),
       );
       expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: MOCK_LAST_READ_URL,
+        notFoundAsNull: true,
+      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
@@ -557,7 +606,11 @@ describe('BootstrapApplication', () => {
         expect.objectContaining({ message: 'Network timeout' }),
       );
       expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: MOCK_LAST_READ_URL,
+        notFoundAsNull: true,
+      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();

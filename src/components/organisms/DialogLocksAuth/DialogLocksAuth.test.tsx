@@ -22,12 +22,13 @@ const mocks = vi.hoisted(() => ({
   checkPaykit: vi.fn(),
   startPaykit: vi.fn(),
   resetPaykit: vi.fn(),
+  onConnectLoad: vi.fn(),
   flow: {
-    status: 'idle' as string,
-    connectUrl: null as string | null,
-    session: null as unknown,
-    error: null as unknown,
-  },
+    status: 'idle',
+    connectUrl: null,
+    session: null,
+    error: null,
+  } as { status: string; connectUrl: string | null; session: unknown; error: unknown; isConnectReady?: boolean },
   paykitFlow: {
     status: 'idle' as string,
     setupUrl: null as string | null,
@@ -39,6 +40,7 @@ vi.mock('@/hooks/useLocksAuthFlow/useLocksAuthFlow', () => ({
   useLocksAuthFlow: () => ({
     ...mocks.flow,
     iframeRef: { current: null },
+    onConnectLoad: mocks.onConnectLoad,
     prepare: mocks.prepare,
     start: mocks.start,
     reset: mocks.reset,
@@ -81,11 +83,21 @@ const signInWithNarrowSession = () =>
 const signIn = ({ paykitConnected = false } = {}) =>
   useLocksAuthStore.setState({ session: fakeSession, locksSessionSecret: 'secret-abc', paykitConnected });
 
-function renderDialog(overrides?: { open?: boolean; onOpenChange?: () => void; onSuccess?: () => void }) {
+function renderDialog(overrides?: {
+  open?: boolean;
+  onOpenChange?: () => void;
+  onSuccess?: () => void;
+  mode?: 'setup' | 'signin';
+}) {
   const onOpenChange = overrides?.onOpenChange ?? vi.fn();
   const onSuccess = overrides?.onSuccess ?? vi.fn();
   const view = render(
-    <DialogLocksAuth open={overrides?.open ?? true} onOpenChange={onOpenChange} onSuccess={onSuccess} />,
+    <DialogLocksAuth
+      open={overrides?.open ?? true}
+      onOpenChange={onOpenChange}
+      onSuccess={onSuccess}
+      mode={overrides?.mode}
+    />,
   );
   return { ...view, onOpenChange, onSuccess };
 }
@@ -129,7 +141,7 @@ describe('DialogLocksAuth', () => {
     expect(mocks.start).not.toHaveBeenCalled();
   });
 
-  it('renders the Lock Server iframe with the postMessage sandbox on the Enable step', () => {
+  it('renders the Lock Server iframe with the postMessage sandbox and clipboard-write allowed on the Enable step', () => {
     mocks.flow = {
       status: LocksAuthFlowStatus.AWAITING_APPROVAL,
       connectUrl: 'https://lock.server/connect?delivery=postmessage',
@@ -141,7 +153,58 @@ describe('DialogLocksAuth', () => {
     const iframe = screen.getByTitle('Lock Server authorization');
     expect(iframe).toHaveAttribute('src', 'https://lock.server/connect?delivery=postmessage');
     expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+    expect(iframe).toHaveAttribute('allow', 'clipboard-write');
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
+  });
+
+  // #3027: a `/connect` page that failed to render must never be shown, not even briefly.
+  describe('until the /connect page reports it rendered', () => {
+    const awaiting = (isConnectReady: boolean) => ({
+      status: LocksAuthFlowStatus.AWAITING_APPROVAL,
+      connectUrl: 'https://lock.server/connect?delivery=postmessage',
+      session: null,
+      error: null,
+      isConnectReady,
+    });
+
+    it('keeps the iframe mounted but invisible behind the spinner', () => {
+      mocks.flow = awaiting(false);
+      renderDialog();
+
+      const iframe = screen.getByTitle('Lock Server authorization');
+      expect(iframe).toHaveClass('invisible');
+      expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).toBeInTheDocument();
+    });
+
+    it('reports the iframe load event to the flow', () => {
+      mocks.flow = awaiting(false);
+      renderDialog();
+
+      fireEvent.load(screen.getByTitle('Lock Server authorization'));
+      expect(mocks.onConnectLoad).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the iframe and drops the spinner once the page is ready', () => {
+      mocks.flow = awaiting(true);
+      renderDialog();
+
+      expect(screen.getByTitle('Lock Server authorization')).not.toHaveClass('invisible');
+      expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).not.toBeInTheDocument();
+    });
+
+    it('replaces the hidden iframe with the error step and Try again when the page never reports', () => {
+      mocks.flow = awaiting(false);
+      const { rerender } = renderDialog();
+      expect(screen.getByTitle('Lock Server authorization')).toBeInTheDocument();
+
+      mocks.flow = { ...awaiting(false), status: LocksAuthFlowStatus.ERROR, error: { message: 'did not render' } };
+      rerender(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+
+      expect(screen.queryByTitle('Lock Server authorization')).not.toBeInTheDocument();
+      expect(screen.getByText("Couldn't authorize the Lock Server. Please try again.")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(mocks.start).toHaveBeenCalledTimes(1);
+    });
   });
 
   it.each([
@@ -288,7 +351,7 @@ describe('DialogLocksAuth', () => {
     expect(link).toHaveClass('text-base', 'font-bold');
   });
 
-  it('renders the Paykit iframe with the postMessage sandbox on the Bitkit step', () => {
+  it('renders the Paykit iframe with the postMessage sandbox and clipboard-write allowed on the Bitkit step', () => {
     signIn();
     mocks.paykitFlow = {
       status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
@@ -300,6 +363,7 @@ describe('DialogLocksAuth', () => {
     const iframe = screen.getByTitle('Bitkit payout account setup');
     expect(iframe).toHaveAttribute('src', 'https://paykit.server/setup?state=STATE');
     expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+    expect(iframe).toHaveAttribute('allow', 'clipboard-write');
   });
 
   it('links the store badges to Bitkit on the Bitkit step', () => {
@@ -328,7 +392,8 @@ describe('DialogLocksAuth', () => {
     mocks.paykitFlow = { status: PaykitSetupFlowStatus.ERROR, setupUrl: null, error: { message: 'paykit-boom' } };
     renderDialog();
 
-    expect(screen.getByText('paykit-boom')).toBeInTheDocument();
+    expect(screen.getByText("Couldn't connect your Bitkit wallet. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByText('paykit-boom')).not.toBeInTheDocument();
     expect(screen.queryByText('locks-boom')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -390,6 +455,70 @@ describe('DialogLocksAuth', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(mocks.start).toHaveBeenCalledTimes(1);
+  });
+
+  // Raw AppError messages are diagnostic text for logs and Sentry, never dialog copy (#3028).
+  it.each([
+    'frontend session exchange failed with HTTP 410',
+    'Lock auth failed: connect-failed',
+    'Lock auth callback state mismatch',
+  ])('shows fixed copy, not the raw message, when the Lock Server step fails with %s', (message) => {
+    mocks.flow = { status: LocksAuthFlowStatus.ERROR, connectUrl: null, session: null, error: { message } };
+    renderDialog();
+
+    expect(screen.getByText("Couldn't authorize the Lock Server. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/HTTP \d{3}/);
+  });
+
+  it.each(['Paykit setup failed: setup-failed', 'Locks session changed while Paykit setup was open'])(
+    'shows fixed copy, not the raw message, when the Bitkit step fails with %s',
+    (message) => {
+      signIn();
+      mocks.paykitFlow = { status: PaykitSetupFlowStatus.ERROR, setupUrl: null, error: { message } };
+      renderDialog();
+
+      expect(screen.getByText("Couldn't connect your Bitkit wallet. Please try again.")).toBeInTheDocument();
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    },
+  );
+
+  describe('sign-in only mode (#2980)', () => {
+    it('stops at the success step once the Lock Server is authorized, without checking Paykit', () => {
+      signIn({ paykitConnected: false });
+      const { onSuccess } = renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Locks Enabled')).toBeInTheDocument();
+      expect(screen.queryByText('Enable Payments')).not.toBeInTheDocument();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the session step for a session minted before /priv', () => {
+      signInWithNarrowSession();
+      signIn({ paykitConnected: false });
+      renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Locks Enabled')).toBeInTheDocument();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+    });
+
+    it('opens at the Lock Server step with no Locks session', () => {
+      renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Lock Content')).toBeInTheDocument();
+      expect(mocks.prepare).toHaveBeenCalled();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+    });
+
+    it('still moves on to the Bitkit step in the default mode (control)', () => {
+      signIn({ paykitConnected: false });
+      renderDialog();
+
+      expect(screen.getByText('Enable Payments')).toBeInTheDocument();
+      expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('requests close when Cancel is clicked', () => {

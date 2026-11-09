@@ -14,8 +14,10 @@ import type {
   CancelableAuthApproval,
   StoragePath,
   TAssertOkParams,
+  TBuildUserEventStreamUrlParams,
   TCheckSessionExpirationParams,
   TGetOwnedResponseParams,
+  THomeserverUserEvent,
   TOwnedSessionPath,
   TParseResponseOrUndefinedParams,
   TResolveOwnedSessionPathParams,
@@ -115,6 +117,82 @@ export const extractPubkyZ32 = (url: string): string | null => {
   }
 
   return null;
+};
+
+/**
+ * The homeserver `/events-stream` request the SDK's `eventStreamForUser(user, cursor).path(…).live().subscribe()`
+ * sends, with the homeserver public key as host for `client.fetch` to resolve.
+ */
+export const buildUserEventStreamUrl = ({
+  homeserverZ32,
+  userZ32,
+  cursor,
+  paths,
+}: TBuildUserEventStreamUrlParams): string => {
+  const url = new URL(`https://${homeserverZ32}/events-stream`);
+  url.searchParams.append('user', cursor === null ? userZ32 : `${userZ32}:${cursor}`);
+  url.searchParams.append('live', 'true');
+  for (const path of paths) {
+    url.searchParams.append('path', path);
+  }
+  return url.toString();
+};
+
+const USER_EVENT_TYPES = new Set(['PUT', 'DEL']);
+const USER_EVENT_CURSOR_PREFIX = 'cursor: ';
+const USER_EVENT_CURSOR_PATTERN = /^\d+$/;
+const SSE_LINE_BREAK = /\r\n|\r|\n/;
+
+const toUserEvent = (eventType: string, data: readonly string[]): THomeserverUserEvent | null => {
+  if (!USER_EVENT_TYPES.has(eventType)) return null;
+  const [resource, ...fields] = data;
+  const path = resource?.startsWith(PUBKY_PROTOCOL) ? toPathname(resource) : null;
+  const cursor = fields
+    .find((field) => field.startsWith(USER_EVENT_CURSOR_PREFIX))
+    ?.slice(USER_EVENT_CURSOR_PREFIX.length);
+  if (!path || !cursor || !USER_EVENT_CURSOR_PATTERN.test(cursor)) return null;
+  return { cursor, eventType, path };
+};
+
+/**
+ * Incremental decoder for the `/events-stream` SSE body, parsed as the SDK does: `event: PUT | DEL`, then a first
+ * `data:` line `pubky://<user>/<path>` and a `data: cursor: <id>` line. Malformed and unknown events are skipped.
+ */
+export const createUserEventStreamDecoder = () => {
+  const textDecoder = new TextDecoder();
+  let unterminated = '';
+  let eventType = '';
+  let data: string[] = [];
+
+  return {
+    /** Decodes one body chunk and returns the events it completed. */
+    push(chunk: Uint8Array): THomeserverUserEvent[] {
+      const text = unterminated + textDecoder.decode(chunk, { stream: true });
+      // A trailing CR may be the first half of a CRLF split across chunks.
+      const heldCarriageReturn = text.endsWith('\r');
+      const lines = (heldCarriageReturn ? text.slice(0, -1) : text).split(SSE_LINE_BREAK);
+      unterminated = (lines.pop() ?? '') + (heldCarriageReturn ? '\r' : '');
+
+      const events: THomeserverUserEvent[] = [];
+      for (const line of lines) {
+        if (line === '') {
+          const event = toUserEvent(eventType, data);
+          if (event) events.push(event);
+          eventType = '';
+          data = [];
+          continue;
+        }
+        if (line.startsWith(':')) continue;
+        const colon = line.indexOf(':');
+        const field = colon === -1 ? line : line.slice(0, colon);
+        const rawValue = colon === -1 ? '' : line.slice(colon + 1);
+        const value = rawValue.startsWith(' ') ? rawValue.slice(1) : rawValue;
+        if (field === 'event') eventType = value;
+        else if (field === 'data') data.push(value);
+      }
+      return events;
+    },
+  };
 };
 
 /**
@@ -443,6 +521,28 @@ export const getOwnedResponse = async ({ session, path, url }: TGetOwnedResponse
     handleError({ error, additionalContext: { url, method: HttpMethod.GET } }),
   );
 
+  await assertOk({ response, url, operation: 'getOwnedResponse' });
+  return response;
+};
+
+/**
+ * Like {@link getOwnedResponse}, but a 404 (as a response or an SDK rejection) resolves to `null`
+ * before any error is created. Every other status and failure is handled the same way.
+ */
+export const getOwnedResponseIfExists = async ({
+  session,
+  path,
+  url,
+}: TGetOwnedResponseParams): Promise<Response | null> => {
+  let response: Response;
+  try {
+    response = await session.storage.get(path);
+  } catch (error) {
+    if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
+    return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
+  }
+
+  if (response.status === HttpStatusCode.NOT_FOUND) return null;
   await assertOk({ response, url, operation: 'getOwnedResponse' });
   return response;
 };

@@ -72,9 +72,19 @@ vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   },
 }));
 
+/** A fresh module with the stub URL set, after `ensureLocksSdkReady` has loaded the stub. */
+const freshUtilsWithE2eStub = async () => {
+  mocks.getE2eLocksStubUrl.mockReturnValue('http://lock-server.e2e.test');
+  vi.resetModules();
+  const utils = await import('./locks.utils');
+  await utils.ensureLocksSdkReady();
+  return utils;
+};
+
 describe('locks.utils', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getE2eLocksStubUrl.mockReturnValue(undefined);
     mocks.getTestnet.mockReturnValue(true);
     mocks.getLockServer.mockReturnValue('lockserverpubky');
     mocks.session = null;
@@ -232,10 +242,10 @@ describe('locks.utils', () => {
       expect(mocks.setLocalTestnetHomeserver).not.toHaveBeenCalled();
     });
 
-    it('builds the E2E stub instead of the SDK client only when the stub URL is configured', () => {
-      mocks.getE2eLocksStubUrl.mockReturnValueOnce('http://lock-server.e2e.test');
+    it('builds the E2E stub instead of the SDK client only when the stub URL is configured', async () => {
+      const utils = await freshUtilsWithE2eStub();
 
-      const client = initLockClient();
+      const client = utils.initLockClient();
 
       expect(mocks.createE2eLocksClient).toHaveBeenCalledWith('http://lock-server.e2e.test');
       expect(mocks.forServerWithOptions).not.toHaveBeenCalled();
@@ -258,10 +268,10 @@ describe('locks.utils', () => {
       expect(mocks.createE2eLocksReads).not.toHaveBeenCalled();
     });
 
-    it('returns the E2E stub reads only when the stub URL is configured', () => {
-      mocks.getE2eLocksStubUrl.mockReturnValueOnce('http://lock-server.e2e.test');
+    it('returns the E2E stub reads only when the stub URL is configured', async () => {
+      const utils = await freshUtilsWithE2eStub();
 
-      const reads = getLocksReads();
+      const reads = utils.getLocksReads();
 
       expect(mocks.createE2eLocksReads).toHaveBeenCalledWith('http://lock-server.e2e.test');
       expect(reads).toBe(mocks.createE2eLocksReads.mock.results[0]?.value);
@@ -287,6 +297,17 @@ describe('locks.utils', () => {
       await Promise.all([ensure(), ensure(), ensure()]);
 
       expect(mocks.init).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses the E2E stub before ensureLocksSdkReady has loaded it', async () => {
+      mocks.getE2eLocksStubUrl.mockReturnValue('http://lock-server.e2e.test');
+      vi.resetModules();
+      const utils = await import('./locks.utils');
+
+      expect(() => utils.initLockClient()).toThrow('E2E Locks stub used before ensureLocksSdkReady');
+      expect(() => utils.getLocksReads()).toThrow('E2E Locks stub used before ensureLocksSdkReady');
+      expect(mocks.createE2eLocksClient).not.toHaveBeenCalled();
+      expect(mocks.forServerWithOptions).not.toHaveBeenCalled();
     });
 
     it('retries on the next call after a failed init', async () => {

@@ -238,7 +238,7 @@ describe('DialogDeleteAccount', () => {
     const deleteButton = screen.getByRole('button', { name: /delete account/i });
     const trashIcon = deleteButton.querySelector('svg');
     expect(trashIcon).toBeInTheDocument();
-    expect(trashIcon).toHaveClass('lucide-trash2');
+    expect(trashIcon).toHaveClass('lucide-trash-2');
   });
 
   it('applies correct button variants', () => {

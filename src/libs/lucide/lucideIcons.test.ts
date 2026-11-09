@@ -7,6 +7,9 @@ import {
   subscribeToLucideIcons,
   toLucideIconName,
 } from './lucideIcons';
+import { LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL } from './lucideIcons.aliases';
+import { LUCIDE_ICON_NODES } from './lucideIcons.nodes';
+import { LUCIDE_ICON_TAGS } from './lucideIcons.tags';
 
 describe('lucideIcons', () => {
   it('normalizes kebab-case icon names, including foreign ones', () => {
@@ -109,13 +112,37 @@ describe('lucideIcons', () => {
     // 'home' aliases 'house' — the picker search relies on this mapping.
     const house = pickerIcons.find((icon) => icon.name === 'house');
     expect(house?.aliases).toContain('home');
+    // 'trash-2' was renamed to 'trash' in lucide 1.65 — hidden from the grid
+    // as a deprecated alias, still searchable through the canonical entry.
+    expect(names).not.toContain('trash-2');
+    const trash = pickerIcons.find((icon) => icon.name === 'trash');
+    expect(trash?.aliases).toContain('trash-2');
     // Synonym tags power vocabulary search ('delete' finds the trash icons).
-    const trash = pickerIcons.find((icon) => icon.name === 'trash-2');
     expect(trash?.tags).toContain('delete');
     // Multi-word tags are hyphenated to match the picker's normalized query,
     // which turns 'air conditioner' into 'air-conditioner'.
     const airVent = pickerIcons.find((icon) => icon.tags.some((tag) => tag.includes('air-condition')));
     expect(airVent).toBeDefined();
     expect(pickerIcons.every((icon) => icon.tags.every((tag) => !tag.includes(' ')))).toBe(true);
+  });
+
+  it('keeps the generated picker data identical to the installed lucide-react catalog', async () => {
+    // The picker's bulk load overwrites icons the feed already rendered, so a
+    // lucide bump without regenerating these files silently swaps in stale
+    // glyphs (as 'trash' lost two strokes on the 1.65 bump).
+    const { dynamicIconImports } = await import('lucide-react/dynamic.js');
+    const nodes: Record<string, unknown> = {};
+    const aliases: Record<string, unknown> = {};
+    await Promise.all(
+      Object.entries(dynamicIconImports).map(async ([name, load]) => {
+        const { __iconData } = await load();
+        if (__iconData.name === name) nodes[name] = __iconData.node;
+        else aliases[name] = __iconData.name;
+      }),
+    );
+
+    expect(LUCIDE_ICON_NODES).toEqual(nodes);
+    expect(LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL).toEqual(aliases);
+    expect(Object.keys(LUCIDE_ICON_TAGS).filter((name) => !Object.hasOwn(nodes, name))).toEqual([]);
   });
 });

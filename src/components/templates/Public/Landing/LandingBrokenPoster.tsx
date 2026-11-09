@@ -68,12 +68,18 @@ export function LandingBrokenPoster({ alt, className, image, video }: LandingBro
   };
 
   if (!shouldLoadVideo) {
-    return <Image src={image} alt={alt} width={1516} height={1516} className={className} />;
+    return <Image src={image} alt={alt} width={1516} height={1516} className={cn('landing-broken-art', className)} />;
   }
 
   return (
     <div className={cn('relative block overflow-hidden', className)} onPointerEnter={handlePointerEnter} onPointerLeave={handlePointerLeave}>
-      <Image src={image} alt={alt} width={1516} height={1516} className="absolute inset-0 size-full object-cover" />
+      <Image
+        src={image}
+        alt={alt}
+        width={1516}
+        height={1516}
+        className="landing-broken-art absolute inset-0 size-full object-cover"
+      />
       <video
         ref={videoRef}
         src={video}

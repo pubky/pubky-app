@@ -1,5 +1,7 @@
 /**
  * Locks: a creator locks a post (with an image) and an article, and another reader pays to unlock them.
+ * The creator then deletes the locked post: the lock is taken down on the Lock Server first (one
+ * refused attempt keeps the post), and the reader no longer sees the teaser or Unlock.
  *
  * WHAT IS STUBBED, AND WHY
  * Locks needs the Lock Server, the Paykit Server and the reader's Bitkit wallet, approved from Pubky
@@ -43,25 +45,28 @@ import {
   fillLockAnnouncement,
   holdSeededLock,
   lockServerError,
+  failNextLockDeletion,
   openPostFromHomeFeed,
   pressPost,
   publishLock,
   recordLockServerCalls,
   registeredGuardedPosts,
   reloadFromReaderReplica,
+  signInToLockServer,
   singlePostCard,
   stubLockServer,
   turnLockOff,
   turnLockOn,
   turnLockOnAndSetUpLocks,
   waitForNexusLockPost,
+  waitForNexusPostDeleted,
   writeLockedArticle,
   writeLockedPost,
 } from '../support/locks';
 import { flushLocksStubLog, locksStep } from '../support/locks-log';
 import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { createLockPostViaApi, seedUserViaApi } from '../support/seed';
-import { HasBackedUp } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import type { SeededLockPost, SeededUser } from '../support/types/seed';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
@@ -73,6 +78,9 @@ const PRICE_SATS = '2100';
 // The lock card prints the price without a space, the Pay to Unlock dialog with one.
 const CARD_PRICE_LABEL = '₿2,100';
 const DIALOG_PRICE_LABEL = '₿ 2,100';
+
+const POST_STEPS = 8;
+const ARTICLE_STEPS = 6;
 
 const lockServer = createLockServerState();
 
@@ -209,7 +217,7 @@ describe('locks', () => {
     flushLocksStubLog();
   });
 
-  it('locks a post with an image: the owner sees it, another reader pays to unlock it', () => {
+  it('locks a post with an image: the owner sees it, another reader pays to unlock it, the owner deletes it', () => {
     const run = Date.now();
     const draftText = `Locked post draft ${run}`;
     const lockedText = `Locked post text, edited ${run}`;
@@ -219,13 +227,13 @@ describe('locks', () => {
     const teaser = `A photo worth unlocking ${run}`;
     signInAs(creator);
 
-    locksStep(1, 'A writes a post with an image and fully locks it');
+    locksStep(1, POST_STEPS, 'A writes a post with an image and fully locks it');
     writeLockedPost(draftText, 'mustache-you.png');
     turnLockOnAndSetUpLocks();
     applyLockPrice(FIRST_PRICE_SATS);
     fillLockAnnouncement(draftTitle, draftTeaser);
 
-    locksStep(2, 'A edits the locked text, title and teaser, re-confirms the lock and saves');
+    locksStep(2, POST_STEPS, 'A edits the locked text, title and teaser, re-confirms the lock and saves');
     turnLockOff();
     editLockedPostText(lockedText);
     turnLockOn();
@@ -245,7 +253,7 @@ describe('locks', () => {
     cy.get<string>('@postId').then((postId) => {
       waitForNexusLockPost(creator.pubky, postId);
 
-      locksStep(3, 'Owner view: A sees the locked image and text, with the title and teaser');
+      locksStep(3, POST_STEPS, 'Owner view: A sees the locked image and text, with the title and teaser');
       openPostFromHomeFeed(creator.pubky, postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', draftTeaser);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
@@ -259,7 +267,7 @@ describe('locks', () => {
         .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
       singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('be.disabled');
 
-      locksStep(4, 'Locked view: B sees only the title and teaser');
+      locksStep(4, POST_STEPS, 'Locked view: B sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
       signInAs(reader);
       openPostFromHomeFeed(creator.pubky, postId, teaser);
@@ -268,10 +276,10 @@ describe('locks', () => {
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
       singlePostCard().find('[data-cy="post-attachment-image"]').should('not.exist');
 
-      locksStep(5, 'B pays in bitcoin through the stubbed Bitkit wallet');
+      locksStep(5, POST_STEPS, 'B pays in bitcoin through the stubbed Bitkit wallet');
       payToUnlock();
 
-      locksStep(6, 'Unlocked view: B sees the image and the locked text');
+      locksStep(6, POST_STEPS, 'Unlocked view: B sees the image and the locked text');
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
       singlePostCard()
         .find('[data-cy="locked-post-unlocked-content"]')
@@ -288,6 +296,49 @@ describe('locks', () => {
           singlePostCard().find('[data-cy="post-attachment-image"]').should('be.visible');
         }),
       );
+
+      locksStep(7, POST_STEPS, 'A deletes the post: a Lock Server failure keeps it, the retry removes lock and post');
+      cy.signOut(HasBackedUp.Yes);
+      signInAs(creator);
+      signInToLockServer();
+      failNextLockDeletion();
+      cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
+        cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
+      });
+      cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click();
+      cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.visible').click();
+      cy.wait('@deleteContentLockFailed');
+      cy.contains('Could not delete the locked content. Try again.').should('be.visible');
+      // A refused lock deletion keeps the row and the confirm dialog, so the retry is the dialog's Delete again.
+      cy.get('[data-cy="dialog-content"]').should('be.visible');
+      cy.get('[data-cy="timeline-posts"]').should('contain.text', teaser);
+      cy.intercept('DELETE', `**/pub/pubky.app/posts/${postId}`).as('announcementDeleted');
+      cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.enabled').click();
+      cy.get('[data-cy="dialog-content"]').should('not.exist');
+      cy.wait('@announcementDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
+      // The post is deleted only after the Lock Server has accepted the lock deletion.
+      cy.get<string>('@lockId').then((lockId) => {
+        cy.wrap(lockServer).its('deletedLocks').should('deep.eq', [lockId]);
+      });
+      // An emptied feed renders its empty state without the `timeline-posts` list, so check the page.
+      cy.get('body').should('not.contain.text', teaser);
+
+      locksStep(8, POST_STEPS, 'B no longer sees the teaser or the unlock option');
+      waitForNexusPostDeleted(creator.pubky, postId);
+      cy.signOut(HasBackedUp.Yes);
+      signInAs(reader);
+      cy.visit(`/post/${creator.id}/${postId}`);
+      cy.get('[data-cy="post-not-found"]:visible', { timeout: 10_000 }).should('have.length', 1);
+      // `contain.text` reads textContent, which includes the Next.js flight <script>
+      // in the body. That payload repeats the meta description, and a lock's
+      // description is the lock title, still served from the fetch cache after Nexus
+      // has 404'd. innerText is the text on screen.
+      cy.get('body').should(($body) => {
+        const visible = ($body[0] as HTMLElement).innerText;
+        expect(visible, 'the teaser').not.to.include(teaser);
+        expect(visible, 'the title').not.to.include(title);
+      });
+      cy.get('[data-cy="locked-post-unlock-btn"]').should('not.exist');
     });
   });
 
@@ -302,13 +353,13 @@ describe('locks', () => {
     const teaser = `An essay worth unlocking ${run}`;
     signInAs(creator);
 
-    locksStep(1, 'A writes an article and fully locks it');
+    locksStep(1, ARTICLE_STEPS, 'A writes an article and fully locks it');
     writeLockedArticle(articleTitle, draftBody);
     turnLockOnAndSetUpLocks();
     applyLockPrice(FIRST_PRICE_SATS);
     fillLockAnnouncement(draftTitle, draftTeaser);
 
-    locksStep(2, 'A edits the article body, title and teaser, re-confirms the lock and saves');
+    locksStep(2, ARTICLE_STEPS, 'A edits the article body, title and teaser, re-confirms the lock and saves');
     turnLockOff();
     editLockedArticleBody(articleTitle, body);
     turnLockOn();
@@ -328,7 +379,7 @@ describe('locks', () => {
     cy.get<string>('@postId').then((postId) => {
       waitForNexusLockPost(creator.pubky, postId);
 
-      locksStep(3, 'Owner view: A sees the locked article body, with the title and teaser');
+      locksStep(3, ARTICLE_STEPS, 'Owner view: A sees the locked article body, with the title and teaser');
       openPostFromHomeFeed(creator.pubky, postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', draftTeaser);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
@@ -339,7 +390,7 @@ describe('locks', () => {
         .and('contain.text', body)
         .and('not.contain.text', draftBody);
 
-      locksStep(4, 'Locked view: B sees only the title and teaser');
+      locksStep(4, ARTICLE_STEPS, 'Locked view: B sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
       signInAs(reader);
       openPostFromHomeFeed(creator.pubky, postId, teaser);
@@ -347,10 +398,10 @@ describe('locks', () => {
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
 
-      locksStep(5, 'B pays in bitcoin through the stubbed Bitkit wallet');
+      locksStep(5, ARTICLE_STEPS, 'B pays in bitcoin through the stubbed Bitkit wallet');
       payToUnlock();
 
-      locksStep(6, 'Unlocked view: B sees the full article body');
+      locksStep(6, ARTICLE_STEPS, 'Unlocked view: B sees the full article body');
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
       singlePostCard()
         .find('[data-cy="locked-post-unlocked-content"]')
@@ -382,13 +433,13 @@ describe('locks', () => {
       const teaser = `Published after errors ${run}`;
       signInAs(creator);
 
-      locksStep(1, 'A writes a post with an image and fully locks it', 3);
+      locksStep(1, 3, 'A writes a post with an image and fully locks it');
       writeLockedPost(text, 'mustache-you.png');
       turnLockOnAndSetUpLocks();
       applyLockPrice(PRICE_SATS);
       fillLockAnnouncement(title, teaser);
 
-      locksStep(2, 'Creating the lock fails: a toast, and the lock, title and teaser stay for another try', 3);
+      locksStep(2, 3, 'Creating the lock fails: a toast, and the lock, title and teaser stay for another try');
       answerLockServerOnce('POST', '/e2e/creator/content-locks', {
         statusCode: 500,
         body: lockServerError('internal_error'),
@@ -398,7 +449,7 @@ describe('locks', () => {
       expectToast('Something went wrong. Try again.');
       expectLockKept(title, teaser);
 
-      locksStep(3, 'The Lock Server session is rejected: sign-in reopens, and the same lock publishes', 3);
+      locksStep(3, 3, 'The Lock Server session is rejected: sign-in reopens, and the same lock publishes');
       answerLockServerOnce('POST', '/e2e/creator/guarded-resources', {
         statusCode: 401,
         body: lockServerError('frontend_session_expired'),
@@ -416,7 +467,7 @@ describe('locks', () => {
       signInAs(reader);
       openPostFromHomeFeed(creator.pubky, paidPost.id, paidLock.teaser);
 
-      locksStep(1, 'The proof submission fails: a toast, and Try again starts the payment', 4);
+      locksStep(1, 4, 'The proof submission fails: a toast, and Try again starts the payment');
       answerLockServerOnce('POST', '/e2e/viewer/proof-bundles', {
         statusCode: 503,
         body: lockServerError('creator_authority_unavailable'),
@@ -426,7 +477,7 @@ describe('locks', () => {
       expectToast('The payment could not be started. Try again later.');
       cy.get('[data-cy="pay-to-unlock-retry"]').filter(':visible').should('have.text', 'Try again');
 
-      locksStep(2, 'Bitkit pays, but the access credential is refused: the payment stands and nothing opens', 4);
+      locksStep(2, 4, 'Bitkit pays, but the access credential is refused: the payment stands and nothing opens');
       const proofSubmissions = recordLockServerCalls('POST', '/e2e/viewer/proof-bundles');
       answerLockServerOnce('POST', '/e2e/viewer/access-credentials', {
         statusCode: 403,
@@ -440,13 +491,13 @@ describe('locks', () => {
         .should('contain.text', 'Payment received. The content could not be opened — nothing is lost.');
       singlePostCard().should('not.contain.text', paidLock.lockedContent);
 
-      locksStep(3, 'Check again issues the credential and opens the content, with no second payment', 4);
+      locksStep(3, 4, 'Check again issues the credential and opens the content, with no second payment');
       cy.get('[data-cy="pay-to-unlock-recheck"]').filter(':visible').click();
       cy.get('[data-cy="pay-to-unlock-view-content"]').filter(':visible').click();
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', paidLock.lockedContent);
       cy.then(() => expect(proofSubmissions, 'payment requests sent to Bitkit after Try again').to.have.length(1));
 
-      locksStep(4, 'A lock the region refuses (HTTP 451) explains itself, with nothing to retry', 4);
+      locksStep(4, 4, 'A lock the region refuses (HTTP 451) explains itself, with nothing to retry');
       cy.go('back');
       openPostFromHomeFeed(creator.pubky, refusedPost.id, refusedLock.teaser);
       answerLockServerOnce('POST', '/e2e/viewer/proof-bundles', {

@@ -49,6 +49,15 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 
 - **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
+- **App shell and public documents:** `AppShell` (`src/components/organisms/AppShell/AppShell.tsx`, mounted by
+  `src/app/layout.tsx`) puts every route behind `DatabaseProvider` → `RouteGuardProvider` with the coordinators, the
+  Fab, the guest banner and the sign-in dialog. The server's HTML holds only the gate's spinner. The public documents
+  (`isPublicDocumentRoute`: `/terms-of-use`, `/privacy-policy`, `/copyright`) skip the gate and render with only
+  `<Header />`, so their text is in the first HTML and they open without IndexedDB. Anything they render must read
+  nothing from Dexie, controllers or the session restore. The header shows members only the logo there, and anything
+  that reads browser-only state (the auth store, the visitor's clock) waits for `useIsHydrated()` so the hydrating
+  render matches the server's markup. Moving between a public document and an app route remounts the gate (database
+  init, coordinators).
 - **Active nav state:** a nav item that links to a default child route (footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay active on sibling routes (`/settings/notifications`) needs active detection on the parent prefix (`activePrefix: APP_ROUTES.SETTINGS`, see `MobileFooter`), not only `href` or `pathname.startsWith(href + '/')`.
 
 `MobileFooter` always disables prefetch for Search. With Next.js 16.3.6, any `/search` prefetch from the footer after a
@@ -174,9 +183,9 @@ When the icon is chosen at runtime from data (a kebab-case Lucide name like `"fo
 <DynamicLucideIcon name={feed.icon} className="size-5" />
 ```
 
-Icon state lives in a module-level store in **`@/libs/lucide/lucideIcons`** (`subscribeToLucideIcons`, `getLucideIconState`, `requestLucideIcon`, `preloadLucideIcons`), read through `useSyncExternalStore`. The full Lucide catalog (`lucide-react/dynamic.js`, ~116KB raw) and the picker's alias/tag metadata are lazily-loaded chunks — nothing icon-related ships in the initial bundle; sync callers can only normalize a name's shape (`toLucideIconName`, which lowercases so an icon another client stored as `Activity` still resolves), and the store answers unknown names once the catalog is resident. Once an icon has resolved anywhere in the session it renders synchronously everywhere, a loaded icon carries the same `lucide-<name>` class as a static import, and a failed chunk heals every mounted instance when any retry succeeds. While a valid name is still loading, the atom renders an empty size-preserving svg — never a wrong icon; the `fallback` prop (default `Activity`) covers missing, unknown, and failed names. Call `preloadLucideIcons(names)` when the icon names become known (e.g. when feed data lands) so mounts hit the cache. Never use this path for static UI icons — those stay named imports.
+Icon state lives in a module-level store in **`@/libs/lucide/lucideIcons`** (`subscribeToLucideIcons`, `getLucideIconState`, `requestLucideIcon`, `preloadLucideIcons`), read through `useSyncExternalStore`. The full Lucide catalog (`lucide-react/dynamic.js`, ~136KB raw) and the picker's alias/tag metadata are lazily-loaded chunks — nothing icon-related ships in the initial bundle; sync callers can only normalize a name's shape (`toLucideIconName`, which lowercases so an icon another client stored as `Activity` still resolves), and the store answers unknown names once the catalog is resident. Once an icon has resolved anywhere in the session it renders synchronously everywhere, a loaded icon carries the same `lucide-<name>` class as a static import, and a failed chunk heals every mounted instance when any retry succeeds. While a valid name is still loading, the atom renders an empty size-preserving svg — never a wrong icon; the `fallback` prop (default `Activity`) covers missing, unknown, and failed names. Call `preloadLucideIcons(names)` when the icon names become known (e.g. when feed data lands) so mounts hit the cache. Never use this path for static UI icons — those stay named imports.
 
-The icon picker takes a different route on purpose: it loads **all** canonical icon nodes in a single lazy chunk (`lucideIcons.nodes.ts`) instead of one chunk per cell, because it renders ~1700 of them and the per-icon path would cost ~1700 requests. Feed tabs keep the per-icon path — they render a handful of icons and must not pull the whole set.
+The icon picker takes a different route on purpose: it loads **all** canonical icon nodes in a single lazy chunk (`lucideIcons.nodes.ts`) instead of one chunk per cell, because it renders ~2000 of them and the per-icon path would cost ~2000 requests. Feed tabs keep the per-icon path — they render a handful of icons and must not pull the whole set.
 
 Three files under `@/libs/lucide` are generated from the installed `lucide-react` and must be regenerated after a lucide upgrade:
 
@@ -185,6 +194,14 @@ Three files under `@/libs/lucide` are generated from the installed `lucide-react
 | `lucideIcons.nodes.ts`   | every canonical icon's node, for the picker's single-chunk load                                              |
 | `lucideIcons.aliases.ts` | deprecated alias → canonical name, so the grid hides duplicate glyphs and search still finds old names       |
 | `lucideIcons.tags.ts`    | search synonyms pruned from `lucide-static`'s `tags.json`, hyphenated to match the picker's normalized query |
+
+Regenerate all three from the installed packages, never by hand:
+
+- Load every `dynamicIconImports` entry from `lucide-react/dynamic.js`. An entry whose module's `__iconData.name` equals its key is canonical: its `__iconData.node` goes into `LUCIDE_ICON_NODES`, in catalog order. Every other entry is a deprecated alias: key → `__iconData.name` goes into `LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL`, sorted by key.
+- Take `tags.json` from `lucide-static` at exactly the installed `lucide-react` version (`npm pack lucide-static@<version>`). Keep canonical names only and drop a tag equal to its icon's name. Tags keep their spaces; the picker hyphenates them at load.
+- Run Prettier on the three files.
+
+`lucideIcons.test.ts` compares the nodes and aliases with the installed package, so a lucide bump without regeneration fails the unit suite.
 
 ### Custom / brand icons
 
@@ -338,6 +355,26 @@ Build forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Cano
 ```
 
 An arbitrary value is fine only when the scale cannot express it: a viewport fraction with no named utility (`max-h-[75dvh]`; the full viewport is `h-dvh`, `max-h-screen`, `max-w-screen`), a `calc()` over the viewport or a CSS variable (`max-h-[calc(100dvh-2rem)]` in the `Dialog` atom), or a CSS variable set by a library (`translate-x-[var(--radix-toast-swipe-move-x)]`). Fixed lengths and colours always come from the scale and the tokens.
+
+### Light and dark themes
+
+The dark theme is the `:root` token set in `src/app/globals.css`; the light theme overrides the same tokens under `.light`. next-themes (`ThemeProvider`) puts `dark` or `light` on `<html>` from the Settings choice (Auto resolves `prefers-color-scheme` to one of them). Prefer tokens over per-theme classes: a token such as `bg-card` or `text-brand-foreground` is already right in both themes.
+
+When a surface really differs per theme, use the `light:` and `dark:` variants declared with `@custom-variant` in `globals.css`. Both follow the class on `<html>`, not the OS setting. Do not write the arbitrary `[.light_&]:` form.
+
+```tsx
+// Per-theme exception
+<Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" className="light:invert" />
+
+// Same colour in both themes: say it once
+<div className="bg-white" /> // QR plate, not `bg-foreground light:bg-white`
+
+// Text on a brand-green fill
+<Button variant="brand" /> // uses `text-brand-foreground`
+<div className="bg-brand text-brand-foreground" />
+```
+
+The document sets no `color-scheme` (`enableColorScheme={false}`, none in `globals.css`). If it did, the browser would paint an opaque backdrop behind iframes whose page uses a different scheme, and transparent embeds such as Shop would turn into a white box.
 
 ### Spacing
 

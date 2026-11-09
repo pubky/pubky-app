@@ -121,6 +121,27 @@ describe('DialogConfirmDelete', () => {
     expect(deleteButton.querySelector('.lucide-trash-2')).toBeInTheDocument();
   });
 
+  it('offers a Sign in button with its notice only when given (#2980)', async () => {
+    const user = userEvent.setup();
+    const onSignIn = vi.fn();
+    const { rerender } = render(<DialogConfirmDelete open onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
+    expect(screen.queryByText('Sign in to the Lock Server to delete this post.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+
+    rerender(
+      <DialogConfirmDelete
+        open
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+        signInNotice="Sign in to the Lock Server to delete this post."
+        onSignIn={onSignIn}
+      />,
+    );
+    expect(screen.getByText('Sign in to the Lock Server to delete this post.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(onSignIn).toHaveBeenCalledOnce();
+  });
+
   it('uses collection-specific copy when title and description are provided', () => {
     render(
       <DialogConfirmDelete

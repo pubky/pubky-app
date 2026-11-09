@@ -14,6 +14,7 @@ import { usePurchaseResume } from '@/hooks/usePurchaseResume/usePurchaseResume';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
+import { useUnlockPillHold } from '@/hooks/useUnlockPillHold/useUnlockPillHold';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -115,17 +116,28 @@ export function LockedPostContent({
   // available for recovery, with new submissions guarded independently inside the pay hook.
   const paidUnlocks = usePaidUnlockAvailability();
   const isPayableReader = Boolean(price) && !isOwnLock;
-  const canRecover = purchasesStatus === 'error' || purchaseStatus === 'unknown' || purchaseStatus === 'recoverable';
+  const isRecoverable = purchaseStatus === 'recoverable' || purchaseStatus === 'recovering';
+  const canRecover = purchasesStatus === 'error' || purchaseStatus === 'unknown' || isRecoverable;
   const isPurchaseChecking = purchasesStatus === 'loading' || purchaseStatus === 'checking';
   const isRegionChecking =
     isPayableReader &&
     !canRecover &&
     paidUnlocks.status !== 'available' &&
     (paidUnlocks.status === 'checking' || isPurchaseChecking);
+  // A reader who already unlocked this post is about to see their replicated copy, so the pill must not go
+  // live in between (#2795), nor while recovery looks up, or downloads, a listed purchase whose copy was not
+  // found (#3038).
+  const isUnlockPillHeld = useUnlockPillHold({
+    lock,
+    isPayableReader,
+    isPayOpen,
+    isResolvingReplica,
+    purchasesStatus,
+    isListedPurchase: hasPurchase(lockId),
+    purchaseStatus,
+  });
   const regionBlock =
-    isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
-      ? paidUnlocks
-      : null;
+    isPayableReader && !isRecoverable && !isRegionChecking && paidUnlocks.status === 'blocked' ? paidUnlocks : null;
 
   const {
     stage,
@@ -225,7 +237,7 @@ export function LockedPostContent({
             title={lockContent.lock_title}
             contentKind={lockContent.content_kind}
             price={price}
-            isLoading={isLockFileLoading || isRegionChecking}
+            isLoading={isLockFileLoading || isRegionChecking || isUnlockPillHeld}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
             // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
