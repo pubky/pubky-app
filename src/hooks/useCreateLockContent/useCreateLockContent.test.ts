@@ -10,6 +10,7 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY } from '@/libs/image/imageUploadSizeLimit';
+import { getLockTeaserMaxLength, type TLockTeaser } from '@/libs/post/lockTeaser';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useCreateLockContent } from './useCreateLockContent';
 
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   waitForAuth: vi.fn<() => Promise<boolean>>(),
   fetchPaykitSetupStatus: vi.fn(),
   commitCreate: vi.fn(),
+  deleteLockContent: vi.fn(),
   post: vi.fn(),
 }));
 
@@ -25,6 +27,7 @@ vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
     createLockContent: mocks.createLockContent,
+    deleteLockContent: mocks.deleteLockContent,
   },
 }));
 
@@ -77,6 +80,7 @@ describe('useCreateLockContent', () => {
       creator: 'pubkybob',
     });
     mocks.commitCreate.mockResolvedValue('POST1');
+    mocks.deleteLockContent.mockResolvedValue(undefined);
   });
 
   describe('locked file clean-up (#2685)', () => {
@@ -168,6 +172,7 @@ describe('useCreateLockContent', () => {
       attachments: [cover],
       tags: ['bitcoin'],
       lock: 'pubky://bob/pub/app.locks/LOCK1.json',
+      onPostSynced: expect.any(Function),
     });
     expect(postId).toEqual({ status: 'published', postId: 'POST1' });
   });
@@ -198,17 +203,70 @@ describe('useCreateLockContent', () => {
 
     expect(outcome).toEqual({ status: 'failed' });
     expect(mocks.commitCreate).not.toHaveBeenCalled();
+    expect(mocks.deleteLockContent).not.toHaveBeenCalled();
   });
 
-  // TODO:[Locks] #2181 — the lock survives this failure, unreferenced.
-  it('surfaces the error and fails when the announcement fails', async () => {
+  it('keeps the lock when the announcement is published', async () => {
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    await act(() => result.current.publish());
+
+    expect(mocks.deleteLockContent).not.toHaveBeenCalled();
+  });
+
+  it('keeps the lock when the announcement is live and only its tags fail', async () => {
+    mocks.commitCreate.mockImplementation(async ({ onPostSynced }: { onPostSynced: () => void }) => {
+      onPostSynced();
+      throw new Error('tag write failed');
+    });
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    const outcome = await act(() => result.current.publish());
+
+    expect(outcome).toEqual({ status: 'failed' });
+    expect(mocks.deleteLockContent).not.toHaveBeenCalled();
+  });
+
+  it('deletes the lock, then surfaces the error and fails, when the announcement fails (#2039)', async () => {
     mocks.commitCreate.mockRejectedValue(new Error('homeserver down'));
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    const outcome = await act(() => result.current.publish());
+
+    expect(mocks.deleteLockContent).toHaveBeenCalledExactlyOnceWith({
+      lockUrl: 'pubky://bob/pub/app.locks/LOCK1.json',
+    });
+    expect(outcome).toEqual({ status: 'failed' });
+    await waitFor(() => expect(result.current.error?.message).toBe('homeserver down'));
+    expect(result.current.isPublishing).toBe(false);
+  });
+
+  it('surfaces the announcement error, not a failed lock delete', async () => {
+    mocks.commitCreate.mockRejectedValue(new Error('homeserver down'));
+    mocks.deleteLockContent.mockRejectedValue(new Error('lock server down'));
     const { result } = renderHook(() => useCreateLockContent(params()));
 
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'failed' });
     await waitFor(() => expect(result.current.error?.message).toBe('homeserver down'));
+  });
+
+  it('keeps publishing until the lock delete settles, so a second press cannot start a new publish', async () => {
+    mocks.commitCreate.mockRejectedValue(new Error('homeserver down'));
+    const deletion = Promise.withResolvers<void>();
+    mocks.deleteLockContent.mockReturnValue(deletion.promise);
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    let first!: Promise<unknown>;
+    act(() => {
+      first = result.current.publish();
+    });
+    await waitFor(() => expect(mocks.deleteLockContent).toHaveBeenCalledOnce());
+
+    await expect(act(() => result.current.publish())).resolves.toEqual({ status: 'canceled' });
+    deletion.resolve();
+    await act(() => first);
     expect(result.current.isPublishing).toBe(false);
   });
 
@@ -303,7 +361,7 @@ describe('useCreateLockContent', () => {
   });
 
   describe('announcement length guard', () => {
-    const withTeaser = (teaserOverride: { lock_title: string; teaser_description: string }) => ({
+    const withTeaser = (teaserOverride: TLockTeaser) => ({
       ...params(),
       announcement: { teaser: teaserOverride, attachments: [], tags: [] },
     });
@@ -336,12 +394,32 @@ describe('useCreateLockContent', () => {
       expect(mocks.createLockContent).not.toHaveBeenCalled();
     });
 
+    // #2433: content_kind is part of what is measured, before the lock exists.
+    it('never creates the lock when only the content kind pushes the announcement over', async () => {
+      const { result } = renderHook(() =>
+        useCreateLockContent(
+          withTeaser({
+            lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
+            teaser_description: 'b'.repeat(POST_MAX_CHARACTER_LENGTH - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41),
+            content_kind: 'note',
+          }),
+        ),
+      );
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed' });
+      expect(mocks.createLockContent).not.toHaveBeenCalled();
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
+
     it('publishes when both fields are filled to their maxLengths', async () => {
       const { result } = renderHook(() =>
         useCreateLockContent(
           withTeaser({
             lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
-            teaser_description: 'b'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH),
+            teaser_description: 'b'.repeat(getLockTeaserMaxLength('article')),
+            content_kind: 'article',
           }),
         ),
       );
@@ -365,7 +443,8 @@ describe('useCreateLockContent', () => {
     });
   });
 
-  it('keeps the Locks session when the homeserver session expires on the announcement', async () => {
+  // Unlike the upload clean-up, a homeserver auth failure still deletes: the Lock Server session is unaffected.
+  it('keeps the Locks session and deletes the lock when the homeserver session expires on the announcement', async () => {
     mocks.commitCreate.mockRejectedValue(
       Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
         service: ErrorService.Homeserver,
@@ -377,6 +456,7 @@ describe('useCreateLockContent', () => {
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'failed' });
+    expect(mocks.deleteLockContent).toHaveBeenCalledOnce();
   });
 
   it('keeps the session and does not flag re-auth on a non-auth failure', async () => {

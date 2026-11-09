@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogLockContent } from './DialogLockContent';
 
@@ -15,13 +16,18 @@ vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
   },
 }));
 
-const setup = async (override?: Partial<React.ComponentProps<typeof DialogLockContent>>) => {
+type Props = React.ComponentProps<typeof DialogLockContent>;
+
+const setup = async (override?: Partial<Props>) => {
   const onOpenChange = vi.fn();
   const onApplied = vi.fn();
-  await act(async () => {
-    render(<DialogLockContent open onOpenChange={onOpenChange} onApplied={onApplied} {...override} />);
-  });
-  return { onOpenChange, onApplied };
+  const ui = (props?: Partial<Props>) => (
+    <DialogLockContent open onOpenChange={onOpenChange} onApplied={onApplied} {...override} {...props} />
+  );
+  const view = await act(async () => render(ui()));
+  /** Re-renders with the same handlers, as the composer does when it closes, reopens or changes the applied price. */
+  const rerender = (props: Partial<Props>) => act(async () => view.rerender(ui(props)));
+  return { onOpenChange, onApplied, rerender };
 };
 
 /** Types `sats` into the price field. */
@@ -150,6 +156,150 @@ describe('DialogLockContent', () => {
   });
 });
 
+describe('price field editing (#2458)', () => {
+  const field = () => screen.getByLabelText<HTMLInputElement>('Bitcoin Amount', { selector: 'input' });
+
+  it('keeps the caret where the creator typed when the edit crosses a thousands boundary', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await user.type(field(), '100');
+    field().setSelectionRange(1, 1);
+    await user.keyboard('2');
+
+    expect(field()).toHaveValue('1200');
+    expect(field().selectionStart).toBe(2);
+    await user.keyboard('5'); // the rest of the correction lands next to the first key
+    expect(field()).toHaveValue('12500');
+  });
+
+  it('lets backspace at the separator position delete a digit instead of a comma that comes back', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await user.type(field(), '1000');
+    field().setSelectionRange(2, 2); // after "10" while editing; after the comma when "1,000" is shown
+    await user.keyboard('{Backspace}');
+
+    expect(field()).toHaveValue('100');
+  });
+
+  it('groups the amount once the field loses focus, and ungroups it on focus', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await user.type(field(), '1234567');
+    expect(field()).toHaveValue('1234567');
+
+    await user.tab();
+    expect(field()).toHaveValue('1,234,567');
+
+    await user.click(field());
+    await waitFor(() => expect(field()).toHaveValue('1234567'));
+  });
+
+  it('keeps the select-all of tabbing back in, so typing replaces the amount', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await user.type(field(), '1234567');
+    await user.tab();
+    expect(field()).toHaveValue('1,234,567');
+
+    await user.tab({ shift: true });
+    await waitFor(() => expect(field()).toHaveValue('1234567'));
+    expect([field().selectionStart, field().selectionEnd]).toEqual([0, 7]);
+    await user.keyboard('9');
+    expect(field()).toHaveValue('9');
+  });
+
+  it('keeps a click on the grouped amount on the same digit once ungrouped', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await user.type(field(), '1234567');
+    await user.tab();
+    expect(field()).toHaveValue('1,234,567');
+
+    await user.pointer({ keys: '[MouseLeft]', target: field(), offset: 7 }); // between "5" and "6" in "1,234,567"
+    await waitFor(() => expect(field()).toHaveValue('1234567'));
+    expect(field().selectionStart).toBe(5); // "12345|67"
+    await user.keyboard('0');
+    expect(field()).toHaveValue('12345067');
+  });
+
+  it('announces the whole-sats note from a live region that is rendered before the note appears', async () => {
+    const user = userEvent.setup();
+    await setup();
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+
+    await user.type(field(), '2.4');
+    expect(region).toHaveTextContent('Only whole sat amounts are accepted.');
+    expect(screen.getByRole('status')).toBe(region);
+  });
+
+  it('keeps every typed digit above 2^53 and applies exactly that amount', async () => {
+    const user = userEvent.setup();
+    const { onApplied } = await setup();
+    await user.type(field(), '123456789012345678');
+    await user.tab();
+    expect(field()).toHaveValue('123,456,789,012,345,678');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+    });
+    expect(onApplied).toHaveBeenCalledWith({ amount: '123456789012345678', asset: 'BTC' });
+  });
+
+  it.each([
+    [
+      'a pasted decimal',
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.click(field());
+        await user.paste('1.5');
+      },
+      '1',
+    ],
+    [
+      'a decimal typed key by key',
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.type(field(), '2.4');
+      },
+      '24',
+    ],
+  ])('says so when it drops %s', async (_label, enter, kept) => {
+    const user = userEvent.setup();
+    await setup();
+    await enter(user);
+
+    expect(field()).toHaveValue(kept);
+    expect(screen.getByText('Only whole sat amounts are accepted.')).toBeInTheDocument();
+    expect(field()).toHaveAccessibleDescription('Only whole sat amounts are accepted.');
+  });
+
+  it('stays quiet for grouping separators and clears the note once the field is emptied', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await user.click(field());
+    await user.paste('1,234');
+    expect(screen.queryByText('Only whole sat amounts are accepted.')).not.toBeInTheDocument();
+
+    await user.paste('.5');
+    expect(screen.getByText('Only whole sat amounts are accepted.')).toBeInTheDocument();
+    await user.clear(field());
+    expect(screen.queryByText('Only whole sat amounts are accepted.')).not.toBeInTheDocument();
+  });
+
+  it('clears the note when the dialog closes, along with what was typed', async () => {
+    const user = userEvent.setup();
+    const { rerender } = await setup();
+    await user.click(field());
+    await user.paste('1.5');
+    expect(screen.getByText('Only whole sat amounts are accepted.')).toBeInTheDocument();
+
+    await rerender({ open: false });
+    await rerender({ open: true });
+    expect(field()).toHaveValue('');
+    expect(screen.queryByText('Only whole sat amounts are accepted.')).not.toBeInTheDocument();
+  });
+});
+
 describe('soft keyboard', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -238,6 +388,23 @@ describe('price denomination', () => {
     expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });
 
+  it('keeps the select-all of tabbing back into a USD amount, so typing replaces it', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await chooseCurrency('USD');
+    const field = () => screen.getByLabelText<HTMLInputElement>('USD Amount', { selector: 'input' });
+    await user.type(field(), '12.50');
+    await user.tab();
+
+    await user.tab({ shift: true });
+    // Let the focus handler's frame run before reading the selection.
+    await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    expect(field()).toHaveValue('12.50');
+    expect([field().selectionStart, field().selectionEnd]).toEqual([0, 5]);
+    await user.keyboard('9');
+    expect(field()).toHaveValue('9');
+  });
+
   it('clears the dollar amount when switching back to Bitcoin', async () => {
     await setup();
     await chooseCurrency('USD');
@@ -251,8 +418,8 @@ describe('price denomination', () => {
     expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });
 
-  it('resets currency and amount after applying', async () => {
-    await setup();
+  it('starts the next open from the applied price, and empty again once the lock is cleared', async () => {
+    const { onApplied, rerender } = await setup();
     await chooseCurrency('USD');
     await act(async () => {
       fireEvent.change(screen.getByLabelText('USD Amount', { selector: 'input' }), { target: { value: '5.25' } });
@@ -260,12 +427,44 @@ describe('price denomination', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
     });
+    expect(onApplied).toHaveBeenCalledWith({ amount: '525', asset: 'USD' });
+
+    // The composer closes the dialog with the applied price; reopening it changes that price.
+    const applied = { amount: '525', asset: 'USD' } as const;
+    await rerender({ open: false, appliedPrice: applied });
+    await rerender({ open: true, appliedPrice: applied });
+    expect(screen.getByLabelText('USD Amount', { selector: 'input' })).toHaveValue('5.25');
+
+    // Published or abandoned: the next lock starts from nothing.
+    await rerender({ open: false, appliedPrice: null });
+    await rerender({ open: true, appliedPrice: null });
     expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });
 
+  it('fills in the applied price when reopened to change it', async () => {
+    await setup({ appliedPrice: { amount: '1000', asset: 'BTC' } });
+
+    expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue('1,000');
+    expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeEnabled();
+  });
+
+  it('keeps the applied price when a price change is dismissed', async () => {
+    const { onOpenChange, onApplied, rerender } = await setup({ appliedPrice: { amount: '1000', asset: 'BTC' } });
+    await enterPrice('2000');
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onApplied).not.toHaveBeenCalled();
+
+    await rerender({ open: false });
+    await rerender({ open: true });
+    expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue('1,000');
+  });
+
   it('discards the price when dismissed', async () => {
-    const { onOpenChange, onApplied } = await setup();
+    const { onOpenChange, onApplied, rerender } = await setup();
     await chooseCurrency('USD');
     await act(async () => {
       fireEvent.change(screen.getByLabelText('USD Amount', { selector: 'input' }), { target: { value: '5.25' } });
@@ -275,6 +474,9 @@ describe('price denomination', () => {
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onApplied).not.toHaveBeenCalled();
+
+    await rerender({ open: false });
+    await rerender({ open: true });
     expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });

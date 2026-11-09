@@ -458,6 +458,8 @@ describe('PostMain', () => {
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: false,
       deletePost: mockDeletePost,
+      needsLocksSignIn: false,
+      clearLocksSignIn: vi.fn(),
     });
   });
 
@@ -934,6 +936,8 @@ describe('PostMain', () => {
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: true,
       deletePost: mockDeletePost,
+      needsLocksSignIn: false,
+      clearLocksSignIn: vi.fn(),
     });
 
     render(<PostMain postId="me:simple-repost-1" />);

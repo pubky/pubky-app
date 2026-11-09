@@ -55,7 +55,7 @@
     {
       "path": "docs/visual-regression-testing.md",
       "description": "VRT tests, determinism rules, CI-owned baselines",
-      "scope": ["src/test/vrt/**", "src/test-utils/vrt*", ".github/workflows/vrt*.yml"]
+      "scope": ["src/test/vrt/**", "src/test-utils/vrt*", "src/test-utils/stores.ts", ".github/workflows/vrt*.yml"]
     },
     {
       "path": "docs/skeleton-architecture.md",

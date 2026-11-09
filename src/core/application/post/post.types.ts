@@ -9,6 +9,7 @@ export interface TCreatePostInput extends TLocalSavePostParams {
   fileAttachments?: TFileAttachmentResult[];
   tags?: TCreateTagInput[];
   isCurrent?: () => boolean;
+  onPostSynced?: () => void;
 }
 
 export interface TEditPostInput {

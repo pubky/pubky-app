@@ -31,6 +31,10 @@ export interface UseUnlockedContentResult {
   isOwnLock: boolean;
   /** The own-lock read has not settled: render the own layout with a text skeleton, never the unlock card. */
   isResolvingOwn: boolean;
-  /** The replica read has not settled, so an empty `unlockedPost` means "not known yet". */
+  /**
+   * The replica read has not settled (or a session restore it will follow is pending), so an empty
+   * `unlockedPost` means "not known yet". False when no read will run. No deadline: purchase recovery
+   * waits on this, and a slow read it gave up on would download the purchase a second time.
+   */
   isResolvingReplica: boolean;
 }

@@ -14,8 +14,17 @@ export const PUBKY_COMPACT_URI_PATTERN = new RegExp(`\\bpubky[${Z32_ALPHABET}]{5
 export const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 export const PHONE_PATTERN = /\+?\d[\d\s().-]{7,}\d/g;
 export const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v0\/post\/[^/]+\/[^/]+\/tags$/;
-/** `operation` tag set by `HomeserverService.subscribeUserEventStreamForPath`; matched by a Sentry drop rule. */
-export const HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION = 'subscribeUserEventStreamForPath';
+/** `operation` tag set by `HomeserverService.subscribeUserEventStream`; matched by a Sentry drop rule. */
+export const HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION = 'subscribeUserEventStream';
+/**
+ * `callSite` tags the Pay to Unlock polling loops put on their Lock Server reads; matched by the
+ * `locks-unlock-poll-repeat-reports` drop rule, so a rename here cannot leave the rule behind.
+ */
+export const LOCKS_UNLOCK_POLL_CALL_SITES = {
+  payment: 'payToUnlockPaymentPoll',
+  connection: 'payToUnlockConnectionPoll',
+} as const;
+export type TLocksUnlockPollCallSite = (typeof LOCKS_UNLOCK_POLL_CALL_SITES)[keyof typeof LOCKS_UNLOCK_POLL_CALL_SITES];
 
 export const SENSITIVE_CONTEXT_KEYS = new Set([
   'avatar',

@@ -1,7 +1,8 @@
 import { isPostDeleted } from '@/libs/utils/utils';
 import { parseArticleContent } from './articleContent';
 import { parseCollectionContent } from './collectionContent';
-import { DEFAULT_LOCK_TITLE, parseLockTeaserContent } from './lockTeaser';
+import { getLockContentDisplay } from './lockContentKind';
+import { parseLockTeaserContent } from './lockTeaser';
 
 /**
  * Derives a human-readable, single-string preview of a post's content, used by the `<meta>`
@@ -38,7 +39,7 @@ export function deriveTextPreview({
   // `LockedPostCard` renders, so one lock reads the same wherever it is named.
   if (lock) {
     const teaser = parseLockTeaserContent(content);
-    if (teaser) return teaser.lock_title.trim() || DEFAULT_LOCK_TITLE;
+    if (teaser) return teaser.lock_title.trim() || getLockContentDisplay(teaser.content_kind).title;
   }
   if (kind === 'long') {
     return parseArticleContent(content)?.title || content;

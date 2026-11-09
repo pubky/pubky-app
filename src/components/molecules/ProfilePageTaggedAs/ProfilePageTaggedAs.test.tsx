@@ -103,11 +103,7 @@ describe('ProfilePageTaggedAs', () => {
 
   it('See all button has correct styling', () => {
     render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} />);
-    expect(screen.getByRole('button', { name: 'See all (7)' })).toHaveClass(
-      'border',
-      'border-border',
-      'bg-foreground/5',
-    );
+    expect(screen.getByRole('button', { name: 'See all (7)' })).toHaveClass('border', 'border-border', 'bg-glass');
   });
 
   it('has correct container structure', () => {

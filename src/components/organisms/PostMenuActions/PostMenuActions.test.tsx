@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostMenuActions } from './PostMenuActions';
@@ -77,15 +77,18 @@ vi.mock('@/atoms/Sheet/Sheet', () => {
   };
 });
 
-const { mockUseIsMobile, mockDeletePost, mockUsePostMenuActions, mockRequireAuth } = vi.hoisted(() => ({
-  mockUseIsMobile: vi.fn(() => false),
-  mockDeletePost: vi.fn(),
-  mockUsePostMenuActions: vi.fn((_postId: string) => ({
-    menuItems: [] as unknown[],
-    isLoading: false,
-  })),
-  mockRequireAuth: vi.fn((action: () => void) => action()),
-}));
+const { mockUseIsMobile, mockDeletePost, mockClearLocksSignIn, mockUsePostMenuActions, mockRequireAuth, deleteState } =
+  vi.hoisted(() => ({
+    deleteState: { needsLocksSignIn: false },
+    mockClearLocksSignIn: vi.fn(),
+    mockUseIsMobile: vi.fn(() => false),
+    mockDeletePost: vi.fn(),
+    mockUsePostMenuActions: vi.fn((_postId: string) => ({
+      menuItems: [] as unknown[],
+      isLoading: false,
+    })),
+    mockRequireAuth: vi.fn((action: () => void) => action()),
+  }));
 const mockUsePostDetails = vi.fn((_postId: string) => ({
   postDetails: { kind: 'short' } as { kind: string; lock?: string } | null,
   isLoading: false,
@@ -111,6 +114,8 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: vi.fn(() => ({
     deletePost: mockDeletePost,
     isDeleting: false,
+    needsLocksSignIn: deleteState.needsLocksSignIn,
+    clearLocksSignIn: mockClearLocksSignIn,
   })),
 }));
 
@@ -165,23 +170,48 @@ vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => {
   return {
     DialogConfirmDelete: ({
       open,
+      onOpenChange,
       onConfirm,
       description,
+      signInNotice,
+      onSignIn,
     }: {
       open: boolean;
       onOpenChange: (open: boolean) => void;
       onConfirm: () => void;
       description?: string;
+      signInNotice?: string;
+      onSignIn?: () => void;
     }) => (
       <div data-testid="dialog-confirm-delete" data-open={open.toString()}>
         <p data-testid="confirm-delete-description">{description}</p>
+        {signInNotice && <p data-testid="confirm-delete-sign-in-notice">{signInNotice}</p>}
+        {onSignIn && (
+          <button onClick={onSignIn} data-testid="confirm-delete-sign-in">
+            Sign in
+          </button>
+        )}
         <button onClick={onConfirm} data-testid="confirm-delete-button">
           Confirm Delete
+        </button>
+        <button onClick={() => onOpenChange(false)} data-testid="confirm-delete-cancel">
+          Cancel
         </button>
       </div>
     ),
   };
 });
+
+vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
+  DialogLocksAuth: ({ open, mode, onSuccess }: { open: boolean; mode?: string; onSuccess: () => void }) =>
+    open ? (
+      <div data-testid="dialog-locks-auth" data-mode={mode}>
+        <button onClick={onSuccess} data-testid="locks-auth-success">
+          Locks Continue
+        </button>
+      </div>
+    ) : null,
+}));
 
 vi.mock('./PostMenuActionsContent/PostMenuActionsContent', () => ({
   PostMenuActionsContent: ({
@@ -253,6 +283,7 @@ vi.mock('@/atoms/Container/Container', () => {
 describe('PostMenuActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    deleteState.needsLocksSignIn = false;
     mockUseIsMobile.mockReturnValue(false);
     mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'short' }, isLoading: false });
   });
@@ -386,6 +417,46 @@ describe('PostMenuActions', () => {
     render(<PostMenuActions postId="pk:test123:post456" trigger={<button>Menu</button>} />);
 
     expect(screen.getByTestId('confirm-delete-description')).toBeEmptyDOMElement();
+  });
+
+  it('offers a Lock Server sign-in that retries the delete (#2980)', async () => {
+    deleteState.needsLocksSignIn = true;
+    mockDeletePost.mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(<PostMenuActions postId="pk:test123:post456" trigger={<button>Menu</button>} />);
+    await user.click(screen.getByTestId('delete-button'));
+
+    expect(screen.getByTestId('confirm-delete-sign-in-notice')).toHaveTextContent(
+      'Sign in to the Lock Server to delete this post.',
+    );
+    expect(screen.queryByTestId('dialog-locks-auth')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('confirm-delete-sign-in'));
+    expect(screen.getByTestId('dialog-locks-auth')).toHaveAttribute('data-mode', 'signin');
+
+    await user.click(screen.getByTestId('locks-auth-success'));
+    expect(mockDeletePost).toHaveBeenCalledWith('pk:test123:post456');
+    await waitFor(() => expect(screen.getByTestId('dialog-confirm-delete')).toHaveAttribute('data-open', 'false'));
+  });
+
+  it('drops the sign-in offer when the confirm dialog closes', async () => {
+    deleteState.needsLocksSignIn = true;
+    const user = userEvent.setup();
+    render(<PostMenuActions postId="pk:test123:post456" trigger={<button>Menu</button>} />);
+    await user.click(screen.getByTestId('delete-button'));
+    expect(mockClearLocksSignIn).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId('confirm-delete-cancel'));
+    expect(screen.getByTestId('dialog-confirm-delete')).toHaveAttribute('data-open', 'false');
+    expect(mockClearLocksSignIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no sign-in offer while no Locks sign-in is needed', async () => {
+    const user = userEvent.setup();
+    render(<PostMenuActions postId="pk:test123:post456" trigger={<button>Menu</button>} />);
+    await user.click(screen.getByTestId('delete-button'));
+
+    expect(screen.queryByTestId('confirm-delete-sign-in-notice')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('confirm-delete-sign-in')).not.toBeInTheDocument();
   });
 
   it('requires authentication before opening the menu', async () => {

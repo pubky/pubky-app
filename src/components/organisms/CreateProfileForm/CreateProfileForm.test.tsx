@@ -71,6 +71,7 @@ vi.mock('facehash', () => ({
       {onRenderMouth?.()}
     </div>
   ),
+  stringHash: () => 0,
 }));
 
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
@@ -510,7 +511,7 @@ describe('CreateProfileForm', () => {
     const facehash = screen.getByTestId('facehash');
     expect(avatarFallback).toBeInTheDocument();
     expect(facehash).toHaveAttribute('data-name', mockPubky);
-    expect(avatarFallback).toHaveTextContent(/[A-Z0-9]/);
+    expect(avatarFallback.textContent).toMatch(/[A-Z0-9]/);
     expect(avatarFallback).toHaveClass('text-4xl');
   });
 
