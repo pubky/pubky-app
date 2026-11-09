@@ -267,15 +267,22 @@ otherwise the invite check answers 400 and onboarding stops at Continue.
 
 ## Reductions and follow-ups
 
-Open after dev-sync 3 (2026-11-09), for the coordinator:
+After dev-sync 3 (2026-11-09), for the coordinator:
 
-- **FIX-8, cross-device `last_read`.** `dev` ships live cross-device sync of the notification read boundary (#3006,
-  ADR-0029): `NotificationLastReadSyncCoordinator` follows `/pub/pubky.app/last_read` on the tab's shared homeserver
-  event stream (#3068). On this branch the file is `/priv/app.pubky/v1/last_read.json`, and a private stream needs a
-  session, which deadlocks the SDK's bearer refresh (ADR-0014). So the coordinator is not started, the hub has no
-  channel and opens no request, and a mark-as-read on another device reaches an open tab only at its next bootstrap
-  (sign-in or reload) or when that tab marks as read itself. To match `dev`, poll `NotificationController.fetchLastReadFromHomeserver` on the mute list's
-  cadence (start, visible, `online`, every `MUTE_SYNC_POLL_INTERVAL_MS`); otherwise record it as a reduction. Not built.
+- **FIX-8, cross-device `last_read`: built (poll).** `dev` ships live cross-device sync of the notification read
+  boundary (#3006, ADR-0029): `NotificationLastReadSyncCoordinator` follows `/pub/pubky.app/last_read` on the tab's
+  shared homeserver event stream (#3068). On this branch the file is `/priv/app.pubky/v1/last_read.json`, and a private
+  stream needs a session: a session-bound stream holds the shared session lock until its response headers reach the
+  SDK, with no timeout; behind anything that buffers event streams (the Cypress proxy does, so would an intermediary)
+  that is unbounded and a 401 refresh then waits forever (pubky/pubky-homeserver#798, probed 2026-11-09). Polling has
+  no such exposure, so the private files are polled for this release: that channel is not started and the hub opens
+  no request; `NotificationLastReadPollCoordinator` polls
+  `NotificationController.fetchLastReadFromHomeserver` on the mute list's cadence instead (start, visible, `online`,
+  every `NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS` = `MUTE_SYNC_POLL_INTERVAL_MS`, 30 s; ADR-0029 amendment).
+  Verified for the poll and the `markAllAsRead` fence: the SDK's session read sends a default-mode fetch, and the
+  homeserver serves `/priv/` `Cache-Control: no-store` (`private, no-cache` + `ETag` from v0.18.0), so the read is
+  never a stale browser-cache hit. The channel class stays in the tree, unregistered, until the SDK bounds that lease
+  or the team accepts the exposure.
 - **FIX-7, Nexus `/v1` API: read sites this sync added.** `src/core/pipes/tag/tag-cache.ts` reads the Nexus tag
   `tag_uri` to confirm a same-viewer create (lines 44-48) and carries the Nexus tag `relationship` (line 100), from the
   #2986 fixes; `src/core/services/nexus/stream/posts/postStream.utils.ts` sends the new `locked=true` stream filter
@@ -286,8 +293,10 @@ Reductions (reported, not built around): bookmark-derived notifications ("post y
 "followed collection updated"); cross-device bookmark changes visible at the next sign-in only; `/feed/<id>`
 deep links change once (a feed id is the hash of its filter, and the migrator re-derives every id when it copies a
 0.x feed); forced sign-out and forced reload on upgrade; migrated articles with the rc.1 off-by-one render through
-the migrated-article reader rule until the migrator fix lands; mute changes made on another device appear within the
-poll interval or on focus, not live (a session-bound event stream deadlocks the SDK's bearer refresh, ADR-0014).
+the migrated-article reader rule until the migrator fix lands; mute changes and the notification read boundary
+(`last_read`) changed on another device appear within the poll interval (≤30 s) or on focus, not live (a
+session-bound stream's lease is unbounded while its headers are outstanding, pubky/pubky-homeserver#798; ADR-0014,
+and the `last_read` poll is ADR-0029).
 
 Follow-ups (not in this round): private drafts and `planPublish`, slugs, attachment alt text UI, collection item
 notes UI, published feeds, `createSocialClient`, the 0.x tree sunset (who deletes `/pub/pubky.app/`, when legacy

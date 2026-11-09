@@ -111,6 +111,10 @@ export class NotificationApplication {
    * Reads the published `last_read` timestamp through the owner's session: the social v1 file is private
    * (`/priv/app.pubky/v1/last_read.json`), and an anonymous read of it answers 401.
    *
+   * No cache bypass: the homeserver serves every `/priv/` response with `Cache-Control: no-store` (`private,
+   * no-cache` with an `ETag` from v0.18.0), so the browser never answers this read from its cache without
+   * revalidating. That keeps the poll and the `markAllAsRead` read-check-write fence on the published value (ADR-0029).
+   *
    * @param url - The current user's `last_read` URL
    * @returns The published timestamp, or null when the file is missing or holds no finite timestamp
    */
