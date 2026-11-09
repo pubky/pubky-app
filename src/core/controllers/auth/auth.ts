@@ -45,6 +45,7 @@ import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
 import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
+import { clearThemePreference } from '@/libs/theme/clear-theme-preference';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
@@ -1081,7 +1082,7 @@ export class AuthController {
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
    * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * and the mute-sync and last_read-sync `sessionStorage` cursors.
+   * the `pubky-theme` preference, and the mute-sync and last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
@@ -1090,6 +1091,7 @@ export class AuthController {
     // Mute-list and last_read SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
     clearNotificationLastReadSyncCursorSessionStorage();
+    clearThemePreference();
 
     // Reset singletons
     PubkySpecsSingleton.reset();

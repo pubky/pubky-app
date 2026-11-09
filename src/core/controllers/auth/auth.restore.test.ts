@@ -10,6 +10,7 @@ import {
   NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
   NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX,
 } from '@/config/notification-last-read-sync';
+import { THEME_STORAGE_KEY } from '@/config/theme';
 import { SettingsController } from '@/controllers/settings/settings';
 import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-event-stream/homeserver-event-stream';
 import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
@@ -304,6 +305,24 @@ describe('AuthController restored session lifecycle', () => {
     expect(request).not.toHaveBeenCalled();
     expect(useAuthStore.getState().sessionReference).toBeNull();
     expect(databaseHelpers.clearDatabase).toHaveBeenCalledOnce();
+  });
+
+  it('forgets the theme preference on sign-out, in storage and in the open theme state', async () => {
+    localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    let themeInMemory = 'light';
+    // Mirrors next-themes: a removal announced for its key resets it to the default and stores that.
+    const nextThemesListener = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY || event.newValue) return;
+      themeInMemory = 'dark';
+      localStorage.setItem(THEME_STORAGE_KEY, themeInMemory);
+    };
+    window.addEventListener('storage', nextThemesListener);
+
+    await AuthController.logout();
+    window.removeEventListener('storage', nextThemesListener);
+
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+    expect(themeInMemory).toBe('dark');
   });
 
   it('lets logout revoke a session while a route guard is also restoring it', async () => {
