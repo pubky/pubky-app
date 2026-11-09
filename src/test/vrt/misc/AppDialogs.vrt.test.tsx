@@ -504,7 +504,9 @@ describe('Locks dialogs — visual regression', () => {
       PAY_IMAGES,
     );
     await expect.element(dialog.getByRole('heading', { name: 'Pay to Unlock' })).toBeVisible();
-    await expect.element(dialog.getByText('Install Bitkit')).toBeVisible();
+    // The step element is "1) Install Bitkit". Vitest matches that whole string.
+    await expect.element(dialog.getByText('1) Install Bitkit')).toBeVisible();
+    await expect.element(dialog.getByRole('button', { name: 'I completed the steps' })).toBeVisible();
     await matchVrtFrameScreenshot(`dialog-pay-to-unlock-install-${name}`);
   });
 
