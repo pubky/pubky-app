@@ -13,8 +13,9 @@ import type { TLocksPollReport } from './locks.types';
 export const LOCKS_REQUEST_TIMEOUT_MS = 30_000;
 
 /**
- * Covers the 10 MB file cap at 256 kbit/s, a weak mobile link (about 5.7 minutes). A shorter limit
- * would fail a slow upload every time, and the late-write undo would delete every attempt.
+ * The longest a user is expected to wait for one file to upload or download, so past it the transfer
+ * counts as failed. A UX limit, not a bandwidth guarantee: on a slow link, parallel transfers of large
+ * files can run out of it every time.
  */
 export const LOCKS_TRANSFER_TIMEOUT_MS = 360_000;
 
