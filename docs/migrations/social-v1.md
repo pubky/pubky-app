@@ -298,8 +298,11 @@ backwards-compatibility coverage: `deep-links.cy.ts` opens a 0.x account's post,
 thread and reposts across both layouts, and `notifications.cy.ts` receives a 0.x account's follow, tag and reply. A signed-in
 test account seeds v1 or empty, except the one that exercises the migration.
 
-e2e runs only on pushes to `dev`/`master`, against the private pubky-stack, whose Nexus submodule must move to the
-carrier before the final PR. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
+e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v1`, against the private pubky-stack:
+`feat/social-v1` points `pubky_stack_ref` (`.github/workflows/e2e-test.yml`) at pubky-stack's `social-v1` branch, whose
+Nexus submodule is pinned to the carrier (pubky/pubky-stack#388, a draft PR into `staging`). At the joint deploy that PR
+is re-pinned to the deploy ref and merged (the staging Nexus bump), and the final PR to `dev` sets `pubky_stack_ref`
+back to `staging` and drops the `feat/social-v1` trigger. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
 otherwise the invite check answers 400 and onboarding stops at Continue.
 
 ## Reductions and follow-ups
