@@ -284,6 +284,7 @@ describe('locks', () => {
       cy.signOut(HasBackedUp.Yes);
       signInAs(reader);
       cy.visit(`/post/${creator.id}/${postId}`);
+      cy.get('[data-cy="post-not-found"]:visible', { timeout: 10_000 }).should('have.length', 1);
       cy.get('body').should('not.contain.text', teaser).and('not.contain.text', title);
       cy.get('[data-cy="locked-post-unlock-btn"]').should('not.exist');
     });
