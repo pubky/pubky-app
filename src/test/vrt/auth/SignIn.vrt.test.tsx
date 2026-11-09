@@ -61,8 +61,21 @@ for (const [name, viewport] of [
         { viewport },
       );
       if (name === 'mobile') {
-        await expect.element(page.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeVisible();
-        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
+        const signerButtons = ['Continue with Pubky Ring', 'Continue with Bitkit'];
+        if (passportEligibility === 'enabled') signerButtons.push('Continue with Google');
+        for (const label of signerButtons) {
+          expect(page.getByRole('button', { name: label }).element().getBoundingClientRect().height).toBe(60);
+        }
+        if (passportEligibility === 'enabled') {
+          expect(
+            page
+              .getByRole('button', { name: 'About signing in with Apple or Google' })
+              .element()
+              .getBoundingClientRect().height,
+          ).toBe(32);
+        }
       } else {
         await expect.element(page.getByRole('button', { name: 'Copy authentication link' })).toBeVisible();
       }

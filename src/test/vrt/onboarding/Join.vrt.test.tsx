@@ -72,8 +72,15 @@ for (const [name, viewport] of [
       await preloadImages(JOIN_IMAGE_URLS);
     });
 
-    it('renders both sign-up methods with Continue with Google', async () => {
+    it('renders both sign-up methods with the compact Passport button', async () => {
       await renderForVRT(<JoinWithHeader />, { viewport });
+      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      const subtitle = page.getByText('How would you like to create your pubky?');
+      if (name === 'mobile') {
+        await expect.element(subtitle).not.toBeVisible();
+      } else {
+        await expect.element(subtitle).toBeVisible();
+      }
       await matchVrtFrameScreenshot(`onboarding-join-${name}`);
     });
 
@@ -84,15 +91,13 @@ for (const [name, viewport] of [
       await matchVrtFrameScreenshot(`onboarding-join-passport-pending-${name}`);
     });
 
-    // Passport users skip the Backup step: the keys are encrypted to Google
-    // Drive by Passport. This popover is where the app explains that backup and
+    // Passport users skip the Backup step: Passport stores an encrypted backup
+    // in iCloud or Google Drive. This popover is where the app explains that backup and
     // how recovery works.
-    it('renders the Google backup and recovery explainer', async () => {
+    it('renders the Passport backup and recovery explainer', async () => {
       await renderForVRT(<JoinWithHeader />, { viewport });
-      await page.getByRole('button', { name: 'About signing in with Google' }).click();
-      await expect
-        .element(page.getByRole('heading', { name: 'Continue with Google, powered by Pubky Passport.' }))
-        .toBeVisible();
+      await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
+      await expect.element(page.getByRole('heading', { name: 'Sign in with Apple or Google' })).toBeVisible();
       await matchVrtFrameScreenshot(`onboarding-join-passport-help-${name}`);
     });
   });

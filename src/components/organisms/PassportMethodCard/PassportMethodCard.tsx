@@ -16,7 +16,7 @@ export const PASSPORT_METHOD_DESCRIPTION = 'Use legacy sign-in methods.';
  * "Continue with Google" button. Sits next to the sovereign (Pubky Ring / own keys) card on
  * `/sign-in` and `/onboarding/join`. The parent owns the Passport attempt.
  */
-export function PassportMethodCard({ onContinue, isPending, className }: PassportMethodCardProps) {
+export function PassportMethodCard({ onContinue, isPending, variant, className }: PassportMethodCardProps) {
   return (
     <IllustratedCard
       data-testid="passport-method-card"
@@ -40,7 +40,7 @@ export function PassportMethodCard({ onContinue, isPending, className }: Passpor
           {PASSPORT_METHOD_DESCRIPTION}
         </Typography>
       </Container>
-      <ContinueWithPassport onContinue={onContinue} isPending={isPending} />
+      <ContinueWithPassport onContinue={onContinue} isPending={isPending} variant={variant} />
     </IllustratedCard>
   );
 }
@@ -49,13 +49,13 @@ export function PassportMethodCard({ onContinue, isPending, className }: Passpor
  * Mobile "QUICK & EASY" section: uppercase label plus the "Continue with Google" button, matching
  * the stacked-sections layout of the sign-in and join screens below the `md` breakpoint.
  */
-export function PassportMethodSection({ onContinue, isPending, className }: PassportMethodCardProps) {
+export function PassportMethodSection({ onContinue, isPending, variant, className }: PassportMethodCardProps) {
   return (
     <Container data-testid="passport-method-section" className={cn('gap-3', className)}>
       <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
         {PASSPORT_METHOD_TITLE}
       </Typography>
-      <ContinueWithPassport onContinue={onContinue} isPending={isPending} />
+      <ContinueWithPassport onContinue={onContinue} isPending={isPending} variant={variant} />
     </Container>
   );
 }

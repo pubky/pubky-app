@@ -11,28 +11,20 @@ const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/R
 
 const POINTS = [
   {
-    term: "Google's role:",
-    text: 'Helps identify you and securely retrieve your encrypted backup. It does not create or control your pubky.',
-  },
-  {
     term: 'Your keys:',
-    text: 'Keys are created in your browser and encrypted before storage on Google Drive. Google never sees the private key.',
+    text: 'Created in your browser, with an encrypted backup stored in your iCloud or Google Drive.',
   },
   {
     term: 'Recovery:',
-    text: 'Recovery requires both your encrypted Google Drive backup and a separate recovery key from Passport.',
-  },
-  {
-    term: 'Split security:',
-    text: 'Neither Google nor Passport can recover your pubky on its own, reducing reliance on either one.',
+    text: 'Restoring your pubky requires your encrypted backup and a separate key from Passport.',
   },
 ];
 
 /**
  * PopoverGoogleSignIn
  *
- * Help popover behind the "Continue with Google" pill: what Google does, where the keys live, and
- * why neither Google nor Passport can recover an account alone. Opens on click (and Enter/Space)
+ * Help popover for Passport sign-in: how Apple or Google accounts are used, where the keys live,
+ * and what recovery requires. Opens on click (and Enter/Space)
  * rather than hover, so an icon-only trigger stays reachable by keyboard, and on touch devices.
  */
 export function PopoverGoogleSignIn({ className }: { className?: string }) {
@@ -42,7 +34,7 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="About signing in with Google"
+          aria-label="About signing in with Apple or Google"
           data-cy="passport-google-help-btn"
           className={cn(
             'size-8 text-secondary-foreground/70 hover:bg-secondary-foreground/10 hover:text-foreground',
@@ -55,8 +47,11 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
       <PopoverContent className="w-80 p-6">
         <Container className="gap-4">
           <Heading level={4} size="sm" className="text-popover-foreground">
-            {'Continue with Google, powered by Pubky Passport.'}
+            {'Sign in with Apple or Google'}
           </Heading>
+          <Typography size="sm" className="text-muted-foreground">
+            {'Use an account you already have to create or access your pubky through Pubky Passport.'}
+          </Typography>
           {POINTS.map((point) => (
             <Typography key={point.term} size="sm" className="text-muted-foreground">
               <Typography as="strong" size="sm" className="font-semibold text-secondary-foreground">

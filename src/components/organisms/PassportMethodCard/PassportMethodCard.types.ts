@@ -1,5 +1,5 @@
 import type { ContinueWithPassportProps } from '@/molecules/ContinueWithPassport/ContinueWithPassport.types';
 
-export type PassportMethodCardProps = Pick<ContinueWithPassportProps, 'onContinue' | 'isPending'> & {
+export type PassportMethodCardProps = Pick<ContinueWithPassportProps, 'onContinue' | 'isPending' | 'variant'> & {
   className?: string;
 };

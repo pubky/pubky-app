@@ -50,6 +50,7 @@ describe('Join', () => {
     expect(screen.getByTestId('passport-method-card')).toBeInTheDocument();
     expect(screen.getByTestId('passport-method-section')).toBeInTheDocument();
     expect(screen.getAllByTestId('join-manage-own-keys')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Continue with Google or Apple' })).toHaveLength(2);
     expect(screen.getByTestId('mock-human-footer')).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
   });

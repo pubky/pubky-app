@@ -3,5 +3,7 @@ export interface ContinueWithPassportProps {
   onContinue: () => void;
   /** True while an attempt is in flight (authorization or session initialization). */
   isPending: boolean;
+  /** Presentation only; both layouts open the same Passport flow. */
+  variant?: 'google' | 'providers';
   className?: string;
 }

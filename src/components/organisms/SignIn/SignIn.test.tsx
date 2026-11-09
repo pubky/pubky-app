@@ -408,7 +408,7 @@ describe('SignInContent', () => {
 
     // Wait for the component to finish loading
     await waitFor(() => {
-      expect(screen.getByText('Authorize with Pubky Ring')).toBeInTheDocument();
+      expect(screen.getByText('Continue with Pubky Ring')).toBeInTheDocument();
     });
 
     const images = screen.getAllByTestId('next-image');
@@ -419,7 +419,7 @@ describe('SignInContent', () => {
     expect(logoImage).toHaveAttribute('width', '137');
     expect(logoImage).toHaveAttribute('height', '30');
 
-    expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue with Pubky Ring/i })).toBeInTheDocument();
   });
 
   it('calls mobile authorize handler when button is tapped', async () => {
@@ -428,10 +428,10 @@ describe('SignInContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Continue with Pubky Ring/i })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring/i });
+    const authorizeButton = screen.getByRole('button', { name: /Continue with Pubky Ring/i });
     await act(async () => {
       fireEvent.click(authorizeButton);
     });
@@ -444,7 +444,7 @@ describe('SignInContent', () => {
     (eligibility) => {
       passportMocks.eligibility = eligibility;
       render(<SignInContent />);
-      fireEvent.click(screen.getByRole('button', { name: 'Authorize with Bitkit' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Continue with Bitkit' }));
       expect(mockOnAuthorizeBitkitClick).toHaveBeenCalledTimes(1);
       expect(mockOnAuthorizeClick).not.toHaveBeenCalled();
       expect(mockFetchUrl).not.toHaveBeenCalled();
@@ -455,7 +455,7 @@ describe('SignInContent', () => {
     vi.mocked(useMobileAuth).mockReturnValue({ ...useMobileAuth(), isOpeningRing: true });
     render(<SignInContent />);
     expect(screen.getByRole('button', { name: 'Opening Pubky Ring...' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Bitkit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Bitkit' }));
     expect(mockOnAuthorizeBitkitClick).toHaveBeenCalledTimes(1);
   });
 
@@ -463,14 +463,14 @@ describe('SignInContent', () => {
     vi.mocked(useMobileAuth).mockReturnValue({ ...useMobileAuth(), isOpeningBitkit: true });
     render(<SignInContent />);
     expect(screen.getByRole('button', { name: 'Opening Bitkit...' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeEnabled();
   });
 
   it('disables both signer buttons before a URL is ready', () => {
     vi.mocked(useMobileAuth).mockReturnValue({ ...useMobileAuth(), url: '' });
     render(<SignInContent />);
-    expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Authorize with Bitkit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Bitkit' })).toBeDisabled();
   });
 
   // Note: Retry logic and error handling for auth URL generation are now tested
@@ -652,9 +652,9 @@ describe('SignInContent - Passport enabled', () => {
     render(<SignInContent />);
 
     expect(screen.getByRole('button', { name: 'Copy authentication link' })).toBeDisabled();
-    expect(screen.getByText('Authorize with Pubky Ring').closest('button')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Authorize with Bitkit' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Bitkit' }));
+    expect(screen.getByText('Continue with Pubky Ring').closest('button')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Bitkit' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Bitkit' }));
     expect(mockOnAuthorizeBitkitClick).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
@@ -759,7 +759,7 @@ describe('SignInContent - Progress View', () => {
     });
 
     expect(screen.getByText('Signing in.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Authorize with Bitkit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue with Bitkit' })).not.toBeInTheDocument();
     expect(screen.getByText('Please wait while your Pubky experience loads.')).toBeInTheDocument();
 
     // Should show all 4 step labels
@@ -832,7 +832,7 @@ describe('SignInContent - Progress View', () => {
     });
 
     // Should not have the authorize button
-    expect(screen.queryByText('Authorize with Pubky Ring')).not.toBeInTheDocument();
+    expect(screen.queryByText('Continue with Pubky Ring')).not.toBeInTheDocument();
 
     // Should not have the desktop/mobile specific containers
     const containers = screen.getAllByTestId('container');

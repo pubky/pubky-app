@@ -76,6 +76,7 @@ describe('ActionButtons', () => {
     );
 
     const googleButton = screen.getByTestId('continue-with-google');
+    expect(googleButton).toHaveAccessibleName('Continue with Google or Apple');
     fireEvent.click(googleButton);
     expect(mockOnContinueWithGoogle).toHaveBeenCalledTimes(1);
 

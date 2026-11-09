@@ -153,14 +153,14 @@ beforeEach(() => {
 
 for (const [name, viewport] of VIEWPORTS) {
   const isDesktop = name === 'desktop';
-  const ringAction = isDesktop ? 'Copy authentication link' : 'Authorize with Pubky Ring';
+  const ringAction = isDesktop ? 'Copy authentication link' : 'Continue with Pubky Ring';
 
   describe(`Sign-in page ${name} — visual regression`, () => {
     it('renders both sign-in methods', async () => {
       await renderSignIn(viewport);
       await expect.element(page.getByRole('button', { name: ringAction })).toBeEnabled();
       if (!isDesktop) {
-        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeEnabled();
+        await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
       await expect.element(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-${name}`);
@@ -171,7 +171,7 @@ for (const [name, viewport] of VIEWPORTS) {
       await renderSignIn(viewport);
       await expect.element(page.getByRole('button', { name: ringAction })).toBeEnabled();
       if (!isDesktop) {
-        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeEnabled();
+        await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
       await expect.element(page.getByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
       await matchVrtFrameScreenshot(`sign-in-page-ring-only-${name}`);
@@ -203,10 +203,10 @@ for (const [name, viewport] of VIEWPORTS) {
       await matchVrtFrameScreenshot(`sign-in-page-ring-expired-${name}`);
     });
 
-    it('renders the Continue with Google help', async () => {
+    it('renders the Passport sign-in help', async () => {
       await renderSignIn(viewport);
-      await page.getByRole('button', { name: 'About signing in with Google' }).click();
-      await expect.element(page.getByText('Continue with Google, powered by Pubky Passport.')).toBeVisible();
+      await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
+      await expect.element(page.getByText('Sign in with Apple or Google')).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-google-help-${name}`);
     });
 

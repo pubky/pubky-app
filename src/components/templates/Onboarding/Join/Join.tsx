@@ -46,7 +46,7 @@ export function Join() {
       type="button"
       variant={ButtonVariant.SECONDARY}
       size="lg"
-      className="w-full"
+      className="h-15 w-full border-0 leading-5"
       onClick={() => router.push(ONBOARDING_ROUTES.HUMAN)}
       disabled={isPending}
       data-testid="join-manage-own-keys"
@@ -63,7 +63,7 @@ export function Join() {
           {"Let's join "}
           <span className="text-brand">{'Pubky.'}</span>
         </PageTitle>
-        <PageSubtitle>{'How would you like to create your pubky?'}</PageSubtitle>
+        <PageSubtitle className="hidden md:block">{'How would you like to create your pubky?'}</PageSubtitle>
       </PageHeader>
 
       {/* Desktop: two method cards side by side */}
@@ -92,7 +92,9 @@ export function Join() {
           </Container>
           {manageOwnKeysButton}
         </IllustratedCard>
-        {isPassportEnabled && <PassportMethodCard onContinue={startPassportAuth} isPending={isPending} />}
+        {isPassportEnabled && (
+          <PassportMethodCard onContinue={startPassportAuth} isPending={isPending} variant="providers" />
+        )}
       </Container>
 
       {/* Mobile: stacked labelled sections */}
@@ -103,10 +105,12 @@ export function Join() {
           </Typography>
           {manageOwnKeysButton}
         </Container>
-        {isPassportEnabled && <PassportMethodSection onContinue={startPassportAuth} isPending={isPending} />}
+        {isPassportEnabled && (
+          <PassportMethodSection onContinue={startPassportAuth} isPending={isPending} variant="providers" />
+        )}
       </Container>
 
-      <HumanFooter />
+      <HumanFooter variant="inline" />
     </OnboardingLayout>
   );
 }
