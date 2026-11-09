@@ -133,6 +133,7 @@ vi.mock('@/controllers/auth/auth', () => ({
     subscribeSessionFailures: vi.fn(() => vi.fn()),
     retryShopCleanup: vi.fn().mockResolvedValue(undefined),
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
+    retrySocialMigration: vi.fn(),
     restorePersistedSession: mocks.restorePersistedSession,
     retireLegacyCookieSessions: mocks.retireLegacyCookieSessions,
     syncRemovedSession: mocks.syncRemovedSession,
