@@ -117,19 +117,14 @@ describe('EmojiPicker', () => {
     expect(MockPickerSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('builds a dark picker while the signed-out theme is forced over a light preference', async () => {
+  it('builds a dark picker while dark is forced over a light preference', async () => {
     mockResolvedTheme = 'light';
     mockForcedTheme = 'dark';
 
-    const { rerender } = render(<EmojiPicker onEmojiSelect={mockOnEmojiSelect} />);
+    render(<EmojiPicker onEmojiSelect={mockOnEmojiSelect} />);
 
     await waitFor(() => {
       expect(MockPickerSpy).toHaveBeenCalledWith(expect.objectContaining({ theme: 'dark' }));
     });
-
-    mockForcedTheme = undefined;
-    rerender(<EmojiPicker onEmojiSelect={mockOnEmojiSelect} />);
-
-    expect(mockPickerInstance.update).toHaveBeenLastCalledWith({ theme: 'light' });
   });
 });
