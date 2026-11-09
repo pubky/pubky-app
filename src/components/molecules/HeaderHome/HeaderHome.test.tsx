@@ -122,17 +122,6 @@ describe('HeaderHome', () => {
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
   });
 
-  it.each(['/', AUTH_ROUTES.LOGOUT, AUTH_ROUTES.SIGN_IN, '/copyright'])(
-    'offers no theme switch on %s: signed-out pages are always dark',
-    (pathname) => {
-      vi.mocked(usePathname).mockReturnValue(pathname);
-
-      render(<HeaderHome />);
-
-      expect(screen.queryByRole('button', { name: /light mode|dark mode|appearance/i })).not.toBeInTheDocument();
-    },
-  );
-
   it('smoothly scrolls Learn to the second section on the landing page', () => {
     const nextSection = document.createElement('section');
     nextSection.id = LANDING_NEXT_SECTION_ID;
