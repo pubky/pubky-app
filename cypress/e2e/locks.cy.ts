@@ -269,8 +269,10 @@ describe('locks', () => {
       cy.contains('Could not delete the locked content. Try again.').should('be.visible');
       // The restored card remounts and loads its body again, so retry rather than filter one snapshot.
       cy.get('[data-cy="timeline-posts"]').should('contain.text', teaser);
+      // The error toast can cover the bottom of the viewport, where the remounted card leaves its menu.
+      cy.get('[data-cy="toast"]', { timeout: 15_000 }).should('not.exist');
       cy.intercept('DELETE', `**/pub/pubky.app/posts/${postId}`).as('announcementDeleted');
-      deletePost({ filterText: teaser });
+      deletePost({ filterText: teaser, scrollToTop: true });
       cy.wait('@announcementDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
       // The post is deleted only after the Lock Server has accepted the lock deletion.
       cy.get<string>('@lockId').then((lockId) => {
