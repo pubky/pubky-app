@@ -18,6 +18,16 @@ describe('PaykitCreatorValidators.validateSafe', () => {
     });
   });
 
+  it.each([`pubkyb${'o'.repeat(46)}`, `pubkypubkyb${'o'.repeat(46)}`])(
+    'keeps a raw key that itself starts with pubky whole, as %j',
+    (creator) => {
+      expect(PaykitCreatorValidators.validateSafe(creator)).toEqual({
+        ok: true,
+        creator: `pubkypubkyb${'o'.repeat(46)}`,
+      });
+    },
+  );
+
   it.each([null, '', 'pubky', 'not-a-pubky', `${MOCK_LOCK_AUTHOR_PUBKY}x`, MOCK_LOCK_AUTHOR_PUBKY.toUpperCase()])(
     'rejects the creator %j',
     (creator) => {

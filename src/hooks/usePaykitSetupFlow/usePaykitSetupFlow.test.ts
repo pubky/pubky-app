@@ -113,6 +113,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('does not record a connection on a failure callback', async () => {
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('setup_required');
     const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
@@ -388,6 +389,51 @@ describe('usePaykitSetupFlow', () => {
         attachIframeSource(result);
         await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state, error: 'setup-failed' });
       };
+
+      beforeEach(() => {
+        mocks.fetchPaykitSetupStatus.mockResolvedValue('setup_required');
+      });
+
+      it('finishes, without a reconnect, when the setup completed despite the failure callback', async () => {
+        mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
+        mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);
+        const { result } = renderHook(() => usePaykitSetupFlow('USD'));
+
+        await failSetup(result);
+
+        expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledWith('USD');
+        expect(mocks.fetchPaykitCreatorHeld).not.toHaveBeenCalled();
+        expect(mocks.markPaykitConnected).toHaveBeenCalledOnce();
+        expect(result.current.status).toBe(PaykitSetupFlowStatus.SUCCESS);
+        expect(mocks.getPaykitReconnectUrl).not.toHaveBeenCalled();
+      });
+
+      it('reports unavailable, without asking Paykit, when the Lock Server cannot say', async () => {
+        mocks.fetchPaykitSetupStatus.mockRejectedValue(new Error('Lock Server request failed with HTTP 502'));
+        mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);
+        const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+
+        await failSetup(result);
+
+        expect(result.current.status).toBe(PaykitSetupFlowStatus.UNAVAILABLE);
+        expect(result.current.error).not.toBeNull();
+        expect(mocks.fetchPaykitCreatorHeld).not.toHaveBeenCalled();
+        expect(mocks.markPaykitConnected).not.toHaveBeenCalled();
+      });
+
+      it('drops a readiness answer that arrives after the Locks session changed', async () => {
+        let release: (status: string) => void = () => {};
+        mocks.fetchPaykitSetupStatus.mockImplementationOnce(() => new Promise((resolve) => (release = resolve)));
+        const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+
+        await failSetup(result);
+        expect(result.current.status).toBe(PaykitSetupFlowStatus.CHECKING);
+        useLocksAuthStore.setState({ locksSessionSecret: 'secret-other' });
+        await act(async () => release('ready'));
+
+        expect(mocks.markPaykitConnected).not.toHaveBeenCalled();
+        expect(result.current.status).toBe(PaykitSetupFlowStatus.IDLE);
+      });
 
       it('asks for a reconnect when Paykit holds the creator, without surfacing a setup error', async () => {
         mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);

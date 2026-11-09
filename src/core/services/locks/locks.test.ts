@@ -733,6 +733,21 @@ describe('LocksService.generatePaykitReconnectUrl', () => {
     expect(url.searchParams.get('creator')).toBe(`pubky${creator}`);
   });
 
+  it('prefixes a raw creator key that itself starts with pubky', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server');
+    const rawKeyStartingWithPubky = `pubkyb${'o'.repeat(46)}`;
+
+    const url = new URL(
+      LocksService.generatePaykitReconnectUrl({
+        returnTo: 'https://app.example',
+        state: 'S',
+        creator: rawKeyStartingWithPubky,
+      }),
+    );
+
+    expect(url.searchParams.get('creator')).toBe(`pubky${rawKeyStartingWithPubky}`);
+  });
+
   it('drops any path on the configured Paykit URL', () => {
     mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server/setup');
 

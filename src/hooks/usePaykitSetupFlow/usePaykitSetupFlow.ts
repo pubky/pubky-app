@@ -108,13 +108,35 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     return false;
   }, []);
 
-  // The failure callback only says `setup-failed`, so ask Paykit why it can matter: a held creator is
-  // refused `/setup` and needs the reconnect; one it does not hold has nothing to reconnect.
+  // The failure callback only says `setup-failed`. Paykit can commit the setup and still send it when
+  // its relay acknowledgement fails, so the Lock Server is asked first: a ready creator is done, and a
+  // reconnect would rotate its receiving account for nothing. Otherwise ask Paykit why it can matter: a
+  // held creator is refused `/setup` and needs the reconnect; one it does not hold has nothing to reconnect.
   const diagnoseFailedSetup = useCallback(async () => {
     const run = (checkRef.current += 1);
     const sessionSecret = sessionSecretRef.current;
     setSetupUrl(null);
     setStatus(PaykitSetupFlowStatus.CHECKING);
+
+    let setupStatus: TPaykitSetupStatus | null = null;
+    let statusFailure: AppError | null = null;
+    try {
+      setupStatus = await LocksController.fetchPaykitSetupStatus(asset);
+    } catch (caught) {
+      statusFailure = toAppError(caught, ErrorService.Locks, 'usePaykitSetupFlow.diagnoseFailedSetup');
+    }
+    if (isOutdated(run, sessionSecret)) return;
+
+    if (setupStatus === 'ready') {
+      LocksController.markPaykitConnected();
+      setStatus(PaykitSetupFlowStatus.SUCCESS);
+      return;
+    }
+    if (setupStatus !== 'setup_required') {
+      setError(statusFailure);
+      setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
+      return;
+    }
 
     const { held, failure } = await readPaykitHeld('usePaykitSetupFlow.diagnoseFailedSetup');
     if (isOutdated(run, sessionSecret)) return;
@@ -125,7 +147,7 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     } else {
       setStatus(held ? PaykitSetupFlowStatus.RECONNECT_REQUIRED : PaykitSetupFlowStatus.SETUP_INCOMPLETE);
     }
-  }, [isOutdated]);
+  }, [asset, isOutdated]);
 
   // Only `setup_required` opens the setup: `unavailable` or a failed check never does, because Paykit
   // may already hold this creator's account. A creator Paykit is known to hold goes to the reconnect

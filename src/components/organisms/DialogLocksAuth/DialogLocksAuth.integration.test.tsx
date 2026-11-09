@@ -208,7 +208,9 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
   // Another attempt can finish between the initial presence check and the setup callback.
   it('setup-failed after the creator becomes held: reconnects instead of looping on Try again', async () => {
     signIn();
-    mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'setup_required' });
+    mocks.paykitSetupStatus
+      .mockResolvedValueOnce({ status: 'setup_required' })
+      .mockResolvedValueOnce({ status: 'setup_required' });
     answerProbe('not-held');
     renderDialog();
 
@@ -254,7 +256,27 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Connect Bitkit' }));
 
     expect(await screen.findByTitle('Bitkit payout account setup')).toBeInTheDocument();
-    expect(mocks.paykitSetupStatus).toHaveBeenCalledTimes(2);
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledTimes(3);
+  });
+
+  // Paykit can commit the setup and still post `setup-failed` when its relay acknowledgement fails.
+  it('setup-failed after the setup was committed: finishes without asking for a reconnect', async () => {
+    signIn();
+    mocks.paykitSetupStatus
+      .mockResolvedValueOnce({ status: 'setup_required' })
+      .mockResolvedValueOnce({ status: 'ready' });
+    answerProbe('not-held');
+    renderDialog();
+
+    const setup = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account setup');
+    answerProbe('held');
+    await postPaykitCallback(setup, 'setup-failed');
+
+    expect(await screen.findByText('Locks Enabled')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+    expect(mocks.probe).toHaveBeenCalledTimes(1);
+    expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
   });
 
   it('setup-failed and Paykit cannot say: shows that payments cannot be checked, not a generic setup error', async () => {
