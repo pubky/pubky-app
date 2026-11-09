@@ -95,7 +95,6 @@ export class NotificationApplication {
     bodyJson: Record<string, unknown>,
   ): Promise<number> {
     return await retryHomeserverWriteAfterReread(fence, async () => {
-      // Past the browser cache: a stale cached copy could let an older mark overwrite another device's newer one.
       const published = await this.fetchLastReadFromHomeserver(url);
       if (published !== null && published >= timestamp) return published;
       await HomeserverService.request({
@@ -109,18 +108,24 @@ export class NotificationApplication {
   }
 
   /**
-   * Reads the published `last_read` timestamp past the browser HTTP cache, so a mark made on another device is
-   * seen even when an earlier copy is still heuristically fresh.
+   * Reads the published `last_read` timestamp through the owner's session: the social v1 file is private
+   * (`/priv/app.pubky/v1/last_read.json`), and an anonymous read of it answers 401.
    *
    * @param url - The current user's `last_read` URL
    * @returns The published timestamp, or null when the file is missing or holds no finite timestamp
    */
   static async fetchLastReadFromHomeserver(url: string): Promise<number | null> {
     try {
-      const published = await HomeserverService.getFreshJson<{ timestamp?: unknown }>(url);
+      // A missing file is the usual answer for a new account and reads as absent without reporting an error.
+      const published = await HomeserverService.request<{ timestamp?: unknown } | null | undefined>({
+        method: HttpMethod.GET,
+        url,
+        notFoundAsNull: true,
+      });
       const value = Number(published?.timestamp);
       return Number.isFinite(value) ? value : null;
     } catch (error) {
+      // A 404 the null option does not cover (a URL outside the owner's session).
       if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
       throw error;
     }
