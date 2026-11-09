@@ -424,22 +424,14 @@ export const deletePost = ({
   filterText,
   postIdx = 0,
   type = PostOrReply.Post,
-  scrollToTop = false,
 }: {
   filterText?: string;
   postIdx?: number;
   type?: PostOrReply;
-  /** Scroll the more button near the top first, so a tall card can't push the menu items below the viewport. */
-  scrollToTop?: boolean;
 }) => {
   // find post or reply and click more menu button
   // use type enum value (0 for post, 1 for reply) to select the correct menu button
   cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.Yes).within(() => {
-    if (scrollToTop) {
-      cy.get('[data-cy="post-more-btn"]')
-        .eq(type)
-        .scrollIntoView({ offset: { top: -150, left: 0 } });
-    }
     cy.get('[data-cy="post-more-btn"]').eq(type).should('be.visible').click();
   });
 

@@ -57,9 +57,8 @@ import {
 } from '../support/locks';
 import { flushLocksStubLog, locksStep } from '../support/locks-log';
 import { userIndexed, waitForNexus } from '../support/nexus';
-import { deletePost } from '../support/posts';
 import { seedUserViaApi } from '../support/seed';
-import { HasBackedUp } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import type { SeededUser } from '../support/types/seed';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
@@ -264,15 +263,19 @@ describe('locks', () => {
       signInAs(creator);
       signInToLockServer();
       failNextLockDeletion();
-      deletePost({ filterText: teaser });
+      cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
+        cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
+      });
+      cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click();
+      cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.visible').click();
       cy.wait('@deleteContentLockFailed');
       cy.contains('Could not delete the locked content. Try again.').should('be.visible');
-      // The restored card remounts and loads its body again, so retry rather than filter one snapshot.
+      // A refused lock deletion keeps the row and the confirm dialog, so the retry is the dialog's Delete again.
+      cy.get('[data-cy="dialog-content"]').should('be.visible');
       cy.get('[data-cy="timeline-posts"]').should('contain.text', teaser);
-      // The error toast can cover the bottom of the viewport, where the remounted card leaves its menu.
-      cy.get('[data-cy="toast"]', { timeout: 15_000 }).should('not.exist');
       cy.intercept('DELETE', `**/pub/pubky.app/posts/${postId}`).as('announcementDeleted');
-      deletePost({ filterText: teaser, scrollToTop: true });
+      cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.enabled').click();
+      cy.get('[data-cy="dialog-content"]').should('not.exist');
       cy.wait('@announcementDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
       // The post is deleted only after the Lock Server has accepted the lock deletion.
       cy.get<string>('@lockId').then((lockId) => {
