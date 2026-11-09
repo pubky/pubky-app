@@ -1,18 +1,34 @@
+import type { Session } from '@synonymdev/pubky';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import type { SessionReference, SessionRestoreStatus } from '@/libs/auth/session.types';
+import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { homeInitialState, REACH } from '@/stores/home/home.types';
+import { mockSession } from '@/test-utils/pubky';
+import { mockAuthStore } from '@/test-utils/stores';
 import { useDefaultHomeReach } from './useDefaultHomeReach';
 
 let mockCurrentUserPubky: string | null = 'viewer-pubky';
 let mockAuthHasHydrated = true;
+let mockSessionState: Session | null = mockSession();
+let mockSessionReference: SessionReference | null = null;
+let mockRestoreStatus: SessionRestoreStatus = 'ready';
 let mockFollowing = 0;
 let mockIsLoading = false;
 
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string | null; hasHydrated: boolean }) => unknown) =>
-    selector({ currentUserPubky: mockCurrentUserPubky, hasHydrated: mockAuthHasHydrated }),
+  useAuthStore: (selector: (state: AuthStore) => unknown) =>
+    selector(
+      mockAuthStore({
+        currentUserPubky: mockCurrentUserPubky,
+        hasHydrated: mockAuthHasHydrated,
+        session: mockSessionState,
+        sessionReference: mockSessionReference,
+        restoreStatus: mockRestoreStatus,
+      }),
+    ),
 }));
 
 vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
@@ -35,6 +51,9 @@ describe('useDefaultHomeReach', () => {
   beforeEach(() => {
     mockCurrentUserPubky = 'viewer-pubky';
     mockAuthHasHydrated = true;
+    mockSessionState = mockSession();
+    mockSessionReference = null;
+    mockRestoreStatus = 'ready';
     mockFollowing = 0;
     mockIsLoading = false;
     useHomeStore.setState({ ...homeInitialState, hasHydrated: true });
@@ -120,4 +139,32 @@ describe('useDefaultHomeReach', () => {
     expect(useProfileStats).toHaveBeenCalledWith('', { enabled: false });
     expect(useHomeStore.getState().reach).toBe(REACH.ALL);
   });
+
+  it('does not load counts for a generated pubky with no session and nothing to restore (#2955)', () => {
+    // The onboarding key step stores the generated pubky before sign-up; Nexus has no counts for it.
+    mockCurrentUserPubky = 'generated-key';
+    mockSessionState = null;
+    mockSessionReference = null;
+    mockRestoreStatus = 'idle';
+    mockFollowing = 10;
+
+    renderHook(() => useDefaultHomeReach());
+
+    expect(useProfileStats).toHaveBeenCalledWith('', { enabled: false });
+    expect(useHomeStore.getState().reach).toBe(REACH.ALL);
+  });
+
+  it.each(['restoring', 'reauth-required', 'temporary-error'] as const)(
+    'still loads counts for a member during %s',
+    (restoreStatus) => {
+      mockSessionState = null;
+      mockRestoreStatus = restoreStatus;
+      mockFollowing = 3;
+
+      renderHook(() => useDefaultHomeReach());
+
+      expect(useProfileStats).toHaveBeenCalledWith('viewer-pubky', { enabled: true });
+      expect(useHomeStore.getState().reach).toBe(REACH.NETWORK);
+    },
+  );
 });

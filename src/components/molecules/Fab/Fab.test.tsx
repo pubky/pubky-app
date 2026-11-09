@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { LEGAL_ROUTES } from '@/app/routes';
 import type { FabAction } from '@/hooks/useFabAction/useFabAction.types';
 import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
 import { useContextualBannerStore } from '@/stores/contextualBanner/contextualBanner.store';
@@ -200,6 +201,12 @@ describe('Fab', () => {
 
   it('returns null on onboarding routes even when fully authenticated', () => {
     mockUsePathname.mockReturnValue('/onboarding/tags');
+    const { container } = render(<Fab />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('does not cover the legal text on %s', (pathname) => {
+    mockUsePathname.mockReturnValue(pathname);
     const { container } = render(<Fab />);
     expect(container.firstChild).toBeNull();
   });

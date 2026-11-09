@@ -1,8 +1,9 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory } from '@/libs/error/error.types';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
@@ -40,6 +41,7 @@ const mocks = vi.hoisted(() => {
     getTestnet: vi.fn(() => true),
     getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
     getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
+    getE2eLocksStubUrl: vi.fn((): string | undefined => undefined),
     setLockServicePointer,
     paykitSetupStatus,
     fakeSession,
@@ -47,6 +49,8 @@ const mocks = vi.hoisted(() => {
     fakeViewer,
     registerGuardedResource: vi.fn(),
     createContentLock: vi.fn(),
+    deleteContentLock: vi.fn(),
+    deleteGuardedResource: vi.fn(),
     readContentLockWithOptions: vi.fn(async () => ({ version: 1, creator: 'pubkybob' })),
     generateBundleId: vi.fn(() => ({ toString: () => 'bundle-generated' })),
     ensureLocksSdkReady: vi.fn(async () => {}),
@@ -65,6 +69,7 @@ vi.mock('@/config/network', () => ({
   getHomeserver: () => 'homeservertestpubky',
   getLockServer: mocks.getLockServer,
   getPaykitServerUrl: mocks.getPaykitServerUrl,
+  getE2eLocksStubUrl: mocks.getE2eLocksStubUrl,
 }));
 
 vi.mock('@synonymdev/locks-sdk', () => {
@@ -93,6 +98,9 @@ vi.mock('@synonymdev/locks-sdk', () => {
       public contentType: string,
       public bytes: Uint8Array,
     ) {}
+  }
+  class DeleteGuardedResourceOptions {
+    constructor(public path: string) {}
   }
   class CreateContentLockRequestBuilder {
     primaryResource() {
@@ -131,6 +139,7 @@ vi.mock('@synonymdev/locks-sdk', () => {
     ExchangeFrontendSessionCodeOptions,
     SetLockServicePointerOptions,
     RegisterGuardedResourceOptions,
+    DeleteGuardedResourceOptions,
     CreateContentLockRequestBuilder,
     VerificationTaskHandleOptions,
     BundleId: { generate: mocks.generateBundleId },
@@ -207,6 +216,12 @@ describe('LocksService (auth)', () => {
     const session = await LocksService.restoreSession();
     expect(session).toBe(mocks.fakeSession);
     expect(mocks.fakeLocks.restoreSession).toHaveBeenCalledWith('secret-abc');
+  });
+
+  it('restoreSession rebuilds from a secret the caller passes, even after the store was cleared', async () => {
+    const session = await LocksService.restoreSession('secret-captured');
+    expect(session).toBe(mocks.fakeSession);
+    expect(mocks.fakeLocks.restoreSession).toHaveBeenCalledWith('secret-captured');
   });
 
   it('restoreSession throws an auth error when the store holds no secret', async () => {
@@ -292,7 +307,12 @@ describe('LocksService (auth)', () => {
 
 const session = asOpaque<LocksSdkSession>({
   creatorPubky: () => 'pubkyaccount',
-  creator: { registerGuardedResource: mocks.registerGuardedResource, createContentLock: mocks.createContentLock },
+  creator: {
+    registerGuardedResource: mocks.registerGuardedResource,
+    createContentLock: mocks.createContentLock,
+    deleteContentLock: mocks.deleteContentLock,
+    deleteGuardedResource: mocks.deleteGuardedResource,
+  },
   lockServer: () => 'lockpubky',
 });
 
@@ -337,6 +357,23 @@ describe('LocksService (content)', () => {
     expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/app.locks/LOCK1.json', creator: 'pubkybob' });
   });
 
+  // No options = the server's default graceful mode; `force` must never be chosen by the app.
+  it('deleteContentLock asks the Lock Server for the default (graceful) deletion of the lock id', async () => {
+    mocks.deleteContentLock.mockResolvedValue({ lock_id: 'LOCK1', status: 'queued' });
+
+    await expect(LocksService.deleteContentLock('LOCK1')).resolves.toBeUndefined();
+
+    expect(mocks.deleteContentLock).toHaveBeenCalledWith('LOCK1');
+  });
+
+  it('deleteGuardedResource addresses the resource by the path it was registered under', async () => {
+    mocks.deleteGuardedResource.mockResolvedValue(undefined);
+
+    await expect(LocksService.deleteGuardedResource('id-1')).resolves.toBeUndefined();
+
+    expect(mocks.deleteGuardedResource).toHaveBeenCalledWith(expect.objectContaining({ path: 'id-1' }));
+  });
+
   it.each([
     [
       'registerGuardedResource',
@@ -345,6 +382,8 @@ describe('LocksService (content)', () => {
       mocks.registerGuardedResource,
     ],
     ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
+    ['deleteContentLock', () => LocksService.deleteContentLock('LOCK1'), mocks.deleteContentLock],
+    ['deleteGuardedResource', () => LocksService.deleteGuardedResource('id-1'), mocks.deleteGuardedResource],
   ])('%s throws an auth error without touching the server when no Locks session exists', async (_name, call, mock) => {
     useLocksAuthStore.getState().reset();
 
@@ -364,6 +403,8 @@ describe('LocksService (content)', () => {
       mocks.registerGuardedResource,
     ],
     ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
+    ['deleteContentLock', () => LocksService.deleteContentLock('LOCK1'), mocks.deleteContentLock],
+    ['deleteGuardedResource', () => LocksService.deleteGuardedResource('id-1'), mocks.deleteGuardedResource],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     mock.mockRejectedValue(new Error('Lock Server request failed with HTTP 401'));
 
@@ -491,6 +532,52 @@ describe('LocksService (reader unlock)', () => {
     expect(task).toEqual({ status: 'pending' });
   });
 
+  describe('submitProof when the Lock Server answers 451', () => {
+    const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
+
+    it('returns a region-blocked result instead of throwing', async () => {
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce(
+        Object.assign(new Error('Lock Server viewer request failed with HTTP 451'), { name: 'InvalidInput' }),
+      );
+
+      await expect(LocksService.submitProof(bundle)).resolves.toEqual({ regionBlocked: true });
+    });
+
+    it('reports a bare string because it does not match the pinned SDK error contract', async () => {
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce('Lock Server viewer request failed with HTTP 451');
+
+      await expect(LocksService.submitProof(bundle)).rejects.toMatchObject({
+        service: ErrorService.Locks,
+        operation: 'LocksService.submitProof',
+      });
+    });
+
+    it('builds no AppError, so nothing is logged or sent to Sentry', async () => {
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce(
+        Object.assign(new Error('Lock Server viewer request failed with HTTP 451'), { name: 'InvalidInput' }),
+      );
+
+      await LocksService.submitProof(bundle);
+
+      expect(logError).not.toHaveBeenCalled();
+      logError.mockRestore();
+    });
+
+    it.each(['HTTP 429', 'HTTP 500', 'HTTP 403', 'HTTP 4510'])('still reports a %s as an error', async (statusText) => {
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce(
+        new Error(`Lock Server viewer request failed with ${statusText}`),
+      );
+
+      const error = await LocksService.submitProof(bundle).catch((caught: unknown) => caught);
+
+      expect(isAppError(error)).toBe(true);
+      expect(logError).toHaveBeenCalled();
+      logError.mockRestore();
+    });
+  });
+
   it('lookupPaykitConnectionState returns the state the server reports', async () => {
     await expect(LocksService.lookupPaykitConnectionState('creator-b', 'b1')).resolves.toBe('handshake');
   });
@@ -524,6 +611,39 @@ describe('LocksService (reader unlock)', () => {
   it('lookupVerificationTask reads the 404 from a non-Error rejection too', async () => {
     mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce('HTTP 404');
     await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toBeNull();
+  });
+
+  describe('lookupVerificationTask when the Lock Server answers 451', () => {
+    const refused = () =>
+      Object.assign(new Error('Lock Server viewer request failed with HTTP 451'), { name: 'InvalidInput' });
+
+    it('returns a region-blocked result instead of throwing, as submitProof does', async () => {
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(refused());
+
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({ regionBlocked: true });
+    });
+
+    it('builds no AppError, so nothing is logged or sent to Sentry', async () => {
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(refused());
+
+      await LocksService.lookupVerificationTask('creator-b', 'b1');
+
+      expect(logError).not.toHaveBeenCalled();
+      logError.mockRestore();
+    });
+
+    it('is not mistaken for a missing task, and other failures are still reported', async () => {
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(refused());
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.not.toBeNull();
+
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(
+        Object.assign(new Error('Lock Server viewer request failed with HTTP 500'), { name: 'InvalidInput' }),
+      );
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).rejects.toMatchObject({
+        operation: 'LocksService.lookupVerificationTask',
+      });
+    });
   });
 
   it('lookupVerificationTask does not treat other 4xx as missing', async () => {

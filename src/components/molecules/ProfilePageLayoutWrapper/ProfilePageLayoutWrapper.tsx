@@ -1,5 +1,5 @@
 import { Container } from '@/atoms/Container/Container';
-import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
+import { CONTENT_GUTTER_CLASS, MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { cn } from '@/libs/utils/utils';
 
 export interface ProfilePageLayoutWrapperProps {
@@ -11,7 +11,8 @@ export function ProfilePageLayoutWrapper({ children }: ProfilePageLayoutWrapperP
     <Container
       overrideDefaults={true}
       className={cn(
-        'mx-auto mt-6 w-full max-w-(--container-max-width) pt-0 pb-24 lg:mt-0 lg:pb-0',
+        'mx-auto mt-6 w-full max-w-(--container-max-width) pt-0 lg:mt-0 lg:pb-0',
+        MOBILE_FAB_CLEARANCE_CLASS,
         CONTENT_GUTTER_CLASS,
       )}
     >

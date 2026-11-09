@@ -23,4 +23,10 @@ export interface PostHeaderProps {
   visuallyHideAvatar?: boolean;
   size?: PostHeaderSize;
   timeAgoPlacement?: 'top-right' | 'bottom-left';
+  /**
+   * When `false`, the author avatar and name render as text instead of profile
+   * links (quoted post in the Reply/Repost dialogs, where a navigation would
+   * land behind the open modal). Defaults to `true`.
+   */
+  navigable?: boolean;
 }

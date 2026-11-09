@@ -6,7 +6,7 @@ export interface UsePostHeaderVisibilityResult {
   /** Composite ID of the reposted original, or null when unavailable */
   originalPostId: string | null;
   /**
-   * Whether the post is a contentless repost (no text, no attachments, not a reply) by anyone.
+   * Whether the post is a contentless repost (no text, no attachments, not a reply, not deleted) by anyone.
    * Its tags and replies belong to the original, whoever is viewing.
    */
   isContentlessRepost: boolean;

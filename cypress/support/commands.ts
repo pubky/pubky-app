@@ -1,6 +1,6 @@
 // <reference types="cypress" />
 
-import { backupDownloadFilePath, extendedTimeout } from './common';
+import { backupDownloadFilePath, extendedTimeout, waitForServiceWorker } from './common';
 import { goToProfilePageFromHeader } from './header';
 import { showProfileHeader } from './profile';
 import { confirmLogoutBackupBeforeNavigation } from './logout';
@@ -244,6 +244,7 @@ Cypress.Commands.add('signInWithEncryptedFile', (backupFilepath: string, passcod
     if (pathname !== '/') cy.visit('/');
   });
   cy.location('pathname').should('eq', '/');
+  waitForServiceWorker();
 
   cy.get('[data-cy="header-sign-in-btn"]').click();
   cy.location('pathname').should('eq', '/sign-in');
@@ -269,6 +270,7 @@ Cypress.Commands.add('signInWithRecoveryPhrase', (recoveryPhrase: string) => {
     if (pathname !== '/') cy.visit('/');
   });
   cy.location('pathname').should('eq', '/');
+  waitForServiceWorker();
 
   cy.get('[data-cy="header-sign-in-btn"]').click();
   cy.location('pathname').should('eq', '/sign-in');

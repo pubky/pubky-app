@@ -11,10 +11,10 @@ import type { TUnlockedListItem } from '@/services/locks/locks.types';
 
 /** One unlocked post, rendered from the reader's own replica. */
 export function ProfileUnlockedCard({ post }: Pick<TUnlockedListItem, 'post'>) {
-  const media = useUnlockedMedia(post);
   // No post page to open here (announcement gone or never recorded), so the full read lives in the
   // card; opt-in keeps the list a list (#2663).
   const [isReadingArticle, setIsReadingArticle] = useState(false);
+  const { media, pendingAttachments } = useUnlockedMedia({ post, preview: !isReadingArticle });
 
   // Same split as `PostContentBase`: an article carries its title in the content JSON, so it needs
   // the article renderer rather than plain body text. `attachments` is null throughout — the bytes
@@ -30,6 +30,7 @@ export function ProfileUnlockedCard({ post }: Pick<TUnlockedListItem, 'post'>) {
             attachments={null}
             localAttachments={media}
             variant={isReadingArticle ? 'full' : 'preview'}
+            pendingAttachments={pendingAttachments}
           />
           {!isReadingArticle && (
             <Button

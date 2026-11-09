@@ -6,6 +6,7 @@ import { Container } from '@/atoms/Container/Container';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { Logo } from '../Logo/Logo';
 
@@ -33,7 +34,7 @@ export function MobileHeader({
   fixed = false,
   containerClassName,
 }: MobileHeaderProps) {
-  const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
+  const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const { isPublicExploreRoute } = usePublicRoute();
   // Layout filters drawer: signed-in users and guests on explore/public routes (/home, /post/..., etc.)

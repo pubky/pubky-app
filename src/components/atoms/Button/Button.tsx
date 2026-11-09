@@ -22,17 +22,16 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-brand/16 text-brand hover:!bg-brand/30 border-brand',
         destructive:
-          'bg-destructive/60 text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 focus-visible:ring-destructive/40',
+          'bg-destructive-button text-destructive-foreground hover:bg-destructive-button-hover focus-visible:ring-destructive/20 focus-visible:ring-destructive/40',
         'destructive-soft': 'bg-destructive/16 text-destructive hover:!bg-destructive/30 border-destructive',
-        outline:
-          'bg-background hover:bg-accent hover:text-accent-foreground bg-foreground/4 border-border hover:bg-input/50',
+        outline: 'bg-button-outline hover:bg-accent hover:text-accent-foreground border-border hover:bg-input/50',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-accent',
-        ghost: 'hover:bg-accent hover:text-accent-foreground hover:bg-accent/50 border-none',
-        brand: 'bg-brand text-background border-brand hover:bg-brand/90',
+        ghost: 'hover:bg-accent hover:text-accent-foreground hover:bg-accent/50 border-none shadow-none',
+        brand: 'bg-brand text-brand-foreground border-brand hover:bg-brand/90',
         link: 'text-primary underline-offset-4 hover:underline',
         dark: 'bg-card text-foreground hover:bg-muted border-card',
         'dark-outline':
-          'bg-transparent hover:bg-neutral-900 hover:text-white bg-transparent border-neutral-700 hover:bg-neutral-800',
+          'bg-transparent hover:bg-neutral-900 hover:text-white bg-transparent border-neutral-700 hover:bg-neutral-800 light:border-border light:hover:bg-accent light:hover:text-accent-foreground',
       },
       size: {
         default: 'h-10 gap-1 px-4 py-2 has-[>svg]:px-4',

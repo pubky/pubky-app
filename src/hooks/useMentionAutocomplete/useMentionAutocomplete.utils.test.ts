@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { extractMentionQuery, getContentWithMention } from './useMentionAutocomplete.utils';
+import {
+  buildMentionText,
+  extractMentionQuery,
+  getContentWithMention,
+  insertMentionAtRange,
+} from './useMentionAutocomplete.utils';
 
 describe('extractMentionQuery', () => {
   describe('@ pattern extraction', () => {
@@ -62,22 +67,22 @@ describe('extractMentionQuery', () => {
     });
 
     it('extracts a multiword name up to the caret', () => {
-      // 'Hello @John Carvalho' - the space between the name's words does not end the query (#1638)
-      const result = extractMentionQuery('Hello @John Carvalho');
-      expect(result.atQuery).toBe('John Carvalho');
+      // 'Hello @Jane Whitlock' - the space between the name's words does not end the query (#1638)
+      const result = extractMentionQuery('Hello @Jane Whitlock');
+      expect(result.atQuery).toBe('Jane Whitlock');
       expect(result.range).toEqual({ start: 6, end: 20 });
     });
 
     it('keeps the query alive on the space typed between two name words', () => {
-      // 'Hello @John |' - the caret is just past the space, so the name search still runs
-      const result = extractMentionQuery('Hello @John ');
-      expect(result.atQuery).toBe('John');
+      // 'Hello @Jane |' - the caret is just past the space, so the name search still runs
+      const result = extractMentionQuery('Hello @Jane ');
+      expect(result.atQuery).toBe('Jane');
       expect(result.range).toEqual({ start: 6, end: 12 });
     });
 
     it('preserves internal spaces of a name query', () => {
-      const result = extractMentionQuery('Hello @John  Carvalho  ');
-      expect(result.atQuery).toBe('John  Carvalho');
+      const result = extractMentionQuery('Hello @Jane  Whitlock  ');
+      expect(result.atQuery).toBe('Jane  Whitlock');
     });
 
     it('keeps the whole typed run when words follow the name', () => {
@@ -88,19 +93,19 @@ describe('extractMentionQuery', () => {
     });
 
     it('ends the query at a newline', () => {
-      const result = extractMentionQuery('Hello @John\nCarvalho');
+      const result = extractMentionQuery('Hello @Jane\nWhitlock');
       expect(result.atQuery).toBeNull();
       expect(result.range).toBeNull();
     });
 
     it('ends the query at sentence punctuation', () => {
-      const result = extractMentionQuery('Thanks @John Carvalho, see you');
+      const result = extractMentionQuery('Thanks @Jane Whitlock, see you');
       expect(result.atQuery).toBeNull();
       expect(result.range).toBeNull();
     });
 
     it('does not start a query on a space right after @', () => {
-      const result = extractMentionQuery('Hello @ John');
+      const result = extractMentionQuery('Hello @ Jane');
       expect(result.atQuery).toBeNull();
       expect(result.range).toBeNull();
     });
@@ -361,10 +366,10 @@ describe('extractMentionQuery', () => {
     });
 
     it('extracts the multiword name the caret sits in when text follows it', () => {
-      // 'Hello @John Carv|alho world' - only the words before the caret count
-      const result = extractMentionQuery('Hello @John Carvalho world', 16);
+      // 'Hello @Jane Whit|lock world' - only the words before the caret count
+      const result = extractMentionQuery('Hello @Jane Whitlock world', 16);
 
-      expect(result.atQuery).toBe('John Carv');
+      expect(result.atQuery).toBe('Jane Whit');
       expect(result.range).toEqual({ start: 6, end: 16 });
     });
 
@@ -425,12 +430,12 @@ describe('getContentWithMention', () => {
     });
 
     it('replaces a multiword name with pubky{userId}', () => {
-      // '@John Carvalho' is one mention, not an '@John' plus prose (#1638)
-      expect(atEnd('Hello @John Carvalho').content).toBe(`Hello pubky${userId} `);
+      // '@Jane Whitlock' is one mention, not an '@Jane' plus prose (#1638)
+      expect(atEnd('Hello @Jane Whitlock').content).toBe(`Hello pubky${userId} `);
     });
 
     it('writes over the space of a name instead of leaving a second one', () => {
-      expect(atEnd('Hello @John ').content).toBe(`Hello pubky${userId} `);
+      expect(atEnd('Hello @Jane ').content).toBe(`Hello pubky${userId} `);
     });
   });
 
@@ -510,8 +515,8 @@ describe('getContentWithMention', () => {
     });
 
     it('replaces a multiword name before the caret and keeps the text after it', () => {
-      // 'Hello @John Carvalho|, thanks' - the whole name run is written over
-      const result = getContentWithMention('Hello @John Carvalho, thanks', 20, userId);
+      // 'Hello @Jane Whitlock|, thanks' - the whole name run is written over
+      const result = getContentWithMention('Hello @Jane Whitlock, thanks', 20, userId);
 
       expect(result.content).toBe(`Hello pubky${userId} , thanks`);
       expect(result.content.slice(result.caret)).toBe(', thanks');
@@ -553,5 +558,59 @@ describe('getContentWithMention', () => {
       expect(result.content).toBe(`Hello pubky${userId} `);
       expect(result.caret).toBe(`Hello pubky${userId} `.length);
     });
+  });
+});
+
+describe('insertMentionAtRange', () => {
+  const userId = 'user123';
+
+  it('inserts at the caret when nothing is selected', () => {
+    const result = insertMentionAtRange('hello', 5, 5, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+    expect(result.caret).toBe('hello pubkyuser123 '.length);
+  });
+
+  it('replaces a selected range', () => {
+    const result = insertMentionAtRange('hello WORLD', 6, 11, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+  });
+
+  it('does not double the space when the character before the range is whitespace', () => {
+    const result = insertMentionAtRange('hello ', 6, 6, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+  });
+
+  it('does not write over an earlier @name', () => {
+    const content = 'Thanks @bob for the help ';
+    const result = insertMentionAtRange(content, content.length, content.length, userId);
+    expect(result.content).toBe('Thanks @bob for the help pubkyuser123 ');
+  });
+
+  it('clamps a stale end below start to start', () => {
+    const result = insertMentionAtRange('hello', 5, 2, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+  });
+});
+
+describe('buildMentionText', () => {
+  const userId = 'user123';
+
+  it('adds a leading space when the preceding character is not whitespace', () => {
+    expect(buildMentionText('hi', 2, userId)).toBe(' pubkyuser123 ');
+  });
+
+  it('does not add a space at the very start of the composer', () => {
+    expect(buildMentionText('', 0, userId)).toBe('pubkyuser123 ');
+  });
+
+  it('does not double the space when the preceding character is whitespace', () => {
+    expect(buildMentionText('hello ', 6, userId)).toBe('pubkyuser123 ');
+  });
+  it('does not add a space when the preceding character is a newline', () => {
+    expect(buildMentionText('hello\n', 6, userId)).toBe('pubkyuser123 ');
+  });
+
+  it('does not add a space when the preceding character is a tab', () => {
+    expect(buildMentionText('hello\t', 6, userId)).toBe('pubkyuser123 ');
   });
 });

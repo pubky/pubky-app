@@ -3,9 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
+import { LOCKS_UNLOCK_POLL_CALL_SITES, type TLocksUnlockPollCallSite } from '@/libs/observability/sentry.constants';
 import { toast } from '@/molecules/Toaster/toast';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
-import type { TPaykitConnectionState, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
+import type {
+  TLocksPollReport,
+  TPaykitConnectionState,
+  TUnlockedContent,
+  TVerificationStatus,
+} from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { TPayToUnlockStage, UsePayToUnlockParams, UsePayToUnlockResult } from './usePayToUnlock.types';
 
@@ -22,6 +28,14 @@ export const CONNECTION_POLL_INTERVAL_MS = 1000;
  * time, but a returning tab does not re-read it: only Check again does.
  */
 export const STALL_AFTER_MS = 3 * 60 * 1000;
+/**
+ * Ceiling of the backoff a loop applies while its reads keep failing: each consecutive failure doubles
+ * its interval up to this. A successful read, or the reader returning to the tab, restores full speed.
+ */
+export const POLL_BACKOFF_MAX_MS = 15_000;
+
+const backoffDelay = (intervalMs: number, failures: number): number =>
+  failures === 0 ? intervalMs : Math.min(intervalMs * 2 ** failures, POLL_BACKOFF_MAX_MS);
 
 const SUBMIT_FAILED_TOAST = 'The payment could not be started. Try again later.';
 const NO_WALLET_TOAST = 'Bitkit is not set up yet. Finish the steps, then try again.';
@@ -48,6 +62,7 @@ const stallNotBeforeFor = (admissionDeadlineAt: string | null): number => {
  */
 export function usePayToUnlock({
   open,
+  paymentAvailability = 'available',
   lockUrl,
   lockFile,
   onCompleted,
@@ -78,6 +93,11 @@ export function usePayToUnlock({
   // One generation per modal opening: every async continuation checks it, so a closed (or
   // reopened) modal can't apply stale results or keep polling.
   const generation = useRef(0);
+  // A button handler retained from an earlier render must use the latest advisory too.
+  const currentPaymentAvailability = useRef(paymentAvailability);
+  useEffect(() => {
+    currentPaymentAvailability.current = paymentAvailability;
+  }, [paymentAvailability]);
   // The active poll loop's teardown (timers + return listeners) — replaced on every loop start,
   // called on close/unmount. The generation makes a leaked loop inert; this makes it absent.
   const stopPolling = useRef<(() => void) | null>(null);
@@ -98,8 +118,11 @@ export function usePayToUnlock({
   /**
    * Credential and guarded read together — a read failure has to reach the same retry and the same
    * parked state as a credential failure, or the reader is left on a spinner with nothing to press.
+   *
+   * `fresh` comes from Check again only: the download it retries may be the one that hung, so it must
+   * not join it. The first finish joins a running recovery download of the same purchase.
    */
-  const finish = async (gen: number, bundleId: string) => {
+  const finish = async (gen: number, bundleId: string, fresh: boolean) => {
     if (!lockFile) return;
     const call = ++finishCall.current;
     const isLatest = () => generation.current === gen && finishCall.current === call;
@@ -114,7 +137,7 @@ export function usePayToUnlock({
 
     let content: TUnlockedContent;
     try {
-      content = await LocksController.fetchPaidContent({ lockFile, bundleId });
+      content = await LocksController.fetchPaidContent({ lockFile, bundleId }, { fresh });
     } catch {
       // Already reported by the Err factory. The payment stands — only the download failed — so
       // this gets its own stage rather than the waiting copy that asks the reader to go pay.
@@ -136,14 +159,22 @@ export function usePayToUnlock({
     setStage('paid');
   };
 
-  const applyStatus = (gen: number, bundleId: string, status: TVerificationStatus): boolean => {
+  const holdNewPayment = () => {
+    const availability = currentPaymentAvailability.current;
+    if (availability === 'available') return false;
+    setStage(availability === 'blocked' ? 'region-blocked' : 'checking');
+    return true;
+  };
+
+  const applyStatus = (gen: number, bundleId: string, status: TVerificationStatus, freshDownload = false): boolean => {
     if (status === 'completed') {
       setConnectionState(null);
       setIsConnectionPending(false);
-      void finish(gen, bundleId);
+      void finish(gen, bundleId, freshDownload);
       return false;
     }
     if (status === 'failed' || status === 'expired') {
+      if (holdNewPayment()) return false;
       // Unretryable: Try again mints a fresh id, unless another device has since saved one that can still pay.
       checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
@@ -173,7 +204,8 @@ export function usePayToUnlock({
     {
       lookupNow = false,
       admissionDeadlineAt = null,
-    }: { lookupNow?: boolean; admissionDeadlineAt?: string | null } = {},
+      freshDownload = false,
+    }: { lookupNow?: boolean; admissionDeadlineAt?: string | null; freshDownload?: boolean } = {},
   ) => {
     if (!lockFile) return;
     waitingBundleId.current = bundleId;
@@ -191,32 +223,62 @@ export function usePayToUnlock({
     // Bumped when the wait parks: an answer from before the park is no longer ours to apply.
     let epoch = 0;
 
-    type TLoop = { timer: number | null; inFlight: boolean; alive: boolean; run: () => void };
+    type TLoop = {
+      timer: number | null;
+      inFlight: boolean;
+      alive: boolean;
+      /** Consecutive failed reads: they back the loop off, and all but the first are tagged (#2641). */
+      failures: number;
+      /** Bumped when the streak is ended from outside (a return to the tab), so a read already out cannot reopen it. */
+      resets: number;
+      run: () => void;
+    };
     const loops: TLoop[] = [];
 
     /**
      * `step` returns false when this loop is done, and takes the guard it must re-check after its
      * await: applying an answer from a closed modal or a parked wait is what opens content nobody
-     * asked for. Each loop skips a tick while its own call is still out.
+     * asked for. Each loop skips a tick while its own call is still out. The loop owns the streak:
+     * `step` passes `report` to its read unchanged, and any rejection of `step` is a failed tick.
      */
-    const addLoop = (intervalMs: number, step: (isCurrent: () => boolean) => Promise<boolean>): TLoop => {
+    const addLoop = (
+      intervalMs: number,
+      callSite: TLocksUnlockPollCallSite,
+      step: (isCurrent: () => boolean, report: TLocksPollReport) => Promise<boolean>,
+    ): TLoop => {
       const loop: TLoop = {
         timer: null,
         inFlight: false,
         alive: true,
+        failures: 0,
+        resets: 0,
         run: () => {
           if (!active || !loop.alive || loop.inFlight || generation.current !== gen) return;
           const startedAt = epoch;
+          const resetsAtStart = loop.resets;
           const isCurrent = () => active && generation.current === gen && startedAt === epoch;
+          // Only the first failure of a streak is reported; the repeats are tagged where the error is built.
+          const report: TLocksPollReport = { callSite, ...(loop.failures > 0 && { reportSuppressed: true as const }) };
           loop.inFlight = true;
-          void step(isCurrent).then((keepGoing) => {
+          const settle = (keepGoing: boolean, failed: boolean) => {
             // Checked before the flag is cleared: after a park, a newer request may already own it,
             // and clearing it here would let the next visibility event start a duplicate.
             if (!isCurrent()) return;
             loop.inFlight = false;
             loop.alive = keepGoing;
-            if (keepGoing) schedule(loop, intervalMs);
-          });
+            // An outage backs off instead of reading (and reporting) every interval; any answer, a
+            // null task included, is a working server and restores full speed. A failure counts only
+            // if nothing ended the streak while it was out.
+            if (!failed) loop.failures = 0;
+            else if (loop.resets === resetsAtStart) loop.failures++;
+            if (keepGoing) schedule(loop, backoffDelay(intervalMs, loop.failures));
+          };
+          // A rejection anywhere in `step`, the read or what it applies, is the failed tick, so it
+          // can never leave `inFlight` set.
+          void step(isCurrent, report).then(
+            (keepGoing) => settle(keepGoing, false),
+            () => settle(true, true),
+          );
         },
       };
       loops.push(loop);
@@ -228,10 +290,11 @@ export function usePayToUnlock({
       loop.timer = window.setTimeout(loop.run, intervalMs);
     };
 
-    const paymentLoop = addLoop(POLL_INTERVAL_MS, async (isCurrent) => {
-      const task = await LocksController.fetchPaymentStatus({ lockFile, bundleId }).catch(() => null);
+    const paymentLoop = addLoop(POLL_INTERVAL_MS, LOCKS_UNLOCK_POLL_CALL_SITES.payment, async (isCurrent, report) => {
+      // A failed lookup is transient mid-wait: the loop keeps waiting, more slowly.
+      const task = await LocksController.fetchPaymentStatus({ lockFile, bundleId }, report);
       if (!isCurrent()) return false;
-      // A failed lookup or a null task is transient mid-wait; both mean "keep waiting".
+      // A null task is an answer, not a failure: keep waiting at full speed.
       if (!task) return true;
       setWalletSetupNeeded(task.walletSetupNeeded);
       // Re-armed when the deadline appears, and again when it clears: the invoice now exists, so the
@@ -241,21 +304,24 @@ export function usePayToUnlock({
         stallNotBefore = notBefore;
         armStallTimer();
       }
-      if (applyStatus(gen, bundleId, task.status)) return true;
+      if (applyStatus(gen, bundleId, task.status, freshDownload)) return true;
       stop();
       return false;
     });
 
-    const connectionLoop = addLoop(CONNECTION_POLL_INTERVAL_MS, async (isCurrent) => {
-      const state = await LocksController.fetchPaykitConnectionState({ lockFile, bundleId }).catch(() => null);
-      if (!isCurrent()) return false;
-      // A failed read invents no state: the last one stands, QR included.
-      if (!state) return true;
-      setConnectionState(state);
-      setIsConnectionPending(false);
-      // `connected` needs no more reads; `blocked` is an operator switch this reader cannot flip.
-      return state !== 'connected' && state !== 'blocked';
-    });
+    const connectionLoop = addLoop(
+      CONNECTION_POLL_INTERVAL_MS,
+      LOCKS_UNLOCK_POLL_CALL_SITES.connection,
+      async (isCurrent, report) => {
+        // A failed read invents no state: the last one stands, QR included.
+        const state = await LocksController.fetchPaykitConnectionState({ lockFile, bundleId }, report);
+        if (!isCurrent()) return false;
+        setConnectionState(state);
+        setIsConnectionPending(false);
+        // `connected` needs no more reads; `blocked` is an operator switch this reader cannot flip.
+        return state !== 'connected' && state !== 'blocked';
+      },
+    );
     if (!watchConnection) connectionLoop.alive = false;
 
     // Independent of both loops: even a call that never settles must expose Check again on time.
@@ -283,6 +349,10 @@ export function usePayToUnlock({
       armStallTimer();
       loops.forEach((loop) => {
         if (loop.timer !== null) window.clearTimeout(loop.timer);
+        // The reader is looking again: read at full speed, and report the next failure afresh. A read
+        // still out from before sees the bump and does not count its failure into the new streak.
+        loop.failures = 0;
+        loop.resets++;
         loop.run();
       });
     };
@@ -335,7 +405,10 @@ export function usePayToUnlock({
   // two per reader and lock, so the second one replays the saved id instead of minting another, or
   // reports its end if the reader rejected it meanwhile (`isRetry` is false here).
   const attemptPayment = async (gen: number, fromInstall: boolean, isRetry: boolean) => {
-    if (!lockFile || !readerPubky || !session || submittingGeneration.current === gen) return;
+    if (!lockFile || !readerPubky || !session || generation.current !== gen || submittingGeneration.current === gen)
+      return;
+    const currentReader = useAuthStore.getState();
+    if (currentReader.currentUserPubky !== readerPubky || currentReader.session !== session || holdNewPayment()) return;
     submittingGeneration.current = gen;
     setIsSubmitting(true);
 
@@ -352,7 +425,16 @@ export function usePayToUnlock({
         if (fromInstall) setStage('checking');
       }
 
-      const { bundleId, status } = await LocksController.startPayment({ lockFile, lockUrl, readerPubky, isRetry });
+      // A wallet check can outlive a country/session change. Its old opening must never submit.
+      if (generation.current !== gen || holdNewPayment()) return;
+      const started = await LocksController.startPayment({ lockFile, lockUrl, readerPubky, isRetry });
+      if (started.regionBlocked) {
+        // An expected refusal, not a failure: no toast, no retry, and the lock is not marked purchased
+        // (that would start the background finish for a payment that was never created).
+        if (generation.current === gen) setStage('region-blocked');
+        return;
+      }
+      const { bundleId, status } = started;
       const lockId = LockContentParser.lockIdFromUrl(lockUrl);
       if (lockId) onPurchased(lockId);
       if (generation.current !== gen) return;
@@ -395,6 +477,13 @@ export function usePayToUnlock({
         const resolved = await LocksController.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
         if (generation.current !== gen) return;
 
+        // The Lock Server refused to look the saved id up for the reader's region (HTTP 451), as it refuses
+        // a submission. That is the same expected answer, not a purchase that "could not be checked": nothing
+        // was lost, nothing can be retried from here, and the saved id stays for a supported region.
+        if (resolved?.kind === 'region-blocked') {
+          setStage('region-blocked');
+          return;
+        }
         // An ended payment is settled by the lookup alone: submitting it again would only echo the
         // same status back.
         if (resolved?.kind === 'terminal') {
@@ -415,6 +504,9 @@ export function usePayToUnlock({
           }
           return;
         }
+        // Recovery is read-only up to this point. No task means new commerce, even when a
+        // bundle file survived a refused or interrupted submission. Keep that file for later.
+        if (holdNewPayment()) return;
         if (!resolved) {
           const hasWallet = await LocksController.hasPaykitReceiver(readerPubky);
           if (generation.current !== gen) return;
@@ -446,7 +538,7 @@ export function usePayToUnlock({
     // attemptPayment and the helpers it calls are stable for one opening; re-running on their
     // identity would restart the purchase.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, lockUrl, lockFile, readerPubky, session]);
+  }, [open, lockUrl, lockFile, readerPubky, session, paymentAvailability]);
 
   // Every step needs the session; without this the modal would sit on a step that can no longer move.
   useEffect(() => {
@@ -471,7 +563,12 @@ export function usePayToUnlock({
     setStage(paymentStillRunning ? 'waiting' : 'finishing');
     // Unknown state included: only a settled link (or an operator block) ends the watch.
     const watchConnection = paymentStillRunning && connectionState !== 'connected' && connectionState !== 'blocked';
-    startPolling(generation.current, bundleId, watchConnection, { lookupNow: true });
+    // A retry of the content read starts a new download rather than joining the one that parked. A wait
+    // re-check has no download of its own out, so a payment that completes there joins as usual.
+    startPolling(generation.current, bundleId, watchConnection, {
+      lookupNow: true,
+      freshDownload: !paymentStillRunning,
+    });
   };
 
   // Link state does not acknowledge a QR scan. Keep the contact handoff available through

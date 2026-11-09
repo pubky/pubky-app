@@ -427,6 +427,7 @@ export class LocalPostService {
             compositePostId,
             kind: normalizedKind,
             parentUri,
+            lock,
             ops,
             action: HttpMethod.PUT,
           });
@@ -616,7 +617,14 @@ export class LocalPostService {
           );
 
           // Remove post from streams (including unread streams)
-          this.updatePostStream({ compositePostId, kind, parentUri, ops, action: HttpMethod.DELETE });
+          this.updatePostStream({
+            compositePostId,
+            kind,
+            parentUri,
+            lock: postDetails?.lock,
+            ops,
+            action: HttpMethod.DELETE,
+          });
 
           await Promise.all(ops);
         },
@@ -636,7 +644,14 @@ export class LocalPostService {
     }
   }
 
-  private static updatePostStream({ compositePostId, kind, parentUri, ops, action }: TLocalUpdatePostStreamParams) {
+  private static updatePostStream({
+    compositePostId,
+    kind,
+    parentUri,
+    lock,
+    ops,
+    action,
+  }: TLocalUpdatePostStreamParams) {
     const { pubky: authorId } = parseCompositeId(compositePostId);
 
     // Helper to call the appropriate method with proper class context
@@ -692,6 +707,15 @@ export class LocalPostService {
       ops.push(removeFromUnreadStream(`timeline:following:${kind}` as PostStreamId, [compositePostId]));
       ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_FRIENDS_ALL, [compositePostId]));
       ops.push(removeFromUnreadStream(`timeline:friends:${kind}` as PostStreamId, [compositePostId]));
+
+      if (lock) {
+        ops.push(updateStream(PostStreamTypes.TIMELINE_ALL_LOCKED, [compositePostId]));
+        ops.push(updateStream(PostStreamTypes.TIMELINE_FOLLOWING_LOCKED, [compositePostId]));
+        ops.push(updateStream(PostStreamTypes.TIMELINE_FRIENDS_LOCKED, [compositePostId]));
+        ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_ALL_LOCKED, [compositePostId]));
+        ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_FOLLOWING_LOCKED, [compositePostId]));
+        ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_FRIENDS_LOCKED, [compositePostId]));
+      }
     }
   }
 

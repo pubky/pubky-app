@@ -7,7 +7,7 @@ const mention = (text: string): MentionSegment => ({ text, isMention: true, pubk
 
 describe('prepareOgText (emoji repair)', () => {
   it('returns text without a zero-width joiner unchanged', () => {
-    expect(prepareOgText('Miguel Medeiros💯🌱🐸')).toBe('Miguel Medeiros💯🌱🐸');
+    expect(prepareOgText('Maya Mitchell💯🌱🐸')).toBe('Maya Mitchell💯🌱🐸');
     expect(prepareOgText('')).toBe('');
   });
 
@@ -26,7 +26,7 @@ describe('prepareOgText (emoji repair)', () => {
 
   it('splits a sequence that is not a valid emoji even when qualified, as browsers draw it', () => {
     // MAGE + ZWJ + TROLL (seen in a real display name) is not an RGI sequence.
-    expect(prepareOgText('Miguel Medeiros💯🌱🐸🧙‍🧌')).toBe('Miguel Medeiros💯🌱🐸🧙🧌');
+    expect(prepareOgText('Maya Mitchell💯🌱🐸🧙‍🧌')).toBe('Maya Mitchell💯🌱🐸🧙🧌');
     expect(prepareOgText('🧙‍🧌 and 👨‍👩‍👧')).toBe('🧙🧌 and 👨‍👩‍👧');
   });
 
@@ -47,10 +47,10 @@ describe('prepareOgText (emoji repair)', () => {
 
 describe('prepareOgTextSegments', () => {
   it('repairs emoji in every run, then truncates', () => {
-    const segments = [plain('by '), mention('@Miguel Medeiros💯🌱🐸🧙‍🧌'), plain(' 👋')];
+    const segments = [plain('by '), mention('@Maya Mitchell💯🌱🐸🧙‍🧌'), plain(' 👋')];
     expect(prepareOgTextSegments(segments, 100)).toEqual([
       plain('by '),
-      mention('@Miguel Medeiros💯🌱🐸🧙🧌'),
+      mention('@Maya Mitchell💯🌱🐸🧙🧌'),
       plain(' 👋'),
     ]);
     expect(prepareOgTextSegments(segments, 5)).toEqual([plain('by '), mention('@M'), plain('...')]);

@@ -24,6 +24,7 @@ export function PostHeader({
   visuallyHideAvatar = false,
   size = 'normal',
   timeAgoPlacement = 'top-right',
+  navigable = true,
 }: PostHeaderProps) {
   // Extract userId from postId (format: userId:postId or just userId if isReplyInput is true)
   const userId = isReplyInput ? postId : postId.split(':')[0];
@@ -76,6 +77,7 @@ export function PostHeader({
       indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
       characterLimit={characterLimitInUserInfo}
       characterLimitPlacement={characterLimitPlacement}
+      navigable={navigable}
     />
   );
 

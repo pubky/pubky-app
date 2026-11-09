@@ -27,6 +27,15 @@ interface PostPreviewCardProps {
    * under the RepostHeader bar in full-bleed contentless collection shares.
    */
   flush?: boolean;
+  /**
+   * When `false`, the preview is a plain surface: the card loses its link role,
+   * focus stop, pointer cursor and click/Enter/Space navigation, a collection
+   * original renders without its link wrapper, and the author, mentions and
+   * hashtags inside render as text. The Reply and Repost dialogs pass `false`
+   * so nothing in the quoted post can change the route behind the open modal.
+   * Feed previews default to `true`.
+   */
+  navigable?: boolean;
 }
 
 /**
@@ -42,7 +51,9 @@ interface PostPreviewCardProps {
  * another PostPreviewCard, creating an infinite loop.
  * Both branches also provide PostPreviewNestingContext so PostLinkEmbeds suppresses
  * in-app link embeds inside the preview — mutually-linking posts would otherwise
- * recurse through PostContentBase → PostLinkEmbeds → PostPreviewCard.
+ * recurse through PostContentBase → PostLinkEmbeds → PostPreviewCard. The same
+ * provider carries `navigable` down to the mention and hashtag renderers, which
+ * sit too deep in the markdown render for a prop.
  *
  * Collection originals skip the post-card shell and render `CollectionCard` with
  * `presentation="embed"`. Pass `interactiveActions={false}` from share/repost
@@ -58,10 +69,17 @@ interface PostPreviewCardProps {
  *
  * **Usage:**
  * - Repost previews: original post in `PostContent` (collections use embed `CollectionCard`)
- * - Share dialog: original post in `PostInput` repost variant
- * - Reply previews: post being replied to in `DialogReply` (non-collection posts only)
+ * - Share dialog: original post in `PostInput` repost variant (`navigable={false}`)
+ * - Reply previews: post being replied to in `DialogReply` (non-collection posts only,
+ *   rendered with `navigable={false}` so the modal stays the only surface in play)
  */
-export function PostPreviewCard({ postId, className, interactiveActions = true, flush = false }: PostPreviewCardProps) {
+export function PostPreviewCard({
+  postId,
+  className,
+  interactiveActions = true,
+  flush = false,
+  navigable = true,
+}: PostPreviewCardProps) {
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
@@ -94,13 +112,14 @@ export function PostPreviewCard({ postId, className, interactiveActions = true, 
   if (postDetails?.kind === 'collection' && !isDeleted) {
     const { pubky, id } = parseCompositeId(postId);
     return (
-      <PostPreviewNestingProvider>
+      <PostPreviewNestingProvider navigable={navigable}>
         <Container ref={ttlRef} data-cy="post-preview-card" overrideDefaults className="min-w-0">
           <CollectionCard
             authorPubky={pubky}
             postId={id}
             presentation="embed"
             interactiveActions={interactiveActions}
+            navigable={navigable}
             className={cn('w-full', flush && 'rounded-t-none rounded-b-md')}
           />
         </Container>
@@ -109,19 +128,20 @@ export function PostPreviewCard({ postId, className, interactiveActions = true, 
   }
 
   return (
-    <PostPreviewNestingProvider>
+    <PostPreviewNestingProvider navigable={navigable}>
       <Card
         ref={ttlRef}
         data-cy="post-preview-card"
         className={cn(
-          'w-full max-w-full min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50',
+          'w-full max-w-full min-w-0 rounded-md py-0',
+          navigable && 'cursor-pointer transition-colors hover:bg-accent/50',
           className,
         )}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        role="link"
-        tabIndex={0}
-        aria-label="View original post"
+        onClick={navigable ? handleClick : undefined}
+        onKeyDown={navigable ? handleKeyDown : undefined}
+        role={navigable ? 'link' : undefined}
+        tabIndex={navigable ? 0 : undefined}
+        aria-label={navigable ? 'View original post' : undefined}
       >
         {isMissing ? (
           <PostUnavailable message={'Post not found.'} />
@@ -129,7 +149,7 @@ export function PostPreviewCard({ postId, className, interactiveActions = true, 
           <PostUnavailable message={'This post has been deleted by its author.'} />
         ) : (
           <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
-            <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" />
+            <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" navigable={navigable} />
             <PostContentBase postId={postId} />
           </CardContent>
         )}

@@ -1,6 +1,7 @@
 'use client';
 
 import type { PropsWithChildren } from 'react';
+import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { HotFeedRightDrawer, HotFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
 import { HotFeedDrawer, HotFeedSidebar } from '@/organisms/HotFeedFilters/HotFeedFilters';
@@ -18,7 +19,7 @@ export function HotDiscoveryContentLayout({ children }: PropsWithChildren) {
       rightSidebarContent={<HotFeedRightSidebar />}
       leftDrawerContent={<HotFeedDrawer />}
       rightDrawerContent={<HotFeedRightDrawer />}
-      className="pb-24 lg:pb-12"
+      className={`${MOBILE_FAB_CLEARANCE_CLASS} lg:pb-12`}
       disableWideShellLayout
       classNameMobileHeader="pb-0"
     >

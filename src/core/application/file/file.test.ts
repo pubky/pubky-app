@@ -1,5 +1,5 @@
 import type { BlobResult, FileResult } from 'pubky-app-specs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
@@ -120,8 +120,13 @@ const createMockFileResult = (
 ) =>
   asOpaque<FileResult>({
     file: { toJson: vi.fn(() => fileJson) },
-    meta: { url },
+    meta: { id: url.slice(url.lastIndexOf('/') + 1), url },
   });
+
+const createMockFileAttachment = (fileId: string) => ({
+  blobResult: createMockBlobResult(),
+  fileResult: createMockFileResult(createFileUri(fileId)),
+});
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -220,6 +225,128 @@ describe('FileApplication', () => {
         });
       }
       expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
+    });
+
+    describe('file id uniqueness', () => {
+      // pubky-app-specs mints file ids from the current millisecond, so two
+      // attachments normalized back to back can be handed the same id
+      const FIRST_ID = '0035WQZH789FG';
+      const OLDER_ID = '0035WQZH789FF';
+      const NEWER_ID = '0035WQZH789FH';
+
+      const mintIds = (...fileIds: string[]) =>
+        fileIds.map((fileId) => {
+          const fileAttachment = createMockFileAttachment(fileId);
+          vi.mocked(FileNormalizer.toFileAttachment).mockReturnValueOnce(fileAttachment);
+          return fileAttachment;
+        });
+      const attach = (name: string) =>
+        FileApplication.toFileAttachment({ file: new File([name], name), pubky: TEST_PUBKY });
+
+      beforeEach(() => {
+        vi.mocked(stripImageMetadata).mockImplementation(async (file) => file);
+      });
+
+      afterEach(() => {
+        vi.mocked(FileNormalizer.toFileAttachment).mockReset();
+        vi.mocked(stripImageMetadata).mockReset();
+      });
+
+      it('normalizes each attachment once when the minted ids already differ', async () => {
+        const [first, second] = mintIds(FIRST_ID, NEWER_ID);
+
+        const image = await attach('a.jpg');
+        const pdf = await attach('b.pdf');
+
+        expect(FileNormalizer.toFileAttachment).toHaveBeenCalledTimes(2);
+        expect(image).toBe(first);
+        expect(pdf).toBe(second);
+      });
+
+      it('normalizes again when the next attachment is minted the same id as the last one', async () => {
+        const [first, , retried] = mintIds(FIRST_ID, FIRST_ID, NEWER_ID);
+
+        const image = await attach('a.jpg');
+        const pdf = await attach('b.pdf');
+
+        expect(FileNormalizer.toFileAttachment).toHaveBeenCalledTimes(3);
+        expect(image).toBe(first);
+        expect(pdf).toBe(retried);
+        expect(pdf.fileResult.meta.id).not.toBe(image.fileResult.meta.id);
+        expect(pdf.fileResult.meta.url).not.toBe(image.fileResult.meta.url);
+      });
+
+      it('normalizes again when a clock that stepped back re-mints an id issued earlier', async () => {
+        // A at FIRST_ID, B at NEWER_ID, then the clock steps back and C is minted with A's id
+        const [first, second, , retried] = mintIds(FIRST_ID, NEWER_ID, FIRST_ID, OLDER_ID);
+
+        const a = await attach('a.jpg');
+        const b = await attach('b.pdf');
+        const c = await attach('c.pdf');
+
+        expect(FileNormalizer.toFileAttachment).toHaveBeenCalledTimes(4);
+        expect(a).toBe(first);
+        expect(b).toBe(second);
+        expect(c).toBe(retried);
+        expect(new Set([a, b, c].map((attachment) => attachment.fileResult.meta.url)).size).toBe(3);
+      });
+
+      it('accepts an older id that was never issued', async () => {
+        const [first, second] = mintIds(FIRST_ID, OLDER_ID);
+
+        const image = await attach('a.jpg');
+        const pdf = await attach('b.pdf');
+
+        expect(FileNormalizer.toFileAttachment).toHaveBeenCalledTimes(2);
+        expect(image).toBe(first);
+        expect(pdf).toBe(second);
+      });
+
+      it('gives concurrent attachments distinct ids', async () => {
+        const [first, , retried] = mintIds(FIRST_ID, FIRST_ID, NEWER_ID);
+
+        const [image, pdf] = await Promise.all([attach('a.jpg'), attach('b.pdf')]);
+
+        expect(FileNormalizer.toFileAttachment).toHaveBeenCalledTimes(3);
+        expect(image).toBe(first);
+        expect(pdf).toBe(retried);
+        expect(new Set([image.fileResult.meta.id, pdf.fileResult.meta.id]).size).toBe(2);
+      });
+
+      it('propagates a normalizer failure raised on a retry and keeps issuing ids afterwards', async () => {
+        const failure = new Error('normalize failed');
+        const [first] = mintIds(FIRST_ID, FIRST_ID);
+        vi.mocked(FileNormalizer.toFileAttachment).mockImplementationOnce(() => {
+          throw failure;
+        });
+        const [retried] = mintIds(NEWER_ID);
+
+        await expect(attach('a.jpg')).resolves.toBe(first);
+        await expect(attach('b.pdf')).rejects.toBe(failure);
+        await expect(attach('c.pdf')).resolves.toBe(retried);
+      });
+
+      it('keeps waiting while every mint repeats an issued id', async () => {
+        vi.useFakeTimers();
+        try {
+          const [first] = mintIds(FIRST_ID);
+          vi.mocked(FileNormalizer.toFileAttachment).mockReturnValue(createMockFileAttachment(FIRST_ID));
+
+          const image = await attach('a.jpg');
+          const pending = attach('b.pdf');
+          // the clock only moves on after many retries; the repeated id is never accepted
+          await vi.advanceTimersByTimeAsync(60);
+          const [retried] = mintIds(NEWER_ID);
+          await vi.advanceTimersByTimeAsync(1);
+          const pdf = await pending;
+
+          expect(image).toBe(first);
+          expect(pdf).toBe(retried);
+          expect(FileNormalizer.toFileAttachment).toHaveBeenCalledTimes(1 + 1 + 60 + 1);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
     });
   });
 

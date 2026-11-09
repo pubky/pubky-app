@@ -36,6 +36,12 @@ interface PostHeaderUserInfoProps {
     max: number;
   };
   characterLimitPlacement?: PostHeaderCharacterLimitPlacement;
+  /**
+   * When `false`, the avatar and name render as text instead of profile links.
+   * The quoted post in the Reply/Repost dialogs passes `false` so a tap cannot
+   * change the route behind the open modal. Defaults to `true`.
+   */
+  navigable?: boolean;
 }
 
 export function PostHeaderUserInfo({
@@ -51,6 +57,7 @@ export function PostHeaderUserInfo({
   indexedAt,
   characterLimit,
   characterLimitPlacement = 'metadata',
+  navigable = true,
 }: PostHeaderUserInfoProps) {
   const [isStatusTooltipOpen, setIsStatusTooltipOpen] = useState(false);
   const formattedPublicKey = formatPublicKey({ key: userId });
@@ -63,21 +70,32 @@ export function PostHeaderUserInfo({
     e.stopPropagation();
   };
 
-  const avatar = (
+  const avatarClassName = cn('shrink-0', visuallyHideAvatar && 'pointer-events-none invisible');
+  const avatarImage = (
+    <AvatarWithFallback
+      avatarUrl={avatarUrl}
+      name={userName}
+      fallbackSeed={userId}
+      size={AVATAR_SIZE_BY_HEADER_SIZE[size]}
+    />
+  );
+
+  // Non-navigating previews keep the same layout boxes around the avatar and name
+  // but drop the profile links, so nothing here can change the route behind a modal.
+  const avatar = navigable ? (
     <Link
       href={profileUrl}
       onClick={handleLinkClick}
-      className={cn('shrink-0', visuallyHideAvatar && 'pointer-events-none invisible')}
+      className={avatarClassName}
       aria-hidden={visuallyHideAvatar || undefined}
       tabIndex={visuallyHideAvatar ? -1 : undefined}
     >
-      <AvatarWithFallback
-        avatarUrl={avatarUrl}
-        name={userName}
-        fallbackSeed={userId}
-        size={AVATAR_SIZE_BY_HEADER_SIZE[size]}
-      />
+      {avatarImage}
     </Link>
+  ) : (
+    <Container overrideDefaults className={avatarClassName} aria-hidden={visuallyHideAvatar || undefined}>
+      {avatarImage}
+    </Container>
   );
 
   if (!showUserInfo) {
@@ -99,18 +117,27 @@ export function PostHeaderUserInfo({
     </Typography>
   );
 
-  const userNameLink = (
-    <Link href={profileUrl} onClick={handleLinkClick} className="block w-fit max-w-full min-w-0 overflow-hidden">
-      <Typography
-        className={cn(
-          'block w-full max-w-full cursor-pointer truncate font-bold text-foreground',
-          USERNAME_CLASS_BY_HEADER_SIZE[size],
-        )}
-        overrideDefaults
-      >
-        {userName}
-      </Typography>
+  const userNameClassName = 'block w-fit max-w-full min-w-0 overflow-hidden';
+  const userNameText = (
+    <Typography
+      className={cn(
+        'block w-full max-w-full truncate font-bold text-foreground',
+        navigable && 'cursor-pointer',
+        USERNAME_CLASS_BY_HEADER_SIZE[size],
+      )}
+      overrideDefaults
+    >
+      {userName}
+    </Typography>
+  );
+  const userNameLink = navigable ? (
+    <Link href={profileUrl} onClick={handleLinkClick} className={userNameClassName}>
+      {userNameText}
     </Link>
+  ) : (
+    <Container overrideDefaults className={userNameClassName}>
+      {userNameText}
+    </Container>
   );
 
   const userNameContent = parsedStatus.emoji ? (
@@ -188,7 +215,9 @@ export function PostHeaderUserInfo({
     </Container>
   );
 
-  if (!showPopover) {
+  // The popover carries its own profile link and Follow action, so a non-navigating
+  // header skips it too.
+  if (!showPopover || !navigable) {
     return content;
   }
 

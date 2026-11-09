@@ -44,10 +44,12 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           <DialogDescription className="sr-only">{title} dialog</DialogDescription>
         </DialogHeader>
 
+        {/* The composer seeds from the post once per mount (#2877): a discard and a different post each
+            take a fresh one, so a seed can never be saved under another post's id. */}
         <PostInput
           active={open}
           dataCy="edit-post-input"
-          key={resetKey}
+          key={`${postDetails.id}-${resetKey}`}
           variant={POST_INPUT_VARIANT.EDIT}
           onSuccess={() => onOpenChangeAction(false)}
           expanded={true}
@@ -57,7 +59,9 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           editContent={teaserBody}
           editIsArticle={isArticle}
           editAttachments={postDetails.attachments ?? []}
-          editLock={lockUrl ? { lockUrl, title: teaser?.lock_title ?? '' } : undefined}
+          editLock={
+            lockUrl ? { lockUrl, title: teaser?.lock_title ?? '', contentKind: teaser?.content_kind } : undefined
+          }
           layoutOverride="inline"
         />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

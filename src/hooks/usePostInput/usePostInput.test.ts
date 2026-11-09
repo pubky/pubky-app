@@ -106,7 +106,6 @@ vi.mock('@/hooks/usePost/usePost', () => ({
       getMediaType: mockGetMediaType,
       getMediaName: mockGetMediaName,
     },
-    uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
   })),
 }));
@@ -576,6 +575,25 @@ describe('usePostInput', () => {
       });
     });
 
+    it('passes the stored lock content kind to the edit method (#2433)', async () => {
+      mockContent = 'Updated teaser';
+      const editLock = {
+        lockUrl: 'pubky://author/pub/app.locks/LOCK1.json',
+        title: 'Private note',
+        contentKind: 'article',
+      };
+
+      const { result } = renderHook(() => usePostInput({ variant: 'edit', editPostId: 'post-to-edit-id', editLock }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        expect.objectContaining({ isLockAnnouncement: true, lockContentKind: 'article' }),
+      );
+    });
+
     it('passes the seeded attachment snapshot to edit as originalAttachmentUris', async () => {
       mockContent = 'Updated post content';
       const editAttachmentUris = ['pubky://user/pub/pubky.app/files/F1', 'pubky://user/pub/pubky.app/files/F2'];
@@ -867,6 +885,40 @@ describe('usePostInput', () => {
       }
     });
 
+    it('discards the pending title and body at once, including a timer an earlier render armed', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleTitleChange({
+            target: { value: 'Edited title' },
+          } as React.ChangeEvent<HTMLInputElement>);
+          result.current.handleArticleBodyChange('Edited body', false);
+        });
+        // A render in between hands out new debounces; the timers armed above are still running
+        rerender();
+
+        // The composer is emptied for the lock with article mode still on: no render has run yet
+        act(() => {
+          result.current.discardPendingArticle();
+        });
+        expect(result.current.getLatestArticle()).toEqual({ title: 'Title', body: '' });
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mockSetContent).not.toHaveBeenCalled();
+        expect(mockSetArticleTitle).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('submits an article whose body only the editor holds yet', async () => {
       // The first keystrokes have not reached `content` through the debounce
       mockContent = '';
@@ -1043,6 +1095,29 @@ describe('usePostInput', () => {
       });
       expect(mockPrependPosts).not.toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('does not prependPosts a post without a lock on a Locks stream', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: PostStreamTypes.TIMELINE_ALL_LOCKED,
+      });
+      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short', lock: null } as never);
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: 'created-post-id' });
+      });
+      expect(mockPrependPosts).not.toHaveBeenCalled();
     });
 
     /*
@@ -2481,10 +2556,12 @@ describe('usePostInput', () => {
       expect(mockSetContent).toHaveBeenLastCalledWith('first, then more');
     });
 
-    it('goes back to the composer state once the debounce has fired', () => {
+    it('returns the typed values after the debounce fired, until that commit has rendered (#3030)', () => {
+      mockArticleTitle = 'Stored title';
       mockContent = 'Stored body';
-      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+      const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
       act(() => {
+        result.current.handleArticleTitleChange(titleEvent('Typed title'));
         result.current.handleArticleBodyChange('Typed body', false);
       });
 
@@ -2492,9 +2569,40 @@ describe('usePostInput', () => {
         vi.advanceTimersByTime(500);
       });
 
-      // The mocked state never changes, so a stale pending value would still read 'Typed body'.
+      // The mocked state has not changed: this is the render the commits are still waiting for
+      expect(mockSetArticleTitle).toHaveBeenCalledWith('Typed title');
       expect(mockSetContent).toHaveBeenCalledWith('Typed body');
-      expect(result.current.getLatestArticle().body).toBe('Stored body');
+      expect(result.current.getLatestArticle()).toEqual({ title: 'Typed title', body: 'Typed body' });
+
+      mockArticleTitle = 'Typed title';
+      mockContent = 'Typed body';
+      rerender();
+      // A later write from elsewhere (a draft restore) is not hidden behind the old pending values
+      mockArticleTitle = 'Restored title';
+      mockContent = 'Restored body';
+      rerender();
+
+      expect(result.current.getLatestArticle()).toEqual({ title: 'Restored title', body: 'Restored body' });
+    });
+
+    it('keeps a newer value pending when an older commit renders', () => {
+      mockContent = 'Stored body';
+      const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+      act(() => {
+        result.current.handleArticleBodyChange('first', false);
+      });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      // Typed again before the commit of 'first' rendered
+      act(() => {
+        result.current.handleArticleBodyChange('first, then more', false);
+      });
+      mockContent = 'first';
+      rerender();
+
+      expect(result.current.getLatestArticle().body).toBe('first, then more');
     });
 
     it('ignores a title over the character limit, as the state does', () => {
@@ -3053,12 +3161,15 @@ describe('usePostInput', () => {
         expect(mockSetAttachments).toHaveBeenCalled();
       });
 
-      it('routes a video dropped inside the rich-text editor to inline insertion too', async () => {
-        mockIsArticle = true;
-        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
-
-        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
-
+      /**
+       * Drops `files` on a non-editable island inside the rich-text editor root, where Lexical
+       * ignores the drop and the composer's fallback stages and inserts them itself.
+       */
+      const dropOnEditorIsland = (
+        result: { current: ReturnType<typeof usePostInput> },
+        files: File[],
+        islandTag = 'img',
+      ) => {
         const insertMarkdown = vi.fn();
         const focus = vi.fn();
         result.current.markdownEditorRef.current = asOpaque<
@@ -3067,85 +3178,145 @@ describe('usePostInput', () => {
 
         const editorRoot = document.createElement('div');
         editorRoot.className = 'mdxeditor dark-theme';
-        const island = document.createElement('video');
+        const island = document.createElement(islandTag);
         editorRoot.appendChild(island);
         document.body.appendChild(editorRoot);
 
-        const clip = new File(['test'], 'clip.mp4', { type: 'video/mp4' });
         const dropEvent = mockDragEvent({
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
           target: island,
-          dataTransfer: asOpaque<DataTransfer>({ items: [{ kind: 'file', getAsFile: () => clip }] }),
+          dataTransfer: asOpaque<DataTransfer>({
+            items: files.map((file) => ({ kind: 'file', getAsFile: () => file })),
+          }),
         });
+        act(() => {
+          result.current.handleDrop(dropEvent);
+        });
+        return { insertMarkdown, focus, cleanup: () => editorRoot.remove() };
+      };
 
+      it('routes a video dropped inside the rich-text editor to inline insertion too', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const clip = new File(['test'], 'clip.mp4', { type: 'video/mp4' });
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [clip], 'video');
         try {
-          act(() => {
-            result.current.handleDrop(dropEvent);
-          });
-
           await waitFor(() => {
             expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/clip1)');
           });
           expect(mockInlineMediaUpload).toHaveBeenCalledWith(clip);
           expect(mockSetAttachments).not.toHaveBeenCalled();
         } finally {
-          document.body.removeChild(editorRoot);
+          cleanup();
         }
       });
 
       it('routes article drops landing inside the rich-text editor to inline insertion', async () => {
         mockIsArticle = true;
         mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/img1');
-
-        const { result } = renderHook(() =>
-          usePostInput({
-            variant: 'post',
-          }),
-        );
-
-        const insertMarkdown = vi.fn();
-        const focus = vi.fn();
-        result.current.markdownEditorRef.current = asOpaque<
-          NonNullable<(typeof result.current.markdownEditorRef)['current']>
-        >({ insertMarkdown, focus });
-
-        // Lexical ignores drops on non-editable islands (already-inserted
-        // images), so the event reaches the container un-prevented with a
-        // target inside the editor root
-        const editorRoot = document.createElement('div');
-        editorRoot.className = 'mdxeditor dark-theme';
-        const droppedOnImage = document.createElement('img');
-        editorRoot.appendChild(droppedOnImage);
-        document.body.appendChild(editorRoot);
-
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        // Lexical ignores drops on non-editable islands (already-inserted images), so the event
+        // reaches the container un-prevented with a target inside the editor root
         const mockFile = new File(['test'], 'pic.png', { type: 'image/png' });
-        const dropEvent = mockDragEvent({
-          preventDefault: vi.fn(),
-          stopPropagation: vi.fn(),
-          target: droppedOnImage,
-          dataTransfer: asOpaque<DataTransfer>({
-            items: [
-              {
-                kind: 'file',
-                getAsFile: () => mockFile,
-              },
-            ],
-          }),
-        });
 
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [mockFile]);
         try {
-          act(() => {
-            result.current.handleDrop(dropEvent);
-          });
-
           await waitFor(() => {
             expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/img1)');
           });
           expect(mockInlineMediaUpload).toHaveBeenCalledWith(mockFile);
           expect(mockSetAttachments).not.toHaveBeenCalled();
         } finally {
-          editorRoot.remove();
+          cleanup();
+        }
+      });
+
+      it('stages every file of a drop in one tick, so the session budget sees the whole batch', async () => {
+        mockIsArticle = true;
+        const resolvers: ((uri: string) => void)[] = [];
+        mockInlineMediaUpload.mockImplementation(() => new Promise<string>((resolve) => resolvers.push(resolve)));
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const first = new File(['a'], 'a.png', { type: 'image/png' });
+        const second = new File(['b'], 'b.png', { type: 'image/png' });
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [first, second]);
+        try {
+          // Both files reached the session before either resolved
+          expect(mockInlineMediaUpload).toHaveBeenCalledTimes(2);
+          expect(insertMarkdown).not.toHaveBeenCalled();
+
+          resolvers[0]('pubky://author/pub/pubky.app/files/draft-a');
+          resolvers[1]('pubky://author/pub/pubky.app/files/draft-b');
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(2));
+          expect(insertMarkdown).toHaveBeenNthCalledWith(1, '![](pubky://author/pub/pubky.app/files/draft-a)');
+          expect(insertMarkdown).toHaveBeenNthCalledWith(2, '![](pubky://author/pub/pubky.app/files/draft-b)');
+        } finally {
+          cleanup();
+        }
+      });
+
+      it('inserts the files the session accepted when it refuses one of the batch', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload
+          .mockRejectedValueOnce(new Error('refused'))
+          .mockResolvedValueOnce('pubky://author/pub/pubky.app/files/draft-b');
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [
+          new File(['a'], 'a.png', { type: 'image/png' }),
+          new File(['b'], 'b.png', { type: 'image/png' }),
+        ]);
+        try {
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(1));
+          expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/draft-b)');
+        } finally {
+          cleanup();
+        }
+      });
+
+      it('toasts when the editor refuses the insert of a staged file', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/draft-a');
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [
+          new File(['a'], 'a.png', { type: 'image/png' }),
+        ]);
+        insertMarkdown.mockImplementation(() => {
+          throw new Error('editor torn down');
+        });
+        try {
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(1));
+          await waitFor(() =>
+            expect(vi.mocked(toast)).toHaveBeenCalledWith({
+              variant: 'error',
+              description: 'Could not insert the file. Try again.',
+            }),
+          );
+        } finally {
+          cleanup();
+        }
+      });
+
+      it('touches the editor not at all when the session refuses the whole batch', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload.mockRejectedValue(new Error('over budget'));
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const { insertMarkdown, focus, cleanup } = dropOnEditorIsland(result, [
+          new File(['a'], 'a.png', { type: 'image/png' }),
+          new File(['b'], 'b.png', { type: 'image/png' }),
+        ]);
+        try {
+          await waitFor(() => expect(mockInlineMediaUpload).toHaveBeenCalledTimes(2));
+          await act(async () => {});
+          expect(insertMarkdown).not.toHaveBeenCalled();
+          expect(focus).not.toHaveBeenCalled();
+        } finally {
+          cleanup();
         }
       });
 
@@ -3459,6 +3630,222 @@ describe('usePostInput', () => {
 
       expect(pasteEvent.preventDefault).not.toHaveBeenCalled();
       expect(mockSetAttachments).not.toHaveBeenCalled();
+    });
+    it('converts a pasted raw pubky key into a mention', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
+          items: [],
+          getData: () => validPubky,
+        }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      expect(pasteEvent.preventDefault).toHaveBeenCalled();
+      expect(mockSetContent).toHaveBeenCalledWith(`pubky${validPubky} `);
+    });
+
+    it('converts a pasted pubky:// URL into a mention', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
+          items: [],
+          getData: () => `pubky://${validPubky}`,
+        }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      expect(pasteEvent.preventDefault).toHaveBeenCalled();
+      expect(mockSetContent).toHaveBeenCalledWith(`pubky${validPubky} `);
+    });
+
+    it('does not convert a non-key text paste', () => {
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
+          items: [],
+          getData: () => 'hello world',
+        }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      expect(pasteEvent.preventDefault).not.toHaveBeenCalled();
+      expect(mockSetContent).not.toHaveBeenCalled();
+    });
+
+    it('routes the mention through execCommand so the paste is undoable', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const focus = vi.fn();
+      const setSelectionRange = vi.fn();
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        selectionStart: 0,
+        selectionEnd: 0,
+        focus,
+        setSelectionRange,
+      });
+
+      // jsdom does not define document.execCommand at all, so vi.spyOn fails. Assign
+      // it directly so the production guard (`typeof document.execCommand === 'function'`)
+      // takes the native-insertion branch. Restore whatever was there afterwards.
+      const doc = document as typeof document & {
+        execCommand?: (cmd: string, ui?: boolean, value?: string) => boolean;
+      };
+      const original = doc.execCommand;
+      const execCommand = vi.fn().mockReturnValue(true);
+      doc.execCommand = execCommand;
+
+      try {
+        const pasteEvent = mockClipboardEvent({
+          clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+          preventDefault: vi.fn(),
+        });
+
+        act(() => {
+          result.current.handlePaste(pasteEvent);
+        });
+
+        expect(focus).toHaveBeenCalled();
+        expect(setSelectionRange).toHaveBeenCalledWith(0, 0);
+        expect(execCommand).toHaveBeenCalledWith('insertText', false, `pubky${validPubky} `);
+      } finally {
+        if (original === undefined) {
+          Reflect.deleteProperty(doc, 'execCommand');
+        } else {
+          doc.execCommand = original;
+        }
+      }
+    });
+
+    it('passes selectionStart and selectionEnd to the native insertion', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const setSelectionRange = vi.fn();
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        selectionStart: 6,
+        selectionEnd: 11,
+        focus: vi.fn(),
+        setSelectionRange,
+      });
+
+      const doc = document as Document & {
+        execCommand?: (cmd: string, ui?: boolean, value?: string) => boolean;
+      };
+      const original = doc.execCommand;
+      doc.execCommand = vi.fn().mockReturnValue(true);
+
+      try {
+        const pasteEvent = mockClipboardEvent({
+          clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+          preventDefault: vi.fn(),
+        });
+
+        act(() => {
+          result.current.handlePaste(pasteEvent);
+        });
+
+        expect(setSelectionRange).toHaveBeenCalledWith(6, 11);
+      } finally {
+        if (original === undefined) {
+          Reflect.deleteProperty(doc, 'execCommand');
+        } else {
+          doc.execCommand = original;
+        }
+      }
+    });
+    it('does not intercept the paste when the normalized mention would exceed maxLength', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      // Fill the composer so a 58-char `pubky<key> ` cannot fit, but the 55-char
+      // `pk:<key>` form could. 1985 + 58 > 2000, 1985 + 55 = 2040 (still over) —
+      // just needs to be within 58 of the limit.
+      mockContent = 'a'.repeat(1985);
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        selectionStart: 1985,
+        selectionEnd: 1985,
+        maxLength: 2000,
+        focus: vi.fn(),
+        setSelectionRange: vi.fn(),
+      });
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      // The handler let the native paste happen.
+      expect(pasteEvent.preventDefault).not.toHaveBeenCalled();
+      expect(mockSetContent).not.toHaveBeenCalled();
+    });
+
+    it('adds the separator when the textarea value differs from content by CRLF normalization', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      // content still holds the CRLF share-target draft; the DOM value has been
+      // normalized to LF by the browser.
+      mockContent = 'A\r\nB';
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        value: 'A\nB',
+        selectionStart: 3,
+        selectionEnd: 3,
+        maxLength: 2000,
+        focus: vi.fn(),
+        setSelectionRange: vi.fn(),
+      });
+
+      const doc = document as Document & {
+        execCommand?: (cmd: string, ui?: boolean, value?: string) => boolean;
+      };
+      const original = doc.execCommand;
+      const execCommand = vi.fn().mockReturnValue(true);
+      doc.execCommand = execCommand;
+
+      try {
+        const pasteEvent = mockClipboardEvent({
+          clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+          preventDefault: vi.fn(),
+        });
+
+        act(() => {
+          result.current.handlePaste(pasteEvent);
+        });
+
+        // Separator must be present — the char before the caret is `B`, not whitespace.
+        expect(execCommand).toHaveBeenCalledWith('insertText', false, ` pubky${validPubky} `);
+      } finally {
+        if (original === undefined) {
+          Reflect.deleteProperty(doc, 'execCommand');
+        } else {
+          doc.execCommand = original;
+        }
+      }
     });
   });
   describe('mention autocomplete', () => {

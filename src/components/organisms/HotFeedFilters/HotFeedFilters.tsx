@@ -4,6 +4,7 @@ import { Calendar, CalendarRange, Clock, Star } from 'lucide-react';
 import {
   FilterHeader,
   FilterItem,
+  FilterItemCheck,
   FilterItemIcon,
   FilterItemLabel,
   FilterList,
@@ -71,6 +72,7 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
             <FilterItem key={key} isSelected={isSelected} onClick={() => handleTabClick(key)}>
               <FilterItemIcon icon={Icon} />
               <FilterItemLabel>{label}</FilterItemLabel>
+              {isSelected && <FilterItemCheck />}
             </FilterItem>
           );
         })}

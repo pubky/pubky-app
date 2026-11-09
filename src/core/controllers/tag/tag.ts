@@ -1,6 +1,6 @@
 import { TagApplication } from '@/application/tag/tag';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
-import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
+import { captureSessionWriteAccess, captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import type { TViewerTagMutationsParams } from '@/services/local/tag/tag.types';
 
@@ -32,15 +32,16 @@ export class TagController {
    * @param params.taggerId - ID of the user removing the tag
    */
   static async commitDelete(params: TTagEventParams) {
-    const { tagUrl, label, taggerId, taggedId, taggedKind } = TagNormalizer.from(params);
+    // Only the label validation is used: the application resolves which tag file to delete.
+    const { label, taggerId, taggedId, taggedKind } = TagNormalizer.from(params);
 
     await TagApplication.commitDelete({
       taggedId,
       label,
       taggedKind,
       taggerId,
-      tagUrl,
       isCurrent: captureViewerSession(),
+      canWrite: captureSessionWriteAccess(),
     });
   }
 }

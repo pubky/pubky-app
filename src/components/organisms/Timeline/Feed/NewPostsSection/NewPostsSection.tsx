@@ -10,7 +10,7 @@ import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { NewPostsButton } from '@/molecules/NewPostsButton/NewPostsButton';
 import { toast } from '@/molecules/Toaster/toast';
-import { postKindBelongsToStream } from '@/stores/home/home.utils';
+import { postBelongsToStream } from '@/stores/home/home.utils';
 
 interface NewPostsSectionProps {
   streamId: PostStreamId;
@@ -79,8 +79,8 @@ export function NewPostsSection({
       if (postsToAdd.length > 0) {
         const details = await PostController.getDetailsByIds({ compositeIds: postsToAdd });
         postsToAdd = postsToAdd.filter((id, index) => {
-          const kind = details[index]?.kind;
-          return !kind || postKindBelongsToStream(kind, streamId);
+          const detail = details[index];
+          return !detail?.kind || postBelongsToStream(detail, streamId);
         });
       }
 

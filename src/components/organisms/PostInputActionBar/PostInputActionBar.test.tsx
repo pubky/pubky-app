@@ -90,6 +90,15 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
+// The notice has its own tests; here only whether the bar shows it, and with what, matters.
+vi.mock('@/molecules/LocksRegionNotice/LocksRegionNotice', () => ({
+  LocksRegionNotice: ({ cause, variant }: { cause?: string; variant?: string }) => (
+    <span data-testid="locks-region-notice" data-cause={cause} data-variant={variant} />
+  ),
+}));
+
+const LOCK_HELP_HEADING = 'Sell your content';
+
 describe('PostInputActionBar', () => {
   const mockUseIsMobile = vi.mocked(useIsMobile);
 
@@ -258,6 +267,65 @@ describe('PostInputActionBar', () => {
     render(<PostInputActionBar hideArticleButton={false} lockSwitch={{ checked: false, onCheckedChange: vi.fn() }} />);
     expect(screen.getByRole('switch', { name: 'Lock content' })).toBeInTheDocument();
   });
+
+  it('shows no region notice beside a lock switch that is available', () => {
+    render(<PostInputActionBar hideArticleButton={false} lockSwitch={{ checked: false, onCheckedChange: vi.fn() }} />);
+    expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+  });
+
+  it('shows the lock help beside a lock switch that is available, explaining it on open', async () => {
+    render(
+      <PostInputActionBar
+        hideArticleButton={false}
+        lockSwitch={{ checked: false, onCheckedChange: vi.fn(), showHelp: true }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: LOCK_HELP_HEADING }));
+
+    expect(
+      await screen.findByText(
+        'Let people pay to unlock the value you create. Add content first, then switch on the lock.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(LOCK_HELP_HEADING, { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['the lock is on', { checked: true }],
+    ['the region is still being read', { checked: false, disabled: true }],
+  ])('shows no lock help when %s', (_state, lockSwitch) => {
+    render(
+      <PostInputActionBar
+        hideArticleButton={false}
+        lockSwitch={{ ...lockSwitch, onCheckedChange: vi.fn(), showHelp: false }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: LOCK_HELP_HEADING })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
+  });
+
+  it.each(['region', 'unknown'] as const)(
+    'disables the lock switch and shows the icon-only region notice when held (%s)',
+    (cause) => {
+      const onCheckedChange = vi.fn();
+      render(
+        <PostInputActionBar
+          hideArticleButton={false}
+          lockSwitch={{ checked: false, onCheckedChange, disabled: true, regionNotice: cause }}
+        />,
+      );
+
+      const lockSwitch = screen.getByRole('switch', { name: 'Lock content' });
+      expect(lockSwitch).toBeDisabled();
+      expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-cause', cause);
+      expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-variant', 'icon');
+      expect(screen.queryByRole('button', { name: LOCK_HELP_HEADING })).not.toBeInTheDocument();
+      fireEvent.click(lockSwitch);
+      expect(onCheckedChange).not.toHaveBeenCalled();
+    },
+  );
 
   it('calls lockSwitch.onCheckedChange when the lock switch is toggled', () => {
     const onCheckedChange = vi.fn();

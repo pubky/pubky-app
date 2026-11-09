@@ -556,12 +556,26 @@ describe('NotificationApplication.markAllAsRead', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+    // Fresh reads land in the `request` spy as GETs, so each test reads its calls as one ordered sequence.
+    vi.spyOn(HomeserverService, 'getFreshJson').mockImplementation((url) =>
+      HomeserverService.request({ method: HttpMethod.GET, url }),
+    );
   });
 
   afterEach(() => {
     installHomeserverWriteRetryDependenciesForTests(null);
     useAuthStore.setState({ isLoggingOut: false });
     vi.restoreAllMocks();
+  });
+
+  it('checks the published lastRead past the browser cache, so a stale cached copy cannot let an older mark through', async () => {
+    const fresh = vi.spyOn(HomeserverService, 'getFreshJson').mockResolvedValue({ timestamp: mockTimestamp + 1 });
+    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: mockTimestamp - 1 });
+
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).resolves.toBe(mockTimestamp + 1);
+
+    expect(fresh).toHaveBeenCalledWith(mockLastReadUrl);
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('reads the published lastRead, then sends this one as a single fenced attempt and returns it', async () => {
@@ -803,6 +817,43 @@ describe('NotificationApplication.fetchMissingEntities', () => {
       cacheMissPostIds: ['author:edited-post'],
       viewerId,
     });
+  });
+});
+
+describe('NotificationApplication.fetchLastReadFromHomeserver', () => {
+  const url = 'pubky://test-user/pub/pubky.app/last_read';
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads past the browser cache through getFreshJson and returns the timestamp', async () => {
+    const fresh = vi.spyOn(HomeserverService, 'getFreshJson').mockResolvedValue({ timestamp: 1_234 });
+    const request = vi.spyOn(HomeserverService, 'request');
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBe(1_234);
+
+    expect(fresh).toHaveBeenCalledWith(url);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('returns null for a missing file', async () => {
+    vi.spyOn(HomeserverService, 'getFreshJson').mockRejectedValue(
+      httpStatusCodeToError(404, 'not found', ErrorService.Homeserver, 'getFreshJson', url),
+    );
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBeNull();
+  });
+
+  it('returns null for a body without a finite timestamp', async () => {
+    vi.spyOn(HomeserverService, 'getFreshJson').mockResolvedValue({ timestamp: 'soon' });
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBeNull();
+  });
+
+  it('rethrows any other failure', async () => {
+    const error = httpStatusCodeToError(503, 'unavailable', ErrorService.Homeserver, 'getFreshJson', url);
+    vi.spyOn(HomeserverService, 'getFreshJson').mockRejectedValue(error);
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).rejects.toBe(error);
   });
 });
 

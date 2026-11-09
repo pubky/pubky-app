@@ -3,7 +3,7 @@ import { backupDownloadFilePath, extendedTimeout } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
-import { addProfileTags, openProfileTab } from '../support/profile';
+import { addProfileTags, openProfileTab, showProfileHeader } from '../support/profile';
 import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 
 const waitUntilStarterPackHasUsers = (tag: string) => {
@@ -39,6 +39,18 @@ describe('Onboarding', () => {
     checkHeaderIsVisible();
   });
 
+  const checkOwnProfile = (profileName: string, profileBio: string) => {
+    goToProfilePageFromHeader();
+    cy.location('pathname').should('eq', '/profile');
+    showProfileHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.get('[data-cy="profile-bio-header"]')
+      .filter(':visible')
+      .should(($bio) => {
+        expect($bio.get(0).innerText.trim()).to.eq(profileBio);
+      });
+  };
+
   const checkHeaderIsVisible = () => {
     cy.get('header').should('exist').should('be.visible');
     cy.get('[data-cy="header-sign-in-btn"]').should('exist').should('be.visible');
@@ -47,9 +59,10 @@ describe('Onboarding', () => {
   it('can onboard as a new user backing up with encrypted file and recovery phrase, sign out, then sign in with both methods', () => {
     // profile name is also used for the backup file name
     const profileName = 'Test User';
+    const profileBio = 'Test Bio';
     const backupWithFileAndPhrase = [BackupType.EncryptedFile, BackupType.RecoveryPhraseWithConfirmation];
 
-    cy.onboardAsNewUser(profileName, 'Test Bio', backupWithFileAndPhrase);
+    cy.onboardAsNewUser(profileName, profileBio, backupWithFileAndPhrase);
 
     // confirm backup reminder is shown
     cy.get('#backup-btn').should('exist').click();
@@ -67,15 +80,16 @@ describe('Onboarding', () => {
     cy.signOut(HasBackedUp.Yes);
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+    checkOwnProfile(profileName, profileBio);
 
     cy.signOut(HasBackedUp.Yes);
 
     cy.get(`@recoveryPhrase-${profileName}`).then((recoveryPhrase) => {
       cy.signInWithRecoveryPhrase(recoveryPhrase.toString());
     });
+    checkOwnProfile(profileName, profileBio);
 
     cy.signOut(HasBackedUp.Yes);
-    // todo: check users profile has correctly saved before sign out once implemented
   });
 
   it('can sign up, sign out, then sign up again as a new user', () => {

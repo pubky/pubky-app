@@ -156,7 +156,7 @@ const showArticleContent = () => {
   if (isMobile()) cy.get(ARTICLE_CONTENT_TAB).should('be.visible').click();
 };
 
-const switchToArticleMode = () => {
+export const switchToArticleMode = () => {
   cy.get(ARTICLE_ADD_BUTTON).should('be.visible').click();
   showArticleTitle();
   cy.get('.mdxeditor-root-contenteditable').should('exist');
@@ -180,7 +180,7 @@ const addArticleCover = (fileName = 'mustache-you.png') => {
   cy.get(ARTICLE_COVER_FILE_INPUT).should('have.length', 1).selectFile(imagePath, { force: true });
 };
 
-const fillArticleFields = ({
+export const fillArticleFields = ({
   title,
   body,
   imageAction,
@@ -577,4 +577,23 @@ export const addImage = (fileName = 'mustache-you.png') => {
     imagePath,
     { force: true }, // force to bypass visibility check of hidden input field
   );
+};
+
+// The app never retries a write the homeserver rejected as unauthenticated; the SDK may refresh its
+// bearer and replay the request once before the error reaches the app, so allow at most two attempts.
+export const expectSessionExpiredWithoutRetryLoop = (writeAlias: string) => {
+  cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Session expired. Please sign in.');
+  cy.get(`${writeAlias}.all`).should('have.length.within', 1, 2);
+  cy.location('pathname').should('eq', '/home');
+};
+
+// Only restoreStatus marks the session as needing sign-in, and it is not persisted: a reload hydrates the
+// saved session reference and boot restores it, which is how a user recovers from the session-expired prompt.
+export const restoreSessionByReload = () => {
+  cy.visit('/home');
+  waitForFeedToLoad();
+  cy.get(isMobile() ? '[data-cy="footer-nav-profile-btn"]' : '[data-cy="header-nav-profile-btn"]')
+    .filter(':visible')
+    .should('have.length', 1);
+  cy.get('[data-cy="home-post-input"]').find('[data-cy="post-input-textarea"]').should('not.have.attr', 'readonly');
 };

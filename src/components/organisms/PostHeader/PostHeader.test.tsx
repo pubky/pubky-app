@@ -93,6 +93,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
         visuallyHideAvatar = false,
         characterLimitPlacement,
         characterLimit,
+        navigable = true,
       }: {
         userId: string;
         userName: string;
@@ -103,6 +104,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
         visuallyHideAvatar?: boolean;
         characterLimitPlacement?: string;
         characterLimit?: { count: number; max: number };
+        navigable?: boolean;
       }) => (
         <div
           data-testid="post-header-user-info"
@@ -111,6 +113,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
           data-show-user-info={showUserInfo}
           data-visually-hide-avatar={visuallyHideAvatar || undefined}
           data-character-limit-placement={characterLimitPlacement}
+          data-navigable={String(navigable)}
         >
           <div data-testid="avatar" />
           {showUserInfo && (
@@ -377,6 +380,34 @@ describe('PostHeader', () => {
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(false);
     expect(screen.getByTestId('avatar')).toBeInTheDocument();
     expect(screen.getByText('12/2000')).toBeInTheDocument();
+  });
+
+  it('passes navigable to PostHeaderUserInfo and defaults it to true', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    const { unmount } = renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-navigable', 'true');
+    unmount();
+
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" navigable={false} />);
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-navigable', 'false');
   });
 
   it('passes showUserInfo to PostHeaderUserInfo', () => {

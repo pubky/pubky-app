@@ -25,7 +25,7 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
         <DialogHeader>
           <DialogTitle>{'Delete Account'}</DialogTitle>
         </DialogHeader>
-        <Typography className="text-base leading-6 font-normal tracking-wide text-white/80">
+        <Typography className="text-base leading-6 font-normal tracking-wide text-foreground/80">
           {'Are you sure? Your account information cannot be recovered.'}
         </Typography>
         <DialogFooter>

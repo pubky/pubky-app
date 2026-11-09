@@ -27,29 +27,30 @@ import {
   checkPostIsAtIndexInFeed,
   countPostsInFeed,
   createQuickArticle,
-  createQuickPost,
   createQuickPostWithImage,
   fastTagPostInFeed,
-  repostPost,
   waitForFeedToLoad,
 } from '../support/posts';
-import { followFromPostMenu, searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
 import { inSidebar, itDesktopOnly } from '../support/mobile';
-import { addProfileTags, openProfileTagging } from '../support/profile';
-import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
-import { defaultMs, fastMs, slowMs } from '../support/slow-down';
-
-// Temporary extra delay around filtered-feed sign-in/clicks (https://github.com/pubky/pubky-app/issues/2142).
-// Must be applied with cy.slowDown / cy.slowDownEnd: slowCypressDown() is synchronous and
-// cannot change delay mid-test, and a bare slowCypressDown() reuses the last delay instead of defaultMs.
-const filteredFeedWorkaroundMs = () => (Cypress.expose('ci') ? fastMs * 2 : slowMs);
+import { followIndexed, postIndexed, postTagsIndexed, userTagsIndexed, waitForNexus } from '../support/nexus';
+import {
+  createImagePostViaApi,
+  createPostViaApi,
+  followUserViaApi,
+  repostViaApi,
+  seedUserViaApi,
+  tagPostViaApi,
+  tagUserViaApi,
+} from '../support/seed';
+import { CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
+import type { SeededPost, SeededUser } from '../support/types/seed';
+import { defaultMs } from '../support/slow-down';
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
 // Needs 5 posts to be suggested in "who to follow"
 const profile1 = {
   username: 'Profile #1',
   bio: 'Follows Profile #2',
-  pubkyAlias: 'pubky_1',
   postText1: `Profile 1's post ${Date.now()}`,
   postText2: `Profile 1's post to be reposted ${Date.now()}`,
   postText3: `Profile 1's third post ${Date.now()}`,
@@ -60,7 +61,6 @@ const profile1 = {
 const profile2 = {
   username: 'Profile #2',
   bio: 'Follows Profile #1',
-  pubkyAlias: 'pubky_2',
   postText: `Profile 2's post ${Date.now()}`,
   repostText: "Repost of Profile 1's post",
 };
@@ -68,14 +68,12 @@ const profile2 = {
 const profile3 = {
   username: 'Profile #3',
   bio: 'Follows Profile #2',
-  pubkyAlias: 'pubky_3',
   postText: `Profile 3's post ${Date.now()}`,
 };
 // Profile 4 follows no-one and is followed by no-one
 const profile4 = {
   username: 'Profile #4',
   bio: 'Follows no-one',
-  pubkyAlias: 'pubky_4',
   postText: `Profile 4's post ${Date.now()}`,
 };
 
@@ -87,66 +85,98 @@ const taggedAsLabelInNetwork = 'taggedbyp1';
 const taggedAsLabelOutsideNetwork = 'taggedbyp4';
 
 describe('feed and filters', () => {
+  let user1: SeededUser;
+  let user2: SeededUser;
+  let user3: SeededUser;
+  let user4: SeededUser;
+  // Every post the feed assertions read, oldest first
+  const seededPosts: SeededPost[] = [];
+  let profile1Post2: SeededPost;
+  let profile2Post: SeededPost;
+  let profile3Post: SeededPost;
+  let profile4Post: SeededPost;
+
+  // Seeded through the API: these profiles and their activity are only observed through the feed filters here.
+  // Onboarding, posting, reposting, following and tagging in the UI are covered by their own specs.
   before(() => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
 
-    // * create profile 1 of 4 and post
-    cy.onboardAsNewUser(profile1.username, profile1.bio, [BackupType.EncryptedFile], profile1.pubkyAlias);
-    createQuickPost(profile1.postText1);
-    createQuickPost(profile1.postText2);
-    createQuickPost(profile1.postText3);
-    createQuickPost(profile1.postText4);
-    createQuickPost(profile1.postText5);
-    cy.signOut(HasBackedUp.Yes);
-
-    // * create profile 2 of 4, post and repost profile 1's post
-    cy.onboardAsNewUser(profile2.username, profile2.bio, [BackupType.EncryptedFile], profile2.pubkyAlias);
-    createQuickPost(profile2.postText);
-    // find Profile 1's latest post and repost it
-    repostPost({ repostContent: profile2.repostText, filterText: profile1.postText2 });
-    // follow Profile 1 from the original post card rather than the repost card
-    followFromPostMenu(profile1.postText2, PostType.Post);
-    cy.signOut(HasBackedUp.Yes);
-
-    // * create profile 3 of 4, post and follow profile 2
-    cy.onboardAsNewUser(profile3.username, profile3.bio, [BackupType.EncryptedFile], profile3.pubkyAlias);
-    createQuickPost(profile3.postText);
-    // follow profile 2
-    cy.get(`@${profile2.pubkyAlias}`).then((pubky) => {
-      searchAndFollowProfile(`${pubky}`, profile2.username);
+    seedUserViaApi(profile1.username, { bio: profile1.bio, withRecoveryFile: true }).then((user) => {
+      user1 = user;
     });
-    cy.signOut(HasBackedUp.Yes);
-
-    // * create profile 4 of 4 and post
-    cy.onboardAsNewUser(profile4.username, profile4.bio, [BackupType.EncryptedFile], profile4.pubkyAlias);
-    createQuickPost(profile4.postText);
-    // tag profile 3's post 5 times for max popularity
-    fastTagPostInFeed(['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5'], profile3.postText);
-    // tag profile 2's post 4 times to make it the second most popular
-    fastTagPostInFeed(['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4'], profile2.postText);
-    // profile 4 is outside profile 3's 2-hop network, so tagging profile 1's profile here
-    // proves 'Tagged as' does not consider taggers outside the viewer's web of trust
-    cy.get(`@${profile1.pubkyAlias}`).then((pubky) => {
-      searchForProfileByPubky(`${pubky}`, profile1.username);
+    seedUserViaApi(profile2.username, { bio: profile2.bio, withRecoveryFile: true }).then((user) => {
+      user2 = user;
     });
-    openProfileTagging();
-    addProfileTags([taggedAsLabelOutsideNetwork]);
-    cy.signOut(HasBackedUp.Yes);
+    seedUserViaApi(profile3.username, { bio: profile3.bio, withRecoveryFile: true }).then((user) => {
+      user3 = user;
+    });
+    seedUserViaApi(profile4.username, { bio: profile4.bio, withRecoveryFile: true }).then((user) => {
+      user4 = user;
+    });
 
-    // * sign back in as profile 1 and follow profile 2, 3 and 4.
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    [profile2, profile3, profile4].forEach((profile) => {
-      cy.get(`@${profile.pubkyAlias}`).then((pubky) => {
-        searchAndFollowProfile(`${pubky}`, profile.username);
+    // Posts are created in the order the recency assertions expect, oldest first
+    const seedPost = (seeded: Cypress.Chainable<SeededPost>) =>
+      seeded.then((post) => {
+        seededPosts.push(post);
+        return post;
+      });
+    cy.then(() => {
+      seedPost(createPostViaApi(user1, profile1.postText1));
+      seedPost(createPostViaApi(user1, profile1.postText2)).then((post) => {
+        profile1Post2 = post;
+      });
+      seedPost(createPostViaApi(user1, profile1.postText3));
+      seedPost(createPostViaApi(user1, profile1.postText4));
+      seedPost(createPostViaApi(user1, profile1.postText5));
+      seedPost(createPostViaApi(user2, profile2.postText)).then((post) => {
+        profile2Post = post;
       });
     });
-    // profile 1 is 2 hops from profile 3, so tagging profile 4's profile here (already on
-    // their page after the follow loop above) proves 'Tagged as' considers taggers within
-    // the viewer's web of trust
-    openProfileTagging();
-    addProfileTags([taggedAsLabelInNetwork]);
-    cy.signOut(HasBackedUp.Yes);
+    cy.then(() => {
+      seedPost(repostViaApi(user2, profile1Post2, profile2.repostText));
+      seedPost(createPostViaApi(user3, profile3.postText)).then((post) => {
+        profile3Post = post;
+      });
+      seedPost(createPostViaApi(user4, profile4.postText)).then((post) => {
+        profile4Post = post;
+      });
+
+      followUserViaApi(user2, user1);
+      followUserViaApi(user3, user2);
+      followUserViaApi(user1, user2);
+      followUserViaApi(user1, user3);
+      followUserViaApi(user1, user4);
+    });
+
+    cy.then(() => {
+      // tag profile 3's post 5 times for max popularity
+      tagPostViaApi(user4, profile3Post, ['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5']);
+      // tag profile 2's post 4 times to make it the second most popular
+      tagPostViaApi(user4, profile2Post, ['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4']);
+      // profile 4 is outside profile 3's 2-hop network, so this tag on profile 1's profile
+      // proves 'Tagged as' does not consider taggers outside the viewer's web of trust
+      tagUserViaApi(user4, user1, [taggedAsLabelOutsideNetwork]);
+      // profile 1 is 2 hops from profile 3, so this tag on profile 4's profile
+      // proves 'Tagged as' considers taggers within the viewer's web of trust
+      tagUserViaApi(user1, user4, [taggedAsLabelInNetwork]);
+    });
+
+    // Every post, follow and tag the reach, sort and 'Tagged as' assertions read
+    cy.then(() =>
+      waitForNexus(
+        ...seededPosts.map(postIndexed),
+        followIndexed(user2, user1),
+        followIndexed(user3, user2),
+        followIndexed(user1, user2),
+        followIndexed(user1, user3),
+        followIndexed(user1, user4),
+        postTagsIndexed(profile3Post, ['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5']),
+        postTagsIndexed(profile2Post, ['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4']),
+        userTagsIndexed(user1, [taggedAsLabelOutsideNetwork]),
+        userTagsIndexed(user4, [taggedAsLabelInNetwork]),
+      ),
+    );
   });
 
   beforeEach(() => {
@@ -210,18 +240,11 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of following', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     // click the Following filter
     selectFeedFilter('reach', 'following-reach-toggle');
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
@@ -234,16 +257,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach Following, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     selectFeedFilter('reach', 'following-reach-toggle');
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
@@ -256,16 +273,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 4 and view Reach Following, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile4.username));
     selectFeedFilter('reach', 'following-reach-toggle');
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cannotFindPostInFeed(profile1.postText1);
     cannotFindPostInFeed(profile1.postText2);
@@ -278,17 +289,10 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of friends', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution more locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     selectFeedFilter('reach', 'friends-reach-toggle');
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
@@ -302,16 +306,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 2 and view Reach Friends, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     selectFeedFilter('reach', 'friends-reach-toggle');
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
@@ -324,16 +322,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach Friends, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     selectFeedFilter('reach', 'friends-reach-toggle');
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cannotFindPostInFeed(profile1.postText1);
     cannotFindPostInFeed(profile1.postText2);
@@ -363,17 +355,10 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view posts from your web of trust', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach My network
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     selectFeedFilter('reach', 'network-reach-toggle');
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     // profile 1 is 2 hops away (profile 3 -> profile 2 -> profile 1) so their posts are included
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
@@ -391,10 +376,6 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view posts by users tagged as chosen profile tags', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach Tagged as
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     // * select the tag applied by profile 4, who is outside profile 3's 2-hop network - not honored
@@ -418,9 +399,6 @@ describe('feed and filters', () => {
       cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${taggedAsLabelInNetwork}{enter}`);
     });
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
     cannotFindPostInFeed(profile1.postText1);
@@ -497,9 +475,10 @@ describe('feed and filters', () => {
     const tag = `night${String(stamp).slice(-6)}`;
     const postContent = `Custom feed post ${stamp}`;
 
+    createPostViaApi(user1, postContent, { tags: [tag] }).then((post) => waitForNexus(postTagsIndexed(post, [tag])));
+
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     resetHomeFeedToAllRecent();
-    createQuickPost(postContent, [tag]);
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
 
     openCreateFeedDialog();
@@ -567,21 +546,29 @@ describe('feed and filters', () => {
     const kindFeed = `Kind ${stamp}`;
 
     // Profile 3 follows only profile 2, and is friends with nobody.
+    tagPostViaApi(user3, profile4Post, [reachTag]);
+    createPostViaApi(user3, older, { tags: [sortTag] }).then((olderPost) => {
+      createPostViaApi(user3, newer, { tags: [sortTag] }).then((newerPost) => {
+        tagPostViaApi(user3, olderPost, ['sorta', 'sortb', 'sortc']);
+        createPostViaApi(user3, shortPost, { tags: [kindTag] }).then((shortKindPost) =>
+          waitForNexus(
+            postTagsIndexed(profile4Post, [reachTag]),
+            postTagsIndexed(olderPost, [sortTag, 'sorta', 'sortb', 'sortc']),
+            postTagsIndexed(newerPost, [sortTag]),
+            postTagsIndexed(shortKindPost, [kindTag]),
+          ),
+        );
+      });
+    });
+
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     resetHomeFeedToAllRecent();
-    fastTagPostInFeed([reachTag], profile4.postText);
-
-    createQuickPost(older, [sortTag]);
-    cy.findFirstPostInFeedFiltered(older, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    createQuickPost(newer, [sortTag]);
-    cy.findFirstPostInFeedFiltered(newer, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    fastTagPostInFeed(['sorta', 'sortb', 'sortc'], older);
     cy.findFirstPostInFeedFiltered(older).within(() => {
       cy.get('[data-cy="post-tag"][data-tag-label="sortc"]').filter(':visible').should('have.length.at.least', 1);
     });
 
-    createQuickPost(shortPost, [kindTag]);
-    cy.findFirstPostInFeedFiltered(shortPost, CheckForNewPosts.No, WaitForNewPosts.Yes);
+    // Keep these UI-created, not seeded: with the post kind filter test in posts.cy.ts skipped (#2900),
+    // this is the only check that the composer files an article and an image post under their kind.
     createQuickArticle(articleTitle, articleBody);
     cy.findFirstPostInFeedFiltered(articleTitle, CheckForNewPosts.No, WaitForNewPosts.Yes);
     fastTagPostInFeed([kindTag], articleTitle);
@@ -709,18 +696,32 @@ describe('visual layout', () => {
     const imagePostContent3 = `Image post 3 ${Date.now()}`;
     const textOnlyPostContent = `Text-only post ${Date.now()}`;
 
-    cy.onboardAsNewUser('Pete the Photographer', 'I post photos');
+    const photographer = 'Pete the Photographer';
 
-    // create 2 posts with images
-    [imagePostContent1, imagePostContent2].forEach((postContent) => {
-      createQuickPostWithImage(postContent);
+    seedUserViaApi(photographer, { bio: 'I post photos', withRecoveryFile: true }).then((user) => {
+      const posts: SeededPost[] = [];
+      // create 2 posts with images
+      [imagePostContent1, imagePostContent2].forEach((postContent) => {
+        createImagePostViaApi(user, postContent).then((post) => {
+          posts.push(post);
+        });
+      });
+
+      // create post with just text
+      createPostViaApi(user, textOnlyPostContent).then((post) => {
+        posts.push(post);
+      });
+
+      // create another post with image (3 posts with images in total)
+      createImagePostViaApi(user, imagePostContent3).then((post) => {
+        posts.push(post);
+      });
+
+      // the text-only post too, so its absence from the visual layout is the filter's doing
+      cy.then(() => waitForNexus(...posts.map(postIndexed)));
     });
 
-    // create post with just text
-    createQuickPost(textOnlyPostContent);
-
-    // create another post with image (3 posts with images in total)
-    createQuickPostWithImage(imagePostContent3);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(photographer));
 
     // switch to visual layout
     selectFeedFilter('layout', 'visual-layout-toggle');
@@ -738,5 +739,44 @@ describe('visual layout', () => {
         // check overlay post content text is not visible whilst not hovering over the tile
         cy.wrap($tile).find('[data-testid="visual-overlay-content-stack"]').should('exist').and('not.be.visible');
       });
+  });
+});
+
+describe('custom feed write failures', () => {
+  before(() => {
+    slowCypressDown();
+    cy.deleteDownloadsFolder();
+  });
+
+  it('rolls back the new feed tab when homeserver fails to save the feed', () => {
+    const stamp = Date.now();
+    const feedName = `Doomed feed ${stamp}`;
+    const tag = `doomed${String(stamp).slice(-6)}`;
+    const feedTab = `[data-cy="feed-navigation-custom-tab"][aria-label="${feedName}"]`;
+
+    cy.onboardAsNewUser('Feed Rollback', 'My feeds fail to save');
+
+    cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-create-btn"]').should('be.visible').click();
+    cy.get('[data-cy="custom-feed-dialog"]').should('be.visible').and('contain.text', 'Create Feed');
+    cy.get('[data-cy="custom-feed-name-input"]').type(feedName);
+    cy.get('[data-cy="custom-feed-dialog"]').find('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
+    cy.get('[data-cy="custom-feed-dialog"]').find(`[data-cy="post-tag"][data-tag-label="${tag}"]`).should('be.visible');
+
+    cy.intercept('PUT', '**/pub/pubky.app/feeds/**', { statusCode: 500 }).as('feedFailed');
+    cy.get('[data-cy="custom-feed-save-btn"]').should('not.be.disabled').click();
+
+    cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Could not create feed. Try again.');
+    // homeserver writes retry a 500 twice before giving up
+    cy.get('@feedFailed.all').should('have.length', 3);
+    // the dialog stays open with the typed values so the user can retry
+    cy.get('[data-cy="custom-feed-dialog"]').should('be.visible');
+    cy.get('[data-cy="custom-feed-name-input"]').should('have.value', feedName);
+    cy.location('pathname').should('eq', '/home');
+    cy.get('[data-cy="feed-navigation"]').find(feedTab).should('not.exist');
+
+    // the rolled back local feed row does not come back from Dexie after a reload
+    cy.reload();
+    cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-create-btn"]').should('be.visible');
+    cy.get('[data-cy="feed-navigation"]').find(feedTab).should('not.exist');
   });
 });

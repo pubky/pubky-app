@@ -357,6 +357,18 @@ describe('LocalStreamPostsService', () => {
       expect(postTags?.tags[0].taggers).toEqual(['user-2']);
     });
 
+    it('should keep the viewer tag_uri of post tags', async () => {
+      const tagUri = 'pubky://user-2/pub/pubky.app/tags/TAG01';
+      const { compositeId } = await persistAndVerifyPost('post-1', 'user-1', BASE_TIMESTAMP, {
+        tags: [
+          new TagModel({ label: 'tech', taggers: ['user-2'], taggers_count: 1, relationship: true, tag_uri: tagUri }),
+        ],
+      });
+
+      const postTags = await PostTagsModel.findById(compositeId);
+      expect(postTags?.tags[0].tag_uri).toBe(tagUri);
+    });
+
     it('should handle posts with relationships', async () => {
       const repliedUri = 'https://pubky.app/user-2/pub/pubky.app/posts/parent-post';
       const { compositeId } = await persistAndVerifyPost('post-1', 'user-1', BASE_TIMESTAMP, {
@@ -961,6 +973,33 @@ describe('LocalStreamPostsService', () => {
       expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
       // ...but the freshness record must advance, or `findStalePostsByIds`
       // keeps returning the id and the client re-fetches it on every tick.
+      expect((await PostTtlModel.findById(compositeId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
+    });
+
+    it('refreshes the freshness record for a Nexus-shaped tombstone (empty content, flag set)', async () => {
+      const compositeId = buildCompositeId({ pubky: 'author-1', id: 'flagged' });
+
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: '',
+        deleted: true,
+        indexed_at: BASE_TIMESTAMP,
+        kind: 'short',
+        uri: 'pubky://author-1/pub/pubky.app/posts/flagged',
+        attachments: null,
+      });
+      await PostTtlModel.table.put({ id: compositeId, lastUpdatedAt: BASE_TIMESTAMP });
+
+      const before = Date.now();
+      await LocalStreamPostsService.persistPosts({
+        posts: [createMockNexusPost('flagged', 'author-1', BASE_TIMESTAMP)],
+        refreshGuard: { fetchStartedAt: before - 1_000 },
+      });
+
+      const persisted = await PostDetailsModel.findById(compositeId);
+      expect(persisted!.content).toBe('');
+      expect(persisted!.deleted).toBe(true);
+      expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
       expect((await PostTtlModel.findById(compositeId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
     });
   });
@@ -2158,16 +2197,22 @@ describe('LocalStreamPostsService', () => {
   });
 
   describe('markUnreadPostsAsReadFromResolvableHead', () => {
-    const createDetails = async (id: string, content = `Content for ${id}`) => {
+    const createDetails = async (id: string, content = `Content for ${id}`, deleted?: boolean) => {
       await PostDetailsModel.create({
         id,
         content,
+        ...(deleted !== undefined && { deleted }),
         kind: 'short',
         indexed_at: BASE_TIMESTAMP + 1,
         uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${id}`,
         attachments: null,
       });
     };
+    // Rows cached from older builds carry the legacy sentinel; Nexus now clears content and sets the flag.
+    const TOMBSTONE_SHAPES = [
+      { shape: 'legacy sentinel', content: DELETED, deleted: undefined },
+      { shape: 'Nexus-shaped', content: '', deleted: true },
+    ];
 
     it('merges from the first hydrated id, keeping the pending id above it unread and the tail cursor', async () => {
       const ready = postId('ready');
@@ -2217,50 +2262,74 @@ describe('LocalStreamPostsService', () => {
       expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([first, second]);
     });
 
-    it('acknowledges a leading tombstone and keeps the pending id below it unread', async () => {
-      const deleted = postId('deleted');
+    it.each(TOMBSTONE_SHAPES)(
+      'acknowledges a leading $shape tombstone and keeps the pending id below it unread',
+      async (tombstone) => {
+        const deleted = postId('deleted');
+        const pending = postId('pending');
+        const existing = postId('existing');
+        await createStream([existing]);
+        await UnreadPostStreamModel.upsert(streamId as PostStreamId, [deleted, pending]);
+        await createDetails(deleted, tombstone.content, tombstone.deleted);
+
+        await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+        await verifyStream([existing]);
+        expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+      },
+    );
+
+    it.each(TOMBSTONE_SHAPES)(
+      'acknowledges a $shape tombstone between the held-back ids and the head',
+      async (tombstone) => {
+        const pending = postId('pending');
+        const deleted = postId('deleted');
+        const ready = postId('ready');
+        const existing = postId('existing');
+        await createStream([existing]);
+        await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, deleted, ready]);
+        await createDetails(deleted, tombstone.content, tombstone.deleted);
+        await createDetails(ready);
+
+        await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+        await verifyStream([ready, existing]);
+        expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+      },
+    );
+
+    it.each(TOMBSTONE_SHAPES)(
+      'drops a $shape tombstone below the head while merging the rest in order',
+      async (tombstone) => {
+        const ready = postId('ready');
+        const deleted = postId('deleted');
+        const older = postId('older');
+        const existing = postId('existing');
+        await createStream([existing]);
+        await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, deleted, older]);
+        await createDetails(ready);
+        await createDetails(deleted, tombstone.content, tombstone.deleted);
+        await createDetails(older);
+
+        await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+        await verifyStream([ready, older, existing]);
+        expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
+      },
+    );
+
+    it('merges a live post with empty content as the head instead of treating it as a tombstone', async () => {
+      const emptyLive = postId('empty-live');
       const pending = postId('pending');
       const existing = postId('existing');
       await createStream([existing]);
-      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [deleted, pending]);
-      await createDetails(deleted, DELETED);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [emptyLive, pending]);
+      // An attachments-only post: Nexus sends empty content with `deleted: false`.
+      await createDetails(emptyLive, '', false);
 
       await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
 
-      await verifyStream([existing]);
-      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
-    });
-
-    it('acknowledges a tombstone between the held-back ids and the head', async () => {
-      const pending = postId('pending');
-      const deleted = postId('deleted');
-      const ready = postId('ready');
-      const existing = postId('existing');
-      await createStream([existing]);
-      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, deleted, ready]);
-      await createDetails(deleted, DELETED);
-      await createDetails(ready);
-
-      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
-
-      await verifyStream([ready, existing]);
-      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
-    });
-
-    it('drops a tombstone below the head while merging the rest in order', async () => {
-      const ready = postId('ready');
-      const deleted = postId('deleted');
-      const older = postId('older');
-      const existing = postId('existing');
-      await createStream([existing]);
-      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, deleted, older]);
-      await createDetails(ready);
-      await createDetails(deleted, DELETED);
-      await createDetails(older);
-
-      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
-
-      await verifyStream([ready, older, existing]);
+      await verifyStream([emptyLive, pending, existing]);
       expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
     });
 

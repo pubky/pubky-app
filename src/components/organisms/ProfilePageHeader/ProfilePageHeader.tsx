@@ -141,7 +141,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               data-cy="profile-username-header"
               as="h1"
               size="lg"
-              className="-mb-[0.15em] min-w-0 truncate pb-[0.15em] leading-8 text-white lg:text-6xl lg:leading-none"
+              className="-mb-[0.15em] min-w-0 truncate pb-[0.15em] leading-8 text-foreground lg:text-6xl lg:leading-none"
             >
               {name}
             </Typography>

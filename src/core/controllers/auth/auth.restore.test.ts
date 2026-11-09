@@ -1,14 +1,27 @@
 import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { HomeserverEventApplication } from '@/application/homeserver-event/homeserver-event';
+import { NotificationApplication } from '@/application/notification/notification';
+import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
+import {
+  NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
+  NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX,
+} from '@/config/notification-last-read-sync';
 import { SettingsController } from '@/controllers/settings/settings';
+import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-event-stream/homeserver-event-stream';
+import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
-import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { Identity } from '@/libs/identity/identity';
 import * as utils from '@/libs/utils/utils';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -65,6 +78,12 @@ const profileError = () =>
     operation: 'userIsSignedUp',
   });
 
+const wrongEnvironmentError = () =>
+  Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'Wrong environment', {
+    service: ErrorService.Homeserver,
+    operation: 'guard',
+  });
+
 function persistState() {
   const state = useAuthStore.getState();
   localStorage.setItem(
@@ -90,9 +109,34 @@ async function replaceAccount() {
   persistState();
 }
 
+const pkarrLookupError = () =>
+  Err.network(NetworkErrorCode.CONNECTION_FAILED, 'PKARR lookup failed', {
+    service: ErrorService.Homeserver,
+    operation: 'resolveHomeserverRecord',
+  });
+
+/** A fresh browser with no saved account: an interactive sign-in runs the full bootstrap. */
+function prepareFreshLogin() {
+  localStorage.clear();
+  useAuthStore.setState({ ...authInitialState, hasHydrated: true });
+  vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(asOpaque({}));
+  vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(asOpaque({}));
+  vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference());
+  vi.spyOn(HomeserverService, 'request')
+    .mockResolvedValueOnce({ name: 'Account A' })
+    .mockResolvedValueOnce(savedSettings);
+}
+
+function startFreshRecoveryLogin() {
+  prepareFreshLogin();
+  vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: sessionA });
+  return AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' });
+}
+
 describe('AuthController restored session lifecycle', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.stubGlobal('navigator', { locks: { request: async (_name: string, callback: () => unknown) => callback() } });
     useAuthStore.setState(authInitialState);
     useSettingsStore.getState().reset();
@@ -122,6 +166,8 @@ describe('AuthController restored session lifecycle', () => {
   });
 
   afterEach(() => {
+    NotificationLastReadSyncCoordinator.resetInstance();
+    HomeserverEventStreamCoordinator.resetInstance();
     AuthController.cancelModerationFollow();
     useSignInStore.getState().reset();
     useOnboardingStore.getState().reset();
@@ -292,6 +338,7 @@ describe('AuthController restored session lifecycle', () => {
     expect(request).toHaveBeenCalledWith({
       method: HttpMethod.GET,
       url: `pubky://${pubkyA}/pub/pubky.app/settings.json`,
+      notFoundAsNull: true,
     });
     expect(useAuthStore.getState()).toMatchObject({ hasProfile: null, isRestoringSession: true });
 
@@ -313,6 +360,146 @@ describe('AuthController restored session lifecycle', () => {
     });
   });
 
+  it('reconciles last_read after a restored account finishes profile lookup and bootstrap', async () => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    // A public page stays mounted when it adopts an already-profiled account from another tab.
+    useAuthStore.setState({ hasProfile: true, needsAccountSync: true });
+    persistState();
+    const profile = deferred<boolean>();
+    const profileLookup = vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockReturnValue(profile.promise);
+    vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(
+      asOpaque<LastReadResult>({ meta: { url: `pubky://${pubkyA}/pub/pubky.app/last_read` } }),
+    );
+    const freshRead = vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2_000);
+    vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(0);
+    const stream = vi.spyOn(HomeserverEventApplication, 'subscribeUserEventStream').mockImplementation(
+      async () =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue({
+              cursor: 'fresh-boundary',
+              eventType: 'PUT',
+              path: NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
+            });
+          },
+        }),
+    );
+    const cursorKey = `${NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX}${pubkyA}`;
+    const eventStream = HomeserverEventStreamCoordinator.getInstance();
+    eventStream.setRoute(`/post/${pubkyA}/post-id`);
+    NotificationLastReadSyncCoordinator.getInstance().start();
+    eventStream.start();
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(profileLookup).toHaveBeenCalledOnce());
+
+    const whileProfilePending = {
+      connections: stream.mock.calls.length,
+      reads: freshRead.mock.calls.length,
+      cursor: sessionStorage.getItem(cursorKey),
+    };
+
+    profile.resolve(true);
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+    const whileBootstrapPending = {
+      connections: stream.mock.calls.length,
+      cursor: sessionStorage.getItem(cursorKey),
+    };
+
+    // Bootstrap's ordinary GET may return an older cached boundary than the stream's fresh read.
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+    await expect(restore).resolves.toBe(true);
+    // Let restoration settle before asserting, so a failing gate cannot leave bootstrap pending for later tests.
+    expect(whileProfilePending).toEqual({ connections: 0, reads: 0, cursor: null });
+    expect(whileBootstrapPending).toEqual({ connections: 0, cursor: null });
+    await vi.waitFor(() => expect(useNotificationStore.getState()).toMatchObject({ lastRead: 2_000, unread: 0 }));
+    await vi.waitFor(() => expect(sessionStorage.getItem(cursorKey)).toBe('fresh-boundary'));
+
+    expect(stream).toHaveBeenCalledOnce();
+    expect(useNotificationStore.getState().lastPolledTimestamp).toBe(5);
+  });
+
+  it('keeps a newer read boundary adopted while bootstrap was running', async () => {
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    // A mark or an already-running read may still complete while bootstrap is pending.
+    useNotificationStore.getState().setLastRead(2_000);
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 2_000, unread: 3, lastPolledTimestamp: 5 });
+    expect(countSpy).toHaveBeenCalledWith(2_000, expect.any(Array));
+  });
+
+  it('drops a read boundary that was already in the store before bootstrap started', async () => {
+    // A snapshot hydrated from storage carries no account owner: another account's tab may have persisted it.
+    useNotificationStore.getState().setState({ lastRead: 2_000, unread: 0, lastPolledTimestamp: 9 });
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(0);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    bootstrap.resolve({ lastRead: 1_000, unread: 1, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 1_000, unread: 1, lastPolledTimestamp: 5 });
+    expect(countSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps a boundary adopted during bootstrap even when the store already held an older one', async () => {
+    useNotificationStore.getState().setState({ lastRead: 2_000, unread: 0, lastPolledTimestamp: 9 });
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(2);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    // This account's mark or already-running read completes while bootstrap is pending.
+    useNotificationStore.getState().setLastRead(3_000);
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 3_000, unread: 2, lastPolledTimestamp: 5 });
+    expect(countSpy).toHaveBeenCalledWith(3_000, expect.any(Array));
+  });
+
+  it('applies the bootstrap read boundary without recounting when the store is not newer', async () => {
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    vi.spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce({ name: 'Account A' })
+      .mockResolvedValueOnce(savedSettings)
+      .mockResolvedValue(undefined);
+    const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
+    const restore = AuthController.restorePersistedSession();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    bootstrap.resolve({ lastRead: 1_000, unread: 7, lastPolledTimestamp: 5 });
+
+    await expect(restore).resolves.toBe(true);
+    expect(useNotificationStore.getState()).toMatchObject({ lastRead: 1_000, unread: 7 });
+    expect(countSpy).not.toHaveBeenCalled();
+  });
+
   it.each(['success', 'failure'] as const)('ignores bootstrap %s after account replacement', async (result) => {
     const bootstrap = deferred<typeof notificationInitialState>();
     vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
@@ -324,29 +511,130 @@ describe('AuthController restored session lifecycle', () => {
 
     await replaceAccount();
     const replacement = useAuthStore.getState();
+    // The newer flow owns the sign-in progress now; the stale restore must not reset it.
+    useSignInStore.setState(completedSignIn);
+    const replacementSignIn = useSignInStore.getState();
     if (result === 'success') bootstrap.resolve({ unread: 5, lastRead: 100, lastPolledTimestamp: undefined });
     else bootstrap.reject(profileError());
 
     await expect(restore).resolves.toBe(false);
     expect(useAuthStore.getState()).toBe(replacement);
+    expect(useSignInStore.getState()).toBe(replacementSignIn);
     expect(useSettingsStore.getState().privacy.neverShowPosts).toBe(false);
     expect(useNotificationStore.getState().unread).toBe(0);
     expect(UserApplication.ensureModerationFollow).not.toHaveBeenCalled();
   });
 
-  it('preserves its session and offers recovery when bootstrap fails', async () => {
+  it.each([
+    { failure: 'temporary', restoreStatus: 'temporary-error' },
+    { failure: 'wrong-environment', restoreStatus: 'reauth-required' },
+  ] as const)(
+    'preserves its session and offers recovery when bootstrap fails: $failure',
+    async ({ failure, restoreStatus }) => {
+      vi.spyOn(HomeserverService, 'request')
+        .mockResolvedValueOnce({ name: 'Account A' })
+        .mockResolvedValueOnce(savedSettings);
+      const error = failure === 'temporary' ? profileError() : wrongEnvironmentError();
+      vi.mocked(BootstrapApplication.initialize).mockRejectedValue(error);
+
+      const restore = AuthController.restorePersistedSession();
+      if (failure === 'temporary') await expect(restore).resolves.toBe(false);
+      else await expect(restore).rejects.toBe(error);
+
+      expect(useAuthStore.getState()).toMatchObject({
+        session: sessionA,
+        hasProfile: null,
+        restoreStatus,
+      });
+      // /sign-in must offer the sign-in choices again, not the primed progress steps.
+      expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+      expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
+    },
+  );
+
+  it('offers recovery when the saved session becomes unreadable during bootstrap', async () => {
     vi.spyOn(HomeserverService, 'request')
       .mockResolvedValueOnce({ name: 'Account A' })
       .mockResolvedValueOnce(savedSettings);
-    vi.mocked(BootstrapApplication.initialize).mockRejectedValue(profileError());
+    const generation = useAuthStore.getState().generation;
+    vi.mocked(BootstrapApplication.initialize).mockImplementation(async () => {
+      // The post-restore storage check cannot parse the record and falls back to recovery.
+      localStorage.setItem(AUTH_PERSIST_KEY, '{');
+      return notificationInitialState;
+    });
 
     await expect(AuthController.restorePersistedSession()).resolves.toBe(false);
 
+    expect(useAuthStore.getState()).toMatchObject({ session: sessionA, generation, restoreStatus: 'temporary-error' });
+    expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+  });
+
+  it('offers the sign-in choices again when an interactive sign-in bootstrap fails', async () => {
+    const error = profileError();
+    vi.mocked(BootstrapApplication.initialize).mockRejectedValue(error);
+
+    await expect(startFreshRecoveryLogin()).rejects.toBe(error);
+
     expect(useAuthStore.getState()).toMatchObject({
       session: sessionA,
+      currentUserPubky: pubkyA,
       hasProfile: null,
       restoreStatus: 'temporary-error',
     });
-    expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
+    // /sign-in must offer the sign-in choices again, not the primed progress steps.
+    expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+  });
+
+  it('signs in once the PKARR lookup recovers within the retry window', async () => {
+    prepareFreshLogin();
+    const signIn = vi
+      .spyOn(HomeserverService, 'signIn')
+      .mockRejectedValueOnce(pkarrLookupError())
+      .mockRejectedValueOnce(pkarrLookupError())
+      .mockResolvedValueOnce({ session: sessionA });
+
+    await expect(
+      AuthController.loginWithEncryptedFile({ encryptedFile: new File([], 'backup.pkarr'), password: 'password' }),
+    ).resolves.toBe(true);
+
+    expect(signIn).toHaveBeenCalledTimes(3);
+    expect(useAuthStore.getState()).toMatchObject({ session: sessionA, currentUserPubky: pubkyA, hasProfile: true });
+  });
+
+  it('makes no further sign-in attempt once a newer flow starts while a retry is pending', async () => {
+    prepareFreshLogin();
+    const error = pkarrLookupError();
+    const signIn = vi.spyOn(HomeserverService, 'signIn').mockRejectedValue(error);
+    const backoff = deferred<void>();
+    vi.mocked(utils.sleep).mockReturnValueOnce(backoff.promise);
+    const before = useAuthStore.getState();
+
+    const login = AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' });
+    await vi.waitFor(() => expect(signIn).toHaveBeenCalledOnce());
+    AuthController.cancelActiveAuthFlow();
+    backoff.resolve();
+
+    await expect(login).rejects.toSatisfy(isAuthFlowCanceledError);
+    expect(signIn).toHaveBeenCalledOnce();
+    expect(useAuthStore.getState()).toBe(before);
+  });
+
+  it('ignores an interactive bootstrap failure after account replacement', async () => {
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    const login = startFreshRecoveryLogin();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    await replaceAccount();
+    const replacement = useAuthStore.getState();
+    // The newer flow owns the sign-in progress now; the superseded sign-in must not reset it.
+    useSignInStore.setState(completedSignIn);
+    const replacementSignIn = useSignInStore.getState();
+    const error = profileError();
+    bootstrap.reject(error);
+
+    await expect(login).rejects.toBe(error);
+    expect(useAuthStore.getState()).toBe(replacement);
+    expect(useSignInStore.getState()).toBe(replacementSignIn);
   });
 });

@@ -2,7 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
+import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import {
@@ -20,12 +21,14 @@ import { pathToStepConfig } from './Header.constants';
 
 export function Header() {
   const pathname = usePathname();
+  const isHydrated = useIsHydrated();
   const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
   const isLandingPage = pathname === '/';
   const isCopyrightPage = pathname === '/copyright';
+  const isLegalPage = isLegalRoute(pathname);
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.title;
@@ -41,8 +44,10 @@ export function Header() {
   // - User is on a core explore route (/home, /hot, /search, /collections) — MobileHeader + MobileFooter
   // - Any user on a dynamic public route (/post/..., /profile/[pubky], /collections/[userId]/[postId]) — page shell owns mobile chrome
   // - Authenticated on standard app routes — MobileHeader + MobileFooter
+  // Legal pages have no mobile app shell, so their header (and its way back) stays on every viewport.
   const shouldHideHeaderOnMobile =
-    isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
+    !isLegalPage &&
+    (isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute));
   // Show the step title on every onboarding page regardless of auth state: sign-up happens on the
   // pubky step, so the later key steps (pubky, backup) and the post-auth steps (profile, experience)
   // are all reached while authenticated. Outside onboarding (i.e. /logout) the title is only for
@@ -67,8 +72,11 @@ export function Header() {
     return <HeaderHome />;
   };
 
-  // Copyright page shows only logo (minimal header).
-  if (isCopyrightPage) {
+  // Copyright page shows only logo (minimal header), and so do the legal pages for members: the public documents
+  // render outside the database and session restore (`AppShell`) that the member header reads. They are also
+  // server-rendered while the auth store only exists in the browser, so the legal pages keep the logo until hydration
+  // and only then offer guests their sign-in header.
+  if (isCopyrightPage || (isLegalPage && (isAuthenticated || !isHydrated))) {
     return (
       <HeaderContainer>
         <Logo />

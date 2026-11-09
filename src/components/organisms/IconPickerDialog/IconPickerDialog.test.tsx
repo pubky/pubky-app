@@ -148,7 +148,7 @@ describe('IconPickerDialog', () => {
 
     // 'garbage' is a tag of the trash icons, not a substring of any name.
     fireEvent.change(screen.getByTestId('icon-picker-search'), { target: { value: 'garbage' } });
-    await waitFor(() => expect(screen.getByTestId('icon-picker-option-trash-2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('icon-picker-option-trash')).toBeInTheDocument());
   });
 
   it('renders the catalog progressively with a load-more sentinel', async () => {

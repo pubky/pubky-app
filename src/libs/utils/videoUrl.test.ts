@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isVideoUrl } from '@/libs/utils/videoUrl';
+import { isVideoUrl, parseVideoUrl } from '@/libs/utils/videoUrl';
 
 describe('isVideoUrl', () => {
   it.each([
@@ -48,5 +48,48 @@ describe('isVideoUrl', () => {
     ['', 'empty'],
   ])('is false when the embed providers cannot play it (%s)', (url) => {
     expect(isVideoUrl(url)).toBe(false);
+  });
+});
+
+describe('parseVideoUrl', () => {
+  it.each([
+    'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'https://youtu.be/dQw4w9WgXcQ',
+    'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+    'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+    'youtube.com/watch?v=dQw4w9WgXcQ',
+  ])('returns the YouTube video id for %s', (url) => {
+    expect(parseVideoUrl(url)).toEqual({ provider: 'youtube', videoId: 'dQw4w9WgXcQ' });
+  });
+
+  it('keeps the case of a YouTube video id', () => {
+    expect(parseVideoUrl('https://YOUTU.BE/AbCdEfGhIjK')).toEqual({ provider: 'youtube', videoId: 'AbCdEfGhIjK' });
+  });
+
+  it.each([
+    ['https://vimeo.com/123456789', '123456789'],
+    ['https://player.vimeo.com/video/123456789', '123456789'],
+    ['https://vimeo.com/channels/staffpicks/123456789', '123456789'],
+    ['https://vimeo.com/album/12345/video/67890', '67890'],
+  ])('returns the Vimeo video id for %s', (url, videoId) => {
+    expect(parseVideoUrl(url)).toEqual({ provider: 'vimeo', videoId });
+  });
+
+  it.each([
+    'https://cdn.example.com/clips/holiday.mp4',
+    'https://cdn.example.com/clips/holiday.MP4?token=abc',
+    'https://cdn.example.com/clips/holiday.mov',
+  ])('returns a direct file for %s', (url) => {
+    expect(parseVideoUrl(url)).toEqual({ provider: 'file' });
+  });
+
+  it.each([
+    'https://www.youtube.com/playlist?list=PL1234567890',
+    'https://www.youtube.com/clip.mp4',
+    'https://vimeo.com/channels/staffpicks',
+    'https://example.com/clip.mp4.pdf',
+    'not a url',
+  ])('returns null when there is nothing to play (%s)', (url) => {
+    expect(parseVideoUrl(url)).toBeNull();
   });
 });

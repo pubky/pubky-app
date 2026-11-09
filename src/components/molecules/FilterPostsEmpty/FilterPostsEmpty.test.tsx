@@ -8,14 +8,16 @@ vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => ({
     icon: Icon,
     title,
     subtitle,
+    dataCy,
   }: {
     imageSrc: string;
     imageAlt: string;
     icon: React.ComponentType;
     title: string;
     subtitle: React.ReactNode;
+    dataCy?: string;
   }) => (
-    <div data-testid="empty-state" data-src={imageSrc}>
+    <div data-testid="empty-state" data-src={imageSrc} data-cy={dataCy}>
       <Icon />
       <h3>{title}</h3>
       <p>{subtitle}</p>
@@ -29,5 +31,6 @@ describe('FilterPostsEmpty', () => {
 
     expect(screen.getByText('No posts match your search')).toBeInTheDocument();
     expect(screen.getByText('Try a different search term.')).toBeInTheDocument();
+    expect(screen.getByTestId('empty-state')).toHaveAttribute('data-cy', 'profile-filter-posts-empty');
   });
 });

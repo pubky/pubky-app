@@ -9,6 +9,7 @@ import {
   APP_ROUTES,
   AUTH_ROUTES,
   AUTHENTICATED_ROUTES,
+  COPYRIGHT_ROUTES,
   getCollectionRoute,
   getContentSearchUrl,
   getProfileRoute,
@@ -17,10 +18,13 @@ import {
   isCoreExploreRoute,
   isCustomFeedRoute,
   isDynamicPublicRoute,
+  isLegalRoute,
   isLogoLandingRoute,
   isNavItemActive,
   isPostRoute,
+  isPublicDocumentRoute,
   isPublicExploreRoute,
+  LEGAL_ROUTES,
   LOGO_LANDING_ROUTES,
   matchesAllowedRoute,
   matchPostRoute,
@@ -28,6 +32,7 @@ import {
   matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
+  PUBLIC_ROUTES,
   SETTINGS_ROUTES,
   UNAUTHENTICATED_ROUTES,
 } from './routes';
@@ -242,6 +247,45 @@ describe('route access matrix', () => {
     expect(isDynamicPublicRoute(pathname)).toBe(true);
     expect(isRouteAccessible(pathname, UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
   });
+});
+
+describe('LEGAL_ROUTES', () => {
+  it('serves the Terms of Service and the Privacy Policy at their public paths', () => {
+    expect(LEGAL_ROUTES.TERMS_OF_USE).toBe('/terms-of-use');
+    expect(LEGAL_ROUTES.PRIVACY_POLICY).toBe('/privacy-policy');
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('keeps %s public for every auth state', (route) => {
+    expect(PUBLIC_ROUTES).toContain(route);
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('points the header logo on %s at the landing page', (route) => {
+    expect(isLogoLandingRoute(route)).toBe(true);
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('recognises %s as a legal route', (route) => {
+    expect(isLegalRoute(route)).toBe(true);
+  });
+
+  it.each([null, '/copyright', '/privacy', '/terms-of-use/extra'])('does not treat %s as a legal route', (route) => {
+    expect(isLegalRoute(route)).toBe(false);
+  });
+});
+
+describe('isPublicDocumentRoute', () => {
+  it.each([...Object.values(LEGAL_ROUTES), COPYRIGHT_ROUTES.COPYRIGHT])(
+    'recognises %s as a public document',
+    (route) => {
+      expect(isPublicDocumentRoute(route)).toBe(true);
+    },
+  );
+
+  it.each([null, '/', '/home', '/settings/legal', '/copyright/extra'])(
+    'does not treat %s as a public document',
+    (route) => {
+      expect(isPublicDocumentRoute(route)).toBe(false);
+    },
+  );
 });
 
 describe('getProfileRoute', () => {

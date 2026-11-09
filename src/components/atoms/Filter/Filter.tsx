@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Check } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 import { Button } from '../Button/Button';
 import { Container } from '../Container/Container';
@@ -120,4 +121,14 @@ function FilterItemLabel({
   );
 }
 
-export { FilterHeader, FilterItem, FilterItemIcon, FilterItemLabel, FilterList, FilterRoot };
+/**
+ * Trailing check that marks the selected filter item. Filter groups open in a
+ * drawer below `lg`, where the check makes the active option obvious; the
+ * desktop sidebar keeps marking it by text colour alone, so the check is hidden
+ * from `lg` up.
+ */
+function FilterItemCheck({ className }: { className?: string }) {
+  return <Check data-testid="filter-item-check" className={cn('ml-auto h-5 w-5 lg:hidden', className)} />;
+}
+
+export { FilterHeader, FilterItem, FilterItemCheck, FilterItemIcon, FilterItemLabel, FilterList, FilterRoot };
