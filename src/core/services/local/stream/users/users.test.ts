@@ -614,6 +614,18 @@ describe('LocalStreamUsersService', () => {
       expect(details!.image).toBe('https://example.com/avatar.jpg');
     });
 
+    it('stores bookmarks as 0 for counts Nexus /v1 serves without the field', async () => {
+      const user = createMockNexusUser('v1-user');
+      const { bookmarks: _served, ...v1Counts } = user.counts;
+      user.counts = v1Counts;
+
+      await LocalStreamUsersService.persistUsers([user], {});
+
+      const counts = await UserCountsModel.findById('v1-user');
+      expect(counts?.bookmarks).toBe(0);
+      expect(counts?.posts).toBe(user.counts.posts);
+    });
+
     it('should persist user counts correctly', async () => {
       const userId = 'user-1' as Pubky;
       const mockUser = createMockNexusUser(userId, {

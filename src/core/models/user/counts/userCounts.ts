@@ -36,11 +36,16 @@ export class UserCountsModel extends TupleModelBase<Pubky, UserCountsModelSchema
   }
 
   /**
-   * The row for a Nexus counts response. `bookmarks` is `0` unless Nexus served it (`/v0` only, ADR-0028):
-   * the field stays on every row, so no schema changes.
+   * The counts as a row holds them. `bookmarks` is `0` unless Nexus served it (`/v0` only, ADR-0028): the
+   * field stays on every row, so no schema changes. Every writer of a counts row goes through this or `toSchema`.
    */
+  static toRowCounts(counts: NexusUserCounts): Omit<UserCountsModelSchema, 'id'> {
+    return { ...counts, bookmarks: counts.bookmarks ?? 0 };
+  }
+
+  /** The row for a Nexus counts response (see `toRowCounts`). */
   static toSchema(data: NexusModelTuple<NexusUserCounts>): UserCountsModelSchema {
-    return { id: data[0], ...data[1], bookmarks: data[1].bookmarks ?? 0 };
+    return { id: data[0], ...this.toRowCounts(data[1]) };
   }
 
   static async updateCounts({ userId, countChanges }: TUserCountsParams): Promise<void> {
