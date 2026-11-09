@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionButtons } from './ActionButtons';
 
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@/config/network', () => ({ isPassportAppleEnabled: mockAppleEnabled }));
+
 describe('ActionButtons', () => {
+  beforeEach(() => mockAppleEnabled.mockReturnValue(false));
   it('renders create account button with default text', () => {
     render(<ActionButtons />);
 
@@ -69,24 +73,28 @@ describe('ActionButtons', () => {
     expect(screen.queryByTestId('continue-with-google')).not.toBeInTheDocument();
   });
 
-  it('renders and calls Continue with Google when provided, disabled while pending', () => {
-    const mockOnContinueWithGoogle = vi.fn();
-    const { rerender } = render(
-      <ActionButtons onCreateAccount={vi.fn()} onContinueWithGoogle={mockOnContinueWithGoogle} />,
-    );
+  it.each([false, true])(
+    'renders the gated Passport action for Apple flag=%s and disables it while pending',
+    (enabled) => {
+      mockAppleEnabled.mockReturnValue(enabled);
+      const mockOnContinueWithGoogle = vi.fn();
+      const { rerender } = render(
+        <ActionButtons onCreateAccount={vi.fn()} onContinueWithGoogle={mockOnContinueWithGoogle} />,
+      );
 
-    const googleButton = screen.getByTestId('continue-with-google');
-    expect(googleButton).toHaveAccessibleName('Continue with Google or Apple');
-    fireEvent.click(googleButton);
-    expect(mockOnContinueWithGoogle).toHaveBeenCalledTimes(1);
+      const googleButton = screen.getByTestId('continue-with-google');
+      expect(googleButton).toHaveAccessibleName(enabled ? 'Continue with Google or Apple' : 'Continue with Google');
+      fireEvent.click(googleButton);
+      expect(mockOnContinueWithGoogle).toHaveBeenCalledTimes(1);
 
-    rerender(
-      <ActionButtons
-        onCreateAccount={vi.fn()}
-        onContinueWithGoogle={mockOnContinueWithGoogle}
-        isContinueWithGooglePending
-      />,
-    );
-    expect(screen.getByTestId('continue-with-google')).toBeDisabled();
-  });
+      rerender(
+        <ActionButtons
+          onCreateAccount={vi.fn()}
+          onContinueWithGoogle={mockOnContinueWithGoogle}
+          isContinueWithGooglePending
+        />,
+      );
+      expect(screen.getByTestId('continue-with-google')).toBeDisabled();
+    },
+  );
 });

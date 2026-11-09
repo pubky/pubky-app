@@ -273,7 +273,7 @@ export const SignInContent = () => {
               </Container>
               {qrButton}
             </IllustratedCard>
-            <PassportMethodCard onContinue={startPassportAuth} isPending={isPassportPending} variant="providers" />
+            <PassportMethodCard onContinue={startPassportAuth} isPending={isPassportPending} />
           </Container>
         ) : (
           <BalancedQrCard
@@ -306,7 +306,7 @@ export const SignInContent = () => {
               {mobileRingButton}
               {mobileBitkitButton}
             </Container>
-            <PassportMethodSection onContinue={startPassportAuth} isPending={isPassportPending} variant="providers" />
+            <PassportMethodSection onContinue={startPassportAuth} isPending={isPassportPending} />
           </Container>
         ) : (
           <ContentCard layout="column">

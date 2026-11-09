@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Join } from './Join';
 
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@/config/network', () => ({ isPassportAppleEnabled: mockAppleEnabled }));
+
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
 
@@ -38,11 +41,13 @@ vi.mock('@/molecules/HumanFooter/HumanFooter', () => ({
 describe('Join', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAppleEnabled.mockReturnValue(false);
     passportMocks.eligibility = 'enabled';
     passportMocks.isPending = false;
   });
 
-  it('renders both methods (desktop cards and mobile sections) when Passport is enabled', () => {
+  it.each([false, true])('renders desktop and mobile Passport methods for Apple flag=%s', (enabled) => {
+    mockAppleEnabled.mockReturnValue(enabled);
     render(<Join />);
 
     expect(screen.getByText('How would you like to create your pubky?')).toBeInTheDocument();
@@ -50,7 +55,9 @@ describe('Join', () => {
     expect(screen.getByTestId('passport-method-card')).toBeInTheDocument();
     expect(screen.getByTestId('passport-method-section')).toBeInTheDocument();
     expect(screen.getAllByTestId('join-manage-own-keys')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Continue with Google or Apple' })).toHaveLength(2);
+    expect(
+      screen.getAllByRole('button', { name: enabled ? 'Continue with Google or Apple' : 'Continue with Google' }),
+    ).toHaveLength(2);
     expect(screen.getByTestId('mock-human-footer')).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
   });

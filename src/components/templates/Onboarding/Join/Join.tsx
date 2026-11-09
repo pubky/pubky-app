@@ -92,9 +92,7 @@ export function Join() {
           </Container>
           {manageOwnKeysButton}
         </IllustratedCard>
-        {isPassportEnabled && (
-          <PassportMethodCard onContinue={startPassportAuth} isPending={isPending} variant="providers" />
-        )}
+        {isPassportEnabled && <PassportMethodCard onContinue={startPassportAuth} isPending={isPending} />}
       </Container>
 
       {/* Mobile: stacked labelled sections */}
@@ -105,9 +103,7 @@ export function Join() {
           </Typography>
           {manageOwnKeysButton}
         </Container>
-        {isPassportEnabled && (
-          <PassportMethodSection onContinue={startPassportAuth} isPending={isPending} variant="providers" />
-        )}
+        {isPassportEnabled && <PassportMethodSection onContinue={startPassportAuth} isPending={isPending} />}
       </Container>
 
       <HumanFooter variant="inline" />

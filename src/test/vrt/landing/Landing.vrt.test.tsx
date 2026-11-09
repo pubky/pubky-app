@@ -207,3 +207,9 @@ describe('Landing — visual regression', () => {
     expect(getComputedStyle(link.element()).textDecorationLine).toBe('none');
   });
 });
+
+// Preserve the provider presentation covered by the existing baselines.
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  isPassportAppleEnabled: () => true,
+}));

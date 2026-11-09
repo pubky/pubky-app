@@ -49,7 +49,6 @@ export function ActionButtons({
           <ContinueWithPassport
             onContinue={onContinueWithGoogle}
             isPending={isContinueWithGooglePending}
-            variant="providers"
             className="w-full sm:w-auto"
           />
         )}

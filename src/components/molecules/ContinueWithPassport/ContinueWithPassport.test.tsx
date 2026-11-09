@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContinueWithPassport } from './ContinueWithPassport';
 
-const HELP_LABEL = 'About signing in with Apple or Google';
+const HELP_LABEL = 'About signing in with Google';
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@/config/network', () => ({ isPassportAppleEnabled: mockAppleEnabled }));
+beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/README.md';
 
 describe('ContinueWithPassport', () => {
@@ -20,10 +23,10 @@ describe('ContinueWithPassport', () => {
     fireEvent.click(help);
 
     expect(onContinue).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: 'Sign in with Apple or Google' })).toBeInTheDocument();
     expect(
-      screen.getByText('Use an existing account to create or access your pubky with Pubky Passport.'),
+      screen.getByRole('heading', { name: 'Continue with Google, powered by Pubky Passport.' }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Google's role:")).toBeInTheDocument();
     expect(screen.getByText('Your keys:')).toBeInTheDocument();
     expect(screen.getByText('Recovery:')).toBeInTheDocument();
 
@@ -35,20 +38,24 @@ describe('ContinueWithPassport', () => {
     expect(learnMore).toHaveAttribute('target', '_blank');
   });
 
-  it.each(['google', 'providers'] as const)('keeps help reachable while the %s variant is pending', (variant) => {
-    render(<ContinueWithPassport onContinue={vi.fn()} isPending variant={variant} />);
+  it.each([false, true])('keeps help reachable while the flag=%s state is pending', (appleEnabled) => {
+    mockAppleEnabled.mockReturnValue(appleEnabled);
+    render(<ContinueWithPassport onContinue={vi.fn()} isPending />);
 
     expect(screen.getByTestId('continue-with-google')).toBeDisabled();
-    expect(screen.getByRole('button', { name: HELP_LABEL })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: appleEnabled ? 'About signing in with Apple or Google' : HELP_LABEL }),
+    ).toBeEnabled();
   });
 
-  it('uses the compact provider layout without changing the Passport or help actions', () => {
+  it('uses the compact provider layout only when Apple is enabled', () => {
+    mockAppleEnabled.mockReturnValue(true);
     const onContinue = vi.fn();
-    render(<ContinueWithPassport onContinue={onContinue} isPending={false} variant="providers" />);
+    render(<ContinueWithPassport onContinue={onContinue} isPending={false} />);
 
     const button = screen.getByRole('button', { name: 'Continue with Google or Apple' });
     expect(button.textContent).toBe('Continue with');
-    const help = screen.getByRole('button', { name: HELP_LABEL });
+    const help = screen.getByRole('button', { name: 'About signing in with Apple or Google' });
     expect(button).not.toContainElement(help);
 
     fireEvent.click(help);
@@ -115,9 +122,10 @@ describe('ContinueWithPassport', () => {
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['google', 'providers'] as const)('disables the %s variant while an attempt is pending', (variant) => {
+  it.each([false, true])('disables the flag=%s state while an attempt is pending', (appleEnabled) => {
+    mockAppleEnabled.mockReturnValue(appleEnabled);
     const onContinue = vi.fn();
-    render(<ContinueWithPassport onContinue={onContinue} isPending variant={variant} />);
+    render(<ContinueWithPassport onContinue={onContinue} isPending />);
 
     const button = screen.getByTestId('continue-with-google');
     expect(button).toBeDisabled();
