@@ -15,6 +15,7 @@ const OWNER = 'creatorpubky';
 
 const mocks = vi.hoisted(() => ({
   putBlob: vi.fn(async () => {}),
+  delete: vi.fn(async () => {}),
   getBytes: vi.fn(async () => new TextEncoder().encode('{"version":1}')),
   getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
 }));
@@ -24,7 +25,7 @@ vi.mock('@/config/network', () => ({
 }));
 
 vi.mock('@/services/homeserver/homeserver', () => ({
-  HomeserverService: { putBlob: mocks.putBlob, getBytes: mocks.getBytes },
+  HomeserverService: { putBlob: mocks.putBlob, delete: mocks.delete, getBytes: mocks.getBytes },
 }));
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -132,6 +133,29 @@ describe('locks.e2eStub', () => {
       url: `pubky://${OWNER}/pub/app.locks/lock-1.json`,
       blob: new TextEncoder().encode(JSON.stringify(contentLock)),
     });
+  });
+
+  it('deletes the lock on the stub, then removes its lock file from the homeserver', async () => {
+    const session = await signIn();
+    replyWith({});
+
+    await session.creator.deleteContentLock('lock-1');
+
+    expect(sentTo()).toEqual({
+      url: `${STUB_URL}/e2e/creator/content-locks/delete`,
+      body: { owner: OWNER, lock_id: 'lock-1' },
+    });
+    expect(mocks.delete).toHaveBeenCalledWith(`pubky://${OWNER}/pub/app.locks/lock-1.json`);
+  });
+
+  it('keeps the lock file when the stub refuses the deletion', async () => {
+    const session = await signIn();
+    replyWith({}, 500);
+
+    await expect(session.creator.deleteContentLock('lock-1')).rejects.toThrow(
+      'Lock Server request failed with HTTP 500',
+    );
+    expect(mocks.delete).not.toHaveBeenCalled();
   });
 
   it('sends the creator with the pointer and setup-status calls', async () => {
