@@ -391,7 +391,7 @@ describe('writes to one tag run in the order the user made them', () => {
     const request = vi.spyOn(HomeserverService, 'request');
     const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
     await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
-    const remove = TagApplication.commitDelete(tag);
+    const remove = TagApplication.commitDelete({ ...tag, canWrite: () => true });
     // The removal has reached the homeserver service before the add's first attempt fails.
     await vi.waitFor(() =>
       expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.DELETE })),
@@ -415,7 +415,7 @@ describe('writes to one tag run in the order the user made them', () => {
       });
 
     const request = vi.spyOn(HomeserverService, 'request');
-    const remove = TagApplication.commitDelete(tag);
+    const remove = TagApplication.commitDelete({ ...tag, canWrite: () => true });
     await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
     const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
     await vi.waitFor(() => expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT })));
