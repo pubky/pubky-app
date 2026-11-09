@@ -5,7 +5,12 @@ import { parseCompositeId } from '@/models/models.utils';
 import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
-import { DELETED_USER_NAME, TAG_BANNED_CHARS } from './utils.constants';
+import {
+  DELETED_USER_NAME,
+  TAG_BANNED_CHARS,
+  TAG_FROZEN_WHITESPACE,
+  TAG_FROZEN_WHITESPACE_EDGES,
+} from './utils.constants';
 import type {
   CopyToClipboardProps,
   ExtractInitialsProps,
@@ -664,14 +669,15 @@ export function sanitizeTagInput(value: string): string {
 /**
  * Convert a tag label to the canonical form used by local storage and Nexus: the fold
  * `pubky-social-specs` applies when it stores a tag, so a label matches the one the tag id
- * hashes. Trimmed, with ASCII letters lowercased and every other character kept (`RUST` becomes
- * `rust`, `Äpfel` stays `Äpfel`).
+ * hashes. Trimmed over the data model's frozen whitespace set (`TAG_FROZEN_WHITESPACE_CODE_POINTS`,
+ * not `String.prototype.trim`), with ASCII letters lowercased and every other character kept
+ * (`RUST` becomes `rust`, `Äpfel` stays `Äpfel`).
  *
  * @param value - The raw tag label
  * @returns The trimmed, ASCII-lowercased tag label
  */
 export function canonicalizeTagLabel(value: string): string {
-  return value.trim().replace(/[A-Z]+/g, (upper) => upper.toLowerCase());
+  return value.replace(TAG_FROZEN_WHITESPACE_EDGES, '').replace(/[A-Z]+/g, (upper) => upper.toLowerCase());
 }
 
 /** Whether Nexus reserves this label from starter-pack interest streams. */
@@ -681,14 +687,20 @@ export function isStarterPackReservedTag(value: string): boolean {
 }
 
 /**
- * Checks whether a string is a valid tag label (correct length, no banned characters).
+ * Checks whether a string is a valid tag label (correct length, no banned characters, no whitespace of
+ * the data model's frozen set inside), so a label the app accepts is one `buildTag` and Nexus accept.
  *
  * @param value - The candidate tag label (should already be trimmed/lowercased)
  * @returns true when the label satisfies all tag constraints
  */
 export function isValidTagLabel(value: string): boolean {
   const charCount = getCharacterCount(value);
-  return charCount > 0 && charCount <= TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
+  return (
+    charCount > 0 &&
+    charCount <= TAG_MAX_LENGTH &&
+    sanitizeTagInput(value) === value &&
+    !TAG_FROZEN_WHITESPACE.test(value)
+  );
 }
 
 /**

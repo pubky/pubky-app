@@ -44,7 +44,7 @@ import {
   stripPubkyPrefix,
   truncateString,
 } from './utils';
-import { HASHTAG_IN_TEXT_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { HASHTAG_IN_TEXT_REGEX, TAG_BANNED_CHARS, TAG_FROZEN_WHITESPACE_CODE_POINTS } from './utils.constants';
 
 describe('Utils', () => {
   describe('cn', () => {
@@ -1334,6 +1334,50 @@ describe('Utils', () => {
         expect(canonicalizeTagLabel(label)).toBe(buildTag(fakeOwner(1), target, label).object.label);
       },
     );
+
+    // The trim is the data model's frozen table, not the engine's: the 25 White_Space code points of
+    // Unicode 15.1, which Nexus `/v1` folds labels by too, so a label the app accepts never 400s there.
+    describe('frozen whitespace (contract with buildTag)', () => {
+      const target = buildUri(fakeOwner(2), 'post', '0032PARTQP4G0');
+      const codePoints = TAG_FROZEN_WHITESPACE_CODE_POINTS.map((codePoint) => [
+        `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`,
+        String.fromCodePoint(codePoint),
+      ]);
+
+      it('names the 25 code points of the frozen set once each, in order', () => {
+        expect(TAG_FROZEN_WHITESPACE_CODE_POINTS).toHaveLength(25);
+        expect([...new Set(TAG_FROZEN_WHITESPACE_CODE_POINTS)].sort((a, b) => a - b)).toEqual([
+          ...TAG_FROZEN_WHITESPACE_CODE_POINTS,
+        ]);
+      });
+
+      it.each(codePoints)('trims %s at either end, as buildTag does', (_name, whitespace) => {
+        const label = `${whitespace}Rust${whitespace}`;
+
+        expect(canonicalizeTagLabel(label)).toBe('rust');
+        expect(buildTag(fakeOwner(1), target, label).object.label).toBe('rust');
+      });
+
+      it.each(codePoints)('rejects %s inside a label, which buildTag refuses', (_name, whitespace) => {
+        const label = `ru${whitespace}st`;
+
+        expect(isValidTagLabel(label)).toBe(false);
+        expect(() => buildTag(fakeOwner(1), target, label)).toThrow();
+      });
+
+      it.each([
+        ['U+FEFF (BOM), trimmed by String.prototype.trim but not here', '\uFEFF'],
+        ['U+200B (zero width space), whitespace to nobody', '\u200B'],
+      ])('keeps %s where buildTag keeps it, at the edge and inside', (_name, character) => {
+        const edge = `${character}rust`;
+        const inside = `ru${character}st`;
+
+        expect(canonicalizeTagLabel(edge)).toBe(buildTag(fakeOwner(1), target, edge).object.label);
+        expect(canonicalizeTagLabel(edge)).toBe(edge);
+        expect(isValidTagLabel(inside)).toBe(true);
+        expect(buildTag(fakeOwner(1), target, inside).object.label).toBe(inside);
+      });
+    });
   });
 
   describe('isStarterPackReservedTag', () => {
