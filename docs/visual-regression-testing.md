@@ -46,6 +46,9 @@ theme (the harness sets the `.dark` or `.light` class on `<html>` per render,
 exactly as next-themes does, so `dark:` and `light:` utilities apply). Light coverage is deliberately limited to a few core
 surfaces — Home feed, Hot and the own-profile posts tab, desktop + mobile,
 named `<surface>-light-<viewport>` — not a duplicate of every dark baseline.
+Light captures always render a signed-in viewer: signed-out surfaces (landing,
+sign-in, logout, onboarding, and guest views) are dark-only, so they have no
+light captures.
 
 ## Capture dimensions
 
