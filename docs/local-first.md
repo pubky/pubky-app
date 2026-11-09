@@ -53,7 +53,7 @@ PostController.getDetails({ compositeId }); // Always local
 PostController.getOrFetchDetails({ compositeId, viewerId }); // Local first, fallback
 UserController.getManyDetails({ userIds }); // Bulk local
 UserController.getManyTagsOrFetch({ userIds }); // Bulk with fallback
-MuteController.subscribeMuteDirectoryEventStream(pubky, cursor); // Live stream subscription
+HomeserverEventController.subscribeUserEventStream({ pubky, cursor, paths, signal }); // Live stream subscription
 
 // Bad naming
 PostController.loadDetails(id); // Unclear source
@@ -323,7 +323,7 @@ Tag notifications are grouped by entity and invalidate its collection before for
 
 ### Writes and session changes
 
-Persist local mutation intent with tag changes in one IndexedDB transaction. Reconcile it against both batch and page responses for the five-minute protection period. Tags and counters must remain consistent; counters cannot be derived from a partial preview. Pending operation identities guard rollback, and replacing a loaded list retires its expired identities. Cache revisions reject superseded responses. Controller session guards reject results from a replaced account/session, and viewerless previews must not overwrite authenticated relationships.
+Persist local mutation intent with tag changes in one IndexedDB transaction. Reconcile it against both batch and page responses for the five-minute protection period. Tags and counters must remain consistent; counters cannot be derived from a partial preview. Pending operation identities guard rollback: a write the homeserver rejected, or that an ended session never sent, is compensated even though the 401 handling has already ended the session, because the undo is bound to the operation it made and a database cleared for another account holds no such operation. Replacing a loaded list retires its expired identities. Cache revisions reject superseded responses. Controller session guards reject results from a replaced account/session, and viewerless previews must not overwrite authenticated relationships.
 
 ### Public views and viewport subscriptions
 

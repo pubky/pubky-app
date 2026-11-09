@@ -2,10 +2,13 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { APP_ROUTES, isCustomFeedRoute, isLogoLandingRoute, ROOT_ROUTES } from '@/app/routes';
+import { APP_ROUTES, isCustomFeedRoute, isLogoLandingRoute, isPublicDocumentRoute, ROOT_ROUTES } from '@/app/routes';
 import { Link } from '@/atoms/Link/Link';
+import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 interface LogoProps {
   width?: number;
@@ -41,7 +44,15 @@ export function Logo({
   ...props
 }: LogoProps & React.HTMLAttributes<HTMLAnchorElement>) {
   const pathname = usePathname();
-  const isLandingRoute = isLogoLandingRoute(pathname);
+  const isHydrated = useIsHydrated();
+  const hasDisplayUser = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
+  // The public documents are server-rendered (`AppShell`) and the auth store only exists in the browser, so the
+  // member href waits for hydration to keep the first client render equal to the server's HTML.
+  const isAuthenticated = isHydrated && hasDisplayUser;
+  // Members open the public documents from Settings. For them `/` redirects to `/home`, which leaves `/` in
+  // the history and turns Back into a loop, so their logo goes straight to `/home`.
+  const isPublicDocument = isPublicDocumentRoute(pathname);
+  const isLandingRoute = isLogoLandingRoute(pathname) && !(isAuthenticated && isPublicDocument);
   // A custom feed lives at `/feed/<id>` in the same persistent feed cluster as
   // `/home`. From there the logo is already on the user's feed, so it scrolls to
   // the top instead of navigating away to the default feed.
@@ -68,15 +79,26 @@ export function Logo({
   );
 }
 
-const LogoImage = ({ width, height, className }: { width: number; height: number; className?: string }) => {
-  return (
+// Both wordmarks are rendered and the `.light` class on <html> picks one via
+// CSS. Reading `resolvedTheme` from next-themes instead would be `undefined`
+// on the server and first client paint, flashing the dark logo on light mode.
+const LogoImage = ({ width, height, className }: { width: number; height: number; className?: string }) => (
+  <>
     <Image
       src="/pubky-logo.svg"
       alt="Pubky"
-      className={logoImageClassName(width, height, className)}
+      className={logoImageClassName(width, height, cn('light:hidden', className))}
       style={logoImageStyle(width, height)}
       width={width}
       height={height}
     />
-  );
-};
+    <Image
+      src="/pubky-logo-on-light.svg"
+      alt="Pubky"
+      className={logoImageClassName(width, height, cn('hidden light:block', className))}
+      style={logoImageStyle(width, height)}
+      width={width}
+      height={height}
+    />
+  </>
+);

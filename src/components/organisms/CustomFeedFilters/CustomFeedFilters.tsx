@@ -44,7 +44,12 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
       <FilterReach selectedTab={reach} defaultSelectedTab={undefined} disabled showTaggedAs />
 
       {customFeed?.tags.length ? (
-        <Container overrideDefaults className="flex flex-col gap-2" data-testid="custom-feed-post-tags">
+        <Container
+          overrideDefaults
+          className="flex flex-col gap-2"
+          data-testid="custom-feed-post-tags"
+          data-cy="custom-feed-post-tags"
+        >
           <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Filter on Content Tags'}</Label>
           <Container overrideDefaults className="flex flex-wrap gap-2">
             {customFeed.tags.map((tag) => (

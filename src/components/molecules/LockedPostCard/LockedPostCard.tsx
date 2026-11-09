@@ -1,19 +1,22 @@
 'use client';
 
-import { type MouseEvent, useEffect, useRef, useState } from 'react';
-import { Check, LockOpen, Pencil, StickyNote, Wallet } from 'lucide-react';
+import { type MouseEvent, type PointerEvent, useEffect, useRef, useState } from 'react';
+import { LockOpen, Pencil, Wallet } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
+import { getLockContentDisplay } from '@/libs/post/lockContentKind';
 import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn } from '@/libs/utils/utils';
+import { LockTitle } from '@/molecules/LockTitle/LockTitle';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type { TLockPrice } from '@/services/locks/locks.types';
 
 interface LockedPostCardProps {
   /** Creator-typed lock title for the reader/preview view. Ignored when `editableTitle` is set. */
   title?: string;
+  /** The locked post's kind: picks the icon and the title shown when none was typed (#2433). */
+  contentKind?: string;
   /** The lock price shown beside Unlock. Nullish → the masked dots, unless `isLoading` shows the spinner instead. */
   price?: TLockPrice | null;
   onUnlock?: () => void;
@@ -30,10 +33,15 @@ interface LockedPostCardProps {
   /** Force the Unlock control disabled. Defaults to `!onUnlock` (inert without a handler). */
   disabled?: boolean;
   /**
-   * Composer mode: renders the title as an inline editable input instead of static text. The leading
-   * icon shifts StickyNote (idle) → Pencil (hover) → Check (editing). Reader mode ignores this.
+   * Composer mode: renders the title as an inline editable input instead of static text, with a pencil
+   * button after it. Every change is kept; there is no confirm step. Reader mode ignores this.
    */
   editableTitle?: { value: string; onChange: (value: string) => void; disabled?: boolean; maxLength?: number };
+  /**
+   * Composer mode: the price becomes a button that calls this, to change the price of a lock not yet published.
+   * Only Unlock is dimmed then, so the price does not look disabled. Not for use with `onUnlock` or `isLoading`.
+   */
+  onChangePrice?: () => void;
   className?: string;
 }
 
@@ -44,8 +52,15 @@ const HIDDEN_REQUIREMENT_MASK = '••••••';
  *  Exported for tests (they advance fake timers by exactly this). */
 export const SLIDE_MS = 200;
 
+/** Releasing a drag this far along the slide unlocks; releasing earlier slides the button back. */
+const DRAG_UNLOCK_RATIO = 0.9;
+
+/** Less movement than this is still a click, so an unsteady tap is not lost. */
+const TAP_SLOP_PX = 10;
+
 /** The shared lock card. */
 export function LockedPostCard({
+  contentKind,
   title,
   price,
   onUnlock,
@@ -54,18 +69,33 @@ export function LockedPostCard({
   isLoading = false,
   disabled,
   editableTitle,
+  onChangePrice,
   className,
 }: LockedPostCardProps) {
   // Loading is inert but undimmed: a dimmed pill would flash as disabled right before the price arrives.
   const isDimmed = !isLoading && (disabled ?? !onUnlock);
   const isDisabled = isLoading || isDimmed;
   const priceLabel = price ? formatLockPrice(price) : HIDDEN_REQUIREMENT_MASK;
+  const { title: defaultTitle, Icon: KindIcon } = getLockContentDisplay(contentKind);
+  const priceContent = (
+    <>
+      <Wallet className="size-4 shrink-0" aria-hidden />
+      <span className="text-xs leading-4 font-medium tracking-[1.2px]" data-cy="locked-post-price">
+        {priceLabel}
+      </span>
+    </>
+  );
 
   const isNested = useIsNestedPostPreview();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const lockInfoRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const slideTimer = useRef<number | null>(null);
+  const dragPress = useRef<{ pointerId: number; x: number; y: number; travel: number } | null>(null);
+  // Outlives the release: the browser's click comes after pointerup and must not unlock as well.
+  const didDrag = useRef(false);
   const [slideX, setSlideX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   // Snap the button back once the modal closes; it stays parked (slideX kept) while open.
@@ -80,23 +110,96 @@ export function LockedPostCard({
     };
   }, []);
 
-  const handleUnlock = (event: MouseEvent) => {
-    event.stopPropagation();
-    // The ref guard also blocks a double-click: a second click during the slide is a no-op.
-    if (isDisabled || slideTimer.current !== null) return;
+  // A disabled button may never get the pointerup, and a release after this point must not unlock.
+  useEffect(() => {
+    if (!isDisabled || !dragPress.current) return;
+    dragPress.current = null;
+    setIsDragging(false);
+    setSlideX(0);
+  }, [isDisabled]);
+
+  // From the button's left edge to the price/mask's, so the button covers it.
+  const getSlideDistance = () => {
+    const button = buttonRef.current;
+    const lockInfo = lockInfoRef.current;
+    return button && lockInfo ? lockInfo.offsetLeft - button.offsetLeft : 0;
+  };
+
+  const startUnlock = () => {
+    // One slide at a time: a second click or key press during the slide is a no-op.
+    if (slideTimer.current !== null) return;
     if (!slideOnUnlock) {
+      // A drag has to return by itself here: no modal follows to snap the button back.
+      setSlideX(0);
       onUnlock?.();
       return;
     }
 
-    const button = buttonRef.current;
-    const lockInfo = lockInfoRef.current;
-    // Slide the button's left edge onto the price/mask's, covering it; then open the modal.
-    if (button && lockInfo) setSlideX(lockInfo.offsetLeft - button.offsetLeft);
+    setSlideX(getSlideDistance());
     slideTimer.current = window.setTimeout(() => {
       slideTimer.current = null;
       onUnlock?.();
     }, SLIDE_MS);
+  };
+
+  const handleUnlock = (event: MouseEvent) => {
+    event.stopPropagation();
+    // A touch drag sends no click, so `didDrag` can still be set when a keyboard press (`detail` 0) arrives.
+    if (didDrag.current && event.detail > 0) {
+      didDrag.current = false;
+      return;
+    }
+    if (isDisabled) return;
+    // A click during a press comes from the keyboard. It ends the press, so neither the release nor the click after
+    // it can unlock again once the slide's timer has run.
+    if (dragPress.current) {
+      dragPress.current = null;
+      didDrag.current = true;
+      setIsDragging(false);
+    }
+    startUnlock();
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    if (isDisabled || !event.isPrimary || event.button !== 0 || slideTimer.current !== null) return;
+    didDrag.current = false;
+    dragPress.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, travel: getSlideDistance() };
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // A pointer the browser already released cannot be captured; a click still works without it.
+    }
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    const press = dragPress.current;
+    if (press?.pointerId !== event.pointerId) return;
+    // No button held: the release never reached the button, so this move ends the press instead.
+    if (event.buttons === 0) {
+      handlePointerEnd(event);
+      return;
+    }
+    if (!didDrag.current) {
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= TAP_SLOP_PX) return;
+      didDrag.current = true;
+      setIsDragging(true);
+    }
+    setSlideX(Math.max(0, Math.min(event.clientX - press.x, press.travel)));
+  };
+
+  // Also runs on pointercancel (the browser took a touch over to scroll the page) and on lostpointercapture, which
+  // finds no press after a normal pointerup.
+  const handlePointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
+    const press = dragPress.current;
+    if (press?.pointerId !== event.pointerId) return;
+    dragPress.current = null;
+    if (!didDrag.current) return;
+    setIsDragging(false);
+    // No click follows a cancel, so nothing else would clear `didDrag` for a click without a pointerdown.
+    if (event.type === 'pointercancel') didDrag.current = false;
+    const reachedEnd = event.type === 'pointerup' && event.clientX - press.x >= press.travel * DRAG_UNLOCK_RATIO;
+    if (reachedEnd) startUnlock();
+    else setSlideX(0);
   };
 
   return (
@@ -106,48 +209,74 @@ export function LockedPostCard({
       // A quote-repost preview is itself `bg-muted`, so the card has to step down a shade there or the
       // two read as one block. The price pill steps down with it to keep its own contrast.
       className={cn(
-        'flex cursor-default items-start justify-between gap-4 rounded-md p-6',
+        // `@container/lock-card`: the shield's size follows the card's own width, not the viewport.
+        // `items-end`: the shield sits on the bottom edge, level with the Unlock pill.
+        '@container/lock-card flex cursor-default items-end justify-between gap-4 rounded-md p-6',
         isNested ? 'bg-card' : 'bg-muted',
         className,
       )}
       data-testid="locked-post-card"
+      data-cy="locked-post-card"
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
+      {/* No `min-w-0`: the column keeps at least the pill's width, so the pill never runs under the shield
+          and the default title stays on one line. A long custom title still wraps (`wrap-anywhere`). */}
+      <div className="flex flex-1 flex-col gap-4">
         <div className={cn('flex items-center gap-2', editableTitle && 'group')}>
           {editableTitle ? (
             <>
-              {/* Icon tracks the state: Check while editing, Pencil on hover, StickyNote otherwise. */}
-              {isEditing ? (
-                <Check className="size-6 shrink-0 text-foreground" aria-hidden />
-              ) : (
-                <>
-                  <StickyNote className="size-6 shrink-0 text-foreground group-hover:hidden" aria-hidden />
-                  <Pencil className="hidden size-6 shrink-0 text-brand group-hover:block" aria-hidden />
-                </>
-              )}
-              <input
-                value={editableTitle.value}
-                onChange={(event) => editableTitle.onChange(event.target.value)}
-                onFocus={() => setIsEditing(true)}
-                onBlur={() => setIsEditing(false)}
-                placeholder={DEFAULT_LOCK_TITLE}
+              <KindIcon className="size-6 shrink-0 text-foreground" aria-hidden />
+              {/* The hidden copy sizes the box to the title so the pencil sits right after it. Safari lacks
+                  `field-sizing: content`, and an input in the flow adds its own minimum width, so it overlays the box.
+                  `grid`: a clipped grid item has no minimum width, so a long title cannot widen the card. */}
+              <div className="relative grid min-w-0">
+                <span aria-hidden className="invisible overflow-hidden text-xl leading-7 font-bold whitespace-pre">
+                  {editableTitle.value || defaultTitle}
+                </span>
+                <input
+                  ref={titleInputRef}
+                  value={editableTitle.value}
+                  onChange={(event) => editableTitle.onChange(event.target.value)}
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={() => setIsEditing(false)}
+                  // The title is kept as it is typed, so Enter and Escape only end editing. Safari sends the
+                  // Enter that commits an IME composition after it ends, with keyCode 229 instead of `isComposing`.
+                  onKeyDown={(event) => {
+                    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+                    if (event.key === 'Enter' || event.key === 'Escape') event.currentTarget.blur();
+                  }}
+                  placeholder={defaultTitle}
+                  disabled={editableTitle.disabled}
+                  maxLength={editableTitle.maxLength}
+                  aria-label={'Lock title'}
+                  data-cy="lock-title-input"
+                  // Marks the input for the composer's outside-click collapse exclusion (usePostInput).
+                  data-lock-title-input=""
+                  className={cn(
+                    'absolute inset-0 w-full bg-transparent text-xl leading-7 font-bold text-foreground caret-foreground outline-none placeholder:text-muted-foreground',
+                    !isEditing && 'group-hover:text-brand',
+                  )}
+                />
+              </div>
+              <Button
+                overrideDefaults
+                type="button"
+                onClick={() => titleInputRef.current?.focus()}
                 disabled={editableTitle.disabled}
-                maxLength={editableTitle.maxLength}
-                aria-label={'Lock title'}
-                data-cy="lock-title-input"
-                // Marks the input for the composer's outside-click collapse exclusion (usePostInput).
-                data-lock-title-input=""
-                className={cn(
-                  'min-w-0 flex-1 bg-transparent text-xl leading-7 font-bold text-foreground caret-foreground outline-none placeholder:text-muted-foreground',
-                  !isEditing && 'group-hover:text-brand',
-                )}
-              />
+                aria-label={'Edit lock title'}
+                data-cy="lock-title-edit"
+                className="shrink-0 cursor-pointer rounded-full p-1 text-muted-foreground outline-none group-hover:text-brand focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Pencil className="size-4" aria-hidden />
+              </Button>
             </>
           ) : (
             <>
-              <StickyNote className="size-6 shrink-0 text-muted-foreground" aria-hidden />
-              <h4 className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground">
-                {title?.trim() || DEFAULT_LOCK_TITLE}
+              <KindIcon className="size-6 shrink-0 text-muted-foreground" aria-hidden />
+              <h4
+                className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground"
+                data-cy="locked-post-title"
+              >
+                <LockTitle title={title?.trim() || defaultTitle} mentionClassName="text-xl" />
               </h4>
             </>
           )}
@@ -157,7 +286,7 @@ export function LockedPostCard({
           className={cn(
             'relative flex w-fit items-center gap-1 rounded-full p-1',
             isNested ? 'bg-background' : 'bg-card',
-            isDimmed && 'cursor-not-allowed opacity-50',
+            isDimmed && !onChangePrice && 'cursor-not-allowed opacity-50',
           )}
         >
           <Button
@@ -166,31 +295,61 @@ export function LockedPostCard({
             variant={ButtonVariant.BRAND}
             disabled={isDisabled}
             onClick={handleUnlock}
-            style={{ transform: `translateX(${slideX}px)`, transitionDuration: `${SLIDE_MS}ms` }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerEnd}
+            onPointerCancel={handlePointerEnd}
+            onLostPointerCapture={handlePointerEnd}
+            // No transition during a drag, or the button would trail the pointer by SLIDE_MS.
+            style={{ transform: `translateX(${slideX}px)`, transitionDuration: isDragging ? '0ms' : `${SLIDE_MS}ms` }}
             className={cn(
-              'relative z-10 h-10 gap-2 rounded-full px-4 transition-transform ease-out disabled:opacity-100',
+              // `touch-pan-y`: the page still scrolls from here, and the horizontal drag stays with us.
+              'relative z-10 h-10 touch-pan-y gap-2 rounded-full px-4 transition-transform ease-out select-none',
+              !onChangePrice && 'disabled:opacity-100',
               isLoading && 'invisible',
             )}
+            data-cy="locked-post-unlock-btn"
           >
             <LockOpen className="size-4 shrink-0" aria-hidden />
             {'Unlock'}
           </Button>
-          {/* `invisible`, not removed: the hidden contents keep the pill at its loaded width. */}
-          <div ref={lockInfoRef} className={cn('flex items-center gap-1.5 px-4 text-brand', isLoading && 'invisible')}>
-            <Wallet className="size-4 shrink-0" aria-hidden />
-            <span className="text-xs leading-4 font-medium tracking-[1.2px]">{priceLabel}</span>
-          </div>
+          {onChangePrice ? (
+            <Button
+              overrideDefaults
+              type="button"
+              onClick={onChangePrice}
+              data-cy="lock-price-edit"
+              className="flex h-10 cursor-pointer items-center gap-1.5 rounded-full px-4 text-brand outline-none hover:bg-brand/16 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {/* Prefix, not `aria-label`: the price stays part of the accessible name. */}
+              <span className="sr-only">{'Change price: '}</span>
+              {priceContent}
+            </Button>
+          ) : (
+            // `invisible`, not removed: the hidden contents keep the pill at its loaded width.
+            <div
+              ref={lockInfoRef}
+              className={cn('flex items-center gap-1.5 px-4 text-brand', isLoading && 'invisible')}
+            >
+              {priceContent}
+            </div>
+          )}
           {isLoading && <Spinner size="sm" className="absolute inset-0 m-auto" />}
         </div>
       </div>
 
-      <Image
-        src="/images/shield.png"
-        alt=""
-        width={96}
-        height={96}
-        className="hidden size-24 shrink-0 rounded-md object-contain sm:block"
-      />
+      {/* 68px at most (the design asks for 25-30% under the original 96px), 48px on a card under 20rem of content (the
+          Cards layout's 336px and 309px cards). It still gives way to the pill instead of running under it,
+          and drops out once it would draw under 48px (3rem). */}
+      <div className="@container/shield hidden w-17 min-w-0 shrink sm:block @max-xs/lock-card:w-12">
+        <Image
+          src="/images/shield.png"
+          alt=""
+          width={68}
+          height={68}
+          className="hidden aspect-square h-auto w-full rounded-md object-contain @min-[3rem]/shield:block"
+        />
+      </div>
     </div>
   );
 }

@@ -1,8 +1,10 @@
+import { renderToString } from 'react-dom/server';
 import { usePathname } from 'next/navigation';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LOGO_LANDING_ROUTES } from '@/app/routes';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { COPYRIGHT_ROUTES, LEGAL_ROUTES, LOGO_LANDING_ROUTES } from '@/app/routes';
 import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { Logo } from './Logo';
 
 // Mock Next.js Image component
@@ -43,17 +45,18 @@ describe('Logo', () => {
     });
   });
 
-  it('renders with default src', () => {
+  it('renders dark and light wordmarks, toggled by the .light class via CSS', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
 
     render(<Logo />);
 
-    const container = screen.getByTestId('logo-image').parentElement;
-    const image = screen.getByTestId('logo-image');
+    const [darkImage, lightImage] = screen.getAllByTestId('logo-image');
 
-    expect(container).toBeInTheDocument();
-    expect(image).toBeInTheDocument();
-    expect(image).toHaveAttribute('src', '/pubky-logo.svg');
+    expect(darkImage.parentElement).toBeInTheDocument();
+    expect(darkImage).toHaveAttribute('src', '/pubky-logo.svg');
+    expect(darkImage).toHaveClass('light:hidden');
+    expect(lightImage).toHaveAttribute('src', '/pubky-logo-on-light.svg');
+    expect(lightImage).toHaveClass('hidden', 'light:block');
   });
 
   it('scrolls to top when clicking logo on /home', () => {
@@ -62,7 +65,7 @@ describe('Logo', () => {
     Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
 
     render(<Logo />);
-    const link = screen.getByTestId('logo-image').closest('a');
+    const link = screen.getAllByTestId('logo-image')[0].closest('a');
     expect(link).toBeTruthy();
 
     fireEvent.click(link!);
@@ -76,7 +79,7 @@ describe('Logo', () => {
     const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
 
     render(<Logo />);
-    const link = screen.getByTestId('logo-image').closest('a');
+    const link = screen.getAllByTestId('logo-image')[0].closest('a');
     expect(link).toBeTruthy();
 
     fireEvent.click(link!);
@@ -93,7 +96,7 @@ describe('Logo', () => {
       const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
 
       render(<Logo />);
-      const link = screen.getByTestId('logo-image').closest('a');
+      const link = screen.getAllByTestId('logo-image')[0].closest('a');
       expect(link).toHaveAttribute('href', '/home');
 
       fireEvent.click(link!);
@@ -107,7 +110,7 @@ describe('Logo', () => {
 
     render(<Logo />);
 
-    expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/');
+    expect(screen.getAllByTestId('logo-image')[0].closest('a')).toHaveAttribute('href', '/');
   });
 
   it.each(LOGO_LANDING_ROUTES)('does not set home scroll intent when clicking logo on %s', (pathname) => {
@@ -117,9 +120,78 @@ describe('Logo', () => {
     const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
 
     render(<Logo />);
-    fireEvent.click(screen.getByTestId('logo-image').closest('a')!);
+    fireEvent.click(screen.getAllByTestId('logo-image')[0].closest('a')!);
 
     expect(window.scrollTo).not.toHaveBeenCalled();
     expect(setItemSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('Logo on the public documents', () => {
+  const PUBLIC_DOCUMENT_ROUTES = [...Object.values(LEGAL_ROUTES), COPYRIGHT_ROUTES.COPYRIGHT];
+
+  afterEach(() => {
+    useAuthStore.setState({ currentUserPubky: null, restoreStatus: 'idle' });
+  });
+
+  it.each(PUBLIC_DOCUMENT_ROUTES)('takes a member to /home on %s, not to the landing page', (pathname) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+    useAuthStore.setState({ currentUserPubky: 'account', restoreStatus: 'ready' });
+
+    render(<Logo />);
+
+    expect(screen.getAllByTestId('logo-image')[0].closest('a')).toHaveAttribute('href', '/home');
+  });
+
+  it.each(PUBLIC_DOCUMENT_ROUTES)(
+    'hydrates the server-rendered landing link on %s, then takes a member to /home',
+    async (pathname) => {
+      vi.mocked(usePathname).mockReturnValue(pathname);
+      useAuthStore.setState({ currentUserPubky: 'account', restoreStatus: 'ready' });
+      const onRecoverableError = vi.fn();
+      const container = document.createElement('div');
+      container.innerHTML = renderToString(<Logo />);
+      document.body.appendChild(container);
+      expect(container.querySelector('a')).toHaveAttribute('href', '/');
+
+      await act(async () => {
+        render(<Logo />, { container, hydrate: true, onRecoverableError });
+      });
+
+      expect(onRecoverableError).not.toHaveBeenCalled();
+      expect(container.querySelector('a')).toHaveAttribute('href', '/home');
+      container.remove();
+    },
+  );
+
+  it.each(PUBLIC_DOCUMENT_ROUTES)('takes a guest to the landing page on %s', (pathname) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    render(<Logo />);
+
+    expect(screen.getAllByTestId('logo-image')[0].closest('a')).toHaveAttribute('href', '/');
+  });
+
+  it('takes a guest whose key step generated a pubky without a session to the landing page (#2882)', () => {
+    vi.mocked(usePathname).mockReturnValue(COPYRIGHT_ROUTES.COPYRIGHT);
+    useAuthStore.setState({
+      currentUserPubky: 'generated-key',
+      session: null,
+      sessionReference: null,
+      restoreStatus: 'idle',
+    });
+
+    render(<Logo />);
+
+    expect(screen.getAllByTestId('logo-image')[0].closest('a')).toHaveAttribute('href', '/');
+  });
+
+  it('keeps the landing link for a member on the other landing routes', () => {
+    vi.mocked(usePathname).mockReturnValue('/sign-in');
+    useAuthStore.setState({ currentUserPubky: 'account', restoreStatus: 'ready' });
+
+    render(<Logo />);
+
+    expect(screen.getAllByTestId('logo-image')[0].closest('a')).toHaveAttribute('href', '/');
   });
 });

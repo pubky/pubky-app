@@ -16,6 +16,7 @@ export function FilterPostsEmpty() {
       imageSrc="/images/tagged-empty-state.webp"
       imageAlt={'Filter posts - Empty state'}
       icon={Search}
+      dataCy="profile-filter-posts-empty"
       title={'No posts match your search'}
       subtitle={'Try a different search term.'}
     />

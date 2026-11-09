@@ -10,7 +10,13 @@ import {
 } from '@/config/network';
 import type { ActiveSessionFailure, SessionReference } from '@/libs/auth/session.types';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, DatabaseErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import {
+  AuthErrorCode,
+  DatabaseErrorCode,
+  NetworkErrorCode,
+  ServerErrorCode,
+  ValidationErrorCode,
+} from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -20,7 +26,6 @@ import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
-import type { Pubky as TPubkyModel } from '@/models/models.types';
 import type {
   TGenerateAuthUrlResult,
   THomeserverSessionResult,
@@ -39,13 +44,17 @@ import type {
   THomeserverPublicKeyParams,
   THomeserverRequestParams,
   THomeserverUserEvent,
+  THomeserverUserEventStreamParams,
   TOwnedSessionPath,
   TPutBlobParams,
 } from './homeserver.types';
 import {
   assertOk,
+  buildUserEventStreamUrl,
+  createUserEventStreamDecoder,
   extractPubkyZ32,
   getOwnedResponse,
+  getOwnedResponseIfExists,
   isHttpUrl,
   parseResponseOrUndefined,
   PUBKY_PREFIX,
@@ -59,9 +68,15 @@ const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
 const LIST_DEFAULT_LIMIT = 500;
 
-type HomeserverSdkUserEvent = THomeserverUserEvent & {
-  free(): void;
-};
+const USER_EVENT_STREAM_ENDPOINT = '/events-stream';
+
+function closedUserEventStream(): ReadableStream<THomeserverUserEvent> {
+  return new ReadableStream<THomeserverUserEvent>({
+    start(controller) {
+      controller.close();
+    },
+  });
+}
 
 export class HomeserverService {
   private constructor() {}
@@ -470,7 +485,13 @@ export class HomeserverService {
         throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
           service: ErrorService.Homeserver,
           operation: 'restoreGrant',
-          context: { reason },
+          context: {
+            reason,
+            // Diagnostics for #2942: which half of the saved grant was gone.
+            ...(reason === 'missing_local_grant' && {
+              material: this.isMissingSessionRecord(error, reference.sessionStoreId) ? 'record' : 'key',
+            }),
+          },
         });
       }
       if (isPubkyErrorLike(error) && error.name === 'ClientStateError') {
@@ -663,7 +684,14 @@ export class HomeserverService {
    * @param {string} url - Pubky URL.
    * @param {Record<string, unknown>} [bodyJson] - JSON body to serialize and send.
    */
-  static async request<T>({ method, url, bodyJson, singleAttempt, fence }: THomeserverRequestParams): Promise<T> {
+  static async request<T>({
+    method,
+    url,
+    bodyJson,
+    singleAttempt,
+    fence,
+    notFoundAsNull,
+  }: THomeserverRequestParams): Promise<T> {
     const owned = this.resolveOwnedSessionPath(url);
     // A fenced write belongs to a read-check-write, whose loop retries it from the read.
     const retryOptions = singleAttempt || fence ? { maxRetries: 0 } : {};
@@ -674,7 +702,12 @@ export class HomeserverService {
 
       switch (method) {
         case HttpMethod.GET: {
-          const response = await this.withActiveSession(session, () => getOwnedResponse({ session, path, url }));
+          const response = await this.withActiveSession<Response | null>(session, () =>
+            notFoundAsNull
+              ? getOwnedResponseIfExists({ session, path, url })
+              : getOwnedResponse({ session, path, url }),
+          );
+          if (response === null) return null as T;
           return (await parseResponseOrUndefined<T>({ response })) as T;
         }
         case HttpMethod.PUT: {
@@ -733,7 +766,13 @@ export class HomeserverService {
             retryOptions,
           );
 
-    const response = await fetchPromise.catch((error) => handleError({ error, additionalContext: { url, method } }));
+    const response = await fetchPromise.catch((error) => {
+      if (notFoundAsNull && method === HttpMethod.GET && extractStatusCode(error) === HttpStatusCode.NOT_FOUND) {
+        return null;
+      }
+      return handleError({ error, additionalContext: { url, method } });
+    });
+    if (response === null || (notFoundAsNull && response.status === HttpStatusCode.NOT_FOUND)) return null as T;
 
     await assertOk({ response, url, operation: 'request' });
 
@@ -1056,62 +1095,96 @@ export class HomeserverService {
   }
 
   /**
-   * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
-   * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   * Subscribe to one live homeserver `/events-stream` for the union of `paths` under a user's storage. Every
+   * long-lived stream holds one of the browser's few HTTP/1.1 connections to the homeserver, the pool CORS
+   * preflights wait in, so callers share one subscription per tab instead of opening one per path.
+   *
+   * Sends the anonymous request of the SDK's `eventStreamForUser().live().subscribe()` through `client.fetch`,
+   * because SDK 0.17.1's `subscribe()` takes no `AbortSignal` and its WASM transport has no timeout: a request
+   * waiting for response headers could not be ended. Aborting `signal` ends the request in every phase. An
+   * aborted subscribe resolves to a closed stream, so the caller never has to win a race.
    */
-  static async subscribeUserEventStreamForPath(params: {
-    userZ32: TPubkyModel;
-    cursor: string | null;
-    pathPrefix: string;
-  }): Promise<ReadableStream<THomeserverUserEvent>> {
+  static async subscribeUserEventStream(
+    params: THomeserverUserEventStreamParams,
+  ): Promise<ReadableStream<THomeserverUserEvent>> {
+    const { userZ32, cursor, paths, signal } = params;
     try {
       const pubkySdk = this.getPubkySdk();
-      const pk = PublicKey.from(params.userZ32);
-      const stream = (await pubkySdk
-        .eventStreamForUser(pk, params.cursor)
-        .path(params.pathPrefix)
-        .live()
-        .subscribe()) as ReadableStream<HomeserverSdkUserEvent>;
+      const homeserver = await pubkySdk.getHomeserverOf(PublicKey.from(userZ32));
+      if (signal.aborted) return closedUserEventStream();
+      if (!homeserver) {
+        throw Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not resolve the homeserver of the user', {
+          service: ErrorService.Homeserver,
+          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+          context: { paths },
+        });
+      }
 
-      return this.normalizeUserEventStream(stream);
+      const url = buildUserEventStreamUrl({ homeserverZ32: homeserver.z32(), userZ32, cursor, paths });
+      const response = await pubkySdk.client.fetch(url, { method: HttpMethod.GET, credentials: 'omit', signal });
+      if (!response.ok) {
+        throw httpResponseToError(
+          response,
+          ErrorService.Homeserver,
+          HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+          USER_EVENT_STREAM_ENDPOINT,
+        );
+      }
+      if (!response.body) return closedUserEventStream();
+
+      return this.decodeUserEventStream(response.body, signal);
     } catch (error) {
+      if (signal.aborted) return closedUserEventStream();
       // `operation` is matched by the `homeserver-event-stream-connect` Sentry drop rule:
-      // the mute-list coordinator reconnects on connect failures by design.
+      // HomeserverEventStreamCoordinator reconnects on connect failures by design.
       return handleError({
         error,
-        additionalContext: { pathPrefix: params.pathPrefix, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
+        additionalContext: { paths, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
       });
     }
   }
 
-  private static normalizeUserEventStream(
-    stream: ReadableStream<HomeserverSdkUserEvent>,
+  private static decodeUserEventStream(
+    body: ReadableStream<Uint8Array>,
+    signal: AbortSignal,
   ): ReadableStream<THomeserverUserEvent> {
-    const reader = stream.getReader();
+    const reader = body.getReader();
+    const decoder = createUserEventStreamDecoder();
+    const cancelBody = () => {
+      void reader.cancel(signal.reason).catch(() => {});
+    };
+    if (signal.aborted) {
+      cancelBody();
+    } else {
+      signal.addEventListener('abort', cancelBody, { once: true });
+    }
 
     return new ReadableStream<THomeserverUserEvent>({
       async pull(controller) {
-        const { done, value } = await reader.read();
-
-        if (done) {
-          controller.close();
-          return;
-        }
-
-        try {
-          controller.enqueue({
-            cursor: value.cursor,
-            eventType: value.eventType,
-          });
-        } finally {
+        for (;;) {
+          let chunk: ReadableStreamReadResult<Uint8Array>;
           try {
-            value.free();
-          } catch {
-            // Ignore WASM dispose errors.
+            chunk = await reader.read();
+          } catch (error) {
+            if (!signal.aborted) throw error;
+            chunk = { done: true, value: undefined };
           }
+
+          if (chunk.done) {
+            signal.removeEventListener('abort', cancelBody);
+            controller.close();
+            return;
+          }
+
+          const events = decoder.push(chunk.value);
+          for (const event of events) {
+            controller.enqueue(event);
+          }
+          if (events.length > 0) return;
         }
       },
       async cancel(reason) {
+        signal.removeEventListener('abort', cancelBody);
         await reader.cancel(reason).catch(() => {});
       },
     });

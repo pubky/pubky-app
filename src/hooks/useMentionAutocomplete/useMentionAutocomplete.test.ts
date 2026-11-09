@@ -143,12 +143,12 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('preserves repeated internal spaces in the name search prefix', async () => {
-    const content = 'Hello @John  Carvalho ';
+    const content = 'Hello @Jane  Whitlock ';
     renderHook(() => useMentionAutocomplete({ content, caret: content.length }));
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    expect(mockGetUsersByName).toHaveBeenCalledWith(expect.objectContaining({ prefix: 'John  Carvalho' }));
+    expect(mockGetUsersByName).toHaveBeenCalledWith(expect.objectContaining({ prefix: 'Jane  Whitlock' }));
   });
 
   it('triggers search when pk: pattern is detected at end of content (legacy)', async () => {
@@ -284,7 +284,7 @@ describe('useMentionAutocomplete', () => {
       // A suggestion has to be on screen for the key handler to act on Escape
       setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'User One', image: null } as NexusUserDetails]]));
 
-      const { result } = renderHook(() => useMentionAutocomplete({ content: 'Hello @John Carvalho', caret: 20 }));
+      const { result } = renderHook(() => useMentionAutocomplete({ content: 'Hello @Jane Whitlock', caret: 20 }));
 
       await act(async () => {
         await vi.runAllTimersAsync();
@@ -333,8 +333,8 @@ describe('useMentionAutocomplete', () => {
     });
 
     it('searches the multiword name up to the caret', async () => {
-      // 'Hello @John Carv|alho' - the words typed so far are one query (#1638)
-      renderHook(() => useMentionAutocomplete({ content: 'Hello @John Carvalho', caret: 16 }));
+      // 'Hello @Jane Whit|lock' - the words typed so far are one query (#1638)
+      renderHook(() => useMentionAutocomplete({ content: 'Hello @Jane Whitlock', caret: 16 }));
 
       await act(async () => {
         await vi.runAllTimersAsync();
@@ -342,14 +342,14 @@ describe('useMentionAutocomplete', () => {
 
       expect(mockGetUsersByName).toHaveBeenCalledWith(
         expect.objectContaining({
-          prefix: 'John Carv',
+          prefix: 'Jane Whit',
         }),
       );
     });
 
     it('keeps searching when the caret sits just past the space of a name', async () => {
-      // 'Hello @John |Carvalho' - the space does not close the popover
-      const { result } = renderHook(() => useMentionAutocomplete({ content: 'Hello @John Carvalho', caret: 12 }));
+      // 'Hello @Jane |Whitlock' - the space does not close the popover
+      const { result } = renderHook(() => useMentionAutocomplete({ content: 'Hello @Jane Whitlock', caret: 12 }));
 
       await act(async () => {
         await vi.runAllTimersAsync();
@@ -357,7 +357,7 @@ describe('useMentionAutocomplete', () => {
 
       expect(mockGetUsersByName).toHaveBeenCalledWith(
         expect.objectContaining({
-          prefix: 'John',
+          prefix: 'Jane',
         }),
       );
       expect(result.current.isOpen).toBe(true);
@@ -365,7 +365,7 @@ describe('useMentionAutocomplete', () => {
 
     it('closes the popover when the name run grows into prose nobody matches', async () => {
       const { result, rerender } = renderHook(({ content, caret }) => useMentionAutocomplete({ content, caret }), {
-        initialProps: { content: 'Hello @John Carvalho', caret: 20 },
+        initialProps: { content: 'Hello @Jane Whitlock', caret: 20 },
       });
 
       await act(async () => {
@@ -374,9 +374,9 @@ describe('useMentionAutocomplete', () => {
 
       expect(result.current.isOpen).toBe(true);
 
-      // 'Hello @John Carvalho thanks' - no display name starts with the whole run
+      // 'Hello @Jane Whitlock thanks' - no display name starts with the whole run
       mockGetUsersByName.mockResolvedValue([]);
-      rerender({ content: 'Hello @John Carvalho thanks', caret: 27 });
+      rerender({ content: 'Hello @Jane Whitlock thanks', caret: 27 });
 
       await act(async () => {
         await vi.runAllTimersAsync();
@@ -384,7 +384,7 @@ describe('useMentionAutocomplete', () => {
 
       expect(mockGetUsersByName).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          prefix: 'John Carvalho thanks',
+          prefix: 'Jane Whitlock thanks',
         }),
       );
       expect(result.current.isOpen).toBe(false);

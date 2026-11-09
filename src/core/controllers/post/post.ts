@@ -187,10 +187,10 @@ export class PostController {
     isArticle,
     tags,
     attachments,
-    attachmentUris,
     parentPostId,
     originalPostId,
     lock,
+    onPostSynced,
   }: TCreatePostParams): Promise<string> {
     const isCurrent = captureViewerSession();
     let parentUri: string | undefined = undefined;
@@ -203,21 +203,6 @@ export class PostController {
     }
     if (originalPostId) {
       repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
-    }
-
-    // Ownership invariant: pre-uploaded attachment URIs must be homeserver
-    // files owned by the author. These URIs are not uploaded or rolled back
-    // here — the composer session that uploaded them owns their cleanup.
-    if (attachmentUris && !attachmentUris.every((uri) => isAuthorFileUri(uri, authorId))) {
-      throw Err.validation(
-        ValidationErrorCode.INVALID_INPUT,
-        'Attachment URIs must be homeserver files owned by the author',
-        {
-          service: ErrorService.Local,
-          operation: 'commitCreate',
-          context: { authorId },
-        },
-      );
     }
 
     // A `lock` marks this post as the public announcement of locked content, which may never be a
@@ -237,7 +222,6 @@ export class PostController {
         embed: repostedUri,
         attachments: fileAttachments,
         lock,
-        attachmentUris,
       },
       authorId,
     );
@@ -280,6 +264,7 @@ export class PostController {
       fileAttachments,
       tags: tagList,
       isCurrent,
+      onPostSynced,
     });
 
     return compositePostId;

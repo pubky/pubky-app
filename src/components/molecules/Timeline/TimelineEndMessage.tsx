@@ -9,7 +9,7 @@ import { Typography } from '@/atoms/Typography/Typography';
  */
 export function TimelineEndMessage() {
   return (
-    <Container className="flex items-center justify-center py-8">
+    <Container className="flex items-center justify-center py-8" data-cy="timeline-end-message">
       <Typography size="md" className="text-muted-foreground">
         {"You've reached the end! 🎉"}
       </Typography>

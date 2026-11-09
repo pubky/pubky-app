@@ -81,6 +81,18 @@ Differentiate transient errors (`SERVICE_UNAVAILABLE`, `NETWORK_ERROR`) from fat
 
 Pubky SDK (`@synonymdev/pubky`) errors are mapped by their `name` in `src/core/services/homeserver/error.utils.ts`: `InvalidInput` → Validation, `AuthenticationError` (or HTTP 401) → Auth `SESSION_EXPIRED`, `PkarrError` (PKARR lookup failed, absence not proven) → Network `CONNECTION_FAILED` (retryable). Anything else falls through to `httpStatusCodeToError`.
 
+#### Non-reporting availability probes
+
+`ClientRegionService.fetchCountry` is a narrow exception to `safeFetch`: it reads the optional same-origin
+`/shop-embed/api/marketplace/client-region` route with raw `fetch`. Its advisory contract in
+[Shop embedding](shop-embedding.md#region-check) treats every failure as `{ status: 'unavailable' }`: a missing
+Shop mount, non-2xx response, redirect, non-JSON or invalid body, network failure and timeout never throw, log or
+report. An unavailable probe leaves the decision to the Lock Server. A successful response with a null country
+still follows the configured unknown-country policy. `safeFetch` would construct and report an
+`AppError` on transport failure before this fallback, violating that contract. Keep the existing request timeout
+and response validation. This is an availability boundary, like the existing boolean `LocksService.isServerReady`
+probe; it does not permit raw `fetch` or silent failures in ordinary data reads or writes.
+
 #### Homeserver write retries
 
 Every homeserver PUT and DELETE goes through `HomeserverService` (`request`, `putBlob`, `delete`), which runs it in `retryHomeserverWrite` (`src/core/services/homeserver/write-retry.ts`); `write-call-sites.gate.test.ts` fails on a write that bypasses it. The policy makes up to three attempts with jittered exponential backoff (a 429's `Retry-After` when the response carries one) for:
@@ -242,6 +254,22 @@ SDK 0.16 `Unsupported stored session version.` is terminal for restoration by th
 recognizes the exact `AuthenticationError` message `Authentication error: The provided auth request has expired or
 was cancelled.` from `restoreSession(export)`. This means no live cookie was found; it is not a generic network-error
 exception. Keep both contracts covered by the real-SDK tests in `session-store.contract.test.ts` on SDK updates.
+
+### Locks SDK 0.1.0 region classification exception
+
+`isLockServerRegionBlocked` in `src/core/services/locks/locks.utils.ts` is a second narrow exception to message-free
+classification. The pinned `@synonymdev/locks-sdk` 0.1.0 browser/WASM binding exposes HTTP viewer failures as an
+`Error` named `InvalidInput`, with no structured status field. Only the exact message
+`Lock Server viewer request failed with HTTP 451` identifies the region restriction on proof submission.
+`LocksService.submitProof` converts that raw SDK error to `{ regionBlocked: true }` before constructing any
+`Err.*`, so this expected result produces no logging, Sentry or Pulse capture. Existing `AppError` instances
+remain unchanged, even if their name or message resembles the SDK contract.
+
+Match the error instance, name and full message only at this boundary. Bare strings, other names or statuses,
+transport errors and parsing failures containing `HTTP 451` are not region restrictions; normalize them through
+the ordinary `AppError` path. Retain `locks.region.contract.test.ts` when updating the SDK: it runs the installed
+WASM, signed PKARR resolution and service with stubbed HTTP responses, checking 451, ordinary failures and success
+as well as the observability calls. Replace the message check with a structured discriminator when the SDK provides one.
 
 ### Grant failures during use and sign-in
 

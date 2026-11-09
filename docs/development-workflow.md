@@ -12,6 +12,13 @@ How to make a change to this repo that a maintainer would write: right layer, ri
 6. Verify at the right level (see [Verification](#verification)), then read your own diff for drift: a stray `useMemo`, a hex colour, a new `index.ts`, an unrelated rename, a raw `Error`, a direct `process.env` read.
 7. If the change alters a UI surface with a VRT baseline, say so; if it needs an ADR-worthy decision, mention it rather than silently inventing a pattern.
 
+## People and names
+
+- In code, comments, docs, fixtures, commit messages and PR text, refer to people only by GitHub handle. Never use real names.
+- Do not attribute opinions, decisions or personal matters to people.
+- Test fixtures use clearly fictional names (`Alice Example`, `Bob Example`).
+- This is a public repo and history is kept forever: a scrubbed name stays in earlier commits, so get it right the first time.
+
 ## Worked Example: Create a Collection
 
 `src/hooks/useCreateCollection/useCreateCollection.ts` → `src/core/controllers/post/post.ts` (`commitCreateCollection`) → `src/core/application/post/post.ts` (`commitCreate`):
@@ -52,7 +59,7 @@ Styling, tokens, z-index, atomic tiers, file layout and Figma parity are in `com
 - **Streams and TTL:** streams are caches (ADR-0003) with TTL-driven staleness (ADR-0005); local services update `*_ttl.lastUpdatedAt` on every write, and forgetting it leaves a cache that never refreshes. TTL values are runtime-configurable (`PUBKY_RUNTIME_TTL_*`) via `src/config/sync.ts`. Persist dependencies before dependents (author, then post, then tags). Deferred stream invalidation goes through `postStreamDirtyRegistry` (`local-first.md`).
 - **State:** Zustand stores in `src/core/stores/<domain>/*.store.ts` with `*.selectors.ts` companions hold global UI state; local component state stays local. Stores hold no business logic and are read by controllers and coordinators (`useAuthStore.getState().selectCurrentUserPubky()`). A new **persisted** store key must be registered in `src/core/stores/persistedKeys.ts`: `PERSISTED_STORE_KEYS` drives the logout/clear sweep.
 - **Server data:** TanStack Query (`src/libs/query-client`) for query-shaped fetches, with retry decisions derived from `AppError.category`; Dexie `useLiveQuery` for local reads.
-- **HTTP:** never raw `fetch` with ad-hoc error handling. Browser → `/api/*` calls use `src/libs/api/client-request.ts` (see `useFeedback`, `useReportPost`); service calls use the service's own `*.utils.ts` over `safeFetch`.
+- **HTTP:** never raw `fetch` with ad-hoc error handling. Browser → `/api/*` calls use `src/libs/api/client-request.ts` (see `useFeedback`, `useReportPost`); service calls use the service's own `*.utils.ts` over `safeFetch`. The optional `ClientRegionService.fetchCountry` probe has a narrow non-reporting exception in [error handling](error-handling.md#non-reporting-availability-probes).
 - **Identities:** pubky public keys are normalized (`stripPubkyPrefix`); session/auth lives in `src/core/services/homeserver` + `useAuthStore`; unauthenticated browsing uses the explore routes and `useRequireAuth().requireAuth()` for gated actions (`components.md`, _Explore mode_).
 
 ## Services Map
@@ -95,7 +102,15 @@ Right-sized verification:
 
 Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT (`visual-regression-testing.md`); no snapshot tests. For mobile layout branches driven by `useIsMobile`, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 
+Cypress e2e data: seed what a test only observes, drive what it tests. Preconditions a spec only reads (other users, their posts, follows, tags, notifications to receive) may be written through the homeserver API with the helpers in `cypress/support/seed.ts`, but every flow seeded that way keeps a named UI test in the spec that owns it, so seeding never reduces coverage. After each phase of seeds, a spec makes one `waitForNexus` call (`cypress/support/nexus.ts`) with a check for every record the phase's assertions read from Nexus, and none for records they do not; the checks are polled together, so a phase costs one indexing delay. Nexus indexes a record as it stands when it processes the write, so a record is waited for before it is edited or deleted. Where a test asserts order, it relies on seeded records being written a few milliseconds apart or compares against the order Nexus returns.
+
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
+
+## Dependency Security
+
+Dependabot security updates (`.github/dependabot.yml`) are event-driven — a new advisory triggers a scan, not the monthly version-update schedule — and neither `cooldown` nor `open-pull-requests-limit` can delay them. npm security fixes arrive as two grouped PRs split by declared dependency type (`applies-to: security-updates` + `dependency-type`): production first (triage priority), development second (test/build tooling), so a dev-only failing update can no longer hold back a production critical — within each group the trade-off remains: one failing update holds the others, there is no native ungroup, and a blocked critical means splitting the PR manually. The type is the `package.json` declaration, not what a package is: the Vitest packages (`vitest`, `@vitest/browser`, `@vitest/browser-playwright`, `@vitest/coverage-v8`, `vitest-browser-react`) are declared in `devDependencies`, so Dependabot classifies them as development — security updates land in `security-development`, and version updates use the existing `vitest` group. Dev tooling never ships in the runner image, but it does execute during the image build and in CI, so development advisories still get triaged, just second. Exact pins in `package.json` do not block these bumps. Never add an `ignore` rule for a shipped dependency: ignore rules suppress security updates too. The feature must stay enabled in repo settings (Settings → Advanced Security → Dependabot), along with Dependabot alerts and the dependency graph — if security updates are disabled there, no advisory ever produces a PR.
+
+Triage order for a new finding: production direct pins first (bump to the fixed version), then transitive production (lockfile refresh or an `overrides` entry), then dev-only. Treat every production dependency as a likely exposure: the Docker runner image ships the Next.js standalone output (`.next/standalone`), a traced subset of production dependencies, so the full production set is a safe over-approximation of what actually ships — reachability still needs a human or agent to confirm. The `node:lts-alpine` base image in the Dockerfile is a floating tag, so base-image fixes arrive by rebuilding the image; GitHub Actions versions are covered by Dependabot's `github-actions` ecosystem.
 
 ## Code Quality
 

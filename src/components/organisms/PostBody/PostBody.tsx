@@ -18,6 +18,7 @@ export function PostBody({
   localAttachments,
   textClassName,
   mediaVariant,
+  collapseMedia,
   pendingAttachments,
 }: PostBodyProps) {
   const hasContent = content.trim().length > 0;
@@ -30,6 +31,7 @@ export function PostBody({
         attachments={attachments}
         localAttachments={localAttachments}
         {...(mediaVariant ? { mediaVariant } : {})}
+        {...(collapseMedia ? { collapseMedia } : {})}
         pendingAttachments={pendingAttachments}
       />
     </>

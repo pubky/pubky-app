@@ -168,11 +168,12 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     FEED_TAB_CLASS,
     tabWidthClass,
     FEED_TAB_INACTIVE_PADDING_CLASS,
-    'cursor-pointer border-border text-muted-foreground hover:text-white',
+    'cursor-pointer border-border text-muted-foreground hover:text-foreground',
   );
 
   return (
     <Container
+      data-cy="feed-navigation"
       className={cn(
         // Full-bleed below lg: cancel ContentLayout's mobile gutter so the tab
         // strip runs edge-to-edge; w-auto lets the negative margins widen the
@@ -197,6 +198,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           overrideDefaults
           href={APP_ROUTES.HOME}
           aria-label={reachLabel}
+          data-cy="feed-navigation-home-tab"
           aria-current={isHomeActive ? 'page' : undefined}
           onClick={(event) =>
             handleFeedNavClick(event, {
@@ -208,7 +210,9 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
             FEED_TAB_CLASS,
             hasCustomFeeds && isHomeActive ? FEED_TAB_ACTIVE_WIDTH_CLASS : tabWidthClass,
             isHomeActive ? FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
-            isHomeActive ? 'border-white text-white' : 'border-border text-muted-foreground hover:text-white',
+            isHomeActive
+              ? 'border-foreground text-foreground'
+              : 'border-border text-muted-foreground hover:text-foreground',
           )}
         >
           <ReachIcon className="size-5 shrink-0" />
@@ -232,13 +236,14 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 // horizontal padding and gives the collapsed (flex-none) tab
                 // its content width; the pencil overlays the right padding.
                 isActive ? FEED_TAB_ACTIVE_WIDTH_CLASS : FEED_TAB_INACTIVE_WIDTH_CLASS,
-                isActive ? 'border-white' : 'border-border',
+                isActive ? 'border-foreground' : 'border-border',
               )}
             >
               <Link
                 overrideDefaults
                 href={href}
                 aria-label={feed.name}
+                data-cy="feed-navigation-custom-tab"
                 aria-current={isActive ? 'page' : undefined}
                 onClick={(event) =>
                   handleFeedNavClick(event, {
@@ -249,7 +254,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 className={cn(
                   'flex h-full w-full min-w-0 items-center justify-center gap-2',
                   isActive ? CUSTOM_FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
-                  isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
+                  isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground',
                 )}
               >
                 <DynamicLucideIcon name={feed.icon} className="size-5 shrink-0" />
@@ -261,6 +266,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 overrideDefaults
                 type="button"
                 aria-label={`Edit ${feed.name}`}
+                data-cy="feed-navigation-edit-btn"
                 onClick={() => setEditingFeed(feed)}
                 className={cn(FEED_TAB_PENCIL_CLASS, !isActive && 'hidden lg:block')}
               >
@@ -272,7 +278,12 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
 
         {isAuthenticated ? (
           <CustomFeedDialog mode="create">
-            <Button overrideDefaults aria-label="Create feed" className={createFeedButtonClass}>
+            <Button
+              overrideDefaults
+              aria-label="Create feed"
+              data-cy="feed-navigation-create-btn"
+              className={createFeedButtonClass}
+            >
               <PlusCircle className="size-5 shrink-0" />
               <Typography overrideDefaults className={cn(FEED_TAB_LABEL_CLASS, 'hidden lg:inline')}>
                 {'Feed'}
@@ -283,6 +294,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           <Button
             overrideDefaults
             aria-label="Create feed"
+            data-cy="feed-navigation-create-btn"
             className={createFeedButtonClass}
             onClick={() => requireAuth(() => undefined)}
           >

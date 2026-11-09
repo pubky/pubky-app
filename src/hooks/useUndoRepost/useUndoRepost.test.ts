@@ -9,7 +9,7 @@ import { useUndoRepost } from './useUndoRepost';
 // Exercise the real useDeletePost so the assertions cover the resulting action,
 // pending state and toast, rather than only its configuration arguments.
 vi.mock('@/controllers/post/post', () => ({
-  PostController: { commitDelete: vi.fn(), getDetails: vi.fn() },
+  PostController: { commitDelete: vi.fn(), getDetails: vi.fn(), getDetailsByIds: vi.fn() },
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
@@ -27,6 +27,8 @@ describe('useUndoRepost', () => {
     useAuthStore.setState({ currentUserPubky: 'viewer', session: mockSession(), restoreStatus: 'ready' });
     vi.mocked(PostController.commitDelete).mockResolvedValue(undefined);
     vi.mocked(PostController.getDetails).mockResolvedValue(null);
+    // A repost carries no `lock`, so the delete never reaches the Lock Server.
+    vi.mocked(PostController.getDetailsByIds).mockResolvedValue([undefined]);
   });
 
   it.each([

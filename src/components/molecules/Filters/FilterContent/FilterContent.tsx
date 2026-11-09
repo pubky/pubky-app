@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CirclePlay, Download, Image, Layers, Library, Link, Newspaper, StickyNote } from 'lucide-react';
+import { CirclePlay, Download, Image, Layers, Library, Link, Lock, Newspaper, StickyNote } from 'lucide-react';
 import { CONTENT, type ContentType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
@@ -30,48 +30,63 @@ export function FilterContent({
         label: 'All',
         icon: Layers,
         disabled: isDisabled(CONTENT.ALL),
+        dataCy: 'all-content-toggle',
       },
       {
         key: CONTENT.SHORT,
         label: 'Posts',
         icon: StickyNote,
         disabled: isDisabled(CONTENT.SHORT),
+        dataCy: 'posts-content-toggle',
       },
       {
         key: CONTENT.LONG,
         label: 'Articles',
         icon: Newspaper,
         disabled: isDisabled(CONTENT.LONG),
+        dataCy: 'articles-content-toggle',
       },
       {
         key: CONTENT.COLLECTIONS,
         label: 'Collections',
         icon: Library,
         disabled: isDisabled(CONTENT.COLLECTIONS),
+        dataCy: 'collections-content-toggle',
       },
       {
         key: CONTENT.IMAGES,
         label: 'Images',
         icon: Image,
         disabled: isDisabled(CONTENT.IMAGES),
+        dataCy: 'images-content-toggle',
       },
       {
         key: CONTENT.VIDEOS,
         label: 'Videos',
         icon: CirclePlay,
         disabled: isDisabled(CONTENT.VIDEOS),
+        dataCy: 'videos-content-toggle',
       },
       {
         key: CONTENT.LINKS,
         label: 'Links',
         icon: Link,
         disabled: isDisabled(CONTENT.LINKS),
+        dataCy: 'links-content-toggle',
       },
       {
         key: CONTENT.FILES,
         label: 'Files',
         icon: Download,
         disabled: isDisabled(CONTENT.FILES),
+        dataCy: 'files-content-toggle',
+      },
+      {
+        key: CONTENT.LOCKS,
+        label: 'Locks',
+        icon: Lock,
+        disabled: isDisabled(CONTENT.LOCKS),
+        dataCy: 'locks-content-toggle',
       },
     ],
     [isDisabled],
@@ -83,6 +98,7 @@ export function FilterContent({
       selectedValue={selectedTab}
       defaultValue={defaultSelectedTab}
       onChange={onTabChange}
+      dataCy="filter-content-radiogroup"
     />
   );
 }

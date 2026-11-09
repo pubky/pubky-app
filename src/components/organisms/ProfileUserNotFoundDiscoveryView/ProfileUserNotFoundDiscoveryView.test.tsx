@@ -87,7 +87,7 @@ describe('ProfileUserNotFoundDiscoveryView', () => {
     expect(layout).toHaveAttribute('data-show-right-mobile-button', 'false');
     expect(layout).toHaveAttribute('data-has-gradient-background', 'false');
     expect(layout).toHaveAttribute('data-disable-wide-shell-layout', 'true');
-    expect(layout).toHaveClass('pb-24 lg:pb-12');
+    expect(layout).toHaveClass('pb-44 lg:pb-12');
 
     expect(screen.getByTestId('content-layout-left-slot')).toContainElement(screen.getByTestId('hot-feed-sidebar'));
     expect(screen.getByTestId('content-layout-right-slot')).toContainElement(

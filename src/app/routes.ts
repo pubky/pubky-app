@@ -68,6 +68,7 @@ export enum SETTINGS_ROUTES {
   ACCOUNT = '/settings/account',
   EDIT = '/settings/edit',
   NOTIFICATIONS = '/settings/notifications',
+  APPEARANCE = '/settings/appearance',
   PRIVACY_SAFETY = '/settings/privacy-safety',
   MUTED_USERS = '/settings/muted-users',
   HELP = '/settings/help',
@@ -79,6 +80,12 @@ export enum POST_ROUTES {
 
 export enum COPYRIGHT_ROUTES {
   COPYRIGHT = '/copyright',
+}
+
+/** Public pages for the legal texts every sign-up, footer and Settings link points to. */
+export enum LEGAL_ROUTES {
+  TERMS_OF_USE = '/terms-of-use',
+  PRIVACY_POLICY = '/privacy-policy',
 }
 
 export enum DEV_ROUTES {
@@ -101,6 +108,8 @@ export const PUBLIC_ROUTES: string[] = [
   APP_ROUTES.PROFILE,
   // Copyright page should be accessible without authentication
   COPYRIGHT_ROUTES.COPYRIGHT,
+  // The Terms of Service and Privacy Policy must open for anyone, in any auth state (app stores link to them).
+  ...Object.values(LEGAL_ROUTES),
   // Sentry verification harness must be reachable without a session on preview deploys.
   // The page returns 404 in production via isSentryTestHarnessEnabled().
   DEV_ROUTES.SENTRY_TEST,
@@ -265,11 +274,25 @@ export const LOGO_LANDING_ROUTES: readonly string[] = [
   ROOT_ROUTES,
   ...Object.values(AUTH_ROUTES),
   COPYRIGHT_ROUTES.COPYRIGHT,
+  ...Object.values(LEGAL_ROUTES),
   ...Object.values(ONBOARDING_ROUTES),
 ];
 
 export function isLogoLandingRoute(pathname: string | null): boolean {
   return pathname != null && LOGO_LANDING_ROUTES.includes(pathname);
+}
+
+/** `/terms-of-use` or `/privacy-policy`. */
+export function isLegalRoute(pathname: string | null): boolean {
+  return pathname === LEGAL_ROUTES.TERMS_OF_USE || pathname === LEGAL_ROUTES.PRIVACY_POLICY;
+}
+
+/**
+ * The public documents: `/copyright` and the legal routes. They render outside the app's database and auth gate
+ * (`AppShell`), so their text is in the server's HTML and they open without IndexedDB.
+ */
+export function isPublicDocumentRoute(pathname: string | null): boolean {
+  return pathname === COPYRIGHT_ROUTES.COPYRIGHT || isLegalRoute(pathname);
 }
 
 // ============================================================================

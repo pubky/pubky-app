@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import { resolvePreferredVisualTileSize } from './TimelineFeedVisual.helpers';
+import { getVisualYouTubeThumbnailUrl, resolvePreferredVisualTileSize } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
-import { resetVisualTileCaches } from './TimelineFeedVisualMedia.utils';
+import { getVisualTileProbeCacheEntry, resetVisualTileCaches } from './TimelineFeedVisualMedia.utils';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
 
 const {
@@ -78,18 +78,23 @@ function createPostDetails({
   id,
   content = 'hello world',
   attachments = null,
+  kind = 'short',
+  lock,
 }: {
   id: string;
   content?: string;
   attachments?: string[] | null;
+  kind?: string;
+  lock?: string | null;
 }): PostDetailsModelSchema {
   return {
     id,
     content,
     indexed_at: 1,
-    kind: 'short',
+    kind,
     uri: `pubky://author/pub/pubky.app/posts/${id}`,
     attachments,
+    ...(lock !== undefined ? { lock } : {}),
   };
 }
 
@@ -788,6 +793,274 @@ describe('useVisualFeedTiles', () => {
       expect(mockGetMetadata).toHaveBeenCalledWith({
         fileAttachments: ['pubky://user-1/pub/pubky.app/files/cover-1'],
       });
+    });
+  });
+  describe('link video tiles', () => {
+    const YOUTUBE_URL = 'https://youtu.be/dQw4w9WgXcQ';
+
+    beforeEach(() => {
+      mockUseLiveQuery.mockImplementation(useExecutedLiveQuery);
+    });
+
+    it('builds a ready 16:9 tile for a post whose only video is a YouTube link', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-youtube', kind: 'video', content: `Watch ${YOUTUBE_URL}` }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-youtube'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+
+      const [tile] = result.current.tiles;
+      expect(tile.id).toBe(`author:post-youtube:link:${YOUTUBE_URL}`);
+      expect(tile.linkVideo).toEqual({ provider: 'youtube', hostLabel: 'youtu.be' });
+      expect(tile.previewSrc).toBe(getVisualYouTubeThumbnailUrl('dQw4w9WgXcQ', 'hq720'));
+      expect(tile.mainSrc).toBe(getVisualYouTubeThumbnailUrl('dQw4w9WgXcQ', 'mqdefault'));
+      expect(tile.probeState).toBe('ready');
+      expect(tile.sizeOptions).toEqual(['wide', 'medium']);
+      expect(tile.content).toBe(`Watch ${YOUTUBE_URL}`);
+      expect(result.current.hiddenPostCount).toBe(0);
+      expect(result.current.hasPendingTiles).toBe(false);
+      expect(result.current.rows).toHaveLength(1);
+      // Never probed: a probe would contact the video host before the tile is even shown.
+      expect(getVisualTileProbeCacheEntry(tile.id)).toBeUndefined();
+      expect(mockGetMetadata).not.toHaveBeenCalled();
+    });
+
+    it('builds a card-only tile for a Vimeo link', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-vimeo', kind: 'video', content: 'https://vimeo.com/123456789' }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-vimeo'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+
+      const [tile] = result.current.tiles;
+      expect(tile.linkVideo).toEqual({ provider: 'vimeo', hostLabel: 'vimeo.com' });
+      expect(tile.previewSrc).toBe('');
+      expect(tile.mainSrc).toBe('');
+      expect(tile.probeState).toBe('ready');
+      expect(result.current.hiddenPostCount).toBe(0);
+    });
+
+    it('plays a direct video file link from the link itself, without probing it', async () => {
+      const fileUrl = 'https://cdn.example.com/clips/holiday.mp4';
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-file', kind: 'video', content: fileUrl }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-file'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+
+      const [tile] = result.current.tiles;
+      expect(tile.linkVideo).toEqual({ provider: 'file', hostLabel: 'cdn.example.com' });
+      expect(tile.mediaKind).toBe('video');
+      expect(tile.previewSrc).toBe(fileUrl);
+      expect(tile.mainSrc).toBe(fileUrl);
+      expect(tile.probeState).toBe('ready');
+      expect(getVisualTileProbeCacheEntry(tile.id)).toBeUndefined();
+    });
+
+    it('decides by the content, so a post stored with kind link before video links were classified still gets a tile', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-legacy', kind: 'link', content: YOUTUBE_URL }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-legacy'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].linkVideo?.provider).toBe('youtube');
+    });
+
+    it('keeps attachment tiles and adds no link tile when the post also carries media', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({
+          id: 'author:post-both',
+          kind: 'video',
+          content: YOUTUBE_URL,
+          attachments: ['pubky://user-1/pub/pubky.app/files/file-1'],
+        }),
+      ]);
+      mockGetMetadata.mockResolvedValue([
+        createFileDetails({ id: 'user-1:file-1', contentType: 'image/jpeg', width: 1000, height: 800 }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-both'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].attachmentId).toBe('user-1:file-1');
+      expect(result.current.tiles[0].linkVideo).toBeUndefined();
+    });
+
+    it('waits while attachment metadata is unresolved instead of building a link tile', async () => {
+      mockFetchFiles.mockImplementation(() => new Promise<void>(() => {}));
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({
+          id: 'author:post-pending',
+          kind: 'video',
+          content: YOUTUBE_URL,
+          attachments: ['pubky://user-1/pub/pubky.app/files/file-pending'],
+        }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-pending'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(mockFetchFiles).toHaveBeenCalledTimes(1);
+      });
+      // The attachment may still turn out to be media, and attachments win over the link.
+      expect(result.current.tiles).toHaveLength(0);
+      expect(result.current.hiddenPostCount).toBe(0);
+      expect(result.current.hasPendingFiles).toBe(true);
+    });
+
+    it('falls back to the link once every remote attachment resolved to non-visual metadata', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({
+          id: 'author:post-doc',
+          kind: 'video',
+          content: YOUTUBE_URL,
+          attachments: ['pubky://user-1/pub/pubky.app/files/file-doc'],
+        }),
+      ]);
+      mockGetMetadata.mockResolvedValue([createFileDetails({ id: 'user-1:file-doc', contentType: 'application/pdf' })]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-doc'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].linkVideo?.provider).toBe('youtube');
+      expect(result.current.hiddenPostCount).toBe(0);
+    });
+
+    it('falls back to the link when the local attachments are not media', async () => {
+      mockLocalFilesState.posts = {
+        'author:post-local-doc': [{ type: 'application/pdf', name: 'doc.pdf', urls: { main: '/doc.pdf' } }],
+      };
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-local-doc', kind: 'video', content: YOUTUBE_URL }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-local-doc'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].linkVideo?.provider).toBe('youtube');
+      expect(result.current.hiddenPostCount).toBe(0);
+    });
+
+    it.each([
+      ['an article', { kind: 'long', content: JSON.stringify({ title: 'T', body: `See ${YOUTUBE_URL}` }) }],
+      ['a collection', { kind: 'collection', content: JSON.stringify({ description: YOUTUBE_URL }) }],
+      [
+        'a lock whose video link is only in its title',
+        {
+          kind: 'short',
+          content: JSON.stringify({ lock_title: YOUTUBE_URL, teaser_description: 'Unlock to watch' }),
+          lock: 'pubky://author/pub/app.locks/lock-1.json',
+        },
+      ],
+      // PostLinkEmbeds embeds nothing for it either.
+      ['a protocol-relative video link', { content: '//youtu.be/dQw4w9WgXcQ' }],
+      ['a YouTube channel link', { content: 'https://www.youtube.com/@somechannel' }],
+      ['a video link inside Markdown', { content: `[my video](${YOUTUBE_URL})` }],
+      ['a link that is not a video', { content: 'https://example.com/article' }],
+      ['a video link that is not the first link', { content: `https://example.com then ${YOUTUBE_URL}` }],
+    ])('builds no link tile for %s and counts it as hidden', async (_label, post) => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([createPostDetails({ id: 'author:post-no-tile', ...post })]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-no-tile'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.hiddenPostCount).toBe(1);
+      });
+      expect(result.current.tiles).toHaveLength(0);
+    });
+
+    it("reads a lock's video link from its teaser and shows the teaser, not the JSON envelope", async () => {
+      const teaser = `Trailer ${YOUTUBE_URL}`;
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({
+          id: 'author:post-lock',
+          // Kind inference reads the envelope, so the announcement is stored as a video post.
+          kind: 'video',
+          content: JSON.stringify({ lock_title: 'Locked content', teaser_description: teaser }),
+          lock: 'pubky://author/pub/app.locks/lock-1.json',
+        }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-lock'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].linkVideo?.provider).toBe('youtube');
+      expect(result.current.tiles[0].content).toBe(teaser);
+      expect(result.current.hiddenPostCount).toBe(0);
+    });
+
+    it('keeps the deleted placeholder for a deleted post that held a video link', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-deleted', kind: 'video', content: '[DELETED]' }),
+      ]);
+
+      const { result } = renderHook(() =>
+        useVisualFeedTiles({ postIds: ['author:post-deleted'], hasMore: false, showUnavailablePosts: true }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].placeholderKind).toBe('deleted');
+      expect(result.current.tiles[0].linkVideo).toBeUndefined();
+    });
+
+    it('marks the link tile of a blurred post as blurred', async () => {
+      mockEnrichPosts.mockImplementation(async (posts: PostDetailsModelSchema[]) =>
+        posts.map((post) => ({ ...post, is_moderated: true, is_blurred: true })),
+      );
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-blurred', kind: 'video', content: YOUTUBE_URL }),
+      ]);
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-blurred'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].isBlurred).toBe(true);
+    });
+
+    it('packs two link tiles into one row without waiting for the next page', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        createPostDetails({ id: 'author:post-a', kind: 'video', content: YOUTUBE_URL }),
+        createPostDetails({ id: 'author:post-b', kind: 'video', content: 'https://vimeo.com/123456789' }),
+      ]);
+
+      const { result } = renderHook(() =>
+        useVisualFeedTiles({ postIds: ['author:post-a', 'author:post-b'], hasMore: true }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.rows).toHaveLength(1);
+      });
+      expect(result.current.rows[0].cells.map((cell) => cell.size)).toEqual(['medium', 'medium']);
+      expect(result.current.tail).toEqual([]);
+      expect(result.current.hasPendingTiles).toBe(false);
     });
   });
 });

@@ -11,6 +11,7 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { DialogEditCollection } from '@/organisms/Collections/DialogEditCollection/DialogEditCollection';
+import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { DialogEditPost } from '../DialogEditPost/DialogEditPost';
 import { DialogReportPost } from '../DialogReportPost/DialogReportPost';
 import type { PostMenuActionsProps } from './PostMenuActions.types';
@@ -22,7 +23,10 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const { deletePost, isDeleting } = useDeletePost({ active: deleteConfirmOpen });
+  const [locksSignInOpen, setLocksSignInOpen] = useState(false);
+  const { deletePost, isDeleting, needsLocksSignIn, clearLocksSignIn } = useDeletePost({
+    active: deleteConfirmOpen || locksSignInOpen,
+  });
   const { requireAuth } = useRequireAuth();
   const { postDetails } = usePostDetails(postId);
   // Collection posts use a dedicated form dialog because their content is a
@@ -45,8 +49,19 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
     setDeleteConfirmOpen(true);
   };
 
+  // A closed confirm dialog forgets the sign-in offer: the creator may sign in elsewhere before reopening it.
+  const handleDeleteConfirmOpenChange = (nextOpen: boolean) => {
+    setDeleteConfirmOpen(nextOpen);
+    if (!nextOpen) clearLocksSignIn();
+  };
+
   const handleDeleteConfirm = () => {
     return deletePost(postId);
+  };
+
+  // The Lock Server refused the lock deletion: sign in to it alone, then retry the delete.
+  const handleLocksSignInSuccess = async () => {
+    if (await deletePost(postId)) handleDeleteConfirmOpenChange(false);
   };
 
   // Handle open/close with auth check - opens sign-in dialog for unauthenticated users
@@ -110,8 +125,21 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
       )}
       <DialogConfirmDelete
         open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
+        onOpenChange={handleDeleteConfirmOpenChange}
         onConfirm={handleDeleteConfirm}
+        description={
+          postDetails?.lock
+            ? 'This action cannot be undone. The post and its locked content will be permanently deleted. Readers who already unlocked it keep their copy.'
+            : undefined
+        }
+        signInNotice={needsLocksSignIn ? 'Sign in to the Lock Server to delete this post.' : undefined}
+        onSignIn={needsLocksSignIn ? () => setLocksSignInOpen(true) : undefined}
+      />
+      <DialogLocksAuth
+        mode="signin"
+        open={locksSignInOpen}
+        onOpenChange={setLocksSignInOpen}
+        onSuccess={() => void handleLocksSignInSuccess()}
       />
     </>
   );

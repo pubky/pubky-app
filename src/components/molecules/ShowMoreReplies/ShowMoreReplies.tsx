@@ -62,6 +62,7 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
             size="sm"
             type="button"
             data-post-list-card="true"
+            data-cy="show-more-replies-btn"
             onClick={onClick}
             className="gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
           >

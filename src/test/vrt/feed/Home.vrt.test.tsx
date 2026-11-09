@@ -197,6 +197,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: createZustandLikeHook({
     secretKey: null as string | null,
+    signupAttempt: null,
     showWelcomeDialog: false,
     setShowWelcomeDialog: () => {},
     hasHydrated: true,
@@ -690,7 +691,9 @@ async function expandFirstQuickReply(screen: Awaited<ReturnType<typeof renderFor
 async function waitForArticleComposer() {
   await expect.element(page.getByRole('tablist', { name: 'Article sections' })).toBeVisible();
   await expect.element(page.getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
-  await expect.element(page.getByText('Publish')).toBeVisible();
+  // Role + full accessible name: Vitest 5's getByText matches exactly, so the
+  // old substring 'Publish' no longer finds the 'Publish Article' button.
+  await expect.element(page.getByRole('button', { name: 'Publish Article' })).toBeVisible();
   await waitForMarkdownEditorReady();
 }
 
@@ -707,6 +710,20 @@ describe('Home (global feed) — visual regression', () => {
   it('renders the global feed at mobile viewport', async () => {
     await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await matchVrtFrameScreenshot('home-feed-mobile');
+  });
+
+  // Custom feed tabs arrive asynchronously from the mocked FeedApplication;
+  // wait for the last fixture feed so the strip is captured in one known state.
+  it('renders the global feed in light mode at desktop viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP, theme: 'light' });
+    await expect.element(screen.getByRole('link', { name: 'Photography' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-light-desktop');
+  });
+
+  it('renders the global feed in light mode at mobile viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE, theme: 'light' });
+    await expect.element(screen.getByRole('link', { name: 'Photography' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-light-mobile');
   });
 
   it('renders an expanded QuickReply at desktop viewport', async () => {

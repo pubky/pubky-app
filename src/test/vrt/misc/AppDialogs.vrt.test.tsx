@@ -16,14 +16,13 @@ import { DialogBackup } from '@/organisms/DialogBackup/DialogBackup';
 import { DialogConfirmBackup } from '@/organisms/DialogConfirmBackup/DialogConfirmBackup';
 import { DialogInstallIos } from '@/organisms/DialogInstallIos/DialogInstallIos';
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
-import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
-import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { DialogWelcome } from '@/organisms/DialogWelcome/DialogWelcome';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 
-// Welcome, backup reminders, legal copy, install, Locks, and pay-to-unlock.
+// Welcome, backup reminders, the age notice, install, Locks, and pay-to-unlock.
 // Sign-in is already covered in auth/DialogSignIn.vrt.test.tsx.
+// Terms and privacy are pages now (`/terms-of-use`, `/privacy-policy`), not dialogs.
 
 const VIEWPORTS = [
   ['desktop', VRT_VIEWPORT_DESKTOP],
@@ -112,6 +111,8 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
     mnemonic: flags.recoveryPhrase,
     clearSecrets: vi.fn(),
     secretKey: null as string | null,
+    // Signed-out value. `hasSignupAttemptForSecretState` reads `.pubky` when this is not null.
+    signupAttempt: null,
     hasHydrated: true,
   }),
 }));
@@ -412,32 +413,6 @@ describe('Legal and install dialogs — visual regression', () => {
     await matchVrtFrameScreenshot(`dialog-age-${name}`);
   });
 
-  it.each(VIEWPORTS)('renders the terms of service at %s viewport', async (name, viewport) => {
-    await preloadImages(CHROME_IMAGES);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogTerms />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Terms of Service' }).click();
-    await expect.element(page.getByTestId('dialog-title')).toHaveTextContent('Terms of Service');
-    await matchVrtFrameScreenshot(`dialog-terms-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders the privacy policy at %s viewport', async (name, viewport) => {
-    await preloadImages(CHROME_IMAGES);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogPrivacy />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Privacy Policy' }).click();
-    await expect.element(page.getByTestId('dialog-title')).toHaveTextContent('Privacy Policy');
-    await matchVrtFrameScreenshot(`dialog-privacy-${name}`);
-  });
-
   it.each(VIEWPORTS)('renders the iOS install steps at %s viewport', async (name, viewport) => {
     const dialog = await renderDialog(
       <DialogInstallIos open onOpenChange={() => undefined} onConfirm={() => undefined} />,
@@ -494,6 +469,12 @@ describe('Locks dialogs — visual regression', () => {
     );
     const amount = dialog.getByPlaceholder('0');
     await amount.fill('21000');
+    // Grouped sats are the resting value. Focus shows the raw digits, so leave the field before the capture.
+    const field = amount.element();
+    if (!(field instanceof HTMLInputElement)) {
+      throw new Error('Lock amount field is not an input');
+    }
+    field.blur();
     await expect.element(amount).toHaveValue('21,000');
     await expect.element(dialog.getByText('$10.50')).toBeVisible();
     await matchVrtFrameScreenshot(`dialog-lock-price-filled-${name}`);

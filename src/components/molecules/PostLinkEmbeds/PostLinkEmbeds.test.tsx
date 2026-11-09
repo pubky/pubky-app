@@ -796,6 +796,18 @@ describe('PostLinkEmbeds', () => {
       expect(screen.queryByTestId('container')).not.toBeInTheDocument();
     });
 
+    it('renders nothing for an in-app URL inside a non-navigating preview (reply/repost dialog)', () => {
+      render(
+        <PostPreviewNestingProvider navigable={false}>
+          <PostLinkEmbeds content={`${origin}/post/${pubky}/${postId}`} />
+        </PostPreviewNestingProvider>,
+      );
+
+      expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('container')).not.toBeInTheDocument();
+    });
+
     it('still renders external embeds inside an embedded post preview', () => {
       render(
         <PostPreviewNestingProvider>

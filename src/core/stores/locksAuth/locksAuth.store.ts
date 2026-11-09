@@ -9,7 +9,7 @@ import { locksAuthInitialState, LocksAuthStore } from './locksAuth.types';
  * Persists the Lock Server bearer secret and its creator pubky to localStorage; the live session is
  * rebuilt from the secret on load. Same shape and lifecycle as the homeserver `auth-store`.
  *
- * Once private homeserver storage lands (pubky/pubky-core#426), the secret could live in the user's
+ * Once private homeserver storage lands (pubky/pubky-homeserver#426), the secret could live in the user's
  * homeserver `/priv` and be fetched on demand instead of localStorage, giving device independence.
  */
 export const useLocksAuthStore = create<LocksAuthStore>()(

@@ -10,9 +10,9 @@ import { cn } from '@/libs/utils/utils';
 import type { ContextualBannerProps } from './ContextualBanner.types';
 
 /** The Button atom's grey focus ring is too faint on lime; a dark ring keeps focus visible. */
-const FOCUS_RING_CLASS = 'focus-visible:ring-primary-foreground';
+const FOCUS_RING_CLASS = 'focus-visible:ring-brand-foreground';
 /** Dark outline pill on the lime bar, as in `AlertInstall`. */
-const OUTLINE_BUTTON_CLASS = cn('flex-1 bg-input/30 font-bold text-primary-foreground lg:flex-none', FOCUS_RING_CLASS);
+const OUTLINE_BUTTON_CLASS = cn('flex-1 bg-input/30 font-bold text-brand-foreground lg:flex-none', FOCUS_RING_CLASS);
 
 /**
  * ContextualBanner
@@ -48,7 +48,7 @@ export function ContextualBanner({
       />
       <div
         data-testid="contextual-banner-bar"
-        className="pointer-events-auto animate-in bg-brand text-primary-foreground duration-300 ease-out fade-in slide-in-from-bottom motion-reduce:animate-none"
+        className="pointer-events-auto animate-in bg-brand text-brand-foreground duration-300 ease-out fade-in slide-in-from-bottom motion-reduce:animate-none"
       >
         <div
           className={cn(
