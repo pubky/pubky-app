@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => {
     stream: coordinator(),
     ttl: coordinator(),
     muteListSync: coordinator(),
+    notificationLastReadPoll: coordinator(),
+    lastReadChannel: coordinator(),
   };
 });
 
@@ -26,8 +28,14 @@ vi.mock('@/coordinators/ttl/ttl', () => ({ TtlCoordinator: { getInstance: () => 
 vi.mock('@/coordinators/mute-list-sync/mute-list-sync', () => ({
   MuteListSyncCoordinator: { getInstance: () => mocks.muteListSync },
 }));
+vi.mock('@/coordinators/notification-last-read-poll/notification-last-read-poll', () => ({
+  NotificationLastReadPollCoordinator: { getInstance: () => mocks.notificationLastReadPoll },
+}));
+vi.mock('@/coordinators/notification-last-read-sync/notification-last-read-sync', () => ({
+  NotificationLastReadSyncCoordinator: { getInstance: () => mocks.lastReadChannel },
+}));
 
-const all = () => [mocks.notification, mocks.stream, mocks.ttl, mocks.muteListSync];
+const all = () => [mocks.notification, mocks.stream, mocks.ttl, mocks.muteListSync, mocks.notificationLastReadPoll];
 
 describe('CoordinatorsManager', () => {
   beforeEach(() => {
@@ -39,8 +47,16 @@ describe('CoordinatorsManager', () => {
     const { unmount } = render(<CoordinatorsManager />);
     for (const coordinator of all()) expect(coordinator.start).toHaveBeenCalledOnce();
     expect(mocks.stream.setRoute).toHaveBeenCalledWith('/home');
+    expect(mocks.notificationLastReadPoll.setRoute).toHaveBeenCalledWith('/home');
     unmount();
     for (const coordinator of all()) expect(coordinator.stop).toHaveBeenCalledOnce();
+  });
+
+  // Social v1: the private `last_read` is polled; the event-stream channel stays unregistered (ADR-0029).
+  it('polls last_read and never starts the last_read event-stream channel', () => {
+    render(<CoordinatorsManager />);
+    expect(mocks.notificationLastReadPoll.start).toHaveBeenCalledOnce();
+    expect(mocks.lastReadChannel.start).not.toHaveBeenCalled();
   });
 
   it('starts nothing while the account is held behind the migration gate, then starts once it passes', () => {

@@ -6,6 +6,8 @@ Proposed — 2026-10-30
 
 Updated — 2026-11-05 (one shared homeserver event stream per tab, #3066)
 
+Updated — 2026-11-09 (social v1: the private `last_read` is polled on the mute cadence while a private stream cannot be held, FIX-8)
+
 ## Context
 
 Marking notifications as read writes the `last_read` timestamp to the user's homeserver, but an open session on
@@ -102,7 +104,8 @@ A new homeserver-synced path adds a channel, not a connection.
   stream (Web Locks, `BroadcastChannel`) or serving the homeserver over HTTP/2 would lift it.
 - ⚠️ A `last_read` read that fails on connect fails the shared connection, so the mute stream reconnects with it.
 - ⚠️ `getFreshJson` reads without the session. That holds for the public file today; a private `last_read` needs an
-  authenticated fresh read when it moves.
+  authenticated fresh read when it moves. On the social v1 tree the read goes through the session, and the
+  homeserver's `/priv/` cache policy keeps it fresh (see _Social v1 note_).
 
 ## Alternatives Considered
 
@@ -125,9 +128,35 @@ A new homeserver-synced path adds a channel, not a connection.
 - [ADR-0010: Notification Application Orchestration](./0010-notification-application-orchestration.md)
 - [ADR-0014: Muting System](./0014-muting-system.md) — the first homeserver-stream coordinator
 
-## Social v1 note
+## Social v1 note (amended 2026-11-09)
 
 On `feat/social-v1` the `last_read` file moves to the private `/priv/app.pubky/v1/last_read.json`. A private event
-stream needs a session, which deadlocks the SDK's bearer refresh (ADR-0014), so `CoordinatorsManager` does not start
-`NotificationLastReadSyncCoordinator` there and `HomeserverService.subscribeUserEventStream` refuses `/priv/` paths.
-Cross-device `last_read` sync on the v1 tree is FIX-8 in `docs/migrations/social-v1.md`.
+stream needs a session, which deadlocks the SDK's bearer refresh for as long as the stream stays open (ADR-0014,
+pubky/pubky-homeserver#798), so `HomeserverService.subscribeUserEventStream` refuses `/priv/` paths and
+`CoordinatorsManager` does not start `NotificationLastReadSyncCoordinator` there.
+
+The sync is polled instead, on the mute list's cadence. `NotificationLastReadPollCoordinator`
+(`src/core/coordinators/notification-last-read-poll/`) extends the polling `Coordinator` base exactly as
+`MuteListSyncCoordinator` does and calls the same `NotificationController.fetchLastReadFromHomeserver` the channel
+calls: on start, when the tab becomes visible, on `online`, and every `NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS`
+(`src/config/notification-last-read-sync.ts`, which reuses `MUTE_SYNC_POLL_INTERVAL_MS`, 30 s), with triggers that
+land together debounced into one read (`NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS`), one read out at a time, a failed
+read logged and retried at the next trigger. It keeps the mute coordinator's guards: signed in with a profile, not on
+the auth or onboarding routes, paused while the tab is hidden under the runtime visibility flag, stopped on sign-out
+and on an account switch, and started by `CoordinatorsManager` only once the social v1 migration gate has passed. The
+read itself is unchanged: the boundary only moves forward and the recount runs before the store changes, so a poll
+that lands during bootstrap is adopted by `AuthController` instead of being rolled back.
+
+Consequences on this tree: a mark-as-read on another device reaches an open tab within about the poll interval,
+not within a second; one `last_read` GET per visible signed-in tab every 30 s, next to the mute LIST, and no
+long-lived homeserver connection. The channel class stays in the tree, unregistered, with no cursor to clear; when
+the SDK releases the session lock for streams, register it and remove the poller.
+
+No cache bypass is needed for the session read, and `markAllAsRead`'s read-check-write fence relies on it. The SDK
+(`@synonymdev/pubky` 0.17.1) sends the session `storage.get` as a default-mode fetch: `pubky-sdk/src/actors/storage/verbs.rs`
+(`get`) builds it through `core.rs` (`request` → `cross_request`, `send` attaches the bearer) and nothing in the SDK
+sets a fetch `cache` mode; reqwest's wasm request leaves `cache` unset. Freshness comes from the homeserver:
+`pubky-homeserver/src/client_server/cache_policy.rs`, layered on the tenant router, stamps every `/priv/` response
+`Cache-Control: no-store` with `Vary: Authorization, Cookie` (v0.13.0 through v0.17.1; `private, no-cache` with an
+`ETag` on a served or unchanged file from v0.18.0), so the browser never answers the read from its cache without
+revalidating. The staging homeserver answers a `/priv/…/last_read.json` GET with `cache-control: no-store`.
