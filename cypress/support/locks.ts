@@ -10,6 +10,7 @@
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
+import { isMobile } from './mobile';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
@@ -356,7 +357,18 @@ const waitForArticleEditorFocus = () => {
   cy.focused().closest('.mdxeditor-root-contenteditable').should('exist');
 };
 
+// Phones split the article composer into tabs: the title and the body each sit on their own tab.
+const showArticleComposerTab = (tab: 'title' | 'content') => {
+  if (isMobile()) homeComposer().find(`[data-cy="article-composer-tab-${tab}"]`).filter(':visible').click();
+};
+
+const articleTitleInput = () => {
+  showArticleComposerTab('title');
+  return homeComposer().find('[data-cy="article-title-input"]').filter(':visible');
+};
+
 const typeArticleBody = (body: string) => {
+  showArticleComposerTab('content');
   // The rich-text toolbar is sticky, so Cypress counts its buttons as hidden while the page header
   // covers them; earlier steps scroll the composer under the header.
   homeComposer().scrollIntoView({ offset: { top: -200, left: 0 } });
@@ -381,18 +393,14 @@ export const writeLockedArticle = (title: string, body: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click();
   homeComposer().find('[data-cy="post-input-action-bar-add-article"]').filter(':visible').click();
   waitForArticleEditorFocus();
-  homeComposer()
-    .find('[data-cy="article-title-input"]')
-    .filter(':visible')
-    .type(title, { delay: 0 })
-    .should('have.value', title);
+  articleTitleInput().type(title, { delay: 0 }).should('have.value', title);
   typeArticleBody(body);
 };
 
 /** Replaces the body of an article draft the lock switch put back into the composer. */
 export const editLockedArticleBody = (title: string, body: string) => {
   waitForArticleEditorFocus();
-  homeComposer().find('[data-cy="article-title-input"]').filter(':visible').should('have.value', title);
+  articleTitleInput().should('have.value', title);
   typeArticleBody(body);
 };
 
