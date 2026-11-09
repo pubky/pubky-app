@@ -8,7 +8,7 @@ import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
-import { getPubkyCoreLink } from '@/config/externalLinks';
+import { getPubkyProtocolLink } from '@/config/externalLinks';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
@@ -48,7 +48,7 @@ export function LandingFinalSection() {
           <Link href={LEGAL_ROUTES.PRIVACY_POLICY}>{'Privacy Policy'}</Link>
           {', and confirm you are'} <DialogAge />{' '}
           {'Pubky is powered by '}
-          <Link href={getPubkyCoreLink()} target="_blank" className="font-semibold">
+          <Link href={getPubkyProtocolLink()} target="_blank" className="font-semibold">
             {'Pubky Protocol'}
           </Link>
           {` and was built by ${LEGAL_ENTITY_NAME} ©2026. All rights reserved.`}

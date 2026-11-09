@@ -62,7 +62,7 @@ export function DialogSignIn() {
                 alt={'New here?'}
                 width={202}
                 height={202}
-                className="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
+                className="h-36 w-auto max-w-[202px] sm:h-auto sm:w-full"
               />
             </Container>
 
@@ -95,7 +95,7 @@ export function DialogSignIn() {
                 alt={'Already have a pubky?'}
                 width={202}
                 height={202}
-                className="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
+                className="h-36 w-auto max-w-[202px] sm:h-auto sm:w-full"
               />
             </Container>
 

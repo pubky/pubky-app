@@ -135,7 +135,7 @@ describe('InputField', () => {
     ['default', 'text-muted-foreground'],
     ['info', 'text-blue-500'],
     ['alert', 'text-yellow-500'],
-    ['error', 'text-red-500'],
+    ['error', 'text-error-foreground'],
     ['success', 'text-brand'],
   ] as const)('styles the message for messageType=%s', (messageType, className) => {
     render(<InputField value="test" message="Hint" messageType={messageType} />);

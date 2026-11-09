@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthState } from '@/stores/auth/auth.types';
 import { MobileHeader } from './MobileHeader';
 
 let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
+let mockRestoreStatus: AuthState['restoreStatus'] = 'ready';
 let mockIsCoreExploreRoute = false;
 let mockIsPublicExploreRoute = false;
 const mockSetShowSignInDialog = vi.fn();
@@ -23,6 +25,9 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = {
       currentUserPubky: mockCurrentUserPubky,
+      session: null,
+      sessionReference: null,
+      restoreStatus: mockRestoreStatus,
       setShowSignInDialog: mockSetShowSignInDialog,
     };
     return selector(state);
@@ -42,6 +47,7 @@ describe('MobileHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCurrentUserPubky = 'pk:test-user-pubky';
+    mockRestoreStatus = 'ready';
     mockIsCoreExploreRoute = false;
     mockIsPublicExploreRoute = false;
   });
@@ -221,6 +227,17 @@ describe('MobileHeader', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Join Pubky' }));
 
+    expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
+  });
+
+  it('offers Join Pubky after the key step generated a pubky without a session (#2882)', () => {
+    mockCurrentUserPubky = 'generated-key';
+    mockRestoreStatus = 'idle';
+
+    render(<MobileHeader />);
+
+    expect(screen.queryByRole('button', { name: 'Open right panel' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Join Pubky' }));
     expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
   });
 });

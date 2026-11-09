@@ -4,7 +4,7 @@
 /* eslint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { matchVrtFrameScreenshot, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, renderForVRT, VRT_ROOT_TESTID, type VrtTheme } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -861,18 +861,20 @@ async function renderProfileTab(
   page: React.ReactNode,
   viewport: { width: number; height: number },
   pubky?: Pubky,
+  theme?: VrtTheme,
 ) {
   routeState.pathname = pathname;
   routeState.params = pubky ? { pubky } : {};
-  return renderForVRT(<ProfileWithChrome pubky={pubky}>{page}</ProfileWithChrome>, { viewport });
+  return renderForVRT(<ProfileWithChrome pubky={pubky}>{page}</ProfileWithChrome>, { viewport, theme });
 }
 
 async function renderOwnProfileTab(
   pathname: string,
   page: React.ReactNode,
   viewport: { width: number; height: number },
+  theme?: VrtTheme,
 ) {
-  return renderProfileTab(pathname, page, viewport);
+  return renderProfileTab(pathname, page, viewport, undefined, theme);
 }
 
 function resetVrtRootScroll() {
@@ -914,6 +916,20 @@ describe('Own profile — posts — visual regression', () => {
     await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
     await expect.element(screen.getByText('9 more replies')).toBeVisible();
     await matchVrtFrameScreenshot('own-profile-posts-mobile');
+  });
+
+  it('renders posts in light mode at desktop viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/posts', <ProfilePostsPage />, VRT_VIEWPORT_DESKTOP, 'light');
+    await expect.element(screen.getByRole('feed').first()).toBeVisible();
+    await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-posts-light-desktop');
+  });
+
+  it('renders posts in light mode at mobile viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/posts', <ProfilePostsPage />, VRT_VIEWPORT_MOBILE, 'light');
+    await expect.element(screen.getByRole('feed').first()).toBeVisible();
+    await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-posts-light-mobile');
   });
 
   it('truncates a long profile name before the status emoji at desktop viewport', async () => {

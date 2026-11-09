@@ -7,6 +7,11 @@ export type TKeypairParams = {
   keypair: Keypair;
 };
 
+export type TSignInParams = TKeypairParams & {
+  /** False once a newer auth flow superseded this sign-in; no further attempt runs. */
+  isCurrent?: () => boolean;
+};
+
 export type TSecretKey = {
   secretKey: string;
 };

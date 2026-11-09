@@ -357,6 +357,18 @@ describe('LocalStreamPostsService', () => {
       expect(postTags?.tags[0].taggers).toEqual(['user-2']);
     });
 
+    it('should keep the viewer tag_uri of post tags', async () => {
+      const tagUri = 'pubky://user-2/pub/pubky.app/tags/TAG01';
+      const { compositeId } = await persistAndVerifyPost('post-1', 'user-1', BASE_TIMESTAMP, {
+        tags: [
+          new TagModel({ label: 'tech', taggers: ['user-2'], taggers_count: 1, relationship: true, tag_uri: tagUri }),
+        ],
+      });
+
+      const postTags = await PostTagsModel.findById(compositeId);
+      expect(postTags?.tags[0].tag_uri).toBe(tagUri);
+    });
+
     it('should handle posts with relationships', async () => {
       const repliedUri = 'https://pubky.app/user-2/pub/pubky.app/posts/parent-post';
       const { compositeId } = await persistAndVerifyPost('post-1', 'user-1', BASE_TIMESTAMP, {

@@ -235,7 +235,15 @@ export class PostApplication {
     });
   }
 
-  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags, isCurrent }: TCreatePostInput) {
+  static async commitCreate({
+    postUrl,
+    compositePostId,
+    post,
+    fileAttachments,
+    tags,
+    isCurrent,
+    onPostSynced,
+  }: TCreatePostInput) {
     const hasFiles = fileAttachments != null && fileAttachments.length > 0;
     const rollbackUploadedFiles = () =>
       this.rollbackUploadedFiles({
@@ -277,6 +285,7 @@ export class PostApplication {
       await rollbackUploadedFiles();
       throw error;
     }
+    onPostSynced?.();
 
     if (tags && tags.length > 0) {
       await TagApplication.commitCreate({ tagList: tags, isCurrent });

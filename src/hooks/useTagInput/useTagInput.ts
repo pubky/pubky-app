@@ -6,7 +6,7 @@ import { Logger } from '@/libs/logger/logger';
 import { getCharacterCount, sanitizeTagInput } from '@/libs/utils/utils';
 import { useEmojiInsert } from '../useEmojiInsert/useEmojiInsert';
 import type { UseTagInputOptions, UseTagInputReturn } from './useTagInput.types';
-import { filterSuggestions } from './useTagInput.utils';
+import { filterSuggestions, isTagAddFailure } from './useTagInput.utils';
 
 /**
  * Hook for managing tag input state and local suggestions.
@@ -38,16 +38,41 @@ import { filterSuggestions } from './useTagInput.utils';
  * ```
  */
 export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTagInputOptions): UseTagInputReturn {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValueState] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Counts every edit of `inputValue`, so code resuming after an await can tell whether the draft
+  // it started from is still the one in the input. Retyping the same text is a new draft too.
+  const inputRevision = useRef(0);
+  const setInputValue = (value: string) => {
+    inputRevision.current += 1;
+    setInputValueState(value);
+  };
 
   const filteredSuggestions = filterSuggestions(allTags, inputValue);
 
   const clearInput = () => {
     setInputValue('');
     setShowSuggestions(false);
+  };
+
+  // Wait for completion before clearing - handles both sync and async onTagAdd
+  const addTag = async (label: string) => {
+    // Only the draft this add started from is cleared: anything typed while the write was pending
+    // is a new draft and stays.
+    const draftRevision = inputRevision.current;
+    try {
+      const result = await onTagAdd(label);
+      // A failed write resolves `{ success: false }` (the caller already toasted): keep the typed
+      // label so the user can retry, e.g. after signing in again (issue #2890).
+      if (isTagAddFailure(result)) return;
+      if (inputRevision.current !== draftRevision) return;
+      clearInput();
+    } catch (error: unknown) {
+      Logger.error('Failed to add tag:', error);
+      // Don't clear input on failure so user can retry
+    }
   };
 
   const handleTagSubmit = async () => {
@@ -63,14 +88,7 @@ export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTa
       return;
     }
 
-    // Wait for completion before clearing - handles both sync and async onTagAdd
-    try {
-      await onTagAdd(trimmedTag);
-      clearInput();
-    } catch (error: unknown) {
-      Logger.error('Failed to add tag:', error);
-      // Don't clear input on failure so user can retry
-    }
+    await addTag(trimmedTag);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,6 +167,7 @@ export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTa
     handleInputChange,
     handleInputFocus,
     handleTagSubmit,
+    addTag,
     handleEmojiSelect,
     handlePaste,
   };

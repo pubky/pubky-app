@@ -110,7 +110,12 @@ export class SettingsApplication {
     Logger.info('[Settings] Pulling from homeserver', { url });
 
     try {
-      const settingsJson = await HomeserverService.request<SettingsJson>({ method: HttpMethod.GET, url });
+      // A new account has no settings.json yet: the 404 resolves to null instead of an error.
+      const settingsJson = await HomeserverService.request<SettingsJson | null>({
+        method: HttpMethod.GET,
+        url,
+        notFoundAsNull: true,
+      });
 
       if (!settingsJson) {
         Logger.info('[Settings] Pull complete, no settings found');

@@ -33,15 +33,10 @@ export function ProfilePageTaggedAs({
   const isMobile = variant === 'mobile';
   const inputTags = allTags ?? tags;
 
-  // Sidebar keeps the previous behaviour: the action that navigates to the
-  // tagged list is gated behind auth because it is the entry point to tagging.
-  const handleAddTagClick = () => {
-    requireAuth(() => router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky)));
-  };
-
-  // Mobile "See All" is a read-only navigation, so it is not auth-gated.
+  // Profile sub-tabs are not public routes, so a guest would be redirected away:
+  // gate the navigation like the other sub-tab entries (filter bar, mobile menu).
   const handleSeeAllClick = () => {
-    router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky));
+    requireAuth(() => router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky)));
   };
 
   return (
@@ -90,12 +85,12 @@ export function ProfilePageTaggedAs({
         data-cy="profile-tag-btn"
         variant="outline"
         size="sm"
-        className="border border-border bg-foreground/5"
-        onClick={isMobile ? handleSeeAllClick : handleAddTagClick}
+        className="border border-border bg-glass"
+        onClick={handleSeeAllClick}
       >
         <Tag size={16} className="text-foreground" />
         <Typography as="span" className="text-sm font-bold">
-          {isMobile ? 'See All' : 'Add Tag'}
+          {isMobile ? 'See All' : `See all (${count})`}
         </Typography>
       </Button>
     </Container>

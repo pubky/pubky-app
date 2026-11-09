@@ -62,6 +62,7 @@ describe('SearchFeedFilters', () => {
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     mocks.searchParams = new URLSearchParams({ tags: 'bitcoin' });
     mocks.isPhoneViewport = false;
+    mocks.homeState.content = 'all';
   });
 
   afterEach(() => {
@@ -91,6 +92,35 @@ describe('SearchFeedFilters', () => {
     expect(screen.getByText('Sort')).toBeInTheDocument();
     expect(screen.getByText('Recent')).toBeInTheDocument();
     expect(screen.getByText('Popularity')).toBeInTheDocument();
+  });
+
+  it.each(['sidebar', 'drawer', 'mobile'] as const)('disables only Locks for full-text search in the %s', (variant) => {
+    mocks.searchParams = new URLSearchParams({ q: 'bitcoin' });
+    render(<SearchFeedFilters variant={variant} />);
+    const content = screen.getByTestId('filter-content-radiogroup');
+
+    expect(within(content).getByRole('radio', { name: 'Locks' })).toHaveAttribute('aria-disabled', 'true');
+    expect(within(content).getByRole('radio', { name: 'Posts' })).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('shows All for full-text search without clearing a stored Locks choice', () => {
+    mocks.searchParams = new URLSearchParams({ q: 'bitcoin' });
+    mocks.homeState.content = 'locks';
+    render(<SearchFeedFilters variant="sidebar" />);
+    const content = screen.getByTestId('filter-content-radiogroup');
+
+    expect(within(content).getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(content).getByRole('radio', { name: 'Locks' })).toHaveAttribute('aria-checked', 'false');
+    expect(mocks.homeState.setContent).not.toHaveBeenCalled();
+  });
+
+  it('keeps Locks enabled and selected for tag search', () => {
+    mocks.homeState.content = 'locks';
+    render(<SearchFeedFilters variant="sidebar" />);
+    const locks = within(screen.getByTestId('filter-content-radiogroup')).getByRole('radio', { name: 'Locks' });
+
+    expect(locks).not.toHaveAttribute('aria-disabled', 'true');
+    expect(locks).toHaveAttribute('aria-checked', 'true');
   });
 
   it('hides only Sort for full-text search', () => {

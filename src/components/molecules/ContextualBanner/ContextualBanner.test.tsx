@@ -133,7 +133,7 @@ describe('ContextualBanner', () => {
       screen.getByRole('link', { name: 'Sign in' }),
       screen.getByRole('button', { name: 'Continue with Google' }),
     ]) {
-      expect(action).toHaveClass('focus-visible:ring-primary-foreground');
+      expect(action).toHaveClass('focus-visible:ring-brand-foreground');
     }
   });
 

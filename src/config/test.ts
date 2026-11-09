@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom';
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
+// Captures Node's built-in fetch before the `global.fetch` mock below replaces it.
+import '@/test-utils/native-fetch';
 import { cleanup } from '@testing-library/react';
 import { vi } from 'vitest';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';

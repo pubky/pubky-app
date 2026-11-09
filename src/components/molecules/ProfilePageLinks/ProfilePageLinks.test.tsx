@@ -136,7 +136,7 @@ describe('ProfilePageLinks', () => {
   it('Add Link button has correct styling', () => {
     render(<ProfilePageLinks links={defaultLinks} isOwnProfile={true} />);
     const addLinkButton = screen.getByText('Add Link').closest('button');
-    expect(addLinkButton).toHaveClass('border', 'border-border', 'bg-foreground/5');
+    expect(addLinkButton).toHaveClass('border', 'border-border', 'bg-glass');
   });
 });
 

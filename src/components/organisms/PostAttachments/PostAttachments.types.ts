@@ -8,6 +8,8 @@ export type PostAttachmentsProps = {
   /** Cards caption between visual media and audio/file attachments. */
   children?: ReactNode;
   mediaVariant?: 'default' | 'list' | 'cards';
+  /** Default variant only: one row of images and videos with a "Show more" toggle (#2868). */
+  collapseMedia?: boolean;
   /** Unlocked content whose bytes are still downloading: a skeleton per attachment instead of the media. Default variant only. */
   pendingAttachments?: PendingAttachment[];
 };

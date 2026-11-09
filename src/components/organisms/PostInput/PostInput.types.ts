@@ -12,6 +12,8 @@ export type PostInputVariant =
 export type EditLock = {
   lockUrl: string;
   title: string;
+  /** The stored `content_kind`, carried through the edit so the save writes it back (#2433). */
+  contentKind?: string;
 };
 
 interface PostInputBaseProps {

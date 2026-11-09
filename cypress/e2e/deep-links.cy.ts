@@ -1,15 +1,12 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { createCollection, createPostInCollection } from '../support/collections';
-import { userIdFromPubky } from '../support/common';
-import { goToCollectionsPage } from '../support/header';
-import { postIdFromWriteUrl, waitForNexusResource, waitForNexusStream } from '../support/pagination';
-import { createQuickPost } from '../support/posts';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { waitForServiceWorker } from '../support/common';
+import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
+import { seededStreamIndexed } from '../support/pagination';
+import { createCollectionViaApi, createPostViaApi, seedUserViaApi } from '../support/seed';
 
 const username = 'Mr Deep Link';
 const userBio = 'Shared links should open for everyone';
-const authorAlias = 'deepLinkAuthor';
 const runId = Date.now().toString();
 const postText = `deep link ${runId} post`;
 const collectionName = `Deep link ${runId} collection`;
@@ -36,40 +33,31 @@ const assertWriteAsksToSignIn = (trigger: string) => {
 };
 
 describe('logged-out deep links', () => {
+  // Seeded through the API: onboarding, posting and creating a collection in the UI are covered in
+  // onboarding.cy.ts, posts.cy.ts and collections.cy.ts. Nothing is signed in, as a shared link opens.
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
-    cy.onboardAsNewUser(username, userBio, [BackupType.EncryptedFile], authorAlias);
-    cy.get<string>(`@${authorAlias}`).then((pubky) => {
-      authorId = userIdFromPubky(pubky);
-    });
+    // Installs the app while the seeds index, so the not-found views are not timed mid-install
+    cy.visit('/');
 
-    createQuickPost(postText);
-    cy.get<{ request: { url: string } }>('@postCreated')
-      .its('request.url')
-      .then((url) => {
-        postId = postIdFromWriteUrl(url);
+    seedUserViaApi(username, { bio: userBio }).then((author) => {
+      authorId = author.id;
+      createPostViaApi(author, postText).then((post) => {
+        postId = post.id;
+        createPostViaApi(author, collectionItemText).then((item) =>
+          createCollectionViaApi(author, collectionName, { items: [item], layout: 'list' }).then((collection) => {
+            collectionId = collection.id;
+            waitForNexus(
+              userIndexed(author),
+              postIndexed(post),
+              postIndexed(collection),
+              seededStreamIndexed({ source: 'collection', author_id: authorId, post_id: collectionId }, [item.id]),
+            );
+          }),
+        );
       });
-
-    goToCollectionsPage();
-    createCollection(collectionName, undefined, { layout: 'list' });
-    cy.get<{ request: { url: string } }>('@collectionCreated')
-      .its('request.url')
-      .then((url) => {
-        collectionId = postIdFromWriteUrl(url);
-      });
-    createPostInCollection(collectionItemText);
-    cy.get<{ request: { url: string } }[]>('@postCreatedInCollection.all').then((interceptions) => {
-      // The first write creates the item, the second rewrites the collection to include it
-      const itemWrite = interceptions.find((interception) => !interception.request.url.endsWith(`/${collectionId}`));
-      expect(itemWrite, 'collection item write').to.not.equal(undefined);
-      const itemId = postIdFromWriteUrl(itemWrite?.request.url ?? '');
-
-      cy.signOut(HasBackedUp.Yes);
-      waitForNexusResource(`/v0/user/${authorId}`);
-      waitForNexusResource(`/v0/post/${authorId}/${postId}`);
-      waitForNexusStream({ source: 'collection', author_id: authorId, post_id: collectionId }, [itemId]);
     });
+    waitForServiceWorker();
   });
 
   beforeEach(() => {

@@ -1,5 +1,5 @@
-import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import type { TUnlockedAttachment } from '@/services/locks/locks.types';
+import type { AttachmentConstructed, PendingAttachment } from '@/organisms/PostAttachments/PostAttachments.types';
+import type { ReplicatedPost, TUnlockedAttachment } from '@/services/locks/locks.types';
 
 /**
  * Guarded attachment bytes → object-URL media, matching the creator-preview `localAttachments` shape.
@@ -17,6 +17,14 @@ export const toUnlockedMedia = (attachments: TUnlockedAttachment[]): AttachmentC
       slot,
     };
   });
+
+/** Keeps the array identity when there is nothing to clear, so an already-empty state does not re-render. */
+export const clearIfFilled = <T>(current: T[]): T[] => (current.length ? [] : current);
+
+/** What each of a cached post's attachment slots will hold, so a skeleton can take its shape. */
+export function toPendingAttachments(post: ReplicatedPost): PendingAttachment[] {
+  return post.attachments?.map(({ content_type, slot }, index) => ({ slot: slot ?? index, type: content_type })) ?? [];
+}
 
 /** Attachments without a recorded slot are index-aligned with the post's `attachments`. */
 export function getAttachmentAtSlot<T extends { slot?: number }>(

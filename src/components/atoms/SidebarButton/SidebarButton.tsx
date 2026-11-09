@@ -8,7 +8,7 @@ export function SidebarButton({ icon: Icon, children, asChild = false, ...props 
       asChild={asChild}
       variant="dark-outline"
       size="sm"
-      className="w-full border-border bg-white/5 text-xs font-bold"
+      className="w-full border-border bg-glass text-xs font-bold"
       {...props}
     >
       <Icon className="size-4" />

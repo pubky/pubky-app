@@ -19,6 +19,7 @@ import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockGrantReference } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInput } from './PostInput';
@@ -607,6 +608,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     isEditInlineMediaLoading: false,
     serializeArticleForLock: vi.fn(() => null),
     getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
+    discardPendingArticle: vi.fn(),
     mentionUsers: [],
     mentionIsOpen: false,
     mentionSelectedIndex: 0,
@@ -749,6 +751,22 @@ describe('PostInput', () => {
     } else {
       expect(screen.getAllByTestId('post-header').length).toBeGreaterThan(0);
     }
+  });
+
+  it('shows guest identity after the key step generated a pubky without a session (#2882)', async () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    expect(screen.getAllByTestId('post-header').length).toBeGreaterThan(0);
+
+    act(() => useAuthStore.setState({ session: null, sessionReference: null, restoreStatus: 'idle' }));
+    expect(screen.getByTestId('post-input-fallback-avatar')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('post-header')).not.toBeInTheDocument());
+
+    // A saved session that is still pending restoration keeps the account identity.
+    act(() => useAuthStore.setState({ sessionReference: mockGrantReference() }));
+    expect(screen.queryByTestId('post-input-fallback-avatar')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('post-header').length).toBeGreaterThan(0);
+
+    act(() => useAuthStore.setState({ sessionReference: null, restoreStatus: 'ready' }));
   });
 
   it('renders with post variant', () => {

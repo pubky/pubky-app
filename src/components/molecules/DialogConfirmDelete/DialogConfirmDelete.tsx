@@ -20,6 +20,9 @@ interface DialogConfirmDeleteProps {
    * caller-side interpolated copy.
    */
   description?: string;
+  /** A line shown above the buttons, with a secondary Sign in button when `onSignIn` is set. */
+  signInNotice?: string;
+  onSignIn?: () => void;
 }
 export function DialogConfirmDelete({
   open,
@@ -27,6 +30,8 @@ export function DialogConfirmDelete({
   onConfirm,
   title = 'Delete post?',
   description = 'This action cannot be undone. The post will be permanently deleted.',
+  signInNotice,
+  onSignIn,
 }: DialogConfirmDeleteProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const inFlight = useRef(false);
@@ -50,7 +55,15 @@ export function DialogConfirmDelete({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <Typography className="text-base tracking-wide text-white/80">{description}</Typography>
+        <Typography className="text-base tracking-wide text-foreground/80">{description}</Typography>
+        {signInNotice && onSignIn && (
+          <div className="flex items-center justify-between gap-4">
+            <Typography className="text-sm text-destructive">{signInNotice}</Typography>
+            <Button variant="secondary" size="sm" onClick={onSignIn} data-cy="dialog-confirm-delete-sign-in">
+              {'Sign in'}
+            </Button>
+          </div>
+        )}
         <DialogFooter>
           <Button
             variant="destructive"
