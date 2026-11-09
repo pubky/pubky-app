@@ -568,15 +568,16 @@ failure callback carries no reason, and the Lock Server's `setup_required` is th
 and an unknown creator, so the Enable Payments step asks Paykit directly through `GET /api/paykit-creator`:
 a server-side read of Paykit's `GET /setup/creator-held?creator=…`, which answers `{ "held": true | false }`
 and nothing else, needed because Paykit sends no CORS headers. It is asked before `/setup` opens and again when
-a setup fails. Paykit can also commit a setup and still post `setup-failed` when its relay acknowledgement fails,
-so after a failed setup the Lock Server is asked first: a ready creator finishes there, with no reconnect (which
+a setup or reconnect fails. Paykit can commit either flow and still post `setup-failed` when its relay acknowledgement fails,
+so after either failure the Lock Server is asked first: a ready creator finishes there, with no reconnect (which
 would rotate its Bitcoin receiving account for nothing), and a failed readiness check shows that payments are
 unavailable. Only `setup_required` goes on to the presence read:
 
 - Paykit holds the creator: the dialog offers **Reconnect Bitkit** as its main action (no **Try again**), which
   loads `/setup/reconnect?creator=…&return_to=…&state=…` in the same iframe. A reconnect moves Bitcoin receiving
-  to a new Bitcoin account, so it only opens on that click. A failed reconnect offers the reconnect again, never
-  `/setup`.
+  to a new Bitcoin account, so it only opens on that click. A failed reconnect offers another reconnect only
+  after readiness still requires setup and Paykit confirms it holds the creator. An error retry checks readiness
+  again before asking for another approval.
 - Paykit does not hold the creator, after a failed setup: the dialog says nothing was set up and offers
   **Connect Bitkit**, which checks again and opens `/setup`.
 - Paykit cannot say: the dialog says payments are unavailable and offers **Try again**, both before setup

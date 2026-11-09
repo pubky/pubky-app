@@ -426,15 +426,13 @@ export function DialogLocksAuth({
             <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={close}>
               {'Cancel'}
             </Button>
-            {/* A failed reconnect tries the reconnect again, never `/setup`, which Paykit refuses for a held
-                creator. Any other failed step retries through the server check before opening another approval. */}
+            {/* Recheck readiness even after a reconnect error: Paykit may have committed before its callback
+                failed. A held creator still needing setup must confirm another reconnect before it opens. */}
             <Button
               variant={ButtonVariant.DEFAULT}
               size="lg"
               className="flex-1"
-              onClick={
-                isReconnectFailed ? reconnectPaykit : isPaykitUnavailable || isPaykitError ? checkPaykit : startLocks
-              }
+              onClick={isPaykitUnavailable || isPaykitError ? checkPaykit : startLocks}
             >
               {isReconnectFailed ? 'Reconnect Bitkit' : 'Try again'}
             </Button>

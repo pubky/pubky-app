@@ -585,23 +585,24 @@ describe('DialogLocksAuth', () => {
       expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
     });
 
-    it('offers the reconnect again, not a setup retry, when the reconnect failed', () => {
+    it('checks readiness before another approval when the reconnect errored', () => {
       signIn();
       mocks.paykitFlow = {
         status: PaykitSetupFlowStatus.ERROR,
         mode: 'reconnect',
         setupUrl: null,
-        error: { message: 'Paykit reconnect failed: setup-failed' },
+        error: { message: 'Paykit setup callback state mismatch' },
       };
       renderDialog();
 
       expect(screen.getByText('Reconnecting Bitkit failed.')).toBeInTheDocument();
-      expect(screen.queryByText(/Paykit reconnect failed/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/callback state mismatch/)).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Reconnect Bitkit' }));
 
-      expect(mocks.reconnectPaykit).toHaveBeenCalledTimes(1);
+      expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+      expect(mocks.reconnectPaykit).not.toHaveBeenCalled();
       expect(mocks.startPaykit).not.toHaveBeenCalled();
     });
   });

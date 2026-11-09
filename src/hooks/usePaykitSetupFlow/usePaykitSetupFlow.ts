@@ -32,7 +32,7 @@ async function readPaykitHeld(operation: string): Promise<{ held: boolean | null
  * returning creator is not sent through it again (#2627). When it is not, Paykit is asked whether it
  * already holds the creator: it refuses the initial `/setup` for one it holds, so that creator is sent
  * to `/setup/reconnect` instead (`RECONNECT_REQUIRED`, then `reconnect()`). The same question is asked
- * after a setup fails, because the failure callback carries no reason. `start()` generates a CSRF
+ * after a setup or reconnect fails, because the failure callback carries no reason. `start()` generates a CSRF
  * `state` and the `/setup` URL for the modal to load in an iframe. The Paykit page posts the outcome
  * back to the parent; the message is validated (origin / iframe source / schema), `state` is checked,
  * and a success is recorded on the Locks session.
@@ -108,7 +108,7 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     return false;
   }, []);
 
-  // The failure callback only says `setup-failed`. Paykit can commit the setup and still send it when
+  // The failure callback only says `setup-failed`. Paykit can commit setup or reconnect and still send it when
   // its relay acknowledgement fails, so the Lock Server is asked first: a ready creator is done, and a
   // reconnect would rotate its receiving account for nothing. Otherwise ask Paykit why it can matter: a
   // held creator is refused `/setup` and needs the reconnect; one it does not hold has nothing to reconnect.
@@ -214,7 +214,6 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
           throw fail('Paykit setup callback state mismatch');
         }
         if (message.error) {
-          if (mode === 'reconnect') throw fail(`Paykit reconnect failed: ${message.error}`);
           void diagnoseFailedSetup();
           return;
         }
@@ -232,7 +231,7 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [status, mode, check, diagnoseFailedSetup]);
+  }, [status, check, diagnoseFailedSetup]);
 
   return { status, mode, setupUrl, error, iframeRef, check, start, reconnect, reset };
 }

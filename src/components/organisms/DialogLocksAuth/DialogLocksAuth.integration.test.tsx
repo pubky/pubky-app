@@ -279,6 +279,54 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
   });
 
+  it('setup-failed after reconnect was committed: finishes without rotating the account again', async () => {
+    signIn();
+    mocks.paykitSetupStatus
+      .mockResolvedValueOnce({ status: 'setup_required' })
+      .mockResolvedValueOnce({ status: 'ready' });
+    answerProbe('held');
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reconnect Bitkit' }));
+    const reconnect = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account reconnect');
+    await postPaykitCallback(reconnect, 'setup-failed');
+
+    expect(await screen.findByText('Locks Enabled')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Reconnecting Bitkit failed.')).not.toBeInTheDocument();
+    expect(setupIframe()).not.toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledTimes(2);
+    expect(mocks.probe).toHaveBeenCalledTimes(1);
+    expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
+  });
+
+  it('rechecks an unavailable reconnect diagnosis and finishes when the committed account becomes ready', async () => {
+    signIn();
+    mocks.paykitSetupStatus
+      .mockResolvedValueOnce({ status: 'setup_required' })
+      .mockResolvedValueOnce({ status: 'unavailable' })
+      .mockResolvedValueOnce({ status: 'ready' });
+    answerProbe('held');
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reconnect Bitkit' }));
+    const reconnect = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account reconnect');
+    await postPaykitCallback(reconnect, 'setup-failed');
+
+    expect(await screen.findByText('Payments are unavailable right now. Please try again later.')).toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+    expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Locks Enabled')).toBeInTheDocument();
+    expect(setupIframe()).not.toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledTimes(3);
+    expect(mocks.probe).toHaveBeenCalledTimes(1);
+    expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
+  });
+
   it('setup-failed and Paykit cannot say: shows that payments cannot be checked, not a generic setup error', async () => {
     signIn();
     mocks.paykitSetupStatus.mockResolvedValue({ status: 'setup_required' });
@@ -292,7 +340,7 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
   });
 
-  it('a failed reconnect offers the reconnect again, never the setup Paykit refuses', async () => {
+  it('a failed reconnect checks readiness and presence before asking for another reconnect approval', async () => {
     signIn();
     mocks.paykitSetupStatus.mockResolvedValue({ status: 'setup_required' });
     answerProbe('held');
@@ -302,13 +350,18 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     const reconnect = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account reconnect');
     await postPaykitCallback(reconnect, 'setup-failed');
 
-    expect(await screen.findByText('Reconnecting Bitkit failed.')).toBeInTheDocument();
+    expect(await screen.findByText(/Paykit already has a Bitkit setup for your account/)).toBeInTheDocument();
+    expect(screen.getByText(/new Bitcoin account/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledTimes(2);
+    expect(mocks.probe).toHaveBeenCalledTimes(2);
 
     fireEvent.click(screen.getByRole('button', { name: 'Reconnect Bitkit' }));
 
     const retried = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account reconnect');
     expect(new URL(retried.src).pathname).toBe('/setup/reconnect');
+    expect(new URL(retried.src).searchParams.get('state')).not.toBe(new URL(reconnect.src).searchParams.get('state'));
     expect(setupIframe()).not.toBeInTheDocument();
   });
 
