@@ -1,12 +1,71 @@
 import { Locks, LocksOptions, type Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { getE2eLocksStubUrl, getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/network';
-import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type { TLocksReads } from './locks.e2eStub';
+import type { TLocksPollReport } from './locks.types';
+
+/** How long one Locks SDK request may take before the app stops waiting for it. */
+export const LOCKS_REQUEST_TIMEOUT_MS = 30_000;
+
+/**
+ * Covers the 10 MB file cap at 256 kbit/s, a weak mobile link (about 5.7 minutes). A shorter limit
+ * would fail a slow upload every time, and the late-write undo would delete every attempt.
+ */
+export const LOCKS_TRANSFER_TIMEOUT_MS = 360_000;
+
+/** A ready Lock Server answers `/readyz` at once. */
+export const READYZ_TIMEOUT_MS = 10_000;
+
+/**
+ * The pinned SDK 0.1.0 takes no `AbortSignal`, so a request the server accepts and never answers
+ * stays pending forever. This stops waiting with a retryable `Err.timeout`, but the request keeps
+ * running and a write may still land: never retry a write automatically after it, and pass
+ * `undoLateWrite` for a write that would leave something behind once nobody uses its result.
+ * `report` must be set here: a polling loop's tags only count when the error is built.
+ * TODO:[Locks] cancel the request instead once the SDK takes an `AbortSignal`.
+ */
+export async function withLocksTimeout<T>(
+  request: Promise<T>,
+  operation: string,
+  {
+    timeoutMs = LOCKS_REQUEST_TIMEOUT_MS,
+    report,
+    undoLateWrite,
+  }: { timeoutMs?: number; report?: TLocksPollReport; undoLateWrite?: (late: T) => Promise<unknown> } = {},
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      request,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          // A failed undo leaves an orphan, so report it; not as an auth error, since it may run after logout.
+          if (undoLateWrite) {
+            void request
+              .then(undoLateWrite, () => undefined)
+              .catch((error: unknown) =>
+                toAppError(error, ErrorService.Locks, operation, { context: { undoLateWrite: true } }),
+              );
+          }
+          reject(
+            Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Locks request timed out', {
+              service: ErrorService.Locks,
+              operation,
+              context: { ...report, timeoutMs },
+            }),
+          );
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * The SDK reports HTTP failures as `Lock Server request failed with HTTP <status>` and exposes no
