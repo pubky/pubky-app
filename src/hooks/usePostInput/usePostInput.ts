@@ -438,6 +438,13 @@ export function usePostInput({
     pendingArticleBodyRef.current = null;
   }, [isArticle]);
 
+  // A debounce commit leaves its value pending until the new state has rendered: a lock capture or a
+  // submit made before that render would otherwise read the previous state (#3030)
+  useEffect(() => {
+    if (pendingArticleTitleRef.current === articleTitle) pendingArticleTitleRef.current = null;
+    if (pendingArticleBodyRef.current === content) pendingArticleBodyRef.current = null;
+  }, [articleTitle, content]);
+
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
@@ -644,7 +651,6 @@ export function usePostInput({
   // that fires after a submit consumed the pending value, finds a mismatch and does nothing.
   const commitArticleTitle = useDebounceCallback((value: string) => {
     if (pendingArticleTitleRef.current !== value) return;
-    pendingArticleTitleRef.current = null;
     setArticleTitle(value);
   }, 500);
 
@@ -658,7 +664,6 @@ export function usePostInput({
 
   const commitArticleBody = useDebounceCallback((markdown: string) => {
     if (pendingArticleBodyRef.current !== markdown) return;
-    pendingArticleBodyRef.current = null;
     setContent(markdown);
   }, 500);
 
