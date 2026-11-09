@@ -64,7 +64,7 @@ for (const [name, viewport] of [
         await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
         const signerButtons = ['Continue with Pubky Ring', 'Continue with Bitkit'];
-        if (passportEligibility === 'enabled') signerButtons.push('Continue with Google');
+        if (passportEligibility === 'enabled') signerButtons.push('Continue with Google or Apple');
         for (const label of signerButtons) {
           expect(page.getByRole('button', { name: label }).element().getBoundingClientRect().height).toBe(60);
         }
