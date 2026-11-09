@@ -274,12 +274,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
 
     const passportUrl = getPassportUrl();
     if (!passportUrl) {
-      toast({
-        variant: 'error',
-        description: isPassportAppleEnabled()
-          ? 'Sign in with Passport is not available right now.'
-          : 'Sign in with Google is not available right now.',
-      });
+      toast({ variant: 'error', description: 'Sign in with Google is not available right now.' });
       return;
     }
 

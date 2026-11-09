@@ -768,17 +768,5 @@ describe('usePassportAuth', () => {
         description: 'Sign in with Passport failed. Try again.',
       });
     });
-
-    it('names Passport when no Passport origin is configured', async () => {
-      mockGetPassportUrl.mockReturnValue(undefined);
-      const hook = renderHook(() => usePassportAuth());
-
-      await startAttempt(hook);
-
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        variant: 'error',
-        description: 'Sign in with Passport is not available right now.',
-      });
-    });
   });
 });
