@@ -37,8 +37,9 @@ function startAppCoordinators(): void {
   void coordinators.stream.start();
   coordinators.ttl.start();
   // The mute list and the private `last_read` poll (ADR-0014, ADR-0029), so no channel registers with the shared
-  // stream and it opens no request. `NotificationLastReadSyncCoordinator` stays unregistered until the SDK releases
-  // the session lock for streams (pubky/pubky-homeserver#798); it then replaces the poller.
+  // stream and it opens no request: a session-bound stream's lease is unbounded while its response headers are
+  // outstanding (pubky/pubky-homeserver#798). `NotificationLastReadSyncCoordinator` stays unregistered until the
+  // SDK bounds that lease or the team accepts the exposure; it then replaces the poller.
   void coordinators.muteListSync.start();
   void coordinators.notificationLastReadPoll.start();
   coordinators.homeserverEventStream.start();

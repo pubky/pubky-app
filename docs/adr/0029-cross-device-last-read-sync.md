@@ -131,9 +131,12 @@ A new homeserver-synced path adds a channel, not a connection.
 ## Social v1 note (amended 2026-11-09)
 
 On `feat/social-v1` the `last_read` file moves to the private `/priv/app.pubky/v1/last_read.json`. A private event
-stream needs a session, which deadlocks the SDK's bearer refresh for as long as the stream stays open (ADR-0014,
-pubky/pubky-homeserver#798), so `HomeserverService.subscribeUserEventStream` refuses `/priv/` paths and
-`CoordinatorsManager` does not start `NotificationLastReadSyncCoordinator` there.
+stream needs a session, and a session-bound stream holds the shared session lock until its response headers reach
+the SDK, with no timeout; behind anything that buffers event streams (the Cypress proxy does, so would an
+intermediary) that is unbounded and a 401 refresh then waits forever (pubky/pubky-homeserver#798, probed
+2026-11-09). Polling has no such exposure, so the private files are polled for this release:
+`HomeserverService.subscribeUserEventStream` refuses `/priv/` paths and `CoordinatorsManager` does not start
+`NotificationLastReadSyncCoordinator` there.
 
 The sync is polled instead, on the mute list's cadence. `NotificationLastReadPollCoordinator`
 (`src/core/coordinators/notification-last-read-poll/`) extends the polling `Coordinator` base exactly as
@@ -152,7 +155,7 @@ that lands during bootstrap is adopted by `AuthController` instead of being roll
 Consequences on this tree: a mark-as-read on another device reaches an open tab within about the poll interval,
 not within a second; one `last_read` GET per visible signed-in tab every 30 s, next to the mute LIST, and no
 long-lived homeserver connection. The channel class stays in the tree, unregistered, with no cursor to clear; when
-the SDK releases the session lock for streams, register it and remove the poller.
+the SDK bounds that lease, or the team accepts the exposure, register the channel and remove the poller.
 
 No cache bypass is needed for the session read, and `markAllAsRead`'s read-check-write fence relies on it. The SDK
 (`@synonymdev/pubky` 0.17.1) sends the session `storage.get` as a default-mode fetch: `pubky-sdk/src/actors/storage/verbs.rs`

@@ -21,9 +21,11 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * Refreshes through {@link NotificationController.fetchLastReadFromHomeserver} (debounced) on start, when the tab
  * becomes visible, on `online`, and every {@link NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS}. It polls instead of
  * streaming: the social v1 `last_read` file is private, a private event stream needs a session, and a session-bound
- * stream deadlocks the SDK's bearer refresh for as long as it stays open (ADR-0014). `NotificationLastReadSyncCoordinator`,
- * the channel of the shared stream that follows the public 0.x file, stays in the tree unregistered until the SDK
- * releases the lock (ADR-0029).
+ * stream holds the shared session lock until its response headers reach the SDK, with no timeout; behind anything that
+ * buffers event streams that is unbounded and a 401 refresh then waits forever (pubky/pubky-homeserver#798). Polling
+ * has no such exposure. `NotificationLastReadSyncCoordinator`, the channel of the shared stream that follows the
+ * public 0.x file, stays in the tree unregistered until the SDK bounds that lease or the team accepts the exposure
+ * (ADR-0029).
  *
  * Policy (aligned with {@link MuteListSyncCoordinator}):
  * - Requires authenticated session with profile and current pubky.

@@ -4,9 +4,10 @@ import { MUTE_SYNC_POLL_INTERVAL_MS } from '@/config/mute-sync';
 /**
  * Homeserver event-stream filter for the notification `last_read` file.
  * One of the path filters of the shared `HomeserverEventStreamCoordinator` subscription. The social v1 port moves
- * the file, and only this constant follows it. The v1 file is private, and a private stream needs a session that
- * deadlocks the SDK's bearer refresh (ADR-0014), so `CoordinatorsManager` does not start this channel;
- * `NotificationLastReadPollCoordinator` polls the file instead (ADR-0029).
+ * the file, and only this constant follows it. The v1 file is private, and a session-bound stream holds the shared
+ * session lock until its response headers reach the SDK, with no timeout (pubky/pubky-homeserver#798), so
+ * `CoordinatorsManager` does not start this channel; `NotificationLastReadPollCoordinator` polls the file instead
+ * (ADR-0029).
  */
 export const NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX = `${APP_PRIVATE_PATH}${APP_LAST_READ_FILE}`;
 
