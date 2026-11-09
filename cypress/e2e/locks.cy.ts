@@ -290,7 +290,15 @@ describe('locks', () => {
       signInAs(reader);
       cy.visit(`/post/${creator.id}/${postId}`);
       cy.get('[data-cy="post-not-found"]:visible', { timeout: 10_000 }).should('have.length', 1);
-      cy.get('body').should('not.contain.text', teaser).and('not.contain.text', title);
+      // `contain.text` reads textContent, which includes the Next.js flight <script>
+      // in the body. That payload repeats the meta description, and a lock's
+      // description is the lock title, still served from the fetch cache after Nexus
+      // has 404'd. innerText is the text on screen.
+      cy.get('body').should(($body) => {
+        const visible = ($body[0] as HTMLElement).innerText;
+        expect(visible, 'the teaser').not.to.include(teaser);
+        expect(visible, 'the title').not.to.include(title);
+      });
       cy.get('[data-cy="locked-post-unlock-btn"]').should('not.exist');
     });
   });

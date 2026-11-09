@@ -297,8 +297,11 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
     },
   );
   const replicaReads: string[] = [];
+  // Record the status only once the homeserver has answered. `req.continue(callback)`
+  // tells Cypress the test is waiting on that response, so it fails the test when a
+  // later navigation (sign-out, reload, `cy.visit`) aborts the request first.
   cy.intercept({ method: 'GET', url: /\/priv\/social\/unlocked\// }, (req) => {
-    req.continue((res) => {
+    req.on('response', (res) => {
       replicaReads.push(`${new URL(req.url).pathname} → ${res.statusCode}`);
     });
   }).as('replicaRead');
