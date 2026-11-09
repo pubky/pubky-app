@@ -9,7 +9,7 @@ import type {
   NexusUserDetails,
   TUserId,
 } from '@/services/nexus/nexus.types';
-import { mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
+import { carryNexusResponseStartedAt, mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
 import type { TQueryNexusParams } from '@/services/nexus/nexus.utils.types';
 import { userApi } from '@/services/nexus/user/user.api';
 import {
@@ -63,7 +63,7 @@ export class NexusUserService {
     const url = userApi.taggers(params);
     // Tagger lists revalidate after local mutations or count changes.
     const taggers = await queryNexus<NexusTaggersWire>({ url, staleTime: 0, notFoundRetries });
-    return TagNormalizer.fromNexus(taggers);
+    return carryNexusResponseStartedAt(taggers, TagNormalizer.fromNexus(taggers));
   }
 
   /**

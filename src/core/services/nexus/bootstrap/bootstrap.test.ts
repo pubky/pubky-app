@@ -9,6 +9,7 @@ describe('NexusBootstrapService', () => {
   const mockFetch = vi.fn();
   const pubky = 'test-user-123';
 
+  // The page as `/v1` serves it: wire kinds, tags without `relationship`
   const generateMockResponse = (testUserId: string, testPostId: string) => ({
     users: [
       {
@@ -38,13 +39,11 @@ describe('NexusBootstrapService', () => {
             label: 'developer',
             taggers: ['tagger-user-1', 'tagger-user-2'],
             taggers_count: 2,
-            relationship: false,
           },
           {
             label: 'p2p',
             taggers: ['tagger-user-3'],
             taggers_count: 1,
-            relationship: false,
           },
         ],
         relationship: {
@@ -58,7 +57,7 @@ describe('NexusBootstrapService', () => {
         details: {
           id: testPostId,
           content: 'Bootstrap post content',
-          kind: 'short',
+          kind: 'note',
           uri: `https://pubky.app/${testUserId}/pub/pubky.app/posts/${testPostId}`,
           author: testUserId,
           indexed_at: Date.now(),
@@ -96,13 +95,11 @@ describe('NexusBootstrapService', () => {
               label: 'developer',
               taggers: ['tagger-user-1', 'tagger-user-2'],
               taggers_count: 2,
-              relationship: false,
             },
             {
               label: 'p2p',
               taggers: ['tagger-user-3'],
               taggers_count: 1,
-              relationship: false,
             },
           ],
           relationship: {
@@ -115,13 +112,11 @@ describe('NexusBootstrapService', () => {
             label: 'tech',
             taggers: ['post-tagger-1'],
             taggers_count: 1,
-            relationship: false,
           },
           {
             label: 'announcement',
             taggers: ['post-tagger-2', 'post-tagger-3'],
             taggers_count: 2,
-            relationship: false,
           },
         ],
         relationships: {
@@ -165,7 +160,17 @@ describe('NexusBootstrapService', () => {
       expect(mockFetch).toHaveBeenCalledWith(bootstrapApi.get(pubky), {
         method: 'GET',
       });
-      expect(result).toEqual(mockResponse);
+      // Past the read boundary: local kinds, every tag with its derived `relationship`
+      const folded = (tags: { label: string }[]) => tags.map((tag) => ({ ...tag, relationship: false }));
+      expect(result).toEqual({
+        ...mockResponse,
+        users: mockResponse.users.map((user) => ({ ...user, tags: folded(user.tags) })),
+        posts: mockResponse.posts.map((post) => ({
+          ...post,
+          details: { ...post.details, kind: 'short' },
+          tags: folded(post.tags),
+        })),
+      });
     });
 
     it('folds the /v1 post kinds, derives every tag relationship and passes a page without files through', async () => {

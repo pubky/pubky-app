@@ -12,7 +12,7 @@ type TMockNexusPostWire = Partial<Omit<NexusPostWire, 'details' | 'tags'>> & {
 
 type TMockNexusUserWire = Partial<Omit<NexusUserWire, 'details' | 'tags'>> & {
   id?: Pubky;
-  tags?: NexusPostWire['tags'];
+  tags?: NexusUserWire['tags'];
   details?: Partial<NexusUserWire['details']>;
 };
 

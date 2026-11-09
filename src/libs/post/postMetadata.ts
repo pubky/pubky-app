@@ -9,7 +9,7 @@ import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { resolveUserDisplayName } from '@/libs/utils/utils';
 import { toLocalPostKindFromNexus } from '@/pipes/post/post.kind';
-import type { NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
+import type { NexusPostDetails, NexusPostDetailsWire, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
 import { formatMentionLabel, type MentionSegment, splitMentions, truncateSegmentsByGraphemes } from './postMentions';
@@ -52,7 +52,10 @@ export async function fetchUserAndPostForMetadata(
 ): Promise<{ user: NexusUserDetails; post: NexusPostDetails } | null> {
   const [user, post] = await Promise.all([
     fetchWithValidation<NexusUserDetails>(userApi.details({ user_id: userId }), 'fetchUserDetails'),
-    fetchWithValidation<NexusPostDetails>(postApi.details({ author_id: userId, post_id: postId }), 'fetchPostDetails'),
+    fetchWithValidation<NexusPostDetailsWire>(
+      postApi.details({ author_id: userId, post_id: postId }),
+      'fetchPostDetails',
+    ),
   ]);
 
   if (!user || !post) return null;

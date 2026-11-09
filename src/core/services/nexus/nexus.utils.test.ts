@@ -345,7 +345,7 @@ describe('nexus.utils', () => {
     });
 
     it('collapses two concurrent identical posts/by_ids calls into one request', async () => {
-      const posts = [{ details: { author: 'author1', id: 'post1', kind: 'short' }, tags: [] }];
+      const posts = [{ details: { author: 'author1', id: 'post1', kind: 'note' }, tags: [] }];
       mockFetch.mockResolvedValueOnce(nexusResponse(posts));
 
       const [first, second] = await Promise.all([
@@ -354,8 +354,10 @@ describe('nexus.utils', () => {
       ]);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(first).toEqual(posts);
-      expect(second).toEqual(posts);
+      // Both callers get the one response, past the read boundary (`note` → `short`)
+      const folded = [{ details: { author: 'author1', id: 'post1', kind: 'short' }, tags: [] }];
+      expect(first).toEqual(folded);
+      expect(second).toEqual(folded);
     });
 
     it('collapses two concurrent identical users/by_ids calls into one request', async () => {

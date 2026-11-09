@@ -299,8 +299,14 @@ export type NexusPost = {
   bookmark?: NexusBookmark | null;
 };
 
+/** Post details as Nexus serves them: `kind` in the wire vocabulary (`note`, `article`, ...), before the fold. */
+export type NexusPostDetailsWire = NexusPostDetails;
+
 /** A post as Nexus serves it: `details.kind` in the wire vocabulary, tags without `relationship`. */
-export type NexusPostWire = Omit<NexusPost, 'tags'> & { tags: NexusTagWire[] };
+export type NexusPostWire = Omit<NexusPost, 'details' | 'tags'> & {
+  details: NexusPostDetailsWire;
+  tags: NexusTagWire[];
+};
 
 /** Paginated post stream response with cursor for pagination */
 export type NexusPostsKeyStream = {

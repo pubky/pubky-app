@@ -339,7 +339,7 @@ export class LocalStreamPostsService {
       // Nexus cannot see, so it only ever describes a 0.x copy (ADR-0028). The local table is
       // hydrated from the homeserver listing instead (`BookmarkApplication.fetchBookmarks`).
 
-      // Convert TagModel[] to NexusTag[] by accessing the data property
+      // Copy the tag fields the table holds (the fold gave every tag its `relationship`)
       const nexusTags = post.tags.map((tag) => ({
         label: tag.label,
         taggers: tag.taggers,

@@ -85,6 +85,6 @@ export class NexusPostService {
     });
     // Tagger lists revalidate after local mutations or count changes.
     const taggers = await queryNexus<NexusTaggersWire>({ url, staleTime: 0, notFoundRetries });
-    return TagNormalizer.fromNexus(taggers);
+    return carryNexusResponseStartedAt(taggers, TagNormalizer.fromNexus(taggers));
   }
 }
