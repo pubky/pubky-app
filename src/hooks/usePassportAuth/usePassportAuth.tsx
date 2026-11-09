@@ -6,8 +6,9 @@ import {
   PASSPORT_ATTEMPT_TIMEOUT_MS,
   PASSPORT_POPUP_CLOSED_CONFIRMATIONS,
   PASSPORT_POPUP_CLOSED_POLL_MS,
-  PASSPORT_POPUP_FEATURES,
+  PASSPORT_POPUP_HEIGHT,
   PASSPORT_POPUP_NAME_PREFIX,
+  PASSPORT_POPUP_WIDTH,
 } from '@/config/passport';
 import { AuthController } from '@/controllers/auth/auth';
 import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
@@ -279,8 +280,15 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     }
 
     const attemptId = crypto.randomUUID();
+    const width = Math.min(PASSPORT_POPUP_WIDTH, window.screen.availWidth || PASSPORT_POPUP_WIDTH);
+    const height = Math.min(PASSPORT_POPUP_HEIGHT, window.screen.availHeight || PASSPORT_POPUP_HEIGHT);
     // Opened synchronously from the click; awaiting first would trigger popup blocking.
-    const popup = window.open('about:blank', `${PASSPORT_POPUP_NAME_PREFIX}${attemptId}`, PASSPORT_POPUP_FEATURES);
+    // Keep window.opener: Passport needs it for the outcome hand-off.
+    const popup = window.open(
+      'about:blank',
+      `${PASSPORT_POPUP_NAME_PREFIX}${attemptId}`,
+      `popup,width=${width},height=${height}`,
+    );
     if (!popup) {
       // No auth flow was started and nothing else was touched: report it as its own outcome so
       // callers do not regenerate a Ring request that is still perfectly valid.

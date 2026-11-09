@@ -141,6 +141,8 @@ describe('usePassportAuth', () => {
     mockInitializeAuthenticatedSession.mockResolvedValue(undefined);
     popup = createFakePopup();
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => asOpaque<Window>(popup));
+    vi.spyOn(window.screen, 'availWidth', 'get').mockReturnValue(1440);
+    vi.spyOn(window.screen, 'availHeight', 'get').mockReturnValue(900);
     listeners = captureMessageListeners();
     vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
       const id = `00000000-0000-4000-8000-${String(attemptIds.length + 1).padStart(12, '0')}`;
@@ -172,7 +174,7 @@ describe('usePassportAuth', () => {
     expect(openSpy).toHaveBeenCalledWith(
       'about:blank',
       `pubky-passport-${attemptIds[0]}`,
-      expect.stringContaining('popup'),
+      'popup,width=375,height=812',
     );
     expect(useOnboardingStore.getState().secretKey).toBe('abandoned-secret');
     expect(useOnboardingStore.getState().mnemonic).toBe('abandoned words');
@@ -189,6 +191,23 @@ describe('usePassportAuth', () => {
     );
     // Listener registered before the popup navigated.
     expect(listeners).toHaveLength(1);
+  });
+
+  it.each([
+    [1440, 720, 'popup,width=375,height=720'],
+    [320, 568, 'popup,width=320,height=568'],
+    [0, 0, 'popup,width=375,height=812'],
+  ])('fits the popup to the available %d×%d screen', async (availWidth, availHeight, features) => {
+    vi.spyOn(window.screen, 'availWidth', 'get').mockReturnValue(availWidth);
+    vi.spyOn(window.screen, 'availHeight', 'get').mockReturnValue(availHeight);
+    const flow = createFlow();
+    mockGetPassportAuthUrl.mockResolvedValue(flow);
+    const hook = renderHook(() => usePassportAuth());
+
+    act(() => hook.result.current.startPassportAuth());
+
+    expect(openSpy).toHaveBeenCalledWith('about:blank', `pubky-passport-${attemptIds[0]}`, features);
+    await act(async () => flow.approval.resolve(mockSession()));
   });
 
   it('preserves draft keys until Passport actually adopts an account', async () => {
