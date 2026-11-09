@@ -47,6 +47,12 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
         ...(uri && { uri }),
       },
     };
+    // The row's address follows the viewer's latest local write: a delete clears it and a create records the
+    // file it wrote, so an untag after this mutation expires never resolves an address the viewer already left.
+    const tag = this.findByLabel(label);
+    const rowViewerId = this.cache?.viewerId;
+    if (tag && (rowViewerId === undefined || rowViewerId === viewerId))
+      tag.tag_uri = relationship ? (uri ?? null) : null;
     this.cache!.revision += 1;
   }
 

@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { AUTH_ROUTES, isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
+import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import {
@@ -20,6 +21,7 @@ import { pathToStepConfig } from './Header.constants';
 
 export function Header() {
   const pathname = usePathname();
+  const isHydrated = useIsHydrated();
   const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
@@ -72,8 +74,11 @@ export function Header() {
     return <HeaderHome />;
   };
 
-  // Copyright and the migration gate show only the logo (minimal header).
-  if (isCopyrightPage || isMigrationPage) {
+  // Copyright and the migration gate show only the logo (minimal header), and so do the legal pages for members:
+  // the public documents render outside the database and session restore (`AppShell`) that the member header reads.
+  // They are also server-rendered while the auth store only exists in the browser, so the legal pages keep the logo
+  // until hydration and only then offer guests their sign-in header.
+  if (isCopyrightPage || isMigrationPage || (isLegalPage && (isAuthenticated || !isHydrated))) {
     return (
       <HeaderContainer>
         <Logo />

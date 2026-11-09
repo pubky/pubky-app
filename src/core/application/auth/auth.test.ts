@@ -404,7 +404,14 @@ describe('AuthApplication', () => {
       expect(requestSpy).toHaveBeenCalledExactlyOnceWith({
         method: HttpMethod.GET,
         url: `pubky://${testPubky}/pub/social/v1/profile.json`,
+        notFoundAsNull: true,
       });
+    });
+
+    it('should return false when the homeserver reads profile.json as missing (null)', async () => {
+      vi.spyOn(HomeserverService, 'request').mockResolvedValue(null);
+
+      await expect(AuthApplication.userIsSignedUp({ pubky: testPubky })).resolves.toBe(false);
     });
 
     it('never probes the 0.x profile: an account with only that one reads as not signed up', async () => {

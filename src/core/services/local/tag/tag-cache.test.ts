@@ -70,7 +70,7 @@ describe('LocalTagCacheService', () => {
     await expect(LocalTagCacheService.getViewerTagUri(entity, 'bitcoin', 'other')).resolves.toBeUndefined();
   });
 
-  it('reports whether an operation is still the viewer latest write for a label', async () => {
+  it('reads the viewer latest write for a label, whatever its age', async () => {
     const mutation = {
       id: 'op',
       label: 'Bitcoin',
@@ -80,11 +80,10 @@ describe('LocalTagCacheService', () => {
       expiresAt: 9,
     };
     tagTable.get.mockResolvedValue({ ...record(), mutations: { 'viewer:bitcoin': mutation } });
-    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'viewer', 'op')).resolves.toBe(true);
-    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'viewer', 'newer')).resolves.toBe(false);
-    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'other', 'op')).resolves.toBe(false);
+    await expect(LocalTagCacheService.findViewerMutation(entity, 'bitcoin', 'viewer')).resolves.toEqual(mutation);
+    await expect(LocalTagCacheService.findViewerMutation(entity, 'bitcoin', 'other')).resolves.toBeUndefined();
     tagTable.get.mockResolvedValue(null);
-    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'viewer', 'op')).resolves.toBe(false);
+    await expect(LocalTagCacheService.findViewerMutation(entity, 'bitcoin', 'viewer')).resolves.toBeUndefined();
   });
 
   it('records cooldown when an invalidation supersedes a failing refresh', async () => {

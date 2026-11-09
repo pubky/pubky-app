@@ -83,11 +83,21 @@ const signInWithNarrowSession = () =>
 const signIn = ({ paykitConnected = false } = {}) =>
   useLocksAuthStore.setState({ session: fakeSession, locksSessionSecret: 'secret-abc', paykitConnected });
 
-function renderDialog(overrides?: { open?: boolean; onOpenChange?: () => void; onSuccess?: () => void }) {
+function renderDialog(overrides?: {
+  open?: boolean;
+  onOpenChange?: () => void;
+  onSuccess?: () => void;
+  mode?: 'setup' | 'signin';
+}) {
   const onOpenChange = overrides?.onOpenChange ?? vi.fn();
   const onSuccess = overrides?.onSuccess ?? vi.fn();
   const view = render(
-    <DialogLocksAuth open={overrides?.open ?? true} onOpenChange={onOpenChange} onSuccess={onSuccess} />,
+    <DialogLocksAuth
+      open={overrides?.open ?? true}
+      onOpenChange={onOpenChange}
+      onSuccess={onSuccess}
+      mode={overrides?.mode}
+    />,
   );
   return { ...view, onOpenChange, onSuccess };
 }
@@ -131,7 +141,7 @@ describe('DialogLocksAuth', () => {
     expect(mocks.start).not.toHaveBeenCalled();
   });
 
-  it('renders the Lock Server iframe with the postMessage sandbox on the Enable step', () => {
+  it('renders the Lock Server iframe with the postMessage sandbox and clipboard-write allowed on the Enable step', () => {
     mocks.flow = {
       status: LocksAuthFlowStatus.AWAITING_APPROVAL,
       connectUrl: 'https://lock.server/connect?delivery=postmessage',
@@ -143,6 +153,7 @@ describe('DialogLocksAuth', () => {
     const iframe = screen.getByTitle('Lock Server authorization');
     expect(iframe).toHaveAttribute('src', 'https://lock.server/connect?delivery=postmessage');
     expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+    expect(iframe).toHaveAttribute('allow', 'clipboard-write');
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
   });
 
@@ -340,7 +351,7 @@ describe('DialogLocksAuth', () => {
     expect(link).toHaveClass('text-base', 'font-bold');
   });
 
-  it('renders the Paykit iframe with the postMessage sandbox on the Bitkit step', () => {
+  it('renders the Paykit iframe with the postMessage sandbox and clipboard-write allowed on the Bitkit step', () => {
     signIn();
     mocks.paykitFlow = {
       status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
@@ -352,6 +363,7 @@ describe('DialogLocksAuth', () => {
     const iframe = screen.getByTitle('Bitkit payout account setup');
     expect(iframe).toHaveAttribute('src', 'https://paykit.server/setup?state=STATE');
     expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+    expect(iframe).toHaveAttribute('allow', 'clipboard-write');
   });
 
   it('links the store badges to Bitkit on the Bitkit step', () => {
@@ -454,6 +466,44 @@ describe('DialogLocksAuth', () => {
       expect(screen.queryByText(message)).not.toBeInTheDocument();
     },
   );
+
+  describe('sign-in only mode (#2980)', () => {
+    it('stops at the success step once the Lock Server is authorized, without checking Paykit', () => {
+      signIn({ paykitConnected: false });
+      const { onSuccess } = renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Locks Enabled')).toBeInTheDocument();
+      expect(screen.queryByText('Enable Payments')).not.toBeInTheDocument();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the session step for a session minted before /priv', () => {
+      signInWithNarrowSession();
+      signIn({ paykitConnected: false });
+      renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Locks Enabled')).toBeInTheDocument();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+    });
+
+    it('opens at the Lock Server step with no Locks session', () => {
+      renderDialog({ mode: 'signin' });
+
+      expect(screen.getByText('Lock Content')).toBeInTheDocument();
+      expect(mocks.prepare).toHaveBeenCalled();
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+    });
+
+    it('still moves on to the Bitkit step in the default mode (control)', () => {
+      signIn({ paykitConnected: false });
+      renderDialog();
+
+      expect(screen.getByText('Enable Payments')).toBeInTheDocument();
+      expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+    });
+  });
 
   it('requests close when Cancel is clicked', () => {
     const { onOpenChange } = renderDialog();

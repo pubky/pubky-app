@@ -19,6 +19,10 @@
  *
  * Which step shows is derived from the stores, so a creator who is already signed in, but whose
  * Paykit setup this Locks session has not confirmed yet, opens straight at Enable Payments.
+ *
+ * `mode="signin"` stops after the Lock Server step (no session or Paykit step, no Paykit check): a
+ * fresh Locks session resets `paykitConnected`, and a caller that only needs the Lock Server (such
+ * as deleting a lock announcement) must not be held up by Paykit.
  */
 import { type ReactNode, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
@@ -63,6 +67,8 @@ type DialogLocksAuthProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** 'signin' asks for the Lock Server sign-in only; 'setup' (default) also runs the session and Paykit steps. */
+  mode?: 'setup' | 'signin';
 };
 
 // Frames the 192px step illustration.
@@ -74,7 +80,13 @@ function StepImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }: DialogLocksAuthProps) {
+export function DialogLocksAuth({
+  open,
+  onOpenChange,
+  onSuccess,
+  asset = 'BTC',
+  mode = 'setup',
+}: DialogLocksAuthProps) {
   const {
     status: locksStatus,
     connectUrl,
@@ -98,17 +110,19 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
 
   let step: 'locks' | 'session' | 'bitkit' | 'done' = 'done';
   if (!isLocksAuthenticated) step = 'locks';
+  else if (mode === 'signin') step = 'done';
   else if (needsSessionUpgrade) step = 'session';
   else if (!isPaykitConnected) step = 'bitkit';
 
   // Fixed when the dialog opens (adjusted during render, so the first frame already carries it):
   // once the Lock Server step completes only the session step is left, and a count taken then
   // would never show "(2/2)".
-  const [isNumbered, setIsNumbered] = useState(() => open && !isLocksAuthenticated && needsSessionUpgrade);
+  const hasSessionStep = mode === 'setup' && needsSessionUpgrade;
+  const [isNumbered, setIsNumbered] = useState(() => open && !isLocksAuthenticated && hasSessionStep);
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setIsNumbered(!isLocksAuthenticated && needsSessionUpgrade);
+    if (open) setIsNumbered(!isLocksAuthenticated && hasSessionStep);
   }
 
   // Probe the Lock Server's readiness when the modal opens; reset when it closes. "Continue" only
@@ -246,6 +260,9 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
                   // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
                   // The other flags let /connect run JS, submit its approval form, and open the signer apps.
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  // The embedded QR copies its URL on click. Chromium blocks that clipboard write
+                  // from a cross-origin frame unless clipboard-write is allowed.
+                  allow="clipboard-write"
                   onLoad={onConnectLoad}
                   className={cn('h-48 w-full pointer-coarse:h-33', !isConnectReady && 'invisible absolute inset-0')}
                 />
@@ -255,7 +272,13 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
             {/* The embedded shell draws no logos, and on touch its buttons already name each app. */}
             <Container overrideDefaults className="flex items-center gap-3.5 pointer-coarse:hidden">
               <Link href={getPubkyRingLink()} overrideDefaults>
-                <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={101} height={22} />
+                <Image
+                  src="/images/logo-pubky-ring.svg"
+                  alt="Pubky Ring"
+                  width={101}
+                  height={22}
+                  className="light:invert"
+                />
               </Link>
               <Link href={BITKIT_WEBSITE_URL} overrideDefaults>
                 <Image src="/images/bitkit-logo.svg" alt="Bitkit" width={75} height={22} />
@@ -278,6 +301,8 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
                   // sandboxed postMessage arrives as origin "null" and is rejected. allow-popups is
                   // for the Bitkit deep link Paykit's page opens on touch devices.
                   sandbox="allow-scripts allow-same-origin allow-popups"
+                  // Same reason as the Lock Server iframe above.
+                  allow="clipboard-write"
                   className="h-48 w-full pointer-coarse:h-15"
                 />
               ) : (

@@ -15,7 +15,7 @@ export interface TCreateTagListInput {
 export type TDeleteTagInput = TTagEventParams & {
   isCurrent?: () => boolean;
   /** Whether the session's capabilities cover the resolved tag file; a scoped grant may not cover every tree. */
-  canWrite?: (tagUri: string) => boolean;
+  canWrite: (tagUri: string) => boolean;
 };
 
 export enum TagKind {

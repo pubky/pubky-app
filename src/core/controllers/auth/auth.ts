@@ -4,6 +4,7 @@ import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
@@ -42,6 +43,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -561,6 +563,7 @@ export class AuthController {
     if (previous.currentUserPubky !== current.currentUserPubky) {
       clearAllQueryClients();
       postStreamQueue.clear();
+      clearNotificationLastReadSyncCursorSessionStorage();
       useLocalFilesStore.getState().reset();
       useSignInStore.getState().reset();
       resetTabStore(useSettingsStore);
@@ -619,6 +622,8 @@ export class AuthController {
    */
   private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
     const isCurrent = captureViewerSession();
+    // A boundary already in the store may have been hydrated from storage another account's tab wrote: it has no owner.
+    const lastReadBeforeBootstrap = useNotificationStore.getState().selectLastRead();
     const signInStore = useSignInStore.getState();
     const url = LastReadNormalizer.buildUrl(pubky);
 
@@ -653,7 +658,20 @@ export class AuthController {
       onProgress,
     );
     if (!isCurrent()) return;
-    useNotificationStore.getState().setState(notification);
+    // The last_read sync or a mark may have set a newer boundary for this session while bootstrap ran: never move it
+    // back, recount instead. Only a value written after bootstrap started counts; the earlier one is dropped.
+    let state = notification;
+    const adoptedDuringBootstrap = () => {
+      const current = useNotificationStore.getState().selectLastRead();
+      return current !== lastReadBeforeBootstrap && current > state.lastRead;
+    };
+    while (adoptedDuringBootstrap()) {
+      const lastRead = useNotificationStore.getState().selectLastRead();
+      const unread = await NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
+      if (!isCurrent()) return;
+      state = { ...state, lastRead, unread };
+    }
+    useNotificationStore.getState().setState(state);
 
     // Apply remote settings to store (store mutation stays in Controller layer)
     if (remoteSettings) {
@@ -1103,12 +1121,16 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
-   * IndexedDB, query cache, singletons, in-memory stream pagination queues and persisted localStorage keys.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
+   * and the last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
+    // The last_read SSE cursor lives in sessionStorage; clear before the next account might reuse the same tab.
+    clearNotificationLastReadSyncCursorSessionStorage();
+
     // Reset singletons. CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();

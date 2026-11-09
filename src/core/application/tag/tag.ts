@@ -71,19 +71,22 @@ export class TagApplication {
     try {
       if (!tagUri) {
         tagUri = await this.fetchViewerTagUri({ taggerId, taggedId, label, taggedKind });
-        // A re-add that landed while Nexus was asked owns the label now, and its PUT is already queued ahead
-        // of this request: a DELETE sent after it would remove the tag the viewer just put back.
-        const owned = await LocalTagCacheService.ownsMutation(entity, label, taggerId, write.mutationId);
+        const latest = await LocalTagCacheService.findViewerMutation(entity, label, taggerId);
         // Checked after both reads: a replacement session must not send this DELETE.
         if (isCurrent && !isCurrent()) {
           await this.undo(local, 'delete', { ...write, tagUri });
           return;
         }
-        if (!owned) return;
+        // A re-add of this same file that landed while Nexus was asked has its PUT queued ahead of this request,
+        // so a DELETE sent after it would remove the tag the viewer just put back. Any other newer write, a re-add
+        // into another app folder or the undo of a failed re-add, still needs this file gone.
+        const readdedSameFile =
+          latest !== undefined && latest.id !== write.mutationId && latest.relationship && latest.uri === tagUri;
+        if (tagUri && readdedSameFile) return;
       }
       // Nexus reporting no tag, like an already absent homeserver record, agrees with the optimistic deletion.
       if (tagUri) {
-        if (canWrite && !canWrite(tagUri)) {
+        if (!canWrite(tagUri)) {
           throw Err.auth(AuthErrorCode.FORBIDDEN, 'The session cannot write the app folder of this tag', {
             service: ErrorService.Local,
             operation: 'commitDelete',

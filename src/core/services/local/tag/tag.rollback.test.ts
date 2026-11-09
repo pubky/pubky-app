@@ -98,8 +98,12 @@ describe.each([
     expect(await local.create({ ...undoOf('op'), tagUri })).toBe(true);
 
     const row = await tags.findById(taggedId);
-    expect(row?.tags.find((tag) => tag.label === label)).toMatchObject({ taggers: [viewer], taggers_count: 1 });
     // The restored row keeps the address that failed, so the next delete needs no Nexus round trip.
+    expect(row?.tags.find((tag) => tag.label === label)).toMatchObject({
+      taggers: [viewer],
+      taggers_count: 1,
+      tag_uri: tagUri,
+    });
     expect(row?.mutations?.[`${viewer}:${label}`]).toMatchObject({
       id: 'undo',
       relationship: true,

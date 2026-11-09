@@ -1,5 +1,6 @@
 import type { Session } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthApplication } from '@/application/auth/auth';
 import { LocksApplication } from '@/application/locks/locks';
 import { ProfileApplication } from '@/application/profile/profile';
 import { SettingsApplication } from '@/application/settings/settings';
@@ -7,6 +8,7 @@ import { TagApplication } from '@/application/tag/tag';
 import { TagKind } from '@/application/tag/tag.types';
 import { NotificationController } from '@/controllers/notification/notification';
 import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
@@ -149,6 +151,42 @@ const bytesPutTo = (path: string) =>
   homeserver.putBytes.mock.calls
     .filter(([putPath]) => putPath === path)
     .map(([, bytes]) => JSON.parse(new TextDecoder().decode(bytes)));
+
+describe('a new account with no files yet', () => {
+  // Every Err.* factory captures to Sentry at construction, so no factory call means no report.
+  const spyOnErrFactories = () => (Object.keys(Err) as (keyof typeof Err)[]).map((factory) => vi.spyOn(Err, factory));
+  const callsTo = (spies: ReturnType<typeof spyOnErrFactories>) =>
+    spies.reduce((total, spy) => total + spy.mock.calls.length, 0);
+
+  it('answers not signed up for a missing profile.json without creating an error', async () => {
+    const created = spyOnErrFactories();
+    await expect(AuthApplication.userIsSignedUp({ pubky: USER })).resolves.toBe(false);
+    expect(callsTo(created)).toBe(0);
+  });
+
+  it('answers signed up once profile.json exists', async () => {
+    homeserver.files.set(PROFILE_PATH, JSON.stringify({ name: 'Alice' }));
+    await expect(AuthApplication.userIsSignedUp({ pubky: USER })).resolves.toBe(true);
+  });
+
+  it('reads missing settings as null without creating an error', async () => {
+    const created = spyOnErrFactories();
+    await expect(SettingsApplication.fetchFromHomeserver(USER)).resolves.toBeNull();
+    expect(callsTo(created)).toBe(0);
+  });
+
+  it('still reports a homeserver failure on the same read', async () => {
+    const created = spyOnErrFactories();
+    useAuthStore.setState({
+      session: asOpaque<Session>({
+        ...session(),
+        storage: { ...session().storage, get: async () => new Response('Error', { status: 500 }) },
+      }),
+    });
+    await expect(SettingsApplication.fetchFromHomeserver(USER)).rejects.toMatchObject({ name: 'AppError' });
+    expect(callsTo(created)).toBeGreaterThan(0);
+  });
+});
 
 describe('a profile edit that the homeserver refuses re-reads before retrying', () => {
   const published = {
@@ -358,7 +396,7 @@ describe('writes to one tag run in the order the user made them', () => {
     const request = vi.spyOn(HomeserverService, 'request');
     const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
     await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
-    const remove = TagApplication.commitDelete(tag);
+    const remove = TagApplication.commitDelete({ ...tag, canWrite: () => true });
     // The removal has reached the homeserver service before the add's first attempt fails.
     await vi.waitFor(() =>
       expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.DELETE })),
@@ -382,7 +420,7 @@ describe('writes to one tag run in the order the user made them', () => {
       });
 
     const putBlob = vi.spyOn(HomeserverService, 'putBlob');
-    const remove = TagApplication.commitDelete(tag);
+    const remove = TagApplication.commitDelete({ ...tag, canWrite: () => true });
     await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
     const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
     await vi.waitFor(() => expect(putBlob).toHaveBeenCalledWith(expect.objectContaining({ url: tag.tagUrl })));

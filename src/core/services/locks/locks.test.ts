@@ -50,6 +50,7 @@ const mocks = vi.hoisted(() => {
     registerGuardedResource: vi.fn(),
     createContentLock: vi.fn(),
     deleteContentLock: vi.fn(),
+    deleteGuardedResource: vi.fn(),
     readContentLockWithOptions: vi.fn(async () => ({ version: 1, creator: 'pubkybob' })),
     generateBundleId: vi.fn(() => ({ toString: () => 'bundle-generated' })),
     ensureLocksSdkReady: vi.fn(async () => {}),
@@ -98,6 +99,9 @@ vi.mock('@synonymdev/locks-sdk', () => {
       public bytes: Uint8Array,
     ) {}
   }
+  class DeleteGuardedResourceOptions {
+    constructor(public path: string) {}
+  }
   class CreateContentLockRequestBuilder {
     primaryResource() {
       return this;
@@ -135,6 +139,7 @@ vi.mock('@synonymdev/locks-sdk', () => {
     ExchangeFrontendSessionCodeOptions,
     SetLockServicePointerOptions,
     RegisterGuardedResourceOptions,
+    DeleteGuardedResourceOptions,
     CreateContentLockRequestBuilder,
     VerificationTaskHandleOptions,
     BundleId: { generate: mocks.generateBundleId },
@@ -306,6 +311,7 @@ const session = asOpaque<LocksSdkSession>({
     registerGuardedResource: mocks.registerGuardedResource,
     createContentLock: mocks.createContentLock,
     deleteContentLock: mocks.deleteContentLock,
+    deleteGuardedResource: mocks.deleteGuardedResource,
   },
   lockServer: () => 'lockpubky',
 });
@@ -360,6 +366,14 @@ describe('LocksService (content)', () => {
     expect(mocks.deleteContentLock).toHaveBeenCalledWith('LOCK1');
   });
 
+  it('deleteGuardedResource addresses the resource by the path it was registered under', async () => {
+    mocks.deleteGuardedResource.mockResolvedValue(undefined);
+
+    await expect(LocksService.deleteGuardedResource('id-1')).resolves.toBeUndefined();
+
+    expect(mocks.deleteGuardedResource).toHaveBeenCalledWith(expect.objectContaining({ path: 'id-1' }));
+  });
+
   it.each([
     [
       'registerGuardedResource',
@@ -369,6 +383,7 @@ describe('LocksService (content)', () => {
     ],
     ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
     ['deleteContentLock', () => LocksService.deleteContentLock('LOCK1'), mocks.deleteContentLock],
+    ['deleteGuardedResource', () => LocksService.deleteGuardedResource('id-1'), mocks.deleteGuardedResource],
   ])('%s throws an auth error without touching the server when no Locks session exists', async (_name, call, mock) => {
     useLocksAuthStore.getState().reset();
 
@@ -389,6 +404,7 @@ describe('LocksService (content)', () => {
     ],
     ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
     ['deleteContentLock', () => LocksService.deleteContentLock('LOCK1'), mocks.deleteContentLock],
+    ['deleteGuardedResource', () => LocksService.deleteGuardedResource('id-1'), mocks.deleteGuardedResource],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     mock.mockRejectedValue(new Error('Lock Server request failed with HTTP 401'));
 

@@ -15,7 +15,7 @@ import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types
 import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { inferPostKindForCreate, toLocalPostKind, toLockContentKind } from '@/pipes/post/post.kind';
-import { postKindBelongsToStream } from '@/stores/home/home.utils';
+import { postBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type { TLockDraft, UsePostInputLockOptions, UsePostInputLockReturn } from './usePostInputLock.types';
@@ -148,7 +148,7 @@ export function usePostInputLock({
         // in `usePostInput` (#2308, #2714).
         if (isViewerExcludedWotStream(streamId)) return;
         const details = await PostController.getDetails({ compositeId: postId });
-        if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+        if (!details?.kind || postBelongsToStream(details, streamId)) {
           await timelineFeed.prependPosts(postId);
         }
       } catch (error) {

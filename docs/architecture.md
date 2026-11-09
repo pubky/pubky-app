@@ -64,6 +64,8 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - **NEVER** call application directly
 - **NEVER** call services directly
 - **Mute list (homeserver poll)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/priv/social/v1/mutes/`, by polling; no session-bound request may stay open. See `docs/adr/0014-muting-system.md`.
+- **Homeserver event stream (shared)**: The tab holds one homeserver event stream for every synced path: `HomeserverEventStreamCoordinator` (`src/core/coordinators/homeserver-event-stream/`) owns the connection (gating, one connection at a time, abort on teardown, backoff, outage report), and each path is a channel extending the abstract `EventStreamSyncCoordinator` (`src/core/coordinators/base/event-stream-sync-coordinator.ts`: debounced refresh, cursor). On the social v1 tree no channel registers, so the hub opens no request: the synced files are private, and a private stream needs a session (ADR-0014). A new homeserver-synced public path adds a channel, never a second stream: the homeserver is HTTP/1.1, and the browser's six connections per host are shared by every tab (#3066, ADR-0029).
+- **Notification read boundary (homeserver events stream)**: `NotificationLastReadSyncCoordinator` (`src/core/coordinators/notification-last-read-sync/`) adopts a newer `last_read` written by another session and recounts the unread badge; see `docs/adr/0029-cross-device-last-read-sync.md`. Not started on the social v1 tree: the v1 file is private (FIX-8 in `docs/migrations/social-v1.md`).
 
 ### Application (`src/core/application/`)
 

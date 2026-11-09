@@ -118,7 +118,7 @@ describe('useDeletePost', () => {
       expect(mockDelete).toHaveBeenCalledWith({ compositePostId: mockPostId });
     });
 
-    it('keeps the post, restores it in the feed and says why when the lock deletion fails', async () => {
+    it('keeps the post in the feed and says why when the lock deletion fails', async () => {
       mockDeleteLockContent.mockRejectedValueOnce(
         Err.server(ServerErrorCode.INTERNAL_ERROR, 'refused', { service: ErrorService.Locks, operation: 'test' }),
       );
@@ -129,11 +129,57 @@ describe('useDeletePost', () => {
       });
 
       expect(mockDelete).not.toHaveBeenCalled();
-      expect(mockPrependPosts).toHaveBeenCalledWith(mockPostId);
+      // The row never left the feed, so there is nothing to put back.
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+      expect(mockPrependPosts).not.toHaveBeenCalled();
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not delete the locked content. Try again.',
       });
+    });
+
+    it('removes the row only after the Lock Server accepted, so a sign-in failure keeps it mounted (#2980)', async () => {
+      const commit = vi.fn();
+      const rollback = vi.fn();
+      const removePostsOptimistically = vi.fn(() => ({ commit, rollback }));
+      vi.mocked(useTimelineFeedContext).mockReturnValue({ ...mockTimelineFeed, removePostsOptimistically });
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await expect(result.current.deletePost(mockPostId)).resolves.toBe(false);
+      });
+      expect(removePostsOptimistically).not.toHaveBeenCalled();
+      expect(rollback).not.toHaveBeenCalled();
+      expect(result.current.needsLocksSignIn).toBe(true);
+
+      await act(async () => {
+        await expect(result.current.deletePost(mockPostId)).resolves.toBe(true);
+      });
+      expect(mockDeleteLockContent.mock.invocationCallOrder[1]).toBeLessThan(
+        removePostsOptimistically.mock.invocationCallOrder[0],
+      );
+      expect(removePostsOptimistically.mock.invocationCallOrder[0]).toBeLessThan(
+        mockDelete.mock.invocationCallOrder[0],
+      );
+      expect(commit).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears a pending sign-in offer on request', async () => {
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+      expect(result.current.needsLocksSignIn).toBe(true);
+
+      act(() => result.current.clearLocksSignIn());
+      expect(result.current.needsLocksSignIn).toBe(false);
     });
 
     it('asks for a Lock Server sign-in when the Locks session was rejected or is missing', async () => {
@@ -151,6 +197,36 @@ describe('useDeletePost', () => {
         variant: 'error',
         description: 'Sign in to the Lock Server to delete this post.',
       });
+    });
+
+    it('flags a Lock Server sign-in after a Locks auth failure and clears it on the next success (#2980)', async () => {
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+      expect(result.current.needsLocksSignIn).toBe(true);
+
+      await act(async () => {
+        await expect(result.current.deletePost(mockPostId)).resolves.toBe(true);
+      });
+      expect(result.current.needsLocksSignIn).toBe(false);
+    });
+
+    it('does not flag a sign-in when the Lock Server fails for another reason', async () => {
+      mockDeleteLockContent.mockRejectedValueOnce(
+        Err.server(ServerErrorCode.INTERNAL_ERROR, 'refused', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      const { result } = renderHook(() => useDeletePost());
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(result.current.needsLocksSignIn).toBe(false);
     });
 
     it('keeps the generic copy for a homeserver failure after the lock was deleted', async () => {

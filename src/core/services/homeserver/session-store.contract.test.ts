@@ -3,6 +3,7 @@ import { AuthFlowKind, Keypair, Pubky, validateCapabilities } from '@synonymdev/
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES } from '@/config/auth';
+import { isRetryable } from '@/libs/error/error.utils';
 import grantAuth015 from './grant-auth-0.15.fixture.json';
 import { HomeserverService } from './homeserver';
 
@@ -317,10 +318,32 @@ describe('SDK upgrade grant compatibility', () => {
           tx.oncomplete = () => resolve();
           tx.onerror = tx.onabort = () => reject(tx.error);
         });
-        await expect(sdk.browserSessionStore.restore(record.id)).rejects.toMatchObject({
-          name: 'RequestError',
-          message: 'Request failed: HTTP transport error: error sending request',
+        // SDK 0.17 keeps refresh transport details secret-safe and omits an HTTP status.
+        const restore = sdk.browserSessionStore.restore(record.id);
+        await expect(restore).rejects.toMatchObject({
+          name: 'CredentialRefreshError',
+          message: 'Credential refresh failed: Grant credential refresh request failed',
         });
+        await expect(restore).rejects.not.toHaveProperty('data');
+        const result = await AuthApplication.restorePersistedSession({
+          reference: {
+            kind: 'grant',
+            sessionStoreId: record.id,
+            grantId: record.grantId,
+            clientId: getAuthClientId(),
+            grantExpiresAt: record.grantExpiresAt,
+            tokenExpiresAt: record.sharedSession.response.session.token_expires_at,
+          },
+          expectedPubky: record.publicKey,
+        });
+        expect(result.status).toBe('temporary-error');
+        expect('error' in result && result.error && isRetryable(result.error)).toBe(true);
+        const retained = await new Promise<unknown>((resolve, reject) => {
+          const request = db.transaction('storedSessions').objectStore('storedSessions').get(record.id);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        expect(retained).toMatchObject({ id: record.id, credential: record.credential });
         const requests = fetch.mock.calls.map(([input, init]) =>
           input instanceof Request ? input : new Request(input, init),
         );

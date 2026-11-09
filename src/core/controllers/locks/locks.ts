@@ -5,6 +5,7 @@ import type {
   TCreateLockContentParams,
   TDeleteLockContentParams,
   TFetchOwnContentParams,
+  TFetchPaidContentOptions,
   TFetchReplicatedAttachmentsParams,
   TFetchReplicatedContentParams,
   TFetchUnlockedListParams,
@@ -399,9 +400,12 @@ export class LocksController {
     return LocksApplication.fetchPurchasedLockIds(params);
   }
 
-  /** Gets an access credential for a paid bundle id from the Lock Server, then downloads the post + attachments with it. */
-  static fetchPaidContent(params: TPaymentBundleParams): Promise<TUnlockedContent> {
-    return LocksApplication.fetchPaidContent(params);
+  /**
+   * Gets an access credential for a paid bundle id from the Lock Server, then downloads the post + attachments with it.
+   * Concurrent callers share one download; `fresh` (Check again) starts a new one in its place.
+   */
+  static fetchPaidContent(params: TPaymentBundleParams, options?: TFetchPaidContentOptions): Promise<TUnlockedContent> {
+    return LocksApplication.fetchPaidContent(params, options);
   }
 
   /** Copies unlocked content into the reader's own `/priv`, so later reads need no credential. */
