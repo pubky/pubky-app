@@ -8,6 +8,8 @@ export interface TagMutation {
   label: string;
   /** Pending ownership survives expiry until settlement or replacement of the cached window. */
   synced: boolean;
+  /** The tag file a local create wrote, so it can be deleted before Nexus reports its `tag_uri`. */
+  uri?: string;
 }
 
 export interface TagCollectionModelSchema<Id> {
