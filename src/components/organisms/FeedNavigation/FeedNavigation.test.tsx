@@ -317,8 +317,8 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const homeLink = getLink('/home');
-    expect(homeLink).toHaveClass('border-white');
-    expect(homeLink).toHaveClass('text-white');
+    expect(homeLink).toHaveClass('border-foreground');
+    expect(homeLink).toHaveClass('text-foreground');
     expect(homeLink).toHaveAttribute('aria-current', 'page');
   });
 
@@ -429,9 +429,9 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const activeLink = getLink('/feed/feed-active');
-    expect(activeLink).toHaveClass('text-white');
+    expect(activeLink).toHaveClass('text-foreground');
     expect(activeLink).toHaveAttribute('aria-current', 'page');
-    expect(activeLink?.parentElement).toHaveClass('border-white');
+    expect(activeLink?.parentElement).toHaveClass('border-foreground');
   });
 
   it('applies muted styling to a custom feed when its route does not match pathname', () => {
@@ -441,9 +441,9 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const inactiveLink = getLink('/feed/feed-inactive');
-    expect(inactiveLink).toHaveClass('text-muted-foreground', 'group-hover:text-white');
+    expect(inactiveLink).toHaveClass('text-muted-foreground', 'group-hover:text-foreground');
     expect(inactiveLink?.parentElement).toHaveClass('border-border');
-    expect(inactiveLink?.parentElement).not.toHaveClass('hover:text-white');
+    expect(inactiveLink?.parentElement).not.toHaveClass('hover:text-foreground');
   });
 
   it('collapses inactive custom feed tabs to icon-only on mobile, keeps the active label', () => {
@@ -584,7 +584,7 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const feedLink = getLink('/feed/feed-1');
-    expect(feedLink).toHaveClass('group-hover:text-white');
+    expect(feedLink).toHaveClass('group-hover:text-foreground');
     expect(screen.getByLabelText('Edit Test Feed')).toHaveClass('text-muted-foreground');
   });
 

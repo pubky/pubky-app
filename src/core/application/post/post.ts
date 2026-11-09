@@ -245,8 +245,16 @@ export class PostApplication {
    * Creates a post: uploads first (the post references them), then the local row, then the
    * first version PUT at the URL `buildPost` named. The local row holds the versionless v1
    * reference as its `uri`; a failed PUT tombstones the row again and sweeps the uploads.
+   * `onPostSynced` runs once the post is on the homeserver, before its tags are written.
    */
-  static async commitCreate({ compositePostId, post, fileAttachments, tags, isCurrent }: TCreatePostInput) {
+  static async commitCreate({
+    compositePostId,
+    post,
+    fileAttachments,
+    tags,
+    isCurrent,
+    onPostSynced,
+  }: TCreatePostInput) {
     const hasFiles = fileAttachments != null && fileAttachments.length > 0;
     const rollbackUploadedFiles = () =>
       this.rollbackUploadedFiles({
@@ -288,6 +296,7 @@ export class PostApplication {
       await rollbackUploadedFiles();
       throw error;
     }
+    onPostSynced?.();
 
     if (tags && tags.length > 0) {
       await TagApplication.commitCreate({ tagList: tags, isCurrent });

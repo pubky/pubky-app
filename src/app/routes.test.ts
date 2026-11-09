@@ -9,6 +9,7 @@ import {
   APP_ROUTES,
   AUTH_ROUTES,
   AUTHENTICATED_ROUTES,
+  COPYRIGHT_ROUTES,
   getCollectionRoute,
   getContentSearchUrl,
   getProfileRoute,
@@ -21,6 +22,7 @@ import {
   isLogoLandingRoute,
   isNavItemActive,
   isPostRoute,
+  isPublicDocumentRoute,
   isPublicExploreRoute,
   LEGAL_ROUTES,
   LOGO_LANDING_ROUTES,
@@ -290,6 +292,22 @@ describe('LEGAL_ROUTES', () => {
   it.each([null, '/copyright', '/privacy', '/terms-of-use/extra'])('does not treat %s as a legal route', (route) => {
     expect(isLegalRoute(route)).toBe(false);
   });
+});
+
+describe('isPublicDocumentRoute', () => {
+  it.each([...Object.values(LEGAL_ROUTES), COPYRIGHT_ROUTES.COPYRIGHT])(
+    'recognises %s as a public document',
+    (route) => {
+      expect(isPublicDocumentRoute(route)).toBe(true);
+    },
+  );
+
+  it.each([null, '/', '/home', '/settings/legal', '/copyright/extra'])(
+    'does not treat %s as a public document',
+    (route) => {
+      expect(isPublicDocumentRoute(route)).toBe(false);
+    },
+  );
 });
 
 describe('getProfileRoute', () => {

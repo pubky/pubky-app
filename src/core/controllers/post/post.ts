@@ -195,6 +195,7 @@ export class PostController {
     parentPostId,
     originalPostId,
     lock,
+    onPostSynced,
   }: TCreatePostParams): Promise<string> {
     const isCurrent = captureViewerSession();
     let parentUri: string | undefined = undefined;
@@ -273,6 +274,7 @@ export class PostController {
       fileAttachments: coverAttachment ? [coverAttachment, ...fileAttachments] : fileAttachments,
       tags: tagList,
       isCurrent,
+      onPostSynced,
     });
 
     return compositePostId;

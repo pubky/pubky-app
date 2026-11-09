@@ -48,6 +48,11 @@ export type TPaymentBundleParams = {
   bundleId: string;
 };
 
+/** `fresh`: start a new download instead of joining the one in flight for the same purchase. */
+export type TFetchPaidContentOptions = {
+  fresh?: boolean;
+};
+
 /** Params for reading the guarded content after unlock, authorized by `credential`. */
 export type TFetchUnlockedContentParams = {
   lockFile: LockFile;

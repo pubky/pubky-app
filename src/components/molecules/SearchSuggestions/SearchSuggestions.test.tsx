@@ -49,7 +49,7 @@ vi.mock('@/molecules/SearchTagSection/SearchTagSection', () => {
 
 vi.mock('@/config/search', () => ({
   SEARCH_EXPANDED_STYLE: {
-    background: 'linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%)',
+    background: 'linear-gradient(180deg, var(--background) 0%, var(--search-expanded-fade) 100%)',
     backdropFilter: 'blur(25px)',
     boxShadow: '0px 50px 100px rgba(0, 0, 0, 1)',
     maxHeight: '300px',
@@ -145,7 +145,9 @@ describe('SearchSuggestions', () => {
     const dropdown = screen.getByTestId('search-suggestions');
     // Inline-style assertion: jsdom's getComputedStyle drops shorthands whose
     // gradient contains var(), so toHaveStyle cannot see this background.
-    expect(dropdown.style.background).toBe('linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%)');
+    expect(dropdown.style.background).toBe(
+      'linear-gradient(180deg, var(--background) 0%, var(--search-expanded-fade) 100%)',
+    );
   });
 
   it('has correct aria-label and role', () => {

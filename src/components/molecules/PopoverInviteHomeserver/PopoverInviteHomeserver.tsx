@@ -16,7 +16,7 @@ export function PopoverInviteHomeserver({ className = 'hover:bg-brand/10' }: Pop
     <Popover hover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className={className}>
-          <CircleHelp className="h-4 w-4 text-white" data-testid="circle-help-icon" />
+          <CircleHelp className="h-4 w-4 text-foreground" data-testid="circle-help-icon" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[327px]">

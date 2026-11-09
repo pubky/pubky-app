@@ -38,8 +38,10 @@ vi.mock('@/controllers/auth/auth', () => ({
     subscribeSessionFailures: vi.fn(() => vi.fn()),
     retryShopCleanup: vi.fn().mockResolvedValue(undefined),
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
+    retrySocialMigration: vi.fn(),
     retireLegacyCookieSessions: vi.fn().mockResolvedValue(undefined),
     restorePersistedSession: mocks.restore,
+    syncSessionFromStorage: vi.fn().mockResolvedValue(undefined),
   },
 }));
 vi.mock('@/controllers/migration/migration', () => ({ MigrationController: { resync: mocks.resync } }));

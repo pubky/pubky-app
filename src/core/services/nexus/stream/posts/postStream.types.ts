@@ -57,6 +57,8 @@ export type TStreamBase = TPaginationParams &
     viewer_id?: Pubky;
     sorting?: StreamSorting;
     kind?: StreamKind;
+    // Posts with a lock attached, of any kind. Nexus rejects it combined with `kind`.
+    locked?: boolean;
     order?: StreamOrder;
     tags?: string; // Max 5 tags
     depth?: number;

@@ -92,6 +92,48 @@ describe('AuthCoordinator', () => {
     expect(AuthController.syncRemovedSession).not.toHaveBeenCalled();
     expect(AuthController.retrySessionRetirement).not.toHaveBeenCalled();
   });
+  it('adopts auth persisted while it was stopped when it starts again on a hydrated store', () => {
+    useAuthStore.setState({ hasHydrated: true });
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).toHaveBeenCalledOnce();
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).toHaveBeenCalledOnce();
+    coordinator.stop();
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).toHaveBeenCalledTimes(2);
+  });
+  it('retries a temporary restore failure once storage is adopted on start', async () => {
+    useAuthStore.setState({ hasHydrated: true, restoreStatus: 'temporary-error' });
+    coordinator.start();
+    await vi.waitFor(() => expect(AuthController.restorePersistedSession).toHaveBeenCalledOnce());
+    expect(vi.mocked(AuthController.syncSessionFromStorage).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(AuthController.restorePersistedSession).mock.invocationCallOrder[0],
+    );
+  });
+  it.each(['hidden', 'logout'])('does not retry a temporary restore failure on start while %s', async (condition) => {
+    useAuthStore.setState({
+      hasHydrated: true,
+      restoreStatus: 'temporary-error',
+      isLoggingOut: condition === 'logout',
+    });
+    if (condition === 'hidden') vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    coordinator.start();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(AuthController.restorePersistedSession).not.toHaveBeenCalled();
+  });
+  it('does not retry after it is stopped before storage is adopted', async () => {
+    useAuthStore.setState({ hasHydrated: true, restoreStatus: 'temporary-error' });
+    coordinator.start();
+    coordinator.stop();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(AuthController.restorePersistedSession).not.toHaveBeenCalled();
+  });
+  it('leaves a store that is still hydrating to read storage itself', () => {
+    coordinator.start();
+    expect(AuthController.syncSessionFromStorage).not.toHaveBeenCalled();
+  });
   it('synchronizes auth storage changes and SDK removals only', () => {
     coordinator.start();
     for (const key of [AUTH_PERSIST_KEY, null, 'unrelated']) window.dispatchEvent(new StorageEvent('storage', { key }));

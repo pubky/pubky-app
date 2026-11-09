@@ -58,6 +58,7 @@ const builtPost = (object: Partial<Post> & { content: string }, compositePostId:
     body: new Uint8Array(),
   });
 };
+const testLockUri = `pubky://${testData.authorPubky}/pub/app.locks/LOCK1.json`;
 
 // Helper functions
 const createSaveParams = (
@@ -1569,6 +1570,32 @@ describe('LocalPostService', () => {
         expect(authorStream?.stream).toContain(postId);
       });
 
+      it('should add a lock post to the Locks timeline streams', async () => {
+        const postId = testData.fullPostId1;
+        await setupUserCounts(testData.authorPubky);
+
+        await LocalPostService.create({
+          compositePostId: postId,
+          post: builtPost({ content: 'Test post', lock: testLockUri }, postId),
+        });
+
+        for (const streamId of [
+          PostStreamTypes.TIMELINE_ALL_LOCKED,
+          PostStreamTypes.TIMELINE_FOLLOWING_LOCKED,
+          PostStreamTypes.TIMELINE_FRIENDS_LOCKED,
+        ]) {
+          expect((await PostStreamModel.table.get(streamId))?.stream).toContain(postId);
+        }
+      });
+
+      it('should keep a post without a lock out of the Locks timeline streams', async () => {
+        await setupUserCounts(testData.authorPubky);
+
+        await LocalPostService.create(createSaveParams('Test post'));
+
+        expect(await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_LOCKED)).toBeUndefined();
+      });
+
       it('should add long-form post to appropriate timeline streams', async () => {
         const postId = testData.fullPostId1;
         await setupUserCounts(testData.authorPubky);
@@ -1686,6 +1713,22 @@ describe('LocalPostService', () => {
         expect(timelineAllAll?.stream || []).not.toContain(postId);
         expect(timelineAllShort?.stream || []).not.toContain(postId);
         expect(authorStream?.stream || []).not.toContain(postId);
+      });
+
+      it('should remove a lock post from the Locks timeline streams and their unread rows', async () => {
+        const postId = testData.fullPostId1;
+        await setupExistingPost(postId, 'Test post');
+        await PostDetailsModel.update(postId, { lock: testLockUri });
+        await setupUserCounts(testData.authorPubky);
+        await PostStreamModel.prependItems(PostStreamTypes.TIMELINE_ALL_LOCKED as PostStreamId, [postId]);
+        await UnreadPostStreamModel.prependItems(PostStreamTypes.TIMELINE_ALL_LOCKED as PostStreamId, [postId]);
+
+        await LocalPostService.delete({ compositePostId: postId });
+
+        const locked = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_LOCKED);
+        const unreadLocked = await UnreadPostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_LOCKED);
+        expect(locked?.stream || []).not.toContain(postId);
+        expect(unreadLocked?.stream || []).not.toContain(postId);
       });
 
       it('should remove reply from author_replies and post_replies streams', async () => {

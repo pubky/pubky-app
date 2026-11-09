@@ -39,7 +39,14 @@ export function reconcileTagWindow(
       : options.complete
         ? false
         : undefined;
-    if (mutation.synced && acknowledged === mutation.relationship) continue;
+    // A same-viewer response acknowledges a create only once it reports the file that create wrote: until Nexus
+    // indexes the new file it can still report one the viewer already deleted, and the next untag would target it.
+    const addressConfirmed =
+      !mutation.uri ||
+      mutation.viewerId !== viewerId ||
+      remote?.tag_uri === undefined ||
+      remote.tag_uri === mutation.uri;
+    if (mutation.synced && acknowledged === mutation.relationship && addressConfirmed) continue;
     mutations[key] = mutation;
     if (mutation.expiresAt <= now) continue;
 
@@ -85,11 +92,14 @@ export function reconcileTagWindow(
     }
     const taggers = tag.taggers.filter((tagger) => tagger !== mutation.viewerId);
     if (mutation.relationship) taggers.push(mutation.viewerId);
+    const ownWrite = mutation.viewerId === viewerId;
     tags.set(label, {
       ...tag,
       taggers,
       taggers_count: count,
-      relationship: mutation.viewerId === viewerId ? mutation.relationship : tag.relationship,
+      relationship: ownWrite ? mutation.relationship : tag.relationship,
+      // The row carries the kept create's address, so it outlives the create when Nexus is still behind.
+      ...(ownWrite && mutation.relationship && mutation.uri && { tag_uri: mutation.uri }),
     });
   }
   return { tags: [...tags.values()], mutations };

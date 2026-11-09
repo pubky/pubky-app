@@ -58,6 +58,7 @@ PostController.getOrFetchDetails({ compositeId, viewerId }); // Local first, fal
 UserController.getManyDetails({ userIds }); // Bulk local
 UserController.getManyTagsOrFetch({ userIds }); // Bulk with fallback
 AuthController.subscribeSessionFailures(listener); // Long-lived subscription
+HomeserverEventController.subscribeUserEventStream({ pubky, cursor, paths, signal }); // Live stream subscription
 
 // Bad naming
 PostController.loadDetails(id); // Unclear source

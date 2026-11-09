@@ -561,6 +561,21 @@ describe('NotificationApplication.markAllAsRead', () => {
     vi.restoreAllMocks();
   });
 
+  // The v1 file is private: an anonymous read (`getFreshJson`) of it answers 401, so the check reads through the session.
+  it('checks the published lastRead through the session, never anonymously', async () => {
+    const fresh = vi.spyOn(HomeserverService, 'getFreshJson');
+    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: mockTimestamp + 1 });
+
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).resolves.toBe(mockTimestamp + 1);
+
+    expect(request).toHaveBeenCalledExactlyOnceWith({
+      method: HttpMethod.GET,
+      url: mockLastReadUrl,
+      notFoundAsNull: true,
+    });
+    expect(fresh).not.toHaveBeenCalled();
+  });
+
   it('reads the published lastRead, then sends this one as a single fenced attempt and returns it', async () => {
     const mockLastReadResult = lastReadResult();
     const homeserverSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
@@ -869,6 +884,41 @@ describe('NotificationApplication.fetchMissingEntities', () => {
 
       expect(invalidate).toHaveBeenCalledExactlyOnceWith({ kind: 'post', id: `${author}:${postId}` }, undefined);
     });
+  });
+});
+
+describe('NotificationApplication.fetchLastReadFromHomeserver', () => {
+  const url = 'pubky://test-user/priv/app.pubky/v1/last_read.json';
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads the private file through the session and returns the timestamp', async () => {
+    const fresh = vi.spyOn(HomeserverService, 'getFreshJson');
+    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: 1_234 });
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBe(1_234);
+
+    expect(request).toHaveBeenCalledExactlyOnceWith({ method: HttpMethod.GET, url, notFoundAsNull: true });
+    expect(fresh).not.toHaveBeenCalled();
+  });
+
+  it('returns null for a missing file', async () => {
+    vi.spyOn(HomeserverService, 'request').mockResolvedValue(null);
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBeNull();
+  });
+
+  it('returns null for a body without a finite timestamp', async () => {
+    vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: 'soon' });
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBeNull();
+  });
+
+  it('rethrows any other failure', async () => {
+    const error = httpStatusCodeToError(503, 'unavailable', ErrorService.Homeserver, 'request', url);
+    vi.spyOn(HomeserverService, 'request').mockRejectedValue(error);
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).rejects.toBe(error);
   });
 });
 

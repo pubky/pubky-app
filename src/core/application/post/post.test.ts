@@ -256,12 +256,15 @@ describe('Post Application', () => {
       });
 
       it('should propagate tag creation error after post sync', async () => {
-        const mockData = { ...createMockPostData(), tags: [createMockTag('post123')] };
+        const onPostSynced = vi.fn();
+        const mockData = { ...createMockPostData(), tags: [createMockTag('post123')], onPostSynced };
         const { putBlobSpy, tagCreateSpy } = setupCreateSpies();
         tagCreateSpy.mockRejectedValue(new Error('Tag creation failed'));
 
         await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('Tag creation failed');
         expect(putBlobSpy).toHaveBeenCalledTimes(1);
+        // The caller may treat the post as live once this runs, so it must come before the tag write.
+        expect(onPostSynced.mock.invocationCallOrder[0]).toBeLessThan(tagCreateSpy.mock.invocationCallOrder[0]);
       });
 
       it('should skip tag creation with an empty list', async () => {
@@ -277,7 +280,12 @@ describe('Post Application', () => {
 
     it('should rollback local write, rollback files, and skip tags when homeserver sync fails', async () => {
       const fileAttachments = [createMockFileAttachment(1)];
-      const mockData = { ...createMockPostData(), fileAttachments, tags: [createMockTag('post123')] };
+      const mockData = {
+        ...createMockPostData(),
+        fileAttachments,
+        tags: [createMockTag('post123')],
+        onPostSynced: vi.fn(),
+      };
       const { deleteSpy, putBlobSpy, tagCreateSpy } = setupCreateSpies();
       putBlobSpy.mockRejectedValue(new Error('Homeserver sync failed'));
       const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
@@ -286,6 +294,7 @@ describe('Post Application', () => {
       expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
       expect(sweepSpy).toHaveBeenCalledWith(fileAttachments);
       expect(tagCreateSpy).not.toHaveBeenCalled();
+      expect(mockData.onPostSynced).not.toHaveBeenCalled();
     });
   });
 

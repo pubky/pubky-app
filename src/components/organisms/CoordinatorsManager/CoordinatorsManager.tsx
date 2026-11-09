@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-event-stream/homeserver-event-stream';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
@@ -14,6 +15,7 @@ function getAppCoordinators() {
     notification: NotificationCoordinator.getInstance(),
     stream: StreamCoordinator.getInstance(),
     ttl: TtlCoordinator.getInstance(),
+    homeserverEventStream: HomeserverEventStreamCoordinator.getInstance(),
     muteListSync: MuteListSyncCoordinator.getInstance(),
   };
 }
@@ -23,6 +25,7 @@ function applyRouteToCoordinators(pathname: string): void {
   void coordinators.notification.setRoute(pathname);
   void coordinators.stream.setRoute(pathname);
   void coordinators.muteListSync.setRoute(pathname);
+  coordinators.homeserverEventStream.setRoute(pathname);
 }
 
 function startAppCoordinators(): void {
@@ -30,7 +33,12 @@ function startAppCoordinators(): void {
   void coordinators.notification.start();
   void coordinators.stream.start();
   coordinators.ttl.start();
+  // The mute list polls (ADR-0014). No channel registers with the shared stream on the social v1 tree, so it opens
+  // no request: the mute directory and `last_read` are private, and a session-bound stream deadlocks the SDK's
+  // bearer refresh. `NotificationLastReadSyncCoordinator` is not started until the private `last_read` file has a
+  // sync of its own (FIX-8 in `docs/migrations/social-v1.md`).
   void coordinators.muteListSync.start();
+  coordinators.homeserverEventStream.start();
 }
 
 function stopAppCoordinators(): void {
@@ -38,6 +46,7 @@ function stopAppCoordinators(): void {
   coordinators.notification.stop();
   coordinators.stream.stop();
   coordinators.ttl.stop();
+  coordinators.homeserverEventStream.stop();
   coordinators.muteListSync.stop();
 }
 
@@ -49,7 +58,7 @@ function stopAppCoordinators(): void {
  *
  * Responsibilities:
  * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator,
- *   MuteListSyncCoordinator, TtlCoordinator)
+ *   MuteListSyncCoordinator, TtlCoordinator, HomeserverEventStreamCoordinator)
  * - Start coordination when the component is mounted, except while the account is held behind
  *   the social v1 migration gate: the stream coordinator keys on the persisted pubky and would
  *   read as the account before its data is migrated (ADR-0026); they start once the gate passes
