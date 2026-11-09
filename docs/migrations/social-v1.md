@@ -41,8 +41,9 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
   rule handles app-written v1, migrated (off by one until the migrator fix) and legacy articles.
 - **App files (D15):** settings and the notification cursor move to `/priv/app.pubky/v1/`, copied from the legacy
   files in the first bootstrap after the gate; legacy fallback reads stay as a safety net.
-- **Kinds (D16):** the local and Nexus vocabulary stays `short`/`long`; `toLocalPostKind` / `toStoredPostKind` in
-  `src/core/pipes/post/post.kind.ts` are the one crossing to the stored `note`/`article`.
+- **Kinds (D16):** the local vocabulary stays `short`/`long`; `toLocalPostKind` / `toStoredPostKind` in
+  `src/core/pipes/post/post.kind.ts` are the one crossing to the stored `note`/`article`, which Nexus `/v1` also
+  speaks: the Nexus services fold every response (see _Nexus API version_).
 - **Bookmark order, summary screen, telemetry (D17):** bookmark order is bookmark time; the summary blocks on
   Continue only when something was skipped or dropped; dropped values show once on `/settings/edit`.
 - **Naming (D18):** `SocialMigration*` in code (`Migration*` stays the DB-reset resync); route `/migration`; ADRs
@@ -204,6 +205,42 @@ Reductions, reported to the team:
   collections is shown or the bookmarks run out, so it may fetch the details of many bookmarked posts first.
 - Following a collection stays a bookmark of the collection post, now private: its creator never learns of it.
 
+## Nexus API version (FIX-7, ADR-0027 amendment)
+
+Nexus serves two APIs: `/v0`, frozen (0.x kind names, bookmark fields, `attachments_metadata`, `files/by_ids`, tag
+`relationship`), and `/v1` (`pubky/pubky-nexus` `feat/social-spec-handling`, API1 #1221), which the release uses.
+Every call is built by `buildNexusUrl` under `NEXUS_API_VERSION = 'v1'` (`src/config/nexus.ts`, a config addition);
+the Nexus services fold each response once at the read boundary (`PostNormalizer.fromNexus`, `UserNormalizer.fromNexus`,
+`TagNormalizer.fromNexus`): `note`/`article` → `short`/`long` (fail-open: `unknown` stays `unknown` and renders as a
+note), `relationship = relationship ?? (tag_uri != null)`. The URL builders send `kind=note|article|…`; the
+`StreamKind` values and the persisted stream ids keep `short`/`long`. `bootstrap.files`, `post.bookmark` and
+`counts.bookmarks` are optional (`UserCountsModel` stores `0`, no `DB_VERSION` change). The one `/v0` call is
+`filesApi.getFiles` (`POST v0/files/by_ids`), for 0.x attachment metadata only, with its sunset in the ADR; the
+compliance gate (`nexusV0`) lets no other file under `src` name `v0`. `/v1` also folds tag labels by the data model's
+frozen whitespace table, which `canonicalizeTagLabel` / `isValidTagLabel` now mirror (contract-tested against `buildTag`).
+
+Deploy coupling is unchanged (D6/D10): the app follows the Nexus deploy; a `/v1` app against a `main` Nexus gets 404s.
+
+Retest (QA-3, on the local stack at nexusd `d94c3e89` or later):
+
+1. Every feed and content filter (`short`, `long`, image, video, link, file, collection) loads on `/v1` (no 400), and
+   the content search with a kind filter.
+2. An article from Nexus renders as an article (kind fold) and its edit and lock paths keep the article kind.
+3. Tag membership from a `/v1` response: an own tag shows as tagged (`tag_uri`), untag works, a foreign tag shows
+   untagged; the taggers panel agrees.
+4. Bootstrap on `/v1` completes without `files` (no throw) and persists posts and notifications with local kinds.
+5. An un-migrated 0.x author's image post renders for a v1 viewer (metadata via `/v0/files/by_ids`).
+6. A post of kind `unknown` (seeded by a raw homeserver write of an unknown kind, if feasible; else skip) renders as a
+   note and cannot be edited.
+7. Profile counts render without `bookmarks`.
+8. Labels with uppercase or whitespace in search and taggers URLs resolve (`%20RUST%20`).
+9. OG and server metadata pages (`postMetadata.ts`, `ogData.ts`) render, an article OG as an article.
+10. Collections via `source=collection` on `/v1` (own, migrated, foreign).
+
+Cypress (not run here, for the QA-3 e2e run): every Nexus intercept and probe moved to `/v1` in
+`cypress/support/{nexus,common,contacts,feeds,pagination,profile,locks}.ts`, `cypress/e2e/{onboarding,posts}.cy.ts`
+and `cypress/plugins/seed.ts` (`PUT /v1/ingest/{id}`); no spec asserts a `kind=` value in a URL.
+
 ## Retest list (final full-stack pass, D10)
 
 Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
@@ -212,9 +249,9 @@ Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
   users' files and OG images; 0.x files stay on `/static/files/{owner}/{tsid}/{variant}` and avatars (v1 images too) on
   `/static/avatar/{user}`. The prefix is staged and may still move: it is one constant, `NEXUS_V1_STATIC_PATH` in
   `src/config/nexus.ts`, derived from `PUBKY_RUNTIME_CDN_URL`. The production proxy has to forward `/v1/static/*`.
-- Other users' v1 attachments without metadata: `attachments_metadata` is empty for v1 and migrated posts and `by_ids` is
-  a 400 for v1 addresses, so the app reads the type from the extension and the name from the filename, with no size or
-  dimensions, and requests `by_ids` for 0.x files only. A real row (own upload) wins. SVG `main` downloads and its WebP
+- Other users' v1 attachments without metadata: `/v1` serves no `attachments_metadata` and `/v0/files/by_ids` skips a
+  v1 address with a server-side warning, so the app reads the type from the extension and the name from the filename,
+  with no size or dimensions, and requests `by_ids` for 0.x files only. A real row (own upload) wins. SVG `main` downloads and its WebP
   `small` displays (`nosniff`); PDFs get the file card, and other non-media types show nothing, as with a real row.
 - A new user's avatar (A7): signup writes `profile.json`, already naming the avatar, before the avatar's bytes, so
   Nexus indexes the file instead of ignoring it for good. Check the avatar serves once the flip is indexed.
@@ -276,11 +313,9 @@ Open after dev-sync 3 (2026-11-09), for the coordinator:
   channel and opens no request, and a mark-as-read on another device reaches an open tab only at its next bootstrap
   (sign-in or reload) or when that tab marks as read itself. To match `dev`, poll `NotificationController.fetchLastReadFromHomeserver` on the mute list's
   cadence (start, visible, `online`, every `MUTE_SYNC_POLL_INTERVAL_MS`); otherwise record it as a reduction. Not built.
-- **FIX-7, Nexus `/v1` API: read sites this sync added.** `src/core/pipes/tag/tag-cache.ts` reads the Nexus tag
-  `tag_uri` to confirm a same-viewer create (lines 44-48) and carries the Nexus tag `relationship` (line 100), from the
-  #2986 fixes; `src/core/services/nexus/stream/posts/postStream.utils.ts` sends the new `locked=true` stream filter
-  (#3056), which the `/v1` API must accept. Already on the branch before this sync: `src/core/application/tag/tag.ts`
-  (taggers `tag_uri` / `relationship`) and `src/core/models/shared/tag/tag.utils.ts`. Not changed.
+- **FIX-7, Nexus `/v1` API: done** (see _Nexus API version_). The read sites dev-sync 3 listed (`tag-cache.ts`
+  `tag_uri` and `relationship`, `application/tag/tag.ts`, `tag.utils.ts`) are served by the derived `relationship` and
+  stay unchanged; `locked=true` exists on `/v1` with the same rules (OpenAPI) and is pinned in the stream api test.
 
 Reductions (reported, not built around): bookmark-derived notifications ("post you bookmarked was deleted/edited",
 "followed collection updated"); cross-device bookmark changes visible at the next sign-in only; `/feed/<id>`

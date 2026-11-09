@@ -127,6 +127,7 @@ Coordinators → Controllers (system-initiated actions)
 Controllers → Pipes, Application, Stores
 Application → Pipes, Services (local, homeserver, nexus, homegate, chatwoot, exchangerate, nextjs)
 Application → Application (cross-domain, acyclic, max depth 1 by default; see ADR-0009 for the depth-2 attachment-persistence exception)
+Services → Pipes (pure transforms; the Nexus services apply the `*.fromNexus` read-boundary mappers)
 Services:
   local → Models
   homeserver → network only
