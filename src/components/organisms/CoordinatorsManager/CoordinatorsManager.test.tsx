@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
   const coordinator = () => ({ start: vi.fn(), stop: vi.fn(), setRoute: vi.fn() });
   return {
     status: 'AUTHENTICATED' as string,
+    pathname: '/home',
     notification: coordinator(),
     stream: coordinator(),
     ttl: coordinator(),
@@ -16,7 +17,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/home' }));
+vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname }));
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => ({ status: mocks.status, isLoading: false }),
 }));
@@ -41,6 +42,7 @@ describe('CoordinatorsManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.status = 'AUTHENTICATED';
+    mocks.pathname = '/home';
   });
 
   it('applies the route and starts every coordinator, and stops them on unmount', () => {
@@ -52,10 +54,18 @@ describe('CoordinatorsManager', () => {
     for (const coordinator of all()) expect(coordinator.stop).toHaveBeenCalledOnce();
   });
 
+  it('hands every route change to the route-gated coordinators', () => {
+    const { rerender } = render(<CoordinatorsManager />);
+    mocks.pathname = '/sign-in';
+    rerender(<CoordinatorsManager />);
+    for (const coordinator of [mocks.notification, mocks.stream, mocks.muteListSync, mocks.notificationLastReadPoll]) {
+      expect(coordinator.setRoute).toHaveBeenLastCalledWith('/sign-in');
+    }
+  });
+
   // Social v1: the private `last_read` is polled; the event-stream channel stays unregistered (ADR-0029).
-  it('polls last_read and never starts the last_read event-stream channel', () => {
+  it('never starts the last_read event-stream channel', () => {
     render(<CoordinatorsManager />);
-    expect(mocks.notificationLastReadPoll.start).toHaveBeenCalledOnce();
     expect(mocks.lastReadChannel.start).not.toHaveBeenCalled();
   });
 

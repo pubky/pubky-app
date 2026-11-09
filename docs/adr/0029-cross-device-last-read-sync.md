@@ -140,8 +140,10 @@ The sync is polled instead, on the mute list's cadence. `NotificationLastReadPol
 `MuteListSyncCoordinator` does and calls the same `NotificationController.fetchLastReadFromHomeserver` the channel
 calls: on start, when the tab becomes visible, on `online`, and every `NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS`
 (`src/config/notification-last-read-sync.ts`, which reuses `MUTE_SYNC_POLL_INTERVAL_MS`, 30 s), with triggers that
-land together debounced into one read (`NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS`), one read out at a time, a failed
-read logged and retried at the next trigger. It keeps the mute coordinator's guards: signed in with a profile, not on
+land together debounced into one read (`NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS`), one read out at a time while
+polling runs (a stop frees the slot, so a read that never settles cannot end polling, and the controller's
+forward-only, account-checked write keeps a late read harmless), a failed read logged and retried at the next
+trigger. It keeps the mute coordinator's guards: signed in with a profile, not on
 the auth or onboarding routes, paused while the tab is hidden under the runtime visibility flag, stopped on sign-out
 and on an account switch, and started by `CoordinatorsManager` only once the social v1 migration gate has passed. The
 read itself is unchanged: the boundary only moves forward and the recount runs before the store changes, so a poll

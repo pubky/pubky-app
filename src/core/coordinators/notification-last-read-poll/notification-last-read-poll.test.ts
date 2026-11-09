@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES, PROFILE_ROUTES } from '@/app/routes';
-import { MUTE_SYNC_POLL_INTERVAL_MS } from '@/config/mute-sync';
 import {
   NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS,
   NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS,
 } from '@/config/notification-last-read-sync';
 import { NotificationController } from '@/controllers/notification/notification';
 import { NotificationLastReadPollCoordinator } from '@/coordinators/notification-last-read-poll/notification-last-read-poll';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { mockSession } from '@/test-utils/pubky';
+import { mockPubky, mockSession } from '@/test-utils/pubky';
 
-const PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-const OTHER_PUBKY = 'c5nr657md9g8mut1xb7pyj8fuhm1aukwpmkqqjhiwsp9wdhmwzay' as Pubky;
+const PUBKY = mockPubky('5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y');
+const OTHER_PUBKY = mockPubky('c5nr657md9g8mut1xb7pyj8fuhm1aukwpmkqqjhiwsp9wdhmwzay');
 
 function setVisibilityState(visibilityState: DocumentVisibilityState): void {
   Object.defineProperty(document, 'visibilityState', {
@@ -52,10 +52,6 @@ describe('NotificationLastReadPollCoordinator', () => {
     useAuthStore.getState().reset();
     vi.restoreAllMocks();
     vi.useRealTimers();
-  });
-
-  it('polls on the mute list cadence', () => {
-    expect(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS).toBe(MUTE_SYNC_POLL_INTERVAL_MS);
   });
 
   describe('triggers', () => {
@@ -271,6 +267,18 @@ describe('NotificationLastReadPollCoordinator', () => {
       expect(fetchLastRead()).not.toHaveBeenCalled();
     });
 
+    it('starts polling once the profile is created after start (onboarding in an open tab)', async () => {
+      useAuthStore.getState().init({ session: mockSession(), currentUserPubky: PUBKY, hasProfile: false });
+      startOn(APP_ROUTES.HOME);
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
+      expect(fetchLastRead()).not.toHaveBeenCalled();
+
+      useAuthStore.getState().setHasProfile(true);
+      await settleDebounce();
+
+      expect(fetchLastRead()).toHaveBeenCalledExactlyOnceWith(PUBKY);
+    });
+
     it('stops polling when the session ends', async () => {
       signIn();
       startOn(APP_ROUTES.HOME);
@@ -298,16 +306,20 @@ describe('NotificationLastReadPollCoordinator', () => {
   });
 
   describe('a refresh that fails or takes long', () => {
-    it('keeps polling after a failed refresh, and the next tick retries', async () => {
-      fetchLastRead().mockRejectedValueOnce(new Error('temporary'));
+    it('logs a failed refresh once, keeps polling, and the next tick retries', async () => {
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      const error = new Error('temporary');
+      fetchLastRead().mockRejectedValueOnce(error);
       signIn();
       startOn(APP_ROUTES.HOME);
       await settleDebounce();
       expect(fetchLastRead()).toHaveBeenCalledTimes(1);
+      expect(logError).toHaveBeenCalledExactlyOnceWith('Notification last_read refresh failed', { error });
 
       await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
 
       expect(fetchLastRead()).toHaveBeenCalledTimes(2);
+      expect(logError).toHaveBeenCalledOnce();
     });
 
     it('does not stack a read on one still out, and resumes once it settles', async () => {

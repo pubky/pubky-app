@@ -36,11 +36,9 @@ function startAppCoordinators(): void {
   void coordinators.notification.start();
   void coordinators.stream.start();
   coordinators.ttl.start();
-  // The mute list and the notification `last_read` poll (ADR-0014, ADR-0029). No channel registers with the shared
-  // stream on the social v1 tree, so it opens no request: the mute directory and `last_read` are private, and a
-  // session-bound stream deadlocks the SDK's bearer refresh. `NotificationLastReadSyncCoordinator`, the channel that
-  // follows the public 0.x file, stays in the tree unregistered: it replaces the poller once the SDK releases the
-  // session lock for streams (pubky/pubky-homeserver#798).
+  // The mute list and the private `last_read` poll (ADR-0014, ADR-0029), so no channel registers with the shared
+  // stream and it opens no request. `NotificationLastReadSyncCoordinator` stays unregistered until the SDK releases
+  // the session lock for streams (pubky/pubky-homeserver#798); it then replaces the poller.
   void coordinators.muteListSync.start();
   void coordinators.notificationLastReadPoll.start();
   coordinators.homeserverEventStream.start();
