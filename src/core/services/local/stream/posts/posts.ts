@@ -366,6 +366,7 @@ export class LocalStreamPostsService {
         taggers: tag.taggers,
         taggers_count: tag.taggers_count,
         relationship: tag.relationship,
+        ...(tag.tag_uri !== undefined && { tag_uri: tag.tag_uri }),
       }));
       postTags.push([postId, nexusTags]);
 
