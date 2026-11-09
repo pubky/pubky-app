@@ -8,11 +8,13 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
  * and the real price dialog (`DialogLockContent`, `useLockContentForm`). The dialog's Apply goes through
  * react-hook-form's async `handleSubmit`, so `onApplied` empties the composer in a promise continuation,
  * outside React's click batch: that clear renders later, and the article body's 500 ms debounce can
- * fire in between (#3021).
+ * fire in between (#3021). The debounce's own commit renders later too, so a switch or a Post click can
+ * land after it fired and before the edited body reached the state (#3030).
  */
 
 const mocks = vi.hoisted(() => ({
   fetchPaykitSetupStatus: vi.fn(),
+  commitCreate: vi.fn(),
   applied: vi.fn(),
   // Handle into the stand-in editor, refreshed on every render. Null while no editor is mounted.
   editor: null as { markdown: string; change: (markdown: string) => void } | null,
@@ -21,10 +23,25 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: { fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus, clearSession: vi.fn() },
 }));
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
-    selector({ currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' }),
+vi.mock('@/controllers/post/post', () => ({
+  PostController: { commitCreate: mocks.commitCreate, getDetails: vi.fn() },
 }));
+vi.mock('@/stores/auth/auth.store', () => {
+  const state = {
+    currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo',
+    // Enough for `canActAsAccount`, so a Post reaches `commitCreate`
+    session: { pubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' },
+    isLoggingOut: false,
+    restoreStatus: 'ready' as const,
+    generation: 1,
+    setShowSignInDialog: () => undefined,
+  };
+  const useAuthStore = Object.assign(
+    (selector?: (authState: typeof state) => unknown) => (typeof selector === 'function' ? selector(state) : state),
+    { getState: () => state },
+  );
+  return { useAuthStore };
+});
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   // Null keeps PostHeader (db-backed) out of the render.
   useCurrentUserProfile: () => ({ currentUserPubky: null, userDetails: null }),
@@ -97,9 +114,11 @@ vi.mock('../PostInputExpandableSection/PostInputExpandableSection', () => ({
   PostInputExpandableSection: (props: {
     lockSwitch?: { checked: boolean; onCheckedChange: (checked: boolean) => void };
     onArticleClick: () => void;
+    onSubmit?: () => void;
   }) => (
     <div>
       <button data-testid="article-button" onClick={props.onArticleClick} />
+      <button data-testid="submit" onClick={() => props.onSubmit?.()} />
       {props.lockSwitch && (
         <button
           data-testid="lock-switch"
@@ -213,10 +232,27 @@ const lockedBody = () => {
   return mocks.editor?.markdown;
 };
 
+/**
+ * Edits the body, fires its debounce and clicks `testId` in the same turn: React has not rendered the
+ * debounce's `setContent` yet.
+ */
+const clickBeforeBodyCommitRenders = async (testId: string) => {
+  act(() => mocks.editor?.change(EDITED_BODY));
+  reactAct.IS_REACT_ACT_ENVIRONMENT = false;
+  try {
+    vi.advanceTimersByTime(DEBOUNCE_MS);
+    (screen.getByTestId(testId) as HTMLButtonElement).click();
+  } finally {
+    reactAct.IS_REACT_ACT_ENVIRONMENT = true;
+  }
+  await act(async () => {});
+};
+
 describe('PostInput - re-locking an article right after editing its body (integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
+    mocks.commitCreate.mockResolvedValue('created-post-id');
     mocks.editor = null;
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
   });
@@ -249,5 +285,24 @@ describe('PostInput - re-locking an article right after editing its body (integr
 
     expect(teaser()).toBe('');
     expect(lockedBody()).toBe(EDITED_BODY);
+  });
+
+  describe('clicked after the body debounce fired, before its commit rendered (#3030)', () => {
+    it('locks the edited body when the switch is turned on', async () => {
+      await writeLockAndTurnOff();
+      await clickBeforeBodyCommitRenders('lock-switch');
+
+      expect(lockedBody()).toBe(EDITED_BODY);
+    });
+
+    it('publishes the edited body when Post is clicked with the lock off', async () => {
+      await writeLockAndTurnOff();
+      await clickBeforeBodyCommitRenders('submit');
+
+      expect(mocks.commitCreate).toHaveBeenCalledTimes(1);
+      const content = String(mocks.commitCreate.mock.calls[0]?.[0]?.content);
+      expect(content).toContain(EDITED_BODY);
+      expect(content).not.toContain(DRAFT_BODY);
+    });
   });
 });
