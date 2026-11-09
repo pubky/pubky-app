@@ -62,12 +62,6 @@ vi.mock('@/molecules/HeaderButtonSignIn/HeaderButtonSignIn', () => {
   };
 });
 
-vi.mock('../ThemeToggle/ThemeToggle', () => {
-  return {
-    ThemeToggle: () => <button data-testid="header-theme-toggle">Toggle appearance</button>,
-  };
-});
-
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -100,12 +94,8 @@ describe('HeaderHome', () => {
   it('renders Learn, Explore and Sign in on the landing page (social links live in the hero footer)', () => {
     render(<HeaderHome />);
 
-    const themeToggle = screen.getByTestId('header-theme-toggle');
-    const learn = screen.getByTestId('header-learn-btn');
-
     expect(screen.queryByTestId('header-social-links')).not.toBeInTheDocument();
-    expect(themeToggle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(learn).toBeInTheDocument();
+    expect(screen.getByTestId('header-learn-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-explore-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /join/i })).not.toBeInTheDocument();
@@ -117,7 +107,6 @@ describe('HeaderHome', () => {
     render(<HeaderHome />);
 
     expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
-    expect(screen.queryByTestId('header-theme-toggle')).not.toBeInTheDocument();
     expect(screen.queryByTestId('header-learn-btn')).not.toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
   });
@@ -127,15 +116,22 @@ describe('HeaderHome', () => {
 
     render(<HeaderHome />);
 
-    const themeToggle = screen.getByTestId('header-theme-toggle');
-    const learn = screen.getByTestId('header-learn-btn');
-
     expect(screen.queryByTestId('header-social-links')).not.toBeInTheDocument();
-    expect(themeToggle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(learn).toBeInTheDocument();
+    expect(screen.getByTestId('header-learn-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-explore-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
   });
+
+  it.each(['/', AUTH_ROUTES.LOGOUT, AUTH_ROUTES.SIGN_IN, '/copyright'])(
+    'offers no theme switch on %s: signed-out pages are always dark',
+    (pathname) => {
+      vi.mocked(usePathname).mockReturnValue(pathname);
+
+      render(<HeaderHome />);
+
+      expect(screen.queryByRole('button', { name: /light mode|dark mode|appearance/i })).not.toBeInTheDocument();
+    },
+  );
 
   it('smoothly scrolls Learn to the second section on the landing page', () => {
     const nextSection = document.createElement('section');
