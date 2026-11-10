@@ -41,10 +41,43 @@ on:
       - '!.github/workflows/**'
       - '.github/workflows/e2e-test.yml'
       - '.github/workflows/build-docker-image.yml'
+  # Pull requests and the nightly run cover phones only, with the mobile subset below; push runs
+  # stay desktop-only. The PR paths are the phone-only components, the drawers' host files, the
+  # viewport hook and the mobile Cypress config. Unit tests alone do not need the e2e stack.
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - 'src/components/molecules/MobileFooter/**'
+      - 'src/components/molecules/MobileHeader/**'
+      - 'src/components/molecules/SideDrawer/**'
+      - 'src/components/molecules/MobileTabBar/**'
+      - 'src/components/molecules/ProfilePageMobileMenu/**'
+      - 'src/components/molecules/Settings/SettingsMobileMenu/**'
+      # Host the phone drawers HomeFeedDrawerMobile, HomeFeedRightDrawerMobile and SinglePostLeftDrawerMobile
+      - 'src/components/organisms/HomeFeedSidebar/HomeFeedSidebar.tsx'
+      - 'src/components/organisms/FeedRightSidebar/FeedRightSidebar.tsx'
+      - 'src/components/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar.tsx'
+      - 'src/hooks/useIsMobile/**'
+      - 'cypress/cypress.config.mobile.ts'
+      - 'cypress/support/mobile.ts'
+      - '.github/workflows/e2e-test.yml'
+      - '!**/*.test.tsx'
+  schedule:
+    # Nightly on the default branch (dev)
+    - cron: '0 3 * * *'
+
+# A new push to a pull request replaces its running e2e run; every push, nightly and dispatched run
+# gets a group of its own, so none of them is queued or cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   rebuild_images:
     name: Getting images to rebuild
+    # Fork pull requests get no secrets, so they cannot log in to the registry or check out pubky-stack.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
@@ -115,6 +148,7 @@ jobs:
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
   rebuild_pubky_app:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/build-docker-image.yml
     with:
       # The env context is not available in a reusable-call `with`, so the
@@ -146,9 +180,23 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chrome]
-        # Push runs have no inputs, so they resolve to desktop only.
-        viewport: ${{ fromJSON(inputs.target == 'both' && '["desktop","mobile"]' || format('["{0}"]', inputs.target || 'desktop')) }}
+        # Pull requests and the nightly run are mobile only. Push runs have no inputs, so they
+        # resolve to desktop only.
+        viewport: ${{ fromJSON((github.event_name == 'pull_request' || github.event_name == 'schedule') && '["mobile"]' || inputs.target == 'both' && '["desktop","mobile"]' || format('["{0}"]', inputs.target || 'desktop')) }}
         spec: ["contacts.cy.ts", "feed.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "profile.cy.ts", "search.cy.ts", "settings.cy.ts", "collections.cy.ts", "pagination.cy.ts", "collections-pagination.cy.ts", "deep-links.cy.ts", "locks.cy.ts"]
+        # Phones run a smoke subset: the `itMobile` tests (cypress/support/mobile.ts). These specs
+        # have none, because every phone-only path they reach is covered by the specs that remain.
+        exclude:
+          - viewport: mobile
+            spec: contacts.cy.ts
+          - viewport: mobile
+            spec: onboarding.cy.ts
+          - viewport: mobile
+            spec: collections.cy.ts
+          - viewport: mobile
+            spec: collections-pagination.cy.ts
+          - viewport: mobile
+            spec: locks.cy.ts
 
     steps:
       - name: Validate envs from rebuild_images job
