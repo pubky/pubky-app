@@ -9,6 +9,7 @@ import {
   getCreditProviderName,
   getCreditSubjectLabel,
   getLicenseLabel,
+  isCreditRequired,
 } from './ResourceCredits.utils';
 
 /** In a line of text a link is underlined; in the compact line every name is one. */
@@ -18,7 +19,8 @@ const COMPACT_LINK_CLASS_NAME = 'hover:text-brand hover:underline';
 interface ResourceCreditsProps {
   /**
    * The credits of the values the card shows (`getShownCredits`); renders nothing when empty. A
-   * credit for a field without a label (not `PinakesCreditField`) is left out here too.
+   * credit for a field without a label in `CREDIT_FIELD_LABELS` is left out here too, and so is one
+   * its licence does not ask for (`isCreditRequired`).
    */
   credits: TPinakesCredit[];
   /**
@@ -33,7 +35,9 @@ interface ResourceCreditsProps {
  * which license. Only `http(s)` URLs become links; every other value is text.
  */
 export function ResourceCredits({ credits, variant }: ResourceCreditsProps) {
-  const labelled = credits.filter((credit) => Object.hasOwn(CREDIT_FIELD_LABELS, credit.field));
+  const labelled = credits.filter(
+    (credit) => Object.hasOwn(CREDIT_FIELD_LABELS, credit.field) && isCreditRequired(credit),
+  );
   if (labelled.length === 0) return null;
   return variant === 'full' ? (
     <ResourceCreditsFull credits={labelled} />
