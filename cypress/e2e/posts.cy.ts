@@ -3,6 +3,7 @@ import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
+import { V1_MEDIA_ROUTE, expectImageServed, imagesFrom } from '../support/media';
 import { notificationsIndexed, postIndexed, postTagsIndexed, userSearchIndexed, waitForNexus } from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { slowCypressDown } from 'cypress-slow-down';
@@ -52,6 +53,10 @@ import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } 
 const username = 'Poster';
 
 const imageFixturePath = () => `${Cypress.config('fixturesFolder')}/mustache-you.png`;
+
+// The one image of a post in the feed that is served from a v1 file route (its attachment or article cover)
+const postMediaImage = (filterText: string) =>
+  cy.findFirstPostInFeedFiltered(filterText).find('img').filter(imagesFrom(V1_MEDIA_ROUTE));
 
 const pdfAttachment = {
   contents: Cypress.Buffer.from('e2e file attachment'),
@@ -284,6 +289,8 @@ describe('posts', () => {
         .invoke('attr', 'src')
         .as('originalImageSrc');
     });
+    // The upload comes back from Nexus's v1 file route, as bytes the browser decodes
+    expectImageServed(() => postMediaImage(postContent), V1_MEDIA_ROUTE);
 
     editPost({
       filterText: postContent,
@@ -302,6 +309,7 @@ describe('posts', () => {
           });
       });
     });
+    expectImageServed(() => postMediaImage(postContent), V1_MEDIA_ROUTE);
 
     editPost({ filterText: postContent, imageAction: { action: 'remove' } });
 
@@ -1054,6 +1062,8 @@ describe('posts', () => {
         .invoke('attr', 'src')
         .as('originalImageSrc');
     });
+    // The cover comes back from Nexus's v1 file route, as bytes the browser decodes
+    expectImageServed(() => postMediaImage(title), V1_MEDIA_ROUTE);
 
     editArticle({ filterText: title, imageAction: { action: 'replace' } });
 
@@ -1069,6 +1079,7 @@ describe('posts', () => {
           });
       });
     });
+    expectImageServed(() => postMediaImage(title), V1_MEDIA_ROUTE);
 
     editArticle({ filterText: title, imageAction: { action: 'remove' } });
 

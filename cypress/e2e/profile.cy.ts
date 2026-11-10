@@ -1,4 +1,6 @@
-import { editProfileAndVerify, addLinks, addProfileTags } from '../support/profile';
+import { editProfileAndVerify, addLinks, addProfileTags, chooseAvatar } from '../support/profile';
+import { userIdFromPubky } from '../support/common';
+import { avatarRoute, avatarServed, expectImageServed, imagesFrom } from '../support/media';
 import { slowCypressDown } from 'cypress-slow-down';
 import { BackupType, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath } from '../support/auth';
@@ -20,15 +22,28 @@ describe('profile', () => {
   });
 
   it('editing should retain any changes made to own profile', () => {
-    // todo: add test profile picture upload
-
     // navigate to edit profile page
     goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-copy-pubkey-btn"]').click();
+    cy.saveCopiedPubkyToAlias('ownPubky');
     cy.get('[data-cy="profile-edit-btn"]').click();
     cy.location('pathname').should('eq', '/settings/edit');
 
-    // edit username and bio and verify changes are persisted
+    // choose an avatar, edit username and bio, and verify changes are persisted
+    chooseAvatar();
+    cy.intercept('PUT', '**/pub/social/v1/files/*').as('avatarStored');
     editProfileAndVerify({ name: 'Edited Name', bio: 'This bio has been edited.' });
+    cy.wait('@avatarStored').its('response.statusCode').should('eq', 201);
+
+    // The avatar is a v1 file, which Nexus serves on the avatar route once it has indexed the profile naming it
+    cy.get('@ownPubky').then((pubky) => {
+      const userId = userIdFromPubky(String(pubky));
+      const route = avatarRoute(userId);
+      waitForNexus(avatarServed(userId));
+      cy.reload();
+      // The header's own avatar and the page's are the same image
+      expectImageServed(() => cy.get('img').filter(imagesFrom(route)).first(), route);
+    });
 
     // re-open edit page and add two new links to the profile
     cy.get('[data-cy="profile-edit-btn"]').click();

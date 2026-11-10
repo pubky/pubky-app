@@ -40,8 +40,22 @@ export const addLinks = (links: { label: string; url: string }[]) => {
   });
 };
 
+// use on edit profile page: picks an avatar from the fixtures and accepts the crop dialog's default square
+export const chooseAvatar = (fixture = 'mustache-you.png') => {
+  cy.get('[data-testid="edit-profile-form"] input[type="file"]').selectFile(
+    `${Cypress.config('fixturesFolder')}/${fixture}`,
+    { force: true },
+  );
+  cy.get('[role="dialog"]')
+    .should('be.visible')
+    .within(() => {
+      cy.contains('button', 'Done').should('be.enabled').click();
+    });
+  cy.get('[role="dialog"]').should('not.exist');
+  cy.get('[data-testid="edit-profile-form"]').find('img[alt^="Selected avatar preview"]').should('exist');
+};
+
 // use on edit profile page
-// todo: add support for profile picture upload
 export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof profileFields, string>>) => {
   // Perform the edit on each field in profileData
   Object.entries(profileData).forEach(([field, value]) => {

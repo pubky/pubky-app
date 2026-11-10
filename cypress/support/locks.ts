@@ -494,7 +494,13 @@ export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
   });
 };
 
-/** Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there. */
+/**
+ * Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there.
+ *
+ * Known Nexus race: a read of a post while Nexus processes its delete can put it back in the cache, where it answers
+ * 200 for good. Call this with nothing else reading the post since its DELETE, so these polls are the only reads; a
+ * timeout on a 200 is then that bug, not a slow index. It stays at 404: the stale copy also says `deleted: false`.
+ */
 export const waitForNexusPostDeleted = (authorPubky: string, postId: string) => {
   const authorId = userIdFromPubky(authorPubky);
   const deadline = Date.now() + 90_000;

@@ -268,10 +268,13 @@ Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
 - Bookmarks on a live homeserver: the LIST of `/priv/social/v1/bookmarks/` through the session, the GETs of their
   times, and the DELETE of a file already gone answering 404.
 - The Cypress suite on `dev`, against pubky-stack with the carrier Nexus, in Chrome (the local port ran headed Electron).
-- `source=collection` for a v1 collection (`nexus-contract` point 16): un-skip the test in `deep-links.cy.ts`, and
-  confirm no screen depends on the stream while it is empty.
-- v1 media bytes: once N5 is on the stack, extend the image tests in `posts.cy.ts` with `naturalWidth > 0` and the
-  `/v1/static/files/` prefix. Until then the 0.x tests in `deep-links.cy.ts` are the only ones that load media bytes.
+- `source=collection` for a v1 collection (`nexus-contract` point 16): covered in Cypress since the carrier.
+  `deep-links.cy.ts` reads a seeded v1 and a 0.x collection's items from the stream, and `collections.cy.ts` one
+  written in the UI.
+- v1 media bytes: covered in Cypress since N5. `expectImageServed` (`cypress/support/media.ts`) checks the route, a 200
+  with an image type and the decoded image for a v1 upload and its replacement (`posts.cy.ts`, image and article
+  cover), a v1 and a 0.x image post and article cover (`deep-links.cy.ts`) and an avatar set in the profile editor
+  (`profile.cy.ts`, on `/static/avatar/{user}`).
 
 ## Cypress (ported in PR #3055)
 

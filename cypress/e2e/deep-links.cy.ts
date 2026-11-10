@@ -1,6 +1,7 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { waitForServiceWorker } from '../support/common';
+import { LEGACY_MEDIA_ROUTE, V1_MEDIA_ROUTE, expectImageServed } from '../support/media';
 import { postIndexed, repliesIndexed, streamIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import {
   createArticleViaApi,
@@ -135,10 +136,9 @@ LAYOUTS.forEach(({ title, legacy }) => {
       assertWriteAsksToSignIn('[data-cy="collection-hero-follow-btn"]:visible');
     });
 
-    // The page does not read this stream since it reads membership from the envelope (#2744), but the client still
-    // wires it. Nexus reads only the 0.x envelope and answers it empty for a v1 collection (the "v1 collection items"
-    // point of the Nexus contract), so that layout waits for the fix.
-    (legacy ? it : it.skip)('lists the items of a collection in its stream', () => {
+    // The page reads membership from the envelope (#2744), but a client pages the items from this stream, which Nexus
+    // fills from either envelope: a v1 collection's items are objects, a 0.x one's are strings (Nexus contract C1).
+    it('lists the items of a collection in its stream', () => {
       waitForNexus(
         streamIndexed(
           { source: 'collection', author_id: authorId, post_id: collectionId },
@@ -153,14 +153,8 @@ LAYOUTS.forEach(({ title, legacy }) => {
 
       cy.contains('h1', articleTitle).should('be.visible');
       cy.get('[data-cy="post-text"]:visible').should('contain.text', articleBody);
-      // Only the article's cover is a <picture>. Whatever the layout, the slot is there; bytes of a 0.x file are
-      // served from its own route, those of a v1 cover need a Nexus route the stack does not have yet.
-      cy.get('picture img').should('have.length', 1);
-      if (legacy) {
-        cy.get('picture img')
-          .should('be.visible')
-          .and(($cover) => expect(($cover[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
-      }
+      // Only the article's cover is a <picture>. Each layout's file is served from its own route.
+      expectImageServed(() => cy.get('picture img'), legacy ? LEGACY_MEDIA_ROUTE : V1_MEDIA_ROUTE);
     });
 
     it('shows the not-found view for a post that does not exist', () => {
@@ -201,12 +195,14 @@ describe('logged-out deep links across both data layouts', () => {
   const v1QuoteText = `layouts ${runId} repost by a migrated account`;
   const legacyQuoteText = `layouts ${runId} repost by an un-migrated account`;
   const legacyImageText = `layouts ${runId} image by an un-migrated account`;
+  const v1ImageText = `layouts ${runId} image by a migrated account`;
 
   let v1Post: SeededPost;
   let legacyPost: SeededPost;
   let v1Quote: SeededPost;
   let legacyQuote: SeededPost;
   let legacyImage: SeededPost;
+  let v1Image: SeededPost;
 
   before(() => {
     slowCypressDown();
@@ -222,6 +218,9 @@ describe('logged-out deep links across both data layouts', () => {
         });
         createImagePostViaApi(legacyUser, legacyImageText).then((post) => {
           legacyImage = post;
+        });
+        createImagePostViaApi(v1User, v1ImageText).then((post) => {
+          v1Image = post;
         });
         cy.then(() => {
           replyViaApi(legacyUser, v1Post, legacyReplyText).then((legacyReply) => {
@@ -243,6 +242,7 @@ describe('logged-out deep links across both data layouts', () => {
                   postIndexed(legacyQuote),
                   postIndexed(v1Quote),
                   postIndexed(legacyImage),
+                  postIndexed(v1Image),
                 );
               });
             });
@@ -281,15 +281,19 @@ describe('logged-out deep links across both data layouts', () => {
     cy.get(singlePost).should('contain.text', v1QuoteText).and('contain.text', legacyText);
   });
 
-  // A 0.x file is served from its own route, and the served bytes are the point: v1 media needs a Nexus route
-  // the 0.x path does not, so this is the one attachment that must load on every stack.
+  // The served bytes are the point, and each layout's file has its own route. A visitor reads a 0.x file's type
+  // from Nexus's file details and a v1 file's from its extension.
   it("loads the image of an un-migrated account's post", () => {
     cy.visit(`/post/${legacyImage.authorId}/${legacyImage.id}`);
 
     cy.get(singlePost).should('contain.text', legacyImageText);
-    cy.get(singlePost)
-      .find('[data-cy="post-attachment-image"]')
-      .should('be.visible')
-      .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
+    expectImageServed(() => cy.get(singlePost).find('[data-cy="post-attachment-image"]'), LEGACY_MEDIA_ROUTE);
+  });
+
+  it("loads the image of a migrated account's post", () => {
+    cy.visit(`/post/${v1Image.authorId}/${v1Image.id}`);
+
+    cy.get(singlePost).should('contain.text', v1ImageText);
+    expectImageServed(() => cy.get(singlePost).find('[data-cy="post-attachment-image"]'), V1_MEDIA_ROUTE);
   });
 });

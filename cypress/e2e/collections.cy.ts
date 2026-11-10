@@ -23,6 +23,7 @@ import {
 } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
+import { streamIndexed, waitForNexus } from '../support/nexus';
 import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
@@ -30,6 +31,8 @@ import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../s
 const MY_SECTION = '[data-cy="my-collections-section"]';
 const FOLLOWED_SECTION = '[data-cy="followed-collections-section"]';
 const DISCOVER_SECTION = '[data-cy="discover-collections-section"]';
+// More than the three items a collection here holds
+const COLLECTION_STREAM_LIMIT = 20;
 
 const curator = {
   username: 'Curator',
@@ -150,6 +153,23 @@ describe('collections', () => {
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', createdPostContent);
     cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 3);
     collectionCounterEq(3);
+
+    // * Nexus reads the items back from the v1 envelope: `source=collection` is the stream a client pages them from
+    cy.location('pathname')
+      .should('match', /^\/collections\/[^/]+\/[^/]+$/)
+      .then((collectionPath) => {
+        const [authorId, collectionId] = collectionPath.split('/').slice(-2);
+        cy.get('@post2Url').then((url) => {
+          const post2Id = new URL(String(url)).pathname.split('/').pop() ?? '';
+          waitForNexus(
+            streamIndexed(
+              { source: 'collection', author_id: authorId, post_id: collectionId },
+              [post2Id],
+              COLLECTION_STREAM_LIMIT,
+            ),
+          );
+        });
+      });
 
     // * the collection is not shown in the global feed (only its posts are)
     goToHomePage();
