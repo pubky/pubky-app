@@ -41,6 +41,8 @@ vi.mock('@/molecules/ResourcePlayer/ResourcePlayerFrame', async (importOriginal)
 vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
   ResourceActions: ({
     uri,
+    spellings,
+    postUri,
     collectionsCount,
     tagsLabel,
     linkUrl,
@@ -50,6 +52,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     extraMenuContent,
   }: {
     uri: string;
+    spellings?: readonly string[];
+    postUri?: string | null;
     collectionsCount?: number | null;
     tagsLabel: string;
     linkUrl?: string | null;
@@ -62,6 +66,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-resource-controls
       data-testid="resource-actions"
       data-uri={uri}
+      data-spellings={(spellings ?? []).join(' ')}
+      data-post-uri={postUri ?? 'default'}
       data-collections={collectionsCount ?? 'none'}
       data-tags-label={tagsLabel}
       data-link-url={linkUrl ?? 'none'}
@@ -584,6 +590,23 @@ describe('GenericResourcePreview', () => {
       rerender(<GenericResourcePreview url={OTHER} isComposing />);
       expect(screen.getByTestId('resource-player-frame').getAttribute('src')).toContain('4uLU6hMCjMI75M1A2tKUQC');
       expect(screen.getByRole('region', { name: /Spotify player/ })).toHaveAttribute('data-load', 'loading');
+    });
+
+    it('acts on the card’s canonical link, the link as written read along, and posts about the link as written', () => {
+      const tidal = {
+        ...musicFixture,
+        uri: 'https://tidal.com/track/3524506',
+        also_on: [],
+        refs: ['https://tidal.com/track/3524506/u'],
+        aliases: ['https://tidal.com/track/3524506/u'],
+      };
+      mockUsePinakesCard.mockReturnValue({ data: tidal, isLoading: false, isError: false });
+      render(<GenericResourcePreview url="https://tidal.com/track/3524506/u" />);
+
+      const actions = screen.getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', 'https://tidal.com/track/3524506');
+      expect(actions).toHaveAttribute('data-spellings', 'https://tidal.com/track/3524506/u');
+      expect(actions).toHaveAttribute('data-post-uri', 'https://tidal.com/track/3524506/u');
     });
 
     it('keeps our card and loads nothing when the card is on other services too', () => {

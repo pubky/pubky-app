@@ -15,12 +15,21 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * when nobody did, as on a post.
  *
  * @param uri - The link the thread is on (the tagged URI)
+ * @param spellings - Other spellings of `uri`, whose taggers take part too
  * @param replyIds - The thread's reply ids (`useResourceReplies`)
  */
-export function ResourceParticipants({ uri, replyIds }: { uri: string; replyIds: string[] }) {
+export function ResourceParticipants({
+  uri,
+  spellings,
+  replyIds,
+}: {
+  uri: string;
+  spellings?: readonly string[];
+  replyIds: string[];
+}) {
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
-  const { participants, isLoading } = useResourceParticipants(uri, replyIds);
+  const { participants, isLoading } = useResourceParticipants(uri, replyIds, { spellings });
   const { toggleFollow, isUserLoading } = useFollowUser();
 
   if (isLoading && participants.length === 0) return <SinglePostParticipantsSkeleton />;

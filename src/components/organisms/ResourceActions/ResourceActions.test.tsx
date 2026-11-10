@@ -629,6 +629,34 @@ describe('ResourceActions', () => {
       });
     });
 
+    it('counts a collection holding another spelling of the link, and takes every spelling out', async () => {
+      const share = `${URI}?si=share`;
+      render(<ResourceActions uri={URI} spellings={[share]} tagsLabel="Tags on this song" linkUrl={LINK} />);
+
+      expect(mocks.collectionParams?.itemUris).toEqual([URI, share]);
+      await mocks.collectionParams?.commitToggle('me:c1', false);
+      expect(PostController.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: 'me:c1',
+        uri: URI,
+        shouldAdd: false,
+        spellings: [share],
+      });
+    });
+
+    it('hands a canonical link that is no web link (isbn:) to the collection write with its spellings', async () => {
+      const isbn = 'isbn:9780141439518';
+      render(<ResourceActions uri={isbn} spellings={[LINK]} tagsLabel="Tags on this book" linkUrl={LINK} />);
+
+      await mocks.collectionParams?.commitToggle('me:c1', true);
+      // `commitUpdateCollectionResource` writes the first spelling a collection can hold.
+      expect(PostController.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: 'me:c1',
+        uri: isbn,
+        shouldAdd: true,
+        spellings: [LINK],
+      });
+    });
+
     it('opens the viewer’s bookmark and collections', async () => {
       renderActions(8);
 

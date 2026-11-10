@@ -58,8 +58,10 @@ export interface TUpdateCollectionItemParams {
 
 export interface TUpdateCollectionResourceParams {
   collectionId: string;
-  /** The external resource's link exactly as written: the item's `uri`. */
+  /** The external resource's link (`getResourceTarget`): the item's `uri` when a collection can hold it. */
   uri: string;
+  /** Other spellings of the link (`getResourceTarget`): a removal takes them out too. */
+  spellings?: readonly string[];
   shouldAdd: boolean;
 }
 

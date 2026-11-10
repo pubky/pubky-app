@@ -29,16 +29,24 @@ type TSettled = { key: string; tags: NexusTag[]; isTruncated: boolean; isError: 
  * failed write is undone with an error toast. Signed out, the tags show and every write asks to
  * sign in first.
  *
- * @param uri - The link exactly as written; `null` reads nothing
+ * With `spellings` (other spellings of the link Pinakes folds into its card), their tags are read
+ * along and merged into the link's: one chip per label, each tagger once. A new tag goes on `uri`; a
+ * removed one goes on every spelling the viewer's tag is on.
+ *
+ * @param uri - The link exactly as written, or the card's canonical link; `null` reads nothing
  * @param options.enabled - `false` defers the read (still loading); writes work either way
+ * @param options.spellings - Other spellings of `uri` read along (`getResourceTarget`)
+ * @param options.spellingsByUri - Read them on a Nexus without `by_ids` too (the resource page)
  */
 export function useResourceTags(
   uri: string | null,
-  { enabled = true }: UseResourceTagsOptions = {},
+  { enabled = true, spellings = [], spellingsByUri = false }: UseResourceTagsOptions = {},
 ): UseResourceTagsResult {
   const viewerId = useAuthStore((state) => state.currentUserPubky);
   const { waitForAuth } = useRequireAuth();
-  const key = uri ? `${uri}\n${viewerId ?? ''}` : '';
+  // The spellings as one value, so effects follow their content, not the array's identity.
+  const spellingsKey = spellings.join('\n');
+  const key = uri ? `${uri}\n${viewerId ?? ''}\n${spellingsKey}` : '';
   const [settled, setSettled] = useState<TSettled | null>(null);
   const pending = useRef(new Set<string>());
   const [reread, setReread] = useState<{ key: string; round: number; writtenAt: number } | null>(null);
@@ -56,8 +64,15 @@ export function useResourceTags(
     const next = () => {
       if (!cancelled && !isLast) setReread({ key, round: round + 1, writtenAt });
     };
+    const links = withSpellings(spellingsKey);
     const timer = setTimeout(() => {
-      TagController.fetchResourceTags({ uri, viewerId, fresh: true }).then(
+      TagController.fetchResourceTags({
+        uri,
+        viewerId,
+        ...links,
+        ...(spellingsByUri ? { spellingsByUri } : {}),
+        fresh: true,
+      }).then(
         (tags) => {
           if (cancelled) return;
           // A write of this card's in flight keeps its optimistic state; the chain goes on regardless,
@@ -65,7 +80,7 @@ export function useResourceTags(
           if (pending.current.size === 0) {
             setSettled((state) => (state?.key === key ? { ...state, tags } : state));
           }
-          if (TagController.hasUnconfirmedResourceTags({ uri, viewerId })) next();
+          if (TagController.hasUnconfirmedResourceTags({ uri, viewerId, ...links })) next();
         },
         // The service reported the failure through Err.*: the state shown stays, and the next round runs.
         next,
@@ -75,15 +90,16 @@ export function useResourceTags(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [currentReread, uri, viewerId, key]);
+  }, [currentReread, uri, viewerId, key, spellingsKey, spellingsByUri]);
 
   useEffect(() => {
     if (!uri || !enabled) return;
     // Set by the cleanup when the link or viewer changes, so a late answer never replaces a newer one.
     let cancelled = false;
+    const links = withSpellings(spellingsKey);
     // Another card of the same link (a post and its repost, the resource page) read or wrote: show
     // it here too. A write of this card's own in flight keeps its optimistic state until it settles.
-    const unsubscribe = TagController.subscribeResourceTags({ uri, viewerId }, (tags) => {
+    const unsubscribe = TagController.subscribeResourceTags({ uri, viewerId, ...links }, (tags) => {
       if (cancelled || pending.current.size > 0) return;
       // A write on another card changed the shared answer; a full answer it came from stays full.
       setSettled((state) => ({
@@ -93,7 +109,7 @@ export function useResourceTags(
         isError: false,
       }));
     });
-    TagController.fetchResourceTags({ uri, viewerId }).then(
+    TagController.fetchResourceTags({ uri, viewerId, ...links, ...(spellingsByUri ? { spellingsByUri } : {}) }).then(
       (tags) => {
         if (!cancelled) setSettled({ key, tags, isTruncated: tags.length >= RESOURCE_TAGS_LIMIT, isError: false });
       },
@@ -106,7 +122,7 @@ export function useResourceTags(
       cancelled = true;
       unsubscribe();
     };
-  }, [uri, viewerId, key, enabled]);
+  }, [uri, viewerId, key, enabled, spellingsKey, spellingsByUri]);
 
   const current = settled?.key === key ? settled : null;
 
@@ -143,7 +159,7 @@ export function useResourceTags(
           const written = await TagController.commitCreateResource({ taggerId, uri, label });
           setTagUri(written.label, written.tagUri);
         } else {
-          await TagController.commitDeleteResource({ taggerId, uri, label, tagUri });
+          await TagController.commitDeleteResource({ taggerId, uri, label, tagUri, ...withSpellings(spellingsKey) });
         }
         setReread({ key, round: 0, writtenAt: Date.now() });
         return { success: true };
@@ -176,4 +192,9 @@ export function useResourceTags(
     addTag,
     toggleTag,
   };
+}
+
+/** The spellings `useResourceTags` was given, from their one-value form, as the controller's parameter. */
+function withSpellings(spellingsKey: string): { spellings?: string[] } {
+  return spellingsKey ? { spellings: spellingsKey.split('\n') } : {};
 }

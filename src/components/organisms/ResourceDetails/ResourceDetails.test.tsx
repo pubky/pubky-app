@@ -47,6 +47,8 @@ vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
 vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
   ResourceActions: ({
     uri,
+    spellings,
+    spellingsByUri,
     postUri,
     collectionsCount,
     tagsLabel,
@@ -59,6 +61,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     replyCount,
   }: {
     uri: string;
+    spellings?: readonly string[];
+    spellingsByUri?: boolean;
     postUri?: string | null;
     collectionsCount?: number | null;
     tagsLabel: string;
@@ -74,6 +78,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-testid="resource-actions"
       data-reply-count={replyCount ?? 'none'}
       data-uri={uri}
+      data-spellings={(spellings ?? []).join(' ')}
+      data-spellings-by-uri={String(Boolean(spellingsByUri))}
       data-post-uri={postUri === undefined ? 'default' : (postUri ?? 'none')}
       data-collections={collectionsCount ?? 'none'}
       data-tags-label={tagsLabel}
@@ -234,23 +240,29 @@ describe('ResourceDetails', () => {
       expect(actions).toHaveAttribute('data-title', 'Fantastic Mr. Fox');
     });
 
-    it('acts on a link people wrote when the canonical one is not one of them', () => {
+    it('acts on the canonical link, reading the links people wrote along when it is not one of them', () => {
       read = settled(missingFixture);
       renderDetails(missingFixture.uri);
 
-      // Nexus has the tags on the `gb` link people wrote, none on the canonical one.
+      // Nexus has the tags on the `gb` link people wrote: read along and shown as the card's.
       expect(missingFixture.refs).not.toContain(missingFixture.uri);
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', 'https://music.apple.com/gb/song/1440717826');
+      expect(actions).toHaveAttribute('data-uri', missingFixture.uri);
+      expect(actions).toHaveAttribute('data-spellings', 'https://music.apple.com/gb/song/1440717826');
+      // The page reads them on a Nexus without `by_ids` too.
+      expect(actions).toHaveAttribute('data-spellings-by-uri', 'true');
+      // "Post about this" gives the link people wrote, as a post's card does.
       expect(actions).toHaveAttribute('data-post-uri', 'https://music.apple.com/gb/song/1440717826');
     });
 
-    it('acts on the page’s own link when people wrote it', () => {
+    it('acts on the canonical link on any spelling’s page, that spelling and the others read along', () => {
       const alias = 'https://youtu.be/dQw4w9WgXcQ';
-      read = settled({ ...VIDEO, refs: [VIDEO.uri, alias] });
+      read = settled({ ...VIDEO, refs: [VIDEO.uri, alias], aliases: ['https://m.youtube.com/watch?v=dQw4w9WgXcQ'] });
       renderDetails(alias);
 
-      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-uri', alias);
+      const actions = screen.getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', VIDEO.uri);
+      expect(actions).toHaveAttribute('data-spellings', `${alias} https://m.youtube.com/watch?v=dQw4w9WgXcQ`);
     });
 
     it('posts about the first web link of a resource whose own link is not one', () => {
@@ -331,7 +343,7 @@ describe('ResourceDetails', () => {
       expect(uris).not.toContain('https://open.spotify.com/track/6JEK0CvvjDjjMUBFoXShNZ');
     });
 
-    it('reads the Also on links’ tags when the group read failed, never the page link’s own spellings', () => {
+    it('reads the Also on links when the group read failed, never the card’s own spellings', () => {
       const alias = 'https://youtu.be/dQw4w9WgXcQ';
       read = settled({
         ...VIDEO,
@@ -345,6 +357,7 @@ describe('ResourceDetails', () => {
       mockGroup.mockReturnValue(FAILED);
       renderDetails(alias);
 
+      // The canonical link and its spellings (the mobile alias too) are the tag bar's, merged there.
       expect(otherLinks()).toEqual([{ uri: 'https://tidal.com/track/490851477', name: 'TIDAL' }]);
     });
 

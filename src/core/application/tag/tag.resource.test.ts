@@ -9,7 +9,14 @@ import { TagApplication } from './tag';
 
 vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { request: vi.fn(), putBlob: vi.fn() } }));
 vi.mock('@/services/nexus/resource/resource', () => ({
-  NexusResourceService: { fetchTagsByUri: vi.fn(), applyViewerTag: vi.fn() },
+  NexusResourceService: {
+    fetchTagsByUri: vi.fn(),
+    applyViewerTag: vi.fn(),
+    getCachedTags: vi.fn(),
+    subscribeTags: vi.fn(),
+    hasUnconfirmedTags: vi.fn(),
+    isByIdsServed: vi.fn(),
+  },
 }));
 
 const URI = 'https://www.openstreetmap.org/node/240109189';
@@ -30,6 +37,138 @@ describe('TagApplication, external resources', () => {
 
     await expect(TagApplication.fetchResourceTags({ uri: URI, viewerId: VIEWER })).resolves.toEqual([]);
     expect(NexusResourceService.fetchTagsByUri).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER });
+  });
+
+  describe('a link read with its other spellings', () => {
+    const SHARE = `${URI}/u`;
+    const tag = (label: string, taggers: string[], extra = {}) => ({
+      label,
+      taggers,
+      taggers_count: taggers.length,
+      relationship: false,
+      tag_uri: null,
+      ...extra,
+    });
+    const answers: Record<string, ReturnType<typeof tag>[]> = {
+      [URI]: [tag('punk', ['a'])],
+      [SHARE]: [tag('punk', ['b']), tag('rock', [VIEWER], { relationship: true, tag_uri: TAG_URL })],
+    };
+
+    beforeEach(() => {
+      vi.mocked(NexusResourceService.isByIdsServed).mockReturnValue(true);
+    });
+
+    it('reads the link alone on a Nexus without `by_ids`, once its own read found that out', async () => {
+      vi.mocked(NexusResourceService.isByIdsServed).mockReturnValue(false);
+      vi.mocked(NexusResourceService.fetchTagsByUri).mockImplementation(async ({ uri }) => answers[uri]);
+
+      await expect(TagApplication.fetchResourceTags({ uri: URI, spellings: [SHARE] })).resolves.toEqual(answers[URI]);
+      expect(NexusResourceService.fetchTagsByUri).toHaveBeenCalledTimes(1);
+    });
+
+    it('reads the spellings once the link’s own read found `by_ids` served', async () => {
+      vi.mocked(NexusResourceService.isByIdsServed).mockReturnValueOnce(false).mockReturnValue(true);
+      vi.mocked(NexusResourceService.fetchTagsByUri).mockImplementation(async ({ uri }) => answers[uri]);
+
+      const tags = await TagApplication.fetchResourceTags({ uri: URI, spellings: [SHARE] });
+
+      expect(NexusResourceService.fetchTagsByUri).toHaveBeenCalledTimes(2);
+      expect(tags.map((entry) => entry.label)).toEqual(['punk', 'rock']);
+    });
+
+    it('reads the spellings on a Nexus without `by_ids` with `spellingsByUri` (the resource page)', async () => {
+      vi.mocked(NexusResourceService.isByIdsServed).mockReturnValue(false);
+      vi.mocked(NexusResourceService.fetchTagsByUri).mockImplementation(async ({ uri }) => answers[uri]);
+
+      await TagApplication.fetchResourceTags({ uri: URI, spellings: [SHARE], spellingsByUri: true });
+
+      expect(NexusResourceService.fetchTagsByUri).toHaveBeenCalledTimes(2);
+    });
+
+    it('reads every spelling and merges their tags', async () => {
+      vi.mocked(NexusResourceService.fetchTagsByUri).mockImplementation(async ({ uri }) => answers[uri]);
+
+      const tags = await TagApplication.fetchResourceTags({ uri: URI, viewerId: VIEWER, spellings: [SHARE] });
+
+      expect(NexusResourceService.fetchTagsByUri).toHaveBeenCalledTimes(2);
+      expect(tags.map((entry) => [entry.label, entry.taggers_count, entry.relationship])).toEqual([
+        ['punk', 2, false],
+        ['rock', 1, true],
+      ]);
+    });
+
+    it('leaves out a spelling whose read failed, and fails only when every read did', async () => {
+      vi.mocked(NexusResourceService.fetchTagsByUri).mockImplementation(async ({ uri }) => {
+        if (uri === SHARE) throw new Error('down');
+        return answers[uri];
+      });
+      await expect(TagApplication.fetchResourceTags({ uri: URI, spellings: [SHARE] })).resolves.toEqual(answers[URI]);
+
+      vi.mocked(NexusResourceService.fetchTagsByUri).mockRejectedValue(new Error('down'));
+      await expect(TagApplication.fetchResourceTags({ uri: URI, spellings: [SHARE] })).rejects.toThrow('down');
+    });
+
+    it('keeps a link’s last answer when a fresh read of it fails', async () => {
+      vi.mocked(NexusResourceService.fetchTagsByUri).mockImplementation(async ({ uri }) => {
+        if (uri === URI) throw new Error('429');
+        return answers[uri];
+      });
+      vi.mocked(NexusResourceService.getCachedTags).mockImplementation(({ uri }) =>
+        uri === URI ? answers[URI] : undefined,
+      );
+
+      const tags = await TagApplication.fetchResourceTags({
+        uri: URI,
+        viewerId: VIEWER,
+        spellings: [SHARE],
+        fresh: true,
+      });
+
+      expect(tags.find((entry) => entry.label === 'punk')?.taggers_count).toBe(2);
+    });
+
+    it('follows every spelling’s answer, merged with the answers read so far', () => {
+      const listeners: (() => void)[] = [];
+      const unsubscribe = vi.fn();
+      vi.mocked(NexusResourceService.subscribeTags).mockImplementation((_key, listener) => {
+        listeners.push(() => listener([]));
+        return unsubscribe;
+      });
+      const cached: Record<string, ReturnType<typeof tag>[] | undefined> = { [URI]: answers[URI] };
+      vi.mocked(NexusResourceService.getCachedTags).mockImplementation(({ uri }) => cached[uri]);
+      const listener = vi.fn();
+
+      const stop = TagApplication.subscribeResourceTags({ uri: URI, viewerId: VIEWER, spellings: [SHARE] }, listener);
+      listeners[0]();
+      // The spelling not read (or whose read failed) is left out.
+      expect(listener).toHaveBeenLastCalledWith(answers[URI]);
+      cached[SHARE] = answers[SHARE];
+      listeners[1]();
+      expect(listener).toHaveBeenLastCalledWith([
+        expect.objectContaining({ label: 'punk', taggers_count: 2 }),
+        expect.objectContaining({ label: 'rock' }),
+      ]);
+      stop();
+      expect(unsubscribe).toHaveBeenCalledTimes(2);
+    });
+
+    it('names the spellings the viewer’s tag is on, with their files', () => {
+      vi.mocked(NexusResourceService.getCachedTags).mockImplementation(({ uri }) => answers[uri]);
+
+      expect(TagApplication.getViewerResourceTagLinks({ uris: [URI, SHARE], viewerId: VIEWER, label: 'Rock' })).toEqual(
+        [{ uri: SHARE, tagUri: TAG_URL }],
+      );
+      expect(TagApplication.getViewerResourceTagLinks({ uris: [URI, SHARE], viewerId: VIEWER, label: 'punk' })).toEqual(
+        [],
+      );
+    });
+
+    it('has an unconfirmed write when any spelling has one', () => {
+      vi.mocked(NexusResourceService.hasUnconfirmedTags).mockImplementation(({ uri }) => uri === SHARE);
+
+      expect(TagApplication.hasUnconfirmedResourceTags({ uri: URI, spellings: [SHARE] })).toBe(true);
+      expect(TagApplication.hasUnconfirmedResourceTags({ uri: URI })).toBe(false);
+    });
   });
 
   it('PUTs the built tag, then applies it to the shared Nexus answer', async () => {

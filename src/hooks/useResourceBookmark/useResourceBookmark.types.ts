@@ -1,6 +1,8 @@
 export interface UseResourceBookmarkOptions {
   /** Whether to read the bookmark (the save picker is open); defaults to `true`. */
   active?: boolean;
+  /** Other spellings of the link: a bookmark of any of them is the link's. */
+  spellings?: readonly string[];
 }
 
 export interface UseResourceBookmarkResult {

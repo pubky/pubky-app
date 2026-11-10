@@ -8,7 +8,12 @@ import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObse
 import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
 import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
-import { getHttpUrl, getResourceLinks, getResourceTagsLabel } from '@/molecules/ResourceCard/ResourceCard.utils';
+import {
+  getHttpUrl,
+  getResourceLinks,
+  getResourceTagsLabel,
+  getResourceTarget,
+} from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
@@ -135,9 +140,13 @@ function NativeEmbedChoice({
 
   if (isReading && !isSlow) return <ResourceCardSkeleton withActions={!isComposing} />;
 
+  // The card's canonical link, its other spellings read along (`getResourceTarget`).
+  const target = getResourceTarget(card, url);
   const actions = isComposing ? null : (
     <ResourceActions
-      uri={url}
+      uri={target.uri}
+      spellings={target.spellings}
+      postUri={url}
       collectionsCount={card?.collections}
       tagsLabel={getResourceTagsLabel(card)}
       linkUrl={card ? getResourceLinks(card, url).linkUrl : getHttpUrl(url)}

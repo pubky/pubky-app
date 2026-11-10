@@ -257,6 +257,11 @@ export class CollectionPostContent {
     });
   }
 
+  /** Whether `uri` can be a collection item: a web link or a Pubky object. */
+  static isItemUri(uri: string): boolean {
+    return isValidCollectionItemUri(uri.trim());
+  }
+
   /** Removes the item any of `spellings` names. Returns the same reference when none is present. */
   static removeItem(collection: CollectionContent, spellings: readonly string[]): CollectionContent {
     const trimmed = spellings.map((uri) => uri.trim());

@@ -1,56 +1,48 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { invalidateResourceBookmarks } from '@/hooks/useResourceBookmarks/useResourceBookmarks';
+import { invalidateResourceBookmarks, useResourceBookmarks } from '@/hooks/useResourceBookmarks/useResourceBookmarks';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseResourceBookmarkOptions, UseResourceBookmarkResult } from './useResourceBookmark.types';
 
-type TSettled = { key: string; isBookmarked: boolean };
+/** A toggle shown over `listing`, the bookmarks listing it was made on, until the next listing. */
+type TToggled = { key: string; isBookmarked: boolean; listing: readonly string[] | undefined };
 
 /**
  * The viewer's own bookmark of an external resource (a link of any scheme). Bookmarks are private:
  * this is only ever the viewer's state, never a count. Read from the viewer's homeserver once signed
- * in (web bookmarks have no local row); signed out it reads `false` and `toggle` asks to sign in.
+ * in (web bookmarks have no local row), from one listing shared by every card (`useResourceBookmarks`);
+ * signed out it reads `false` and `toggle` asks to sign in.
  *
  * `toggle` flips the bookmark at once and back again, with an error toast, when the write fails.
+ * With `spellings` (the link's other spellings), a bookmark of any of them is the link's: removing
+ * it removes each; a new bookmark goes on `uri`.
  *
- * @param uri - The link exactly as written; `null` reads nothing
- * @param options.active - Reads only while `true` (the save picker is open): one homeserver request
- *   per open, not per card in a feed. Inactive, it reads `false` and not loading.
+ * @param uri - The link exactly as written, or the card's canonical link; `null` reads nothing
+ * @param options.active - Reads only while `true` (the save picker is open): no homeserver request
+ *   for a card in a feed. Inactive, it reads `false` and not loading.
+ * @param options.spellings - Other spellings of `uri` (`getResourceTarget`)
  */
 export function useResourceBookmark(
   uri: string | null,
-  { active = true }: UseResourceBookmarkOptions = {},
+  { active = true, spellings = [] }: UseResourceBookmarkOptions = {},
 ): UseResourceBookmarkResult {
   const { isAuthenticated, waitForAuth } = useRequireAuth();
   const userId = useAuthStore((state) => state.currentUserPubky);
-  const key = active && uri && userId && isAuthenticated ? `${uri}\n${userId}` : '';
-  const [settled, setSettled] = useState<TSettled | null>(null);
+  const listing = useResourceBookmarks({ enabled: active });
+  const links = uri ? [uri, ...spellings] : [];
+  const key = active && uri && userId && isAuthenticated ? `${links.join('\n')}\n\n${userId}` : '';
+  const [toggled, setToggled] = useState<TToggled | null>(null);
   const [isToggling, setIsToggling] = useState(false);
   const inFlight = useRef(false);
 
-  useEffect(() => {
-    if (!uri || !userId || !key) return;
-    let cancelled = false;
-    BookmarkController.fetchResourceBookmarked({ uri, userId }).then(
-      (isBookmarked) => {
-        if (!cancelled) setSettled({ key, isBookmarked });
-      },
-      () => {
-        // Reported by the service; it reads "not bookmarked" and stays usable.
-        if (!cancelled) setSettled({ key, isBookmarked: false });
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [uri, userId, key]);
-
-  const current = key && settled?.key === key ? settled : null;
-  const isBookmarked = current?.isBookmarked ?? false;
+  // The spellings the viewer's bookmark is on.
+  const bookmarked = key && listing ? links.filter((link) => listing.includes(link)) : [];
+  const shown = key && toggled?.key === key && toggled.listing === listing ? toggled : null;
+  const isBookmarked = shown ? shown.isBookmarked : bookmarked.length > 0;
 
   const toggle = async (): Promise<boolean> => {
     if (!uri || inFlight.current) return false;
@@ -60,22 +52,28 @@ export function useResourceBookmark(
       if (!(await waitForAuth('resource-bookmark'))) return false;
       const viewer = useAuthStore.getState().currentUserPubky;
       if (!viewer) return false;
-      const viewerKey = `${uri}\n${viewer}`;
-      const wasBookmarked = settled?.key === viewerKey ? settled.isBookmarked : false;
+      const viewerKey = `${links.join('\n')}\n\n${viewer}`;
+      const wasBookmarked = viewerKey === key && isBookmarked;
 
-      setSettled({ key: viewerKey, isBookmarked: !wasBookmarked });
+      setToggled({ key: viewerKey, isBookmarked: !wasBookmarked, listing });
+      let removed = 0;
       try {
-        const write = wasBookmarked ? BookmarkController.commitDeleteResource : BookmarkController.commitCreateResource;
-        if (!(await write({ uri, userId: viewer }))) {
-          // Skipped: the account changed while it waited; nothing to announce.
-          setSettled({ key: viewerKey, isBookmarked: wasBookmarked });
-          return false;
+        if (wasBookmarked) {
+          for (const link of bookmarked.length > 0 ? bookmarked : [uri]) {
+            await BookmarkController.commitDeleteResource({ uri: link, userId: viewer });
+            removed++;
+          }
+          toast({ title: 'Removed from bookmarks' });
+        } else {
+          await BookmarkController.commitCreateResource({ uri, userId: viewer });
+          toast({ title: 'Saved to bookmarks' });
         }
-        toast({ title: wasBookmarked ? 'Removed from bookmarks' : 'Saved to bookmarks' });
         invalidateResourceBookmarks();
         return true;
       } catch {
-        setSettled({ key: viewerKey, isBookmarked: wasBookmarked });
+        // A spelling whose bookmark went is gone from the listing too; a retry deletes again.
+        if (removed > 0) invalidateResourceBookmarks();
+        setToggled({ key: viewerKey, isBookmarked: wasBookmarked, listing });
         toast({
           variant: 'error',
           description: wasBookmarked ? 'Could not remove bookmark' : 'Could not add bookmark',
@@ -88,5 +86,5 @@ export function useResourceBookmark(
     }
   };
 
-  return { isBookmarked, isLoading: Boolean(key) && !current, isToggling, toggle };
+  return { isBookmarked, isLoading: Boolean(key) && listing === undefined, isToggling, toggle };
 }

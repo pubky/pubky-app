@@ -1764,6 +1764,44 @@ describe('PostController', () => {
       }
     });
 
+    it('adds a link spelling when the canonical link is no web link (isbn:), and removes every spelling', async () => {
+      setupAuthUser(testData.authorPubky);
+      const isbn = 'isbn:9780141439518';
+      const written = 'https://www.goodreads.com/book/show/1885';
+      const share = `${written}?ref=share`;
+      vi.spyOn(PostApplication, 'getDetails')
+        .mockResolvedValueOnce(createCollectionDetails([targetPostUri]))
+        .mockResolvedValueOnce(createCollectionDetails([written, share, targetPostUri]));
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        const params = { collectionId: collectionPostId, uri: isbn, spellings: [written, share] };
+        await PostController.commitUpdateCollectionResource({ ...params, shouldAdd: true });
+        await PostController.commitUpdateCollectionResource({ ...params, shouldAdd: false });
+
+        // The item is the first spelling a collection may hold; the remove takes every spelling.
+        const spellings = [written, isbn, share];
+        const changes = commitEditSpy.mock.calls.map(([{ compositePostId, edit }]) => ({
+          compositePostId,
+          change: edit.collection,
+        }));
+        expect(changes).toEqual([
+          { compositePostId: collectionPostId, change: { op: 'add', spellings } },
+          { compositePostId: collectionPostId, change: { op: 'remove', spellings } },
+        ]);
+        const read = (items: string[]) => CollectionPostContent.parse(createCollectionDetails(items)!.content)!;
+        expect(CollectionPostContent.apply(read([targetPostUri]), changes[0].change!)).toEqual(
+          appliedItems([written, targetPostUri]),
+        );
+        expect(CollectionPostContent.apply(read([written, share, targetPostUri]), changes[1].change!)).toEqual(
+          appliedItems([targetPostUri]),
+        );
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
     it('writes nothing when the collection already holds the link', async () => {
       setupAuthUser(testData.authorPubky);
       const link = 'https://www.openstreetmap.org/node/240109189';

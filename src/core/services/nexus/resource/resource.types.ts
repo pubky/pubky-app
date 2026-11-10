@@ -61,6 +61,11 @@ export type NexusResourceView = {
 export type TResourceCounts = {
   /** The resource's Nexus id, which its reference lists are read by. */
   resourceId: string;
+  /**
+   * The counts of a link and its other spellings, summed (`mergeResourceCounts`): the Nexus id of
+   * each spelling Nexus knows, `resourceId` first. Absent for one link's own counts.
+   */
+  resourceIds?: string[];
   replies?: number;
   embeds?: number;
   collections?: number;

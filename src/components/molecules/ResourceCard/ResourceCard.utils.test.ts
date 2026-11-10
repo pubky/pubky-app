@@ -25,9 +25,11 @@ import {
   getResourceListNote,
   getResourceStatus,
   getResourceTagsLabel,
+  getResourceTarget,
   getResourceTypeLabel,
   hasWideImage,
   isCardSurfaceClick,
+  MAX_LINK_SPELLINGS,
 } from './ResourceCard.utils';
 
 const TYPE_FACETS: TPinakesTypeFacet[] = typeFacetFixture.facets.type;
@@ -516,5 +518,42 @@ describe('getResourceListNote', () => {
     expect(getResourceListNote(book)).toBe('Book');
     expect(getResourceListNote(place)).toBe('Place');
     expect(getResourceListNote({ uri: 'geo:0,0', type: null, type_path: [], site: null })).toBeNull();
+  });
+});
+
+describe('getResourceTarget', () => {
+  const TIDAL = 'https://tidal.com/track/3524506';
+  const SHARE = `${TIDAL}/u`;
+
+  it('acts on the card’s canonical link, with the written link, refs and aliases as spellings, each once', () => {
+    expect(getResourceTarget({ uri: TIDAL, refs: [SHARE], aliases: [SHARE] }, SHARE)).toEqual({
+      uri: TIDAL,
+      spellings: [SHARE],
+    });
+    expect(
+      getResourceTarget(
+        { uri: TIDAL, refs: [TIDAL, `${TIDAL}/`], aliases: [SHARE] },
+        'https://www.tidal.com/track/3524506',
+      ),
+    ).toEqual({ uri: TIDAL, spellings: ['https://www.tidal.com/track/3524506', `${TIDAL}/`, SHARE] });
+  });
+
+  it('keeps the link as written when the canonical link is not one the app writes', () => {
+    expect(getResourceTarget({ uri: 'pubky://someone/pub/x', refs: [SHARE] }, SHARE)).toEqual({
+      uri: SHARE,
+      spellings: [],
+    });
+    // An identifier scheme the app writes (`isbn:`) stays the canonical link.
+    expect(getResourceTarget({ uri: 'isbn:9780140328721', refs: [] }, SHARE).uri).toBe('isbn:9780140328721');
+  });
+
+  it('acts on the link as written without a card', () => {
+    expect(getResourceTarget(null, SHARE)).toEqual({ uri: SHARE, spellings: [] });
+    expect(getResourceTarget(undefined, SHARE)).toEqual({ uri: SHARE, spellings: [] });
+  });
+
+  it('reads at most MAX_LINK_SPELLINGS other spellings', () => {
+    const refs = Array.from({ length: MAX_LINK_SPELLINGS + 5 }, (_, index) => `${TIDAL}?s=${index}`);
+    expect(getResourceTarget({ uri: TIDAL, refs }, TIDAL).spellings).toHaveLength(MAX_LINK_SPELLINGS);
   });
 });

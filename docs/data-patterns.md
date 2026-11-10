@@ -449,8 +449,11 @@ where the copies can be found (ADR-0014, ADR-0020):
 | Mute   | `/priv/social/v1/mutes/{mutee}.json`, **private**: only the owner's session reads it, no indexer sees it                                                                                                      | `MuteNormalizer.to` → `buildMute`                                                                                                                         | `MuteNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'mute' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent`                                                                                                                      | `MuteApplication.fetchMutedUsers` LISTs `/priv/social/v1/mutes/` only (`parseUri(url).kind === 'mute'`, no union with the 0.x directory); another session's changes arrive by the `MuteListSyncCoordinator` poll (start, visible, `online`, every 30 s), never a session-bound event stream (ADR-0014) |
 
 **External resources (web links).** A social v1 Tag `uri`, Bookmark target and CollectionItem `uri` may be any scheme,
-so an external resource card writes them against the link exactly as written, without a local row (no Dexie table
-holds web links):
+so an external resource card writes them against the link, without a local row (no Dexie table holds web links).
+The link is the card's (`getResourceTarget`): Pinakes' canonical `uri` once it knows the link, else the link as
+written. Nexus keeps every spelling of a link apart, so the link as written and the card's `refs` and `aliases`
+(at most 5) are read along and shown as one; new writes go to the canonical link, and a removal (tag, bookmark,
+collection item) goes to every spelling holding it.
 
 - Tag: `TagController.commitCreateResource` / `commitDeleteResource` → `buildTag(viewer, link, label)` →
   `putBlob`, or one DELETE of the viewer's own Nexus `tag_uri` (else the built file, whose id hashes link and
@@ -458,13 +461,17 @@ holds web links):
   `POST /v1/stream/resources/by_ids` (100 per request; Nexus must apply its `limit_tags` / `limit_taggers` query
   as on by-uri), which the client probes for once per page load; else, or when a batch fails,
   `GET /v1/resource/by-uri` per link, six at a time; both time out after 10 s (`NexusResourceService`, a 404 or a
-  skipped link is "nobody tagged it"). An accepted write is applied to that shared Nexus answer, since Nexus
-  indexes it with a delay, and every card of the link follows that answer (`subscribeResourceTags`).
+  skipped link is "nobody tagged it"). A feed card reads the other spellings only in a `by_ids` batch, the
+  resource page on any Nexus. An accepted write is applied to that shared Nexus answer, since Nexus indexes it
+  with a delay, and every card of the link follows that answer (`subscribeResourceTags`).
 - Bookmark: `BookmarkController.commitCreateResource` / `commitDeleteResource` → `buildBookmark(viewer, link)`;
-  the viewer's state is `HomeserverService.exists` on the built file, read only while the card's save picker is
-  open (closed, the Save button shows the collections only). The bookmarks table, feed and count stay
-  post-only (ADR-0028; `BookmarkNormalizer.fromListing` skips web targets).
-- Collection item: `PostController.commitUpdateCollectionResource`, the same edit as a post item.
+  the viewer's state comes from one listing of their bookmarks per page load (`useResourceBookmarks`), read the
+  first time a card's save picker opens and again after a bookmark changes (closed, the Save button shows the
+  collections only). The bookmarks table, feed and count stay post-only (ADR-0028;
+  `BookmarkNormalizer.fromListing` skips web targets).
+- Collection item: `PostController.commitUpdateCollectionResource`, the same edit as a post item. A collection
+  holds web links and Pubky objects only: a canonical link of another scheme (`isbn:`) gives way to the first
+  spelling that is a web link.
 - Reply: `PostController.commitCreate({ parentUri })` → the post's `parent` is the resource's URI as written,
   checked by `PostValidators.validateExternalParentUri` (a web link or `isbn:`/`doi:`/`osm:`/`geo:`/`urn:`), never
   with `parentPostId`. The footer's Reply button uses the same rule (`isExternalParentUri`,
