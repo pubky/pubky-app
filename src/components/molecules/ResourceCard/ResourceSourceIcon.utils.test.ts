@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFaviconUrls, getParentDomain } from './ResourceSourceIcon.utils';
+import { getFaviconOverride, getFaviconUrls, getParentDomain, isDarkFavicon } from './ResourceSourceIcon.utils';
 
 describe('getFaviconUrls', () => {
   it('tries the parent domain’s favicon after a subdomain’s own', () => {
@@ -42,5 +42,52 @@ describe('getParentDomain', () => {
     expect(getParentDomain('qobuz.com')).toBeNull();
     expect(getParentDomain('localhost')).toBeNull();
     expect(getParentDomain('10.0.0.1')).toBeNull();
+  });
+});
+
+describe('getFaviconOverride', () => {
+  it('names the icon of a site that has none at /favicon.ico, for its subdomains too', () => {
+    expect(getFaviconOverride('discogs.com')).toBe('https://st.discogs.com/favicon.ico');
+    expect(getFaviconOverride('tycho.bandcamp.com')).toBe('https://s4.bcbits.com/img/favicon/favicon-32x32.png');
+    expect(getFaviconOverride('bandcamp.com')).toBe('https://s4.bcbits.com/img/favicon/favicon-32x32.png');
+    expect(getFaviconOverride('audius.co')).toBe('https://audius.co/favicons/favicon-32x32.png');
+  });
+
+  it('gives Amazon Music its own icon on every country site, not the shop’s', () => {
+    const icon = 'https://m.media-amazon.com/images/G/01/music/logo/1.0/smile_256x256.png';
+    expect(getFaviconOverride('music.amazon.com')).toBe(icon);
+    expect(getFaviconOverride('music.amazon.fr')).toBe(icon);
+    expect(getFaviconOverride('music.amazon.co.uk')).toBe(icon);
+    expect(getFaviconOverride('music.amazon.com.br')).toBe(icon);
+    expect(getFaviconOverride('amazon.fr')).toBeNull();
+    expect(getFaviconOverride('music.amazon.evil.example')).toBeNull();
+    expect(getFaviconOverride('music.amazon.top')).toBeNull();
+    expect(getFaviconOverride('music.amazon.co.zz')).toBeNull();
+  });
+
+  it('leaves every other site, and look-alike domains, to its own favicon', () => {
+    expect(getFaviconOverride('notbandcamp.com')).toBeNull();
+    expect(getFaviconOverride('bandcamp.com.evil.example')).toBeNull();
+    expect(getFaviconOverride('tidal.com')).toBeNull();
+    expect(getFaviconOverride(null)).toBeNull();
+  });
+});
+
+describe('isDarkFavicon', () => {
+  it('marks the dark icons (Discogs, GitHub, Mixcloud, TIDAL’s black tile) and their subdomains', () => {
+    expect(isDarkFavicon('discogs.com')).toBe(true);
+    expect(isDarkFavicon('www.mixcloud.com')).toBe(true);
+    expect(isDarkFavicon('m.mixcloud.com')).toBe(true);
+    expect(isDarkFavicon('tidal.com')).toBe(true);
+    expect(isDarkFavicon('listen.tidal.com')).toBe(true);
+    expect(isDarkFavicon('st.discogs.com')).toBe(true);
+    expect(isDarkFavicon('github.com')).toBe(true);
+    expect(isDarkFavicon('gist.github.com')).toBe(true);
+  });
+
+  it('leaves icons on a light or coloured tile and other sites as they are', () => {
+    expect(isDarkFavicon('x.com')).toBe(false);
+    expect(isDarkFavicon('mydiscogs.com')).toBe(false);
+    expect(isDarkFavicon(null)).toBe(false);
   });
 });

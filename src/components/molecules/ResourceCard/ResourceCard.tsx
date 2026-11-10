@@ -44,16 +44,21 @@ const DETAIL_ICON_SIZE = 14;
  * that is not `ok` says so and shows what it still has. `actions` (the bottom zone: action row and
  * tags) close the card.
  *
- * The whole card is a click-through to the link; the title and the source are its links.
+ * The whole card is a click-through to the link, unless its actions' ⋯ menu lists other services
+ * (`hasAlsoOn`: the same thing on other services too, `also_on`), where the viewer picks the
+ * service; the title and the source are its links either way.
+ *
  * Only `http(s)` values become links or images; every text field is rendered as text.
  */
-export function ResourceCard({ card, href, actions }: ResourceCardProps) {
+export function ResourceCard({ card, href, actions, hasAlsoOn = false }: ResourceCardProps) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
 
   const status = getResourceStatus(card.status);
   const family = getResourceFamily(card);
   const typeLabel = getResourceTypeLabel(card);
   const { linkUrl, sourceUri, siteName } = getResourceLinks(card, href);
+  // With other services to pick from, the viewer picks one in the actions' ⋯ menu (or the header's link).
+  const clickThroughUrl = hasAlsoOn ? null : linkUrl;
   const title = card.name || getDisplayLink(href || card.uri);
   const imageUrl = getHttpUrl(card.image);
   const showImage = imageUrl !== null && failedImage !== imageUrl;
@@ -67,8 +72,16 @@ export function ResourceCard({ card, href, actions }: ResourceCardProps) {
   const statusNote = status === PinakesStatus.OK ? null : STATUS_NOTES[status];
 
   return (
-    <ResourceCardFrame clickThroughUrl={linkUrl} data-testid="resource-card" data-status={status} data-family={family}>
-      <Container overrideDefaults className={cn('flex min-w-0 flex-col gap-3 p-4', linkUrl && 'cursor-pointer')}>
+    <ResourceCardFrame
+      clickThroughUrl={clickThroughUrl}
+      data-testid="resource-card"
+      data-status={status}
+      data-family={family}
+    >
+      <Container
+        overrideDefaults
+        className={cn('flex min-w-0 flex-col gap-3 p-4', clickThroughUrl && 'cursor-pointer')}
+      >
         <ResourceCardHeader typeLabel={typeLabel} sourceUri={sourceUri} href={linkUrl} siteName={siteName} />
 
         <Container overrideDefaults className="flex min-w-0 gap-4">

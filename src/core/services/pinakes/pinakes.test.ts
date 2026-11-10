@@ -12,6 +12,7 @@ import eventFixture from './fixtures/by-uri.event.json';
 import missingFixture from './fixtures/by-uri.missing.json';
 import movieFixture from './fixtures/by-uri.movie.json';
 import musicRecordingFixture from './fixtures/by-uri.music-recording.json';
+import natureArticleFixture from './fixtures/by-uri.nature-article.json';
 import placeFixture from './fixtures/by-uri.place.json';
 import podcastFixture from './fixtures/by-uri.podcast.json';
 import pubkyFixture from './fixtures/by-uri.pubky.json';
@@ -51,6 +52,7 @@ const RESOURCE_FIXTURES: Record<string, TPinakesResourceDetail> = {
   event: eventFixture,
   book: bookFixture,
   'scholarly-article': scholarlyArticleFixture,
+  'nature-article': natureArticleFixture,
   podcast: podcastFixture,
   movie: movieFixture,
   'music-recording': musicRecordingFixture,

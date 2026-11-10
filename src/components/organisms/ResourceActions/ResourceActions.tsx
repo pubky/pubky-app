@@ -28,7 +28,7 @@ interface ResourceActionsProps {
   linkUrl?: string | null;
   /** The card's title for the ⋯ menu's "Copy title"; absent when the card has none. */
   title?: string | null;
-  /** Extra ⋯ menu entries after the card's own. */
+  /** Extra ⋯ menu entries after the card's own (the other services it is on, "Also on"). */
   extraMenuContent?: ResourceExtraMenuContent;
   /** Whether the card is on screen: the tags are read from the first time it is. */
   isOnScreen?: boolean;
