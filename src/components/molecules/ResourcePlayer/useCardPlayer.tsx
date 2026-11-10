@@ -5,6 +5,7 @@ import { Play } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { pauseMedia, tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { getResourceStatus } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { getResourceSummary } from '@/molecules/ResourceCard/ResourceFacts.utils';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
@@ -22,7 +23,7 @@ import {
 } from './resourcePlayer.utils';
 import { PlayerDock, PlayerSwitch, PlayOnSplit } from './ResourcePlayerControls';
 import { AnimatedHeight, ResourcePlayerFrame } from './ResourcePlayerFrame';
-import { type ResourcePlayerState, useFramePress, useResourcePlayer } from './useResourcePlayer';
+import { type ResourcePlayerState, useResourcePlayer } from './useResourcePlayer';
 
 export interface CardPlayer {
   /** "Play on <service>" for the card's action row (`ResourceActions`'s `playOn`); absent with no player. */
@@ -155,6 +156,7 @@ export function useCardPlayer(
               title={title}
               load={player.load}
               onLoaded={player.onLoaded}
+              onPlay={(media) => player.play(current, media)}
             />
           </PlayerDock>
         ) : (
@@ -183,9 +185,9 @@ interface SongPlayerProps {
 
 /**
  * A song's player up front: its chosen service's embed, paused (`getUpFrontTarget`), with a switch
- * to the others and Card (`PlayerSwitch`). Only a press inside it makes it the page's player, which
- * then docks (never in a preview). With platform embeds up front off, a stand-in with Play on loads
- * nothing from the services.
+ * to the others and Card (`PlayerSwitch`). Its playing makes it the page's player, which then docks
+ * (never in a preview) until other media starts or Close. With platform embeds up front off, a
+ * stand-in with Play on loads nothing from the services.
  */
 function SongPlayer({ card, title, targets, choice, onChoose, player, surface = 'muted', preview }: SongPlayerProps) {
   const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
@@ -198,24 +200,25 @@ function SongPlayer({ card, title, targets, choice, onChoose, player, surface = 
   const [round, setRound] = useState(0);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
 
+  const selected = targets.find((target) => target.provider === choice) ?? targets[0];
+  // Says when it plays, and pauses where it is: an audio file and the players that tell
+  // (`tellsWhenPlaying`); any other starts by a press inside it (`ResourcePlayerFrame`).
+  const tells = selected.element === 'audio' || tellsWhenPlaying(selected.src);
   const isActive = player.current !== null;
-  // Another card's player was pressed, or the dock closed this one: load it anew, paused.
+  // Other media started (it paused this one), or the dock closed this one: a player that pauses
+  // stays as it is; any other is loaded anew, paused.
   const [wasActive, setWasActive] = useState(isActive);
   if (wasActive !== isActive) {
     setWasActive(isActive);
     if (!isActive) {
-      setRound((value) => value + 1);
+      if (!tells) setRound((value) => value + 1);
       setOptedIn(false);
       setAutoStart(false);
     }
   }
 
-  const selected = targets.find((target) => target.provider === choice) ?? targets[0];
   const showsPlayer = embedsUpFront || optedIn;
   const frameKey = `${selected.provider}:${round}`;
-  // A press inside the player makes it the page's player, in a preview too (it never docks there).
-  useFramePress(boxRef, () => player.play(selected), showsPlayer && !isActive);
-
   // Platform embeds turned off while this player was the page's: its frame is gone, so is its claim.
   useEffect(() => {
     if (!showsPlayer && isActive) player.close();
@@ -237,6 +240,11 @@ function SongPlayer({ card, title, targets, choice, onChoose, player, surface = 
   const showCard = () => {
     if (isActive) player.close();
     onChoose(CARD_PLAYER);
+  };
+
+  const close = () => {
+    if (boxRef.current) pauseMedia(boxRef.current);
+    player.close();
   };
 
   const open = () => {
@@ -301,7 +309,7 @@ function SongPlayer({ card, title, targets, choice, onChoose, player, surface = 
     >
       {switcher}
       <div ref={boxRef} className="min-w-0">
-        <PlayerDock target={selected} title={title} onClose={player.close} dockable={isActive && !preview}>
+        <PlayerDock target={selected} title={title} onClose={close} dockable={isActive && !preview}>
           <ResourcePlayerFrame
             key={frameKey}
             target={autoStart ? selected : getUpFrontTarget(selected)}
@@ -311,7 +319,7 @@ function SongPlayer({ card, title, targets, choice, onChoose, player, surface = 
             load={autoStart && isActive ? player.load : loadedKey === frameKey ? 'ready' : 'loading'}
             onLoaded={autoStart && isActive ? player.onLoaded : () => setLoadedKey(frameKey)}
             quiet={!autoStart}
-            onPlay={isActive ? undefined : () => player.play(selected)}
+            onPlay={(media) => player.play(selected, media)}
           />
         </PlayerDock>
       </div>

@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getPlayerTarget } from './resourcePlayer.utils';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
@@ -214,14 +214,16 @@ describe('ResourcePlayerFrame', () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 
-  it('sends no message to a player that starts by its own address', () => {
+  it('sends no start message to a player that starts by its own address, only asks it to say when it plays', () => {
     render(<ResourcePlayerFrame target={YOUTUBE} title="Video" load="loading" onLoaded={() => {}} />);
     const { frame, post } = watchFrame();
 
     act(() => frame.dispatchEvent(new Event('load')));
     postFromFrame(frame, { type: 'ready' }, 'https://www.youtube-nocookie.com');
 
-    expect(post).not.toHaveBeenCalled();
+    expect(post.mock.calls).toEqual([
+      [JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), 'https://www.youtube-nocookie.com'],
+    ]);
   });
 
   it('says nothing more once a player that starts on load has loaded', () => {
@@ -250,6 +252,57 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByTestId('resource-player-status')).toHaveTextContent('Spotify has not answered.');
     expect(screen.getByTestId('resource-player-status')).not.toHaveClass('sr-only');
     expect(screen.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute('href', SPOTIFY.link);
+  });
+
+  it('stops an embed shown up front once pressed, when other media starts: loaded anew, paused', () => {
+    vi.useFakeTimers();
+    const ALBUM = getPlayerTarget('https://www.deezer.com/album/302127')!;
+    render(
+      <>
+        <ResourcePlayerFrame target={ALBUM} title="Discovery" load="ready" onLoaded={() => {}} quiet />
+        <Player target={SPOTIFY} />
+      </>,
+    );
+    const album = screen.getByLabelText('Deezer player: Discovery', { selector: 'iframe' });
+    const press = () =>
+      act(() => {
+        fireEvent.mouseOver(album);
+        album.focus();
+        window.dispatchEvent(new Event('blur'));
+        vi.advanceTimersByTime(1);
+      });
+
+    // Not pressed, so not playing: opening another player leaves it as it is.
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    expect(screen.getByLabelText('Deezer player: Discovery', { selector: 'iframe' })).toBe(album);
+
+    // Pressed: it plays, and the page's player stops.
+    press();
+    expect(screen.getByRole('button', { name: 'play' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    const reloaded = screen.getByLabelText('Deezer player: Discovery', { selector: 'iframe' });
+    expect(reloaded).not.toBe(album);
+    expect(reloaded).toHaveAttribute('src', ALBUM.src);
+    // Its placeholder holds the place until the new frame has loaded.
+    const region = screen.getByRole('region', { name: 'Deezer player: Discovery' });
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    act(() => reloaded.dispatchEvent(new Event('load')));
+    expect(region).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('loads anew an embed shown up front that said it plays, when other media starts', () => {
+    render(
+      <>
+        <ResourcePlayerFrame target={SPOTIFY} title="Get Lucky" load="ready" onLoaded={() => {}} quiet />
+        <Player target={TIDAL} />
+      </>,
+    );
+    const song = screen.getByLabelText('Spotify player: Get Lucky', { selector: 'iframe' }) as HTMLIFrameElement;
+    postFromFrame(song, { type: 'playback_update', payload: { isPaused: false } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    expect(screen.getByLabelText('Spotify player: Get Lucky', { selector: 'iframe' })).not.toBe(song);
   });
 
   it('shows no status line and loads lazily when quiet (an embed shown up front)', () => {

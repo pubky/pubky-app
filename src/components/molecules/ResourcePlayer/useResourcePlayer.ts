@@ -1,12 +1,13 @@
 'use client';
 
 import { type RefObject, useEffect, useEffectEvent, useState, useSyncExternalStore } from 'react';
+import { onMediaStop, stopOtherMedia } from '@/hooks/useOnePlayer/useOnePlayer';
 import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
 
 /**
  * The one player open on the page: `{ owner, provider }`, or `null`. Opening a player anywhere
  * replaces it, so the card that held it unmounts its frame: two services can never play together,
- * whatever their APIs allow.
+ * whatever their APIs allow. Any other media starting on the page stops it too (`useOnePlayer`).
  */
 type ActivePlayer = { owner: string; provider: PlayerProvider } | null;
 
@@ -14,6 +15,7 @@ let active: ActivePlayer = null;
 const listeners = new Set<() => void>();
 
 function setActive(next: ActivePlayer) {
+  if (active?.owner === next?.owner && active?.provider === next?.provider) return;
   active = next;
   listeners.forEach((listener) => listener());
 }
@@ -32,8 +34,11 @@ export interface ResourcePlayerState {
   /** The player open in this card, or `null` (the card shows its content). */
   current: PlayerTarget | null;
   load: PlayerLoadState;
-  /** Open `target`'s player here, closing any other on the page. */
-  play: (target: PlayerTarget) => void;
+  /**
+   * Open `target`'s player here, closing any other on the page and stopping any other media; `keep`
+   * (the media that started it) plays on.
+   */
+  play: (target: PlayerTarget, keep?: Element | null) => void;
   /** Unload this card's player and show the card again. */
   close: () => void;
   /** The frame's `load` event (the frame exists, not proof it plays). */
@@ -65,15 +70,23 @@ export function useResourcePlayer(owner: string, targets: PlayerTarget[]): Resou
     return () => clearTimeout(timer);
   }, [key]);
 
-  // Leaving the page (or the card unmounting for another resource) unloads its player.
-  useEffect(
-    () => () => {
+  // Leaving the page (or the card unmounting for another resource) unloads its player; other media
+  // starting stops it.
+  useEffect(() => {
+    const close = () => {
       if (active?.owner === owner) setActive(null);
-    },
-    [owner],
-  );
+    };
+    const unsubscribe = onMediaStop(close);
+    return () => {
+      unsubscribe();
+      close();
+    };
+  }, [owner]);
 
-  const play = (target: PlayerTarget) => setActive({ owner, provider: target.provider });
+  const play = (target: PlayerTarget, keep: Element | null = null) => {
+    stopOtherMedia(keep);
+    setActive({ owner, provider: target.provider });
+  };
   const close = () => {
     if (active?.owner === owner) setActive(null);
   };
@@ -82,35 +95,71 @@ export function useResourcePlayer(owner: string, targets: PlayerTarget[]): Resou
   return { current, load: loadState, play, close, onLoaded };
 }
 
+/** How often the page looks where the focus is while it is inside a frame (`useFramePress`). */
+const FOCUS_POLL_MS = 250;
+/** Each enabled `useFramePress`'s look at the focus; one poll runs them all (`pollFocus`). */
+const focusLooks = new Set<() => void>();
+let focusPoll: ReturnType<typeof setInterval> | undefined;
+
+function stopFocusPoll() {
+  clearInterval(focusPoll);
+  focusPoll = undefined;
+}
+
+/** Looks where the focus is now and then, until it leaves the frames or no one asks any more. */
+function pollFocus() {
+  if (focusPoll !== undefined) return;
+  focusPoll = setInterval(() => {
+    if (focusLooks.size === 0 || !(document.activeElement instanceof HTMLIFrameElement)) stopFocusPoll();
+    else if (document.visibilityState !== 'hidden') focusLooks.forEach((look) => look());
+  }, FOCUS_POLL_MS);
+}
+
 /**
  * Calls `onPress` when the viewer presses inside a frame in `box`: a press in an iframe moves the
  * focus there, which the page sees as its window's blur, or, from another frame, as a `focusin`.
- * It counts only with the pointer over `box`, so tabbing into a frame is no press. Only while `enabled`.
+ * Firefox and Safari send neither from one frame into another, so while the focus is inside a frame
+ * the page also looks where it is now and then. With a hover-capable pointer it counts only with the
+ * pointer over `box`, so tabbing into a frame is no press. Only while `enabled`.
  */
 export function useFramePress(box: RefObject<HTMLElement | null>, onPress: () => void, enabled = true): void {
   const press = useEffectEvent(onPress);
   useEffect(() => {
     if (!enabled) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    // A tap sends the page mouse events too, so this also holds on touch screens.
+    // A tap inside a cross-origin frame sends the page no mouse event, so without a hover-capable
+    // pointer any focus move into the frame counts (tabbing there is rare).
+    const isHoverless = window.matchMedia?.('(hover: none)').matches ?? false;
     let isPointerOver = box.current?.matches(':hover') ?? false;
     const onPointer = (event: MouseEvent) => {
       isPointerOver = event.target instanceof Node && box.current?.contains(event.target) === true;
     };
+    const look = () => {
+      const active = document.activeElement;
+      if ((isHoverless || isPointerOver) && active instanceof HTMLIFrameElement && box.current?.contains(active)) {
+        press();
+      }
+    };
     // Read after the event: some browsers move the focus to the iframe only once it has fired.
     const check = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const active = document.activeElement;
-        if (isPointerOver && active instanceof HTMLIFrameElement && box.current?.contains(active)) press();
-      }, 0);
+      timer = setTimeout(look, 0);
     };
+    const onBlur = () => {
+      check();
+      pollFocus();
+    };
+    focusLooks.add(look);
+    // Turned on while the focus is already inside a frame (another player started from there).
+    if (document.activeElement instanceof HTMLIFrameElement) pollFocus();
     document.addEventListener('mouseover', onPointer);
-    window.addEventListener('blur', check);
+    window.addEventListener('blur', onBlur);
     document.addEventListener('focusin', check);
     return () => {
+      focusLooks.delete(look);
+      if (focusLooks.size === 0) stopFocusPoll();
       document.removeEventListener('mouseover', onPointer);
-      window.removeEventListener('blur', check);
+      window.removeEventListener('blur', onBlur);
       document.removeEventListener('focusin', check);
       clearTimeout(timer);
     };
