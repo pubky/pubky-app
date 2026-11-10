@@ -60,8 +60,10 @@ const migrationFlag = () =>
 const legacyPostPath = (post: SeededPost) => `pub/pubky.app/posts/${post.id}`;
 
 const waitUntilStarterPackHasUsers = (tag: string) => {
-  const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
+    // The deadline starts when the poll runs: this wait is queued behind a full onboarding,
+    // so a Date.now() at the call can be spent before the first request.
+    const deadline = Date.now() + 90_000;
     const nexusOrigin = String(nexusUrl).replace(/\/$/, '');
     const poll = () => {
       cy.request({
