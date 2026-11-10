@@ -1,0 +1,152 @@
+/**
+ * Pinakes API shapes, hand-written from `GET <pinakes>/v1/openapi.json` (components `Card`,
+ * `ResourceDetail` = `Card` + `Details`, `AlsoOn`, `OpenIn`, `GroupRef`, `GroupDetail`,
+ * `SearchResponse`, `Facets`, `TypeFacet`, `Point`).
+ *
+ * Only the fields the app reads are typed; the API carries more (`facts`, `address`, `stream`,
+ * `maybe_same`, `occurrence`, ...). Fields the schema lists as required are required here; every
+ * other field is optional and nullable, as the schema declares it ("Absent values are null").
+ * The captured responses in `./fixtures` are checked against these types in `pinakes.test.ts`.
+ */
+
+/**
+ * The documented `status` values (`/llms.txt`, "What is in the index": "`status` is `ok`,
+ * `pending`, `missing` (the object is gone upstream), `unreachable` or `error`"). Only `missing`
+ * has a documented meaning; the others are named there without one. The schema types `status` as
+ * a plain string, so a card may carry a value added later: treat anything else like `error`.
+ */
+export enum PinakesStatus {
+  OK = 'ok',
+  /** Undocumented. */
+  PENDING = 'pending',
+  /** "The object is gone upstream." */
+  MISSING = 'missing',
+  /** Undocumented beyond its name. */
+  UNREACHABLE = 'unreachable',
+  /** Undocumented. */
+  ERROR = 'error',
+}
+
+/** `Point`: where a place (or an event's venue) is. */
+export interface TPinakesPoint {
+  lat: number;
+  lon: number;
+}
+
+/** `GroupRef`: the group a card is in; its other members are in `also_on`. */
+export interface TPinakesGroupRef {
+  id: string;
+  /** Members in the group, this one included. */
+  size: number;
+}
+
+/** `AlsoOn`: the same thing on another service, a tagged group member or a derived link. */
+export interface TPinakesAlsoOn {
+  uri: string;
+  /** A tagged member's resource ID; absent on a derived link. */
+  id?: string | null;
+  /** The service name. */
+  site?: string | null;
+  /** A link nobody tagged, found by a source. */
+  derived?: boolean;
+  /** For a derived link, a qualifier (`archived`, `work`, `source`, `submitted`, `published`, `pdf`). */
+  kind?: string | null;
+  /** For a derived link, the hub or service it came through (`musicbrainz`, `wikidata`). */
+  via?: string | null;
+  /** For a derived link, a time that belongs to it (an archived copy's capture). RFC 3339. */
+  at?: string | null;
+}
+
+/** `OpenIn`: a client that opens a Pubky app's object, and the object's `https:` address there. */
+export interface TPinakesOpenIn {
+  client: string;
+  url: string;
+}
+
+/**
+ * `Because`: why a `related` search row is listed: the resource's taggers who also referenced the
+ * row, as Pinakes ranked it.
+ */
+export interface TPinakesBecause {
+  /** How many of them (the count the row is ranked by). */
+  shared: number;
+  /** Up to three of them (Pubky public keys), those who tagged the resource most recently first. */
+  taggers: string[];
+}
+
+/** `Card`: the one card every route returns for a resource. */
+export interface TPinakesCard {
+  /** Pinakes's own resource ID (32 lowercase hex). Join with Nexus by URI, never by this ID. */
+  id: string;
+  /** The canonical link. Not always `http(s)`: `isbn:`, `doi:`, `osm:`, `pubky://`, ... */
+  uri: string;
+  /** One of `PinakesStatus`, or a value added after this client was written. */
+  status: string;
+  /** schema.org type (`VideoObject`, `MusicRecording`, ...). */
+  type?: string | null;
+  /** The type's ancestors, root first (`["Thing", "Event", "MusicEvent"]`). */
+  type_path: string[];
+  /** Plain text: escape before rendering as HTML. */
+  name?: string | null;
+  /** Plain text: escape before rendering as HTML. */
+  description?: string | null;
+  /** Not always `https:`: also `http:` and `pubky://`. Callers show only `http(s)` images. */
+  image?: string | null;
+  /** The publishing site or service (`OpenStreetMap`, `Wikipedia (de)`), else the host. */
+  site?: string | null;
+  point?: TPinakesPoint | null;
+  /** RFC 3339. */
+  start?: string | null;
+  /** RFC 3339. */
+  end?: string | null;
+  /** The credit to show with OpenStreetMap cards and events placed from OSM data. */
+  attribution?: string | null;
+  group?: TPinakesGroupRef | null;
+  also_on: TPinakesAlsoOn[];
+  open_in: TPinakesOpenIn[];
+  /** On a `related` search row only (absent elsewhere and on older instances): why it is listed. */
+  because?: TPinakesBecause | null;
+  /** The referenced links that resolve to this card, most referenced first (at most 5). */
+  refs: string[];
+  /** How many public collection posts hold the card's link. */
+  collections: number;
+}
+
+/** `ResourceDetail`: a resource read (`by-uri`, `resources/{id}`), the card plus `Details`. */
+export interface TPinakesResourceDetail extends TPinakesCard {
+  /** Other spellings of this link that resolve to it (at most 50). */
+  aliases: string[];
+  /** The public identifiers this resource is keyed by (`isbn:…`, `doi:…`, `osm:node/…`). */
+  keys: string[];
+  /** IANA time zone of an event (`America/Chicago`). */
+  tz?: string | null;
+  all_day?: boolean | null;
+  updated_at?: string | null;
+}
+
+/** `GroupDetail`: `GET /v1/groups/{id}`, every member's own card. */
+export interface TPinakesGroupDetail {
+  id: string;
+  /** An operator set the members. */
+  curated: boolean;
+  /** The identifiers two or more members share. */
+  keys: string[];
+  members: TPinakesCard[];
+  /** The type most members have. */
+  type?: string | null;
+}
+
+/** `TypeFacet`: one card type and where it sits in schema.org. */
+export interface TPinakesTypeFacet {
+  type: string;
+  type_path: string[];
+  count: number;
+}
+
+/** `SearchResponse`: `GET /v1/search` (without `cluster`). */
+export interface TPinakesSearchResponse {
+  items: TPinakesCard[];
+  cursor?: string | null;
+  reach_truncated: boolean;
+  facets?: { type?: TPinakesTypeFacet[] | null } | null;
+}

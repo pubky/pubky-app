@@ -198,6 +198,16 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: 'not-a-url' })).toThrow();
   });
 
+  it('leaves Pinakes off when its URL is unset or blank, and throws on a malformed one', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).pinakesUrl).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pinakesUrl: '  ' }).pinakesUrl).toBeUndefined();
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).pinakesUrl).toBeUndefined();
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pinakesUrl: 'https://pinakes.example.com' }).pinakesUrl,
+    ).toBe('https://pinakes.example.com');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pinakesUrl: 'not-a-url' })).toThrow();
+  });
+
   describe('region modes (PUBKY_RUNTIME_REGION_MODES)', () => {
     it('is unset by default, and blank counts as unset', () => {
       expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).regionModes).toBeUndefined();
