@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NexusTag } from '@/services/nexus/nexus.types';
-import { OTHER_LINK_READS_AT_ONCE, useOtherLinkTags } from './useOtherLinkTags';
+import { useOtherLinkTags } from './useOtherLinkTags';
 import type { TOtherLink } from './useOtherLinkTags.types';
 
 const mocks = vi.hoisted(() => ({ viewerId: 'viewer' as string | null, fetchResourceTags: vi.fn() }));
@@ -66,27 +66,34 @@ describe('useOtherLinkTags', () => {
     expect(result.current.reads.map((read) => read.link)).toEqual([TMDB]);
   });
 
-  it('reads a few links at a time', async () => {
-    const links = Array.from({ length: OTHER_LINK_READS_AT_ONCE + 2 }, (_, index) => ({
-      uri: `https://e.com/${index}`,
-      name: 'e.com',
-    }));
-    const pending: Array<() => void> = [];
+  it('asks every link at once and shows the answers as they arrive, in link order', async () => {
+    const links = Array.from({ length: 8 }, (_, index) => ({ uri: `https://e.com/${index}`, name: 'e.com' }));
+    const pending = new Map<string, () => void>();
     mocks.fetchResourceTags.mockImplementation(
-      () =>
+      ({ uri }: { uri: string }) =>
         new Promise<NexusTag[]>((resolve) => {
-          pending.push(() => resolve([tag('x', ['a'])]));
+          pending.set(uri, () => resolve([tag(uri.slice(-1), ['a'])]));
         }),
     );
     const { result } = renderHook(() => useOtherLinkTags(links));
 
-    expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(OTHER_LINK_READS_AT_ONCE);
-    await act(async () => pending.splice(0).forEach((resolve) => resolve()));
-    await waitFor(() => expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(links.length));
-    // The first batch shows while the next one is read.
-    expect(result.current.reads).toHaveLength(OTHER_LINK_READS_AT_ONCE);
-    await act(async () => pending.splice(0).forEach((resolve) => resolve()));
+    expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(links.length);
+    expect(result.current.isLoading).toBe(true);
+    // A link read later (`by-uri` after a cut-off batch view) does not hold back the others.
+    await act(async () => links.slice(2).forEach((link) => pending.get(link.uri)?.()));
+    await waitFor(() => expect(result.current.reads).toHaveLength(links.length - 2));
+    expect(result.current.isLoading).toBe(false);
+    await act(async () => links.slice(0, 2).forEach((link) => pending.get(link.uri)?.()));
     await waitFor(() => expect(result.current.reads).toHaveLength(links.length));
+    expect(result.current.reads.map((read) => read.link)).toEqual(links);
+  });
+
+  it('stops loading once every link answered, all without tags', async () => {
+    mocks.fetchResourceTags.mockResolvedValue([]);
+    const { result } = renderHook(() => useOtherLinkTags([IMDB, NETFLIX]));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.reads).toEqual([]);
   });
 
   it('never shows a late answer for links it no longer reads', async () => {
