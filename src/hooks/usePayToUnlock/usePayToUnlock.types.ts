@@ -10,6 +10,8 @@ import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/servi
  * `finishing` acknowledges that payment while the credential and content are being fetched.
  * `region-blocked` is the Lock Server's HTTP 451: paid unlocks are not offered in the reader's region.
  * Nothing was created and trying again cannot help, so it offers no retry and has nothing to do with Bitkit.
+ * `reader-not-payable` is a task the Lock Server failed because the reader's wallet cannot receive payment
+ * requests. Its button still submits a fresh id: the ended one stays failed, even after the wallet is fixed.
  */
 export type TPayToUnlockStage =
   | 'checking'
@@ -21,7 +23,8 @@ export type TPayToUnlockStage =
   | 'paid'
   | 'unopened'
   | 'blocked'
-  | 'region-blocked';
+  | 'region-blocked'
+  | 'reader-not-payable';
 
 export interface UsePayToUnlockParams {
   /** The modal's open state; closed keeps the hook idle (no requests, no polling). */
@@ -55,8 +58,8 @@ export interface UsePayToUnlockResult {
   /** True while a wallet check started from a button or the proof submission is in flight. */
   isSubmitting: boolean;
   /**
-   * Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired
-   * payment), checking the wallet first after `failed`; with none, it moves to the install screen.
+   * Install screen: re-checks the wallet, then submits. Retry and not-payable screens: submit again (a fresh id after a
+   * failed/expired payment), checking the wallet first after `failed`; with none, they move to the install screen.
    */
   retry: () => void;
   /** Resume a parked wait. The purchase was never abandoned, so this only restarts the polling. */
