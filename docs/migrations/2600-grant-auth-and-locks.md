@@ -5,10 +5,15 @@
 PubkyApp uses `@synonymdev/pubky@0.16.2` and grant authentication for Ring, Passport (Continue with Google),
 encrypted-file and recovery-phrase login, and browser signup. Existing cookie sessions require fresh authorization.
 Valid saved grants continue to restore. The update does not change accounts, published content or the Dexie version.
-Nexus reads and public mute SSE subscriptions retain their current behavior.
+Nexus reads and public mute SSE subscriptions retain their current behavior (superseded by the social v1 port: mutes
+are private and polled, ADR-0014).
 
 Ring/Bitkit and Passport request `/pub/pubky.app/:rw`, `/priv/social/:rw` and `/priv/app.locks/content/:r`.
 They also request the embedded Shop/Chat storage scopes in [ADR 0025](../adr/0025-same-origin-shop-session.md).
+Since the social v1 port they also request `/pub/social/v1/:rw`, `/priv/social/v1/:rw` and `/priv/app.pubky/v1/:rw`
+(`SOCIAL_V1_APP_CAPABILITIES` in `src/config/auth.ts`), and a saved grant without them is signed out by the migration
+gate instead of being upgraded in place ([ADR 0026](../adr/0026-social-v1-migration-gate.md),
+[social v1 migration](social-v1.md)).
 Key recovery and browser signup obtain root grants. Feature access depends on the active grant's actual capabilities.
 A valid older grant without the Locks scopes can be upgraded for the same account from the Locks UI.
 

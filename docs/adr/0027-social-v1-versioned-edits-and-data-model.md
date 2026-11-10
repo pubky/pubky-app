@@ -7,6 +7,11 @@ Accepted — 2026-10-30
 Amended — 2026-10-31 (QA-1 BUG-2): media is collected on a post delete only, and only once every check says nothing
 else of the owner references it; edits and avatar replacement never delete media. See _Media lifetime_ below.
 
+Amended — 2026-11-04 (FIX-5, Nexus N5): v1 media is served at `{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}`
+(`NEXUS_V1_STATIC_PATH`, derived from the CDN runtime value); Nexus keeps no metadata for a v1 file, so another user's
+v1 attachment is typed from its URI; a signup PUTs the profile naming the avatar before the avatar's bytes (A7). See
+_Media_ below and `docs/data-patterns.md`, _Media reads_.
+
 Amended — 2026-11-09 (FIX-7): every Nexus call is built under the `/v1` API, which serves the stored kind names and
 drops the bookmark, file-details and tag `relationship` fields; the local vocabulary stays `short`/`long` and the
 Nexus services fold every response once. One call stays on the frozen `/v0`. See _Nexus API version_ below.
@@ -53,8 +58,9 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   both `postReferenceSpellings` (replies, collection membership and counts, validators, the Locks announcement).
 - **Media** is hashed (`hashMedia` + `buildFile`), PUT once, and rowed as `owner:hash` with the upload's
   `content_type`, `size` and `name`. The homeserver is asked `exists` before the PUT, so a rollback never deletes a
-  file another post already references; the per-tab timestamp-id guard is gone. The CDN URL keeps its path with the
-  hash as the id (D6; v1 rendering waits for Nexus N5).
+  file another post already references; the per-tab timestamp-id guard is gone. A v1 file is rendered from the Nexus
+  route `{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}` (`NEXUS_V1_STATIC_PATH` in `src/config/nexus.ts`,
+  FIX-5, Nexus N5); 0.x files and every avatar stay on `/static` (D6: no app-side homeserver fallback).
 - **Articles** write the cover in `cover_image`; `attachments` hold inline media only and `attachment:{n}` indexes
   them directly. One reader, `resolveArticleCover`, serves the three stored shapes (ADR-0023 amendment).
 - **Collections** write `{ uri, note }` items through `toNewInput` / `toStored` + `encodeContent`; notes are kept.

@@ -86,7 +86,8 @@ field is ignored.**
   ghosts), and "a collection you follow was updated" stops. A local recomputation would be a new feature.
 - Cross-device bookmark changes appear at the next sign-in or local database reset (the bootstrap and resync
   LISTs), not live and not on a plain reload, which restores the session without bootstrapping. A bookmarks event
-  stream is a follow-up, and a private stream waits on the same SDK fix as the mutes one (ADR-0014).
+  stream is a follow-up, and a private stream has the same session-lease exposure as the mutes one (ADR-0014,
+  pubky/pubky-homeserver#798): it waits until the SDK bounds that lease or the team accepts the exposure.
 - The first bootstrap on a device costs one GET per bookmark; later ones only GET new filenames.
 - The 0.x copy of an un-bookmarked post stays on the homeserver and in Nexus until Nexus stops indexing
   `/pub/pubky.app/bookmarks/`; it is invisible in the app.

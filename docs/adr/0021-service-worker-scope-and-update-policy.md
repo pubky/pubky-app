@@ -3,8 +3,8 @@
 ## Status
 
 Accepted — 2026-09-15  
-Updated — 2026-10-30 (one-release exception for the social v1 cut-over: forced worker takeover, reverted in the
-following release; see _Amendment_)
+Updated — 2026-10-30 (exception for the social v1 cut-over: forced worker takeover; see _Amendment_)  
+Updated — 2026-11-10 (the revert is not tied to the following release; its timing is the team's call, see _Amendment_)
 
 ## Context
 
@@ -21,7 +21,7 @@ The app is local-first: Dexie is the data cache, TTL is the freshness mechanism,
 - **The network is not a reason to reload.** `reloadOnOnline: false`; the UI shows offline / online toasts instead.
 - **`public/` precaching is an allow-list** (`globPublicPatterns`), because public entries bypass Serwist's size limit and `exclude`.
 
-## Amendment — social v1 cut-over (one release only)
+## Amendment — social v1 cut-over (a bounded exception)
 
 The release that moves the app from `pubky-app-specs` 0.x to `pubky-social-specs` 1.x (`/pub/social/v1/`,
 ADR-0026) changes what the client writes to the homeserver. A page still running the previous bundle keeps
@@ -30,7 +30,7 @@ page: runtime config is memoized per load, the old bundle reads no version gate,
 even adopts the new grant through the `storage` event. The service worker lifecycle is the only channel that
 reloads an old page without its consent and without changing old code.
 
-For that one release, `src/sw.ts` ships with:
+From that release until the revert below, `src/sw.ts` ships with:
 
 - `skipWaiting: true`: the new worker activates as soon as it installs instead of waiting for the "Update
   available" toast.
@@ -48,16 +48,22 @@ navigation lands. The guards that benefit from this reload (the Dexie recreate l
 sign-out of un-migrated sessions in ADR-0026) are designed so that the reload converges them, not so that they
 depend on it.
 
-Accepted costs, for this release only: in-progress composition in an old tab is lost; the new-build tab that
+Accepted costs while the exception holds: in-progress composition in an old tab is lost (the composer persists no
+draft; deferring the reload for a dirty composer was declined on 2026-11-04); every later deploy also reloads open
+tabs without the consent toast; the new-build tab that
 triggered the install reloads too (it sits at the sign-in or migration gate, so nothing is lost); discovery
 still depends on the browser's `sw.js` check (immediate on any navigation, within
 `SW_UPDATE_CHECK_MIN_INTERVAL_MS` of a tab becoming visible, at most 24 h), so a tab that never triggers a
 check keeps writing 0.x until it does; `WindowClient.navigate` on WebKit is unverified; no worker means no
 effect (dev without `SERWIST_DEV`, a rejected registration).
 
-Revert: the first release after the cut-over (PR-E2) restores `skipWaiting: false`, removes the listener and
-its test ("claims then navigates every window client"), and drops the rollout note from `docs/pwa.md`. The
-consent policy above stays the rule; this amendment records the exception.
+Revert: PR-E2 restores `skipWaiting: false`, removes the listener and its test ("claims then navigates every
+window client"), and drops the rollout note from `docs/pwa.md`. It is **not** tied to the release after the
+cut-over (D9): nobody can tell when the last 0.x tab is gone, so the forced policy stays until Nexus
+shows migrated users' 0.x writes at about zero, or for a period the team picks; keeping it costs only the
+consented-update toast, since every deploy meanwhile reloads open tabs. The revert date is the team's decision and
+is recorded in `docs/migrations/social-v1.md` when taken. The consent policy above stays the rule; this amendment
+records the exception.
 
 ## Consequences
 
@@ -87,7 +93,7 @@ Would double-cache data the app already keeps in Dexie and let a failed fetch re
 ### Keep `skipWaiting: true` and reload on `controllerchange`
 
 Simpler, but reloads every tab the moment a deploy lands, mid-composition included. Rejected in favour of consent;
-used deliberately for exactly one release by the _Amendment_ above.
+used deliberately, for a bounded time, by the _Amendment_ above.
 
 ### A Next `/offline` route precached via `additionalPrecacheEntries`
 

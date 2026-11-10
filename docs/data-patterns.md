@@ -16,6 +16,8 @@ const id = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035QZPT4QG00';
 const COMPOSITE_ID_DELIMITER = ':' as const;
 ```
 
+A post's composite id is form-agnostic: a v1 post is a directory of versions (`/pub/social/v1/posts/{id}/{editId}.json`, ADR-0027), and `buildCompositeIdFromPubkyUri` takes the segment after `posts` from a versionless reference, a version path and the 0.x spelling (`/pub/pubky.app/posts/{id}`) alike, so one post has one key whichever form a Nexus response or a 0.x reference spells. The reverse direction is `postReferenceSpellings(pubky, id)` (`src/core/pipes/post/post.reference.ts`): every lookup by URI matches both spellings, and every new reference is written in the v1 one (`docs/local-first.md`).
+
 A file's composite id is `owner:hash`: v1 media lives at `files/{hash}.{ext}`, and `buildCompositeIdFromPubkyUri` strips the extension for the `files` domain (a 0.x file id has no dot). Every file-keyed table (`file_details`, the local files store) is keyed that way, so a v1 upload and a 0.x row never share a key.
 
 ### Utilities
@@ -222,14 +224,22 @@ class PostController {
   }
 }
 
-// Application also normalizes data before persisting
+// Application also normalizes data before persisting: a stored-object edit is a fenced
+// read-modify-write of the published bytes, never a rebuild from the local row
 // Real: src/core/application/profile/profile.ts
 class ProfileApplication {
   private static async commitChanges({ pubky, changes }) {
-    const published = UserNormalizer.fromPublished(await HomeserverService.getFreshJson(userUriBuilder(pubky)));
-    const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
-    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
-    await LocalProfileService.updateDetails(user, pubky);
+    await this.withProfileLock(pubky, async () => {
+      const url = buildUri(pubky, 'user');
+      const fence = HomeserverService.createWriteFence();
+      const user = await retryHomeserverWriteAfterReread(fence, async () => {
+        const stored = await HomeserverService.getFreshBytes(url); // every retry pass reads again
+        const next = this.applyToStored({ url, stored, changes }); // decodeObject → applyChanges (a spread: `$unknown` survives) → encodeObject
+        await HomeserverService.putBlob({ url, blob: next.body, fence });
+        return next.user;
+      });
+      await LocalProfileService.updateDetails(user, pubky); // once, after the write landed
+    });
   }
 }
 ```
@@ -279,6 +289,11 @@ read-modify-write of the stored object: `getFreshBytes(buildUri(pubky, 'user'))`
 no fallback to the 0.x profile, which only an un-migrated account has, and `AuthApplication.userIsSignedUp` probes
 the v1 profile alone.
 
+**Feeds.** A feed's id is the hash of its filter (`buildFeed` derives it from the filter alone, `FeedNormalizer`), so it
+changes on every filter edit: a save writes the new file, swaps the local row and deletes the old file through
+`deletionPaths`, and `/feed/<id>` deep links to the old id stop resolving (an accepted reduction). The migrator derives
+the id of every 0.x feed it copies the same way, so a migrated feed's id changes once.
+
 **App files.** Settings and `last_read` are read v1 → 0.x → create: the v1 file when it exists, else the 0.x file,
 else defaults (settings) or a cursor at the current time (`last_read`). The first `SettingsApplication.initializeSettings`
 and the first `BootstrapApplication.initialize` after the gate write the v1 file from the 0.x one (fenced; the
@@ -321,6 +336,8 @@ All tables defined in `src/core/database/franky/franky.ts`.
 ### Schema changes
 
 `franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
+
+Version history: 3 → 4 on 2026-10-30 for the social v1 port (`docs/migrations/social-v1.md`): the index map did not change, but value shapes inside existing columns did (feed enums became the data model's strings, file ids became `owner:hash`, post `uri` spellings changed, bookmarks became locally owned), and a recreate is the only way to prove that every client starts clean. The default lives in `src/libs/env/env.ts` and `.env.example`, and the Docker workflows pass the same value as a build arg, so a bump is the app change plus a CI-task PR. A second mismatch in one page lifetime (a tab of another build recreating the database underneath) is refused with `DatabaseErrorCode.VERSION_CONFLICT` and the recovery screen says "Close other Pubky tabs, then retry." (the loop-breaker, ADR-0019).
 
 ### User Tables
 
@@ -370,11 +387,11 @@ The three relationship objects are built by `pubky-social-specs` and written onl
 (`putBlob` of `built.body`); the 0.x copy of each is never written again. Deletion differs per object because of
 where the copies can be found (ADR-0014, ADR-0020):
 
-| Object | Path (`pubky-social-specs`)                                                                                                                                                                                   | Write                                                                                                                                                     | Delete                                                                                                                                                                                                                                                       | Read                                                                                                                                                                                                     |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tag    | `/pub/social/v1/tags/{hash}.json`; the hash covers the target and the stored label. Target: the post reference `buildUri(author, 'post', id)` or the profile URL `buildUri(user, 'user')`, never the bare key | `TagNormalizer.from` → `buildTag`; the stored label is trimmed and ASCII-lowercased (`canonicalizeTagLabel`, also the fold hashtags and the composer use) | The viewer's file is resolved, never rebuilt: the local `TagMutation.uri`, else Nexus `tag_uri`, both through `TagNormalizer.toOwnTagUri` and the session `canWrite` preflight, then one DELETE (#2832). No `deletionPaths`: the 0.x copy has a different id | Nexus (tags are public and indexed)                                                                                                                                                                      |
-| Follow | `/pub/social/v1/follows/{followee}.json`                                                                                                                                                                      | `FollowNormalizer.to` → `buildFollow`                                                                                                                     | `FollowNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'follow' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent` (a 404 is an already absent copy)                                                                                | Nexus; `UserApplication.ensureModerationFollow` probes `exists(buildUri(follower, 'follow', bot))` on the v1 path only (`privacy.moderationBot` in settings is the idempotency guard)                    |
-| Mute   | `/priv/social/v1/mutes/{mutee}.json`, **private**: only the owner's session reads it, no indexer sees it                                                                                                      | `MuteNormalizer.to` → `buildMute`                                                                                                                         | `MuteNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'mute' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent`                                                                                                                      | `MuteApplication.fetchMutedUsers` LISTs `/priv/social/v1/mutes/` only (`parseUri(url).kind === 'mute'`, no union with the 0.x directory); live changes via the session-bound event stream on that prefix |
+| Object | Path (`pubky-social-specs`)                                                                                                                                                                                   | Write                                                                                                                                                     | Delete                                                                                                                                                                                                                                                       | Read                                                                                                                                                                                                                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tag    | `/pub/social/v1/tags/{hash}.json`; the hash covers the target and the stored label. Target: the post reference `buildUri(author, 'post', id)` or the profile URL `buildUri(user, 'user')`, never the bare key | `TagNormalizer.from` → `buildTag`; the stored label is trimmed and ASCII-lowercased (`canonicalizeTagLabel`, also the fold hashtags and the composer use) | The viewer's file is resolved, never rebuilt: the local `TagMutation.uri`, else Nexus `tag_uri`, both through `TagNormalizer.toOwnTagUri` and the session `canWrite` preflight, then one DELETE (#2832). No `deletionPaths`: the 0.x copy has a different id | Nexus (tags are public and indexed)                                                                                                                                                                                                                                                                    |
+| Follow | `/pub/social/v1/follows/{followee}.json`                                                                                                                                                                      | `FollowNormalizer.to` → `buildFollow`                                                                                                                     | `FollowNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'follow' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent` (a 404 is an already absent copy)                                                                                | Nexus; `UserApplication.ensureModerationFollow` probes `exists(buildUri(follower, 'follow', bot))` on the v1 path only (`privacy.moderationBot` in settings is the idempotency guard)                                                                                                                  |
+| Mute   | `/priv/social/v1/mutes/{mutee}.json`, **private**: only the owner's session reads it, no indexer sees it                                                                                                      | `MuteNormalizer.to` → `buildMute`                                                                                                                         | `MuteNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'mute' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent`                                                                                                                      | `MuteApplication.fetchMutedUsers` LISTs `/priv/social/v1/mutes/` only (`parseUri(url).kind === 'mute'`, no union with the 0.x directory); another session's changes arrive by the `MuteListSyncCoordinator` poll (start, visible, `online`, every 30 s), never a session-bound event stream (ADR-0014) |
 
 ## Quick Checklist
 

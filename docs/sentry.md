@@ -21,6 +21,10 @@ Every `Pulse.*` capture call is a no-op until `Pulse.init()` runs, and it never 
 
 The migration gate (ADR-0026) captures one event per (account, code) per page for a run that did not pass: `Err.server(SERVICE_UNAVAILABLE)` for an unreachable or full homeserver, `Err.server(UNKNOWN_ERROR)` for an unsupported epoch or a thrown engine error, `Err.auth(FORBIDDEN)` for a scope refusal after adoption. The context carries status, code, attempt and the per-outcome counts only; the report's `skipped` paths, `notes`, `droppedValues` and `current` are the user's own file names and never leave the browser (`src/libs/social-migration/report-telemetry.ts`). A finished run with skips is `Logger.info` only.
 
+### Data model refusals (`ErrorService.SocialSpecs`)
+
+A refusal by `pubky-social-specs` (a limit, an invalid reference, an unknown kind) reaches Sentry as `Err.validation(INVALID_INPUT)` tagged `error.service: pubky-social-specs`, built by `toSpecsValidationError` in the pipe that called the package (`src/core/pipes/specs.errors.ts`; three sites catch the package's `ValidationError` and re-map it by hand, and other app-side validations tag the same service without a package throw, see `docs/error-handling.md`). Its context holds the package's structured `code`, `field` and `limit` plus what the caller passed as its context: the owner key, the post or file id, the URI, and for a tag the label and for a file its name. Keys and `pubky://` URIs are redacted by the scrubber (_Privacy_); a post body is never attached. A new caller keeps to identifiers and must not add free text.
+
 ## Capture rule
 
 > Throw via `Err.*` factories. Do **not** call `Sentry.captureException` or `Pulse.captureException` directly anywhere except the single `Pulse.captureException` inside `createAppError()` (`src/libs/error/error.factories.ts`) and the two boundaries `app/error.tsx` and `app/global-error.tsx` — and in those two files only for non-`AppError` instances.
