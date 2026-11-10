@@ -59,6 +59,8 @@ export function PubchiSettings() {
     currentSigner,
     loading,
     enrollmentLoaded,
+    syncStatus,
+    retrySync,
     enabled,
   } = usePubchiEnrollment();
 
@@ -73,6 +75,20 @@ export function PubchiSettings() {
         title="Pubchi"
         description="Create a personal bot identity bound to your Pubky account."
       >
+        {syncStatus === 'error' || syncStatus === 'rate-limited' ? (
+          <div className="mx-6 flex flex-col gap-2 rounded-md border p-3">
+            <Typography role="status" size="sm">
+              {syncStatus === 'error'
+                ? 'Pubchi could not sync. Your current data is still available.'
+                : 'Pubchi sync is paused briefly. It will retry automatically.'}
+            </Typography>
+            {syncStatus === 'error' ? (
+              <Button type="button" variant="outline" size="sm" onClick={retrySync}>
+                Retry sync
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         {needsReapproval ? (
           <div className="flex flex-col gap-3 px-6" data-testid="pubchi-degraded-session">
             <Typography size="sm">{PUBCHI_DEGRADED_SESSION_MESSAGE}</Typography>

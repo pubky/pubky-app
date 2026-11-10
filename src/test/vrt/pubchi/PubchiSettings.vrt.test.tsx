@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PubchiSyncStatus } from '@/hooks/usePubchiEnrollment/usePubchiEnrollment.types';
 import { PUBCHI_SETTINGS_SURFACE, PubchiSettings } from '@/templates/Settings/Pubchi/Pubchi';
 import { matchVrtElementScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
-import { VRT_VIEWPORT_DESKTOP } from '@/test-utils/vrt.viewports';
+import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 
 const OWNER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const BOT = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -68,6 +69,8 @@ const enrollment = {
   currentSigner: THIS_SIGNER as string | undefined,
   loading: false,
   enrollmentLoaded: true,
+  syncStatus: 'idle' as PubchiSyncStatus,
+  retrySync: vi.fn(),
   enabled: true,
 };
 
@@ -154,6 +157,9 @@ function botWithPanels() {
 }
 
 describe('PubchiSettings — visual regression', () => {
+  beforeEach(() => {
+    enrollment.syncStatus = 'idle';
+  });
   it('guards the production surface marker', async () => {
     bindWithDevices();
     const screen = await renderForVRT(<PubchiSettings />, { viewport: VRT_VIEWPORT_DESKTOP });
@@ -183,6 +189,30 @@ describe('PubchiSettings — visual regression', () => {
     const screen = await renderForVRT(<PubchiSettings />, { viewport: VRT_VIEWPORT_DESKTOP });
     await matchVrtElementScreenshot(screen.getByTestId(PUBCHI_SETTINGS_SURFACE), 'pubchi-settings-bot-panels-desktop');
   });
+
+  for (const [viewportName, viewport] of [
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const) {
+    it.each(['error', 'rate-limited'] as const)(
+      `captures sync %s feedback on the ${viewportName} settings surface`,
+      async (syncStatus) => {
+        enrollment.binding = undefined;
+        enrollment.pubchi = undefined;
+        enrollment.config = undefined;
+        enrollment.devices = [];
+        enrollment.currentSigner = undefined;
+        enrollment.needsReapproval = false;
+        enrollment.syncStatus = syncStatus;
+        const screen = await renderForVRT(<PubchiSettings />, { viewport });
+        await expect.element(screen.getByRole('status')).toBeVisible();
+        await matchVrtElementScreenshot(
+          screen.getByTestId(PUBCHI_SETTINGS_SURFACE),
+          `pubchi-settings-sync-${syncStatus}-${viewportName}`,
+        );
+      },
+    );
+  }
 
   it('captures Ring re-approval on the production settings surface', async () => {
     bindWithDevices();
