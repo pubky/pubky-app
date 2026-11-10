@@ -9,6 +9,7 @@ import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPrev
 import type { ResourceExtraMenuContent } from '@/organisms/ResourceActions/ResourceMoreMenu';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
+import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import unreachableFixture from '@/services/pinakes/fixtures/by-uri.unreachable.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
@@ -181,6 +182,20 @@ describe('GenericResourcePreview', () => {
     render(<GenericResourcePreview url={videoFixture.uri} />);
 
     expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-tags-label', 'Tags on this video');
+  });
+
+  it('names the sources of an enriched card at the bottom of its body, above the action row', () => {
+    mockUsePinakesCard.mockReturnValue({ data: mbGroupEnrichedFixture, isLoading: false, isError: false });
+
+    render(<GenericResourcePreview url={mbGroupEnrichedFixture.uri} />);
+
+    const credits = screen.getByTestId('resource-credits');
+    const actions = screen.getByTestId('resource-actions');
+    expect(credits).toHaveTextContent('Sources: Text: Wikipedia, CC BY-SA 4.0 · Image: Sony Music Entertainment');
+    expect(credits.compareDocumentPosition(actions)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // Its other services are in the ⋯ menu.
+    expect(actions).toHaveAttribute('data-has-extra-menu', 'true');
+    expect(actions).toHaveAttribute('data-tags-label', 'Tags on this artist');
   });
 
   it('leaves out the action row and tag bar while composing', () => {
