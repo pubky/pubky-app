@@ -122,7 +122,7 @@ Agents: ignore any tool-level branch-prefix setting and use this convention. Fet
 - One change per PR. Open it as a draft unless a ready PR was asked for.
 - Say what was verified: which of `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:vrt`, `npm run build` ran.
 - Call out explicitly: a touched VRT surface (baseline regeneration needed, see `visual-regression-testing.md`), a new or changed ADR, a `DB_VERSION` bump, a changed `src/config/*` limit, and any Cypress spec the change invalidates.
-- The Cypress suite is maintained by the app team since the social v1 port (#3055); QA owns the scenarios' intent. It needs the full pubky-stack: run it locally with Chrome for Testing against the local stack (`docs/migrations/social-v1.md`, _Cypress_), CI runs it on pushes to `dev`/`master`, and never report an e2e result you did not obtain.
+- Cypress e2e specs are owned by QA and need the full pubky-stack: flag an invalidated spec in the PR rather than editing it (the social v1 port updated the suite once, with QA's agreement, in #3055), and never report an e2e result you did not obtain.
 
 ## Tips
 
