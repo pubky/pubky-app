@@ -444,7 +444,9 @@ describe('a lock payment retry that reuses a saved bundle', () => {
     ['the session is replaced', () => useAuthStore.setState({ session: session() })],
   ])("submits nothing when %s during the retry's task lookup", async (_name, change) => {
     vi.spyOn(LocksService, 'generateBundleId').mockResolvedValue('B'.repeat(26));
-    const submitProof = vi.spyOn(LocksService, 'submitProof').mockResolvedValue(asOpaque({ status: 'pending' }));
+    const submitProof = vi
+      .spyOn(LocksService, 'submitProof')
+      .mockResolvedValue({ status: 'pending', readerNotPayable: false });
     vi.spyOn(LocksService, 'lookupVerificationTask').mockImplementation(async () => {
       change();
       return null;
@@ -462,7 +464,9 @@ describe('a lock payment retry that reuses a saved bundle', () => {
 
   it('still submits the reused bundle while the session is current', async () => {
     vi.spyOn(LocksService, 'generateBundleId').mockResolvedValue('B'.repeat(26));
-    const submitProof = vi.spyOn(LocksService, 'submitProof').mockResolvedValue(asOpaque({ status: 'pending' }));
+    const submitProof = vi
+      .spyOn(LocksService, 'submitProof')
+      .mockResolvedValue({ status: 'pending', readerNotPayable: false });
     vi.spyOn(LocksService, 'lookupVerificationTask').mockResolvedValue(null);
     homeserver.putBytes.mockRejectedValueOnce(sdkError(503));
     onBackoff = () => {
@@ -471,7 +475,7 @@ describe('a lock payment retry that reuses a saved bundle', () => {
 
     await expect(
       LocksApplication.startPayment({ lockFile, lockUrl, readerPubky: USER, isRetry: false }),
-    ).resolves.toEqual({ bundleId: BUNDLE, status: 'pending' });
+    ).resolves.toEqual({ bundleId: BUNDLE, status: 'pending', readerNotPayable: false });
     expect(submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: BUNDLE }));
   });
 });
