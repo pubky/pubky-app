@@ -257,7 +257,8 @@ Deploy coupling is unchanged (D6/D10): the app follows the Nexus deploy; a `/v1`
 
 Retest: the FIX-7 checks were run in QA-3 on 2026-11-10 (_QA matrix_), one per row there: the feed and content filters
 and the content search with a kind filter (QA-3 item 6), an article from Nexus rendering as an article and keeping its
-kind through edit and lock (items 4 and 14), tag membership from `tag_uri` and the untag (item 8), the bootstrap
+kind through an edit (items 4 and 14; the lock path was not exercised, item 12 NOT RUN, and waits for the staging
+test), tag membership from `tag_uri` and the untag (item 8), the bootstrap
 without `files` with one `files/by_ids` request per page (item 7), an un-migrated author's image post for a v1 viewer
 (item 7), profile counts without `bookmarks` (item 10), labels with uppercase or whitespace (item 8), collections via
 `source=collection` (item 11), and the OG image of an image note (item 7; the article OG was not exercised). A post of
