@@ -477,4 +477,36 @@ describe('TagNormalizer', () => {
       });
     });
   });
+
+  describe('toOwnTagUri', () => {
+    it.each([
+      'pubky://viewer/pub/pubky.app/tags/0033RX1Y4ZTQ0',
+      'pubky://viewer/pub/mapky/tags/MAPKY01',
+      'pubky://viewer/pub/social/v1/tags/SOCIAL01',
+    ])('accepts a tag file in the viewer folder: %s', (tagUri) => {
+      expect(TagNormalizer.toOwnTagUri(tagUri, 'viewer')).toBe(tagUri);
+    });
+
+    it.each([
+      ['missing', undefined],
+      ['null', null],
+      ['another user', 'pubky://other/pub/pubky.app/tags/TAG01'],
+      ['a viewer key prefix', 'pubky://viewerx/pub/pubky.app/tags/TAG01'],
+      ['private storage', 'pubky://viewer/priv/pubky.app/tags/TAG01'],
+      ['not a tag file', 'pubky://viewer/pub/pubky.app/posts/POST01'],
+      ['the tags folder itself', 'pubky://viewer/pub/pubky.app/tags/'],
+      ['no app folder', 'pubky://viewer/pub/tags/TAG01'],
+      ['a parent segment', 'pubky://viewer/pub/../tags/TAG01'],
+      ['a query', 'pubky://viewer/pub/pubky.app/tags/TAG01?x=1'],
+      ['a fragment', 'pubky://viewer/pub/pubky.app/tags/TAG01#f'],
+      ['an encoded parent segment', 'pubky://viewer/pub/pubky.app/%2e%2e/tags/TAG01'],
+      ['an empty segment', 'pubky://viewer/pub/pubky.app//tags/TAG01'],
+      ['a backslash', 'pubky://viewer/pub/pubky.app\\tags/TAG01'],
+      ['an uppercase scheme', 'PUBKY://viewer/pub/pubky.app/tags/TAG01'],
+      ['a tags folder nested in app data', 'pubky://viewer/pub/pubky.app/posts/tags/TAG01'],
+      ['an app folder deeper than two segments', 'pubky://viewer/pub/a/b/c/tags/TAG01'],
+    ])('rejects %s', (_case, tagUri) => {
+      expect(TagNormalizer.toOwnTagUri(tagUri, 'viewer')).toBeUndefined();
+    });
+  });
 });

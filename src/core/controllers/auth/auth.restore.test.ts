@@ -2,11 +2,16 @@ import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { HomeserverEventApplication } from '@/application/homeserver-event/homeserver-event';
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
-import { NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX } from '@/config/notification-last-read-sync';
+import {
+  NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
+  NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX,
+} from '@/config/notification-last-read-sync';
 import { SettingsController } from '@/controllers/settings/settings';
+import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-event-stream/homeserver-event-stream';
 import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
@@ -162,6 +167,7 @@ describe('AuthController restored session lifecycle', () => {
 
   afterEach(() => {
     NotificationLastReadSyncCoordinator.resetInstance();
+    HomeserverEventStreamCoordinator.resetInstance();
     AuthController.cancelModerationFollow();
     useSignInStore.getState().reset();
     useOnboardingStore.getState().reset();
@@ -369,18 +375,23 @@ describe('AuthController restored session lifecycle', () => {
     );
     const freshRead = vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2_000);
     vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(0);
-    const stream = vi.spyOn(NotificationApplication, 'subscribeLastReadEventStream').mockImplementation(
+    const stream = vi.spyOn(HomeserverEventApplication, 'subscribeUserEventStream').mockImplementation(
       async () =>
         new ReadableStream({
           start(controller) {
-            controller.enqueue({ cursor: 'fresh-boundary', eventType: 'PUT' });
+            controller.enqueue({
+              cursor: 'fresh-boundary',
+              eventType: 'PUT',
+              path: NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
+            });
           },
         }),
     );
     const cursorKey = `${NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX}${pubkyA}`;
-    const coordinator = NotificationLastReadSyncCoordinator.getInstance();
-    coordinator.setRoute(`/post/${pubkyA}/post-id`);
-    coordinator.start();
+    const eventStream = HomeserverEventStreamCoordinator.getInstance();
+    eventStream.setRoute(`/post/${pubkyA}/post-id`);
+    NotificationLastReadSyncCoordinator.getInstance().start();
+    eventStream.start();
     const restore = AuthController.restorePersistedSession();
     await vi.waitFor(() => expect(profileLookup).toHaveBeenCalledOnce());
 

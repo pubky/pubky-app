@@ -180,12 +180,16 @@ export type NexusTag = {
   taggers_count: number;
   /** Whether the viewer has a relationship with any tagger */
   relationship: boolean;
+  /** The viewer's own tag file for this label; null when they have not tagged it. Absent in rows cached before Nexus returned it. */
+  tag_uri?: string | null;
 };
 
 /** List of users who applied a specific tag */
 export type NexusTaggers = {
   relationship: boolean;
   users: Pubky[];
+  /** The viewer's own tag file for this label; null when they have not tagged it. */
+  tag_uri?: string | null;
 };
 
 /** Trending/hot tag with engagement metrics */
