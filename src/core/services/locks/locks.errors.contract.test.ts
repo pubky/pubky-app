@@ -353,12 +353,19 @@ describe('Lock Server creator errors through the pinned SDK and LocksService', (
     expectNothingReported();
   });
 
-  it('rejects an unknown setup status as one reported error, not a sign-in prompt', async () => {
+  // SDK 0.1.0 validates the setup-status enum itself, so its InvalidInput reaches toLocksError before our
+  // schema runs. The schema's Validation INVALID_INPUT fallback is covered with a mocked SDK in locks.test.ts.
+  it('rejects an unknown setup status in the SDK as one reported server error, not a sign-in prompt', async () => {
     stubLockServer({ status: 200, body: JSON.stringify({ status: 'pending_review' }) });
 
     const error = await rejection(LocksService.lookupPaykitSetupStatus('BTC'));
 
-    expect(error).toMatchObject({ category: ErrorCategory.Server, cause: { name: 'InvalidInput' } });
+    expect(error).toMatchObject({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.UNKNOWN_ERROR,
+      operation: 'LocksService.lookupPaykitSetupStatus',
+      cause: { name: 'InvalidInput', message: expect.stringContaining('invalid paykit setup status response') },
+    });
     expect(isAppError(error) && requiresLogin(error)).toBe(false);
     expectReportedOnce(error);
   });
