@@ -10,7 +10,7 @@ import type {
   TLocksPollReport,
   TPaykitConnectionState,
   TUnlockedContent,
-  TVerificationStatus,
+  TVerificationTask,
 } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { TPayToUnlockStage, UsePayToUnlockParams, UsePayToUnlockResult } from './usePayToUnlock.types';
@@ -166,7 +166,12 @@ export function usePayToUnlock({
     return true;
   };
 
-  const applyStatus = (gen: number, bundleId: string, status: TVerificationStatus, freshDownload = false): boolean => {
+  const applyStatus = (
+    gen: number,
+    bundleId: string,
+    { status, readerNotPayable }: Pick<TVerificationTask, 'status' | 'readerNotPayable'>,
+    freshDownload = false,
+  ): boolean => {
     if (status === 'completed') {
       setConnectionState(null);
       setIsConnectionPending(false);
@@ -179,6 +184,11 @@ export function usePayToUnlock({
       checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
       setIsConnectionPending(false);
+      // No toast: the generic ones say to try again, which cannot help until the wallet changes.
+      if (readerNotPayable) {
+        setStage('reader-not-payable');
+        return false;
+      }
       toast({
         variant: 'error',
         description:
@@ -304,7 +314,7 @@ export function usePayToUnlock({
         stallNotBefore = notBefore;
         armStallTimer();
       }
-      if (applyStatus(gen, bundleId, task.status, freshDownload)) return true;
+      if (applyStatus(gen, bundleId, task, freshDownload)) return true;
       stop();
       return false;
     });
@@ -434,13 +444,13 @@ export function usePayToUnlock({
         if (generation.current === gen) setStage('region-blocked');
         return;
       }
-      const { bundleId, status } = started;
+      const { bundleId } = started;
       const lockId = LockContentParser.lockIdFromUrl(lockUrl);
       if (lockId) onPurchased(lockId);
       if (generation.current !== gen) return;
       // The submission only reports lifecycle now, so the connection state is unknown until the
       // loop reads it — the QR appears one round trip later.
-      if (applyStatus(gen, bundleId, status)) startPolling(gen, bundleId, true);
+      if (applyStatus(gen, bundleId, started)) startPolling(gen, bundleId, true);
     } catch (error) {
       // Already reported by the Err factory. Try again replays the saved id; a failure that started
       // on the install screen goes back there, the only screen whose button always checks the wallet.
@@ -487,19 +497,19 @@ export function usePayToUnlock({
         // An ended payment is settled by the lookup alone: submitting it again would only echo the
         // same status back.
         if (resolved?.kind === 'terminal') {
-          applyStatus(gen, resolved.bundleId, resolved.status);
+          applyStatus(gen, resolved.bundleId, resolved);
           return;
         }
         if (resolved?.task) {
           const { bundleId, task } = resolved;
           if (task.status === 'completed') {
-            applyStatus(gen, bundleId, task.status);
+            applyStatus(gen, bundleId, task);
             return;
           }
           // A task that is already running needs no second submission: the connection state has its
           // own lookup now, and re-submitting would only re-confirm what the lookup just said.
           setWalletSetupNeeded(task.walletSetupNeeded);
-          if (applyStatus(gen, bundleId, task.status)) {
+          if (applyStatus(gen, bundleId, task)) {
             startPolling(gen, bundleId, true, { admissionDeadlineAt: task.admissionDeadlineAt });
           }
           return;

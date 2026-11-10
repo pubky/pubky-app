@@ -1,14 +1,16 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { isAppError } from '@/libs/error/error.utils';
+import { isAppError, isRetryable } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { LOCKS_UNLOCK_POLL_CALL_SITES } from '@/libs/observability/sentry.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksService } from './locks';
+import { LOCKS_REQUEST_TIMEOUT_MS, LOCKS_TRANSFER_TIMEOUT_MS, READYZ_TIMEOUT_MS } from './locks.utils';
 
 const mocks = vi.hoisted(() => {
   const setLockServicePointer = vi.fn(async () => {});
@@ -422,12 +424,19 @@ describe('LocksService.isServerReady', () => {
     vi.unstubAllGlobals();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('returns true when /readyz responds 2xx', async () => {
     const fetchMock = vi.fn(async () => ({ ok: true }) as Response);
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(LocksService.isServerReady(origin)).resolves.toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith('https://lock.server/readyz', { method: 'GET' });
+    expect(fetchMock).toHaveBeenCalledWith('https://lock.server/readyz', {
+      method: 'GET',
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it('returns false when /readyz responds non-2xx (server not ready)', async () => {
@@ -446,6 +455,26 @@ describe('LocksService.isServerReady', () => {
       }),
     );
     await expect(LocksService.isServerReady(origin)).resolves.toBe(false);
+  });
+
+  it('aborts the probe and returns false when the server never answers', async () => {
+    const timeout = new AbortController();
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeout.signal);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new DOMException('timed out', 'TimeoutError')));
+          }),
+      ),
+    );
+    const ready = LocksService.isServerReady(origin);
+
+    timeout.abort();
+
+    await expect(ready).resolves.toBe(false);
+    expect(timeoutSpy).toHaveBeenCalledWith(READYZ_TIMEOUT_MS);
   });
 });
 
@@ -498,7 +527,13 @@ describe('LocksService (reader unlock)', () => {
     expect(mocks.fakeViewer.lookupVerificationTask).toHaveBeenCalledWith(
       expect.objectContaining({ creator: 'creator-b', bundle_id: 'b1' }),
     );
-    expect(task).toEqual({ status: 'completed', walletSetupNeeded: false, admissionDeadlineAt: null });
+    expect(task).toEqual({
+      status: 'completed',
+      walletSetupNeeded: false,
+      readerNotPayable: false,
+      admissionDeadlineAt: null,
+      completedAt: null,
+    });
   });
 
   it('lookupVerificationTask reports the wallet setup notice and the invoice deadline', async () => {
@@ -511,9 +546,38 @@ describe('LocksService (reader unlock)', () => {
     await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({
       status: 'pending',
       walletSetupNeeded: true,
+      readerNotPayable: false,
       admissionDeadlineAt: '2026-10-08T12:10:00Z',
+      completedAt: null,
     });
   });
+
+  const FAILURE_MESSAGES = [
+    ['reader is not payable', true],
+    ['invoice admission deadline exceeded', false],
+    ['paykit invoice admission failed', false],
+    ['Reader is not payable', false],
+    ['reader is not payable.', false],
+  ] as const;
+
+  it.each(FAILURE_MESSAGES)(
+    'lookupVerificationTask matches the failure message %j exactly',
+    async (failureMessage, readerNotPayable) => {
+      mocks.fakeViewer.lookupVerificationTask.mockResolvedValueOnce({
+        status: 'failed',
+        failure_message: failureMessage,
+        completed_at: '2026-10-08T09:52:51Z',
+      } as never);
+
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({
+        status: 'failed',
+        walletSetupNeeded: false,
+        readerNotPayable,
+        admissionDeadlineAt: null,
+        completedAt: '2026-10-08T09:52:51Z',
+      });
+    },
+  );
 
   it('lookupVerificationTask rejects an unknown lifecycle status', async () => {
     mocks.fakeViewer.lookupVerificationTask.mockResolvedValueOnce({ status: 'refunded' } as never);
@@ -529,8 +593,22 @@ describe('LocksService (reader unlock)', () => {
     const task = await LocksService.submitProof(bundle);
 
     expect(mocks.fakeViewer.submitProofBundle).toHaveBeenCalledWith(bundle);
-    expect(task).toEqual({ status: 'pending' });
+    expect(task).toEqual({ status: 'pending', readerNotPayable: false });
   });
+
+  // A replayed submission answers with the task it already has, which may have failed.
+  it.each(FAILURE_MESSAGES)(
+    'submitProof matches the failure message %j exactly',
+    async (failureMessage, readerNotPayable) => {
+      const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
+      mocks.fakeViewer.submitProofBundle.mockResolvedValueOnce({
+        status: 'failed',
+        failure_message: failureMessage,
+      } as never);
+
+      await expect(LocksService.submitProof(bundle)).resolves.toEqual({ status: 'failed', readerNotPayable });
+    },
+  );
 
   describe('submitProof when the Lock Server answers 451', () => {
     const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
@@ -819,5 +897,198 @@ describe('LocksService.lookupPaykitCreatorHeld', () => {
     await expect(LocksService.lookupPaykitCreatorHeld(params)).rejects.toMatchObject({
       category: ErrorCategory.Validation,
     });
+  });
+});
+
+describe('LocksService when the server never answers', () => {
+  const hang = () => new Promise<never>(() => {});
+  const creatorSession = asOpaque<LocksSdkSession>({
+    creatorPubky: () => 'pubkyaccount',
+    creator: {
+      setLockServicePointer: mocks.setLockServicePointer,
+      paykitSetupStatus: mocks.paykitSetupStatus,
+      registerGuardedResource: mocks.registerGuardedResource,
+      createContentLock: mocks.createContentLock,
+      deleteContentLock: mocks.deleteContentLock,
+      deleteGuardedResource: mocks.deleteGuardedResource,
+    },
+    lockServer: () => 'lockpubky',
+  });
+  const upload = () =>
+    LocksService.registerGuardedResource({ path: 'id-1', contentType: 'image/png', bytes: new Uint8Array([1]) });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    useAuthStore.setState({ currentUserPubky: 'account' });
+    mocks.getLockServer.mockReturnValue('lockserverpubky');
+    useLocksAuthStore.setState(locksAuthInitialState);
+    useLocksAuthStore.getState().init({ session: creatorSession, secret: 'secret-abc', creatorPubky: 'account' });
+    LocksService['locksClient'] = null;
+    LocksService['viewerClient'] = null;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The outcome of `call` after `ms`, or null while it is still pending. */
+  async function rejectionAfter(call: Promise<unknown>, ms: number) {
+    let settled = false;
+    const outcome = call.then(
+      () => {
+        settled = true;
+        return { rejected: false as const };
+      },
+      (error: unknown) => {
+        settled = true;
+        return { rejected: true as const, error };
+      },
+    );
+    await vi.advanceTimersByTimeAsync(ms);
+    return settled ? outcome : null;
+  }
+
+  it.each([
+    [
+      'generateConnectUrl',
+      mocks.fakeLocks.createConnectUrl,
+      () => LocksService.generateConnectUrl({ returnTo: 'https://staging.pubky.app', state: 'opaque-state' }),
+    ],
+    [
+      'exchangeSessionCode',
+      mocks.fakeLocks.exchangeFrontendSessionCode,
+      () => LocksService.exchangeSessionCode({ code: 'one-time', state: 'opaque-state' }),
+    ],
+    ['setLockServiceConfig', mocks.setLockServicePointer, () => LocksService.setLockServiceConfig()],
+    ['lookupPaykitSetupStatus', mocks.paykitSetupStatus, () => LocksService.lookupPaykitSetupStatus('BTC')],
+    ['createContentLock', mocks.createContentLock, () => LocksService.createContentLock(lockParams)],
+    ['deleteContentLock', mocks.deleteContentLock, () => LocksService.deleteContentLock('LOCK1')],
+    ['deleteGuardedResource', mocks.deleteGuardedResource, () => LocksService.deleteGuardedResource('id-1')],
+    [
+      'readContentLock',
+      mocks.readContentLockWithOptions,
+      () => LocksService.readContentLock('pubky://creatorb/pub/app.locks/lock1.json'),
+    ],
+    ['hasPaykitReceiver', mocks.hasPaykitDataWithOptions, () => LocksService.hasPaykitReceiver('reader')],
+    [
+      'submitProof',
+      mocks.fakeViewer.submitProofBundle,
+      () => LocksService.submitProof(asOpaque<Parameters<typeof LocksService.submitProof>[0]>({})),
+    ],
+    [
+      'lookupVerificationTask',
+      mocks.fakeViewer.lookupVerificationTask,
+      () => LocksService.lookupVerificationTask('creator', 'bundle-1'),
+    ],
+    [
+      'lookupPaykitConnectionState',
+      mocks.fakeViewer.lookupPaykitConnectionState,
+      () => LocksService.lookupPaykitConnectionState('creator', 'bundle-1'),
+    ],
+    [
+      'issueAccessCredential',
+      mocks.fakeViewer.issueAccessCredential,
+      () => LocksService.issueAccessCredential('creator', 'bundle-1'),
+    ],
+  ])('%s fails with a retryable timeout instead of waiting forever', async (name, mock, call) => {
+    vi.mocked(mock).mockImplementationOnce(hang);
+
+    const outcome = await rejectionAfter(call(), LOCKS_REQUEST_TIMEOUT_MS);
+
+    expect(outcome).toMatchObject({
+      rejected: true,
+      error: {
+        category: ErrorCategory.Timeout,
+        code: TimeoutErrorCode.REQUEST_TIMEOUT,
+        service: ErrorService.Locks,
+        operation: `LocksService.${name}`,
+      },
+    });
+    expect(outcome?.rejected && isAppError(outcome.error) && isRetryable(outcome.error)).toBe(true);
+  });
+
+  it.each([
+    ['registerGuardedResource', mocks.registerGuardedResource, upload],
+    [
+      'proxyReadGuardedResource',
+      mocks.fakeViewer.proxyReadGuardedResource,
+      () => LocksService.proxyReadGuardedResource('cred-abc', '/priv/app.locks/content/id-1'),
+    ],
+  ])('%s waits the longer file transfer limit before it times out', async (name, mock, call) => {
+    vi.mocked(mock).mockImplementationOnce(hang);
+    const request = call();
+
+    expect(await rejectionAfter(request, LOCKS_TRANSFER_TIMEOUT_MS - 1)).toBeNull();
+    const outcome = await rejectionAfter(request, 1);
+
+    expect(outcome).toMatchObject({
+      rejected: true,
+      error: { category: ErrorCategory.Timeout, operation: `LocksService.${name}` },
+    });
+  });
+
+  it('tags a polling read timeout with its report, so the repeat-report drop rule still applies', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockImplementationOnce(hang);
+    const report = { callSite: LOCKS_UNLOCK_POLL_CALL_SITES.payment, reportSuppressed: true as const };
+
+    const outcome = await rejectionAfter(
+      LocksService.lookupVerificationTask('creator', 'bundle-1', report),
+      LOCKS_REQUEST_TIMEOUT_MS,
+    );
+
+    expect(outcome).toMatchObject({ rejected: true, error: { context: report } });
+  });
+
+  it.each([
+    [
+      'exchangeSessionCode signs out a session',
+      () => {
+        mocks.fakeLocks.exchangeFrontendSessionCode.mockImplementationOnce(async () => {
+          await new Promise((resolve) => setTimeout(resolve, LOCKS_REQUEST_TIMEOUT_MS + 1));
+          return mocks.fakeSession;
+        });
+        return LocksService.exchangeSessionCode({ code: 'one-time', state: 'opaque-state' });
+      },
+      LOCKS_REQUEST_TIMEOUT_MS,
+      () => expect(mocks.fakeSession.signout).toHaveBeenCalledOnce(),
+    ],
+    [
+      'registerGuardedResource deletes an upload',
+      () => {
+        mocks.registerGuardedResource.mockImplementationOnce(async () => {
+          await new Promise((resolve) => setTimeout(resolve, LOCKS_TRANSFER_TIMEOUT_MS + 1));
+          return { guarded_resource: descriptor, creator: 'pubkybob' };
+        });
+        return upload();
+      },
+      LOCKS_TRANSFER_TIMEOUT_MS,
+      () => expect(mocks.deleteGuardedResource).toHaveBeenCalledWith(expect.objectContaining({ path: 'id-1' })),
+    ],
+    [
+      'createContentLock deletes a lock',
+      () => {
+        mocks.createContentLock.mockImplementationOnce(async () => {
+          await new Promise((resolve) => setTimeout(resolve, LOCKS_REQUEST_TIMEOUT_MS + 1));
+          return { lock_id: 'LATE1', content_lock_path: '/pub/app.locks/LATE1.json', content_lock: { creator: 'x' } };
+        });
+        return LocksService.createContentLock(lockParams);
+      },
+      LOCKS_REQUEST_TIMEOUT_MS,
+      () => expect(mocks.deleteContentLock).toHaveBeenCalledWith('LATE1'),
+    ],
+  ])('after a timeout, %s that lands late', async (_name, call, timeoutMs, expectUndone) => {
+    const outcome = await rejectionAfter(call(), timeoutMs);
+    expect(outcome).toMatchObject({ rejected: true, error: { category: ErrorCategory.Timeout } });
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    expectUndone();
+  });
+
+  it('leaves no timer behind once the server answers', async () => {
+    await LocksService.lookupPaykitSetupStatus('BTC');
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -17,6 +17,8 @@ const SERVER = 'tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy';
 const ROUTING_PACKET =
   'FSgcCvQf4IDHyAtpTkQvSSCN3RsLYv7QC1vNT3qOf9nhNFbL89xLKYGT7LAfAeBLX723CTWU1v5jzB2PCWZnDwAGZRcomIAAAACAAAAAAAEAAAAANHRrcnE4em13YjhhM205azE1Y3N1M3ExN3FtZmdxbnA5ZHNrYnJnOXVxMXJ5ZHB5eHA3cXkAAEEAAQAADhAAFgABDWxlZ2FjeS1jb29raWUEdGVzdAA=';
 const RELAY = 'https://pkarr.test';
+const creator = `pubky${SERVER}`;
+const lookupRoute = { method: 'POST', path: '/verification-task-lookups' };
 const bundle: TSubmittedProofBundle = {
   version: 1,
   bundle_id: '000G40R40M30E209185GR38E1W',
@@ -171,7 +173,7 @@ describe('pinned Locks SDK 0.1.0 region error contract', () => {
         terminal_reason: null,
       }),
     );
-    await expect(LocksService.submitProof(bundle)).resolves.toEqual({ status: 'pending' });
+    await expect(LocksService.submitProof(bundle)).resolves.toEqual({ status: 'pending', readerNotPayable: false });
     expect(Logger.error).not.toHaveBeenCalled();
     expect(sentry.captureAppError).not.toHaveBeenCalled();
     expect(Pulse.captureException).not.toHaveBeenCalled();
@@ -181,9 +183,6 @@ describe('pinned Locks SDK 0.1.0 region error contract', () => {
 // The second tap on the same lock looks the saved bundle id up before it submits anything. The pinned SDK
 // sends that lookup as its own POST, and a region refusal reaches it with the same error as the submission.
 describe('pinned Locks SDK 0.1.0 region error contract for the saved bundle id lookup', () => {
-  const lookupRoute = { method: 'POST', path: '/verification-task-lookups' };
-  const creator = `pubky${SERVER}`;
-
   it('exposes HTTP 451 on the lookup as the same InvalidInput Error the submission raises', async () => {
     const lookups = stubTransport(451, '{}', lookupRoute);
     const options = new LocksOptions().addPkarrRelay(RELAY);
@@ -229,5 +228,48 @@ describe('pinned Locks SDK 0.1.0 region error contract for the saved bundle id l
       expect(error).toMatchObject({ service: ErrorService.Locks, operation: 'LocksService.lookupVerificationTask' });
     }
     expect(sentry.captureAppError).toHaveBeenCalledTimes(4);
+  });
+});
+
+// The modal's not-payable screen depends on `failure_message` reaching the service through the real SDK. The SDK accepts
+// any non-empty wording, so this block cannot catch the Lock Server rewording it. Same body as a real staging response.
+describe('pinned Locks SDK 0.1.0 failed task contract', () => {
+  const COMPLETED_AT = '2026-10-08T09:52:51.22186Z';
+  const OUTCOMES = [
+    ['reader is not payable', true],
+    ['paykit invoice admission failed', false],
+  ] as const;
+  const failedTask = (failureMessage: string) =>
+    JSON.stringify({
+      creator,
+      bundle_id: bundle.bundle_id,
+      status: 'failed',
+      submitted_at: '2026-10-08T09:52:50.086318Z',
+      started_at: COMPLETED_AT,
+      completed_at: COMPLETED_AT,
+      failure_message: failureMessage,
+      status_message: null,
+      admission_deadline_at: null,
+      terminal_reason: null,
+    });
+
+  it.each(OUTCOMES)('reads %j from a task lookup', async (failureMessage, readerNotPayable) => {
+    stubTransport(200, failedTask(failureMessage), lookupRoute);
+
+    await expect(LocksService.lookupVerificationTask(creator, bundle.bundle_id)).resolves.toEqual({
+      status: 'failed',
+      walletSetupNeeded: false,
+      readerNotPayable,
+      admissionDeadlineAt: null,
+      completedAt: COMPLETED_AT,
+    });
+    expect(Logger.error).not.toHaveBeenCalled();
+  });
+
+  it.each(OUTCOMES)('reads %j from a proof submission', async (failureMessage, readerNotPayable) => {
+    stubTransport(200, failedTask(failureMessage));
+
+    await expect(LocksService.submitProof(bundle)).resolves.toEqual({ status: 'failed', readerNotPayable });
+    expect(Logger.error).not.toHaveBeenCalled();
   });
 });

@@ -347,17 +347,18 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    submitted again: that submission never reached the server.
 4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
    payload, reader pubky at the bundle's top level). Only **Try again** (or **I completed the
-   steps**) may replace an ended id: an automatic start that waited behind another submission and
-   finds every saved id ended returns that status for the modal to show, since the reader may have
-   just rejected the request in Bitkit. Replaying the same bundle is safe and creates no second
-   payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
-   afterwards, retrying for up to 10 minutes (its `admission_deadline_at`); Paykit then delivers the
-   payment request to the reader's wallet, and the app never sees an address or invoice. A reader
-   without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
-   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows
-   a setup notice in place of the handoff. A failed submission (network, rate limit) shows **Try
-   again**, which keeps the saved id. A submission the Lock Server refuses with **HTTP 451** (paid
-   unlocks are not offered in the reader's region) is not a failure: `LocksService.submitProof` returns
+   steps**, or **Check again** on the not-payable screen) may replace an ended id: an automatic
+   start that waited behind another submission and finds every saved id ended returns that status
+   for the modal to show, since the reader may have just rejected the request in Bitkit. Replaying
+   the same bundle is safe and creates no second payment request. The Lock Server answers
+   `pending` at once and creates the Paykit invoice afterwards, retrying for up to 10 minutes
+   (its `admission_deadline_at`); Paykit then delivers the payment request to the reader's
+   wallet, and the app never sees an address or invoice. A reader without a usable wallet or a
+   Paykit outage therefore ends the task `failed`, not the submission. While the server waits on
+   the reader's wallet it says so (`status_message`), and the modal shows a setup notice in
+   place of the handoff. A failed submission (network, rate limit) shows **Try again**, which
+   keeps the saved id. A submission the Lock Server refuses with **HTTP 451** (paid unlocks are
+   not offered in the reader's region) is not a failure: `LocksService.submitProof` returns
    `{ regionBlocked: true }` before any `Err.*` is built, so it is not logged and not sent to Sentry
    (the factories report on construction). `startPayment` passes it up as `regionBlocked`, and the
    modal lands on `region-blocked`: "Paid unlocks aren't available in your region yet." with an info
@@ -397,7 +398,20 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    An `expired` task stops waiting and shows "The payment was not completed. You can try again."
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
    interpreting `terminal_reason`. **Try again** starts a new payment as in step 3;
-   `failed` keeps its existing wallet-related guidance and retry handling.
+   `failed` keeps its existing wallet-related guidance and retry handling, except for the exact
+   `failure_message` `reader is not payable` (the wallet data exists but cannot receive payment
+   requests, or its key authorization fails verification). That lands on `reader-not-payable`: it
+   names the wallet as the cause, with no toast and no offer to try again. Its **Check again** works
+   like **Try again**, because the ended id stays failed even after the reader connects Bitkit to
+   this profile, so without it the lock could never be paid. Pressing it before anything is fixed
+   costs a new id and a failed task, and no charge: the attempt stops before Paykit creates an
+   invoice or address. Every path to a failed task reaches this screen, and on a reopen the attempt
+   that ended last (`completed_at`) decides it; the rank in step 1 still picks the id.
+   The string belongs to the Lock Server (its closed invoice-admission vocabulary, `docs/API.md` in
+   pubky/locks). The SDK only requires a non-empty `failure_message`, so the failed task contract
+   block in `locks.region.contract.test.ts` proves the field reaches the service, not its wording.
+   Re-check the string on each Lock Server upgrade: a rewording falls back to the generic screen,
+   and no test fails.
    A read that rejects backs its own loop off: each consecutive failure doubles that loop's
    interval up to `POLL_BACKOFF_MAX_MS` (15 s), so the link read goes 1, 2, 4, 8, 15 s and the task
    lookup 3, 6, 12, 15 s. Any answer (a null task included) and a return to the tab restore full
@@ -698,3 +712,5 @@ This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://gith
 Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
 
 The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`CONNECT_READY_AFTER_LOAD_MS`, `CONNECT_MOUNT_TIMEOUT_MS`). A page that failed to render, such as a JSON error body, is never shown (#3027).
+
+The pinned SDK takes no `AbortSignal`, so `LocksService` bounds every network request it makes through the SDK with `withLocksTimeout`: 30 s for a lookup or a small write, and 6 minutes for a request that carries a file's bytes (`registerGuardedResource`, `proxyReadGuardedResource`): the longest a user is expected to wait for a file. This is a UX limit, not a bandwidth guarantee: on a slow link, parallel uploads or downloads of large files can run out of it every time. A request that runs out of time fails with a retryable `Err.timeout`, so each screen shows the same failure state as for a network error. The request itself keeps running and a write may still land, so nothing retries a write automatically. When a late upload, content lock or session lands, the app tries to undo it: it deletes the upload or the lock, and signs out the session. An undo can fail, for example after a logout ended the session; the failure is reported, and the upload or lock stays on the server. A late proof submission needs no undo, because Try again resubmits the same saved bundle id. The setup dialog's server check builds the connect URL (up to 30 s) and then probes `/readyz` (up to 10 s), so it reports the server as unavailable within 40 s. `signout` has no limit of its own: logout waits for it at most `SIGNOUT_TIMEOUT_MS`, and the other callers (discarding a stale sign-in, undoing a late session) do not wait for it. Loading the SDK's wasm is not bounded (#3026).

@@ -6,8 +6,10 @@ import { addProfileTags } from '../support/profile';
 import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 
 const waitUntilStarterPackHasUsers = (tag: string) => {
-  const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
+    // The deadline starts when the poll runs: this wait is queued behind a full onboarding,
+    // so a Date.now() at the call can be spent before the first request.
+    const deadline = Date.now() + 90_000;
     const nexusOrigin = String(nexusUrl).replace(/\/$/, '');
     const poll = () => {
       cy.request({
