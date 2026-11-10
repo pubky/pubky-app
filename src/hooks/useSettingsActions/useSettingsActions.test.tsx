@@ -67,11 +67,11 @@ describe('useSettingsActions', () => {
     const { result } = renderHook(() => useSettingsActions());
 
     await act(async () => {
-      await result.current.setPlayers(['tidal'], ['youtube']);
+      await result.current.setPlayers(['tidal'], ['youtube'], 'podcasts');
       await result.current.setEmbedsUpFront(false);
     });
 
-    expect(mockSettingsController.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube']);
+    expect(mockSettingsController.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube'], 'podcasts');
     expect(mockSettingsController.setEmbedsUpFront).toHaveBeenCalledWith(false);
   });
 

@@ -258,6 +258,24 @@ describe('SettingsNormalizer', () => {
       expect(SettingsNormalizer.from({ media }).media).toEqual(media);
     });
 
+    it('keeps each kind’s players, dropping malformed ones, so they round-trip', () => {
+      const players = {
+        podcasts: { order: ['card', 'spotify'], hidden: ['youtube'] },
+        books: { order: [], hidden: [] },
+      };
+      const media = { ...defaultMediaPreferences, players };
+
+      expect(SettingsNormalizer.from({ media }).media).toEqual(media);
+      expect(
+        SettingsNormalizer.from({
+          media: asInvalid<typeof media>({ ...media, players: { ...players, music: { order: 1 } } }),
+        }).media,
+      ).toEqual(media);
+      expect(SettingsNormalizer.from({ media: asInvalid<typeof media>({ players: [] }) }).media).toEqual(
+        defaultMediaPreferences,
+      );
+    });
+
     it('should handle empty object gracefully', () => {
       const result = SettingsNormalizer.from({});
 
