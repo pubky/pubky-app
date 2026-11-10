@@ -3,14 +3,13 @@ import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.jso
 import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
 import {
   CARD_PLAYER,
-  getEmbedTarget,
   getPlayerList,
   getPlayerTarget,
   getPlayerTargets,
   getUpFrontTarget,
   isCardFirst,
+  isPlayable,
   isRankedOrder,
-  isSong,
   PlayerProvider,
   PROVIDER_NAMES,
 } from './resourcePlayer.utils';
@@ -140,6 +139,45 @@ describe('getPlayerTarget', () => {
     dockHeights.forEach((height) => expect(height).toBeLessThanOrEqual(166));
   });
 
+  it('plays Apple Music songs, albums and playlists in Apple’s embed, which needs a press inside', () => {
+    expect(getPlayerTarget('https://music.apple.com/song/1440717826')).toMatchObject({
+      provider: PlayerProvider.APPLE_MUSIC,
+      name: 'Apple Music',
+      link: 'https://music.apple.com/us/song/1440717826',
+      src: 'https://embed.music.apple.com/us/song/1440717826',
+      layout: { kind: 'audio', height: 175, dockHeight: 175 },
+      autoplay: false,
+    });
+    // An album's song (`?i=`) is that song.
+    expect(getPlayerTarget('https://music.apple.com/de/album/random-access-memories/617154241?i=617154366')?.src).toBe(
+      'https://embed.music.apple.com/de/song/617154366',
+    );
+    expect(getPlayerTarget('https://music.apple.com/us/album/random-access-memories/617154241')).toMatchObject({
+      src: 'https://embed.music.apple.com/us/album/617154241',
+      layout: { kind: 'audio', height: 450 },
+    });
+    expect(
+      getPlayerTarget('https://music.apple.com/us/playlist/todays-hits/pl.f4d106fed2bd41149aaacabb233eb5eb')?.src,
+    ).toBe('https://embed.music.apple.com/us/playlist/pl.f4d106fed2bd41149aaacabb233eb5eb');
+  });
+
+  it('plays Apple Podcasts shows and episodes in Apple’s embed', () => {
+    expect(
+      getPlayerTarget('https://podcasts.apple.com/us/podcast/lightning-in-x402/id1415720320?i=1000792990676'),
+    ).toMatchObject({
+      provider: PlayerProvider.APPLE_PODCASTS,
+      name: 'Apple Podcasts',
+      link: 'https://podcasts.apple.com/us/podcast/id1415720320?i=1000792990676',
+      src: 'https://embed.podcasts.apple.com/us/episode/1000792990676',
+      layout: { kind: 'audio', height: 175 },
+      autoplay: false,
+    });
+    expect(getPlayerTarget('https://podcasts.apple.com/us/podcast/darknet-diaries/id1296350485')).toMatchObject({
+      src: 'https://embed.podcasts.apple.com/us/podcast/1296350485',
+      layout: { kind: 'audio', height: 450 },
+    });
+  });
+
   it('plays a plain https audio file in the browser player', () => {
     expect(getPlayerTarget('https://example.com/files/episode.mp3')).toMatchObject({ element: 'audio' });
   });
@@ -154,7 +192,10 @@ describe('getPlayerTarget', () => {
     'https://www.deezer.com/episode/320429237',
     'https://tidal.com/artist/7429906',
     'https://tidal.com/track/3524506/x',
-    'https://music.apple.com/song/1440717826',
+    'https://music.apple.com/us/artist/daft-punk/5468295',
+    'https://music.apple.com/us/playlist/x/1440717826',
+    'https://podcasts.apple.com/us/podcast/darknet-diaries/1296350485',
+    'https://tycho.bandcamp.com/album/dive',
     'https://www.youtube.com/@Sefaofficial',
     'javascript:alert(1)',
   ])('offers no player for %s', (link) => {
@@ -227,12 +268,12 @@ describe('getPlayerTargets', () => {
   });
 
   it('offers nothing for a card on services we do not embed', () => {
-    expect(getPlayerTargets(card('https://music.apple.com/song/1440717826'))).toEqual([]);
+    expect(getPlayerTargets(card('https://tycho.bandcamp.com/album/dive'))).toEqual([]);
   });
 
   describe('with the viewer’s Players', () => {
     const song = card('https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq', [
-      { uri: 'https://music.apple.com/song/1440717826', site: 'Apple Music' },
+      { uri: 'https://tycho.bandcamp.com/track/awake', site: 'Bandcamp' },
       { uri: 'https://www.youtube.com/watch?v=5NV6Rdv1a3I', site: 'YouTube' },
       { uri: 'https://tidal.com/track/20115564', site: 'TIDAL' },
     ] as TPinakesAlsoOn[]);
@@ -296,7 +337,17 @@ describe('getPlayerList', () => {
 
   it('shows the viewer’s order first, then the services not in it, and the removed ones apart', () => {
     expect(getPlayerList({ playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube'] })).toEqual({
-      shown: ['tidal', 'spotify', 'vimeo', 'soundcloud', 'mixcloud', 'deezer', CARD_PLAYER],
+      shown: [
+        'tidal',
+        'spotify',
+        'vimeo',
+        'soundcloud',
+        'mixcloud',
+        'deezer',
+        'apple-music',
+        'apple-podcasts',
+        CARD_PLAYER,
+      ],
       removed: ['youtube'],
     });
   });
@@ -304,7 +355,18 @@ describe('getPlayerList', () => {
   it('shows a service a later version adds at the end, and leaves out ids it does not play', () => {
     const order = ['deezer', 'tidal', 'mixcloud', 'soundcloud', 'spotify', 'napster', 'vimeo'];
     expect(getPlayerList({ playerOrder: order, hiddenPlayers: ['bandcamp'] })).toEqual({
-      shown: ['deezer', 'tidal', 'mixcloud', 'soundcloud', 'spotify', 'vimeo', 'youtube', CARD_PLAYER],
+      shown: [
+        'deezer',
+        'tidal',
+        'mixcloud',
+        'soundcloud',
+        'spotify',
+        'vimeo',
+        'youtube',
+        'apple-music',
+        'apple-podcasts',
+        CARD_PLAYER,
+      ],
       removed: [],
     });
   });
@@ -315,7 +377,17 @@ describe('getPlayerList', () => {
 
   it('shows Card (no player) where the viewer put it, and never as removed', () => {
     expect(getPlayerList({ playerOrder: ['tidal', 'card'], hiddenPlayers: ['card', 'youtube'] })).toEqual({
-      shown: ['tidal', CARD_PLAYER, 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'deezer'],
+      shown: [
+        'tidal',
+        CARD_PLAYER,
+        'vimeo',
+        'spotify',
+        'soundcloud',
+        'mixcloud',
+        'deezer',
+        'apple-music',
+        'apple-podcasts',
+      ],
       removed: ['youtube'],
     });
   });
@@ -381,63 +453,6 @@ describe('isRankedOrder', () => {
   });
 });
 
-describe('getEmbedTarget', () => {
-  it.each([
-    [
-      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
-    ],
-    ['https://vimeo.com/1084537', 'https://player.vimeo.com/video/1084537?dnt=1'],
-    [
-      'https://open.spotify.com/track/1YQWosTIljIvxAgHWTp7KP',
-      'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
-    ],
-  ])('builds the service embed for %s without starting it on load', (link, src) => {
-    const target = getEmbedTarget(link);
-    expect(target?.src).toBe(src);
-    expect(target?.start).toBeUndefined();
-  });
-
-  it('drops SoundCloud’s auto_play and keeps its other parameters', () => {
-    const src = new URL(getEmbedTarget('https://soundcloud.com/artist/track')!.src);
-    expect(src.searchParams.has('auto_play')).toBe(false);
-    expect(src.searchParams.get('url')).toBe('https://soundcloud.com/artist/track');
-  });
-
-  it('builds TIDAL’s embed for its `/u` share link', () => {
-    expect(getEmbedTarget('https://tidal.com/track/3524506/u')?.src).toBe(
-      'https://embed.tidal.com/tracks/3524506?hideOverlays=true',
-    );
-  });
-
-  it('falls back to the card’s canonical link and aliases for a link with no embed', () => {
-    const link = 'https://example.com/share/3524506';
-    expect(getEmbedTarget(link)).toBeNull();
-    expect(getEmbedTarget(link, { uri: 'https://tidal.com/track/3524506' })?.src).toBe(
-      'https://embed.tidal.com/tracks/3524506?hideOverlays=true',
-    );
-    expect(getEmbedTarget(link, { uri: 'https://example.com/x', aliases: ['https://vimeo.com/1084537'] })?.src).toBe(
-      'https://player.vimeo.com/video/1084537?dnt=1',
-    );
-    expect(getEmbedTarget(link, { uri: 'https://example.com/x', aliases: [] })).toBeNull();
-  });
-
-  it('has none for a link on no such service or a plain audio file', () => {
-    expect(getEmbedTarget('https://example.com/a')).toBeNull();
-    expect(getEmbedTarget('https://example.com/a.mp3')).toBeNull();
-  });
-
-  it('has none for a service the viewer removed from Players, the card’s canonical link’s neither', () => {
-    expect(getEmbedTarget('https://vimeo.com/1084537', null, ['vimeo'])).toBeNull();
-    expect(
-      getEmbedTarget('https://example.com/share/1', { uri: 'https://tidal.com/track/3524506' }, ['tidal']),
-    ).toBeNull();
-    expect(getEmbedTarget('https://vimeo.com/1084537', null, ['tidal'])?.src).toBe(
-      'https://player.vimeo.com/video/1084537?dnt=1',
-    );
-  });
-});
-
 describe('getUpFrontTarget', () => {
   it.each([
     'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -455,11 +470,6 @@ describe('getUpFrontTarget', () => {
     expect(src.searchParams.has('auto_play')).toBe(false);
     expect(upFront.start).toBeUndefined();
     expect(upFront.autoplay).toBe(false);
-  });
-
-  it('is what getEmbedTarget shows up front for the same link', () => {
-    const link = 'https://open.spotify.com/track/1YQWosTIljIvxAgHWTp7KP';
-    expect(getUpFrontTarget(getPlayerTarget(link)!)).toEqual(getEmbedTarget(link));
   });
 
   it('keeps a plain audio file in the browser player, which then does not start on its own', () => {
@@ -489,60 +499,66 @@ const YOUTUBE_GET_LUCKY = {
   ],
 };
 
-describe('isSong', () => {
-  const video = (alsoOn: string[]) => ({
-    type: 'VideoObject',
-    type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'],
-    also_on: alsoOn.map((uri) => ({ uri })),
+describe('isPlayable', () => {
+  const typed = (uri: string, type: string, typePath: string[], alsoOn: string[] = []) => ({
+    uri,
+    type,
+    type_path: ['Thing', ...typePath, type],
+    also_on: alsoOn.map((link) => ({ uri: link })),
+    aliases: [],
   });
+  const SPOTIFY_TRACK = 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq';
 
-  it('is a MusicRecording, by its type or the deepest entry of its path, Also on or not', () => {
-    expect(isSong({ ...musicFixture, also_on: [] })).toBe(true);
-    expect(isSong({ type: null, type_path: ['Thing', 'CreativeWork', 'MusicRecording'], also_on: [] })).toBe(true);
-  });
-
-  it('is a video that is a track on Spotify, Deezer or TIDAL (YouTube’s Get Lucky)', () => {
-    expect(isSong(YOUTUBE_GET_LUCKY)).toBe(true);
-    expect(isSong(video(['https://open.spotify.com/intl-de/track/69kOkLUCkxIZYexIgSG8rq']))).toBe(true);
-    expect(isSong(video(['https://www.deezer.com/fr/track/67238735']))).toBe(true);
-    expect(isSong(video(['https://tidal.com/browse/track/20115564/u']))).toBe(true);
-  });
-
-  it('is no video on none of them as a track: an album, artist, playlist, episode or TIDAL video', () => {
-    expect(isSong(video([]))).toBe(false);
+  it('is any card whose own link is on a service with a player: a video, a song, an artist’s page', () => {
+    expect(isPlayable(YOUTUBE_GET_LUCKY)).toBe(true);
+    expect(isPlayable(typed('https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'VideoObject', ['CreativeWork']))).toBe(
+      true,
+    );
+    expect(isPlayable(typed('https://www.deezer.com/artist/804443', 'Person', []))).toBe(true);
+    expect(isPlayable(typed('https://soundcloud.com/forss/flickermood', 'CreativeWork', []))).toBe(true);
     expect(
-      isSong(
-        video([
-          'https://www.youtube.com/watch?v=Om61naQC8is',
-          'https://music.apple.com/song/617154366',
-          'https://musicbrainz.org/isrc/GB5KW2103369',
-          'https://open.spotify.com/album/1weenld61qoidwYuZ1GESA',
-          'https://open.spotify.com/artist/0caJEGgVuXuSHhhrMCmlkI',
-          'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M',
-          'https://open.spotify.com/episode/512ojhOuo1ktJprKbVcKyQ',
-          'https://www.deezer.com/album/1441464',
-          'https://www.deezer.com/artist/804443',
-          'https://tidal.com/album/655910',
-          'https://tidal.com/video/123456',
-          'https://example.com/track/20115564',
-        ]),
+      isPlayable(typed('https://podcasts.apple.com/us/podcast/x/id1296350485', 'PodcastSeries', ['CreativeWork'])),
+    ).toBe(true);
+  });
+
+  it('reads the link as written, then the canonical link and its other spellings', () => {
+    const page = typed('https://example.com/watch/1', 'WebPage', ['CreativeWork']);
+    expect(isPlayable(page)).toBe(false);
+    expect(isPlayable(page, 'https://vimeo.com/1084537')).toBe(true);
+    expect(isPlayable({ ...page, aliases: ['https://vimeo.com/1084537'] })).toBe(true);
+  });
+
+  it('is a recording, album, video or episode on another site, which plays on its Also on services', () => {
+    const recording = 'https://musicbrainz.org/recording/833f00e1-781f-4edd-90e4-e52712618862';
+    expect(isPlayable(typed(recording, 'MusicRecording', ['CreativeWork'], [SPOTIFY_TRACK]))).toBe(true);
+    expect(isPlayable({ type: null, type_path: ['Thing', 'CreativeWork', 'MusicRecording'], uri: recording })).toBe(
+      true,
+    );
+    expect(
+      isPlayable(typed('https://musicbrainz.org/release-group/1', 'MusicAlbum', ['CreativeWork', 'MusicPlaylist'])),
+    ).toBe(true);
+    expect(
+      isPlayable(typed('https://podcastindex.org/podcast/1?episode=2', 'PodcastEpisode', ['CreativeWork', 'Episode'])),
+    ).toBe(true);
+  });
+
+  it('is no card about something else, whatever services it is on: an artist, an article, a post, a place', () => {
+    const artist = typed('https://musicbrainz.org/artist/b5416a54', 'Person', [], [SPOTIFY_TRACK]);
+    expect(isPlayable(artist)).toBe(false);
+    expect(
+      isPlayable(typed('https://en.wikipedia.org/wiki/Sum_41', 'Article', ['CreativeWork'], [SPOTIFY_TRACK])),
+    ).toBe(false);
+    expect(
+      isPlayable(
+        typed(
+          'https://x.com/a/status/1',
+          'SocialMediaPosting',
+          ['CreativeWork'],
+          ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
+        ),
       ),
     ).toBe(false);
-  });
-
-  it('is no album, artist or post, whatever it is on', () => {
-    const tracks = [{ uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq' }];
-    expect(isSong({ type: 'MusicAlbum', type_path: ['Thing', 'CreativeWork', 'MusicAlbum'], also_on: tracks })).toBe(
-      false,
-    );
-    expect(isSong({ type: 'Person', type_path: ['Thing', 'Person'], also_on: tracks })).toBe(false);
-    expect(
-      isSong({
-        type: 'SocialMediaPosting',
-        type_path: ['Thing', 'CreativeWork', 'SocialMediaPosting'],
-        also_on: tracks,
-      }),
-    ).toBe(false);
+    expect(isPlayable(typed('https://www.openstreetmap.org/node/1', 'Place', []))).toBe(false);
   });
 });
 

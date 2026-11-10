@@ -19,6 +19,8 @@ interface ResourceEmbedFrameProps {
   children: ReactNode;
   /** What the embed is, named in the header when there is no card to say it ("Post", "Video"). */
   fallbackTypeLabel?: string;
+  /** A control in the header, next to the type: a playable card's switch (`useCardPlayer`'s `switcher`). */
+  headerControl?: ReactNode;
 }
 
 /**
@@ -33,6 +35,7 @@ export function ResourceEmbedFrame({
   actions,
   children,
   fallbackTypeLabel = 'Link',
+  headerControl,
 }: ResourceEmbedFrameProps) {
   const links = card ? getResourceLinks(card, url) : null;
   const typeLabel = (card ? getResourceTypeLabel(card) : null) ?? fallbackTypeLabel;
@@ -49,6 +52,7 @@ export function ResourceEmbedFrame({
             sourceUri={links?.sourceUri ?? url}
             href={href}
             siteName={links?.siteName ?? getLinkHost(href)}
+            control={headerControl}
           />
         </Container>
         <Container

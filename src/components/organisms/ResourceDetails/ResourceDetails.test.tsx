@@ -103,7 +103,7 @@ vi.mock('./ResourceReplies', () => ({
 }));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
-/** The same video without its tracks on Spotify, Deezer and TIDAL: a video, no song (`isSong`). */
+/** The same video without its tracks on Spotify, Deezer and TIDAL. */
 const ORDINARY_VIDEO: TPinakesResourceDetail = {
   ...VIDEO,
   also_on: VIDEO.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
@@ -171,16 +171,16 @@ describe('ResourceDetails', () => {
 
   describe('when the link is known', () => {
     it('reads the card for the page’s link and shows it large, under the page’s heading, opened by its header alone', () => {
-      read = settled(ORDINARY_VIDEO);
-      renderDetails(VIDEO.uri);
+      read = settled(placeFixture);
+      renderDetails(placeFixture.uri);
 
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-size', 'large');
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(VIDEO.name!);
-      // One way to open the source: "Open in YouTube", no second link on the title.
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(placeFixture.name!);
+      // One way to open the source: "Open in <site>", no second link on the title.
       expect(screen.getByTestId('resource-card-title')).not.toHaveAttribute('href');
-      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', VIDEO.uri);
-      expect(screen.getByTestId('resource-card-source').textContent).toBe('YouTube');
-      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in YouTube');
+      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', placeFixture.uri);
+      expect(screen.getByTestId('resource-card-source').textContent).toBe('OpenStreetMap');
+      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in OpenStreetMap');
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('External resource');
       // The lists are the page's sidebar cards (`ResourceSidebar`), not part of the body.
       expect(screen.queryByTestId('resource-also-on-list')).not.toBeInTheDocument();
@@ -329,7 +329,24 @@ describe('ResourceDetails', () => {
       expect(within(card).getByTestId('resource-actions')).toBeInTheDocument();
     });
 
-    it('shows a song as its card, with the switch above its image and text, with Card (no player) first in Players', () => {
+    it('shows a video as its player in place of its image and text, its other services in the switch in the header', () => {
+      read = settled(ORDINARY_VIDEO);
+      renderDetails(VIDEO.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
+      );
+      expect(within(card).queryByTestId('resource-card-title')).not.toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      expect(within(card).getByRole('heading', { level: 2, name: VIDEO.name! })).toHaveClass('sr-only');
+      // The switch sits in the card's header, beside "Open in YouTube".
+      const header = within(card).getByTestId('resource-card-source').parentElement!;
+      expect(within(header).getByRole('button', { name: 'YouTube: choose another service' })).toBeInTheDocument();
+    });
+
+    it('shows a song as its card, with the switch in its header, with Card (no player) first in Players', () => {
       useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
       onTestFinished(() => {
         useSettingsStore.setState({ media: defaultMediaPreferences });
@@ -547,11 +564,12 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
     });
 
-    it('keeps a video’s card, its text and details, with no platform embed', () => {
+    it('shows a video as its player, with no X embed and no switch for a video on one service', () => {
       read = settled({ ...VIDEO, also_on: [] });
       renderDetails(VIDEO.uri);
 
-      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
+      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /choose another service$/ })).toBeNull();
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
       expect(screen.queryByTestId('show-embed')).toBeNull();
     });

@@ -41,7 +41,7 @@ const ROW_TEXT = 'truncate text-base font-medium transition-colors group-hover:t
 /**
  * The services to play on, in the post menu's style: one line per service (favicon and name), the
  * current one in full colour with a check, then Card where the link's card can stand instead of a
- * player (a song's switch), then Close when there is a player to close.
+ * player (a playable card's switch), then Close when there is a player to close.
  */
 function ProviderMenu({
   targets,
@@ -182,10 +182,10 @@ export function PlayOnSplit({
 }
 
 /**
- * A song's switch above its player (`useCardPlayer`): the shown service's favicon, name and a
- * chevron, in the action row's pill style, opening the services to show instead (`ProviderMenu`),
- * then Card. Picking one only switches the player shown; it never starts it. While the card shows
- * (`current` is `null`), the switch reads Card.
+ * A playable card's switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
+ * shown service's favicon, name and a chevron, in the action row's pill style, opening the
+ * services to show instead (`ProviderMenu`), then Card. Picking one only switches the player
+ * shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card.
  */
 export function PlayerSwitch({
   targets,
@@ -196,7 +196,7 @@ export function PlayerSwitch({
   surface = 'muted',
 }: {
   targets: PlayerTarget[];
-  /** The service shown, or `null` while the song shows its card. */
+  /** The service shown, or `null` while the card shows instead. */
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
   onShowCard: () => void;
@@ -273,7 +273,7 @@ export function PlayOnPill({
  * view it returns to the card. The dock sits above the phone's bottom bar and left of the new-post
  * button (Fab: right-3 bottom-18 size-20, sm:right-10, md:bottom-20, lg:bottom-6), so it never
  * covers either. Audio uses the service's compact height; video keeps its ratio at the dock's width.
- * A player nobody started (a song's player shown up front, `dockable` off) stays in its card, and a
+ * A player nobody started (a player shown up front, `dockable` off) stays in its card, and a
  * post pauses it off screen like any embed.
  */
 export function PlayerDock({

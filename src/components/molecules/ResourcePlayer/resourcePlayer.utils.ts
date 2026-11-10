@@ -13,6 +13,8 @@ export enum PlayerProvider {
   MIXCLOUD = 'mixcloud',
   TIDAL = 'tidal',
   DEEZER = 'deezer',
+  APPLE_MUSIC = 'apple-music',
+  APPLE_PODCASTS = 'apple-podcasts',
   AUDIO_FILE = 'audio-file',
 }
 
@@ -28,6 +30,8 @@ export const PROVIDER_NAMES: Record<ListedPlayer, string> = {
   [PlayerProvider.MIXCLOUD]: 'Mixcloud',
   [PlayerProvider.TIDAL]: 'TIDAL',
   [PlayerProvider.DEEZER]: 'Deezer',
+  [PlayerProvider.APPLE_MUSIC]: 'Apple Music',
+  [PlayerProvider.APPLE_PODCASTS]: 'Apple Podcasts',
 };
 
 /** Each service's site, whose favicon stands for it in the Players list. */
@@ -39,6 +43,8 @@ export const PROVIDER_SITES: Record<ListedPlayer, string> = {
   [PlayerProvider.MIXCLOUD]: 'https://www.mixcloud.com/',
   [PlayerProvider.TIDAL]: 'https://tidal.com/',
   [PlayerProvider.DEEZER]: 'https://www.deezer.com/',
+  [PlayerProvider.APPLE_MUSIC]: 'https://music.apple.com/',
+  [PlayerProvider.APPLE_PODCASTS]: 'https://podcasts.apple.com/',
 };
 
 /** The viewer's Players (Settings, Links & Media): their order and the removed ones. */
@@ -401,6 +407,66 @@ function deezer(value: string): PlayerTarget | null {
   };
 }
 
+/** What Apple's embed code asks for. */
+const APPLE_ALLOW = 'autoplay *; encrypted-media *; fullscreen *; clipboard-write';
+/** A storefront (`us`), then a song, album or playlist with or without its name (`/us/album/<name>/<id>`). */
+const APPLE_MUSIC_PATH =
+  /^\/(?:([a-z]{2})\/)?(song|album|playlist)\/(?:[^/]+\/)?([0-9]{1,15}|pl\.[A-Za-z0-9-]{1,64})\/?$/i;
+const APPLE_ID = /^[0-9]{1,15}$/;
+
+/**
+ * Apple Music's embed: a song (also an album's song, `?i=<song>`), an album or a playlist. It has no
+ * start command we can send, so the viewer presses play inside it.
+ */
+function appleMusic(value: string): PlayerTarget | null {
+  const url = parseHttps(value, ['music.apple.com']);
+  const match = url ? APPLE_MUSIC_PATH.exec(url.pathname) : null;
+  if (!url || !match) return null;
+  const storefront = (match[1] ?? 'us').toLowerCase();
+  const song = url.searchParams.get('i');
+  const isAlbumSong = match[2].toLowerCase() === 'album' && song !== null && APPLE_ID.test(song);
+  const kind = isAlbumSong ? 'song' : match[2].toLowerCase();
+  const id = isAlbumSong ? song : match[3];
+  // A playlist's id is `pl.…`, a song's or album's a number.
+  if ((kind === 'playlist') !== id.startsWith('pl.')) return null;
+  return {
+    provider: PlayerProvider.APPLE_MUSIC,
+    name: PROVIDER_NAMES[PlayerProvider.APPLE_MUSIC],
+    link: `https://music.apple.com/${storefront}/${kind}/${id}`,
+    src: `https://embed.music.apple.com/${storefront}/${kind}/${id}`,
+    element: 'iframe',
+    // Apple's embed code: 175 px for one song, 450 px for a list.
+    layout: { kind: 'audio', height: kind === 'song' ? 175 : 450, dockHeight: 175 },
+    allow: APPLE_ALLOW,
+    autoplay: false,
+  };
+}
+
+const APPLE_PODCAST_PATH = /^\/(?:([a-z]{2})\/)?podcast\/(?:[^/]+\/)?id([0-9]{1,15})\/?$/i;
+
+/** Apple Podcasts' embed: a show, or one of its episodes (`?i=<episode>`); played by a press inside it. */
+function applePodcasts(value: string): PlayerTarget | null {
+  const url = parseHttps(value, ['podcasts.apple.com']);
+  const match = url ? APPLE_PODCAST_PATH.exec(url.pathname) : null;
+  if (!url || !match) return null;
+  const storefront = (match[1] ?? 'us').toLowerCase();
+  const show = match[2];
+  const episode = url.searchParams.get('i');
+  const isEpisode = episode !== null && APPLE_ID.test(episode);
+  return {
+    provider: PlayerProvider.APPLE_PODCASTS,
+    name: PROVIDER_NAMES[PlayerProvider.APPLE_PODCASTS],
+    link: `https://podcasts.apple.com/${storefront}/podcast/id${show}${isEpisode ? `?i=${episode}` : ''}`,
+    src: isEpisode
+      ? `https://embed.podcasts.apple.com/${storefront}/episode/${episode}`
+      : `https://embed.podcasts.apple.com/${storefront}/podcast/${show}`,
+    element: 'iframe',
+    layout: { kind: 'audio', height: isEpisode ? 175 : 450, dockHeight: 175 },
+    allow: APPLE_ALLOW,
+    autoplay: false,
+  };
+}
+
 /** A plain audio file (a homeserver file, a podcast enclosure): the browser's own `<audio>` player. */
 function audioFile(value: string): PlayerTarget | null {
   let url: URL;
@@ -423,7 +489,18 @@ function audioFile(value: string): PlayerTarget | null {
   };
 }
 
-const LINK_PARSERS = [youtube, vimeo, spotify, soundcloud, mixcloud, tidal, deezer, audioFile];
+const LINK_PARSERS = [
+  youtube,
+  vimeo,
+  spotify,
+  soundcloud,
+  mixcloud,
+  tidal,
+  deezer,
+  appleMusic,
+  applePodcasts,
+  audioFile,
+];
 
 /** The player for one link, when the link is on a service in the allowlist. */
 export function getPlayerTarget(link: string): PlayerTarget | null {
@@ -432,35 +509,6 @@ export function getPlayerTarget(link: string): PlayerTarget | null {
     if (target) return target;
   }
   return null;
-}
-
-/** The services whose track links say a video is a song: their own catalogues' tracks. */
-const TRACK_PROVIDERS: ReadonlySet<PlayerProvider> = new Set([
-  PlayerProvider.SPOTIFY,
-  PlayerProvider.DEEZER,
-  PlayerProvider.TIDAL,
-]);
-
-/** A link that is one track on Spotify, Deezer or TIDAL (no album, artist, playlist, episode or video). */
-function isTrackLink(link: string): boolean {
-  const target = getPlayerTarget(link);
-  return (
-    target !== null &&
-    TRACK_PROVIDERS.has(target.provider) &&
-    /^\/(?:browse\/)?track\//.test(new URL(target.link).pathname)
-  );
-}
-
-/**
- * Whether a card is a song, whose player shows up front (`useCardPlayer`): a `MusicRecording` (its
- * `type`, else the deepest `type_path` entry), or a `VideoObject` Pinakes knows as a track on
- * Spotify, Deezer or TIDAL (Also on): a song's upload to YouTube, which Pinakes types as a video.
- * Only those link shapes count, never a name or a tag; an album, artist or other type is no song.
- */
-export function isSong(card: Pick<TPinakesCard, 'type' | 'type_path' | 'also_on'>): boolean {
-  const type = card.type || card.type_path.at(-1);
-  if (type === 'MusicRecording') return true;
-  return type === 'VideoObject' && card.also_on.some((entry) => isTrackLink(entry.uri));
 }
 
 /** A card's links its own player may be built from: its canonical `uri` and its other spellings. */
@@ -473,6 +521,34 @@ type TOwnLinks = Pick<TPinakesCard, 'uri'> & Partial<Pick<TPinakesResourceDetail
 function getOwnLink(card: TOwnLinks, href?: string | null): string {
   const links = [...(href ? [href] : []), card.uri, ...(card.aliases ?? [])];
   return links.find((link) => getPlayerTarget(link)) ?? href ?? card.uri;
+}
+
+/**
+ * The types of a card that is itself something to play: a recording, an album or playlist, a video,
+ * an episode or a show (schema.org's, its `type` or any entry of its `type_path`).
+ */
+const PLAYABLE_TYPES: ReadonlySet<string> = new Set([
+  'MusicRecording',
+  'MusicPlaylist',
+  'MusicAlbum',
+  'VideoObject',
+  'Episode',
+  'PodcastEpisode',
+  'RadioEpisode',
+  'PodcastSeries',
+]);
+
+/**
+ * Whether a card is something that plays, so its service's player is the card (`useCardPlayer`'s
+ * `embed`): its own link (the link as written, else its canonical link or another spelling) is on
+ * a service with a player, or it is a recording, album, video or episode (`PLAYABLE_TYPES`), such as a
+ * MusicBrainz recording, which plays on its Also on services. A card about something else (an
+ * artist, an article, a place) is not, even when a service it is on could play; shared as its page
+ * on a service with a player (an artist on Spotify, a YouTube channel), it shows that player.
+ */
+export function isPlayable(card: Pick<TPinakesCard, 'type' | 'type_path'> & TOwnLinks, href?: string | null): boolean {
+  if (getPlayerTarget(getOwnLink(card, href))) return true;
+  return [...card.type_path, card.type].some((type) => type != null && PLAYABLE_TYPES.has(type));
 }
 
 /** The `src` parameters that start a player on load. */
@@ -491,30 +567,12 @@ export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
 }
 
 /**
- * A link's service embed shown up front (`GenericResourcePreview`), not after a press on Play: the
- * card player's frame for it without what starts it on load (`getUpFrontTarget`), so it plays only
- * when pressed inside. `null` when the link is on no such service, or is a plain audio file (the
- * link's own preview plays those). With the link's card, a link no player takes falls back to the
- * card's canonical `uri` and its aliases (`getOwnLink`). `null` too for a service the viewer removed
- * from Players (`hiddenPlayers`).
- */
-export function getEmbedTarget(
-  link: string,
-  card?: TOwnLinks | null,
-  hiddenPlayers?: readonly string[],
-): PlayerTarget | null {
-  const target = getPlayerTarget(card ? getOwnLink(card, link) : link);
-  if (!target || target.element !== 'iframe' || !isPlayerShown(target.provider, hiddenPlayers)) return null;
-  return getUpFrontTarget(target);
-}
-
-/**
  * Every player the card offers, one per service: the card's own link first (`getOwnLink`), then
  * its `also_on` links in Pinakes' order (its best link of a service first), those that start on
  * our press before those that need a press inside (`autoplay`), so Play on starts with one press
  * whenever an Also on service can. A `missing` card's own link is gone upstream and offers no player.
- * With `autoplayFirst: false` Also on keeps Pinakes' order: a player shown up front (a song's)
- * starts on no press of ours, so none is put first for starting on it.
+ * With `autoplayFirst: false` Also on keeps Pinakes' order: a player shown up front (a playable
+ * card's, `isPlayable`) starts on no press of ours, so none is put first for starting on it.
  *
  * The viewer's Players (`players`, Settings, Links & Media) come last: a removed service offers no
  * player, and the services in the viewer's order go first, in that order,

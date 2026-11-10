@@ -21,7 +21,7 @@ import {
   getPlayerTarget,
   getPlayerTargets,
   isCardFirst,
-  isSong,
+  isPlayable,
 } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
@@ -59,14 +59,15 @@ function useEmbedEngaged(box: React.RefObject<HTMLElement | null>): boolean {
 }
 
 /**
- * A post's embedded X post, YouTube or Vimeo video as an external resource (`chooseNativeEmbed`):
- * our card when Pinakes knows it on other services (a video plays from Play on, an X post from
+ * A post's embedded X post, YouTube or Vimeo video as an external resource. A video Pinakes has read
+ * (`isPlayable`) shows its player up front (`useCardPlayer`'s `embed`) in the resource frame, also
+ * with Also on, with the switch to its other services and Card in the frame's header; or our card
+ * with the switch, when Card (no player) ranks above its service; unless the platform's embed was
+ * pressed in before the card was read. Anything else (an X post, a video gone upstream, no card)
+ * follows `chooseNativeEmbed`: our card when Pinakes knows it on other services (an X post from
  * "Show on <site>"), else the platform's own embed in the resource frame. A viewer who turned
  * platform embeds up front off (Settings, Links & Media) gets our card whenever there is one,
- * unless it is a video the card player cannot play (then the card would have no Play on); so does a
- * video whose service ranks below Card (no player) in Players. A song (`isSong`) shows its player
- * up front instead (`useCardPlayer`'s `embed`), unless the platform's embed was pressed in before
- * the card was read; or our card with the switch, when Card (no player) ranks above its service. The
+ * unless it is a video the card player cannot play (then the card would have no Play on). The
  * card's skeleton holds the place while Pinakes is read (at most `PINAKES_SLOW_READ_MS`), so no
  * embed loads only to be replaced. Nothing is read before the box first comes near the screen.
  */
@@ -129,14 +130,19 @@ function NativeEmbedChoice({
   });
   const showsCard = choice === 'card' && card !== null;
   const isVideo = kind === 'video';
-  // A song shows its player up front (`embed`), also in the composer, unless the platform's embed
-  // was already pressed in.
-  const showsSong = card !== null && isSong(card) && !engaged;
+  // A video Pinakes has read shows its player up front (`embed`), also in the composer, unless the
+  // platform's embed was already pressed in. An X post keeps X's embed.
+  const showsPlayer = isVideo && card !== null && isPlayable(card, url) && !engaged;
   // On a top-level card (a collection's) the player's pills sit on the card's surface, as in `ResourceActions`.
   const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
-  const player = useCardPlayer(showsSong || (showsCard && isVideo && !isComposing) ? card : null, url, actionSurface, {
-    preview: isComposing,
-  });
+  const player = useCardPlayer(
+    showsPlayer || (showsCard && isVideo && !isComposing) ? card : null,
+    url,
+    actionSurface,
+    {
+      preview: isComposing,
+    },
+  );
   const siteName = card ? getResourceLinks(card, url).siteName : null;
 
   // An X post on our card: the card player's pill (`PlayOnPill`) shows the post's embed in the body.
@@ -177,14 +183,14 @@ function NativeEmbedChoice({
 
   if (player.embed) {
     return (
-      <ResourceEmbedFrame url={url} card={card} actions={actions}>
+      <ResourceEmbedFrame url={url} card={card} actions={actions} headerControl={player.switcher}>
         {player.embed}
       </ResourceEmbedFrame>
     );
   }
 
-  // A song shown as its card (its switch's Card, or Card (no player) above its service in Players)
-  // is our card too.
+  // Something to play shown as its card (its switch's Card, or Card (no player) above its service in
+  // Players) is our card too, the switch in its header.
   if (showsCard || (player.isCard && card)) {
     const renderBody =
       isVideo || player.isCard
@@ -204,6 +210,7 @@ function NativeEmbedChoice({
         actions={actions}
         renderBody={renderBody}
         isBodyReplaced={isVideo ? player.isOpen : isPostOpen && !failed}
+        headerControl={player.switcher}
       />
     );
   }
