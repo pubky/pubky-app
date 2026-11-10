@@ -391,6 +391,23 @@ describe('Lock Server code-exchange errors through the pinned SDK and LocksServi
     expect(isAppError(error) && requiresLogin(error)).toBe(false);
     expectReportedOnce(error);
   });
+
+  // The creator approved and came back with the one-time code, but the exchange got no answer.
+  it('rejects an unreachable Lock Server as one reported server error, not an expired session', async () => {
+    const requests = stubLockServer('network-failure');
+
+    const error = await rejection(LocksService.exchangeSessionCode({ code: 'one-time-code', state: 'state-1' }));
+
+    expect(requests.map(({ method, path }) => `${method} ${path}`)).toEqual(['POST /frontend-sessions']);
+    expect(error).toMatchObject({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.UNKNOWN_ERROR,
+      operation: 'LocksService.exchangeSessionCode',
+      cause: { name: 'InvalidInput', message: expect.stringContaining('frontend session exchange failed:') },
+    });
+    expect(isAppError(error) && requiresLogin(error)).toBe(false);
+    expectReportedOnce(error);
+  });
 });
 
 /** A settled task, in the lifecycle field combination the SDK accepts for `failed` and `expired`. */
