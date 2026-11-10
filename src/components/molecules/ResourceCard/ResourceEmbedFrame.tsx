@@ -15,8 +15,11 @@ interface ResourceEmbedFrameProps {
   card: TPinakesResourceDetail | null;
   /** The resource's footer (`ResourceActions`). */
   actions: ReactNode;
-  /** The platform's own embed (an X post, a video, a music player). */
-  children: ReactNode;
+  /**
+   * The platform's own embed (an X post, a video, a music player); none while it is loaded only on
+   * a press (platform embeds up front off): the frame is then its header and footer.
+   */
+  children?: ReactNode;
   /** What the embed is, named in the header when there is no card to say it ("Post", "Video"). */
   fallbackTypeLabel?: string;
   /** A control in the header, next to the type: a card's embed/card switch (`useCardPlayer`'s `switcher`). */
@@ -55,14 +58,16 @@ export function ResourceEmbedFrame({
             control={headerControl}
           />
         </Container>
-        <Container
-          overrideDefaults
-          data-resource-controls
-          className="min-w-0 px-4 pb-4"
-          data-testid="resource-embed-body"
-        >
-          {children}
-        </Container>
+        {children ? (
+          <Container
+            overrideDefaults
+            data-resource-controls
+            className="min-w-0 px-4 pb-4"
+            data-testid="resource-embed-body"
+          >
+            {children}
+          </Container>
+        ) : null}
       </Container>
       {actions}
     </ResourceCardFrame>

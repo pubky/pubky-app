@@ -8,6 +8,11 @@ describe('getShowPostLabel', () => {
     expect(getShowPostLabel('x.com', true)).toBe('Close the x.com post');
     expect(getShowPostLabel(null, false)).toBe('Show on X');
   });
+
+  it('plays or closes a video', () => {
+    expect(getShowPostLabel('YouTube', false, true)).toBe('Play on YouTube');
+    expect(getShowPostLabel('YouTube', true, true)).toBe('Close the YouTube video');
+  });
 });
 
 describe('chooseNativeEmbed', () => {

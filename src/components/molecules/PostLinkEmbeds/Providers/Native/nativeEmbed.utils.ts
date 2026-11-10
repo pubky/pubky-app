@@ -41,8 +41,9 @@ export function getNativeEmbedCard(card: TPinakesResourceDetail | null | undefin
   return card.description?.trim() === name ? { ...card, description: null } : card;
 }
 
-/** The accessible name of the pill that shows a platform's post in our card's body, or closes it. */
-export function getShowPostLabel(siteName: string | null, isOpen: boolean): string {
+/** The accessible name of the pill that shows a platform's post (or plays its video) in our card's body, or closes it. */
+export function getShowPostLabel(siteName: string | null, isOpen: boolean, isVideo = false): string {
   const site = siteName ?? 'X';
+  if (isVideo) return isOpen ? `Close the ${site} video` : `Play on ${site}`;
   return isOpen ? `Close the ${site} post` : `Show on ${site}`;
 }
