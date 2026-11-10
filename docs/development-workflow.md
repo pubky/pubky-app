@@ -112,6 +112,20 @@ Dependabot security updates (`.github/dependabot.yml`) are event-driven — a ne
 
 Triage order for a new finding: production direct pins first (bump to the fixed version), then transitive production (lockfile refresh or an `overrides` entry), then dev-only. Treat every production dependency as a likely exposure: the Docker runner image ships the Next.js standalone output (`.next/standalone`), a traced subset of production dependencies, so the full production set is a safe over-approximation of what actually ships — reachability still needs a human or agent to confirm. The `node:lts-alpine` base image in the Dockerfile is a floating tag, so base-image fixes arrive by rebuilding the image; GitHub Actions versions are covered by Dependabot's `github-actions` ecosystem.
 
+### Temporary dependency overrides
+
+The scoped overrides in `package.json` keep the current toolchain on patched transitive dependencies until upstream
+releases adopt them. Remove each override when its parent dependency resolves a patched version without it:
+
+- Serwist 9.5.13 pins older `glob` and Zod versions. Its build packages use `glob` 14.0.4 and the app's existing Zod
+  version (`$zod`). The glob major update preserves the `globSync` calls used here; the public asset list and generated
+  manifest were checked for identical entries and revisions. Keep this override scoped to Serwist.
+- Typography 0.5.20 pins `postcss-selector-parser` 6.0.10. Use the compatible 6.1.5 backport while
+  [upstream PR #431](https://github.com/tailwindlabs/tailwindcss-typography/pull/431) awaits release.
+- `typescript-estree` uses `minimatch` 11.0.5, matching the major adopted in
+  [upstream PR #13145](https://github.com/typescript-eslint/typescript-eslint/pull/13145). The used matching API is
+  unchanged. Do not override every `minimatch` consumer: older ESLint plugins still require the version 3 API.
+
 ## Code Quality
 
 These apply to every diff and are what a reviewer (human or Greptile) checks first.

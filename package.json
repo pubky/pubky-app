@@ -49,7 +49,7 @@
     "@mdxeditor/editor": "4.3.4",
     "@mdxeditor/gurx": "1.2.4",
     "@prelude.so/js-sdk": "0.14.0",
-    "@sentry/nextjs": "11.10.0",
+    "@sentry/nextjs": "11.11.0",
     "@serwist/next": "9.5.13",
     "@synonymdev/locks-sdk": "0.1.0",
     "@synonymdev/pubky": "0.17.1",
@@ -100,7 +100,7 @@
     "@eslint/compat": "2.1.1",
     "@fontsource-variable/inter-tight": "^5.3.0",
     "@next/eslint-plugin-next": "16.4.3",
-    "@sentry/browser": "11.10.0",
+    "@sentry/browser": "11.11.0",
     "@sentry/cli": "3.8.2",
     "@stylistic/eslint-plugin": "5.10.0",
     "@tailwindcss/postcss": "4.3.3",
@@ -144,6 +144,25 @@
     "vite-tsconfig-paths": "6.1.1",
     "vitest": "5.0.5",
     "vitest-browser-react": "^2.3.0"
+  },
+  "overrides": {
+    "@serwist/next": {
+      "glob": "14.0.4",
+      "zod": "$zod"
+    },
+    "@serwist/build": {
+      "glob": "14.0.4",
+      "zod": "$zod"
+    },
+    "@serwist/webpack-plugin": {
+      "zod": "$zod"
+    },
+    "@tailwindcss/typography": {
+      "postcss-selector-parser": "6.1.5"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.5"
+    }
   },
   "allowScripts": {
     "@sentry/cli": true,
