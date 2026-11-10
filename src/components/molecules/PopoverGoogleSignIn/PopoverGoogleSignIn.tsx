@@ -10,20 +10,34 @@ import { cn } from '@/libs/utils/utils';
 
 const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/README.md';
 
-const APPLE_POINTS = [
+type HelpPoint = { term: string; text: string };
+
+// Figma help design (Pubky-SHADCN 47458:207555): "Continue with <X>," / "powered by Pubky Passport."
+// and four labelled points.
+
+// Provider-neutral wording shared with pubky/pubky-passport#278 (`ACCOUNT_HELP_POINTS`).
+const PROVIDER_POINTS: HelpPoint[] = [
+  {
+    term: 'Your provider:',
+    text: 'Your account provider helps you sign in and find your encrypted backup. It does not create or control your pubky.',
+  },
   {
     term: 'Your keys:',
-    text: 'Created in your browser, with an encrypted backup stored in your iCloud or Google Drive.',
+    text: 'Your keys are created in your browser and encrypted before they are saved in your cloud storage.',
   },
   {
     term: 'Recovery:',
-    text: 'Restoring your pubky requires your encrypted backup and a separate key from Passport.',
+    text: 'When you sign in, Passport retrieves your encrypted backup and the separate key needed to unlock it.',
+  },
+  {
+    term: 'Split security:',
+    text: 'Your encrypted backup and the key that unlocks it are stored separately.',
   },
 ];
 
-const GOOGLE_POINTS = [
+const GOOGLE_POINTS: HelpPoint[] = [
   {
-    term: "Google's role:",
+    term: 'Google’s role:',
     text: 'Helps identify you and securely retrieve your encrypted backup. It does not create or control your pubky.',
   },
   {
@@ -43,13 +57,14 @@ const GOOGLE_POINTS = [
 /**
  * PopoverGoogleSignIn
  *
- * Help popover for Passport sign-in: how Apple or Google accounts are used, where the keys live,
- * and what recovery requires. Opens on click (and Enter/Space)
- * rather than hover, so an icon-only trigger stays reachable by keyboard, and on touch devices.
+ * Help popover for Passport sign-in: what the account provider does, where the keys live,
+ * and what recovery requires. Google-only copy by default; provider-neutral copy when Apple is
+ * enabled. Opens on click (and Enter/Space) rather than hover, so an icon-only trigger stays
+ * reachable by keyboard, and on touch devices.
  */
 export function PopoverGoogleSignIn({ className }: { className?: string }) {
   const appleEnabled = isPassportAppleEnabled();
-  const points = appleEnabled ? APPLE_POINTS : GOOGLE_POINTS;
+  const points = appleEnabled ? PROVIDER_POINTS : GOOGLE_POINTS;
 
   return (
     <Popover>
@@ -70,13 +85,9 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
       <PopoverContent className="w-80 p-6">
         <Container className="gap-4">
           <Heading level={4} size="sm" className="text-popover-foreground">
-            {appleEnabled ? 'Sign in with Apple or Google' : 'Continue with Google, powered by Pubky Passport.'}
+            <span className="block">{appleEnabled ? 'Continue with your account,' : 'Continue with Google,'}</span>{' '}
+            <span className="block">{'powered by Pubky Passport.'}</span>
           </Heading>
-          {appleEnabled && (
-            <Typography size="sm" className="text-muted-foreground">
-              {'Use an existing account to create or access your pubky with Pubky Passport.'}
-            </Typography>
-          )}
           {points.map((point) => (
             <Typography key={point.term} size="sm" className="text-muted-foreground">
               <Typography as="strong" size="sm" className="font-semibold text-secondary-foreground">
