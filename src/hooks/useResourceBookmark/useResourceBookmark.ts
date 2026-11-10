@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { invalidateResourceBookmarks } from '@/hooks/useResourceBookmarks/useResourceBookmarks';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseResourceBookmarkOptions, UseResourceBookmarkResult } from './useResourceBookmark.types';
@@ -71,6 +72,7 @@ export function useResourceBookmark(
           return false;
         }
         toast({ title: wasBookmarked ? 'Removed from bookmarks' : 'Saved to bookmarks' });
+        invalidateResourceBookmarks();
         return true;
       } catch {
         setSettled({ key: viewerKey, isBookmarked: wasBookmarked });

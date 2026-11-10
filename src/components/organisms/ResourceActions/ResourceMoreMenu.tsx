@@ -1,7 +1,8 @@
 'use client';
 
 import { type ReactNode, useState } from 'react';
-import { Ellipsis, FileText, Link } from 'lucide-react';
+import { Ellipsis, FileText, Link, Share2 } from 'lucide-react';
+import { getResourceRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
@@ -35,9 +36,10 @@ interface ResourceMoreMenuProps {
 
 /**
  * The ⋯ of an external resource card: the post's More button and menu (a dropdown, a bottom sheet
- * on a phone) with what fits a link: copy its link, copy its title, then the extra entries. The card's
- * header already opens the link on its site, so the menu does not. Every item only reads, so the menu
- * opens signed out too. Both shells scroll when the extra entries make the menu taller than the screen.
+ * on a phone) with what fits a link: copy its link, copy the link to its page (as the post menu's
+ * "Copy link to post"), copy its title, then the extra entries. The card's header already opens the
+ * link on its site, so the menu does not. Every item only reads, so the menu opens signed out too.
+ * Both shells scroll when the extra entries make the menu taller than the screen.
  */
 export function ResourceMoreMenu({ uri, linkUrl, title, extraMenuContent, surface = 'muted' }: ResourceMoreMenuProps) {
   const isMobile = useIsMobile();
@@ -54,6 +56,15 @@ export function ResourceMoreMenu({ uri, linkUrl, title, extraMenuContent, surfac
       onClick: async () => {
         // useShareUrl reports its own success/failure toasts and never throws.
         await copyLink(linkUrl ?? uri);
+      },
+    },
+    {
+      id: 'copy-page-link',
+      label: 'Copy link to page',
+      icon: Share2,
+      onClick: async () => {
+        // The resource's page on this app, as "Copy link to post" gives the post's.
+        await copyLink(`${window.location.origin}${getResourceRoute(uri)}`);
       },
     },
   ];

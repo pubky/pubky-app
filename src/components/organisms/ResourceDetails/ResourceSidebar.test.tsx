@@ -1,9 +1,11 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
+import { useResourceRowCounts } from '@/hooks/useResourceRowCounts/useResourceRowCounts';
+import type { TResourceRowCounts } from '@/hooks/useResourceRowCounts/useResourceRowCounts.types';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
 import natureFixture from '@/services/pinakes/fixtures/by-uri.nature-article.json';
 import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
@@ -18,9 +20,16 @@ import { ResourceSidebar } from './ResourceSidebar';
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => true, PINAKES_RELATED_LIMIT: 5 }));
 vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({ usePinakesGroup: vi.fn() }));
 vi.mock('@/hooks/usePinakesRelated/usePinakesRelated', () => ({ usePinakesRelated: vi.fn() }));
+vi.mock('@/hooks/useResourceRowCounts/useResourceRowCounts', () => ({ useResourceRowCounts: vi.fn() }));
 vi.mock('./ResourceSimilarBecause', () => ({
   ResourceSimilarBecause: ({ tagUri }: { tagUri: string }) => <span data-testid="because">{tagUri}</span>,
 }));
+vi.mock('./ResourceParticipants', () => ({
+  ResourceParticipants: ({ uri, replyIds }: { uri: string; replyIds: string[] }) => (
+    <div data-testid="participants-stub" data-uri={uri} data-replies={replyIds.join(' ')} />
+  ),
+}));
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => ({ FeedbackCard: () => <div data-testid="feedback-stub" /> }));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
 const GROUP: TPinakesGroupDetail = groupFixture;
@@ -33,6 +42,7 @@ const FAILED = { data: null, isLoading: false, isError: true };
 describe('ResourceSidebar', () => {
   const mockGroup = vi.mocked(usePinakesGroup);
   const mockRelated = vi.mocked(usePinakesRelated);
+  const mockRowCounts = vi.mocked(useResourceRowCounts);
   let card: TPinakesResourceDetail;
 
   beforeEach(() => {
@@ -41,6 +51,8 @@ describe('ResourceSidebar', () => {
     // The video's group; any other card has none here, and a hook asked without an ID reads nothing.
     mockGroup.mockImplementation((id) => (id === VIDEO.group!.id ? settled(GROUP) : settled(null)));
     mockRelated.mockReturnValue(settled(RELATED));
+    // No link read: no row shows counts.
+    mockRowCounts.mockReturnValue(null);
   });
 
   it.each([undefined, null])('shows nothing without a card (%s)', (none) => {
@@ -50,8 +62,31 @@ describe('ResourceSidebar', () => {
     expect(mockRelated).not.toHaveBeenCalled();
   });
 
+  describe('people sections, as on a post’s page', () => {
+    it('shows Participants and Feedback under Also on and Similar, Feedback only when asked', () => {
+      const { rerender } = render(<ResourceSidebar card={card} uri={VIDEO.uri} replyIds={['a:1']} showFeedback />);
+
+      const sidebar = screen.getByTestId('resource-sidebar');
+      const order = [...sidebar.children].map((child) => child.getAttribute('data-testid'));
+      expect(order.slice(-2)).toEqual(['participants-stub', 'feedback-stub']);
+      expect(screen.getByTestId('participants-stub')).toHaveAttribute('data-uri', VIDEO.uri);
+      expect(screen.getByTestId('participants-stub')).toHaveAttribute('data-replies', 'a:1');
+
+      rerender(<ResourceSidebar card={card} uri={VIDEO.uri} />);
+      expect(screen.queryByTestId('feedback-stub')).not.toBeInTheDocument();
+    });
+
+    it('shows Participants without a card', () => {
+      render(<ResourceSidebar card={null} uri="https://example.com/a" showFeedback />);
+
+      expect(screen.getByTestId('participants-stub')).toHaveAttribute('data-uri', 'https://example.com/a');
+      expect(screen.getByTestId('feedback-stub')).toBeInTheDocument();
+      expect(mockRelated).not.toHaveBeenCalled();
+    });
+  });
+
   describe('with a card', () => {
-    it('lists one row per other service, each opening it, where the link came from in its tooltip only', () => {
+    it('lists one row per other service, each opening its page on Pubky, where the link came from in its tooltip only', () => {
       render(<ResourceSidebar card={card} />);
 
       const section = screen.getByTestId('resource-also-on-list');
@@ -59,13 +94,66 @@ describe('ResourceSidebar', () => {
       expect(within(section).getByRole('heading', { level: 2 })).toHaveTextContent('Also on · 5');
       const rows = within(section).getAllByTestId('resource-also-on-list-row');
       expect(rows.map((row) => row.textContent)).toEqual(['TIDAL', 'Apple Music', 'MusicBrainz', 'Deezer', 'Spotify']);
-      const tidal = within(rows[0]).getByRole('link');
+      const [tidal, out] = within(rows[0]).getAllByRole('link');
       expect(tidal).toHaveAccessibleName('TIDAL');
-      expect(tidal).toHaveAttribute('href', VIDEO.also_on[0].uri);
-      expect(tidal).toHaveAttribute('target', '_blank');
-      expect(tidal).toHaveAttribute('rel', 'noopener noreferrer');
+      // Its page on Pubky, not the service: leaving for TIDAL is the ↗ beside it.
+      expect(tidal).toHaveAttribute('href', getResourceRoute(VIDEO.also_on[0].uri));
+      expect(tidal).not.toHaveAttribute('target');
       expect(tidal).toHaveAttribute('title', `TIDAL · ${SHARED_ON_PUBKY_NOTE}`);
+      expect(out).toBe(within(rows[0]).getByTestId('resource-also-on-list-row-external'));
+      expect(out).toHaveAccessibleName('Open in TIDAL');
+      expect(out).toHaveAttribute('href', VIDEO.also_on[0].uri);
+      expect(out).toHaveAttribute('target', '_blank');
+      expect(tidal).not.toContainElement(out);
       expect(section.textContent).not.toMatch(/found via|shared on pubky/i);
+    });
+
+    it('puts each link’s own counts under its row, none under a link without any', () => {
+      const counts: Record<string, TResourceRowCounts> = {
+        [VIDEO.also_on[0].uri]: { tags: 1, isTagsAtReadLimit: false, replies: 4, posts: 2 },
+      };
+      mockRowCounts.mockImplementation((uri) => counts[uri] ?? null);
+      render(<ResourceSidebar card={card} />);
+
+      const rows = within(screen.getByTestId('resource-also-on-list')).getAllByTestId('resource-also-on-list-row');
+      // Asked for each row's link exactly as the row opens it.
+      for (const row of rows) {
+        const href = within(row).getAllByRole('link')[0].getAttribute('href');
+        expect(mockRowCounts.mock.calls.some(([uri]) => getResourceRoute(uri) === href)).toBe(true);
+      }
+      const [tidal] = within(rows[0]).getAllByRole('link');
+      expect(tidal).toHaveAccessibleName('TIDAL 1 tag, 4 comments, 2 posts');
+      expect(tidal).toHaveAttribute('title', `TIDAL · 1 tag, 4 comments, 2 posts · ${SHARED_ON_PUBKY_NOTE}`);
+      expect(within(rows[0]).getByTestId('resource-also-on-list-row-counts-tags')).toHaveTextContent('1');
+      expect(within(rows[0]).getByTestId('resource-also-on-list-row-counts-replies')).toHaveTextContent('4');
+      expect(within(rows[0]).getByTestId('resource-also-on-list-row-counts-posts')).toHaveTextContent('2');
+      for (const row of rows.slice(1)) {
+        expect(within(row).queryByTestId('resource-also-on-list-row-counts')).not.toBeInTheDocument();
+      }
+      // Similar rows show none.
+      const similar = screen.getByTestId('resource-similar-list');
+      expect(within(similar).queryByTestId(/-counts$/)).not.toBeInTheDocument();
+    });
+
+    it('shows the first five services and the rest behind "Show N more" in the card’s footer', () => {
+      const many = Array.from({ length: 8 }, (_, index) => ({
+        uri: `https://service${index}.example/track/1`,
+        site: `Service ${index}`,
+      }));
+      card = { ...VIDEO, group: null, also_on: many };
+      render(<ResourceSidebar card={card} />);
+
+      const section = screen.getByTestId('resource-also-on-list');
+      expect(within(section).getByRole('heading', { level: 2 })).toHaveTextContent('Also on · 8');
+      expect(within(section).getAllByTestId('resource-also-on-list-row')).toHaveLength(5);
+      const toggle = within(section).getByTestId('resource-also-on-list-toggle');
+      expect(toggle).toHaveTextContent('Show 3 more');
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(toggle).toHaveAttribute('aria-controls', within(section).getByRole('list').id);
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(within(section).getAllByTestId('resource-also-on-list-row')).toHaveLength(8);
+      expect(within(section).getByTestId('resource-also-on-list-toggle')).toHaveTextContent('Show less');
     });
 
     it('shows Also on, then Similar', () => {
@@ -79,17 +167,19 @@ describe('ResourceSidebar', () => {
       expect(sidebar).not.toHaveTextContent('Group members');
     });
 
-    it('lists a shared link that is not a web link by its identifier, as text', () => {
+    it('lists a shared link that is not a web link by its identifier, opening its page', () => {
       card = natureFixture;
       render(<ResourceSidebar card={card} />);
 
       const doi = screen.getAllByTestId('resource-also-on-list-row')[0];
       expect(natureFixture.also_on[0].uri).toBe('doi:10.1038/nature12373');
       expect(doi).toHaveTextContent('DOI 10.1038/nature12373');
-      expect(within(doi).queryByRole('link')).not.toBeInTheDocument();
+      expect(within(doi).getByRole('link')).toHaveAttribute('href', getResourceRoute('doi:10.1038/nature12373'));
+      // Not a web link: nothing to open out of the app.
+      expect(within(doi).queryByTestId('resource-also-on-list-row-external')).not.toBeInTheDocument();
     });
 
-    it('lists a found link that is not a web link as text', () => {
+    it('lists a found link that is not a web link, opening its page', () => {
       card = {
         ...natureFixture,
         also_on: [{ uri: 'doi:10.1038/nature12373', site: 'DOI', derived: true, via: 'crossref' }],
@@ -98,7 +188,7 @@ describe('ResourceSidebar', () => {
 
       const doi = screen.getByTestId('resource-also-on-list-row');
       expect(doi).toHaveTextContent('10.1038/nature12373');
-      expect(within(doi).queryByRole('link')).not.toBeInTheDocument();
+      expect(within(doi).getByRole('link')).toHaveAttribute('href', getResourceRoute('doi:10.1038/nature12373'));
     });
 
     it('shows no Also on section for a resource on no other service', () => {
@@ -145,16 +235,22 @@ describe('ResourceSidebar', () => {
         expect(rows).toHaveLength(6);
         expect(wikipedia()).toHaveAccessibleName('Wikipedia English (en)');
         expect(wikipedia()).toHaveAttribute('title', 'Wikipedia · English (en) · Found via wikidata');
-        expect(wikipedia()).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Berlin');
-        expect(wikipedia()).toHaveAttribute('target', '_blank');
+        expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://en.wikipedia.org/wiki/Berlin'));
+        expect(wikipedia()).not.toHaveAttribute('target');
         // The select is the link's sibling in the list item, never inside it.
         expect(languages()).toHaveAccessibleName('Wikipedia language: English (en)');
         expect(languages()).toHaveTextContent('English (en)');
         expect(wikipedia()).not.toContainElement(languages());
         expect(rows[5]).toContainElement(languages());
+        // The chosen edition on Wikipedia, beside the row on its line; the select is under both.
+        const out = within(rows[5]).getByTestId('resource-also-on-list-row-external');
+        expect(out).toHaveAccessibleName('Open in Wikipedia');
+        expect(out).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Berlin');
+        expect(out.parentElement).toBe(wikipedia().parentElement);
+        expect(out.parentElement).not.toContainElement(languages());
       });
 
-      it('lists the languages by their own names and changes only where the row links', async () => {
+      it('lists the languages by their own names and changes only where the row and its ↗ link', async () => {
         const user = userEvent.setup();
         card = PLACE;
         render(<ResourceSidebar card={card} />);
@@ -171,8 +267,12 @@ describe('ResourceSidebar', () => {
         await user.click(screen.getByRole('option', { name: 'Français (fr)' }));
 
         expect(languages()).toHaveAccessibleName('Wikipedia language: Français (fr)');
-        expect(wikipedia()).toHaveAttribute('href', 'https://fr.wikipedia.org/wiki/Berlin');
+        expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://fr.wikipedia.org/wiki/Berlin'));
         expect(wikipedia()).toHaveAccessibleName('Wikipedia Français (fr)');
+        expect(within(section()).getByRole('link', { name: 'Open in Wikipedia' })).toHaveAttribute(
+          'href',
+          'https://fr.wikipedia.org/wiki/Berlin',
+        );
         expect(window.location.href).toBe(location);
       });
 
@@ -183,10 +283,26 @@ describe('ResourceSidebar', () => {
           render(<ResourceSidebar card={card} />);
 
           expect(languages()).toHaveAccessibleName('Wikipedia language: Deutsch (de)');
-          expect(wikipedia()).toHaveAttribute('href', 'https://de.wikipedia.org/wiki/Berlin');
+          expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://de.wikipedia.org/wiki/Berlin'));
         } finally {
           spy.mockRestore();
         }
+      });
+
+      it('puts the chosen edition’s counts under the row', () => {
+        mockRowCounts.mockImplementation((uri) =>
+          uri === 'https://en.wikipedia.org/wiki/Berlin'
+            ? { tags: 3, isTagsAtReadLimit: false, replies: 0, posts: 1 }
+            : null,
+        );
+        card = PLACE;
+        render(<ResourceSidebar card={card} />);
+
+        expect(wikipedia()).toHaveAccessibleName('Wikipedia English (en) 3 tags, 1 post');
+        expect(within(wikipedia()).getByTestId('resource-also-on-list-row-counts-tags')).toHaveTextContent('3');
+        expect(within(wikipedia()).queryByTestId('resource-also-on-list-row-counts-replies')).not.toBeInTheDocument();
+        expect(within(wikipedia()).getByTestId('resource-also-on-list-row-counts-posts')).toHaveTextContent('1');
+        expect(within(section()).getAllByTestId('resource-also-on-list-row-counts')).toHaveLength(1);
       });
 
       it('gives each service its own row and select, and leaves a service in one language a plain row', () => {
@@ -199,7 +315,7 @@ describe('ResourceSidebar', () => {
         expect(languages('Wikivoyage')).toHaveAccessibleName('Wikivoyage language: Deutsch (de)');
         expect(within(section()).getByRole('link', { name: 'Wikipedia (de)' })).toHaveAttribute(
           'href',
-          wikipediaDe.uri,
+          getResourceRoute(wikipediaDe.uri),
         );
       });
     });
@@ -212,7 +328,10 @@ describe('ResourceSidebar', () => {
 
       expect(mockGroup).toHaveBeenCalledWith(VIDEO.group!.id);
       const section = screen.getByTestId('resource-also-on-list');
-      const links = within(section).getAllByRole('link');
+      // Each row's own link, not its ↗.
+      const links = within(section)
+        .getAllByTestId('resource-also-on-list-row')
+        .map((row) => within(row).getAllByRole('link')[0]);
       expect(links.map((link) => link.textContent)).toEqual([
         'Spotify',
         'TIDAL',
@@ -220,22 +339,29 @@ describe('ResourceSidebar', () => {
         'MusicBrainz',
         'Deezer',
       ]);
-      expect(links[0]).toHaveAttribute('href', derived.uri);
-      expect(links[1]).toHaveAttribute('href', 'https://tidal.com/track/490851477');
+      expect(links[0]).toHaveAttribute('href', getResourceRoute(derived.uri));
+      expect(links[1]).toHaveAttribute('href', getResourceRoute('https://tidal.com/track/490851477'));
+      // A member row links out to its service too.
+      const rows = within(section).getAllByTestId('resource-also-on-list-row');
+      expect(within(rows[1]).getByTestId('resource-also-on-list-row-external')).toHaveAttribute(
+        'href',
+        'https://tidal.com/track/490851477',
+      );
       // A member is named by its service, as Also on names it, not by its title.
       expect(section).not.toHaveTextContent('(Official Video)');
     });
 
-    it('names a member Pinakes gives no service by its link’s host, and links it out', () => {
+    it('names a member Pinakes gives no service by its link’s host, and opens its page', () => {
       const derived = VIDEO.also_on[VIDEO.also_on.length - 1];
       card = { ...VIDEO, also_on: [derived] };
       const member = { ...GROUP.members[1], uri: 'https://www.example.org/track/1', refs: [], site: null };
       mockGroup.mockReturnValue(settled({ ...GROUP, members: [GROUP.members[0], member] }));
       render(<ResourceSidebar card={card} />);
 
-      const last = within(screen.getAllByTestId('resource-also-on-list-row')[1]).getByRole('link');
+      const last = within(screen.getAllByTestId('resource-also-on-list-row')[1]).getAllByRole('link')[0];
       expect(last).toHaveAccessibleName('example.org');
-      expect(last).toHaveAttribute('href', member.uri);
+      expect(last).toHaveAttribute('href', getResourceRoute(member.uri));
+      expect(screen.getByRole('link', { name: 'Open in example.org' })).toHaveAttribute('href', member.uri);
     });
 
     it.each([

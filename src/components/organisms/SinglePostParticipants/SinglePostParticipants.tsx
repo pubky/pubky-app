@@ -14,7 +14,7 @@ import type { ParticipantItemProps, SinglePostParticipantsProps } from './Single
 /**
  * Individual participant item with reactive follow status
  */
-function ParticipantItem({
+export function ParticipantItem({
   participant,
   currentUserId,
   onUserClick,

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getResourceRoute } from '@/app/routes';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { MENU_VARIANT } from '@/config/ui';
@@ -414,9 +415,11 @@ describe('GenericResourcePreview', () => {
       const rows = within(within(menu).getByRole('group', { name: 'Also on' })).getAllByRole('menuitem');
       // A YouTube video: the other YouTube upload is its own service.
       expect(rows.map((row) => row.textContent)).toEqual(['TIDAL', 'Apple Music', 'MusicBrainz', 'Deezer', 'Spotify']);
-      expect(rows[0]).toHaveAttribute('href', 'https://tidal.com/track/490851477');
+      expect(rows[0]).toHaveAttribute('href', getResourceRoute('https://tidal.com/track/490851477'));
       // The card's own link is not a row: the card's header opens it.
-      expect(rows.map((row) => row.getAttribute('href'))).not.toContain(videoFixture.uri);
+      expect(rows.map((row) => row.getAttribute('href'))).not.toContain(getResourceRoute(videoFixture.uri));
+      // The card's menu lists only where the resource is: Also on, no Similar.
+      expect(within(menu).queryByText(/similar/i)).not.toBeInTheDocument();
     });
 
     it('adds nothing to the ⋯ menu, and stays a click-through, when Also on lists only its own service', () => {
@@ -443,7 +446,7 @@ describe('GenericResourcePreview', () => {
 
       expect(screen.getByRole('menuitem', { name: /^Wayback Machine, Archived/ })).toHaveAttribute(
         'href',
-        unreachableFixture.also_on[0].uri,
+        getResourceRoute(unreachableFixture.also_on[0].uri),
       );
     });
 
@@ -456,8 +459,8 @@ describe('GenericResourcePreview', () => {
       const items = within(openMoreMenu()).getAllByRole('menuitem');
       // Deezer and Spotify are listed more than once: one row each.
       expect(items.map((item) => item.textContent)).toEqual(['Deezer', 'Qobuz', 'TIDAL', 'Spotify', 'YouTube']);
-      expect(items[0]).toHaveAttribute('href', missingFixture.also_on[0].uri);
-      expect(items.map((item) => item.getAttribute('href'))).not.toContain(missingFixture.uri);
+      expect(items[0]).toHaveAttribute('href', getResourceRoute(missingFixture.also_on[0].uri));
+      expect(items.map((item) => item.getAttribute('href'))).not.toContain(getResourceRoute(missingFixture.uri));
     });
 
     it('adds nothing to the ⋯ menu on the link’s own preview, which Pinakes has no card for', () => {

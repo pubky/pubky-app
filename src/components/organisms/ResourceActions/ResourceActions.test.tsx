@@ -4,6 +4,7 @@ import { MENU_VARIANT } from '@/config/ui';
 import { PostController } from '@/controllers/post/post';
 import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
 import { dedupeAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
+import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { ResourceActions } from './ResourceActions';
@@ -44,6 +45,9 @@ const mocks = vi.hoisted(() => ({
   shareUrl: vi.fn(),
   copyToClipboard: vi.fn(),
   copyTitles: [] as (string | undefined)[],
+  counts: undefined as
+    undefined | null | { resourceId: string; replies?: number; embeds?: number; collections?: number },
+  countsUri: null as string | null,
 }));
 
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
@@ -63,6 +67,14 @@ vi.mock('@/hooks/useResourceTags/useResourceTags', () => ({
     mocks.tagsUri = uri;
     mocks.tagsEnabled.push(options?.enabled);
     return mocks.tags;
+  },
+}));
+vi.mock('@/hooks/useResourceCounts/useResourceCounts', () => ({
+  useResourceCounts: (uri: string, options?: { fetch?: boolean }) => {
+    mocks.countsUri = uri;
+    // A card reads no counts of its own: they come with its tags.
+    if (options?.fetch) throw new Error('ResourceActions must not fetch the counts itself');
+    return mocks.counts;
   },
 }));
 vi.mock('@/hooks/useShareUrl/useShareUrl', () => ({ useShareUrl: () => ({ shareUrl: mocks.shareUrl }) }));
@@ -95,12 +107,20 @@ vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => ({
   },
 }));
 vi.mock('@/organisms/DialogReply/DialogReply', () => ({
-  DialogReply: (props: { open: boolean; resourceUri?: string; onOpenChangeAction: (open: boolean) => void }) => {
+  DialogReply: (props: {
+    open: boolean;
+    resourceUri?: string;
+    onOpenChangeAction: (open: boolean) => void;
+    onReplySubmitted?: (replyId: string) => void;
+  }) => {
     mocks.replyDialog(props);
     return props.open ? (
       <div data-testid="reply-dialog" data-resource-uri={props.resourceUri}>
         <button type="button" onClick={() => props.onOpenChangeAction(false)}>
           Close reply
+        </button>
+        <button type="button" onClick={() => props.onReplySubmitted?.('me:reply1')}>
+          Send reply
         </button>
       </div>
     ) : null;
@@ -188,6 +208,8 @@ describe('ResourceActions', () => {
     mocks.copyTitles = [];
     mocks.tagsEnabled = [];
     mocks.bookmarkActive = [];
+    mocks.counts = undefined;
+    mocks.countsUri = null;
   });
 
   it.each([
@@ -339,6 +361,21 @@ describe('ResourceActions', () => {
     }
   });
 
+  it('keeps the post’s own pills on a card that is the item itself, on the post card’s surface', () => {
+    render(
+      <ResourceSurfaceProvider surface="card">
+        <ResourceActions uri={URI} collectionsCount={8} tagsLabel="Tags on this song" />
+      </ResourceSurfaceProvider>,
+    );
+
+    const row = screen.getByTestId('resource-action-row');
+    expect(row.children).toHaveLength(5);
+    for (const pill of Array.from(row.children)) {
+      expect(pill).toHaveClass('bg-action-pill', 'shadow-xs');
+      expect(pill).not.toHaveClass('bg-card');
+    }
+  });
+
   describe('tags', () => {
     it.each([
       ['the labels Nexus returned', { tags: [tag('a'), tag('b')] }, '2'],
@@ -450,6 +487,56 @@ describe('ResourceActions', () => {
       expect(screen.queryByTestId('reply-dialog')).not.toBeInTheDocument();
     });
 
+    it('shows how many posts reply to the link, as Nexus counts them with its tags', () => {
+      mocks.counts = { resourceId: 'r1', replies: 4, embeds: 2, collections: 1 };
+      renderActions();
+
+      expect(mocks.countsUri).toBe(URI);
+      const button = screen.getByRole('button', { name: 'Reply to this external resource (4 replies)' });
+      expect(button).toHaveTextContent('4');
+    });
+
+    it.each([
+      ['Nexus has no record of the link', null],
+      ['Nexus counts none', { resourceId: 'r1', replies: 0, embeds: 0 }],
+    ])('shows 0 replies and 0 posts about it when %s, as a post shows its 0s', (_name, counts) => {
+      mocks.counts = counts;
+      renderActions();
+
+      expect(screen.getByRole('button', { name: 'Reply to this external resource (0 replies)' })).toHaveTextContent(
+        '0',
+      );
+      expect(screen.getByRole('button', { name: /^Post about this \(0 posts embed it\)/ })).toHaveTextContent('0');
+    });
+
+    it('shows no number on Reply and Post about this when Nexus does not serve their counts', () => {
+      // A `by-uri` answer without the `*_count` fields: the record exists, its counts are unknown.
+      mocks.counts = { resourceId: 'r1' };
+      renderActions();
+
+      expect(screen.getByRole('button', { name: 'Reply to this external resource' })).toHaveTextContent('');
+      expect(screen.getByTestId('resource-post-button')).toHaveTextContent('');
+    });
+
+    it('takes the page thread’s count over Nexus’ and tells it the reply the dialog wrote', () => {
+      mocks.counts = { resourceId: 'r1', replies: 4 };
+      const onReplySubmitted = vi.fn();
+      render(
+        <ResourceActions
+          uri={URI}
+          tagsLabel="Tags on this song"
+          size="large"
+          replyCount={5}
+          onReplySubmitted={onReplySubmitted}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reply to this external resource (5 replies)' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Send reply' }));
+
+      expect(onReplySubmitted).toHaveBeenCalledWith('me:reply1');
+    });
+
     it('is disabled for a URI a reply cannot name as its parent (a pubky:// resource)', () => {
       render(<ResourceActions uri={PUBKY_URI} tagsLabel="Tags on this deck" />);
 
@@ -495,6 +582,13 @@ describe('ResourceActions', () => {
         expect(button).toHaveAccessibleName('Save link');
         expect(button).toHaveClass('w-10');
       }
+    });
+
+    it('shows Nexus’ count of the collections holding the link over Pinakes’', () => {
+      mocks.counts = { resourceId: 'r1', collections: 2 };
+      renderActions(8);
+
+      expect(screen.getByTestId('resource-collections-count')).toHaveTextContent('2');
     });
 
     it.each([
@@ -589,6 +683,13 @@ describe('ResourceActions', () => {
       expect(mocks.dialog).toHaveBeenLastCalledWith(expect.objectContaining({ open: true, initialContent: URI }));
     });
 
+    it('shows how many posts embed the link when Nexus counts them', () => {
+      mocks.counts = { resourceId: 'r1', embeds: 3 };
+      renderActions();
+
+      expect(screen.getByRole('button', { name: 'Post about this (3 posts embed it)' })).toHaveTextContent('3');
+    });
+
     it('is disabled for a resource with no web link', () => {
       render(<ResourceActions uri="isbn:9780140328721" postUri={null} tagsLabel="Tags on this book" />);
 
@@ -618,7 +719,7 @@ describe('ResourceActions', () => {
 
       openMenu('More options');
 
-      await waitFor(() => expect(menuLabels()).toEqual(['Copy link', 'Copy title']));
+      await waitFor(() => expect(menuLabels()).toEqual(['Copy link', 'Copy link to page', 'Copy title']));
       expect(mocks.signInRequests).toBe(0);
     });
 
@@ -635,12 +736,25 @@ describe('ResourceActions', () => {
       expect(mocks.copyTitles).toContain('Title copied');
     });
 
+    it('copies the link to the resource’s page on Pubky, as a post’s menu copies the post’s', async () => {
+      renderActions();
+
+      openMenu('More options');
+      fireEvent.click(await screen.findByText('Copy link to page'));
+
+      await waitFor(() =>
+        expect(mocks.shareUrl).toHaveBeenCalledWith(
+          `${window.location.origin}/resource?${new URLSearchParams({ uri: URI }).toString()}`,
+        ),
+      );
+    });
+
     it('copies the URI without a web link, and has no title item without a title', async () => {
       render(<ResourceActions uri="isbn:9780140328721" tagsLabel="Tags on this book" linkUrl={null} />);
 
       openMenu('More options');
 
-      await waitFor(() => expect(menuLabels()).toEqual(['Copy link']));
+      await waitFor(() => expect(menuLabels()).toEqual(['Copy link', 'Copy link to page']));
       fireEvent.click(screen.getByText('Copy link'));
       await waitFor(() => expect(mocks.shareUrl).toHaveBeenCalledWith('isbn:9780140328721'));
     });
@@ -651,7 +765,9 @@ describe('ResourceActions', () => {
 
       openMenu('More options');
 
-      await waitFor(() => expect(menuLabels()).toEqual(['Copy link', `Also on (${MENU_VARIANT.DROPDOWN})`]));
+      await waitFor(() =>
+        expect(menuLabels()).toEqual(['Copy link', 'Copy link to page', `Also on (${MENU_VARIANT.DROPDOWN})`]),
+      );
     });
 
     it('lists the other services last, one row per service under "Also on", in a menu that scrolls', async () => {
@@ -672,6 +788,7 @@ describe('ResourceActions', () => {
       const menu = await screen.findByRole('menu');
       expect(menuLabels()).toEqual([
         'Copy link',
+        'Copy link to page',
         'Copy title',
         'TIDAL',
         'Apple Music',

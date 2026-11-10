@@ -1,3 +1,4 @@
+import { getResourceRoute } from '@/app/routes';
 import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
 import {
@@ -274,6 +275,11 @@ const KIND_LABELS: Readonly<Record<string, string>> = { pdf: 'PDF' };
 /** The name of an Also on entry: its service, else the link's host, else the link as written. */
 export function getAlsoOnName(entry: Pick<TPinakesAlsoOn, 'uri' | 'site'>): string {
   return entry.site?.trim() || getLinkHost(entry.uri) || getDisplayLink(entry.uri);
+}
+
+/** Where an Also on entry opens: the link's resource page; `null` for a Pubky object, no external resource. */
+export function getAlsoOnRoute(uri: string): string | null {
+  return uri.startsWith('pubky:') ? null : getResourceRoute(uri);
 }
 
 /**

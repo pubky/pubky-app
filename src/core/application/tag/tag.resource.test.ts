@@ -66,6 +66,33 @@ describe('TagApplication, external resources', () => {
     expect(NexusResourceService.applyViewerTag).toHaveBeenCalledWith(VIEWER_TAG, false);
   });
 
+  it('DELETEs a second file of the same tag too, once', async () => {
+    const other = TAG_URL.replace(/[^/]+\.json$/, 'OTHER.json');
+
+    await TagApplication.commitDeleteResource({ tagUri: TAG_URL, alsoTagUri: other, canWrite: () => true }, VIEWER_TAG);
+    await TagApplication.commitDeleteResource(
+      { tagUri: TAG_URL, alsoTagUri: TAG_URL, canWrite: () => true },
+      VIEWER_TAG,
+    );
+
+    // The second file first: a failure on the file Nexus reports leaves the tag as it was.
+    expect(vi.mocked(HomeserverService.request).mock.calls.map(([request]) => request.url)).toEqual([
+      other,
+      TAG_URL,
+      TAG_URL,
+    ]);
+  });
+
+  it('refuses both files when the session cannot write one of them', async () => {
+    await expect(
+      TagApplication.commitDeleteResource(
+        { tagUri: TAG_URL, alsoTagUri: 'pubky://x/pub/other/tags/1', canWrite: (file) => file === TAG_URL },
+        VIEWER_TAG,
+      ),
+    ).rejects.toBeInstanceOf(AppError);
+    expect(HomeserverService.request).not.toHaveBeenCalled();
+  });
+
   it('treats an already absent tag file as deleted', async () => {
     vi.mocked(HomeserverService.request).mockRejectedValue(
       new AppError({

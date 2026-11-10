@@ -3,6 +3,7 @@ import type { TBookmarkEventParams, TResourceBookmarkParams } from '@/controller
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
+import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 
@@ -102,6 +103,11 @@ export class BookmarkController {
     const { url } = BookmarkNormalizer.toResource(uri, userId);
 
     return BookmarkApplication.fetchResourceBookmarked(url);
+  }
+
+  /** The external resources (links that are no Pubky object) `userId` bookmarked, from the homeserver. */
+  static fetchResourceBookmarks({ userId }: { userId: Pubky }): Promise<string[]> {
+    return BookmarkApplication.fetchResourceBookmarks(userId);
   }
 
   /**

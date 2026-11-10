@@ -14,6 +14,10 @@ import { useBookmarksCollectionSummary } from './useBookmarksCollectionSummary';
 
 let mockLocalAvatarUrl: string | null | undefined = null;
 
+const resourceMocks = vi.hoisted(() => ({ links: undefined as string[] | undefined }));
+vi.mock('@/hooks/useResourceBookmarks/useResourceBookmarks', () => ({
+  useResourceBookmarks: () => resourceMocks.links,
+}));
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(),
 }));
@@ -63,6 +67,7 @@ function setup({
 describe('useBookmarksCollectionSummary', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    resourceMocks.links = [];
     await db.initialize();
     await Promise.all([BookmarkModel.table.clear(), PostDetailsModel.table.clear(), PostStreamModel.table.clear()]);
     setup();
@@ -78,6 +83,25 @@ describe('useBookmarksCollectionSummary', () => {
     expect(result.current.avatarSeed).toBe(CURRENT_USER_PUBKY);
     expect(result.current.avatarUrl).toBe(`avatar:${CURRENT_USER_PUBKY}:42`);
     expect(result.current.isProfileResolved).toBe(true);
+  });
+
+  it('shows no count until the bookmarked links are listed', async () => {
+    await Promise.all(['a:p1'].map(bookmark));
+    resourceMocks.links = undefined;
+
+    const { result } = renderHook(() => useBookmarksCollectionSummary());
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(result.current.bookmarkCount).toBeUndefined();
+  });
+
+  it('adds the bookmarked links (external resources) to the count', async () => {
+    await Promise.all(['a:p1', 'a:p2'].map(bookmark));
+    resourceMocks.links = ['https://www.openstreetmap.org/node/240109189'];
+
+    const { result } = renderHook(() => useBookmarksCollectionSummary());
+
+    await waitFor(() => expect(result.current.bookmarkCount).toBe(3));
   });
 
   it('counts bookmarked posts only, not followed collections', async () => {

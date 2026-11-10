@@ -22,6 +22,8 @@ export function SidebarSection({
   footerText,
   onFooterClick,
   footerTestId,
+  footerExpanded,
+  footerControls,
   footerDataCy,
   className,
   dataCy,
@@ -58,7 +60,14 @@ export function SidebarSection({
 
       {/* Footer */}
       {footerIcon && footerText && (
-        <SidebarButton icon={footerIcon} onClick={onFooterClick} data-cy={footerDataCy} data-testid={footerTestId}>
+        <SidebarButton
+          icon={footerIcon}
+          onClick={onFooterClick}
+          aria-expanded={footerExpanded}
+          aria-controls={footerControls}
+          data-cy={footerDataCy}
+          data-testid={footerTestId}
+        >
           {footerText}
         </SidebarButton>
       )}
