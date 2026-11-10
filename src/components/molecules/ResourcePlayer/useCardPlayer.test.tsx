@@ -604,8 +604,9 @@ describe('useCardPlayer, a song', () => {
     expect(composer).not.toBeInTheDocument();
   });
 
-  it('makes an up-front audio file the page’s player once it plays, and stops it for another', () => {
+  it('makes an up-front audio file the page’s player once it plays, and pauses it for another', () => {
     vi.useFakeTimers();
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
     render(
       <>
         <Song
@@ -617,11 +618,218 @@ describe('useCardPlayer, a song', () => {
       </>,
     );
     const audio = within(screen.getByTestId('file')).getByTestId('resource-player-audio');
+    Object.defineProperty(audio, 'paused', { configurable: true, value: false });
     fireEvent.play(audio);
     expect(audio.closest('[data-keep-playing]')).not.toBeNull();
 
     engage(frameOf('spotify'));
-    expect(audio).not.toBeInTheDocument();
+    // Paused where it is, not loaded anew.
+    expect(pause.mock.contexts).toEqual([audio]);
+    expect(audio).toBeInTheDocument();
+    expect(audio.closest('[data-keep-playing]')).toBeNull();
+  });
+
+  /** One media plays on the page: its own word, where it gives one, says it started. */
+  describe('one media at a time', () => {
+    const YOUTUBE_SONG: TPinakesResourceDetail = {
+      ...SONG_ALONE,
+      uri: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      site: 'YouTube',
+    };
+    const DEEZER_SONG: TPinakesResourceDetail = {
+      ...SONG_ALONE,
+      uri: 'https://www.deezer.com/track/67238735',
+      site: 'Deezer',
+    };
+    const YOUTUBE = 'https://www.youtube-nocookie.com';
+    const youtubeSays = (frame: HTMLElement, playerState: number, origin = YOUTUBE, source?: Window | null) =>
+      act(() => {
+        window.dispatchEvent(
+          new MessageEvent('message', {
+            origin,
+            source: source === undefined ? (frame as HTMLIFrameElement).contentWindow : source,
+            data: JSON.stringify({ event: 'infoDelivery', info: { playerState } }),
+          }),
+        );
+      });
+    const docked = () => document.querySelectorAll('[data-keep-playing]');
+
+    function Page({ withVideo = false }: { withVideo?: boolean }) {
+      return (
+        <>
+          <Song card={YOUTUBE_SONG} href={YOUTUBE_SONG.uri} testId="youtube" />
+          <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
+          {withVideo && <video data-testid="post-video" />}
+        </>
+      );
+    }
+
+    it('asks a YouTube player to say when it plays, and makes it the page’s player only once it does', () => {
+      vi.useFakeTimers();
+      render(<Page />);
+      const youtube = frameOf('youtube') as HTMLIFrameElement;
+      const post = vi.spyOn(youtube.contentWindow!, 'postMessage').mockImplementation(() => {});
+
+      fireEvent.load(youtube);
+      expect(post).toHaveBeenCalledWith(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), YOUTUBE);
+      // A press is no start: the player says when it plays.
+      engage(youtube);
+      expect(docked()).toHaveLength(0);
+
+      youtubeSays(youtube, 1);
+      expect(docked()).toHaveLength(1);
+      report(false);
+      expect(screen.getByRole('complementary')).toContainElement(youtube);
+    });
+
+    it('pauses the playing one when another starts: only the new one docks', () => {
+      vi.useFakeTimers();
+      render(<Page />);
+      const youtube = frameOf('youtube') as HTMLIFrameElement;
+      const post = vi.spyOn(youtube.contentWindow!, 'postMessage').mockImplementation(() => {});
+      youtubeSays(youtube, 1);
+
+      const deezer = frameOf('deezer');
+      engage(deezer);
+      // YouTube is paused in place (its frame stays); the Deezer player is the page's now.
+      expect(post).toHaveBeenCalledWith(JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }), YOUTUBE);
+      expect(frameOf('youtube')).toBe(youtube);
+      expect(Array.from(docked())).toEqual([deezer.closest('[data-keep-playing]')]);
+
+      // YouTube starting again stops Deezer, which cannot be paused: loaded anew, paused.
+      youtubeSays(youtube, 2);
+      youtubeSays(youtube, 1);
+      expect(deezer).not.toBeInTheDocument();
+      expect(Array.from(docked())).toEqual([youtube.closest('[data-keep-playing]')]);
+      report(false);
+      expect(screen.getAllByRole('complementary')).toHaveLength(1);
+    });
+
+    it('keeps a player the viewer paused docked, until other media starts', () => {
+      vi.useFakeTimers();
+      render(<Page withVideo />);
+      const youtube = frameOf('youtube');
+      youtubeSays(youtube, 1);
+      youtubeSays(youtube, 2);
+      report(false);
+      expect(screen.getByRole('complementary')).toContainElement(youtube);
+
+      fireEvent.play(screen.getByTestId('post-video'));
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+      expect(docked()).toHaveLength(0);
+    });
+
+    it('stops a song’s player when a post’s video starts', () => {
+      vi.useFakeTimers();
+      render(<Page withVideo />);
+      const deezer = frameOf('deezer');
+      engage(deezer);
+      expect(docked()).toHaveLength(1);
+
+      fireEvent.play(screen.getByTestId('post-video'));
+      expect(deezer).not.toBeInTheDocument();
+      expect(docked()).toHaveLength(0);
+    });
+
+    it('stops the page’s player for media starting outside it, but not for a muted video', () => {
+      vi.useFakeTimers();
+      render(<Page withVideo />);
+      youtubeSays(frameOf('youtube'), 1);
+      const video = screen.getByTestId('post-video') as HTMLVideoElement;
+      video.muted = true;
+
+      fireEvent.play(video);
+      expect(docked()).toHaveLength(1);
+    });
+
+    it('ignores a player’s word from another origin or another window', () => {
+      vi.useFakeTimers();
+      render(<Page />);
+      const youtube = frameOf('youtube');
+
+      youtubeSays(youtube, 1, 'https://evil.example');
+      youtubeSays(youtube, 1, YOUTUBE, window);
+      youtubeSays(youtube, 1, YOUTUBE, (frameOf('deezer') as HTMLIFrameElement).contentWindow);
+      expect(docked()).toHaveLength(0);
+    });
+
+    it('closes from the dock to a paused player in place', () => {
+      vi.useFakeTimers();
+      render(<Page />);
+      const youtube = frameOf('youtube') as HTMLIFrameElement;
+      const post = vi.spyOn(youtube.contentWindow!, 'postMessage').mockImplementation(() => {});
+      youtubeSays(youtube, 1);
+      report(false);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close the YouTube player' }));
+      expect(post).toHaveBeenCalledWith(JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }), YOUTUBE);
+      expect(frameOf('youtube')).toBe(youtube);
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
+
+    it('sees a press go from one player’s frame into another’s while the page has no focus', () => {
+      vi.useFakeTimers();
+      render(
+        <>
+          <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="first" />
+          <Song card={SONG_ALONE} testId="second" />
+        </>,
+      );
+      const first = frameOf('first');
+      engage(first);
+      expect(first.closest('[data-keep-playing]')).not.toBeNull();
+
+      // Firefox and Safari: the focus moves on into the other frame with no event on the page.
+      const second = frameOf('second');
+      fireEvent.mouseOver(second);
+      const focus = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(second);
+      act(() => vi.advanceTimersByTime(300));
+      focus.mockRestore();
+      expect(first).not.toBeInTheDocument();
+      expect(second.closest('[data-keep-playing]')).not.toBeNull();
+    });
+
+    it('takes no word from a player still playing, nor from a paused video being sought, for a start', () => {
+      vi.useFakeTimers();
+      render(<Page />);
+      const youtube = frameOf('youtube');
+      youtubeSays(youtube, 1);
+      const deezer = frameOf('deezer');
+      engage(deezer);
+      const dockedDeezer = deezer.closest('[data-keep-playing]');
+
+      // Still playing as it is told to pause, then paused and sought: Deezer keeps the page.
+      youtubeSays(youtube, 1);
+      youtubeSays(youtube, 3);
+      youtubeSays(youtube, 2);
+      youtubeSays(youtube, 3);
+      expect(frameOf('deezer')).toBe(deezer);
+      expect(Array.from(docked())).toEqual([dockedDeezer]);
+
+      // Played again by the viewer: it takes the page.
+      youtubeSays(youtube, 1);
+      expect(deezer).not.toBeInTheDocument();
+      expect(Array.from(docked())).toEqual([youtube.closest('[data-keep-playing]')]);
+    });
+
+    it('stops the other players for a preview’s player, which never docks', () => {
+      vi.useFakeTimers();
+      render(
+        <>
+          <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
+          <Song card={YOUTUBE_SONG} href={YOUTUBE_SONG.uri} testId="youtube" preview />
+        </>,
+      );
+      const deezer = frameOf('deezer');
+      engage(deezer);
+      expect(docked()).toHaveLength(1);
+
+      youtubeSays(frameOf('youtube'), 1);
+      expect(deezer).not.toBeInTheDocument();
+      expect(docked()).toHaveLength(0);
+      report(false);
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
   });
 
   it('lets go of the page’s player when platform embeds are turned off while it plays', () => {
