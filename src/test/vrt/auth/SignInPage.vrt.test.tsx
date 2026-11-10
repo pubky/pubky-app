@@ -28,6 +28,7 @@ const SIGN_IN_IMAGE_URLS = [
 type RingRequest = 'ready' | 'generating' | 'expired';
 
 // Per-test scenario read by the mocks below at call time.
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
 const scenario = vi.hoisted(() => ({
   ring: 'ready' as RingRequest,
   passport: 'enabled' as 'enabled' | 'disabled',
@@ -148,6 +149,7 @@ async function renderSignIn(viewport: (typeof VIEWPORTS)[number][1]) {
 beforeEach(() => {
   scenario.ring = 'ready';
   scenario.passport = 'enabled';
+  mockAppleEnabled.mockReturnValue(false);
   useSignInStore.setState(signInInitialState);
 });
 
@@ -162,7 +164,7 @@ for (const [name, viewport] of VIEWPORTS) {
       if (!isDesktop) {
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
-      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await expect.element(page.getByRole('button', { name: 'Continue with Google', exact: true })).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-${name}`);
     });
 
@@ -173,7 +175,7 @@ for (const [name, viewport] of VIEWPORTS) {
       if (!isDesktop) {
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
-      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).not.toBeInTheDocument();
+      await expect.element(page.getByTestId('continue-with-google')).not.toBeInTheDocument();
       await matchVrtFrameScreenshot(`sign-in-page-ring-only-${name}`);
     });
 
@@ -205,14 +207,16 @@ for (const [name, viewport] of VIEWPORTS) {
 
     it('renders the Passport sign-in help', async () => {
       await renderSignIn(viewport);
-      await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
-      await expect.element(page.getByText('Sign in with Apple or Google')).toBeVisible();
+      await page.getByRole('button', { name: 'About signing in with Google' }).click();
+      await expect
+        .element(page.getByRole('heading', { name: 'Continue with Google, powered by Pubky Passport.' }))
+        .toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-google-help-${name}`);
     });
 
     it('renders the page while Passport is open', async () => {
       await renderSignIn(viewport);
-      await page.getByRole('button', { name: 'Continue with Google or Apple' }).click();
+      await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
       await expect.element(page.getByRole('button', { name: 'Waiting for Passport...' })).toBeDisabled();
       if (isDesktop) {
         await expect.element(page.getByRole('button', { name: 'Reload sign-in QR code' })).toBeDisabled();
@@ -235,8 +239,21 @@ for (const [name, viewport] of VIEWPORTS) {
   });
 }
 
-// Preserve the provider presentation covered by the existing baselines.
+describe('Sign-in page mobile with Apple enabled — visual regression', () => {
+  it('renders the provider button and the provider-neutral help', async () => {
+    mockAppleEnabled.mockReturnValue(true);
+    await renderSignIn(VRT_VIEWPORT_MOBILE);
+    await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+    await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
+    await expect
+      .element(page.getByRole('heading', { name: 'Continue with your account, powered by Pubky Passport.' }))
+      .toBeVisible();
+    await matchVrtFrameScreenshot('sign-in-page-apple-help-mobile');
+  });
+});
+
+// Apple is off by default, as shipped; one capture per surface turns it on.
 vi.mock('@/config/network', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/network')>()),
-  isPassportAppleEnabled: () => true,
+  isPassportAppleEnabled: mockAppleEnabled,
 }));

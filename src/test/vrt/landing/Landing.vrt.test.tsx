@@ -2,7 +2,7 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -86,7 +86,13 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   }),
 }));
 
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+
 describe('Landing — visual regression', () => {
+  beforeEach(() => {
+    mockAppleEnabled.mockReturnValue(false);
+  });
+
   it('renders the landing hero at desktop viewport', async () => {
     await preloadImages(LANDING_LOGO_URLS);
     await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
@@ -99,6 +105,14 @@ describe('Landing — visual regression', () => {
     await preloadImages(LANDING_LOGO_URLS);
     await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await matchVrtFrameScreenshot('landing-mobile');
+  });
+
+  it('renders the landing hero at mobile viewport with Apple enabled', async () => {
+    mockAppleEnabled.mockReturnValue(true);
+    await preloadImages(LANDING_LOGO_URLS);
+    await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+    await matchVrtFrameScreenshot('landing-apple-mobile');
   });
 
   it.each([
@@ -208,8 +222,8 @@ describe('Landing — visual regression', () => {
   });
 });
 
-// Preserve the provider presentation covered by the existing baselines.
+// Apple is off by default, as shipped; one capture per surface turns it on.
 vi.mock('@/config/network', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/network')>()),
-  isPassportAppleEnabled: () => true,
+  isPassportAppleEnabled: mockAppleEnabled,
 }));
