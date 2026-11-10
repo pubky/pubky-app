@@ -90,7 +90,7 @@ These workflows trigger on `pull_request` (any target branch):
 
 ### VRT and e2e
 
-VRT and e2e **do not** run on pull requests. They run on **push** to `master` and `dev`, and can also be triggered manually.
+VRT runs on pull requests; e2e **does not**. Both run on **push** to `master` and `dev`, and can also be triggered manually.
 
 They should be passing on the commits you are about to ship, either from the latest `dev` run or by triggering the workflows by hand.
 
