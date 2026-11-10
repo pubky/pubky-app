@@ -1,3 +1,5 @@
+import { useId } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
@@ -15,6 +17,8 @@ interface ResourceSectionProps {
   message?: string | null;
   /** Rows to show as skeletons while the list is read; nothing is loading when `0` or absent. */
   loadingRows?: number;
+  /** A toggle under the rows, in the sidebar card's footer button (`SidebarSection`): "Show N more". */
+  footer?: { icon: LucideIcon; text: string; onClick: () => void; expanded: boolean };
   testId: string;
 }
 
@@ -30,15 +34,25 @@ export function ResourceSection({
   children,
   message,
   loadingRows = 0,
+  footer,
   testId,
 }: ResourceSectionProps) {
   const isLoading = loadingRows > 0;
+  const listId = useId();
 
   return (
     // A named region (`SidebarSection` is a plain block), busy while its list is read.
     <Container as="section" overrideDefaults aria-label={title} aria-busy={isLoading} data-testid={testId}>
       {/* The count never wraps alone onto a line of its own in the narrow column. */}
-      <SidebarSection title={count === undefined ? title : `${title}\u00a0·\u00a0${count}`}>
+      <SidebarSection
+        title={count === undefined ? title : `${title}\u00a0·\u00a0${count}`}
+        footerIcon={footer?.icon}
+        footerText={footer?.text}
+        onFooterClick={footer?.onClick}
+        footerTestId={footer ? `${testId}-toggle` : undefined}
+        footerExpanded={footer?.expanded}
+        footerControls={footer ? listId : undefined}
+      >
         {description && (
           <Typography size="sm" className="font-normal text-muted-foreground">
             {description}
@@ -60,7 +74,9 @@ export function ResourceSection({
             {message}
           </Typography>
         ) : (
-          <ul className="flex min-w-0 flex-col gap-2">{children}</ul>
+          <ul id={listId} className="flex min-w-0 flex-col gap-2">
+            {children}
+          </ul>
         )}
       </SidebarSection>
     </Container>

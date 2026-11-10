@@ -24,6 +24,7 @@ import { QuickReplyContent } from './QuickReplyContent';
 
 export function QuickReply({
   parentPostId,
+  parentUri,
   connectorVariant = POST_THREAD_CONNECTOR_VARIANTS.LAST,
   onReplySubmitted,
 }: QuickReplyProps) {
@@ -69,6 +70,7 @@ export function QuickReply({
   } = usePostInput({
     variant: POST_INPUT_VARIANT.REPLY,
     postId: parentPostId,
+    parentUri,
     placeholder: prompt,
     expanded: false,
     onSuccess: onReplySubmitted,

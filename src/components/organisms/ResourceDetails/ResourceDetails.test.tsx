@@ -13,7 +13,11 @@ import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import type { TPinakesCard, TPinakesGroupDetail, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceDetails } from './ResourceDetails';
 
-const mocks = vi.hoisted(() => ({ configured: true, otherLinks: null as { uri: string; name: string }[] | null }));
+const mocks = vi.hoisted(() => ({
+  configured: true,
+  replyCount: 2 as number | undefined,
+  otherLinks: null as { uri: string; name: string }[] | null,
+}));
 
 // The second tag group's links are read once by the page; here only which links matters.
 vi.mock('@/hooks/useOtherLinkTags/useOtherLinkTags', () => ({
@@ -38,6 +42,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     extraMenuContent,
     otherTagList,
     size,
+    replyCount,
   }: {
     uri: string;
     postUri?: string | null;
@@ -48,9 +53,11 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     extraMenuContent?: unknown;
     otherTagList?: readonly { label: string }[];
     size?: string;
+    replyCount?: number;
   }) => (
     <div
       data-testid="resource-actions"
+      data-reply-count={replyCount ?? 'none'}
       data-uri={uri}
       data-post-uri={postUri === undefined ? 'default' : (postUri ?? 'none')}
       data-collections={collectionsCount ?? 'none'}
@@ -62,6 +69,11 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     >
       <div data-testid="resource-other-tag-list" data-labels={otherTagList?.map((tag) => tag.label).join(',')} />
     </div>
+  ),
+}));
+vi.mock('./ResourceReplies', () => ({
+  ResourceReplies: ({ uri, replies }: { uri: string; replies: { uri: string | null } }) => (
+    <div data-testid="resource-replies-stub" data-uri={uri} data-replies-uri={replies.uri} />
   ),
 }));
 
@@ -77,7 +89,20 @@ const FAILED = { data: null, isLoading: false, isError: true };
 
 let read: UsePinakesQueryResult<TPinakesResourceDetail>;
 const onRetry = vi.fn();
-const renderDetails = (uri: string | null) => render(<ResourceDetails uri={uri} read={read} onRetry={onRetry} />);
+/** The page's read of the thread (`ResourcePage` reads it and hands it down); its own test covers it. */
+const pageReplies = () => ({
+  uri: 'page-thread',
+  replyIds: [],
+  totalCount: 2,
+  replyCount: mocks.replyCount,
+  hasMore: false,
+  showAll: false,
+  isExpandingAll: false,
+  expandAll: vi.fn(),
+  addReply: vi.fn(),
+});
+const renderDetails = (uri: string | null) =>
+  render(<ResourceDetails uri={uri} read={read} onRetry={onRetry} replies={pageReplies()} />);
 
 describe('ResourceDetails', () => {
   const mockGroup = vi.mocked(usePinakesGroup);
@@ -87,6 +112,7 @@ describe('ResourceDetails', () => {
     mocks.otherLinks = null;
     vi.clearAllMocks();
     mocks.configured = true;
+    mocks.replyCount = 2;
     read = settled(VIDEO);
     mockGroup.mockReturnValue(settled(GROUP));
     mockRelated.mockReturnValue(settled(RELATED));
@@ -107,6 +133,25 @@ describe('ResourceDetails', () => {
       // The lists are the page's sidebar cards (`ResourceSidebar`), not part of the body.
       expect(screen.queryByTestId('resource-also-on-list')).not.toBeInTheDocument();
       expect(mockRelated).not.toHaveBeenCalled();
+    });
+
+    it('puts the thread of the posts replying to the acted-on link under the card, as a post page does', () => {
+      renderDetails(VIDEO.uri);
+
+      const thread = screen.getByTestId('resource-replies-stub');
+      expect(thread).toHaveAttribute('data-uri', VIDEO.uri);
+      expect(thread).toHaveAttribute('data-replies-uri', 'page-thread');
+      // After the card, not inside it.
+      expect(within(screen.getByTestId('resource-details')).queryByTestId('resource-replies-stub')).toBeNull();
+      // The Reply button counts what the thread counts.
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-reply-count', '2');
+    });
+
+    it('gives the Reply button no number when Nexus does not count the replies', () => {
+      mocks.replyCount = undefined;
+      renderDetails(VIDEO.uri);
+
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-reply-count', 'none');
     });
 
     it('closes the large card with its action row and tags, on the card’s link', () => {
@@ -323,6 +368,24 @@ describe('ResourceDetails', () => {
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
       expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['Pinakes is not configured', () => (mocks.configured = false)],
+      ['the card could not be read', () => (read = FAILED)],
+    ])('shows the posts replying to the link when %s: they come from Nexus', (_name, arrange) => {
+      arrange();
+      renderDetails(NOT_KNOWN);
+
+      expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+    });
+
+    it('still shows the posts replying to it, under the empty state, which then does not say nobody shared it', () => {
+      read = settled(null);
+      renderDetails(NOT_KNOWN);
+
+      expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+      expect(screen.getByText('It has not been read yet.')).toBeInTheDocument();
     });
 
     it.each(['isbn:0000000000', 'javascript:alert(1)'])('shows %s as text, not a link', (uri) => {

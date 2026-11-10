@@ -8,6 +8,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 import { isCardSurfaceClick } from './ResourceCard.utils';
 import { ResourceSourceIcon } from './ResourceSourceIcon';
+import { useResourceSurface } from './ResourceSurfaceContext';
 
 interface ResourceCardFrameProps extends Omit<React.HTMLAttributes<HTMLElement>, 'onClick' | 'onKeyDown'> {
   /**
@@ -29,8 +30,12 @@ interface ResourceCardFrameProps extends Omit<React.HTMLAttributes<HTMLElement>,
  * opens the link in a new tab. The frame itself has no interactive role, so no control is nested
  * in another; clicks, and Enter or Space on the card's links and controls, never reach the
  * surrounding post (a quoted post opens itself on either key, wherever it came from).
+ *
+ * A card that is the item itself, in no post (a collection's: `ResourceSurfaceProvider` `card`),
+ * stands on the post card's surface instead, as the resource page's large card does.
  */
 export function ResourceCardFrame({ clickThroughUrl, className, children, ...props }: ResourceCardFrameProps) {
+  const onCard = useResourceSurface() === 'card';
   const handleClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     if (!clickThroughUrl || !isCardSurfaceClick(event.currentTarget, event.target)) return;
@@ -50,7 +55,11 @@ export function ResourceCardFrame({ clickThroughUrl, className, children, ...pro
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       data-click-through={clickThroughUrl ? 'true' : undefined}
-      className={cn('flex w-full min-w-0 flex-col overflow-hidden rounded-md bg-embed', className)}
+      className={cn(
+        'flex w-full min-w-0 flex-col overflow-hidden rounded-md bg-embed',
+        onCard && 'bg-card text-card-foreground shadow-sm',
+        className,
+      )}
       {...props}
     >
       {children}

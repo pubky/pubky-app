@@ -14,7 +14,7 @@ import type { DialogReplyProps } from './DialogReply.types';
  * The reply composer under what it answers: a post, or an external resource's card. A reply to an
  * external resource is a post whose `parent` is the resource's URI.
  */
-export function DialogReply({ postId, resourceUri, open, onOpenChangeAction }: DialogReplyProps) {
+export function DialogReply({ postId, resourceUri, open, onOpenChangeAction, onReplySubmitted }: DialogReplyProps) {
   // The reply's `parent`: the resource's URI as written, else the post.
   const replyTarget = resourceUri !== undefined ? { parentUri: resourceUri } : { postId };
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
@@ -55,7 +55,8 @@ export function DialogReply({ postId, resourceUri, open, onOpenChangeAction }: D
               autoFocusTextarea
               variant={POST_INPUT_VARIANT.REPLY}
               {...replyTarget}
-              onSuccess={() => {
+              onSuccess={(replyId) => {
+                onReplySubmitted?.(replyId);
                 onOpenChangeAction(false);
               }}
               showThreadConnector={true}

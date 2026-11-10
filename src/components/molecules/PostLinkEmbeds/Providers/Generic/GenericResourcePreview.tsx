@@ -17,6 +17,7 @@ import {
   getResourceTagsLabel,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
+import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
@@ -132,6 +133,9 @@ function ResourcePreview({
   isComposing = false,
   isOnScreen,
 }: GenericResourcePreviewProps & { isOnScreen: boolean }) {
+  // A card that is the item itself (a collection's) stands on the post card's surface: its
+  // player's pills are the post's own, as its footer's (`ResourceActions`).
+  const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
   const isNested = useIsNestedPostPreview();
   const lookupUrl = isPinakesConfigured() && !isDirectMediaFile(url) ? url : null;
   // The composer has Pinakes read the link (`resolve`) and never re-reads it: a link's re-reads are
@@ -143,7 +147,11 @@ function ResourcePreview({
   const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
   const withActions = !isComposing && !isNested;
   // A card with an action row plays its services in place; not while composing or in a quoted post.
-  const { playOn, renderBody } = useCardPlayer(withActions && card && !hasNothingToShow(card) ? card : null, url);
+  const { playOn, renderBody } = useCardPlayer(
+    withActions && card && !hasNothingToShow(card) ? card : null,
+    url,
+    actionSurface,
+  );
 
   if (!lookupUrl) return <GenericPreview url={url} />;
   if (isLoading && !isSlow) return <ResourceCardSkeleton withActions={withActions} />;

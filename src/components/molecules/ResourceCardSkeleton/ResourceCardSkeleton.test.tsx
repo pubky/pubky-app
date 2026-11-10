@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from './ResourceCardSkeleton';
 
 describe('ResourceCardSkeleton', () => {
@@ -67,5 +68,24 @@ describe('ResourceCardSkeleton', () => {
     expect(skeleton).toHaveAttribute('data-size', 'large');
     expect(skeleton).toHaveClass('bg-card');
     expect(skeleton).not.toHaveClass('bg-embed');
+  });
+
+  it('takes the large card’s surface and placeholders, at the normal size, for a card that is the item itself', () => {
+    render(
+      <ResourceSurfaceProvider surface="card">
+        <ResourceCardSkeleton withActions />
+      </ResourceSurfaceProvider>,
+    );
+    const skeleton = screen.getByTestId('resource-card-skeleton');
+    expect(skeleton).toHaveAttribute('data-size', 'default');
+    expect(skeleton).toHaveClass('bg-card');
+    expect(skeleton).not.toHaveClass('bg-embed');
+    expect(skeleton.firstElementChild).toHaveClass('p-4');
+    const buttons = screen.getByTestId('resource-card-skeleton-actions').lastElementChild?.children ?? [];
+    expect(buttons).toHaveLength(5);
+    for (const button of Array.from(buttons)) {
+      expect(button).toHaveClass('bg-muted');
+      expect(button).not.toHaveClass('bg-card');
+    }
   });
 });

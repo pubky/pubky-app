@@ -55,12 +55,25 @@ describe('TagController, external resources', () => {
     expect(viewerTag).toEqual({ uri: URI, label: 'berlin', viewerId: VIEWER });
   });
 
-  it('deletes the viewer’s own tag file Nexus reports, wherever another app wrote it', async () => {
+  it('deletes the viewer’s own tag file Nexus reports, wherever another app wrote it, and the one this app writes', async () => {
     const tagUri = `pubky://${VIEWER}/pub/mapky/tags/0123ABC`;
 
     await TagController.commitDeleteResource({ taggerId: VIEWER, uri: URI, label: 'berlin', tagUri });
 
-    expect(vi.mocked(TagApplication.commitDeleteResource).mock.calls[0][0].tagUri).toBe(tagUri);
+    const [input] = vi.mocked(TagApplication.commitDeleteResource).mock.calls[0];
+    expect(input.tagUri).toBe(tagUri);
+    // A spelling Nexus folds into the same resource left a second file of the same tag.
+    expect(input.alsoTagUri).toBe(buildTag(VIEWER, URI, 'berlin').url);
+  });
+
+  it('deletes one file when Nexus reports the one this app writes', async () => {
+    const tagUri = buildTag(VIEWER, URI, 'berlin').url;
+
+    await TagController.commitDeleteResource({ taggerId: VIEWER, uri: URI, label: 'berlin', tagUri });
+
+    const [input] = vi.mocked(TagApplication.commitDeleteResource).mock.calls[0];
+    expect(input.tagUri).toBe(tagUri);
+    expect(input.alsoTagUri).toBeUndefined();
   });
 
   it('never deletes a tag file of another user, building the viewer’s own instead', async () => {

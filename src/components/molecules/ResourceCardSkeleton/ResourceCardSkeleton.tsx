@@ -1,6 +1,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { cn } from '@/libs/utils/utils';
+import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { PostActionsBarSkeleton } from '@/organisms/PostActionsBar/PostActionsBar.skeleton';
 
 // Only Tags carries a count (wider); Reply, Post about this, Save and ⋯ are icon-only.
@@ -21,10 +22,12 @@ function SkeletonPiece({ className }: { className?: string }) {
 /**
  * Loading state of `ResourceCard`, in its frame: type and source on top, image and title beside
  * it, then the bottom zone (the tags' "+", then the action buttons, as on a post).
- * In a post it is announced as busy ("Loading link preview").
+ * In a post it is announced as busy ("Loading link preview"). A card that is the item itself
+ * (`ResourceSurfaceProvider` `card`) loads on the post card's surface, as the large card does.
  */
 export function ResourceCardSkeleton({ withActions = false, size = 'default' }: ResourceCardSkeletonProps) {
   const isLarge = size === 'large';
+  const onCard = useResourceSurface() === 'card' || isLarge;
   return (
     <Container
       overrideDefaults
@@ -33,7 +36,7 @@ export function ResourceCardSkeleton({ withActions = false, size = 'default' }: 
       aria-busy="true"
       className={cn(
         'flex w-full min-w-0 flex-col overflow-hidden rounded-md bg-embed',
-        isLarge && 'bg-card text-card-foreground shadow-sm',
+        onCard && 'bg-card text-card-foreground shadow-sm',
       )}
     >
       <Container overrideDefaults className={cn('flex flex-col gap-3', isLarge ? 'p-6' : 'p-4')}>
@@ -62,7 +65,7 @@ export function ResourceCardSkeleton({ withActions = false, size = 'default' }: 
           )}
         >
           <SkeletonPiece className="size-8 rounded-md" />
-          <PostActionsBarSkeleton widths={RESOURCE_ACTION_BUTTON_WIDTHS} surface={isLarge ? 'default' : 'muted'} />
+          <PostActionsBarSkeleton widths={RESOURCE_ACTION_BUTTON_WIDTHS} surface={onCard ? 'default' : 'muted'} />
         </Container>
       )}
     </Container>

@@ -34,6 +34,12 @@ export interface TCreateResourceTagInput {
 /** The viewer's resolved tag file on an external resource. */
 export interface TDeleteResourceTagInput {
   tagUri: string;
+  /**
+   * A second file of the same tag to delete with it: the one this app writes for the link as
+   * written, when Nexus reports another. One person tagging spellings Nexus folds into one resource
+   * (`#fragment`, host case, `:443`) holds a file per spelling and Nexus reports only one.
+   */
+  alsoTagUri?: string;
   isCurrent?: () => boolean;
   canWrite: (tagUri: string) => boolean;
 }

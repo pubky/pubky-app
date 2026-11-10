@@ -53,6 +53,37 @@ export class BookmarkNormalizer {
   }
 
   /**
+   * The external resource (a link that is no Pubky object) one entry of the bookmarks directory
+   * listing bookmarks: its target as written, or `null` for the overflow form `~{hash}`, whose
+   * target only the stored object holds (`resourceOfStored`). `undefined` for a file that bookmarks
+   * a Pubky object (a post, a profile) or is no bookmark.
+   */
+  static resourceOfListing(url: string): string | null | undefined {
+    try {
+      const parsed = parseUri(url);
+      if (parsed.kind !== 'bookmark') return undefined;
+      if (parsed.target === undefined) return parsed.id.startsWith('~') ? null : undefined;
+      return isResourceTarget(parsed.target) ? parsed.target : undefined;
+    } catch {
+      // A name that is no canonical URI names no bookmark.
+      return undefined;
+    }
+  }
+
+  /**
+   * The external resource the stored bookmark at `url` targets, `undefined` when it targets a Pubky
+   * object. Throws a validation `AppError` for bytes the data model refuses.
+   */
+  static resourceOfStored(url: string, bytes: Uint8Array): string | undefined {
+    try {
+      const { target } = decodeObject(url, bytes, 'bookmark');
+      return target && isResourceTarget(target) ? target : undefined;
+    } catch (error) {
+      throw toSpecsValidationError(error, 'decodeBookmark', { url });
+    }
+  }
+
+  /**
    * The stored bookmark at `url`: the post it targets (null when it targets anything else) and when
    * it was made, in milliseconds. Throws a validation `AppError` for bytes the data model refuses.
    */
@@ -82,4 +113,9 @@ export class BookmarkNormalizer {
       return null;
     }
   }
+}
+
+/** A bookmark target that is no Pubky object: an external resource (a web link, `isbn:`, …). */
+function isResourceTarget(target: string): boolean {
+  return !target.startsWith('pubky:');
 }

@@ -619,6 +619,8 @@ vi.mock('@/controllers/bookmark/bookmark', async () => {
             details: fixture ? { ...fixture.details } : undefined,
           };
         }),
+      // Bookmarked web links (`useResourceBookmarks`): none in these fixtures.
+      fetchResourceBookmarks: async () => [],
     },
   };
 });
