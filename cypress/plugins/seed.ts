@@ -25,6 +25,9 @@ import type {
  * app writes with (`@synonymdev/pubky` + `pubky-app-specs`), straight against the test stack's
  * homeserver. Nexus indexes those writes exactly as it indexes the app's, so feeds, notifications
  * and pagination are still exercised end to end; only the setup clicks are skipped.
+ *
+ * The local stack resolves homeservers through testnet PKARR relays on localhost. Staging sets
+ * `testnet` false and uses the default mainnet client, which uses the public PKARR relays.
  */
 
 export type SeedConfig = {
@@ -32,6 +35,7 @@ export type SeedConfig = {
   homeserverAdminPassword: string;
   homeserverPublicKey: string;
   nexusUrl: string;
+  testnet: boolean;
 };
 
 // The passcode `cy.signInWithEncryptedFile` types by default
@@ -76,7 +80,7 @@ export const createSeedTasks = (config: SeedConfig) => {
   // seeded its users fails with "was not seeded in this Cypress run", so re-run the whole spec.
   const sessions = new Map<string, SeededSession>();
   let sdk: Pubky | undefined;
-  const pubky = () => (sdk ??= Pubky.testnet('localhost'));
+  const pubky = () => (sdk ??= config.testnet ? Pubky.testnet('localhost') : new Pubky());
 
   const sessionFor = (userId: string): SeededSession => {
     const seeded = sessions.get(userId);

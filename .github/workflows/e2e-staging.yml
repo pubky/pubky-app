@@ -10,12 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       specs:
-        description: 'Optional value passed to cypress run --spec, relative to cypress/ (for example e2e/posts.cy.ts). Leave empty to run the full suite.'
+        description: 'Optional value passed to cypress run --spec, relative to cypress/ (for example e2e/posts.cy.ts). Leave empty to run every spec except e2e/locks.cy.ts.'
         required: false
         type: string
-  # TEMP: remove before merge
-  push:
-    branches: [cursor/e2e-staging-workflow-e74d]
 
 # One run at a time: every spec shares the staging backend.
 concurrency:
@@ -58,6 +55,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Copies PUBKY_RUNTIME_TESTNET=false, which selects the mainnet seed client.
       - name: Load staging env
         run: cp .env.staging.example .env
 
@@ -74,6 +72,8 @@ jobs:
           wait-on: 'http://localhost:3000'
           wait-on-timeout: 180
           spec: ${{ inputs.specs }}
+          # locks.cy.ts needs the local Lock Server stub, which this job does not run.
+          config: excludeSpecPattern=e2e/locks.cy.ts
           browser: chrome
           # Dependencies are already installed. The action's own install looks
           # for a lockfile in the Cypress directory, which has none.
