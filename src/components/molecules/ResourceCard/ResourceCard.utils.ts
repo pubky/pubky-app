@@ -154,16 +154,24 @@ export function getFaviconUrl(value: string | null | undefined): string | null {
  * Where a card leads and whose site it names, shared by the card and its ⋯ menu:
  *
  * - `linkUrl`: the post's link first (what the author wrote), then the card's own link, then the
- *   address Pinakes gives for a Pubky app's object (`open_in`); never a non-web URI.
- * - `sourceUri`: what the source's favicon is read from: the card's own link when that is web, not
- *   an alias the post may use (a short link, a mobile host), since the source names the card's site.
+ *   address Pinakes gives for a Pubky app's object (`open_in`), then the first web link people
+ *   wrote for it (`refs`, most referenced first), such as a `btc:` or `isbn:` card's page; never a
+ *   non-web URI.
+ * - `sourceUri`: what the source's favicon is read from: the card's own link when that is web, else
+ *   `linkUrl`; not an alias the post may use (a short link, a mobile host), since the source names
+ *   the card's site.
  * - `siteName`: the card's `site`, else the host of `sourceUri` without `www.`.
  */
 export function getResourceLinks(
-  card: Pick<TPinakesCard, 'uri' | 'site' | 'open_in'>,
+  card: Pick<TPinakesCard, 'uri' | 'site' | 'open_in' | 'refs'>,
   href?: string,
 ): { linkUrl: string | null; sourceUri: string; siteName: string | null } {
-  const linkUrl = getHttpUrl(href) ?? getHttpUrl(card.uri) ?? getHttpUrl(card.open_in[0]?.url);
+  const linkUrl =
+    getHttpUrl(href) ??
+    getHttpUrl(card.uri) ??
+    getHttpUrl(card.open_in[0]?.url) ??
+    card.refs.map(getHttpUrl).find((url) => url !== null) ??
+    null;
   const sourceUri = getHttpUrl(card.uri) ?? linkUrl ?? card.uri;
   return { linkUrl, sourceUri, siteName: card.site || getLinkHost(sourceUri) };
 }

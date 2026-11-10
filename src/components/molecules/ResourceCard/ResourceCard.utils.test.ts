@@ -236,11 +236,63 @@ describe('getResourceLinks', () => {
   });
 
   it('never links a non-web URI', () => {
-    expect(getResourceLinks({ uri: 'isbn:9780140328721', site: null, open_in: [] })).toEqual({
+    expect(
+      getResourceLinks({ uri: 'isbn:9780140328721', site: null, open_in: [], refs: ['isbn:9780140328721'] }),
+    ).toEqual({
       linkUrl: null,
       sourceUri: 'isbn:9780140328721',
       siteName: null,
     });
+  });
+
+  const BTC_BLOCK = {
+    uri: 'btc:block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a',
+    site: 'mempool.space',
+    open_in: [],
+    refs: ['https://mempool.space/block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a'],
+  };
+
+  it('links a card whose own link is not a web link to the first web link people wrote for it', () => {
+    expect(getResourceLinks(BTC_BLOCK)).toEqual({
+      linkUrl: BTC_BLOCK.refs[0],
+      sourceUri: BTC_BLOCK.refs[0],
+      siteName: 'mempool.space',
+    });
+    expect(
+      getResourceLinks({
+        uri: 'isbn:9780140328721',
+        site: null,
+        open_in: [],
+        refs: ['isbn:9780140328721', 'https://openlibrary.org/isbn/9780140328721', 'https://example.org/b'],
+      }),
+    ).toEqual({
+      linkUrl: 'https://openlibrary.org/isbn/9780140328721',
+      sourceUri: 'https://openlibrary.org/isbn/9780140328721',
+      siteName: 'openlibrary.org',
+    });
+  });
+
+  it('still prefers the post’s link and the card’s own web link over its refs', () => {
+    expect(getResourceLinks(BTC_BLOCK, 'https://example.org/block').linkUrl).toBe('https://example.org/block');
+    expect(getResourceLinks({ ...eventFixture, refs: ['https://example.org/other'] }).linkUrl).toBe(eventFixture.uri);
+  });
+
+  it('prefers the address Pinakes gives for a Pubky app’s object to a web link people wrote', () => {
+    expect(
+      getResourceLinks({
+        uri: 'pubky://someone/pub/x',
+        site: 'loopky',
+        open_in: [{ client: 'Loopky', url: 'https://loopky.app/x' }],
+        refs: ['pubky://someone/pub/x', 'https://homeserver.example/pub/x'],
+      }).linkUrl,
+    ).toBe('https://loopky.app/x');
+  });
+
+  it('never links a ref that is not a web link', () => {
+    expect(
+      getResourceLinks({ uri: 'btc:block/0', site: null, open_in: [], refs: ['btc:block/0', 'javascript:alert(1)'] })
+        .linkUrl,
+    ).toBeNull();
   });
 });
 

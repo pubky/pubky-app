@@ -326,6 +326,24 @@ describe('ResourceCard', () => {
       );
     });
 
+    it('links a btc: card without a post link to the web link people wrote for it', () => {
+      const block = {
+        ...ARTICLE,
+        uri: 'btc:block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a',
+        type: 'BitcoinBlock',
+        type_path: ['Thing', 'BitcoinBlock'],
+        site: 'mempool.space',
+        image: null,
+        refs: ['https://mempool.space/block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a'],
+        aliases: ['https://mempool.space/block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a'],
+      };
+      render(<ResourceCard card={block} />);
+
+      expect(source()).toHaveAttribute('href', block.refs[0]);
+      expect(source()).toHaveTextContent('mempool.space');
+      expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute('src', 'https://mempool.space/favicon.ico');
+    });
+
     it('opens a pubky:// card at the address Pinakes gives for it, and hides its pubky:// image', () => {
       render(<ResourceCard card={pubkyFixture} />);
 
@@ -340,6 +358,7 @@ describe('ResourceCard', () => {
         ...ARTICLE,
         uri: 'javascript:alert(1)',
         image: 'javascript:alert(2)',
+        refs: ['javascript:alert(4)'],
         open_in: [{ client: 'x', url: 'data:text/html,<b>x</b>' }],
       };
       render(<ResourceCard card={unsafe} href="javascript:alert(3)" />);
