@@ -52,16 +52,23 @@ export function isListedPlayer(id: string): id is ListedPlayer {
 /**
  * The Players list as shown (Settings, Links & Media): the services in the viewer's order, then
  * those not in it in their default order (a service a later version adds shows up at the end), the
- * removed ones apart. Ids this version does not play are left out of both.
+ * removed ones apart. Card (no player) is a row too, last until moved, and never removed. Ids this
+ * version does not play are left out of both.
  */
 export function getPlayerList({ playerOrder, hiddenPlayers }: PlayerPreferences): {
-  shown: ListedPlayer[];
+  shown: PlayerListEntry[];
   removed: ListedPlayer[];
 } {
-  const all = [...new Set([...playerOrder.filter(isListedPlayer), ...(Object.keys(PROVIDER_NAMES) as ListedPlayer[])])];
+  const all = [
+    ...new Set<PlayerListEntry>([
+      ...playerOrder.filter(isPlayerListEntry),
+      ...(Object.keys(PROVIDER_NAMES) as ListedPlayer[]),
+      CARD_PLAYER,
+    ]),
+  ];
   return {
-    shown: all.filter((id) => !hiddenPlayers.includes(id)),
-    removed: all.filter((id) => hiddenPlayers.includes(id)),
+    shown: all.filter((id) => id === CARD_PLAYER || !hiddenPlayers.includes(id)),
+    removed: all.filter((id): id is ListedPlayer => id !== CARD_PLAYER && hiddenPlayers.includes(id)),
   };
 }
 
@@ -71,6 +78,41 @@ export function getPlayerList({ playerOrder, hiddenPlayers }: PlayerPreferences)
  */
 export function isPlayerShown(provider: PlayerProvider, hiddenPlayers: readonly string[] = []): boolean {
   return !hiddenPlayers.includes(provider);
+}
+
+/**
+ * The choice that is no player: a song shows its card ("Card" in its switch, "Card (no player)" in
+ * the Players list), and nothing loads from the services until one is picked.
+ */
+export const CARD_PLAYER = 'card';
+
+/** A row of the Players list: a service, or Card (no player), which is never removed. */
+export type PlayerListEntry = ListedPlayer | typeof CARD_PLAYER;
+
+/** Whether an id is a row of the Players list this version shows (a service it lists, or Card). */
+export function isPlayerListEntry(id: string): id is PlayerListEntry {
+  return id === CARD_PLAYER || isListedPlayer(id);
+}
+
+/**
+ * Whether a card shows itself instead of a service's player: Card (no player) is in the viewer's
+ * Players order above that service (`provider`, the one it would play first). A service not in the
+ * order comes after Card; a plain audio file is no service in the list, so it still plays. Without
+ * Card in the order (never moved, or a client that does not know it), the player shows.
+ */
+export function isCardFirst(provider: PlayerProvider, playerOrder: readonly string[]): boolean {
+  const card = playerOrder.indexOf(CARD_PLAYER);
+  if (card === -1) return false;
+  const service = playerOrder.indexOf(provider);
+  return service === -1 ? isListedPlayer(provider) : card < service;
+}
+
+/**
+ * Whether the viewer ranked the services: a service is in the order after Card, or without it. An
+ * order that ends at Card only places Card (moved alone), so the services keep Auto.
+ */
+export function isRankedOrder(playerOrder: readonly string[]): boolean {
+  return playerOrder.slice(playerOrder.indexOf(CARD_PLAYER) + 1).some(isListedPlayer);
 }
 
 /**
@@ -392,6 +434,35 @@ export function getPlayerTarget(link: string): PlayerTarget | null {
   return null;
 }
 
+/** The services whose track links say a video is a song: their own catalogues' tracks. */
+const TRACK_PROVIDERS: ReadonlySet<PlayerProvider> = new Set([
+  PlayerProvider.SPOTIFY,
+  PlayerProvider.DEEZER,
+  PlayerProvider.TIDAL,
+]);
+
+/** A link that is one track on Spotify, Deezer or TIDAL (no album, artist, playlist, episode or video). */
+function isTrackLink(link: string): boolean {
+  const target = getPlayerTarget(link);
+  return (
+    target !== null &&
+    TRACK_PROVIDERS.has(target.provider) &&
+    /^\/(?:browse\/)?track\//.test(new URL(target.link).pathname)
+  );
+}
+
+/**
+ * Whether a card is a song, whose player shows up front (`useCardPlayer`): a `MusicRecording` (its
+ * `type`, else the deepest `type_path` entry), or a `VideoObject` Pinakes knows as a track on
+ * Spotify, Deezer or TIDAL (Also on): a song's upload to YouTube, which Pinakes types as a video.
+ * Only those link shapes count, never a name or a tag; an album, artist or other type is no song.
+ */
+export function isSong(card: Pick<TPinakesCard, 'type' | 'type_path' | 'also_on'>): boolean {
+  const type = card.type || card.type_path.at(-1);
+  if (type === 'MusicRecording') return true;
+  return type === 'VideoObject' && card.also_on.some((entry) => isTrackLink(entry.uri));
+}
+
 /** A card's links its own player may be built from: its canonical `uri` and its other spellings. */
 type TOwnLinks = Pick<TPinakesCard, 'uri'> & Partial<Pick<TPinakesResourceDetail, 'aliases'>>;
 
@@ -408,12 +479,24 @@ function getOwnLink(card: TOwnLinks, href?: string | null): string {
 const AUTOPLAY_PARAMS = ['autoplay', 'auto_play'] as const;
 
 /**
+ * A player shown up front, not after a press on Play: the same player without what starts it on
+ * load (its autoplay parameter and start message), so it plays only when pressed inside. A plain
+ * audio file keeps the browser's player, which then does not start on its own (`autoplay: false`).
+ */
+export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
+  if (target.element !== 'iframe') return { ...target, autoplay: false };
+  const src = new URL(target.src);
+  for (const param of AUTOPLAY_PARAMS) src.searchParams.delete(param);
+  return { ...target, src: src.href, autoplay: false, start: undefined };
+}
+
+/**
  * A link's service embed shown up front (`GenericResourcePreview`), not after a press on Play: the
- * card player's frame for it without what starts it on load (its autoplay parameter and start
- * message), so it plays only when pressed inside. `null` when the link is on no such service, or is
- * a plain audio file (the link's own preview plays those). With the link's card, a link no player
- * takes falls back to the card's canonical `uri` and its aliases (`getOwnLink`). `null` too for a
- * service the viewer removed from Players (`hiddenPlayers`).
+ * card player's frame for it without what starts it on load (`getUpFrontTarget`), so it plays only
+ * when pressed inside. `null` when the link is on no such service, or is a plain audio file (the
+ * link's own preview plays those). With the link's card, a link no player takes falls back to the
+ * card's canonical `uri` and its aliases (`getOwnLink`). `null` too for a service the viewer removed
+ * from Players (`hiddenPlayers`).
  */
 export function getEmbedTarget(
   link: string,
@@ -422,9 +505,7 @@ export function getEmbedTarget(
 ): PlayerTarget | null {
   const target = getPlayerTarget(card ? getOwnLink(card, link) : link);
   if (!target || target.element !== 'iframe' || !isPlayerShown(target.provider, hiddenPlayers)) return null;
-  const src = new URL(target.src);
-  for (const param of AUTOPLAY_PARAMS) src.searchParams.delete(param);
-  return { ...target, src: src.href, autoplay: false, start: undefined };
+  return getUpFrontTarget(target);
 }
 
 /**
@@ -432,14 +513,21 @@ export function getEmbedTarget(
  * its `also_on` links in Pinakes' order (its best link of a service first), those that start on
  * our press before those that need a press inside (`autoplay`), so Play on starts with one press
  * whenever an Also on service can. A `missing` card's own link is gone upstream and offers no player.
+ * With `autoplayFirst: false` Also on keeps Pinakes' order: a player shown up front (a song's)
+ * starts on no press of ours, so none is put first for starting on it.
  *
  * The viewer's Players (`players`, Settings, Links & Media) come last: a removed service offers no
  * player, and the services in the viewer's order go first, in that order,
- * before those not in it (Auto order). With no order (never reordered) it all stays Auto.
+ * before those not in it (Auto order). With no ranked order (never reordered, or only Card moved:
+ * `isRankedOrder`) it all stays Auto.
  */
 export function getPlayerTargets(
   card: Pick<TPinakesCard, 'status' | 'also_on'> & TOwnLinks,
-  { href, players }: { href?: string | null; players?: PlayerPreferences } = {},
+  {
+    href,
+    players,
+    autoplayFirst = true,
+  }: { href?: string | null; players?: PlayerPreferences; autoplayFirst?: boolean } = {},
 ): PlayerTarget[] {
   const own = card.status === 'missing' ? null : getOwnLink(card, href);
   const links = [...(own ? [own] : []), ...card.also_on.map((entry) => entry.uri)];
@@ -454,13 +542,15 @@ export function getPlayerTargets(
   }
   const ownCount = own && getPlayerTarget(own) ? 1 : 0;
   const alsoOn = targets.slice(ownCount);
-  const ordered = [
-    ...targets.slice(0, ownCount),
-    ...alsoOn.filter((target) => target.autoplay),
-    ...alsoOn.filter((target) => !target.autoplay),
-  ];
+  const ordered = autoplayFirst
+    ? [
+        ...targets.slice(0, ownCount),
+        ...alsoOn.filter((target) => target.autoplay),
+        ...alsoOn.filter((target) => !target.autoplay),
+      ]
+    : targets;
   const shown = ordered.filter((target) => isPlayerShown(target.provider, players?.hiddenPlayers));
-  const order = players?.playerOrder ?? [];
+  const order = players && isRankedOrder(players.playerOrder) ? players.playerOrder : [];
   const rank = (target: PlayerTarget) => {
     const index = order.indexOf(target.provider);
     return index === -1 ? order.length : index;

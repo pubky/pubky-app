@@ -86,6 +86,18 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByRole('region', { name: 'Spotify player: Get Lucky' })).toHaveAttribute('aria-busy', 'true');
   });
 
+  it('rounds its corners as the services do, and shows its own background only until the player has loaded', () => {
+    const { rerender } = render(
+      <ResourcePlayerFrame target={TIDAL} title="Kind of Blue" load="loading" onLoaded={() => {}} />,
+    );
+    const region = screen.getByRole('region', { name: 'TIDAL player: Kind of Blue' });
+    expect(region).toHaveClass('rounded-lg', 'bg-card');
+
+    rerender(<ResourcePlayerFrame target={TIDAL} title="Kind of Blue" load="ready" onLoaded={() => {}} />);
+    expect(region).toHaveClass('rounded-lg');
+    expect(region).not.toHaveClass('bg-card');
+  });
+
   it.each([
     ['Mixcloud', MIXCLOUD],
     ['Deezer', DEEZER],

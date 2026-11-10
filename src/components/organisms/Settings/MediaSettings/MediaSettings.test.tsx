@@ -35,6 +35,7 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
 
 const ALL = ['YouTube', 'Vimeo', 'Spotify', 'SoundCloud', 'Mixcloud', 'TIDAL', 'Deezer'];
 const ALL_IDS = ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer'];
+const CARD = 'Card (no player)';
 
 const setMedia = (media: Partial<MediaPreferences>) =>
   mockUseSettingsStore.mockReturnValue({ media: { ...defaultMediaPreferences, ...media } });
@@ -56,7 +57,7 @@ describe('MediaSettings', () => {
   it('lists every player in the default order, with nothing to add, and platform embeds up front on', () => {
     render(<MediaSettings />);
 
-    expect(rowNames()).toEqual(ALL);
+    expect(rowNames()).toEqual([...ALL, CARD]);
     expect(screen.getByText(/^Cards play on the first of these services they are on/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add a player' })).not.toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Show platform embeds up front' })).toBeChecked();
@@ -76,7 +77,7 @@ describe('MediaSettings', () => {
     setMedia({ playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube', 'deezer'] });
     render(<MediaSettings />);
 
-    expect(rowNames()).toEqual(['TIDAL', 'Spotify', 'Vimeo', 'SoundCloud', 'Mixcloud']);
+    expect(rowNames()).toEqual(['TIDAL', 'Spotify', 'Vimeo', 'SoundCloud', 'Mixcloud', CARD]);
     expect(
       within(openAdd())
         .getAllByRole('menuitem')
@@ -109,7 +110,7 @@ describe('MediaSettings', () => {
 
     setMedia({ hiddenPlayers: ALL_IDS });
     render(<MediaSettings />);
-    expect(rowNames()).toEqual([]);
+    expect(rowNames()).toEqual([CARD]);
     expect(
       within(openAdd())
         .getAllByRole('menuitem')
@@ -167,7 +168,7 @@ describe('MediaSettings', () => {
     // Rows 40 px apart, so dnd-kit's keyboard coordinates find the next row.
     const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
       const row = this.closest('[data-player]');
-      const top = row ? ALL_IDS.indexOf(row.getAttribute('data-player') ?? '') * 40 : 0;
+      const top = row ? [...ALL_IDS, 'card'].indexOf(row.getAttribute('data-player') ?? '') * 40 : 0;
       return { x: 0, y: top, top, left: 0, right: 300, bottom: top + 36, width: 300, height: 36, toJSON: () => ({}) };
     });
     try {
@@ -187,6 +188,143 @@ describe('MediaSettings', () => {
 
       expect(mockSetPlayers).toHaveBeenCalledWith(
         ['vimeo', 'youtube', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer'],
+        [],
+      );
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
+  it('ends the list with Card (no player): a drag handle, the link icon, no remove button', () => {
+    render(<MediaSettings />);
+    const row = within(screen.getByRole('list', { name: 'Players' }))
+      .getAllByRole('listitem')
+      .at(-1);
+
+    expect(row).toHaveAttribute('data-player', 'card');
+    expect(within(row as HTMLElement).getByRole('button', { name: `Move ${CARD}` })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: `Remove ${CARD}` })).not.toBeInTheDocument();
+  });
+
+  it('saves Card (no player) moved above a player with only what sits above it, the rest in Auto', () => {
+    render(<MediaSettings />);
+    act(() => capturedDnd.onDragEnd?.({ active: { id: 'card' }, over: { id: 'tidal' } }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'card'], []);
+  });
+
+  it('saves Card (no player) moved to the top as Card alone: the services stay in Auto', () => {
+    render(<MediaSettings />);
+    act(() => capturedDnd.onDragEnd?.({ active: { id: 'card' }, over: { id: 'youtube' } }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(['card'], []);
+  });
+
+  it('places Card (no player) in a ranked order as shown', () => {
+    setMedia({ playerOrder: ['tidal', 'spotify'] });
+    render(<MediaSettings />);
+    act(() => capturedDnd.onDragEnd?.({ active: { id: 'card' }, over: { id: 'spotify' } }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(
+      ['tidal', 'card', 'spotify', 'youtube', 'vimeo', 'soundcloud', 'mixcloud', 'deezer'],
+      [],
+    );
+  });
+
+  it('shows Card (no player) first when the order starts with it', () => {
+    setMedia({ playerOrder: ['card'] });
+    render(<MediaSettings />);
+
+    expect(rowNames()).toEqual([CARD, ...ALL]);
+  });
+
+  it('does not store Card (no player) moved back to the end: Auto again', () => {
+    setMedia({ playerOrder: ['card'] });
+    render(<MediaSettings />);
+    act(() => capturedDnd.onDragEnd?.({ active: { id: 'card' }, over: { id: 'deezer' } }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith([], []);
+  });
+
+  it('keeps Card (no player) first, and Auto, when a removed player is added back', () => {
+    setMedia({ playerOrder: ['card'], hiddenPlayers: ['spotify'] });
+    render(<MediaSettings />);
+    fireEvent.click(within(openAdd()).getByRole('menuitem', { name: 'Spotify' }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(['card'], []);
+  });
+
+  it('drops Card (no player) from the order when a remove leaves it last', () => {
+    setMedia({ playerOrder: ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'card', 'deezer'] });
+    render(<MediaSettings />);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Deezer' }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(
+      ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal'],
+      ['deezer'],
+    );
+  });
+
+  it('adds a removed player back below Card (no player) moved alone, keeping Auto', () => {
+    setMedia({ playerOrder: ['tidal', 'card'], hiddenPlayers: ['spotify'] });
+    render(<MediaSettings />);
+    expect(rowNames()).toEqual(['TIDAL', CARD, 'YouTube', 'Vimeo', 'SoundCloud', 'Mixcloud', 'Deezer']);
+    fireEvent.click(within(openAdd()).getByRole('menuitem', { name: 'Spotify' }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(['tidal', 'card'], []);
+  });
+
+  it('keeps Auto when a remove leaves Card (no player), moved alone, below every player', () => {
+    const hidden = ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud'];
+    setMedia({ playerOrder: ['tidal', 'card'], hiddenPlayers: hidden });
+    render(<MediaSettings />);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Deezer' }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith([], [...hidden, 'deezer']);
+  });
+
+  it('adds a removed player back at the end of a ranked order with Card (no player) in it', () => {
+    setMedia({ playerOrder: ['tidal', 'card', 'youtube'], hiddenPlayers: ['spotify'] });
+    render(<MediaSettings />);
+    fireEvent.click(within(openAdd()).getByRole('menuitem', { name: 'Spotify' }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(
+      ['tidal', 'card', 'youtube', 'vimeo', 'soundcloud', 'mixcloud', 'deezer', 'spotify'],
+      [],
+    );
+  });
+
+  it('keeps Card (no player) first when every player is removed, so one added back stays below it', () => {
+    setMedia({ playerOrder: ['card'], hiddenPlayers: ALL_IDS.slice(0, -1) });
+    render(<MediaSettings />);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Deezer' }));
+
+    expect(mockSetPlayers).toHaveBeenCalledWith(['card'], ALL_IDS);
+  });
+
+  it('moves Card (no player) with the keyboard', async () => {
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const row = this.closest('[data-player]');
+      const top = row ? [...ALL_IDS, 'card'].indexOf(row.getAttribute('data-player') ?? '') * 40 : 0;
+      return { x: 0, y: top, top, left: 0, right: 300, bottom: top + 36, width: 300, height: 36, toJSON: () => ({}) };
+    });
+    try {
+      render(<MediaSettings />);
+      const handle = screen.getByRole('button', { name: `Move ${CARD}` });
+      handle.focus();
+
+      await act(async () => {
+        fireEvent.keyDown(handle, { code: 'Space', key: ' ' });
+      });
+      await act(async () => {
+        fireEvent.keyDown(document, { code: 'ArrowUp', key: 'ArrowUp' });
+      });
+      await act(async () => {
+        fireEvent.keyDown(document, { code: 'Space', key: ' ' });
+      });
+
+      expect(mockSetPlayers).toHaveBeenCalledWith(
+        ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'card'],
         [],
       );
     } finally {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { type RefObject, useEffect, useEffectEvent, useState, useSyncExternalStore } from 'react';
 import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
 
 /**
@@ -80,4 +80,39 @@ export function useResourcePlayer(owner: string, targets: PlayerTarget[]): Resou
   const onLoaded = () => setLoad({ key, state: 'ready' });
 
   return { current, load: loadState, play, close, onLoaded };
+}
+
+/**
+ * Calls `onPress` when the viewer presses inside a frame in `box`: a press in an iframe moves the
+ * focus there, which the page sees as its window's blur, or, from another frame, as a `focusin`.
+ * It counts only with the pointer over `box`, so tabbing into a frame is no press. Only while `enabled`.
+ */
+export function useFramePress(box: RefObject<HTMLElement | null>, onPress: () => void, enabled = true): void {
+  const press = useEffectEvent(onPress);
+  useEffect(() => {
+    if (!enabled) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // A tap sends the page mouse events too, so this also holds on touch screens.
+    let isPointerOver = box.current?.matches(':hover') ?? false;
+    const onPointer = (event: MouseEvent) => {
+      isPointerOver = event.target instanceof Node && box.current?.contains(event.target) === true;
+    };
+    // Read after the event: some browsers move the focus to the iframe only once it has fired.
+    const check = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const active = document.activeElement;
+        if (isPointerOver && active instanceof HTMLIFrameElement && box.current?.contains(active)) press();
+      }, 0);
+    };
+    document.addEventListener('mouseover', onPointer);
+    window.addEventListener('blur', check);
+    document.addEventListener('focusin', check);
+    return () => {
+      document.removeEventListener('mouseover', onPointer);
+      window.removeEventListener('blur', check);
+      document.removeEventListener('focusin', check);
+      clearTimeout(timer);
+    };
+  }, [box, enabled]);
 }

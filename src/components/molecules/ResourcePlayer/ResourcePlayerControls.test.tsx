@@ -60,6 +60,19 @@ describe('PlayerDock', () => {
     expect(screen.getByTitle('player')).toBe(frame);
   });
 
+  it('never docks a player shown up front that nobody started (`dockable` off), nor keeps it playing off screen', () => {
+    render(
+      <PlayerDock target={SPOTIFY} title="Get Lucky" onClose={vi.fn()} dockable={false}>
+        <iframe title="player" />
+      </PlayerDock>,
+    );
+
+    act(() => report?.([{ isIntersecting: false }]));
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.getByTestId('player-dock-slot')).not.toHaveAttribute('data-docked');
+    expect(screen.getByTitle('player').closest('[data-keep-playing]')).toBeNull();
+  });
+
   it('closes the player from the dock, and scrolls back to the card', () => {
     const scrollIntoView = vi.fn();
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
@@ -117,6 +130,9 @@ describe('PlayOnSplit', () => {
     expect(main.querySelector('.lucide-x')).not.toBeNull();
     expect(main.querySelector('.lucide-play')).toBeNull();
     expect(screen.getByRole('button', { name: 'Play on another service' })).toBe(screen.getByTestId('play-on-trigger'));
+    fireEvent.pointerDown(screen.getByTestId('play-on-trigger'), { button: 0, ctrlKey: false });
+    expect(screen.getByTestId('play-on-menu')).toHaveAttribute('aria-label', 'Play on');
+    fireEvent.keyDown(screen.getByTestId('play-on-menu'), { key: 'Escape' });
     fireEvent.click(main);
     expect(player.close).toHaveBeenCalledTimes(1);
   });

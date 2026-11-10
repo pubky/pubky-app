@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
 import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
 import {
+  CARD_PLAYER,
   getEmbedTarget,
   getPlayerList,
   getPlayerTarget,
   getPlayerTargets,
+  getUpFrontTarget,
+  isCardFirst,
+  isRankedOrder,
+  isSong,
   PlayerProvider,
   PROVIDER_NAMES,
 } from './resourcePlayer.utils';
@@ -282,12 +288,15 @@ describe('getPlayerList', () => {
   const ALL = Object.keys(PROVIDER_NAMES);
 
   it('lists every service in the default order, none removed, with no order', () => {
-    expect(getPlayerList({ playerOrder: [], hiddenPlayers: [] })).toEqual({ shown: ALL, removed: [] });
+    expect(getPlayerList({ playerOrder: [], hiddenPlayers: [] })).toEqual({
+      shown: [...ALL, CARD_PLAYER],
+      removed: [],
+    });
   });
 
   it('shows the viewer’s order first, then the services not in it, and the removed ones apart', () => {
     expect(getPlayerList({ playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube'] })).toEqual({
-      shown: ['tidal', 'spotify', 'vimeo', 'soundcloud', 'mixcloud', 'deezer'],
+      shown: ['tidal', 'spotify', 'vimeo', 'soundcloud', 'mixcloud', 'deezer', CARD_PLAYER],
       removed: ['youtube'],
     });
   });
@@ -295,13 +304,80 @@ describe('getPlayerList', () => {
   it('shows a service a later version adds at the end, and leaves out ids it does not play', () => {
     const order = ['deezer', 'tidal', 'mixcloud', 'soundcloud', 'spotify', 'napster', 'vimeo'];
     expect(getPlayerList({ playerOrder: order, hiddenPlayers: ['bandcamp'] })).toEqual({
-      shown: ['deezer', 'tidal', 'mixcloud', 'soundcloud', 'spotify', 'vimeo', 'youtube'],
+      shown: ['deezer', 'tidal', 'mixcloud', 'soundcloud', 'spotify', 'vimeo', 'youtube', CARD_PLAYER],
       removed: [],
     });
   });
 
   it('can have every service removed', () => {
-    expect(getPlayerList({ playerOrder: [], hiddenPlayers: ALL })).toEqual({ shown: [], removed: ALL });
+    expect(getPlayerList({ playerOrder: [], hiddenPlayers: ALL })).toEqual({ shown: [CARD_PLAYER], removed: ALL });
+  });
+
+  it('shows Card (no player) where the viewer put it, and never as removed', () => {
+    expect(getPlayerList({ playerOrder: ['tidal', 'card'], hiddenPlayers: ['card', 'youtube'] })).toEqual({
+      shown: ['tidal', CARD_PLAYER, 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'deezer'],
+      removed: ['youtube'],
+    });
+  });
+});
+
+describe('isCardFirst', () => {
+  it('is false without Card in the order (Auto, or never moved)', () => {
+    expect(isCardFirst(PlayerProvider.SPOTIFY, [])).toBe(false);
+    expect(isCardFirst(PlayerProvider.SPOTIFY, ['tidal', 'spotify'])).toBe(false);
+  });
+
+  it('is true when Card ranks above the service, or the service is not in the order', () => {
+    expect(isCardFirst(PlayerProvider.SPOTIFY, ['card'])).toBe(true);
+    expect(isCardFirst(PlayerProvider.SPOTIFY, ['tidal', 'card', 'spotify'])).toBe(true);
+    expect(isCardFirst(PlayerProvider.DEEZER, ['tidal', 'card', 'spotify'])).toBe(true);
+  });
+
+  it('is false when the service ranks above Card', () => {
+    expect(isCardFirst(PlayerProvider.TIDAL, ['tidal', 'card', 'spotify'])).toBe(false);
+  });
+
+  it('is false for a plain audio file: no service in the list', () => {
+    expect(isCardFirst(PlayerProvider.AUDIO_FILE, ['card'])).toBe(false);
+  });
+
+  it('leaves the order of the services alone (getPlayerTargets)', () => {
+    const song = card('https://open.spotify.com/track/1YQWosTIljIvxAgHWTp7KP', [
+      { uri: 'https://tidal.com/track/490851477', site: 'TIDAL' },
+    ]);
+    const providers = (playerOrder: string[]) =>
+      getPlayerTargets(song, { players: { playerOrder, hiddenPlayers: [] } }).map((target) => target.provider);
+
+    expect(providers(['card'])).toEqual(providers([]));
+    // Card moved alone saves the services above it: still Auto.
+    expect(providers(['tidal', 'card'])).toEqual(providers([]));
+    expect(providers(['tidal', 'card', 'spotify'])).toEqual([PlayerProvider.TIDAL, PlayerProvider.SPOTIFY]);
+  });
+
+  it('keeps the shared link’s service first when only Card moved, and shows the card for one below it', () => {
+    const song = card('https://www.deezer.com/track/67238735', [
+      { uri: 'https://www.youtube.com/watch?v=5NV6Rdv1a3I', site: 'YouTube' },
+    ] as TPinakesAlsoOn[]);
+    const playerOrder = ['youtube', 'vimeo', 'spotify', 'card'];
+    const [first] = getPlayerTargets(song, { players: { playerOrder, hiddenPlayers: [] } });
+
+    expect(first.provider).toBe(PlayerProvider.DEEZER);
+    expect(isCardFirst(first.provider, playerOrder)).toBe(true);
+  });
+});
+
+describe('isRankedOrder', () => {
+  it('is true with a service in the order after Card, or without Card', () => {
+    expect(isRankedOrder(['tidal'])).toBe(true);
+    expect(isRankedOrder(['tidal', 'card', 'spotify'])).toBe(true);
+    expect(isRankedOrder(['card', 'youtube'])).toBe(true);
+  });
+
+  it('is false with no service, or none after Card (Card moved alone)', () => {
+    expect(isRankedOrder([])).toBe(false);
+    expect(isRankedOrder(['card'])).toBe(false);
+    expect(isRankedOrder(['youtube', 'vimeo', 'card'])).toBe(false);
+    expect(isRankedOrder(['youtube', 'card', 'napster'])).toBe(false);
   });
 });
 
@@ -359,5 +435,137 @@ describe('getEmbedTarget', () => {
     expect(getEmbedTarget('https://vimeo.com/1084537', null, ['tidal'])?.src).toBe(
       'https://player.vimeo.com/video/1084537?dnt=1',
     );
+  });
+});
+
+describe('getUpFrontTarget', () => {
+  it.each([
+    'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'https://open.spotify.com/track/1YQWosTIljIvxAgHWTp7KP',
+    'https://soundcloud.com/artist/track',
+    'https://www.mixcloud.com/artist/mix/',
+    'https://tidal.com/browse/track/77646168',
+    'https://www.deezer.com/track/3135556',
+  ])('keeps %s’s player, without what starts it on load', (link) => {
+    const target = getPlayerTarget(link)!;
+    const upFront = getUpFrontTarget(target);
+    const src = new URL(upFront.src);
+    expect(upFront.provider).toBe(target.provider);
+    expect(src.searchParams.has('autoplay')).toBe(false);
+    expect(src.searchParams.has('auto_play')).toBe(false);
+    expect(upFront.start).toBeUndefined();
+    expect(upFront.autoplay).toBe(false);
+  });
+
+  it('is what getEmbedTarget shows up front for the same link', () => {
+    const link = 'https://open.spotify.com/track/1YQWosTIljIvxAgHWTp7KP';
+    expect(getUpFrontTarget(getPlayerTarget(link)!)).toEqual(getEmbedTarget(link));
+  });
+
+  it('keeps a plain audio file in the browser player, which then does not start on its own', () => {
+    const upFront = getUpFrontTarget(getPlayerTarget('https://example.com/a.mp3')!);
+    expect(upFront.element).toBe('audio');
+    expect(upFront.src).toBe('https://example.com/a.mp3');
+    expect(upFront.autoplay).toBe(false);
+  });
+});
+
+/**
+ * The YouTube upload of Get Lucky as Pinakes reads it:
+ * a `VideoObject` with no facts, on Spotify, Deezer and TIDAL as tracks and on Apple Music.
+ */
+const YOUTUBE_GET_LUCKY = {
+  ...musicFixture,
+  uri: 'https://www.youtube.com/watch?v=5NV6Rdv1a3I',
+  site: 'YouTube',
+  type: 'VideoObject',
+  type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'],
+  facts: null,
+  also_on: [
+    { uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq', site: 'Spotify' },
+    { uri: 'https://www.deezer.com/track/67238735', site: 'Deezer' },
+    { uri: 'https://tidal.com/track/20115564', site: 'TIDAL' },
+    { uri: 'https://music.apple.com/song/617154366', site: 'Apple Music' },
+  ],
+};
+
+describe('isSong', () => {
+  const video = (alsoOn: string[]) => ({
+    type: 'VideoObject',
+    type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'],
+    also_on: alsoOn.map((uri) => ({ uri })),
+  });
+
+  it('is a MusicRecording, by its type or the deepest entry of its path, Also on or not', () => {
+    expect(isSong({ ...musicFixture, also_on: [] })).toBe(true);
+    expect(isSong({ type: null, type_path: ['Thing', 'CreativeWork', 'MusicRecording'], also_on: [] })).toBe(true);
+  });
+
+  it('is a video that is a track on Spotify, Deezer or TIDAL (YouTube’s Get Lucky)', () => {
+    expect(isSong(YOUTUBE_GET_LUCKY)).toBe(true);
+    expect(isSong(video(['https://open.spotify.com/intl-de/track/69kOkLUCkxIZYexIgSG8rq']))).toBe(true);
+    expect(isSong(video(['https://www.deezer.com/fr/track/67238735']))).toBe(true);
+    expect(isSong(video(['https://tidal.com/browse/track/20115564/u']))).toBe(true);
+  });
+
+  it('is no video on none of them as a track: an album, artist, playlist, episode or TIDAL video', () => {
+    expect(isSong(video([]))).toBe(false);
+    expect(
+      isSong(
+        video([
+          'https://www.youtube.com/watch?v=Om61naQC8is',
+          'https://music.apple.com/song/617154366',
+          'https://musicbrainz.org/isrc/GB5KW2103369',
+          'https://open.spotify.com/album/1weenld61qoidwYuZ1GESA',
+          'https://open.spotify.com/artist/0caJEGgVuXuSHhhrMCmlkI',
+          'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M',
+          'https://open.spotify.com/episode/512ojhOuo1ktJprKbVcKyQ',
+          'https://www.deezer.com/album/1441464',
+          'https://www.deezer.com/artist/804443',
+          'https://tidal.com/album/655910',
+          'https://tidal.com/video/123456',
+          'https://example.com/track/20115564',
+        ]),
+      ),
+    ).toBe(false);
+  });
+
+  it('is no album, artist or post, whatever it is on', () => {
+    const tracks = [{ uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq' }];
+    expect(isSong({ type: 'MusicAlbum', type_path: ['Thing', 'CreativeWork', 'MusicAlbum'], also_on: tracks })).toBe(
+      false,
+    );
+    expect(isSong({ type: 'Person', type_path: ['Thing', 'Person'], also_on: tracks })).toBe(false);
+    expect(
+      isSong({
+        type: 'SocialMediaPosting',
+        type_path: ['Thing', 'CreativeWork', 'SocialMediaPosting'],
+        also_on: tracks,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('getPlayerTargets in Pinakes’ order (`autoplayFirst: false`)', () => {
+  // A link with no player (MusicBrainz), on Deezer (no start on our press) before Spotify.
+  const song = card('https://musicbrainz.org/recording/b1a9c0e9-d987-4042-ae91-78d6a3267d69', [
+    { uri: 'https://www.deezer.com/track/4329888262', site: 'Deezer' },
+    { uri: 'https://open.spotify.com/track/2OBofMJx94NryV2SK8p8Zf', site: 'Spotify' },
+  ]);
+
+  it('keeps Also on in Pinakes’ order, where Play on puts the services that start on our press first', () => {
+    expect(getPlayerTargets(song).map((target) => target.provider)).toEqual(['spotify', 'deezer']);
+    expect(getPlayerTargets(song, { autoplayFirst: false }).map((target) => target.provider)).toEqual([
+      'deezer',
+      'spotify',
+    ]);
+  });
+
+  it('still puts the viewer’s first player first', () => {
+    const players = { playerOrder: ['spotify'], hiddenPlayers: [] };
+    expect(getPlayerTargets(song, { autoplayFirst: false, players }).map((target) => target.provider)).toEqual([
+      'spotify',
+      'deezer',
+    ]);
   });
 });
