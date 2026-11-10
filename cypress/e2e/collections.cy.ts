@@ -1,3 +1,4 @@
+import type { Interception } from 'cypress/types/net-stubbing';
 import { backupDownloadFilePath } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
@@ -23,6 +24,7 @@ import {
 } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
+import { postIdFromWriteUrl, streamIndexed, waitForNexus } from '../support/nexus';
 import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
@@ -30,6 +32,8 @@ import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../s
 const MY_SECTION = '[data-cy="my-collections-section"]';
 const FOLLOWED_SECTION = '[data-cy="followed-collections-section"]';
 const DISCOVER_SECTION = '[data-cy="discover-collections-section"]';
+// More than the three items a collection here holds
+const COLLECTION_STREAM_LIMIT = 20;
 
 const curator = {
   username: 'Curator',
@@ -84,6 +88,14 @@ describe('collections', () => {
     const editedDescription = 'The best posts, curated by e2e.';
     const tags = ['bitcoin', 'nostalgia'];
     const createdPostContent = `Created from the Add Post dialog! ${Date.now()}`;
+
+    // capture the URL of the post that will be added from the feed, for its id in the Nexus check below
+    cy.findFirstPostInFeedFiltered(curator.postText1, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').click();
+    });
+    cy.location('pathname').should('contain', '/post/');
+    cy.url().as('post1Url');
+    goToHomePage();
 
     // capture the URL of the post that will be added by URL later
     cy.findFirstPostInFeedFiltered(curator.postText2, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
@@ -150,6 +162,34 @@ describe('collections', () => {
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', createdPostContent);
     cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 3);
     collectionCounterEq(3);
+
+    // * Nexus reads every item back from the v1 envelope: `source=collection` is the stream a client pages them from
+    cy.location('pathname')
+      .should('match', /^\/collections\/[^/]+\/[^/]+$/)
+      .then((collectionPath) => {
+        const [authorId, collectionId] = collectionPath.split('/').slice(-2);
+        // The Add Post dialog writes the new post, then the collection's next version
+        cy.get<Interception[]>('@postCreatedInCollection.all').then((writes) => {
+          const createdIds = writes
+            .map(({ request }) => postIdFromWriteUrl(request.url))
+            .filter((id) => id !== collectionId);
+          expect(createdIds, 'post created in the collection').to.have.length(1);
+          cy.get('@post1Url').then((post1Url) => {
+            cy.get('@post2Url').then((post2Url) => {
+              const itemIds = [post1Url, post2Url]
+                .map((url) => new URL(String(url)).pathname.split('/').pop() ?? '')
+                .concat(createdIds);
+              waitForNexus(
+                streamIndexed(
+                  { source: 'collection', author_id: authorId, post_id: collectionId },
+                  itemIds,
+                  COLLECTION_STREAM_LIMIT,
+                ),
+              );
+            });
+          });
+        });
+      });
 
     // * the collection is not shown in the global feed (only its posts are)
     goToHomePage();

@@ -422,6 +422,10 @@ describe('Onboarding', () => {
     cy.wait('@versionDeleted').then(({ request }) => {
       expect(postIdFromWriteUrl(request.url)).to.eq(deletable.id);
     });
+    // Known Nexus race: a read of a post while Nexus processes its delete can put it back in the cache, where it
+    // answers 200 with `deleted: false` for good. So nothing here reads this post between the DELETEs and the waiter,
+    // whose own polls are the only reads left, and a timeout on a 200 is that bug. The waiter stays at 404: the stale
+    // copy says `deleted: false` too.
     cy.then(() => {
       waitForNexus(postGone(deletable));
     });

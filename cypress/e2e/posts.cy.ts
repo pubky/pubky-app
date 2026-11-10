@@ -3,6 +3,7 @@ import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
+import { V1_MEDIA_ROUTE, expectImageServed, imagesFrom } from '../support/media';
 import { notificationsIndexed, postIndexed, postTagsIndexed, userSearchIndexed, waitForNexus } from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { slowCypressDown } from 'cypress-slow-down';
@@ -52,6 +53,14 @@ import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } 
 const username = 'Poster';
 
 const imageFixturePath = () => `${Cypress.config('fixturesFolder')}/mustache-you.png`;
+
+// The one image of a post in the feed that is served from a v1 file route (its attachment or article cover)
+const postMediaImage = (filterText: string) =>
+  cy.findFirstPostInFeedFiltered(filterText).find('img').filter(imagesFrom(V1_MEDIA_ROUTE));
+
+// Checks the bytes of that image; a reload the check needs waits for the feed like every other reload here
+const expectPostMediaServed = (filterText: string) =>
+  expectImageServed(() => postMediaImage(filterText), V1_MEDIA_ROUTE, { afterReload: waitForFeedToLoad });
 
 const pdfAttachment = {
   contents: Cypress.Buffer.from('e2e file attachment'),
@@ -284,6 +293,8 @@ describe('posts', () => {
         .invoke('attr', 'src')
         .as('originalImageSrc');
     });
+    // The upload comes back from Nexus's v1 file route, as bytes the browser decodes
+    expectPostMediaServed(postContent);
 
     editPost({
       filterText: postContent,
@@ -302,6 +313,9 @@ describe('posts', () => {
           });
       });
     });
+    // This checks a second file only because the `src` changed above and the replacement fixture (mustache-edit.png)
+    // has other bytes: a fixture with the first one's bytes would hash to the same URL and make this a repeat
+    expectPostMediaServed(postContent);
 
     editPost({ filterText: postContent, imageAction: { action: 'remove' } });
 
@@ -1054,6 +1068,8 @@ describe('posts', () => {
         .invoke('attr', 'src')
         .as('originalImageSrc');
     });
+    // The cover comes back from Nexus's v1 file route, as bytes the browser decodes
+    expectPostMediaServed(title);
 
     editArticle({ filterText: title, imageAction: { action: 'replace' } });
 
@@ -1069,6 +1085,9 @@ describe('posts', () => {
           });
       });
     });
+    // This checks a second file only because the `src` changed above and the replacement fixture (mustache-edit.png)
+    // has other bytes: a fixture with the first one's bytes would hash to the same URL and make this a repeat
+    expectPostMediaServed(title);
 
     editArticle({ filterText: title, imageAction: { action: 'remove' } });
 
