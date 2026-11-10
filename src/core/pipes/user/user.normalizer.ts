@@ -4,12 +4,22 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import type { ProfileChanges, UserValidatorData } from '@/pipes/pipes.types';
-import type { NexusUserLink } from '@/services/nexus/nexus.types';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import type { NexusUser, NexusUserLink, NexusUserWire } from '@/services/nexus/nexus.types';
 
 export type UiLink = { label: string; url: string };
 
 export class UserNormalizer {
   private constructor() {}
+
+  /**
+   * A user as the app holds it, from a user as Nexus `/v1` serves it: every tag given its
+   * `relationship` (`TagNormalizer.fromNexus`). Applied by the Nexus services to each user they
+   * return; the other members pass through unchanged.
+   */
+  static fromNexus(user: NexusUserWire): NexusUser {
+    return { ...user, tags: user.tags.map((tag) => TagNormalizer.fromNexus(tag)) };
+  }
 
   /**
    * Converts UI link format ({ label, url }) to API format ({ title, url })

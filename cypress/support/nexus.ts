@@ -26,65 +26,65 @@ export const waitForNexus = (...checks: NexusCheck[]): Cypress.Chainable<unknown
 
 export const userIndexed = (user: SeededUser): NexusCheck => ({
   description: `user '${user.name}'`,
-  path: `/v0/user/${user.id}`,
+  path: `/v1/user/${user.id}`,
   expect: { kind: 'found' },
 });
 
 // The search the @mention popover and header search run, which Nexus fills separately from the user record
 export const userSearchIndexed = (user: SeededUser): NexusCheck => ({
   description: `user '${user.name}' in name search`,
-  path: `/v0/search/users/by_name/${encodeURIComponent(user.name)}`,
+  path: `/v1/search/users/by_name/${encodeURIComponent(user.name)}`,
   expect: { kind: 'includes', value: user.id },
 });
 
 export const postIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>): NexusCheck => ({
   description: `post ${post.id}`,
-  path: `/v0/post/${post.authorId}/${post.id}`,
+  path: `/v1/post/${post.authorId}/${post.id}`,
   expect: { kind: 'found' },
 });
 
 // The post as an edit left it, which a post that was already indexed answers `found` to long before
 export const postContentIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>, text: string): NexusCheck => ({
   description: `post ${post.id} holding "${text}"`,
-  path: `/v0/post/${post.authorId}/${post.id}`,
+  path: `/v1/post/${post.authorId}/${post.id}`,
   expect: { kind: 'content', text },
 });
 
 export const postGone = (post: Pick<SeededPost, 'id' | 'authorId'>): NexusCheck => ({
   description: `post ${post.id} deleted`,
-  path: `/v0/post/${post.authorId}/${post.id}`,
+  path: `/v1/post/${post.authorId}/${post.id}`,
   expect: { kind: 'gone' },
 });
 
 export const followIndexed = (follower: SeededUser, followee: SeededUser): NexusCheck => ({
   description: `'${follower.name}' following '${followee.name}'`,
-  path: `/v0/user/${followee.id}/followers`,
+  path: `/v1/user/${followee.id}/followers`,
   expect: { kind: 'includes', value: follower.id },
 });
 
 export const followGone = (follower: SeededUser, followee: SeededUser): NexusCheck => ({
   description: `'${follower.name}' no longer following '${followee.name}'`,
-  path: `/v0/user/${followee.id}/followers`,
+  path: `/v1/user/${followee.id}/followers`,
   expect: { kind: 'excludes', value: follower.id },
 });
 
 export const postTagsIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>, labels: string[]): NexusCheck => ({
   description: `tags ${labels.join(', ')} on post ${post.id}`,
-  path: `/v0/post/${post.authorId}/${post.id}/tags`,
+  path: `/v1/post/${post.authorId}/${post.id}/tags`,
   qs: { limit_tags: String(TAGS_LIMIT) },
   expect: { kind: 'tags', labels },
 });
 
 export const postTagGone = (post: Pick<SeededPost, 'id' | 'authorId'>, label: string): NexusCheck => ({
   description: `no tag ${label} on post ${post.id}`,
-  path: `/v0/post/${post.authorId}/${post.id}/tags`,
+  path: `/v1/post/${post.authorId}/${post.id}/tags`,
   qs: { limit_tags: String(TAGS_LIMIT) },
   expect: { kind: 'noTag', label },
 });
 
 export const userTagsIndexed = (user: SeededUser, labels: string[]): NexusCheck => ({
   description: `tags ${labels.join(', ')} on user '${user.name}'`,
-  path: `/v0/user/${user.id}/tags`,
+  path: `/v1/user/${user.id}/tags`,
   qs: { limit_tags: String(TAGS_LIMIT) },
   expect: { kind: 'tags', labels },
 });
@@ -99,15 +99,15 @@ export const notificationsIndexed = (
   { actor, count = 1 }: { actor?: SeededUser; count?: number } = {},
 ): NexusCheck => ({
   description: `${count} ${type} notification(s) for '${receiver.name}'${actor ? ` from '${actor.name}'` : ''}`,
-  path: `/v0/user/${receiver.id}/notifications`,
+  path: `/v1/user/${receiver.id}/notifications`,
   qs: { limit: String(NOTIFICATIONS_LIMIT) },
   expect: { kind: 'notifications', type, actorId: actor?.id, count },
 });
 
-// Every id in `postIds` listed by the `/v0/stream/posts/keys` stream `query` (first `limit` keys)
+// Every id in `postIds` listed by the `/v1/stream/posts/keys` stream `query` (first `limit` keys)
 export const streamIndexed = (query: Record<string, string>, postIds: string[], limit: number): NexusCheck => ({
   description: `${postIds.length} posts in stream ${JSON.stringify(query)}`,
-  path: '/v0/stream/posts/keys',
+  path: '/v1/stream/posts/keys',
   qs: { ...query, limit: String(limit) },
   expect: { kind: 'streamKeys', postIds },
 });

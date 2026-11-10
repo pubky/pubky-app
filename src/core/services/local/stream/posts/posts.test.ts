@@ -16,10 +16,11 @@ import { TagModel } from '@/models/shared/tag/tag';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { LocalPostService } from '@/services/local/post/post';
 import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
-import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
+import type { NexusPost, NexusPostDetails, NexusPostWire, NexusTag } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 describe('LocalStreamPostsService', () => {
@@ -336,6 +337,50 @@ describe('LocalStreamPostsService', () => {
       await LocalStreamPostsService.persistPosts({ posts: [post] });
 
       expect((await PostDetailsModel.findById(postId('remote')))?.localUpdatedAt).toBeUndefined();
+    });
+
+    // The read boundary runs in the Nexus services (`PostNormalizer.fromNexus`); these pin what reaches
+    // the tables from a `/v1` response: local kinds, an unknown kind as served, tags with `relationship`.
+    describe('from a /v1 response', () => {
+      const wirePost = (id: string, kind: string, tags: NexusPostWire['tags'] = []): NexusPostWire => {
+        const { details, counts, relationships } = createMockNexusPost(id);
+        return { details: { ...details, kind }, counts, relationships, tags };
+      };
+
+      it.each([
+        ['article', 'long'],
+        ['note', 'short'],
+      ])('persists the /v1 kind %s as the local kind %s (D16)', async (wire, local) => {
+        await LocalStreamPostsService.persistPosts({ posts: [PostNormalizer.fromNexus(wirePost('v1', wire))] });
+
+        expect((await PostDetailsModel.findById(postId('v1')))?.kind).toBe(local);
+      });
+
+      it('persists an unknown kind as served, so the post renders as a note and is never hidden', async () => {
+        await LocalStreamPostsService.persistPosts({ posts: [PostNormalizer.fromNexus(wirePost('odd', 'unknown'))] });
+
+        const details = await PostDetailsModel.findById(postId('odd'));
+        expect(details?.kind).toBe('unknown');
+        expect(details?.content).toBe('Post odd content');
+      });
+
+      it('persists every tag with the relationship derived from tag_uri', async () => {
+        const post = wirePost('tagged', 'note', [
+          { label: 'own', taggers: ['viewer'], taggers_count: 1, tag_uri: 'pubky://viewer/pub/social/v1/tags/T1' },
+          { label: 'foreign', taggers: ['user-2'], taggers_count: 1, tag_uri: null },
+        ]);
+
+        await LocalStreamPostsService.persistPosts({
+          posts: [PostNormalizer.fromNexus(post)],
+          tagGuard: { viewerId: 'viewer' },
+        });
+
+        const postTags = await PostTagsModel.findById(postId('tagged'));
+        expect(postTags?.tags.map((tag) => [tag.label, tag.relationship, tag.tag_uri])).toEqual([
+          ['own', true, 'pubky://viewer/pub/social/v1/tags/T1'],
+          ['foreign', false, null],
+        ]);
+      });
     });
 
     it('should handle posts with tags', async () => {

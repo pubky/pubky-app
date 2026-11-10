@@ -24,6 +24,7 @@ Node 24 (`.nvmrc`), dependencies via `npm ci`. The pre-commit hook runs `lint-st
 UI (user actions) → Controllers → Application → Services → Models
 Coordinators (system) ↗            ↓              ↓
                        Stores     Pipes         Database
+Services → Pipes (pure transforms; the Nexus services apply the `*.fromNexus` read-boundary mappers)
 ```
 
 Hard constraints (review-enforced, not compiler-enforced; `docs/architecture.md`):

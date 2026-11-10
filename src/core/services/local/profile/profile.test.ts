@@ -256,6 +256,25 @@ describe('LocalProfileService', () => {
       expect(result!.friends).toBe(25);
     });
 
+    it('stores bookmarks as 0 when the Nexus counts carry none (a /v1 response)', async () => {
+      const { bookmarks: _served, ...v1Counts } = {
+        posts: 1,
+        replies: 0,
+        followers: 0,
+        following: 0,
+        friends: 0,
+        tagged: 0,
+        tags: 0,
+        unique_tags: 0,
+        collections: 0,
+        bookmarks: 9,
+      } satisfies NexusUserCounts;
+
+      await LocalProfileService.upsertCounts(userId, v1Counts);
+
+      expect((await UserCountsModel.findById(userId))?.bookmarks).toBe(0);
+    });
+
     it('should update existing user counts', async () => {
       const initialCounts: NexusUserCounts = {
         posts: 5,

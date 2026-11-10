@@ -32,8 +32,8 @@ interface UseAttachmentsMetadataResult {
 /**
  * Resolves the local file rows behind a set of attachment URIs: live, local-first.
  *
- * A card can paint from post details before its file rows exist: Nexus can return
- * attachment URIs while `attachments_metadata` is still missing or partially indexed. A one-shot
+ * A card can paint from post details before its file rows exist: the page's batched metadata
+ * fetch (`FileApplication.fetchFilesForPosts`) may still be missing rows or have failed. A one-shot
  * `getMetadata` right after the post row arrives reads an empty table and never
  * looks again, so the attachments stay missing until something remounts the card.
  * This hook instead:

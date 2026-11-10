@@ -216,7 +216,7 @@ export const unfollowUserByUsername = (username: string) => {
 // reload straight after an unfollow can still list the user. Run on /profile/following: reloads
 // until Nexus returns an empty following stream.
 export const reloadUntilOwnFollowingIsEmpty = (attempts = 10) => {
-  cy.intercept({ method: 'GET', pathname: '/v0/stream/users/ids', query: { source: 'following' } }).as(
+  cy.intercept({ method: 'GET', pathname: '/v1/stream/users/ids', query: { source: 'following' } }).as(
     'followingStream',
   );
   const reloadUntilEmpty = (remaining: number) => {

@@ -4,8 +4,14 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
-import type { NexusUser, NexusUserIdsStream } from '@/services/nexus/nexus.types';
-import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
+import { UserNormalizer } from '@/pipes/user/user.normalizer';
+import type { NexusUser, NexusUserIdsStream, NexusUserWire } from '@/services/nexus/nexus.types';
+import {
+  getNexusResponseStartedAt,
+  mapNexusResponse,
+  markNexusResponseStartedAt,
+  queryNexus,
+} from '@/services/nexus/nexus.utils';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
 import type {
   TFetchUserStreamParams,
@@ -73,7 +79,7 @@ export class NexusUserStreamService {
    * Fetches full user details for the provided user IDs
    *
    * @param params - User IDs to fetch, optional viewer ID for relationship data
-   * @returns Array of full user objects with details, counts, tags, and relationships
+   * @returns Array of full user objects with details, counts, tags, and relationships, past the read boundary
    */
   static async fetchByIds({
     force,
@@ -87,9 +93,15 @@ export class NexusUserStreamService {
     const sortedIds = [...params.user_ids].sort();
     const fetchSlice = async (user_ids: Pubky[]) => {
       const { url, body } = userStreamApi.usersByIds({ ...params, user_ids });
-      return await queryNexus<NexusUser[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body), force });
+      const users = await queryNexus<NexusUserWire[]>({
+        url,
+        method: HttpMethod.POST,
+        body: JSON.stringify(body),
+        force,
+      });
+      return mapNexusResponse(users, (user) => UserNormalizer.fromNexus(user));
     };
-    // One request returns the response as queryNexus stamped it (see getNexusResponseStartedAt)
+    // One request returns the response stamped as queryNexus stamped it (see getNexusResponseStartedAt)
     if (sortedIds.length <= NEXUS_USERS_BY_IDS_MAX_IDS) {
       return await fetchSlice(sortedIds);
     }

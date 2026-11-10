@@ -9,7 +9,7 @@ import type { Pubky } from '@/models/models.types';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { pickHeadVersion } from '@/pipes/post/post.head';
-import type { NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
+import type { NexusPost } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { stubMemoryHomeserver } from '@/test-utils/homeserver';
@@ -22,7 +22,7 @@ const OWNER = fakeOwner(1) as Pubky;
 describe('content-addressed media lifetime', () => {
   let homeserver: ReturnType<typeof stubMemoryHomeserver>;
   /** What Nexus has indexed, by composite post id. */
-  let indexed: Map<string, NexusPostWithAttachmentMetadata>;
+  let indexed: Map<string, NexusPost>;
 
   const media = (byte: number, type = 'image/png') => {
     const bytes = new Uint8Array([byte, byte, byte]);
@@ -170,9 +170,7 @@ describe('content-addressed media lifetime', () => {
       await PostController.commitDelete({ compositePostId: post });
 
       expect(await stored(file)).toBe(false);
-      expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledWith(
-        expect.objectContaining({ force: true, include_attachment_metadata: false }),
-      );
+      expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledWith(expect.objectContaining({ force: true }));
     });
 
     it('keeps the file the published profile uses as its avatar', async () => {

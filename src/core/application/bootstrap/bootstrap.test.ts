@@ -34,7 +34,8 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
-import { type NexusFileDetails, type NexusNotification, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { NexusFileService } from '@/services/nexus/file/file';
+import { type NexusNotification, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { BootstrapApplication } from './bootstrap';
 
@@ -47,7 +48,6 @@ const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
 const emptyBootstrap = (): NexusBootstrapResponse => ({
   users: [],
   posts: [],
-  files: [],
   ids: { stream: [], influencers: [], recommended: [], hot_tags: [] },
   indexed: true,
   notifications: [],
@@ -98,7 +98,6 @@ const createMockBootstrapData = (): NexusBootstrapResponse => ({
       tags: [],
     },
   ],
-  files: [],
   ids: {
     stream: ['post-1'],
     influencers: ['user-1'],
@@ -180,7 +179,7 @@ type ServiceMocks = {
   fetchBookmarks: unknown;
   persistUsers: unknown;
   persistPosts: unknown;
-  persistFiles: unknown;
+  fetchFilesForPosts: unknown;
   upsertPostsStream: unknown;
   clearUnreadPostsStream: unknown;
   upsertInfluencersStream: unknown;
@@ -245,8 +244,8 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     persistPosts: vi
       .spyOn(LocalStreamPostsService, 'persistPosts')
       .mockImplementation(persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve()),
-    persistFiles: vi
-      .spyOn(FileApplication, 'persistFiles')
+    fetchFilesForPosts: vi
+      .spyOn(FileApplication, 'fetchFilesForPosts')
       .mockImplementation(
         persistFilesError ? () => Promise.reject(persistFilesError) : () => Promise.resolve(undefined),
       ),
@@ -307,7 +306,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
     bootstrapData.ids.hot_tags,
   );
   expect(mocks.upsertTagsStream).toHaveBeenCalledWith(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
-  expect(mocks.persistFiles).toHaveBeenCalledWith(bootstrapData.files);
+  expect(mocks.fetchFilesForPosts).toHaveBeenCalledExactlyOnceWith(bootstrapData.posts);
   const flatNotifications = bootstrapData.notifications.map((n) => createFlatNotification(n.timestamp));
   expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications });
   expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
@@ -759,23 +758,45 @@ describe('BootstrapApplication', () => {
       expect(mocks.upsertTagsStream).toHaveBeenCalledWith(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
     });
 
-    it('should persist files from bootstrap payload', async () => {
+    it('fetches the page file metadata in one call before the posts are persisted', async () => {
       const bootstrapData = createMockBootstrapData();
-      const mockFiles = asOpaque<NexusFileDetails[]>([{ id: 'file-1' }, { id: 'file-2' }]);
-      bootstrapData.files = mockFiles;
-      const notification = createMockNotification();
-      bootstrapData.notifications = [notification];
+      bootstrapData.posts[0].details.attachments = ['pubky://user-1/pub/pubky.app/files/image-1'];
+      const mocks = setupMocks({ bootstrapData, unreadCount: 0 });
 
-      const mocks = setupMocks({ bootstrapData, unreadCount: 1 });
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+      const fetchFiles = vi.mocked(FileApplication.fetchFilesForPosts);
+      expect(fetchFiles).toHaveBeenCalledExactlyOnceWith(bootstrapData.posts);
+      expect(fetchFiles.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(LocalStreamPostsService.persistPosts).mock.invocationCallOrder[0],
+      );
+      expect(mocks.persistPosts).toHaveBeenCalledWith(expect.objectContaining({ posts: bootstrapData.posts }));
+    });
 
-      expect(mocks.persistFiles).toHaveBeenCalledWith(mockFiles);
-      expect(result).toEqual({
-        unread: 1,
-        lastRead: MOCK_LAST_READ,
-        lastPolledTimestamp: notification.timestamp + 1,
-      });
+    it('persists the page when the file metadata fetch fails: the cards fetch their own rows', async () => {
+      const bootstrapData = createMockBootstrapData();
+      bootstrapData.posts[0].details.attachments = ['pubky://user-1/pub/pubky.app/files/image-1'];
+      const mocks = setupMocks({ bootstrapData, unreadCount: 0 });
+      // The real seam, with Nexus refusing the file-details request
+      vi.mocked(FileApplication.fetchFilesForPosts).mockRestore();
+      const fetchFiles = vi.spyOn(NexusFileService, 'fetchFiles').mockRejectedValue(new Error('rate limited'));
+      const persistFiles = vi.spyOn(FileApplication, 'persistFiles');
+
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(fetchFiles).toHaveBeenCalledExactlyOnceWith(['pubky://user-1/pub/pubky.app/files/image-1']);
+      expect(persistFiles).not.toHaveBeenCalled();
+      expect(mocks.persistPosts).toHaveBeenCalledWith(expect.objectContaining({ posts: bootstrapData.posts }));
+    });
+
+    it('does not persist the page when the file metadata cannot be stored, so the sign-in can retry', async () => {
+      const bootstrapData = createMockBootstrapData();
+      const failure = new Error('file storage unavailable');
+      const mocks = setupMocks({ bootstrapData, unreadCount: 0, persistFilesError: failure });
+
+      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toBe(failure);
+
+      expect(mocks.persistPosts).not.toHaveBeenCalled();
     });
 
     it('should handle empty muted users list in bootstrap response', async () => {

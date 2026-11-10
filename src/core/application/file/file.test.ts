@@ -11,9 +11,10 @@ import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
+import { NexusFileService } from '@/services/nexus/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
-import type { NexusFileDetails, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
+import type { NexusFileDetails, NexusPost } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { asOpaque } from '@/test-utils/type-assertions';
 
@@ -586,7 +587,7 @@ describe('FileApplication', () => {
       });
     });
 
-    it('handles urls as parsed object (from inline attachments_metadata)', async () => {
+    it('handles urls as parsed object', async () => {
       const fileId = 'file-456';
       const uri = createFileUri(fileId);
       const compositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
@@ -639,7 +640,7 @@ describe('FileApplication', () => {
       });
     });
 
-    it('handles urls as parsed object (from inline attachments_metadata)', async () => {
+    it('handles urls as parsed object', async () => {
       const fileId = 'file-456';
       const uri = createFileUri(fileId);
       const compositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
@@ -665,7 +666,7 @@ describe('FileApplication', () => {
   describe('commitDelete', () => {
     const media = (byte: number) => createMockFileAttachment(byte).media;
     /** Nexus's view of a post of the owner's, referencing `attachments`. */
-    const indexedPost = (id: string, attachments: string[] = []): NexusPostWithAttachmentMetadata => ({
+    const indexedPost = (id: string, attachments: string[] = []): NexusPost => ({
       details: {
         id,
         author: TEST_PUBKY,
@@ -705,7 +706,6 @@ describe('FileApplication', () => {
       });
       expect(NexusPostStreamService.fetchByIds).toHaveBeenCalledWith({
         post_ids: [buildCompositeId({ pubky: TEST_PUBKY, id: other.id })],
-        include_attachment_metadata: false,
         force: true,
       });
       expect(deleteIdempotentSpy).toHaveBeenCalledExactlyOnceWith(url);
@@ -881,5 +881,50 @@ describe('FileApplication', () => {
       await expect(FileApplication.commitDeleteUploaded([attachment])).rejects.toThrow('deletion failed');
       expect(LocalFileService.deleteById).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('FileApplication.fetchFilesForPosts', () => {
+  const legacy = (id: string) => createFileUri(id);
+  const v1 = `pubky://${TEST_PUBKY}/pub/social/v1/files/0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f.png`;
+  const post = (attachments: string[] | null): NexusPost =>
+    asOpaque<NexusPost>({ details: { id: 'post', author: TEST_PUBKY, attachments }, tags: [] });
+
+  beforeEach(() => {
+    vi.mocked(NexusFileService.fetchFiles).mockResolvedValue([]);
+    vi.spyOn(LocalFileService, 'createMany').mockResolvedValue(undefined);
+  });
+
+  it('asks Nexus once for the distinct 0.x attachments of the whole batch and persists the answer', async () => {
+    const file = createMockFile('a', 'a.png', legacy('a'));
+    vi.mocked(NexusFileService.fetchFiles).mockResolvedValue([file]);
+
+    await FileApplication.fetchFilesForPosts([post([legacy('a'), legacy('b')]), post([legacy('b'), v1]), post(null)]);
+
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledExactlyOnceWith([legacy('a'), legacy('b')]);
+    expect(LocalFileService.createMany).toHaveBeenCalledWith({
+      files: [{ ...file, id: buildCompositeId({ pubky: TEST_PUBKY, id: 'a' }) }],
+    });
+  });
+
+  it('sends nothing when the batch has no 0.x attachment: v1 media needs no metadata', async () => {
+    await FileApplication.fetchFilesForPosts([post([v1]), post([]), post(null)]);
+
+    expect(NexusFileService.fetchFiles).not.toHaveBeenCalled();
+  });
+
+  it('leaves a Nexus failure to the cards instead of holding the posts back', async () => {
+    vi.mocked(NexusFileService.fetchFiles).mockRejectedValue(new Error('rate limited'));
+
+    await expect(FileApplication.fetchFilesForPosts([post([legacy('a')])])).resolves.toBeUndefined();
+    expect(LocalFileService.createMany).not.toHaveBeenCalled();
+  });
+
+  it('propagates a storage failure so the posts stay retryable until their metadata is durable', async () => {
+    const failure = new Error('file storage unavailable');
+    vi.mocked(NexusFileService.fetchFiles).mockResolvedValue([createMockFile('a', 'a.png', legacy('a'))]);
+    vi.spyOn(LocalFileService, 'createMany').mockRejectedValue(failure);
+
+    await expect(FileApplication.fetchFilesForPosts([post([legacy('a')])])).rejects.toBe(failure);
   });
 });

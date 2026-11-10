@@ -479,7 +479,7 @@ export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
   const authorId = userIdFromPubky(authorPubky);
   const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
-    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
+    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v1/post/${authorId}/${postId}/details`;
     const poll = () => {
       cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
         if (response.status === 200 && response.body?.lock) return;
@@ -499,7 +499,7 @@ export const waitForNexusPostDeleted = (authorPubky: string, postId: string) => 
   const authorId = userIdFromPubky(authorPubky);
   const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
-    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
+    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v1/post/${authorId}/${postId}/details`;
     const poll = () => {
       cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
         if (response.status === 404) return;

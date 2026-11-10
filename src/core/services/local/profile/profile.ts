@@ -78,10 +78,7 @@ export class LocalProfileService {
    * @returns Promise resolving to void
    */
   static async upsertCounts(userId: Pubky, userCounts: NexusUserCounts): Promise<void> {
-    await UserCountsModel.upsert({
-      id: userId,
-      ...userCounts,
-    });
+    await UserCountsModel.upsert(UserCountsModel.toSchema([userId, userCounts]));
   }
 
   /**

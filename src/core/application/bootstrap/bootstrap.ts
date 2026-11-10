@@ -78,6 +78,12 @@ export class BootstrapApplication {
       TtlCoordinator.getInstance().retryUserIndexing({ pubky });
     }
 
+    // One file-details request for the page's 0.x attachments before the posts land: a timeline card
+    // then finds its rows instead of asking for its own on every sign-in (`/v1` serves no `files`).
+    await FileApplication.fetchFilesForPosts(bootstrapData.posts);
+    if (params.isCurrent && !params.isCurrent())
+      return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };
+
     const [{ unread, nextPollCursor }] = await Promise.all([
       NotificationApplication.persistAndSummarize({
         notifications: bootstrapData.notifications,
@@ -115,7 +121,6 @@ export class BootstrapApplication {
         streamId: UserStreamTypes.RECOMMENDED,
         stream: bootstrapData.ids.recommended,
       }),
-      FileApplication.persistFiles(bootstrapData.files),
       // Both features: hot tags and tag streams
       LocalHotService.upsert(buildHotTagsId(UserStreamTimeframe.TODAY, 'all'), bootstrapData.ids.hot_tags),
       LocalStreamTagsService.upsert(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),

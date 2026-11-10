@@ -1180,7 +1180,7 @@ describe('posts', () => {
     // head poll (`end` without `start`; ascending reply pages also send `end`) starts below it and
     // Nexus, which keeps a post with replies as a deleted entry, offers it as new. That offer is
     // what surfaced the "see new posts" button and the deleted card with its reply.
-    cy.intercept('GET', '**/v0/stream/posts/keys*', (req) => {
+    cy.intercept('GET', '**/v1/stream/posts/keys*', (req) => {
       const { start, end, source } = req.query;
       if (end !== undefined && start === undefined && source !== 'post_replies') {
         req.alias = 'streamHeadPoll';

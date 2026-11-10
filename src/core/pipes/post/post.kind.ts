@@ -162,9 +162,11 @@ export const resolveTagTargetCompositeIdForPostCreate = ({
 };
 
 /**
- * Nexus serves the 0.x kind names (`short`, `long`) for every post while it reads both epochs, and
- * the local tables keep what Nexus serves. A stored v1 post uses `note` and `article`. These two
- * functions are the only crossing between the vocabularies.
+ * The local tables and the stream ids keep the 0.x kind names (`short`, `long`), which Nexus `/v0`
+ * served and which 120 read sites compare against (D16). A stored v1 post, and Nexus `/v1`, use
+ * `note` and `article`. These two functions are the only crossing between the vocabularies; the
+ * read boundary (`toLocalPostKindFromNexus`) and the stream filter (`toNexusPostKindFilter`) are
+ * spelled through them.
  */
 export const toLocalPostKind = (kind: KnownPostKind): PostKind =>
   kind === 'note' ? 'short' : kind === 'article' ? 'long' : kind;
@@ -179,3 +181,24 @@ export const toStoredPostKind = (kind: string): KnownPostKind | null => {
   if (normalized === 'long' || normalized === 'article') return 'article';
   return isOneOf(postKinds, normalized) ? normalized : null;
 };
+
+/**
+ * The local kind of a kind Nexus serves. `/v1` spells the stored names (`note`, `article`), so every
+ * Nexus post read crosses here before the kind is stored or compared: the Nexus services
+ * (`PostNormalizer.fromNexus`, `NotificationNormalizer`) and the server-side metadata read
+ * (`fetchUserAndPostForMetadata`), which fetches outside the services. Fails open: `unknown`, and any
+ * name neither vocabulary has, is kept as served, so such a post still renders (as a note, today's
+ * fall-through) and is never hidden; it cannot be written back, since `toStoredPostKind` fails closed.
+ */
+export const toLocalPostKindFromNexus = (kind: string): string => {
+  const stored = toStoredPostKind(kind);
+  return stored === null ? kind : toLocalPostKind(stored);
+};
+
+/**
+ * The `kind=` a Nexus `/v1` stream or content-search filter takes: the stored name of a local stream
+ * kind (`short` → `note`, `long` → `article`, the rest unchanged). The `StreamKind` values and the
+ * persisted stream ids (`timeline:all:short`) keep the local names; only the URL builders cross. A
+ * name neither vocabulary has is sent as is, for Nexus to reject.
+ */
+export const toNexusPostKindFilter = (kind: string): string => toStoredPostKind(kind) ?? kind;

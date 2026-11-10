@@ -171,6 +171,10 @@ describe('AuthController restored session lifecycle', () => {
     vi.spyOn(utils, 'sleep').mockResolvedValue(undefined);
     vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notificationInitialState);
     vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
+    // The settings sync before bootstrap reads `/priv/app.pubky/v1/settings.json` through `getBytesIfExists`, not
+    // `request`: unstubbed, the read runs against the mock session, fails, and costs each restore some 700 ms, which
+    // tips the 1 s `waitFor` on a loaded runner and leaves the shared restore promise pending for every later test.
+    storeSavedSettings();
   });
 
   afterEach(() => {

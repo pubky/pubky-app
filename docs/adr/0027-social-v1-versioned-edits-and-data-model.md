@@ -7,6 +7,10 @@ Accepted — 2026-10-30
 Amended — 2026-10-31 (QA-1 BUG-2): media is collected on a post delete only, and only once every check says nothing
 else of the owner references it; edits and avatar replacement never delete media. See _Media lifetime_ below.
 
+Amended — 2026-11-09 (FIX-7): every Nexus call is built under the `/v1` API, which serves the stored kind names and
+drops the bookmark, file-details and tag `relationship` fields; the local vocabulary stays `short`/`long` and the
+Nexus services fold every response once. One call stays on the frozen `/v0`. See _Nexus API version_ below.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`). Amends ADR-0023 (article covers)
 and the Locks reader described in ADR-0022.
 
@@ -24,8 +28,8 @@ Three constraints shaped the port. Writes stay local-first (ADR-0001): Dexie fir
 on failure. `HomeserverService` stays the only write path, with its retry policy and write fences (ADR-0004,
 `docs/error-handling.md`), so the package's own client (`pubky-social-specs/client`), which writes through the SDK
 session directly, is never imported outside `src/test-utils` (gate test). And the app changes no visible behaviour:
-kinds stay `short`/`long` locally and on Nexus, item notes and alt text are preserved but not shown, no drafts, slugs
-or private posts.
+kinds stay `short`/`long` locally (Nexus `/v0` served them so; `/v1` serves `note`/`article`, folded at the read
+boundary), item notes and alt text are preserved but not shown, no drafts, slugs or private posts.
 
 ## Decision
 
@@ -78,6 +82,36 @@ or private posts.
     uploads (`FileController.commitDelete`).
   - Private trees are not checked: the app writes no private object that references public media.
 - **Kinds** cross the vocabulary in one place (`toLocalPostKind` / `toStoredPostKind`); `storedKind` fails closed.
+- **Nexus API version** (amended 2026-11-09, FIX-7). Every Nexus URL is built by `buildNexusUrl` under
+  `NEXUS_API_VERSION` (`v1`, `src/config/nexus.ts`); the endpoints are spelled without a version. `/v1` serves the
+  same routes as `/v0` with the data model's names and shapes, so the app crosses once more at the **Nexus read
+  boundary**, in the Nexus services, before anything is stored or compared:
+  - **Wire kinds vs local kinds.** `/v1` spells `details.kind` and a notification's `post_kind` as `note`/`article`
+    and takes only those names in a `kind=` filter (`short` is a 400). The local tables, the persisted stream ids
+    (`timeline:all:short`) and the 120 read sites keep `short`/`long` (D16). `PostNormalizer.fromNexus` folds every
+    post a service returns (`toLocalPostKindFromNexus`: `toStoredPostKind` then `toLocalPostKind`, fail-open, so
+    `unknown` and any name this client does not know stay as served and the post renders as a note, never hidden,
+    never written back since `storedKind` fails closed); `NotificationNormalizer` already folded `post_kind`. The
+    URL builders (`buildPostStreamUrl`, `searchApi.byContent`) send the stored name (`toNexusPostKindFilter`); the
+    server-side metadata fetch (`fetchUserAndPostForMetadata`) folds the one detail it reads outside the services.
+  - **Tag `relationship`.** `/v1` drops it; `tag_uri` (the viewer's own tag file, `null` otherwise) says the same.
+    `TagNormalizer.fromNexus` derives `relationship = relationship ?? (tag_uri != null)` on every tag and taggers
+    response, so the local `NexusTag` keeps a required `relationship` and the tag cache pipes are untouched; the
+    `*Wire` types in `nexus.types.ts` are the responses before this fold. A request without a viewer derives `false`.
+  - **Dropped fields.** The bootstrap `files` and the post `attachments_metadata` are gone with their types: the
+    page's 0.x attachment metadata is fetched once (`FileApplication.fetchFilesForPosts`, before the posts are
+    persisted) on bootstrap, the stream and the TTL refresh. `NexusPost.bookmark` and `NexusUserCounts.bookmarks`
+    are optional on the wire (`UserCountsModel` stores `0` on every row, no `DB_VERSION` change); the `/v0` body
+    flag `include_attachment_metadata` is gone. `exclude_kinds` and `source=bookmarks` are never sent.
+  - **The one `/v0` call.** `filesApi.getFiles` (`POST v0/files/by_ids`) names its version explicitly: a 0.x
+    attachment URI carries no extension or type, `/v1` serves no file details, and un-migrated authors keep such
+    posts until they open the new app, so without it their images would degrade to file cards for every viewer
+    (D10). It is asked for 0.x addresses only, once per fetched page of posts before they are persisted
+    (`FileApplication.fetchFilesForPosts`, in place of the inline `attachments_metadata` `/v0` served; at most
+    `NEXUS_FILES_BY_IDS_MAX_URIS` per request) and per card for any row still missing. **Sunset:** remove it (with
+    `NexusFileService.fetchFiles` and `FileApplication.fetchFiles*`) when `/v0` gets a removal date or every author
+    has migrated. The compliance gate lets no
+    other file under `src` name `v0`.
 - **Limits** come from the package: the article body cap is `articleBodyMaxLength` for the body alone, in code
   points, which `getCharacterCount` already counts.
 
@@ -128,6 +162,9 @@ migrated-shape heuristic permanent. Rejected (D14).
 
 - `src/core/pipes/post/{post.normalizer,post.head,post.collection,post.kind,post.reference}.ts`,
   `src/core/pipes/file/file.normalizer.ts`, `src/core/pipes/locks/{guardedPost.builder,locks.parser}.ts`
+- Nexus read boundary: `src/core/services/nexus/nexus.utils.ts` (`buildNexusUrl`, `carryNexusResponseStartedAt`),
+  `PostNormalizer.fromNexus`, `UserNormalizer.fromNexus`, `TagNormalizer.fromNexus{,Taggers}`, applied in
+  `src/core/services/nexus/{post/post,user/user,bootstrap/bootstrap,stream/posts/postStream,stream/users/userStream}.ts`
 - `src/core/application/post/post.ts` (`commitCreate`, `commitEdit`, `commitDelete`, `readHead`),
   `src/core/application/file/file.ts` (`commitDelete`, `commitDeleteUploaded`), `src/core/services/local/{post,file}`
 - Media lifetime tests: `src/core/controllers/post/post.media.integration.test.ts` (the BUG-2 regression included)

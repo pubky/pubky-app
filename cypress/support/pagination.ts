@@ -42,12 +42,12 @@ export const seededStreamKeys = (body: unknown): string[] => {
 export const waitForNexusStream = (query: StreamQuery, postIds: string[]): Cypress.Chainable<string[]> =>
   waitForNexus(seededStreamIndexed(query, postIds)).then(([body]) => seededStreamKeys(body));
 /**
- * Records every `/v0/stream/posts/keys` response the app receives whose query passes `matches`,
+ * Records every `/v1/stream/posts/keys` response the app receives whose query passes `matches`,
  * in arrival order. Register before the page loads so the first page is captured.
  */
 export const recordStreamPages = (matches: (query: StreamQuery) => boolean): RecordedStreamPage[] => {
   const pages: RecordedStreamPage[] = [];
-  cy.intercept({ method: 'GET', url: '**/v0/stream/posts/keys*' }, (req) => {
+  cy.intercept({ method: 'GET', url: '**/v1/stream/posts/keys*' }, (req) => {
     const query = toStreamQuery(req.query);
     if (!matches(query)) return;
     req.on('response', (res) => {

@@ -19,6 +19,8 @@ import { getCharacterCount } from '@/libs/utils/utils';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import type { PostValidatorData } from '@/pipes/pipes.types';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import type { NexusPostWire } from '@/services/nexus/nexus.types';
+import { mockNexusPostWire } from '@/test-utils/nexus';
 import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 
 const OWNER = fakeOwner(1);
@@ -40,6 +42,47 @@ const articleContent = (title = 'Title', body = 'Body') => JSON.stringify({ titl
 
 describe('PostNormalizer', () => {
   withFrozenSpecClock();
+
+  describe('fromNexus', () => {
+    const wirePost = (kind: string, tags: NexusPostWire['tags'] = []) =>
+      mockNexusPostWire({ id: '0035QZPT4QG00', author: OWNER, kind, tags, details: { content: 'Hello' } });
+
+    it.each([
+      ['note', 'short'],
+      ['article', 'long'],
+      ['image', 'image'],
+      ['collection', 'collection'],
+    ])('folds the /v1 kind %s into the local kind %s (D16)', (wire, local) => {
+      expect(PostNormalizer.fromNexus(wirePost(wire)).details.kind).toBe(local);
+    });
+
+    it('keeps a kind it cannot classify as served, so the post still renders', () => {
+      expect(PostNormalizer.fromNexus(wirePost('unknown')).details.kind).toBe('unknown');
+    });
+
+    it('gives every tag its relationship, from tag_uri when /v1 serves none', () => {
+      const post = wirePost('note', [
+        { label: 'own', taggers: [FRIEND], taggers_count: 1, tag_uri: `pubky://${FRIEND}/pub/social/v1/tags/T1` },
+        { label: 'foreign', taggers: [OWNER], taggers_count: 1, tag_uri: null },
+        { label: 'legacy', taggers: [OWNER], taggers_count: 1, relationship: true },
+      ]);
+
+      expect(PostNormalizer.fromNexus(post).tags.map((tag) => [tag.label, tag.relationship])).toEqual([
+        ['own', true],
+        ['foreign', false],
+        ['legacy', true],
+      ]);
+    });
+
+    it('passes every other member through unchanged, those it does not name included', () => {
+      const post = { ...wirePost('article'), bookmark: null };
+
+      expect(PostNormalizer.fromNexus(post)).toEqual({
+        ...post,
+        details: { ...post.details, kind: 'long' },
+      });
+    });
+  });
 
   describe('to', () => {
     it('builds the first version of a note where buildPost puts it: one file under posts/{id}/', () => {

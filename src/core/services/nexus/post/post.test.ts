@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNexusUrl } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
-import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import type { NexusTag, NexusTaggers, NexusTagWire } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusPostService } from '@/services/nexus/post/post';
+import { mockNexusPostWire } from '@/test-utils/nexus';
 import { postApi } from './post.api';
 import { type TPostBase, type TPostTaggersParams, type TPostTagsParams, type TPostViewParams } from './post.types';
 
@@ -29,7 +30,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.view(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}`);
     });
 
     it('should generate correct view URL with viewer_id', () => {
@@ -40,7 +41,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.view(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}?viewer_id=${pubky}-viewer`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}?viewer_id=${pubky}-viewer`);
     });
 
     it('should generate correct view URL with tag pagination parameters', () => {
@@ -52,7 +53,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.view(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}?limit_tags=10&limit_taggers=5`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}?limit_tags=10&limit_taggers=5`);
     });
   });
 
@@ -64,7 +65,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.counts(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/counts`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/counts`);
     });
   });
 
@@ -76,7 +77,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.details(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/details`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/details`);
     });
   });
 
@@ -89,7 +90,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.taggers(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/test-label`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/taggers/test-label`);
     });
 
     it('should generate correct taggers URL with pagination parameters', () => {
@@ -102,7 +103,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.taggers(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/test-label?skip=10&limit=20`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/taggers/test-label?skip=10&limit=20`);
     });
 
     it('should generate correct taggers URL with viewer_id', () => {
@@ -114,7 +115,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.taggers(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/test-label?viewer_id=${pubky}-viewer`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/taggers/test-label?viewer_id=${pubky}-viewer`);
     });
   });
 
@@ -126,7 +127,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.tags(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/tags`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/tags`);
     });
 
     it('should generate correct tags URL with tag pagination parameters', () => {
@@ -139,7 +140,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.tags(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/tags?limit_tags=15&limit_taggers=8&skip_tags=5`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/tags?limit_tags=15&limit_taggers=8&skip_tags=5`);
     });
 
     it('should generate correct tags URL with viewer_id', () => {
@@ -150,7 +151,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.tags(params);
-      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/tags?viewer_id=${pubky}-viewer`);
+      expect(result).toBe(`${getNexusUrl()}/v1/post/${pubky}/${postId}/tags?viewer_id=${pubky}-viewer`);
     });
   });
 
@@ -240,7 +241,7 @@ describe('NexusPostService', () => {
 
       expect(result).toEqual(mockTags);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${getNexusUrl()}/v0/post/${pubky}/${postId}/tags?skip_tags=5&limit_tags=3&viewer_id=${testViewerId}`,
+        url: `${getNexusUrl()}/v1/post/${pubky}/${postId}/tags?skip_tags=5&limit_tags=3&viewer_id=${testViewerId}`,
       });
     });
 
@@ -257,9 +258,77 @@ describe('NexusPostService', () => {
         }),
       ).rejects.toThrow(error);
     });
+
+    it('derives each tag relationship from tag_uri, which /v1 serves in place of the field, and keeps the stamp', async () => {
+      const OWN = `pubky://${testViewerId}/pub/social/v1/tags/T1`;
+      const wireTags: NexusTagWire[] = [
+        { label: 'own', taggers: [testViewerId], taggers_count: 1, tag_uri: OWN },
+        { label: 'foreign', taggers: ['user1' as Pubky], taggers_count: 1, tag_uri: null },
+      ];
+      markNexusResponseStartedAt(wireTags, 1_000);
+      mockQueryNexus.mockResolvedValue(wireTags);
+
+      const result = await NexusPostService.getPostTags({ compositeId: `${pubky}:${postId}`, viewerId: testViewerId });
+
+      expect(result).toEqual([
+        { ...wireTags[0], relationship: true },
+        { ...wireTags[1], relationship: false },
+      ]);
+      expect(getNexusResponseStartedAt(result)).toBe(1_000);
+    });
+  });
+
+  describe('getPost', () => {
+    const wirePost = (kind: string) =>
+      mockNexusPostWire({
+        id: postId,
+        author: pubky,
+        kind,
+        tags: [
+          {
+            label: 'rust',
+            taggers: [testViewerId],
+            taggers_count: 1,
+            tag_uri: `pubky://${testViewerId}/pub/social/v1/tags/T1`,
+          },
+        ],
+      });
+
+    it.each([
+      ['article', 'long'],
+      ['note', 'short'],
+      ['unknown', 'unknown'],
+    ])('folds the /v1 kind %s into the local kind %s and derives the tag relationship', async (wire, local) => {
+      mockQueryNexus.mockResolvedValue(wirePost(wire));
+
+      const result = await NexusPostService.getPost({ compositeId: `${pubky}:${postId}` });
+
+      expect(mockQueryNexus).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v1/post/${pubky}/${postId}` });
+      expect(result.details.kind).toBe(local);
+      expect(result.tags[0].relationship).toBe(true);
+    });
   });
 
   describe('getPostTaggers', () => {
+    it('derives relationship from tag_uri when /v1 serves none', async () => {
+      mockQueryNexus.mockResolvedValue({
+        users: [testViewerId],
+        tag_uri: `pubky://${testViewerId}/pub/social/v1/tags/T1`,
+      });
+
+      const result = await NexusPostService.getPostTaggers({
+        compositeId: `${pubky}:${postId}`,
+        label: 'rust',
+        viewerId: testViewerId,
+      });
+
+      expect(result.relationship).toBe(true);
+      mockQueryNexus.mockResolvedValue({ users: ['user1' as Pubky], tag_uri: null });
+      expect(
+        (await NexusPostService.getPostTaggers({ compositeId: `${pubky}:${postId}`, label: 'rust' })).relationship,
+      ).toBe(false);
+    });
+
     it('should construct correct URL and return queryNexus response', async () => {
       const mockTaggers: NexusTaggers = { relationship: false, users: ['user1' as Pubky] };
       const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockTaggers);
@@ -274,7 +343,7 @@ describe('NexusPostService', () => {
 
       expect(result).toEqual(mockTaggers);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/rust%20%26%20wasm?skip=10&limit=5&viewer_id=${testViewerId}`,
+        url: `${getNexusUrl()}/v1/post/${pubky}/${postId}/taggers/rust%20%26%20wasm?skip=10&limit=5&viewer_id=${testViewerId}`,
         staleTime: 0,
       });
     });

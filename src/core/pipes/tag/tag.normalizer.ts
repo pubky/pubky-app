@@ -4,9 +4,21 @@ import type { TTagEventParams, TTagFromResponse } from '@/controllers/tag/tag.ty
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { toSpecsValidationError } from '@/pipes/specs.errors';
+import type { NexusTaggersWire, NexusTagWire } from '@/services/nexus/nexus.types';
 
 export class TagNormalizer {
   private constructor() {}
+
+  /**
+   * A tag, or a taggers page, as the app holds it, from the one Nexus serves. `/v0` served
+   * `relationship`; `/v1` does not, and `tag_uri` (the viewer's own tag file, `null` when they have
+   * not tagged the label) says the same, so a missing `relationship` is derived from it. Right only
+   * for a response fetched with the viewer on the request: without one `tag_uri` is `null`, which
+   * reads as `false`, the right answer for a guest. A `relationship` Nexus did send is kept as sent.
+   */
+  static fromNexus<T extends NexusTagWire | NexusTaggersWire>(tag: T): T & { relationship: boolean } {
+    return { ...tag, relationship: tag.relationship ?? tag.tag_uri != null };
+  }
 
   /**
    * The viewer's tag on a post or a user, as `pubky-social-specs` stores it. The target is the

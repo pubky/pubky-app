@@ -1,3 +1,4 @@
+import { toNexusPostKindFilter } from '@/pipes/post/post.kind';
 import { buildNexusUrl } from '@/services/nexus/nexus.utils';
 import {
   STREAM_PREFIX,
@@ -24,10 +25,11 @@ function buildPostStreamUrl(params: TStreamQueryParams, source: StreamSource, pr
   // Add source parameter
   queryParams.append('source', source);
 
-  // Add all parameters that exist and are not empty strings
+  // Add all parameters that exist and are not empty strings. `kind` goes out in the `/v1` vocabulary
+  // (`short` → `note`, `long` → `article`); the `StreamKind` values and the stream ids keep the local names.
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      queryParams.append(key, String(value));
+      queryParams.append(key, key === 'kind' ? toNexusPostKindFilter(String(value)) : String(value));
     }
   });
 
@@ -89,7 +91,6 @@ export const postStreamApi = {
 export function buildPostStreamBodyUrl(params: TStreamPostsByIdsParams): TStreamPostsByIdsParams {
   const body: TStreamPostsByIdsParams = {
     post_ids: params.post_ids,
-    include_attachment_metadata: params.include_attachment_metadata ?? true,
   };
 
   if (params.viewer_id) {

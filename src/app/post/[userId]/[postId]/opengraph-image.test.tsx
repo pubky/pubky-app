@@ -3,7 +3,7 @@ import PostImage from './opengraph-image';
 
 const PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const POST_ID = '0035NGP297YG0';
-const NEXUS = 'https://nexus.staging.pubky.app/v0';
+const NEXUS = 'https://nexus.staging.pubky.app/v1';
 
 /**
  * Regression coverage for the crawl-facing id shapes behind the `AppError: Bad
