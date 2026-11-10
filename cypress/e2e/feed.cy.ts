@@ -31,7 +31,7 @@ import {
   fastTagPostInFeed,
   waitForFeedToLoad,
 } from '../support/posts';
-import { inSidebar, itDesktopOnly, itMobile } from '../support/mobile';
+import { inSidebar, itMobile } from '../support/mobile';
 import { followIndexed, postIndexed, postTagsIndexed, userTagsIndexed, waitForNexus } from '../support/nexus';
 import {
   createImagePostViaApi,
@@ -690,7 +690,7 @@ describe('visual layout', () => {
   });
 
   // Phones do not offer the visual layout.
-  itDesktopOnly('can view image-only posts in visual layout', () => {
+  it('can view image-only posts in visual layout', () => {
     const imagePostContent1 = `Image post 1 ${Date.now()}`;
     const imagePostContent2 = `Image post 2 ${Date.now()}`;
     const imagePostContent3 = `Image post 3 ${Date.now()}`;

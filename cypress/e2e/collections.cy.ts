@@ -23,7 +23,7 @@ import {
 } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
-import { isMobile, itDesktopOnly } from '../support/mobile';
+import { isMobile } from '../support/mobile';
 import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
 import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
@@ -283,7 +283,7 @@ describe('collections', () => {
   });
 
   // Sets the Home layout through the layout filter, which the phone filters drawer does not offer.
-  itDesktopOnly('list layout: creator default, hidden replies, home post layout, temporary viewer override', () => {
+  it('list layout: creator default, hidden replies, home post layout, temporary viewer override', () => {
     const collectionName = `List collection ${Date.now()}`;
     const postContent = `A post in List layout ${Date.now()}`;
     const replyContent = `A reply hidden from the collection ${Date.now()}`;

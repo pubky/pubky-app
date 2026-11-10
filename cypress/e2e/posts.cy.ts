@@ -42,7 +42,7 @@ import {
   revealPostInTimeline,
 } from '../support/feeds';
 import { goToCollectionsPage } from '../support/header';
-import { itDesktopOnly, itMobile } from '../support/mobile';
+import { itMobile } from '../support/mobile';
 import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
@@ -687,7 +687,7 @@ describe('posts', () => {
   });
 
   // Switches layout through the post page's layout filter, which phones do not offer.
-  itDesktopOnly('can tag and remove tags from existing post on post page (wide layout)', () => {
+  it('can tag and remove tags from existing post on post page (wide layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
     const tag2 = 'cassava';

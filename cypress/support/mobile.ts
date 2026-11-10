@@ -1,8 +1,5 @@
 export const isMobile = (): boolean => Boolean(Cypress.expose('isMobile'));
 
-// For features the phone layout does not offer (e.g. the layout filter), not for mobile failures.
-export const itDesktopOnly: Mocha.TestFunction | Mocha.PendingTestFunction = isMobile() ? it.skip : it;
-
 declare global {
   interface Window {
     mobileSubset?: Set<string>;
@@ -15,7 +12,8 @@ const mobileSubset = () => (window.mobileSubset ??= new Set<string>());
 
 /**
  * A test in the mobile smoke subset: it runs on desktop and phones, while a plain `it` runs on
- * desktop only. Mobile VRT covers the phone layout, so the subset is the tests that prove a
+ * desktop only, including tests of features phones do not offer (e.g. the layout filter).
+ * Mobile VRT covers the phone layout, so the subset is the tests that prove a
  * phone-only interaction (footer, drawers, tab bars, sheets, composer tabs) or behaviour that
  * depends on the viewport (scroll-triggered paging, scroll restore). Specs without one are left
  * out of the mobile matrix in e2e-test.yml.
