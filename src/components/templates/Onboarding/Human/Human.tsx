@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
+import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { Logger } from '@/libs/logger/logger';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
+import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
 import { toast, type ToastHandle } from '@/molecules/Toaster/toast';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
@@ -30,6 +32,7 @@ export function Human() {
   const verificationRequestRef = useRef(0);
   const { setInviteCode, reset } = useOnboardingStore();
   const router = useRouter();
+  const passportEligibility = usePassportEligibility();
   useEffect(() => {
     reset();
   }, [reset]);
@@ -104,7 +107,9 @@ export function Human() {
             className="py-0 pt-6"
             backButtonClassName="h-15 w-full lg:w-auto lg:[&_svg]:mr-0"
             hiddenContinueButton
-            onHandleBackButton={() => router.back()}
+            onHandleBackButton={() =>
+              router.push(passportEligibility === 'enabled' ? ONBOARDING_ROUTES.JOIN : ROOT_ROUTES)
+            }
           />
         )
       }
@@ -132,6 +137,14 @@ export function Human() {
             }
           }}
         />
+      )}
+      {state === States.Selection && (
+        <div
+          data-testid="human-selection-footer"
+          className={passportEligibility === 'enabled' ? 'hidden lg:block' : undefined}
+        >
+          <HumanFooter />
+        </div>
       )}
       {state === States.PhoneInput && (
         <HumanPhoneInput

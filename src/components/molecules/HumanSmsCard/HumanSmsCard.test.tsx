@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HumanSmsCard } from './HumanSmsCard';
 
@@ -44,6 +44,18 @@ describe('SmsVerificationCard', () => {
     fireEvent.click(button!);
 
     expect(isOnboardingClicked).toBe(true);
+  });
+
+  it.each([
+    [false, 'Not available in your country'],
+    [true, 'Service temporarily unavailable'],
+  ] as const)('explains the mobile unavailable state with error=%s', (error, title) => {
+    mockUseSmsVerificationInfo.mockReturnValue({ available: false, error });
+    render(<HumanSmsCard />);
+    fireEvent.click(screen.getByRole('button', { name: 'Why phone verification is unavailable' }));
+    const explanation = within(screen.getByRole('dialog', { name: title }));
+    expect(explanation.getByText(title)).toBeInTheDocument();
+    expect(explanation.getByText('Try a different verification method')).toBeInTheDocument();
   });
 
   it('renders geoblocking overlay when not available', () => {

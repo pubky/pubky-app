@@ -31,6 +31,7 @@ type RingRequest = 'ready' | 'generating' | 'expired';
 const scenario = vi.hoisted(() => ({
   ring: 'ready' as RingRequest,
   passport: 'enabled' as 'enabled' | 'disabled',
+  appleEnabled: false,
 }));
 
 // The root layout mounts <Header /> above every page. On /sign-in it is the
@@ -148,6 +149,7 @@ async function renderSignIn(viewport: (typeof VIEWPORTS)[number][1]) {
 beforeEach(() => {
   scenario.ring = 'ready';
   scenario.passport = 'enabled';
+  scenario.appleEnabled = false;
   useSignInStore.setState(signInInitialState);
 });
 
@@ -162,7 +164,7 @@ for (const [name, viewport] of VIEWPORTS) {
       if (!isDesktop) {
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
-      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await expect.element(page.getByRole('button', { name: 'Continue with Google', exact: true })).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-${name}`);
     });
 
@@ -173,7 +175,7 @@ for (const [name, viewport] of VIEWPORTS) {
       if (!isDesktop) {
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
-      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).not.toBeInTheDocument();
+      await expect.element(page.getByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
       await matchVrtFrameScreenshot(`sign-in-page-ring-only-${name}`);
     });
 
@@ -205,14 +207,14 @@ for (const [name, viewport] of VIEWPORTS) {
 
     it('renders the Passport sign-in help', async () => {
       await renderSignIn(viewport);
-      await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
-      await expect.element(page.getByText('Sign in with Apple or Google')).toBeVisible();
+      await page.getByRole('button', { name: 'About signing in with Google' }).click();
+      await expect.element(page.getByRole('heading', { name: 'Sign in with Google', exact: true })).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-google-help-${name}`);
     });
 
     it('renders the page while Passport is open', async () => {
       await renderSignIn(viewport);
-      await page.getByRole('button', { name: 'Continue with Google or Apple' }).click();
+      await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
       await expect.element(page.getByRole('button', { name: 'Waiting for Passport...' })).toBeDisabled();
       if (isDesktop) {
         await expect.element(page.getByRole('button', { name: 'Reload sign-in QR code' })).toBeDisabled();
@@ -232,11 +234,31 @@ for (const [name, viewport] of VIEWPORTS) {
       await expect.element(page.getByText('Syncing settings')).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-progress-${name}`);
     });
+
+    it('renders Apple-enabled providers and their concise help', async () => {
+      scenario.appleEnabled = true;
+      await renderSignIn(viewport);
+      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await matchVrtFrameScreenshot(`sign-in-page-apple-enabled-${name}`);
+      await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
+      for (const term of ['Your keys:', 'Recovery:']) {
+        await expect.element(page.getByText(term, { exact: true })).toBeVisible();
+      }
+      const bounds = page.getByRole('dialog').element().getBoundingClientRect();
+      expect(bounds.top).toBeGreaterThanOrEqual(0);
+      expect(bounds.bottom).toBeLessThanOrEqual(viewport.height);
+      await matchVrtFrameScreenshot(`sign-in-page-apple-help-${name}`);
+      const learnMore = page.getByRole('link', { name: 'Learn more' });
+      learnMore.element().scrollIntoView({ block: 'nearest' });
+      expect(learnMore.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        page.getByRole('dialog').element().getBoundingClientRect().bottom,
+      );
+    });
   });
 }
 
-// Preserve the provider presentation covered by the existing baselines.
+// Match the default deployment, with explicit Apple-enabled coverage above.
 vi.mock('@/config/network', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/network')>()),
-  isPassportAppleEnabled: () => true,
+  isPassportAppleEnabled: () => scenario.appleEnabled,
 }));

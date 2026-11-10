@@ -2,7 +2,7 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -12,6 +12,9 @@ import { Landing } from '@/templates/Public/Landing/Landing';
 import { LandingFinalSection } from '@/templates/Public/Landing/LandingFinalSection';
 import { LandingFreedomSection } from '@/templates/Public/Landing/LandingFreedomSection';
 import { HomeFooter } from '@/molecules/Home/Home';
+
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 
 // Preload images into cache to guarantee they render before snapshot.
 // This ensures the logo and Synonym/"a tether. company" brand mark <img>s are loaded up front,
@@ -99,6 +102,17 @@ describe('Landing — visual regression', () => {
     await preloadImages(LANDING_LOGO_URLS);
     await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await matchVrtFrameScreenshot('landing-mobile');
+  });
+
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders the Apple-enabled hero on %s', async (name, viewport) => {
+    mockAppleEnabled.mockReturnValue(true);
+    await preloadImages(LANDING_LOGO_URLS);
+    await renderForVRT(<LandingWithHeader />, { viewport });
+    await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' }).first()).toBeVisible();
+    await matchVrtFrameScreenshot(`landing-apple-enabled-${name}`);
   });
 
   it.each([
@@ -208,8 +222,8 @@ describe('Landing — visual regression', () => {
   });
 });
 
-// Preserve the provider presentation covered by the existing baselines.
+// Match the default deployment, with explicit Apple-enabled coverage above.
 vi.mock('@/config/network', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/network')>()),
-  isPassportAppleEnabled: () => true,
+  isPassportAppleEnabled: mockAppleEnabled,
 }));

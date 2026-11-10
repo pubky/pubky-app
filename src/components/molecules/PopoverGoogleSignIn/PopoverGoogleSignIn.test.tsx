@@ -16,29 +16,27 @@ describe('PopoverGoogleSignIn', () => {
     );
     expect(
       screen.getByRole('heading', {
-        name: enabled ? 'Sign in with Apple or Google' : 'Continue with Google, powered by Pubky Passport.',
+        name: enabled ? 'Sign in with Apple or Google' : 'Sign in with Google',
       }),
     ).toBeInTheDocument();
-    if (enabled) {
-      expect(
-        screen.getByText('Use an existing account to create or access your pubky with Pubky Passport.'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Created in your browser, with an encrypted backup stored in your iCloud or Google Drive/),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Restoring your pubky requires your encrypted backup and a separate key from Passport/),
-      ).toBeInTheDocument();
-      expect(screen.queryByText("Google's role:")).not.toBeInTheDocument();
-    } else {
-      expect(screen.getByText(/Helps identify you and securely retrieve your encrypted backup/)).toBeInTheDocument();
-      expect(
-        screen.getByText(/Keys are created in your browser and encrypted before storage on Google Drive/),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/Recovery requires both your encrypted Google Drive backup/)).toBeInTheDocument();
-      expect(screen.getByText(/Neither Google nor Passport can recover your pubky on its own/)).toBeInTheDocument();
-      expect(screen.queryByText(/iCloud|Apple/)).not.toBeInTheDocument();
-    }
+    expect(
+      screen.getByText('Use an existing account to create or access your pubky with Pubky Passport.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        enabled
+          ? /Created in your browser, with an encrypted backup stored in your iCloud or Google Drive/
+          : /Created in your browser, with an encrypted backup stored in your Google Drive/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Restoring your pubky requires your encrypted backup and a separate key from Passport/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Your keys:')).toBeInTheDocument();
+    expect(screen.getByText('Recovery:')).toBeInTheDocument();
+    expect(screen.queryByText("Google's role:")).not.toBeInTheDocument();
+    expect(screen.queryByText('Split security:')).not.toBeInTheDocument();
+    if (!enabled) expect(screen.queryByText(/iCloud|Apple/)).not.toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Learn more' })).toHaveAttribute(
       'href',

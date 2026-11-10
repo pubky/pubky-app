@@ -3,7 +3,3 @@ import type { ContinueWithPassportProps } from '@/molecules/ContinueWithPassport
 export type PassportMethodCardProps = Pick<ContinueWithPassportProps, 'onContinue' | 'isPending'> & {
   className?: string;
 };
-
-export type PassportMethodSectionProps = PassportMethodCardProps & {
-  variant?: 'label' | 'card';
-};

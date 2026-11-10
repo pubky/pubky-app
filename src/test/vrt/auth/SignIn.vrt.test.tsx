@@ -1,6 +1,6 @@
 // Preserve browser mock initialization order.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -8,6 +8,9 @@ import { createZustandLikeHook } from '@/test-utils/stores';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { Header } from '@/organisms/Header/Header';
 import { SignInPage } from '@/templates/Auth/SignInPage/SignInPage';
+
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -65,16 +68,13 @@ for (const [name, viewport] of [
         await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
         const signerButtons = ['Continue with Pubky Ring', 'Continue with Bitkit'];
-        if (passportEligibility === 'enabled') signerButtons.push('Continue with Google or Apple');
+        if (passportEligibility === 'enabled') signerButtons.push('Continue with Google');
         for (const label of signerButtons) {
           expect(page.getByRole('button', { name: label }).element().getBoundingClientRect().height).toBe(60);
         }
         if (passportEligibility === 'enabled') {
           expect(
-            page
-              .getByRole('button', { name: 'About signing in with Apple or Google' })
-              .element()
-              .getBoundingClientRect().height,
+            page.getByRole('button', { name: 'About signing in with Google' }).element().getBoundingClientRect().height,
           ).toBe(32);
           const sovereign = page.getByTestId('sign-in-sovereign-card-mobile').element().getBoundingClientRect();
           const passport = page.getByTestId('passport-method-section').element().getBoundingClientRect();
@@ -93,11 +93,25 @@ for (const [name, viewport] of [
       }
       await matchVrtFrameScreenshot(`sign-in-passport-${passportEligibility}-${name}`);
     });
+
+    it('renders the provider button when Apple is enabled', async () => {
+      mockAppleEnabled.mockReturnValue(true);
+      vi.mocked(usePassportEligibility).mockReturnValue('enabled');
+      await renderForVRT(
+        <>
+          <Header />
+          <SignInPage />
+        </>,
+        { viewport },
+      );
+      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await matchVrtFrameScreenshot(`sign-in-apple-enabled-${name}`);
+    });
   });
 }
 
-// Preserve the provider presentation covered by the existing baselines.
+// Match the default deployment, with explicit Apple-enabled coverage above.
 vi.mock('@/config/network', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/network')>()),
-  isPassportAppleEnabled: () => true,
+  isPassportAppleEnabled: mockAppleEnabled,
 }));

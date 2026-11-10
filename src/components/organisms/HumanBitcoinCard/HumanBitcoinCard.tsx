@@ -14,7 +14,8 @@ import { HumanBitcoinCardSkeleton } from './HumanBitcoinCard.skeleton';
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
 
 export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
-  const satUsdRate = useBtcRate().rate?.satUsd;
+  const { rate, status: rateStatus } = useBtcRate();
+  const satUsdRate = rate?.satUsd;
   const lnInfo = useLnVerificationInfo();
 
   // Waiting for availability check
@@ -27,7 +28,6 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
   const isUnavailable = isGeoBlocked || isError;
   // Price when available
   const priceSat = lnInfo?.available ? lnInfo.amountSat : undefined;
-  const dataAvailable = priceSat !== undefined && satUsdRate !== undefined;
   const formattedPrice = priceSat?.toLocaleString('en-US');
   let usdAmount: string | undefined;
   if (priceSat !== undefined && satUsdRate !== undefined) {
@@ -78,11 +78,11 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
             size="lg"
             className="w-full border-0 disabled:opacity-40"
             onClick={onClick}
-            disabled={!dataAvailable || isUnavailable}
+            disabled={priceSat === undefined || isUnavailable}
           >
             <Wallet className="size-4" aria-hidden="true" />
             {usdAmount !== undefined ? `Bitcoin payment ($${usdAmount})` : 'Bitcoin payment'}
-            {!isUnavailable && usdAmount === undefined && <Skeleton className="h-4 w-8 rounded" />}
+            {!isUnavailable && rateStatus === 'loading' && <Skeleton className="h-4 w-8 rounded" />}
           </Button>
           {isUnavailable && (
             <div className="lg:hidden">

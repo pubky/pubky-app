@@ -103,9 +103,7 @@ export function Join() {
           </Typography>
           {manageOwnKeysButton}
         </Container>
-        {isPassportEnabled && (
-          <PassportMethodSection variant="card" onContinue={startPassportAuth} isPending={isPending} />
-        )}
+        {isPassportEnabled && <PassportMethodSection onContinue={startPassportAuth} isPending={isPending} />}
       </Container>
 
       <HumanFooter variant="inline" showBranding />

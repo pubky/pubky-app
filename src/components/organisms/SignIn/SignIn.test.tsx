@@ -5,10 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
 import { toast } from '@/molecules/Toaster/toast';
-import type {
-  PassportMethodCardProps,
-  PassportMethodSectionProps,
-} from '@/organisms/PassportMethodCard/PassportMethodCard.types';
+import type { PassportMethodCardProps } from '@/organisms/PassportMethodCard/PassportMethodCard.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -138,8 +135,8 @@ vi.mock('@/organisms/PassportMethodCard/PassportMethodCard', () => ({
       </button>
     </div>
   ),
-  PassportMethodSection: ({ onContinue, isPending, variant }: PassportMethodSectionProps) => (
-    <div data-testid="passport-method-section" data-variant={variant}>
+  PassportMethodSection: ({ onContinue, isPending }: PassportMethodCardProps) => (
+    <div data-testid="passport-method-section">
       <button data-testid="continue-with-google" onClick={onContinue} disabled={isPending}>
         {'Continue with Google'}
       </button>
@@ -632,13 +629,13 @@ describe('SignInContent - Passport enabled', () => {
     passportMocks.eligibility = 'enabled';
   });
 
-  it('renders the desktop method cards and selects the compact mobile Passport card', () => {
+  it('renders the desktop method cards and the compact mobile Passport card', () => {
     render(<SignInContent />);
 
-    // The Container mock drops test ids, while the Passport mock exposes the selected variant.
+    // The Container mock drops test ids; the Passport mock identifies each layout.
     expect(screen.getByTestId('sign-in-ring-card')).toBeInTheDocument();
     expect(screen.getByTestId('passport-method-card')).toBeInTheDocument();
-    expect(screen.getByTestId('passport-method-section')).toHaveAttribute('data-variant', 'card');
+    expect(screen.getByTestId('passport-method-section')).toBeInTheDocument();
     expect(screen.queryByTestId('sign-in-qr-card')).not.toBeInTheDocument();
     expect(screen.getAllByText('Choose your preferred method to sign in.')).toHaveLength(2);
     expect(screen.getAllByText('Sovereign & Secure')).toHaveLength(2);

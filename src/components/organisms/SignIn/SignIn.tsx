@@ -306,7 +306,7 @@ export const SignInContent = () => {
               {mobileRingButton}
               {mobileBitkitButton}
             </Container>
-            <PassportMethodSection variant="card" onContinue={startPassportAuth} isPending={isPassportPending} />
+            <PassportMethodSection onContinue={startPassportAuth} isPending={isPassportPending} />
           </Container>
         ) : (
           <ContentCard layout="column">

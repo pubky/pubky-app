@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { HumanBitcoinCard } from './HumanBitcoinCard';
 
@@ -87,8 +87,41 @@ describe('BitcoinPaymentCard', () => {
     const skeletonContainer = container.querySelector('.animate-pulse');
     expect(skeletonContainer).toBeInTheDocument();
 
-    // Button should be disabled when data is not available
-    expect(screen.getByRole('button', { name: /^Bitcoin payment/i })).toBeDisabled();
+    // The exchange rate is display-only; the satoshi price is sufficient to pay.
+    expect(screen.getByRole('button', { name: /^Bitcoin payment/i })).toBeEnabled();
+  });
+
+  it('allows payment without a dollar estimate when the exchange rate fails', () => {
+    mockUseBtcRate.mockReturnValue({ rate: null, status: 'failed' });
+    const onClick = vi.fn();
+    const { container } = render(<HumanBitcoinCard onClick={onClick} />);
+    const button = screen.getByRole('button', { name: 'Bitcoin payment' });
+    expect(button).toBeEnabled();
+    expect(container.querySelector('[data-slot="skeleton"]')).not.toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps payment disabled when no satoshi price is available', () => {
+    mockUseLnVerificationInfo.mockReturnValue({ available: true });
+    const onClick = vi.fn();
+    render(<HumanBitcoinCard onClick={onClick} />);
+    const button = screen.getByRole('button', { name: 'Bitcoin payment' });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [false, 'Not available in your country'],
+    [true, 'Service temporarily unavailable'],
+  ] as const)('explains the mobile unavailable state with error=%s', (error, title) => {
+    mockUseLnVerificationInfo.mockReturnValue({ available: false, error });
+    render(<HumanBitcoinCard />);
+    fireEvent.click(screen.getByRole('button', { name: 'Why Bitcoin payment is unavailable' }));
+    const explanation = within(screen.getByRole('dialog', { name: title }));
+    expect(explanation.getByText(title)).toBeInTheDocument();
+    expect(explanation.getByText('Try a different verification method')).toBeInTheDocument();
   });
 
   it('renders geo-blocking overlay when not available', () => {

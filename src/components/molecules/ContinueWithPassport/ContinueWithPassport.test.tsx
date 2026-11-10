@@ -23,10 +23,7 @@ describe('ContinueWithPassport', () => {
     fireEvent.click(help);
 
     expect(onContinue).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole('heading', { name: 'Continue with Google, powered by Pubky Passport.' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Google's role:")).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign in with Google' })).toBeInTheDocument();
     expect(screen.getByText('Your keys:')).toBeInTheDocument();
     expect(screen.getByText('Recovery:')).toBeInTheDocument();
 

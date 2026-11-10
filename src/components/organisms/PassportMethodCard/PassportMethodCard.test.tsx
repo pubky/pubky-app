@@ -35,20 +35,20 @@ describe('PassportMethodCard', () => {
 });
 
 describe('PassportMethodSection', () => {
-  it('renders the card variant with a heading and preserves the pending state', () => {
-    render(<PassportMethodSection variant="card" onContinue={vi.fn()} isPending />);
+  it('renders a heading and preserves the pending state', () => {
+    render(<PassportMethodSection onContinue={vi.fn()} isPending />);
 
     expect(screen.getByRole('heading', { level: 3, name: 'Quick & Easy' })).toBeInTheDocument();
     expect(screen.getByTestId('passport-method-section')).toHaveClass('bg-card', 'p-6');
     expect(screen.getByTestId('continue-with-google')).toBeDisabled();
   });
 
-  it('renders the uppercase label and button for the mobile layout', () => {
+  it('renders the mobile card and forwards the button click', () => {
     const onContinue = vi.fn();
     render(<PassportMethodSection onContinue={onContinue} isPending={false} />);
 
     expect(screen.getByTestId('passport-method-section')).toBeInTheDocument();
-    expect(screen.getByText('Quick & Easy')).toHaveClass('uppercase');
+    expect(screen.getByRole('heading', { name: 'Quick & Easy' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('continue-with-google'));
     expect(onContinue).toHaveBeenCalledTimes(1);

@@ -13,6 +13,8 @@ import { Toaster } from '@/molecules/Toaster/Toaster';
 import { AuthController } from '@/controllers/auth/auth';
 import { useLnVerificationInfo } from '@/hooks/useLnVerificationInfo/useLnVerificationInfo';
 import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo/useSmsVerificationInfo';
+import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
+import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
 
 // The real app mounts <Header /> from the root layout above every page; on
 // /onboarding/* it renders the "Create account" step bar (1–5). Render it here
@@ -88,14 +90,15 @@ vi.mock('@/hooks/useLnVerificationInfo/useLnVerificationInfo', () => ({
   useLnVerificationInfo: vi.fn(),
 }));
 
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: vi.fn(),
+}));
+
 // The card reads `useBtcRate().rate`. A flat rate object leaves `rate` undefined,
 // so the price line stays on its skeleton and the screenshot records that instead
 // of ₿ 1,000.
 vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
-  useBtcRate: () => ({
-    rate: { satUsd: 0.0005, btcUsd: 50_000, lastUpdatedAt: new Date(0) },
-    status: 'ready' as const,
-  }),
+  useBtcRate: vi.fn(),
 }));
 
 async function waitForVerificationCards(screen: Awaited<ReturnType<typeof renderForVRT>>) {
@@ -111,6 +114,11 @@ async function waitForVerificationCards(screen: Awaited<ReturnType<typeof render
 
 describe('Human (onboarding) — visual regression', () => {
   beforeEach(() => {
+    vi.mocked(usePassportEligibility).mockReturnValue('enabled');
+    vi.mocked(useBtcRate).mockReturnValue({
+      rate: { satUsd: 0.0005, btcUsd: 50_000, lastUpdatedAt: new Date(0) },
+      status: 'ready',
+    });
     vi.mocked(AuthController.verifySignupToken).mockReset().mockResolvedValue('valid');
     vi.mocked(useLnVerificationInfo).mockReturnValue({ available: true, amountSat: 1000 });
     vi.mocked(useSmsVerificationInfo).mockReturnValue({ available: true });
@@ -174,7 +182,7 @@ describe('Human (onboarding) — visual regression', () => {
   });
 
   it('keeps the three cards aligned at the Figma desktop width', async () => {
-    const screen = await renderForVRT(<HumanWithHeader />, { viewport: { width: 1280, height: 900 } });
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport: { width: 1280, height: 1024 } });
     await waitForVerificationCards(screen);
     const cards = ['bitcoin-payment-card', 'sms-verification-card', 'invite-code-option-card'].map((id) =>
       screen.getByTestId(id).element().getBoundingClientRect(),
@@ -190,12 +198,57 @@ describe('Human (onboarding) — visual regression', () => {
     await expect.element(back).toBeVisible();
     const backBounds = back.element().getBoundingClientRect();
     expect(backBounds.left).toBeCloseTo(cards[0].left, 0);
-    expect(backBounds.top - cards[0].bottom).toBeCloseTo(24, 0);
+    const footer = screen.getByTestId('human-selection-footer').element().getBoundingClientRect();
+    expect(footer.top).toBeGreaterThanOrEqual(cards[0].bottom);
+    expect(backBounds.top - footer.bottom).toBeCloseTo(24, 0);
     expect(backBounds.height).toBeCloseTo(60, 0);
     expect(backBounds.width).toBeLessThan(130);
-    await expect.element(screen.getByRole('link', { name: 'Terms of Service' })).not.toBeInTheDocument();
+    await expect.element(screen.getByRole('link', { name: 'Terms of Service' })).toBeVisible();
     await matchVrtFrameScreenshot('onboarding-human-figma-desktop');
   });
+
+  for (const [name, viewport] of [
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', { width: 375, height: 812 }],
+  ] as const) {
+    it.each(['enabled', 'disabled', 'pending'] as const)(
+      `shows the agreement at ${name} width when Passport is %s`,
+      async (eligibility) => {
+        vi.mocked(usePassportEligibility).mockReturnValue(eligibility);
+        const screen = await renderForVRT(<HumanWithHeader />, { viewport });
+        const footer = screen.getByTestId('human-selection-footer');
+        if (name === 'mobile' && eligibility === 'enabled') {
+          await expect.element(footer).not.toBeVisible();
+        } else {
+          await expect.element(footer).toBeVisible();
+          await expect.element(screen.getByRole('link', { name: 'Terms of Service' })).toBeVisible();
+          await expect.element(screen.getByRole('link', { name: 'Privacy Policy' })).toBeVisible();
+          await expect.element(screen.getByRole('button', { name: 'over 18 years old.' })).toBeVisible();
+        }
+        await matchVrtFrameScreenshot(`onboarding-human-agreement-${eligibility}-${name}`);
+        const back = screen.getByRole('button', { name: 'Back', exact: true });
+        if (name === 'desktop' || eligibility !== 'enabled') {
+          footer.element().scrollIntoView({ block: 'center' });
+        } else {
+          back.element().scrollIntoView({ block: 'end' });
+        }
+        const bounds = back.element().getBoundingClientRect();
+        expect(bounds.top).toBeGreaterThanOrEqual(0);
+        expect(bounds.bottom).toBeLessThanOrEqual(viewport.height);
+        if (name === 'desktop' || eligibility !== 'enabled') {
+          expect(footer.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(bounds.top);
+        }
+      },
+    );
+
+    it(`keeps Bitcoin verification available after a rate failure on ${name}`, async () => {
+      vi.mocked(useBtcRate).mockReturnValue({ rate: null, status: 'failed' });
+      const screen = await renderForVRT(<HumanWithHeader />, { viewport });
+      await expect.element(screen.getByRole('button', { name: 'Bitcoin payment', exact: true })).toBeEnabled();
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
+      await matchVrtFrameScreenshot(`onboarding-human-rate-failed-${name}`);
+    });
+  }
 
   it('keeps the invite option and verified navigation reachable on mobile', async () => {
     await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp', '/images/gift.webp']);

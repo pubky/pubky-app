@@ -138,9 +138,7 @@ for (const [name, viewport] of [
         expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
         await matchVrtFrameScreenshot('onboarding-join-google-only-figma-mobile');
         await page.getByRole('button', { name: 'About signing in with Google' }).click();
-        await expect
-          .element(page.getByRole('heading', { name: 'Continue with Google, powered by Pubky Passport.' }))
-          .toBeVisible();
+        await expect.element(page.getByRole('heading', { name: 'Sign in with Google', exact: true })).toBeVisible();
       });
     }
   });
