@@ -64,7 +64,7 @@ import {
   writeLockedPost,
 } from '../support/locks';
 import { flushLocksStubLog, locksStep } from '../support/locks-log';
-import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
+import { lockPostIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { createLockPostViaApi, seedUserViaApi } from '../support/seed';
 import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import type { SeededLockPost, SeededUser } from '../support/types/seed';
@@ -199,9 +199,10 @@ describe('locks', () => {
         refusedPost = post;
       });
     });
-    // Both sign in, and the app reads the signed-in account's profile and the seeded locks from Nexus
+    // Both sign in, and the app reads the signed-in account's profile and the seeded locks from Nexus.
+    // A seeded post read before its lock is indexed would be cached as a normal post, with no Unlock.
     cy.then(() =>
-      waitForNexus(userIndexed(creator), userIndexed(reader), postIndexed(paidPost), postIndexed(refusedPost)),
+      waitForNexus(userIndexed(creator), userIndexed(reader), lockPostIndexed(paidPost), lockPostIndexed(refusedPost)),
     );
   });
 

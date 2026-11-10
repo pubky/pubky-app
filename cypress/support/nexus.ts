@@ -41,6 +41,14 @@ export const postIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>): NexusChe
   expect: { kind: 'found' },
 });
 
+// The post's `lock` URL is the only thing that tells a reader it is locked; without it the app caches a
+// normal post. Same endpoint and field as waitForNexusLockPost in cypress/support/locks.ts.
+export const lockPostIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>): NexusCheck => ({
+  description: `lock on post ${post.id}`,
+  path: `/v0/post/${post.authorId}/${post.id}/details`,
+  expect: { kind: 'lock' },
+});
+
 export const followIndexed = (follower: SeededUser, followee: SeededUser): NexusCheck => ({
   description: `'${follower.name}' following '${followee.name}'`,
   path: `/v0/user/${followee.id}/followers`,
