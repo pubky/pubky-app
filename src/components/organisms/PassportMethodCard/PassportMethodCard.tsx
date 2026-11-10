@@ -46,13 +46,12 @@ export function PassportMethodCard({ onContinue, isPending, className }: Passpor
 }
 
 /**
- * Mobile "QUICK & EASY" section: uppercase label plus the "Continue with Google" button, matching
- * the stacked-sections layout of the sign-in and join screens below the `md` breakpoint.
+ * Compact mobile Passport card shared by Join and sign-in.
  */
 export function PassportMethodSection({ onContinue, isPending, className }: PassportMethodCardProps) {
   return (
-    <Container data-testid="passport-method-section" className={cn('gap-3', className)}>
-      <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
+    <Container data-testid="passport-method-section" className={cn('gap-4 rounded-md bg-card p-6', className)}>
+      <Typography as="h3" className="text-xl leading-7 font-bold">
         {PASSPORT_METHOD_TITLE}
       </Typography>
       <ContinueWithPassport onContinue={onContinue} isPending={isPending} />

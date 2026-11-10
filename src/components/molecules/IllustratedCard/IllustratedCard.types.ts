@@ -10,6 +10,7 @@ export interface IllustratedCardProps extends Omit<ComponentProps<typeof Card>, 
   visual?: ReactNode;
   visualClassName?: ComponentProps<'div'>['className'];
   contentClassName?: ComponentProps<'div'>['className'];
+  layoutClassName?: ComponentProps<'div'>['className'];
   layout?: IllustratedCardLayout;
   paddingBreakpoint?: IllustratedCardPaddingBreakpoint;
   visualSizing?: IllustratedCardVisualSizing;

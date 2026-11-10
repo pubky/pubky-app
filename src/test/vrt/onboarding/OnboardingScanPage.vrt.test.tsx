@@ -95,7 +95,7 @@ describe('OnboardingScanPage (onboarding) — visual regression', () => {
   it('renders the scan/QR page at mobile viewport', async () => {
     await preloadImages(SCAN_PAGE_IMAGE_URLS);
     await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect.element(page.getByRole('button', { name: 'Authorize with Pubky Ring', exact: true })).toBeEnabled();
+    await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring', exact: true })).toBeEnabled();
     await expect.element(page.getByRole('button', { name: /Bitkit/ })).not.toBeInTheDocument();
     await matchVrtFrameScreenshot('onboarding-scan-mobile');
   });

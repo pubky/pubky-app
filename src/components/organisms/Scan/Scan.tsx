@@ -60,7 +60,7 @@ export const ScanContent = () => {
   ) : (
     <>
       <Key className="mr-2 size-4" />
-      {'Authorize with Pubky Ring'}
+      {'Continue with Pubky Ring'}
     </>
   );
   return (

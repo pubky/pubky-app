@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { LEGAL_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { toast } from '@/molecules/Toaster/toast';
 import { Human } from './Human';
 
 const mockPush = vi.fn();
+const mockBack = vi.fn();
 const mockResetOnboarding = vi.fn();
 const mockSetInviteCode = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
@@ -29,10 +31,15 @@ const INVITE_CODE_TOASTS = {
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    back: mockBack,
   }),
 }));
 
 vi.mock('@/molecules/Toaster/toast');
+
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: vi.fn(),
+}));
 
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: () => ({
@@ -83,7 +90,9 @@ function goToInviteCodeAndVerify() {
 
 describe('Human template', () => {
   beforeEach(() => {
+    vi.mocked(usePassportEligibility).mockReturnValue('disabled');
     mockPush.mockClear();
+    mockBack.mockClear();
     vi.mocked(toast).mockReset();
     vi.mocked(toast).mockReturnValue({ dismiss: vi.fn() });
     mockResetOnboarding.mockClear();
@@ -97,6 +106,29 @@ describe('Human template', () => {
 
     expect(screen.getByTestId('human-selection')).toBeInTheDocument();
   });
+
+  it.each([
+    ['enabled', ONBOARDING_ROUTES.JOIN],
+    ['disabled', ROOT_ROUTES],
+    ['pending', ROOT_ROUTES],
+  ] as const)('uses the explicit Back destination when Passport is %s', (eligibility, destination) => {
+    vi.mocked(usePassportEligibility).mockReturnValue(eligibility);
+    render(<Human />);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(mockPush).toHaveBeenCalledWith(destination);
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it.each(['enabled', 'disabled', 'pending'] as const)(
+    'includes the verification agreement when Passport is %s',
+    (eligibility) => {
+      vi.mocked(usePassportEligibility).mockReturnValue(eligibility);
+      render(<Human />);
+      expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute('href', LEGAL_ROUTES.TERMS_OF_USE);
+      expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', LEGAL_ROUTES.PRIVACY_POLICY);
+      expect(screen.getByRole('button', { name: 'over 18 years old.' })).toBeInTheDocument();
+    },
+  );
 
   describe('invite code verification', () => {
     it('confirms a valid invite inline and waits for Continue before navigating to install', async () => {

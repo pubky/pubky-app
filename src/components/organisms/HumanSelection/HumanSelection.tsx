@@ -1,13 +1,13 @@
 import React from 'react';
-import { Ticket } from 'lucide-react';
+import { Gift } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
-import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
 import { HumanSmsCard } from '@/molecules/HumanSmsCard/HumanSmsCard';
+import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
 import { PageTitle } from '@/molecules/Page/Page';
 import { HumanBitcoinCard } from '../HumanBitcoinCard/HumanBitcoinCard';
 import type { HumanSelectionProps } from './HumanSelection.types';
@@ -18,42 +18,67 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
   const isDevMode = process.env.NODE_ENV === 'development' || isCypressRunning;
   return (
     <React.Fragment>
-      <PageHeader>
+      <PageHeader className="pt-0">
         <PageTitle size="large">
-          {"Prove you're "}
-          <span className="text-brand">{'not a Robot.'}</span>
+          {'Prove you’re '}
+          <span className="block text-brand lg:inline">{'not a robot.'}</span>
         </PageTitle>
-        <PageSubtitle>{'Verify quickly using your phone number, a small payment, or an invite code.'}</PageSubtitle>
+        <PageSubtitle className="leading-7 lg:leading-8">
+          {'Verify to get 1GB of storage, used for your posts, media, and your profile.'}
+        </PageSubtitle>
       </PageHeader>
 
-      <Container data-testid="human-verification-cards" className="gap-6">
-        <Card
+      <Container
+        data-testid="human-verification-cards"
+        display="grid"
+        className="gap-3 rounded-md bg-card p-6 lg:grid-cols-3 lg:gap-6 lg:bg-transparent lg:p-0"
+      >
+        <Typography as="h3" className="mb-3 text-xl leading-7 font-bold lg:hidden">
+          {'Pick verification method'}
+        </Typography>
+        <HumanBitcoinCard onClick={() => onClick('payment')} />
+        <HumanSmsCard onClick={() => onClick('sms')} />
+        <IllustratedCard
           data-testid="invite-code-option-card"
-          className="gap-4 rounded-md p-6 lg:flex-row lg:items-center lg:justify-between"
+          layout="column"
+          className="contents lg:flex lg:min-w-0 lg:rounded-md"
+          layoutClassName="contents lg:flex lg:flex-1 lg:gap-6"
+          contentClassName="contents lg:flex"
+          visualClassName="mx-auto"
+          visual={
+            <Image
+              priority
+              src="/images/gift.webp"
+              alt="Lime Pubky gift representing an invite code"
+              width={192}
+              height={192}
+              className="size-48"
+            />
+          }
         >
-          <Container className="gap-3">
+          <Container className="hidden gap-3 lg:flex">
             <Typography as="h3" className="text-xl leading-7 font-bold text-foreground lg:text-2xl lg:leading-8">
-              {'Invite Code'}
+              {'Invite code'}
             </Typography>
-            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {'Already have an invite? Use your code to continue.'}
+            <Typography
+              as="p"
+              className="text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
+            >
+              {'Ask us for an invite code'}
             </Typography>
           </Container>
           <Button
             variant="secondary"
+            size="lg"
             onClick={onInviteCodeClick}
-            className="w-full shrink-0 rounded-full lg:w-auto"
+            className="w-full border-0 lg:mt-auto"
             data-testid="invite-code-link"
             data-cy="invite-code-link"
           >
-            <Ticket className="mr-2 size-4" aria-hidden="true" />
-            {'Enter invite code'}
+            <Gift className="size-4" aria-hidden="true" />
+            {'Invite code'}
           </Button>
-        </Card>
-        <Container className="gap-6 lg:flex-row lg:items-stretch">
-          <HumanSmsCard onClick={() => onClick('sms')} />
-          <HumanBitcoinCard onClick={() => onClick('payment')} />
-        </Container>
+        </IllustratedCard>
       </Container>
       {isDevMode && (
         <Container className="relative mt-6 flex items-start rounded border px-4 py-6">
@@ -78,7 +103,6 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
           </Container>
         </Container>
       )}
-      <HumanFooter />
     </React.Fragment>
   );
 };
