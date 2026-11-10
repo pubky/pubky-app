@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type {
   PostHeaderCharacterLimitPlacement,
   PostHeaderSize,
@@ -23,6 +24,8 @@ export interface PostHeaderProps {
   visuallyHideAvatar?: boolean;
   size?: PostHeaderSize;
   timeAgoPlacement?: 'top-right' | 'bottom-left';
+  /** Rendered at the end of the row under the name, after the pubky and the time. */
+  metadataSlot?: ReactNode;
   /**
    * When `false`, the author avatar and name render as text instead of profile
    * links (quoted post in the Reply/Repost dialogs, where a navigation would
