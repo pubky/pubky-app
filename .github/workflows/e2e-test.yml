@@ -682,6 +682,12 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      # cypress-io/github-action looks for the binary in ~/.cache/Cypress on every OS unless this is
+      # set, but Cypress on macOS defaults to ~/Library/Caches/Cypress. Set before npm ci, whose
+      # cypress install script downloads the binary, so install, cache and run share one folder.
+      - name: Set the Cypress cache folder
+        run: echo "CYPRESS_CACHE_FOLDER=$HOME/.cache/Cypress" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
 
@@ -697,9 +703,9 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
-            ~/Library/Caches/Cypress
+            ${{ env.CYPRESS_CACHE_FOLDER }}
             ~/Library/Caches/ms-playwright
-          key: e2e-webkit-browsers-v1-${{ runner.os }}-${{ runner.arch }}-cypress-${{ steps.versions.outputs.cypress }}-playwright-${{ steps.versions.outputs.playwright }}
+          key: e2e-webkit-browsers-v2-${{ runner.os }}-${{ runner.arch }}-cypress-${{ steps.versions.outputs.cypress }}-playwright-${{ steps.versions.outputs.playwright }}
 
       # package.json denies the playwright-webkit install script so other installs skip the download.
       # The playwright CLI shares its playwright-core version, so this is the build Cypress loads.
@@ -718,7 +724,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: |
-            ~/Library/Caches/Cypress
+            ${{ env.CYPRESS_CACHE_FOLDER }}
             ~/Library/Caches/ms-playwright
           key: ${{ steps.browsers.outputs.cache-primary-key }}
 
