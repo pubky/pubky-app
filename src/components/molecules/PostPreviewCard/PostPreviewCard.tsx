@@ -71,8 +71,8 @@ interface PostPreviewCardProps {
  * provider carries `navigable` down to the mention and hashtag renderers, which
  * sit too deep in the markdown render for a prop.
  * The previewed post's own web `embed` is passed down, so a quoted post with an external resource
- * embed shows that resource's card (compact: no action row or tag bar inside a preview), as its own
- * post does; a `pubky://` embed is a repost and is not followed.
+ * embed shows that resource's card or player with its own footer, as its own post does; a
+ * `pubky://` embed is a repost and is not followed.
  *
  * Collection originals skip the post-card shell and render `CollectionCard` with
  * `presentation="embed"`. Pass `interactiveActions={false}` from share/repost

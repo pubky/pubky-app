@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MENU_VARIANT } from '@/config/ui';
 import { PostController } from '@/controllers/post/post';
+import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
 import { dedupeAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
@@ -915,6 +916,49 @@ describe('ResourceActions', () => {
 
       expect(screen.queryByTestId('new-post-dialog')).not.toBeInTheDocument();
       expect(mocks.signInRequests).toBe(1);
+    });
+  });
+
+  describe('inside a post being written (a composer’s preview, a dialog’s quoted post)', () => {
+    const renderWriting = () =>
+      render(
+        <PostPreviewNavigableProvider navigable={false}>
+          <ResourceActions uri={URI} tagsLabel="Tags on this song" />
+        </PostPreviewNavigableProvider>,
+      );
+
+    it.each([true, false])(
+      'shows Reply and Post about this disabled with their counts, opening no other composer (signed in: %s)',
+      (isSignedIn) => {
+        mocks.isSignedIn = isSignedIn;
+        mocks.counts = { resourceId: 'r1', replies: 2, embeds: 3 };
+        renderWriting();
+
+        const reply = screen.getByRole('button', {
+          name: 'Reply to this external resource: not available while writing a post (2 replies)',
+        });
+        const postAbout = screen.getByRole('button', {
+          name: 'Post about this: not available while writing a post (3 posts embed it)',
+        });
+        expect(reply).toBeDisabled();
+        expect(reply).toHaveTextContent('2');
+        expect(postAbout).toBeDisabled();
+        expect(postAbout).toHaveTextContent('3');
+
+        fireEvent.click(reply);
+        fireEvent.click(postAbout);
+        expect(screen.queryByTestId('reply-dialog')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('new-post-dialog')).not.toBeInTheDocument();
+        expect(mocks.signInRequests).toBe(0);
+      },
+    );
+
+    it('keeps Tags, Save and ⋯ usable', () => {
+      renderWriting();
+
+      expect(screen.getByTestId('resource-tags-button')).toBeEnabled();
+      expect(screen.getByRole('button', { name: /^Save link/ })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'More options' })).toBeEnabled();
     });
   });
 

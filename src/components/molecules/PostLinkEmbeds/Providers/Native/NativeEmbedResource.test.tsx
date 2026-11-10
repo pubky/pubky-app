@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { getResourceRoute } from '@/app/routes';
 import { PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
+import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -500,6 +501,21 @@ describe('NativeEmbedResource', () => {
     }
   });
 
+  it('previews a dialog’s quoted video as the composer does: its player, paused, and its footer, no Play on', () => {
+    mockCard(VIDEO_WITH_ALSO_ON);
+    render(
+      <PostPreviewNavigableProvider navigable={false}>
+        <NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />
+      </PostPreviewNavigableProvider>,
+    );
+
+    const frame = screen.getByTestId('resource-embed-frame');
+    expect(within(frame).getByTestId('resource-actions')).toBeInTheDocument();
+    expect(within(frame).getByTestId('resource-player-frame').getAttribute('src')).not.toMatch(/autoplay/);
+    expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    expect(embed).not.toHaveBeenCalled();
+  });
+
   it('holds the place with the card’s skeleton while Pinakes reads, then shows the embed after 5 s', () => {
     vi.useFakeTimers();
     try {
@@ -539,13 +555,46 @@ describe('NativeEmbedResource', () => {
       expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-has-also-on', 'true');
     });
 
-    it('previews the same in the composer, without the footer', () => {
+    it.each([
+      { surface: 'a post', navigable: true, docks: true },
+      { surface: 'a dialog (a post being written)', navigable: false, docks: false },
+    ])('lets a playing song player in $surface dock: $docks', ({ navigable, docks }) => {
+      vi.useFakeTimers();
+      try {
+        mockCard(SONG);
+        render(
+          <PostPreviewNavigableProvider navigable={navigable}>
+            <NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />
+          </PostPreviewNavigableProvider>,
+        );
+
+        const frame = screen.getByTestId('resource-player-frame') as HTMLIFrameElement;
+        // YouTube says it plays (`useOnePlayer`): that makes it the page's player, not a press.
+        act(() => {
+          window.dispatchEvent(
+            new MessageEvent('message', {
+              origin: 'https://www.youtube-nocookie.com',
+              source: frame.contentWindow,
+              data: JSON.stringify({ event: 'infoDelivery', info: { playerState: 1 } }),
+            }),
+          );
+        });
+        expect(document.querySelector('[data-keep-playing]') !== null).toBe(docks);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('previews the same in the composer, with the footer', () => {
       mockCard(SONG);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
 
       expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
       expect(embed).not.toHaveBeenCalled();
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-actions')).toHaveAttribute(
+        'data-uri',
+        SONG.uri,
+      );
     });
 
     describe('with platform embeds up front off', () => {
@@ -648,28 +697,26 @@ describe('NativeEmbedResource', () => {
   });
 
   describe('in the composer', () => {
-    it('asks Pinakes to read the link at once and previews the video’s player without footer or Play on', () => {
+    it('asks Pinakes to read the link at once and previews the video’s player with its footer, without Play on', () => {
       mockCard(VIDEO_WITH_ALSO_ON);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
 
       expect(usePinakesCard).toHaveBeenCalledWith(VIDEO_URL, { resolve: true });
-      expect(
-        within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-player-frame'),
-      ).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      const actions = within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', VIDEO_URL);
+      expect(actions).toHaveAttribute('data-has-also-on', 'true');
       expect(screen.queryByRole('button', { name: /Play on/ })).not.toBeInTheDocument();
       expect(embed).not.toHaveBeenCalled();
     });
 
-    it('previews the video’s player in the frame without footer when there is no Also on', () => {
+    it('previews the video’s player in the frame with its footer when there is no Also on', () => {
       mockCard(VIDEO_ALONE);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
 
-      expect(
-        within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-player-frame'),
-      ).toBeInTheDocument();
-      expect(embed).not.toHaveBeenCalled();
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', VIDEO_URL);
     });
   });
 

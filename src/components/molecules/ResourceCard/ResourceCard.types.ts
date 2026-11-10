@@ -37,10 +37,7 @@ export interface ResourceCardProps {
    * renders as text.
    */
   href?: string;
-  /**
-   * What closes the card: the action row and the tag bar. Absent while composing, where there is
-   * nothing to act on yet.
-   */
+  /** What closes the card: the action row and the tag bar (`ResourceActions`). */
   actions?: ReactNode;
   /**
    * `default`: a card in a post, whose title opens the resource's page. `large`: the card heading

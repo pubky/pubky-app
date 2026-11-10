@@ -36,8 +36,9 @@ export function DialogReply({ postId, resourceUri, open, onOpenChangeAction, onR
         <Container className="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1">
           {/* What is replied to — never a link, so the route cannot change behind the open modal */}
           {resourceUri !== undefined ? (
-            // The card as a quoted post shows it: no footer, nothing that changes the route behind the
-            // modal (its own link opens in a new tab).
+            // The card as the composer previews it: its footer tags and saves the resource, while Reply
+            // and Post about this, which would open another composer, show disabled; nothing changes
+            // the route behind the modal (its own link opens in a new tab).
             <PostPreviewNestingProvider navigable={false}>
               <GenericResourcePreview url={resourceUri} />
             </PostPreviewNestingProvider>

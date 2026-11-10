@@ -17,9 +17,10 @@ import { NativeEmbedResource } from './Providers/Native/NativeEmbedResource';
  * the text keeps its own website preview, since the post does not reference that resource.
  *
  * A post's embed with a platform embed (`resourceKind`: an X post, a YouTube or Vimeo video) shows
- * as that resource too (`NativeEmbedResource`), also in the composer. A quoted post, or an app
- * without Pinakes, shows the plain embed. A YouTube or Vimeo link whose player the viewer removed
- * from Players shows as any link does (the resource card, or the link's own preview).
+ * as that resource too (`NativeEmbedResource`), also in the composer and in a quoted post (only
+ * another Pubky post is suppressed there). Without Pinakes, the plain embed. A YouTube or Vimeo link
+ * whose player the viewer removed from Players shows as any link does (the resource card, or the
+ * link's own preview).
  */
 export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostLinkEmbedsProps) => {
   const isNested = useIsNestedPostPreview();
@@ -34,7 +35,7 @@ export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostL
   if (!embed || !provider) return null;
 
   const isPostEmbed = Boolean(url);
-  const resourceKind = url && !isNested && isPinakesConfigured() ? provider.resourceKind : undefined;
+  const resourceKind = url && isPinakesConfigured() ? provider.resourceKind : undefined;
 
   return (
     <Container ref={mediaContainerRef} className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
