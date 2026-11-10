@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { getResourceRoute } from '@/app/routes';
 import { PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
+import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
@@ -215,6 +216,25 @@ describe('NativeEmbedResource', () => {
       fireEvent.click(pill);
       expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
+    });
+
+    it('gives Show on the post’s own pill on the post card’s surface (a quoted post, a collection’s item)', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
+      mockCard(POST_WITH_ALSO_ON);
+      const { unmount } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+      expect(screen.getByTestId('show-embed')).toHaveClass('bg-card');
+      unmount();
+
+      render(
+        <ResourceSurfaceProvider surface="card">
+          <NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />
+        </ResourceSurfaceProvider>,
+      );
+      expect(screen.getByTestId('show-embed')).toHaveClass('bg-action-pill');
+      expect(screen.getByTestId('show-embed')).not.toHaveClass('bg-card');
     });
 
     it('shows a video gone upstream as our card, its other services in the switch, never its embed', () => {
