@@ -136,7 +136,6 @@
     "lint-staged": "17.6.0",
     "patch-package": "8.0.1",
     "playwright": "1.64.1",
-    "playwright-webkit": "1.64.1",
     "prettier": "3.9.10",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
@@ -149,7 +148,6 @@
   "allowScripts": {
     "@sentry/cli": true,
     "browser-tabs-lock": true,
-    "cypress": true,
-    "playwright-webkit": false
+    "cypress": true
   }
 }
