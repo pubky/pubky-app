@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
-import { getPlayerTarget, getPlayerTargets, PlayerProvider } from './resourcePlayer.utils';
+import { getEmbedTarget, getPlayerTarget, getPlayerTargets, PlayerProvider } from './resourcePlayer.utils';
 
 const card = (uri: string, alsoOn: TPinakesAlsoOn[] = [], status = 'ok') => ({ uri, status, also_on: alsoOn });
 
@@ -215,5 +215,52 @@ describe('getPlayerTargets', () => {
 
   it('offers nothing for a card on services we do not embed', () => {
     expect(getPlayerTargets(card('https://music.apple.com/song/1440717826'))).toEqual([]);
+  });
+});
+
+describe('getEmbedTarget', () => {
+  it.each([
+    [
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
+    ],
+    ['https://vimeo.com/1084537', 'https://player.vimeo.com/video/1084537?dnt=1'],
+    [
+      'https://open.spotify.com/track/1YQWosTIljIvxAgHWTp7KP',
+      'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
+    ],
+  ])('builds the service embed for %s without starting it on load', (link, src) => {
+    const target = getEmbedTarget(link);
+    expect(target?.src).toBe(src);
+    expect(target?.start).toBeUndefined();
+  });
+
+  it('drops SoundCloud’s auto_play and keeps its other parameters', () => {
+    const src = new URL(getEmbedTarget('https://soundcloud.com/artist/track')!.src);
+    expect(src.searchParams.has('auto_play')).toBe(false);
+    expect(src.searchParams.get('url')).toBe('https://soundcloud.com/artist/track');
+  });
+
+  it('builds TIDAL’s embed for its `/u` share link', () => {
+    expect(getEmbedTarget('https://tidal.com/track/3524506/u')?.src).toBe(
+      'https://embed.tidal.com/tracks/3524506?hideOverlays=true',
+    );
+  });
+
+  it('falls back to the card’s canonical link and aliases for a link with no embed', () => {
+    const link = 'https://example.com/share/3524506';
+    expect(getEmbedTarget(link)).toBeNull();
+    expect(getEmbedTarget(link, { uri: 'https://tidal.com/track/3524506' })?.src).toBe(
+      'https://embed.tidal.com/tracks/3524506?hideOverlays=true',
+    );
+    expect(getEmbedTarget(link, { uri: 'https://example.com/x', aliases: ['https://vimeo.com/1084537'] })?.src).toBe(
+      'https://player.vimeo.com/video/1084537?dnt=1',
+    );
+    expect(getEmbedTarget(link, { uri: 'https://example.com/x', aliases: [] })).toBeNull();
+  });
+
+  it('has none for a link on no such service or a plain audio file', () => {
+    expect(getEmbedTarget('https://example.com/a')).toBeNull();
+    expect(getEmbedTarget('https://example.com/a.mp3')).toBeNull();
   });
 });

@@ -27,9 +27,21 @@ vi.mock('@/hooks/useOtherLinkTags/useOtherLinkTags', () => ({
   },
 }));
 
+// X's embed (react-tweet) loads nothing here: `tweet.state` is what X answers.
+const tweet = vi.hoisted(() => ({ state: { data: null as unknown, error: null as unknown, isLoading: false } }));
+vi.mock('react-tweet', () => ({
+  useTweet: () => tweet.state,
+  EmbeddedTweet: () => <div data-testid="twitter-tweet" />,
+  TweetSkeleton: () => <div data-testid="twitter-tweet-skeleton" />,
+  TweetNotFound: () => <div data-testid="twitter-tweet-not-found" />,
+}));
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => mocks.configured, PINAKES_RELATED_LIMIT: 5 }));
 vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({ usePinakesGroup: vi.fn() }));
 vi.mock('@/hooks/usePinakesRelated/usePinakesRelated', () => ({ usePinakesRelated: vi.fn() }));
+// A card without an image asks the link's OpenGraph data; nothing is read here.
+vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
+  useOgMetadata: () => ({ metadata: null, isLoading: false, error: null }),
+}));
 // The action row and tag bar have their own tests; here only what they are given matters.
 vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
   ResourceActions: ({
@@ -41,6 +53,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     title,
     extraMenuContent,
     otherTagList,
+    playOn,
     size,
     replyCount,
   }: {
@@ -52,6 +65,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     title?: string | null;
     extraMenuContent?: unknown;
     otherTagList?: readonly { label: string }[];
+    playOn?: React.ReactNode;
     size?: string;
     replyCount?: number;
   }) => (
@@ -67,6 +81,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-extra-menu={extraMenuContent ? 'yes' : 'no'}
       data-size={size}
     >
+      {playOn}
       <div data-testid="resource-other-tag-list" data-labels={otherTagList?.map((tag) => tag.label).join(',')} />
     </div>
   ),
@@ -81,6 +96,26 @@ const VIDEO: TPinakesResourceDetail = videoFixture;
 const GROUP: TPinakesGroupDetail = groupFixture;
 const RELATED: TPinakesCard[] = relatedFixture.items;
 const NOT_KNOWN = 'https://example.com/pinakes-does-not-know-this-link-1104';
+const X_URL = 'https://x.com/joenakamoto/status/2119830751713829276';
+const X_POST: TPinakesResourceDetail = {
+  ...VIDEO,
+  uri: X_URL,
+  refs: [X_URL],
+  aliases: [],
+  name: 'this guy has been on a rampage',
+  description: 'this guy has been on a rampage pic.twitter.com/MZy4Mhd',
+  site: 'x.com',
+  type: 'SocialMediaPosting',
+  type_path: ['Thing', 'CreativeWork', 'Article', 'SocialMediaPosting'],
+  image: null,
+  facts: { author: 'joenakamoto', author_name: 'Joe Nakamoto', published: '2026-11-09' },
+  group: null,
+  also_on: [],
+};
+const X_POST_WITH_ALSO_ON: TPinakesResourceDetail = {
+  ...X_POST,
+  also_on: [{ ...VIDEO.also_on[0], uri: 'https://bsky.app/profile/someone/post/3abc', site: 'Bluesky' }],
+};
 
 const settled = <T,>(data: T) => ({ data, isLoading: false, isError: false });
 const otherLinks = (): { uri: string; name: string }[] => mocks.otherLinks ?? [];
@@ -116,6 +151,7 @@ describe('ResourceDetails', () => {
     read = settled(VIDEO);
     mockGroup.mockReturnValue(settled(GROUP));
     mockRelated.mockReturnValue(settled(RELATED));
+    tweet.state = { data: { id_str: '2119830751713829276' }, error: null, isLoading: false };
   });
 
   describe('when the link is known', () => {
@@ -338,6 +374,102 @@ describe('ResourceDetails', () => {
     renderDetails(uri);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('External resource');
+  });
+
+  describe('an X post', () => {
+    beforeEach(() => mockGroup.mockReturnValue(settled(null)));
+
+    it('shows X’s embed as the card’s body when Pinakes knows it nowhere else, without the card’s own text or details', () => {
+      read = settled(X_POST);
+      renderDetails(X_URL);
+
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-title')).toBeNull();
+      expect(screen.queryByTestId('resource-card-description')).toBeNull();
+      expect(screen.queryByTestId('resource-facts')).toBeNull();
+      // The header, the footer and the page's headings stay.
+      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-size', 'large');
+      expect(screen.getByTestId('resource-card-source').textContent).toBe('x.com');
+      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in x.com');
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(X_POST.name!);
+      expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+    });
+
+    it('shows our card with Show on <site> when Pinakes knows it on other services too, X’s embed only from there', () => {
+      read = settled(X_POST_WITH_ALSO_ON);
+      renderDetails(X_URL);
+
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
+      expect(screen.getByTestId('resource-facts')).toBeInTheDocument();
+      expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+
+      const show = within(screen.getByTestId('resource-actions')).getByTestId('show-embed');
+      expect(show).toHaveAccessibleName('Show on x.com');
+      fireEvent.click(show);
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-title')).toBeNull();
+      expect(screen.queryByTestId('resource-facts')).toBeNull();
+      expect(screen.getByTestId('show-embed')).toHaveAccessibleName('Close the x.com post');
+
+      fireEvent.click(screen.getByTestId('show-embed'));
+      expect(screen.getByTestId('resource-card-title')).toBeInTheDocument();
+    });
+
+    it('shows our card, without Show on, when X cannot show the post', () => {
+      tweet.state = { data: null, error: new Error('gone'), isLoading: false };
+      read = settled(X_POST);
+      renderDetails(X_URL);
+
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
+      expect(screen.getByTestId('resource-facts')).toBeInTheDocument();
+      expect(screen.queryByTestId('native-embed-body')).toBeNull();
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+    });
+
+    it('shows X’s embed up front for a card Pinakes is still reading, as in a post', () => {
+      read = settled({ ...X_POST, status: 'pending', name: null, description: null });
+      renderDetails(X_URL);
+
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(X_URL);
+    });
+
+    it('goes back to our card, without Show on, when X cannot show the post it was asked to', () => {
+      tweet.state = { data: null, error: new Error('gone'), isLoading: false };
+      read = settled(X_POST_WITH_ALSO_ON);
+      renderDetails(X_URL);
+
+      fireEvent.click(screen.getByTestId('show-embed'));
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
+      expect(screen.queryByTestId('native-embed-body')).toBeNull();
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+    });
+
+    it('gives a card the player of its other services back once X cannot show the post', () => {
+      tweet.state = { data: null, error: new Error('gone'), isLoading: false };
+      read = settled({
+        ...X_POST,
+        also_on: [{ id: 'yt', uri: 'https://www.youtube.com/watch?v=Om61naQC8is', site: 'YouTube' }],
+      });
+      renderDetails(X_URL);
+
+      // Our card offers X's post, as in a post, not the other service's player.
+      expect(screen.queryByTestId('play-on-main')).toBeNull();
+      fireEvent.click(screen.getByTestId('show-embed'));
+      fireEvent.click(screen.getByTestId('play-on-main'));
+      expect(screen.getByTestId('resource-player')).toBeInTheDocument();
+      expect(screen.queryByTestId('native-embed-body')).toBeNull();
+    });
+
+    it('keeps a video’s card, its text and details, with no platform embed', () => {
+      read = settled({ ...VIDEO, also_on: [] });
+      renderDetails(VIDEO.uri);
+
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
+      expect(screen.queryByTestId('native-embed-body')).toBeNull();
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+    });
   });
 
   it('names the loading card for screen readers', () => {

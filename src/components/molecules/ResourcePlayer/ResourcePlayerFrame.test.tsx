@@ -239,4 +239,11 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByTestId('resource-player-status')).not.toHaveClass('sr-only');
     expect(screen.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute('href', SPOTIFY.link);
   });
+
+  it('shows no status line and loads lazily when quiet (an embed shown up front)', () => {
+    render(<ResourcePlayerFrame target={MIXCLOUD} title="Party time" load="ready" onLoaded={() => {}} quiet />);
+
+    expect(screen.getByTestId('resource-player-status')).toHaveClass('hidden');
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('loading', 'lazy');
+  });
 });

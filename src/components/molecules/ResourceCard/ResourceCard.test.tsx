@@ -256,7 +256,7 @@ describe('ResourceCard', () => {
       expect(source()).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
-    it('links the title out where links may not navigate (the composer, a quoted post in a dialog)', () => {
+    it('links the title to the resource page in a new tab where links may not navigate (the composer, a quoted post in a dialog)', () => {
       const href = 'https://en.m.wikipedia.org/wiki/Bitcoin';
       render(
         <PostPreviewNavigableProvider navigable={false}>
@@ -264,9 +264,12 @@ describe('ResourceCard', () => {
         </PostPreviewNavigableProvider>,
       );
 
-      expect(title()).toHaveAttribute('href', href);
+      expect(title()).toHaveAttribute('href', getResourceRoute(ARTICLE.uri));
       expect(title()).toHaveAttribute('target', '_blank');
       expect(title()).toHaveAttribute('rel', 'noopener noreferrer');
+      // The site link still opens the link as written, in a new tab.
+      expect(source()).toHaveAttribute('href', href);
+      expect(source()).toHaveAttribute('target', '_blank');
     });
 
     it('takes the favicon from the card’s own site when the post uses another host', () => {
@@ -746,13 +749,13 @@ describe('ResourceCard', () => {
       expect(card()).not.toHaveAttribute('data-click-through');
       unmount();
 
-      // Where links may not navigate, its title is text too.
+      // Its title still opens the resource's page (which says it is gone), never the link.
       const { unmount: unmountQuoted } = render(
         <PostPreviewNavigableProvider navigable={false}>
           <ResourceCard card={missingFixture} href={missingFixture.uri} />
         </PostPreviewNavigableProvider>,
       );
-      expect(title().tagName).not.toBe('A');
+      expect(title()).toHaveAttribute('href', getResourceRoute(missingFixture.uri));
       unmountQuoted();
 
       render(<ResourceCard card={missingFixture} size="large" />);

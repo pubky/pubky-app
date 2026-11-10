@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CircleAlert, Link2Off, RotateCw } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -12,9 +13,17 @@ import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
 import type { UseResourceRepliesResult } from '@/hooks/useResourceReplies/useResourceReplies';
 import { IllustratedEmptyState } from '@/molecules/IllustratedEmptyState/IllustratedEmptyState';
+import { parseUrlForLinkEmbed } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds.utils';
+import {
+  chooseNativeEmbed,
+  getNativeEmbedCard,
+  getShowPostLabel,
+} from '@/molecules/PostLinkEmbeds/Providers/Native/nativeEmbed.utils';
+import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
 import { getHttpUrl, getResourceLinks, getResourceTagsLabel } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
+import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -132,6 +141,8 @@ function ResourceKnown({
   const otherTags = mergeOtherLinkTags(useOtherLinkTags(otherLinks).reads);
   // The services that allow embedding play on the page too, as in a post (`useCardPlayer`).
   const { playOn, renderBody } = useCardPlayer(card, undefined, 'default');
+  // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
+  const postEmbed = usePostEmbed(card, uri);
   const actions = (
     <ResourceActions
       uri={actionUri}
@@ -141,7 +152,7 @@ function ResourceKnown({
       linkUrl={getResourceLinks(card, actionUri).linkUrl}
       title={card.name || null}
       otherTagList={otherTags}
-      playOn={playOn}
+      playOn={postEmbed?.showPost ?? playOn}
       size="large"
       replyCount={replies.replyCount}
       onReplySubmitted={replies.addReply}
@@ -150,11 +161,67 @@ function ResourceKnown({
   return (
     <>
       <Container overrideDefaults data-testid="resource-details" className="min-w-0">
-        <ResourceCard card={card} size="large" actions={actions} renderBody={renderBody} />
+        <ResourceCard
+          card={card}
+          size="large"
+          actions={actions}
+          renderBody={postEmbed?.renderBody ?? renderBody}
+          isBodyReplaced={postEmbed?.isOpen}
+        />
       </Container>
       <ResourceReplies uri={actionUri} replies={replies} />
     </>
   );
+}
+
+/**
+ * An X post's own embed (a provider whose `resourceKind` is `post`) as the large card's body, chosen
+ * as in a post (`chooseNativeEmbed`): up front without Also on, else from "Show on <site>" on our
+ * card. A post X cannot show leaves our card without the pill. `null` for any other link.
+ */
+function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
+  const [isPostOpen, setIsPostOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const found = [uri, card.uri]
+    .map((link) => parseUrlForLinkEmbed(link, false))
+    .find(({ provider }) => provider?.resourceKind === 'post');
+  if (!found?.embed || !found.provider) return null;
+  const { embed, provider } = found;
+
+  const choice = chooseNativeEmbed({
+    hasCard: getNativeEmbedCard(card) !== null,
+    hasAlsoOn: getMenuAlsoOn(card, uri) !== null,
+    embedFailed: failed,
+  });
+  const isOpen = !failed && (choice === 'embed' || isPostOpen);
+  // The card player's pill, as on a post's card, on the page's surface.
+  const showPost =
+    choice === 'card' && !failed ? (
+      <PlayOnPill
+        uri={uri}
+        isOpen={isPostOpen}
+        label={getShowPostLabel(getResourceLinks(card, uri).siteName, isPostOpen)}
+        surface="default"
+        aria-expanded={isPostOpen}
+        onClick={() => setIsPostOpen((open) => !open)}
+        data-testid="show-embed"
+      />
+    ) : undefined;
+  // Only while the embed shows: otherwise the card's own body, or its player's (Play on).
+  const renderBody = isOpen
+    ? () => (
+        <>
+          {/* The embed shows the post's text; the page keeps it as its heading for screen readers. */}
+          <Typography as="h2" overrideDefaults className="sr-only">
+            {card.name?.trim() || uri}
+          </Typography>
+          <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
+            {provider.renderEmbed(embed, { isPostEmbed: true, onEmbedError: () => setFailed(true), fill: true })}
+          </Container>
+        </>
+      )
+    : undefined;
+  return { showPost, renderBody, isOpen };
 }
 
 /**

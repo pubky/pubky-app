@@ -64,4 +64,9 @@ export interface ResourceCardProps {
    * click-through: its body may turn into a player.
    */
   renderBody?: (body: ReactNode) => ReactNode;
+  /**
+   * Whether `renderBody` shows a platform's embed in place of the body now: the `large` card then
+   * leaves out its Details (the resource page's X post shows them itself).
+   */
+  isBodyReplaced?: boolean;
 }

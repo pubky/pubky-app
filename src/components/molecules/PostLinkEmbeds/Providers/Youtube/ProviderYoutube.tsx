@@ -56,6 +56,8 @@ const extractVideoIdFromEmbedUrl = (embedUrl: string): string => {
  * that is stored as kind `video` is a link this provider plays.
  */
 export const Youtube: EmbedProvider = {
+  resourceKind: 'video',
+
   /**
    * List of supported YouTube domains
    */

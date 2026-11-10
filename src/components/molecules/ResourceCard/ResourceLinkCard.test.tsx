@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getResourceRoute } from '@/app/routes';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceLinkCard } from './ResourceLinkCard';
 
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({ useOgMetadata: vi.fn() }));
@@ -26,7 +28,10 @@ describe('ResourceLinkCard', () => {
     render(<ResourceLinkCard url={URL} actions={<div data-testid="actions" />} />);
 
     expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent('An article');
-    expect(screen.getByTestId('resource-link-card-title')).toHaveAttribute('href', URL);
+    // The title opens the resource's page, the site link the link itself in a new tab.
+    expect(screen.getByTestId('resource-link-card-title')).toHaveAttribute('href', getResourceRoute(URL));
+    expect(screen.getByTestId('resource-link-card-title')).not.toHaveAttribute('target');
+    expect(screen.getByTestId('resource-card-source')).toHaveAttribute('target', '_blank');
     expect(screen.getByTestId('resource-link-card-image')).toHaveAttribute('src', 'https://cdn.example.com/a.png');
     expect(screen.getByTestId('resource-card-source')).toHaveTextContent('example.com');
     expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in example.com');
@@ -34,6 +39,19 @@ describe('ResourceLinkCard', () => {
     expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', URL);
     expect(screen.queryByTestId('resource-card-type')).not.toBeInTheDocument();
     expect(screen.getByTestId('actions')).toBeInTheDocument();
+  });
+
+  it('opens the resource page in a new tab from the title where links may not navigate (the composer)', () => {
+    render(
+      <PostPreviewNavigableProvider navigable={false}>
+        <ResourceLinkCard url={URL} />
+      </PostPreviewNavigableProvider>,
+    );
+
+    const title = screen.getByTestId('resource-link-card-title');
+    expect(title).toHaveAttribute('href', getResourceRoute(URL));
+    expect(title).toHaveAttribute('target', '_blank');
+    expect(title).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('titles the card with the link without its scheme when there is no preview', () => {
