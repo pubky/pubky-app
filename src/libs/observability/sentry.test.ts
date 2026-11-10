@@ -400,7 +400,7 @@ describe('captureAppError filtering', () => {
 
 /**
  * Drop rules are asserted against errors produced by the real pipeline (`safeFetch`,
- * homeserver `handleError` via `HomeserverService.subscribeUserEventStreamForPath` in
+ * homeserver `handleError` via `HomeserverService.subscribeUserEventStream` in
  * homeserver.test.ts), not hand-built `new AppError(...)` shapes: a rule that matches a
  * shape the pipeline never emits is dead code that looks green.
  */

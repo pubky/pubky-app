@@ -198,7 +198,11 @@ Nexus data requested after the local edit can confirm it early; expiry alone doe
 
 ### Homeserver mute list sync
 
-Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.
+Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable. The stream itself is shared with the notification `last_read` sync; its reconnect backoff, healthy-after time and alert threshold are fixed in [`src/config/homeserver-event-stream.ts`](../src/config/homeserver-event-stream.ts).
+
+### Homeserver notification last_read sync
+
+Cross-session alignment of the notification read boundary uses the same homeserver **event stream** connection. Its debounce is fixed in [`src/config/notification-last-read-sync.ts`](../src/config/notification-last-read-sync.ts), the shared stream's timing in [`src/config/homeserver-event-stream.ts`](../src/config/homeserver-event-stream.ts), not environment variables. See ADR-0029.
 
 ## Setting Variables
 
@@ -228,4 +232,4 @@ See [grant migration and Locks integration](migrations/2600-grant-auth-and-locks
 
 ### Embedded Shop
 
-Shop navigation always opens the same-origin `/shop` shell and embeds Shop at `/shop-embed`. New Ring/Bitkit and Passport approvals include Shop/Chat storage scopes; recovery-key sign-in and browser signup obtain root storage grants. There is no enable flag or external Shop URL. Deploy compatible App and Shop builds, the proxy, and Shop's BFF together, and verify BFF readiness before promoting the deployment. A later BFF outage shows an unavailable state that retries automatically; see [Shop embedding](shop-embedding.md) and [ADR 0025](adr/0025-same-origin-shop-session.md). Local development can set `SHOP_EMBED_PROXY_ORIGIN=http://localhost:3001` for a prefix-preserving Next rewrite; this build-tool setting is ignored in production.
+Shop navigation always opens the same-origin `/shop` shell and embeds Shop at `/shop-embed`. New Ring/Bitkit and Passport approvals include Shop/Chat storage scopes; recovery-key sign-in and browser signup obtain root storage grants. There is no enable flag or external Shop URL. Deploy compatible App and Shop builds, the proxy, and Shop's BFF together, and verify BFF readiness before promoting the deployment. At sign-out App also ends the marketplace sessions Shop persisted in `localStorage` at the transaction service, which needs `marketplaceUrl` (`PUBKY_RUNTIME_MARKETPLACE_URL`, the same origin the Shop reads from the same-named variable). It is optional and has no deployed default: unset, App logs a warning and the sessions expire on their own after 24 hours. Preview deployments leave it unset on purpose, because the staging service's CORS allowlist does not include preview origins and the browser would block the request. Local dev defaults to `http://localhost:3100`; an explicit blank value disables the revocation. A later BFF outage shows an unavailable state that retries automatically; see [Shop embedding](shop-embedding.md) and [ADR 0025](adr/0025-same-origin-shop-session.md). Local development can set `SHOP_EMBED_PROXY_ORIGIN=http://localhost:3001` for a prefix-preserving Next rewrite; this build-tool setting is ignored in production.

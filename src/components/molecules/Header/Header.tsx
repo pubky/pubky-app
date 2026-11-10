@@ -155,7 +155,7 @@ const NavigationButton = ({
   const button = (
     <Button
       data-cy={href ? undefined : dataCy}
-      className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-white/5')}
+      className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-glass')}
       variant="secondary"
       size="icon"
       aria-label={label}
@@ -236,7 +236,7 @@ export function HeaderNavigationButtons({
             className="absolute right-0 bottom-0 h-5 w-5 rounded-full bg-brand shadow-sm"
             variant="secondary"
           >
-            <Typography className={cn('font-semibold text-primary-foreground', counter > 21 && 'text-xs')} size="xs">
+            <Typography className={cn('font-semibold text-brand-foreground', counter > 21 && 'text-xs')} size="xs">
               {counterString}
             </Typography>
           </Badge>
@@ -284,7 +284,7 @@ export function HeaderExploreNavigationButtons({
           <Button
             variant="secondary"
             size="icon"
-            className="h-12 w-12 border bg-white/5"
+            className="h-12 w-12 border bg-glass"
             onClick={() => setShowSignInDialog(true)}
             aria-label="Join Pubky"
             data-testid="header-explore-join-button"

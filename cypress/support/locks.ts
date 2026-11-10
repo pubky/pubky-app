@@ -42,6 +42,8 @@ export type TLockServerState = {
   guarded: Record<string, string>;
   /** The price of each content lock the creator published, by lock id. */
   locks: Record<string, TLockPrice>;
+  /** Lock ids the creator deleted, in order. */
+  deletedLocks: string[];
   /** Bundle ids the reader submitted: the lock each pays for, and the task lookups it has had. */
   tasks: Record<string, { lockId: string; lookups: number }>;
 };
@@ -50,6 +52,7 @@ export const createLockServerState = (): TLockServerState => ({
   creatorPubky: '',
   guarded: {},
   locks: {},
+  deletedLocks: [],
   tasks: {},
 });
 
@@ -184,6 +187,11 @@ export const stubLockServer = (state: TLockServerState) => {
       },
     });
   }).as('createContentLock');
+  cy.intercept(route('POST', '/e2e/creator/content-locks/delete'), (req) => {
+    const { lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
+    state.deletedLocks.push(lock_id);
+    answer(req, 'delete content lock', `lock ${lock_id} (${describePrice(state.locks[lock_id])})`, {});
+  }).as('deleteContentLock');
 
   // The reader's Bitkit wallet: it has published Paykit data, it is linked to the creator, and the
   // payment request is paid on the second task lookup (the first one still reads `pending`).
@@ -289,8 +297,11 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
     },
   );
   const replicaReads: string[] = [];
+  // Record the status only once the homeserver has answered. `req.continue(callback)`
+  // tells Cypress the test is waiting on that response, so it fails the test when a
+  // later navigation (sign-out, reload, `cy.visit`) aborts the request first.
   cy.intercept({ method: 'GET', url: /\/priv\/social\/unlocked\// }, (req) => {
-    req.continue((res) => {
+    req.on('response', (res) => {
       replicaReads.push(`${new URL(req.url).pathname} → ${res.statusCode}`);
     });
   }).as('replicaRead');
@@ -399,6 +410,25 @@ export const turnLockOnAndSetUpLocks = () => {
   cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
 };
 
+/** The Lock Server refuses the next lock deletion, as a Lock Server outage would. */
+export const failNextLockDeletion = () => {
+  cy.intercept({ ...route('POST', '/e2e/creator/content-locks/delete'), times: 1 }, (req) => {
+    answer(req, 'delete content lock', 'Lock Server unavailable', { error: 'unavailable' }, 503);
+  }).as('deleteContentLockFailed');
+};
+
+/**
+ * Signing out drops the Locks session, and only the composer's lock switch signs back in: walk the
+ * setup on a throwaway draft, then cancel the price dialog, which turns it back into a normal post.
+ */
+export const signInToLockServer = () => {
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click().type('Lock Server sign-in');
+  turnLockOnAndSetUpLocks();
+  cy.get('[data-cy="lock-content-cancel"]').filter(':visible').click();
+  lockSwitch().should('have.attr', 'aria-checked', 'false');
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').clear();
+};
+
 /** Flips the lock switch on once Locks is set up in this tab: the price dialog opens straight away. */
 export const turnLockOn = () => {
   lockSwitch().should('have.attr', 'aria-checked', 'false').and('not.be.disabled').click();
@@ -442,20 +472,33 @@ export const publishLock = (): Cypress.Chainable<string> => {
   });
 };
 
+const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
+
+const nexusDetailsHaveLock = (body: unknown): boolean =>
+  typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
+
 /**
- * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ * Polls GET /v0/post/<author>/<id>/details until `settled` is true.
+ *
+ * The 90s deadline is taken when this command runs. locks.cy.ts calls both waiters from one
+ * post-id callback that also queues the later steps, so a Date.now() at the call has already
+ * passed by the time the delete poll starts.
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+const pollNexusPostDetails = (
+  authorPubky: string,
+  postId: string,
+  settled: (status: number, body: unknown) => boolean,
+  timedOut: (authorId: string, status: number) => string,
+) => {
   const authorId = userIdFromPubky(authorPubky);
-  const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
     const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
+    const deadline = Date.now() + NEXUS_POST_POLL_TIMEOUT_MS;
     const poll = () => {
       cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
-        if (response.status === 200 && response.body?.lock) return;
+        if (settled(response.status, response.body)) return;
         if (Date.now() >= deadline) {
-          throw new Error(`Nexus did not index lock post ${authorId}/${postId} (last status ${response.status})`);
+          throw new Error(timedOut(authorId, response.status));
         }
         cy.wait(1000);
         poll();
@@ -463,6 +506,29 @@ export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
     };
     poll();
   });
+};
+
+/**
+ * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
+ * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ */
+export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+  pollNexusPostDetails(
+    authorPubky,
+    postId,
+    (status, body) => status === 200 && nexusDetailsHaveLock(body),
+    (authorId, status) => `Nexus did not index lock post ${authorId}/${postId} (last status ${status})`,
+  );
+};
+
+/** Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there. */
+export const waitForNexusPostDeleted = (authorPubky: string, postId: string) => {
+  pollNexusPostDetails(
+    authorPubky,
+    postId,
+    (status) => status === 404,
+    (authorId, status) => `Nexus still serves deleted post ${authorId}/${postId} (last status ${status})`,
+  );
 };
 
 export const singlePostCard = () => cy.get('[data-cy="single-post-card"]').filter(':visible');

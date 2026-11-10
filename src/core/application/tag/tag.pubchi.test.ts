@@ -138,18 +138,48 @@ describe('Pubchi tag adoption', () => {
     const proof = await sha256Hex(canonicalJson(tag.tagJson));
     vi.mocked(HomeserverService.requestRawText).mockResolvedValue(JSON.stringify(tag.tagJson, null, 2));
 
-    await TagApplication.commitDeleteIfUnchanged(tag, proof);
+    await TagApplication.commitDeleteIfUnchanged({ ...tag, canWrite: () => true }, proof);
 
     expect(HomeserverService.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: HttpMethod.DELETE, url: tag.tagUrl }),
     );
   });
 
+  it('refuses assisted undo when the current grant cannot delete the proven file', async () => {
+    const proof = await sha256Hex(canonicalJson(tag.tagJson));
+    const canWrite = vi.fn(() => false);
+
+    await expect(TagApplication.commitDeleteIfUnchanged({ ...tag, canWrite }, proof)).rejects.toMatchObject({
+      code: AuthErrorCode.FORBIDDEN,
+    });
+
+    expect(canWrite).toHaveBeenCalledWith(tag.tagUrl);
+    expect(HomeserverService.requestRawText).not.toHaveBeenCalled();
+    expect(HomeserverService.request).not.toHaveBeenCalled();
+    expect(LocalPostTagService.create).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedMutationId: expect.any(String), tagUri: tag.tagUrl }),
+    );
+  });
+
+  it('refuses a different owner undo address before any optimistic deletion or fallback lookup', async () => {
+    const proof = await sha256Hex(canonicalJson(tag.tagJson));
+    await expect(
+      TagApplication.commitDeleteIfUnchanged(
+        { ...tag, tagUrl: 'pubky://someone-else/pub/pubky.app/tags/id', canWrite: () => true },
+        proof,
+      ),
+    ).rejects.toThrow('does not belong to the owner');
+    expect(LocalPostTagService.delete).not.toHaveBeenCalled();
+    expect(HomeserverService.request).not.toHaveBeenCalled();
+  });
+
   it('preserves a manually recreated tag at the same URL', async () => {
     const proof = await sha256Hex(canonicalJson(tag.tagJson));
     vi.mocked(HomeserverService.requestRawText).mockResolvedValue(JSON.stringify({ ...tag.tagJson, created_at: 300 }));
 
-    await expect(TagApplication.commitDeleteIfUnchanged(tag, proof)).rejects.toThrow('Tag changed');
+    await expect(TagApplication.commitDeleteIfUnchanged({ ...tag, canWrite: () => true }, proof)).rejects.toThrow(
+      'Tag changed',
+    );
 
     expect(HomeserverService.request).not.toHaveBeenCalled();
     expect(LocalPostTagService.create).toHaveBeenCalledWith(
@@ -169,7 +199,9 @@ describe('Pubchi tag adoption', () => {
         context: { statusCode: 503 },
       }),
     );
-    await expect(TagApplication.commitDeleteIfUnchanged(tag, proof)).rejects.toThrow('Tag changed');
+    await expect(TagApplication.commitDeleteIfUnchanged({ ...tag, canWrite: () => true }, proof)).rejects.toThrow(
+      'Tag changed',
+    );
     expect(retrySleep).toHaveBeenCalledOnce();
 
     expect(HomeserverService.requestRawText).toHaveBeenCalledTimes(2);
@@ -180,7 +212,9 @@ describe('Pubchi tag adoption', () => {
   });
 
   it('refuses undo without proof before any local or remote deletion', async () => {
-    await expect(TagApplication.commitDeleteIfUnchanged(tag, '')).rejects.toThrow('verifiable document proof');
+    await expect(TagApplication.commitDeleteIfUnchanged({ ...tag, canWrite: () => true }, '')).rejects.toThrow(
+      'verifiable document proof',
+    );
     expect(LocalPostTagService.delete).not.toHaveBeenCalled();
     expect(HomeserverService.requestRawText).not.toHaveBeenCalled();
     expect(HomeserverService.request).not.toHaveBeenCalled();

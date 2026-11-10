@@ -1,6 +1,7 @@
 import type { Session } from '@synonymdev/pubky';
 import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthApplication } from '@/application/auth/auth';
 import { LocksApplication } from '@/application/locks/locks';
 import { ProfileApplication } from '@/application/profile/profile';
 import { SettingsApplication } from '@/application/settings/settings';
@@ -9,6 +10,7 @@ import { TagKind } from '@/application/tag/tag.types';
 import { NotificationController } from '@/controllers/notification/notification';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { canonicalJson, sha256Hex } from '@/libs/pubchi/schemas/canonical';
+import { Err } from '@/libs/error/error.factories';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
@@ -145,6 +147,42 @@ afterEach(() => {
 
 const putsTo = (path: string) =>
   homeserver.putJson.mock.calls.filter(([putPath]) => putPath === path).map(([, body]) => body);
+
+describe('a new account with no files yet', () => {
+  // Every Err.* factory captures to Sentry at construction, so no factory call means no report.
+  const spyOnErrFactories = () => (Object.keys(Err) as (keyof typeof Err)[]).map((factory) => vi.spyOn(Err, factory));
+  const callsTo = (spies: ReturnType<typeof spyOnErrFactories>) =>
+    spies.reduce((total, spy) => total + spy.mock.calls.length, 0);
+
+  it('answers not signed up for a missing profile.json without creating an error', async () => {
+    const created = spyOnErrFactories();
+    await expect(AuthApplication.userIsSignedUp({ pubky: USER })).resolves.toBe(false);
+    expect(callsTo(created)).toBe(0);
+  });
+
+  it('answers signed up once profile.json exists', async () => {
+    homeserver.files.set(PROFILE_PATH, JSON.stringify({ name: 'Alice' }));
+    await expect(AuthApplication.userIsSignedUp({ pubky: USER })).resolves.toBe(true);
+  });
+
+  it('reads missing settings as null without creating an error', async () => {
+    const created = spyOnErrFactories();
+    await expect(SettingsApplication.fetchFromHomeserver(USER)).resolves.toBeNull();
+    expect(callsTo(created)).toBe(0);
+  });
+
+  it('still reports a homeserver failure on the same read', async () => {
+    const created = spyOnErrFactories();
+    useAuthStore.setState({
+      session: asOpaque<Session>({
+        ...session(),
+        storage: { ...session().storage, get: async () => new Response('Error', { status: 500 }) },
+      }),
+    });
+    await expect(SettingsApplication.fetchFromHomeserver(USER)).rejects.toMatchObject({ name: 'AppError' });
+    expect(callsTo(created)).toBeGreaterThan(0);
+  });
+});
 
 describe('a profile edit that the homeserver refuses re-reads before retrying', () => {
   const published = {
@@ -336,6 +374,7 @@ describe('writes to one tag run in the order the user made them', () => {
     label: 'bitcoin',
     taggedKind: TagKind.POST,
     tagUrl: `pubky://${USER}${TAG_PATH}`,
+    canWrite: () => true,
   };
   const tagJson = { uri: `pubky://${USER}/pub/pubky.app/posts/0033SSE3B1FQ0`, label: 'bitcoin', created_at: 1 };
   const tagOps = () => homeserver.writes.filter(({ path }) => path === TAG_PATH).map(({ op }) => op);

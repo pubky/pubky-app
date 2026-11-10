@@ -1,4 +1,4 @@
-import { Bell, Bot, CircleHelp, MegaphoneOff, Shield, UserRound } from 'lucide-react';
+import { Bell, Bot, CircleHelp, MegaphoneOff, Shield, SunMoon, UserRound } from 'lucide-react';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import { isPubchiEnabled } from '@/libs/pubchi/flags';
 import type { SettingsMenuItem } from './SettingsMenu.types';
@@ -22,6 +22,12 @@ export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
     id: 'notifications',
     label: 'Notifications',
     path: SETTINGS_ROUTES.NOTIFICATIONS,
+  },
+  {
+    icon: SunMoon,
+    id: 'appearance',
+    label: 'Appearance',
+    path: SETTINGS_ROUTES.APPEARANCE,
   },
   {
     icon: Shield,

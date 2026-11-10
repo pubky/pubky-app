@@ -49,8 +49,10 @@ Three things break the usual pubky-app mental model:
   Lock Server session that belongs to the account signed in to pubky.app (#2758).
 - **Nexus indexes the announcement, not the lock.** The announcement is an ordinary Nexus
   post and behaves like one; the locked payload and everything about the lock itself never
-  reach Nexus. Locks have no Nexus streams. Their immutable descriptors and readable posts
-  are cached in Dexie's `locks` table; purchase bundle ids remain on the reader's homeserver.
+  reach Nexus. Locks have no Nexus streams of their own: the feed's Locks content filter
+  (`locked=true`) selects announcements, and Nexus text search cannot apply it, so the option is
+  disabled there (#3046). Their immutable descriptors and readable posts are cached in Dexie's
+  `locks` table; purchase bundle ids remain on the reader's homeserver.
 - **Content lives under homeserver `/priv`.** Both the creator's originals and the
   reader's unlocked copies sit on `/priv` paths, readable only by their owner with a
   restored session — unlike everything under `/pub/pubky.app`.
@@ -88,12 +90,20 @@ _SVG files._ A locked SVG is stored without its image type, so it does not rende
 Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
 
 _Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
-10,000,000 bytes per file. It refuses a lock only after its files were uploaded, which leaves them
-orphaned, so the composer mirrors both limits (`LOCK_ATTACHMENT_MAX_FILES` and
-`LOCK_ATTACHMENT_MAX_SIZE` in `@/config/posts`) and checks them when the switch goes on: a draft
+10,000,000 bytes per file. It refuses a lock only after its files were uploaded, so a draft over the
+limits would upload every file for nothing. The composer therefore mirrors both limits
+(`LOCK_ATTACHMENT_MAX_FILES` and `LOCK_ATTACHMENT_MAX_SIZE` in `@/config/posts`) and checks them when the switch goes on: a draft
 over them gets a toast and the switch stays off. The check waits for the switch so that a creator
 who is not locking anything never hears about lock limits. The values are the server's defaults: it
 offers no way to read them.
+
+_Failed publish (#2039)._ Before the lock exists, a failed publish deletes every upload the Lock
+Server confirmed. After it exists, a failed announcement queues the lock's deletion, and the Lock
+Server removes its files in the background. An announcement already on the homeserver keeps its lock,
+even when its tags then fail. If the announcement landed and only its answer was lost, it now points
+at a deleted lock that the creator can see and delete. Files or the lock still stay behind when an
+upload's answer was lost, when a delete request fails (a rejected Locks session, a network or server
+error), and when the tab closes mid-publish (server-side reaping, pubky/locks#107).
 
 **2. Unlock (reader).** The lock card opens Pay to Unlock. The FE submits a **proof** to the
 Lock Server, waits until the reader has paid in Bitkit, gets a short-lived credential,
@@ -652,3 +662,5 @@ This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://gith
 Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
 
 The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`CONNECT_READY_AFTER_LOAD_MS`, `CONNECT_MOUNT_TIMEOUT_MS`). A page that failed to render, such as a JSON error body, is never shown (#3027).
+
+The pinned SDK takes no `AbortSignal`, so `LocksService` bounds every network request it makes through the SDK with `withLocksTimeout`: 30 s for a lookup or a small write, and 6 minutes for a request that carries a file's bytes (`registerGuardedResource`, `proxyReadGuardedResource`): the longest a user is expected to wait for a file. This is a UX limit, not a bandwidth guarantee: on a slow link, parallel uploads or downloads of large files can run out of it every time. A request that runs out of time fails with a retryable `Err.timeout`, so each screen shows the same failure state as for a network error. The request itself keeps running and a write may still land, so nothing retries a write automatically. When a late upload, content lock or session lands, the app tries to undo it: it deletes the upload or the lock, and signs out the session. An undo can fail, for example after a logout ended the session; the failure is reported, and the upload or lock stays on the server. A late proof submission needs no undo, because Try again resubmits the same saved bundle id. The setup dialog's server check builds the connect URL (up to 30 s) and then probes `/readyz` (up to 10 s), so it reports the server as unavailable within 40 s. `signout` has no limit of its own: logout waits for it at most `SIGNOUT_TIMEOUT_MS`, and the other callers (discarding a stale sign-in, undoing a late session) do not wait for it. Loading the SDK's wasm is not bounded (#3026).
