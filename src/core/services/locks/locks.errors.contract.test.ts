@@ -14,6 +14,7 @@ import {
   LOCK_SERVER_ORIGIN,
   LOCK_SERVER_PUBKY,
   PKARR_RELAY,
+  READER,
   setupLocksContractHarness,
   stubLockServerFetch,
 } from '@/test-utils/locks-contract';
@@ -408,6 +409,49 @@ describe('Lock Server code-exchange errors through the pinned SDK and LocksServi
     expect(isAppError(error) && requiresLogin(error)).toBe(false);
     expectReportedOnce(error);
   });
+});
+
+// Before Pay, the SDK lists the reader's /pub/paykit/v0/ on the reader's own homeserver (READER resolves to
+// LOCK_SERVER_ORIGIN). usePayToUnlock turns a rejection into the "could not be started" toast or the
+// blocked stage; it only signs the reader out for an error that requires login.
+describe("Reader Paykit presence reads from the reader's homeserver through the pinned SDK and LocksService", () => {
+  const PAYKIT_LISTING = 'GET /pub/paykit/v0/?shallow&limit=1';
+
+  it.each([
+    ['a Paykit entry', { status: 200, body: `pubky://${READER}/pub/paykit/v0/receiver\n` }, true],
+    ['an empty listing', { status: 200, body: '' }, false],
+    ['no Paykit directory (HTTP 404)', { status: 404, body: '' }, false],
+  ] as const)('reads %s as %s, not an error', async (_name, reply, expected) => {
+    const requests = stubLockServer(reply);
+
+    await expect(LocksService.hasPaykitReceiver(READER)).resolves.toBe(expected);
+    expect(requests.map(({ method, path }) => `${method} ${path}`)).toContain(PAYKIT_LISTING);
+    expectNothingReported();
+  });
+
+  it.each([
+    ['HTTP 500', { status: 500, body: '' }],
+    ['HTTP 503', { status: 503, body: '' }],
+    ['network failure', 'network-failure'],
+  ] as const)(
+    'rejects a failed read (%s) as one reported server error, never a sign-in prompt',
+    async (_name, reply) => {
+      const requests = stubLockServer(reply);
+
+      const error = await rejection(LocksService.hasPaykitReceiver(READER));
+
+      expect(requests.map(({ method, path }) => `${method} ${path}`)).toContain(PAYKIT_LISTING);
+      expect(error).toMatchObject({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.UNKNOWN_ERROR,
+        service: ErrorService.Locks,
+        operation: 'LocksService.hasPaykitReceiver',
+        cause: { name: 'PaykitDataLookupFailed', message: 'Paykit data lookup failed' },
+      });
+      expect(isAppError(error) && requiresLogin(error)).toBe(false);
+      expectReportedOnce(error);
+    },
+  );
 });
 
 /** A settled task, in the lifecycle field combination the SDK accepts for `failed` and `expired`. */

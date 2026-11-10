@@ -8,16 +8,24 @@ import { getRuntimeConfig, resetRuntimeConfigForTests } from '@/libs/runtime-con
 
 /**
  * Synthetic one-seed Lock Server identity. The Pubky session-store and grant-flow contract tests sign
- * the same identity's packet into their own fixtures; keep them byte-identical.
+ * the same identities' packets into their own fixtures; keep them byte-identical.
  */
 export const LOCK_SERVER = 'tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy';
 export const LOCK_SERVER_PUBKY = `pubky${LOCK_SERVER}`;
+/** Synthetic zero-seed user whose homeserver is `LOCK_SERVER`, for reads from a reader's homeserver. */
+export const READER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
 export const PKARR_RELAY = 'https://pkarr.test';
-/** Where the signed routing packet sends every Lock Server request. */
+/** Where the signed routing packets send every Lock Server request and every read from `READER`'s homeserver. */
 export const LOCK_SERVER_ORIGIN = 'https://legacy-cookie.test';
 
-const ROUTING_PACKET =
+const READER_ROUTING_PACKET =
+  'XTDocF4Xf6HpVOBIowal9ggCGKv383XHTY9OHqmQRvRPd+0uJDBTxrKwIUzoaERgl/4+DWme0M3YTe3XfM1wBAAGZRcomIAAAACAAAAAAAEAAAAABl9wdWJreTQ4cGlueHhncXM0MW40YWlkaWRlbnc1YXBxcDF1cmZtemR6dHI4anQ0YWJya2RuNDM1ZXdvAABBAAEAAA4QADgAADR0a3JxOHptd2I4YTNtOWsxNWNzdTNxMTdxbWZncW5wOWRza2JyZzl1cTFyeWRweXhwN3F5AA==';
+const LOCK_SERVER_ROUTING_PACKET =
   'FSgcCvQf4IDHyAtpTkQvSSCN3RsLYv7QC1vNT3qOf9nhNFbL89xLKYGT7LAfAeBLX723CTWU1v5jzB2PCWZnDwAGZRcomIAAAACAAAAAAAEAAAAANHRrcnE4em13YjhhM205azE1Y3N1M3ExN3FtZmdxbnA5ZHNrYnJnOXVxMXJ5ZHB5eHA3cXkAAEEAAQAADhAAFgABDWxlZ2FjeS1jb29raWUEdGVzdAA=';
+const ROUTING_PACKETS: Record<string, string> = {
+  [`/${LOCK_SERVER}`]: LOCK_SERVER_ROUTING_PACKET,
+  [`/${READER}`]: READER_ROUTING_PACKET,
+};
 
 /**
  * Registers the hooks every Locks SDK contract test needs: loads the installed WASM build from disk,
@@ -64,7 +72,7 @@ export function setupLocksContractHarness() {
 }
 
 /**
- * Replaces only HTTP: the PKARR relay gets the signed routing packet, and every other request goes to
+ * Replaces only HTTP: the PKARR relay gets the signed routing packets, and every other request goes to
  * `answer`, which may throw to simulate a network failure. The service, SDK/WASM, request building and
  * PKARR validation run unchanged.
  */
@@ -73,9 +81,10 @@ export function stubLockServerFetch(answer: (request: Request) => Response | Pro
     const request = input instanceof Request ? input : new Request(input, init);
     const url = new URL(request.url);
     let response: Response;
-    if (url.origin === PKARR_RELAY && url.pathname === `/${LOCK_SERVER}`) {
+    const packet = url.origin === PKARR_RELAY ? ROUTING_PACKETS[url.pathname] : undefined;
+    if (packet) {
       expect(request.method).toBe('GET');
-      response = new Response(Buffer.from(ROUTING_PACKET, 'base64'));
+      response = new Response(Buffer.from(packet, 'base64'));
     } else {
       response = await answer(request);
     }
