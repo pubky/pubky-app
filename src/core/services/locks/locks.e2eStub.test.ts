@@ -6,9 +6,12 @@ import type {
   VerificationTaskHandleOptions,
 } from '@synonymdev/locks-sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { createE2eLocksClient, createE2eLocksReads } from './locks.e2eStub';
+import { isLockServerRegionBlocked, toLocksError } from './locks.utils';
 
 const STUB_URL = 'http://lock-server.e2e.test';
 const OWNER = 'creatorpubky';
@@ -199,15 +202,75 @@ describe('locks.e2eStub', () => {
     expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
   });
 
-  it('keeps the SDK error message, so status mapping still applies', async () => {
-    replyWith({}, 404);
+  describe('errors', () => {
+    const handle = asOpaque<VerificationTaskHandleOptions>({ creator: OWNER, bundleId: 'X' });
 
-    const error = await createE2eLocksClient(STUB_URL)
-      .viewer.lookupVerificationTask(asOpaque<VerificationTaskHandleOptions>({ creator: OWNER, bundleId: 'X' }))
-      .catch((caught: unknown) => caught);
+    it.each([
+      ['submitProofBundle', 451],
+      ['lookupVerificationTask', 404],
+      ['lookupPaykitConnectionState', 502],
+      ['issueAccessCredential', 403],
+    ] as const)('rejects a viewer %s HTTP %i with the SDK viewer error', async (call, status) => {
+      replyWith({ error: { code: 'any', message: 'any' } }, status);
+      const { viewer } = createE2eLocksClient(STUB_URL);
 
-    expect(isAppError(error)).toBe(true);
-    expect((error as Error).message).toBe('Lock Server request failed with HTTP 404');
+      const error = await (call === 'submitProofBundle' ? viewer.submitProofBundle({}) : viewer[call](handle)).catch(
+        (caught: unknown) => caught,
+      );
+
+      expect(isAppError(error)).toBe(false);
+      expect(error).toBeInstanceOf(Error);
+      expect(error).toMatchObject({
+        name: 'InvalidInput',
+        message: `Lock Server viewer request failed with HTTP ${status}`,
+      });
+    });
+
+    it('rejects a viewer 451 exactly as the region-refusal contract expects', async () => {
+      replyWith({}, 451);
+
+      const error = await createE2eLocksClient(STUB_URL)
+        .viewer.proxyReadGuardedResource('cred', 'file-1')
+        .catch((caught: unknown) => caught);
+
+      expect(isLockServerRegionBlocked(error)).toBe(true);
+    });
+
+    it('rejects a creator call with the session error, so a 401 maps to an expired session', async () => {
+      const session = await signIn();
+      replyWith({}, 401);
+
+      const error = await session.creator.paykitSetupStatus('BTC').catch((caught: unknown) => caught);
+
+      expect(isAppError(error)).toBe(false);
+      expect(error).toMatchObject({ name: 'InvalidInput', message: 'Lock Server request failed with HTTP 401' });
+      expect(toLocksError(error, 'op')).toMatchObject({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.SESSION_EXPIRED,
+      });
+    });
+
+    it('rejects a failed code exchange with the SDK exchange error', async () => {
+      replyWith({ error: { code: 'frontend_session_code_expired', message: 'expired' } }, 410);
+
+      const error = await createE2eLocksClient(STUB_URL)
+        .exchangeFrontendSessionCode(asOpaque<ExchangeFrontendSessionCodeOptions>({ code: 'c', state: 's' }))
+        .catch((caught: unknown) => caught);
+
+      expect(error).toMatchObject({ name: 'InvalidInput', message: 'frontend session exchange failed with HTTP 410' });
+      expect(isLockServerRegionBlocked(error)).toBe(false);
+    });
+
+    it('rejects a failed Paykit presence read with the SDK lookup error', async () => {
+      replyWith({}, 503);
+
+      const error = await createE2eLocksReads(STUB_URL)
+        .hasPaykitData('pubkyreader')
+        .catch((caught: unknown) => caught);
+
+      expect(isAppError(error)).toBe(false);
+      expect(error).toMatchObject({ name: 'PaykitDataLookupFailed', message: 'Paykit data lookup failed' });
+    });
   });
 
   it('reads the lock file from the homeserver and Paykit presence from the stub', async () => {
