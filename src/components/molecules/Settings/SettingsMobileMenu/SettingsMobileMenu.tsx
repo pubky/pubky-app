@@ -1,6 +1,8 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { SETTINGS_ROUTES } from '@/app/routes';
+import { isPinakesConfigured } from '@/config/pinakes';
 import { MobileTabBar } from '../../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../../MobileTabBar/MobileTabBar.types';
 import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
@@ -24,7 +26,9 @@ export function SettingsMobileMenu() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const items: MobileTabBarItem[] = SETTINGS_MOBILE_ITEMS.map((item) => ({
+  // Links & Media sets how external resource cards play: none without Pinakes.
+  const shown = SETTINGS_MOBILE_ITEMS.filter((item) => item.path !== SETTINGS_ROUTES.MEDIA || isPinakesConfigured());
+  const items: MobileTabBarItem[] = shown.map((item) => ({
     key: item.path,
     icon: item.icon,
     label: item.label,

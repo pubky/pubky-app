@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { PlayerProvider } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 
 /**
  * Discriminated union for embed data types
@@ -68,4 +69,10 @@ export interface EmbedProvider {
    * frame or the resource's card. Absent for providers that are no platform embed.
    */
   resourceKind?: EmbedResourceKind;
+
+  /**
+   * The card player's service this platform's embed is (YouTube, Vimeo): removed from Players
+   * (Settings, Links & Media), its links show as any other link does, with no player or embed from it.
+   */
+  player?: PlayerProvider;
 }

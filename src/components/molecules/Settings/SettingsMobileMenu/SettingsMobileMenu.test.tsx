@@ -1,8 +1,11 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SETTINGS_ROUTES } from '@/app/routes';
+import { isPinakesConfigured } from '@/config/pinakes';
 import { SettingsMobileMenu } from './SettingsMobileMenu';
+
+vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: vi.fn(() => true) }));
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -19,8 +22,21 @@ describe('SettingsMobileMenu', () => {
     expect(screen.getByLabelText('Notifications')).toBeInTheDocument();
     expect(screen.getByLabelText('Appearance')).toBeInTheDocument();
     expect(screen.getByLabelText('Privacy & Safety')).toBeInTheDocument();
+    expect(screen.getByLabelText('Links & Media')).toBeInTheDocument();
     expect(screen.getByLabelText('Muted Users')).toBeInTheDocument();
     expect(screen.getByLabelText('Help')).toBeInTheDocument();
+  });
+
+  describe('without Pinakes', () => {
+    afterEach(() => vi.mocked(isPinakesConfigured).mockReturnValue(true));
+
+    it('leaves out Links & Media', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(false);
+      render(<SettingsMobileMenu />);
+
+      expect(screen.queryByLabelText('Links & Media')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Privacy & Safety')).toBeInTheDocument();
+    });
   });
 
   it('includes lg:hidden class by default', () => {

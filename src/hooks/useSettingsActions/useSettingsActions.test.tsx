@@ -13,6 +13,8 @@ const { mockSettingsController, mockIsAppError } = vi.hoisted(() => ({
     setHideActiveFriends: vi.fn(),
     setHideSearch: vi.fn(),
     setNeverShowPosts: vi.fn(),
+    setPlayers: vi.fn(),
+    setEmbedsUpFront: vi.fn(),
   },
   mockIsAppError: vi.fn(),
 }));
@@ -59,6 +61,18 @@ describe('useSettingsActions', () => {
     });
 
     expect(mockSettingsController.setBlurCensored).toHaveBeenCalledWith(true);
+  });
+
+  it('calls SettingsController.setPlayers and setEmbedsUpFront', async () => {
+    const { result } = renderHook(() => useSettingsActions());
+
+    await act(async () => {
+      await result.current.setPlayers(['tidal'], ['youtube']);
+      await result.current.setEmbedsUpFront(false);
+    });
+
+    expect(mockSettingsController.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube']);
+    expect(mockSettingsController.setEmbedsUpFront).toHaveBeenCalledWith(false);
   });
 
   it('sets error on failure with AppError message', async () => {

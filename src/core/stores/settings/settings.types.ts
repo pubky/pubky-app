@@ -34,9 +34,23 @@ export interface PrivacyPreferences {
   moderationBot?: Pubky;
 }
 
+/**
+ * Links & Media settings, synced as the top-level `media` object of settings.json. Older clients
+ * drop unknown top-level keys on write, so `media` resets to its defaults there.
+ */
+export interface MediaPreferences {
+  /** Player ids (`PlayerProvider`) in the viewer's order; empty is Auto (the link's own service first). */
+  playerOrder: string[];
+  /** Player ids the viewer removed: no player or embed loads from them. Default none. */
+  hiddenPlayers: string[];
+  /** A link's platform embed shows up front instead of our card. Default on. */
+  embedsUpFront: boolean;
+}
+
 export interface SettingsState {
   notifications: NotificationPreferences;
   privacy: PrivacyPreferences;
+  media: MediaPreferences;
   muted: string[];
   updatedAt: number;
   version: number;
@@ -56,6 +70,9 @@ export interface SettingsActions {
   setHideSearch: (hideSearch: boolean) => void;
   setNeverShowPosts: (neverShowPosts: boolean) => void;
   setModerationBot: (moderationBot: Pubky) => void;
+  // Links and media actions
+  setPlayers: (playerOrder: string[], hiddenPlayers: string[]) => void;
+  setEmbedsUpFront: (embedsUpFront: boolean) => void;
   // Muted users actions
   addMutedUser: (userId: string) => void;
   removeMutedUser: (userId: string) => void;
@@ -92,9 +109,37 @@ export const defaultPrivacyPreferences: PrivacyPreferences = {
   neverShowPosts: false,
 };
 
+export const defaultMediaPreferences: MediaPreferences = {
+  playerOrder: [],
+  hiddenPlayers: [],
+  embedsUpFront: true,
+};
+
+function getStrings(value: unknown): string[] | undefined {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : undefined;
+}
+
+/**
+ * A stored `media` object (settings.json, the persisted store) with missing or malformed keys as
+ * their defaults. Keys a later version adds are kept.
+ */
+export function normalizeMediaPreferences(media: unknown): MediaPreferences {
+  const stored =
+    typeof media === 'object' && media !== null && !Array.isArray(media) ? (media as Record<string, unknown>) : {};
+  return {
+    ...defaultMediaPreferences,
+    ...stored,
+    playerOrder: getStrings(stored.playerOrder) ?? [],
+    hiddenPlayers: getStrings(stored.hiddenPlayers) ?? [],
+    embedsUpFront:
+      typeof stored.embedsUpFront === 'boolean' ? stored.embedsUpFront : defaultMediaPreferences.embedsUpFront,
+  };
+}
+
 export const settingsInitialState: SettingsState = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
+  media: defaultMediaPreferences,
   muted: [],
   updatedAt: 0,
   version: 1,
@@ -112,6 +157,8 @@ export enum SettingsActionTypes {
   SET_HIDE_SEARCH = 'SET_HIDE_SEARCH',
   SET_NEVER_SHOW_POSTS = 'SET_NEVER_SHOW_POSTS',
   SET_MODERATION_BOT = 'SET_MODERATION_BOT',
+  SET_PLAYERS = 'SET_PLAYERS',
+  SET_EMBEDS_UP_FRONT = 'SET_EMBEDS_UP_FRONT',
   ADD_MUTED_USER = 'ADD_MUTED_USER',
   REMOVE_MUTED_USER = 'REMOVE_MUTED_USER',
   SET_MUTED_USERS = 'SET_MUTED_USERS',

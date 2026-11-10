@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createJSONStorage } from 'zustand/middleware';
 import type { Pubky } from '@/models/models.types';
 import { useSettingsStore } from './settings.store';
-import { defaultNotificationPreferences, defaultPrivacyPreferences, settingsInitialState } from './settings.types';
+import {
+  defaultMediaPreferences,
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  settingsInitialState,
+} from './settings.types';
 
 // Mock localStorage for testing
 const localStorageMock = {
@@ -28,6 +34,7 @@ describe('SettingsStore', () => {
     useSettingsStore.setState({
       notifications: defaultNotificationPreferences,
       privacy: defaultPrivacyPreferences,
+      media: defaultMediaPreferences,
       muted: [],
       updatedAt: Date.now(),
       version: 1,
@@ -45,6 +52,7 @@ describe('SettingsStore', () => {
       useSettingsStore.setState({
         notifications: defaultNotificationPreferences,
         privacy: defaultPrivacyPreferences,
+        media: defaultMediaPreferences,
         muted: [],
         updatedAt: initialTimestamp,
         version: 1,
@@ -129,6 +137,7 @@ describe('SettingsStore', () => {
       useSettingsStore.getState().loadFromHomeserver({
         notifications: defaultNotificationPreferences,
         privacy: { ...defaultPrivacyPreferences, moderationBot },
+        media: defaultMediaPreferences,
         muted: [],
         updatedAt: 123,
         version: 1,
@@ -175,6 +184,63 @@ describe('SettingsStore', () => {
       expect(state.privacy.hideActiveFriends).toBe(true);
       expect(state.privacy.hideSearch).toBe(true);
       expect(state.privacy.neverShowPosts).toBe(true);
+    });
+
+    it('should set the links and media preferences', () => {
+      const store = useSettingsStore.getState();
+
+      store.setPlayers(['tidal', 'spotify'], ['youtube']);
+      store.setEmbedsUpFront(false);
+      expect(useSettingsStore.getState().media).toEqual({
+        playerOrder: ['tidal', 'spotify'],
+        hiddenPlayers: ['youtube'],
+        embedsUpFront: false,
+      });
+
+      store.setPlayers([], []);
+      expect(useSettingsStore.getState().media).toEqual({ playerOrder: [], hiddenPlayers: [], embedsUpFront: false });
+      expect(useSettingsStore.getState().privacy).toEqual(defaultPrivacyPreferences); // Unchanged
+    });
+
+    const rehydrateFrom = async (state: unknown) => {
+      const { storage } = useSettingsStore.persist.getOptions();
+      useSettingsStore.persist.setOptions({
+        storage: createJSONStorage(() => ({
+          getItem: () => JSON.stringify({ state, version: 0 }),
+          setItem: () => {},
+          removeItem: () => {},
+        })),
+      });
+      try {
+        await useSettingsStore.persist.rehydrate();
+      } finally {
+        useSettingsStore.persist.setOptions({ storage });
+      }
+    };
+
+    it('should keep the links and media defaults when rehydrating a store persisted without them', async () => {
+      await rehydrateFrom({ privacy: { ...defaultPrivacyPreferences, showConfirm: false } });
+
+      expect(useSettingsStore.getState().privacy.showConfirm).toBe(false);
+      expect(useSettingsStore.getState().media).toEqual(defaultMediaPreferences);
+    });
+
+    it('should keep the links and media preferences when nothing is persisted', async () => {
+      useSettingsStore.getState().setPlayers(['tidal'], ['vimeo']);
+      await rehydrateFrom(undefined);
+
+      expect(useSettingsStore.getState().media).toEqual({
+        playerOrder: ['tidal'],
+        hiddenPlayers: ['vimeo'],
+        embedsUpFront: true,
+      });
+    });
+
+    it('should keep the players of a store persisted with them', async () => {
+      const media = { playerOrder: ['deezer', 'youtube'], hiddenPlayers: ['vimeo'], embedsUpFront: true };
+      await rehydrateFrom({ media });
+
+      expect(useSettingsStore.getState().media).toEqual(media);
     });
 
     it('should update privacy preferences independently', () => {

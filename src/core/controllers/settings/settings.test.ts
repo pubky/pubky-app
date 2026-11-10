@@ -10,6 +10,7 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 import type { NotificationStore } from '@/stores/notification/notification.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import {
+  defaultMediaPreferences,
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type SettingsState,
@@ -38,12 +39,15 @@ const mockStoreActions = {
   setHideActiveFriends: vi.fn(),
   setHideSearch: vi.fn(),
   setNeverShowPosts: vi.fn(),
+  setPlayers: vi.fn(),
+  setEmbedsUpFront: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
   setMutedUsers: vi.fn(),
   clearMutedUsers: vi.fn(),
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
+  media: defaultMediaPreferences,
   muted: [] as string[],
   updatedAt: 1000,
   version: 1,
@@ -52,6 +56,7 @@ const mockStoreActions = {
 const mockSettingsState: SettingsState = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
+  media: defaultMediaPreferences,
   muted: [],
   updatedAt: 1000,
   version: 1,
@@ -174,6 +179,24 @@ describe('SettingsController', () => {
       await SettingsController.setBlurCensored(true);
 
       expect(mockStoreActions.setBlurCensored).toHaveBeenCalledWith(true);
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+  });
+
+  describe('setPlayers', () => {
+    it('should update zustand store and sync to homeserver', async () => {
+      await SettingsController.setPlayers(['tidal'], ['youtube']);
+
+      expect(mockStoreActions.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube']);
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+  });
+
+  describe('setEmbedsUpFront', () => {
+    it('should update zustand store and sync to homeserver', async () => {
+      await SettingsController.setEmbedsUpFront(false);
+
+      expect(mockStoreActions.setEmbedsUpFront).toHaveBeenCalledWith(false);
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

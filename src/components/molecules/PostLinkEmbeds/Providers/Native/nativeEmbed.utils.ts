@@ -9,22 +9,25 @@ import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/p
  * - `embed`: the platform's own embed in the resource frame, up front: no Also on, or no card.
  *
  * An embed that failed (a deleted post) gives way to the card; one the viewer has pressed in
- * (`engaged`) stays, so a card read later never unloads a playing video.
+ * (`engaged`) stays, so a card read later never unloads a playing video. A viewer who turned
+ * platform embeds up front off (`upFront: false`) gets the card whenever there is one.
  */
 export function chooseNativeEmbed({
   hasCard,
   hasAlsoOn,
   embedFailed = false,
   engaged = false,
+  upFront = true,
 }: {
   hasCard: boolean;
   hasAlsoOn: boolean;
   embedFailed?: boolean;
   engaged?: boolean;
+  upFront?: boolean;
 }): 'card' | 'embed' {
   if (!hasCard) return 'embed';
   if (embedFailed) return 'card';
-  return hasAlsoOn && !engaged ? 'card' : 'embed';
+  return (hasAlsoOn || !upFront) && !engaged ? 'card' : 'embed';
 }
 
 /**

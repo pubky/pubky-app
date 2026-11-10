@@ -65,6 +65,11 @@ export function useSettingsActions(): UseSettingsActionsResult {
   const setNeverShowPosts = (neverShowPosts: boolean) =>
     run(() => SettingsController.setNeverShowPosts(neverShowPosts));
 
+  const setPlayers = (playerOrder: string[], hiddenPlayers: string[]) =>
+    run(() => SettingsController.setPlayers(playerOrder, hiddenPlayers));
+
+  const setEmbedsUpFront = (embedsUpFront: boolean) => run(() => SettingsController.setEmbedsUpFront(embedsUpFront));
+
   return {
     setNotificationPreference,
     setShowConfirm,
@@ -75,6 +80,8 @@ export function useSettingsActions(): UseSettingsActionsResult {
     setHideActiveFriends,
     setHideSearch,
     setNeverShowPosts,
+    setPlayers,
+    setEmbedsUpFront,
     error,
   };
 }

@@ -26,6 +26,7 @@ import { AnimatedHeight, ResourcePlayerFrame } from '@/molecules/ResourcePlayer/
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { GenericPreview } from './GenericPreview';
 import { useSlowRead } from './useSlowRead';
 
@@ -85,7 +86,9 @@ interface GenericResourcePreviewProps {
  *
  * A card on such a service with no Also on shows that service's embed up front instead, in the
  * resource frame (`ResourceEmbedFrame`), as `NativeEmbedResource` does for a video; in a post, the
- * composer and a collection alike. It plays only on a press inside it.
+ * composer and a collection alike. It plays only on a press inside it. A viewer who turned platform
+ * embeds up front off (Settings, Links & Media) gets our card instead, the service's player only on
+ * Play on.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -130,6 +133,8 @@ function ResourcePreview({
   const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
   // The up-front service embed that has loaded (see `embedTarget`); another link loads anew.
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
+  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
   const withActions = !isComposing && !isNested;
   // A card with an action row plays its services in place; not while composing or in a quoted post.
   const { playOn, renderBody, isOpen } = useCardPlayer(
@@ -149,11 +154,11 @@ function ResourcePreview({
   // the card's own (`pickAlsoOn`).
   const cardAlsoOn = shownCard ? getMenuAlsoOn(shownCard, url) : null;
   const alsoOn = withActions ? cardAlsoOn : null;
-  // No Also on and the link (or the card's canonical link) is on a service with an embed: that embed,
-  // up front, in the resource frame.
+  // No Also on and the link (or the card's canonical link) is on a service with an embed, not removed
+  // from Players: that embed, up front, in the resource frame.
   const embedTarget =
-    !isNested && shownCard && !cardAlsoOn && getResourceStatus(shownCard.status) === PinakesStatus.OK
-      ? getEmbedTarget(url, shownCard)
+    embedsUpFront && !isNested && shownCard && !cardAlsoOn && getResourceStatus(shownCard.status) === PinakesStatus.OK
+      ? getEmbedTarget(url, shownCard, hiddenPlayers)
       : null;
   // The footer acts on the card's canonical link, its other spellings read along (`getResourceTarget`).
   const target = getResourceTarget(shownCard, url);

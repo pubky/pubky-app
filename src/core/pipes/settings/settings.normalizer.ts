@@ -4,6 +4,8 @@ import type { Pubky } from '@/models/models.types';
 import {
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
+  type MediaPreferences,
+  normalizeMediaPreferences,
   type NotificationPreferences,
   type PrivacyPreferences,
   type SettingsState,
@@ -17,6 +19,7 @@ import {
 export interface SettingsJson {
   notifications: NotificationPreferences;
   privacy: PrivacyPreferences;
+  media: MediaPreferences;
   updatedAt: number;
   version: number;
 }
@@ -24,13 +27,14 @@ export interface SettingsJson {
 /**
  * Input type for parsing settings from homeserver.
  * Allows partial nested objects to support backwards compatibility
- * when new fields are added to notifications or privacy.
+ * when new fields are added to notifications, privacy or media.
  * Unknown fields written by older clients (e.g. the removed `language`
  * preference) are simply ignored.
  */
 export interface SettingsJsonInput {
   notifications?: Partial<NotificationPreferences>;
   privacy?: Partial<PrivacyPreferences>;
+  media?: Partial<MediaPreferences>;
   updatedAt?: number;
   version?: number;
 }
@@ -62,6 +66,7 @@ export class SettingsNormalizer {
     return {
       notifications: store.notifications,
       privacy: store.privacy,
+      media: store.media,
       muted: store.muted,
       updatedAt: store.updatedAt,
       version: store.version,
@@ -93,6 +98,7 @@ export class SettingsNormalizer {
     const settingsJson: SettingsJson = {
       notifications: settings.notifications,
       privacy: settings.privacy,
+      media: settings.media,
       updatedAt: settings.updatedAt,
       version: settings.version,
     };
@@ -124,6 +130,7 @@ export class SettingsNormalizer {
         ...defaultPrivacyPreferences,
         ...json.privacy,
       },
+      media: normalizeMediaPreferences(json.media),
       muted: [], // Muted is not synced to homeserver, always defaults to empty
       updatedAt: json.updatedAt ?? Date.now(),
       version: json.version ?? 1,
