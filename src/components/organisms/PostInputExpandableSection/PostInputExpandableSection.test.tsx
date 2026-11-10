@@ -7,6 +7,8 @@ import { PostInputExpandableSection } from './PostInputExpandableSection';
 
 // Use real libs - use actual implementations
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {

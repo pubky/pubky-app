@@ -5,6 +5,8 @@ import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceLinkCard } from './ResourceLinkCard';
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({ useOgMetadata: vi.fn() }));
 
 const URL = 'https://www.example.com/articles/a-long-path?ref=feed';
@@ -22,6 +24,7 @@ describe('ResourceLinkCard', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    mockPush.mockClear();
   });
 
   it('shows the link’s preview in the card frame, with the host as its source', () => {
@@ -64,13 +67,16 @@ describe('ResourceLinkCard', () => {
     );
   });
 
-  it('is a click-through to the link', () => {
+  it('opens the link’s resource page on a click on the card: only its source opens the link', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     render(<ResourceLinkCard url={URL} />);
 
+    fireEvent.click(screen.getByTestId('resource-link-card-image'));
     fireEvent.click(screen.getByTestId('resource-link-card'));
 
-    expect(open).toHaveBeenCalledWith(URL, '_blank', 'noopener,noreferrer');
+    expect(mockPush).toHaveBeenCalledTimes(2);
+    expect(mockPush).toHaveBeenCalledWith(getResourceRoute(URL));
+    expect(open).not.toHaveBeenCalled();
   });
 
   it('shows the frame skeleton while the preview loads', () => {

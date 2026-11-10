@@ -24,7 +24,8 @@ interface ResourceLinkCardProps {
 /**
  * An external resource Pinakes has no card for: the link's own preview (its Open Graph title and
  * image) in the same frame as a card, with the host as the source on the right and the same
- * actions. Without a preview the link itself, without its scheme, is the title.
+ * actions. Without a preview the link itself, without its scheme, is the title. The title and a
+ * click on the card open the link's resource page; the source opens the link.
  *
  * A link the preview reads as an image, video or audio file keeps `GenericPreview`, which shows or
  * plays it inline.
@@ -43,7 +44,7 @@ export function ResourceLinkCard({ url, actions }: ResourceLinkCardProps) {
   const showImage = imageUrl !== null && failedImage !== imageUrl;
 
   return (
-    <ResourceCardFrame clickThroughUrl={linkUrl} data-testid="resource-link-card">
+    <ResourceCardFrame clickThroughUrl={linkUrl ? getResourceRoute(url) : null} data-testid="resource-link-card">
       <Container overrideDefaults className={cn('flex min-w-0 flex-col gap-3 p-4', linkUrl && 'cursor-pointer')}>
         <ResourceCardHeader typeLabel={null} sourceUri={url} href={linkUrl} siteName={getLinkHost(url)} />
         <Container overrideDefaults className="flex min-w-0 gap-4">

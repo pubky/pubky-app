@@ -19,6 +19,8 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { PinakesStatus } from '@/services/pinakes/pinakes.types';
 import { GenericResourcePreview } from './GenericResourcePreview';
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 vi.mock('@/config/pinakes', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/pinakes')>()),
   isPinakesConfigured: vi.fn(),
@@ -44,6 +46,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     linkUrl,
     title,
     isOnScreen,
+    playOn,
     extraMenuContent,
   }: {
     uri: string;
@@ -52,6 +55,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     linkUrl?: string | null;
     title?: string | null;
     isOnScreen?: boolean;
+    playOn?: React.ReactNode;
     extraMenuContent?: ResourceExtraMenuContent;
   }) => (
     <div
@@ -65,6 +69,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-on-screen={String(isOnScreen)}
       data-has-extra-menu={String(Boolean(extraMenuContent))}
     >
+      {playOn}
       {extraMenuContent && (
         <DropdownMenu>
           <DropdownMenuTrigger data-testid="mock-more-trigger">More options</DropdownMenuTrigger>
@@ -412,7 +417,9 @@ describe('GenericResourcePreview', () => {
 
       render(<GenericResourcePreview url={videoFixture.uri} />);
 
-      expect(screen.getByTestId('resource-card')).not.toHaveAttribute('data-click-through');
+      // The card still opens the resource page; only its source opens the link.
+      fireEvent.click(screen.getByTestId('resource-card-description'));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
       const menu = openMoreMenu();
       const rows = within(within(menu).getByRole('group', { name: 'Also on' })).getAllByRole('menuitem');
       // A YouTube video: the other YouTube upload is its own service.
@@ -422,6 +429,29 @@ describe('GenericResourcePreview', () => {
       expect(rows.map((row) => row.getAttribute('href'))).not.toContain(getResourceRoute(videoFixture.uri));
       // The card's menu lists only where the resource is: Also on, no Similar.
       expect(within(menu).queryByText(/similar/i)).not.toBeInTheDocument();
+    });
+
+    it('still opens the resource page from the card once Play on puts a player in its body, never from the player', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      mockUsePinakesCard.mockReturnValue({ data: videoFixture, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={videoFixture.uri} />);
+
+      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
+      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+
+      // A click (or a middle click) on or around the player never leaves what plays.
+      fireEvent.click(screen.getByTestId('resource-player'));
+      fireEvent(
+        screen.getByTestId('resource-player'),
+        new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }),
+      );
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+      open.mockRestore();
+      // A click on the rest of the card, its header, still opens the page.
+      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
+      fireEvent.click(screen.getByTestId('resource-card-type'));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
     });
 
     it('adds nothing to the ⋯ menu, and stays a click-through, when Also on lists only its own service', () => {

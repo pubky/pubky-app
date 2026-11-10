@@ -130,7 +130,7 @@ function ResourcePreview({
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const withActions = !isComposing && !isNested;
   // A card with an action row plays its services in place; not while composing or in a quoted post.
-  const { playOn, renderBody } = useCardPlayer(
+  const { playOn, renderBody, isOpen } = useCardPlayer(
     withActions && card && !hasNothingToShow(card) ? card : null,
     url,
     actionSurface,
@@ -143,8 +143,8 @@ function ResourcePreview({
   const shownCard = card && !hasNothingToShow(card) ? card : null;
   // The ⋯ menu copies what the card links.
   const linkUrl = shownCard ? getResourceLinks(shownCard, url).linkUrl : getHttpUrl(url);
-  // A card on other services too lists them in its ⋯ menu ("Also on") and is then no click-through:
-  // one row per service, never the card's own (`pickAlsoOn`).
+  // A card on other services too lists them in its ⋯ menu ("Also on"): one row per service, never
+  // the card's own (`pickAlsoOn`).
   const cardAlsoOn = shownCard ? getMenuAlsoOn(shownCard, url) : null;
   const alsoOn = withActions ? cardAlsoOn : null;
   // No Also on and the link (or the card's canonical link) is on a service with an embed: that embed,
@@ -188,9 +188,9 @@ function ResourcePreview({
       card={shownCard}
       href={url}
       actions={actions}
-      hasAlsoOn={alsoOn !== null}
       isOnScreen={isOnScreen}
       renderBody={renderBody}
+      isBodyReplaced={isOpen}
     />
   );
 }

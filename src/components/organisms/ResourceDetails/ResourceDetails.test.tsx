@@ -35,6 +35,7 @@ vi.mock('react-tweet', () => ({
   TweetSkeleton: () => <div data-testid="twitter-tweet-skeleton" />,
   TweetNotFound: () => <div data-testid="twitter-tweet-not-found" />,
 }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => mocks.configured, PINAKES_RELATED_LIMIT: 5 }));
 vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({ usePinakesGroup: vi.fn() }));
 vi.mock('@/hooks/usePinakesRelated/usePinakesRelated', () => ({ usePinakesRelated: vi.fn() }));

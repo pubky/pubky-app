@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { ArrowUpRight } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
@@ -18,11 +19,15 @@ import { useResourceSurface } from './ResourceSurfaceContext';
 export const CARD_MUTED_TEXT =
   '[--color-muted-foreground:color-mix(in_oklab,var(--foreground)_58%,var(--embed))] light:[--color-muted-foreground:color-mix(in_oklab,var(--foreground)_66%,var(--embed))]';
 
-interface ResourceCardFrameProps extends Omit<React.HTMLAttributes<HTMLElement>, 'onClick' | 'onKeyDown'> {
+interface ResourceCardFrameProps extends Omit<
+  React.HTMLAttributes<HTMLElement>,
+  'onClick' | 'onAuxClick' | 'onKeyDown'
+> {
   /**
-   * Where a click on the card itself goes (a new tab), or `null` for a card with no click-through.
-   * Keyboard users reach the same link through the source link in the header. The card's header
-   * and body show the pointer, its bottom zone of actions and tags does not.
+   * The resource's page (`getResourceRoute`) a click on the card itself opens, as its title does,
+   * or `null` for a card with no click-through. Keyboard users reach the same page through the
+   * title (in `ResourceEmbedFrame`, the type). The card's header and body show the pointer, its
+   * bottom zone of actions and tags does not.
    */
   clickThroughUrl: string | null;
   children: ReactNode;
@@ -35,9 +40,12 @@ interface ResourceCardFrameProps extends Omit<React.HTMLAttributes<HTMLElement>,
  * overrides the surface through `className`.
  *
  * With a `clickThroughUrl`, a mouse click anywhere on the card that is not one of its controls
- * opens the link in a new tab. The frame itself has no interactive role, so no control is nested
- * in another; clicks, and Enter or Space on the card's links and controls, never reach the
- * surrounding post (a quoted post opens itself on either key, wherever it came from).
+ * opens the resource's page as a link to it would (`usePostNavigation` for a post): in this tab, or
+ * in a new one on Cmd/Ctrl/Shift-click, on a middle click, and where links may not navigate (the
+ * composer, a post quoted in a dialog). Only the header's source opens the link itself. The frame
+ * has no interactive role, so no control is nested in another; clicks, and Enter or Space on the
+ * card's links and controls, never reach the surrounding post (a quoted post opens itself on
+ * either key, wherever it came from).
  *
  * A card that is the item itself, in no post (a collection's), or that sits in a quoted post
  * (`ResourceSurfaceProvider` `card`) stands on the post card's surface instead, as the resource
@@ -45,11 +53,25 @@ interface ResourceCardFrameProps extends Omit<React.HTMLAttributes<HTMLElement>,
  */
 export function ResourceCardFrame({ clickThroughUrl, className, children, ...props }: ResourceCardFrameProps) {
   const onCard = useResourceSurface() === 'card';
+  const router = useRouter();
+  const navigable = useIsPostPreviewNavigable();
+
   const handleClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     if (!clickThroughUrl || !isCardSurfaceClick(event.currentTarget, event.target)) return;
     // Selecting text on the card is not a click on it.
     if (window.getSelection()?.toString()) return;
+    if (!navigable || event.metaKey || event.ctrlKey || event.shiftKey) {
+      window.open(clickThroughUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    router.push(clickThroughUrl);
+  };
+
+  const handleAuxClick = (event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (event.button !== 1 || !clickThroughUrl || !isCardSurfaceClick(event.currentTarget, event.target)) return;
+    event.preventDefault();
     window.open(clickThroughUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -62,6 +84,7 @@ export function ResourceCardFrame({ clickThroughUrl, className, children, ...pro
       as="article"
       overrideDefaults
       onClick={handleClick}
+      onAuxClick={handleAuxClick}
       onKeyDown={handleKeyDown}
       data-click-through={clickThroughUrl ? 'true' : undefined}
       className={cn(
