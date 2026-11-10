@@ -13,9 +13,15 @@ interface ResourceCardSkeletonProps {
   size?: 'default' | 'large';
 }
 
+/** A skeleton piece that stands out on the card's frame, which is the app skeleton's own colour. */
+function SkeletonPiece({ className }: { className?: string }) {
+  return <Skeleton className={cn('bg-foreground/10 motion-reduce:animate-none', className)} />;
+}
+
 /**
  * Loading state of `ResourceCard`, in its frame: type and source on top, image and title beside
  * it, then the bottom zone (the tags' "+", then the action buttons, as on a post).
+ * In a post it is announced as busy ("Loading link preview").
  */
 export function ResourceCardSkeleton({ withActions = false, size = 'default' }: ResourceCardSkeletonProps) {
   const isLarge = size === 'large';
@@ -24,22 +30,25 @@ export function ResourceCardSkeleton({ withActions = false, size = 'default' }: 
       overrideDefaults
       data-testid="resource-card-skeleton"
       data-size={size}
+      aria-busy="true"
       className={cn(
         'flex w-full min-w-0 flex-col overflow-hidden rounded-md bg-embed',
         isLarge && 'bg-card text-card-foreground shadow-sm',
       )}
     >
       <Container overrideDefaults className={cn('flex flex-col gap-3', isLarge ? 'p-6' : 'p-4')}>
+        {/* Read in place of the card; the resource page names its own loading section. */}
+        {!isLarge && <span className="sr-only">Loading link preview</span>}
         <Container overrideDefaults className="flex items-center justify-between gap-3">
-          <Skeleton className="h-4 w-20 rounded-md" />
-          <Skeleton className="h-4 w-24 rounded-md" />
+          <SkeletonPiece className="h-4 w-20 rounded-md" />
+          <SkeletonPiece className="h-4 w-24 rounded-md" />
         </Container>
         <Container overrideDefaults className="flex gap-4">
-          <Skeleton className={cn('shrink-0 rounded-md', isLarge ? 'size-24 sm:size-40' : 'size-20 sm:size-24')} />
+          <SkeletonPiece className={cn('shrink-0 rounded-md', isLarge ? 'size-24 sm:size-40' : 'size-20 sm:size-24')} />
           <Container className="min-w-0 flex-1 gap-2">
-            <Skeleton className={cn('w-48 max-w-full rounded-md', isLarge ? 'h-7 sm:h-8 sm:w-72' : 'h-5')} />
-            <Skeleton className="h-4 w-full rounded-md" />
-            <Skeleton className="h-4 w-32 rounded-md" />
+            <SkeletonPiece className={cn('w-48 max-w-full rounded-md', isLarge ? 'h-7 sm:h-8 sm:w-72' : 'h-5')} />
+            <SkeletonPiece className="h-4 w-full rounded-md" />
+            <SkeletonPiece className="h-4 w-32 rounded-md" />
           </Container>
         </Container>
       </Container>
@@ -52,7 +61,7 @@ export function ResourceCardSkeleton({ withActions = false, size = 'default' }: 
             isLarge ? 'px-6 py-4' : 'px-4 py-3',
           )}
         >
-          <Skeleton className="size-8 rounded-md" />
+          <SkeletonPiece className="size-8 rounded-md" />
           <PostActionsBarSkeleton widths={RESOURCE_ACTION_BUTTON_WIDTHS} surface={isLarge ? 'default' : 'muted'} />
         </Container>
       )}

@@ -59,6 +59,12 @@ export function getResourceTypeLabel(card: Pick<TPinakesCard, 'type' | 'type_pat
     .join(' ');
 }
 
+/** The card's types, nearest first: its `type`, then `type_path` from the deepest. */
+export function getNearestTypes(card: Pick<TPinakesCard, 'type' | 'type_path'>): string[] {
+  const path = [...card.type_path].reverse();
+  return card.type && path[0] !== card.type ? [card.type, ...path] : path;
+}
+
 /**
  * Which details a card shows, from the nearest ancestor in its `type_path` that has a family
  * (`Restaurant` → `LocalBusiness` → `Place`). Types with no such ancestor are plain web cards.
