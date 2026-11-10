@@ -16,6 +16,7 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { parseArticleContent } from '@/libs/post/articleContent';
+import { getWebEmbedUrl } from '@/libs/post/postEmbedUrl';
 import type { Pubky } from '@/models/models.types';
 import type { CollectionContentInput } from '@/models/post/collection/collectionPost.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -51,6 +52,8 @@ export type TLocalPostEdit = {
   attachments?: string[] | null;
   /** `undefined` leaves the column untouched. */
   kind?: string;
+  /** The web link the post embeds; `null` for none, `undefined` leaves the relationships untouched. */
+  embed?: string | null;
 };
 
 /** A stored collection envelope with nothing in it, for a cached row whose content is not one. */
@@ -139,13 +142,15 @@ export class PostNormalizer {
    * edit is a change applied to the head's own items (`CollectionPostContent.apply`), never a list
    * read elsewhere; `null` when the head already holds it and nothing else in the edit changes the
    * head, so nothing is written. A stored collection this client cannot normalize fails with its own
-   * validation message.
+   * validation message. A new `embed` replaces a web link or none, never a repost's post (or another
+   * reference that is not a web link).
    */
   static toEdit({ owner, head, edit }: TToEditParams): BuiltPost | null {
     return this.build(
       () => {
         const post: Post = { ...head.post };
         if (edit.kind !== undefined) post.kind = edit.kind;
+        if (edit.embed !== undefined && this.isWebEmbedOrNone(head.post.embed)) post.embed = edit.embed;
         if (edit.attachmentUris !== undefined) {
           post.attachments = this.nextAttachments(
             head.post.attachments,
@@ -159,7 +164,13 @@ export class PostNormalizer {
           const current = CollectionPostContent.parse(head.post.content);
           if (!current) throw this.invalidStoredCollection();
           const next = CollectionPostContent.apply(current, edit.collection);
-          if (next === current && edit.kind === undefined && edit.attachmentUris === undefined) return null;
+          if (
+            next === current &&
+            edit.kind === undefined &&
+            edit.attachmentUris === undefined &&
+            edit.embed === undefined
+          )
+            return null;
           post.content = encodeContent(CollectionPostContent.toStored(envelope.content, next));
         } else if (envelope?.kind === 'article') {
           const article = edit.content === undefined ? envelope.content : this.parseArticle(edit.content);
@@ -191,6 +202,7 @@ export class PostNormalizer {
   static toLocalEdit({ row, edit }: TToLocalEditParams): TLocalPostEdit {
     const local: TLocalPostEdit = { content: row.content };
     if (edit.kind !== undefined) local.kind = toLocalPostKind(edit.kind);
+    if (edit.embed !== undefined) local.embed = edit.embed;
     if (edit.attachmentUris !== undefined) {
       local.attachments = edit.attachmentUris && edit.attachmentUris.length > 0 ? edit.attachmentUris : null;
     }
@@ -217,6 +229,11 @@ export class PostNormalizer {
       local.content = edit.content;
     }
     return local;
+  }
+
+  /** Whether a stored `embed` is a web link or none: what an edit may replace. */
+  static isWebEmbedOrNone(embed: string | null | undefined): boolean {
+    return !embed || getWebEmbedUrl(embed) !== null;
   }
 
   /** The attachments in `uris` order: a kept one keeps its stored object, a new one gets its name. */

@@ -20,6 +20,7 @@ const IconsButton = {
 
 export function PostInputExpandableSection({
   content,
+  showLinkPreview = true,
   tags,
   isSubmitting,
   isArticle,
@@ -54,7 +55,7 @@ export function PostInputExpandableSection({
     <>
       <Container className="gap-4">
         {/* A link preview must not navigate away from the post being written. */}
-        {hasContent && !isArticle && (
+        {hasContent && !isArticle && showLinkPreview && (
           <PostPreviewNavigableProvider navigable={false}>
             <PostLinkEmbeds content={content} isComposing />
           </PostPreviewNavigableProvider>

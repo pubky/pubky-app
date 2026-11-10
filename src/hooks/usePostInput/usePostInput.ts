@@ -35,6 +35,7 @@ import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { isArticleCoverContentType, resolveArticleCover, settleArticleSlotZero } from '@/libs/post/articleCover';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineMedia';
+import { getComposerEmbedUrl, getComposerEmbedUrls, getEditEmbedSeed } from '@/libs/post/postEmbedUrl';
 import { isPubkyIdentifier, stripPubkyPrefix } from '@/libs/utils/utils';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
@@ -110,6 +111,7 @@ export function usePostInput({
   editAttachmentUris,
   editContent,
   editIsArticle,
+  editEmbedUrl,
   onSuccess,
   placeholder,
   successToastTitle,
@@ -167,6 +169,43 @@ export function usePostInput({
   } = usePost({ keepInlineMedia, active });
   const timelineFeed = useTimelineFeedContext();
   const { undoRepost } = useUndoRepost(isCollectionShare, { outlivesOwner: true });
+
+  // A new post embeds one link of its text: the first, or the one the author picks from the card's
+  // Switch menu while the text holds several. The pick holds while the text still has that link, so
+  // typing elsewhere does not move the card; once it is no longer among the links that can be
+  // embedded, the pick is forgotten. The other links are offered only when the first one can be
+  // embedded: a text that opens with a link that can't keeps its plain preview. The author may remove
+  // the embed; the link stays in the text. The removal is kept per link, so a different link is
+  // embedded again. An edit of a note follows the same rules, starting from the post's embed while
+  // the text holds it; `editEmbedUrl` left out (a repost, a reply, an article, a lock, unknown
+  // relationships) keeps the stored embed.
+  const isEmbedEdit = variant === POST_INPUT_VARIANT.EDIT && editEmbedUrl !== undefined;
+  // Seeded once from the mount snapshot, like the edit text
+  const [editEmbedSeed] = useState(() => (isEmbedEdit ? getEditEmbedSeed(editContent ?? '', editEmbedUrl) : null));
+  const openedEmbedUrl = editEmbedSeed?.opened ?? null;
+  const [pickedEmbedUrl, setPickedEmbedUrl] = useState<string | null>(null);
+  const [removedEmbedUrl, setRemovedEmbedUrl] = useState<string | null>(editEmbedSeed?.removed ?? null);
+  const firstEmbedUrl =
+    (variant === POST_INPUT_VARIANT.POST || isEmbedEdit) && !isArticle ? getComposerEmbedUrl(content) : null;
+  const embedUrls = firstEmbedUrl ? getComposerEmbedUrls(content) : [];
+  const isPickInText = pickedEmbedUrl !== null && embedUrls.includes(pickedEmbedUrl);
+  // Forget a pick the text no longer holds (state adjusted while rendering, not in an effect)
+  if (pickedEmbedUrl !== null && !isPickInText) setPickedEmbedUrl(null);
+  const isOpenedInText = openedEmbedUrl !== null && embedUrls.includes(openedEmbedUrl);
+  const selectedEmbedUrl = isPickInText ? pickedEmbedUrl : isOpenedInText ? openedEmbedUrl : firstEmbedUrl;
+  const isEmbedRemoved = selectedEmbedUrl !== null && selectedEmbedUrl === removedEmbedUrl;
+  const embedUrl = isEmbedRemoved ? null : selectedEmbedUrl;
+  const embedChoices = embedUrl !== null && embedUrls.length > 1 ? embedUrls : [];
+  const pickEmbed = (url: string) => {
+    if (embedUrls.includes(url)) setPickedEmbedUrl(url);
+  };
+  const removeEmbed = () => setRemovedEmbedUrl(selectedEmbedUrl);
+  const restoreEmbed = () => setRemovedEmbedUrl(null);
+
+  // A save writes the embed only when it differs from the one the edit opened with, so an edit of the
+  // text alone keeps it. A stored embed the text does not offer opens as none, so a link shown in its
+  // place is saved.
+  const isEmbedChanged = isEmbedEdit && embedUrl !== openedEmbedUrl;
 
   // Article edits show only the cover in the attachment strip — inline media
   // lives in the body. Where the cover is and what each `attachment:{n}` names
@@ -547,6 +586,9 @@ export function usePostInput({
         return;
       }
 
+      setRemovedEmbedUrl(null);
+      setPickedEmbedUrl(null);
+
       if (!isArticle && attachments.length) {
         useLocalFilesStore.getState().setPostAttachments(createdPostId, attachments.map(newFileToLocalAttachment));
       }
@@ -634,12 +676,14 @@ export function usePostInput({
           originalCoverUri: editCoverUri,
           preservedAttachmentUris: editPreservedUris,
           article: latestArticle,
+          // The embed the author chose, or null for none; left out, the stored embed stays
+          embedUrl: isEmbedChanged ? embedUrl : undefined,
           onSuccess: handleSuccess,
         });
         break;
       case POST_INPUT_VARIANT.POST:
       default:
-        await post({ article: latestArticle, onSuccess: handleSuccess });
+        await post({ article: latestArticle, embedUrl: embedUrl ?? undefined, onSuccess: handleSuccess });
         break;
     }
   }, [
@@ -653,6 +697,8 @@ export function usePostInput({
     parentUri,
     originalPostId,
     successToastTitle,
+    embedUrl,
+    isEmbedChanged,
     reply,
     post,
     repost,
@@ -1010,6 +1056,9 @@ export function usePostInput({
     serializeArticleForLock,
     getLatestArticle,
     discardPendingArticle,
+    embedUrl,
+    embedChoices,
+    isEmbedRemoved,
 
     // Mention autocomplete state
     mentionUsers,
@@ -1034,6 +1083,9 @@ export function usePostInput({
     handleFilesAdded,
     handleFileClick,
     removeExistingAttachment,
+    removeEmbed,
+    restoreEmbed,
+    pickEmbed,
     handleDragEnter,
     handleDragLeave,
     handleDragOver,

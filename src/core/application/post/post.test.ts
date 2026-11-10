@@ -631,6 +631,82 @@ describe('Post Application', () => {
       });
     });
 
+    describe('the embedded link', () => {
+      const LINK = 'https://tidal.com/track/3524506';
+      const OTHER = 'https://luma.com/376whqyw';
+      const linked = buildPost(OWNER, { content: `${LINK} ${OTHER}`, embed: LINK });
+      const linkedId = `${OWNER}:${linked.id}`;
+      const relationships = { id: linkedId, replied: null, reposted: null, embedded: LINK, mentioned: [] };
+
+      it('writes the new embed in the next version, and projects and converges the row onto it', async () => {
+        storeVersions(linked);
+        const { readDetailsSpy, editSpy, putBlobSpy } = setupEditSpies();
+        readDetailsSpy.mockResolvedValue({ ...originalRow, id: linkedId, lock: null });
+        vi.spyOn(LocalPostService, 'readRelationships').mockResolvedValue(relationships);
+
+        await PostApplication.commitEdit({
+          compositePostId: linkedId,
+          edit: { content: `${LINK} ${OTHER}`, embed: OTHER },
+        });
+
+        expect(lastPut(putBlobSpy).post.embed).toBe(OTHER);
+        expect(editSpy).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({ compositePostId: linkedId, embed: OTHER }),
+        );
+        expect(editSpy).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({ compositePostId: linkedId, embed: OTHER }),
+        );
+      });
+
+      it('drops the embed with null', async () => {
+        storeVersions(linked);
+        const { readDetailsSpy, putBlobSpy } = setupEditSpies();
+        readDetailsSpy.mockResolvedValue({ ...originalRow, id: linkedId, lock: null });
+        vi.spyOn(LocalPostService, 'readRelationships').mockResolvedValue(relationships);
+
+        await PostApplication.commitEdit({
+          compositePostId: linkedId,
+          edit: { content: `${LINK} ${OTHER}`, embed: null },
+        });
+
+        expect(lastPut(putBlobSpy).post.embed).toBeNull();
+      });
+
+      it('keeps the stored embed and leaves the relationships alone when the edit carries none', async () => {
+        storeVersions(linked);
+        const { readDetailsSpy, editSpy, putBlobSpy } = setupEditSpies();
+        readDetailsSpy.mockResolvedValue({ ...originalRow, id: linkedId, lock: null });
+        const readRelationshipsSpy = vi.spyOn(LocalPostService, 'readRelationships');
+
+        await PostApplication.commitEdit({ compositePostId: linkedId, edit: { content: 'Edited' } });
+
+        expect(lastPut(putBlobSpy).post.embed).toBe(LINK);
+        expect(readRelationshipsSpy).not.toHaveBeenCalled();
+        expect(editSpy.mock.calls.every(([params]) => params.embed === undefined)).toBe(true);
+      });
+
+      it('puts the embed the row had back when the PUT fails', async () => {
+        storeVersions(linked);
+        const { readDetailsSpy, editSpy, putBlobSpy } = setupEditSpies();
+        readDetailsSpy.mockResolvedValue({ ...originalRow, id: linkedId, lock: null });
+        // A post created on this device holds its web embed in `reposted`
+        vi.spyOn(LocalPostService, 'readRelationships').mockResolvedValue({
+          ...relationships,
+          reposted: LINK,
+          embedded: null,
+        });
+        putBlobSpy.mockRejectedValue(new Error('Homeserver sync failed'));
+
+        await expect(
+          PostApplication.commitEdit({ compositePostId: linkedId, edit: { content: 'x', embed: OTHER } }),
+        ).rejects.toThrow('Homeserver sync failed');
+
+        expect(editSpy).toHaveBeenLastCalledWith(expect.objectContaining({ compositePostId: linkedId, embed: LINK }));
+      });
+    });
+
     it('edits the newest version when the post was edited before, not its first one', async () => {
       const second = editPost(OWNER, head.url, { ...head.object, content: 'second' });
       storeVersions(head, second);

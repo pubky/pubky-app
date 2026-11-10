@@ -8,9 +8,10 @@ import { PostActionButton, type PostActionSurface } from '@/organisms/PostAction
 
 /**
  * "Post about this", in the post's repost button: opens the new-post composer with the external
- * resource's link as its text. No count: Nexus does not count the posts that embed a link. Signed
- * out, it asks to sign in. Without a web link (`null`: a resource known only as `isbn:`, `doi:`, ...)
- * it is disabled, as only a web link can be posted about.
+ * resource's link as its text. As the first link of a new post it is selected as the post's embed,
+ * so the composer shows its card with the X that removes it. No count: Nexus does not count the posts
+ * that embed a link. Signed out, it asks to sign in. Without a web link (`null`: a resource known
+ * only as `isbn:`, `doi:`, ...) it is disabled, as the composer embeds web links only.
  * `surface` is what the row sits on (`muted` on a card in a post).
  */
 export function ResourcePostButton({ uri, surface = 'muted' }: { uri: string | null; surface?: PostActionSurface }) {

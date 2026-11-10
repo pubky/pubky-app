@@ -296,6 +296,33 @@ describe('PostNormalizer', () => {
       );
     });
 
+    it("replaces a web embed or none with the edit's, drops it with null, and keeps it when left out", () => {
+      const LINK = 'https://tidal.com/track/3524506';
+      const OTHER = 'https://luma.com/376whqyw';
+      const linked = head({ content: `${LINK} ${OTHER}`, embed: LINK });
+      const plain = head({ content: `${LINK} ${OTHER}` });
+      const next = (stored: ReturnType<typeof head>, embed?: string | null) =>
+        PostNormalizer.toEdit({ owner: OWNER, head: stored, edit: { content: `${LINK} ${OTHER}`, embed } })!.object
+          .embed;
+
+      expect(next(linked, OTHER)).toBe(OTHER);
+      expect(next(linked, null)).toBeNull();
+      expect(next(linked)).toBe(LINK);
+      expect(next(plain, LINK)).toBe(LINK);
+    });
+
+    it("never replaces a repost's post with a web embed", () => {
+      const repost = head({ content: 'Quote', embed: PARENT });
+
+      const next = PostNormalizer.toEdit({
+        owner: OWNER,
+        head: repost,
+        edit: { content: 'Quote https://luma.com/376whqyw', embed: 'https://luma.com/376whqyw' },
+      });
+
+      expect(next!.object.embed).toBe(PARENT);
+    });
+
     it('carries the members another client added ($unknown) into the next version', () => {
       const stored = head({ content: 'Hello' });
       const withUnknown = { url: stored.url, post: { ...stored.post, $unknown: '{"mood":"calm"}' } };
@@ -581,6 +608,17 @@ describe('PostNormalizer', () => {
         kind: 'image',
       });
       expect(PostNormalizer.toLocalEdit({ row, edit: {} })).toEqual({ content: 'Hello' });
+    });
+
+    it('projects a changed embed, and leaves the relationships alone without one', () => {
+      const row = { content: 'Hello', attachments: null, kind: 'short' };
+
+      expect(PostNormalizer.toLocalEdit({ row, edit: { embed: 'https://luma.com/376whqyw' } })).toEqual({
+        content: 'Hello',
+        embed: 'https://luma.com/376whqyw',
+      });
+      expect(PostNormalizer.toLocalEdit({ row, edit: { embed: null } })).toEqual({ content: 'Hello', embed: null });
+      expect(PostNormalizer.toLocalEdit({ row, edit: { content: 'x' } })).not.toHaveProperty('embed');
     });
 
     it("spells an article's envelope with its cover kept, replaced or cleared", () => {

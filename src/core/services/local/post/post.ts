@@ -8,6 +8,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
+import { getWebEmbedUrl } from '@/libs/post/postEmbedUrl';
 import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
@@ -176,6 +177,8 @@ export class LocalPostService {
    * @param params.content - New content for the post
    * @param params.attachments - New attachment URIs (`null` clears them); `undefined` leaves the column untouched
    * @param params.kind - New lowercase kind; `undefined` leaves the column untouched
+   * @param params.embed - The web link the post embeds (`null`: none); `undefined` leaves the
+   *   relationships untouched, and so does a repost (its embed is a post)
    *
    * @throws {DatabaseError} When database operations fail
    */
@@ -184,11 +187,13 @@ export class LocalPostService {
     content,
     attachments,
     kind,
+    embed,
   }: {
     compositePostId: string;
     content: string;
     attachments?: string[] | null;
     kind?: string;
+    embed?: string | null;
   }) {
     // Set once the transaction announces its curated-count writes; runs if it does not commit.
     let restoreMarks: (() => void) | undefined;
@@ -208,7 +213,8 @@ export class LocalPostService {
         changes.kind = kind;
       }
 
-      await db.transaction('rw', [PostDetailsModel.table, PostCountsModel.table, PostTtlModel.table], async () => {
+      const tables = [PostDetailsModel.table, PostCountsModel.table, PostTtlModel.table, PostRelationshipsModel.table];
+      await db.transaction('rw', tables, async () => {
         // Read before the write: the curated-item diff below needs the pre-edit envelope.
         const existing = await PostDetailsModel.findById(compositePostId);
         const now = Date.now();
@@ -217,6 +223,15 @@ export class LocalPostService {
           changes.localUpdatedAt = now;
         }
         await PostDetailsModel.update(compositePostId, changes);
+        if (embed !== undefined) {
+          // Nexus serves a web embed as `embedded`; a post created here holds it in `reposted` (as
+          // `create` writes it). A repost's `reposted` names its post and stays.
+          const relationships = await PostRelationshipsModel.findById(compositePostId);
+          const isRepost = !!relationships?.reposted && getWebEmbedUrl(relationships.reposted) === null;
+          if (relationships && !isRepost) {
+            await PostRelationshipsModel.update(compositePostId, { embedded: embed, reposted: null });
+          }
+        }
         // Touch TTL so the coordinator considers the edited post fresh and
         // doesn't overwrite the local edit with stale (pre-edit) Nexus data
         await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: now });

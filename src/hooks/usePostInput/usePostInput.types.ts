@@ -25,6 +25,13 @@ export interface UsePostInputOptions {
   editContent?: string;
   /** Whether the post being edited is an article (edit variant only) */
   editIsArticle?: boolean;
+  /**
+   * The web link the post being edited embeds, as stored (Nexus serves it normalized), or null for
+   * none (edit variant only): the edit shows it and may embed another link or none, and writes the
+   * embed only once it differs from the one the edit opened with. Left out for a post whose embed the
+   * edit leaves as stored (a repost, a reply, an article, a lock announcement, unknown relationships).
+   */
+  editEmbedUrl?: string | null;
   /** Callback after successful post, receives the created post ID */
   onSuccess?: (createdPostId: string) => void;
   /** Custom placeholder text */
@@ -110,6 +117,15 @@ export interface UsePostInputReturn {
    * afterwards (#3021).
    */
   discardPendingArticle: () => void;
+  /**
+   * The web link a new post (or an edited note) embeds: the first link of its text, or the one the
+   * author picked, unless removed; null for none.
+   */
+  embedUrl: string | null;
+  /** The text's links that can be embedded while there are several and one is embedded; else empty. */
+  embedChoices: string[];
+  /** True when a link of the text could be embedded and the author removed it. */
+  isEmbedRemoved: boolean;
 
   // Mention autocomplete state
   mentionUsers: AutocompleteUserData[];
@@ -134,6 +150,12 @@ export interface UsePostInputReturn {
   handleFilesAdded: (files: File[]) => void;
   handleFileClick: () => void;
   removeExistingAttachment: (uri: string) => void;
+  /** Removes the embed; the link stays in the text. */
+  removeEmbed: () => void;
+  /** Embeds the removed link again. */
+  restoreEmbed: () => void;
+  /** Embeds `url`, one of `embedChoices`, instead of the embedded link. */
+  pickEmbed: (url: string) => void;
   handleDragEnter: (e: React.DragEvent) => void;
   handleDragLeave: (e: React.DragEvent) => void;
   handleDragOver: (e: React.DragEvent) => void;
