@@ -32,6 +32,8 @@ interface ResourceSavePickerProps {
   collectionsCount?: number | null;
   /** What the row sits on: `muted` on a card in a post, `default` on the page's large card. */
   surface?: PostActionSurface;
+  /** Other spellings of the link (`getResourceTarget`): a bookmark or collection of one is the link's. */
+  spellings?: readonly string[];
 }
 
 /**
@@ -42,12 +44,12 @@ interface ResourceSavePickerProps {
  * collections hold it. The bookmark has no local row, so it is read only while the picker is open.
  * Signed out, it asks to sign in.
  */
-export function ResourceSavePicker({ uri, collectionsCount, surface = 'muted' }: ResourceSavePickerProps) {
+export function ResourceSavePicker({ uri, collectionsCount, surface = 'muted', spellings }: ResourceSavePickerProps) {
   const isMobile = useIsMobile();
   const { requireAuth } = useRequireAuth();
   const [open, setOpen] = useState(false);
-  const targets = useResourceSaveTargets(uri, { isPickerOpen: open });
-  const bookmark = useResourceBookmark(uri, { active: open });
+  const targets = useResourceSaveTargets(uri, { isPickerOpen: open, spellings });
+  const bookmark = useResourceBookmark(uri, { active: open, spellings });
   const count = collectionsCount && collectionsCount > 0 ? collectionsCount : null;
   const isSaved = bookmark.isBookmarked || targets.collections.some((collection) => collection.isSaved);
   const triggerIconState: SaveTriggerIconState = isSaved ? 'saved' : count ? 'collected' : 'default';

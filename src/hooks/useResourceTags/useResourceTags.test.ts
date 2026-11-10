@@ -59,6 +59,43 @@ describe('useResourceTags', () => {
     expect(TagController.fetchResourceTags).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER });
   });
 
+  it('reads the link’s other spellings along, and removes a tag on the spellings it is on', async () => {
+    const spellings = [`${URI}/`, 'http://www.openstreetmap.org/node/240109189'];
+    const { result } = renderHook(() => useResourceTags(URI, { spellings: [...spellings] }));
+
+    await waitFor(() => expect(result.current.tags).toEqual(TAGS));
+    expect(TagController.fetchResourceTags).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER, spellings });
+    expect(TagController.subscribeResourceTags).toHaveBeenCalledWith(
+      { uri: URI, viewerId: VIEWER, spellings },
+      expect.any(Function),
+    );
+    // A new array of the same spellings reads nothing again.
+    expect(TagController.fetchResourceTags).toHaveBeenCalledTimes(1);
+
+    await act(() => result.current.toggleTag(TAGS[1]));
+    expect(TagController.commitDeleteResource).toHaveBeenCalledWith({
+      taggerId: VIEWER,
+      uri: URI,
+      label: 'city',
+      tagUri: OWN_TAG_URI,
+      spellings,
+    });
+  });
+
+  it('asks for the spellings on a Nexus without `by_ids` too when told to (the resource page)', async () => {
+    const spellings = [`${URI}/`];
+    renderHook(() => useResourceTags(URI, { spellings, spellingsByUri: true }));
+
+    await waitFor(() =>
+      expect(TagController.fetchResourceTags).toHaveBeenCalledWith({
+        uri: URI,
+        viewerId: VIEWER,
+        spellings,
+        spellingsByUri: true,
+      }),
+    );
+  });
+
   it('says when Nexus answered with as many tags as it is asked for', async () => {
     const full = Array.from({ length: RESOURCE_TAGS_LIMIT }, (_, index) => ({ ...TAGS[0], label: `tag${index}` }));
     vi.mocked(TagController.fetchResourceTags).mockResolvedValueOnce(TAGS).mockResolvedValueOnce(full);

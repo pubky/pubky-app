@@ -143,6 +143,11 @@ export class NexusResourceService {
     return nexusQueryClient.getQueryData<NexusTag[]>(queryKey(key));
   }
 
+  /** Whether the configured Nexus answered a `by_ids` request; `false` while that is not known yet. */
+  static isByIdsServed(): boolean {
+    return isByIdsServed;
+  }
+
   /** Whether a write of the viewer's on the link is still missing from Nexus' answers. */
   static hasUnconfirmedTags(key: TResourceTagsKey): boolean {
     return (unconfirmedWrites.get(unconfirmedKey(key))?.size ?? 0) > 0;

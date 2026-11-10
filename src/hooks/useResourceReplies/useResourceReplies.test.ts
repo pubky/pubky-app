@@ -6,7 +6,7 @@ import { useResourceReplies } from './useResourceReplies';
 const URI = 'https://example.com/article';
 
 const mocks = vi.hoisted(() => ({
-  counts: undefined as undefined | null | { resourceId: string; replies?: number },
+  counts: undefined as undefined | null | { resourceId: string; resourceIds?: string[]; replies?: number },
   muted: new Set<string>(),
   fetchReplies: vi.fn(),
 }));
@@ -46,6 +46,73 @@ describe('useResourceReplies', () => {
     expect(result.current.replyIds).toEqual(['u:1', 'u:2', 'u:3', 'u:4', 'u:5']);
     expect(result.current.hasMore).toBe(false);
     expect(mocks.fetchReplies).toHaveBeenLastCalledWith(expect.objectContaining({ resourceId: 'r1', skip: 0 }));
+  });
+
+  it('reads the replies to each spelling of the link as one thread, by when they were written', async () => {
+    mocks.counts = { resourceId: 'r1', resourceIds: ['r1', 'r2'], replies: 4 };
+    // Post ids are TimestampIds: they sort as text by when the post was written.
+    mocks.fetchReplies.mockImplementation(async ({ resourceId }: { resourceId: string }) =>
+      resourceId === 'r1'
+        ? { replyIds: ['a:0000000000004', 'a:0000000000001'], fetched: 2, reachedEnd: true }
+        : { replyIds: ['b:0000000000003', 'b:0000000000002'], fetched: 2, reachedEnd: true },
+    );
+
+    const { result } = renderHook(() => useResourceReplies(URI, { maxReplies: 10 }));
+
+    await waitFor(() =>
+      expect(result.current.replyIds).toEqual([
+        'a:0000000000001',
+        'b:0000000000002',
+        'b:0000000000003',
+        'a:0000000000004',
+      ]),
+    );
+    expect(mocks.fetchReplies).toHaveBeenCalledWith({ resourceId: 'r2', skip: 0, limit: 10 });
+    expect(result.current.totalCount).toBe(4);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it('keeps the thread and the viewer’s reply while a spelling’s counts arrive after the link’s', async () => {
+    mocks.counts = { resourceId: 'r1', replies: 1 };
+    mocks.fetchReplies.mockImplementation(async ({ resourceId }: { resourceId: string }) =>
+      resourceId === 'r1'
+        ? { replyIds: ['a:0000000000001'], fetched: 1, reachedEnd: true }
+        : { replyIds: ['b:0000000000002'], fetched: 1, reachedEnd: true },
+    );
+    const { result, rerender } = renderHook(() => useResourceReplies(URI));
+    await waitFor(() => expect(result.current.replyIds).toEqual(['a:0000000000001']));
+    act(() => result.current.addReply('me:0000000000009'));
+
+    mocks.counts = { resourceId: 'r1', resourceIds: ['r1', 'r2'], replies: 2 };
+    rerender();
+    expect(result.current.replyIds).toEqual(['a:0000000000001', 'me:0000000000009']);
+
+    await waitFor(() =>
+      expect(result.current.replyIds).toEqual(['a:0000000000001', 'b:0000000000002', 'me:0000000000009']),
+    );
+  });
+
+  it('reads every page of every spelling on "show all"', async () => {
+    mocks.counts = { resourceId: 'r1', resourceIds: ['r1', 'r2'], replies: 5 };
+    mocks.fetchReplies.mockImplementation(async ({ resourceId, skip }: { resourceId: string; skip: number }) => {
+      if (resourceId === 'r2') return { replyIds: ['b:0000000000003'], fetched: 1, reachedEnd: true };
+      return skip === 0
+        ? { replyIds: ['a:0000000000005', 'a:0000000000004'], fetched: 2, reachedEnd: false }
+        : { replyIds: ['a:0000000000002', 'a:0000000000001'], fetched: 2, reachedEnd: true };
+    });
+    const { result } = renderHook(() => useResourceReplies(URI));
+    await waitFor(() => expect(result.current.replyIds).toHaveLength(3));
+
+    await act(() => result.current.expandAll());
+
+    expect(result.current.replyIds).toEqual([
+      'a:0000000000001',
+      'a:0000000000002',
+      'b:0000000000003',
+      'a:0000000000004',
+      'a:0000000000005',
+    ]);
+    expect(result.current.hasMore).toBe(false);
   });
 
   it('reads nothing while Nexus counts no reply or does not know the link', () => {

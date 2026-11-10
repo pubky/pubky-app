@@ -21,8 +21,22 @@ const REPLY_LABEL = 'Reply to this external resource';
 const CANNOT_REPLY_LABEL = 'Replies to this external resource are not supported';
 
 interface ResourceActionsProps {
-  /** The external resource's link exactly as written: what is bookmarked, collected and tagged. */
+  /**
+   * The external resource's link: what is bookmarked, collected, tagged and replied to. The card's
+   * canonical link once Pinakes knows it (`getResourceTarget`), else the link exactly as written.
+   */
   uri: string;
+  /**
+   * Other spellings of `uri` (the link as written, Pinakes' refs and aliases of the card): Nexus
+   * keeps each apart, so their tags, counts, bookmarks and collections are read along and shown as
+   * the link's own. Writes go to `uri`; a removal goes to the spelling it is on.
+   */
+  spellings?: readonly string[];
+  /**
+   * Read the spellings' tags on a Nexus without `by_ids` too, one `by-uri` each (the resource page);
+   * a card in a feed reads them only in a `by_ids` batch.
+   */
+  spellingsByUri?: boolean;
   /**
    * The web link "Post about this" puts in the composer, when `uri` is not one; `null` when the
    * resource has none (the button is disabled). Defaults to `uri`.
@@ -74,6 +88,8 @@ interface ResourceActionsProps {
  */
 export function ResourceActions({
   uri,
+  spellings,
+  spellingsByUri,
   postUri = uri,
   collectionsCount,
   tagsLabel,
@@ -91,9 +107,9 @@ export function ResourceActions({
   // Once read, the tags stay while the card scrolls out of view.
   const [hasBeenOnScreen, setHasBeenOnScreen] = useState(isOnScreen);
   if (isOnScreen && !hasBeenOnScreen) setHasBeenOnScreen(true);
-  const resourceTags = useResourceTags(uri, { enabled: hasBeenOnScreen });
+  const resourceTags = useResourceTags(uri, { enabled: hasBeenOnScreen, spellings, spellingsByUri });
   // Read with the tags (one answer): no request of its own.
-  const counts = useResourceCounts(uri);
+  const counts = useResourceCounts(uri, { spellings });
   // 0 for a link Nexus has no record of; no number while read or for a count Nexus does not serve.
   const countOf = (key: 'replies' | 'embeds') => (counts === null ? 0 : counts?.[key]);
   const replies = replyCount ?? countOf('replies');
@@ -197,7 +213,7 @@ export function ResourceActions({
             data-testid="resource-reply-button"
           />
           <ResourcePostButton uri={postUri} count={embeds} surface={surface} />
-          <ResourceSavePicker uri={uri} collectionsCount={collections} surface={surface} />
+          <ResourceSavePicker uri={uri} spellings={spellings} collectionsCount={collections} surface={surface} />
           <ResourceMoreMenu
             uri={uri}
             linkUrl={linkUrl}

@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
-import { getActionUri } from '@/organisms/ResourceDetails/ResourceDetails.utils';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourcePage } from './ResourcePage';
@@ -13,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   PostPageLayout: vi.fn(),
   fetchCardByUri: vi.fn(),
   repliesUri: undefined as string | null | undefined,
+  repliesSpellings: undefined as readonly string[] | undefined,
 }));
 
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => true }));
@@ -62,8 +62,9 @@ vi.mock('@/organisms/ResourceDetails/ResourceDetails', () => ({
   ),
 }));
 vi.mock('@/hooks/useResourceReplies/useResourceReplies', () => ({
-  useResourceReplies: (uri: string | null) => {
+  useResourceReplies: (uri: string | null, options?: { spellings?: readonly string[] }) => {
     mocks.repliesUri = uri;
+    mocks.repliesSpellings = options?.spellings;
     return { replyIds: uri ? ['replier:1'] : [] };
   },
 }));
@@ -71,11 +72,13 @@ vi.mock('@/organisms/ResourceDetails/ResourceSidebar', () => ({
   ResourceSidebar: ({
     card,
     uri,
+    spellings,
     replyIds,
     showFeedback,
   }: {
     card: TPinakesResourceDetail | null | undefined;
     uri?: string | null;
+    spellings?: readonly string[];
     replyIds?: string[];
     showFeedback?: boolean;
   }) =>
@@ -83,6 +86,7 @@ vi.mock('@/organisms/ResourceDetails/ResourceSidebar', () => ({
       <div
         data-testid="resource-sidebar-stub"
         data-people={uri ?? ''}
+        data-spellings={(spellings ?? []).join(' ')}
         data-replies={(replyIds ?? []).join(' ')}
         data-feedback={String(Boolean(showFeedback))}
       >
@@ -117,9 +121,9 @@ describe('ResourcePage', () => {
       'data-feedback',
       'true',
     );
-    // One read of the thread, on the acted-on link, for the body and the Participants.
-    expect(mocks.repliesUri).toBe(getActionUri(VIDEO, VIDEO.uri));
-    expect(drawer).toHaveAttribute('data-people', getActionUri(VIDEO, VIDEO.uri));
+    // One read of the thread, on the card's canonical link, for the body and the Participants.
+    expect(mocks.repliesUri).toBe(VIDEO.uri);
+    expect(drawer).toHaveAttribute('data-people', VIDEO.uri);
     expect(drawer).toHaveAttribute('data-replies', 'replier:1');
     expect(drawer).toHaveAttribute('data-feedback', 'false');
   });
@@ -163,6 +167,18 @@ describe('ResourcePage', () => {
       within(screen.getByTestId('resource-sidebar-inline')).getByTestId('resource-sidebar-stub'),
     ).toHaveTextContent('');
     expect(screen.getByTestId('resource-details-stub')).toBeInTheDocument();
+  });
+
+  it('reads the thread on the card’s canonical link, with the page’s link and the card’s other spellings', () => {
+    const share = 'https://youtu.be/dQw4w9WgXcQ';
+    mockCard.mockReturnValue({ data: { ...VIDEO, refs: [share] }, isLoading: false, isError: false });
+    render(<ResourcePage uri={share} />);
+
+    expect(mocks.repliesUri).toBe(VIDEO.uri);
+    expect(mocks.repliesSpellings).toEqual([share]);
+    const drawer = within(screen.getByTestId('right-drawer')).getByTestId('resource-sidebar-stub');
+    expect(drawer).toHaveAttribute('data-people', VIDEO.uri);
+    expect(drawer).toHaveAttribute('data-spellings', share);
   });
 
   it('names the tab after the resource, and gives the route’s title back on leaving', () => {

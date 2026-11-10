@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { getActionUri, getThreadUri } from './ResourceDetails.utils';
+import { getThreadUri } from './ResourceDetails.utils';
 
 describe('getThreadUri', () => {
   const card: TPinakesResourceDetail = { ...(videoFixture as TPinakesResourceDetail), refs: ['https://youtu.be/x'] };
 
-  it('is the acted-on link once the card is read', () => {
-    expect(getThreadUri(card.uri, { data: card, isLoading: false }, true)).toBe(getActionUri(card, card.uri));
+  it('is the card’s canonical link once the card is read, whichever spelling the page has', () => {
+    expect(getThreadUri(card.uri, { data: card, isLoading: false }, true)).toBe(card.uri);
+    expect(getThreadUri('https://youtu.be/x', { data: card, isLoading: false }, true)).toBe(card.uri);
   });
 
   it('is nothing while the card is read, so the thread is read once', () => {

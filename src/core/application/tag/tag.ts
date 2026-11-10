@@ -14,8 +14,9 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
-import type { TResourceViewerTag } from '@/pipes/tag/tag.resource';
+import { mergeResourceTags, type TResourceViewerTag } from '@/pipes/tag/tag.resource';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { TLocalTagParams, TViewerTagMutationsParams } from '@/services/local/tag/tag.types';
@@ -27,6 +28,8 @@ import { NexusResourceService } from '@/services/nexus/resource/resource';
 import { NexusUserService } from '@/services/nexus/user/user';
 
 type TLocalTagService = typeof LocalPostTagService | typeof LocalUserTagService;
+/** An external resource's tags for the viewer, with the other spellings of its link read along. */
+type TResourceTagsRead = { uri: string; viewerId?: string | null; spellings?: readonly string[] };
 type TTagWrite = Pick<TLocalTagParams, 'taggerId' | 'taggedId' | 'label' | 'mutationId' | 'tagUri'>;
 
 /** Optimistic writes and conditional compensation share their operation ID in IndexedDB. */
@@ -114,30 +117,87 @@ export class TagApplication {
     await LocalTagCacheService.completeMutation(entity, { mutationId: write.mutationId, isCurrent });
   }
 
-  /** The tags on an external resource (a web link), `[]` when nobody tagged it. Network only. */
-  static fetchResourceTags({
+  /**
+   * The tags on an external resource (a web link), `[]` when nobody tagged it. Network only. With
+   * `spellings`, the link's other spellings are read in the same `by_ids` batch and their tags
+   * merged into its own (`mergeResourceTags`). On a Nexus without `by_ids` they are read (one
+   * `by-uri` each) only with `spellingsByUri`, else the link is read alone. A spelling whose read
+   * failed (the service reported it) counts with its last answer, or is left out without one, and
+   * the read fails only when every read did.
+   */
+  static async fetchResourceTags({
     uri,
     viewerId,
     fresh,
-  }: {
-    uri: string;
-    viewerId?: string | null;
-    fresh?: boolean;
-  }): Promise<NexusTag[]> {
-    return NexusResourceService.fetchTagsByUri({ uri, viewerId, ...(fresh ? { fresh } : {}) });
+    spellings = [],
+    spellingsByUri = false,
+  }: TResourceTagsRead & { fresh?: boolean; spellingsByUri?: boolean }): Promise<NexusTag[]> {
+    const read = (link: string) =>
+      NexusResourceService.fetchTagsByUri({ uri: link, viewerId, ...(fresh ? { fresh } : {}) });
+    const own = read(uri);
+    if (spellings.length === 0) return own;
+    if (!spellingsByUri) {
+      // The link's own read finds out whether Nexus serves `by_ids`.
+      if (!NexusResourceService.isByIdsServed()) await own.catch(() => {});
+      if (!NexusResourceService.isByIdsServed()) return own;
+    }
+    const links = [uri, ...spellings];
+    const reads = await Promise.allSettled([own, ...spellings.map(read)]);
+    const answers = reads.flatMap((result, index) => {
+      if (result.status === 'fulfilled') return [result.value];
+      const last = NexusResourceService.getCachedTags({ uri: links[index], viewerId });
+      return last ? [last] : [];
+    });
+    if (answers.length === 0) throw (reads[0] as PromiseRejectedResult).reason;
+    return mergeResourceTags(answers);
   }
 
-  /** Whether a tag write of the viewer's on the link is still missing from Nexus' answers. */
-  static hasUnconfirmedResourceTags({ uri, viewerId }: { uri: string; viewerId?: string | null }): boolean {
-    return NexusResourceService.hasUnconfirmedTags({ uri, viewerId });
+  /** Whether a tag write of the viewer's on the link or a spelling is still missing from Nexus' answers. */
+  static hasUnconfirmedResourceTags({ uri, viewerId, spellings = [] }: TResourceTagsRead): boolean {
+    return [uri, ...spellings].some((link) => NexusResourceService.hasUnconfirmedTags({ uri: link, viewerId }));
   }
 
-  /** Every later change of the shared answer `fetchResourceTags` reads; returns the unsubscribe. */
+  /**
+   * Every later change of the shared answer `fetchResourceTags` reads; returns the unsubscribe. With
+   * `spellings`, a change of any spelling's answer, merged with the other answers read (a spelling
+   * whose read failed has none and is left out).
+   */
   static subscribeResourceTags(
-    { uri, viewerId }: { uri: string; viewerId?: string | null },
+    { uri, viewerId, spellings = [] }: TResourceTagsRead,
     listener: (tags: NexusTag[]) => void,
   ): () => void {
-    return NexusResourceService.subscribeTags({ uri, viewerId }, listener);
+    if (spellings.length === 0) return NexusResourceService.subscribeTags({ uri, viewerId }, listener);
+    const links = [uri, ...spellings];
+    const onChange = () => {
+      const answers = links
+        .map((link) => NexusResourceService.getCachedTags({ uri: link, viewerId }))
+        .filter((tags): tags is NexusTag[] => tags !== undefined);
+      listener(mergeResourceTags(answers));
+    };
+    const unsubscribes = links.map((link) => NexusResourceService.subscribeTags({ uri: link, viewerId }, onChange));
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
+  }
+
+  /**
+   * The links among `uris` the viewer's tag `label` is on, by the answers already read, each with the
+   * tag file Nexus reports there: removing the tag deletes it on each spelling it was written to.
+   */
+  static getViewerResourceTagLinks({
+    uris,
+    viewerId,
+    label,
+  }: {
+    uris: readonly string[];
+    viewerId: string;
+    label: string;
+  }): { uri: string; tagUri: string | null }[] {
+    const key = canonicalizeTagLabel(label);
+    return uris.flatMap((uri) => {
+      const tag = NexusResourceService.getCachedTags({ uri, viewerId })?.find(
+        (entry) => entry.relationship && canonicalizeTagLabel(entry.label) === key,
+      );
+      return tag ? [{ uri, tagUri: tag.tag_uri ?? null }] : [];
+    });
   }
 
   /** The shared answer `fetchResourceTags` read, without asking Nexus; `undefined` when none was read. */

@@ -514,6 +514,15 @@ describe('NexusResourceService batched tag reads (POST /v0/stream/resources/by_i
     expect(byUriCalls()).toHaveLength(3);
   });
 
+  it('tells whether Nexus serves `by_ids` once a batch was answered', async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse([OSM_VIEW]));
+    expect(NexusResourceService.isByIdsServed()).toBe(false);
+
+    await read(OSM);
+
+    expect(NexusResourceService.isByIdsServed()).toBe(true);
+  });
+
   it('reads link by link when Nexus refuses the batch (400), and keeps batching later reads', async () => {
     fetchSpy
       .mockResolvedValueOnce(new Response('bad uri', { status: 400 }))

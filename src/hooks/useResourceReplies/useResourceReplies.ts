@@ -14,6 +14,8 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 export interface UseResourceRepliesOptions {
   /** Level 1 replies shown before "+N more" (the post page's thread shows 3). */
   maxReplies?: number;
+  /** Other spellings of the link (`getResourceTarget`): their replies are the link's too. */
+  spellings?: readonly string[];
 }
 
 /** Reads of the first page asked again when one comes back for a session that changed meanwhile. */
@@ -39,38 +41,46 @@ type TLoaded = { key: string; ids: string[]; reachedEnd: boolean; isCapped?: boo
  * The posts replying to an external resource (their `parent` is the link), in the shape the post
  * page's thread reads (`useThreadReplies`). Read once the link's counts say there are replies and
  * stored as posts; the viewer's own reply shows at once (`addReply`), muted users' are left out.
- * Kept per link and viewer: a page that comes back for another viewer is dropped.
+ * Kept per link and viewer: a page that comes back for another viewer is dropped. With `spellings`,
+ * the replies to each spelling Nexus knows are read and shown as one thread, newest first by when
+ * they were written.
  *
- * @param uri - The link exactly as written (what the replies' `parent` spells); `null` reads nothing
+ * @param uri - The link the replies' `parent` spells (as written, or the card's canonical link);
+ *   `null` reads nothing
  */
 export function useResourceReplies(
   uri: string | null,
-  { maxReplies = DEFAULT_MAX_THREAD_REPLIES }: UseResourceRepliesOptions = {},
+  { maxReplies = DEFAULT_MAX_THREAD_REPLIES, spellings }: UseResourceRepliesOptions = {},
 ): UseResourceRepliesResult {
   // On the page, a card of the link reads its tags first: this read waits for it (one request).
-  const counts = useResourceCounts(uri, { fetch: true });
+  const counts = useResourceCounts(uri, { fetch: true, spellings });
   const viewerId = useAuthStore((state) => state.currentUserPubky);
-  const resourceId = counts?.resourceId ?? null;
+  // Every resource the replies are read from: the link's, and its spellings' when read along.
+  const resourceKey = (counts?.resourceIds ?? (counts ? [counts.resourceId] : [])).join(' ');
   // 0 for a link Nexus has no record of; `undefined` while read or when Nexus does not count replies.
   const nexusCount = counts === null ? 0 : counts?.replies;
   const hasReplies = (nexusCount ?? 0) > 0;
-  const key = `${uri ?? ''}\n${resourceId ?? ''}\n${viewerId ?? ''}`;
+  // Per link and viewer: a spelling's counts arriving later re-read the first pages, keeping what
+  // is shown (and the viewer's own replies) meanwhile.
+  const key = `${uri ?? ''}\n${viewerId ?? ''}`;
   const { mutedUserIdSet } = useMutedUsers();
   const [loaded, setLoaded] = useState<TLoaded | null>(null);
   // The viewer's replies written here, and Nexus' count when the first was written: replies Nexus
   // counts later include them.
   const [own, setOwn] = useState<{ key: string; ids: string[]; baseline: number }>({ key, ids: [], baseline: 0 });
-  const [staleRetry, setStaleRetry] = useState<{ key: string; count: number }>({ key, count: 0 });
-  const retries = staleRetry.key === key ? staleRetry.count : 0;
+  // Per set of resources: a set that grew gets its own retries.
+  const retryKey = `${key}\n${resourceKey}`;
+  const [staleRetry, setStaleRetry] = useState<{ key: string; count: number }>({ key: retryKey, count: 0 });
+  const retries = staleRetry.key === retryKey ? staleRetry.count : 0;
   const [showAllKey, setShowAllKey] = useState<string | null>(null);
   const [expandingKey, setExpandingKey] = useState<string | null>(null);
   const expanding = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!resourceId || !hasReplies) return;
+    if (!resourceKey || !hasReplies) return;
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    ResourceController.fetchReplies({ resourceId, skip: 0, limit: maxReplies }).then(
+    readFirstPages(resourceKey.split(' '), maxReplies).then(
       (page) => {
         if (cancelled) return;
         if (page) {
@@ -80,7 +90,7 @@ export function useResourceReplies(
         // The session changed meanwhile (another viewer: the key changes and this runs again; the same
         // viewer's session restored after a reload: the key stays, so ask again).
         if (retries < STALE_PAGE_RETRIES) {
-          retryTimer = setTimeout(() => setStaleRetry({ key, count: retries + 1 }), STALE_PAGE_RETRY_MS);
+          retryTimer = setTimeout(() => setStaleRetry({ key: retryKey, count: retries + 1 }), STALE_PAGE_RETRY_MS);
         }
       },
       // The service reported the failure through Err.*: the thread shows the composer only.
@@ -92,7 +102,7 @@ export function useResourceReplies(
       cancelled = true;
       clearTimeout(retryTimer);
     };
-  }, [key, resourceId, hasReplies, maxReplies, retries]);
+  }, [key, retryKey, resourceKey, hasReplies, maxReplies, retries]);
 
   const current = loaded?.key === key ? loaded : null;
   const showAll = showAllKey === key;
@@ -120,25 +130,36 @@ export function useResourceReplies(
   const hasMore = replyIds.length < totalCount && !(showAll && (isComplete || current?.isCapped));
 
   async function expandAll() {
-    if (!resourceId || expanding.current === key) return;
+    if (!resourceKey || expanding.current === key) return;
     const expandKey = key;
     expanding.current = expandKey;
     setExpandingKey(expandKey);
     setShowAllKey(expandKey);
     try {
-      const ids: string[] = [];
-      let skip = 0;
-      let reachedEnd = false;
-      for (let page = 0; page < MAX_EXPAND_PAGES && !reachedEnd; page++) {
-        const result = await ResourceController.fetchReplies({ resourceId, skip, limit: NEXUS_POSTS_PER_PAGE });
-        // The viewer changed meanwhile: what was read is not theirs.
-        if (!result) return;
-        ids.push(...result.replyIds);
-        // Pages follow what Nexus sent, kept or not (a reply whose files could not be read is left out).
-        skip += result.fetched;
-        reachedEnd = result.reachedEnd || result.fetched === 0;
+      const lists: string[][] = [];
+      let isEveryEndReached = true;
+      for (const resourceId of resourceKey.split(' ')) {
+        const ids: string[] = [];
+        let skip = 0;
+        let reachedEnd = false;
+        for (let page = 0; page < MAX_EXPAND_PAGES && !reachedEnd; page++) {
+          const result = await ResourceController.fetchReplies({ resourceId, skip, limit: NEXUS_POSTS_PER_PAGE });
+          // The viewer changed meanwhile: what was read is not theirs.
+          if (!result) return;
+          ids.push(...result.replyIds);
+          // Pages follow what Nexus sent, kept or not (a reply whose files could not be read is left out).
+          skip += result.fetched;
+          reachedEnd = result.reachedEnd || result.fetched === 0;
+        }
+        lists.push(ids);
+        isEveryEndReached &&= reachedEnd;
       }
-      setLoaded({ key: expandKey, ids: [...new Set(ids)], reachedEnd, isCapped: !reachedEnd });
+      setLoaded({
+        key: expandKey,
+        ids: [...new Set(mergeNewestFirst(lists))],
+        reachedEnd: isEveryEndReached,
+        isCapped: !isEveryEndReached,
+      });
     } catch {
       // The service reported the failure through Err.*: what was read stays.
     } finally {
@@ -164,4 +185,33 @@ export function useResourceReplies(
     expandAll,
     addReply,
   };
+}
+
+/**
+ * The first page of each resource's replies (a link's spellings), merged newest first; `null` when
+ * one came back for a viewer who is no longer signed in.
+ */
+async function readFirstPages(
+  resourceIds: string[],
+  limit: number,
+): Promise<{ replyIds: string[]; reachedEnd: boolean } | null> {
+  const pages = await Promise.all(
+    resourceIds.map((resourceId) => ResourceController.fetchReplies({ resourceId, skip: 0, limit })),
+  );
+  if (pages.some((page) => !page)) return null;
+  const read = pages as NonNullable<(typeof pages)[number]>[];
+  return {
+    replyIds: mergeNewestFirst(read.map((page) => page.replyIds)),
+    reachedEnd: read.every((page) => page.reachedEnd),
+  };
+}
+
+/**
+ * Replies read from several resources, newest first: a post's id is the time it was written (a
+ * TimestampId, which sorts as text), after its author's key. One list stays as Nexus sent it.
+ */
+function mergeNewestFirst(lists: readonly string[][]): string[] {
+  if (lists.length === 1) return lists[0];
+  const time = (replyId: string) => replyId.slice(replyId.lastIndexOf(':') + 1);
+  return lists.flat().sort((a, b) => (time(a) < time(b) ? 1 : time(a) > time(b) ? -1 : 0));
 }
