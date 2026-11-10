@@ -793,10 +793,10 @@ describe('GenericResourcePreview', () => {
         );
         fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
         expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+          'Card',
           'TIDAL',
           'YouTube',
           'Spotify',
-          'Card',
         ]);
       });
 
@@ -810,7 +810,7 @@ describe('GenericResourcePreview', () => {
           'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
         );
         fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
-        expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['TIDAL', 'YouTube', 'Card']);
+        expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Card', 'TIDAL', 'YouTube']);
         expect(document.querySelectorAll('iframe[src*="spotify"]')).toHaveLength(0);
       });
 
