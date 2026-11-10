@@ -2,14 +2,21 @@ import { describe, expect, it } from 'vitest';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import type { TPinakesCredit, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import {
+  getCardAttribution,
   getCreditProviderName,
   getCreditSubjectLabel,
   getLicenseLabel,
+  getMapDataCredit,
   getShownCredits,
+  isCreditRequired,
 } from './ResourceCredits.utils';
 
 const MB_GROUP: TPinakesResourceDetail = mbGroupEnrichedFixture;
 const [TEXT_CREDIT, IMAGE_CREDIT]: TPinakesCredit[] = MB_GROUP.credits ?? [];
+
+const OSM = '© OpenStreetMap contributors (ODbL)';
+const ZONE = 'Timezone Boundary Builder / OpenStreetMap contributors (ODbL-1.0), tzf-rel 2025c';
+const FEDLEX = 'Source: Fedlex, www.fedlex.admin.ch';
 
 describe('getShownCredits', () => {
   it.each([
@@ -40,6 +47,77 @@ describe('getShownCredits', () => {
     const card = { ...mbGroupEnrichedFixture, credits: [{ ...TEXT_CREDIT, field: 'name' }] };
 
     expect(getShownCredits(card, { imageShown: true })).toEqual([]);
+  });
+});
+
+describe('getCardAttribution', () => {
+  it('leaves out OpenStreetMap’s credit, and keeps another source’s', () => {
+    expect(getCardAttribution(OSM)).toBeNull();
+    expect(getCardAttribution(`${OSM}; ${ZONE}`)).toBeNull();
+    expect(getCardAttribution(FEDLEX)).toBe(FEDLEX);
+    expect(getCardAttribution(`${FEDLEX}; ${OSM}`)).toBe(FEDLEX);
+  });
+
+  it('leaves out a credit no licence asks for: CC0, a Public Domain Mark, public-domain sources', () => {
+    for (const attribution of [
+      'RCSB PDB (CC0 1.0)',
+      'Research Organization Registry (CC0)',
+      'PubChem (NCBI)',
+      'U.S. Geological Survey',
+      'The Metropolitan Museum of Art, CC0',
+      'A. Person, no rights reserved (CC0), via iNaturalist',
+      'Public Domain Mark 1.0',
+    ]) {
+      expect(getCardAttribution(attribution)).toBeNull();
+    }
+    expect(getCardAttribution(`RCSB PDB (CC0 1.0); ${FEDLEX}`)).toBe(FEDLEX);
+  });
+
+  it('keeps a credit a licence or the source’s terms ask for', () => {
+    for (const attribution of [
+      FEDLEX,
+      '© European Union, https://eur-lex.europa.eu',
+      'UniProt (CC BY 4.0)',
+      '(c) A. Person, some rights reserved (CC BY-NC), via iNaturalist',
+      'The Metropolitan Museum of Art',
+      'Grayliptrot / Public domain',
+    ]) {
+      expect(getCardAttribution(attribution)).toBe(attribution);
+    }
+  });
+
+  it('has none for a card without one', () => {
+    expect(getCardAttribution(null)).toBeNull();
+    expect(getCardAttribution(undefined)).toBeNull();
+    expect(getCardAttribution(' ')).toBeNull();
+  });
+});
+
+describe('isCreditRequired', () => {
+  it('asks for every credit but a CC0 one', () => {
+    expect(isCreditRequired({ license: 'CC0-1.0' })).toBe(false);
+    expect(isCreditRequired({ license: 'CC-BY-SA-4.0' })).toBe(true);
+    expect(isCreditRequired({ license: 'public-domain' })).toBe(true);
+    expect(isCreditRequired({ license: null })).toBe(true);
+  });
+});
+
+describe('getMapDataCredit', () => {
+  it('credits OpenStreetMap once, linked to its copyright page, for a place, an event or a time zone', () => {
+    for (const attribution of [OSM, ZONE, `${OSM}; ${ZONE}`, `${FEDLEX}; ${OSM}`]) {
+      expect(getMapDataCredit(attribution)).toEqual({
+        field: 'map',
+        provider: 'openstreetmap',
+        source_url: 'https://www.openstreetmap.org/copyright',
+      });
+    }
+    const credit = getMapDataCredit(OSM);
+    expect(credit && getCreditProviderName(credit)).toBe('OpenStreetMap');
+  });
+
+  it('has none for a card OpenStreetMap does not credit', () => {
+    expect(getMapDataCredit(FEDLEX)).toBeNull();
+    expect(getMapDataCredit(null)).toBeNull();
   });
 });
 

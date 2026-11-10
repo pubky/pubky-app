@@ -25,7 +25,7 @@ import {
 } from './ResourceCard.utils';
 import { ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
 import { ResourceCredits } from './ResourceCredits';
-import { getShownCredits } from './ResourceCredits.utils';
+import { getCardAttribution, getMapDataCredit, getShownCredits } from './ResourceCredits.utils';
 
 /** What a card that is not `ok` says about itself. Only `missing` has a documented meaning (`/llms.txt`). */
 const STATUS_NOTES: Readonly<
@@ -85,6 +85,10 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
   const point = family !== ResourceFamily.WEB && !venue && card.point ? formatResourcePoint(card.point) : null;
   const eventStatusNote = family === ResourceFamily.EVENT ? getEventStatusNote(card.event_status) : null;
   const statusNote = status === PinakesStatus.OK ? null : STATUS_NOTES[status];
+  // OpenStreetMap is credited once, under the resource page's Sources ("Map data"), not on every
+  // card; another source's credit stays on the card.
+  const cardAttribution = getCardAttribution(card.attribution);
+  const mapCredit = isLarge ? getMapDataCredit(card.attribution) : null;
   const credits = getShownCredits(card, { imageShown: showImage });
   // A `missing` card's link is gone upstream: the large card's source does not send the viewer there.
   const titleUrl = status === PinakesStatus.MISSING ? null : linkUrl;
@@ -170,13 +174,13 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
             {eventStatusNote && (
               <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
             )}
-            {card.attribution && (
+            {cardAttribution && (
               <Typography
                 size="xs"
                 data-testid="resource-card-attribution"
                 className="font-normal wrap-anywhere text-muted-foreground"
               >
-                {card.attribution}
+                {cardAttribution}
               </Typography>
             )}
             {statusNote && (
@@ -185,7 +189,10 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
           </Container>
         </Container>
 
-        <ResourceCredits credits={credits} variant={isLarge ? 'full' : 'compact'} />
+        <ResourceCredits
+          credits={mapCredit ? [...credits, mapCredit] : credits}
+          variant={isLarge ? 'full' : 'compact'}
+        />
       </Container>
 
       {actions}

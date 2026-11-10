@@ -26,6 +26,13 @@ describe('ResourceCredits', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it.each(['full', 'compact'] as const)('leaves out a credit its licence does not ask for (%s)', (variant) => {
+    const wikidata = { ...TEXT_CREDIT, provider: 'wikidata', author: null, license: 'CC0-1.0' };
+    const { container } = render(<ResourceCredits credits={[wikidata]} variant={variant} />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   describe('full', () => {
     it('lists the sources under a heading, one line per credit', () => {
       render(<ResourceCredits credits={[TEXT_CREDIT, IMAGE_CREDIT]} variant="full" />);

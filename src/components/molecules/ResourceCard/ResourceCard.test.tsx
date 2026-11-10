@@ -338,15 +338,50 @@ describe('ResourceCard', () => {
       expect(screen.getByTestId('resource-card-event-status')).toHaveTextContent('Event status: cancelled');
     });
 
-    it('shows where a place is, with its attribution', () => {
+    it('shows where a place is, without OpenStreetMap’s credit: its page names it under Sources', () => {
       render(<ResourceCard card={placeFixture} href={placeFixture.uri} />);
 
       expect(card()).toHaveAttribute('data-family', ResourceFamily.PLACE);
       expect(screen.getByTestId('resource-card-type')).toHaveTextContent('City');
       expect(screen.getByTestId('resource-card-point')).toHaveTextContent('52.5174, 13.3951');
-      expect(screen.getByTestId('resource-card-attribution')).toHaveTextContent('© OpenStreetMap contributors (ODbL)');
+      expect(screen.queryByTestId('resource-card-attribution')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
+      expect(card()).not.toHaveTextContent('ODbL');
       expect(screen.queryByTestId('resource-card-dates')).not.toBeInTheDocument();
       expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+    });
+
+    it('names OpenStreetMap once under Sources on the page of a place or of an event placed from its data', () => {
+      const zone = 'Timezone Boundary Builder / OpenStreetMap contributors (ODbL-1.0), tzf-rel 2025c';
+      for (const attribution of [placeFixture.attribution, `${placeFixture.attribution}; ${zone}`, zone]) {
+        const { unmount } = render(<ResourceCard card={{ ...placeFixture, attribution }} size="large" />);
+
+        expect(screen.queryByTestId('resource-card-attribution')).not.toBeInTheDocument();
+        const sources = within(screen.getByRole('region', { name: 'Sources' }));
+        expect(sources.getAllByRole('listitem').map((line) => line.textContent)).toEqual(['Map data: OpenStreetMap']);
+        expect(sources.getByTestId('resource-credit-source')).toHaveAttribute(
+          'href',
+          'https://www.openstreetmap.org/copyright',
+        );
+        unmount();
+      }
+    });
+
+    it('keeps a credit other than OpenStreetMap’s on the card, with no map data under Sources', () => {
+      const fedlex = 'Source: Fedlex, www.fedlex.admin.ch';
+      render(<ResourceCard card={{ ...ARTICLE, credits: [], attribution: fedlex }} size="large" />);
+
+      expect(screen.getByTestId('resource-card-attribution').textContent).toBe(fedlex);
+      expect(screen.queryByRole('region', { name: 'Sources' })).not.toBeInTheDocument();
+    });
+
+    it('keeps only the other source’s credit on a feed card whose attribution also credits OpenStreetMap', () => {
+      const fedlex = 'Source: Fedlex, www.fedlex.admin.ch';
+      const attribution = `${fedlex}; ${placeFixture.attribution}`;
+      render(<ResourceCard card={{ ...ARTICLE, credits: [], attribution }} href={ARTICLE.uri} />);
+
+      expect(screen.getByTestId('resource-card-attribution').textContent).toBe(fedlex);
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
     });
 
     it.each([
