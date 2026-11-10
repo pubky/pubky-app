@@ -31,10 +31,3 @@ if (Cypress.browser.family === 'chromium') {
     },
   });
 }
-
-// The default `top` puts an action's target at the viewport's top edge, under the sticky header.
-// WebKit then scrolls to reveal the element Cypress focuses on mousedown, so the mouseup and click
-// land on whatever moved under the pointer, and the target never gets its click.
-if (Cypress.isBrowser('webkit')) {
-  Cypress.config('scrollBehavior', 'center');
-}
