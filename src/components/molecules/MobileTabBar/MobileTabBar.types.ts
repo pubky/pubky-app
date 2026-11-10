@@ -13,6 +13,8 @@ export interface MobileTabBarItem {
   onSelect: () => void;
   /** Optional override for aria-label (defaults to `label`) */
   ariaLabel?: string;
+  /** Optional data-cy for the tab button (E2E hook) */
+  dataCy?: string;
 }
 
 export type MobileTabBarPosition = 'sticky' | 'fixed';

@@ -308,6 +308,13 @@ describe('locks', () => {
       // sticky header before opening it. The menu is portaled and fixed, so the default click
       // scroll cannot bring that clipped item back on screen.
       cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
+        // The owner's content resolves behind a skeleton after the card renders, and the image then
+        // grows the card, so park the button only once the card has its final height.
+        cy.get('[data-cy="locked-post-unlocked-content"]')
+          .should('contain.text', lockedText)
+          .find('[data-cy="post-attachment-image"]')
+          .should('be.visible')
+          .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
         cy.get('[data-cy="post-more-btn"]')
           .first()
           .scrollIntoView({ offset: { top: -200, left: 0 } })
