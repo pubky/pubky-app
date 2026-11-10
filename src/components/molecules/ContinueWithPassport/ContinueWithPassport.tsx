@@ -15,15 +15,14 @@ import type { ContinueWithPassportProps } from './ContinueWithPassport.types';
  * The parent owns the `usePassportAuth` attempt and passes its pending state down so the button can
  * be disabled for the whole attempt, including session initialization.
  *
- * The help mark explaining what Google does here renders centred with the icon and label as one
+ * The help mark explaining Passport sign-in renders centred with the icon and label as one
  * group, yet stays a sibling of the pill, never nested in it, so it remains reachable while an
  * attempt is pending. The pill reserves the mark's slot after its label, and an overlay that
  * mirrors the icon, label and gaps (invisible, hidden from assistive tech, click-through) places
  * the real mark on that slot. The overlay follows the pending label so the two never drift.
  */
 export function ContinueWithPassport({ onContinue, isPending, className }: ContinueWithPassportProps) {
-  const variant = isPassportAppleEnabled() ? 'providers' : 'google';
-  const showProviderIcons = variant === 'providers' && !isPending;
+  const showProviderIcons = isPassportAppleEnabled() && !isPending;
   const label = isPending ? 'Waiting for Passport...' : showProviderIcons ? 'Continue with' : 'Continue with Google';
 
   return (
