@@ -1,0 +1,98 @@
+name: e2e-staging
+
+# Cypress against the staging backend. The app is built from this checkout
+# and started on localhost:3000. Runtime values live in .env.staging.example.
+# The homeserver admin password is the STAGING_HOMESERVER_ADMIN_PASSWORD
+# secret. Cypress sends it as X-Admin-Password (cypress/support/commands.ts).
+# The value is never printed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      specs:
+        description: 'Optional value passed to cypress run --spec, relative to cypress/ (for example e2e/posts.cy.ts). Leave empty to run every spec except e2e/locks.cy.ts.'
+        required: false
+        type: string
+
+# One run at a time: every spec shares the staging backend.
+concurrency:
+  group: e2e-staging
+  cancel-in-progress: false
+
+jobs:
+  e2e-staging:
+    name: End-to-End Tests (staging backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      HOMESERVER_ADMIN_PASSWORD: ${{ secrets.STAGING_HOMESERVER_ADMIN_PASSWORD }}
+
+    steps:
+      - name: Require the staging admin password
+        run: |
+          if [ -z "$HOMESERVER_ADMIN_PASSWORD" ]; then
+            echo "::error::STAGING_HOMESERVER_ADMIN_PASSWORD is not set."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Copies PUBKY_RUNTIME_TESTNET=false, which selects the mainnet seed client.
+      - name: Load staging env
+        run: cp .env.staging.example .env
+
+      - name: Build
+        run: npm run build
+
+      - name: Cypress
+        uses: cypress-io/github-action@v7
+        with:
+          working-directory: cypress
+          config-file: cypress.config.ts
+          # The action's working directory is cypress/; the Next app is the repo root.
+          start: npm --prefix .. run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 180
+          spec: ${{ inputs.specs }}
+          # locks.cy.ts needs the local Lock Server stub, which this job does not run.
+          config: excludeSpecPattern=e2e/locks.cy.ts
+          browser: chrome
+          # Dependencies are already installed. The action's own install looks
+          # for a lockfile in the Cypress directory, which has none.
+          install: false
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          if-no-files-found: ignore
+
+      - name: Upload videos
+        if: failure()
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: cypress-videos
+          path: cypress/videos
+          if-no-files-found: ignore

@@ -31,6 +31,8 @@ export default defineConfig({
       // The pubky-testnet homeserver key, which the app's testnet mode also defaults to
       homeserverPublicKey:
         process.env['PUBKY_RUNTIME_HOMESERVER'] || '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo',
+      // Unset keeps the local testnet seed client. .env.staging.example sets this false.
+      testnet: process.env['PUBKY_RUNTIME_TESTNET'] !== 'false',
     },
     expose: {
       // slow down execution more in CI to avoid flaky tests
@@ -152,6 +154,8 @@ export default defineConfig({
           homeserverAdminPassword: String(cypressConfig.env['homeserverAdminPassword']),
           homeserverPublicKey: String(cypressConfig.env['homeserverPublicKey']),
           nexusUrl: String(cypressConfig.env['nexusUrl']),
+          // Cypress may surface the config boolean as the string "false".
+          testnet: cypressConfig.env['testnet'] !== false && cypressConfig.env['testnet'] !== 'false',
         }),
       );
 

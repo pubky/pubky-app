@@ -33,6 +33,6 @@ The setup script prompts without echoing the password. Do not ask the user to pa
 
 On success, `scripts/generate.sh` writes exactly one invite code to stdout. Return that code to the user without saving it. On failure, report the concise diagnostic from stderr and do not invent a code. Do not automatically retry a timeout or other ambiguous network failure because the first request may already have minted a token.
 
-Each code is single-use and valid only for the staging homeserver `8um71us3fyw6h8wbcxb5ar3rwusy1a6u49ba7eabxpqi8gnetewy` used by shop.pubky.app and staging Pubky App accounts.
+Each code is single-use and valid only for the staging homeserver `ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy` used by shop.pubky.app and staging Pubky App accounts.
 
 The user enters it in Pubky App sign-up under **Invite code**. If a fresh code is rejected, first confirm that the app targets the staging homeserver and that an earlier signup attempt did not consume it.
