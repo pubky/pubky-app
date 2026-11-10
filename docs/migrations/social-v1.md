@@ -303,8 +303,8 @@ staging-only checks (Locks before and after a migration, one real-Ring sign-in w
 
 ## Cypress (ported in PR #3055)
 
-The suite was QA-owned while the port ran; it was ported to v1 in PR #3055 and `cypress/**` moved with it. What
-the specs now assume:
+The suite stays QA-owned; the port updated it to v1 once, with QA's agreement, in PR #3055 (`cypress/**`), and
+runs it on the branch until the final PR lands. What the specs now assume:
 
 - Paths: posts, files, tags, follows and the profile under `/pub/social/v1/` (a post write is one version,
   `posts/{id}/{editId}.json`, and `postIdFromWriteUrl` in `cypress/support/nexus.ts` reads the post id from it);
