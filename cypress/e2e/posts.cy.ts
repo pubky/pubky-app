@@ -42,7 +42,7 @@ import {
   revealPostInTimeline,
 } from '../support/feeds';
 import { goToCollectionsPage } from '../support/header';
-import { itDesktopOnly } from '../support/mobile';
+import { itDesktopOnly, itMobile } from '../support/mobile';
 import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
@@ -172,7 +172,7 @@ describe('posts', () => {
     });
   });
 
-  it('can post from quick post box', () => {
+  itMobile('can post from quick post box', () => {
     const postContent = `I can post using the quick post box! ${Date.now()}`;
     createQuickPost(postContent);
 
@@ -199,7 +199,7 @@ describe('posts', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  it('can edit a post', () => {
+  itMobile('can edit a post', () => {
     const postContent = `I can edit this post! ${Date.now()}`;
     const editedContent = `I have edited this post! ${Date.now()}`;
 
@@ -397,7 +397,7 @@ describe('posts', () => {
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
   });
 
-  it('can edit and delete a post from the profile posts tab', () => {
+  itMobile('can edit and delete a post from the profile posts tab', () => {
     const postContent = `I can edit this post from my profile! ${Date.now()}`;
     const editedContent = `I have edited this post from my profile! ${Date.now()}`;
     createQuickPost(postContent);
@@ -500,7 +500,7 @@ describe('posts', () => {
     });
   });
 
-  it('can tag and remove tags from existing post on feed page', () => {
+  itMobile('can tag and remove tags from existing post on feed page', () => {
     const postContent = `I can add and remove tags from my existing post on the feed page! ${Date.now()}`;
     const tag1 = 'bananas';
     const tag2 = 'pyjamas';
@@ -538,7 +538,7 @@ describe('posts', () => {
     });
   });
 
-  it("can tag another profile's post from the feed and from their profile", () => {
+  itMobile("can tag another profile's post from the feed and from their profile", () => {
     const stamp = Date.now();
     const postContent = `Tag my post from anywhere! ${stamp}`;
     const feedTag = `feed${String(stamp).slice(-6)}`;
@@ -764,7 +764,7 @@ describe('posts', () => {
     });
   });
 
-  it('can bookmark multiple posts then remove bookmarks', () => {
+  itMobile('can bookmark multiple posts then remove bookmarks', () => {
     const postContent1 = `This post will be bookmarked! ${Date.now()}`;
     const postContent2 = `This post will also be bookmarked! ${Date.now()}`;
 
@@ -933,7 +933,7 @@ describe('posts', () => {
     cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
   });
 
-  it('can create an article from quick post box', () => {
+  itMobile('can create an article from quick post box', () => {
     const title = `Quick article ${Date.now()}`;
     const body = `I can create an article from the quick post box! ${Date.now()}`;
 
@@ -946,7 +946,7 @@ describe('posts', () => {
     articleInFeedEq(title, body);
   });
 
-  it('can create an article from new post', () => {
+  itMobile('can create an article from new post', () => {
     const title = `Dialog article ${Date.now()}`;
     const body = `I can create an article from new post! ${Date.now()}`;
 
@@ -960,7 +960,7 @@ describe('posts', () => {
   });
 
   // Cover stacking bug: article composer must appear in the same dialog, not behind it
-  it('new article modal is shown infront of new post modal', () => {
+  itMobile('new article modal is shown infront of new post modal', () => {
     cy.get('[data-cy="new-post-btn"]').click();
 
     cy.get('[data-cy="dialog-content"]')
@@ -992,7 +992,7 @@ describe('posts', () => {
     cy.get('[data-cy="dialog-content"]').should('not.exist');
   });
 
-  it('can edit an article', () => {
+  itMobile('can edit an article', () => {
     const title = `Editable article ${Date.now()}`;
     const body = `This article will be edited! ${Date.now()}`;
     const editedTitle = `Edited article ${Date.now()}`;
@@ -1178,7 +1178,7 @@ describe('posts', () => {
   });
 
   // https://github.com/pubky/pubky-app/issues/416
-  it('can navigate back to feed from post view', () => {
+  itMobile('can navigate back to feed from post view', () => {
     cy.viewport(Cypress.config('viewportWidth'), 640);
 
     const filler = `Scroll anchor ${Date.now()}`;
@@ -1303,7 +1303,7 @@ describe('posts', () => {
     restoreSessionByReload();
   });
 
-  it('prompts to sign in again when homeserver responds 401 to creating new article', () => {
+  itMobile('prompts to sign in again when homeserver responds 401 to creating new article', () => {
     const title = `Unauthenticated article ${Date.now()}`;
     const body = `This article is rejected as unauthenticated! ${Date.now()}`;
     cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('articleUnauthorized');

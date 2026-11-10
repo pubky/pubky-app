@@ -31,7 +31,7 @@ import {
   fastTagPostInFeed,
   waitForFeedToLoad,
 } from '../support/posts';
-import { inSidebar, itDesktopOnly } from '../support/mobile';
+import { inSidebar, itDesktopOnly, itMobile } from '../support/mobile';
 import { followIndexed, postIndexed, postTagsIndexed, userTagsIndexed, waitForNexus } from '../support/nexus';
 import {
   createImagePostViaApi,
@@ -239,7 +239,7 @@ describe('feed and filters', () => {
     });
   });
 
-  it('can filter to view only posts and reposts of following', () => {
+  itMobile('can filter to view only posts and reposts of following', () => {
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     // click the Following filter
@@ -419,7 +419,7 @@ describe('feed and filters', () => {
     });
   });
 
-  it('who to follow sidebar and who-to-follow page suggested other profiles', () => {
+  itMobile('who to follow sidebar and who-to-follow page suggested other profiles', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
 
     inSidebar(
@@ -530,7 +530,7 @@ describe('feed and filters', () => {
     cy.signOut(HasBackedUp.Yes);
   });
 
-  it('can create a custom feed with filters', () => {
+  itMobile('can create a custom feed with filters', () => {
     const stamp = Date.now();
     const reachTag = `p4${String(stamp).slice(-6)}`;
     const sortTag = `sort${String(stamp).slice(-6)}`;

@@ -1,7 +1,7 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { waitForServiceWorker } from '../support/common';
-import { isMobile } from '../support/mobile';
+import { isMobile, itMobile } from '../support/mobile';
 import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { seededStreamIndexed } from '../support/pagination';
 import { createCollectionViaApi, createPostViaApi, seedUserViaApi } from '../support/seed';
@@ -90,7 +90,7 @@ describe('logged-out deep links', () => {
     assertWriteAsksToSignIn('[data-cy="profile-follow-toggle-btn"]:visible');
   });
 
-  it('opens a collection and asks to sign in before following it', () => {
+  itMobile('opens a collection and asks to sign in before following it', () => {
     cy.visit(`/collections/${authorId}/${collectionId}`);
 
     cy.get('[data-cy="collection-hero"]:visible').should('have.length', 1).and('contain.text', collectionName);

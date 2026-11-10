@@ -2,6 +2,7 @@ import { backupDownloadFilePath, userIdFromPubky } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { addTagsToCollectionHero, createCollection, findCollectionCardInSection } from '../support/collections';
+import { itMobile } from '../support/mobile';
 import {
   closeSearchSuggestions,
   getSearchBox,
@@ -84,7 +85,7 @@ describe('search', () => {
     });
   });
 
-  it('can search posts by tag filters', () => {
+  itMobile('can search posts by tag filters', () => {
     // open search results for a single tag
     cy.visit(`/search?tags=${tag1}`);
 
@@ -160,7 +161,7 @@ describe('search', () => {
     cy.get('[data-cy="post-search-results"]').find('[data-cy="post-card"]').should('have.length', 1);
   });
 
-  it('can search posts by full-text query', () => {
+  itMobile('can search posts by full-text query', () => {
     // full-text search for the unique word from the first post's text
     getSearchInput().type(uniqueWord).type('{enter}');
 

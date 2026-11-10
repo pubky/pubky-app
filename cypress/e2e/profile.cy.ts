@@ -13,6 +13,7 @@ import { BackupType, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath } from '../support/auth';
 import { searchForProfileByName, searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
+import { itMobile } from '../support/mobile';
 import { userIndexed, userTagsIndexed, waitForNexus } from '../support/nexus';
 import { seedUserViaApi } from '../support/seed';
 
@@ -28,7 +29,7 @@ describe('profile', () => {
     cy.onboardAsNewUser(profileName, 'This bio is editable', [BackupType.EncryptedFile]);
   });
 
-  it('editing should retain any changes made to own profile', () => {
+  itMobile('editing should retain any changes made to own profile', () => {
     // todo: add test profile picture upload
 
     // navigate to edit profile page
@@ -68,7 +69,7 @@ describe('profile', () => {
     cy.get('[data-cy="edit-profile-link-github-input"]').should('be.visible');
   });
 
-  it('cancelling edit should not retain any changes made to own profile', () => {
+  itMobile('cancelling edit should not retain any changes made to own profile', () => {
     // navigate to edit profile page
     goToProfilePageFromHeader();
     openEditProfile();
@@ -147,7 +148,7 @@ describe('profile', () => {
     getProfileTaggedSection().contains('them-2');
   });
 
-  it('can tag other profile from the tag button on their profile', () => {
+  itMobile('can tag other profile from the tag button on their profile', () => {
     // the profile to tag only needs to exist, so it is seeded through the API
     seedUserViaApi(`${Cypress._.random(100_000)}-Tag My Button`, { bio: 'Tag me from my profile header' }).then(
       (target) => {

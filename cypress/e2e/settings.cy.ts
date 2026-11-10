@@ -3,6 +3,7 @@ import { searchForProfileByPubky } from '../support/contacts';
 import { goToHomePage, goToSettingsPage, goToProfilePageFromHeader, openSettingsSection } from '../support/header';
 import { showProfileHeader } from '../support/profile';
 import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
+import { itMobile } from '../support/mobile';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
@@ -18,7 +19,7 @@ describe('settings', () => {
     cy.deleteDownloadsFolder();
   });
 
-  it('Account settings function correctly', () => {
+  itMobile('Account settings function correctly', () => {
     // Create a new user with recovery phrase backup
     const profileName = 'MrAccountSettings';
 
@@ -78,7 +79,7 @@ describe('settings', () => {
     cy.get('[data-testid="tags-of-interest-form"]').should('be.visible');
   });
 
-  it('Muted users settings displays muted users and hides posts in feed', () => {
+  itMobile('Muted users settings displays muted users and hides posts in feed', () => {
     // Create user 1
     cy.onboardAsNewUser('Mr Muted', 'I like to be muted');
 
@@ -136,7 +137,7 @@ describe('settings', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  it('can save changes to notification settings', () => {
+  itMobile('can save changes to notification settings', () => {
     // Create a new user with encrypted file backup (profile name used for backup filename)
     cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings', [BackupType.EncryptedFile]);
 
