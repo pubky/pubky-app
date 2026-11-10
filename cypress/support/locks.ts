@@ -536,20 +536,33 @@ export const publishLock = (): Cypress.Chainable<string> => {
   });
 };
 
+const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
+
+const nexusDetailsHaveLock = (body: unknown): boolean =>
+  typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
+
 /**
- * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ * Polls GET /v0/post/<author>/<id>/details until `settled` is true.
+ *
+ * The 90s deadline is taken when this command runs. locks.cy.ts calls both waiters from one
+ * post-id callback that also queues the later steps, so a Date.now() at the call has already
+ * passed by the time the delete poll starts.
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+const pollNexusPostDetails = (
+  authorPubky: string,
+  postId: string,
+  settled: (status: number, body: unknown) => boolean,
+  timedOut: (authorId: string, status: number) => string,
+) => {
   const authorId = userIdFromPubky(authorPubky);
-  const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
     const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
+    const deadline = Date.now() + NEXUS_POST_POLL_TIMEOUT_MS;
     const poll = () => {
       cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
-        if (response.status === 200 && response.body?.lock) return;
+        if (settled(response.status, response.body)) return;
         if (Date.now() >= deadline) {
-          throw new Error(`Nexus did not index lock post ${authorId}/${postId} (last status ${response.status})`);
+          throw new Error(timedOut(authorId, response.status));
         }
         cy.wait(1000);
         poll();
@@ -559,24 +572,27 @@ export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
   });
 };
 
+/**
+ * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
+ * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ */
+export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+  pollNexusPostDetails(
+    authorPubky,
+    postId,
+    (status, body) => status === 200 && nexusDetailsHaveLock(body),
+    (authorId, status) => `Nexus did not index lock post ${authorId}/${postId} (last status ${status})`,
+  );
+};
+
 /** Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there. */
 export const waitForNexusPostDeleted = (authorPubky: string, postId: string) => {
-  const authorId = userIdFromPubky(authorPubky);
-  const deadline = Date.now() + 90_000;
-  cy.env(['nexusUrl']).then(({ nexusUrl }) => {
-    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
-    const poll = () => {
-      cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
-        if (response.status === 404) return;
-        if (Date.now() >= deadline) {
-          throw new Error(`Nexus still serves deleted post ${authorId}/${postId} (last status ${response.status})`);
-        }
-        cy.wait(1000);
-        poll();
-      });
-    };
-    poll();
-  });
+  pollNexusPostDetails(
+    authorPubky,
+    postId,
+    (status) => status === 404,
+    (authorId, status) => `Nexus still serves deleted post ${authorId}/${postId} (last status ${status})`,
+  );
 };
 
 export const singlePostCard = () => cy.get('[data-cy="single-post-card"]').filter(':visible');

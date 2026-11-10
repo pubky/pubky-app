@@ -206,7 +206,13 @@ describe('Lock Server viewer errors through the pinned SDK and LocksService', ()
 
     const lookup = await LocksService.lookupVerificationTask(CREATOR, BUNDLE_ID);
 
-    expect(lookup).toEqual({ status: 'failed', walletSetupNeeded: false, admissionDeadlineAt: null });
+    expect(lookup).toEqual({
+      status: 'failed',
+      walletSetupNeeded: false,
+      readerNotPayable: false,
+      admissionDeadlineAt: null,
+      completedAt: '2026-06-01T12:00:02Z',
+    });
     expectNothingReported();
   });
 

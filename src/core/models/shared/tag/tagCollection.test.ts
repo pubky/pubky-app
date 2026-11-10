@@ -1,10 +1,12 @@
 import Dexie, { Table } from 'dexie';
 import { IDBKeyRange, indexedDB } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { TAG_MUTATION_TTL_MS } from '@/config/tags';
 import type { Pubky } from '@/models/models.types';
 import { TagModel } from '@/models/shared/tag/tag';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { getViewerTagUri } from './tag.utils';
 import { TagCollection } from './tagCollection';
 
 type TestTagSchema = TagCollectionModelSchema<string>;
@@ -102,6 +104,63 @@ describe('TagCollection local intent', () => {
       expiresAt: now + 60_000,
     });
     expect(collection.mutations?.['viewer:new']).toMatchObject({ viewerId: 'viewer', relationship: true });
+  });
+});
+
+describe('TagCollection tag address', () => {
+  it('records the address a create wrote, and none for a delete', () => {
+    const row = new TestTagCollection({ id: 'profile', tags: [] });
+    row.recordMutation('bitcoin', 'viewer', true, 'a', false, 'pubky://viewer/pub/pubky.app/tags/TAG01');
+    expect(row.mutations?.['viewer:bitcoin']?.uri).toBe('pubky://viewer/pub/pubky.app/tags/TAG01');
+    row.recordMutation('bitcoin', 'viewer', false, 'b', false);
+    expect(row.mutations?.['viewer:bitcoin']).not.toHaveProperty('uri');
+  });
+
+  it('keeps the Nexus tag_uri through a local write, and adds none to rows cached without it', () => {
+    const tagUri = 'pubky://viewer/pub/mapky/tags/MAPKY01';
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [
+        { label: 'bitcoin', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: tagUri },
+        { label: 'legacy', taggers: [], taggers_count: 1, relationship: false },
+      ],
+    });
+    row.addTagger('pubky', 'viewer');
+    expect(row.tags[0].tag_uri).toBe(tagUri);
+    expect(row.tags[1]).not.toHaveProperty('tag_uri');
+  });
+
+  it('moves the row address with each local write, so an expired re-add never resolves the file it left', () => {
+    const mapky = 'pubky://viewer/pub/mapky/tags/MAPKY01';
+    const app = 'pubky://viewer/pub/pubky.app/tags/TAG01';
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [{ label: 'bitcoin', taggers: ['viewer', 'other'], taggers_count: 2, relationship: true, tag_uri: mapky }],
+      cache: { cursor: 1, exhausted: true, fetchedAt: 1, revision: 1, viewerId: 'viewer' },
+    });
+    const later = Date.now() + TAG_MUTATION_TTL_MS + 1;
+
+    row.removeTagger('bitcoin', 'viewer');
+    row.recordMutation('bitcoin', 'viewer', false, 'a', true);
+    expect(row.tags[0].tag_uri).toBeNull();
+    expect(getViewerTagUri(row, 'bitcoin', 'viewer', later)).toBeUndefined();
+
+    row.addTagger('bitcoin', 'viewer');
+    row.recordMutation('bitcoin', 'viewer', true, 'b', true, app);
+    expect(row.tags[0].tag_uri).toBe(app);
+    expect(getViewerTagUri(row, 'bitcoin', 'viewer', later)).toBe(app);
+  });
+
+  it('leaves the address of a row scoped to another viewer alone', () => {
+    const mapky = 'pubky://other/pub/mapky/tags/MAPKY01';
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [{ label: 'bitcoin', taggers: ['other'], taggers_count: 1, relationship: true, tag_uri: mapky }],
+      cache: { cursor: 1, exhausted: true, fetchedAt: 1, revision: 1, viewerId: 'other' },
+    });
+    row.addTagger('bitcoin', 'viewer');
+    row.recordMutation('bitcoin', 'viewer', true, 'a', false, 'pubky://viewer/pub/pubky.app/tags/TAG01');
+    expect(row.tags[0].tag_uri).toBe(mapky);
   });
 });
 
