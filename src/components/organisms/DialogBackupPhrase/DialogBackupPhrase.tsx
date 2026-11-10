@@ -54,7 +54,9 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
           <Button id="backup-recovery-phrase-btn">{'Continue'}</Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-sm md:max-w-2xl" hiddenTitle={'Backup recovery phrase'}>
+      {/* `sentry-block` keeps this DOM out of Replay and `beforeBreadcrumb` drops its SDK click breadcrumbs, but Replay's
+          click events still carry the target's id and classes: ids in here stay position-only, never a word. */}
+      <DialogContent className="sentry-block max-w-sm md:max-w-2xl" hiddenTitle={'Backup recovery phrase'}>
         {step === 1 && (
           <RecoveryStep1
             recoveryWords={recoveryWords}
@@ -202,7 +204,7 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
         <Container className="flex-row flex-wrap gap-2">
           {remainingWords.map(({ word, index, isUsed }) => (
             <Button
-              id={`backup-recovery-phrase-word-${word}-${index + 1}`}
+              id={`backup-recovery-phrase-choice-${index + 1}`}
               key={`${word}-${index}`}
               variant={isUsed ? 'secondary' : 'outline'}
               className={`rounded-full ${isUsed ? 'cursor-not-allowed border bg-transparent text-muted-foreground opacity-40' : 'cursor-pointer border-transparent bg-secondary'}`}
