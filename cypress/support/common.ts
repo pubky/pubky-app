@@ -62,13 +62,14 @@ export const verifyNotificationCounter = (expectedCount?: number) => {
  * chunk requests share the browser's connections to the Cypress proxy with the app's own
  * requests: a sign-in's PKARR lookups then time out, and a page can take tens of seconds to load
  * its first stream page. Resolves at once when the worker is already active, or when the build
- * has no service worker.
+ * has no service worker. Chromium only: under Cypress, Firefox and WebKit never activate the
+ * worker, so `ready` would never settle there.
  */
 export const waitForServiceWorker = () =>
   cy
     .window({ log: false })
     .then({ timeout: 120_000 }, (win) =>
-      'serwist' in win && 'serviceWorker' in win.navigator
+      Cypress.browser.family === 'chromium' && 'serwist' in win && 'serviceWorker' in win.navigator
         ? win.navigator.serviceWorker.ready.then(() => undefined)
         : undefined,
     );
