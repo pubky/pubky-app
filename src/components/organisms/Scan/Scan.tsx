@@ -98,13 +98,7 @@ export const ScanContent = () => {
         <ScanHeader isMobile={true} />
         <ContentCard layout="column">
           <Container className="flex-col items-center justify-center gap-12 lg:flex-row">
-            <Image
-              src="/images/logo-pubky-ring.svg"
-              alt="Pubky Ring"
-              width={137}
-              height={30}
-              className="light:invert"
-            />
+            <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
             <Button
               className="w-full"
               size="lg"

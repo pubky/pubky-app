@@ -44,7 +44,7 @@ data dependency (store/hook/fetch/router) so the pixels are deterministic.
 Captures are dark by default. Pass `theme: 'light'` to capture the light
 theme (the harness sets the `.dark` or `.light` class on `<html>` per render,
 exactly as next-themes does, so `dark:` and `light:` utilities apply). Light coverage is deliberately limited to a few core
-surfaces — Home feed, Hot and the own-profile posts tab, desktop + mobile,
+signed-in surfaces — Home feed, Hot and the own-profile posts tab, desktop + mobile,
 named `<surface>-light-<viewport>` — not a duplicate of every dark baseline.
 
 ## Capture dimensions
