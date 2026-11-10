@@ -94,6 +94,11 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
 }));
 
 const URL = 'https://en.wikipedia.org/wiki/Bitcoin';
+/** The video without its tracks on Spotify, Deezer and TIDAL: a video with Also on, no song (`isSong`). */
+const ORDINARY_VIDEO = {
+  ...videoFixture,
+  also_on: videoFixture.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
+};
 
 describe('GenericResourcePreview', () => {
   const mockUsePinakesCard = vi.mocked(usePinakesCard);
@@ -168,7 +173,7 @@ describe('GenericResourcePreview', () => {
       act(() => vi.advanceTimersByTime(PINAKES_SLOW_READ_MS));
       expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
 
-      mockUsePinakesCard.mockReturnValue({ data: videoFixture, isLoading: false, isError: false });
+      mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
       rerender(<GenericResourcePreview url={videoFixture.uri} />);
       expect(screen.getByTestId('resource-card')).toBeInTheDocument();
     } finally {
@@ -231,7 +236,7 @@ describe('GenericResourcePreview', () => {
   });
 
   it('does not read the link’s own preview for a card that has its title and image', () => {
-    mockUsePinakesCard.mockReturnValue({ data: videoFixture, isLoading: false, isError: false });
+    mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
 
     render(<GenericResourcePreview url={videoFixture.uri} />);
 
@@ -447,9 +452,9 @@ describe('GenericResourcePreview', () => {
 
       render(<GenericResourcePreview url={videoFixture.uri} />);
 
-      // The card still opens the resource page; only its source opens the link.
-      fireEvent.click(screen.getByTestId('resource-card-description'));
-      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
+      // The video is a track on Spotify, Deezer and TIDAL too (`isSong`): its player shows up front
+      // in the resource frame, whose type still opens the resource page.
+      expect(screen.getByTestId('resource-card-type')).toHaveAttribute('href', getResourceRoute(videoFixture.uri));
       const menu = openMoreMenu();
       const rows = within(within(menu).getByRole('group', { name: 'Also on' })).getAllByRole('menuitem');
       // A YouTube video: the other YouTube upload is its own service.
@@ -463,7 +468,7 @@ describe('GenericResourcePreview', () => {
 
     it('still opens the resource page from the card once Play on puts a player in its body, never from the player', () => {
       const open = vi.spyOn(window, 'open').mockReturnValue(null);
-      mockUsePinakesCard.mockReturnValue({ data: videoFixture, isLoading: false, isError: false });
+      mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
       render(<GenericResourcePreview url={videoFixture.uri} />);
 
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
@@ -481,7 +486,7 @@ describe('GenericResourcePreview', () => {
       // A click on the rest of the card, its header, still opens the page.
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
       fireEvent.click(screen.getByTestId('resource-card-type'));
-      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ORDINARY_VIDEO.uri));
     });
 
     it('adds nothing to the ⋯ menu, and stays a click-through, when Also on lists only its own service', () => {
@@ -634,7 +639,7 @@ describe('GenericResourcePreview', () => {
     });
 
     it('keeps our card and loads nothing when the card is on other services too', () => {
-      mockUsePinakesCard.mockReturnValue({ data: videoFixture, isLoading: false, isError: false });
+      mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
       render(<GenericResourcePreview url="https://www.youtube.com/playlist?list=PLabcdefghij" />);
 
       expect(screen.getByTestId('resource-card')).toBeInTheDocument();
@@ -656,12 +661,15 @@ describe('GenericResourcePreview', () => {
       afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
       it('keeps our card and loads nothing from the service', () => {
-        mockUsePinakesCard.mockReturnValue({
-          data: { ...musicFixture, also_on: [] },
-          isLoading: false,
-          isError: false,
-        });
-        render(<GenericResourcePreview url={SPOTIFY} />);
+        const album = {
+          ...musicFixture,
+          uri: 'https://open.spotify.com/album/2noRn2Aes5aoNVsU6iWThc',
+          type: 'MusicAlbum',
+          type_path: ['Thing', 'CreativeWork', 'MusicAlbum'],
+          also_on: [],
+        };
+        mockUsePinakesCard.mockReturnValue({ data: album, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={album.uri} />);
 
         expect(screen.getByTestId('resource-card')).toBeInTheDocument();
         expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
@@ -698,6 +706,207 @@ describe('GenericResourcePreview', () => {
       render(
         <PostPreviewNestingProvider>
           <GenericResourcePreview url={SPOTIFY} />
+        </PostPreviewNestingProvider>,
+      );
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
+    });
+  });
+  describe('a song', () => {
+    // Get Lucky on Spotify, also on Apple Music (no player), TIDAL and YouTube.
+    const SONG = {
+      ...musicFixture,
+      also_on: [
+        { id: 'a', uri: 'https://music.apple.com/song/1624945512', site: 'Apple Music' },
+        { id: 't', uri: 'https://tidal.com/track/490851477', site: 'TIDAL' },
+        { id: 'y', uri: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', site: 'YouTube' },
+      ],
+    };
+    const switchButton = () => screen.getByRole('button', { name: /choose another service$/ });
+
+    it('shows its player up front with Also on, in the resource frame: no card text, no Play on, tags and actions kept', () => {
+      mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={SONG.uri} />);
+
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
+      );
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-title')).not.toBeInTheDocument();
+      expect(within(frame).getByTestId('resource-card-type')).toHaveTextContent('Song');
+      const actions = within(frame).getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', SONG.uri);
+      expect(actions).toHaveAttribute('data-has-extra-menu', 'true');
+      expect(within(actions).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    });
+
+    it('switches its player without opening the resource page', () => {
+      mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={SONG.uri} />);
+
+      fireEvent.click(switchButton());
+      fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'TIDAL' }));
+      fireEvent.click(screen.getByTestId('resource-player-frame'));
+
+      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
+      );
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    describe('with the viewer’s Players', () => {
+      const setPlayers = (playerOrder: string[], hiddenPlayers: string[] = []) =>
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder, hiddenPlayers } });
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('shows the first service in the viewer’s order, its switch in that order', () => {
+        setPlayers(['tidal', 'youtube', 'spotify']);
+        mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={SONG.uri} />);
+
+        expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+          'src',
+          'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
+        );
+        fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
+        expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+          'TIDAL',
+          'YouTube',
+          'Spotify',
+          'Card',
+        ]);
+      });
+
+      it('leaves a removed service out, the shared link’s too', () => {
+        setPlayers([], ['spotify']);
+        mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={SONG.uri} />);
+
+        expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+          'src',
+          'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
+        );
+        fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
+        expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['TIDAL', 'YouTube', 'Card']);
+        expect(document.querySelectorAll('iframe[src*="spotify"]')).toHaveLength(0);
+      });
+
+      it('shows the card without a player when every service it is on is removed', () => {
+        setPlayers([], ['spotify', 'tidal', 'youtube']);
+        mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={SONG.uri} />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+      });
+    });
+
+    it('previews the same player and switch in the composer, without the footer', () => {
+      mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={SONG.uri} isComposing />);
+
+      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
+      );
+      expect(switchButton()).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    });
+
+    it('shows our card in place from the switch’s Card, with the switch to pick a service again', () => {
+      mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={SONG.uri} />);
+
+      fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Show the link card instead of a player' }));
+
+      const card = screen.getByTestId('resource-card');
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(SONG.name!);
+      expect(within(card).getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
+      expect(within(card).getByTestId('resource-actions')).toHaveAttribute('data-has-extra-menu', 'true');
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      expect(mockPush).not.toHaveBeenCalled();
+
+      fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'TIDAL' }));
+      expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
+      );
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    describe('with Card (no player) first in Players', () => {
+      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('shows our card first, loading nothing, also for a song on one service', () => {
+        mockUsePinakesCard.mockReturnValue({ data: { ...SONG, also_on: [] }, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={SONG.uri} />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(switchButton()).toHaveAccessibleName('Card: choose another service');
+      });
+
+      it('shows our card with Play on, loading nothing, for an album on one service', () => {
+        const album = {
+          ...musicFixture,
+          uri: 'https://tidal.com/album/655910',
+          site: 'TIDAL',
+          type: 'MusicAlbum',
+          type_path: ['Thing', 'CreativeWork', 'MusicAlbum'],
+          also_on: [],
+        };
+        mockUsePinakesCard.mockReturnValue({ data: album, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={album.uri} />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Play on TIDAL' })).toBeInTheDocument();
+      });
+
+      it('previews our card in the composer, without the footer', () => {
+        mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={SONG.uri} isComposing />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(switchButton()).toBeInTheDocument();
+        expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      });
+    });
+
+    describe('with platform embeds up front off', () => {
+      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('loads no player, and offers Play on in its place, the footer kept', () => {
+        mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={SONG.uri} />);
+
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(
+          within(screen.getByTestId('song-player')).getByRole('button', { name: 'Play on Spotify' }),
+        ).toBeInTheDocument();
+        expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
+      });
+    });
+
+    it('keeps the card in a quoted post', () => {
+      mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+      render(
+        <PostPreviewNestingProvider>
+          <GenericResourcePreview url={SONG.uri} />
         </PostPreviewNestingProvider>,
       );
 

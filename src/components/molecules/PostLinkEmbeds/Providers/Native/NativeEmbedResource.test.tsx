@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
@@ -51,6 +51,11 @@ const VIDEO_URL = videoFixture.uri;
 const POST_URL = 'https://x.com/someone/status/2118393153103470770';
 
 const VIDEO_ALONE: TPinakesResourceDetail = { ...videoFixture, also_on: [] };
+/** The video without its tracks on Spotify, Deezer and TIDAL: a video with Also on, no song (`isSong`). */
+const VIDEO_WITH_ALSO_ON: TPinakesResourceDetail = {
+  ...videoFixture,
+  also_on: videoFixture.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
+};
 const POST_CARD: TPinakesResourceDetail = {
   ...videoFixture,
   uri: POST_URL,
@@ -129,7 +134,7 @@ describe('NativeEmbedResource', () => {
 
   describe('a link with Also on', () => {
     it('shows our card with Play on and loads nothing from the platform', () => {
-      mockCard(videoFixture);
+      mockCard(VIDEO_WITH_ALSO_ON);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
       expect(screen.getByTestId('resource-card')).toBeInTheDocument();
@@ -141,7 +146,7 @@ describe('NativeEmbedResource', () => {
     });
 
     it('plays the video in the card on Play on', () => {
-      mockCard(videoFixture);
+      mockCard(VIDEO_WITH_ALSO_ON);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
@@ -189,6 +194,7 @@ describe('NativeEmbedResource', () => {
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
       const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-card-type')).toHaveTextContent('Video');
       expect(within(frame).getByTestId('platform-embed')).toBeInTheDocument();
       expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', VIDEO_URL);
       expect(screen.queryByRole('button', { name: /Play on/ })).not.toBeInTheDocument();
@@ -284,9 +290,137 @@ describe('NativeEmbedResource', () => {
     }
   });
 
+  describe('a YouTube link Pinakes knows as a song', () => {
+    // The same song on YouTube, as Pinakes types it: a `MusicRecording`, also on Spotify.
+    const SONG: TPinakesResourceDetail = {
+      ...videoFixture,
+      type: 'MusicRecording',
+      type_path: ['Thing', 'CreativeWork', 'MusicRecording'],
+    };
+
+    it('shows the song’s player up front, paused, in the resource frame instead of the platform embed', () => {
+      mockCard(SONG);
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
+      );
+      expect(embed).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      expect(within(frame).getByRole('button', { name: /choose another service$/ })).toBeInTheDocument();
+      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-has-also-on', 'true');
+    });
+
+    it('previews the same in the composer, without the footer', () => {
+      mockCard(SONG);
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
+
+      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(embed).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    });
+
+    describe('with platform embeds up front off', () => {
+      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('loads nothing from any service, and offers Play on in the player’s place', () => {
+        mockCard(SONG);
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(embed).not.toHaveBeenCalled();
+        expect(screen.getByTestId('song-player')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('YouTube’s Get Lucky, a video Pinakes knows as a track on other services', () => {
+    // As Pinakes reads it: a `VideoObject`, on Spotify, Deezer and TIDAL as tracks.
+    const GET_LUCKY_URL = 'https://www.youtube.com/watch?v=5NV6Rdv1a3I';
+    const GET_LUCKY: TPinakesResourceDetail = {
+      ...videoFixture,
+      uri: GET_LUCKY_URL,
+      name: 'Daft Punk - Get Lucky (Official Audio) ft. Pharrell Williams, Nile Rodgers',
+      refs: [GET_LUCKY_URL],
+      facts: null,
+      also_on: [
+        { uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq', site: 'Spotify' },
+        { uri: 'https://www.deezer.com/track/67238735', site: 'Deezer' },
+        { uri: 'https://tidal.com/track/20115564', site: 'TIDAL' },
+        { uri: 'https://music.apple.com/song/617154366', site: 'Apple Music' },
+      ],
+    };
+
+    it('shows the song’s player up front, paused, with a switch, instead of our card with Play on', () => {
+      expect(GET_LUCKY.type).toBe('VideoObject');
+      mockCard(GET_LUCKY);
+      render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
+
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/5NV6Rdv1a3I?enablejsapi=1&rel=0',
+      );
+      expect(within(frame).getByRole('button', { name: 'YouTube: choose another service' })).toBeInTheDocument();
+      // Its header keeps Pinakes' type, as its card does.
+      expect(within(frame).getByTestId('resource-card-type')).toHaveTextContent('Video');
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(embed).not.toHaveBeenCalled();
+    });
+
+    it('shows our card, loading nothing, with Card (no player) first in Players', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
+      mockCard(GET_LUCKY);
+      render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(embed).not.toHaveBeenCalled();
+    });
+
+    it('shows an ordinary video Pinakes knows nowhere else as our card with Play on, with Card (no player) above YouTube', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
+      mockCard({ ...GET_LUCKY, also_on: [] });
+      render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(embed).not.toHaveBeenCalled();
+    });
+
+    it('keeps an ordinary video with Also on, on no music service as a track, as our card with Play on', () => {
+      mockCard({
+        ...GET_LUCKY,
+        also_on: [
+          { uri: 'https://www.youtube.com/watch?v=Om61naQC8is', site: 'YouTube' },
+          { uri: 'https://open.spotify.com/album/1weenld61qoidwYuZ1GESA', site: 'Spotify' },
+        ],
+      });
+      render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
+    });
+  });
+
   describe('in the composer', () => {
     it('asks Pinakes to read the link at once and shows our card without footer or Play on when it has Also on', () => {
-      mockCard(videoFixture);
+      mockCard(VIDEO_WITH_ALSO_ON);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
 
       expect(usePinakesCard).toHaveBeenCalledWith(VIDEO_URL, { resolve: true });
@@ -314,12 +448,13 @@ describe('NativeEmbedResource', () => {
       const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
       const frame = screen.getByTestId('platform-embed');
       act(() => {
+        fireEvent.mouseOver(frame);
         frame.focus();
         window.dispatchEvent(new Event('blur'));
         vi.advanceTimersByTime(1);
       });
 
-      mockCard(videoFixture);
+      mockCard(VIDEO_WITH_ALSO_ON);
       rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
       expect(screen.getByTestId('platform-embed')).toBe(frame);
       expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
@@ -333,7 +468,7 @@ describe('NativeEmbedResource', () => {
     const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
     expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
 
-    mockCard(videoFixture);
+    mockCard(VIDEO_WITH_ALSO_ON);
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
     expect(screen.getByTestId('resource-card')).toBeInTheDocument();
   });
@@ -344,7 +479,7 @@ describe('NativeEmbedResource', () => {
     expect(screen.getByTestId('resource-card-skeleton')).toBeInTheDocument();
     expect(embed).not.toHaveBeenCalled();
 
-    mockCard(videoFixture);
+    mockCard(VIDEO_WITH_ALSO_ON);
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
     expect(screen.getByTestId('resource-card')).toBeInTheDocument();
     expect(embed).not.toHaveBeenCalled();

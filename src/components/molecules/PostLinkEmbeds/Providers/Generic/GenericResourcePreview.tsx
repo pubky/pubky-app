@@ -21,7 +21,7 @@ import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame'
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
-import { getEmbedTarget } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
+import { getEmbedTarget, isCardFirst } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { AnimatedHeight, ResourcePlayerFrame } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
@@ -84,11 +84,15 @@ interface GenericResourcePreviewProps {
  * A card on a service that allows embedding plays there in place (`useCardPlayer`: "Play on
  * <service>" in the action row, a dock when it scrolls away); not in the composer or a quoted post.
  *
+ * A song shows its player up front instead, also with Also on (`useCardPlayer`'s `embed`), in the
+ * resource frame with a switch to its other services and Card; the composer previews the same
+ * without the footer. Card picked, or ranked above its first service, shows our card (`isCard`).
+ *
  * A card on such a service with no Also on shows that service's embed up front instead, in the
  * resource frame (`ResourceEmbedFrame`), as `NativeEmbedResource` does for a video; in a post, the
  * composer and a collection alike. It plays only on a press inside it. A viewer who turned platform
- * embeds up front off (Settings, Links & Media) gets our card instead, the service's player only on
- * Play on.
+ * embeds up front off (Settings, Links & Media), or who put Card (no player) above that service in
+ * Players, gets our card instead, the service's player only on Play on.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -134,13 +138,16 @@ function ResourcePreview({
   // The up-front service embed that has loaded (see `embedTarget`); another link loads anew.
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
+  const playerOrder = useSettingsStore((state) => state.media.playerOrder);
   const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
   const withActions = !isComposing && !isNested;
-  // A card with an action row plays its services in place; not while composing or in a quoted post.
-  const { playOn, renderBody, isOpen } = useCardPlayer(
-    withActions && card && !hasNothingToShow(card) ? card : null,
+  // A card with an action row plays its services in place; not in a quoted post. While composing,
+  // only a song previews its player (`preview`).
+  const { playOn, renderBody, isOpen, embed, isCard } = useCardPlayer(
+    !isNested && card && !hasNothingToShow(card) ? card : null,
     url,
     actionSurface,
+    { preview: isComposing },
   );
 
   if (!lookupUrl) return <GenericPreview url={url} />;
@@ -155,11 +162,18 @@ function ResourcePreview({
   const cardAlsoOn = shownCard ? getMenuAlsoOn(shownCard, url) : null;
   const alsoOn = withActions ? cardAlsoOn : null;
   // No Also on and the link (or the card's canonical link) is on a service with an embed, not removed
-  // from Players: that embed, up front, in the resource frame.
-  const embedTarget =
-    embedsUpFront && !isNested && shownCard && !cardAlsoOn && getResourceStatus(shownCard.status) === PinakesStatus.OK
+  // from Players: that embed, up front, in the resource frame; not for a song shown as its card
+  // (`isCard`), nor when Card (no player) is above that service in Players (`isCardFirst`).
+  const upFront =
+    embedsUpFront &&
+    !isNested &&
+    !isCard &&
+    shownCard &&
+    !cardAlsoOn &&
+    getResourceStatus(shownCard.status) === PinakesStatus.OK
       ? getEmbedTarget(url, shownCard, hiddenPlayers)
       : null;
+  const embedTarget = upFront && !isCardFirst(upFront.provider, playerOrder) ? upFront : null;
   // The footer acts on the card's canonical link, its other spellings read along (`getResourceTarget`).
   const target = getResourceTarget(shownCard, url);
   const actions = !withActions ? null : (
@@ -182,6 +196,14 @@ function ResourcePreview({
     />
   );
   if (!shownCard) return <ResourceLinkCard url={url} actions={actions} />;
+  // A song: its player up front in the resource frame, with a switch to its other services.
+  if (embed) {
+    return (
+      <ResourceEmbedFrame url={url} card={shownCard} actions={actions}>
+        {embed}
+      </ResourceEmbedFrame>
+    );
+  }
   if (embedTarget) {
     return (
       <ResourceEmbedFrame url={url} card={shownCard} actions={actions}>

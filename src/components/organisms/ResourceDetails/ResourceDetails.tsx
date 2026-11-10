@@ -149,8 +149,9 @@ function ResourceKnown({
   const otherLinks =
     card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, getOwnLinkUris(card, uri, actionUri));
   const otherTags = mergeOtherLinkTags(useOtherLinkTags(otherLinks).reads);
-  // The services that allow embedding play on the page too, as in a post (`useCardPlayer`).
-  const { playOn, renderBody } = useCardPlayer(card, undefined, 'default');
+  // The services that allow embedding play on the page too, as in a post (`useCardPlayer`), the
+  // page's own link first. A song shows its player up front in place of the card's image and text.
+  const { playOn, renderBody, embed } = useCardPlayer(card, uri, 'default');
   // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
   const postEmbed = usePostEmbed(card, uri);
   const actions = (
@@ -177,7 +178,19 @@ function ResourceKnown({
           card={card}
           size="large"
           actions={actions}
-          renderBody={postEmbed?.renderBody ?? renderBody}
+          renderBody={
+            embed
+              ? () => (
+                  <>
+                    {/* The player shows the title; the page keeps it as its heading for screen readers. */}
+                    <Typography as="h2" overrideDefaults className="sr-only">
+                      {card.name?.trim() || uri}
+                    </Typography>
+                    {embed}
+                  </>
+                )
+              : (postEmbed?.renderBody ?? renderBody)
+          }
           isBodyReplaced={postEmbed?.isOpen}
         />
       </Container>

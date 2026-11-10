@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, X } from 'lucide-react';
+import { GripVertical, LinkIcon, Plus, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -31,9 +31,12 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 import { ResourceSourceIcon } from '@/molecules/ResourceCard/ResourceSourceIcon';
 import {
+  CARD_PLAYER,
   getPlayerList,
-  isListedPlayer,
+  isPlayerListEntry,
+  isRankedOrder,
   type ListedPlayer,
+  type PlayerListEntry,
   type PlayerPreferences,
   PROVIDER_NAMES,
   PROVIDER_SITES,
@@ -50,15 +53,18 @@ interface MediaPlayerListProps {
  * has a drag handle (dnd-kit, as the collection reorder grid: mouse, a long press on touch, and the
  * keyboard: Space lifts, arrows move, Space drops) and a remove ✕; Add, in the post menu's style,
  * brings a removed service back (at the end, or under Auto at its default place) and shows only
- * while one is removed. Removing every service is allowed: then no card loads a player.
+ * while one is removed. Removing every service is allowed: then no card loads a player. Card (no
+ * player) is a row without ✕, last until moved: a song whose first service ranks below it shows its
+ * card.
  *
  * Until the viewer reorders, the order has no service this version lists (Auto: a link's own service
- * first); a reorder, or an Add once there is an order, saves the list as shown. Ids this version
+ * first); a reorder, or an Add once there is an order, saves the list as shown. Moving only Card
+ * saves the services above it, ending at Card, which keeps Auto (`isRankedOrder`). Ids this version
  * does not play (a later version's) keep their place after it.
  */
 export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
   const { shown, removed } = getPlayerList(players);
-  const later = players.playerOrder.filter((id) => !isListedPlayer(id));
+  const later = players.playerOrder.filter((id) => !isPlayerListEntry(id));
   // A stable id: dnd-kit's own counter gives its screen-reader hint another id on the server.
   const dndId = useId();
   const sensors = useSensors(
@@ -67,16 +73,38 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const move = (from: ListedPlayer, to: ListedPlayer) =>
-    onChange([...arrayMove(shown, shown.indexOf(from), shown.indexOf(to)), ...later], players.hiddenPlayers);
-  const remove = (id: ListedPlayer) =>
+  // The viewer has ranked the services (else Auto: a link's own service first).
+  const isRanked = isRankedOrder(players.playerOrder);
+  // Card (no player) last after a service is where it is by default, so it is not stored there: a
+  // service a later version adds then comes before it, as one added back does. Alone (every service
+  // removed) it stays where it was. In Auto, so do the services saved above it.
+  const save = (order: string[], hiddenPlayers: string[], ranked = true) => {
+    const after = getPlayerList({ playerOrder: order, hiddenPlayers }).shown;
+    const isCardLast = after.length > 1 && after.at(-1) === CARD_PLAYER;
     onChange(
+      isCardLast ? order.filter((id) => (ranked ? id !== CARD_PLAYER : !isPlayerListEntry(id))) : order,
+      hiddenPlayers,
+    );
+  };
+
+  const move = (from: PlayerListEntry, to: PlayerListEntry) => {
+    const next = arrayMove(shown, shown.indexOf(from), shown.indexOf(to));
+    // Moving only Card keeps Auto: the services above it are saved, ending at Card (none at the end).
+    const card = next.indexOf(CARD_PLAYER);
+    const order = from === CARD_PLAYER && !isRanked ? (card === next.length - 1 ? [] : next.slice(0, card + 1)) : next;
+    save([...order, ...later], players.hiddenPlayers);
+  };
+  const remove = (id: ListedPlayer) =>
+    save(
       players.playerOrder.filter((entry) => entry !== id),
       [...players.hiddenPlayers, id],
+      isRanked,
     );
   const add = (id: ListedPlayer) =>
-    onChange(
-      players.playerOrder.some(isListedPlayer) ? [...shown, id, ...later] : players.playerOrder,
+    save(
+      isRanked
+        ? [...shown.filter((entry, index) => entry !== CARD_PLAYER || index < shown.length - 1), id, ...later]
+        : players.playerOrder,
       players.hiddenPlayers.filter((entry) => entry !== id),
     );
 
@@ -95,7 +123,7 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={({ active, over }) => {
-          if (over && active.id !== over.id) move(active.id as ListedPlayer, over.id as ListedPlayer);
+          if (over && active.id !== over.id) move(active.id as PlayerListEntry, over.id as PlayerListEntry);
         }}
       >
         <SortableContext items={shown} strategy={verticalListSortingStrategy}>
@@ -106,9 +134,13 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
             data-testid="media-player-list"
             className="flex w-full flex-col gap-1"
           >
-            {shown.map((id) => (
-              <MediaPlayerRow key={id} id={id} onRemove={() => remove(id)} />
-            ))}
+            {shown.map((id) =>
+              id === CARD_PLAYER ? (
+                <MediaPlayerRow key={id} id={id} />
+              ) : (
+                <MediaPlayerRow key={id} id={id} onRemove={() => remove(id)} />
+              ),
+            )}
           </Container>
         </SortableContext>
       </DndContext>
@@ -145,12 +177,15 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
   );
 }
 
-/** One ranked service: drag handle, the service's icon and name, remove ✕. */
-function MediaPlayerRow({ id, onRemove }: { id: ListedPlayer; onRemove: () => void }) {
+/**
+ * One ranked row: drag handle, the service's icon and name, remove ✕; Card (no player) has the
+ * app's link icon and no ✕.
+ */
+function MediaPlayerRow({ id, onRemove }: { id: PlayerListEntry; onRemove?: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
-  const name = PROVIDER_NAMES[id];
+  const name = id === CARD_PLAYER ? 'Card (no player)' : PROVIDER_NAMES[id];
 
   return (
     <Container
@@ -177,19 +212,25 @@ function MediaPlayerRow({ id, onRemove }: { id: ListedPlayer; onRemove: () => vo
       >
         <GripVertical aria-hidden="true" />
       </Button>
-      <ResourceSourceIcon uri={PROVIDER_SITES[id]} />
+      {id === CARD_PLAYER ? (
+        <LinkIcon className="size-4 shrink-0" aria-hidden="true" />
+      ) : (
+        <ResourceSourceIcon uri={PROVIDER_SITES[id]} />
+      )}
       <Typography as="span" size="sm" className="min-w-0 flex-1 truncate leading-5 font-medium">
         {name}
       </Typography>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={`Remove ${name}`}
-        onClick={onRemove}
-        className="text-muted-foreground hover:text-foreground"
-      >
-        <X aria-hidden="true" />
-      </Button>
+      {onRemove && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Remove ${name}`}
+          onClick={onRemove}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <X aria-hidden="true" />
+        </Button>
+      )}
     </Container>
   );
 }

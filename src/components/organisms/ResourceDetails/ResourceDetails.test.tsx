@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
+import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import mbRecordingEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-recording.enriched.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
@@ -102,6 +103,11 @@ vi.mock('./ResourceReplies', () => ({
 }));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
+/** The same video without its tracks on Spotify, Deezer and TIDAL: a video, no song (`isSong`). */
+const ORDINARY_VIDEO: TPinakesResourceDetail = {
+  ...VIDEO,
+  also_on: VIDEO.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
+};
 const GROUP: TPinakesGroupDetail = groupFixture;
 const RELATED: TPinakesCard[] = relatedFixture.items;
 const NOT_KNOWN = 'https://example.com/pinakes-does-not-know-this-link-1104';
@@ -165,6 +171,7 @@ describe('ResourceDetails', () => {
 
   describe('when the link is known', () => {
     it('reads the card for the page’s link and shows it large, under the page’s heading, opened by its header alone', () => {
+      read = settled(ORDINARY_VIDEO);
       renderDetails(VIDEO.uri);
 
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-size', 'large');
@@ -284,23 +291,69 @@ describe('ResourceDetails', () => {
     });
 
     it('shows an enriched card’s whole text and image with their sources', () => {
+      read = settled(mbGroupEnrichedFixture);
+      renderDetails(mbGroupEnrichedFixture.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByTestId('resource-card-description')).toHaveTextContent(
+        mbGroupEnrichedFixture.description!.slice(0, 40),
+      );
+      expect(within(card).getByTestId('resource-card-image')).toHaveAttribute('src', mbGroupEnrichedFixture.image);
+      const sources = within(card).getByRole('region', { name: 'Sources' });
+      const lines = within(sources)
+        .getAllByRole('listitem')
+        .map((line) => line.textContent);
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toMatch(/^Text: Wikipedia/);
+      expect(lines[1]).toMatch(/^Image: /);
+    });
+
+    it('shows a song as its player, paused, in place of its image and text, with its details, sources and footer', () => {
       read = settled(mbRecordingEnrichedFixture);
       renderDetails(mbRecordingEnrichedFixture.uri);
 
       const card = screen.getByTestId('resource-card');
-      expect(within(card).getByTestId('resource-card-description')).toHaveTextContent(
-        mbRecordingEnrichedFixture.description,
+      const player = within(card).getByTestId('resource-player-frame');
+      expect(player).toHaveAttribute('src', 'https://open.spotify.com/embed/track/2OBofMJx94NryV2SK8p8Zf');
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      // No second card beside the player: no image, title link or description.
+      expect(within(card).queryByTestId('resource-card-image')).not.toBeInTheDocument();
+      expect(within(card).queryByTestId('resource-card-title')).not.toBeInTheDocument();
+      expect(within(card).queryByTestId('resource-card-description')).not.toBeInTheDocument();
+      // The page keeps its heading for screen readers, and everything outside the body.
+      expect(within(card).getByRole('heading', { level: 2, name: mbRecordingEnrichedFixture.name })).toHaveClass(
+        'sr-only',
       );
-      expect(within(card).getByTestId('resource-card-image')).toHaveAttribute('src', mbRecordingEnrichedFixture.image);
-      const sources = within(card).getByRole('region', { name: 'Sources' });
-      expect(
-        within(sources)
-          .getAllByRole('listitem')
-          .map((line) => line.textContent),
-      ).toEqual([
-        'Text: Wikipedia (en), excerpt, about its MusicBrainz work · CC BY-SA 4.0',
-        'Image: Queen · Wikimedia Commons · Public domain',
-      ]);
+      expect(within(card).getByRole('region', { name: 'Sources' })).toBeInTheDocument();
+      expect(within(card).getByRole('region', { name: 'Details' })).toBeInTheDocument();
+      expect(within(card).getByTestId('resource-actions')).toBeInTheDocument();
+    });
+
+    it('shows a song as its card, with the switch above its image and text, with Card (no player) first in Players', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
+      read = settled(mbRecordingEnrichedFixture);
+      renderDetails(mbRecordingEnrichedFixture.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(within(card).getByRole('heading', { level: 2, name: mbRecordingEnrichedFixture.name })).not.toHaveClass(
+        'sr-only',
+      );
+      expect(within(card).getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    });
+
+    it('plays a song on the service of the link the page was opened with', () => {
+      read = settled(mbRecordingEnrichedFixture);
+      renderDetails('https://tidal.com/track/534050211');
+
+      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://embed.tidal.com/tracks/534050211?hideOverlays=true',
+      );
     });
 
     it('names OpenStreetMap once under Sources on a place’s page, not on its card', () => {

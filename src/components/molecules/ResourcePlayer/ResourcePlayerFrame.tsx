@@ -18,6 +18,8 @@ interface ResourcePlayerFrameProps {
   title: string;
   load: PlayerLoadState;
   onLoaded: () => void;
+  /** A plain audio file has started playing (a song's player up front becomes the page's player). */
+  onPlay?: () => void;
   /**
    * An embed shown up front (a card without Also on, `GenericResourcePreview`), not opened by Play:
    * no status line, since nothing was asked to start; loaded once near the screen, like a post's
@@ -85,7 +87,14 @@ function useStartMessage(target: PlayerTarget, onLoaded: () => void) {
  * (Spotify, TIDAL). A service that cannot start that way (Mixcloud, Deezer) says a press inside its
  * player is needed, to screen readers only; the card never claims playback.
  */
-export function ResourcePlayerFrame({ target, title, load, onLoaded, quiet = false }: ResourcePlayerFrameProps) {
+export function ResourcePlayerFrame({
+  target,
+  title,
+  load,
+  onLoaded,
+  quiet = false,
+  onPlay,
+}: ResourcePlayerFrameProps) {
   const { frameRef, onLoad } = useStartMessage(target, onLoaded);
   const label = `${target.name} player: ${title}`;
   const isVideo = target.layout.kind === 'video';
@@ -107,9 +116,12 @@ export function ResourcePlayerFrame({ target, title, load, onLoaded, quiet = fal
         data-load={load}
         data-player-region
         style={style}
+        // The services draw their own rounded corners (TIDAL, Spotify: 12 px, `rounded-lg` here): ours
+        // match them, and our background shows only until the player has loaded, so none peeks out at a
+        // corner; never behind a plain file, whose own pill is rounder than the box.
         className={cn(
-          'relative w-full overflow-hidden rounded-md',
-          target.element !== 'audio' && 'bg-card',
+          'relative w-full overflow-hidden rounded-lg',
+          target.element !== 'audio' && load !== 'ready' && 'bg-card',
           isVideo ? 'aspect-video' : 'h-(--player-h)',
         )}
       >
@@ -117,10 +129,11 @@ export function ResourcePlayerFrame({ target, title, load, onLoaded, quiet = fal
           <Audio
             src={target.src}
             controls
-            autoPlay
+            autoPlay={target.autoplay}
             preload="metadata"
             aria-label={label}
             onLoadedMetadata={onLoaded}
+            onPlay={onPlay}
             className="absolute inset-0 size-full"
             data-testid="resource-player-audio"
           />
