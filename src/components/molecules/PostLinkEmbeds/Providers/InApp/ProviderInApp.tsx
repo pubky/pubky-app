@@ -2,6 +2,7 @@ import { matchPostRoute, matchSingleCollectionRoute } from '@/app/routes';
 import { isPubkyIdentifier, isSameDomain } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
+import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import type { EmbedData, EmbedProvider } from '../Provider.types';
 
 /**
@@ -53,12 +54,17 @@ export const InApp: EmbedProvider = {
 
   /**
    * Render the referenced post with the same preview card reposts use
-   * (`bg-muted` matches the repost preview contrast in PostContent)
+   * (`bg-embed` matches the repost preview contrast in PostContent); an external resource inside it
+   * stands on the post card's surface again, as in a repost preview
    */
   renderEmbed: (embedData: EmbedData) => {
     // Type guard: ensure we have a post type
     if (embedData.type !== 'post') return null;
 
-    return <PostPreviewCard postId={embedData.value} className="bg-embed" />;
+    return (
+      <ResourceSurfaceProvider surface="card">
+        <PostPreviewCard postId={embedData.value} className="bg-embed" />
+      </ResourceSurfaceProvider>
+    );
   },
 };
