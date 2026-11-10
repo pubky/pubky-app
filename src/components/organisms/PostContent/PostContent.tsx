@@ -5,6 +5,7 @@ import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePost
 import { getInteractionPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
+import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { PostContentBase } from '../PostContentBase/PostContentBase';
 import type { PostContentOrganismProps } from './PostContent.types';
 
@@ -18,6 +19,9 @@ import type { PostContentOrganismProps } from './PostContent.types';
  *   a footer: the repost's own footer already acts on the original (`getInteractionPostId`)
  * - **Web link embed**: PostContentBase previews the embedded link in place of the text's first link
  * - **Collection original**: PostPreviewCard renders embed `CollectionCard` (no post shell)
+ *
+ * The original stands on the embed surface (`bg-embed`), so an external resource inside it stands on
+ * the post card's surface again (`ResourceSurfaceProvider` `card`): card, embed, card.
  */
 export function PostContent({ postId, className, textClassName, mediaVariant = 'default' }: PostContentOrganismProps) {
   // Get repost information
@@ -47,7 +51,9 @@ export function PostContent({ postId, className, textClassName, mediaVariant = '
 
       {/* Show original post preview for reposts */}
       {shouldRenderRepostPreview && (
-        <PostPreviewCard postId={originalPostId} className="bg-embed" showTagsActions={showOriginalTagsActions} />
+        <ResourceSurfaceProvider surface="card">
+          <PostPreviewCard postId={originalPostId} className="bg-embed" showTagsActions={showOriginalTagsActions} />
+        </ResourceSurfaceProvider>
       )}
     </>
   );

@@ -12,6 +12,7 @@ import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
+import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
@@ -96,6 +97,10 @@ interface PostPreviewCardProps {
  * - Share dialog: original post in `PostInput` repost variant (`navigable={false}`)
  * - Reply previews: post being replied to in `DialogReply` (non-collection posts only,
  *   rendered with `navigable={false}` so the modal stays the only surface in play)
+ *
+ * Callers that put the preview on the embed surface (`className="bg-embed"`: `PostContent`,
+ * `ProviderInApp`) wrap it in `ResourceSurfaceProvider` `card`, so a resource inside stands on the
+ * post card's surface again.
  */
 export function PostPreviewCard({
   postId,
@@ -183,46 +188,52 @@ export function PostPreviewCard({
               <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" navigable={navigable} />
               <PostContentBase postId={postId} embedUrl={embedUrl} />
             </PostPreviewNestingProvider>
-            {/* Outside the nesting: the footer's menus (Edit post) are no embedded preview. */}
-            {showTagsActions &&
-              (hasActionRow ? (
-                <PostInlineTagsActions
-                  postId={postId}
-                  surface="muted"
-                  onReplyClick={openReplyDialog}
-                  onRepostClick={openRepostDialog}
-                  // Container queries on the footer's own width: in a narrow quote (a phone) the buttons close up,
-                  // so ⋯ stays on their row, in the steps of a resource card's footer (the second from 17rem: counts
-                  // of two digits still fit at 390 px).
-                  className="@container/post-preview-actions"
-                  actionsClassName={cn(
-                    'w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!',
-                    '@max-sm/post-preview-actions:gap-1.5 @max-sm/post-preview-actions:[&>*]:px-2.5!',
-                    '@max-[17rem]/post-preview-actions:gap-1 @max-[17rem]/post-preview-actions:[&>*]:gap-1! @max-[17rem]/post-preview-actions:[&>*]:px-2!',
-                    '@max-[14.5rem]/post-preview-actions:[&>*]:px-1.5!',
-                    '@max-[13.75rem]/post-preview-actions:gap-0.5',
-                  )}
-                />
-              ) : (
-                <ClickableTagsList
-                  taggedId={postId}
-                  taggedKind={TagKind.POST}
-                  maxTagLength={POST_TAGS_MAX_LENGTH}
-                  maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
-                  showCount={true}
-                  showInput={false}
-                  showAddButton={false}
-                  readOnly
-                />
-              ))}
+            {/* Outside the nesting: the footer's menus (Edit post) are no embedded preview. Their dialogs open
+                on the page, so the footer is back on the default resource surface, not the caller's. */}
+            <ResourceSurfaceProvider surface="embed">
+              {showTagsActions &&
+                (hasActionRow ? (
+                  <PostInlineTagsActions
+                    postId={postId}
+                    surface="muted"
+                    onReplyClick={openReplyDialog}
+                    onRepostClick={openRepostDialog}
+                    // Container queries on the footer's own width: in a narrow quote (a phone) the buttons close up,
+                    // so ⋯ stays on their row, in the steps of a resource card's footer (the second from 17rem: counts
+                    // of two digits still fit at 390 px).
+                    className="@container/post-preview-actions"
+                    actionsClassName={cn(
+                      'w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!',
+                      '@max-sm/post-preview-actions:gap-1.5 @max-sm/post-preview-actions:[&>*]:px-2.5!',
+                      '@max-[17rem]/post-preview-actions:gap-1 @max-[17rem]/post-preview-actions:[&>*]:gap-1! @max-[17rem]/post-preview-actions:[&>*]:px-2!',
+                      '@max-[14.5rem]/post-preview-actions:[&>*]:px-1.5!',
+                      '@max-[13.75rem]/post-preview-actions:gap-0.5',
+                    )}
+                  />
+                ) : (
+                  <ClickableTagsList
+                    taggedId={postId}
+                    taggedKind={TagKind.POST}
+                    maxTagLength={POST_TAGS_MAX_LENGTH}
+                    maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
+                    showCount={true}
+                    showInput={false}
+                    showAddButton={false}
+                    readOnly
+                  />
+                ))}
+            </ResourceSurfaceProvider>
           </CardContent>
         )}
       </Card>
-      {/* Outside the card: a click in a dialog portal still bubbles through React. */}
+      {/* Outside the card: a click in a dialog portal still bubbles through React. The dialogs open on the
+          page, so a resource in them stands on the default surface, not the caller's (`card`). */}
       {hasActionRow && (
-        <Container overrideDefaults className="contents" onClick={stopPropagation} onAuxClick={stopPropagation}>
-          {dialogs}
-        </Container>
+        <ResourceSurfaceProvider surface="embed">
+          <Container overrideDefaults className="contents" onClick={stopPropagation} onAuxClick={stopPropagation}>
+            {dialogs}
+          </Container>
+        </ResourceSurfaceProvider>
       )}
     </>
   );

@@ -61,8 +61,8 @@ interface ResourceActionsProps {
  * whose `parent` is the resource's URI), Post about this, Save and ⋯; a card with a player has
  * "Play on <service>" (`playOn`) on a line above. Like the post's, the tags show only a few until
  * expanded; on a phone the buttons go under the tags. The pills are the post's own on the post
- * card's surface (the large card, `ResourceSurfaceProvider` `card`), else `surface="muted"`
- * (`bg-card` pills) on a card inside a post.
+ * card's surface (the large card, `ResourceSurfaceProvider` `card`: a collection's item, a card in a
+ * quoted post), else `surface="muted"` (`bg-card` pills) on a card inside a post.
  *
  * Counts show as a post's do, 0 included: the tag labels Nexus returned (`20+` at the read limit),
  * the replies and embeds Nexus counts (read with the tags), the public collections, else Pinakes'

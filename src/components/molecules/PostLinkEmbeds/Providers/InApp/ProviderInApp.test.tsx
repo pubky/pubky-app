@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ResourceCardFrame } from '@/molecules/ResourceCard/ResourceCardFrame';
+import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
 import { InApp } from './ProviderInApp';
@@ -8,6 +10,8 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => ({
   PostPreviewCard: ({ postId, className }: { postId: string; className?: string }) => (
     <div data-testid="post-preview-card" data-post-id={postId} className={className}>
       Mocked Post Preview Card
+      <ResourceCardFrame clickThroughUrl={null}>Quoted post’s resource</ResourceCardFrame>
+      <ResourceCardSkeleton withActions />
     </div>
   ),
 }));
@@ -141,6 +145,17 @@ describe('ProviderInApp', () => {
       render(<>{InApp.renderEmbed({ type: 'post', value: `${PUBKY}:${POST_ID}` })}</>);
 
       expect(screen.getByTestId('post-preview-card')).toHaveClass('bg-embed');
+    });
+
+    it('stands a resource inside the quoted post on the post card’s surface', () => {
+      render(<>{InApp.renderEmbed({ type: 'post', value: `${PUBKY}:${POST_ID}` })}</>);
+
+      expect(screen.getByRole('article')).toHaveClass('bg-card', 'text-card-foreground', 'shadow-sm');
+      expect(screen.getByRole('article')).not.toHaveClass('bg-embed');
+      expect(screen.getByTestId('resource-card-skeleton')).toHaveClass('bg-card');
+      const pills = screen.getByTestId('resource-card-skeleton-actions').lastElementChild!.children;
+      expect(pills).toHaveLength(5);
+      for (const pill of Array.from(pills)) expect(pill).not.toHaveClass('bg-card');
     });
 
     it('returns null for url embed data', () => {

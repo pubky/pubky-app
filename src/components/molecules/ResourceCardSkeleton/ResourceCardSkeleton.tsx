@@ -22,8 +22,9 @@ function SkeletonPiece({ className }: { className?: string }) {
 /**
  * Loading state of `ResourceCard`, in its frame: type and source on top, image and title beside
  * it, then the bottom zone (the tags' "+", then the action buttons, as on a post).
- * In a post it is announced as busy ("Loading link preview"). A card that is the item itself
- * (`ResourceSurfaceProvider` `card`) loads on the post card's surface, as the large card does.
+ * In a post it is announced as busy ("Loading link preview"). A card that is the item itself or
+ * sits in a quoted post (`ResourceSurfaceProvider` `card`) loads on the post card's surface, as the
+ * large card does.
  */
 export function ResourceCardSkeleton({ withActions = false, size = 'default' }: ResourceCardSkeletonProps) {
   const isLarge = size === 'large';

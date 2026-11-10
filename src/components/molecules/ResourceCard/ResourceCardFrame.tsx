@@ -31,8 +31,9 @@ interface ResourceCardFrameProps extends Omit<React.HTMLAttributes<HTMLElement>,
  * in another; clicks, and Enter or Space on the card's links and controls, never reach the
  * surrounding post (a quoted post opens itself on either key, wherever it came from).
  *
- * A card that is the item itself, in no post (a collection's: `ResourceSurfaceProvider` `card`),
- * stands on the post card's surface instead, as the resource page's large card does.
+ * A card that is the item itself, in no post (a collection's), or that sits in a quoted post
+ * (`ResourceSurfaceProvider` `card`) stands on the post card's surface instead, as the resource
+ * page's large card does.
  */
 export function ResourceCardFrame({ clickThroughUrl, className, children, ...props }: ResourceCardFrameProps) {
   const onCard = useResourceSurface() === 'card';

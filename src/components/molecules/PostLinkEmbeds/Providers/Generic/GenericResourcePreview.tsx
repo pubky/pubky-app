@@ -133,8 +133,8 @@ function ResourcePreview({
   isComposing = false,
   isOnScreen,
 }: GenericResourcePreviewProps & { isOnScreen: boolean }) {
-  // A card that is the item itself (a collection's) stands on the post card's surface: its
-  // player's pills are the post's own, as its footer's (`ResourceActions`).
+  // A card that is the item itself (a collection's) or sits in a quoted post stands on the post
+  // card's surface: its player's pills are the post's own, as its footer's (`ResourceActions`).
   const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
   const isNested = useIsNestedPostPreview();
   const lookupUrl = isPinakesConfigured() && !isDirectMediaFile(url) ? url : null;
