@@ -13,9 +13,9 @@ const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/R
 /**
  * PopoverGoogleSignIn
  *
- * Help popover for Passport sign-in: how Apple or Google accounts are used, where the keys live,
- * and what recovery requires. Opens on click (and Enter/Space)
- * rather than hover, so an icon-only trigger stays reachable by keyboard, and on touch devices.
+ * Help popover for Passport sign-in: where the keys and their encrypted backup live, and what
+ * recovery requires. Opens on click (and Enter/Space) rather than hover, so an icon-only trigger
+ * stays reachable by keyboard, and on touch devices.
  */
 export function PopoverGoogleSignIn({ className }: { className?: string }) {
   const appleEnabled = isPassportAppleEnabled();
