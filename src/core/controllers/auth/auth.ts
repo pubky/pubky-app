@@ -1082,7 +1082,7 @@ export class AuthController {
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
    * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * the `pubky-theme` preference, and the mute-sync and last_read-sync `sessionStorage` cursors.
+   * and the mute-sync and last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
@@ -1091,7 +1091,6 @@ export class AuthController {
     // Mute-list and last_read SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
     clearNotificationLastReadSyncCursorSessionStorage();
-    clearThemePreference();
 
     // Reset singletons
     PubkySpecsSingleton.reset();
@@ -1313,6 +1312,8 @@ export class AuthController {
       } finally {
         if (!persisted) useAuthStore.persist.setOptions({ storage });
       }
+      // Before the remote wait: a sign-in from another tab meanwhile would skip cleanup and inherit the preference.
+      clearThemePreference();
       const isCurrent = () =>
         this.epoch === epoch &&
         useAuthStore.getState().generation === localGeneration &&
