@@ -35,7 +35,7 @@ function JoinWithHeader() {
 // attempt as idle. Override the attempt here so the same file can also capture
 // the "Waiting for Passport..." state that follows a Continue with Google click.
 const passportAttempt = vi.hoisted(() => ({ isPending: false }));
-const mockAppleEnabled = vi.hoisted(() => vi.fn(() => true));
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
 vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => ({
   usePassportAuth: () => ({ startPassportAuth: () => undefined, isPending: passportAttempt.isPending }),
 }));
@@ -77,13 +77,13 @@ for (const [name, viewport] of [
   describe(`Join (onboarding, Passport) ${name} — visual regression`, () => {
     beforeEach(async () => {
       passportAttempt.isPending = false;
-      mockAppleEnabled.mockReturnValue(true);
+      mockAppleEnabled.mockReturnValue(false);
       await preloadImages(JOIN_IMAGE_URLS);
     });
 
     it('renders both sign-up methods with the compact Passport button', async () => {
       await renderForVRT(<JoinWithHeader />, { viewport });
-      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await expect.element(page.getByRole('button', { name: 'Continue with Google', exact: true })).toBeVisible();
       await expect.element(page.getByRole('link', { name: 'Synonym' })).toBeVisible();
       await expect.element(page.getByRole('link', { name: 'a tether. company' })).toBeVisible();
       const subtitle = page.getByText('How would you like to create your pubky?');
@@ -102,8 +102,8 @@ for (const [name, viewport] of [
           expect(card.width).toBeCloseTo(343, 0);
           expect(card.height).toBeCloseTo(152, 0);
         }
-        for (const label of ['Manage your own keys', 'Continue with Google or Apple']) {
-          const button = page.getByRole('button', { name: label }).element().getBoundingClientRect();
+        for (const label of ['Manage your own keys', 'Continue with Google']) {
+          const button = page.getByRole('button', { name: label, exact: true }).element().getBoundingClientRect();
           expect(button.left).toBeCloseTo(40, 0);
           expect(button.width).toBeCloseTo(295, 0);
           expect(button.height).toBeCloseTo(60, 0);
@@ -121,30 +121,30 @@ for (const [name, viewport] of [
     });
 
     // Passport users skip the Backup step: Passport stores an encrypted backup
-    // in iCloud or Google Drive. This popover is where the app explains that backup and
+    // in Google Drive. This popover is where the app explains that backup and
     // how recovery works.
     it('renders the Passport backup and recovery explainer', async () => {
       await renderForVRT(<JoinWithHeader />, { viewport });
-      await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
-      await expect.element(page.getByRole('heading', { name: 'Sign in with Apple or Google' })).toBeVisible();
+      await page.getByRole('button', { name: 'About signing in with Google' }).click();
+      await expect.element(page.getByRole('heading', { name: 'Sign in with Google', exact: true })).toBeVisible();
       await matchVrtFrameScreenshot(`onboarding-join-passport-help-${name}`);
     });
 
     if (name === 'figma-mobile') {
-      it('keeps the Google-only option and help available inside the compact card', async () => {
-        mockAppleEnabled.mockReturnValue(false);
+      it('renders the provider button and its help when Apple is enabled', async () => {
+        mockAppleEnabled.mockReturnValue(true);
         await renderForVRT(<JoinWithHeader />, { viewport });
-        await expect.element(page.getByRole('button', { name: 'Continue with Google', exact: true })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
         expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
-        await matchVrtFrameScreenshot('onboarding-join-google-only-figma-mobile');
-        await page.getByRole('button', { name: 'About signing in with Google' }).click();
-        await expect.element(page.getByRole('heading', { name: 'Sign in with Google', exact: true })).toBeVisible();
+        await matchVrtFrameScreenshot('onboarding-join-apple-enabled-figma-mobile');
+        await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
+        await expect.element(page.getByRole('heading', { name: 'Sign in with Apple or Google' })).toBeVisible();
       });
     }
   });
 }
 
-// Preserve the provider presentation covered by the existing baselines.
+// Match the default deployment, with explicit Apple-enabled coverage above.
 vi.mock('@/config/network', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/network')>()),
   isPassportAppleEnabled: mockAppleEnabled,
