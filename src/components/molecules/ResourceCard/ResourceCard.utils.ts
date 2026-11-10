@@ -314,3 +314,12 @@ export function getAlsoOnNote(
   if (identifier) return note ? `${identifier} · ${note}` : identifier;
   return note;
 }
+
+/**
+ * The note under another resource in a list: its type in plain words and its site, else the host of
+ * its own web link (not `open_in`, as a row names the card's own link only). `null` when it has neither.
+ */
+export function getResourceListNote(card: Pick<TPinakesCard, 'uri' | 'type' | 'type_path' | 'site'>): string | null {
+  const parts = [getResourceTypeLabel(card), card.site?.trim() || getLinkHost(card.uri)].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}

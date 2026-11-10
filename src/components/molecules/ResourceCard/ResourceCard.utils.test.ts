@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
+import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import natureArticleFixture from '@/services/pinakes/fixtures/by-uri.nature-article.json';
 import scholarlyArticleFixture from '@/services/pinakes/fixtures/by-uri.scholarly-article.json';
 import unreachableFixture from '@/services/pinakes/fixtures/by-uri.unreachable.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
+import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import typeFacetFixture from '@/services/pinakes/fixtures/search.type-facet.json';
-import { PinakesStatus, type TPinakesTypeFacet } from '@/services/pinakes/pinakes.types';
+import { PinakesStatus, type TPinakesCard, type TPinakesTypeFacet } from '@/services/pinakes/pinakes.types';
 import { ResourceFamily } from './ResourceCard.types';
 import {
   formatResourceDates,
@@ -20,6 +22,7 @@ import {
   getLinkHost,
   getResourceFamily,
   getResourceLinks,
+  getResourceListNote,
   getResourceStatus,
   getResourceTagsLabel,
   getResourceTypeLabel,
@@ -493,5 +496,25 @@ describe('getAlsoOnNote', () => {
     expect(
       getAlsoOnNote({ uri: 'doi:10.1038/x', site: 'DOI', derived: true, via: 'w' }, undefined, { withSource: false }),
     ).toBe('10.1038/x');
+  });
+});
+
+describe('getResourceListNote', () => {
+  const [nature, , book, , place]: TPinakesCard[] = relatedFixture.items;
+
+  it('names the type and the site', () => {
+    expect(getResourceListNote(nature)).toBe('Scholarly article · Nature');
+    expect(getResourceListNote(missingFixture)).toBe('Web page · Apple Music');
+  });
+
+  it('names the host of its web link when the card has no site', () => {
+    expect(getResourceListNote({ ...nature, site: null })).toBe('Scholarly article · nature.com');
+  });
+
+  it('names the type alone without a site or web link, and is null without either', () => {
+    expect(book.uri).toBe('isbn:9781119473862');
+    expect(getResourceListNote(book)).toBe('Book');
+    expect(getResourceListNote(place)).toBe('Place');
+    expect(getResourceListNote({ uri: 'geo:0,0', type: null, type_path: [], site: null })).toBeNull();
   });
 });
