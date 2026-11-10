@@ -20,6 +20,7 @@ import {
   RAW_PUBKY_PATTERN,
   SENSITIVE_CONTEXT_KEYS,
   SENSITIVE_VALUE_REDACTED,
+  SENTRY_BLOCK_SELECTOR,
 } from './sentry.constants';
 
 function normalizeContextKey(key: string): string {
@@ -378,6 +379,24 @@ export function scrubTransactionEvent(event: TransactionEvent): TransactionEvent
   // Tags are app-controlled operational labels; do not walk them as user payload.
 
   return event;
+}
+
+/**
+ * `beforeBreadcrumb` for every runtime. A `ui.*` breadcrumb (click, keypress, input) raised inside a
+ * `SENTRY_BLOCK_SELECTOR` subtree is dropped: its message is the target's id and classes, and the subtrees we
+ * block (the recovery phrase dialog) are the ones whose markup must never leave the browser. The hint carries the
+ * DOM event, or the element itself, the way the SDK's breadcrumbs integration reads it.
+ */
+export function dropBlockedUiBreadcrumb(
+  breadcrumb: Sentry.Breadcrumb,
+  hint?: Sentry.BreadcrumbHint,
+): Sentry.Breadcrumb | null {
+  if (!breadcrumb.category?.startsWith('ui.')) return breadcrumb;
+  if (typeof Element === 'undefined') return breadcrumb;
+  const source: unknown = hint?.event;
+  const target: unknown = typeof Event !== 'undefined' && source instanceof Event ? source.target : source;
+  if (target instanceof Element && target.closest(SENTRY_BLOCK_SELECTOR)) return null;
+  return breadcrumb;
 }
 
 /**

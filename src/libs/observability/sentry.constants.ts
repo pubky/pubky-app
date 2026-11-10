@@ -2,6 +2,12 @@ import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload
 
 const Z32_ALPHABET = 'ybndrfg8ejkmcpqxot1uwisza345h769';
 
+/**
+ * Replay's default block class. An element inside it is not recorded by Replay, and `beforeBreadcrumb` drops the
+ * `ui.*` breadcrumbs it raises, because the click breadcrumb is built from the element's id and classes.
+ */
+export const SENTRY_BLOCK_SELECTOR = '.sentry-block';
+
 export const PUBKY_REDACTED = '[redacted: pubky identifier]';
 export const EMAIL_REDACTED = '[redacted: email]';
 export const PHONE_REDACTED = '[redacted: phone]';

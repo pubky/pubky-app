@@ -94,8 +94,18 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 // Mock atoms
 vi.mock('@/atoms/Badge/Badge', () => {
   return {
-    Badge: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) => (
-      <span data-testid="badge" data-variant={variant} className={className}>
+    Badge: ({
+      children,
+      id,
+      variant,
+      className,
+    }: {
+      children: React.ReactNode;
+      id?: string;
+      variant?: string;
+      className?: string;
+    }) => (
+      <span data-testid="badge" id={id} data-variant={variant} className={className}>
         {children}
       </span>
     ),
@@ -106,6 +116,7 @@ vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
+      id,
       variant,
       className,
       onClick,
@@ -113,6 +124,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size,
     }: {
       children: React.ReactNode;
+      id?: string;
       variant?: string;
       className?: string;
       onClick?: () => void;
@@ -120,6 +132,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size?: string;
     }) => (
       <button
+        id={id}
         data-testid={`button-${variant || 'default'}`}
         className={className}
         onClick={onClick}
@@ -840,5 +853,51 @@ describe('DialogBackupPhrase - Identical Words Test', () => {
     baconButtons.forEach((button) => {
       expect(button).not.toBeDisabled();
     });
+  });
+});
+
+describe('DialogBackupPhrase - telemetry privacy', () => {
+  const RECOVERY_WORDS = 'tube tube resource mass door firm genius parrot girl orphan window world'.split(' ');
+
+  function goToStep2() {
+    fireEvent.click(screen.getByRole('button', { name: /reveal recovery phrase/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /confirm recovery phrase/i })[0]);
+  }
+
+  function expectNoWordInIds(container: HTMLElement) {
+    const ids = Array.from(container.querySelectorAll('[id]')).map((element) => element.id);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) {
+      for (const word of RECOVERY_WORDS) {
+        expect(id).not.toContain(word);
+      }
+    }
+  }
+
+  it('keeps recovery words out of element ids on the reveal step', () => {
+    const { container } = render(<DialogBackupPhrase />);
+    expectNoWordInIds(container);
+  });
+
+  it('keeps recovery words out of element ids on the confirm step', () => {
+    const { container } = render(<DialogBackupPhrase />);
+    goToStep2();
+    expectNoWordInIds(container);
+  });
+
+  it('ids the confirm-step choices by position only, under their own prefix', () => {
+    const { container } = render(<DialogBackupPhrase />);
+    goToStep2();
+    const choiceIds = Array.from(container.querySelectorAll('[id^="backup-recovery-phrase-choice-"]')).map(
+      (element) => element.id,
+    );
+    expect(choiceIds).toEqual(Array.from({ length: 12 }, (_, index) => `backup-recovery-phrase-choice-${index + 1}`));
+    // The reveal-step badge prefix stays exclusive to the badges, which are not rendered on this step.
+    expect(container.querySelectorAll('[id^="backup-recovery-phrase-word-"]')).toHaveLength(0);
+  });
+
+  it('marks the dialog content sentry-block so Replay and breadcrumbs skip it', () => {
+    render(<DialogBackupPhrase />);
+    expect(screen.getByTestId('dialog-content')).toHaveClass('sentry-block');
   });
 });

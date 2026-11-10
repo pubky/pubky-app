@@ -160,6 +160,9 @@ Pubky App is decentralized social — strict defaults:
   list for PII-shaped header/query keys), so no IP inference and no IP/cookie/header PII is attached in any
   runtime (browser, server, edge).
 - Replay: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`, `networkCaptureBodies: false`
+- Secret-bearing UI (the recovery phrase backup dialog) carries the `sentry-block` class: Replay records none of
+  it, and `beforeBreadcrumb` (`dropBlockedUiBreadcrumb`) drops the `ui.*` breadcrumbs raised inside it, whose message
+  is the target's id and classes. Element ids never carry user secrets; key them by position.
 - `beforeSend` defensively redacts user identifiers and user-provided data from app-controlled payloads:
   `email`, `phone` / `phoneNumber`, `name`, `firstName`, `lastName`, `displayName`, `username`, `bio`, `file`,
   `user`, raw Pubky public keys, `pubky://...` URIs, compact Pubky URLs, and `_pubky.` HTTP hostnames.
