@@ -299,14 +299,14 @@ export const SignInContent = () => {
         <SignInHeader isPassportEnabled={isPassportEnabled} />
         {isPassportEnabled ? (
           <Container className="gap-6" data-testid="sign-in-methods-mobile">
-            <Container className="gap-3">
-              <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
+            <Container className="gap-4 rounded-md bg-card p-6" data-testid="sign-in-sovereign-card-mobile">
+              <Typography as="h3" className="text-xl leading-7 font-bold">
                 {SOVEREIGN_METHOD_TITLE}
               </Typography>
               {mobileRingButton}
               {mobileBitkitButton}
             </Container>
-            <PassportMethodSection onContinue={startPassportAuth} isPending={isPassportPending} />
+            <PassportMethodSection variant="card" onContinue={startPassportAuth} isPending={isPassportPending} />
           </Container>
         ) : (
           <ContentCard layout="column">
@@ -342,10 +342,10 @@ export const SignInFooter = () => {
 };
 export const SignInHeader = ({ isPassportEnabled = false }: { isPassportEnabled?: boolean }) => {
   return (
-    <PageHeader>
+    <PageHeader className="pt-0 md:pt-2">
       <PageTitle size="large">
         {'Sign in to '}
-        <span className="text-brand">{'Pubky.'}</span>
+        <span className="block text-brand md:inline">{'Pubky.'}</span>
       </PageTitle>
       <PageSubtitle className="hidden md:block">
         {isPassportEnabled ? (

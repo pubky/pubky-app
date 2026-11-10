@@ -49,6 +49,7 @@ vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => ({
 for (const [name, viewport] of [
   ['desktop', VRT_VIEWPORT_DESKTOP],
   ['mobile', VRT_VIEWPORT_MOBILE],
+  ['figma-mobile', { width: 375, height: 812 }],
 ] as const) {
   describe(`SignIn ${name}`, () => {
     it.each(['enabled', 'disabled'] as const)('renders with Passport %s', async (passportEligibility) => {
@@ -60,7 +61,7 @@ for (const [name, viewport] of [
         </>,
         { viewport },
       );
-      if (name === 'mobile') {
+      if (name !== 'desktop') {
         await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
         const signerButtons = ['Continue with Pubky Ring', 'Continue with Bitkit'];
@@ -75,7 +76,18 @@ for (const [name, viewport] of [
               .element()
               .getBoundingClientRect().height,
           ).toBe(32);
+          const sovereign = page.getByTestId('sign-in-sovereign-card-mobile').element().getBoundingClientRect();
+          const passport = page.getByTestId('passport-method-section').element().getBoundingClientRect();
+          expect(sovereign.height).toBeCloseTo(228, 0);
+          expect(passport.height).toBeCloseTo(152, 0);
+          expect(passport.top - sovereign.bottom).toBeCloseTo(24, 0);
+          for (const card of [sovereign, passport]) {
+            expect(card.left).toBeCloseTo(16, 0);
+            expect(card.width).toBeCloseTo(viewport.width - 32, 0);
+          }
+          if (name === 'figma-mobile') expect(sovereign.top).toBeCloseTo(216, 0);
         }
+        expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
       } else {
         await expect.element(page.getByRole('button', { name: 'Copy authentication link' })).toBeVisible();
       }

@@ -46,7 +46,7 @@ export function PassportMethodCard({ onContinue, isPending, className }: Passpor
 }
 
 /**
- * Mobile Passport section: an uppercase label on sign-in, or a compact card with a heading on Join.
+ * Mobile Passport section: an uppercase label or a compact card with a heading.
  */
 export function PassportMethodSection({
   onContinue,
