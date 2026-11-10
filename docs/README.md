@@ -14,6 +14,7 @@ Single source of truth for all project standards, conventions, and architectural
 | Observability (Sentry, Pulse)                                                                                                         | `sentry.md`                                                                       |
 | PWA: `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/`, `src/hooks/use{ServiceWorkerUpdate,NetworkStatus,AppBadge,InstallPrompt}*` | `pwa.md`                                                                          |
 | Lock posts                                                                                                                            | `locks.md`                                                                        |
+| The social data model (`pubky-social-specs`), the migration gate, the rollout                                                         | `migrations/social-v1.md`, `adr/0026`, `adr/0027`, `adr/0028`                     |
 | Writing tests                                                                                                                         | `component-testing.md`, `visual-regression-testing.md`                            |
 | Making commits, branches, PRs                                                                                                         | `commit-message.md`                                                               |
 | Cutting a release                                                                                                                     | `release.md`                                                                      |
@@ -48,9 +49,11 @@ Single source of truth for all project standards, conventions, and architectural
 
 ### Migrations
 
-| File                                     | Description                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `migrations/2305-i18n-conflict-guide.md` | Resolving branch conflicts against the i18n removal (delete after the open-PR wave clears) |
+| File                                      | Description                                                                                                                                                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `migrations/2305-i18n-conflict-guide.md`  | Resolving branch conflicts against the i18n removal (delete after the open-PR wave clears)                                                                                                                     |
+| `migrations/2600-grant-auth-and-locks.md` | Grant-only authentication and the Locks integration: behaviour, SDK contract, release checks                                                                                                                   |
+| `migrations/social-v1.md`                 | The `pubky-social-specs` 1.x port: behaviour, decisions, the migration gate, Nexus `/v1`, compliance gate and dev-sync, rollout order and release checklist, QA matrix, local stack, reductions and follow-ups |
 
 ## Architecture Decision Records
 

@@ -238,6 +238,36 @@ The `release-<version>` branch can be deleted after this PR is merged.
 
 `next.config.ts` sets `NEXT_PUBLIC_APP_VERSION` from `package.json` `version` unless the env var is already set. Docker CI currently still passes the commit SHA as that build arg, so the published image's Sentry release is the SHA; the SemVer lives in `package.json` and in any build that does not override the env var.
 
+## The social v1 release (one-time additions)
+
+The release that merges `feat/social-v1` into `dev` moves the app to `pubky-social-specs` 1.x and force-migrates every
+account (`docs/migrations/social-v1.md`, _Rollout order and release checklist_ has the full list). What changes about the
+process above, for that release only:
+
+- **Release gate.** The app ships with, never before, the Nexus deploy that carries the social v1 steps (the epoch flip
+  and per-user backfill, v1 files, collection items, the `/v1` API) and the `tag_uri` backfill: a `/v1` app against
+  today's Nexus gets 404s, so the final PR merges to `dev` only near that deploy and `dev` stays deployable meanwhile.
+  The proxy in front of Nexus must forward `/v1/*` (the API and `/v1/static/*`). Storage allowances for the heaviest
+  accounts are raised before the deploy, because a migration temporarily doubles each user's storage, and moderation
+  service readiness is a release gate too.
+- **Order.** Nexus deploys first; pubky-stack's `social-v1` branch (pubky/pubky-stack#388) is re-pinned to that deploy
+  ref and merged, which is the staging Nexus bump; the final app PR sets `pubky_stack_ref` in
+  `.github/workflows/e2e-test.yml` back to `staging` and drops the `feat/social-v1` push trigger; then the release
+  follows the steps above. `NEXT_PUBLIC_DB_VERSION=4` is already in both Docker workflows on the branch.
+- **No rollback after the first migrated user.** Before anyone migrates, redeploying the previous tag is safe (the
+  database version mismatch recreates symmetrically). After, v1 writes are invisible to a 0.x client and Nexus has
+  flipped epochs, so a defect goes through [hotfix.md](./hotfix.md); a hotfix that skips or disables the migration
+  gate is never acceptable.
+- **Release notes** (the GitHub Release of step 7) say, in user terms: everyone is signed out once and signs in again
+  (Ring users approve a longer permission list), then a one-time migration screen copies the account to the new
+  format and must finish before the app opens; open tabs reload on their own at the cut-over, and an unsaved draft in
+  a tab left open is lost; feed deep links change once; the two bookmark-derived notifications stop; a bookmark, mute
+  or read-state change made on another device shows at the next sign-in (bookmarks) or within about 30 seconds
+  (mutes, read state).
+- **After the deploy.** A team account migrates on production and its v1 post appears in Nexus; Sentry filtered on
+  `operation: socialMigration` shows no terminal codes; PR-E2 (the service-worker policy revert) is opened when the
+  team decides (ADR-0021, D9), not automatically with the next release.
+
 ## Release checklist
 
 - [ ] `dev` has the promised work (or remaining work will land on `dev` and be rebased or cherry-picked in)

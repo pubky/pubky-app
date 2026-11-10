@@ -16,7 +16,7 @@ All build-time variables are validated in `src/libs/env/env.ts` using Zod schema
 
 The schema is intentionally small:
 
-- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION`, `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`.
+- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION` (default `4` since the social v1 port, 2026-10-30; the Docker workflows pass the same value as a build arg, so a bump is the app change plus a CI-task PR, and a mismatch recreates the local database: ADR-0019, `docs/data-patterns.md`, _Schema changes_), `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`.
 - **Server-only variables** (never exposed to the browser): `HOMESERVER_ADMIN_URL` / `HOMESERVER_ADMIN_PASSWORD` (dev/test signup tokens) and the Chatwoot support credentials (`BASE_URL_SUPPORT`, `SUPPORT_API_ACCESS_TOKEN`, `SUPPORT_ACCOUNT_ID`).
 - `NODE_ENV` / `VITEST`.
 
@@ -180,9 +180,21 @@ normal refresh frequency. Rejected refreshes during that window use `PUBKY_RUNTI
 A longer window also delays accepting conflicting edits from another device. Matching, newer
 Nexus data requested after the local edit can confirm it early; expiry alone does not prove indexing.
 
+### Homeserver capabilities (fixed policy)
+
+The scopes a grant is asked for are product policy in [`src/config/auth.ts`](../src/config/auth.ts), not environment variables: `APP_CAPABILITIES` (`/pub/pubky.app/:rw`, the 0.x tree, kept so a delete still reaches a migrated object's 0.x copy and the migrator can list the tree), `SOCIAL_V1_APP_CAPABILITIES` (`/pub/social/v1/:rw`, `/priv/social/v1/:rw`, `/priv/app.pubky/v1/:rw`, explicit and not inherited from the Locks `/priv/social/:rw` entry) and `LOCKS_CAPABILITIES`; `HOMESERVER_CAPABILITIES` in `@/config/network` is their concatenation. `hasSocialV1Capabilities` (`@/libs/capabilities/capabilities`) checks a session against the data model package's `MIGRATION_CAPS` (`pubky-social-specs`), which spells the same four scopes, and the migration gate signs out a session that lacks one (ADR-0026). Only `PUBKY_RUNTIME_AUTH_CLIENT_ID` (below) is deploy-specific.
+
+### Nexus API version (fixed policy)
+
+Which Nexus API the app speaks is not configurable: `NEXUS_API_VERSION = 'v1'` in [`src/config/nexus.ts`](../src/config/nexus.ts) prefixes every call `buildNexusUrl` makes, and the one call that stays on the frozen `/v0` (`filesApi.getFiles`, the file details of 0.x attachments) names its version where it is made (ADR-0027, _Nexus API version_). The same module fixes `NEXUS_V1_STATIC_PATH` (`/v1/static`, the route v1 media is served under, derived from `PUBKY_RUNTIME_CDN_URL` by `getV1CdnUrl` with no env var of its own) and `NEXUS_FILES_BY_IDS_MAX_URIS` (100, the OpenAPI cap on one `files/by_ids` request). Deploy coupling follows from this: the app ships with, never before, the Nexus that serves `/v1`, and the proxy in front of Nexus has to forward `/v1/*`.
+
+### Social v1 migration (fixed policy)
+
+[`src/config/social-migration.ts`](../src/config/social-migration.ts) fixes what the migration gate reads before it runs the engine: `SOCIAL_MIGRATION_TRANSFORM_REV` (the mirror of the migrator's `transformRev`, contract-tested; a flag recorded under a lower revision is walked again), `SOCIAL_MIGRATION_FLAG_PATH` (`/priv/social/v1/_migrated.json`), `SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS` (2 s, 5 s, 15 s) and `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS` (200 ms). None is an environment variable.
+
 ### Homeserver mute list sync
 
-Cross-session mute alignment polls the private mute directory on the homeserver. The poll interval and the debounce are fixed in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_POLL_INTERVAL_MS`, `MUTE_SYNC_DEBOUNCE_MS`), not environment variables. The page-visibility pause follows `PUBKY_RUNTIME_NOTIFICATION_RESPECT_PAGE_VISIBILITY`.
+Cross-session mute alignment polls the private mute directory on the homeserver. The poll interval and the debounce are fixed in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_POLL_INTERVAL_MS`, 30 s; `MUTE_SYNC_DEBOUNCE_MS`), not environment variables. The page-visibility pause follows `PUBKY_RUNTIME_NOTIFICATION_RESPECT_PAGE_VISIBILITY`. It polls rather than following a session-bound event stream because such a stream's session lease is unbounded while its response headers are outstanding (ADR-0014, pubky/pubky-homeserver#798).
 
 Where the app keeps its own files on the homeserver (`/priv/app.pubky/v1/settings.json`, `last_read.json`, and the 0.x `settings.json` it still reads as a fallback) is product policy in [`src/config/app-files.ts`](../src/config/app-files.ts), not an environment variable: every deployment of one version writes the same paths, and a deployment-specific namespace would split one account's settings across versions (`docs/data-patterns.md`, _Homeserver Trees and App Files_).
 

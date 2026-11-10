@@ -1,10 +1,12 @@
 # Social v1 migration (`pubky-social-specs` 1.x)
 
-**Status: in progress** on the integration branch `feat/social-v1` (cut from `dev`; child PRs merge into it, one
-final PR merges it into `dev`). The port is complete: PR-F removed `pubky-app-specs` from the app and emptied the
-compliance ratchet; the docs sweep (PR-G), QA-3 against a complete Nexus and the final PR remain. The approved plan, its decisions D1–D19 and the design documents behind them live
-outside the repository (`~/.claude/plans/ok-we-have-a-majestic-rivest.md`, `social-v1/{reports,designs}`); this
-file is the in-repo record and is kept current by every child PR.
+**Status: release candidate** on the integration branch `feat/social-v1` (cut from `dev`; child PRs merge into it, one
+final PR merges it into `dev`). The port is complete and verified: every slice, the QA-1 fixes, the Cypress port, the
+Nexus `/v1` move (FIX-7) and the private-file polling (FIX-6, FIX-8) are merged, `pubky-app-specs` is gone from the
+tree, the compliance ratchet is empty, and QA-3 against the complete Nexus carrier found no app regression (_QA
+matrix_). What is left before the final PR is step 3 of _Rollout order and release checklist_. The approved plan, its decisions D1–D19, the design documents
+and the QA reports live outside the repository (`qa1-report.md`, `qa-3-results.md`); this file is the in-repo record
+and is kept current by every child PR.
 
 ## Behavior
 
@@ -28,8 +30,10 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
   the app never ships before Nexus is complete, with a retest list run in a final full-stack pass.
 - **Media (D6):** no app-side media fallback; CDN rendering stays with the v1 hash as the file id.
 - **Bookmarks (D7):** locally owned; the two Nexus-generated notifications that needed public bookmarks are removed.
-- **Rollout guards (D8, D9):** `DB_VERSION` 3 → 4 with a loop-breaker, and a one-release forced service-worker
-  reload (reverted the release after).
+- **Rollout guards (D8, D9):** `DB_VERSION` 3 → 4 with a loop-breaker, and a forced service-worker reload on
+  activation (`skipWaiting` plus claim-and-navigate). Its revert (PR-E2) is not tied to the next release: nobody can
+  tell when the last 0.x tab is gone, so the forced policy stays until Nexus shows migrated users' 0.x writes at about
+  zero or for a period the team picks; keeping it costs only the consented-update toast (ADR-0021 amendment).
 - **Write path (D12):** `HomeserverService` is the only homeserver write path; `pubky-social-specs/client` is never
   imported outside `src/test-utils` (gate-tested). Reads are `list` + `getBytes` + `decodeObject`; writes
   `putBlob(built.body)` / `deleteIdempotent`.
@@ -71,17 +75,32 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
 | PR-D2    | dropped-values note on the profile edit page                                                                                                                                                                                                                                       | C, D            | tests, code-review                                                            |
 | PR-F     | cleanup: remove `pubky-app-specs`, `pipes.builder.ts`, mocks, Turbopack alias, wasm suppressions; empty the ratchet                                                                                                                                                                | B1–B4, C, D, D2 | full `npm test`, `npm run build`                                              |
 | PR-G     | docs and Greptile sweep                                                                                                                                                                                                                                                            | after F         | review                                                                        |
-| Final    | `feat/social-v1` → `dev` after the full-stack retest; PR-E2 (revert the SW policy) opened the same day                                                                                                                                                                             | all             | code-review, security-review, Greptile                                        |
+| Final    | `feat/social-v1` → `dev` after the full-stack retest and the maintainer's manual pass; PR-E2 (revert the SW policy) opened when the team decides (D9)                                                                                                                              | all             | code-review, security-review, Greptile, talosmachina                          |
 
 File ownership: `homeserver.ts` is PR-A then PR-D only; `controllers/auth/auth.ts` PR-A (two one-liners) then
 PR-D only; `src/config/*` PR-A only; the lockfile changes only in PR-A and PR-F. Each child session merges
 `feat/social-v1` into its branch before opening the PR.
 
-Known limitation on the intermediate branch (after PR-A and PR-C, before PR-D): the first bootstrap reads and
-writes the notification cursor and the settings at `/priv/app.pubky/v1/`, so a pre-port Ring grant (lacking
-`/priv/app.pubky/v1/:rw`) fails those requests until the gate signs it out for a new grant. Root sessions are
-unaffected. PR-C also makes `AuthApplication.userIsSignedUp` probe the v1 profile alone: until the gate lands, a
-session restored on an un-migrated account reads as not signed up.
+What landed, by PR number (every PR into `feat/social-v1` unless noted; each reviewed by the code-review skill,
+Greptile and the `talosmachina` bot, merged with a merge commit once CI and both bots were green):
+
+| PR                                | What                                                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| #2986 (into `dev`)                | PR-0: untag via Nexus `tag_uri`                                                                                                            |
+| #2987, #2988, #2989               | PR-A foundation; PR-E rollout guards; PR-CI `NEXT_PUBLIC_DB_VERSION=4`                                                                     |
+| #2990, #2991, #2992, #2994, #2995 | PR-C profile and app files; PR-D migration gate; PR-B1 posts, media, articles, collections, Locks; PR-B4 feeds; PR-B2 tags, follows, mutes |
+| #3008, #3009, #3010, #3011        | attachment MIME parity (`text/csv` deferred); PR-D2 dropped-values note; dev-sync 1; PR-B3 bookmarks                                       |
+| #3012, #3013, #3014, #3015, #3016 | QA-1 fixes: gate UX polish, small fixes (BUG-1, BUG-3), media GC (BUG-2), PR-F cleanup, VRT fixtures                                       |
+| #3051, #3054, #3055               | dev-sync 2; FIX-5 Nexus file contract (`/v1/static`, metadata from the URI, signup order A7); the Cypress port                             |
+| #3062                             | FIX-6: the mute list polled instead of a session-bound event stream                                                                        |
+| #3084, #3087, #3089, #3090        | dev-sync 3; FIX-8 `last_read` polled; branch e2e against pubky-stack `social-v1`; FIX-7 every Nexus call on `/v1`                          |
+
+The branch also carries CI-owned VRT baseline commits from three `VRT Update Baselines` dispatches (after the QA-1
+fixes, after dev-sync 2 and after dev-sync 3): the new `auth/SocialMigration` suite and the fixture-driven re-captures.
+
+History: between PR-A and PR-D the branch had a known limitation (the first bootstrap read and wrote the app files at
+`/priv/app.pubky/v1/`, so a pre-port Ring grant failed those requests until the gate signed it out, and
+`AuthApplication.userIsSignedUp` read an un-migrated account as not signed up). The gate closed both.
 
 ## The migration gate (PR-D, ADR-0026)
 
@@ -108,7 +127,7 @@ takes minutes does not time the attempt out); recovery phrase and encrypted file
 when the gate takes over); browser and Ring signup run inline; a capability upgrade (Locks, Shop) consults the local
 record only and keeps its context. Shop learns the account as `restoring` while gated.
 
-Verification matrix (QA-1, local stack): seed user X with 0.x data on the current build, deploy the branch, restore → sign-out
+Verification matrix (QA-1, local stack, see _QA matrix_): seed user X with 0.x data on the current build, deploy the branch, restore → sign-out
 explanation → Sign in → `/migration` runs → `/home`; reload mid-run resumes ("Continuing from an earlier run"); second
 tab waits; sign in from a second browser after the first finished passes on the flag read; a never-backed-up browser key
 sees the backup prompt first; a pre-port Ring grant sees `missing-scopes`; signup lands on onboarding with no gate screen;
@@ -128,10 +147,15 @@ Two gate tests keep the branch honest while it lives, and ship to `dev` with the
   `pubky-social-specs/client`.
 - `src/core/services/homeserver/social-v1-compliance.gate.test.ts`: scans non-test `src/**` (comments ignored,
   string literals counted) for `/pub/pubky.app`, the `pubky.app/` path fragment, `blobs/`, `*UriBuilder`,
-  `PubkyApp*` classes, `PubkySpecs*`, any `pubky-app-specs` import and the Nexus `.bookmark` field.
-  `PERMANENT` lists the spellings that outlive the port with a reason each; `LEGACY_RATCHET` listed every file that
-  matched when the gate landed (55 files on 2026-10-30), each child PR shrank it, and PR-F emptied it. A file that
-  matches outside `PERMANENT` fails the gate.
+  `PubkyApp*` classes, `PubkySpecs*`, any `pubky-app-specs` import, the Nexus `.bookmark` field and, since FIX-7, the
+  Nexus `v0` version as a path segment or literal (`nexusV0`). `PERMANENT` lists the spellings that outlive the port
+  with a reason each (today: the `/pub/pubky.app/:rw` scope and the chat `v0` scopes in `src/config/auth.ts`, the
+  `v0` type in `src/config/nexus.ts`, the `files/by_ids` call in `file.api.ts`, the 0.x settings and `last_read`
+  fallback paths, and the author check that still accepts 0.x File and blob URIs in articles); `LEGACY_RATCHET`
+  listed every file that matched when the gate landed (55 files on 2026-10-30), each child PR shrank it, and PR-F
+  emptied it. A file that matches outside `PERMANENT` fails the gate: a new 0.x spelling is ported, never listed.
+  The same test (FIX-6) fails on `.session(` chained onto `eventStreamForUser` / `eventStreamFor`, directly or
+  through variables, anywhere in non-test `src/**`: no session-bound event stream may be held open (ADR-0014).
 - ESLint `no-restricted-imports` bans `pubky-app-specs` and `pubky-app-specs/*` everywhere linted (`cypress/` is not),
   and the compliance gate also catches a dynamic `import('pubky-app-specs')`. The package itself is uninstalled (see
   _Cypress_).
@@ -224,7 +248,9 @@ frozen whitespace table, which `canonicalizeTagLabel` / `isValidTagLabel` now mi
 
 Deploy coupling is unchanged (D6/D10): the app follows the Nexus deploy; a `/v1` app against a `main` Nexus gets 404s.
 
-Retest (QA-3, on the local stack at nexusd `d94c3e89` or later):
+Retest (QA-3, on the local stack at nexusd `d94c3e89` or later; run on 2026-11-10, see _QA matrix_: items 1–5, 7, 8 and
+10 passed, 6 was recorded as passed without being observed because the migrator skipped the corpus' unknown-kind post,
+and 9 was covered for an image note's OG image only):
 
 1. Every feed and content filter (`short`, `long`, image, video, link, file, collection) loads on `/v1` (no 400), and
    the content search with a kind filter.
@@ -247,7 +273,11 @@ and `cypress/plugins/seed.ts` (`PUT /v1/ingest/{id}`); no spec asserts a `kind=`
 
 ## Retest list (final full-stack pass, D10)
 
-Re-run once the Nexus branch is complete (N2b, N3, N4, N5, `tag_uri` backfill):
+Written before the Nexus branch was complete (N2b, N3, N4, N5, `tag_uri` backfill); QA-3 ran it on 2026-11-10 against
+the carrier at `d94c3e89` (_QA matrix_). Still open from it: `details.content` verbatim for a **migrated** article
+(Nexus serves the 0.x content shape, QA-3 F-1, no user-visible defect), the Cypress suite on `dev` (it waits for the
+pubky-stack bump at the joint deploy), the un-skip of the collection-items test (the e2e follow-up PR), and the
+staging-only checks (Locks before and after a migration, one real-Ring sign-in with the ten-scope grant).
 
 - v1 files on the N5 route, `{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}` for every variant, including other
   users' files and OG images; 0.x files stay on `/static/files/{owner}/{tsid}/{variant}` and avatars (v1 images too) on
@@ -307,7 +337,15 @@ e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v
 Nexus submodule is pinned to the carrier (pubky/pubky-stack#388, a draft PR into `staging`). At the joint deploy that PR
 is re-pinned to the deploy ref and merged (the staging Nexus bump), and the final PR to `dev` sets `pubky_stack_ref`
 back to `staging` and drops the `feat/social-v1` trigger. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
-otherwise the invite check answers 400 and onboarding stops at Continue.
+otherwise the invite check answers 400 and onboarding stops at Continue. The branch run is green: 13 of 13 specs in Chrome
+against the carrier Nexus on the FIX-7 merge (2026-11-10), after one earlier flake on a post delete that the Nexus
+delete race explains (_External questions_). Local runs use the Chrome-family binary Playwright's VRT setup installs,
+never Electron or a snap browser, so they match CI's matrix.
+
+e2e follow-up (its own PR, pending): assert v1 media bytes on the `/v1/static/files/` route (the `naturalWidth > 0`
+checks exist in `deep-links.cy.ts` and `locks.cy.ts`), enable the collection-items check in `deep-links.cy.ts` for v1
+collections (today `it.skip` unless the account is legacy), port `dev`'s newer specs to v1 paths, and re-run the whole
+suite on the complete Nexus.
 
 ## Reductions and follow-ups
 
@@ -331,20 +369,233 @@ After dev-sync 3 (2026-11-09), for the coordinator:
   `tag_uri` and `relationship`, `application/tag/tag.ts`, `tag.utils.ts`) are served by the derived `relationship` and
   stay unchanged; `locked=true` exists on `/v1` with the same rules (OpenAPI) and is pinned in the stream api test.
 
-Reductions (reported, not built around): bookmark-derived notifications ("post you bookmarked was deleted/edited",
-"followed collection updated"); cross-device bookmark changes visible at the next sign-in only; `/feed/<id>`
-deep links change once (a feed id is the hash of its filter, and the migrator re-derives every id when it copies a
-0.x feed); forced sign-out and forced reload on upgrade; migrated articles with the rc.1 off-by-one render through
-the migrated-article reader rule until the migrator fix lands; mute changes and the notification read boundary
-(`last_read`) changed on another device appear within the poll interval (≤30 s) or on focus, not live (a
-session-bound stream's lease is unbounded while its headers are outstanding, pubky/pubky-homeserver#798; ADR-0014,
-and the `last_read` poll is ADR-0029).
+### Reductions (reported, not built around)
 
-Follow-ups (not in this round): private drafts and `planPublish`, slugs, attachment alt text UI, collection item
-notes UI, published feeds, `createSocialClient`, the 0.x tree sunset (who deletes `/pub/pubky.app/`, when legacy
-reads stop, the `rescan` schedule), bookmark SSE, restoring the mute SSE once the SDK releases the session lock for
-streams, the auth-store v4 cut-over (contingency only), 1.1 kinds; generic
-file card renders only PDFs; CSV/zip/txt uploads show no card (pre-existing); text/csv attachments (spec allows
-them; deferred); media GC for orphaned files (server-side or Nexus-backed reference counting): edits and avatar
-changes never delete media and a post delete skips any file it cannot verify unreferenced (ADR-0027), so orphaned
-files accumulate in each account's storage until then.
+- Bookmark-derived notifications ("post you bookmarked was deleted/edited", "followed collection updated") stop (D7).
+- Cross-device bookmark changes are visible at the next sign-in or local database reset only; no bookmarks event stream.
+- `/feed/<id>` deep links change once at the migration (a feed id is the hash of its filter, and the migrator
+  re-derives every id when it copies a 0.x feed) and again on every filter edit, which is the data model's design.
+- Forced sign-out, a new grant with the longer scope list, and a forced reload of open tabs at the cut-over; a stale
+  tab reloaded by the cut-over worker loses an unsaved composer draft (the composer persists no draft; deferring the
+  reload for a dirty composer was declined on 2026-11-04).
+- Migrated articles with the rc.1 off-by-one render through the migrated-article reader rule (A′), and keep doing so
+  after the migrator fix, since the fixed migrator rewrites nothing an earlier run wrote (ADR-0023 amendment).
+- Mute changes and the notification read boundary (`last_read`) changed on another device appear within the poll
+  interval (≤30 s) or on focus, not live: a session-bound stream's lease is unbounded while its response headers are
+  outstanding (pubky/pubky-homeserver#798; ADR-0014, and the `last_read` poll is ADR-0029).
+- Item notes and attachment alt text are preserved on write but not shown (D4).
+
+### Follow-ups (not in this round)
+
+- **Migrator rc.2 adoption PR** (after the maintainer tags `v1.0.0-rc.2` of pubky/pubky-social-specs with #210): bump
+  `pubky-social-specs` and `pubky-social-migrator`, mirror `SOCIAL_MIGRATION_TRANSFORM_REV` 4 (contract-tested), keep
+  rule A′ and say so in the `src/libs/post/articleCover.ts` docblock (it goes only after every rc.1-migrated tree has
+  been migrated again: the revision bump re-walks but rewrites nothing), and
+  make rule B take `attachments[0]` as the cover only when it is an image (the fixed migrator leaves `cover_image` null
+  for a non-image slot 0, and today the app would show a PDF as the cover). Re-QA a migrated article with cover and
+  inline media.
+- Restore the mute and `last_read` event streams when the SDK bounds the session lease for streams or the team
+  accepts the exposure (pubky/pubky-homeserver#798): register the `last_read` channel and remove the poller
+  (ADR-0029), bring back the mute channel (ADR-0014). The compliance gate's `.session(` rule goes with them.
+- Muted users unknown to Nexus are hidden in Settings → Muted users, so such a mute cannot be removed from the UI
+  while the MUTED stream still holds the key (QA-3 O-1; minor).
+- Media GC residual: `LocalFileService.isReferencedElsewhere` checks the owner's profile image and the locally cached
+  posts, so a shared file can still be lost when the other referencing post is outside the cache and the Nexus `by_ids`
+  view misses it; server-side or Nexus-backed reference counting is the real fix (QA-1 BUG-2, partly fixed; ADR-0027).
+  Until then edits and avatar changes never delete media, a post delete skips any file it cannot verify unreferenced,
+  and orphans accumulate in each account's storage.
+- Avatar route: avatars are built on `/static/avatar/{user}`, not `/v1/static/avatar/{user}`; both answer the same on
+  the carrier (QA-3 O-2). Align when the Nexus team says which one stays.
+- Ring folds the ten requested scopes into nine (`/priv/social/v1/:rw` is covered by `/priv/social/:rw`); adoption and
+  the gate work with the folded grant (QA-1 O-7, QA-3 O-4). Known, nothing to do unless Ring changes.
+- Nexus post delete vs. read-repair race (an upstream issue, found 2026-11-10): a read concurrent with a delete can
+  resurrect the post in Redis. The e2e `postGone` waiter stays at 404, which is right; deletes in e2e may flake until
+  Nexus fixes it.
+- Migrated articles are served by Nexus in the 0.x content shape on `/v1` (QA-3 F-1, Nexus contract point 24); the app
+  renders both shapes through the reader rules, so no change here.
+- Cleanup pass of the `/pub/pubky.app/` copies: not at release (meeting 2026-11-04: no app-side deletion; Nexus clears
+  legacy data later). The 0.x tree sunset (who deletes it, when legacy reads stop, the `rescan` schedule) and the
+  removal of the one `/v0` call (`files/by_ids`, ADR-0027 _Sunset_) follow it.
+- Private drafts and `planPublish`, slugs, attachment alt text UI, collection item notes UI, published feeds,
+  `createSocialClient`, 1.1 kinds (D4); the auth-store v4 cut-over (contingency only).
+- The generic file card renders only PDFs, so a CSV, zip or txt upload shows no card (pre-existing); `text/csv`
+  attachments (the data model allows them) are deferred with it.
+- `pubky-social-specs` and `pubky-social-migrator` could join the `pubky-sdk` Dependabot group (a CI task), and
+  `src/core/utils/pubky-app-spec-feed-mappers.ts` keeps its old file name although it maps `pubky-social-specs` values.
+- PR-E2, the service-worker policy revert, when the team decides (D9, ADR-0021); the "Update available" toast returns
+  with it.
+
+## Rollout order and release checklist
+
+The app ships with, never before, the Nexus deploy that carries the social v1 steps (D6/D10): a `/v1` app against
+today's Nexus gets 404s. `docs/release.md` has the one-time additions to the release process; this is the order and the
+gate list.
+
+1. **Nexus deploys first.** The carrier `feat/social-spec-handling` (the epoch flip and per-user backfill, v1 files,
+   collection items, the `/v1` API, the `tag_uri` backfill; complete at `d94c3e89` on 2026-11-06, the QA-3 reference)
+   merges to Nexus `main` through its umbrella PR and the Nexus team names the staging and production deploy ref and
+   dates. Whatever fronts `nexus.*.pubky.app` must forward `/v1/*` (the API and `/v1/static/*`) to Nexus in the same
+   deploy (open with the Nexus team). Nexus deletes its bookmark indexing at the joint deploy (agreed 2026-11-05).
+2. **pubky-stack.** pubky/pubky-stack#388 (branch `social-v1`, Nexus submodule pinned to the carrier) is re-pinned to
+   the deploy ref and merged into `staging`: that is the staging Nexus bump, and what makes the `dev` e2e run green.
+3. **The final app PR** `feat/social-v1` → `dev` merges only near that deploy, so `dev` stays deployable meanwhile. It
+   sets `pubky_stack_ref` in `.github/workflows/e2e-test.yml` back to `staging`, drops the `feat/social-v1` push trigger,
+   carries the code-review skill at high effort, `security-review`, Greptile and talosmachina, and the frontend team's
+   review. Before it: the maintainer's manual pass on the local stack (after a reset and re-seed), dev-sync 4, the e2e
+   follow-up PR, the migrator rc.2 adoption PR, and this docs sweep; after it, a staging deploy and the maintainer's
+   staging test (one real-Ring sign-in with the ten-scope grant; Locks before and after a migration), then production
+   with the Nexus deploy.
+4. **Infrastructure gates.** The production homeserver serves the same feature set as staging and the local stack at
+   0.16.2 (verified 2026-11-04). A migration temporarily doubles each user's storage, so the allowances of the heaviest
+   accounts are raised before the deploy. Moderation service readiness is a release gate. Bot accounts (the moderation
+   bot) need a migration path (open). `NEXT_PUBLIC_DB_VERSION=4` is in both Docker workflows (PR-CI).
+5. **No rollback after the first migrated user** (ADR-0019, ADR-0026): before anyone migrates, redeploying the previous
+   image tag is safe (the database version mismatch recreates symmetrically); after, v1 writes are invisible to a 0.x
+   client and Nexus has flipped epochs, so a defect goes through `docs/hotfix.md`, and a hotfix that skips the gate is
+   never acceptable.
+6. **Release notes** (`docs/release.md`, _The social v1 release_) tell users what changes and list the reductions above.
+7. **After the deploy.** A team account migrates on production and its v1 post appears in Nexus; Sentry filtered on
+   `operation: socialMigration` shows no terminal codes; the branch e2e trigger is gone; PR-E2 is opened when the team
+   decides (D9); #2928 and #2929 (the spec author's draft PRs) are closed.
+
+Checklist:
+
+- [ ] Nexus `main` carries the carrier; staging and production deploy ref and dates named; the proxy forwards `/v1/*`
+- [ ] pubky/pubky-stack#388 re-pinned to the deploy ref and merged (staging Nexus bump)
+- [ ] Integration branch green: lint, typecheck, full `npm test`, `npm run build`, branch e2e 13/13, VRT baselines
+      regenerated by CI after the last dev-sync
+- [ ] QA-1 and QA-3 recorded (_QA matrix_); the maintainer's manual pass done; staging checks (Ring grant, Locks)
+- [ ] Storage allowances raised; moderation service ready; bot-account migration path decided
+- [ ] Migrator rc.2 adopted (both packages, `SOCIAL_MIGRATION_TRANSFORM_REV` 4)
+- [ ] Final PR reviewed (code-review high, security-review, Greptile, talosmachina, frontend team), `pubky_stack_ref`
+      back to `staging`, the `feat/social-v1` e2e trigger dropped
+- [ ] Release per `docs/release.md`, with the social v1 release notes
+- [ ] Post-deploy canary and Sentry check; PR-E2 scheduled per D9
+
+## QA matrix
+
+Two browser QA passes ran on the local stack (_Local stack runbook_) with the built-in browser, verifying every step
+against the homeserver (`/storage/<pk>/…` LIST and GET, admin WebDAV for `/priv/`, the request log), Nexus and the
+browser console. The full reports with screenshots live with the plan, outside the repository (`qa1-report.md`,
+`qa-3-results.md`); the summary by item:
+
+**QA-1 (2026-10-30/31, `feat/social-v1` with B3 merged, Nexus placeholder `feat/v1-social-indexing`): 19 PASS, 1 N/A of 20.** Persisted 0.x sessions signed out (`pre-migration-grant`, a Ring 0.x grant `missing-scopes`, a never-backed-up key
+with the backup prompt first) · phrase sign-in → `/migration` → summary → home, flag revision 3, 0.x tree
+byte-identical · reload after migration: no gate, no migrator chunk · migrated article (rule A′), collection and image
+note render · post create, edit (second version is the head), reply, repost, delete (every version gone, tombstone,
+the 0.x copy removed too) · article with cover and inline media, title edit · collections create, add (also into a
+migrated one), remove, cover removal (BUG-1 and BUG-2 found here) · tags, migrated tag untag via `tag_uri`, hashtag
+folding · follows, mutes (unmute deletes both copies), second tab live · feeds with new ids, filter edit, delete ·
+profile bio, links, status, avatar · settings and `last_read` at `/priv/app.pubky/v1/` · bookmarks (private file,
+bookmark-time order, count, unbookmark, followed collections) · account export N/A (no UI entry point, same on `dev`),
+account delete instead · a second user migrates and sees the first's v1 posts · signup with no `/migration` screen ·
+Ring simulator full and trimmed grants (BUG-3) · interrupted run resumes, second tab waits · encrypted-file sign-in ·
+migrator CLI dry run `already_migrated`. Bugs: BUG-2 (high, a cover removal deleted a shared content-addressed file;
+fixed in #3014, residual in _Follow-ups_), BUG-1 (medium, an uncaught `ValidationError` per keystroke in the
+collection URL field; fixed in #3013), BUG-3 (low, the trimmed-grant toast blamed the key; fixed in #3013). Media via
+the CDN failed as expected before Nexus N5. The "post edited" notification burst was observed on the placeholder Nexus
+and is gone on the carrier (QA-3 item 2).
+
+**QA-3 (2026-11-10, `feat/social-v1` @ `03bdc021a`, homeserver 0.16.2, nexusd `d94c3e89`): 12 PASS (4 with
+observations), 1 PARTIAL, 1 NOT RUN of 14; no app regression.** 1 migration path from a persisted 0.x session (sign-out,
+grant retired, phrase sign-in, progress, summary with the expected skips, exactly one flag write, 0.x tree
+byte-identical) PASS · 2 epoch flip and backfill within the run, every indexable post served with v1 URIs and kinds,
+no "post edited" burst PASS · 3 app files, private trees LISTed and read back, re-derived feed ids, an old `/feed/<id>`
+link opens home (accepted reduction) PASS (O-1) · 4 migrated article renders (cover on top, inline image in place)
+PASS, Nexus `content` not verbatim for the migrated article PARTIAL (F-1, Nexus) · 5 second sign-in reads the flag, no
+second write PASS · 6 feeds on the `/v1` contract (`kind=note|article`, search with a kind, no `exclude_kinds`, no
+`source=bookmarks`) PASS · 7 media: v1 files on `/v1/static/files/{owner}/{hash}.{ext}/{variant}`, one `/v0/files/by_ids`
+per page for 0.x attachments, OG image PASS (O-2, F-2) · 8 tags: trim and fold, cross-epoch untag via `tag_uri` PASS ·
+9 `unknown` kind recorded PASS without being observed (the migrator skipped the corpus' unknown-kind post, so no such
+post reached Nexus) · 10 user counts without `bookmarks`, local bookmark count
+PASS · 11 collections: migrated collection, add by URL (BUG-1 fixed), remove, Followed Collections past 21 bookmarks,
+live unfollow, cold cache PASS (O-3) · 12 Locks before and after a migration NOT RUN (no Lock Server on the stack; moves
+to the staging test) · 13 cross-device: mark-all-read and a mute reach a second context within about 15 s PASS · 14 the
+QA-1 matrix re-run: create, edit, reply, repost, delete (the Nexus delete race not observed), article with cover and
+inline seen by another user, profile, follow, notifications with v1 URIs, Ring simulator sign-in and gate, sign-out and
+sign-in without a migration PASS (O-4). Findings: F-1 and F-2 are Nexus-side (the 0.x content shape for migrated
+articles; corpus posts whose 0.x File objects were never indexed keep 0.x attachment URIs), O-1 to O-4 are in
+_Follow-ups_ (O-3, a bootstrap that skipped the private-tree fetches after a forced IndexedDB wipe, was not reproducible
+with genuinely empty storage).
+
+Browser QA matrix for a later pass (sign-in paths: Ring simulator scoped grant, recovery phrase, encrypted file, fresh
+signup; pass = the stated outcome, no unexpected `AppError` toast, homeserver and Nexus agree): un-migrated persisted
+session → sign-out → sign-in → migration → home; un-migrated fresh sign-in gates without a sign-out; fresh signup
+migrates its empty tree inline; a run interrupted at `migrating` resumes; a migrated account costs one flag read and
+loads no migrator chunk; a second tab waits on the Web Lock; a second device migrated elsewhere passes on the flag; a
+trimmed Ring grant fails adoption with the "Authorization failed" toast naming the missing permission; QUOTA shows the
+bytes needed with Retry; an old-build tab reloads within seconds of a new-build load; two builds with the worker
+blocked show the "Close other Pubky tabs" recovery screen. Then the feature re-verification: post create, edit, delete,
+reply, repost; image, video and PDF uploads for own and other users' media; article with cover and inline media
+including a migrated one; collections add, remove, follow in both reference spellings; bookmarks after a migration;
+tags and untag including migrated tags; follow and unfollow; mute and unmute with a second tab; feeds create, edit,
+delete; profile edit with avatar; notifications; settings and `last_read`; Locks creator and reader; account export
+(no UI entry point today) and delete; the forced reload.
+
+## Local stack runbook
+
+The local pubky-docker stack (homeserver testnet, Nexus, Neo4j, Redis, Homegate) is one shared in-memory tenant and one
+graph: one session uses it at a time, and only the coordinator starts, stops, resets or rebuilds containers (a user and
+a post written by one session once appeared in another's e2e run, 2026-11-04).
+
+- **Components and pins.** `pubky-docker` with its testnet watcher keys; `HOMESERVER_TAG=v0.16.2`,
+  `HOMEGATE_TAG=v0.2.0` in its `.env`; `nexusd` built from source at the carrier ref under test (`d94c3e89` for QA-3)
+  with `docker compose --profile backend build nexusd`, then `up -d` (re-run `up -d nexusd` if it exits before Neo4j is
+  up); `./list-component-versions.sh`, `GET :6286/info` and `GET :8080/v1/info` confirm the set. The homeserver runs
+  with `signup_mode = "token_required"` (as CI does), so seeding signs up with an admin token.
+- **App env** (`.env.local`, the local testnet example in `.env.example`): Nexus `http://localhost:8080`, CDN
+  `http://localhost:8080/static`, the testnet homeserver key at `http://localhost:6286`, Homegate `:6300`, relay
+  `http://localhost:15412/inbox/`, `PUBKY_RUNTIME_TESTNET=true`, `PUBKY_RUNTIME_ENV=production` (turns the staging
+  sign-in guard off and sets the `pubky.app` client id). Never run the `pubky-app` compose profile (it bakes an old
+  `DB_VERSION`).
+- **Seeding.** User X is the migrator's semantic vector corpus (a 0.x tree with every object kind, invalid rows
+  included) written by a throwaway Node script on the SDK, outside the repository, with its recovery file kept out of
+  the repository too; users Y and Z and the cross-user data (follows, replies, reposts, tags, bookmarks, a followed
+  collection, an avatar) are created on a 0.x `dev` build of the app; a Ring-grant user comes from the Ring simulator
+  (identities are memory-only: keep its tab open). Then the dev server switches to the integration worktree and the
+  persisted sessions hit the gate. The Locks pre-migration case needs a Lock Server, which the local stack has not had.
+- **Inspection.** Homeserver `GET :6286/storage/<pk>/<path>` (LIST with `?limit=`), admin WebDAV `:6288/dav/<pk>/priv/…`
+  (PROPFIND with `Depth: 1`), `GET :6286/events/?cursor=0&limit=200` (what Nexus consumes), Nexus `/v1/user/<pk>`
+  (`epoch`), `/v1/post/<pk>/<id>`, `/v1/stream/posts/keys`; the migrator CLI `--dry-run --json` cross-checks a tree
+  (`already_migrated` after a run).
+- **Reset.** The testnet homeserver is in-memory: a restart (a laptop reboot included) loses every tree, and Nexus keeps
+  a stale graph. Clean graph: stop `nexusd`, `redis-cli FLUSHALL`, Neo4j `MATCH (n) DETACH DELETE n`, set the homeserver
+  cursor in Redis back to 0, start `nexusd`, re-seed. Never re-seed on a stale graph.
+- **Cypress locally** needs the stack above plus `PUBKY_RUNTIME_PKARR_RELAYS=["http://localhost:15411"]` under
+  `next start`, and runs with the Chrome-family binary (see _Cypress_).
+
+## External questions and answers
+
+Asked of the Nexus team, the data model's author, the Ring team and ops while the branch lived; answers are recorded
+where they changed the app.
+
+- **Nexus (answered by the carrier):** the flip trigger is the v1 `profile.json` PUT, and 0.x PUT/DEL are ignored after
+  it (the app's dual 0.x delete is harmless); v1 objects written before the profile are indexed by the per-user backfill
+  at the flip, which rewrites post addresses, attachments and tag ids and keeps `indexed_at`; no "post edited" burst in
+  the normal flow; `tag_uri` points at the v1 copy after the flip and deleting it removes the edge; a tag on the
+  profile URL counts as a user tag; v1 files are served at `/v1/static/files/{owner}/{hash}.{ext}/{variant}` with no
+  metadata (no `File` object, so the app types another user's v1 attachment from its URI) and the avatar route serves a
+  v1 image; `/v0/files/by_ids` skips a v1 address with a warning and a 200; kind names on `/v1` are `note`/`article`
+  (strict in filters); collection items of either epoch are read back; notification URIs are the stored versionless
+  address, while `parent_post_uri` and `embed_uri` are spelled as the referencing author wrote them; `/v0` is frozen
+  and served until the remaining clients leave it; rate-limit buckets are shared across the two prefixes.
+- **Nexus (open):** the staging and production deploy ref and dates; who forwards `/v1/*` on the proxy in front of
+  Nexus, in the same deploy; the owner and timing of the `/pub/pubky.app/` cleanup pass (the Nexus gate PR calls it a
+  requirement, the 2026-11-04 meeting said no deletion at release); a removal date for `/v0`; whether the extension
+  Nexus picks for a copied blob always equals the migrator's; E1 (head selection by edit id) timing; the 0.x content
+  shape served for migrated articles (QA-3 F-1); the delete race.
+- **Data model author:** the migrator's article cover promotion is fixed in pubky/pubky-social-specs#210 (renumbered
+  references, no promotion of a referenced slot 0, transform revision 4), awaiting the maintainer's review and the
+  rc.2 tag; `/priv/app.pubky/v1/` is the app namespace the port adopted (its confirmation was asked and no answer is
+  recorded); `memoryHomeserver` differences from SDK 0.16.2 are test-only; Ring writes no 0.x profile at signup.
+- **Ring:** scopes are approved all-or-nothing (partial approval exists only for the encryption action), with no count
+  or length limit in code; the published Ring folds `/priv/social/v1/:rw` into `/priv/social/:rw`, so the grant shows
+  nine scopes and adoption works; HPKE approvals with the current SDK are to be verified on staging with a real Ring
+  before the release (QA used the simulator).
+- **Ops:** the production homeserver reports the same features as staging and the local 0.16.2 stack; old `_next/static`
+  chunks after a deploy are moot under the forced reload; storage allowances and the moderation service are release
+  gates (above).
+- **SDK (pubky/pubky-homeserver#798):** filed 2026-11-04 as "a session-bound event stream deadlocks the bearer refresh";
+  the 2026-11-09 probe in a plain browser refuted the deadlock (the stream's lease is released as soon as its response
+  headers arrive; only a proxy that buffers event streams, as Cypress's does, makes it unbounded). Polling stays for
+  this release; the follow-up is above.

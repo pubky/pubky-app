@@ -64,9 +64,28 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   documented second retry policy (ADR-0026). A write built from a read of the same data passes the
   `HomeserverService.createWriteFence()` fence inside `retryHomeserverWriteAfterReread(fence, …)`: it makes one attempt,
   every retry runs the read again, and no later pass outlives the session. `docs/error-handling.md`
-- Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`. `docs/data-patterns.md`
+- Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`; `buildCompositeIdFromPubkyUri` reads
+  one from either spelling of a post reference or a version path. `docs/data-patterns.md`
+- Data model: `pubky-social-specs` builds, decodes and encodes every homeserver object; the app PUTs `built.body`
+  through `putBlob`, never a hand-spelled path or `JSON.stringify` body, and never imports `pubky-social-specs/client`
+  outside `src/test-utils`. Posts are versioned (an edit writes the next version from the decoded head, spread so
+  `$unknown` survives); media is content addressed and shared (`files/{hash}.{ext}`, never deleted on an edit);
+  bookmarks, mutes and feeds are private and locally owned (no Nexus bookmark field is read); kinds cross to
+  `note`/`article` only in `toLocalPostKind` / `toStoredPostKind`; post URIs match both spellings
+  (`postReferenceSpellings`) and are written in the v1 one; the compliance gate's `PERMANENT` list is the only home of
+  a 0.x spelling (a new match is ported, never listed). `docs/data-patterns.md`, `docs/migrations/social-v1.md`, ADR-0027/0028
 - Article bodies embed every media kind as `![alt](attachment:{n})`; the kind comes from file metadata, never the
-  markdown, and the cover stays image-only. `docs/data-patterns.md`, ADR-0023
+  markdown; the cover is the envelope `cover_image` and stays image-only; every reader goes through
+  `resolveArticleCover` (rules A, A′ for a migrated article, B for a 0.x one). `docs/data-patterns.md`, ADR-0023
+- Migration gate: every restore and sign-in passes `SocialMigrationController.ensureMigrated` before the session
+  enters the auth store (`restoreStatus` `social-migration`, `AuthStatus.NEEDS_SOCIAL_MIGRATION`, route `/migration`);
+  a new route, coordinator or provider respects that status, and no code path needs an epoch check because every
+  signed-in account has passed it. Capabilities are policy in `src/config/auth.ts` (`APP_CAPABILITIES`,
+  `SOCIAL_V1_APP_CAPABILITIES`), never spelled elsewhere. ADR-0026, `docs/components.md`
+- Nexus: every call is built under `NEXUS_API_VERSION` (`/v1`) and folded once at the read boundary (`*.fromNexus`:
+  `note`/`article` → `short`/`long`, `relationship` from `tag_uri`); the one `/v0` call is `files/by_ids` for 0.x
+  attachments, batched once per page before posts persist. Private homeserver files (mutes, `last_read`) are polled,
+  never followed on a session-bound event stream (gate test). ADR-0027, ADR-0014, ADR-0029
 - Shadcn first and design tokens only (`bg-primary`, not `bg-[#1a1a1a]` or `p-[13px]`); atomic tiers atoms → molecules →
   organisms → templates; z-index only `-z-10, z-10, z-30, z-40, z-50, z-60`. `docs/components.md`, `docs/z-index.md`
 - No `useCallback` / `useMemo` / `React.memo`: the React Compiler handles it. Add one only with profiler evidence.
@@ -75,8 +94,9 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   interpolate user-entered text. `docs/components.md`
 - Forms: react-hook-form + zod inside a `use{Action}Form` hook returning `{ form, submit }`; schema in a sibling `*.types.ts`;
   form components never call `commit*` controllers directly; Zod v4 (`z.url()`). `docs/components.md`
-- Dexie schema: one `DB_VERSION`; a mismatch recreates the database. Bumping it or changing an index map is a reviewed
-  decision, never a side effect. `docs/data-patterns.md`, ADR-0019
+- Dexie schema: one `DB_VERSION` (4 since the social v1 port); a mismatch recreates the database. Bumping it or
+  changing an index map is a reviewed decision, never a side effect, and ships with a CI-task PR for the Docker build
+  arg. `docs/data-patterns.md`, ADR-0019
 - Copy: inline US-English literals at the call site. i18n (`next-intl`, `messages/`, `useTranslations`) was removed in #2313
   and must not come back in any form, including a lookalike message registry.
 - `src/config/*` limits are product-wide policy: never tune one for a local fix, and never reduce visible behaviour
@@ -89,7 +109,9 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   `captureException` except `app/error.tsx` / `app/global-error.tsx`, for non-`AppError` values; no raw user data. `docs/sentry.md`
 - Tests: colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT; no
   snapshot tests (removed for VRT, must not return); no `as any` or `as unknown as T` (use the `src/test-utils`
-  helpers). `docs/component-testing.md`
+  helpers). The data model package is real in tests, never `vi.mock('pubky-social-specs')`: `fakeOwner` for keys,
+  `setClock` via `src/test-utils/spec-clock.ts` for deterministic ids, `stubMemoryHomeserver` for the homeserver.
+  `docs/component-testing.md`, `docs/development-workflow.md`
 
 ## Before you edit, read
 
@@ -102,6 +124,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - `src/libs/observability/**`, `src/instrumentation*.ts`, `src/sentry.*.config.ts` → `docs/sentry.md`
 - `src/core/database/**`, `src/core/services/homeserver/**`, `src/core/pipes/**`, `src/libs/network/**` →
   `docs/architecture.md`, _High-Risk Areas_, first
+- `src/core/**/social-migration/**`, `src/libs/social-migration/**`, `src/components/templates/Auth/SocialMigration/**`,
+  `src/core/services/nexus/**`, anything naming a homeserver path → `docs/migrations/social-v1.md`, ADR-0026/0027/0028
 - Any change → `docs/development-workflow.md`; the ADRs in `docs/adr/` explain the why
 
 ## How to work here
@@ -137,6 +161,8 @@ to people. See [People and names](docs/development-workflow.md#people-and-names)
 ## Common failure modes
 
 - IO in a component, hook or pipe; a service called from a controller; application called from a coordinator.
+- A homeserver path spelled by hand, a `JSON.stringify` body, a `/pub/pubky.app/` write, a Nexus `/v0` URL, a
+  `short`/`long` sent to the homeserver or Nexus, a bookmark read from Nexus, or a `.session(` on an event stream.
 - A new store, a second data-fetching mechanism or a parallel error type instead of Zustand, TanStack or `Err.*`.
 - A new button, dialog, input, empty state or skeleton where an atom, molecule or Shadcn primitive already exists.
 - A `useEffect` where `useLocalFirstQuery` belongs; a cache hit treated as fresh data; a second freshness mechanism beside TTL.

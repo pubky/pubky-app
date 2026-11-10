@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2025-10-26
+Accepted — 2025-10-26  
+Updated — 2026-11-10 (social v1: the builders are the native functions of `pubky-social-specs` (`buildPost`, `editPost`, `buildTag`, `buildUser`, `decodeObject`, `encodeObject`, …); the wasm singleton that loaded `pubky-app-specs` is gone (`docs/migrations/social-v1.md`, _Cleanup_), and a pipe maps a package refusal to `Err.validation` with the package's `code`, `field` and `limit`, through the shared `toSpecsValidationError` or, at three older sites, by hand; ADR-0027, `docs/error-handling.md`)
 
 ## Context
 
