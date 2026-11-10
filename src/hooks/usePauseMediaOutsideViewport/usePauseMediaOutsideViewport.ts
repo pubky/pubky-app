@@ -24,16 +24,26 @@ const pauseIframe = (iframe: HTMLIFrameElement) => {
   }
 };
 
+/** Marks a box whose media keeps playing off screen (a player moved into the dock). */
+export const KEEP_PLAYING_ATTRIBUTE = 'data-keep-playing';
+
+const isKept = (element: Element) => element.closest(`[${KEEP_PLAYING_ATTRIBUTE}]`) !== null;
+
 const pauseMedia = (container: HTMLElement) => {
-  container.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => media.pause());
-  container.querySelectorAll<HTMLIFrameElement>('iframe').forEach(pauseIframe);
+  container.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => {
+    if (!isKept(media)) media.pause();
+  });
+  container.querySelectorAll<HTMLIFrameElement>('iframe').forEach((iframe) => {
+    if (!isKept(iframe)) pauseIframe(iframe);
+  });
 };
 
 /**
  * Pauses media as soon as its embed is outside the viewport.
  *
  * Native media (including the video rendered by react-tweet) is paused
- * directly. YouTube and Vimeo are paused through their player APIs.
+ * directly. YouTube and Vimeo are paused through their player APIs. Media
+ * inside a box marked `data-keep-playing` (a docked player) is left playing.
  */
 export const usePauseMediaOutsideViewport = () => {
   const [container, setContainer] = useState<HTMLElement | null>(null);

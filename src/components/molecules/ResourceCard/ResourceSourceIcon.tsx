@@ -50,7 +50,7 @@ interface ResourceSourceIconProps {
  * when the host's own fails (`open.qobuz.com` → `qobuz.com`), a globe when none loads, and an icon
  * for the kind of identifier (`isbn:`, `doi:`, `pubky://`) otherwise. A few services whose favicon
  * is not their known mark (Apple Music, `BRAND_ICONS`) get a bundled icon instead. Decorative: the
- * site name is always shown next to it.
+ * site name is shown next to it or is in its button's accessible name (the player pill).
  */
 export function ResourceSourceIcon({ uri }: ResourceSourceIconProps) {
   const [failedUrls, setFailedUrls] = useState<readonly string[]>([]);
