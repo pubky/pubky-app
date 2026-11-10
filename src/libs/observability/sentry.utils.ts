@@ -383,9 +383,10 @@ export function scrubTransactionEvent(event: TransactionEvent): TransactionEvent
 
 /**
  * `beforeBreadcrumb` for every runtime. A `ui.*` breadcrumb (click, keypress, input) raised inside a
- * `SENTRY_BLOCK_SELECTOR` subtree is dropped: its message is the target's id and classes, and the subtrees we
- * block (the recovery phrase dialog) are the ones whose markup must never leave the browser. The hint carries the
- * DOM event, or the element itself, the way the SDK's breadcrumbs integration reads it.
+ * `SENTRY_BLOCK_SELECTOR` subtree is dropped from the SDK breadcrumb trail, since its message is the target's id and
+ * classes. This does not reach Replay: its click events carry the same id and classes and never pass through
+ * `beforeBreadcrumb`, so position-only ids in blocked subtrees remain the required control. The hint carries the DOM
+ * event, or the element itself, the way the SDK's breadcrumbs integration reads it.
  */
 export function dropBlockedUiBreadcrumb(
   breadcrumb: Sentry.Breadcrumb,
@@ -394,7 +395,7 @@ export function dropBlockedUiBreadcrumb(
   if (!breadcrumb.category?.startsWith('ui.')) return breadcrumb;
   if (typeof Element === 'undefined') return breadcrumb;
   const source: unknown = hint?.event;
-  const target: unknown = typeof Event !== 'undefined' && source instanceof Event ? source.target : source;
+  const target: unknown = source instanceof Event ? source.target : source;
   if (target instanceof Element && target.closest(SENTRY_BLOCK_SELECTOR)) return null;
   return breadcrumb;
 }

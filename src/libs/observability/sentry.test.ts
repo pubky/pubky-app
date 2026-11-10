@@ -1352,4 +1352,48 @@ describe('Sentry beforeBreadcrumb drops UI breadcrumbs from sentry-block subtree
     const crumb = { category: 'ui.click', message: 'button#x' };
     expect(runBeforeBreadcrumb(crumb)).toBe(crumb);
   });
+
+  /**
+   * The cases above hand-build the hint. This one lets the SDK build it: a real `BrowserClient` with the
+   * breadcrumbs integration's DOM instrumentation, real clicks on attached elements, and the app's
+   * `beforeBreadcrumb`. If an SDK bump changes the hint shape, the filter fails open and this case goes red.
+   */
+  it('drops real SDK click breadcrumbs from a blocked subtree and keeps the rest', () => {
+    const recorded: Sentry.Breadcrumb[] = [];
+    const client = new SentryBrowser.BrowserClient({
+      dsn: TEST_DSN,
+      beforeBreadcrumb: getSentryInitBase().beforeBreadcrumb,
+      transport: () => Sentry.createTransport({ recordDroppedEvent: () => {} }, async () => ({ statusCode: 200 })),
+      stackParser: SentryBrowser.defaultStackParser,
+      integrations: [
+        SentryBrowser.breadcrumbsIntegration({
+          dom: true,
+          fetch: false,
+          history: false,
+          sentry: false,
+          xhr: false,
+        }),
+      ],
+      sendClientReports: false,
+    });
+    client.on('beforeAddBreadcrumb', (breadcrumb) => {
+      recorded.push(breadcrumb);
+    });
+    const previousClient = SentryBrowser.getCurrentScope().getClient();
+    SentryBrowser.setCurrentClient(client);
+    client.init();
+    const { blocked, open, cleanup } = renderBlockedButton();
+    try {
+      blocked.click();
+      open.click();
+
+      const clicks = recorded.filter((breadcrumb) => breadcrumb.category === 'ui.click');
+      expect(clicks).toHaveLength(1);
+      expect(clicks[0].message).toMatch(/button#profile-logout-btn$/);
+      expect(JSON.stringify(recorded)).not.toContain('backup-recovery-phrase-choice-1');
+    } finally {
+      cleanup();
+      SentryBrowser.getCurrentScope().setClient(previousClient);
+    }
+  });
 });

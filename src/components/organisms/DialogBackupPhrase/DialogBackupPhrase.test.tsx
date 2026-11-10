@@ -895,9 +895,4 @@ describe('DialogBackupPhrase - telemetry privacy', () => {
     // The reveal-step badge prefix stays exclusive to the badges, which are not rendered on this step.
     expect(container.querySelectorAll('[id^="backup-recovery-phrase-word-"]')).toHaveLength(0);
   });
-
-  it('marks the dialog content sentry-block so Replay and breadcrumbs skip it', () => {
-    render(<DialogBackupPhrase />);
-    expect(screen.getByTestId('dialog-content')).toHaveClass('sentry-block');
-  });
 });

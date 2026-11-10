@@ -54,7 +54,8 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
           <Button id="backup-recovery-phrase-btn">{'Continue'}</Button>
         </DialogTrigger>
       )}
-      {/* `sentry-block`: Replay records none of this dialog and `beforeBreadcrumb` drops its clicks. */}
+      {/* `sentry-block` keeps this DOM out of Replay and `beforeBreadcrumb` drops its SDK click breadcrumbs, but Replay's
+          click events still carry the target's id and classes: ids in here stay position-only, never a word. */}
       <DialogContent className="sentry-block max-w-sm md:max-w-2xl" hiddenTitle={'Backup recovery phrase'}>
         {step === 1 && (
           <RecoveryStep1

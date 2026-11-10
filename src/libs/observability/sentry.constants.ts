@@ -3,8 +3,9 @@ import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload
 const Z32_ALPHABET = 'ybndrfg8ejkmcpqxot1uwisza345h769';
 
 /**
- * Replay's default block class. An element inside it is not recorded by Replay, and `beforeBreadcrumb` drops the
- * `ui.*` breadcrumbs it raises, because the click breadcrumb is built from the element's id and classes.
+ * Replay's default block class. Its subtree is removed from the Replay DOM recording, and `beforeBreadcrumb` drops
+ * the SDK `ui.*` breadcrumbs it raises. Replay's own click events still carry the target's id and classes, so ids and
+ * classes inside a blocked subtree must stay free of secrets.
  */
 export const SENTRY_BLOCK_SELECTOR = '.sentry-block';
 
