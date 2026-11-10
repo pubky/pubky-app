@@ -31,15 +31,18 @@ vi.mock('@/molecules/Toaster/toast', () => ({
   toast: (...args: unknown[]) => mocks.toast(...args),
 }));
 
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (
-    selector: (state: { currentUserPubky: string; session: { info: { capabilities: string[] } } }) => unknown,
-  ) =>
-    selector({
-      currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo',
-      session: { info: { capabilities: ['/pub/app.pubchi/v1/:rw'] } },
+vi.mock('@/stores/auth/auth.store', () => {
+  const state = {
+    currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo',
+    generation: 'enroll-feedback-session',
+    session: { info: { capabilities: ['/pub/app.pubchi/v1/:rw'] } },
+  };
+  return {
+    useAuthStore: Object.assign((selector: (value: typeof state) => unknown) => selector(state), {
+      getState: () => state,
     }),
-}));
+  };
+});
 
 describe('PubchiSettings enroll validation', () => {
   beforeEach(() => {
