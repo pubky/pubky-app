@@ -16,11 +16,12 @@ on:
           - both
         default: desktop
       browsers:
-        description: 'chrome runs the specs for the chosen target; firefox runs the desktop cross-browser smoke subset and ignores target'
+        description: 'chrome runs the specs for the chosen target; firefox and webkit run the desktop cross-browser smoke subset and ignore target (webkit runs on macOS against a stack on Ubuntu)'
         type: choice
         options:
           - chrome
           - firefox
+          - webkit
         default: chrome
   push:
     branches:
@@ -49,11 +50,13 @@ on:
       - '.github/workflows/e2e-test.yml'
       - '.github/workflows/build-docker-image.yml'
   schedule:
-    # Both on the default branch (dev), Monday to Friday, i.e. Sunday to Thursday night, so results
+    # All on the default branch (dev), Monday to Friday, i.e. Sunday to Thursday night, so results
     # are ready on week-day mornings. 03:00 UTC: Chrome mobile. 04:00 UTC: the Firefox desktop
-    # smoke subset; the matrix below keys on this exact cron string.
+    # smoke subset; the matrix below keys on this exact cron string. 05:00 UTC: the same subset on
+    # WebKit on macOS; the job conditions below key on that exact cron string.
     - cron: '0 3 * * 1-5'
     - cron: '0 4 * * 1-5'
+    - cron: '0 5 * * 1-5'
 
 jobs:
   rebuild_images:
@@ -128,6 +131,8 @@ jobs:
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
   rebuild_pubky_app:
+    # WebKit runs build the app on macOS (webkit-test) and never pull this image.
+    if: ${{ github.event.schedule != '0 5 * * 1-5' && inputs.browsers != 'webkit' }}
     uses: ./.github/workflows/build-docker-image.yml
     with:
       # The env context is not available in a reusable-call `with`, so the
@@ -140,6 +145,8 @@ jobs:
 
   e2e-test:
     name: End-to-End Tests
+    # WebKit runs (05:00 nightly or a webkit dispatch) use the webkit-stack and webkit-test pair below.
+    if: ${{ github.event.schedule != '0 5 * * 1-5' && inputs.browsers != 'webkit' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     # Intentionally not needs: rebuild_pubky_app. The spec jobs do their own
@@ -457,3 +464,331 @@ jobs:
       - name: Dump docker logs on failure
         if: failure()
         uses: jwalton/gh-docker-logs@v2
+
+  # WebKit runs (05:00 nightly or a webkit dispatch) need macOS for a Safari-like engine, and macOS
+  # runners cannot run Docker. Each spec therefore gets a pair of jobs that run at the same time:
+  # this one starts the same pubky-stack as e2e-test on Ubuntu and holds it up, and webkit-test
+  # runs the app and Cypress on macOS against it. .github/scripts/e2e-remote-stack.sh explains how
+  # the two find and reach each other. The stack steps are copies of e2e-test's; keep them in step.
+  webkit-stack:
+    name: WebKit stack on Ubuntu
+    if: ${{ github.event.schedule == '0 5 * * 1-5' || inputs.browsers == 'webkit' }}
+    runs-on: ubuntu-latest
+    # Longer than webkit-test, which may start late if macOS runners are busy: the macOS job, not
+    # this one, decides how a run ends.
+    timeout-minutes: 75
+    needs: [rebuild_images]
+    env:
+      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
+      PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
+      REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      # GitHub names a matrix job "<name> (<matrix values>)".
+      PEER_JOB: WebKit specs on macOS (${{ matrix.spec }})
+      CLIENT_KEY_ARTIFACT: e2e-webkit-client-key-${{ matrix.spec }}-${{ github.run_attempt }}
+      ENDPOINT_ARTIFACT: e2e-webkit-stack-endpoint-${{ matrix.spec }}-${{ github.run_attempt }}
+    permissions:
+      contents: read
+      # read the macOS job's state and download its artifact
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        spec: ['onboarding.cy.ts', 'posts.cy.ts', 'profile.cy.ts']
+
+    steps:
+      - name: Validate envs from rebuild_images job
+        run: |
+          if [ -z "${{ env.HOMESERVER_TAG }}" ]; then
+            echo "Error: env HOMESERVER_TAG is empty!"
+            exit 1
+          fi
+
+          if [ -z "${{ env.PUBKY_NEXUS_TAG }}" ]; then
+            echo "Error: env PUBKY_NEXUS_TAG is empty!"
+            exit 1
+          fi
+
+      - name: Checkout pubky-stack
+        uses: actions/checkout@v7
+        with:
+          repository: pubky/pubky-stack
+          ref: ${{ env.pubky_stack_ref }}
+          path: pubky-stack
+          submodules: true
+          token: ${{ secrets.READ_REPOS }}
+
+      # Only the scripts: this job runs no app code.
+      - name: Checkout this repository
+        uses: actions/checkout@v7
+        with:
+          path: pubky-app
+          sparse-checkout: .github/scripts
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Modify neo4j.env
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/NEO4J_server_memory_pagecache_size=2G/NEO4J_server_memory_pagecache_size=1G/' neo4j.env
+          sed -i 's/NEO4J_server_memory_heap_initial__size=4G/NEO4J_server_memory_heap_initial__size=1G/' neo4j.env
+          sed -i 's/NEO4J_server_memory_heap_max__size=8G/NEO4J_server_memory_heap_max__size=2G/' neo4j.env
+
+      - name: Increase watcher sleep in Nexus config
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/watcher_sleep = 100/watcher_sleep = 500/' pubky-nexus-config-testnet.toml
+
+      # The pubky-app container never starts in this job. Its compose environment is still
+      # prepared as in e2e-test, because the macOS app is started with exactly that environment.
+      - name: Prepare pubky-stack .env
+        working-directory: pubky-stack/docker
+        run: |
+          cp .env-sample .env
+          printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
+          if [ -f docker-compose.override.yml ]; then
+            echo 'docker-compose.override.yml already exists in pubky-stack; merge the PUBKY_RUNTIME_* poll interval into it instead of overwriting.'
+            exit 1
+          fi
+          cat > docker-compose.override.yml <<'EOF'
+          services:
+            pubky-app:
+              environment:
+                PUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS: "2000"
+          EOF
+
+      - name: Require signup tokens for e2e invite codes
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/signup_mode = "open"/signup_mode = "token_required"/' homeserver.config.toml
+          grep -q 'signup_mode = "token_required"' homeserver.config.toml || {
+            echo 'Error: homeserver.config.toml is missing signup_mode = "token_required"'
+            exit 1
+          }
+
+      # Compose interpolates every service at config load, so PUBKY_APP_TAG must be set even
+      # though no pubky-app image is pulled here.
+      - name: Run pubky-stack infra services
+        working-directory: pubky-stack/docker
+        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis postgres
+        env:
+          REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: unused
+
+      - name: Wait for dockerised pubky-stack to start
+        run: |
+          PORT=8080
+          MAX_WAIT=300     # Maximum wait time in seconds (5 minutes)
+          WAIT_INTERVAL=5  # Interval between checks in seconds
+          ELAPSED=0
+
+          while ! curl -s http://localhost:$PORT; do
+            if [ $ELAPSED -ge $MAX_WAIT ]; then
+              echo "Service did not start within 5 minutes."
+              exit 1
+            fi
+            echo "Waiting for service on port $PORT to be ready... ($ELAPSED seconds elapsed)"
+            sleep $WAIT_INTERVAL
+            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+          done
+
+          echo "Service is ready."
+
+      - name: Install cloudflared
+        run: bash pubky-app/.github/scripts/e2e-remote-stack.sh install-cloudflared
+
+      - name: Expose the stack to the macOS job
+        working-directory: pubky-stack/docker
+        timeout-minutes: 20
+        run: bash ../../pubky-app/.github/scripts/e2e-remote-stack.sh expose
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: unused
+
+      - name: Upload the stack endpoint
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ENDPOINT_ARTIFACT }}
+          path: ${{ runner.temp }}/e2e-remote-stack/endpoint
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Keep the stack up until the macOS job finishes
+        run: bash pubky-app/.github/scripts/e2e-remote-stack.sh hold
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Close the tunnel
+        if: ${{ always() }}
+        run: bash pubky-app/.github/scripts/e2e-remote-stack.sh close
+
+      - name: Dump docker logs on failure
+        if: failure()
+        uses: jwalton/gh-docker-logs@v2
+
+  webkit-test:
+    name: WebKit specs on macOS
+    if: ${{ github.event.schedule == '0 5 * * 1-5' || inputs.browsers == 'webkit' }}
+    runs-on: macos-latest
+    timeout-minutes: 45
+    # Uses none of its outputs: needing rebuild_images starts both halves together, and skips this
+    # one when the stack's images cannot be resolved.
+    needs: [rebuild_images]
+    env:
+      REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      # GitHub names a matrix job "<name> (<matrix values>)".
+      PEER_JOB: WebKit stack on Ubuntu (${{ matrix.spec }})
+      CLIENT_KEY_ARTIFACT: e2e-webkit-client-key-${{ matrix.spec }}-${{ github.run_attempt }}
+      ENDPOINT_ARTIFACT: e2e-webkit-stack-endpoint-${{ matrix.spec }}-${{ github.run_attempt }}
+    permissions:
+      contents: read
+      # read the stack job's state and download its artifact
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # The cross-browser smoke subset (see e2e-test), desktop only.
+        spec: ['onboarding.cy.ts', 'posts.cy.ts', 'profile.cy.ts']
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v7
+        with:
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__. VRT workflows still fetch them.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
+
+      # First, so the stack job has the key by the time its stack is up.
+      - name: Create the tunnel key
+        run: bash .github/scripts/e2e-remote-stack.sh client-key
+
+      - name: Upload the tunnel public key
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.CLIENT_KEY_ARTIFACT }}
+          path: ${{ runner.temp }}/e2e-remote-stack/client-key
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Read the Cypress and Playwright versions
+        id: versions
+        run: |
+          echo "cypress=$(node -p "require('./package-lock.json').packages['node_modules/cypress'].version")" >> "$GITHUB_OUTPUT"
+          echo "playwright=$(node -p "require('./package-lock.json').packages['node_modules/playwright-webkit'].version")" >> "$GITHUB_OUTPUT"
+
+      # Both live outside node_modules, so the install-dependencies cache does not hold them.
+      - name: Restore the Cypress binary and WebKit
+        id: browsers
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/Library/Caches/Cypress
+            ~/Library/Caches/ms-playwright
+          key: e2e-webkit-browsers-v1-${{ runner.os }}-${{ runner.arch }}-cypress-${{ steps.versions.outputs.cypress }}-playwright-${{ steps.versions.outputs.playwright }}
+
+      # package.json denies the playwright-webkit install script so other installs skip the download.
+      # The playwright CLI shares its playwright-core version, so this is the build Cypress loads.
+      - name: Install the Cypress binary and WebKit
+        id: install-browsers
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: |
+          npx --no-install cypress install
+          npx --no-install cypress verify
+          npx --no-install playwright install webkit
+        env:
+          CYPRESS_VERIFY_TIMEOUT: 120000
+
+      - name: Save the Cypress binary and WebKit
+        if: steps.install-browsers.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/Library/Caches/Cypress
+            ~/Library/Caches/ms-playwright
+          key: ${{ steps.browsers.outputs.cache-primary-key }}
+
+      # A production build like the image the other e2e jobs run, with the build arguments
+      # build-docker-image.yml passes.
+      - name: Build the app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_DB_VERSION: 3
+          NEXT_PUBLIC_DB_NAME: franky
+          NEXT_PUBLIC_DEBUG_MODE: false
+          NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Install cloudflared
+        run: bash .github/scripts/e2e-remote-stack.sh install-cloudflared
+
+      - name: Connect to the stack
+        timeout-minutes: 25
+        run: bash .github/scripts/e2e-remote-stack.sh connect
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Start the app
+        run: bash .github/scripts/e2e-remote-stack.sh start-app
+
+      - name: Run e2e tests - Desktop (webkit) - Spec (${{ matrix.spec }})
+        id: test-desktop
+        uses: cypress-io/github-action@v7
+        env:
+          DEBUG: '@cypress/github-action'
+        with:
+          working-directory: cypress
+          config-file: cypress.config.ts
+          spec: e2e/${{ matrix.spec }}
+          browser: webkit
+          headed: false
+          summary-title: webkit (macOS) - Desktop
+          install: false
+
+      - name: Upload screenshots - webkit - Desktop
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-webkit-${{ matrix.spec }}-desktop
+          path: cypress/screenshots
+          if-no-files-found: ignore
+          overwrite: true
+
+      - name: Upload video for ${{ matrix.spec }} test - webkit - Desktop
+        if: ${{ always() && steps.test-desktop.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: video-webkit-${{ matrix.spec }}-desktop
+          path: cypress/videos/${{ matrix.spec }}.mp4
+          if-no-files-found: ignore
+          overwrite: true
+
+      - name: Upload cypress.log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: cypress-log-webkit-${{ matrix.spec }}
+          path: cypress/cypress.log
+          if-no-files-found: ignore
+          overwrite: true
+
+      - name: Close the tunnel and print the app and tunnel logs
+        if: ${{ always() }}
+        run: bash .github/scripts/e2e-remote-stack.sh close
