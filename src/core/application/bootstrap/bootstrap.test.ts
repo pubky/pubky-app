@@ -34,6 +34,7 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
+import { NexusFileService } from '@/services/nexus/file/file';
 import { type NexusNotification, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { BootstrapApplication } from './bootstrap';
@@ -769,6 +770,22 @@ describe('BootstrapApplication', () => {
       expect(fetchFiles.mock.invocationCallOrder[0]).toBeLessThan(
         vi.mocked(LocalStreamPostsService.persistPosts).mock.invocationCallOrder[0],
       );
+      expect(mocks.persistPosts).toHaveBeenCalledWith(expect.objectContaining({ posts: bootstrapData.posts }));
+    });
+
+    it('persists the page when the file metadata fetch fails: the cards fetch their own rows', async () => {
+      const bootstrapData = createMockBootstrapData();
+      bootstrapData.posts[0].details.attachments = ['pubky://user-1/pub/pubky.app/files/image-1'];
+      const mocks = setupMocks({ bootstrapData, unreadCount: 0 });
+      // The real seam, with Nexus refusing the file-details request
+      vi.mocked(FileApplication.fetchFilesForPosts).mockRestore();
+      const fetchFiles = vi.spyOn(NexusFileService, 'fetchFiles').mockRejectedValue(new Error('rate limited'));
+      const persistFiles = vi.spyOn(FileApplication, 'persistFiles');
+
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(fetchFiles).toHaveBeenCalledExactlyOnceWith(['pubky://user-1/pub/pubky.app/files/image-1']);
+      expect(persistFiles).not.toHaveBeenCalled();
       expect(mocks.persistPosts).toHaveBeenCalledWith(expect.objectContaining({ posts: bootstrapData.posts }));
     });
 
