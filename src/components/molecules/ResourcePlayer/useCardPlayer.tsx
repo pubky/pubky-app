@@ -6,12 +6,13 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { pauseMedia, tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
-import { getResourceStatus } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { getResourceStatus, getResourceTarget } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { getResourceSummary } from '@/molecules/ResourceCard/ResourceFacts.utils';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+import { usePlayerHost } from './PlayerHost';
 import {
   CARD_PLAYER,
   getOwnPlayer,
@@ -21,7 +22,7 @@ import {
   type PlayerProvider,
   type PlayerTarget,
 } from './resourcePlayer.utils';
-import { PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
+import { type PagePlayer, PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
 import { type ResourcePlayerState, useResourcePlayer } from './useResourcePlayer';
 
@@ -102,8 +103,11 @@ export function useCardPlayer(
   // player goes first. Else the link is generic here: its card goes first.
   const own = card && getResourceStatus(card.status) !== PinakesStatus.MISSING ? getOwnPlayer(card, href) : null;
   const linked = own !== null && targets.some((target) => target.provider === own.provider);
-  const player = useResourcePlayer(owner, targets);
+  // The app's player host keeps the frame of any player but a preview's: it plays on across pages.
+  const hosted = usePlayerHost() !== null && !preview;
+  const player = useResourcePlayer(owner, targets, { hosted });
   if (!card || targets.length === 0) return {};
+  const pagePlayer = hosted ? { owner, resource: getResourceTarget(card, href ?? card.uri).uri } : undefined;
 
   const title = card.name?.trim() || href || card.uri;
   // Another resource starts over: nothing picked; a generic link's card, else the Players order
@@ -151,6 +155,7 @@ export function useCardPlayer(
         player={player}
         surface={surface}
         preview={preview}
+        pagePlayer={pagePlayer}
         showsPlayer={showsPlayer}
         onOptIn={(on) => setOptedIn(on ? card.uri : null)}
       />
@@ -169,6 +174,8 @@ interface EmbedPlayerProps {
   player: ResourcePlayerState;
   surface?: PostActionSurface;
   preview: boolean;
+  /** The page's player it is, kept by the app's player host (`PlayerDock`); not in a preview. */
+  pagePlayer?: PagePlayer;
   /** Platform embeds up front, or Play on pressed here with them off: the player shows. */
   showsPlayer: boolean;
   /** Play on pressed with platform embeds up front off (`true`), or the player let go (`false`). */
@@ -188,6 +195,7 @@ function EmbedPlayer({
   player,
   surface = 'muted',
   preview,
+  pagePlayer,
   showsPlayer,
   onOptIn,
 }: EmbedPlayerProps) {
@@ -225,6 +233,7 @@ function EmbedPlayer({
     if (!showsPlayer && isActive) player.close();
   }, [showsPlayer, isActive, player]);
 
+  // Under the app's player host the frame is not in this box: the host's dock pauses it.
   const close = () => {
     if (boxRef.current) pauseMedia(boxRef.current);
     player.close();
@@ -273,7 +282,7 @@ function EmbedPlayer({
 
   return (
     <div ref={boxRef} data-resource-controls data-testid="embed-player" className="min-w-0">
-      <PlayerDock target={target} title={title} onClose={close} dockable={isActive && !preview}>
+      <PlayerDock target={target} title={title} onClose={close} dockable={isActive && !preview} pagePlayer={pagePlayer}>
         <ResourcePlayerFrame
           key={frameKey}
           target={autoStart ? target : getUpFrontTarget(target)}
