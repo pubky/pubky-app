@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -31,7 +32,7 @@ interface ProviderMenuProps {
   icons?: boolean;
   /** The menu's accessible name: what picking a row does. */
   label?: string;
-  /** A "Card" row after the services: shows the link's card instead of a player, current while `current` is `null`. */
+  /** A "Card" row before the services: shows the link's card instead of a player, current while `current` is `null`. */
   onShowCard?: () => void;
 }
 
@@ -40,8 +41,9 @@ const ROW_TEXT = 'truncate text-base font-medium transition-colors group-hover:t
 
 /**
  * The services to play on, in the post menu's style: one line per service (favicon and name), the
- * current one in full colour with a check, then Card where the link's card can stand instead of a
- * player (a playable card's switch), then Close when there is a player to close.
+ * current one in full colour with a check. Where the link's card can stand instead of a player (a
+ * playable card's switch), Card comes first, set apart from the services by the menu's separator.
+ * Close comes last when there is a player to close.
  */
 function ProviderMenu({
   targets,
@@ -63,6 +65,36 @@ function ProviderMenu({
         className="flex w-56 flex-col gap-2.5"
         data-testid="play-on-menu"
       >
+        {onShowCard && (
+          <>
+            <DropdownMenuItem
+              data-testid="play-on-card"
+              aria-label="Show the link card instead of a player"
+              aria-current={cardShown || undefined}
+              onSelect={onShowCard}
+              className={ROW}
+            >
+              {icons && (
+                <LinkIcon
+                  aria-hidden="true"
+                  className={cn(
+                    'size-4 shrink-0 transition-colors group-hover:text-foreground',
+                    cardShown ? 'text-foreground' : 'text-muted-foreground',
+                  )}
+                />
+              )}
+              <Typography
+                as="span"
+                overrideDefaults
+                className={cn(ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
+              >
+                Card
+              </Typography>
+              {cardShown && <Check aria-hidden="true" className="size-4 shrink-0 text-brand" />}
+            </DropdownMenuItem>
+            {targets.length > 0 && <DropdownMenuSeparator className="-mx-4 my-0" />}
+          </>
+        )}
         {targets.map((target) => {
           const playing = current?.provider === target.provider;
           return (
@@ -85,33 +117,6 @@ function ProviderMenu({
             </DropdownMenuItem>
           );
         })}
-        {onShowCard && (
-          <DropdownMenuItem
-            data-testid="play-on-card"
-            aria-label="Show the link card instead of a player"
-            aria-current={cardShown || undefined}
-            onSelect={onShowCard}
-            className={ROW}
-          >
-            {icons && (
-              <LinkIcon
-                aria-hidden="true"
-                className={cn(
-                  'size-4 shrink-0 transition-colors group-hover:text-foreground',
-                  cardShown ? 'text-foreground' : 'text-muted-foreground',
-                )}
-              />
-            )}
-            <Typography
-              as="span"
-              overrideDefaults
-              className={cn(ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
-            >
-              Card
-            </Typography>
-            {cardShown && <Check aria-hidden="true" className="size-4 shrink-0 text-brand" />}
-          </DropdownMenuItem>
-        )}
         {current && onClose && (
           <DropdownMenuItem onSelect={onClose} className={ROW}>
             <X
@@ -183,9 +188,9 @@ export function PlayOnSplit({
 
 /**
  * A playable card's switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
- * shown service's favicon, name and a chevron, in the action row's pill style, opening the
- * services to show instead (`ProviderMenu`), then Card. Picking one only switches the player
- * shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card.
+ * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
+ * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
+ * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card.
  */
 export function PlayerSwitch({
   targets,

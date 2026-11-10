@@ -325,13 +325,34 @@ describe('useCardPlayer, a song', () => {
     const cardRow = (menu: HTMLElement) =>
       within(menu).getByRole('menuitem', { name: 'Show the link card instead of a player' });
 
-    it('is the switch’s last row, after the services, unchecked while a player shows', () => {
+    it('is the switch’s first row, set apart from the services by a separator, unchecked while a player shows', () => {
       render(<Song card={SONG} />);
 
       const menu = openSwitch();
       const rows = within(menu).getAllByRole('menuitem');
-      expect(rows.at(-1)).toBe(cardRow(menu));
+      expect(rows[0]).toBe(cardRow(menu));
+      expect(rows.slice(1).map((row) => row.textContent)).toEqual(['Spotify', 'TIDAL', 'YouTube']);
       expect(cardRow(menu)).not.toHaveAttribute('aria-current');
+      const separator = within(menu).getByRole('separator');
+      expect(separator).toHaveClass('-mx-4', 'my-0');
+      expect(cardRow(menu).nextElementSibling).toBe(separator);
+      expect(separator.nextElementSibling).toBe(rows[1]);
+    });
+
+    it('stays first and checked while the card shows', () => {
+      render(<Song card={SONG} />);
+      fireEvent.click(cardRow(openSwitch()));
+
+      const menu = openSwitch();
+      const rows = within(menu).getAllByRole('menuitem');
+      expect(rows[0]).toBe(cardRow(menu));
+      expect(cardRow(menu)).toHaveAttribute('aria-current', 'true');
+      expect(
+        within(menu)
+          .getAllByTestId('play-on-row')
+          .some((row) => row.hasAttribute('aria-current')),
+      ).toBe(false);
+      expect(within(menu).getByRole('separator')).toBeInTheDocument();
     });
 
     it('shows the card in place of the player, loads nothing, and keeps the switch to pick a service again', () => {
