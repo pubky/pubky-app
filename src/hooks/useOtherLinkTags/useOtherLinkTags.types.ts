@@ -38,7 +38,7 @@ export interface TMergedTag {
 }
 
 export interface UseOtherLinkTagsResult {
-  /** The tags of every link read so far that has some; `[]` while the first batch is read. */
+  /** The tags of every link read so far that has some, in the links' order; `[]` until one answers with tags. */
   reads: TOtherLinkTags[];
   isLoading: boolean;
 }

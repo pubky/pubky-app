@@ -6,7 +6,12 @@ import type { NexusTag } from '@/services/nexus/nexus.types';
 import { mockNexusPostWire } from '@/test-utils/nexus';
 import type { NexusResourceService as TNexusResourceService } from './resource';
 import { resourceApi } from './resource.api';
-import { RESOURCE_TAG_UNCONFIRMED_MS, RESOURCE_TAGS_LIMIT } from './resource.constants';
+import {
+  RESOURCE_BY_IDS_BATCH_MS,
+  RESOURCE_READ_TIMEOUT_MS,
+  RESOURCE_TAG_UNCONFIRMED_MS,
+  RESOURCE_TAGS_LIMIT,
+} from './resource.constants';
 
 // The viewer's unconfirmed tag writes are module state: every test reads a fresh service module.
 let AppError: typeof TAppError;
@@ -53,6 +58,8 @@ describe('NexusResourceService', () => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
   beforeEach(() => {
+    // Link by link (`by-uri`), as on a Nexus without `by_ids`; the batch has its own tests below.
+    NexusResourceService.clearBatch({ byIdsMissing: true });
     fetchSpy.mockReset();
   });
 
@@ -295,6 +302,8 @@ describe('NexusResourceService counts and replies (our Nexus fork)', () => {
 
   beforeEach(() => {
     nexusQueryClient.clear();
+    // Link by link (`by-uri`), as on a Nexus without `by_ids`.
+    NexusResourceService.clearBatch({ byIdsMissing: true });
     fetchSpy.mockReset();
   });
 
@@ -389,5 +398,391 @@ describe('NexusResourceService counts and replies (our Nexus fork)', () => {
     expect(fetchSpy.mock.calls[0][0]).toBe(
       `${getNexusUrl()}/v1/resource/${RESOURCE_ID}/replies?viewer_id=${VIEWER}&skip=3&limit=20`,
     );
+  });
+});
+
+describe('NexusResourceService batched tag reads (POST /v0/stream/resources/by_ids)', () => {
+  const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  const OSM = 'https://www.openstreetmap.org/node/270803095';
+  const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+  const UNKNOWN = 'https://nobody-tagged.example/page';
+  const tag = (label: string, taggers: string[], taggersCount = taggers.length): NexusTag => ({
+    label,
+    taggers,
+    taggers_count: taggersCount,
+    relationship: false,
+    tag_uri: null,
+  });
+  const view = (uri: string, tags: NexusTag[], id = 'c10fedfa853bcdbdd4b18d8257250518') => ({
+    details: { id, uri, scheme: 'https', indexed_at: 1792548723375 },
+    tags,
+    taggers_count: tags.length,
+    replies_count: 1,
+    embeds_count: 0,
+    collections_count: 2,
+  });
+  // The shape of a `POST /v0/stream/resources/by_ids` answer.
+  const OSM_VIEW = view(OSM, [tag('coffee', ['a', 'b', 'c']), tag('zurich', ['a'])]);
+  const YOUTUBE_VIEW = view(YOUTUBE, [tag('video', ['k'])], '0f3820de1c3532e8805674cc996978f9');
+  const BY_IDS_URL = resourceApi.byIds({ uris: [], limit_tags: RESOURCE_TAGS_LIMIT }).url;
+  const byIdsCalls = () => fetchSpy.mock.calls.filter(([url]) => String(url) === BY_IDS_URL);
+  const byUriCalls = () => fetchSpy.mock.calls.filter(([url]) => String(url).includes('/v0/resource/by-uri'));
+  const bodyOf = (call: unknown[]) => JSON.parse(String((call[1] as RequestInit).body));
+  const read = (uri: string, viewerId: string | null = VIEWER) =>
+    NexusResourceService.fetchTagsByUri({ uri, viewerId });
+
+  beforeEach(() => {
+    fetchSpy.mockReset();
+  });
+
+  afterEach(() => {
+    nexusQueryClient.clear();
+  });
+
+  it('reads every link asked at the same moment in one request, for the viewer, each answer with its link', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse([OSM_VIEW, YOUTUBE_VIEW]));
+
+    const [osm, unknown, youtube] = await Promise.all([read(OSM), read(UNKNOWN), read(YOUTUBE)]);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(fetchSpy.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    expect(bodyOf(fetchSpy.mock.calls[0])).toEqual({ uris: [OSM, UNKNOWN, YOUTUBE], viewer_id: VIEWER });
+    expect(osm).toEqual(OSM_VIEW.tags);
+    expect(youtube).toEqual(YOUTUBE_VIEW.tags);
+    // Skipped by Nexus: nobody tagged it, as `by-uri`'s 404.
+    expect(unknown).toEqual([]);
+  });
+
+  it('fills each link’s shared answer and counts, so a later card of the link asks nothing', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse([OSM_VIEW]));
+
+    await Promise.all([read(OSM), read(UNKNOWN)]);
+    await read(OSM);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(NexusResourceService.getCachedCounts(OSM)).toEqual({
+      resourceId: OSM_VIEW.details.id,
+      replies: 1,
+      embeds: 0,
+      collections: 2,
+    });
+    expect(NexusResourceService.getCachedCounts(UNKNOWN)).toBeNull();
+  });
+
+  it('asks signed out without a viewer, and keeps viewers apart', async () => {
+    fetchSpy.mockImplementation(async () => jsonResponse([OSM_VIEW]));
+
+    await Promise.all([read(OSM, null), read(OSM, VIEWER)]);
+
+    expect(byIdsCalls().map(bodyOf)).toEqual([{ uris: [OSM] }, { uris: [OSM], viewer_id: VIEWER }]);
+  });
+
+  it('matches a link Nexus returns normalized (host case, fragment)', async () => {
+    const written = 'https://WWW.OpenStreetMap.org/node/270803095#map=19';
+    fetchSpy.mockResolvedValue(jsonResponse([OSM_VIEW]));
+
+    expect(await read(written)).toEqual(OSM_VIEW.tags);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks `by_ids` for the limits `by-uri` is asked for, and takes its views as they are', async () => {
+    const manyTags = view(
+      YOUTUBE,
+      ['a', 'b', 'c', 'd', 'e', 'f'].map((label) => tag(label, ['k', 'l', 'm', 'n', 'o'], 9)),
+    );
+    fetchSpy.mockResolvedValue(jsonResponse([OSM_VIEW, manyTags]));
+
+    expect(await Promise.all([read(OSM), read(YOUTUBE)])).toEqual([OSM_VIEW.tags, manyTags.tags]);
+
+    expect(new URL(BY_IDS_URL).searchParams.get('limit_tags')).toBe(String(RESOURCE_TAGS_LIMIT));
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(byUriCalls()).toHaveLength(0);
+  });
+
+  it('reads link by link on a Nexus without `by_ids` (404), and does not ask it again', async () => {
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL ? new Response('Not Found', { status: 404 }) : jsonResponse(BY_URI_RESPONSE),
+    );
+
+    const [first, second] = await Promise.all([read(OSM), read(YOUTUBE)]);
+    await read(UNKNOWN);
+
+    expect(first).toEqual(BY_URI_RESPONSE.tags);
+    expect(second).toEqual(BY_URI_RESPONSE.tags);
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(byUriCalls()).toHaveLength(3);
+  });
+
+  it('reads link by link when Nexus refuses the batch (400), and keeps batching later reads', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response('bad uri', { status: 400 }))
+      .mockResolvedValueOnce(jsonResponse(BY_URI_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse([OSM_VIEW]));
+
+    expect(await read(YOUTUBE)).toEqual(BY_URI_RESPONSE.tags);
+    expect(await read(OSM)).toEqual(OSM_VIEW.tags);
+    expect(byIdsCalls()).toHaveLength(2);
+    expect(byUriCalls()).toHaveLength(1);
+  });
+
+  it('leaves the links to `by-uri` when a view matches none of them', async () => {
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL
+        ? jsonResponse([view('https://elsewhere.example/', [tag('x', ['a'])])])
+        : jsonResponse(BY_URI_RESPONSE),
+    );
+
+    expect(await read(OSM)).toEqual(BY_URI_RESPONSE.tags);
+    expect(byUriCalls()).toHaveLength(1);
+  });
+
+  it('reads link by link on a 405 too', async () => {
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL ? new Response('', { status: 405 }) : jsonResponse(BY_URI_RESPONSE),
+    );
+
+    await read(OSM);
+    await read(YOUTUBE);
+
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(byUriCalls()).toHaveLength(2);
+  });
+
+  it('reads a link Nexus does not take (no URI, longer than 2048 bytes) alone, the others in the batch', async () => {
+    const long = `https://e.com/${'a'.repeat(2048)}`;
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL ? jsonResponse([OSM_VIEW]) : jsonResponse(BY_URI_RESPONSE),
+    );
+
+    await Promise.all([read('not a uri'), read(long), read(OSM)]);
+
+    expect(byIdsCalls().map(bodyOf)).toEqual([{ uris: [OSM], viewer_id: VIEWER }]);
+    expect(byUriCalls()).toHaveLength(2);
+  });
+
+  it('answers two spellings of one link from the views Nexus returns for each', async () => {
+    const other = 'https://www.openstreetmap.org/node/270803095#map';
+    fetchSpy.mockResolvedValue(jsonResponse([OSM_VIEW, OSM_VIEW]));
+
+    expect(await Promise.all([read(OSM), read(other)])).toEqual([OSM_VIEW.tags, OSM_VIEW.tags]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('batches a fresh re-read after a write too', async () => {
+    fetchSpy.mockImplementation(async () => jsonResponse([OSM_VIEW]));
+
+    await read(OSM);
+    await NexusResourceService.fetchTagsByUri({ uri: OSM, viewerId: VIEWER, fresh: true });
+
+    expect(byIdsCalls()).toHaveLength(2);
+    expect(byUriCalls()).toHaveLength(0);
+  });
+
+  it('reads by `by-uri` when the batch answer is not a list of views', async () => {
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL ? jsonResponse({}) : jsonResponse(BY_URI_RESPONSE),
+    );
+    expect(await read(OSM)).toEqual(BY_URI_RESPONSE.tags);
+
+    nexusQueryClient.clear();
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL ? jsonResponse([{ details: null }, OSM_VIEW]) : jsonResponse(BY_URI_RESPONSE),
+    );
+    expect(await Promise.all([read(YOUTUBE), read(OSM)])).toEqual([BY_URI_RESPONSE.tags, OSM_VIEW.tags]);
+    expect(byUriCalls()).toHaveLength(2);
+  });
+
+  it('reads at most six links by `by-uri` at a time', async () => {
+    NexusResourceService.clearBatch({ byIdsMissing: true });
+    const answers: Array<() => void> = [];
+    fetchSpy.mockImplementation(
+      () => new Promise<Response>((resolve) => answers.push(() => resolve(jsonResponse(BY_URI_RESPONSE)))),
+    );
+    const reads = Promise.all(Array.from({ length: 8 }, (_, index) => read(`https://e.com/${index}`)));
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(6));
+    answers.splice(0, 2).forEach((answer) => answer());
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(8));
+    answers.splice(0).forEach((answer) => answer());
+    expect(await reads).toHaveLength(8);
+  });
+
+  it('collects links asked a few milliseconds apart (a feed mounting its cards), at most 100 ms', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchSpy.mockImplementation(async () => jsonResponse([]));
+      const reads: Promise<NexusTag[]>[] = [];
+      for (let index = 0; index < 30; index++) {
+        reads.push(read(`https://e.com/${index}`));
+        await vi.advanceTimersByTimeAsync(5);
+      }
+      await vi.advanceTimersByTimeAsync(RESOURCE_BY_IDS_BATCH_MS);
+      await Promise.all(reads);
+
+      // 30 links 5 ms apart: sent 100 ms after the first (20 links), the rest once no link followed.
+      expect(byIdsCalls().map((call) => bodyOf(call).uris.length)).toEqual([20, 10]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends one `by_ids` request while it is unknown whether Nexus has it, then the waiting batches', async () => {
+    let answerProbe: (response: Response) => void = () => {};
+    fetchSpy.mockImplementation((url) =>
+      String(url) === BY_IDS_URL && byIdsCalls().length === 1
+        ? new Promise<Response>((resolve) => (answerProbe = resolve))
+        : Promise.resolve(jsonResponse(BY_URI_RESPONSE)),
+    );
+    const first = read(OSM);
+    await vi.waitFor(() => expect(byIdsCalls()).toHaveLength(1));
+    const second = read(YOUTUBE);
+    await new Promise((resolve) => setTimeout(resolve, RESOURCE_BY_IDS_BATCH_MS * 3));
+
+    expect(byIdsCalls()).toHaveLength(1);
+    answerProbe(new Response('Not Found', { status: 404 }));
+    await Promise.all([first, second]);
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(byUriCalls()).toHaveLength(2);
+  });
+
+  it('sends the waiting batches once the probe was answered, each by `by_ids`', async () => {
+    let answerProbe: (response: Response) => void = () => {};
+    fetchSpy.mockImplementation((url) =>
+      String(url) === BY_IDS_URL && byIdsCalls().length === 1
+        ? new Promise<Response>((resolve) => (answerProbe = resolve))
+        : Promise.resolve(jsonResponse([YOUTUBE_VIEW])),
+    );
+    const first = read(OSM);
+    await vi.waitFor(() => expect(byIdsCalls()).toHaveLength(1));
+    const second = read(YOUTUBE);
+    await new Promise((resolve) => setTimeout(resolve, RESOURCE_BY_IDS_BATCH_MS * 3));
+    answerProbe(jsonResponse([OSM_VIEW]));
+
+    expect(await Promise.all([first, second])).toEqual([OSM_VIEW.tags, YOUTUBE_VIEW.tags]);
+    expect(byIdsCalls()).toHaveLength(2);
+    expect(byUriCalls()).toHaveLength(0);
+  });
+
+  it('reads by `by-uri` on a probe answered with a 500, and leaves `by_ids` out for the waiting batches', async () => {
+    let answerProbe: (response: Response) => void = () => {};
+    fetchSpy.mockImplementation((url) =>
+      String(url) === BY_IDS_URL
+        ? new Promise<Response>((resolve) => (answerProbe = resolve))
+        : Promise.resolve(jsonResponse(BY_URI_RESPONSE)),
+    );
+    const first = read(OSM);
+    await vi.waitFor(() => expect(byIdsCalls()).toHaveLength(1));
+    const second = read(YOUTUBE);
+    await new Promise((resolve) => setTimeout(resolve, RESOURCE_BY_IDS_BATCH_MS * 3));
+    answerProbe(new Response('boom', { status: 500 }));
+
+    expect(await Promise.all([first, second])).toEqual([BY_URI_RESPONSE.tags, BY_URI_RESPONSE.tags]);
+    await read(UNKNOWN);
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(byUriCalls()).toHaveLength(3);
+  });
+
+  it('reads by `by-uri` when the probe fails to connect, and does not ask `by_ids` again', async () => {
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url) === BY_IDS_URL) throw new TypeError('Failed to fetch');
+      return jsonResponse(BY_URI_RESPONSE);
+    });
+
+    expect(await Promise.all([read(OSM), read(YOUTUBE)])).toEqual([BY_URI_RESPONSE.tags, BY_URI_RESPONSE.tags]);
+    await read(UNKNOWN);
+
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(byUriCalls()).toHaveLength(3);
+  });
+
+  it('reads a failed batch’s links by `by-uri` once Nexus served `by_ids`, and keeps batching', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(jsonResponse([OSM_VIEW]))
+      .mockResolvedValueOnce(new Response('boom', { status: 500 }))
+      .mockResolvedValueOnce(jsonResponse(BY_URI_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    expect(await read(OSM)).toEqual(OSM_VIEW.tags);
+    expect(await read(YOUTUBE)).toEqual(BY_URI_RESPONSE.tags);
+    expect(await read(UNKNOWN)).toEqual([]);
+    expect(byIdsCalls()).toHaveLength(3);
+    expect(byUriCalls()).toHaveLength(1);
+  });
+
+  it('gives up on a probe that never answers, so the batches waiting for it are read by `by-uri`', async () => {
+    vi.useFakeTimers();
+    // AbortSignal.timeout runs on Node's own timers: one on the faked ones instead.
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException('timed out', 'TimeoutError')), ms);
+      return controller.signal;
+    });
+    fetchSpy.mockImplementation((url, init) =>
+      String(url) === BY_IDS_URL
+        ? new Promise<Response>((_, reject) =>
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('timed out', 'TimeoutError'))),
+          )
+        : Promise.resolve(jsonResponse(BY_URI_RESPONSE)),
+    );
+    try {
+      const first = read(OSM);
+      await vi.advanceTimersByTimeAsync(RESOURCE_BY_IDS_BATCH_MS * 2);
+      const second = read(YOUTUBE);
+      await vi.advanceTimersByTimeAsync(RESOURCE_READ_TIMEOUT_MS);
+
+      expect(await Promise.all([first, second])).toEqual([BY_URI_RESPONSE.tags, BY_URI_RESPONSE.tags]);
+      expect(byIdsCalls()).toHaveLength(1);
+    } finally {
+      timeout.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('reads by `by-uri` a view whose tags are malformed', async () => {
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL
+        ? jsonResponse([{ ...OSM_VIEW, tags: [{ label: 'x' }] }])
+        : jsonResponse(BY_URI_RESPONSE),
+    );
+
+    expect(await read(OSM)).toEqual(BY_URI_RESPONSE.tags);
+  });
+
+  it('reads alone a spelling of a link Nexus answered once for two spellings', async () => {
+    const other = 'https://www.openstreetmap.org/node/270803095#map';
+    fetchSpy.mockImplementation(async (url) =>
+      String(url) === BY_IDS_URL ? jsonResponse([OSM_VIEW]) : jsonResponse(BY_URI_RESPONSE),
+    );
+
+    expect(await Promise.all([read(OSM), read(other)])).toEqual([OSM_VIEW.tags, BY_URI_RESPONSE.tags]);
+  });
+
+  it('asks 100 links per request', async () => {
+    fetchSpy.mockImplementation(async () => jsonResponse([]));
+    const uris = Array.from({ length: 150 }, (_, index) => `https://e.com/${index}`);
+
+    await Promise.all(uris.map((uri) => read(uri)));
+
+    expect(byIdsCalls().map((call) => bodyOf(call).uris.length)).toEqual([100, 50]);
+    expect(byUriCalls()).toHaveLength(0);
+  });
+
+  it('fails a read only when its `by-uri` fallback fails too', async () => {
+    fetchSpy.mockResolvedValue(new Response('boom', { status: 500 }));
+    const failing = nexusQueryClient.getDefaultOptions();
+    nexusQueryClient.setDefaultOptions({ queries: { ...failing.queries, retry: false } });
+
+    try {
+      const results = await Promise.allSettled([read(OSM), read(YOUTUBE)]);
+      expect(results.map((result) => result.status === 'rejected' && result.reason)).toEqual([
+        expect.any(AppError),
+        expect.any(AppError),
+      ]);
+      expect(byIdsCalls()).toHaveLength(1);
+      expect(byUriCalls()).toHaveLength(2);
+    } finally {
+      nexusQueryClient.setDefaultOptions(failing);
+    }
   });
 });

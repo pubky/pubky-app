@@ -1,5 +1,5 @@
 import { buildNexusUrl, buildUrlWithQuery } from '@/services/nexus/nexus.utils';
-import type { TResourceByUriParams } from '@/services/nexus/resource/resource.types';
+import type { TResourceByIdsParams, TResourceByUriParams } from '@/services/nexus/resource/resource.types';
 
 type TResourceRepliesQuery = {
   viewer_id?: string;
@@ -19,6 +19,11 @@ export const resourceApi = {
   byUri: (params: TResourceByUriParams) => buildUrlWithQuery({ baseRoute: `${PREFIX}/by-uri`, params }),
   /** The endpoint without its query string, for error context: the query carries a link from someone's post. */
   byUriEndpoint: () => buildNexusUrl(`${PREFIX}/by-uri`),
+  /** The views of up to 100 resources by link in one POST (optional: a Nexus without it answers 404). */
+  byIds: ({ uris, viewer_id, ...params }: TResourceByIdsParams) => ({
+    url: buildUrlWithQuery({ baseRoute: 'v0/stream/resources/by_ids', params }),
+    body: viewer_id ? { uris, viewer_id } : { uris },
+  }),
   /**
    * The live posts whose `parent` is the resource, newest first (`/v1`, a Nexus with external
    * references; others answer 404). No attachment metadata: `/v1` serves none.

@@ -454,9 +454,12 @@ holds web links):
 
 - Tag: `TagController.commitCreateResource` / `commitDeleteResource` → `buildTag(viewer, link, label)` →
   `putBlob`, or one DELETE of the viewer's own Nexus `tag_uri` (else the built file, whose id hashes link and
-  label). Read once the card is first on screen: `GET /v1/resource/by-uri` (`NexusResourceService`, a 404 is
-  "nobody tagged it"); an accepted write is applied to that shared Nexus answer, since Nexus indexes it with a
-  delay, and every card of the link follows that answer (`subscribeResourceTags`).
+  label). Read once the card is first on screen: the links read around the same moment go in one optional
+  `POST /v1/stream/resources/by_ids` (100 per request; Nexus must apply its `limit_tags` / `limit_taggers` query
+  as on by-uri), which the client probes for once per page load; else, or when a batch fails,
+  `GET /v1/resource/by-uri` per link, six at a time; both time out after 10 s (`NexusResourceService`, a 404 or a
+  skipped link is "nobody tagged it"). An accepted write is applied to that shared Nexus answer, since Nexus
+  indexes it with a delay, and every card of the link follows that answer (`subscribeResourceTags`).
 - Bookmark: `BookmarkController.commitCreateResource` / `commitDeleteResource` → `buildBookmark(viewer, link)`;
   the viewer's state is `HomeserverService.exists` on the built file, read only while the card's save picker is
   open (closed, the Save button shows the collections only). The bookmarks table, feed and count stay
