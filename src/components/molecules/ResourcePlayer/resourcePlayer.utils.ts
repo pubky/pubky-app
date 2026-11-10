@@ -57,6 +57,124 @@ export const PROVIDER_SITES: Record<ListedPlayer, string> = {
 /** The viewer's Players (Settings, Links & Media): their order and the removed ones. */
 export type PlayerPreferences = Pick<MediaPreferences, 'playerOrder' | 'hiddenPlayers'>;
 
+/** The kinds of resource the viewer ranks services for apart (Settings, Links & Media, Players). */
+export enum PlayerCategory {
+  MUSIC = 'music',
+  PODCASTS = 'podcasts',
+  VIDEO = 'video',
+}
+
+/** Each kind's name and the services its Players list, in their default order. */
+export const PLAYER_CATEGORIES: Record<PlayerCategory, { name: string; services: readonly ListedPlayer[] }> = {
+  [PlayerCategory.MUSIC]: {
+    name: 'Music',
+    services: [
+      PlayerProvider.YOUTUBE,
+      PlayerProvider.SPOTIFY,
+      PlayerProvider.SOUNDCLOUD,
+      PlayerProvider.MIXCLOUD,
+      PlayerProvider.TIDAL,
+      PlayerProvider.DEEZER,
+      PlayerProvider.APPLE_MUSIC,
+    ],
+  },
+  [PlayerCategory.PODCASTS]: {
+    name: 'Podcasts',
+    services: [PlayerProvider.YOUTUBE, PlayerProvider.SPOTIFY, PlayerProvider.APPLE_PODCASTS],
+  },
+  [PlayerCategory.VIDEO]: { name: 'Video', services: [PlayerProvider.YOUTUBE, PlayerProvider.VIMEO] },
+};
+
+/** The kind of a card by its type (schema.org's, its `type` or any entry of its `type_path`). */
+const CATEGORY_TYPES: Readonly<Record<string, PlayerCategory>> = {
+  MusicRecording: PlayerCategory.MUSIC,
+  MusicAlbum: PlayerCategory.MUSIC,
+  MusicRelease: PlayerCategory.MUSIC,
+  MusicPlaylist: PlayerCategory.MUSIC,
+  MusicGroup: PlayerCategory.MUSIC,
+  MusicComposition: PlayerCategory.MUSIC,
+  PodcastSeries: PlayerCategory.PODCASTS,
+  PodcastSeason: PlayerCategory.PODCASTS,
+  PodcastEpisode: PlayerCategory.PODCASTS,
+  VideoObject: PlayerCategory.VIDEO,
+  Movie: PlayerCategory.VIDEO,
+  MovieSeries: PlayerCategory.VIDEO,
+  TVSeries: PlayerCategory.VIDEO,
+  TVSeason: PlayerCategory.VIDEO,
+  TVEpisode: PlayerCategory.VIDEO,
+};
+
+/** The kind of what a service plays, for a card whose type says none. */
+const PROVIDER_CATEGORIES: Readonly<Record<PlayerProvider, PlayerCategory>> = {
+  [PlayerProvider.YOUTUBE]: PlayerCategory.VIDEO,
+  [PlayerProvider.VIMEO]: PlayerCategory.VIDEO,
+  [PlayerProvider.SPOTIFY]: PlayerCategory.MUSIC,
+  [PlayerProvider.SOUNDCLOUD]: PlayerCategory.MUSIC,
+  [PlayerProvider.MIXCLOUD]: PlayerCategory.MUSIC,
+  [PlayerProvider.TIDAL]: PlayerCategory.MUSIC,
+  [PlayerProvider.DEEZER]: PlayerCategory.MUSIC,
+  [PlayerProvider.APPLE_MUSIC]: PlayerCategory.MUSIC,
+  [PlayerProvider.APPLE_PODCASTS]: PlayerCategory.PODCASTS,
+  [PlayerProvider.AUDIO_FILE]: PlayerCategory.MUSIC,
+};
+
+/**
+ * Which kind's Players a card follows: its type's (`MusicRecording` -> Music, `PodcastSeries` ->
+ * Podcasts, `VideoObject` or `Movie` -> Video), else the kind of the service it plays on first
+ * (`provider`), else Music.
+ */
+export function getPlayerCategory(
+  card: Pick<TPinakesCard, 'type' | 'type_path'> | null,
+  provider?: EmbedProvider,
+): PlayerCategory {
+  for (const type of [card?.type, ...[...(card?.type_path ?? [])].reverse()]) {
+    if (type && Object.hasOwn(CATEGORY_TYPES, type)) return CATEGORY_TYPES[type];
+  }
+  return provider && Object.hasOwn(PROVIDER_CATEGORIES, provider)
+    ? PROVIDER_CATEGORIES[provider as PlayerProvider]
+    : PlayerCategory.MUSIC;
+}
+
+/**
+ * One kind's Players: its own once the viewer changed that list (`media.players`), else the ones
+ * every kind falls back to (`playerOrder`, `hiddenPlayers`, set before Players had kinds).
+ * Podcasts' Card is their built-in player (a show's latest episodes, an episode's audio), first
+ * until the viewer moves it.
+ */
+export function getCategoryPlayers(
+  media: Pick<MediaPreferences, 'playerOrder' | 'hiddenPlayers' | 'players'>,
+  category: PlayerCategory,
+): PlayerPreferences {
+  const own = media.players?.[category];
+  if (own) return { playerOrder: own.order, hiddenPlayers: own.hidden };
+  if (category !== PlayerCategory.PODCASTS)
+    return { playerOrder: media.playerOrder, hiddenPlayers: media.hiddenPlayers };
+  // The built-in player first, then the services as ranked (none ranked: Auto, the link's own first).
+  const ranked = isRankedOrder(media.playerOrder) ? media.playerOrder.filter((id) => id !== CARD_PLAYER) : [];
+  return { playerOrder: [CARD_PLAYER, ...ranked], hiddenPlayers: media.hiddenPlayers };
+}
+
+/**
+ * Whether a card shows itself before `provider`'s player by its kind's Players (`isCardFirst`): Card
+ * above that service. Podcasts' Card is their built-in player, so there only a card that plays in it
+ * (`playsInCard`) comes first; for any other podcast Card's place in the list counts for nothing.
+ */
+export function isCardFirstFor(
+  category: PlayerCategory,
+  provider: EmbedProvider,
+  playerOrder: readonly string[],
+  playsInCard: boolean,
+): boolean {
+  if (category === PlayerCategory.PODCASTS) {
+    if (!playsInCard) return false;
+    // A podcast host the app does not list (Pinakes' frame of a Podbean episode) comes after the
+    // built-in player, like a listed service the viewer has not ranked above it.
+    if (!isListedPlayer(provider) && provider !== PlayerProvider.AUDIO_FILE && !playerOrder.includes(provider))
+      return playerOrder.includes(CARD_PLAYER);
+  }
+  return isCardFirst(provider, playerOrder);
+}
+
 /** Whether an id is a service this version lists (a later version's id is not). */
 export function isListedPlayer(id: string): id is ListedPlayer {
   return Object.hasOwn(PROVIDER_NAMES, id);
@@ -66,16 +184,20 @@ export function isListedPlayer(id: string): id is ListedPlayer {
  * The Players list as shown (Settings, Links & Media): the services in the viewer's order, then
  * those not in it in their default order (a service a later version adds shows up at the end), the
  * removed ones apart. Card (no player) is a row too, last until moved, and never removed. Ids this
- * version does not play are left out of both.
+ * version does not play are left out of both, and so are services not in `services` (one kind's
+ * list, `PLAYER_CATEGORIES`).
  */
-export function getPlayerList({ playerOrder, hiddenPlayers }: PlayerPreferences): {
+export function getPlayerList(
+  { playerOrder, hiddenPlayers }: PlayerPreferences,
+  services: readonly ListedPlayer[] = Object.keys(PROVIDER_NAMES) as ListedPlayer[],
+): {
   shown: PlayerListEntry[];
   removed: ListedPlayer[];
 } {
   const all = [
     ...new Set<PlayerListEntry>([
-      ...playerOrder.filter(isPlayerListEntry),
-      ...(Object.keys(PROVIDER_NAMES) as ListedPlayer[]),
+      ...playerOrder.filter((id): id is PlayerListEntry => id === CARD_PLAYER || services.some((s) => s === id)),
+      ...services,
       CARD_PLAYER,
     ]),
   ];

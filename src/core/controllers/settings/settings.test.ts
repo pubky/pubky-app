@@ -185,9 +185,9 @@ describe('SettingsController', () => {
 
   describe('setPlayers', () => {
     it('should update zustand store and sync to homeserver', async () => {
-      await SettingsController.setPlayers(['tidal'], ['youtube']);
+      await SettingsController.setPlayers(['tidal'], ['youtube'], 'music');
 
-      expect(mockStoreActions.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube']);
+      expect(mockStoreActions.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube'], 'music');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

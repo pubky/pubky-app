@@ -19,8 +19,8 @@ export interface UseSettingsActionsResult {
   setHideSearch: (hideSearch: boolean) => Promise<void>;
   /** Updates never show posts preference and syncs to homeserver */
   setNeverShowPosts: (neverShowPosts: boolean) => Promise<void>;
-  /** Updates the players' order and the removed players, and syncs to homeserver */
-  setPlayers: (playerOrder: string[], hiddenPlayers: string[]) => Promise<void>;
+  /** Updates the players' order and the removed players (of one kind with `category`), and syncs to homeserver */
+  setPlayers: (playerOrder: string[], hiddenPlayers: string[], category?: string) => Promise<void>;
   /** Updates the platform-embeds-up-front preference and syncs to homeserver */
   setEmbedsUpFront: (embedsUpFront: boolean) => Promise<void>;
   /** Error message if the action failed */

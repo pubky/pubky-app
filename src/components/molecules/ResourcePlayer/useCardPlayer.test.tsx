@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
+import podcastFixture from '@/services/pinakes/fixtures/by-uri.podcast.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
@@ -1379,6 +1380,125 @@ describe('useCardPlayer, anything that plays', () => {
 
     expect(within(screen.getByTestId('item-header')).getByTestId('player-switch')).toHaveTextContent('YouTube');
     expect(within(screen.getByTestId('embed-player')).queryByTestId('player-switch')).not.toBeInTheDocument();
+  });
+});
+
+describe('useCardPlayer, a podcast that plays in its card', () => {
+  // Dan Carlin's show on Apple Podcasts (also on Spotify), with its latest episodes.
+  const episodes = [1, 2].map((n) => ({
+    uri: `https://example.org/episode/${n}`,
+    name: `Episode ${n}`,
+    guid: `guid-${n}`,
+    stream: { url: `https://example.org/ep${n}.mp3`, type: 'audio/mpeg', preview: false },
+  }));
+  const SHOW: TPinakesResourceDetail = { ...podcastFixture, episodes };
+  const setMedia = (media: Partial<typeof defaultMediaPreferences>) =>
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, ...media } });
+
+  afterEach(() => setMedia({}));
+
+  it('shows its card first, loads nothing, and offers the services’ embeds in the switch', () => {
+    render(<Card card={SHOW} testId="show" />);
+
+    expect(screen.getByTestId('show')).toHaveAttribute('data-card', 'true');
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(within(screen.getByTestId('show-header')).getByTestId('player-switch')).toHaveTextContent('Card');
+    const menu = openSwitchOf('show');
+    expect(within(menu).getByTestId('play-on-card')).toHaveAttribute('aria-current', 'true');
+    expect(rowsOf(menu)).toEqual(['Apple Podcasts', 'Spotify']);
+  });
+
+  it('does so for an episode with its whole audio too, but not for a preview', () => {
+    const episode: TPinakesResourceDetail = {
+      ...podcastFixture,
+      type: 'PodcastEpisode',
+      type_path: ['Thing', 'CreativeWork', 'Episode', 'PodcastEpisode'],
+      stream: { url: 'https://example.org/ep.mp3', type: 'audio/mpeg', preview: false },
+    };
+    const { unmount } = render(<Card card={episode} testId="episode" />);
+    expect(screen.getByTestId('episode')).toHaveAttribute('data-card', 'true');
+    unmount();
+
+    render(<Card card={{ ...episode, stream: { ...episode.stream!, preview: true } }} testId="preview" />);
+    expect(screen.getByTestId('preview')).toHaveAttribute('data-card', 'false');
+  });
+
+  it('shows the first service’s embed once the viewer moves the built-in player below the services', () => {
+    // Moved to the end of Podcasts' list: stored as no order (Auto), the shared link's service first.
+    setMedia({ players: { podcasts: { order: [], hidden: [] } } });
+    const { unmount } = render(<Card card={SHOW} testId="show" />);
+
+    expect(screen.getByTestId('show')).toHaveAttribute('data-card', 'false');
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+      'src',
+      expect.stringContaining('embed.podcasts.apple.com'),
+    );
+    unmount();
+
+    // Ranked below Spotify: Spotify's embed.
+    setMedia({ players: { podcasts: { order: ['spotify', 'card', 'apple-podcasts'], hidden: [] } } });
+    render(<Card card={SHOW} testId="ranked" />);
+    expect(screen.getByTestId('ranked')).toHaveAttribute('data-card', 'false');
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+      'src',
+      expect.stringContaining('open.spotify.com/embed/show/'),
+    );
+  });
+
+  it('keeps the shared link’s embed first for a show with nothing to play in its card', () => {
+    render(<Card card={podcastFixture} testId="show" />);
+
+    expect(screen.getByTestId('show')).toHaveAttribute('data-card', 'false');
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+      'src',
+      expect.stringContaining('embed.podcasts.apple.com'),
+    );
+  });
+
+  it('follows Podcasts’ players, not the ones music or video set', () => {
+    setMedia({ players: { music: { order: ['spotify', 'card'], hidden: ['apple-podcasts'] } } });
+    render(<Card card={SHOW} testId="show" />);
+
+    expect(screen.getByTestId('show')).toHaveAttribute('data-card', 'true');
+    expect(rowsOf(openSwitchOf('show'))).toEqual(['Apple Podcasts', 'Spotify']);
+  });
+
+  it('keeps its built-in player first for an episode whose frame is on a host the app does not list, and the switch back to it', () => {
+    const episode: TPinakesResourceDetail = {
+      ...podcastFixture,
+      uri: 'https://example.podbean.com/e/episode-1/',
+      site: 'Podbean',
+      type: 'PodcastEpisode',
+      type_path: ['Thing', 'CreativeWork', 'Episode', 'PodcastEpisode'],
+      stream: { url: 'https://example.org/ep.mp3', type: 'audio/mpeg', preview: false },
+      aliases: [],
+      also_on: [],
+      embed: {
+        provider: 'podbean',
+        kind: 'audio',
+        src: 'https://www.podbean.com/player-v2/?i=abc',
+        height: 150,
+        aspect: null,
+        allow: [],
+        autoplay_param: null,
+      },
+    };
+    render(<Card card={episode} testId="episode" />);
+
+    expect(screen.getByTestId('episode')).toHaveAttribute('data-card', 'true');
+    expect(document.querySelector('iframe')).toBeNull();
+    let menu = openSwitchOf('episode');
+    expect(rowsOf(menu)).toEqual(['Podbean']);
+
+    // Its frame picked, the switch stays: Card brings the built-in player back.
+    fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
+    expect(screen.getByTestId('episode')).toHaveAttribute('data-card', 'false');
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', expect.stringContaining('podbean.com'));
+    menu = openSwitchOf('episode');
+    expect(within(menu).getByTestId('play-on-card')).not.toHaveAttribute('aria-current');
+    fireEvent.click(within(menu).getByTestId('play-on-card'));
+    expect(screen.getByTestId('episode')).toHaveAttribute('data-card', 'true');
+    expect(document.querySelector('iframe')).toBeNull();
   });
 });
 

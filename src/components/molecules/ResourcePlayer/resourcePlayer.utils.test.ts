@@ -3,15 +3,19 @@ import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.jso
 import type { TPinakesAlsoOn, TPinakesEmbed } from '@/services/pinakes/pinakes.types';
 import {
   CARD_PLAYER,
+  getCategoryPlayers,
   getEmbedTarget,
   getOwnPlayer,
+  getPlayerCategory,
   getPlayerList,
   getPlayerTarget,
   getPlayerTargets,
   getUpFrontTarget,
   isCardFirst,
+  isCardFirstFor,
   isPlayable,
   isRankedOrder,
+  PlayerCategory,
   PlayerProvider,
   PROVIDER_NAMES,
 } from './resourcePlayer.utils';
@@ -575,6 +579,86 @@ describe('getPlayerTargets in Pinakes’ order', () => {
   it('still puts the viewer’s first player first', () => {
     const players = { playerOrder: ['spotify'], hiddenPlayers: [] };
     expect(getPlayerTargets(song, { players }).map((target) => target.provider)).toEqual(['spotify', 'deezer']);
+  });
+});
+
+describe('getPlayerCategory', () => {
+  const card = (type: string | null, type_path: string[] = []) => ({ type, type_path });
+
+  it('reads the kind from the card’s type, the nearest first', () => {
+    expect(getPlayerCategory(card('MusicRecording'))).toBe(PlayerCategory.MUSIC);
+    expect(getPlayerCategory(card('MusicGroup', ['Thing', 'Organization', 'PerformingGroup', 'MusicGroup']))).toBe(
+      PlayerCategory.MUSIC,
+    );
+    expect(getPlayerCategory(card('PodcastSeries'), PlayerProvider.SPOTIFY)).toBe(PlayerCategory.PODCASTS);
+    expect(getPlayerCategory(card(null, ['Thing', 'CreativeWork', 'Episode', 'PodcastEpisode']))).toBe(
+      PlayerCategory.PODCASTS,
+    );
+    expect(getPlayerCategory(card('Movie'), PlayerProvider.YOUTUBE)).toBe(PlayerCategory.VIDEO);
+    expect(getPlayerCategory(card('VideoObject'), PlayerProvider.SPOTIFY)).toBe(PlayerCategory.VIDEO);
+  });
+
+  it('falls back to the kind of the service it plays on first, else Music', () => {
+    expect(getPlayerCategory(card('WebPage'), PlayerProvider.YOUTUBE)).toBe(PlayerCategory.VIDEO);
+    expect(getPlayerCategory(card(null), PlayerProvider.APPLE_PODCASTS)).toBe(PlayerCategory.PODCASTS);
+    expect(getPlayerCategory(card('Person'), PlayerProvider.TIDAL)).toBe(PlayerCategory.MUSIC);
+    expect(getPlayerCategory(null)).toBe(PlayerCategory.MUSIC);
+  });
+});
+
+describe('getCategoryPlayers', () => {
+  const media = { playerOrder: ['tidal', 'card', 'spotify'], hiddenPlayers: ['youtube'] };
+
+  it('uses the players every kind falls back to until a kind has its own', () => {
+    expect(getCategoryPlayers(media, PlayerCategory.MUSIC)).toEqual({
+      playerOrder: ['tidal', 'card', 'spotify'],
+      hiddenPlayers: ['youtube'],
+    });
+    expect(getCategoryPlayers(media, PlayerCategory.VIDEO)).toEqual({
+      playerOrder: ['tidal', 'card', 'spotify'],
+      hiddenPlayers: ['youtube'],
+    });
+  });
+
+  it('puts Podcasts’ built-in player first until the viewer orders Podcasts', () => {
+    expect(getCategoryPlayers(media, PlayerCategory.PODCASTS)).toEqual({
+      playerOrder: ['card', 'tidal', 'spotify'],
+      hiddenPlayers: ['youtube'],
+    });
+    expect(getCategoryPlayers({ playerOrder: [], hiddenPlayers: [] }, PlayerCategory.PODCASTS).playerOrder).toEqual([
+      'card',
+    ]);
+  });
+
+  it('keeps Podcasts in Auto when the services were never ranked (only Card moved)', () => {
+    const auto = { playerOrder: ['youtube', 'spotify', 'card'], hiddenPlayers: [] };
+    expect(getCategoryPlayers(auto, PlayerCategory.PODCASTS).playerOrder).toEqual(['card']);
+  });
+
+  it('uses a kind’s own players once set, also with the built-in player moved down', () => {
+    const own = { ...media, players: { podcasts: { order: ['spotify'], hidden: [] } } };
+    expect(getCategoryPlayers(own, PlayerCategory.PODCASTS)).toEqual({ playerOrder: ['spotify'], hiddenPlayers: [] });
+    expect(getCategoryPlayers(own, PlayerCategory.MUSIC).playerOrder).toEqual(['tidal', 'card', 'spotify']);
+  });
+});
+
+describe('isCardFirstFor', () => {
+  it('puts a podcast’s built-in player first only when the podcast plays in its card', () => {
+    expect(isCardFirstFor(PlayerCategory.PODCASTS, PlayerProvider.APPLE_PODCASTS, ['card'], true)).toBe(true);
+    expect(isCardFirstFor(PlayerCategory.PODCASTS, PlayerProvider.APPLE_PODCASTS, ['card'], false)).toBe(false);
+    expect(isCardFirstFor(PlayerCategory.PODCASTS, PlayerProvider.SPOTIFY, ['spotify', 'card'], true)).toBe(false);
+    expect(isCardFirstFor(PlayerCategory.MUSIC, PlayerProvider.SPOTIFY, ['card'], false)).toBe(true);
+    expect(isCardFirstFor(PlayerCategory.VIDEO, PlayerProvider.YOUTUBE, [], false)).toBe(false);
+  });
+});
+
+describe('getPlayerList for one kind', () => {
+  it('lists only that kind’s services, its order first', () => {
+    const services = [PlayerProvider.YOUTUBE, PlayerProvider.SPOTIFY, PlayerProvider.APPLE_PODCASTS] as const;
+    expect(getPlayerList({ playerOrder: ['card', 'tidal', 'spotify'], hiddenPlayers: ['youtube'] }, services)).toEqual({
+      shown: [CARD_PLAYER, PlayerProvider.SPOTIFY, PlayerProvider.APPLE_PODCASTS],
+      removed: [PlayerProvider.YOUTUBE],
+    });
   });
 });
 

@@ -15,14 +15,17 @@ import {
   getResourceLinks,
   getResourceTagsLabel,
   getResourceTarget,
+  playsInCard,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import {
+  getCategoryPlayers,
+  getPlayerCategory,
   getPlayerTarget,
   getPlayerTargets,
-  isCardFirst,
+  isCardFirstFor,
   isPlayable,
 } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
@@ -120,8 +123,7 @@ function NativeEmbedChoice({
   // The embed was opened from the pill before Pinakes knew the link: a card read later keeps it.
   const [openedWithoutCard, setOpenedWithoutCard] = useState(false);
   const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
-  const playerOrder = useSettingsStore((state) => state.media.playerOrder);
-  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
+  const media = useSettingsStore((state) => state.media);
   const navigable = useIsPostPreviewNavigable();
   // A post being written (the composer, the Reply and Repost dialogs) previews the resource.
   const isPreview = isComposing || !navigable;
@@ -130,7 +132,13 @@ function NativeEmbedChoice({
   const alsoOn = card ? getMenuAlsoOn(card, url) : null;
   // Card (no player) above the video's service in Players: our card, its player from the switch.
   const videoProvider = kind === 'video' ? getPlayerTarget(url)?.provider : undefined;
-  const upFront = embedsUpFront && !(videoProvider !== undefined && isCardFirst(videoProvider, playerOrder));
+  // The Players of its kind (`getPlayerCategory`: by the card's type, else Video for a video, else Music).
+  const category = getPlayerCategory(card, videoProvider);
+  const { playerOrder, hiddenPlayers } = getCategoryPlayers(media, category);
+  const cardFirst =
+    videoProvider !== undefined &&
+    isCardFirstFor(category, videoProvider, playerOrder, card !== null && playsInCard(card));
+  const upFront = embedsUpFront && !cardFirst;
   const choice = chooseNativeEmbed({
     hasCard: card !== null,
     embedFailed: failed,

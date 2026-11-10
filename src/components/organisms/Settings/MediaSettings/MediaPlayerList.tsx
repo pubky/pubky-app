@@ -36,6 +36,8 @@ import {
   isPlayerListEntry,
   isRankedOrder,
   type ListedPlayer,
+  PLAYER_CATEGORIES,
+  PlayerCategory,
   type PlayerListEntry,
   type PlayerPreferences,
   PROVIDER_NAMES,
@@ -43,28 +45,39 @@ import {
 } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 
 interface MediaPlayerListProps {
+  /** The kind of resource whose services the list ranks (`PLAYER_CATEGORIES`). */
+  category: PlayerCategory;
+  /** That kind's Players (`getCategoryPlayers`). */
   players: PlayerPreferences;
   /** Saves the new order and removed players (`setPlayers`). */
   onChange: (playerOrder: string[], hiddenPlayers: string[]) => void;
 }
 
 /**
- * The Players row of Links & Media: the services a card plays on, ranked (`getPlayerList`). Each row
+ * One kind's list in the Players row of Links & Media (Music, Podcasts, Video): the services its
+ * cards play on, ranked (`getPlayerList`). Each row
  * has a drag handle (dnd-kit, as the collection reorder grid: mouse, a long press on touch, and the
  * keyboard: Space lifts, arrows move, Space drops) and a remove ✕; Add, in the post menu's style,
  * brings a removed service back (at the end, or under Auto at its default place) and shows only
  * while one is removed. Removing every service is allowed: then no card loads a player. Card (no
  * player) is a row without ✕, last until moved: a song whose first service ranks below it shows its
- * card.
+ * card. In Podcasts it is the built-in player, first until moved: a podcast that plays in its card
+ * shows the card and its own player first.
  *
  * Until the viewer reorders, the order has no service this version lists (Auto: a link's own service
  * first); a reorder, or an Add once there is an order, saves the list as shown. Moving only Card
  * saves the services above it, ending at Card, which keeps Auto (`isRankedOrder`). Ids this version
  * does not play (a later version's) keep their place after it.
  */
-export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
-  const { shown, removed } = getPlayerList(players);
-  const later = players.playerOrder.filter((id) => !isPlayerListEntry(id));
+export function MediaPlayerList({ category, players, onChange }: MediaPlayerListProps) {
+  const { name: categoryName, services } = PLAYER_CATEGORIES[category];
+  const cardName = category === PlayerCategory.PODCASTS ? 'Built-in player' : 'Card (no player)';
+  const labelId = `media-players-${category}-label`;
+  const { shown, removed } = getPlayerList(players, services);
+  // Ids this list does not show (another kind's services, a later version's) keep their place after it.
+  const later = players.playerOrder.filter(
+    (id) => !shown.includes(id as PlayerListEntry) && !removed.includes(id as ListedPlayer),
+  );
   // A stable id: dnd-kit's own counter gives its screen-reader hint another id on the server.
   const dndId = useId();
   const sensors = useSensors(
@@ -79,7 +92,7 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
   // service a later version adds then comes before it, as one added back does. Alone (every service
   // removed) it stays where it was. In Auto, so do the services saved above it.
   const save = (order: string[], hiddenPlayers: string[], ranked = true) => {
-    const after = getPlayerList({ playerOrder: order, hiddenPlayers }).shown;
+    const after = getPlayerList({ playerOrder: order, hiddenPlayers }, services).shown;
     const isCardLast = after.length > 1 && after.at(-1) === CARD_PLAYER;
     onChange(
       isCardLast ? order.filter((id) => (ranked ? id !== CARD_PLAYER : !isPlayerListEntry(id))) : order,
@@ -110,13 +123,8 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
 
   return (
     <Container overrideDefaults className="flex w-full flex-col items-start gap-2">
-      <Typography id="media-players-label" size="sm" className="leading-5 font-medium">
-        {'Players'}
-      </Typography>
-      <Typography size="sm" className="font-normal text-muted-foreground">
-        {
-          'Cards play on the first of these services they are on; removed ones never play. Until you reorder them, a link plays on its own service first.'
-        }
+      <Typography as="h3" id={labelId} size="sm" className="leading-5 font-medium">
+        {categoryName}
       </Typography>
       <DndContext
         id={dndId}
@@ -130,15 +138,15 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
           <Container
             overrideDefaults
             role="list"
-            aria-labelledby="media-players-label"
+            aria-labelledby={labelId}
             data-testid="media-player-list"
             className="flex w-full flex-col gap-1"
           >
             {shown.map((id) =>
               id === CARD_PLAYER ? (
-                <MediaPlayerRow key={id} id={id} />
+                <MediaPlayerRow key={id} id={id} name={cardName} />
               ) : (
-                <MediaPlayerRow key={id} id={id} onRemove={() => remove(id)} />
+                <MediaPlayerRow key={id} id={id} name={PROVIDER_NAMES[id]} onRemove={() => remove(id)} />
               ),
             )}
           </Container>
@@ -147,14 +155,19 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
       {removed.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary" size="sm" className="rounded-full" aria-label="Add a player">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-full"
+              aria-label={`Add a player to ${categoryName}`}
+            >
               <Plus aria-hidden="true" />
               {'Add'}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            aria-label="Add a player"
+            aria-label={`Add a player to ${categoryName}`}
             className="flex w-56 flex-col gap-2.5"
             data-testid="media-player-add-menu"
           >
@@ -178,14 +191,13 @@ export function MediaPlayerList({ players, onChange }: MediaPlayerListProps) {
 }
 
 /**
- * One ranked row: drag handle, the service's icon and name, remove ✕; Card (no player) has the
- * app's link icon and no ✕.
+ * One ranked row: drag handle, the service's icon and name, remove ✕; Card (no player), the
+ * built-in player in Podcasts, has the app's link icon and no ✕.
  */
-function MediaPlayerRow({ id, onRemove }: { id: PlayerListEntry; onRemove?: () => void }) {
+function MediaPlayerRow({ id, name, onRemove }: { id: PlayerListEntry; name: string; onRemove?: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
-  const name = id === CARD_PLAYER ? 'Card (no player)' : PROVIDER_NAMES[id];
 
   return (
     <Container

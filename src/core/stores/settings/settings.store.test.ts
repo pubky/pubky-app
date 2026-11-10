@@ -236,6 +236,29 @@ describe('SettingsStore', () => {
       });
     });
 
+    it('should set one kind’s players apart, keeping the ones every kind falls back to', () => {
+      const store = useSettingsStore.getState();
+      store.setPlayers(['tidal'], ['youtube']);
+      store.setPlayers(['spotify', 'card'], [], 'podcasts');
+      store.setPlayers([], ['vimeo'], 'video');
+
+      expect(useSettingsStore.getState().media).toEqual({
+        playerOrder: ['tidal'],
+        hiddenPlayers: ['youtube'],
+        embedsUpFront: true,
+        players: { podcasts: { order: ['spotify', 'card'], hidden: [] }, video: { order: [], hidden: ['vimeo'] } },
+      });
+    });
+
+    it('should keep each kind’s players when rehydrating, dropping malformed ones', async () => {
+      const players = { podcasts: { order: ['spotify'], hidden: [] }, books: { order: ['x'], hidden: ['y'] } };
+      await rehydrateFrom({
+        media: { ...defaultMediaPreferences, players: { ...players, music: { order: 'tidal' }, video: null } },
+      });
+
+      expect(useSettingsStore.getState().media.players).toEqual(players);
+    });
+
     it('should keep the players of a store persisted with them', async () => {
       const media = { playerOrder: ['deezer', 'youtube'], hiddenPlayers: ['vimeo'], embedsUpFront: true };
       await rehydrateFrom({ media });

@@ -6,6 +6,7 @@ import { isPinakesConfigured } from '@/config/pinakes';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { getCategoryPlayers, PlayerCategory } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { parseUrlForLinkEmbed } from './PostLinkEmbeds.utils';
@@ -24,7 +25,9 @@ import { NativeEmbedResource } from './Providers/Native/NativeEmbedResource';
  */
 export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostLinkEmbedsProps) => {
   const isNested = useIsNestedPostPreview();
-  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
+  const media = useSettingsStore((state) => state.media);
+  // YouTube and Vimeo, the only platform embeds with a player here, follow Video's Players.
+  const { hiddenPlayers } = getCategoryPlayers(media, PlayerCategory.VIDEO);
   const { embed, provider } = useMemo(
     // Without Pinakes, Links & Media is hidden, so a removed player could not be put back.
     () => parseUrlForLinkEmbed(url || getFirstLinkUrl(content), !isNested, isPinakesConfigured() ? hiddenPlayers : []),
