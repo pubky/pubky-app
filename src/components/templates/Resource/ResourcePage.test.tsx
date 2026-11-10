@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
@@ -11,12 +11,15 @@ import { ResourcePage } from './ResourcePage';
 const mocks = vi.hoisted(() => ({
   PostPageLayout: vi.fn(),
   fetchCardByUri: vi.fn(),
+  resolveCard: vi.fn(),
   repliesUri: undefined as string | null | undefined,
   repliesSpellings: undefined as readonly string[] | undefined,
 }));
 
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => true }));
-vi.mock('@/controllers/pinakes/pinakes', () => ({ PinakesController: { fetchCardByUri: mocks.fetchCardByUri } }));
+vi.mock('@/controllers/pinakes/pinakes', () => ({
+  PinakesController: { fetchCardByUri: mocks.fetchCardByUri, resolveCard: mocks.resolveCard },
+}));
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({ usePinakesCard: vi.fn() }));
 vi.mock('@/organisms/PostPageShell/PostPageLayout', () => ({
   PostPageLayout: ({
@@ -52,7 +55,12 @@ vi.mock('@/organisms/ResourceDetails/ResourceDetails', () => ({
     read: UsePinakesQueryResult<TPinakesResourceDetail>;
     onRetry: () => void;
   }) => (
-    <div data-testid="resource-details-stub" data-uri={uri ?? 'none'} data-card={read.data?.id ?? 'none'}>
+    <div
+      data-testid="resource-details-stub"
+      data-uri={uri ?? 'none'}
+      data-card={read.data?.id ?? 'none'}
+      data-loading={String(read.isLoading)}
+    >
       {read.isError && (
         <button type="button" onClick={onRetry}>
           Try again
@@ -108,7 +116,8 @@ describe('ResourcePage', () => {
   it('lays the page out as a post’s page: the card’s read in the body, its sidebar cards on the right and in the drawer', () => {
     render(<ResourcePage uri={VIDEO.uri} />);
 
-    expect(mockCard).toHaveBeenCalledWith(VIDEO.uri);
+    // A link Pinakes does not know is sent to be read; a pending card is read again (`usePinakesCard`).
+    expect(mockCard).toHaveBeenCalledWith(VIDEO.uri, { resolve: true, recheck: true });
     const details = within(screen.getByTestId('post-page-layout')).getByTestId('resource-details-stub');
     expect(details).toHaveAttribute('data-uri', VIDEO.uri);
     expect(details).toHaveAttribute('data-card', VIDEO.id);
@@ -150,6 +159,79 @@ describe('ResourcePage', () => {
     expect(mocks.PostPageLayout).toHaveBeenLastCalledWith(expect.objectContaining({ rightDrawerContent: null }));
     expect(screen.queryByTestId('resource-sidebar-inline')).not.toBeInTheDocument();
     expect(mocks.repliesUri).toBeNull();
+  });
+
+  it('shows the link, its thread and Participants at once while Pinakes is asked to read it', () => {
+    mockCard.mockReturnValue({ data: null, isLoading: false, isError: false, isResolving: true });
+    render(<ResourcePage uri={VIDEO.uri} />);
+
+    expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-loading', 'false');
+    expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-card', 'none');
+    expect(mocks.repliesUri).toBe(VIDEO.uri);
+    expect(within(screen.getByTestId('right-sidebar')).getByTestId('resource-sidebar-stub')).toHaveAttribute(
+      'data-people',
+      VIDEO.uri,
+    );
+  });
+
+  describe('a link Pinakes does not know (the real card read)', () => {
+    let resolveDebounceMs = 0;
+    const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+
+    beforeEach(async () => {
+      const actual = await vi.importActual<typeof import('@/hooks/usePinakesCard/usePinakesCard')>(
+        '@/hooks/usePinakesCard/usePinakesCard',
+      );
+      resolveDebounceMs = actual.PINAKES_RESOLVE_DEBOUNCE_MS;
+      mockCard.mockImplementation(actual.usePinakesCard);
+      mocks.fetchCardByUri.mockResolvedValue(null);
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('has Pinakes read it once on opening the page, showing the link meanwhile, then the card it read', async () => {
+      const uri = 'https://tidal.com/artist/7429906';
+      let answer: (card: TPinakesResourceDetail) => void = () => {};
+      mocks.resolveCard.mockReturnValue(new Promise<TPinakesResourceDetail>((resolve) => (answer = resolve)));
+      render(<ResourcePage uri={uri} />);
+      await advance(0);
+      await advance(resolveDebounceMs);
+
+      // While Pinakes reads it, after its 404: the link without a card, its thread on the link as written.
+      expect(mocks.fetchCardByUri).toHaveBeenCalledWith({ uri });
+      expect(mocks.resolveCard).toHaveBeenCalledWith({ uri });
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-loading', 'false');
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-card', 'none');
+      expect(mocks.repliesUri).toBe(uri);
+
+      await act(async () => answer({ ...VIDEO, id: 'read-on-open', uri }));
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-card', 'read-on-open');
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-loading', 'false');
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+      expect(mocks.repliesUri).toBe(uri);
+    });
+
+    it('shows the page without a card, the thread on the link as written, when Pinakes would not read it', async () => {
+      // Pinakes refuses some links (400), or is over its budget (429, 503): `resolveCard` answers null.
+      const uri = 'https://example.com/refused';
+      mocks.resolveCard.mockResolvedValue(null);
+      render(<ResourcePage uri={uri} />);
+      await advance(0);
+      await advance(resolveDebounceMs);
+      await advance(0);
+
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+      expect(mocks.resolveCard).toHaveBeenCalledWith({ uri });
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-loading', 'false');
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-card', 'none');
+      expect(mocks.repliesUri).toBe(uri);
+      expect(within(screen.getByTestId('right-sidebar')).getByTestId('resource-sidebar-stub')).toHaveAttribute(
+        'data-people',
+        uri,
+      );
+    });
   });
 
   it.each([

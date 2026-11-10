@@ -99,4 +99,58 @@ describe('ResourceLinkCard', () => {
     expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
     expect(screen.queryByTestId('actions')).not.toBeInTheDocument();
   });
+
+  describe('large, atop the link’s resource page', () => {
+    it('makes the title the page’s heading and the source “Open in”, with no click-through to the same page', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      render(<ResourceLinkCard url={URL} size="large" actions={<div data-testid="actions" />} />);
+
+      const card = screen.getByTestId('resource-link-card');
+      expect(card).toHaveAttribute('data-size', 'large');
+      expect(card).not.toHaveAttribute('data-click-through');
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('An article');
+      expect(screen.getByTestId('resource-link-card-title')).not.toHaveAttribute('href');
+      expect(screen.getByTestId('resource-card-source').textContent).toBe('example.com');
+      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in example.com');
+      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', URL);
+      expect(screen.getByTestId('actions')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('resource-link-card-image'));
+      fireEvent.click(card);
+
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('shows the large skeleton while the preview loads', () => {
+      mockUseOgMetadata.mockReturnValue({ metadata: null, isLoading: true, error: null });
+
+      render(<ResourceLinkCard url={URL} size="large" actions={<div />} />);
+
+      expect(screen.getByTestId('resource-card-skeleton')).toHaveAttribute('data-size', 'large');
+    });
+
+    it('keeps the frame and its footer for a link the preview reads as a media file', () => {
+      mockUseOgMetadata.mockReturnValue({
+        metadata: { url: URL, title: null, image: null, type: 'audio' },
+        isLoading: false,
+        error: null,
+      });
+
+      render(<ResourceLinkCard url={URL} size="large" actions={<div data-testid="actions" />} />);
+
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+      expect(screen.getByTestId('actions')).toBeInTheDocument();
+    });
+  });
+
+  it('titles a link that is not web with the link as written, as text, and reads no preview for it', () => {
+    // What the preview answers when it is asked for nothing.
+    mockUseOgMetadata.mockReturnValue({ metadata: null, isLoading: false, error: null });
+    render(<ResourceLinkCard url="isbn:9780000000002" size="large" actions={<div />} />);
+
+    expect(mockUseOgMetadata).toHaveBeenLastCalledWith(null);
+    expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent('isbn:9780000000002');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
 });

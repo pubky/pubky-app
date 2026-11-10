@@ -22,6 +22,9 @@ interface ResourcePageProps {
  * ({@link PostPageLayout}): the resource's card where the post stands, its sidebar cards (Also on,
  * Similar) above the post page's Participants and Feedback. Below `lg` they follow the card inline,
  * since the mobile header's right button is "Join Pubky" for visitors.
+ *
+ * A link Pinakes does not know is sent to be read when its page opens (`POST /v1/resolve`): the page
+ * shows the link itself, its footer and thread meanwhile, and the card once Pinakes has read it.
  */
 export function ResourcePage({ uri }: ResourcePageProps) {
   // A failed read is not cached: a new attempt remounts the read and asks again.
@@ -32,7 +35,9 @@ export function ResourcePage({ uri }: ResourcePageProps) {
 
 /** One read of the link's card, for the body and the sidebar cards alike. */
 function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () => void }) {
-  const read = usePinakesCard(uri);
+  // A link Pinakes does not know yet is read on opening its page (`resolve`); a pending card is read
+  // again until it settles (`recheck`).
+  const read = usePinakesCard(uri, { resolve: true, recheck: true });
   const card = read.data;
   useResourceTitle(card?.name);
   // One read of the replies for the thread under the card and the Participants panel.

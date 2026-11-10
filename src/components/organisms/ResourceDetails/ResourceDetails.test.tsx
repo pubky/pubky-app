@@ -42,9 +42,9 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => mocks.configured, PINAKES_RELATED_LIMIT: 5 }));
 vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({ usePinakesGroup: vi.fn() }));
 vi.mock('@/hooks/usePinakesRelated/usePinakesRelated', () => ({ usePinakesRelated: vi.fn() }));
-// A card without an image asks the link's OpenGraph data; nothing is read here.
+// A link Pinakes has no card for shows its own preview: here it has none (the link is its title).
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
-  useOgMetadata: () => ({ metadata: null, isLoading: false, error: null }),
+  useOgMetadata: vi.fn(() => ({ metadata: null, isLoading: false, error: null })),
 }));
 // The action row and tag bar have their own tests; here only what they are given matters.
 vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
@@ -96,9 +96,12 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     </div>
   ),
 }));
+// The thread's quick reply is a plain field here: only whether it keeps its draft matters.
 vi.mock('./ResourceReplies', () => ({
   ResourceReplies: ({ uri, replies }: { uri: string; replies: { uri: string | null } }) => (
-    <div data-testid="resource-replies-stub" data-uri={uri} data-replies-uri={replies.uri} />
+    <div data-testid="resource-replies-stub" data-uri={uri} data-replies-uri={replies.uri}>
+      <textarea aria-label="Quick reply" data-testid="quick-reply-stub" />
+    </div>
   ),
 }));
 
@@ -624,16 +627,32 @@ describe('ResourceDetails', () => {
   });
 
   describe('when the link is not known', () => {
-    it('says Pinakes does not know it and links out to it', () => {
+    it('shows the link in the large card’s frame with the card’s footer, acting on the link as written', () => {
       read = settled(null);
       renderDetails(NOT_KNOWN);
 
-      expect(screen.getByText("Pinakes doesn't know this link yet")).toBeInTheDocument();
-      const link = screen.getByTestId('resource-plain-link');
-      expect(link).toHaveAttribute('href', NOT_KNOWN);
-      expect(link).toHaveAttribute('target', '_blank');
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(screen.queryByText("Pinakes doesn't know this link yet")).not.toBeInTheDocument();
       expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      const linkCard = screen.getByTestId('resource-link-card');
+      expect(linkCard).toHaveAttribute('data-size', 'large');
+      // The link is the card's heading; its source the one way out, as on a card's page.
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+        'example.com/pinakes-does-not-know-this-link-1104',
+      );
+      const source = within(linkCard).getByTestId('resource-card-source');
+      expect(source).toHaveAttribute('href', NOT_KNOWN);
+      expect(source).toHaveAttribute('target', '_blank');
+      expect(source.textContent).toBe('example.com');
+      expect(source).toHaveAccessibleName('Open in example.com');
+      // Tags, Reply, Post about this, Save and ⋯ on the link as written.
+      const actions = within(linkCard).getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', NOT_KNOWN);
+      expect(actions).toHaveAttribute('data-spellings', '');
+      expect(actions).toHaveAttribute('data-post-uri', NOT_KNOWN);
+      expect(actions).toHaveAttribute('data-link-url', NOT_KNOWN);
+      expect(actions).toHaveAttribute('data-tags-label', 'Tags on the external resource');
+      expect(actions).toHaveAttribute('data-size', 'large');
+      expect(actions).toHaveAttribute('data-reply-count', '2');
     });
 
     it.each([
@@ -646,20 +665,65 @@ describe('ResourceDetails', () => {
       expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
     });
 
-    it('still shows the posts replying to it, under the empty state, which then does not say nobody shared it', () => {
+    it('shows the posts replying to it under the link', () => {
       read = settled(null);
       renderDetails(NOT_KNOWN);
 
-      expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
-      expect(screen.getByText('It has not been read yet.')).toBeInTheDocument();
+      const thread = screen.getByTestId('resource-replies-stub');
+      expect(thread).toHaveAttribute('data-uri', NOT_KNOWN);
+      expect(screen.getByTestId('resource-unknown').compareDocumentPosition(thread)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
     });
 
-    it.each(['isbn:0000000000', 'javascript:alert(1)'])('shows %s as text, not a link', (uri) => {
+    it('keeps the thread and a half-typed quick reply when the card arrives on the same link', () => {
+      // Pinakes is asked to read the link (`resolve`): its preview shows until the card comes.
+      read = settled(null);
+      const { rerender } = renderDetails(NOT_KNOWN);
+      const composer = screen.getByTestId('quick-reply-stub');
+      fireEvent.change(composer, { target: { value: 'Half a reply' } });
+
+      read = settled({ ...ORDINARY_VIDEO, uri: NOT_KNOWN, refs: [NOT_KNOWN], aliases: [], group: null });
+      rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+      expect(screen.getByTestId('quick-reply-stub')).toBe(composer);
+      expect(composer).toHaveValue('Half a reply');
+      // Still under the card, as under the link before.
+      expect(screen.getByTestId('resource-details').compareDocumentPosition(composer)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
+    it.each(['isbn:0000000000', 'geo:47.3769,8.5417'])('shows %s as written, as text, with the footer on it', (uri) => {
       read = settled(null);
       renderDetails(uri);
 
-      expect(screen.getByTestId('resource-plain-link')).toHaveTextContent(uri);
+      expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent(uri);
       expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      const actions = screen.getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', uri);
+      // No web address to post about or copy.
+      expect(actions).toHaveAttribute('data-post-uri', 'none');
+      expect(actions).toHaveAttribute('data-link-url', 'none');
+    });
+
+    it('shows a URI the app does not write as text, with no footer to tag or save it', () => {
+      read = settled(null);
+      renderDetails('javascript:alert(1)');
+
+      expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent('javascript:alert(1)');
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    });
+
+    it('gives a link with credentials no footer, so they are not tagged, saved or replied to', () => {
+      read = settled(null);
+      renderDetails('https://user:secret@example.com/private');
+
+      expect(screen.getByTestId('resource-link-card')).toHaveAttribute('data-size', 'large');
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
     });
   });
 
@@ -675,12 +739,15 @@ describe('ResourceDetails', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('says the details are not available, reading nothing, when Pinakes is not configured', () => {
+  it('shows the link with the card’s footer when Pinakes is not configured', () => {
     mocks.configured = false;
+    read = settled(VIDEO);
     renderDetails(NOT_KNOWN);
 
-    expect(screen.getByText('External resource details are not available')).toBeInTheDocument();
-    expect(screen.getByTestId('resource-plain-link')).toHaveAttribute('href', NOT_KNOWN);
+    expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+    expect(screen.getByTestId('resource-link-card')).toHaveAttribute('data-size', 'large');
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-uri', NOT_KNOWN);
+    expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
   });
 
   it('says there is no link when the page has none', () => {

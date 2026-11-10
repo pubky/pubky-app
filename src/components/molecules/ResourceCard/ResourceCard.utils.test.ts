@@ -29,6 +29,7 @@ import {
   getResourceTypeLabel,
   hasWideImage,
   isCardSurfaceClick,
+  isWritableResourceUri,
   MAX_LINK_SPELLINGS,
 } from './ResourceCard.utils';
 
@@ -160,6 +161,22 @@ describe('getHttpUrl', () => {
   ])('refuses %s', (value) => {
     expect(getHttpUrl(value)).toBeNull();
   });
+});
+
+describe('isWritableResourceUri', () => {
+  it.each(['https://example.com/a?next=x@y', 'https://example.com/@someone', 'isbn:9780140328721'])(
+    'writes %s',
+    (uri) => {
+      expect(isWritableResourceUri(uri)).toBe(true);
+    },
+  );
+
+  it.each(['https://user:secret@example.com/a', 'http://user@example.com', 'javascript:alert(1)', 'pubky://someone'])(
+    'does not write %s',
+    (uri) => {
+      expect(isWritableResourceUri(uri)).toBe(false);
+    },
+  );
 });
 
 describe('link helpers', () => {
