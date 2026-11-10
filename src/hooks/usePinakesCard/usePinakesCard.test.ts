@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
+import { PinakesStatus } from '@/services/pinakes/pinakes.types';
 import { PINAKES_RESOLVE_DEBOUNCE_MS, usePinakesCard } from './usePinakesCard';
 
 const mocks = vi.hoisted(() => ({ configured: true, fetchCardByUri: vi.fn(), resolveCard: vi.fn() }));
@@ -283,6 +284,29 @@ describe('usePinakesCard', () => {
       await advance(800);
 
       expect(result.current).toEqual({ data: null, isLoading: false, isError: false });
+    });
+
+    it('leaves an unknown link to the resolve when asked to recheck it too, and rechecks a pending card', async () => {
+      const unknown = link('recheck-unknown');
+      const pending = link('recheck-pending');
+      mocks.fetchCardByUri.mockImplementation(async ({ uri }: { uri: string }) =>
+        uri === pending ? { ...videoFixture, uri, status: PinakesStatus.PENDING } : null,
+      );
+      mocks.resolveCard.mockResolvedValue(videoFixture);
+      const fresh = (uri: string) =>
+        mocks.fetchCardByUri.mock.calls.filter(([params]) => params.uri === uri && params.fresh).length;
+
+      const { result } = renderHook(() => usePinakesCard(unknown, { resolve: true, recheck: true }));
+      renderHook(() => usePinakesCard(pending, { resolve: true, recheck: true }));
+      await advance(0);
+      await advance(800);
+      await advance(0);
+      expect(result.current.data).toEqual(videoFixture);
+      for (const delay of [2_000, 4_000, 8_000]) await advance(delay);
+
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+      expect(fresh(unknown)).toBe(0);
+      expect(fresh(pending)).toBeGreaterThan(0);
     });
   });
 });

@@ -198,6 +198,15 @@ export function getResourceLinks(
 export const MAX_LINK_SPELLINGS = 5;
 
 /**
+ * Whether the page may tag, save or reply to `uri` as written: a URI a post can name as its parent
+ * (`isExternalParentUri`), but not a web link with credentials (`https://user:pw@host`), which such a
+ * public write would publish.
+ */
+export function isWritableResourceUri(uri: string): boolean {
+  return isExternalParentUri(uri) && !/^https?:\/\/[^/?#]*@/.test(uri);
+}
+
+/**
  * The link a card's tags, replies, saves and counts are on (`uri`), and its other spellings shown
  * as the same link's (`spellings`: the link as written, the card's `refs` and `aliases`): Nexus
  * keeps each spelling apart, Pinakes folds them into one card. `uri` is the card's canonical link,
