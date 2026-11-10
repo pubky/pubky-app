@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react';
 import { ArrowUp, Check, ChevronDown, Play, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -103,19 +103,15 @@ export function PlayOnSplit({
   const label = isOpen ? `Close the ${shown.name} player` : `Play on ${shown.name}`;
   return (
     <Container overrideDefaults role="group" aria-label="Player" className="flex shrink-0 items-center gap-px">
-      <Button
-        variant="secondary"
-        size="sm"
-        data-testid="play-on-main"
-        aria-label={label}
-        title={label}
+      <PlayOnPill
+        uri={shown.link}
+        isOpen={isOpen}
+        label={label}
+        surface={surface}
         onClick={() => (isOpen ? player.close() : player.play(shown))}
-        className={cn(postActionsButtonVariants({ surface }), hasMenu && 'rounded-r-none')}
-      >
-        {!isOpen && <Play aria-hidden="true" className="fill-current" />}
-        <ResourceSourceIcon uri={shown.link} />
-        {isOpen && <X aria-hidden="true" />}
-      </Button>
+        data-testid="play-on-main"
+        className={cn(hasMenu && 'rounded-r-none')}
+      />
       {hasMenu && (
         <ProviderMenu
           targets={targets}
@@ -132,6 +128,41 @@ export function PlayOnSplit({
         />
       )}
     </Container>
+  );
+}
+
+/**
+ * The player pill in the action row's own buttons: ▶ and the service's logo, while open the logo and
+ * ✕; the label (the service's name) is its accessible name and tooltip. `PlayOnSplit`'s main part,
+ * and an X post's "Show on" on its card (`NativeEmbedResource`).
+ */
+export function PlayOnPill({
+  uri,
+  isOpen,
+  label,
+  surface = 'muted',
+  className,
+  ...props
+}: {
+  /** The link whose service's logo the pill shows. */
+  uri: string;
+  isOpen: boolean;
+  label: string;
+  surface?: PostActionSurface;
+} & Omit<ComponentProps<typeof Button>, 'variant' | 'size' | 'children' | 'aria-label' | 'title'>) {
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      aria-label={label}
+      title={label}
+      className={cn(postActionsButtonVariants({ surface }), className)}
+      {...props}
+    >
+      {!isOpen && <Play aria-hidden="true" className="fill-current" />}
+      <ResourceSourceIcon uri={uri} />
+      {isOpen && <X aria-hidden="true" />}
+    </Button>
   );
 }
 

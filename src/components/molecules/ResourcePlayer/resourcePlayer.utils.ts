@@ -356,6 +356,24 @@ function getOwnLink(card: TOwnLinks, href?: string | null): string {
   return links.find((link) => getPlayerTarget(link)) ?? href ?? card.uri;
 }
 
+/** The `src` parameters that start a player on load. */
+const AUTOPLAY_PARAMS = ['autoplay', 'auto_play'] as const;
+
+/**
+ * A link's service embed shown up front (`GenericResourcePreview`), not after a press on Play: the
+ * card player's frame for it without what starts it on load (its autoplay parameter and start
+ * message), so it plays only when pressed inside. `null` when the link is on no such service, or is
+ * a plain audio file (the link's own preview plays those). With the link's card, a link no player
+ * takes falls back to the card's canonical `uri` and its aliases (`getOwnLink`).
+ */
+export function getEmbedTarget(link: string, card?: TOwnLinks | null): PlayerTarget | null {
+  const target = getPlayerTarget(card ? getOwnLink(card, link) : link);
+  if (!target || target.element !== 'iframe') return null;
+  const src = new URL(target.src);
+  for (const param of AUTOPLAY_PARAMS) src.searchParams.delete(param);
+  return { ...target, src: src.href, autoplay: false, start: undefined };
+}
+
 /**
  * Every player the card offers, one per service: the card's own link first (`getOwnLink`), then
  * its `also_on` links in Pinakes' order (its best link of a service first), those that start on

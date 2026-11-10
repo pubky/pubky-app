@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { BookOpen, FileText, Globe, Link2, MapPin } from 'lucide-react';
 import { Image } from '@/atoms/Image/Image';
-import { AppleMusic, PubkyIcon } from '@/icons';
+import { AppleMusic, PubkyIcon, XTwitter } from '@/icons';
 import { cn } from '@/libs/utils/utils';
 import { getLinkHost } from './ResourceCard.utils';
 import { getFaviconOverride, getFaviconUrls, isDarkFavicon } from './ResourceSourceIcon.utils';
@@ -14,12 +14,18 @@ const ICON_PROPS = { size: ICON_SIZE, 'aria-hidden': true, className: 'shrink-0 
 /**
  * Services whose favicon is not the mark people know them by, drawn from `@/icons` instead of
  * asking the site. Apple Music's favicon (and every icon its pages declare) is Apple's white square
- * with a black note, not the red app icon. Keep it tiny: every other site shows its own favicon.
+ * with a black note, not the red app icon. X's favicon is a black tile, unseen on the dark UI and on
+ * a pill: the app's own X mark (the header's) instead. Keep it tiny: every other site shows its own
+ * favicon.
  */
 const BRAND_ICONS: Readonly<Record<string, typeof AppleMusic>> = {
   'music.apple.com': AppleMusic,
   'geo.music.apple.com': AppleMusic,
   'itunes.apple.com': AppleMusic,
+  'x.com': XTwitter,
+  'mobile.x.com': XTwitter,
+  'twitter.com': XTwitter,
+  'mobile.twitter.com': XTwitter,
 };
 
 /** An icon for a URI that is not a web page: its scheme says what it is, there is no site to ask. */

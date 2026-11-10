@@ -182,12 +182,11 @@ describe('PostInputExpandableSection', () => {
     expect(screen.getByTestId('post-link-embeds')).toBeInTheDocument();
   });
 
-  it('keeps a resource card’s title from navigating away from the draft: it links out in a new tab', () => {
+  it('keeps a resource card’s title from navigating away from the draft: it opens the resource page in a new tab', () => {
     render(<PostInputExpandableSection {...defaultProps} content={`Watch ${videoFixture.uri}`} />);
 
     const title = screen.getByTestId('resource-card-title');
-    expect(title).toHaveAttribute('href', videoFixture.uri);
-    expect(title).not.toHaveAttribute('href', getResourceRoute(videoFixture.uri));
+    expect(title).toHaveAttribute('href', getResourceRoute(videoFixture.uri));
     expect(title).toHaveAttribute('target', '_blank');
   });
 

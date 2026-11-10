@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
-import { usePinakesCard } from './usePinakesCard';
+import { PINAKES_RESOLVE_DEBOUNCE_MS, usePinakesCard } from './usePinakesCard';
 
 const mocks = vi.hoisted(() => ({ configured: true, fetchCardByUri: vi.fn(), resolveCard: vi.fn() }));
 
@@ -284,5 +284,29 @@ describe('usePinakesCard', () => {
 
       expect(result.current).toEqual({ data: null, isLoading: false, isError: false });
     });
+  });
+});
+
+describe('usePinakesCard isResolving', () => {
+  it('says a resolve is in flight for a link Pinakes did not know, until it is answered', async () => {
+    vi.useFakeTimers();
+    try {
+      const uri = 'https://example.com/isresolving-1';
+      mocks.fetchCardByUri.mockResolvedValue(null);
+      mocks.resolveCard.mockResolvedValue(null);
+      const { result } = renderHook(() => usePinakesCard(uri, { resolve: true }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.data).toBeNull();
+      expect(result.current.isResolving).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PINAKES_RESOLVE_DEBOUNCE_MS + 10);
+      });
+      expect(result.current.isResolving).toBeFalsy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

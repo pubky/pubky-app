@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useState } from 'react';
+import { getResourceRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
@@ -8,6 +9,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { cn } from '@/libs/utils/utils';
 import { GenericPreview } from '@/molecules/PostLinkEmbeds/Providers/Generic/GenericPreview';
+import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { getDisplayLink, getHttpUrl, getLinkHost } from './ResourceCard.utils';
 import { ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
@@ -29,6 +31,7 @@ interface ResourceLinkCardProps {
  */
 export function ResourceLinkCard({ url, actions }: ResourceLinkCardProps) {
   const { metadata, isLoading } = useOgMetadata(url);
+  const navigable = useIsPostPreviewNavigable();
   const [failedImage, setFailedImage] = useState<string | null>(null);
 
   if (isLoading) return <ResourceCardSkeleton withActions={Boolean(actions)} />;
@@ -55,9 +58,12 @@ export function ResourceLinkCard({ url, actions }: ResourceLinkCardProps) {
               className="size-20 shrink-0 rounded-md object-cover object-center sm:size-24"
             />
           )}
+          {/* Like a card's title: the resource's page (in a new tab where links may not navigate). */}
           {linkUrl ? (
             <Link
-              href={linkUrl}
+              href={getResourceRoute(url)}
+              target={navigable ? undefined : '_blank'}
+              rel={navigable ? undefined : 'noopener noreferrer'}
               overrideDefaults
               data-testid="resource-link-card-title"
               className="min-w-0 flex-1 text-base font-bold wrap-anywhere text-foreground hover:text-brand"

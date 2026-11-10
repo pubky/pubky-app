@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { EmbeddedTweet, TweetNotFound, TweetSkeleton, useTweet } from 'react-tweet';
 import type { Tweet, TweetEntities } from 'react-tweet/api';
 import { Container } from '@/atoms/Container/Container';
-import type { EmbedData, EmbedProvider } from '../Provider.types';
+import { cn } from '@/libs/utils/utils';
+import type { EmbedData, EmbedProvider, EmbedRenderOptions } from '../Provider.types';
 
 /**
  * Extract Twitter/X post ID from URL
@@ -90,8 +91,14 @@ const normalizeTweet = (tweet: Tweet): Tweet => ({
  * entities before rendering. Mirrors the original loading / error / content
  * states. Part of the TEMPORARY WORKAROUND above.
  */
-const NormalizedTweet = ({ tweetId }: { tweetId: string }) => {
+const NormalizedTweet = ({ tweetId, onError }: { tweetId: string; onError?: () => void }) => {
   const { data, error, isLoading } = useTweet(tweetId);
+  const failed = !isLoading && (Boolean(error) || !data);
+
+  // Tells the surrounding resource (`NativeEmbedResource`) that X cannot show the post.
+  useEffect(() => {
+    if (failed) onError?.();
+  }, [failed, onError]);
 
   if (isLoading) return <TweetSkeleton />;
   if (error || !data) return <TweetNotFound error={error} />;
@@ -105,7 +112,18 @@ const NormalizedTweet = ({ tweetId }: { tweetId: string }) => {
  * Remove this once react-tweet provides an upstream fix.
  * See: https://github.com/vercel/react-tweet/issues/212
  */
-const TwitterEmbed = ({ tweetId, tweetUrl }: { tweetId: string; tweetUrl: string }) => {
+const TwitterEmbed = ({
+  tweetId,
+  tweetUrl,
+  onError,
+  fill = false,
+}: {
+  tweetId: string;
+  tweetUrl: string;
+  onError?: () => void;
+  /** Fills the frame's width at every size, with tighter action links so Copy link fits at 390 px. */
+  fill?: boolean;
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -137,9 +155,12 @@ const TwitterEmbed = ({ tweetId, tweetUrl }: { tweetId: string; tweetUrl: string
       ref={containerRef}
       data-testid="twitter-container"
       data-theme="dark"
-      className="mx-0 max-w-70 sm:mx-auto sm:max-w-none [&_.react-tweet-theme]:m-0! [&_.tweet-media\_root\_\_k6gQ2]:max-h-75! [&_.tweet-media\_root\_\_k6gQ2]:overflow-y-auto!"
+      className={cn(
+        'mx-0 max-w-70 sm:mx-auto sm:max-w-none [&_.react-tweet-theme]:m-0! [&_.tweet-media\_root\_\_k6gQ2]:max-h-75! [&_.tweet-media\_root\_\_k6gQ2]:overflow-y-auto!',
+        fill && 'max-w-none [&_.react-tweet-theme]:max-w-none! [&_[class*=tweet-actions]>a]:mr-3!',
+      )}
     >
-      <NormalizedTweet tweetId={tweetId} />
+      <NormalizedTweet tweetId={tweetId} onError={onError} />
     </Container>
   );
 };
@@ -149,6 +170,8 @@ const TwitterEmbed = ({ tweetId, tweetUrl }: { tweetId: string; tweetUrl: string
  * Implements the standard EmbedProvider interface
  */
 export const Twitter: EmbedProvider = {
+  resourceKind: 'post',
+
   /**
    * List of supported Twitter/X domains
    */
@@ -172,13 +195,13 @@ export const Twitter: EmbedProvider = {
    * from react-tweet. The hash suffix may change in library updates - verify
    * styling after upgrading react-tweet package.
    */
-  renderEmbed: (embedData: EmbedData) => {
+  renderEmbed: (embedData: EmbedData, options?: EmbedRenderOptions) => {
     // Type guard: ensure we have an ID type
     if (embedData.type !== 'id') return null;
 
     const tweetId = embedData.value;
     const tweetUrl = `https://x.com/i/status/${tweetId}`;
 
-    return <TwitterEmbed tweetId={tweetId} tweetUrl={tweetUrl} />;
+    return <TwitterEmbed tweetId={tweetId} tweetUrl={tweetUrl} onError={options?.onEmbedError} fill={options?.fill} />;
   },
 };
