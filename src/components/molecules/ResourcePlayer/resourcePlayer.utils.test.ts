@@ -214,14 +214,14 @@ describe('getPlayerTargets', () => {
         { uri: 'https://www.youtube.com/watch?v=4D7u5KF7SP8', site: 'YouTube', derived: true },
       ] as TPinakesAlsoOn[]),
     );
-    // Deezer needs a press inside its player: after the services that start on ours.
+    // Every player starts on a press inside it: no service goes first for starting on ours.
     expect(targets.map((target) => target.provider)).toEqual([
       PlayerProvider.SPOTIFY,
+      PlayerProvider.DEEZER,
       PlayerProvider.TIDAL,
       PlayerProvider.YOUTUBE,
-      PlayerProvider.DEEZER,
     ]);
-    expect(targets[2].link).toBe('https://www.youtube.com/watch?v=5NV6Rdv1a3I');
+    expect(targets[3].link).toBe('https://www.youtube.com/watch?v=5NV6Rdv1a3I');
   });
 
   it('keeps a card’s own Deezer link first', () => {
@@ -528,21 +528,18 @@ describe('isPlayable', () => {
     expect(isPlayable({ ...page, aliases: ['https://vimeo.com/1084537'] })).toBe(true);
   });
 
-  it('is a recording, album, video or episode on another site, which plays on its Also on services', () => {
+  it('is no generic link, even a recording, album or episode that plays on its Also on services', () => {
     const recording = 'https://musicbrainz.org/recording/833f00e1-781f-4edd-90e4-e52712618862';
-    expect(isPlayable(typed(recording, 'MusicRecording', ['CreativeWork'], [SPOTIFY_TRACK]))).toBe(true);
-    expect(isPlayable({ type: null, type_path: ['Thing', 'CreativeWork', 'MusicRecording'], uri: recording })).toBe(
-      true,
-    );
+    expect(isPlayable(typed(recording, 'MusicRecording', ['CreativeWork'], [SPOTIFY_TRACK]))).toBe(false);
     expect(
       isPlayable(typed('https://musicbrainz.org/release-group/1', 'MusicAlbum', ['CreativeWork', 'MusicPlaylist'])),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isPlayable(typed('https://podcastindex.org/podcast/1?episode=2', 'PodcastEpisode', ['CreativeWork', 'Episode'])),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('is no card about something else, whatever services it is on: an artist, an article, a post, a place', () => {
+  it('is no generic link about something else, whatever services it is on: an artist, an article, a post, a place', () => {
     const artist = typed('https://musicbrainz.org/artist/b5416a54', 'Person', [], [SPOTIFY_TRACK]);
     expect(isPlayable(artist)).toBe(false);
     expect(
@@ -562,26 +559,19 @@ describe('isPlayable', () => {
   });
 });
 
-describe('getPlayerTargets in Pinakes’ order (`autoplayFirst: false`)', () => {
+describe('getPlayerTargets in Pinakes’ order', () => {
   // A link with no player (MusicBrainz), on Deezer (no start on our press) before Spotify.
   const song = card('https://musicbrainz.org/recording/b1a9c0e9-d987-4042-ae91-78d6a3267d69', [
     { uri: 'https://www.deezer.com/track/4329888262', site: 'Deezer' },
     { uri: 'https://open.spotify.com/track/2OBofMJx94NryV2SK8p8Zf', site: 'Spotify' },
   ]);
 
-  it('keeps Also on in Pinakes’ order, where Play on puts the services that start on our press first', () => {
-    expect(getPlayerTargets(song).map((target) => target.provider)).toEqual(['spotify', 'deezer']);
-    expect(getPlayerTargets(song, { autoplayFirst: false }).map((target) => target.provider)).toEqual([
-      'deezer',
-      'spotify',
-    ]);
+  it('keeps Also on in Pinakes’ order, not the services that start on our press first', () => {
+    expect(getPlayerTargets(song).map((target) => target.provider)).toEqual(['deezer', 'spotify']);
   });
 
   it('still puts the viewer’s first player first', () => {
     const players = { playerOrder: ['spotify'], hiddenPlayers: [] };
-    expect(getPlayerTargets(song, { autoplayFirst: false, players }).map((target) => target.provider)).toEqual([
-      'spotify',
-      'deezer',
-    ]);
+    expect(getPlayerTargets(song, { players }).map((target) => target.provider)).toEqual(['spotify', 'deezer']);
   });
 });

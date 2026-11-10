@@ -100,8 +100,8 @@ const ORDINARY_VIDEO = {
   also_on: videoFixture.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
 };
 /**
- * A card that is not itself something to play (`isPlayable`), on YouTube too: an artist's
- * MusicBrainz page. Its card shows, with Play on in its footer.
+ * A generic link (`isPlayable` false) Pinakes knows on YouTube too: an artist's MusicBrainz page.
+ * Its card shows first, with the embed/card switch in its header.
  */
 const ARTIST_URL = 'https://musicbrainz.org/artist/056e4f3e-d505-4dad-8ec1-d04f521cbb56';
 const ARTIST = {
@@ -480,13 +480,24 @@ describe('GenericResourcePreview', () => {
       expect(within(menu).queryByText(/similar/i)).not.toBeInTheDocument();
     });
 
-    it('still opens the resource page from the card once Play on puts a player in its body, never from the player', () => {
+    it('shows a generic link’s card first with the switch in its header; a picked service never opens the page from its player', () => {
       const open = vi.spyOn(window, 'open').mockReturnValue(null);
       mockUsePinakesCard.mockReturnValue({ data: ARTIST, isLoading: false, isError: false });
       render(<GenericResourcePreview url={ARTIST.uri} />);
 
-      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
-      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+      const card = screen.getByTestId('resource-card');
+      expect(card).toHaveAttribute('data-click-through', 'true');
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      const switchButton = within(card).getByRole('button', { name: 'Card: choose another service' });
+      fireEvent.click(switchButton);
+      expect(mockPush).not.toHaveBeenCalled();
+      fireEvent.pointerDown(switchButton, { button: 0, ctrlKey: false });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'YouTube' }));
+      expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/Om61naQC8is?enablejsapi=1&rel=0',
+      );
 
       // A click (or a middle click) on or around the player never leaves what plays.
       fireEvent.click(screen.getByTestId('resource-player'));
@@ -497,9 +508,8 @@ describe('GenericResourcePreview', () => {
       expect(mockPush).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
       open.mockRestore();
-      // A click on the rest of the card, its header, still opens the page.
-      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
-      fireEvent.click(screen.getByTestId('resource-card-type'));
+      // A click on the rest of the frame, its header's surface (the type is a link of its own), still opens the page.
+      fireEvent.click(screen.getByTestId('resource-card-type').parentElement!);
       expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ARTIST.uri));
     });
 
@@ -800,15 +810,14 @@ describe('GenericResourcePreview', () => {
         ]);
       });
 
-      it('leaves a removed service out, the shared link’s too', () => {
+      it('leaves a removed service out, the shared link’s too, whose card then shows first like a generic link’s', () => {
         setPlayers([], ['spotify']);
         mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
         render(<GenericResourcePreview url={SONG.uri} />);
 
-        expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
-          'src',
-          'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
-        );
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(switchButton()).toHaveTextContent('Card');
         fireEvent.pointerDown(switchButton(), { button: 0, ctrlKey: false });
         expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Card', 'TIDAL', 'YouTube']);
         expect(document.querySelectorAll('iframe[src*="spotify"]')).toHaveLength(0);

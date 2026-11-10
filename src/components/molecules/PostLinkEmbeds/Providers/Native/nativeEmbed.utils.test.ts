@@ -12,15 +12,14 @@ describe('getShowPostLabel', () => {
 
 describe('chooseNativeEmbed', () => {
   it.each([
-    [{ hasCard: true, hasAlsoOn: true }, 'card'],
-    [{ hasCard: true, hasAlsoOn: false }, 'embed'],
-    [{ hasCard: false, hasAlsoOn: false }, 'embed'],
-    [{ hasCard: true, hasAlsoOn: false, embedFailed: true }, 'card'],
-    [{ hasCard: false, hasAlsoOn: false, embedFailed: true }, 'embed'],
-    [{ hasCard: true, hasAlsoOn: true, engaged: true }, 'embed'],
-    [{ hasCard: true, hasAlsoOn: false, upFront: false }, 'card'],
-    [{ hasCard: false, hasAlsoOn: false, upFront: false }, 'embed'],
-    [{ hasCard: true, hasAlsoOn: false, embedFailed: true, upFront: false }, 'card'],
+    [{ hasCard: true }, 'embed'],
+    [{ hasCard: false }, 'embed'],
+    [{ hasCard: true, embedFailed: true }, 'card'],
+    [{ hasCard: false, embedFailed: true }, 'embed'],
+    [{ hasCard: true, upFront: false }, 'card'],
+    [{ hasCard: true, upFront: false, engaged: true }, 'embed'],
+    [{ hasCard: false, upFront: false }, 'embed'],
+    [{ hasCard: true, embedFailed: true, upFront: false }, 'card'],
   ] as const)('%o -> %s', (input, expected) => {
     expect(chooseNativeEmbed(input)).toBe(expected);
   });

@@ -78,17 +78,13 @@ interface GenericResourcePreviewProps {
  * Without a Pinakes origin configured no request is made and the plain `GenericPreview` renders;
  * a direct media file keeps it too, since it shows or plays the file inline.
  *
- * A card that is something to play (`useCardPlayer`'s `embed`: a song, album, video or episode, or
- * any link on a service with a player) shows its service's player up front, in the resource frame
- * (`ResourceEmbedFrame`), also with Also on, with the switch to its other services and Card in the
- * frame's header; in a post, the composer (without the footer) and a collection alike. It plays
- * only on a press inside it. A viewer who turned platform embeds up front off (Settings, Links &
- * Media) gets a stand-in that loads nothing until Play on. Card picked, or Card (no player) ranked
- * above its first service in Players, shows our card with the switch in its header (`isCard`).
- *
- * Any other card on a service that allows embedding (an artist) plays there in place
- * (`useCardPlayer`: "Play on <service>" in the action row, a dock when it scrolls away); not in the
- * composer or a quoted post.
+ * Embed or card (`useCardPlayer`): a link on a service with a player (a Spotify track or artist
+ * page) shows that service's player up front, in the resource frame (`ResourceEmbedFrame`); a
+ * generic link Pinakes knows on such services (a MusicBrainz or Wikipedia page) shows our card up
+ * front. Either has the embed/card switch in its header when there is a choice (Card, then the
+ * services), and no Play on in its action row; in a post, the composer (without the footer) and a
+ * collection alike. A player plays only on a press inside it. A viewer who turned platform embeds
+ * up front off (Settings, Links & Media) gets a stand-in that loads nothing until its Play.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -132,9 +128,8 @@ function ResourcePreview({
   });
   const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
   const withActions = !isComposing && !isNested;
-  // A card with an action row plays its services in place; not in a quoted post. While composing,
-  // only a playable card previews its player (`preview`).
-  const { playOn, renderBody, isOpen, embed, switcher } = useCardPlayer(
+  // Embed or card, with the switch; not in a quoted post. While composing, a player previews (`preview`).
+  const { embed, switcher } = useCardPlayer(
     !isNested && card && !hasNothingToShow(card) ? card : null,
     url,
     actionSurface,
@@ -164,7 +159,6 @@ function ResourcePreview({
       title={shownCard?.name}
       card={shownCard}
       isOnScreen={isOnScreen}
-      playOn={shownCard ? playOn : undefined}
       extraMenuContent={
         alsoOn
           ? ({ variant, closeMenu }) => <ResourceAlsoOn alsoOn={alsoOn} variant={variant} closeMenu={closeMenu} />
@@ -173,7 +167,7 @@ function ResourcePreview({
     />
   );
   if (!shownCard) return <ResourceLinkCard url={url} actions={actions} />;
-  // Something to play: its player up front in the resource frame, the switch in its header.
+  // A service's player: in the resource frame, the switch in its header.
   if (embed) {
     return (
       <ResourceEmbedFrame url={url} card={shownCard} actions={actions} headerControl={switcher}>
@@ -182,14 +176,6 @@ function ResourcePreview({
     );
   }
   return (
-    <ResourceCard
-      card={shownCard}
-      href={url}
-      actions={actions}
-      isOnScreen={isOnScreen}
-      renderBody={renderBody}
-      isBodyReplaced={isOpen}
-      headerControl={switcher}
-    />
+    <ResourceCard card={shownCard} href={url} actions={actions} isOnScreen={isOnScreen} headerControl={switcher} />
   );
 }

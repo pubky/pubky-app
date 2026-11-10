@@ -15,23 +15,20 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { KEEP_PLAYING_ATTRIBUTE } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { cn } from '@/libs/utils/utils';
 import { ResourceSourceIcon } from '@/molecules/ResourceCard/ResourceSourceIcon';
-import { PostActionButton, type PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
+import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
 import type { PlayerTarget } from './resourcePlayer.utils';
-import type { ResourcePlayerState } from './useResourcePlayer';
 
 interface ProviderMenuProps {
   targets: PlayerTarget[];
   /** The service shown now (playing, or a song's player up front), or `null`. */
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
-  /** Closes the open player: a "Close player" row while `current` is set. */
-  onClose?: () => void;
   trigger: ReactNode;
   /** Each row's favicon; off where nothing may load from the services yet (platform embeds off). */
   icons?: boolean;
   /** The menu's accessible name: what picking a row does. */
-  label?: string;
+  label: string;
   /** A "Card" row before the services: shows the link's card instead of a player, current while `current` is `null`. */
   onShowCard?: () => void;
 }
@@ -42,19 +39,9 @@ const ROW_TEXT = 'truncate text-base font-medium transition-colors group-hover:t
 /**
  * The services to play on, in the post menu's style: one line per service (favicon and name), the
  * current one in full colour with a check. Where the link's card can stand instead of a player (a
- * playable card's switch), Card comes first, set apart from the services by the menu's separator.
- * Close comes last when there is a player to close.
+ * card's switch), Card comes first, set apart from the services by the menu's separator.
  */
-function ProviderMenu({
-  targets,
-  current,
-  onSelect,
-  onClose,
-  trigger,
-  icons = true,
-  label = 'Play on',
-  onShowCard,
-}: ProviderMenuProps) {
+function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label, onShowCard }: ProviderMenuProps) {
   const cardShown = current === null;
   return (
     <DropdownMenu>
@@ -117,77 +104,13 @@ function ProviderMenu({
             </DropdownMenuItem>
           );
         })}
-        {current && onClose && (
-          <DropdownMenuItem onSelect={onClose} className={ROW}>
-            <X
-              aria-hidden="true"
-              className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-            />
-            <Typography as="span" overrideDefaults className={cn(ROW_TEXT, 'text-muted-foreground')}>
-              Close player
-            </Typography>
-          </DropdownMenuItem>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 /**
- * The card's player, on its own line above the footer, in the action row's pills (`PostActionButton`'s):
- * ▶ and the service's logo play the first service; while it plays, the logo and ✕ close it. The service's
- * name is in the accessible name. A chevron pill beside it picks another service, only when there
- * is one.
- */
-export function PlayOnSplit({
-  targets,
-  player,
-  surface = 'muted',
-}: {
-  targets: PlayerTarget[];
-  player: ResourcePlayerState;
-  /** What the card's footer sits on (`PostActionButton`'s `surface`). */
-  surface?: PostActionSurface;
-}) {
-  const shown = player.current ?? targets[0];
-  if (!shown) return null;
-  const isOpen = player.current !== null;
-  const hasMenu = targets.length > 1;
-  const label = isOpen ? `Close the ${shown.name} player` : `Play on ${shown.name}`;
-  return (
-    <Container overrideDefaults role="group" aria-label="Player" className="flex shrink-0 items-center gap-px">
-      <PlayOnPill
-        uri={shown.link}
-        isOpen={isOpen}
-        label={label}
-        surface={surface}
-        onClick={() => (isOpen ? player.close() : player.play(shown))}
-        data-testid="play-on-main"
-        className={cn(hasMenu && 'rounded-r-none')}
-      />
-      {hasMenu && (
-        <ProviderMenu
-          targets={targets}
-          current={player.current}
-          onSelect={player.play}
-          onClose={player.close}
-          trigger={
-            <PostActionButton
-              icon={ChevronDown}
-              surface={surface}
-              ariaLabel="Play on another service"
-              data-testid="play-on-trigger"
-              className="rounded-l-none"
-            />
-          }
-        />
-      )}
-    </Container>
-  );
-}
-
-/**
- * A playable card's switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
+ * A card's embed/card switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
  * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
  * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
  * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card.
@@ -239,8 +162,8 @@ export function PlayerSwitch({
 
 /**
  * The player pill in the action row's own buttons: ▶ and the service's logo, while open the logo and
- * ✕; the label (the service's name) is its accessible name and tooltip. `PlayOnSplit`'s main part,
- * and an X post's "Show on" on its card (`NativeEmbedResource`).
+ * ✕; the label (the service's name) is its accessible name and tooltip: an X post's "Show on" on
+ * its card (`NativeEmbedResource`).
  */
 export function PlayOnPill({
   uri,

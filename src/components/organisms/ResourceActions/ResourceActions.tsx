@@ -72,8 +72,9 @@ interface ResourceActionsProps {
    */
   card?: TPinakesResourceDetail | null;
   /**
-   * "Play on <service>" for a card with a service's player (`useCardPlayer`): on its own line above
-   * the footer, so the footer's tags and buttons are the post's, never squeezed by it.
+   * A pill that shows the platform's own embed (an X post's "Show on <site>" with platform embeds up
+   * front off): on its own line above the footer, so the footer's tags and buttons are the post's,
+   * never squeezed by it. A service's player is picked in the card's header switch instead.
    */
   playOn?: ReactNode;
   /** `large`: under the resource page's large card, with its padding and the post's pills. */
@@ -83,8 +84,8 @@ interface ResourceActionsProps {
 /**
  * What closes an external resource card, in a post or atop its page: the post's own footer. The tags
  * and "+" on the left; on the right, in the post's order and in its buttons: Tags, Reply (a post
- * whose `parent` is the resource's URI), Post about this, Save and ⋯; a card with a player has
- * "Play on <service>" (`playOn`) on a line above. Like the post's, the tags show only a few until
+ * whose `parent` is the resource's URI), Post about this, Save and ⋯; an X post's card may have
+ * "Show on <site>" (`playOn`) on a line above. Like the post's, the tags show only a few until
  * expanded; on a phone the buttons go under the tags. The pills are the post's own on the post
  * card's surface (the large card, `ResourceSurfaceProvider` `card`: a collection's item, a card in a
  * quoted post), else `surface="muted"` (`bg-card` pills) on a card inside a post.

@@ -19,7 +19,6 @@ import {
   getNativeEmbedCard,
   getShowPostLabel,
 } from '@/molecules/PostLinkEmbeds/Providers/Native/nativeEmbed.utils';
-import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
 import {
   getHttpUrl,
@@ -149,12 +148,13 @@ function ResourceKnown({
   const otherLinks =
     card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, getOwnLinkUris(card, uri, actionUri));
   const otherTags = mergeOtherLinkTags(useOtherLinkTags(otherLinks).reads);
-  // The services that allow embedding play on the page too, as in a post (`useCardPlayer`), the
-  // page's own link first. Something to play shows its player up front in place of the card's image
-  // and text, the switch to its other services in the card's header.
-  const { playOn, renderBody, embed, switcher } = useCardPlayer(card, uri, 'default');
   // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
   const postEmbed = usePostEmbed(card, uri);
+  // Embed or card, as in a post (`useCardPlayer`): the page's own link's player up front in place of
+  // the card's image and text, a generic link's card; the switch in the large card's header. An X
+  // post's embed, or its Show on, is its only source; once X cannot show it, its card is generic.
+  const showsPost = postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined);
+  const { embed, switcher } = useCardPlayer(showsPost ? null : card, uri, 'default');
   const actions = (
     <ResourceActions
       uri={actionUri}
@@ -166,7 +166,7 @@ function ResourceKnown({
       linkUrl={getResourceLinks(card, writtenUri).linkUrl}
       title={card.name || null}
       otherTagList={otherTags}
-      playOn={postEmbed?.showPost ?? playOn}
+      playOn={postEmbed?.showPost}
       size="large"
       replyCount={replies.replyCount}
       onReplySubmitted={replies.addReply}
@@ -190,7 +190,7 @@ function ResourceKnown({
                     {embed}
                   </>
                 )
-              : (postEmbed?.renderBody ?? renderBody)
+              : postEmbed?.renderBody
           }
           isBodyReplaced={postEmbed?.isOpen}
           headerControl={switcher}
@@ -203,9 +203,9 @@ function ResourceKnown({
 
 /**
  * An X post's own embed (a provider whose `resourceKind` is `post`) as the large card's body, chosen
- * as in a post (`chooseNativeEmbed`): up front without Also on, else from "Show on <site>" on our
- * card. A post X cannot show leaves our card without the pill. `null` for any other link. A viewer
- * who turned platform embeds up front off (Settings, Links & Media) gets our card with the pill.
+ * as in a post (`chooseNativeEmbed`): up front, its only source (no switch). A post X cannot show
+ * leaves our card without the pill. `null` for any other link. A viewer who turned platform embeds
+ * up front off (Settings, Links & Media) gets our card with "Show on <site>".
  */
 function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   const [isPostOpen, setIsPostOpen] = useState(false);
@@ -219,7 +219,6 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
 
   const choice = chooseNativeEmbed({
     hasCard: getNativeEmbedCard(card) !== null,
-    hasAlsoOn: getMenuAlsoOn(card, uri) !== null,
     embedFailed: failed,
     upFront: embedsUpFront,
   });
@@ -237,7 +236,7 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
         data-testid="show-embed"
       />
     ) : undefined;
-  // Only while the embed shows: otherwise the card's own body, or its player's (Play on).
+  // Only while the embed shows: otherwise the card's own body.
   const renderBody = isOpen
     ? () => (
         <>

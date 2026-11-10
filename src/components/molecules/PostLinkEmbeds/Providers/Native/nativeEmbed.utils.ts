@@ -4,30 +4,28 @@ import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/p
 /**
  * What a post's embedded link shows when the platform has its own embed (an X post, a YouTube or
  * Vimeo video):
- * - `card`: our card, with the platform's embed only behind Play on (Show on for a post), for a
- *   link Pinakes knows on other services too (Also on).
- * - `embed`: the platform's own embed in the resource frame, up front: no Also on, or no card.
+ * - `embed`: the platform's own embed in the resource frame, up front: the link's own source,
+ *   also when Pinakes knows it on other services (Also on, in the ⋯ menu), or no card.
+ * - `card`: our card, with the platform's embed only behind Show on (a post) or the player switch
+ *   (a video), for a viewer who turned platform embeds up front off (`upFront: false`).
  *
  * An embed that failed (a deleted post) gives way to the card; one the viewer has pressed in
- * (`engaged`) stays, so a card read later never unloads a playing video. A viewer who turned
- * platform embeds up front off (`upFront: false`) gets the card whenever there is one.
+ * (`engaged`) stays, so a card read later never unloads a playing video.
  */
 export function chooseNativeEmbed({
   hasCard,
-  hasAlsoOn,
   embedFailed = false,
   engaged = false,
   upFront = true,
 }: {
   hasCard: boolean;
-  hasAlsoOn: boolean;
   embedFailed?: boolean;
   engaged?: boolean;
   upFront?: boolean;
 }): 'card' | 'embed' {
   if (!hasCard) return 'embed';
   if (embedFailed) return 'card';
-  return (hasAlsoOn || !upFront) && !engaged ? 'card' : 'embed';
+  return !upFront && !engaged ? 'card' : 'embed';
 }
 
 /**

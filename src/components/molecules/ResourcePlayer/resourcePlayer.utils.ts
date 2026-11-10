@@ -524,31 +524,19 @@ function getOwnLink(card: TOwnLinks, href?: string | null): string {
 }
 
 /**
- * The types of a card that is itself something to play: a recording, an album or playlist, a video,
- * an episode or a show (schema.org's, its `type` or any entry of its `type_path`).
+ * Whether a card's own link is on a service with a player (`getOwnPlayer`): a Spotify track or
+ * artist page, a YouTube video or channel, a SoundCloud track. A generic link (a MusicBrainz
+ * recording, a Wikipedia article, an artist's Discogs page) is not, even when Pinakes knows it on
+ * such a service (Also on). `useCardPlayer` shows that player first unless the viewer removed its
+ * service in Players.
  */
-const PLAYABLE_TYPES: ReadonlySet<string> = new Set([
-  'MusicRecording',
-  'MusicPlaylist',
-  'MusicAlbum',
-  'VideoObject',
-  'Episode',
-  'PodcastEpisode',
-  'RadioEpisode',
-  'PodcastSeries',
-]);
+export function isPlayable(card: TOwnLinks, href?: string | null): boolean {
+  return getOwnPlayer(card, href) !== null;
+}
 
-/**
- * Whether a card is something that plays, so its service's player is the card (`useCardPlayer`'s
- * `embed`): its own link (the link as written, else its canonical link or another spelling) is on
- * a service with a player, or it is a recording, album, video or episode (`PLAYABLE_TYPES`), such as a
- * MusicBrainz recording, which plays on its Also on services. A card about something else (an
- * artist, an article, a place) is not, even when a service it is on could play; shared as its page
- * on a service with a player (an artist on Spotify, a YouTube channel), it shows that player.
- */
-export function isPlayable(card: Pick<TPinakesCard, 'type' | 'type_path'> & TOwnLinks, href?: string | null): boolean {
-  if (getPlayerTarget(getOwnLink(card, href))) return true;
-  return [...card.type_path, card.type].some((type) => type != null && PLAYABLE_TYPES.has(type));
+/** The player of a card's own link (`getOwnLink`), or `null` when its link is on no service with a player. */
+export function getOwnPlayer(card: TOwnLinks, href?: string | null): PlayerTarget | null {
+  return getPlayerTarget(getOwnLink(card, href));
 }
 
 /** The `src` parameters that start a player on load. */
@@ -568,11 +556,9 @@ export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
 
 /**
  * Every player the card offers, one per service: the card's own link first (`getOwnLink`), then
- * its `also_on` links in Pinakes' order (its best link of a service first), those that start on
- * our press before those that need a press inside (`autoplay`), so Play on starts with one press
- * whenever an Also on service can. A `missing` card's own link is gone upstream and offers no player.
- * With `autoplayFirst: false` Also on keeps Pinakes' order: a player shown up front (a playable
- * card's, `isPlayable`) starts on no press of ours, so none is put first for starting on it.
+ * its `also_on` links in Pinakes' order (its best link of a service first). A `missing` card's own
+ * link is gone upstream and offers no player. A player shows paused and starts on a press inside
+ * it, so no service is put first for starting on our press.
  *
  * The viewer's Players (`players`, Settings, Links & Media) come last: a removed service offers no
  * player, and the services in the viewer's order go first, in that order,
@@ -581,11 +567,7 @@ export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
  */
 export function getPlayerTargets(
   card: Pick<TPinakesCard, 'status' | 'also_on'> & TOwnLinks,
-  {
-    href,
-    players,
-    autoplayFirst = true,
-  }: { href?: string | null; players?: PlayerPreferences; autoplayFirst?: boolean } = {},
+  { href, players }: { href?: string | null; players?: PlayerPreferences } = {},
 ): PlayerTarget[] {
   const own = card.status === 'missing' ? null : getOwnLink(card, href);
   const links = [...(own ? [own] : []), ...card.also_on.map((entry) => entry.uri)];
@@ -598,16 +580,7 @@ export function getPlayerTargets(
     seen.add(target.provider);
     targets.push(target);
   }
-  const ownCount = own && getPlayerTarget(own) ? 1 : 0;
-  const alsoOn = targets.slice(ownCount);
-  const ordered = autoplayFirst
-    ? [
-        ...targets.slice(0, ownCount),
-        ...alsoOn.filter((target) => target.autoplay),
-        ...alsoOn.filter((target) => !target.autoplay),
-      ]
-    : targets;
-  const shown = ordered.filter((target) => isPlayerShown(target.provider, players?.hiddenPlayers));
+  const shown = targets.filter((target) => isPlayerShown(target.provider, players?.hiddenPlayers));
   const order = players && isRankedOrder(players.playerOrder) ? players.playerOrder : [];
   const rank = (target: PlayerTarget) => {
     const index = order.indexOf(target.provider);

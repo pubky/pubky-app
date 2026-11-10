@@ -19,7 +19,7 @@ interface ResourceEmbedFrameProps {
   children: ReactNode;
   /** What the embed is, named in the header when there is no card to say it ("Post", "Video"). */
   fallbackTypeLabel?: string;
-  /** A control in the header, next to the type: a playable card's switch (`useCardPlayer`'s `switcher`). */
+  /** A control in the header, next to the type: a card's embed/card switch (`useCardPlayer`'s `switcher`). */
   headerControl?: ReactNode;
 }
 

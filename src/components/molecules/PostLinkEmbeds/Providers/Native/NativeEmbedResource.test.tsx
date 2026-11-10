@@ -177,7 +177,23 @@ describe('NativeEmbedResource', () => {
       expect(screen.queryByTestId('embed-player')).not.toBeInTheDocument();
     });
 
-    it('shows an X post on our card from Show on, with X’s mark, and the same pill closes it', () => {
+    it('shows an X post as X’s embed up front, its only source: no switch, no Card, its Also on in the ⋯ menu', () => {
+      mockCard(POST_WITH_ALSO_ON);
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('platform-embed')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-has-also-on', 'true');
+    });
+
+    it('with platform embeds up front off, shows an X post on our card from Show on, with X’s mark, and the same pill closes it', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
       mockCard(POST_WITH_ALSO_ON);
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
@@ -199,6 +215,17 @@ describe('NativeEmbedResource', () => {
       fireEvent.click(pill);
       expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
+    });
+
+    it('shows a video gone upstream as our card, its other services in the switch, never its embed', () => {
+      mockCard({ ...VIDEO_WITH_ALSO_ON, status: 'missing' });
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+      expect(embed).not.toHaveBeenCalled();
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
     });
   });
 

@@ -59,17 +59,19 @@ function useEmbedEngaged(box: React.RefObject<HTMLElement | null>): boolean {
 }
 
 /**
- * A post's embedded X post, YouTube or Vimeo video as an external resource. A video Pinakes has read
- * (`isPlayable`) shows its player up front (`useCardPlayer`'s `embed`) in the resource frame, also
- * with Also on, with the switch to its other services and Card in the frame's header; or our card
- * with the switch, when Card (no player) ranks above its service; unless the platform's embed was
- * pressed in before the card was read. Anything else (an X post, a video gone upstream, no card)
- * follows `chooseNativeEmbed`: our card when Pinakes knows it on other services (an X post from
- * "Show on <site>"), else the platform's own embed in the resource frame. A viewer who turned
- * platform embeds up front off (Settings, Links & Media) gets our card whenever there is one,
- * unless it is a video the card player cannot play (then the card would have no Play on). The
- * card's skeleton holds the place while Pinakes is read (at most `PINAKES_SLOW_READ_MS`), so no
- * embed loads only to be replaced. Nothing is read before the box first comes near the screen.
+ * A post's embedded X post, YouTube or Vimeo video as an external resource, embed or card. A video
+ * Pinakes has read (`isPlayable`) shows its player up front (`useCardPlayer`'s `embed`) in the
+ * resource frame, with the embed/card switch in the frame's header when it is on other services
+ * too; or our card with the switch, when Card (no player) ranks above its service; unless the
+ * platform's embed was pressed in before the card was read. A video gone upstream that Pinakes
+ * knows on such services shows our card, those services in the switch. Anything else (an X post,
+ * a video with nothing else to play, no card) follows `chooseNativeEmbed`: the platform's own
+ * embed in the resource frame, its only source, so with no switch and no Card, also when Pinakes
+ * knows it elsewhere (Also on, in the ⋯ menu). A viewer who turned platform embeds up front off
+ * (Settings, Links & Media) gets our card whenever there is one (an X post's from "Show on
+ * <site>"), unless it is a video the card player cannot play (then the card would have no player).
+ * The card's skeleton holds the place while Pinakes is read (at most `PINAKES_SLOW_READ_MS`), so
+ * no embed loads only to be replaced. Nothing is read before the box first comes near the screen.
  */
 export function NativeEmbedResource(props: NativeEmbedResourceProps) {
   // The default margin: the box counts as near 200px before it scrolls in.
@@ -115,7 +117,7 @@ function NativeEmbedChoice({
 
   const card = getNativeEmbedCard(data);
   const alsoOn = card ? getMenuAlsoOn(card, url) : null;
-  // Card (no player) above the video's service in Players: our card, its player on Play on.
+  // Card (no player) above the video's service in Players: our card, its player from the switch.
   const videoProvider = kind === 'video' ? getPlayerTarget(url)?.provider : undefined;
   const cardFirst = videoProvider !== undefined && isCardFirst(videoProvider, playerOrder);
   // A video the card player has no player for (an `http:` link, one gone upstream) keeps its embed.
@@ -123,7 +125,6 @@ function NativeEmbedChoice({
     (embedsUpFront && !cardFirst) || (kind === 'video' && !(card && getPlayerTargets(card, { href: url }).length > 0));
   const choice = chooseNativeEmbed({
     hasCard: card !== null,
-    hasAlsoOn: alsoOn !== null,
     embedFailed: failed,
     engaged,
     upFront,
@@ -135,14 +136,11 @@ function NativeEmbedChoice({
   const showsPlayer = isVideo && card !== null && isPlayable(card, url) && !engaged;
   // On a top-level card (a collection's) the player's pills sit on the card's surface, as in `ResourceActions`.
   const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
-  const player = useCardPlayer(
-    showsPlayer || (showsCard && isVideo && !isComposing) ? card : null,
-    url,
-    actionSurface,
-    {
-      preview: isComposing,
-    },
-  );
+  // Our card for a video the card player cannot play from its own link, or for a post X cannot show:
+  // a generic card, its other services (Also on) in the switch.
+  const player = useCardPlayer(showsPlayer || (showsCard && (isVideo || failed)) ? card : null, url, actionSurface, {
+    preview: isComposing,
+  });
   const siteName = card ? getResourceLinks(card, url).siteName : null;
 
   // An X post on our card: the card player's pill (`PlayOnPill`) shows the post's embed in the body.
@@ -172,7 +170,7 @@ function NativeEmbedChoice({
       linkUrl={card ? getResourceLinks(card, url).linkUrl : getHttpUrl(url)}
       title={card?.name}
       card={card}
-      playOn={showsCard ? (isVideo ? player.playOn : showPost) : undefined}
+      playOn={showPost}
       extraMenuContent={
         alsoOn
           ? ({ variant, closeMenu }) => <ResourceAlsoOn alsoOn={alsoOn} variant={variant} closeMenu={closeMenu} />
@@ -194,7 +192,7 @@ function NativeEmbedChoice({
   if (showsCard || (player.isCard && card)) {
     const renderBody =
       isVideo || player.isCard
-        ? player.renderBody
+        ? undefined
         : (body: ReactNode) =>
             isPostOpen && !failed ? (
               <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
@@ -209,7 +207,7 @@ function NativeEmbedChoice({
         href={url}
         actions={actions}
         renderBody={renderBody}
-        isBodyReplaced={isVideo ? player.isOpen : isPostOpen && !failed}
+        isBodyReplaced={!isVideo && isPostOpen && !failed}
         headerControl={player.switcher}
       />
     );

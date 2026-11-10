@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
@@ -8,8 +8,8 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { useCardPlayer } from './useCardPlayer';
 
-// Play on, for a card that is not itself something to play (`isPlayable`; something to play shows
-// its player up front, below): an artist's MusicBrainz page, on Spotify (the song's link).
+// A generic link (an artist's MusicBrainz page) Pinakes knows on a service with a player (Spotify,
+// the song's link): its card first, the services in its switch.
 const ARTIST: TPinakesResourceDetail = {
   ...musicFixture,
   uri: 'https://musicbrainz.org/artist/056e4f3e-d505-4dad-8ec1-d04f521cbb56',
@@ -19,78 +19,61 @@ const ARTIST: TPinakesResourceDetail = {
   aliases: [],
   also_on: [{ id: 's', uri: musicFixture.uri, site: 'Spotify' }],
 };
-/** Another artist, on YouTube. */
-const ARTIST_ON_YOUTUBE: TPinakesResourceDetail = {
-  ...ARTIST,
-  id: 'artist-on-youtube',
-  uri: 'https://musicbrainz.org/artist/b5416a54-4941-4fcf-b2a0-7f98da6f9344',
-  also_on: [{ id: 'y', uri: videoFixture.uri, site: 'YouTube' }],
-};
 
 function Card({ card, testId }: { card: TPinakesResourceDetail; testId: string }) {
-  const { playOn, renderBody, isOpen } = useCardPlayer(card);
+  const { embed, switcher, isCard } = useCardPlayer(card, card.uri);
   const body = <p>{card.name}</p>;
   return (
-    <section data-testid={testId} data-open={String(isOpen)}>
-      {renderBody ? renderBody(body) : body}
-      {playOn}
+    <section data-testid={testId} data-card={String(Boolean(isCard))}>
+      <header data-testid={`${testId}-header`}>{switcher}</header>
+      {embed ?? body}
     </section>
   );
 }
 
-describe('useCardPlayer', () => {
-  it('offers Play on the card’s own service and loads nothing before it is pressed', () => {
-    render(<Card card={ARTIST} testId="song" />);
+const openSwitchOf = (testId: string) => {
+  fireEvent.pointerDown(within(screen.getByTestId(testId)).getByRole('button', { name: /choose another service$/ }), {
+    button: 0,
+  });
+  return screen.getByTestId('play-on-menu');
+};
+const rowsOf = (menu: HTMLElement) =>
+  within(menu)
+    .getAllByTestId('play-on-row')
+    .map((row) => row.textContent);
 
-    expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
+describe('useCardPlayer, a generic link', () => {
+  it('shows its card first, loads nothing, and offers its services in the header switch, not Play on', () => {
+    render(<Card card={ARTIST} testId="artist" />);
+
+    expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
     expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('artist')).toHaveAttribute('data-card', 'true');
+    expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    const trigger = within(screen.getByTestId('artist-header')).getByTestId('player-switch');
+    expect(trigger).toHaveTextContent('Card');
+    const menu = openSwitchOf('artist');
+    expect(within(menu).getByTestId('play-on-card')).toHaveAttribute('aria-current', 'true');
+    expect(rowsOf(menu)).toEqual(['Spotify']);
   });
 
-  it('puts the service’s player in place of the card’s body, and Close brings the body back', () => {
-    render(<Card card={ARTIST} testId="song" />);
+  it('shows a picked service’s player paused in place of the card’s body, and Card brings the body back', () => {
+    render(<Card card={ARTIST} testId="artist" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Play on Spotify' }));
+    fireEvent.click(within(openSwitchOf('artist')).getAllByTestId('play-on-row')[0]);
     const frame = screen.getByTestId('resource-player-frame');
     expect(frame).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
     expect(screen.queryByText(musicFixture.name!)).not.toBeInTheDocument();
-    expect(screen.getByTestId('song')).toHaveAttribute('data-open', 'true');
+    expect(screen.getByTestId('player-switch')).toHaveTextContent('Spotify');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close the Spotify player' }));
-    expect(screen.queryByTestId('resource-player-frame')).not.toBeInTheDocument();
+    fireEvent.click(within(openSwitchOf('artist')).getByTestId('play-on-card'));
+    expect(document.querySelector('iframe')).toBeNull();
     expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
-    expect(screen.getByTestId('song')).toHaveAttribute('data-open', 'false');
-  });
-
-  it('lets the viewer pick another service the card is on', () => {
-    const artist = {
-      ...ARTIST,
-      also_on: [...ARTIST.also_on, { uri: 'https://tidal.com/album/655910', site: 'TIDAL' }],
-    };
-    render(<Card card={artist} testId="album" />);
-
-    expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Play on another service' })).toBeInTheDocument();
-  });
-
-  it('plays one card at a time on the page', () => {
-    render(
-      <>
-        <Card card={ARTIST} testId="song" />
-        <Card card={ARTIST_ON_YOUTUBE} testId="video" />
-      </>,
-    );
-
-    fireEvent.click(within(screen.getByTestId('song')).getByRole('button', { name: 'Play on Spotify' }));
-    fireEvent.click(within(screen.getByTestId('video')).getByRole('button', { name: 'Play on YouTube' }));
-
-    expect(screen.getAllByTestId('resource-player-frame')).toHaveLength(1);
-    expect(within(screen.getByTestId('video')).getByTestId('resource-player-frame')).toBeInTheDocument();
-    expect(within(screen.getByTestId('song')).getByText(musicFixture.name!)).toBeInTheDocument();
   });
 
   describe('with the viewer’s Players', () => {
     // An artist on Spotify, also on Bandcamp (no player) and TIDAL.
-    const song: TPinakesResourceDetail = {
+    const artist: TPinakesResourceDetail = {
       ...ARTIST,
       also_on: [
         ...ARTIST.also_on,
@@ -103,58 +86,64 @@ describe('useCardPlayer', () => {
 
     afterEach(() => setPlayers([]));
 
-    it('plays the card’s own service on Auto', () => {
-      render(<Card card={song} testId="song" />);
+    it('lists its services in Pinakes’ order on Auto', () => {
+      render(<Card card={artist} testId="artist" />);
 
-      expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
+      expect(rowsOf(openSwitchOf('artist'))).toEqual(['Spotify', 'TIDAL']);
     });
 
-    it('plays the first player in the viewer’s order the card is on', () => {
+    it('lists the viewer’s order first, and still shows the card first', () => {
       setPlayers(['deezer', 'tidal', 'spotify']);
-      render(<Card card={song} testId="song" />);
+      render(<Card card={artist} testId="artist" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Play on TIDAL' }));
-      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
-        'src',
-        'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
-      );
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(rowsOf(openSwitchOf('artist'))).toEqual(['TIDAL', 'Spotify']);
     });
 
-    it('keeps the card’s own service when the card is on no player in the viewer’s order', () => {
-      setPlayers(['deezer']);
-      render(<Card card={song} testId="song" />);
-
-      expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
-    });
-
-    it('never offers a removed service, its own link’s neither', () => {
+    it('never offers a removed service', () => {
       setPlayers([], ['spotify']);
-      render(<Card card={song} testId="song" />);
+      render(<Card card={artist} testId="artist" />);
 
-      expect(screen.getByRole('button', { name: 'Play on TIDAL' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Spotify/ })).not.toBeInTheDocument();
+      expect(rowsOf(openSwitchOf('artist'))).toEqual(['TIDAL']);
     });
 
-    it('offers no player when the viewer removed every service the card is on', () => {
+    it('has no switch when the viewer removed every service the card is on', () => {
       setPlayers([], ['spotify', 'tidal']);
-      render(<Card card={song} testId="song" />);
+      render(<Card card={artist} testId="artist" />);
 
-      expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
-      expect(screen.getByText(song.name!)).toBeInTheDocument();
+      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+      expect(screen.getByText(artist.name!)).toBeInTheDocument();
     });
+  });
+
+  it('loads nothing with platform embeds up front off: Card first, no favicons, a picked service as a stand-in', () => {
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    onTestFinished(() => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+    });
+    render(<Card card={ARTIST} testId="artist" />);
+
+    expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
+    const menu = openSwitchOf('artist');
+    expect(menu.querySelector('img')).toBeNull();
+    fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
   });
 
   it('offers nothing for a card on no service that allows embedding', () => {
     render(<Card card={eventFixture} testId="event" />);
 
+    expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
     expect(screen.getByText(eventFixture.name!)).toBeInTheDocument();
   });
 });
 
 /**
- * A song (`MusicRecording`) shows its player up front (`embed`): the chosen service's own embed,
- * paused, with a switch to the card's other services; no Play on.
+ * A song shared as its link on a service with a player shows that player up front (`embed`):
+ * the chosen service's own embed, paused, with a switch to Card and the card's other services; no
+ * Play on.
  */
 describe('useCardPlayer, a song', () => {
   const SPOTIFY = musicFixture.uri;
@@ -193,13 +182,12 @@ describe('useCardPlayer, a song', () => {
     testId?: string;
     preview?: boolean;
   }) {
-    const { embed, switcher, playOn, renderBody } = useCardPlayer(card, href, undefined, { preview });
+    const { embed, switcher } = useCardPlayer(card, href, undefined, { preview });
     const body = <p>{card.name}</p>;
     return (
       <section data-testid={testId}>
         {switcher}
-        {embed ?? (renderBody ? renderBody(body) : body)}
-        {playOn}
+        {embed ?? body}
       </section>
     );
   }
@@ -294,6 +282,19 @@ describe('useCardPlayer, a song', () => {
     expect(screen.getAllByTestId('resource-player-frame')).toHaveLength(1);
     expect(document.querySelector('[data-keep-playing]')).toBeNull();
     expect(useSettingsStore.getState().media.playerOrder).toEqual([]);
+  });
+
+  it('shows its card first, like a generic link’s, when the viewer removed the shared link’s service', () => {
+    setMedia({ hiddenPlayers: ['spotify'] });
+    render(<Song card={SONG} />);
+
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
+    expect(
+      within(openSwitch())
+        .getAllByTestId('play-on-row')
+        .map((row) => row.textContent),
+    ).toEqual(['TIDAL', 'YouTube']);
   });
 
   it('lists its services in the viewer’s Players order and leaves out the removed ones', () => {
@@ -479,11 +480,11 @@ describe('useCardPlayer, a song', () => {
         expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
       });
 
-      it('keeps Play on for an artist', () => {
+      it('shows an artist’s generic link as its card with the switch, never Play on', () => {
         render(<Song card={ARTIST} href={ARTIST.uri} />);
 
-        expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
       });
     });
   });
@@ -888,15 +889,25 @@ describe('useCardPlayer, a song', () => {
     expect(audio.autoplay).toBe(false);
   });
 
-  it('keeps Play on for an artist, and for a song that is not ok', () => {
+  it('shows an artist’s generic link as its card, a song that is not ok as its player, one gone upstream as its card', () => {
     const { unmount } = render(<Song card={ARTIST} href={ARTIST.uri} />);
-    expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
     expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('player-switch')).toHaveTextContent('Card');
     unmount();
 
-    render(<Song card={{ ...SONG, status: 'unreachable' }} />);
-    expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
+    const { unmount: unmountUnreachable } = render(<Song card={{ ...SONG, status: 'unreachable' }} />);
+    expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
+    unmountUnreachable();
+
+    // Gone upstream: its own link offers no player, so the card shows, its Also on in the switch.
+    render(<Song card={{ ...SONG, status: 'missing' }} />);
     expect(document.querySelector('iframe')).toBeNull();
+    expect(
+      within(openSwitch())
+        .getAllByTestId('play-on-row')
+        .map((row) => row.textContent),
+    ).toEqual(['TIDAL', 'YouTube']);
+    expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
   });
 
   it('shows the card for a song on no service we can embed (Bandcamp), its links staying links', () => {
@@ -936,7 +947,7 @@ describe('useCardPlayer, a song', () => {
     expect(rows.map((row) => row.textContent)).toEqual(['YouTube', 'Spotify', 'Deezer', 'TIDAL', 'Apple Music']);
   });
 
-  describe('with no service of its own', () => {
+  describe('with no service of its own (a generic link)', () => {
     // A MusicBrainz recording: on Deezer, then Spotify, in Pinakes' order.
     const recording: TPinakesResourceDetail = {
       ...musicFixture,
@@ -948,16 +959,31 @@ describe('useCardPlayer, a song', () => {
       ],
     };
 
-    it('shows the first service in Pinakes’ order, not the one that starts on a press first', () => {
+    const rows = () =>
+      within(openSwitch())
+        .getAllByTestId('play-on-row')
+        .map((row) => row.textContent);
+
+    it('shows its card first, its services in Pinakes’ order in the switch, not the one that starts on a press first', () => {
       render(<Song card={recording} href={recording.uri} />);
 
-      expect(frameOf()).toHaveAttribute('src', 'https://widget.deezer.com/widget/dark/track/4329888262');
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
+      expect(rows()).toEqual(['Deezer', 'Spotify']);
     });
 
-    it('still shows the viewer’s first player first', () => {
+    it('lists the viewer’s first player first, the card still first', () => {
       setMedia({ playerOrder: ['spotify'] });
       render(<Song card={recording} href={recording.uri} />);
 
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(rows()).toEqual(['Spotify', 'Deezer']);
+    });
+
+    it('shows a picked service’s player, paused', () => {
+      render(<Song card={recording} href={recording.uri} />);
+
+      fireEvent.click(within(openSwitch()).getAllByTestId('play-on-row')[1]);
       expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/2OBofMJx94NryV2SK8p8Zf');
     });
   });
@@ -1010,13 +1036,12 @@ describe('useCardPlayer, a song', () => {
  */
 describe('useCardPlayer, anything that plays', () => {
   function Item({ card, href = card.uri }: { card: TPinakesResourceDetail; href?: string }) {
-    const { embed, switcher, playOn, renderBody } = useCardPlayer(card, href);
+    const { embed, switcher } = useCardPlayer(card, href);
     const body = <p>{card.name}</p>;
     return (
       <section data-testid="item">
         <header data-testid="item-header">{switcher}</header>
-        {embed ?? (renderBody ? renderBody(body) : body)}
-        {playOn}
+        {embed ?? body}
       </section>
     );
   }
@@ -1048,7 +1073,7 @@ describe('useCardPlayer, anything that plays', () => {
     expect(switchRows()).toEqual(['YouTube', 'TIDAL', 'Apple Music', 'Deezer', 'Spotify']);
   });
 
-  it('shows an album on its first service, a MusicBrainz release group on its Also on', () => {
+  it('shows a MusicBrainz release group, a generic link, as its card first, its Also on in the switch', () => {
     const album: TPinakesResourceDetail = {
       ...musicFixture,
       uri: 'https://musicbrainz.org/release-group/8e8a594f-2175-38c7-a871-abb68ec363e7',
@@ -1059,11 +1084,27 @@ describe('useCardPlayer, anything that plays', () => {
     };
     render(<Item card={album} />);
 
-    expect(frame()).toHaveAttribute('src', 'https://open.spotify.com/embed/album/1weenld61qoidwYuZ1GESA');
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('player-switch')).toHaveTextContent('Card');
+    expect(switchRows()).toEqual(['Spotify']);
     noPlayOn();
   });
 
-  it('shows a podcast episode on Apple Podcasts, from its Also on', () => {
+  it('shows a Spotify artist page, its link on a service with a player, as that player', () => {
+    const artist: TPinakesResourceDetail = {
+      ...ARTIST,
+      uri: 'https://open.spotify.com/artist/4tZwfgrHOc3mvqYlEYSvVi',
+      site: 'Spotify',
+      also_on: [{ uri: 'https://www.deezer.com/artist/27', site: 'Deezer' }],
+    };
+    render(<Item card={artist} />);
+
+    expect(frame()).toHaveAttribute('src', 'https://open.spotify.com/embed/artist/4tZwfgrHOc3mvqYlEYSvVi');
+    expect(switchRows()).toEqual(['Spotify', 'Deezer']);
+    noPlayOn();
+  });
+
+  it('shows a podcast episode’s generic link as its card, Apple Podcasts from its Also on in the switch', () => {
     const episode: TPinakesResourceDetail = {
       ...musicFixture,
       uri: 'https://podcastindex.org/podcast/759235?episode=61210434390',
@@ -1077,6 +1118,9 @@ describe('useCardPlayer, anything that plays', () => {
     };
     render(<Item card={episode} />);
 
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(switchRows()).toEqual(['Apple Podcasts']);
+    fireEvent.click(within(screen.getByTestId('play-on-menu')).getAllByTestId('play-on-row')[0]);
     expect(frame()).toHaveAttribute('src', 'https://embed.podcasts.apple.com/us/episode/1000792990676');
     noPlayOn();
   });
