@@ -40,6 +40,13 @@ describe('ResourceCard', () => {
   });
 
   describe('header and click-through', () => {
+    it('is no click-through when its body may turn into a player', () => {
+      render(<ResourceCard card={videoFixture} renderBody={(body) => <div data-testid="wrapped">{body}</div>} />);
+
+      expect(card()).not.toHaveAttribute('data-click-through');
+      expect(screen.getByTestId('wrapped')).toContainElement(title());
+    });
+
     it('names the site top right with an arrow, never the full link', () => {
       render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
 

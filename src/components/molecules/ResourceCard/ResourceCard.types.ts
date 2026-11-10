@@ -58,4 +58,10 @@ export interface ResourceCardProps {
    * preview) only once it has been, the large card always. Defaults to `true`.
    */
   isOnScreen?: boolean;
+  /**
+   * Wraps the card's image and text, e.g. to put a service's player in their place
+   * (`useCardPlayer`); the header, details, credits and `actions` stay. A card given one is no
+   * click-through: its body may turn into a player.
+   */
+  renderBody?: (body: ReactNode) => ReactNode;
 }

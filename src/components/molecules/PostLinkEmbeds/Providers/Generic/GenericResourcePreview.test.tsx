@@ -26,6 +26,10 @@ vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
   useViewportObserver: () => ({ ref: () => {}, isVisible: viewport.isVisible }),
 }));
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({ useOgMetadata: vi.fn() }));
+vi.mock('@/molecules/ResourcePlayer/ResourcePlayerFrame', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/molecules/ResourcePlayer/ResourcePlayerFrame')>()),
+  AnimatedHeight: ({ children }: { children: React.ReactNode }) => <div data-testid="animated-height">{children}</div>,
+}));
 // The action row and tag bar have their own tests; here only what they are given matters. The extra
 // ⋯ entries render in a dropdown, as the real ⋯ menu renders them on a desktop; `data-has-extra-menu`
 // says whether any were passed.
@@ -258,6 +262,17 @@ describe('GenericResourcePreview', () => {
 
     expect(screen.getByTestId('resource-card')).toBeInTheDocument();
     expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+  });
+
+  it('grows the box smoothly in a post, and leaves the composer to size its own height', () => {
+    mockUsePinakesCard.mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+
+    const { unmount } = render(<GenericResourcePreview url={URL} />);
+    expect(within(screen.getByTestId('resource-preview')).getByTestId('animated-height')).toBeInTheDocument();
+    unmount();
+
+    render(<GenericResourcePreview url={URL} isComposing />);
+    expect(screen.queryByTestId('animated-height')).not.toBeInTheDocument();
   });
 
   it('asks Pinakes to read the link while composing, and not in a published post', () => {
