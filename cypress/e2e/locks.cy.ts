@@ -264,6 +264,14 @@ describe('locks', () => {
       signInToLockServer();
       failNextLockDeletion();
       cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
+        // The owner's content resolves behind a skeleton after the card renders, and the image then
+        // grows the card. An open menu follows its trigger down the page with scrolling locked, so
+        // open it only once the card has its final height.
+        cy.get('[data-cy="locked-post-unlocked-content"]')
+          .should('contain.text', lockedText)
+          .find('[data-cy="post-attachment-image"]')
+          .should('be.visible')
+          .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
         cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
       });
       cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click();
