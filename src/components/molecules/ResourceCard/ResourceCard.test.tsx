@@ -84,6 +84,13 @@ describe('ResourceCard', () => {
       expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ARTICLE.uri));
     });
 
+    it('puts no native tooltip on the title or the summary line', () => {
+      render(<ResourceCard card={placeFixture} href={placeFixture.uri} />);
+
+      expect(title()).not.toHaveAttribute('title');
+      expect(screen.getByTestId('resource-card-summary')).not.toHaveAttribute('title');
+    });
+
     it('names the site top right with an arrow, never the full link', () => {
       render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
 
@@ -594,6 +601,31 @@ describe('ResourceCard', () => {
       expect(audio()).toHaveAttribute('preload', 'none');
       expect(audio()).toHaveAccessibleName(`Play ${EPISODE.name}`);
       expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+    });
+
+    it('lists a show’s latest episodes, each in the app’s audio player', () => {
+      const episodes = [182, 181, 180, 179].map((n) => ({
+        uri: `https://darknetdiaries.com/episode/${n}/`,
+        name: `Episode ${n}`,
+        guid: `guid-${n}`,
+        stream: { url: `https://example.org/ep${n}.mp3`, type: 'audio/mpeg', preview: false },
+      }));
+      render(<ResourceCard card={{ ...podcastFixture, episodes }} href={podcastFixture.uri} />);
+
+      expect(screen.getAllByTestId('resource-card-episode-audio').map((el) => el.getAttribute('src'))).toEqual([
+        'https://example.org/ep182.mp3',
+        'https://example.org/ep181.mp3',
+        'https://example.org/ep180.mp3',
+      ]);
+      expect(screen.getByTestId('resource-card-episodes-toggle')).toHaveTextContent('Show more');
+      // A show has no audio of its own.
+      expect(audio()).not.toBeInTheDocument();
+    });
+
+    it('lists no episodes for a show without any', () => {
+      render(<ResourceCard card={podcastFixture} href={podcastFixture.uri} />);
+
+      expect(screen.queryByTestId('resource-card-episodes')).not.toBeInTheDocument();
     });
 
     it('plays a recording’s public preview too, and says it is one', () => {

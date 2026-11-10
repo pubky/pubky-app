@@ -31,6 +31,7 @@ import {
   getDisplayLink,
   getEventStatusNote,
   getHttpUrl,
+  getPlayableEpisodes,
   getResourceFamily,
   getResourceLinks,
   getResourceStatus,
@@ -43,6 +44,7 @@ import { ResourceChainBody, ResourceChainCopy, ResourceChainLines } from './Reso
 import { getChainView } from './ResourceChain.utils';
 import { ResourceCredits } from './ResourceCredits';
 import { getCardAttribution, getMapDataCredit, getShownCredits } from './ResourceCredits.utils';
+import { ResourceEpisodes } from './ResourceEpisodes';
 import { ResourceFactList } from './ResourceFactList';
 import { getResourceDetailRows, getResourceSummary } from './ResourceFacts.utils';
 import { getResourceTypeIcon } from './ResourceTypeIcon';
@@ -74,7 +76,8 @@ const DETAIL_ICON_SIZE = 14;
  * and source on top, then the image (or the type's icon), the title, a summary line of the type's
  * facts (`getResourceSummary`) and the description. An event leads with its dates, venue,
  * organizer and attendance; a card with an audio `stream` (an episode, or a recording's preview)
- * plays it. A sparse card fills a missing description or image from a general database in its
+ * plays it, and a show its latest episodes (`ResourceEpisodes`). A sparse card fills a missing
+ * description or image from a general database in its
  * group (`useResourceFallback`), then a missing title or image from the link's OpenGraph data.
  *
  * The title opens the resource's page (in a new tab where links may not navigate), and so does a
@@ -163,6 +166,8 @@ export function ResourceCard({
   const mapCredit = isLarge ? getMapDataCredit(card.attribution) : null;
   // Any audio `stream` plays: an episode's enclosure or a recording's public preview.
   const streamUrl = card.stream && card.stream.type?.startsWith('audio/') ? getHttpUrl(card.stream.url) : null;
+  // A show plays its latest episodes, each in the same player.
+  const episodes = getPlayableEpisodes(card);
 
   const credits = [
     ...getShownCredits(card, { imageShown: ownImageShown }),
@@ -295,7 +300,6 @@ export function ResourceCard({
                   rel={titleTarget ? 'noopener noreferrer' : undefined}
                   overrideDefaults
                   dir="auto"
-                  title={title}
                   data-testid="resource-card-title"
                   className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
                 >
@@ -308,7 +312,6 @@ export function ResourceCard({
                   size="sm"
                   dir="auto"
                   data-testid="resource-card-summary"
-                  title={summary}
                   className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
                 >
                   <ResourceArrowText text={summary} />
@@ -378,6 +381,7 @@ export function ResourceCard({
           </Container>
         )}
 
+        {episodes.length > 0 && <ResourceEpisodes episodes={episodes} />}
         {isLarge && chain && !isBodyReplaced && <ResourceChainBody view={chain} target={titleTarget} />}
 
         {isLarge && <ResourceFactList rows={detailRows} />}
