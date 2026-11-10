@@ -3,6 +3,8 @@
  * `ResourceDetail` = `Card` + `Details`, `AlsoOn`, `OpenIn`, `GroupRef`, `GroupDetail`,
  * `SearchResponse`, `Facets`, `TypeFacet`, `Point`, `VenueRef`).
  *
+ * `Card.credits` (`Credit`) is optional: not every Pinakes deployment sends it yet.
+ *
  * Only the fields the app reads are typed; the API carries more (`facts`, `address`, `stream`,
  * `maybe_same`, `occurrence`, ...). Fields the schema lists as required are required here; every
  * other field is optional and nullable, as the schema declares it ("Absent values are null").
@@ -64,6 +66,44 @@ export interface TPinakesAlsoOn {
   at?: string | null;
 }
 
+/** The card fields a `Credit` names. A credit for any other field is ignored. */
+export enum PinakesCreditField {
+  IMAGE = 'image',
+  DESCRIPTION = 'description',
+}
+
+/** The sources a `Credit` names by name. Any other provider is named by its `source_url` host. */
+export enum PinakesCreditProvider {
+  WIKIPEDIA = 'wikipedia',
+  WIKIMEDIA_COMMONS = 'wikimedia_commons',
+}
+
+/**
+ * `Credit`: where an enriched card value (a Wikipedia text, a Wikimedia Commons image) comes from
+ * and under which license. Pinakes shows an enriched value only with its credit.
+ */
+export interface TPinakesCredit {
+  /** The card field it credits: one of `PinakesCreditField`, or a field added later. */
+  field: string;
+  /** One of `PinakesCreditProvider`, or a provider added later. */
+  provider: string;
+  /** The article or file page the value comes from. Not always `http(s)`: shown as a link only then. */
+  source_url: string;
+  /** Plain text. */
+  author?: string | null;
+  /** SPDX-style license id (`CC-BY-SA-4.0`) or `public-domain`. */
+  license?: string | null;
+  license_url?: string | null;
+  /** The text's language (`en`); `null` for an image. */
+  lang?: string | null;
+  /** The text is cut from a longer source. */
+  excerpted?: boolean;
+  /** The value was changed from its source. */
+  modified?: boolean;
+  /** The entity the content is about, when it is another one (a song's text from its work's article). */
+  subject?: string | null;
+}
+
 /** `OpenIn`: a client that opens a Pubky app's object, and the object's `https:` address there. */
 export interface TPinakesOpenIn {
   client: string;
@@ -117,6 +157,12 @@ export interface TPinakesCard {
   refs: string[];
   /** How many public collection posts hold the card's link. */
   collections: number;
+  /**
+   * Where the card's enriched values come from. Absent on stable, and absent, `null` and `[]` mean
+   * the same: nothing is credited. `PinakesApplication` drops malformed entries
+   * (`withNormalizedCredits`).
+   */
+  credits?: TPinakesCredit[] | null;
 }
 
 /** `ResourceDetail`: a resource read (`by-uri`, `resources/{id}`), the card plus `Details`. */

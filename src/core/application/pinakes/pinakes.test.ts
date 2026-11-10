@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import kindOfBlueEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-release-group.enriched.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
 import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import { PinakesService } from '@/services/pinakes/pinakes';
+import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { PinakesApplication } from './pinakes';
 
 vi.mock('@/services/pinakes/pinakes', () => ({
@@ -16,6 +19,12 @@ vi.mock('@/services/pinakes/pinakes', () => ({
   },
 }));
 
+const MALFORMED_CREDITS = asInvalid<TPinakesResourceDetail['credits']>([
+  'wikipedia',
+  { field: 'description', provider: 'wikipedia' },
+  ...(kindOfBlueEnrichedFixture.credits ?? []),
+]);
+
 describe('PinakesApplication', () => {
   it('returns the card the service reads', async () => {
     vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue(videoFixture);
@@ -24,18 +33,61 @@ describe('PinakesApplication', () => {
     expect(PinakesService.fetchCardByUri).toHaveBeenCalledWith(videoFixture.uri, undefined);
   });
 
-  it('returns the related cards the service reads', async () => {
-    vi.mocked(PinakesService.fetchRelated).mockResolvedValue(relatedFixture.items);
+  it('returns a card with valid credits as Pinakes sends it', async () => {
+    vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue(kindOfBlueEnrichedFixture);
 
-    await expect(PinakesApplication.fetchRelated(videoFixture.id, 5)).resolves.toBe(relatedFixture.items);
+    await expect(PinakesApplication.fetchCardByUri(kindOfBlueEnrichedFixture.uri)).resolves.toEqual(
+      kindOfBlueEnrichedFixture,
+    );
+  });
+
+  it('drops malformed credits from a card', async () => {
+    vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue({
+      ...kindOfBlueEnrichedFixture,
+      credits: MALFORMED_CREDITS,
+    });
+
+    const card = await PinakesApplication.fetchCardByUri(kindOfBlueEnrichedFixture.uri);
+
+    expect(card?.credits).toEqual(kindOfBlueEnrichedFixture.credits);
+  });
+
+  it('answers no card as null', async () => {
+    vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue(null);
+
+    await expect(PinakesApplication.fetchCardByUri('https://example.com/a')).resolves.toBeNull();
+  });
+
+  it('returns the related cards the service reads, with their credits validated', async () => {
+    vi.mocked(PinakesService.fetchRelated).mockResolvedValue([
+      ...relatedFixture.items,
+      { ...kindOfBlueEnrichedFixture, credits: MALFORMED_CREDITS },
+    ]);
+
+    const cards = await PinakesApplication.fetchRelated(videoFixture.id, 5);
+
+    expect(cards.slice(0, -1)).toEqual(relatedFixture.items);
+    expect(cards.at(-1)?.credits).toEqual(kindOfBlueEnrichedFixture.credits);
     expect(PinakesService.fetchRelated).toHaveBeenCalledWith(videoFixture.id, 5);
   });
 
-  it('returns the group the service reads', async () => {
-    vi.mocked(PinakesService.fetchGroup).mockResolvedValue(groupFixture);
+  it('returns the group the service reads, with its members’ credits validated', async () => {
+    vi.mocked(PinakesService.fetchGroup).mockResolvedValue({
+      ...groupFixture,
+      members: [...groupFixture.members, { ...kindOfBlueEnrichedFixture, credits: MALFORMED_CREDITS }],
+    });
 
-    await expect(PinakesApplication.fetchGroup(groupFixture.id)).resolves.toBe(groupFixture);
+    const group = await PinakesApplication.fetchGroup(groupFixture.id);
+
+    expect(group?.members.slice(0, -1)).toEqual(groupFixture.members);
+    expect(group?.members.at(-1)?.credits).toEqual(kindOfBlueEnrichedFixture.credits);
     expect(PinakesService.fetchGroup).toHaveBeenCalledWith(groupFixture.id);
+  });
+
+  it('answers a gone group as null', async () => {
+    vi.mocked(PinakesService.fetchGroup).mockResolvedValue(null);
+
+    await expect(PinakesApplication.fetchGroup(groupFixture.id)).resolves.toBeNull();
   });
 
   describe('resolveCard', () => {

@@ -24,6 +24,8 @@ import {
   hasWideImage,
 } from './ResourceCard.utils';
 import { ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
+import { ResourceCredits } from './ResourceCredits';
+import { getShownCredits } from './ResourceCredits.utils';
 
 /** What a card that is not `ok` says about itself. Only `missing` has a documented meaning (`/llms.txt`). */
 const STATUS_NOTES: Readonly<
@@ -49,6 +51,11 @@ const DETAIL_ICON_SIZE = 14;
  * The whole card is a click-through to the link, unless its actions' ⋯ menu lists other services
  * (`hasAlsoOn`: the same thing on other services too, `also_on`), where the viewer picks the
  * service; the source is its link either way.
+ *
+ * A text or image Pinakes enriched the card with comes with its credit (`credits`): the `large`
+ * card lists them under "Sources", the default card names the sources in one line; both close the
+ * card's body, above its actions.
+ * A value without a credit is the source page's own and shows as it is.
  *
  * The title opens the resource's page (`/resource?uri=<card.uri>`), or links out where links may
  * not navigate (the composer, a dialog). The `large` card heads that page: a heading title, "Open in
@@ -78,6 +85,7 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
   const point = family !== ResourceFamily.WEB && !venue && card.point ? formatResourcePoint(card.point) : null;
   const eventStatusNote = family === ResourceFamily.EVENT ? getEventStatusNote(card.event_status) : null;
   const statusNote = status === PinakesStatus.OK ? null : STATUS_NOTES[status];
+  const credits = getShownCredits(card, { imageShown: showImage });
   // A `missing` card's link is gone upstream: the large card's source does not send the viewer there.
   const titleUrl = status === PinakesStatus.MISSING ? null : linkUrl;
   const smallTitleUrl = navigable ? getResourceRoute(card.uri) : linkUrl;
@@ -176,6 +184,8 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
             )}
           </Container>
         </Container>
+
+        <ResourceCredits credits={credits} variant={isLarge ? 'full' : 'compact'} />
       </Container>
 
       {actions}
