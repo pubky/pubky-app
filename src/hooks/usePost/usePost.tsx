@@ -269,9 +269,9 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     useLocalFilesStore.getState().setArticleCover(postId, cover ?? null);
   };
 
-  const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
+  const reply = async ({ postId, parentUri, onSuccess }: UsePostReplyOptions) => {
     // allow empty content and attachments
-    if ((!content.trim() && attachments.length === 0) || !postId || !currentUserId) return;
+    if ((!content.trim() && attachments.length === 0) || !(postId || parentUri) || !currentUserId) return;
 
     if (inFlight.current) return;
     inFlight.current = true;
@@ -281,6 +281,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       if (!(await waitForAuth())) return;
       const createdPostId = await PostController.commitCreate({
         parentPostId: postId,
+        parentUri,
         content: content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,

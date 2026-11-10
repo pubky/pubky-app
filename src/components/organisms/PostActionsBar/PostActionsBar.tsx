@@ -1,15 +1,14 @@
 'use client';
 
 import { Ellipsis, MessageCircle, Repeat, Tag } from 'lucide-react';
-import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
 import { PostMenuActions } from '../PostMenuActions/PostMenuActions';
 import { PostSavePicker } from '../PostSavePicker/PostSavePicker';
+import { PostActionButton } from './PostActionButton';
 import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
 import type { ActionButtonConfig, PostActionsBarProps } from './PostActionsBar.types';
 import { postActionsButtonVariants, postActionsCountVariants } from './PostActionsBar.variants';
@@ -35,11 +34,6 @@ export function PostActionsBar({
   if (isCountsLoading || !postCounts) {
     return <PostActionsBarSkeleton className={className} />;
   }
-  const commonButtonProps = {
-    variant: 'secondary' as const,
-    size: 'sm' as const,
-    className: buttonClassName,
-  };
   const tagCount = postCounts.unique_tags ?? 0;
   const isCollection = postDetails?.kind === 'collection';
   const actionButtons: ActionButtonConfig[] = [
@@ -66,32 +60,13 @@ export function PostActionsBar({
     },
   ];
   const moreButton = (
-    <Button {...commonButtonProps} aria-label="More options" data-cy="post-more-btn">
-      <Ellipsis />
-    </Button>
+    <PostActionButton icon={Ellipsis} variant={variant} ariaLabel="More options" data-cy="post-more-btn" />
   );
   return (
     <Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
-      {actionButtons.map(
-        ({ id, icon: Icon, count, onClick, ariaLabel, className: btnClassName, iconProps, disabled }) => (
-          <Button
-            key={id}
-            data-cy={`post-${id}-btn`}
-            {...commonButtonProps}
-            onClick={onClick}
-            disabled={disabled}
-            className={cn(commonButtonProps.className, btnClassName)}
-            aria-label={ariaLabel}
-          >
-            <Icon {...iconProps} />
-            {count !== undefined && (
-              <Typography as="span" overrideDefaults className={countClassName}>
-                {count}
-              </Typography>
-            )}
-          </Button>
-        ),
-      )}
+      {actionButtons.map(({ id, ...action }) => (
+        <PostActionButton key={id} data-cy={`post-${id}-btn`} variant={variant} {...action} />
+      ))}
       {!isCollection && (
         <PostSavePicker postId={savePostId} buttonClassName={buttonClassName} countClassName={countClassName} />
       )}

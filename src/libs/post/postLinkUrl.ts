@@ -44,3 +44,12 @@ export function getFirstLinkUrl(content: string): string | null {
 
   return match?.[0]?.url ?? null;
 }
+
+/** Every link in the content, Markdown link targets included, in order. */
+export function getLinkUrls(content: string): string[] {
+  return (
+    getLinkify()
+      .match(content)
+      ?.map((match) => match.url) ?? []
+  );
+}

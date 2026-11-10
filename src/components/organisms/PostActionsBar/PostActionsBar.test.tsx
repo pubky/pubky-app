@@ -193,6 +193,21 @@ describe('PostActionsBar', () => {
     expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument();
   });
 
+  it('keeps the post’s own pill fill, not the one for a muted surface', () => {
+    mockUsePostCounts.mockReturnValue({
+      postCounts: { tags: 3, unique_tags: 3, replies: 5, reposts: 2 },
+      isLoading: false,
+    });
+
+    render(<PostActionsBar postId="post-2" />);
+
+    for (const name of ['Tag post (3)', 'Reply to post (5)', 'Repost (2)', 'More options']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveClass('border-none', 'shadow-xs');
+      expect(button).not.toHaveClass('bg-card');
+    }
+  });
+
   it('invokes callbacks when buttons are clicked', () => {
     mockUsePostCounts.mockReturnValue({
       postCounts: { tags: 1, unique_tags: 1, replies: 1, reposts: 1 },

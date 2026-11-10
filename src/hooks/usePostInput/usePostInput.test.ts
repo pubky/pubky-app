@@ -1680,6 +1680,58 @@ describe('usePostInput', () => {
       expect(mockOnSuccess).toHaveBeenCalledWith('created-reply-id');
     });
 
+    it('replies to an external resource with its URI and does NOT prependPosts it (a reply joins no feed)', async () => {
+      mockContent = 'About this book';
+      mockReply.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-resource-reply-id');
+      });
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'reply',
+          parentUri: 'isbn:9780131103627',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockReply).toHaveBeenCalledWith({ parentUri: 'isbn:9780131103627', onSuccess: expect.any(Function) });
+      expect(mockReply.mock.calls.at(-1)?.[0]).not.toHaveProperty('postId');
+      // Listed only in the author's replies (as on Nexus), never on top of the home timeline.
+      expect(mockPrependPosts).not.toHaveBeenCalled();
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-resource-reply-id');
+    });
+
+    it.each([
+      TIMELINE_FEED_VARIANT.CUSTOM,
+      TIMELINE_FEED_VARIANT.HOT,
+      TIMELINE_FEED_VARIANT.PROFILE,
+      TIMELINE_FEED_VARIANT.COLLECTION,
+      TIMELINE_FEED_VARIANT.BOOKMARKS,
+    ])('does NOT prependPosts a reply to an external resource on a %s feed', async (feedVariant) => {
+      vi.mocked(useTimelineFeedContext).mockReturnValueOnce({ ...mockTimelineFeedContext, variant: feedVariant });
+      mockContent = 'About this book';
+      mockReply.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-resource-reply-id');
+      });
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({ variant: 'reply', parentUri: 'isbn:9780131103627', onSuccess: mockOnSuccess }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockPrependPosts).not.toHaveBeenCalled();
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-resource-reply-id');
+    });
+
     it('calls onSuccess but does NOT prependPosts for edit variant', async () => {
       mockContent = 'Updated post content';
       mockEdit.mockImplementation(async ({ onSuccess }) => {

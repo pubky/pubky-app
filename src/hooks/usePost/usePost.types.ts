@@ -15,10 +15,10 @@ export type SerializedArticle = {
   inlineFiles: File[];
 };
 
-export interface UsePostReplyOptions {
-  postId: string;
+/** A reply to a post (`postId`) or to an external resource (`parentUri`, its URI as written). */
+export type UsePostReplyOptions = ({ postId: string; parentUri?: never } | { parentUri: string; postId?: never }) & {
   onSuccess?: (createdPostId: string) => void;
-}
+};
 
 /**
  * The article title and body as the inputs hold them right now. `articleTitle` and `content` trail

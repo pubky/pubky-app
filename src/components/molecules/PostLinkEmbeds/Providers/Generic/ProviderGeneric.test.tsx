@@ -4,6 +4,7 @@ import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
 import { GenericPreview } from './GenericPreview';
+import { GenericResourcePreview } from './GenericResourcePreview';
 import { Generic } from './ProviderGeneric';
 
 // Mock the hooks module
@@ -148,6 +149,30 @@ describe('ProviderGeneric', () => {
       // Should return a React element
       expect(result).toBeTruthy();
       expect(typeof result).toBe('object');
+    });
+
+    it('keeps the generic website preview for a link that is only in the text', () => {
+      const result = Generic.renderEmbed({ type: 'url', value: 'https://example.com' }, { isComposing: true });
+
+      expect(result).toMatchObject({ type: GenericPreview, props: { url: 'https://example.com' } });
+    });
+
+    it('renders the external resource preview for the link a post embeds', () => {
+      const result = Generic.renderEmbed({ type: 'url', value: 'https://example.com' }, { isPostEmbed: true });
+
+      expect(result).toMatchObject({
+        type: GenericResourcePreview,
+        props: { url: 'https://example.com', isComposing: undefined },
+      });
+    });
+
+    it('passes the composer flag to the external resource preview of an embed', () => {
+      const result = Generic.renderEmbed(
+        { type: 'url', value: 'https://example.com' },
+        { isPostEmbed: true, isComposing: true },
+      );
+
+      expect(result).toMatchObject({ type: GenericResourcePreview, props: { isComposing: true } });
     });
   });
 });

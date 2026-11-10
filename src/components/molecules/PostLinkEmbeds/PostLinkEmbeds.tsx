@@ -39,8 +39,7 @@ const getProviderMap = (): Map<string, EmbedProvider> => {
 };
 
 /**
- * Parse content for embeddable links
- * Returns the first embeddable link and its provider
+ * Parse a link for its embed and provider
  *
  * In-app post/collection URLs are checked before the provider map: the current
  * origin is dynamic so it can't be a static map key. When `allowInApp` is false
@@ -48,9 +47,8 @@ const getProviderMap = (): Map<string, EmbedProvider> => {
  * plain link text from PostText is enough, and a generic OG card of our own SPA
  * page would only add noise.
  */
-const parseContentForLinkEmbed = (content: string, allowInApp: boolean): ParseUrlForLinkEmbedResult => {
+const parseUrlForLinkEmbed = (url: string | null, allowInApp: boolean): ParseUrlForLinkEmbedResult => {
   try {
-    const url = getFirstLinkUrl(content);
     if (!url) return { embed: null, provider: null };
 
     const inAppEmbed = InApp.parseEmbed(url);
@@ -83,16 +81,24 @@ const parseContentForLinkEmbed = (content: string, allowInApp: boolean): ParseUr
   }
 };
 
-export const PostLinkEmbeds = ({ content }: PostLinkEmbedsProps) => {
+/**
+ * Embeds `url` when given, else the first link of `content`. Only `url`, the link the post embeds, is
+ * the post's embed: a generic link there shows as the external resource card. A link that is only in
+ * the text keeps its own website preview, since the post does not reference that resource.
+ */
+export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostLinkEmbedsProps) => {
   const isNested = useIsNestedPostPreview();
-  const { embed, provider } = useMemo(() => parseContentForLinkEmbed(content, !isNested), [content, isNested]);
+  const { embed, provider } = useMemo(
+    () => parseUrlForLinkEmbed(url || getFirstLinkUrl(content), !isNested),
+    [content, url, isNested],
+  );
   const mediaContainerRef = usePauseMediaOutsideViewport();
 
   if (!embed || !provider) return null;
 
   return (
     <Container ref={mediaContainerRef} className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-      {provider.renderEmbed(embed)}
+      {provider.renderEmbed(embed, { isComposing, isPostEmbed: Boolean(url) })}
     </Container>
   );
 };

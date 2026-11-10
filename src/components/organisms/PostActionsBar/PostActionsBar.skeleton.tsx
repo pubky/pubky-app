@@ -6,11 +6,26 @@ import { cn } from '@/libs/utils/utils';
 // save + more are icon-only (narrower). Left-aligned `flex flex-wrap gap-2` group.
 const ACTION_BUTTON_WIDTHS = ['w-12', 'w-12', 'w-12', 'w-9', 'w-9'];
 
-export function PostActionsBarSkeleton({ className }: { className?: string }) {
+interface PostActionsBarSkeletonProps {
+  className?: string;
+  /** One width class per button; the post's own row by default. */
+  widths?: string[];
+  /** What the row sits on: `muted` fills the pills with `bg-card`, as `PostActionButton` does. */
+  surface?: 'default' | 'muted';
+}
+
+export function PostActionsBarSkeleton({
+  className,
+  widths = ACTION_BUTTON_WIDTHS,
+  surface = 'default',
+}: PostActionsBarSkeletonProps) {
   return (
     <Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
-      {ACTION_BUTTON_WIDTHS.map((width, i) => (
-        <Skeleton key={`post-actions-skeleton-${i}`} className={cn('h-8 rounded-full', width)} />
+      {widths.map((width, i) => (
+        <Skeleton
+          key={`post-actions-skeleton-${i}`}
+          className={cn('h-8 rounded-full', width, surface === 'muted' && 'bg-card')}
+        />
       ))}
     </Container>
   );

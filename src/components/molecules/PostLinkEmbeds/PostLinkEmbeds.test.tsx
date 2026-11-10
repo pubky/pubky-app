@@ -1,7 +1,10 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { isPinakesConfigured } from '@/config/pinakes';
+import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
 vi.mock('@/atoms/Container/Container', () => {
@@ -115,6 +118,16 @@ vi.mock('./Providers/Generic/GenericPreview', () => ({
       Mocked Generic Preview
     </div>
   ),
+}));
+
+// No Pinakes card unless a test gives one, as with Pinakes not configured
+vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: vi.fn(() => false) }));
+vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({
+  usePinakesCard: vi.fn(() => ({ data: null, isLoading: false, isError: false })),
+}));
+// The card's action row and tag bar have their own tests; here only whether they render matters.
+vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
+  ResourceActions: () => <div data-testid="resource-actions" />,
 }));
 
 // Mock PostPreviewCard to avoid pulling in local-first data hooks
@@ -819,6 +832,26 @@ describe('PostLinkEmbeds', () => {
     });
   });
 
+  describe('Link in the text', () => {
+    afterEach(() => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(false);
+    });
+
+    it('keeps the website preview of a link that is only in the text, also when Pinakes is configured', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+
+      render(<PostLinkEmbeds content="Read https://en.wikipedia.org/wiki/Bitcoin" />);
+
+      expect(screen.getByTestId('generic-preview')).toHaveAttribute(
+        'data-url',
+        'https://en.wikipedia.org/wiki/Bitcoin',
+      );
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Tags on/)).not.toBeInTheDocument();
+      expect(usePinakesCard).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Edge cases', () => {
     it('does not render embed for content without URLs', () => {
       render(<PostLinkEmbeds content="Just some regular text without any links" />);
@@ -867,6 +900,112 @@ describe('PostLinkEmbeds', () => {
 
       // Parent click handler should not be called due to stopPropagation
       expect(handleParentClick).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('url prop', () => {
+    afterEach(() => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(false);
+      vi.mocked(usePinakesCard).mockReturnValue({ data: null, isLoading: false, isError: false });
+    });
+
+    it('embeds the given link instead of the first link of the text', () => {
+      render(<PostLinkEmbeds content="First https://example.com/first" url="https://example.com/embedded" />);
+
+      expect(screen.getByTestId('generic-preview')).toHaveAttribute('data-url', 'https://example.com/embedded');
+    });
+
+    it('embeds the given link without any text', () => {
+      render(<PostLinkEmbeds url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);
+
+      expect(screen.getByTestId('YouTube video player')).toBeInTheDocument();
+    });
+
+    it('shows the external resource card of the given link when Pinakes knows it', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      vi.mocked(usePinakesCard).mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+
+      render(<PostLinkEmbeds url="https://en.wikipedia.org/wiki/Bitcoin" />);
+
+      expect(usePinakesCard).toHaveBeenCalledWith('https://en.wikipedia.org/wiki/Bitcoin', {
+        recheck: false,
+        resolve: false,
+      });
+      expect(screen.getByTestId('resource-card')).toHaveTextContent(articleFixture.name);
+      expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
+      expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
+    });
+
+    it('leaves the action row and tag bar out of the given link’s card while composing', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      vi.mocked(usePinakesCard).mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+
+      render(<PostLinkEmbeds url="https://en.wikipedia.org/wiki/Bitcoin" isComposing />);
+
+      expect(screen.getByTestId('resource-card')).toHaveTextContent(articleFixture.name);
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    });
+
+    it('keeps the website preview of a link that is only in the text, also when Pinakes knows it', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      vi.mocked(usePinakesCard).mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+
+      render(<PostLinkEmbeds content="Read https://en.wikipedia.org/wiki/Bitcoin" url={null} />);
+
+      expect(screen.getByTestId('generic-preview')).toHaveAttribute(
+        'data-url',
+        'https://en.wikipedia.org/wiki/Bitcoin',
+      );
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Tags on/)).not.toBeInTheDocument();
+      expect(usePinakesCard).not.toHaveBeenCalledWith('https://en.wikipedia.org/wiki/Bitcoin');
+    });
+
+    it('keeps the website preview of a link typed in the composer that is not embedded', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      vi.mocked(usePinakesCard).mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+
+      render(<PostLinkEmbeds content="Read https://en.wikipedia.org/wiki/Bitcoin" isComposing />);
+
+      expect(screen.getByTestId('generic-preview')).toHaveAttribute(
+        'data-url',
+        'https://en.wikipedia.org/wiki/Bitcoin',
+      );
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+    });
+
+    it('shows only the embedded link’s card when the text holds another link', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      vi.mocked(usePinakesCard).mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+
+      render(
+        <PostLinkEmbeds
+          content="See https://example.com/first and https://en.wikipedia.org/wiki/Bitcoin"
+          url="https://en.wikipedia.org/wiki/Bitcoin"
+        />,
+      );
+
+      expect(screen.getAllByTestId('resource-card')).toHaveLength(1);
+      expect(screen.getByTestId('resource-card')).toHaveTextContent(articleFixture.name);
+      expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
+      expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
+      expect(usePinakesCard).not.toHaveBeenCalledWith('https://example.com/first');
+    });
+
+    it('keeps a provider player for an embedded link', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+
+      render(<PostLinkEmbeds url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);
+
+      expect(screen.getByTestId('YouTube video player')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+    });
+
+    it('falls back to the first link of the text when the link is null', () => {
+      render(<PostLinkEmbeds content="First https://example.com/first" url={null} />);
+
+      expect(screen.getByTestId('generic-preview')).toHaveAttribute('data-url', 'https://example.com/first');
     });
   });
 });

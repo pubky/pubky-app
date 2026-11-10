@@ -124,20 +124,23 @@ vi.mock('@/atoms/Container/Container', () => {
 });
 
 vi.mock('../PostInput/PostInput', () => ({
-  PostInput: vi.fn(({ onSuccess, onContentChange, variant, postId, showThreadConnector, layoutOverride }) => (
-    <div
-      data-testid="post-input"
-      data-variant={variant}
-      data-post-id={postId}
-      data-show-thread={String(showThreadConnector)}
-      data-has-content-change={String(Boolean(onContentChange))}
-      data-layout-override={layoutOverride}
-    >
-      <button data-testid="mock-success-btn" onClick={() => onSuccess?.('reply-post-id')}>
-        Success
-      </button>
-    </div>
-  )),
+  PostInput: vi.fn(
+    ({ onSuccess, onContentChange, variant, postId, parentUri, showThreadConnector, layoutOverride }) => (
+      <div
+        data-testid="post-input"
+        data-variant={variant}
+        data-post-id={postId}
+        data-parent-uri={parentUri}
+        data-show-thread={String(showThreadConnector)}
+        data-has-content-change={String(Boolean(onContentChange))}
+        data-layout-override={layoutOverride}
+      >
+        <button data-testid="mock-success-btn" onClick={() => onSuccess?.('reply-post-id')}>
+          Success
+        </button>
+      </div>
+    ),
+  ),
 }));
 
 // Mock molecules
@@ -171,6 +174,23 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
           PostPreviewCard {postId}
         </div>
       ),
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostLinkEmbeds/Providers/Generic/GenericResourcePreview', async () => {
+  const { useIsNestedPostPreview, useIsPostPreviewNavigable } = await vi.importActual<
+    typeof import('@/molecules/PostPreviewCard/PostPreviewNestingContext')
+  >('@/molecules/PostPreviewCard/PostPreviewNestingContext');
+  return {
+    GenericResourcePreview: ({ url, isComposing }: { url: string; isComposing?: boolean }) => (
+      <div
+        data-testid="resource-preview"
+        data-url={url}
+        data-composing={String(Boolean(isComposing))}
+        data-nested={String(useIsNestedPostPreview())}
+        data-navigable={String(useIsPostPreviewNavigable())}
+      />
     ),
   };
 });
@@ -327,5 +347,37 @@ describe('DialogReply', () => {
     expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).not.toEqual(
       expect.objectContaining({ onAnimationEnd: expect.any(Function) }),
     );
+  });
+
+  describe('on an external resource', () => {
+    const RESOURCE_URI = 'https://stacker.news/items/123';
+
+    it('shows the resource’s card, not a post, and replies with the resource as parent', () => {
+      render(<DialogReply resourceUri={RESOURCE_URI} open={true} onOpenChangeAction={vi.fn()} />);
+
+      expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
+      const preview = screen.getByTestId('resource-preview');
+      expect(preview).toHaveAttribute('data-url', RESOURCE_URI);
+      // No footer and no links out of the modal, as a quoted post's card; not the composer's preview,
+      // which would ask Pinakes to read the link.
+      expect(preview).toHaveAttribute('data-composing', 'false');
+      expect(preview).toHaveAttribute('data-nested', 'true');
+      expect(preview).toHaveAttribute('data-navigable', 'false');
+
+      const input = screen.getByTestId('post-input');
+      expect(input).toHaveAttribute('data-variant', POST_INPUT_VARIANT.REPLY);
+      expect(input).toHaveAttribute('data-parent-uri', RESOURCE_URI);
+      expect(input).not.toHaveAttribute('data-post-id');
+      expect(screen.getByTestId('dialog-content')).toHaveAttribute('aria-label', 'Reply to external resource');
+    });
+
+    it('closes after the reply is posted', () => {
+      const onOpenChangeAction = vi.fn();
+      render(<DialogReply resourceUri={RESOURCE_URI} open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+      fireEvent.click(screen.getByTestId('mock-success-btn'));
+
+      expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+    });
   });
 });

@@ -11,11 +11,12 @@ import type { PostContentOrganismProps } from './PostContent.types';
  * **Rendering logic:**
  * - **Repost with content (quote)**: PostContentBase (quote text) + PostPreviewCard (original)
  * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard
+ * - **Web link embed**: PostContentBase previews the embedded link in place of the text's first link
  * - **Collection original**: PostPreviewCard renders embed `CollectionCard` (no post shell)
  */
 export function PostContent({ postId, className, textClassName, mediaVariant = 'default' }: PostContentOrganismProps) {
   // Get repost information
-  const { isRepost, originalPostId } = useRepostInfo(postId);
+  const { isRepost, originalPostId, embedUrl } = useRepostInfo(postId);
 
   // Determine if we should render the repost preview
   const shouldRenderRepostPreview = isRepost && !!originalPostId;
@@ -28,6 +29,7 @@ export function PostContent({ postId, className, textClassName, mediaVariant = '
         className={className}
         textClassName={textClassName}
         mediaVariant={mediaVariant}
+        embedUrl={embedUrl}
       />
 
       {/* Show original post preview for reposts */}

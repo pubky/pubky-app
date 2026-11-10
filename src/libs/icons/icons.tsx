@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { LucideProps } from 'lucide-react';
 import { createLucideCompatIcon } from './createLucideCompatIcon';
 
@@ -397,3 +398,36 @@ export const PubkyIcon = ({ className, size = 24, ...props }: LucideProps) => (
     />
   </svg>
 );
+
+/**
+ * Apple Music app mark (red gradient rounded square, white note; multi-colour, not themeable). Drawn
+ * here so a resource card never asks Apple for it: music.apple.com's own favicon is Apple's white
+ * square with a black note, not this mark.
+ */
+export const AppleMusic = ({ className, size = 24, ...props }: LucideProps) => {
+  const gradientId = useId();
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="12" y1="0" x2="12" y2="24" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#FA5C74" />
+          <stop offset="1" stopColor="#FA243C" />
+        </linearGradient>
+      </defs>
+      <rect width="24" height="24" rx="5.4" fill={`url(#${gradientId})`} />
+      <g fill="#fff" transform="translate(0.6 -0.4)">
+        <path d="M8.9 8.4 16.9 6.4V14.8H15.4V8.775L10.4 10.025V16.4H8.9Z" />
+        <ellipse cx="7.9" cy="16.4" rx="2.5" ry="2" transform="rotate(-18 7.9 16.4)" />
+        <ellipse cx="14.4" cy="14.8" rx="2.5" ry="2" transform="rotate(-18 14.4 14.8)" />
+      </g>
+    </svg>
+  );
+};

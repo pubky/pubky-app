@@ -282,6 +282,11 @@ export type NexusPostRelationships = {
   replied: string | null;
   /** URI of the post this is reposting, if any */
   reposted: string | null;
+  /**
+   * The web link the post embeds, if any, normalized by Nexus (match it to a text link with
+   * `normalizeEmbedUrl`). A Nexus that does not serve it leaves it out.
+   */
+  embedded?: string | null;
   /** Users mentioned in this post */
   mentioned: Pubky[];
 };

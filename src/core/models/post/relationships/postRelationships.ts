@@ -17,12 +17,14 @@ export class PostRelationshipsModel
 
   replied: string | null;
   reposted: string | null;
+  embedded?: string | null;
   mentioned: Pubky[];
 
   constructor(postRelationships: PostRelationshipsModelSchema) {
     super(postRelationships);
     this.replied = postRelationships.replied;
     this.reposted = postRelationships.reposted;
+    this.embedded = postRelationships.embedded ?? null;
     this.mentioned = postRelationships.mentioned;
   }
 

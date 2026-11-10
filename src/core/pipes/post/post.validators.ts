@@ -1,8 +1,9 @@
 import { buildUri } from 'pubky-social-specs';
 import { PostController } from '@/controllers/post/post';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { getExternalParentProblem } from '@/libs/post/externalParent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 
@@ -35,5 +36,21 @@ export class PostValidators {
     }
     const { pubky, id } = parseCompositeId(postId);
     return buildUri(pubky, 'post', id);
+  }
+
+  /**
+   * An external resource's URI as a post's `parent`, returned exactly as written (the spelling its
+   * tags use, so Nexus files the post and the tags under one resource). Refused as
+   * `getExternalParentProblem` says.
+   */
+  static validateExternalParentUri(uri: string): string {
+    const problem = getExternalParentProblem(uri);
+    if (problem) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, `External resource parent ${problem}`, {
+        service: ErrorService.Local,
+        operation: 'validateExternalParentUri',
+      });
+    }
+    return uri;
   }
 }

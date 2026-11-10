@@ -1,29 +1,15 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
-import {
-  useAuthoredCollections,
-  useAuthoredCollectionsPagination,
-} from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { useCollectionSaveTargets } from '@/hooks/useCollectionSaveTargets/useCollectionSaveTargets';
+import type { CollectionSaveTarget } from '@/hooks/useCollectionSaveTargets/useCollectionSaveTargets.types';
 import { usePostCollections } from '@/hooks/usePostCollections/usePostCollections';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { isAppError } from '@/libs/error/error.utils';
-import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
-import { toast } from '@/molecules/Toaster/toast';
 import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
-export type PostSaveCollectionTarget = {
-  id: string;
-  name: string;
-  description: string;
-  isSaved: boolean;
-  isUpdating: boolean;
-};
+export type PostSaveCollectionTarget = CollectionSaveTarget;
 
 type UsePostSaveTargetsOptions = {
   /**
@@ -59,34 +45,25 @@ type UsePostSaveTargetsResult = {
 
 export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOptions = {}): UsePostSaveTargetsResult {
   const isPickerOpen = options.isPickerOpen ?? false;
-  const { waitForAuth } = useRequireAuth(options.isPickerOpen ?? true);
-  const pending = useRef(new Set<string>());
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const bookmark = useBookmark(postId, { active: options.isPickerOpen ?? true });
-  // Each completed toggle forces a fresh local read and stays busy until that read lands.
-  // `pendingReads` maps a collection to the read version its last toggle waits for.
-  const [localReads, setLocalReads] = useState({ version: 0, pendingReads: new Map<string, number>() });
-  const {
-    collections,
-    isLoading: isCollectionsLoading,
-    readVersion,
-  } = useAuthoredCollections(Boolean(currentUserPubky), localReads.version);
-  // `useAuthoredCollections` reads the whole cached stream, so it already renders
-  // every page this driver persists: the picker list grows through the live read
-  // rather than through a page-scoped list that would shrink back to one page.
-  const {
-    hasMore: hasMoreCollections,
-    isLoading: isCollectionsPageLoading,
-    isLoadingMore: isCollectionsPageLoadingMore,
-    loadMore: loadMoreCollections,
-  } = useAuthoredCollectionsPagination({
-    enabled: isPickerOpen,
-    onError: () => toast({ variant: 'error', description: 'Failed to load collections.' }),
+  const { pubky, id } = parseCompositeId(postId);
+  // A collection may spell the post either way (an item added before its author migrated keeps
+  // the 0.x spelling); a new collection curates it by its v1 reference.
+  const postUris = postReferenceSpellings(pubky, id);
+  const collectionTargets = useCollectionSaveTargets({
+    itemUris: postUris,
+    isPickerOpen,
+    active: options.isPickerOpen ?? true,
+    commitToggle: (collectionId, shouldAdd) =>
+      PostController.commitUpdateCollectionItem({ collectionId, postId, shouldAdd }),
+    messages: {
+      added: 'Post added to collection.',
+      removed: 'Post removed from collection.',
+      created: 'Collection created and post saved.',
+    },
+    logContext: { source: 'usePostSaveTargets', ids: { postId } },
   });
-  // The paginator's first page counts as busy too: while it is in flight the
-  // picker must not arm its scroll sentinel, or a scroll would start a second
-  // concurrent load on the same stream.
-  const isCollectionsLoadingMore = isCollectionsPageLoading || isCollectionsPageLoadingMore;
   const { collectionIds: postCollectionIds, isLoading: isOtherCollectionsLoading } = usePostCollections(postId, {
     enabled: isPickerOpen,
   });
@@ -98,122 +75,21 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
       return false;
     }
   });
-  const [updatingCollectionIds, setUpdatingCollectionIds] = useState<Set<string>>(new Set());
-  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
-
-  const { pubky, id } = parseCompositeId(postId);
-  // A collection may spell the post either way (an item added before its author migrated keeps
-  // the 0.x spelling); a new collection curates it by its v1 reference.
-  const postUris = postReferenceSpellings(pubky, id);
-
-  const saveTargets: PostSaveCollectionTarget[] = collections.map((collection) => {
-    const id = collection.details.id;
-    const isSaved = (collection.content.items ?? []).some((item) => postUris.includes(item));
-    return {
-      id,
-      name: collection.content.name,
-      description: collection.content.description ?? '',
-      isSaved,
-      isUpdating: updatingCollectionIds.has(id) || (localReads.pendingReads.get(id) ?? 0) > readVersion,
-    };
-  });
-
-  const setCollectionUpdating = (collectionId: string, isUpdating: boolean) => {
-    setUpdatingCollectionIds((current) => {
-      const next = new Set(current);
-      if (isUpdating) {
-        next.add(collectionId);
-      } else {
-        next.delete(collectionId);
-      }
-      return next;
-    });
-  };
-
-  const toggleCollection = async (collectionId: string) => {
-    const target = saveTargets.find((collection) => collection.id === collectionId);
-    if (!target || target.isUpdating || pending.current.has(collectionId)) return false;
-    pending.current.add(collectionId);
-
-    setCollectionUpdating(collectionId, true);
-
-    try {
-      if (!(await waitForAuth(collectionId))) return false;
-      await PostController.commitUpdateCollectionItem({
-        collectionId,
-        postId,
-        shouldAdd: !target.isSaved,
-      });
-      toast({
-        title: target.isSaved ? 'Post removed from collection.' : 'Post added to collection.',
-      });
-      return true;
-    } catch (error) {
-      Logger.error('[usePostSaveTargets] Failed to update collection membership', { error, collectionId, postId });
-      toast({
-        variant: 'error',
-        description: isAppError(error) ? error.message : 'Failed to update collection.',
-      });
-      return false;
-    } finally {
-      // Observe the current database after success/rollback, including writes
-      // from other pickers. Waiting for an expected boolean can never settle
-      // when another writer has already superseded this operation. Only this
-      // collection waits for the read; the other rows stay interactive.
-      setLocalReads(({ version, pendingReads }) => ({
-        version: version + 1,
-        pendingReads: new Map(pendingReads).set(collectionId, version + 1),
-      }));
-      pending.current.delete(collectionId);
-      setCollectionUpdating(collectionId, false);
-    }
-  };
-
-  const createCollectionWithPost = async (name: string) => {
-    if (!currentUserPubky || pending.current.has('create')) return false;
-    pending.current.add('create');
-
-    setIsCreatingCollection(true);
-
-    try {
-      if (!(await waitForAuth('create'))) return false;
-      await PostController.commitCreateCollection({
-        authorId: currentUserPubky,
-        name,
-        items: [postUris[0]],
-        layout: DEFAULT_COLLECTION_LAYOUT,
-      });
-      toast({
-        title: 'Collection created and post saved.',
-      });
-      return true;
-    } catch (error) {
-      Logger.error('[usePostSaveTargets] Failed to create collection', { error, postId });
-      toast({
-        variant: 'error',
-        description: isAppError(error) ? error.message : 'Failed to create collection.',
-      });
-      return false;
-    } finally {
-      pending.current.delete('create');
-      setIsCreatingCollection(false);
-    }
-  };
 
   return {
     isBookmarked: bookmark.isBookmarked,
     isBookmarkLoading: bookmark.isLoading,
     isBookmarkToggling: bookmark.isToggling,
-    collections: saveTargets,
-    isCollectionsLoading: isCollectionsLoading && collections.length === 0,
-    isCreatingCollection,
-    hasMoreCollections,
-    isCollectionsLoadingMore,
-    loadMoreCollections,
+    collections: collectionTargets.collections,
+    isCollectionsLoading: collectionTargets.isCollectionsLoading,
+    isCreatingCollection: collectionTargets.isCreatingCollection,
+    hasMoreCollections: collectionTargets.hasMoreCollections,
+    isCollectionsLoadingMore: collectionTargets.isCollectionsLoadingMore,
+    loadMoreCollections: collectionTargets.loadMoreCollections,
     otherCollectionIds,
     isOtherCollectionsLoading,
     toggleBookmark: bookmark.toggle,
-    toggleCollection,
-    createCollectionWithPost,
+    toggleCollection: collectionTargets.toggleCollection,
+    createCollectionWithPost: collectionTargets.createCollectionWithItem,
   };
 }

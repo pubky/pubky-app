@@ -1,5 +1,9 @@
 import { listPrefix } from 'pubky-social-specs';
-import type { TBookmarkFetchOptions, TBookmarkPersistInput } from '@/application/bookmark/bookmark.types';
+import type {
+  TBookmarkFetchOptions,
+  TBookmarkPersistInput,
+  TResourceBookmarkPersistInput,
+} from '@/application/bookmark/bookmark.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -142,6 +146,33 @@ export class BookmarkApplication {
       await HomeserverService.deleteIdempotent(bookmarkUrl);
     }
     return true;
+  }
+
+  /**
+   * Whether the viewer's bookmark of an external resource exists on their homeserver. Web
+   * bookmarks have no local row (the bookmarks table and feed hold posts, ADR-0028), so the
+   * homeserver is the only record. Network only.
+   */
+  static async fetchResourceBookmarked(bookmarkUrl: string): Promise<boolean> {
+    return HomeserverService.exists(bookmarkUrl);
+  }
+
+  /**
+   * Writes or deletes the viewer's bookmark of an external resource on their homeserver, with no
+   * local row (see `fetchResourceBookmarked`). A missing file is the state a delete wants.
+   */
+  static async persistResource(action: HttpMethod, { bookmarkUrl, bookmarkBody }: TResourceBookmarkPersistInput) {
+    if (action === HttpMethod.PUT) {
+      if (!bookmarkBody) {
+        throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'A bookmark PUT needs the bytes to store', {
+          service: ErrorService.Local,
+          operation: 'persistResourceBookmark',
+        });
+      }
+      await HomeserverService.putBlob({ url: bookmarkUrl, blob: bookmarkBody });
+    } else {
+      await HomeserverService.deleteIdempotent(bookmarkUrl);
+    }
   }
 
   /**

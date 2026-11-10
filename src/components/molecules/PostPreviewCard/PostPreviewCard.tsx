@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -54,6 +55,9 @@ interface PostPreviewCardProps {
  * recurse through PostContentBase → PostLinkEmbeds → PostPreviewCard. The same
  * provider carries `navigable` down to the mention and hashtag renderers, which
  * sit too deep in the markdown render for a prop.
+ * The previewed post's own web `embed` is passed down, so a quoted post with an external resource
+ * embed shows that resource's card (compact: no action row or tag bar inside a preview), as its own
+ * post does; a `pubky://` embed is a repost and is not followed.
  *
  * Collection originals skip the post-card shell and render `CollectionCard` with
  * `presentation="embed"`. Pass `interactiveActions={false}` from share/repost
@@ -82,6 +86,7 @@ export function PostPreviewCard({
 }: PostPreviewCardProps) {
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
+  const { embedUrl } = useRepostInfo(postId);
   const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
     id: postId,
@@ -150,7 +155,7 @@ export function PostPreviewCard({
         ) : (
           <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
             <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" navigable={navigable} />
-            <PostContentBase postId={postId} />
+            <PostContentBase postId={postId} embedUrl={embedUrl} />
           </CardContent>
         )}
       </Card>

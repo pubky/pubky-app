@@ -50,6 +50,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -73,6 +74,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -96,6 +98,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -128,6 +131,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -160,6 +164,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -182,6 +187,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -204,6 +210,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -227,6 +234,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -256,6 +264,7 @@ describe('usePostHeaderVisibility', () => {
         isReply: false,
         isCurrentUserRepost: false,
         originalPostId: 'orig',
+        embedUrl: null,
         isLoading: false,
         hasError: false,
       });
@@ -278,6 +287,7 @@ describe('usePostHeaderVisibility', () => {
         isReply: false,
         isCurrentUserRepost: true,
         originalPostId: 'orig',
+        embedUrl: null,
         isLoading: false,
         hasError: false,
       });
@@ -302,6 +312,7 @@ describe('usePostHeaderVisibility', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'orig',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });

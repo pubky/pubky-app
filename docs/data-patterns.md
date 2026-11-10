@@ -411,7 +411,7 @@ notifications      — Notification records
 ```
 post_details       — Post content, kind, attachments, timestamps
 post_counts        — Reply/repost/tag counts, plus `collections` (how many collections curate the post; bumped locally when the viewer's own collections change)
-post_relationships — Author, parent, repost relationships
+post_relationships — Author, parent, repost relationships (`replied` names a parent post only: the app writes `null` for an external resource parent, as Nexus serves it; `embedded` is the web link Nexus serves for a post's `embed`, normalized, and a web `embed` in `reposted` is read the same way, never as a repost)
 post_tags          — Tag collections per post
 post_ttl           — Cache staleness (id, lastUpdatedAt)
 ```
@@ -447,6 +447,26 @@ where the copies can be found (ADR-0014, ADR-0020):
 | Tag    | `/pub/social/v1/tags/{hash}.json`; the hash covers the target and the stored label. Target: the post reference `buildUri(author, 'post', id)` or the profile URL `buildUri(user, 'user')`, never the bare key | `TagNormalizer.from` → `buildTag`; the stored label is trimmed and ASCII-lowercased (`canonicalizeTagLabel`, also the fold hashtags and the composer use) | The viewer's file is resolved, never rebuilt: the local `TagMutation.uri`, else Nexus `tag_uri`, both through `TagNormalizer.toOwnTagUri` and the session `canWrite` preflight, then one DELETE (#2832). No `deletionPaths`: the 0.x copy has a different id | Nexus (tags are public and indexed)                                                                                                                                                                                                                                                                    |
 | Follow | `/pub/social/v1/follows/{followee}.json`                                                                                                                                                                      | `FollowNormalizer.to` → `buildFollow`                                                                                                                     | `FollowNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'follow' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent` (a 404 is an already absent copy)                                                                                | Nexus; `UserApplication.ensureModerationFollow` probes `exists(buildUri(follower, 'follow', bot))` on the v1 path only (`privacy.moderationBot` in settings is the idempotency guard)                                                                                                                  |
 | Mute   | `/priv/social/v1/mutes/{mutee}.json`, **private**: only the owner's session reads it, no indexer sees it                                                                                                      | `MuteNormalizer.to` → `buildMute`                                                                                                                         | `MuteNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'mute' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent`                                                                                                                      | `MuteApplication.fetchMutedUsers` LISTs `/priv/social/v1/mutes/` only (`parseUri(url).kind === 'mute'`, no union with the 0.x directory); another session's changes arrive by the `MuteListSyncCoordinator` poll (start, visible, `online`, every 30 s), never a session-bound event stream (ADR-0014) |
+
+**External resources (web links).** A social v1 Tag `uri`, Bookmark target and CollectionItem `uri` may be any scheme,
+so an external resource card writes them against the link exactly as written, without a local row (no Dexie table
+holds web links):
+
+- Tag: `TagController.commitCreateResource` / `commitDeleteResource` → `buildTag(viewer, link, label)` →
+  `putBlob`, or one DELETE of the viewer's own Nexus `tag_uri` (else the built file, whose id hashes link and
+  label). Read once the card is first on screen: `GET /v0/resource/by-uri` (`NexusResourceService`, a 404 is
+  "nobody tagged it"); an accepted write is applied to that shared Nexus answer, since Nexus indexes it with a
+  delay, and every card of the link follows that answer (`subscribeResourceTags`).
+- Bookmark: `BookmarkController.commitCreateResource` / `commitDeleteResource` → `buildBookmark(viewer, link)`;
+  the viewer's state is `HomeserverService.exists` on the built file, read only while the card's save picker is
+  open (closed, the Save button shows the collections only). The bookmarks table, feed and count stay
+  post-only (ADR-0028; `BookmarkNormalizer.fromListing` skips web targets).
+- Collection item: `PostController.commitUpdateCollectionResource`, the same edit as a post item.
+- Reply: `PostController.commitCreate({ parentUri })` → the post's `parent` is the resource's URI as written,
+  checked by `PostValidators.validateExternalParentUri` (a web link or `isbn:`/`doi:`/`osm:`/`geo:`/`urn:`), never
+  with `parentPostId`. The footer's Reply button uses the same rule (`isExternalParentUri`,
+  `src/libs/post/externalParent.ts`) and is disabled otherwise. Locally `replied` stays `null`; like Nexus, it is
+  listed only in `author_replies` and counted as a reply (no timeline, author stream or post thread).
 
 ## Quick Checklist
 

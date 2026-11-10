@@ -4,6 +4,7 @@ import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import { Logger } from '@/libs/logger/logger';
+import { getWebEmbedUrl } from '@/libs/post/postEmbedUrl';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
@@ -54,12 +55,16 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
     enabled: !!postId,
   });
 
-  const isRepost = !!relationships?.reposted;
+  // A web link the post embeds is an external resource, not a repost. Nexus serves it as `embedded`;
+  // a post written locally, or read from a Nexus without that field, holds it in `reposted`.
+  const repostedLink = getWebEmbedUrl(relationships?.reposted);
+  const isRepost = !!relationships?.reposted && repostedLink === null;
+  const embedUrl = isRepost ? null : (getWebEmbedUrl(relationships?.embedded) ?? repostedLink);
   const hasError = !!postId && relationships === null && !isLoading;
 
   // Extract original post ID from reposted URI
   let originalPostId: string | null = null;
-  if (relationships?.reposted) {
+  if (isRepost && relationships?.reposted) {
     originalPostId = buildCompositeIdFromPubkyUri({
       uri: relationships.reposted,
       domain: CompositeIdDomain.POSTS,
@@ -94,6 +99,7 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
     repostAuthorId,
     isCurrentUserRepost,
     originalPostId,
+    embedUrl,
     isLoading,
     hasError,
   };

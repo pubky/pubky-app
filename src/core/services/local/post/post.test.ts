@@ -313,6 +313,34 @@ describe('LocalPostService', () => {
       expect(details?.localUpdatedAt).toBe(ttl?.lastUpdatedAt);
     });
 
+    it('keeps a reply to an external resource out of post threads and counts it as a reply', async () => {
+      await setupUserCounts(testData.authorPubky);
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+      const updateCountsSpy = vi.spyOn(PostCountsModel, 'update');
+
+      const baseParams = createSaveParams('About this book', testData.fullPostId1);
+      const saveParams: TLocalSavePostParams = {
+        ...baseParams,
+        post: builtPost(
+          { content: baseParams.post.object.content, parent: 'https://example.com/book' },
+          baseParams.compositePostId,
+        ),
+      };
+
+      await LocalPostService.create(saveParams);
+
+      const relationships = await PostRelationshipsModel.findById(testData.fullPostId1);
+      expect(relationships?.replied).toBeNull();
+      expect(updateCountsSpy).not.toHaveBeenCalled();
+      expect(userCountsSpy).toHaveBeenCalledWith({
+        userId: testData.authorPubky,
+        countChanges: { posts: 1, replies: 1, collections: 0 },
+      });
+
+      userCountsSpy.mockRestore();
+      updateCountsSpy.mockRestore();
+    });
+
     it('should handle reply creation when parent post does not exist', async () => {
       const parentUri = `pubky://nonexistent/pub/pubky.app/posts/missing123`;
 
@@ -590,6 +618,47 @@ describe('LocalPostService', () => {
       });
 
       userCountsSpy.mockRestore();
+    });
+
+    it('deletes a reply to an external resource written here as a reply with no parent post', async () => {
+      await setupUserCounts(testData.authorPubky);
+      const baseParams = createSaveParams('About this book', testData.fullPostId1);
+      await LocalPostService.create({
+        ...baseParams,
+        post: builtPost(
+          { content: baseParams.post.object.content, parent: 'isbn:9780131103627' },
+          baseParams.compositePostId,
+        ),
+      });
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+      const updateCountsSpy = vi.spyOn(PostCountsModel, 'update');
+
+      await LocalPostService.delete({ compositePostId: testData.fullPostId1 });
+
+      expect(userCountsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ countChanges: expect.objectContaining({ posts: -1, replies: -1 }) }),
+      );
+      expect(updateCountsSpy).not.toHaveBeenCalled();
+
+      userCountsSpy.mockRestore();
+      updateCountsSpy.mockRestore();
+    });
+
+    it('treats an external resource stored as `replied` as a reply with no parent post on delete', async () => {
+      await setupUserCounts(testData.authorPubky);
+      await setupExistingPost(testData.fullPostId1, 'About this page', 'https://example.com/page');
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+      const updateCountsSpy = vi.spyOn(PostCountsModel, 'update');
+
+      await LocalPostService.delete({ compositePostId: testData.fullPostId1 });
+
+      expect(userCountsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ countChanges: expect.objectContaining({ posts: -1, replies: -1 }) }),
+      );
+      expect(updateCountsSpy).not.toHaveBeenCalled();
+
+      userCountsSpy.mockRestore();
+      updateCountsSpy.mockRestore();
     });
 
     it('should handle delete when parent/original post no longer exists', async () => {
@@ -1671,6 +1740,53 @@ describe('LocalPostService', () => {
         expect(timelineAllAll?.stream || []).not.toContain(replyId);
       });
 
+      it('adds a reply to an external resource to author_replies only, never to a timeline or the author stream', async () => {
+        const replyId = testData.fullPostId1;
+        await setupUserCounts(testData.authorPubky);
+
+        const baseParams = createSaveParams('About this artist', replyId);
+        await LocalPostService.create({
+          ...baseParams,
+          post: builtPost(
+            { content: baseParams.post.object.content, parent: 'https://musicbrainz.org/artist/b5416a54' },
+            replyId,
+          ),
+        });
+
+        const authorReplies = await PostStreamModel.table.get(`author_replies:${testData.authorPubky}` as PostStreamId);
+        expect(authorReplies?.stream).toEqual([replyId]);
+        // Every other stream it could have joined: timelines (all, kind, locked), the author's posts, a thread.
+        const streams = await PostStreamModel.table.toArray();
+        expect(streams.map((stream) => stream.id)).toEqual([`author_replies:${testData.authorPubky}`]);
+        expect(await UserCountsModel.table.get(testData.authorPubky)).toMatchObject({ posts: 1, replies: 1 });
+      });
+
+      it('keeps a post embedding an external resource in the timelines and the author stream', async () => {
+        const postId = testData.fullPostId1;
+        await setupUserCounts(testData.authorPubky);
+
+        const baseParams = createSaveParams('lol', postId);
+        await LocalPostService.create({
+          ...baseParams,
+          post: builtPost(
+            { content: baseParams.post.object.content, embed: 'https://musicbrainz.org/artist/b5416a54' },
+            postId,
+          ),
+        });
+
+        for (const streamId of [
+          PostStreamTypes.TIMELINE_ALL_ALL,
+          PostStreamTypes.TIMELINE_ALL_SHORT,
+          PostStreamTypes.TIMELINE_FOLLOWING_ALL,
+          PostStreamTypes.TIMELINE_FRIENDS_ALL,
+          `author:${testData.authorPubky}`,
+        ] as PostStreamId[]) {
+          expect((await PostStreamModel.table.get(streamId))?.stream).toContain(postId);
+        }
+        const authorReplies = await PostStreamModel.table.get(`author_replies:${testData.authorPubky}` as PostStreamId);
+        expect(authorReplies?.stream ?? []).not.toContain(postId);
+      });
+
       it('should prepend posts to beginning of stream (most recent first)', async () => {
         const postId1 = testData.fullPostId1;
         const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: '0035QZPT4QG0G' });
@@ -1755,6 +1871,37 @@ describe('LocalPostService', () => {
 
         expect(authorRepliesStream?.stream || []).not.toContain(replyId);
         expect(postRepliesStream?.stream || []).not.toContain(replyId);
+      });
+
+      it('removes a reply to an external resource written here from author_replies', async () => {
+        const replyId = testData.fullPostId1;
+        await setupUserCounts(testData.authorPubky);
+        const baseParams = createSaveParams('About this artist', replyId);
+        await LocalPostService.create({
+          ...baseParams,
+          post: builtPost(
+            { content: baseParams.post.object.content, parent: 'https://musicbrainz.org/artist/b5416a54' },
+            replyId,
+          ),
+        });
+
+        await LocalPostService.delete({ compositePostId: replyId });
+
+        const authorReplies = await PostStreamModel.table.get(`author_replies:${testData.authorPubky}` as PostStreamId);
+        expect(authorReplies?.stream ?? []).not.toContain(replyId);
+        expect(await UserCountsModel.table.get(testData.authorPubky)).toMatchObject({ posts: 0, replies: 0 });
+      });
+
+      it('removes a reply to an external resource served with its link in `replied` from author_replies', async () => {
+        const replyId = testData.fullPostId1;
+        await setupExistingPost(replyId, 'About this page', 'https://example.com/page');
+        await setupUserCounts(testData.authorPubky);
+        await PostStreamModel.prependItems(`author_replies:${testData.authorPubky}` as PostStreamId, [replyId]);
+
+        await LocalPostService.delete({ compositePostId: replyId });
+
+        const authorReplies = await PostStreamModel.table.get(`author_replies:${testData.authorPubky}` as PostStreamId);
+        expect(authorReplies?.stream ?? []).not.toContain(replyId);
       });
 
       it('should handle deleting post when stream does not exist', async () => {

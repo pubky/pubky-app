@@ -6,7 +6,9 @@ vi.mock('@/molecules/PostText/PostText', () => ({
   PostText: ({ content }: { content: string }) => <p data-testid="post-text">{content}</p>,
 }));
 vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => ({
-  PostLinkEmbeds: ({ content }: { content: string }) => <div data-testid="link-embeds" data-content={content} />,
+  PostLinkEmbeds: ({ content, url }: { content: string; url?: string | null }) => (
+    <div data-testid="link-embeds" data-content={content} data-url={url ?? ''} />
+  ),
 }));
 vi.mock('../PostAttachments/PostAttachments', () => ({
   PostAttachments: ({
@@ -37,6 +39,33 @@ describe('PostBody', () => {
     expect(screen.getByTestId('post-text')).toHaveTextContent('hello');
     expect(screen.getByTestId('link-embeds')).toHaveAttribute('data-content', 'hello https://x.com/a');
     expect(screen.getByTestId('attachments')).toHaveAttribute('data-count', '1');
+  });
+
+  it('previews the embedded link in place of the first link of the text', () => {
+    render(
+      <PostBody
+        content="hello https://x.com/a"
+        embedUrl="https://en.wikipedia.org/wiki/Bitcoin"
+        attachments={null}
+        localAttachments={undefined}
+      />,
+    );
+
+    expect(screen.getByTestId('link-embeds')).toHaveAttribute('data-url', 'https://en.wikipedia.org/wiki/Bitcoin');
+  });
+
+  it('previews the embedded link of a post without text', () => {
+    render(
+      <PostBody
+        content=""
+        embedUrl="https://en.wikipedia.org/wiki/Bitcoin"
+        attachments={null}
+        localAttachments={undefined}
+      />,
+    );
+
+    expect(screen.queryByTestId('post-text')).not.toBeInTheDocument();
+    expect(screen.getByTestId('link-embeds')).toHaveAttribute('data-url', 'https://en.wikipedia.org/wiki/Bitcoin');
   });
 
   it('forwards the pending attachments to the attachments renderer', () => {

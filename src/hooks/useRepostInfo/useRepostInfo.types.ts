@@ -9,6 +9,8 @@ export interface UseRepostInfoResult {
   isCurrentUserRepost: boolean;
   /** Original post ID if this is a repost (used by PostContent) */
   originalPostId: string | null;
+  /** The web link the post embeds instead of a post (an `http(s)` `embed`), else null (used by PostContent) */
+  embedUrl: string | null;
   /** Loading state - true while relationships are being fetched */
   isLoading: boolean;
   /** Error state - true if there was an error fetching relationships or parsing data */

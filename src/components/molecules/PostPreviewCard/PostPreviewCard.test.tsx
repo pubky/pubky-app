@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { PostPreviewCard } from './PostPreviewCard';
 
@@ -26,6 +27,10 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
 
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
+  useRepostInfo: vi.fn(() => ({ embedUrl: null })),
+}));
+
 vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
   PostUnavailable: ({ message }: { message: string }) => <div data-testid="post-unavailable" data-message={message} />,
 }));
@@ -34,11 +39,16 @@ vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
 vi.mock('@/organisms/PostContentBase/PostContentBase', async () => {
   const { useIsPostPreviewNavigable } = await import('@/molecules/PostPreviewCard/PostPreviewNestingContext');
   return {
-    PostContentBase: vi.fn(({ postId }: { postId: string }) => {
+    PostContentBase: vi.fn(({ postId, embedUrl }: { postId: string; embedUrl?: string | null }) => {
       // Mentions and hashtags read this context several layers below PostContentBase.
       const navigable = useIsPostPreviewNavigable();
       return (
-        <div data-testid="post-content-base" data-post-id={postId} data-navigable={String(navigable)}>
+        <div
+          data-testid="post-content-base"
+          data-post-id={postId}
+          data-navigable={String(navigable)}
+          data-embed-url={embedUrl ?? ''}
+        >
           PostContentBase {postId}
         </div>
       );
@@ -173,6 +183,18 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('card-content')).toBeInTheDocument();
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('post-content-base')).toBeInTheDocument();
+  });
+
+  it('passes the previewed post its own web embed', () => {
+    vi.mocked(useRepostInfo).mockReturnValueOnce({ embedUrl: 'https://en.wikipedia.org/wiki/Bitcoin' } as never);
+
+    render(<PostPreviewCard postId="test-post-123" />);
+
+    expect(useRepostInfo).toHaveBeenCalledWith('test-post-123');
+    expect(screen.getByTestId('post-content-base')).toHaveAttribute(
+      'data-embed-url',
+      'https://en.wikipedia.org/wiki/Bitcoin',
+    );
   });
 
   it('places the timestamp under user info for narrow preview cards', () => {
