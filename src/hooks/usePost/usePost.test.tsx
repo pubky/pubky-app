@@ -765,6 +765,25 @@ describe('usePost', () => {
       expect(result.current.isSubmitting).toBe(false);
     });
 
+    it('passes the embed link to the controller', async () => {
+      const { result } = renderHook(() => usePost());
+
+      act(() => {
+        result.current.setContent('Read https://en.wikipedia.org/wiki/Bitcoin');
+      });
+
+      await act(async () => {
+        await result.current.post({ embedUrl: 'https://en.wikipedia.org/wiki/Bitcoin', onSuccess: vi.fn() });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Read https://en.wikipedia.org/wiki/Bitcoin',
+          embedUrl: 'https://en.wikipedia.org/wiki/Bitcoin',
+        }),
+      );
+    });
+
     it('should handle post with empty tags array', async () => {
       const { result } = renderHook(() => usePost());
 
@@ -1649,6 +1668,27 @@ describe('usePost', () => {
         expect(vi.mocked(toast)).toHaveBeenCalledWith({
           title: 'Post updated',
         });
+      });
+
+      it('passes the chosen embed of a note, or none, to the edit', async () => {
+        const { result } = renderHook(() => usePost());
+        const LINK = 'https://luma.com/376whqyw';
+
+        act(() => {
+          result.current.setContent(`Edited ${LINK}`);
+        });
+        await act(async () => {
+          await result.current.edit({ editPostId: 'test-post-123', embedUrl: LINK });
+        });
+        act(() => {
+          result.current.setContent(`Edited ${LINK}`);
+        });
+        await act(async () => {
+          await result.current.edit({ editPostId: 'test-post-123', embedUrl: null });
+        });
+
+        expect(mockPostControllerEdit).toHaveBeenNthCalledWith(1, expect.objectContaining({ embedUrl: LINK }));
+        expect(mockPostControllerEdit).toHaveBeenNthCalledWith(2, expect.objectContaining({ embedUrl: null }));
       });
 
       it('serializes edited lock title and teaser into the announcement envelope', async () => {

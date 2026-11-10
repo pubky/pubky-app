@@ -6,6 +6,8 @@ import type {
 
 export interface PostInputExpandableSectionProps {
   content: string;
+  /** Whether the first link of `content` is previewed here; off when the composer shows it as an embed. */
+  showLinkPreview?: boolean;
   tags: string[];
   isSubmitting: boolean;
   isArticle?: boolean;

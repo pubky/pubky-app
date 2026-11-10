@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -2543,6 +2544,402 @@ describe('usePostInput', () => {
 
       expect(result.current.existingAttachments).toBe(mockExistingAttachments);
       expect(result.current.setExistingAttachments).toBe(mockSetExistingAttachments);
+    });
+  });
+
+  describe('link embed', () => {
+    const LINK = 'https://en.wikipedia.org/wiki/Bitcoin';
+
+    it('embeds the first link of a new post', () => {
+      mockContent = `Read ${LINK} and https://luma.com/376whqyw`;
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      expect(result.current.embedUrl).toBe(LINK);
+      expect(result.current.isEmbedRemoved).toBe(false);
+    });
+
+    it('embeds the link "Post about this" opens the composer with, its only text', () => {
+      mockContent = 'https://www.openstreetmap.org/node/240109189';
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      expect(result.current.embedUrl).toBe('https://www.openstreetmap.org/node/240109189');
+    });
+
+    it('embeds nothing without a link', () => {
+      mockContent = 'No link here';
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      expect(result.current.embedUrl).toBeNull();
+      expect(result.current.isEmbedRemoved).toBe(false);
+    });
+
+    it.each([
+      ['reply', { variant: 'reply' as const, postId: 'parent-post-id' }],
+      ['repost', { variant: 'repost' as const, originalPostId: 'original-post-id' }],
+      ['edit that leaves the embed as stored', { variant: 'edit' as const, editPostId: 'post-to-edit-id' }],
+    ])('embeds nothing in a %s', (_name, options) => {
+      mockContent = `Read ${LINK}`;
+
+      const { result } = renderHook(() => usePostInput(options));
+
+      expect(result.current.embedUrl).toBeNull();
+    });
+
+    it('embeds nothing in an article', () => {
+      mockContent = `Read ${LINK}`;
+      mockIsArticle = true;
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      expect(result.current.embedUrl).toBeNull();
+    });
+
+    it('publishes the embed with the post', async () => {
+      mockContent = `Read ${LINK}`;
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockPost).toHaveBeenCalledWith({ embedUrl: LINK, onSuccess: expect.any(Function) });
+    });
+
+    it('publishes no embed once it is removed, and keeps the link in the text', async () => {
+      mockContent = `Read ${LINK}`;
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      act(() => {
+        result.current.removeEmbed();
+      });
+
+      expect(result.current.embedUrl).toBeNull();
+      expect(result.current.isEmbedRemoved).toBe(true);
+      expect(mockSetContent).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockPost).toHaveBeenCalledWith({ onSuccess: expect.any(Function) });
+      expect(mockPost.mock.calls[0][0].embedUrl).toBeUndefined();
+    });
+
+    it('embeds the removed link again once restored', () => {
+      mockContent = `Read ${LINK}`;
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      act(() => {
+        result.current.removeEmbed();
+      });
+      act(() => {
+        result.current.restoreEmbed();
+      });
+
+      expect(result.current.embedUrl).toBe(LINK);
+      expect(result.current.isEmbedRemoved).toBe(false);
+    });
+
+    it('embeds a different first link again after a removal', () => {
+      mockContent = `Read ${LINK}`;
+
+      const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      act(() => {
+        result.current.removeEmbed();
+      });
+      mockContent = 'Read https://luma.com/376whqyw';
+      rerender();
+
+      expect(result.current.embedUrl).toBe('https://luma.com/376whqyw');
+      expect(result.current.isEmbedRemoved).toBe(false);
+    });
+
+    describe('with several links', () => {
+      const LUMA = 'https://luma.com/376whqyw';
+      const OSM = 'https://www.openstreetmap.org/node/240109189';
+
+      it('starts at the first link when the text writes it with trailing punctuation', () => {
+        mockContent = `(what about https://a.example/x?) or ${LUMA}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedChoices).toHaveLength(2);
+        expect(result.current.embedChoices[0]).toBe(result.current.embedUrl);
+        expect(result.current.embedChoices[1]).toBe(LUMA);
+      });
+
+      it('offers no choice for a single link', () => {
+        mockContent = `Read ${LINK}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedChoices).toEqual([]);
+      });
+
+      it('starts at the first link and lists every link that can be embedded', () => {
+        mockContent = `Read ${LINK}, example.org/plain, ${LUMA} and ${OSM}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedUrl).toBe(LINK);
+        expect(result.current.embedChoices).toEqual([LINK, LUMA, OSM]);
+      });
+
+      it('embeds the link picked from the list, and ignores one the text does not hold', () => {
+        mockContent = `Read ${LINK}, ${LUMA} and ${OSM}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        act(() => result.current.pickEmbed(OSM));
+        expect(result.current.embedUrl).toBe(OSM);
+        expect(result.current.embedChoices).toEqual([LINK, LUMA, OSM]);
+
+        act(() => result.current.pickEmbed('https://elsewhere.example/'));
+        expect(result.current.embedUrl).toBe(OSM);
+      });
+
+      it('publishes the picked link as the embed', async () => {
+        mockContent = `Read ${LINK} and ${LUMA}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        act(() => result.current.pickEmbed(LUMA));
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockPost).toHaveBeenCalledWith({ embedUrl: LUMA, onSuccess: expect.any(Function) });
+      });
+
+      it('keeps the pick while the text holds it, and falls back to the first link once it is gone', () => {
+        mockContent = `Read ${LINK} and ${LUMA}`;
+
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        act(() => result.current.pickEmbed(LUMA));
+        mockContent = `Now read ${LINK}, ${OSM} and ${LUMA}`;
+        rerender();
+        expect(result.current.embedUrl).toBe(LUMA);
+        expect(result.current.embedChoices).toEqual([LINK, OSM, LUMA]);
+
+        mockContent = `Now read ${LINK} and ${OSM}`;
+        rerender();
+        expect(result.current.embedUrl).toBe(LINK);
+
+        // A link typed again later is not picked again: the pick went with it
+        mockContent = `Now read ${LINK}, ${OSM} and ${LUMA}`;
+        rerender();
+        expect(result.current.embedUrl).toBe(LINK);
+      });
+
+      it('counts two spellings of one link once', () => {
+        mockContent = `Read ${LUMA}#one and ${LUMA}#two`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedUrl).toBe(`${LUMA}#one`);
+        expect(result.current.embedChoices).toEqual([]);
+      });
+
+      it('removes and restores the picked link', () => {
+        mockContent = `Read ${LINK} and ${LUMA}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        act(() => result.current.pickEmbed(LUMA));
+        act(() => result.current.removeEmbed());
+        expect(result.current.embedUrl).toBeNull();
+        expect(result.current.embedChoices).toEqual([]);
+        expect(result.current.isEmbedRemoved).toBe(true);
+
+        act(() => result.current.restoreEmbed());
+        expect(result.current.embedUrl).toBe(LUMA);
+      });
+
+      it('offers no other link when the first one cannot be embedded', () => {
+        mockContent = `Read example.org/plain then ${LINK} and ${LUMA}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedUrl).toBeNull();
+        expect(result.current.embedChoices).toEqual([]);
+      });
+    });
+
+    describe('in an edit', () => {
+      const LUMA = 'https://luma.com/376whqyw';
+      const TEXT = `Read ${LINK} and ${LUMA}`;
+      const renderEdit = (options: { editEmbedUrl?: string | null } = {}) =>
+        renderHook(() =>
+          usePostInput({ variant: 'edit', editPostId: 'post-to-edit-id', editContent: TEXT, ...options }),
+        );
+
+      beforeEach(() => {
+        mockContent = TEXT;
+      });
+
+      it('starts from the stored embed, not the first link', () => {
+        const { result } = renderEdit({ editEmbedUrl: LUMA });
+
+        expect(result.current.embedUrl).toBe(LUMA);
+        expect(result.current.embedChoices).toEqual([LINK, LUMA]);
+        expect(result.current.isEmbedRemoved).toBe(false);
+      });
+
+      it('matches the stored embed Nexus serves normalized to the link as the text writes it', () => {
+        mockContent = `Read ${LINK} and ${LUMA}#event`;
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            editContent: mockContent,
+            editEmbedUrl: LUMA,
+          }),
+        );
+
+        expect(result.current.embedUrl).toBe(`${LUMA}#event`);
+      });
+
+      it('starts with the first link not embedded when the post embeds none', () => {
+        const { result } = renderEdit({ editEmbedUrl: null });
+
+        expect(result.current.embedUrl).toBeNull();
+        expect(result.current.isEmbedRemoved).toBe(true);
+
+        act(() => result.current.restoreEmbed());
+        expect(result.current.embedUrl).toBe(LINK);
+      });
+
+      it('falls back to the first link when the stored embed is no longer in the text', () => {
+        const { result } = renderEdit({ editEmbedUrl: 'https://gone.example/page' });
+
+        expect(result.current.embedUrl).toBe(LINK);
+      });
+
+      it.each([
+        [
+          'switched to another link',
+          (r: { current: ReturnType<typeof usePostInput> }) => r.current.pickEmbed(LINK),
+          LINK,
+        ],
+        ['removed', (r: { current: ReturnType<typeof usePostInput> }) => r.current.removeEmbed(), null],
+      ])('saves the embed %s', async (_name, change, expected) => {
+        const { result } = renderEdit({ editEmbedUrl: LUMA });
+
+        act(() => change(result));
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockEdit).toHaveBeenCalledWith(
+          expect.objectContaining({ editPostId: 'post-to-edit-id', embedUrl: expected }),
+        );
+      });
+
+      it.each([
+        ['left as it is', LUMA, () => {}],
+        [
+          'switched away and back',
+          LUMA,
+          (r: { current: ReturnType<typeof usePostInput> }) => {
+            act(() => r.current.pickEmbed(LINK));
+            act(() => r.current.pickEmbed(LUMA));
+          },
+        ],
+        ['none, with the link not embedded', null, () => {}],
+        // The render offers no link while the first one cannot be embedded
+        ['behind a first link that cannot be embedded', LUMA, () => {}, `see example.com/x and ${LUMA}`],
+      ])('keeps the stored embed when it is %s', async (_name, stored, change, text = TEXT) => {
+        mockContent = text;
+        const { result } = renderHook(() =>
+          usePostInput({ variant: 'edit', editPostId: 'post-to-edit-id', editContent: text, editEmbedUrl: stored }),
+        );
+
+        change(result);
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockEdit).toHaveBeenCalledTimes(1);
+        expect(mockEdit.mock.calls[0][0].embedUrl).toBeUndefined();
+      });
+
+      it.each([
+        ['moves to the next link once the text loses the embedded one', `Read ${LINK}`, LINK],
+        ['is dropped once the text holds no link', 'no links', null],
+      ])('writes the embed that %s', async (_name, text, expected) => {
+        const { result, rerender } = renderEdit({ editEmbedUrl: LUMA });
+
+        mockContent = text;
+        rerender();
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockEdit).toHaveBeenCalledWith(expect.objectContaining({ embedUrl: expected }));
+      });
+
+      it('saves the first link it shows when the stored embed is no longer in the text', async () => {
+        const { result } = renderEdit({ editEmbedUrl: 'https://gone.example/page' });
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockEdit).toHaveBeenCalledWith(expect.objectContaining({ embedUrl: LINK }));
+      });
+
+      it('embeds the link again in a post that embeds none', async () => {
+        const { result } = renderEdit({ editEmbedUrl: null });
+
+        act(() => result.current.restoreEmbed());
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockEdit).toHaveBeenCalledWith(expect.objectContaining({ embedUrl: LINK }));
+      });
+
+      it('keeps the seeded pick when the text arrives from an effect in the same commit, as PostInput sets it', () => {
+        mockContent = '';
+        const { result } = renderHook(() => {
+          const [, rerender] = useState(0);
+          const input = usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            editContent: TEXT,
+            editEmbedUrl: LUMA,
+          });
+          // PostInput's mount effect runs after the hook's and sets the text (here the mocked usePost's)
+          useEffect(() => {
+            mockContent = TEXT;
+            rerender(1);
+          }, []);
+          return input;
+        });
+
+        expect(result.current.embedUrl).toBe(LUMA);
+      });
+
+      it('leaves the stored embed alone in a repost or a post whose embed is unknown', async () => {
+        const { result } = renderEdit();
+
+        expect(result.current.embedUrl).toBeNull();
+        expect(result.current.isEmbedRemoved).toBe(false);
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockEdit).toHaveBeenCalledTimes(1);
+        expect(mockEdit.mock.calls[0][0].embedUrl).toBeUndefined();
+      });
     });
   });
 

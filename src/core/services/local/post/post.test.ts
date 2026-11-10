@@ -1375,6 +1375,44 @@ describe('LocalPostService', () => {
       }
     });
 
+    describe('embedded link', () => {
+      const LINK = 'https://tidal.com/track/3524506';
+      const OTHER = 'https://luma.com/376whqyw';
+      const readRelationships = () => PostRelationshipsModel.table.get(testData.fullPostId1);
+
+      it('moves the web embed Nexus served, and drops it with null', async () => {
+        await setupExistingPost(testData.fullPostId1, `${LINK} ${OTHER}`);
+        await PostRelationshipsModel.table.update(testData.fullPostId1, { embedded: LINK });
+
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'x', embed: OTHER });
+        expect(await readRelationships()).toMatchObject({ embedded: OTHER, reposted: null });
+
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'x', embed: null });
+        expect(await readRelationships()).toMatchObject({ embedded: null, reposted: null });
+      });
+
+      it('moves a web embed a post created here holds in reposted', async () => {
+        await setupExistingPost(testData.fullPostId1, `${LINK} ${OTHER}`);
+        await PostRelationshipsModel.table.update(testData.fullPostId1, { reposted: LINK });
+
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'x', embed: OTHER });
+
+        expect(await readRelationships()).toMatchObject({ embedded: OTHER, reposted: null });
+      });
+
+      it("never touches a repost's post, nor the relationships of an edit without an embed", async () => {
+        const original = `pubky://${testData.authorPubky}/pub/social/v1/posts/0035QZPT4QG00`;
+        await setupExistingPost(testData.fullPostId1, 'Quote');
+        await PostRelationshipsModel.table.update(testData.fullPostId1, { reposted: original });
+
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'x', embed: OTHER });
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'y' });
+
+        expect(await readRelationships()).toMatchObject({ reposted: original });
+        expect((await readRelationships())?.embedded).toBeUndefined();
+      });
+    });
+
     it('clears the deleted flag when an edit restores live content', async () => {
       const postId = testData.fullPostId1;
       await setupExistingPost(postId, 'Original content');
