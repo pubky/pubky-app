@@ -289,6 +289,22 @@ describe('NativeEmbedResource', () => {
       }
     });
 
+    describe('with Card (no player) above YouTube in Players', () => {
+      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('keeps the frame of a link Pinakes does not know, its embed only from Play on', () => {
+        mockCard(null);
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        const frame = screen.getByTestId('resource-embed-frame');
+        expect(embed).not.toHaveBeenCalled();
+        expect(document.querySelector('iframe')).toBeNull();
+        fireEvent.click(within(frame).getByRole('button', { name: 'Play on YouTube' }));
+        expect(within(frame).getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('platform-embed'));
+      });
+    });
+
     describe('with platform embeds up front off', () => {
       beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
       afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
@@ -304,11 +320,93 @@ describe('NativeEmbedResource', () => {
         expect(within(frame).getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
       });
 
-      it('keeps the embed of a video the card player cannot play, which would have no Play on', () => {
+      it('shows our card for a video the card player cannot play, its embed only from Play on', () => {
         mockCard({ ...VIDEO_ALONE, status: 'missing' });
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-        expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('platform-embed')).toBeInTheDocument();
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(embed).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByTestId('show-embed'));
+        expect(within(screen.getByTestId('resource-card')).getByTestId('platform-embed')).toBeInTheDocument();
+        expect(screen.getByTestId('show-embed')).toHaveAccessibleName('Close the YouTube video');
+      });
+
+      it('keeps the frame of a link Pinakes does not know, its embed only from Play on, and closes it again', () => {
+        mockCard(null);
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        const frame = screen.getByTestId('resource-embed-frame');
+        expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', VIDEO_URL);
+        expect(embed).not.toHaveBeenCalled();
+        // No empty body under the header while nothing is loaded
+        expect(within(frame).queryByTestId('resource-embed-body')).not.toBeInTheDocument();
+
+        fireEvent.click(within(frame).getByRole('button', { name: 'Play on YouTube' }));
+        expect(within(frame).getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('platform-embed'));
+        fireEvent.click(within(frame).getByRole('button', { name: 'Close the YouTube video' }));
+        expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+        expect(within(frame).queryByTestId('resource-embed-body')).not.toBeInTheDocument();
+      });
+
+      it('keeps an embed opened before Pinakes knew the link when its card is read later', () => {
+        mockCard(null);
+        const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+
+        mockCard(VIDEO_ALONE);
+        rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        const frame = screen.getByTestId('resource-embed-frame');
+        expect(within(frame).getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('platform-embed'));
+        expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+
+        // Closed, the player's stand-in takes its place.
+        fireEvent.click(within(frame).getByRole('button', { name: 'Close the YouTube video' }));
+        expect(screen.getByTestId('embed-player')).toBeInTheDocument();
+        expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+      });
+
+      it('closes an embed opened and pressed in before its card was read', () => {
+        vi.useFakeTimers();
+        try {
+          mockCard(null);
+          const withFrame = vi.fn<RenderNativeEmbed>(() => <iframe title="player" data-testid="platform-embed" />);
+          const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
+          fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+          const player = screen.getByTestId('platform-embed');
+          act(() => {
+            fireEvent.mouseOver(player);
+            player.focus();
+            window.dispatchEvent(new Event('blur'));
+            vi.advanceTimersByTime(1);
+          });
+
+          mockCard(VIDEO_ALONE);
+          rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
+          expect(screen.getByTestId('platform-embed')).toBe(player);
+
+          fireEvent.click(screen.getByRole('button', { name: 'Close the YouTube video' }));
+          expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+          expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('closes an opened embed the platform cannot show, Play on back in its place', () => {
+        mockCard(null);
+        let fail: () => void = () => {};
+        const failing = vi.fn<RenderNativeEmbed>(({ onError }) => {
+          fail = onError;
+          return <div data-testid="platform-embed" />;
+        });
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={failing} />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+        expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+        act(() => fail());
+        expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
       });
 
       it('shows an X post on our card, its embed only from Show on', () => {
@@ -337,6 +435,69 @@ describe('NativeEmbedResource', () => {
       // No Show on for a post the platform cannot show.
       expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
     });
+  });
+
+  describe('a video with Also on the card player cannot play', () => {
+    // Gone upstream, and Also on only on services without a player: the card player has nothing to play.
+    const gone = () =>
+      mockCard({
+        ...videoFixture,
+        status: 'missing',
+        also_on: videoFixture.also_on.filter((entry) => entry.site === 'MusicBrainz'),
+      });
+
+    it('shows the platform embed up front, its only source: no card, no switch, no Play on', () => {
+      gone();
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+      expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('platform-embed')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+    });
+
+    it('offers the platform embed from Play on, with platform embeds up front off', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      try {
+        gone();
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.queryByTestId('play-on-main')).not.toBeInTheDocument();
+        expect(embed).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+        expect(within(screen.getByTestId('resource-card')).getByTestId('platform-embed')).toBeInTheDocument();
+      } finally {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      }
+    });
+  });
+
+  it('offers the platform embed of a video whose other services are all removed from Players', () => {
+    try {
+      // Gone upstream, and Also on only on services the viewer removed from Players (or without a
+      // player): the card player has nothing to play.
+      useSettingsStore.setState({
+        media: {
+          ...defaultMediaPreferences,
+          embedsUpFront: false,
+          hiddenPlayers: ['tidal', 'deezer', 'spotify', 'apple-music'],
+        },
+      });
+      mockCard({
+        ...videoFixture,
+        status: 'missing',
+        also_on: videoFixture.also_on.filter((entry) => entry.site !== 'YouTube'),
+      });
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.queryByTestId('play-on-main')).not.toBeInTheDocument();
+      expect(screen.getByTestId('show-embed')).toBeInTheDocument();
+      expect(embed).not.toHaveBeenCalled();
+    } finally {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+    }
   });
 
   it('holds the place with the card’s skeleton while Pinakes reads, then shows the embed after 5 s', () => {
