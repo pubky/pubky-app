@@ -1,8 +1,8 @@
 'use client';
 
+import { type ReactNode, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
-import type { ReactNode } from 'react';
 import { AUTH_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
 import { DEFAULT_THEME, THEME_CLASSES, THEME_STORAGE_KEY } from '@/config/theme';
 import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
@@ -48,8 +48,24 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const pathname = usePathname();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const isSignedIn = useAuthStore((state) => selectDisplayUserPubky(state) !== null);
+  // Public documents render without AuthCoordinator, so their store never adopts another tab's sign-in or sign-out.
+  // Until this tab's store changes again, follow the session another tab last stored.
+  const [storedByOtherTab, setStoredByOtherTab] = useState<boolean | null>(null);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === AUTH_PERSIST_KEY || event.key === null) setStoredByOtherTab(hasStoredSession(AUTH_PERSIST_KEY));
+    };
+    window.addEventListener('storage', onStorage);
+    const unsubscribe = useAuthStore.subscribe(() => setStoredByOtherTab(null));
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      unsubscribe();
+    };
+  }, []);
   // Until the store rehydrates, read the session it will load; the server leaves that to the script.
-  const hasSession = hasHydrated ? isSignedIn : typeof window === 'undefined' || hasStoredSession(AUTH_PERSIST_KEY);
+  const hasSession = hasHydrated
+    ? (storedByOtherTab ?? isSignedIn)
+    : typeof window === 'undefined' || hasStoredSession(AUTH_PERSIST_KEY);
   const isSignedOut = SIGNED_OUT_ROUTES.includes(pathname) || !hasSession;
 
   return (

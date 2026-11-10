@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
@@ -6,10 +6,11 @@ import { mockSession } from '@/test-utils/pubky';
 import { mockAuthStore } from '@/test-utils/stores';
 import { ThemeProvider } from './ThemeProvider';
 
-const { providerProps, mockPathname, authState } = vi.hoisted(() => ({
+const { providerProps, mockPathname, authState, authListeners } = vi.hoisted(() => ({
   providerProps: vi.fn(),
   mockPathname: { current: '/home' },
   authState: { current: {} as Partial<AuthStore> },
+  authListeners: new Set<() => void>(),
 }));
 
 vi.mock('next-themes', () => ({
@@ -24,7 +25,12 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: <T,>(selector: (state: AuthStore) => T) => selector(mockAuthStore(authState.current)),
+  useAuthStore: Object.assign(<T,>(selector: (state: AuthStore) => T) => selector(mockAuthStore(authState.current)), {
+    subscribe: (listener: () => void) => {
+      authListeners.add(listener);
+      return () => authListeners.delete(listener);
+    },
+  }),
 }));
 
 const MEMBER: Partial<AuthStore> = { hasHydrated: true, currentUserPubky: 'pubky-1', session: mockSession() };
@@ -93,6 +99,53 @@ describe('ThemeProvider', () => {
 
     storeSession();
     expect(forcedTheme()).toBeUndefined();
+  });
+
+  describe('another tab changing the session on a public document', () => {
+    function announceStoredAuth() {
+      act(() => window.dispatchEvent(new StorageEvent('storage', { key: AUTH_PERSIST_KEY })));
+    }
+
+    function lastForcedTheme() {
+      return providerProps.mock.lastCall?.[0].forcedTheme;
+    }
+
+    beforeEach(() => {
+      mockPathname.current = '/privacy-policy';
+    });
+
+    it('lets the stored preference apply after another tab signs in', () => {
+      authState.current = GUEST;
+      render(<ThemeProvider>{null}</ThemeProvider>);
+      expect(lastForcedTheme()).toBe('dark');
+
+      storeSession();
+      announceStoredAuth();
+
+      expect(lastForcedTheme()).toBeUndefined();
+    });
+
+    it('forces dark after another tab signs out', () => {
+      storeSession();
+      render(<ThemeProvider>{null}</ThemeProvider>);
+      expect(lastForcedTheme()).toBeUndefined();
+
+      localStorage.removeItem(AUTH_PERSIST_KEY);
+      announceStoredAuth();
+
+      expect(lastForcedTheme()).toBe('dark');
+    });
+
+    it('follows this tab again once its auth store changes', () => {
+      authState.current = GUEST;
+      render(<ThemeProvider>{null}</ThemeProvider>);
+      storeSession();
+      announceStoredAuth();
+
+      act(() => authListeners.forEach((listener) => listener()));
+
+      expect(lastForcedTheme()).toBe('dark');
+    });
   });
 
   describe('pre-paint script', () => {
