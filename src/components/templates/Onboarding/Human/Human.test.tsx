@@ -5,6 +5,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import { Human } from './Human';
 
 const mockPush = vi.fn();
+const mockBack = vi.fn();
 const mockResetOnboarding = vi.fn();
 const mockSetInviteCode = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
@@ -29,6 +30,7 @@ const INVITE_CODE_TOASTS = {
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    back: mockBack,
   }),
 }));
 
@@ -84,6 +86,7 @@ function goToInviteCodeAndVerify() {
 describe('Human template', () => {
   beforeEach(() => {
     mockPush.mockClear();
+    mockBack.mockClear();
     vi.mocked(toast).mockReset();
     vi.mocked(toast).mockReturnValue({ dismiss: vi.fn() });
     mockResetOnboarding.mockClear();
@@ -96,6 +99,12 @@ describe('Human template', () => {
     render(<Human />);
 
     expect(screen.getByTestId('human-selection')).toBeInTheDocument();
+  });
+
+  it('returns to the previous screen from the selection Back button', () => {
+    render(<Human />);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(mockBack).toHaveBeenCalledTimes(1);
   });
 
   describe('invite code verification', () => {

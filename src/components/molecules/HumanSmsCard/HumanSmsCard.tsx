@@ -1,12 +1,12 @@
 'use client';
-import { Check, Smartphone, TriangleAlert } from 'lucide-react';
-import { Badge } from '@/atoms/Badge/Badge';
+import { Smartphone } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo/useSmsVerificationInfo';
 import { cn } from '@/libs/utils/utils';
+import { HumanVerificationStatus } from '../HumanVerificationStatus/HumanVerificationStatus';
 import { IllustratedCard } from '../IllustratedCard/IllustratedCard';
 import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
@@ -26,114 +26,71 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
     return <HumanSmsCardSkeleton />;
   }
   return (
-    <Container className="relative flex-1">
+    <Container className="contents lg:relative lg:flex lg:min-w-0">
       <IllustratedCard
         data-testid="sms-verification-card"
-        className={cn('flex-1 rounded-md', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
-        contentClassName="gap-4 lg:gap-6"
+        className={cn(
+          'contents lg:flex lg:flex-1 lg:rounded-md',
+          isUnavailable && 'lg:pointer-events-none lg:opacity-50 lg:blur-xs',
+        )}
+        layout="column"
+        layoutClassName="contents lg:flex lg:flex-1 lg:gap-6"
+        contentClassName="contents lg:flex"
+        visualClassName="mx-auto"
         visual={
           <Image
             priority
             src="/images/sms-verification-phone.webp"
             alt="Lime Pubky phone representing phone number verification"
+            width={192}
+            height={192}
             className="size-48"
           />
         }
       >
-        <Container className="flex-col gap-3">
-          <Container className="flex-row items-center justify-between gap-4 lg:justify-start">
-            <Typography
-              as="h3"
-              className="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
-            >
-              {'Phone Number'}
-            </Typography>
-            <Badge
-              variant="secondary"
-              className="rounded-md border-0 bg-primary px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground uppercase lg:hidden"
-            >
-              {'Free'}
-            </Badge>
-          </Container>
-
-          <Typography as="p" className="hidden text-5xl leading-none font-bold text-brand lg:block lg:text-6xl">
-            {'Free'}
+        <Container className="hidden gap-3 lg:flex">
+          <Typography as="h3" className="text-xl leading-7 font-bold text-foreground lg:text-2xl lg:leading-8">
+            {'Phone verification'}
           </Typography>
+          <Typography as="p" className="text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase">
+            {'Easy and free'}
+          </Typography>
+        </Container>
 
-          <Typography
-            as="p"
-            className="mt-1 text-sm font-bold tracking-widest text-muted-foreground uppercase lg:mt-0 lg:text-xs lg:font-medium lg:tracking-[1.2px]"
+        <div className="relative lg:mt-auto">
+          <Button
+            data-testid="human-sms-card-receive-sms-btn"
+            variant={ButtonVariant.SECONDARY}
+            size="lg"
+            className="w-full border-0 disabled:opacity-40"
+            onClick={onClick}
+            disabled={isUnavailable}
           >
-            {'LESS PRIVATE, BUT EASY'}
-          </Typography>
-
-          <Container className="hidden flex-col lg:flex">
-            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {'1GB storage'}
-            </Typography>
-            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {'1MB/s speed limit'}
-            </Typography>
-          </Container>
-        </Container>
-
-        <Container className="gap-2 lg:hidden">
-          <Container className="flex-row items-center gap-2">
-            <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
-            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {'1GB storage'}
-            </Typography>
-          </Container>
-          <Container className="flex-row items-center gap-2">
-            <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
-            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {'1MB/s speed limit'}
-            </Typography>
-          </Container>
-        </Container>
-
-        <Button
-          data-testid="human-sms-card-receive-sms-btn"
-          variant={ButtonVariant.SECONDARY}
-          className="h-10 w-full shrink-0 rounded-full px-4 text-sm font-semibold shadow-xs lg:w-auto lg:self-start"
-          onClick={onClick}
-          disabled={isUnavailable}
-        >
-          <Smartphone className="mr-2 size-4" />
-          {'Receive Code'}
-        </Button>
+            <Smartphone className="size-4" aria-hidden="true" />
+            {'Phone number'}
+          </Button>
+          {isUnavailable && (
+            <div className="lg:hidden">
+              <HumanVerificationStatus
+                layout="mobile"
+                reason={isGeoblocked ? 'geoblocked' : 'error'}
+                method="phone"
+                testId="geoblock-alert-mobile"
+              />
+            </div>
+          )}
+        </div>
       </IllustratedCard>
 
-      {/* Geoblocking overlay badge */}
-      {isGeoblocked && (
-        <Container
-          overrideDefaults
-          data-testid="geoblock-alert"
-          className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive-button px-6 py-3 shadow-xl"
-        >
-          <Container overrideDefaults className="pt-0.5">
-            <TriangleAlert className="size-4 text-destructive-foreground" />
-          </Container>
-          <Typography overrideDefaults className="text-sm font-semibold whitespace-nowrap text-destructive-foreground">
-            {'Currently not available in your country'}
-          </Typography>
-        </Container>
-      )}
-
-      {/* Generic error overlay badge */}
-      {isError && (
-        <Container
-          overrideDefaults
-          data-testid="service-error-alert"
-          className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive-button px-6 py-3 shadow-xl"
-        >
-          <Container overrideDefaults className="pt-0.5">
-            <TriangleAlert className="size-4 text-destructive-foreground" />
-          </Container>
-          <Typography overrideDefaults className="text-sm font-semibold whitespace-nowrap text-destructive-foreground">
-            {'Service temporarily unavailable'}
-          </Typography>
-        </Container>
+      {isUnavailable && (
+        <div className="hidden lg:contents">
+          <HumanVerificationStatus
+            layout="desktop"
+            reason={isGeoblocked ? 'geoblocked' : 'error'}
+            method="phone"
+            testId={isGeoblocked ? 'geoblock-alert' : 'service-error-alert'}
+          />
+        </div>
       )}
     </Container>
   );

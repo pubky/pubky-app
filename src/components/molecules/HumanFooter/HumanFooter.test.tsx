@@ -104,4 +104,11 @@ describe('HumanFooter', () => {
     expect(screen.getByTestId('footer-links')).toHaveTextContent('By joining, continuing, or creating a Pubky account');
     expect(screen.getByTestId('footer-links')).toHaveTextContent('over 18 years old. Pubky is powered by');
   });
+
+  it('reuses the homepage brand links when requested', () => {
+    render(<HumanFooter variant="inline" showBranding />);
+
+    expect(screen.getByRole('link', { name: 'Synonym' })).toHaveAttribute('href', 'https://synonym.to');
+    expect(screen.getByRole('link', { name: 'a tether. company' })).toHaveAttribute('href', 'https://tether.io/');
+  });
 });

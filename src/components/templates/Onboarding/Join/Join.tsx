@@ -57,11 +57,11 @@ export function Join() {
   );
 
   return (
-    <OnboardingLayout testId="join-content">
-      <PageHeader>
+    <OnboardingLayout testId="join-content" className="pt-0 md:pt-4">
+      <PageHeader className="pt-0 md:pt-2">
         <PageTitle size="large">
-          {"Let's join "}
-          <span className="text-brand">{'Pubky.'}</span>
+          {'Let’s join '}
+          <span className="block text-brand md:inline">{'Pubky.'}</span>
         </PageTitle>
         <PageSubtitle className="hidden md:block">{'How would you like to create your pubky?'}</PageSubtitle>
       </PageHeader>
@@ -95,18 +95,20 @@ export function Join() {
         {isPassportEnabled && <PassportMethodCard onContinue={startPassportAuth} isPending={isPending} />}
       </Container>
 
-      {/* Mobile: stacked labelled sections */}
+      {/* Mobile: compact method cards */}
       <Container className="gap-6 md:hidden" data-testid="join-methods-mobile">
-        <Container className="gap-3">
-          <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
+        <Container className="gap-4 rounded-md bg-card p-6" data-testid="join-sovereign-card-mobile">
+          <Typography as="h3" className="text-xl leading-7 font-bold">
             {SOVEREIGN_METHOD_TITLE}
           </Typography>
           {manageOwnKeysButton}
         </Container>
-        {isPassportEnabled && <PassportMethodSection onContinue={startPassportAuth} isPending={isPending} />}
+        {isPassportEnabled && (
+          <PassportMethodSection variant="card" onContinue={startPassportAuth} isPending={isPending} />
+        )}
       </Container>
 
-      <HumanFooter variant="inline" />
+      <HumanFooter variant="inline" showBranding />
     </OnboardingLayout>
   );
 }

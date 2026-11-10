@@ -35,6 +35,14 @@ describe('PassportMethodCard', () => {
 });
 
 describe('PassportMethodSection', () => {
+  it('renders the card variant with a heading and preserves the pending state', () => {
+    render(<PassportMethodSection variant="card" onContinue={vi.fn()} isPending />);
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Quick & Easy' })).toBeInTheDocument();
+    expect(screen.getByTestId('passport-method-section')).toHaveClass('bg-card', 'p-6');
+    expect(screen.getByTestId('continue-with-google')).toBeDisabled();
+  });
+
   it('renders the uppercase label and button for the mobile layout', () => {
     const onContinue = vi.fn();
     render(<PassportMethodSection onContinue={onContinue} isPending={false} />);

@@ -52,12 +52,12 @@ describe('SmsVerificationCard', () => {
 
     // Check for geoblocking alert
     expect(screen.getByTestId('geoblock-alert')).toBeInTheDocument();
-    expect(screen.getByText(/Currently not available in your country/i)).toBeInTheDocument();
+    expect(screen.getByText(/Not available in your country/i)).toBeInTheDocument();
 
     // Card should have blur class
     const card = screen.getByTestId('sms-verification-card');
-    expect(card).toHaveClass('blur-[5px]');
-    expect(card).toHaveClass('opacity-60');
+    expect(card).toHaveClass('lg:blur-xs');
+    expect(card).toHaveClass('lg:opacity-50');
 
     // Button should be disabled
     expect(screen.getByTestId('human-sms-card-receive-sms-btn')).toBeDisabled();
@@ -100,11 +100,11 @@ describe('SmsVerificationCard', () => {
 
     // Should NOT show geoblocking message
     expect(screen.queryByTestId('geoblock-alert')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Currently not available in your country/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not available in your country/i)).not.toBeInTheDocument();
 
     // Card should still have blur class (service unavailable)
     const card = screen.getByTestId('sms-verification-card');
-    expect(card).toHaveClass('blur-[5px]');
+    expect(card).toHaveClass('lg:blur-xs');
 
     // Button should be disabled
     expect(screen.getByTestId('human-sms-card-receive-sms-btn')).toBeDisabled();

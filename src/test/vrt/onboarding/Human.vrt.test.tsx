@@ -3,6 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -10,6 +11,8 @@ import { Header } from '@/organisms/Header/Header';
 import { Human } from '@/templates/Onboarding/Human/Human';
 import { Toaster } from '@/molecules/Toaster/Toaster';
 import { AuthController } from '@/controllers/auth/auth';
+import { useLnVerificationInfo } from '@/hooks/useLnVerificationInfo/useLnVerificationInfo';
+import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo/useSmsVerificationInfo';
 
 // The real app mounts <Header /> from the root layout above every page; on
 // /onboarding/* it renders the "Create account" step bar (1–5). Render it here
@@ -78,11 +81,11 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 // and CI region). Pin both to the "available" happy path so the snapshot is
 // the real cards, not a flaky skeleton or blurred/unavailable state.
 vi.mock('@/hooks/useSmsVerificationInfo/useSmsVerificationInfo', () => ({
-  useSmsVerificationInfo: () => ({ available: true as const }),
+  useSmsVerificationInfo: vi.fn(),
 }));
 
 vi.mock('@/hooks/useLnVerificationInfo/useLnVerificationInfo', () => ({
-  useLnVerificationInfo: () => ({ available: true as const, amountSat: 1000 }),
+  useLnVerificationInfo: vi.fn(),
 }));
 
 // The card reads `useBtcRate().rate`. A flat rate object leaves `rate` undefined,
@@ -96,15 +99,12 @@ vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
 }));
 
 async function waitForVerificationCards(screen: Awaited<ReturnType<typeof renderForVRT>>) {
-  await expect.element(screen.getByTestId('sms-verification-card')).toBeVisible();
   await expect.element(screen.getByTestId('human-sms-card-receive-sms-btn')).toBeVisible();
-  await expect.element(screen.getByTestId('bitcoin-payment-card')).toBeVisible();
-  // The card paints before the price. Both the phone badge and the desktop
-  // headline say "₿ 1,000"; a remaining skeleton means the rate has not landed.
+  // Wait for the live price and conversion to settle before capturing.
   await expect
     .poll(() => {
       const card = document.querySelector('[data-testid="bitcoin-payment-card"]');
-      return Boolean(card?.textContent?.includes('₿ 1,000') && card.querySelector('[data-slot="skeleton"]') === null);
+      return Boolean(card?.textContent?.includes('₿1,000') && card.querySelector('[data-slot="skeleton"]') === null);
     })
     .toBe(true);
 }
@@ -112,20 +112,89 @@ async function waitForVerificationCards(screen: Awaited<ReturnType<typeof render
 describe('Human (onboarding) — visual regression', () => {
   beforeEach(() => {
     vi.mocked(AuthController.verifySignupToken).mockReset().mockResolvedValue('valid');
+    vi.mocked(useLnVerificationInfo).mockReturnValue({ available: true, amountSat: 1000 });
+    vi.mocked(useSmsVerificationInfo).mockReturnValue({ available: true });
   });
 
   it('renders the human-verification selection at desktop viewport', async () => {
-    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp']);
+    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp', '/images/gift.webp']);
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
     await waitForVerificationCards(screen);
     await matchVrtFrameScreenshot('onboarding-human-desktop');
   });
 
   it('renders the human-verification selection at mobile viewport', async () => {
-    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp']);
+    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp', '/images/gift.webp']);
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await waitForVerificationCards(screen);
     await matchVrtFrameScreenshot('onboarding-human-mobile');
+  });
+
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders the geo-blocked payment option on %s', async (name, viewport) => {
+    vi.mocked(useLnVerificationInfo).mockReturnValue({ available: false });
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport });
+    if (name === 'desktop') {
+      await expect.element(screen.getByRole('status')).toHaveTextContent('Not available in your country');
+    } else {
+      await expect.element(screen.getByRole('button', { name: 'Why Bitcoin payment is unavailable' })).toBeVisible();
+    }
+    await expect.element(screen.getByRole('button', { name: 'Bitcoin payment' })).toBeDisabled();
+    await expect.element(screen.getByRole('button', { name: 'Phone number' })).toBeEnabled();
+    await expect.element(screen.getByRole('button', { name: 'Invite code' })).toBeEnabled();
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
+    await matchVrtFrameScreenshot(`onboarding-human-geoblocked-${name}`);
+  });
+
+  it('explains the blocked payment on tap at the Figma mobile width', async () => {
+    vi.mocked(useLnVerificationInfo).mockReturnValue({ available: false });
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport: { width: 375, height: 812 } });
+    await screen.getByRole('button', { name: 'Why Bitcoin payment is unavailable' }).click();
+    await expect.element(page.getByRole('dialog', { name: 'Not available in your country' })).toBeVisible();
+    await expect.element(page.getByText('Try a different verification method')).toBeVisible();
+    const bounds = page.getByRole('dialog').element().getBoundingClientRect();
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(375);
+    await matchVrtFrameScreenshot('onboarding-human-geoblock-explanation-mobile');
+  });
+
+  it('fits all verification methods and Back at the Figma mobile size', async () => {
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport: { width: 375, height: 812 } });
+    await waitForVerificationCards(screen);
+    for (const name of ['Bitcoin payment ($0.50)', 'Phone number', 'Invite code', 'Back']) {
+      const bounds = screen.getByRole('button', { name, exact: true }).element().getBoundingClientRect();
+      expect(bounds.top).toBeGreaterThanOrEqual(0);
+      expect(bounds.bottom).toBeLessThanOrEqual(812);
+      expect(bounds.left).toBeGreaterThanOrEqual(16);
+      expect(bounds.right).toBeLessThanOrEqual(359);
+    }
+    await matchVrtFrameScreenshot('onboarding-human-figma-mobile');
+  });
+
+  it('keeps the three cards aligned at the Figma desktop width', async () => {
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport: { width: 1280, height: 900 } });
+    await waitForVerificationCards(screen);
+    const cards = ['bitcoin-payment-card', 'sms-verification-card', 'invite-code-option-card'].map((id) =>
+      screen.getByTestId(id).element().getBoundingClientRect(),
+    );
+    for (const card of cards) {
+      expect(card.top).toBeCloseTo(cards[0].top, 0);
+      expect(card.width).toBeCloseTo(384, 0);
+      expect(card.height).toBeCloseTo(cards[0].height, 0);
+    }
+    expect(cards[0].right).toBeLessThan(cards[1].left);
+    expect(cards[1].right).toBeLessThan(cards[2].left);
+    const back = screen.getByRole('button', { name: 'Back', exact: true });
+    await expect.element(back).toBeVisible();
+    const backBounds = back.element().getBoundingClientRect();
+    expect(backBounds.left).toBeCloseTo(cards[0].left, 0);
+    expect(backBounds.top - cards[0].bottom).toBeCloseTo(24, 0);
+    expect(backBounds.height).toBeCloseTo(60, 0);
+    expect(backBounds.width).toBeLessThan(130);
+    await expect.element(screen.getByRole('link', { name: 'Terms of Service' })).not.toBeInTheDocument();
+    await matchVrtFrameScreenshot('onboarding-human-figma-desktop');
   });
 
   it('keeps the invite option and verified navigation reachable on mobile', async () => {
@@ -133,7 +202,8 @@ describe('Human (onboarding) — visual regression', () => {
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await waitForVerificationCards(screen);
 
-    const inviteButton = screen.getByRole('button', { name: 'Enter invite code' });
+    const inviteButton = screen.getByRole('button', { name: 'Invite code' });
+    inviteButton.element().scrollIntoView({ block: 'center' });
     const inviteBounds = inviteButton.element().getBoundingClientRect();
     expect(inviteBounds.top).toBeGreaterThanOrEqual(0);
     expect(inviteBounds.bottom).toBeLessThanOrEqual(VRT_VIEWPORT_MOBILE.height);
@@ -164,14 +234,14 @@ describe('Human (onboarding) — visual regression', () => {
     await matchVrtFrameScreenshot('onboarding-human-invite-verified-mobile');
 
     await screen.getByRole('button', { name: 'Back' }).click();
-    await expect.element(screen.getByTestId('human-verification-cards')).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Invite code' })).toBeVisible();
   });
 
   it('clears an invalid-code toast immediately when the corrected code verifies on mobile', async () => {
     vi.mocked(AuthController.verifySignupToken).mockResolvedValueOnce('invalid').mockResolvedValueOnce('valid');
     await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp', '/images/gift.webp']);
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await screen.getByRole('button', { name: 'Enter invite code' }).click();
+    await screen.getByRole('button', { name: 'Invite code' }).click();
     const input = screen.getByRole('textbox', { name: 'Invite code' });
     await input.fill('AAAA-BBBB-CCCC');
     await expect

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
+import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
 import { toast, type ToastHandle } from '@/molecules/Toaster/toast';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
@@ -89,7 +90,25 @@ export function Human() {
     }
   }
   return (
-    <OnboardingLayout testId="human-content">
+    <OnboardingLayout
+      testId="human-content"
+      className={
+        state === States.Selection
+          ? 'min-h-[calc(100dvh-6rem)] pt-0 sm:min-h-[calc(100dvh-9rem)] lg:min-h-0'
+          : undefined
+      }
+      navigation={
+        state === States.Selection && (
+          <ButtonsNavigation
+            id="human-selection"
+            className="py-0 pt-6"
+            backButtonClassName="h-15 w-full lg:w-auto lg:[&_svg]:mr-0"
+            hiddenContinueButton
+            onHandleBackButton={() => router.back()}
+          />
+        )
+      }
+    >
       {state === States.Selection && (
         <HumanSelection
           onClick={(card) => {

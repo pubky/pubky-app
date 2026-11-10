@@ -6,9 +6,16 @@ import { Link } from '@/atoms/Link/Link';
 import { getPubkyProtocolLink } from '@/config/externalLinks';
 import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { cn } from '@/libs/utils/utils';
+import { HomeBrandFooter } from '@/molecules/Home/Home';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 
-export const HumanFooter = ({ variant = 'default' }: { variant?: 'default' | 'inline' }) => {
+export const HumanFooter = ({
+  variant = 'default',
+  showBranding = false,
+}: {
+  variant?: 'default' | 'inline';
+  showBranding?: boolean;
+}) => {
   const isInline = variant === 'inline';
   const attribution = (
     <>
@@ -39,6 +46,7 @@ export const HumanFooter = ({ variant = 'default' }: { variant?: 'default' | 'in
         {isInline && <> {attribution}</>}
       </FooterLinks>
       {!isInline && <FooterLinks>{attribution}</FooterLinks>}
+      {showBranding && <HomeBrandFooter className="mt-4" />}
     </Container>
   );
 };

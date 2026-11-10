@@ -6,7 +6,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 import { ContinueWithPassport } from '@/molecules/ContinueWithPassport/ContinueWithPassport';
 import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
-import type { PassportMethodCardProps } from './PassportMethodCard.types';
+import type { PassportMethodCardProps, PassportMethodSectionProps } from './PassportMethodCard.types';
 
 export const PASSPORT_METHOD_TITLE = 'Quick & Easy';
 export const PASSPORT_METHOD_DESCRIPTION = 'Use your existing sign-in methods.';
@@ -46,13 +46,25 @@ export function PassportMethodCard({ onContinue, isPending, className }: Passpor
 }
 
 /**
- * Mobile "QUICK & EASY" section: uppercase label plus the "Continue with Google" button, matching
- * the stacked-sections layout of the sign-in and join screens below the `md` breakpoint.
+ * Mobile Passport section: an uppercase label on sign-in, or a compact card with a heading on Join.
  */
-export function PassportMethodSection({ onContinue, isPending, className }: PassportMethodCardProps) {
+export function PassportMethodSection({
+  onContinue,
+  isPending,
+  className,
+  variant = 'label',
+}: PassportMethodSectionProps) {
+  const isCard = variant === 'card';
   return (
-    <Container data-testid="passport-method-section" className={cn('gap-3', className)}>
-      <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
+    <Container
+      data-testid="passport-method-section"
+      className={cn(isCard ? 'gap-4 rounded-md bg-card p-6' : 'gap-3', className)}
+    >
+      <Typography
+        as={isCard ? 'h3' : 'p'}
+        size="xs"
+        className={isCard ? 'text-xl leading-7 font-bold' : 'tracking-[1.2px] text-muted-foreground uppercase'}
+      >
         {PASSPORT_METHOD_TITLE}
       </Typography>
       <ContinueWithPassport onContinue={onContinue} isPending={isPending} />

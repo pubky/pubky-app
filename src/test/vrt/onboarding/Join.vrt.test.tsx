@@ -12,7 +12,13 @@ import { Join } from '@/templates/Onboarding/Join/Join';
 
 // Join renders the keyring and Passport cloud artwork on desktop; the logo is
 // in the header at every width.
-const JOIN_IMAGE_URLS = ['/pubky-logo.svg', '/images/keyring.webp', '/images/passport-cloud.webp'];
+const JOIN_IMAGE_URLS = [
+  '/pubky-logo.svg',
+  '/images/keyring.webp',
+  '/images/passport-cloud.webp',
+  '/images/synonym-grey-logo.svg',
+  '/images/a-tether-company.svg',
+];
 
 // Root layout mounts <Header /> above every page; on /onboarding/join it renders
 // the "Create account" step bar (step 1).
@@ -29,6 +35,7 @@ function JoinWithHeader() {
 // attempt as idle. Override the attempt here so the same file can also capture
 // the "Waiting for Passport..." state that follows a Continue with Google click.
 const passportAttempt = vi.hoisted(() => ({ isPending: false }));
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => true));
 vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => ({
   usePassportAuth: () => ({ startPassportAuth: () => undefined, isPending: passportAttempt.isPending }),
 }));
@@ -65,21 +72,43 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 for (const [name, viewport] of [
   ['desktop', VRT_VIEWPORT_DESKTOP],
   ['mobile', VRT_VIEWPORT_MOBILE],
+  ['figma-mobile', { width: 375, height: 812 }],
 ] as const) {
   describe(`Join (onboarding, Passport) ${name} — visual regression`, () => {
     beforeEach(async () => {
       passportAttempt.isPending = false;
+      mockAppleEnabled.mockReturnValue(true);
       await preloadImages(JOIN_IMAGE_URLS);
     });
 
     it('renders both sign-up methods with the compact Passport button', async () => {
       await renderForVRT(<JoinWithHeader />, { viewport });
       await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await expect.element(page.getByRole('link', { name: 'Synonym' })).toBeVisible();
+      await expect.element(page.getByRole('link', { name: 'a tether. company' })).toBeVisible();
       const subtitle = page.getByText('How would you like to create your pubky?');
-      if (name === 'mobile') {
+      if (name !== 'desktop') {
         await expect.element(subtitle).not.toBeVisible();
       } else {
         await expect.element(subtitle).toBeVisible();
+      }
+      if (name === 'figma-mobile') {
+        const sovereign = page.getByTestId('join-sovereign-card-mobile').element().getBoundingClientRect();
+        const passport = page.getByTestId('passport-method-section').element().getBoundingClientRect();
+        expect(sovereign.top).toBeCloseTo(216, 0);
+        expect(passport.top - sovereign.bottom).toBeCloseTo(24, 0);
+        for (const card of [sovereign, passport]) {
+          expect(card.left).toBeCloseTo(16, 0);
+          expect(card.width).toBeCloseTo(343, 0);
+          expect(card.height).toBeCloseTo(152, 0);
+        }
+        for (const label of ['Manage your own keys', 'Continue with Google or Apple']) {
+          const button = page.getByRole('button', { name: label }).element().getBoundingClientRect();
+          expect(button.left).toBeCloseTo(40, 0);
+          expect(button.width).toBeCloseTo(295, 0);
+          expect(button.height).toBeCloseTo(60, 0);
+        }
+        expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
       }
       await matchVrtFrameScreenshot(`onboarding-join-${name}`);
     });
@@ -100,11 +129,25 @@ for (const [name, viewport] of [
       await expect.element(page.getByRole('heading', { name: 'Sign in with Apple or Google' })).toBeVisible();
       await matchVrtFrameScreenshot(`onboarding-join-passport-help-${name}`);
     });
+
+    if (name === 'figma-mobile') {
+      it('keeps the Google-only option and help available inside the compact card', async () => {
+        mockAppleEnabled.mockReturnValue(false);
+        await renderForVRT(<JoinWithHeader />, { viewport });
+        await expect.element(page.getByRole('button', { name: 'Continue with Google', exact: true })).toBeVisible();
+        expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
+        await matchVrtFrameScreenshot('onboarding-join-google-only-figma-mobile');
+        await page.getByRole('button', { name: 'About signing in with Google' }).click();
+        await expect
+          .element(page.getByRole('heading', { name: 'Continue with Google, powered by Pubky Passport.' }))
+          .toBeVisible();
+      });
+    }
   });
 }
 
 // Preserve the provider presentation covered by the existing baselines.
 vi.mock('@/config/network', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/network')>()),
-  isPassportAppleEnabled: () => true,
+  isPassportAppleEnabled: mockAppleEnabled,
 }));
