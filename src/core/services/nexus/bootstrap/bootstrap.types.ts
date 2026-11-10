@@ -1,6 +1,5 @@
 import type { Pubky } from '@/models/models.types';
 import type {
-  NexusFileDetails,
   NexusHotTag,
   NexusNotification,
   NexusPost,
@@ -9,12 +8,13 @@ import type {
   NexusUserWire,
 } from '@/services/nexus/nexus.types';
 
-/** The bootstrap page past the read boundary: local post kinds, tags with `relationship`. */
+/**
+ * The bootstrap page past the read boundary: local post kinds, tags with `relationship`. `/v1` serves no
+ * `files`: the 0.x attachment metadata of the page comes from `FileApplication.fetchFilesForPosts`.
+ */
 export type NexusBootstrapResponse = {
   users: NexusUser[];
   posts: NexusPost[];
-  /** `/v0` only: `/v1` serves no file details (0.x attachment metadata comes from `filesApi.getFiles`). */
-  files?: NexusFileDetails[];
   ids: NexusBootstrapList;
   indexed: boolean;
   notifications: NexusNotification[];

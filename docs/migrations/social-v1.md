@@ -213,8 +213,9 @@ Every call is built by `buildNexusUrl` under `NEXUS_API_VERSION = 'v1'` (`src/co
 the Nexus services fold each response once at the read boundary (`PostNormalizer.fromNexus`, `UserNormalizer.fromNexus`,
 `TagNormalizer.fromNexus`): `note`/`article` → `short`/`long` (fail-open: `unknown` stays `unknown` and renders as a
 note), `relationship = relationship ?? (tag_uri != null)`. The URL builders send `kind=note|article|…`; the
-`StreamKind` values and the persisted stream ids keep `short`/`long`. `bootstrap.files`, `post.bookmark` and
-`counts.bookmarks` are optional (`UserCountsModel` stores `0`, no `DB_VERSION` change). The one `/v0` call is
+`StreamKind` values and the persisted stream ids keep `short`/`long`. `post.bookmark` and `counts.bookmarks` are
+optional (`UserCountsModel` stores `0` on every row, no `DB_VERSION` change); `bootstrap.files` and `attachments_metadata`
+are gone. The one `/v0` call is
 `filesApi.getFiles` (`POST v0/files/by_ids`), for 0.x attachment metadata only: once per fetched page of posts
 (`FileApplication.fetchFilesForPosts`, before the posts are persisted, in place of the inline `attachments_metadata`
 `/v0` served) and per card for any row still missing; sunset in the ADR; the
@@ -230,7 +231,8 @@ Retest (QA-3, on the local stack at nexusd `d94c3e89` or later):
 2. An article from Nexus renders as an article (kind fold) and its edit and lock paths keep the article kind.
 3. Tag membership from a `/v1` response: an own tag shows as tagged (`tag_uri`), untag works, a foreign tag shows
    untagged; the taggers panel agrees.
-4. Bootstrap on `/v1` completes without `files` (no throw) and persists posts and notifications with local kinds.
+4. Bootstrap on `/v1` completes without `files`, makes one `files/by_ids` request for the page's 0.x media (none for a
+   v1-only page) and persists posts and notifications with local kinds.
 5. An un-migrated 0.x author's image post renders for a v1 viewer (metadata via `/v0/files/by_ids`).
 6. A post of kind `unknown` (seeded by a raw homeserver write of an unknown kind, if feasible; else skip) renders as a
    note and cannot be edited.

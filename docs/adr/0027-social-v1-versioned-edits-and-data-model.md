@@ -98,9 +98,11 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
     `TagNormalizer.fromNexus` derives `relationship = relationship ?? (tag_uri != null)` on every tag and taggers
     response, so the local `NexusTag` keeps a required `relationship` and the tag cache pipes are untouched; the
     `*Wire` types in `nexus.types.ts` are the responses before this fold. A request without a viewer derives `false`.
-  - **Dropped fields.** `NexusBootstrapResponse.files`, `NexusPost.bookmark` and `NexusUserCounts.bookmarks` are
-    optional (`UserCountsModel` stores `0`, no `DB_VERSION` change); the `/v0` body flag `include_attachment_metadata`
-    is gone. `exclude_kinds` and `source=bookmarks` are never sent.
+  - **Dropped fields.** The bootstrap `files` and the post `attachments_metadata` are gone with their types: the
+    page's 0.x attachment metadata is fetched once (`FileApplication.fetchFilesForPosts`, before the posts are
+    persisted) on bootstrap, the stream and the TTL refresh. `NexusPost.bookmark` and `NexusUserCounts.bookmarks`
+    are optional on the wire (`UserCountsModel` stores `0` on every row, no `DB_VERSION` change); the `/v0` body
+    flag `include_attachment_metadata` is gone. `exclude_kinds` and `source=bookmarks` are never sent.
   - **The one `/v0` call.** `filesApi.getFiles` (`POST v0/files/by_ids`) names its version explicitly: a 0.x
     attachment URI carries no extension or type, `/v1` serves no file details, and un-migrated authors keep such
     posts until they open the new app, so without it their images would degrade to file cards for every viewer

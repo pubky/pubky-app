@@ -173,10 +173,9 @@ describe('NexusBootstrapService', () => {
       });
     });
 
-    it('folds the /v1 post kinds, derives every tag relationship and passes a page without files through', async () => {
+    it('folds the /v1 post kinds and derives every tag relationship', async () => {
       const v1Pubky = 'v1-user-321';
       const page = generateMockResponse(v1Pubky, 'v1-post');
-      const { files: _files, ...withoutFiles } = page as typeof page & { files?: unknown };
       const own = {
         label: 'own',
         taggers: [v1Pubky],
@@ -185,7 +184,7 @@ describe('NexusBootstrapService', () => {
       };
       const foreign = { label: 'foreign', taggers: ['other'], taggers_count: 1, tag_uri: null };
       const body = {
-        ...withoutFiles,
+        ...page,
         users: [{ ...page.users[0], tags: [own, foreign] }],
         posts: [{ ...page.posts[0], details: { ...page.posts[0].details, kind: 'article' }, tags: [own, foreign] }],
       };
@@ -197,7 +196,6 @@ describe('NexusBootstrapService', () => {
 
       const result = await NexusBootstrapService.fetch(v1Pubky);
 
-      expect(result.files).toBeUndefined();
       expect(result.posts[0].details.kind).toBe('long');
       expect(result.posts[0].tags.map((tag) => tag.relationship)).toEqual([true, false]);
       expect(result.users[0].tags.map((tag) => tag.relationship)).toEqual([true, false]);
