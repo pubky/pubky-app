@@ -8,16 +8,23 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { useCardPlayer } from './useCardPlayer';
 
-// Play on, for anything but a song (which shows its player up front, below): the same link as an album.
-/** The video without its tracks on Spotify, Deezer and TIDAL: a video with Also on, no song (`isSong`). */
-const VIDEO: TPinakesResourceDetail = {
-  ...videoFixture,
-  also_on: videoFixture.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
-};
-const ALBUM: TPinakesResourceDetail = {
+// Play on, for a card that is not itself something to play (`isPlayable`; something to play shows
+// its player up front, below): an artist's MusicBrainz page, on Spotify (the song's link).
+const ARTIST: TPinakesResourceDetail = {
   ...musicFixture,
-  type: 'MusicAlbum',
-  type_path: ['Thing', 'CreativeWork', 'MusicAlbum'],
+  uri: 'https://musicbrainz.org/artist/056e4f3e-d505-4dad-8ec1-d04f521cbb56',
+  site: 'MusicBrainz',
+  type: 'MusicGroup',
+  type_path: ['Thing', 'Organization', 'PerformingGroup', 'MusicGroup'],
+  aliases: [],
+  also_on: [{ id: 's', uri: musicFixture.uri, site: 'Spotify' }],
+};
+/** Another artist, on YouTube. */
+const ARTIST_ON_YOUTUBE: TPinakesResourceDetail = {
+  ...ARTIST,
+  id: 'artist-on-youtube',
+  uri: 'https://musicbrainz.org/artist/b5416a54-4941-4fcf-b2a0-7f98da6f9344',
+  also_on: [{ id: 'y', uri: videoFixture.uri, site: 'YouTube' }],
 };
 
 function Card({ card, testId }: { card: TPinakesResourceDetail; testId: string }) {
@@ -33,14 +40,14 @@ function Card({ card, testId }: { card: TPinakesResourceDetail; testId: string }
 
 describe('useCardPlayer', () => {
   it('offers Play on the card’s own service and loads nothing before it is pressed', () => {
-    render(<Card card={ALBUM} testId="song" />);
+    render(<Card card={ARTIST} testId="song" />);
 
     expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
     expect(document.querySelector('iframe')).toBeNull();
   });
 
   it('puts the service’s player in place of the card’s body, and Close brings the body back', () => {
-    render(<Card card={ALBUM} testId="song" />);
+    render(<Card card={ARTIST} testId="song" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Play on Spotify' }));
     const frame = screen.getByTestId('resource-player-frame');
@@ -55,8 +62,11 @@ describe('useCardPlayer', () => {
   });
 
   it('lets the viewer pick another service the card is on', () => {
-    const album = { ...ALBUM, also_on: [{ uri: 'https://tidal.com/album/655910', site: 'TIDAL' }] };
-    render(<Card card={album} testId="album" />);
+    const artist = {
+      ...ARTIST,
+      also_on: [...ARTIST.also_on, { uri: 'https://tidal.com/album/655910', site: 'TIDAL' }],
+    };
+    render(<Card card={artist} testId="album" />);
 
     expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Play on another service' })).toBeInTheDocument();
@@ -65,8 +75,8 @@ describe('useCardPlayer', () => {
   it('plays one card at a time on the page', () => {
     render(
       <>
-        <Card card={ALBUM} testId="song" />
-        <Card card={VIDEO} testId="video" />
+        <Card card={ARTIST} testId="song" />
+        <Card card={ARTIST_ON_YOUTUBE} testId="video" />
       </>,
     );
 
@@ -79,11 +89,12 @@ describe('useCardPlayer', () => {
   });
 
   describe('with the viewer’s Players', () => {
-    // A song on Spotify, also on Apple Music (no player) and TIDAL.
+    // An artist on Spotify, also on Bandcamp (no player) and TIDAL.
     const song: TPinakesResourceDetail = {
-      ...ALBUM,
+      ...ARTIST,
       also_on: [
-        { id: 'a', uri: 'https://music.apple.com/song/1624945512', site: 'Apple Music' },
+        ...ARTIST.also_on,
+        { id: 'b', uri: 'https://rickastley.bandcamp.com/track/never-gonna-give-you-up', site: 'Bandcamp' },
         { id: 't', uri: 'https://tidal.com/track/490851477', site: 'TIDAL' },
       ],
     };
@@ -150,7 +161,7 @@ describe('useCardPlayer, a song', () => {
   const SONG: TPinakesResourceDetail = {
     ...musicFixture,
     also_on: [
-      { id: 'a', uri: 'https://music.apple.com/song/1624945512', site: 'Apple Music' },
+      { id: 'b', uri: 'https://rickastley.bandcamp.com/track/never-gonna-give-you-up', site: 'Bandcamp' },
       { id: 't', uri: 'https://tidal.com/track/490851477', site: 'TIDAL' },
       { id: 'y', uri: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', site: 'YouTube' },
     ],
@@ -182,10 +193,11 @@ describe('useCardPlayer, a song', () => {
     testId?: string;
     preview?: boolean;
   }) {
-    const { embed, playOn, renderBody } = useCardPlayer(card, href, undefined, { preview });
+    const { embed, switcher, playOn, renderBody } = useCardPlayer(card, href, undefined, { preview });
     const body = <p>{card.name}</p>;
     return (
       <section data-testid={testId}>
+        {switcher}
         {embed ?? (renderBody ? renderBody(body) : body)}
         {playOn}
       </section>
@@ -298,21 +310,15 @@ describe('useCardPlayer, a song', () => {
     render(<Song card={SONG} />);
 
     expect(screen.queryByTestId('resource-player-frame')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('song-player')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('embed-player')).not.toBeInTheDocument();
     expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
   });
 
-  it('offers only Card besides the one service of a song on one service', () => {
+  it('has no switch for a song on one service: nothing to choose', () => {
     render(<Song card={SONG_ALONE} />);
 
     expect(frameOf()).toBeInTheDocument();
-    const menu = openSwitch();
-    expect(
-      within(menu)
-        .getAllByTestId('play-on-row')
-        .map((row) => row.textContent),
-    ).toEqual(['Spotify']);
-    expect(within(menu).getByTestId('play-on-card')).toHaveTextContent('Card');
+    expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
   });
 
   describe('Card', () => {
@@ -452,9 +458,8 @@ describe('useCardPlayer, a song', () => {
         expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
       });
 
-      it('keeps Play on for an album', () => {
-        const album = { ...SONG, type: 'MusicAlbum', type_path: ['Thing', 'CreativeWork', 'MusicAlbum'] };
-        render(<Song card={album} />);
+      it('keeps Play on for an artist', () => {
+        render(<Song card={ARTIST} href={ARTIST.uri} />);
 
         expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
@@ -862,9 +867,8 @@ describe('useCardPlayer, a song', () => {
     expect(audio.autoplay).toBe(false);
   });
 
-  it('keeps Play on for an album, and for a song that is not ok', () => {
-    const album = { ...SONG, type: 'MusicAlbum', type_path: ['Thing', 'CreativeWork', 'MusicAlbum'] };
-    const { unmount } = render(<Song card={album} />);
+  it('keeps Play on for an artist, and for a song that is not ok', () => {
+    const { unmount } = render(<Song card={ARTIST} href={ARTIST.uri} />);
     expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
     expect(document.querySelector('iframe')).toBeNull();
     unmount();
@@ -908,7 +912,7 @@ describe('useCardPlayer, a song', () => {
     expect(frameOf()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/5NV6Rdv1a3I?enablejsapi=1&rel=0');
     expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
     const rows = within(openSwitch()).getAllByTestId('play-on-row');
-    expect(rows.map((row) => row.textContent)).toEqual(['YouTube', 'Spotify', 'Deezer', 'TIDAL']);
+    expect(rows.map((row) => row.textContent)).toEqual(['YouTube', 'Spotify', 'Deezer', 'TIDAL', 'Apple Music']);
   });
 
   describe('with no service of its own', () => {
@@ -976,5 +980,131 @@ describe('useCardPlayer, a song', () => {
       expect(document.querySelector('iframe')).toBeNull();
       expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
     });
+  });
+});
+
+/**
+ * Every link that plays shows its player up front, as a song does: a video, an album, an episode,
+ * any link on a service with a player; the switch only when there is more than one service.
+ */
+describe('useCardPlayer, anything that plays', () => {
+  function Item({ card, href = card.uri }: { card: TPinakesResourceDetail; href?: string }) {
+    const { embed, switcher, playOn, renderBody } = useCardPlayer(card, href);
+    const body = <p>{card.name}</p>;
+    return (
+      <section data-testid="item">
+        <header data-testid="item-header">{switcher}</header>
+        {embed ?? (renderBody ? renderBody(body) : body)}
+        {playOn}
+      </section>
+    );
+  }
+  const frame = () => screen.getByTestId('resource-player-frame');
+  const noPlayOn = () => expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+  const switchRows = () => {
+    fireEvent.pointerDown(screen.getByRole('button', { name: /choose another service$/ }), { button: 0 });
+    return within(screen.getByTestId('play-on-menu'))
+      .getAllByTestId('play-on-row')
+      .map((row) => row.textContent);
+  };
+
+  afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+  it('shows an ordinary video Pinakes knows nowhere else as its player, paused, with no switch and no Play on', () => {
+    render(<Item card={{ ...videoFixture, also_on: [] }} />);
+
+    expect(frame()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0');
+    expect(screen.queryByText(videoFixture.name!)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
+    noPlayOn();
+  });
+
+  it('shows a video with Also on as its player too, its other services in the switch', () => {
+    render(<Item card={videoFixture} />);
+
+    expect(frame()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0');
+    noPlayOn();
+    expect(switchRows()).toEqual(['YouTube', 'TIDAL', 'Apple Music', 'Deezer', 'Spotify']);
+  });
+
+  it('shows an album on its first service, a MusicBrainz release group on its Also on', () => {
+    const album: TPinakesResourceDetail = {
+      ...musicFixture,
+      uri: 'https://musicbrainz.org/release-group/8e8a594f-2175-38c7-a871-abb68ec363e7',
+      type: 'MusicAlbum',
+      type_path: ['Thing', 'CreativeWork', 'MusicPlaylist', 'MusicAlbum'],
+      aliases: [],
+      also_on: [{ uri: 'https://open.spotify.com/album/1weenld61qoidwYuZ1GESA', site: 'Spotify' }],
+    };
+    render(<Item card={album} />);
+
+    expect(frame()).toHaveAttribute('src', 'https://open.spotify.com/embed/album/1weenld61qoidwYuZ1GESA');
+    noPlayOn();
+  });
+
+  it('shows a podcast episode on Apple Podcasts, from its Also on', () => {
+    const episode: TPinakesResourceDetail = {
+      ...musicFixture,
+      uri: 'https://podcastindex.org/podcast/759235?episode=61210434390',
+      type: 'PodcastEpisode',
+      type_path: ['Thing', 'CreativeWork', 'Episode', 'PodcastEpisode'],
+      aliases: [],
+      also_on: [
+        { uri: 'https://podcasters.spotify.com/pod/show/stephan-livera/episodes/x-e3pqhh4', site: 'Spotify' },
+        { uri: 'https://podcasts.apple.com/us/podcast/x/id1415720320?i=1000792990676', site: 'Apple Podcasts' },
+      ],
+    };
+    render(<Item card={episode} />);
+
+    expect(frame()).toHaveAttribute('src', 'https://embed.podcasts.apple.com/us/episode/1000792990676');
+    noPlayOn();
+  });
+
+  it('shows a SoundCloud track as its player, with no switch', () => {
+    const track: TPinakesResourceDetail = {
+      ...musicFixture,
+      uri: 'https://soundcloud.com/forss/flickermood',
+      type: 'CreativeWork',
+      type_path: ['Thing', 'CreativeWork'],
+      aliases: [],
+      also_on: [],
+    };
+    render(<Item card={track} />);
+
+    expect(frame().getAttribute('src')).toMatch(/^https:\/\/w\.soundcloud\.com\/player\/\?url=/);
+    expect(frame().getAttribute('src')).not.toMatch(/auto_play/);
+    expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
+  });
+
+  it('loads nothing up front with platform embeds up front off: a stand-in with Play on', () => {
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    render(<Item card={videoFixture} />);
+
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(document.querySelector('img')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+  });
+
+  it('loads nothing again after Card with platform embeds up front off: back on a service, the stand-in', () => {
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    render(<Item card={videoFixture} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+    expect(frame()).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByRole('button', { name: /choose another service$/ }), { button: 0 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Show the link card instead of a player' }));
+    expect(document.querySelector('iframe')).toBeNull();
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Card: choose another service' }), { button: 0 });
+    fireEvent.click(within(screen.getByTestId('play-on-menu')).getAllByTestId('play-on-row')[0]);
+
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+  });
+
+  it('puts the switch apart from the player, for the header of the frame it is shown in', () => {
+    render(<Item card={videoFixture} />);
+
+    expect(within(screen.getByTestId('item-header')).getByTestId('player-switch')).toHaveTextContent('YouTube');
+    expect(within(screen.getByTestId('embed-player')).queryByTestId('player-switch')).not.toBeInTheDocument();
   });
 });

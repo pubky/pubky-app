@@ -33,8 +33,28 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
   };
 });
 
-const ALL = ['YouTube', 'Vimeo', 'Spotify', 'SoundCloud', 'Mixcloud', 'TIDAL', 'Deezer'];
-const ALL_IDS = ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer'];
+const ALL = [
+  'YouTube',
+  'Vimeo',
+  'Spotify',
+  'SoundCloud',
+  'Mixcloud',
+  'TIDAL',
+  'Deezer',
+  'Apple Music',
+  'Apple Podcasts',
+];
+const ALL_IDS = [
+  'youtube',
+  'vimeo',
+  'spotify',
+  'soundcloud',
+  'mixcloud',
+  'tidal',
+  'deezer',
+  'apple-music',
+  'apple-podcasts',
+];
 const CARD = 'Card (no player)';
 
 const setMedia = (media: Partial<MediaPreferences>) =>
@@ -77,7 +97,16 @@ describe('MediaSettings', () => {
     setMedia({ playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube', 'deezer'] });
     render(<MediaSettings />);
 
-    expect(rowNames()).toEqual(['TIDAL', 'Spotify', 'Vimeo', 'SoundCloud', 'Mixcloud', CARD]);
+    expect(rowNames()).toEqual([
+      'TIDAL',
+      'Spotify',
+      'Vimeo',
+      'SoundCloud',
+      'Mixcloud',
+      'Apple Music',
+      'Apple Podcasts',
+      CARD,
+    ]);
     expect(
       within(openAdd())
         .getAllByRole('menuitem')
@@ -103,7 +132,7 @@ describe('MediaSettings', () => {
   it('can remove the last player, then offers them all under Add', () => {
     setMedia({ hiddenPlayers: ALL_IDS.slice(0, -1) });
     const { unmount } = render(<MediaSettings />);
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Deezer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Apple Podcasts' }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith([], ALL_IDS);
     unmount();
@@ -140,7 +169,18 @@ describe('MediaSettings', () => {
     fireEvent.click(within(openAdd()).getByRole('menuitem', { name: 'Spotify' }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith(
-      ['tidal', 'youtube', 'vimeo', 'soundcloud', 'mixcloud', 'deezer', 'spotify', 'napster'],
+      [
+        'tidal',
+        'youtube',
+        'vimeo',
+        'soundcloud',
+        'mixcloud',
+        'deezer',
+        'apple-music',
+        'apple-podcasts',
+        'spotify',
+        'napster',
+      ],
       [],
     );
   });
@@ -151,7 +191,7 @@ describe('MediaSettings', () => {
     act(() => capturedDnd.onDragEnd?.({ active: { id: 'tidal' }, over: { id: 'youtube' } }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith(
-      ['tidal', 'youtube', 'spotify', 'soundcloud', 'mixcloud', 'deezer', 'napster'],
+      ['tidal', 'youtube', 'spotify', 'soundcloud', 'mixcloud', 'deezer', 'apple-music', 'apple-podcasts', 'napster'],
       ['vimeo'],
     );
   });
@@ -187,7 +227,7 @@ describe('MediaSettings', () => {
       });
 
       expect(mockSetPlayers).toHaveBeenCalledWith(
-        ['vimeo', 'youtube', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer'],
+        ['vimeo', 'youtube', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer', 'apple-music', 'apple-podcasts'],
         [],
       );
     } finally {
@@ -226,7 +266,18 @@ describe('MediaSettings', () => {
     act(() => capturedDnd.onDragEnd?.({ active: { id: 'card' }, over: { id: 'spotify' } }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith(
-      ['tidal', 'card', 'spotify', 'youtube', 'vimeo', 'soundcloud', 'mixcloud', 'deezer'],
+      [
+        'tidal',
+        'card',
+        'spotify',
+        'youtube',
+        'vimeo',
+        'soundcloud',
+        'mixcloud',
+        'deezer',
+        'apple-music',
+        'apple-podcasts',
+      ],
       [],
     );
   });
@@ -241,7 +292,7 @@ describe('MediaSettings', () => {
   it('does not store Card (no player) moved back to the end: Auto again', () => {
     setMedia({ playerOrder: ['card'] });
     render(<MediaSettings />);
-    act(() => capturedDnd.onDragEnd?.({ active: { id: 'card' }, over: { id: 'deezer' } }));
+    act(() => capturedDnd.onDragEnd?.({ active: { id: 'card' }, over: { id: 'apple-podcasts' } }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith([], []);
   });
@@ -255,12 +306,25 @@ describe('MediaSettings', () => {
   });
 
   it('drops Card (no player) from the order when a remove leaves it last', () => {
-    setMedia({ playerOrder: ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'card', 'deezer'] });
+    setMedia({
+      playerOrder: [
+        'youtube',
+        'vimeo',
+        'spotify',
+        'soundcloud',
+        'mixcloud',
+        'tidal',
+        'apple-music',
+        'apple-podcasts',
+        'card',
+        'deezer',
+      ],
+    });
     render(<MediaSettings />);
     fireEvent.click(screen.getByRole('button', { name: 'Remove Deezer' }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith(
-      ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal'],
+      ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'apple-music', 'apple-podcasts'],
       ['deezer'],
     );
   });
@@ -268,14 +332,24 @@ describe('MediaSettings', () => {
   it('adds a removed player back below Card (no player) moved alone, keeping Auto', () => {
     setMedia({ playerOrder: ['tidal', 'card'], hiddenPlayers: ['spotify'] });
     render(<MediaSettings />);
-    expect(rowNames()).toEqual(['TIDAL', CARD, 'YouTube', 'Vimeo', 'SoundCloud', 'Mixcloud', 'Deezer']);
+    expect(rowNames()).toEqual([
+      'TIDAL',
+      CARD,
+      'YouTube',
+      'Vimeo',
+      'SoundCloud',
+      'Mixcloud',
+      'Deezer',
+      'Apple Music',
+      'Apple Podcasts',
+    ]);
     fireEvent.click(within(openAdd()).getByRole('menuitem', { name: 'Spotify' }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith(['tidal', 'card'], []);
   });
 
   it('keeps Auto when a remove leaves Card (no player), moved alone, below every player', () => {
-    const hidden = ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud'];
+    const hidden = ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'apple-music', 'apple-podcasts'];
     setMedia({ playerOrder: ['tidal', 'card'], hiddenPlayers: hidden });
     render(<MediaSettings />);
     fireEvent.click(screen.getByRole('button', { name: 'Remove Deezer' }));
@@ -289,7 +363,18 @@ describe('MediaSettings', () => {
     fireEvent.click(within(openAdd()).getByRole('menuitem', { name: 'Spotify' }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith(
-      ['tidal', 'card', 'youtube', 'vimeo', 'soundcloud', 'mixcloud', 'deezer', 'spotify'],
+      [
+        'tidal',
+        'card',
+        'youtube',
+        'vimeo',
+        'soundcloud',
+        'mixcloud',
+        'deezer',
+        'apple-music',
+        'apple-podcasts',
+        'spotify',
+      ],
       [],
     );
   });
@@ -297,7 +382,7 @@ describe('MediaSettings', () => {
   it('keeps Card (no player) first when every player is removed, so one added back stays below it', () => {
     setMedia({ playerOrder: ['card'], hiddenPlayers: ALL_IDS.slice(0, -1) });
     render(<MediaSettings />);
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Deezer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Apple Podcasts' }));
 
     expect(mockSetPlayers).toHaveBeenCalledWith(['card'], ALL_IDS);
   });
@@ -324,7 +409,7 @@ describe('MediaSettings', () => {
       });
 
       expect(mockSetPlayers).toHaveBeenCalledWith(
-        ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'card'],
+        ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer', 'apple-music', 'card'],
         [],
       );
     } finally {

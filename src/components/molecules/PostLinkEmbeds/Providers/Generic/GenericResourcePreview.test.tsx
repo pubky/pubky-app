@@ -94,10 +94,24 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
 }));
 
 const URL = 'https://en.wikipedia.org/wiki/Bitcoin';
-/** The video without its tracks on Spotify, Deezer and TIDAL: a video with Also on, no song (`isSong`). */
+/** The video without its tracks on Spotify, Deezer and TIDAL: a video with Also on. */
 const ORDINARY_VIDEO = {
   ...videoFixture,
   also_on: videoFixture.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
+};
+/**
+ * A card that is not itself something to play (`isPlayable`), on YouTube too: an artist's
+ * MusicBrainz page. Its card shows, with Play on in its footer.
+ */
+const ARTIST_URL = 'https://musicbrainz.org/artist/056e4f3e-d505-4dad-8ec1-d04f521cbb56';
+const ARTIST = {
+  ...ORDINARY_VIDEO,
+  uri: ARTIST_URL,
+  refs: [ARTIST_URL],
+  aliases: [],
+  site: 'MusicBrainz',
+  type: 'MusicGroup',
+  type_path: ['Thing', 'Organization', 'PerformingGroup', 'MusicGroup'],
 };
 
 describe('GenericResourcePreview', () => {
@@ -173,8 +187,8 @@ describe('GenericResourcePreview', () => {
       act(() => vi.advanceTimersByTime(PINAKES_SLOW_READ_MS));
       expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
 
-      mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
-      rerender(<GenericResourcePreview url={videoFixture.uri} />);
+      mockUsePinakesCard.mockReturnValue({ data: ARTIST, isLoading: false, isError: false });
+      rerender(<GenericResourcePreview url={ARTIST.uri} />);
       expect(screen.getByTestId('resource-card')).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -236,9 +250,9 @@ describe('GenericResourcePreview', () => {
   });
 
   it('does not read the link’s own preview for a card that has its title and image', () => {
-    mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
+    mockUsePinakesCard.mockReturnValue({ data: ARTIST, isLoading: false, isError: false });
 
-    render(<GenericResourcePreview url={videoFixture.uri} />);
+    render(<GenericResourcePreview url={ARTIST.uri} />);
 
     expect(screen.getByTestId('resource-card')).toBeInTheDocument();
     expect(mockUseOgMetadata).not.toHaveBeenCalledWith(expect.any(String));
@@ -468,8 +482,8 @@ describe('GenericResourcePreview', () => {
 
     it('still opens the resource page from the card once Play on puts a player in its body, never from the player', () => {
       const open = vi.spyOn(window, 'open').mockReturnValue(null);
-      mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
-      render(<GenericResourcePreview url={videoFixture.uri} />);
+      mockUsePinakesCard.mockReturnValue({ data: ARTIST, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={ARTIST.uri} />);
 
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
       fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
@@ -486,7 +500,7 @@ describe('GenericResourcePreview', () => {
       // A click on the rest of the card, its header, still opens the page.
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
       fireEvent.click(screen.getByTestId('resource-card-type'));
-      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ORDINARY_VIDEO.uri));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ARTIST.uri));
     });
 
     it('adds nothing to the ⋯ menu, and stays a click-through, when Also on lists only its own service', () => {
@@ -638,13 +652,16 @@ describe('GenericResourcePreview', () => {
       expect(actions).toHaveAttribute('data-post-uri', 'https://tidal.com/track/3524506/u');
     });
 
-    it('keeps our card and loads nothing when the card is on other services too', () => {
+    it('shows the link’s player when the card is on other services too, those in the switch', () => {
       mockUsePinakesCard.mockReturnValue({ data: ORDINARY_VIDEO, isLoading: false, isError: false });
       render(<GenericResourcePreview url="https://www.youtube.com/playlist?list=PLabcdefghij" />);
 
-      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
-      expect(document.querySelector('iframe')).toBeNull();
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame').getAttribute('src')).toContain(
+        'https://www.youtube-nocookie.com/embed/videoseries?list=PLabcdefghij',
+      );
+      expect(within(frame).getByRole('button', { name: 'YouTube: choose another service' })).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
     });
 
     it('previews the same embed in the composer, without the footer', () => {
@@ -660,7 +677,7 @@ describe('GenericResourcePreview', () => {
       beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
       afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
-      it('keeps our card and loads nothing from the service', () => {
+      it('shows the player’s stand-in with Play on in the resource frame and loads nothing from the service', () => {
         const album = {
           ...musicFixture,
           uri: 'https://open.spotify.com/album/2noRn2Aes5aoNVsU6iWThc',
@@ -671,8 +688,9 @@ describe('GenericResourcePreview', () => {
         mockUsePinakesCard.mockReturnValue({ data: album, isLoading: false, isError: false });
         render(<GenericResourcePreview url={album.uri} />);
 
-        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
+        const frame = screen.getByTestId('resource-embed-frame');
+        expect(within(frame).getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
+        expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
         expect(document.querySelector('iframe')).toBeNull();
       });
     });
@@ -714,11 +732,11 @@ describe('GenericResourcePreview', () => {
     });
   });
   describe('a song', () => {
-    // Get Lucky on Spotify, also on Apple Music (no player), TIDAL and YouTube.
+    // Get Lucky on Spotify, also on Bandcamp (no player), TIDAL and YouTube.
     const SONG = {
       ...musicFixture,
       also_on: [
-        { id: 'a', uri: 'https://music.apple.com/song/1624945512', site: 'Apple Music' },
+        { id: 'b', uri: 'https://rickastley.bandcamp.com/track/never-gonna-give-you-up', site: 'Bandcamp' },
         { id: 't', uri: 'https://tidal.com/track/490851477', site: 'TIDAL' },
         { id: 'y', uri: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', site: 'YouTube' },
       ],
@@ -857,7 +875,7 @@ describe('GenericResourcePreview', () => {
         expect(switchButton()).toHaveAccessibleName('Card: choose another service');
       });
 
-      it('shows our card with Play on, loading nothing, for an album on one service', () => {
+      it('shows our card, loading nothing, for an album on one service, its switch offering that service', () => {
         const album = {
           ...musicFixture,
           uri: 'https://tidal.com/album/655910',
@@ -872,7 +890,8 @@ describe('GenericResourcePreview', () => {
         expect(screen.getByTestId('resource-card')).toBeInTheDocument();
         expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
         expect(document.querySelector('iframe')).toBeNull();
-        expect(screen.getByRole('button', { name: 'Play on TIDAL' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+        expect(switchButton()).toHaveAccessibleName('Card: choose another service');
       });
 
       it('previews our card in the composer, without the footer', () => {
@@ -896,7 +915,7 @@ describe('GenericResourcePreview', () => {
 
         expect(document.querySelector('iframe')).toBeNull();
         expect(
-          within(screen.getByTestId('song-player')).getByRole('button', { name: 'Play on Spotify' }),
+          within(screen.getByTestId('embed-player')).getByRole('button', { name: 'Play on Spotify' }),
         ).toBeInTheDocument();
         expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
       });

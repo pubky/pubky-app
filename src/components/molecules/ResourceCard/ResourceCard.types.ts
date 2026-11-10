@@ -63,4 +63,6 @@ export interface ResourceCardProps {
    * its Details then (the resource page's X post shows them itself).
    */
   isBodyReplaced?: boolean;
+  /** A control in the header, next to the type: a playable card's switch (`useCardPlayer`'s `switcher`). */
+  headerControl?: ReactNode;
 }

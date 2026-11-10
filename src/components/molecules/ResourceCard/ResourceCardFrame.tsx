@@ -113,10 +113,19 @@ interface ResourceCardHeaderProps {
   href: string | null;
   /** The site's name (`card.site`, else the host without `www.`); never the full link. */
   siteName: string | null;
+  /** A control next to the type (a playable card's switch, `useCardPlayer`'s `switcher`). */
+  control?: ReactNode;
 }
 
 /** The type line on the left and the source on the right: the site's icon and name, linking out. */
-export function ResourceCardHeader({ typeLabel, typeHref, sourceUri, href, siteName }: ResourceCardHeaderProps) {
+export function ResourceCardHeader({
+  typeLabel,
+  typeHref,
+  sourceUri,
+  href,
+  siteName,
+  control,
+}: ResourceCardHeaderProps) {
   const navigable = useIsPostPreviewNavigable();
   // Never cut short: on a narrow card the type wraps instead (on a phone the switch and the link
   // show their icons only, so it rarely has to).
@@ -142,6 +151,12 @@ export function ResourceCardHeader({ typeLabel, typeHref, sourceUri, href, siteN
             {typeLabel}
           </Typography>
         ))}
+      {control && (
+        // Its own controls: a press never opens the resource page.
+        <Container overrideDefaults data-resource-controls className="flex min-w-0 shrink-0 items-center">
+          {control}
+        </Container>
+      )}
       <ResourceSource uri={sourceUri} href={href} name={siteName} />
     </Container>
   );

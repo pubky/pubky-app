@@ -91,6 +91,7 @@ export function ResourceCard({
   isOnScreen = true,
   renderBody,
   isBodyReplaced = false,
+  headerControl,
 }: ResourceCardProps) {
   const navigable = useIsPostPreviewNavigable();
   const [expanded, setExpanded] = useState(false);
@@ -224,7 +225,13 @@ export function ResourceCard({
           clickThroughUrl && 'cursor-pointer',
         )}
       >
-        <ResourceCardHeader typeLabel={typeLabel} sourceUri={sourceUri} href={titleUrl} siteName={siteName} />
+        <ResourceCardHeader
+          typeLabel={typeLabel}
+          sourceUri={sourceUri}
+          href={titleUrl}
+          siteName={siteName}
+          control={headerControl}
+        />
 
         {showBody(
           <Container overrideDefaults className="flex min-w-0 gap-4">
