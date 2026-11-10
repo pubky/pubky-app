@@ -8,7 +8,7 @@
 #   2. Ubuntu  `expose`      waits for that key, starts an sshd that accepts only it and only forwards
 #                            to the stack's ports, publishes the sshd through a cloudflared quick
 #                            tunnel (no account or secret), and writes the tunnel host, the sshd host
-#                            key and the app's runtime config for the workflow to upload.
+#                            key, the ports and the app's runtime config for the workflow to upload.
 #   3. macOS   `connect`     waits for that upload and forwards the stack's ports to its own localhost.
 #              `start-app`   starts the built app with the runtime config the Docker app would get.
 #   4. Ubuntu  `hold`        keeps the stack up until the macOS job completes and ends as it did, so
@@ -18,6 +18,8 @@
 # testnet mode (which reads the homeserver's port from its pkarr record) and the Cypress tasks use
 # the same `localhost:<port>` addresses as in the Docker jobs. Every port a browser or the Node SDK
 # uses is HTTP; the testnet DHT (UDP) is only used between the containers and stays on Ubuntu.
+# Forwarded are the ports the stack always publishes plus every other localhost port the app's
+# runtime config names (Homegate, for one), so the app reaches whatever it would in a Docker job.
 #
 # Only public values cross the artifacts: two public keys, the tunnel hostname and PUBKY_RUNTIME_*
 # (public by definition, docs/environment.md). The repository is public, so are its artifacts.
@@ -34,9 +36,10 @@ CLOUDFLARED_SHA256_LINUX_X86_64=1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2
 CLOUDFLARED_SHA256_DARWIN_ARM64=3586ccf397e98e5f437e60e7c307ca6ac463e110580503af8bb8e6f9ebf831bd
 CLOUDFLARED_SHA256_DARWIN_X86_64=02f3edfd87684dd5b705607688e4eb4b323f6e777b81e7b3a85af556aa356848
 
-# Homeserver HTTP, homeserver admin, Nexus API, pkarr relay, HTTP relay: what pubky-stack publishes
-# for the browser, the SDK and the Cypress tasks. The databases are deliberately left out.
-STACK_PORTS="6286 6288 8080 15411 15412"
+# Homeserver HTTP, homeserver admin, Nexus API, pkarr relay, HTTP relay: what pubky-stack always
+# publishes for the browser, the SDK and the Cypress tasks, so both jobs wait for them. `expose`
+# adds the other localhost ports of the app's runtime config. The databases are deliberately left out.
+REQUIRED_PORTS=(6286 6288 8080 15411 15412)
 APP_URL=http://localhost:3000
 SSH_PORT=22022
 SSH_ALIAS=e2e-stack
@@ -94,11 +97,13 @@ answers_http() {
   curl -s -o /dev/null --max-time 5 "http://127.0.0.1:$1/"
 }
 
-wait_for_stack_ports() {
+# timeout port...
+wait_for_ports() {
   local deadline=$((SECONDS + $1)) port pending
+  shift
   while true; do
     pending=""
-    for port in $STACK_PORTS; do
+    for port in "$@"; do
       answers_http "$port" || pending="$pending $port"
     done
     [ -z "$pending" ] && return 0
@@ -157,7 +162,7 @@ client_key() {
 # The runtime config compose would give the pubky-app container, so the macOS app runs with the
 # same values as the Docker app instead of a second copy that drifts from pubky-stack.
 write_app_env() {
-  local target=$1 port
+  local target=$1
   docker compose config --format json |
     jq '.services["pubky-app"].environment // {}
         | with_entries(select((.key | test("^PUBKY_RUNTIME_[A-Z0-9_]+$")) and .value != null))
@@ -167,17 +172,40 @@ write_app_env() {
   jq -e 'all(.[]; test("\n") | not)' "$target" >/dev/null || fail "A PUBKY_RUNTIME_* value spans several lines."
   echo "Runtime config for the app:"
   jq . "$target"
+}
 
-  for port in $(jq -r '.[]' "$target" | grep -oE '(localhost|127\.0\.0\.1):[0-9]+' | cut -d: -f2 | sort -u); do
-    case " $STACK_PORTS ${APP_URL##*:} " in
-      *" $port "*) ;;
-      *) echo "::warning::The runtime config points at localhost:$port, which is not forwarded to the macOS job." ;;
+# Writes the ports to forward (forward-ports) and, of those, the ports the macOS job must see
+# answering (ready-ports): the required ones, plus each other localhost port the app's runtime
+# config names if something answers on it here. A port nothing listens on is still forwarded, so
+# the app fails on it exactly as it would beside the stack, but it cannot be waited for.
+select_ports() {
+  local dir=$1 port names
+  local -a forward=("${REQUIRED_PORTS[@]}") ready=("${REQUIRED_PORTS[@]}") named=()
+  read -r -a named <<< "$(jq -r '.[]' "$dir/app-env.json" | grep -oE '(localhost|127\.0\.0\.1):[0-9]+' |
+    cut -d: -f2 | sort -un | tr '\n' ' ' || true)"
+  for port in "${named[@]}"; do
+    case " ${REQUIRED_PORTS[*]} ${APP_URL##*:} " in
+      *" $port "*) continue ;;
     esac
+    forward+=("$port")
+    names=$(jq -r --arg port "$port" \
+      'to_entries | map(select(.value | test("(localhost|127\\.0\\.0\\.1):" + $port + "([^0-9]|$)")) | .key) | join(", ")' \
+      "$dir/app-env.json")
+    if wait_for_ports 15 "$port" >/dev/null; then
+      ready+=("$port")
+    else
+      echo "::notice::Nothing answers on localhost:$port ($names) on this runner. It is forwarded, but the macOS job does not wait for it."
+    fi
   done
+  echo "${forward[*]}" > "$dir/forward-ports"
+  echo "${ready[*]}" > "$dir/ready-ports"
+  echo "Forwarding port(s) ${forward[*]}; the macOS job waits for ${ready[*]}."
 }
 
 start_sshd() {
   local dir="$WORK_DIR/server" sshd port permit_open=""
+  local -a forward=()
+  read -r -a forward < "$WORK_DIR/endpoint/forward-ports"
   sshd=$(command -v sshd || echo /usr/sbin/sshd)
   if [ ! -x "$sshd" ]; then
     sudo apt-get update -qq
@@ -185,7 +213,7 @@ start_sshd() {
   fi
 
   ssh-keygen -q -t ed25519 -N '' -C e2e-webkit-stack -f "$dir/host_ed25519"
-  for port in $STACK_PORTS; do
+  for port in "${forward[@]}"; do
     permit_open="$permit_open 127.0.0.1:$port"
   done
 
@@ -276,7 +304,8 @@ expose() {
   chmod 700 "$dir"
 
   write_app_env "$WORK_DIR/endpoint/app-env.json"
-  wait_for_stack_ports 120 || fail "The stack is not answering on every port the macOS job needs."
+  wait_for_ports 120 "${REQUIRED_PORTS[@]}" || fail "The stack is not answering on every port the macOS job needs."
+  select_ports "$WORK_DIR/endpoint"
 
   wait_for_artifact "$CLIENT_KEY_ARTIFACT" "$dir/client-key" "${CLIENT_KEY_TIMEOUT:-900}"
   ssh-keygen -l -f "$dir/client-key/id_ed25519.pub" >/dev/null || fail "$CLIENT_KEY_ARTIFACT does not hold a public key."
@@ -311,15 +340,20 @@ hold() {
 
 connect() {
   require_env GH_TOKEN REPO RUN_ID RUN_ATTEMPT PEER_JOB ENDPOINT_ARTIFACT
-  local dir="$WORK_DIR/endpoint" host user port
-  local -a forwards=()
+  local dir="$WORK_DIR/endpoint" host user port ports
+  local -a forwards=() forward=() ready=()
   wait_for_artifact "$ENDPOINT_ARTIFACT" "$dir" "${ENDPOINT_TIMEOUT:-1200}"
 
   host=$(cat "$dir/tunnel-host")
   user=$(cat "$dir/ssh-user")
   [[ "$host" =~ ^[a-z0-9-]+\.trycloudflare\.com$ ]] || fail "Unexpected tunnel host: $host"
   [[ "$user" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "Unexpected SSH user: $user"
-  for port in $STACK_PORTS; do
+  for ports in forward-ports ready-ports; do
+    [[ "$(cat "$dir/$ports")" =~ ^[0-9]+(\ [0-9]+)*$ ]] || fail "Unexpected $ports: $(cat "$dir/$ports")"
+  done
+  read -r -a forward < "$dir/forward-ports"
+  read -r -a ready < "$dir/ready-ports"
+  for port in "${forward[@]}"; do
     forwards+=(-L "$port:127.0.0.1:$port")
   done
 
@@ -334,11 +368,11 @@ connect() {
     "${forwards[@]}" "$user@$SSH_ALIAS" > "$LOG_DIR/tunnel.log" 2>&1 < /dev/null &
   echo $! > "$WORK_DIR/client/tunnel.pid"
 
-  wait_for_stack_ports 180 || {
+  wait_for_ports 180 "${ready[@]}" || {
     cat "$LOG_DIR/tunnel.log"
     fail "The stack is not reachable through the tunnel."
   }
-  echo "The stack answers on localhost port(s) $STACK_PORTS."
+  echo "Forwarded port(s) ${forward[*]}; the stack answers on localhost port(s) ${ready[*]}."
 }
 
 start_app() {
