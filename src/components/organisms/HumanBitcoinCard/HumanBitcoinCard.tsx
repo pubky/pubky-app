@@ -90,7 +90,6 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
                 layout="mobile"
                 reason={isGeoBlocked ? 'geoblocked' : 'error'}
                 method="payment"
-                testId="geo-block-alert-mobile"
               />
             </div>
           )}

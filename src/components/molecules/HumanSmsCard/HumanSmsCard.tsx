@@ -71,12 +71,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
           </Button>
           {isUnavailable && (
             <div className="lg:hidden">
-              <HumanVerificationStatus
-                layout="mobile"
-                reason={isGeoblocked ? 'geoblocked' : 'error'}
-                method="phone"
-                testId="geoblock-alert-mobile"
-              />
+              <HumanVerificationStatus layout="mobile" reason={isGeoblocked ? 'geoblocked' : 'error'} method="phone" />
             </div>
           )}
         </div>

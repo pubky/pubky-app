@@ -138,6 +138,22 @@ describe('Human (onboarding) — visual regression', () => {
     await matchVrtFrameScreenshot('onboarding-human-mobile');
   });
 
+  it('keeps the mobile agreement visible and stable when Passport eligibility resolves', async () => {
+    vi.mocked(usePassportEligibility).mockReturnValue('pending');
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport: { width: 375, height: 812 } });
+    const footer = screen.getByTestId('human-selection-footer');
+    await expect.element(footer).toBeVisible();
+    const initialBounds = footer.element().getBoundingClientRect();
+
+    vi.mocked(usePassportEligibility).mockReturnValue('enabled');
+    await screen.rerender(<HumanWithHeader />);
+
+    await expect.element(footer).toBeVisible();
+    const settledBounds = footer.element().getBoundingClientRect();
+    expect(settledBounds.top).toBeCloseTo(initialBounds.top, 0);
+    expect(settledBounds.height).toBeCloseTo(initialBounds.height, 0);
+  });
+
   it.each([
     ['desktop', VRT_VIEWPORT_DESKTOP],
     ['mobile', VRT_VIEWPORT_MOBILE],
@@ -217,26 +233,19 @@ describe('Human (onboarding) — visual regression', () => {
         vi.mocked(usePassportEligibility).mockReturnValue(eligibility);
         const screen = await renderForVRT(<HumanWithHeader />, { viewport });
         const footer = screen.getByTestId('human-selection-footer');
-        if (name === 'mobile' && eligibility === 'enabled') {
-          await expect.element(footer).not.toBeVisible();
-        } else {
-          await expect.element(footer).toBeVisible();
-          await expect.element(screen.getByRole('link', { name: 'Terms of Service' })).toBeVisible();
-          await expect.element(screen.getByRole('link', { name: 'Privacy Policy' })).toBeVisible();
-          await expect.element(screen.getByRole('button', { name: 'over 18 years old.' })).toBeVisible();
-        }
+        await expect.element(footer).toBeVisible();
+        await expect.element(screen.getByRole('link', { name: 'Terms of Service' })).toBeVisible();
+        await expect.element(screen.getByRole('link', { name: 'Privacy Policy' })).toBeVisible();
+        await expect.element(screen.getByRole('button', { name: 'over 18 years old.' })).toBeVisible();
         await matchVrtFrameScreenshot(`onboarding-human-agreement-${eligibility}-${name}`);
         const back = screen.getByRole('button', { name: 'Back', exact: true });
-        if (name === 'desktop' || eligibility !== 'enabled') {
-          footer.element().scrollIntoView({ block: 'center' });
-        } else {
-          back.element().scrollIntoView({ block: 'end' });
-        }
+        footer.element().scrollIntoView({ block: 'center' });
         const bounds = back.element().getBoundingClientRect();
         expect(bounds.top).toBeGreaterThanOrEqual(0);
         expect(bounds.bottom).toBeLessThanOrEqual(viewport.height);
-        if (name === 'desktop' || eligibility !== 'enabled') {
-          expect(footer.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(bounds.top);
+        expect(footer.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(bounds.top);
+        if (name === 'mobile' && eligibility === 'enabled') {
+          await matchVrtFrameScreenshot('onboarding-human-agreement-footer-mobile');
         }
       },
     );

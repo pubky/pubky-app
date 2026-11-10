@@ -36,7 +36,6 @@ export function HumanVerificationStatus({ layout, reason, method, testId }: Huma
         <Button
           variant={reason === 'geoblocked' ? 'brand' : 'destructive'}
           size="icon"
-          data-testid={testId}
           aria-label={
             method === 'payment' ? 'Why Bitcoin payment is unavailable' : 'Why phone verification is unavailable'
           }

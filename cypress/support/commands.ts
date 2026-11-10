@@ -202,7 +202,7 @@ function confirmRecoveryPhrase(recoveryPhrase: string): void {
       throw new Error(`Could not find available index for word: ${word}`);
     }
 
-    cy.get(`#backup-recovery-phrase-word-${word}-${alphaIndex + 1}`).click();
+    cy.get(`#backup-recovery-phrase-choice-${alphaIndex + 1}`).click();
   });
   cy.get('#backup-recovery-phrase-validate-btn').click();
   cy.get('#backup-recovery-phrase-finish-btn').click();

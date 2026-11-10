@@ -4,7 +4,7 @@ import { HumanVerificationStatus } from './HumanVerificationStatus';
 
 describe('HumanVerificationStatus', () => {
   it('explains a blocked method when its mobile warning is tapped', () => {
-    render(<HumanVerificationStatus layout="mobile" method="payment" reason="geoblocked" testId="warning" />);
+    render(<HumanVerificationStatus layout="mobile" method="payment" reason="geoblocked" />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Why Bitcoin payment is unavailable' }));
@@ -15,7 +15,7 @@ describe('HumanVerificationStatus', () => {
   });
 
   it('distinguishes a phone service error from a country restriction', () => {
-    render(<HumanVerificationStatus layout="mobile" method="phone" reason="error" testId="warning" />);
+    render(<HumanVerificationStatus layout="mobile" method="phone" reason="error" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Why phone verification is unavailable' }));
     expect(screen.getByRole('dialog', { name: 'Service temporarily unavailable' })).toBeInTheDocument();

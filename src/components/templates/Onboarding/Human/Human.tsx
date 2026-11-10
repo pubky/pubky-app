@@ -139,10 +139,7 @@ export function Human() {
         />
       )}
       {state === States.Selection && (
-        <div
-          data-testid="human-selection-footer"
-          className={passportEligibility === 'enabled' ? 'hidden lg:block' : undefined}
-        >
+        <div data-testid="human-selection-footer">
           <HumanFooter />
         </div>
       )}
