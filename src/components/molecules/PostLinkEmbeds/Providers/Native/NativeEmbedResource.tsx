@@ -134,7 +134,8 @@ function NativeEmbedChoice({
   // A video Pinakes has read shows its player up front (`embed`), also in the composer, unless the
   // platform's embed was already pressed in. An X post keeps X's embed.
   const showsPlayer = isVideo && card !== null && isPlayable(card, url) && !engaged;
-  // On a top-level card (a collection's) the player's pills sit on the card's surface, as in `ResourceActions`.
+  // On the post card's surface (a collection's item, a card in a quoted post) the player's pills and
+  // Show on are the post's own, as in `ResourceActions`.
   const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
   // Our card for a video the card player cannot play from its own link, or for a post X cannot show:
   // a generic card, its other services (Also on) in the switch.
@@ -151,6 +152,7 @@ function NativeEmbedChoice({
         isOpen={isPostOpen}
         label={getShowPostLabel(siteName, isPostOpen)}
         aria-expanded={isPostOpen}
+        surface={actionSurface}
         onClick={() => setIsPostOpen((open) => !open)}
         data-testid="show-embed"
       />
