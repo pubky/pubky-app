@@ -50,8 +50,14 @@ const waitUntilServed = (url: string, deadline = Date.now() + SERVED_TIMEOUT_MS)
  * Checks the bytes behind an image, not only the element: its URL is on `route`, answers 200 with an image type,
  * and the browser decoded what it got. `findImage` must yield the one image, from the top of the command chain,
  * since a browser that met a 404 before Nexus had the file keeps the broken image until the page loads again.
+ * `afterReload` runs after that reload, before `findImage` looks again: a page that settles in steps (a feed)
+ * waits there the way the spec waits after its own reloads.
  */
-export const expectImageServed = (findImage: () => Cypress.Chainable<JQuery<HTMLElement>>, route: RegExp) => {
+export const expectImageServed = (
+  findImage: () => Cypress.Chainable<JQuery<HTMLElement>>,
+  route: RegExp,
+  { afterReload }: { afterReload?: () => void } = {},
+) => {
   findImage()
     .should('have.length', 1)
     .scrollIntoView()
@@ -61,7 +67,10 @@ export const expectImageServed = (findImage: () => Cypress.Chainable<JQuery<HTML
     });
   findImage().then(($image) => {
     const image = $image[0] as HTMLImageElement;
-    if (image.complete && image.naturalWidth === 0) cy.reload();
+    if (image.complete && image.naturalWidth === 0) {
+      cy.reload();
+      afterReload?.();
+    }
   });
   findImage()
     .should('have.length', 1)

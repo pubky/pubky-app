@@ -58,6 +58,10 @@ const imageFixturePath = () => `${Cypress.config('fixturesFolder')}/mustache-you
 const postMediaImage = (filterText: string) =>
   cy.findFirstPostInFeedFiltered(filterText).find('img').filter(imagesFrom(V1_MEDIA_ROUTE));
 
+// Checks the bytes of that image; a reload the check needs waits for the feed like every other reload here
+const expectPostMediaServed = (filterText: string) =>
+  expectImageServed(() => postMediaImage(filterText), V1_MEDIA_ROUTE, { afterReload: waitForFeedToLoad });
+
 const pdfAttachment = {
   contents: Cypress.Buffer.from('e2e file attachment'),
   fileName: 'notes.pdf',
@@ -290,7 +294,7 @@ describe('posts', () => {
         .as('originalImageSrc');
     });
     // The upload comes back from Nexus's v1 file route, as bytes the browser decodes
-    expectImageServed(() => postMediaImage(postContent), V1_MEDIA_ROUTE);
+    expectPostMediaServed(postContent);
 
     editPost({
       filterText: postContent,
@@ -309,7 +313,9 @@ describe('posts', () => {
           });
       });
     });
-    expectImageServed(() => postMediaImage(postContent), V1_MEDIA_ROUTE);
+    // This checks a second file only because the `src` changed above and the replacement fixture (mustache-edit.png)
+    // has other bytes: a fixture with the first one's bytes would hash to the same URL and make this a repeat
+    expectPostMediaServed(postContent);
 
     editPost({ filterText: postContent, imageAction: { action: 'remove' } });
 
@@ -1063,7 +1069,7 @@ describe('posts', () => {
         .as('originalImageSrc');
     });
     // The cover comes back from Nexus's v1 file route, as bytes the browser decodes
-    expectImageServed(() => postMediaImage(title), V1_MEDIA_ROUTE);
+    expectPostMediaServed(title);
 
     editArticle({ filterText: title, imageAction: { action: 'replace' } });
 
@@ -1079,7 +1085,9 @@ describe('posts', () => {
           });
       });
     });
-    expectImageServed(() => postMediaImage(title), V1_MEDIA_ROUTE);
+    // This checks a second file only because the `src` changed above and the replacement fixture (mustache-edit.png)
+    // has other bytes: a fixture with the first one's bytes would hash to the same URL and make this a repeat
+    expectPostMediaServed(title);
 
     editArticle({ filterText: title, imageAction: { action: 'remove' } });
 
