@@ -1,26 +1,26 @@
-import { readFileSync } from 'node:fs';
-import { initSync, Locks, LocksOptions } from '@synonymdev/locks-sdk';
+import { Locks, LocksOptions } from '@synonymdev/locks-sdk';
 import { Pulse } from '@synonymdev/pubky-pulse-web';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import * as sentry from '@/libs/observability/sentry';
-import { getRuntimeConfig, resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
+import {
+  LOCK_SERVER,
+  LOCK_SERVER_ORIGIN,
+  LOCK_SERVER_PUBKY,
+  PKARR_RELAY,
+  setupLocksContractHarness,
+  stubLockServerFetch,
+} from '@/test-utils/locks-contract';
 import { LocksService } from './locks';
 import type { TGuardedResource, TSubmittedProofBundle } from './locks.types';
 
-// The same synthetic Lock Server identity and signed PKARR packet as locks.region.contract.test.ts.
-const SERVER = 'tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy';
-const ROUTING_PACKET =
-  'FSgcCvQf4IDHyAtpTkQvSSCN3RsLYv7QC1vNT3qOf9nhNFbL89xLKYGT7LAfAeBLX723CTWU1v5jzB2PCWZnDwAGZRcomIAAAACAAAAAAAEAAAAANHRrcnE4em13YjhhM205azE1Y3N1M3ExN3FtZmdxbnA5ZHNrYnJnOXVxMXJ5ZHB5eHA3cXkAAEEAAQAADhAAFgABDWxlZ2FjeS1jb29raWUEdGVzdAA=';
-const RELAY = 'https://pkarr.test';
-const LOCK_SERVER_ORIGIN = 'https://legacy-cookie.test';
-const CREATOR = `pubky${SERVER}`;
+const CREATOR = LOCK_SERVER_PUBKY;
 const BUNDLE_ID = '000G40R40M30E209185GR38E1W';
 const LOCK_ID = '000G40R40M30E209185GR38E1W8124GK2GAHC5RR34D1P70X3RFG';
 const bundle: TSubmittedProofBundle = {
@@ -41,75 +41,37 @@ type TReply = { status: number; body?: string } | 'network-failure';
 /** The Lock Server's error envelope (`locks-server/src/api/errors.rs`). */
 const envelope = (code: string) => JSON.stringify({ error: { code, message: code.replaceAll('_', ' ') } });
 
-const originalConfig = window.__PUBKY_CONFIG__;
-
-beforeAll(() => {
-  const sdkEntry = import.meta.resolve('@synonymdev/locks-sdk');
-  initSync({ module: readFileSync(new URL('./locks_sdk_wasm_bg.wasm', sdkEntry)) });
-  window.__PUBKY_CONFIG__ = { ...getRuntimeConfig(), lockServer: CREATOR, pkarrRelays: [RELAY] };
-  resetRuntimeConfigForTests();
-});
-
-beforeEach(() => {
-  // Vitest aliases window to its Node global, which fails wasm-bindgen's Window instanceof check.
-  const BrowserWindow = Window;
-  vi.stubGlobal(
-    'Window',
-    class extends BrowserWindow {
-      static [Symbol.hasInstance](value: unknown) {
-        return value === window || value instanceof BrowserWindow;
-      }
-    },
-  );
-  vi.spyOn(Logger, 'error').mockImplementation(() => {});
-  vi.spyOn(sentry, 'captureAppError');
-  vi.spyOn(Pulse, 'captureException');
-});
+setupLocksContractHarness();
 
 afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
   useLocksAuthStore.setState(locksAuthInitialState);
 });
 
-afterAll(() => {
-  window.__PUBKY_CONFIG__ = originalConfig;
-  resetRuntimeConfigForTests();
-});
-
-/** Only HTTP is replaced: the service, SDK/WASM, request building and PKARR resolution run unchanged. */
 function stubLockServer(reply: TReply) {
   const requests: { method: string; path: string; authorization: string | null }[] = [];
-  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : new Request(input, init);
+  stubLockServerFetch((request) => {
     const url = new URL(request.url);
-    let response: Response;
-    if (url.origin === RELAY && url.pathname === `/${SERVER}`) {
-      response = new Response(Buffer.from(ROUTING_PACKET, 'base64'));
-    } else {
-      expect(url.origin).toBe(LOCK_SERVER_ORIGIN);
-      requests.push({
-        method: request.method,
-        path: `${url.pathname}${url.search}`,
-        authorization: request.headers.get('authorization'),
-      });
-      if (reply === 'network-failure') throw new TypeError('offline');
-      response = new Response(reply.body ?? '{}', {
-        status: reply.status,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    return Object.defineProperty(response, 'url', { value: request.url });
+    expect(url.origin).toBe(LOCK_SERVER_ORIGIN);
+    requests.push({
+      method: request.method,
+      path: `${url.pathname}${url.search}`,
+      authorization: request.headers.get('authorization'),
+    });
+    if (reply === 'network-failure') throw new TypeError('offline');
+    return new Response(reply.body ?? '{}', {
+      status: reply.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   });
   return requests;
 }
 
 /** A creator session restored from a bearer secret, exactly as a reload restores it. */
 function signInCreator() {
-  const options = new LocksOptions().addPkarrRelay(RELAY);
+  const options = new LocksOptions().addPkarrRelay(PKARR_RELAY);
   const session = Locks.forServerWithOptions(CREATOR, options).restoreSession('creator-bearer-secret');
-  useAuthStore.setState({ currentUserPubky: SERVER });
-  useLocksAuthStore.getState().init({ session, secret: 'creator-bearer-secret', creatorPubky: SERVER });
+  useAuthStore.setState({ currentUserPubky: LOCK_SERVER });
+  useLocksAuthStore.getState().init({ session, secret: 'creator-bearer-secret', creatorPubky: LOCK_SERVER });
 }
 
 /** What the call rejected with; undefined when it resolved. */

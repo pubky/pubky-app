@@ -53,14 +53,8 @@ Not covered by contract tests: Nexus (no SDK; plain HTTP through `safeFetch`), d
 ## How to write one
 
 - **Name and place**: `<service>.<topic>.contract.test.ts`, next to the service it exercises in `src/core/services/<service>/`. It runs in the `unit` Vitest project, so there is no separate config.
-- **Load the real SDK.** For Locks, resolve the installed package and load its WASM from disk so the shipped build runs:
-
-```typescript
-const sdkEntry = import.meta.resolve('@synonymdev/locks-sdk');
-initSync({ module: readFileSync(new URL('./locks_sdk_wasm_bg.wasm', sdkEntry)) });
-```
-
-- **Fake only HTTP.** Stub `fetch` with `vi.stubGlobal`, answer the PKARR relay with the signed routing packet, record each request (method, path, `Authorization`), and set `response.url` as a real response would. Say what is still real in the stub's doc comment, as the existing files do.
+- **Use the shared Locks harness.** Every Locks contract test calls `setupLocksContractHarness()` from [`src/test-utils/locks-contract.ts`](../src/test-utils/locks-contract.ts) once, before its own hooks. It loads the installed SDK's WASM from disk with `initSync`, points the runtime config at the synthetic Lock Server, bridges the wasm-bindgen `Window` check, spies on `Logger.error`, `captureAppError` and `Pulse.captureException`, and restores all of it. The file resets only the stores it seeds.
+- **Fake only HTTP.** For Locks, `stubLockServerFetch(answer)` answers the PKARR relay with the signed routing packet, passes every other request to `answer` (throw from it for a network failure) and sets `response.url` as a real response would. Record each request you assert on (method, path, `Authorization`) inside `answer`. The Pubky files stub `fetch` with `vi.stubGlobal` themselves; say what is still real in the stub's doc comment, as they do.
 - **Fixtures are synthetic and public.** The routing packets are signed for fixed test identities (the zero-seed user `8pinx…` and the one-seed server `tkrq8…`, which resolves to `legacy-cookie.test`); they are not live accounts. State written by an older SDK goes in a sibling JSON file that records how it was made, for example [`grant-auth-0.15.fixture.json`](../src/core/services/homeserver/grant-auth-0.15.fixture.json) (`"generatedWith": "@synonymdev/pubky@0.15.0"`). Never record a real session, cookie or user key.
 - **Error bodies mirror the server source.** The Lock Server envelope is `{ error: { code, message } }` (`locks-server/src/api/errors.rs`), and the statuses per endpoint come from `locks-server/docs/API.md`. Name the source in a comment next to the cases.
 - **Cover the error matrix with `it.each`**: every documented status for each call, plus `'network-failure'` and malformed success bodies. Assert on category and code, never on our message text, and check observability (`Logger.error`, `captureAppError`, `Pulse.captureException`) once per failure, or not at all for expected results.
@@ -98,9 +92,9 @@ Contract tests decide what the SDK does; the stub copies it. If a contract test 
 
 ## Pitfalls
 
-- **Vitest aliases `window` to its Node global**, which fails wasm-bindgen's `Window` instanceof check. Stub `Window` as the Locks files do; change nothing else about the environment.
-- **Restore everything**: `vi.unstubAllGlobals()`, `vi.restoreAllMocks()`, the runtime config (`resetRuntimeConfigForTests()`) and the stores you seeded, or the next file inherits a stubbed `fetch` or Lock Server.
-- **The routing packets are copied** into each file that needs them, and their comments point at each other. Keep them byte-identical if you touch one.
+- **Vitest aliases `window` to its Node global**, which fails wasm-bindgen's `Window` instanceof check. The Locks harness stubs `Window` for you; change nothing else about the environment.
+- **Restore everything**: `vi.unstubAllGlobals()`, `vi.restoreAllMocks()`, the runtime config (`resetRuntimeConfigForTests()`) and the stores you seeded, or the next file inherits a stubbed `fetch` or Lock Server. The Locks harness restores all but the stores.
+- **The one-seed server's routing packet lives once for Locks**, in `src/test-utils/locks-contract.ts`. The Pubky `session-store` and `grant-flow.recovery` files sign the same identity into their own fixtures; keep those byte-identical if you touch the packet.
 - **Don't mock the SDK** in a contract test. If you need `vi.mock('@synonymdev/…')`, write a unit test instead. Mocking an unrelated module (the Pubky files mock `pubky-app-specs`) is fine.
 - **A 404 isn't always an error**: the Locks task lookup reads 404 as "no task yet" (`null`). Assert that kind of exception explicitly.
 
