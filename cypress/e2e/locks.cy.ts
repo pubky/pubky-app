@@ -303,10 +303,18 @@ describe('locks', () => {
       signInAs(creator);
       signInToLockServer();
       failNextLockDeletion();
+      // The unlocked image makes the card tall, so the more button sits near the bottom of the
+      // viewport and the menu opens with Delete below the fold. Park the button clear of the
+      // sticky header before opening it. The menu is portaled and fixed, so the default click
+      // scroll cannot bring that clipped item back on screen.
       cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
-        cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
+        cy.get('[data-cy="post-more-btn"]')
+          .first()
+          .scrollIntoView({ offset: { top: -200, left: 0 } })
+          .should('be.visible')
+          .click({ scrollBehavior: false });
       });
-      cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click();
+      cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click({ scrollBehavior: false });
       cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.visible').click();
       cy.wait('@deleteContentLockFailed');
       cy.contains('Could not delete the locked content. Try again.').should('be.visible');
