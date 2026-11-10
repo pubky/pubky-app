@@ -18,7 +18,7 @@ describe('PubchiBrainPanel', () => {
     expect(screen.getByLabelText('Kimi K3, hosted by Synonym (default)')).toHaveAttribute('aria-checked', 'true');
     expect(
       screen.getByText(
-        "Your Pubchi's identity, settings, and history live on your homeserver. Changing the brain changes how it thinks, not who it is.",
+        "Your Pubchi's identity, settings, and private About and Instructions are saved on your homeserver. This session's conversation is temporary. Changing the brain keeps your saved identity and settings.",
       ),
     ).toBeInTheDocument();
   });

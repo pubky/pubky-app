@@ -38,6 +38,7 @@ export type DiscoveredTagSuggestion = {
 };
 
 export type PubchiQueryApplicationParams = {
+  signal?: AbortSignal;
   owner: Pubky;
   isCurrent: () => boolean;
   question: string;

@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PubchiQuerySuccess } from '@/application/pubchi/pubchi.types';
 import { PUBCHI_PANEL_SURFACE, PubchiPanel } from '@/organisms/Pubchi/PubchiPanel/PubchiPanel';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { matchVrtElementScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP } from '@/test-utils/vrt.viewports';
 
@@ -42,6 +43,7 @@ vi.mock('@/hooks/usePubchiQuery/usePubchiQuery', () => ({
     return {
       form,
       submit: vi.fn(),
+      cancel: vi.fn(),
       applyFeed: vi.fn(),
       result: mockQuery.answer ? ANSWER : undefined,
       errorCode: mockQuery.errorCode,
@@ -100,6 +102,7 @@ vi.mock('@/molecules/ControlledTextareaField/ControlledTextareaField', () => ({
 
 describe('PubchiPanel — visual regression', () => {
   beforeEach(() => {
+    usePubchiStore.getState().clear();
     mockQuery.signingAvailable = true;
     mockQuery.loading = false;
     mockQuery.elapsedMs = 0;
@@ -107,6 +110,34 @@ describe('PubchiPanel — visual regression', () => {
     mockQuery.errorCode = undefined;
     enrollment.pubchi = undefined;
     enrollment.config = undefined;
+  });
+
+  it.each([320, 1280])('keeps long conversation tokens within the %ipx panel', async (width) => {
+    const longQuestion = `https://example.test/${'question'.repeat(45)}`;
+    const longAnswer = `pubky://${'answer'.repeat(70)}`;
+    usePubchiStore.setState({
+      conversation: {
+        turns: [
+          { role: 'user', text: longQuestion },
+          { role: 'assistant', text: 'Earlier answer' },
+          { role: 'user', text: 'Latest question' },
+          { role: 'assistant', text: longAnswer, basis: 'web' },
+        ],
+      },
+    });
+    const screen = await renderForVRT(<PubchiPanel open onOpenChange={() => {}} />, {
+      viewport: { width, height: 844 },
+    });
+    const earlier = screen.getByRole('button', { name: longQuestion });
+    await expect.element(earlier).toHaveAttribute('aria-expanded', 'false');
+    const surface = screen.getByTestId(PUBCHI_PANEL_SURFACE).element();
+    const dialog = screen.getByRole('dialog').element();
+    expect(surface.scrollWidth).toBeLessThanOrEqual(surface.clientWidth);
+    expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
+    await earlier.click();
+    await expect.element(screen.getByText('Earlier answer', { exact: true })).toBeVisible();
+    expect(surface.scrollWidth).toBeLessThanOrEqual(surface.clientWidth);
+    expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
   });
 
   it('guards the production surface marker', async () => {

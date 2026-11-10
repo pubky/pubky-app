@@ -2478,7 +2478,10 @@ export class PubchiApplication {
       });
     }
 
-    const assertCurrent = () => assertQueryCurrent(params.isCurrent);
+    const assertCurrent = () => {
+      params.signal?.throwIfAborted();
+      assertQueryCurrent(params.isCurrent);
+    };
     assertCurrent();
     const binding = await LocalPubchiBindingService.readActive(params.owner);
     assertCurrent();
@@ -2547,7 +2550,7 @@ export class PubchiApplication {
     assertCurrent();
     assertRequestSignerIsStoredDevice(request.signer, device.signer);
 
-    const response = await PubchiService.query({ request, body });
+    const response = await PubchiService.query({ request, body }, params.signal);
     assertCurrent();
     const interpreted = interpretQueryResponse(response);
     if (interpreted.kind !== 'answer') return interpreted;
@@ -2559,6 +2562,7 @@ export class PubchiApplication {
         submittedAt,
         interpreted.result,
         assertCurrent,
+        params.signal,
       );
     }
     if (servedPurpose !== 'ask' || !body.target) return interpreted;
@@ -2597,9 +2601,10 @@ export class PubchiApplication {
           updated_at: Date.now(),
         },
         assertCurrent,
+        params.signal,
       );
     } catch (cause) {
-      if (cause instanceof AppError) throw cause;
+      if (cause instanceof AppError || (params.signal?.aborted && cause === params.signal.reason)) throw cause;
       throw Err.database(DatabaseErrorCode.TRANSACTION_FAILED, 'Could not persist Pubchi tag suggestions', {
         service: ErrorService.Pubchi,
         operation: 'query',
@@ -2622,6 +2627,7 @@ export class PubchiApplication {
     submittedAt: number,
     result: PubchiAnswerV1,
     assertCurrent: () => void,
+    signal?: AbortSignal,
   ): Promise<PubchiQuerySuccess> {
     const responseSha256 = await sha256Hex(canonicalJson(result));
     const responseBinding = {
@@ -2650,9 +2656,10 @@ export class PubchiApplication {
           updated_at: Date.now(),
         },
         assertCurrent,
+        signal,
       );
     } catch (cause) {
-      if (cause instanceof AppError) throw cause;
+      if (cause instanceof AppError || (signal?.aborted && cause === signal.reason)) throw cause;
       throw Err.database(DatabaseErrorCode.TRANSACTION_FAILED, 'Could not persist Pubchi draft post', {
         service: ErrorService.Pubchi,
         operation: 'query',

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { scanForbiddenPublicState } from '@/libs/pubchi/schemas/forbidden';
 
+export type PubchiSyncStatus = 'idle' | 'syncing' | 'rate-limited' | 'error';
+
 export const ENROLL_FORM_FIELDS = {
   DISPLAY_NAME: 'displayName',
 } as const;

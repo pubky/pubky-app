@@ -260,6 +260,123 @@ describe('usePubchiEnrollment', () => {
     expect(result.current.pubchi).toBeUndefined();
   });
 
+  it('shows a pause after five spaced reloads and resumes automatically without bypassing the limit', async () => {
+    const { result, unmount } = renderHook(() => usePubchiEnrollment());
+    await waitFor(() => expect(result.current.enrollmentLoaded).toBe(true));
+    vi.useFakeTimers();
+    try {
+      for (let index = 0; index < 6; index += 1) {
+        await act(async () => {
+          postSyncMessage(OWNER, 'config-saved');
+          await vi.advanceTimersByTimeAsync(200);
+        });
+      }
+      expect(mocks.load).toHaveBeenCalledTimes(6);
+      expect(result.current.syncStatus).toBe('rate-limited');
+
+      await act(async () => {
+        result.current.retrySync();
+        await vi.advanceTimersByTimeAsync(200);
+      });
+      expect(mocks.load).toHaveBeenCalledTimes(6);
+      expect(result.current.syncStatus).toBe('rate-limited');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(mocks.load).toHaveBeenCalledTimes(7);
+      expect(result.current.syncStatus).toBe('idle');
+    } finally {
+      unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps cached data visible on sync failure and clears the error after a successful retry', async () => {
+    mocks.load.mockResolvedValue({
+      bot: OWNER,
+      displayName: 'Scout',
+      createdAt: 1,
+      backupConfirmedAt: null,
+      verified: true,
+    });
+    const { result } = renderHook(() => usePubchiEnrollment());
+    await waitFor(() => expect(result.current.enrollmentLoaded).toBe(true));
+    mocks.load.mockRejectedValueOnce(new Error('sync unavailable'));
+
+    act(() => postSyncMessage(OWNER, 'config-saved'));
+    await waitFor(() => expect(result.current.syncStatus).toBe('error'));
+    expect(result.current.pubchi?.displayName).toBe('Scout');
+
+    mocks.load.mockResolvedValue({
+      bot: OWNER,
+      displayName: 'Scout II',
+      createdAt: 1,
+      backupConfirmedAt: null,
+      verified: true,
+    });
+    act(() => result.current.retrySync());
+    await waitFor(() => expect(result.current.syncStatus).toBe('idle'));
+    expect(result.current.pubchi?.displayName).toBe('Scout II');
+    expect(mocks.load).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(['owner', 'generation'])('ignores an old sync failure after the %s changes', async (changed) => {
+    const { result, rerender } = renderHook(() => usePubchiEnrollment());
+    await waitFor(() => expect(result.current.enrollmentLoaded).toBe(true));
+    let rejectReload!: (error: Error) => void;
+    mocks.load.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectReload = reject;
+        }),
+    );
+    act(() => postSyncMessage(OWNER, 'config-saved'));
+    await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
+
+    if (changed === 'owner') mocks.owner = 'a'.repeat(52);
+    else mocks.generation = 'second';
+    rerender();
+    await waitFor(() => expect(result.current.enrollmentLoaded).toBe(true));
+    await act(async () => rejectReload(new Error('old owner sync failed')));
+    expect(result.current.syncStatus).toBe('idle');
+  });
+
+  it('keeps sync reloads serialized across local cache timestamp changes', async () => {
+    const { result, unmount } = renderHook(() => usePubchiEnrollment());
+    await waitFor(() => expect(result.current.enrollmentLoaded).toBe(true));
+    let finishReload!: (value: undefined) => void;
+    mocks.load.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishReload = resolve;
+        }),
+    );
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        postSyncMessage(OWNER, 'config-saved');
+        await vi.advanceTimersByTimeAsync(200);
+      });
+      expect(mocks.load).toHaveBeenCalledTimes(2);
+      act(() => usePubchiStore.setState({ lastUpdatedAt: Date.now() + 1 }));
+      await act(async () => {
+        postSyncMessage(OWNER, 'config-saved');
+        await vi.advanceTimersByTimeAsync(200);
+      });
+      expect(mocks.load).toHaveBeenCalledTimes(2);
+      await act(async () => finishReload(undefined));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+      expect(mocks.load).toHaveBeenCalledTimes(3);
+      expect(result.current.syncStatus).toBe('idle');
+    } finally {
+      unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it('ignores messages for a different owner without reloading', async () => {
     const { result } = renderHook(() => usePubchiEnrollment());
     await waitFor(() => expect(mocks.load).toHaveBeenCalledOnce());

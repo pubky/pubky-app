@@ -15,7 +15,7 @@ import { PubchiPanel } from './PubchiPanel';
 
 const OWNER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const TARGET = { kind: 'post' as const, uri: `pubky://${OWNER}/pub/pubky.app/posts/POST123456789` };
-const QUESTION = `Summarize this thread ${TARGET.uri}`;
+const QUESTION = 'Summarize this thread';
 const beforeProposal: FeedProposalV2 = {
   schema: 'pubchi-feed-proposal',
   version: 2,
@@ -309,7 +309,7 @@ describe('PubchiPanel contextual summary readiness', () => {
     render(<PanelHarness />);
     await waitFor(() => expect(PubchiController.ensureDeviceReady).toHaveBeenCalled());
     const nextTarget = { ...TARGET, uri: `pubky://${OWNER}/pub/pubky.app/posts/POST987654321` };
-    const nextQuestion = `Summarize this thread ${nextTarget.uri}`;
+    const nextQuestion = 'Summarize this thread';
     act(() => PubchiController.openFlyout({ question: nextQuestion, source: 'post-menu', target: nextTarget }));
     await act(async () => ready.resolve(true));
     await waitFor(() => expect(PubchiController.fetchPubchiQuery).toHaveBeenCalledTimes(1));

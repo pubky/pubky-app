@@ -30,9 +30,11 @@ function isAbortError(error: unknown): boolean {
 
 export function usePubchiQuery() {
   const owner = useAuthStore((state) => state.currentUserPubky);
+  const generation = useAuthStore((state) => state.generation);
   const addConversationTurn = usePubchiStore((state) => state.addConversationTurn);
   const abortRef = useRef<AbortController | null>(null);
   const inFlightRequestIdRef = useRef(0);
+  const inFlightRequestKeyRef = useRef<string | null>(null);
   const requestIdRef = useRef(0);
   const [signingAvailable, setSigningAvailable] = useState(false);
   const [pubchiAvailable, setPubchiAvailable] = useState<boolean | undefined>(undefined);
@@ -84,17 +86,29 @@ export function usePubchiQuery() {
     return () => window.clearInterval(timer);
   }, [loading]);
 
+  const cancel = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    inFlightRequestIdRef.current = 0;
+    inFlightRequestKeyRef.current = null;
+    setLoading(false);
+  };
+
   useEffect(() => {
+    setLoading(false);
     const unsubscribe = usePubchiStore.subscribe((state, previous) => {
       if (state.conversationGeneration !== previous.conversationGeneration) {
-        abortRef.current?.abort();
+        cancel();
       }
     });
     return () => {
       unsubscribe();
       abortRef.current?.abort();
+      abortRef.current = null;
+      inFlightRequestIdRef.current = 0;
+      inFlightRequestKeyRef.current = null;
     };
-  }, []);
+  }, [owner, generation]);
 
   const submit = async (
     purpose: Phase0Purpose,
@@ -109,107 +123,137 @@ export function usePubchiQuery() {
       setErrorCode(SIGNING_UNAVAILABLE);
       return false;
     }
+    const submittedQuestion = form.getValues(QUERY_FORM_FIELDS.QUESTION);
+    const requestGeneration = usePubchiStore.getState().conversationGeneration;
+    const authGeneration = useAuthStore.getState().generation;
+    const requestKey = JSON.stringify({
+      owner,
+      authGeneration,
+      requestGeneration,
+      question: submittedQuestion.trim(),
+      purpose,
+      ...requestOptions,
+    });
+    if (inFlightRequestKeyRef.current === requestKey && !abortRef.current?.signal.aborted) return false;
+
+    // Claim the request before asynchronous form validation, so cancel and duplicate submits also cover that wait.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
+    inFlightRequestIdRef.current = requestId;
+    inFlightRequestKeyRef.current = requestKey;
+    const isCurrent = () =>
+      !controller.signal.aborted &&
+      inFlightRequestIdRef.current === requestId &&
+      useAuthStore.getState().currentUserPubky === owner &&
+      useAuthStore.getState().generation === authGeneration &&
+      usePubchiStore.getState().conversationGeneration === requestGeneration;
+    setLoading(true);
+    setErrorCode(undefined);
     let ok = false;
-    await form.handleSubmit(
-      async (values) => {
-        abortRef.current?.abort();
-        const controller = new AbortController();
-        abortRef.current = controller;
-        const requestId = ++requestIdRef.current;
-        inFlightRequestIdRef.current = requestId;
-        const requestGeneration = usePubchiStore.getState().conversationGeneration;
-        const isCurrent = () =>
-          !controller.signal.aborted &&
-          inFlightRequestIdRef.current === requestId &&
-          usePubchiStore.getState().conversationGeneration === requestGeneration;
-        setLoading(true);
-        setErrorCode(undefined);
-        try {
-          const rawQuestion = values[QUERY_FORM_FIELDS.QUESTION];
-          const remoteCursorAvailable = Boolean(
-            owner &&
-            rawQuestion === 'What did I miss?' &&
-            sessionCovers(useAuthStore.getState().selectSession()?.info.capabilities ?? [], PUBCHI_PRIVATE_DIRECTORY),
-          );
-          const requestOwner = owner;
-          const remoteCursor = remoteCursorAvailable ? await PubchiController.loadPubchiCursor() : null;
+    try {
+      await form.handleSubmit(
+        async (values) => {
           if (!isCurrent()) return;
-          const cursor = remoteCursor ?? (owner && rawQuestion === 'What did I miss?' ? readLocalCursor(owner) : null);
-          setCursorSource(remoteCursorAvailable && remoteCursor ? 'remote' : cursor ? 'device' : 'none');
-          const conversation = usePubchiStore.getState().conversation;
-          const next = await PubchiController.fetchPubchiQuery({
-            question: cursor ? `What did I miss since ${cursor}` : rawQuestion,
-            purpose,
-            ...(purpose === 'ask' ? { conversation } : {}),
-            ...(purpose === 'build-feed' ? { proposalVersion: 2 as const } : {}),
-            ...requestOptions,
-          });
-          if (!isCurrent()) return;
-          const nextUntil = next.kind === 'answer' ? next.result.continuation?.until : undefined;
-          const cursorTime = cursor ? Date.parse(cursor) : Number.NaN;
-          const nextUntilTime = nextUntil ? Date.parse(nextUntil) : Number.NaN;
-          if (
-            requestOwner &&
-            next.kind === 'answer' &&
-            next.result.owner === requestOwner &&
-            rawQuestion === 'What did I miss?' &&
-            next.result.continuation?.complete &&
-            !Number.isNaN(nextUntilTime) &&
-            (cursor === null || (!Number.isNaN(cursorTime) && nextUntilTime > cursorTime))
-          ) {
-            setResult(next);
-            ok = true;
-            try {
-              if (remoteCursorAvailable) await PubchiController.savePubchiCursor(requestOwner, nextUntil!);
-              else writeLocalCursor(requestOwner, nextUntil!);
-            } catch (error) {
-              Logger.warn('Failed to save Pubchi catch-up position', { error });
-              toast({
-                variant: 'warning',
-                title: "Answer shown; couldn't save your catch-up position",
-                dismissButton: true,
-              });
-            }
-            return;
-          }
-          setResult(next);
-          if (purpose === 'ask' && requestOwner && next.kind === 'answer') {
-            addConversationTurn({ role: 'user', text: rawQuestion }, requestOwner);
-            addConversationTurn(
-              {
-                role: 'assistant',
-                text: next.result.summary,
-                ...(next.result.basis ? { basis: next.result.basis } : {}),
-                ...(next.result.citations ? { citations: next.result.citations } : {}),
-              },
-              requestOwner,
+          try {
+            const rawQuestion = values[QUERY_FORM_FIELDS.QUESTION];
+            const remoteCursorAvailable = Boolean(
+              owner &&
+              rawQuestion === 'What did I miss?' &&
+              sessionCovers(useAuthStore.getState().selectSession()?.info.capabilities ?? [], PUBCHI_PRIVATE_DIRECTORY),
             );
+            const requestOwner = owner;
+            const remoteCursor = remoteCursorAvailable ? await PubchiController.loadPubchiCursor() : null;
+            if (!isCurrent()) return;
+            const cursor =
+              remoteCursor ?? (owner && rawQuestion === 'What did I miss?' ? readLocalCursor(owner) : null);
+            setCursorSource(remoteCursorAvailable && remoteCursor ? 'remote' : cursor ? 'device' : 'none');
+            const conversation = usePubchiStore.getState().conversation;
+            const next = await PubchiController.fetchPubchiQuery({
+              question: cursor ? `What did I miss since ${cursor}` : rawQuestion,
+              purpose,
+              signal: controller.signal,
+              ...(purpose === 'ask' ? { conversation } : {}),
+              ...(purpose === 'build-feed' ? { proposalVersion: 2 as const } : {}),
+              ...requestOptions,
+            });
+            if (!isCurrent()) return;
+            const acceptResult = () => {
+              setResult(next);
+              if (form.getValues(QUERY_FORM_FIELDS.QUESTION) === submittedQuestion) {
+                form.setValue(QUERY_FORM_FIELDS.QUESTION, '', { shouldDirty: false });
+              }
+              ok = true;
+            };
+            const nextUntil = next.kind === 'answer' ? next.result.continuation?.until : undefined;
+            const cursorTime = cursor ? Date.parse(cursor) : Number.NaN;
+            const nextUntilTime = nextUntil ? Date.parse(nextUntil) : Number.NaN;
+            if (
+              requestOwner &&
+              next.kind === 'answer' &&
+              next.result.owner === requestOwner &&
+              rawQuestion === 'What did I miss?' &&
+              next.result.continuation?.complete &&
+              !Number.isNaN(nextUntilTime) &&
+              (cursor === null || (!Number.isNaN(cursorTime) && nextUntilTime > cursorTime))
+            ) {
+              acceptResult();
+              try {
+                if (remoteCursorAvailable) await PubchiController.savePubchiCursor(requestOwner, nextUntil!);
+                else writeLocalCursor(requestOwner, nextUntil!);
+              } catch (error) {
+                if (!isCurrent()) return;
+                Logger.warn('Failed to save Pubchi catch-up position', { error });
+                toast({
+                  variant: 'warning',
+                  title: "Answer shown; couldn't save your catch-up position",
+                  dismissButton: true,
+                });
+              }
+              return;
+            }
+            acceptResult();
+            if (purpose === 'ask' && requestOwner && next.kind === 'answer') {
+              addConversationTurn({ role: 'user', text: rawQuestion }, requestOwner);
+              addConversationTurn(
+                {
+                  role: 'assistant',
+                  text: next.result.summary,
+                  ...(next.result.basis ? { basis: next.result.basis } : {}),
+                  ...(next.result.citations ? { citations: next.result.citations } : {}),
+                },
+                requestOwner,
+              );
+            }
+          } catch (error) {
+            if (!isCurrent() || isAbortError(error)) return;
+            const code = pubchiQueryErrorCode(error);
+            const { message } = pubchiErrorCopy(code);
+            setErrorCode(code);
+            setResult(undefined);
+            toast({ variant: 'error', title: message, dismissButton: true });
           }
-          ok = true;
-        } catch (error) {
-          if (!isCurrent() || isAbortError(error)) return;
-          const code = pubchiQueryErrorCode(error);
-          const { message } = pubchiErrorCopy(code);
-          setErrorCode(code);
-          setResult(undefined);
-          toast({ variant: 'error', title: message, dismissButton: true });
-        } finally {
-          if (inFlightRequestIdRef.current === requestId) {
-            inFlightRequestIdRef.current = 0;
-            setLoading(false);
-          }
-        }
-      },
-      () => {
-        document.getElementById(QUERY_FORM_FIELDS.QUESTION)?.focus();
-      },
-    )();
+        },
+        () => {
+          if (isCurrent()) document.getElementById(QUERY_FORM_FIELDS.QUESTION)?.focus();
+        },
+      )();
+    } finally {
+      if (inFlightRequestIdRef.current === requestId) {
+        inFlightRequestIdRef.current = 0;
+        inFlightRequestKeyRef.current = null;
+        abortRef.current = null;
+        setLoading(false);
+      }
+    }
     return ok;
   };
 
   return {
     form,
     submit,
+    cancel,
     result,
     errorCode,
     loading,

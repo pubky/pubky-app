@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { deletePubchiDatabase, getPubchiDatabase } from '@/database/pubchi/pubchi';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import * as deviceKey from '@/libs/pubchi/device-key';
 import type { PubchiAnswerV1 } from '@/libs/pubchi/schemas/answer';
 import * as canonical from '@/libs/pubchi/schemas/canonical';
@@ -77,10 +78,11 @@ function answer(kind: QueryKind): PubchiAnswerV1 {
   };
 }
 
-function query(kind: QueryKind) {
+function query(kind: QueryKind, signal?: AbortSignal) {
   return PubchiController.fetchPubchiQuery({
     question: answer(kind).question,
     purpose: 'ask',
+    ...(signal ? { signal } : {}),
     ...(kind === 'tag' ? { target } : {}),
   });
 }
@@ -238,6 +240,81 @@ describe('Pubchi query authentication lifetime', () => {
         await expectNoPrivateRecords();
       },
     );
+
+    it('does not persist a canceled response and allows the next query', async () => {
+      const controller = new AbortController();
+      const response = Promise.withResolvers<unknown>();
+      const service = vi.spyOn(PubchiService, 'query').mockReturnValueOnce(response.promise);
+      const pending = query(kind, controller.signal).catch((error: unknown) => error);
+      await vi.waitFor(() => expect(service).toHaveBeenCalledOnce());
+
+      controller.abort();
+      response.resolve(answer(kind));
+
+      await expect(pending).resolves.toMatchObject({ name: 'AbortError' });
+      await expectNoPrivateRecords();
+      expect(service.mock.calls[0][1]).toBe(controller.signal);
+      service.mockResolvedValueOnce(answer(kind));
+      await expect(query(kind, new AbortController().signal)).resolves.toMatchObject({ kind: 'answer' });
+      const db = getPubchiDatabase();
+      expect(await (kind === 'draft' ? db.draftPosts : db.tagApplications).where('owner').equals(owner).count()).toBe(
+        1,
+      );
+    });
+
+    it('aborts a queued private record write when the caller cancels', async () => {
+      const report = vi.spyOn(Err, 'database');
+      const db = getPubchiDatabase();
+      const controller = new AbortController();
+      const response = Promise.withResolvers<unknown>();
+      const service = vi.spyOn(PubchiService, 'query').mockReturnValueOnce(response.promise);
+      const pending = query(kind, controller.signal);
+      const settled = pending.then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      );
+      await vi.waitFor(() => expect(service).toHaveBeenCalledOnce());
+      const release = Promise.withResolvers<void>();
+      const started = Promise.withResolvers<void>();
+      const blocker = db.transaction('rw', db.tables, async () => {
+        await db.bindings.count();
+        started.resolve();
+        await Dexie.waitFor(release.promise);
+      });
+      await started.promise;
+      try {
+        const put = kind === 'draft' ? vi.spyOn(db.draftPosts, 'put') : vi.spyOn(db.tagApplications, 'put');
+        response.resolve(answer(kind));
+        await vi.waitFor(() => expect(put).toHaveBeenCalledOnce());
+        controller.abort();
+        release.resolve();
+        await blocker;
+
+        await settled;
+        expect(report).not.toHaveBeenCalled();
+        await expect(settled).resolves.toMatchObject({ error: { name: 'AbortError' } });
+        await expectNoPrivateRecords();
+      } finally {
+        response.resolve(answer(kind));
+        release.resolve();
+        await Promise.allSettled([blocker, settled]);
+      }
+    });
+
+    it('still reports a database AbortError when the caller did not cancel', async () => {
+      const db = getPubchiDatabase();
+      const report = vi.spyOn(Err, 'database');
+      vi.spyOn(PubchiService, 'query').mockResolvedValueOnce(answer(kind));
+      const put = kind === 'draft' ? vi.spyOn(db.draftPosts, 'put') : vi.spyOn(db.tagApplications, 'put');
+      put.mockRejectedValueOnce(new DOMException('Storage transaction failed', 'AbortError'));
+
+      await expect(query(kind, new AbortController().signal)).rejects.toMatchObject({
+        code: DatabaseErrorCode.TRANSACTION_FAILED,
+      });
+
+      expect(report).toHaveBeenCalledOnce();
+      await expectNoPrivateRecords();
+    });
 
     it('rejects if logout starts during response hashing', async () => {
       vi.spyOn(PubchiService, 'query').mockResolvedValue(answer(kind));

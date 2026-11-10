@@ -7,7 +7,8 @@ it does not receive the user's Pubky session, recovery phrase, or private key.
 
 This integration ports the Pubchi frontend from
 [`BitcoinErrorLog/pubky-app` at `30b7763bf7c456d8523e8996f1804d68fabcc8a9`](https://github.com/BitcoinErrorLog/pubky-app/tree/30b7763bf7c456d8523e8996f1804d68fabcc8a9)
-onto official App `dev` at `27891747ae0fc17b0b32b04b3ac3181480acfb3a`.
+into official App `dev`. The initial port used `27891747ae0fc17b0b32b04b3ac3181480acfb3a`;
+subsequent App changes are merged into the same integration branch.
 It retains the current App's grant authentication, Shop integration, local-first data
 paths, runtime configuration, and test conventions. The source fork's historical
 Phase 0 proof documents describe earlier contracts and are not the operational guide
@@ -69,10 +70,17 @@ hosted scheduler. Unsupported purpose/endpoint pairs are rejected before a reque
 The feature includes `/pubchi`, `/pubchi/brain`, and `/settings/pubchi`, a flyout from
 App navigation, and contextual entry points in post/profile menus. Settings cover
 creation or enrollment, backup confirmation, preferences, model configuration, device
-delegations, and export/import. Brain context is stored under the owner's private
-Pubchi namespace and is included in signed requests when the user configures it.
+delegations, and the brain context editor. Export/import APIs exist, but Settings has
+no export/import screen or guided move flow yet.
+
+The brain editor saves the user's about text and instructions under the owner's
+private `/priv/app.pubchi/v1/context.json` and includes them in signed requests.
+Ordinary conversation turns are temporary browser-memory state, bounded to eight
+turns and 4,800 code points; they are not a persisted chat history or a readable
+memory store. Operation receipts are separate from conversation history.
 Public graph/web context settings are visible in configuration; web context is off
-by default.
+by default. The follower-history preference currently saves an opt-in only: this
+frontend has no snapshot writer or history card.
 
 The current service accepts self-hosted OpenAI-compatible and Ollama model endpoints
 only on its exact loopback hosts. A URL such as `http://localhost:11434` is resolved
@@ -135,10 +143,14 @@ is attempted while the outgoing session is still usable, with pending revocation
 recorded before keys are removed. A routine main-cache reset is not a logout and must
 preserve Pubchi state. Disabling the feature is also not a data deletion operation.
 
-Homeserver records provide portable configuration, bindings, provenance, and private
-receipts. Export/import validates those documents and owner relationships. It does
-not export device private keys or turn a browser-local signer into portable custody.
-See [ADR 0026](adr/0026-pubchi-assisted-integration.md) for storage and layer boundaries.
+Homeserver records hold configuration, bindings, provenance, and private receipts.
+The export/import engine validates allowlisted **public** `/pub/app.pubchi/v1/`
+documents, their exact UTF-8 hashes, and owner relationships. Its optional history
+means public request/suggestion/run records, not chat history. It excludes `/priv/`
+documents, including brain context and private receipts, and device private keys.
+There is no export/import UI or guided move flow yet, and a browser-local signer does
+not become portable custody. See [ADR 0026](adr/0026-pubchi-assisted-integration.md)
+for storage and layer boundaries.
 
 ## Scope and verification
 
@@ -146,12 +158,22 @@ The migration includes feature modules, current-contract fixtures, unit coverage
 Pubchi VRT cases. It excludes the source fork's unrelated preview CI changes,
 repository-wide lint/TypeScript exceptions, obsolete component snapshots, and local
 proof artifacts. The separate [legal PR #188](https://github.com/BitcoinErrorLog/pubky-app/pull/188)
-remains unmerged and is not incorporated by this integration. VRT baselines are CI-owned; source screenshots and locally
-generated baselines are not acceptance evidence for this App revision.
+remains unmerged and is not incorporated by this integration. Pubchi Terms/Privacy
+disclosures still need review before first-group enablement; provider training claims
+must be supported by the selected provider's actual terms. VRT baselines are CI-owned;
+source screenshots and locally generated baselines are not acceptance evidence for
+this App revision.
 
 Run the affected unit suites, lint, typecheck, the full unit suite, and a production
 build for the combined change. Review the Pubchi visual cases through the existing
 VRT workflow. Before enabling a deployment, exercise signer capability approval,
 enrollment/backup, query/feed responses, approved tag and post writes, revert and
-reconciliation, logout/account switching across tabs, and export/import against the
-chosen backend. A unit test pass alone does not prove that deployment contract.
+reconciliation, and logout/account switching across tabs against the chosen backend.
+A unit test pass alone does not prove that deployment contract.
+
+Follow-up work includes persisted chat/readable memory, export/import with preview,
+guided move, and follower-history snapshots with an honest completeness indicator.
+The existing portability tests use mocked homeservers; a real A-to-B homeserver
+exercise, byte-hash comparison, and deliberate failure case are still required.
+Keep the feature disabled until the service contract checks, aligned CORS/audience
+origins, live acceptance, and required disclosures are complete.

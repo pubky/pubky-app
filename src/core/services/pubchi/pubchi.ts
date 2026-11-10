@@ -23,7 +23,8 @@ export class PubchiService {
    * POST a signed request to the Pubchi gateway. HTTP only: no validation,
    * no Dexie, no stores.
    */
-  static async query(payload: PubchiQueryRequest): Promise<unknown> {
+  static async query(payload: PubchiQueryRequest, signal?: AbortSignal): Promise<unknown> {
+    signal?.throwIfAborted();
     if (!isPubchiPanelEnabled()) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'PUBCHI_DISABLED', {
         service: ErrorService.Pubchi,
@@ -37,6 +38,8 @@ export class PubchiService {
     }
 
     const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort, { once: true });
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
@@ -54,7 +57,9 @@ export class PubchiService {
         'query',
       );
 
+      signal?.throwIfAborted();
       const raw = await readLimitedBody(response);
+      signal?.throwIfAborted();
       const parsed = parseJsonOrUndefined(raw);
 
       if (!response.ok) {
@@ -83,6 +88,8 @@ export class PubchiService {
 
       return parsed;
     } catch (error) {
+      // External cancellation stays quiet; the internal deadline retains its retryable timeout error.
+      signal?.throwIfAborted();
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'REQUEST_TIMEOUT', {
           service: ErrorService.Pubchi,
@@ -99,6 +106,7 @@ export class PubchiService {
       });
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
     }
   }
 }

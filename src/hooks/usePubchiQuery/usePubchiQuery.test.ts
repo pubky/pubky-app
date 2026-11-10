@@ -80,6 +80,8 @@ const mocks = vi.hoisted(() => ({
   loadPubchiCursor: vi.fn(),
   savePubchiCursor: vi.fn(),
   sessionCapabilities: [] as string[],
+  authOwner: 'a'.repeat(52),
+  authGeneration: 'original-generation',
 }));
 
 vi.mock('@/libs/pubchi/flags', () => ({
@@ -102,10 +104,12 @@ vi.mock('@/molecules/Toaster/toast', () => ({
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: Object.assign(
-    (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'a'.repeat(52) }),
+    (selector: (state: { currentUserPubky: string; generation: string }) => unknown) =>
+      selector({ currentUserPubky: mocks.authOwner, generation: mocks.authGeneration }),
     {
       getState: () => ({
-        currentUserPubky: 'a'.repeat(52),
+        currentUserPubky: mocks.authOwner,
+        generation: mocks.authGeneration,
         selectSession: () => ({ info: { capabilities: mocks.sessionCapabilities } }),
       }),
     },
@@ -123,6 +127,8 @@ describe('usePubchiQuery', () => {
     mocks.loadPubchiCursor.mockReset().mockResolvedValue(null);
     mocks.savePubchiCursor.mockReset().mockResolvedValue(undefined);
     mocks.sessionCapabilities = [];
+    mocks.authOwner = 'a'.repeat(52);
+    mocks.authGeneration = 'original-generation';
     localStorage.clear();
   });
 
@@ -144,9 +150,215 @@ describe('usePubchiQuery', () => {
       question: 'build a feed of builders',
       purpose: 'build-feed',
       proposalVersion: 2,
+      signal: expect.any(AbortSignal),
     });
     expect(result.current.result).toEqual(FEED_SUCCESS);
     expect(result.current.errorCode).toBeUndefined();
+  });
+
+  it('clears the submitted question after success, including surrounding whitespace', async () => {
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, '  What changed?  ');
+      await expect(result.current.submit('ask')).resolves.toBe(true);
+    });
+
+    expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('');
+  });
+
+  it('preserves a newer question typed while the submitted question is pending', async () => {
+    const response = Promise.withResolvers<PubchiQuerySuccess>();
+    mocks.fetchPubchiQuery.mockReturnValueOnce(response.promise);
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+    let pending!: Promise<boolean>;
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      pending = result.current.submit('ask');
+    });
+    await waitFor(() => expect(mocks.fetchPubchiQuery).toHaveBeenCalledOnce());
+
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'Who built it?');
+      response.resolve(answer({ continuation: false }));
+      await expect(pending).resolves.toBe(true);
+    });
+
+    expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('Who built it?');
+  });
+
+  it('cancels the transport, preserves the question, and ignores the old response after a new query succeeds', async () => {
+    usePubchiStore.getState().setConfig(null, 'a'.repeat(52));
+    const response = Promise.withResolvers<PubchiQuerySuccess>();
+    mocks.fetchPubchiQuery.mockReturnValueOnce(response.promise);
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+    let pending!: Promise<boolean>;
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What did I miss?');
+      pending = result.current.submit('ask');
+    });
+    await waitFor(() => expect(mocks.fetchPubchiQuery).toHaveBeenCalledOnce());
+    const signal = mocks.fetchPubchiQuery.mock.calls[0][0].signal;
+
+    act(() => result.current.cancel());
+
+    expect(signal.aborted).toBe(true);
+    expect(result.current.loading).toBe(false);
+    expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('What did I miss?');
+    const nextAnswer = answer({ continuation: false });
+    mocks.fetchPubchiQuery.mockResolvedValueOnce(nextAnswer);
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'Who built it?');
+      await expect(result.current.submit('ask')).resolves.toBe(true);
+      response.resolve(answer());
+      await expect(pending).resolves.toBe(false);
+    });
+
+    expect(result.current.result).toEqual(nextAnswer);
+    expect(result.current.errorCode).toBeUndefined();
+    expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('');
+    expect(usePubchiStore.getState().conversation.turns.map((turn) => turn.text)).toEqual([
+      'Who built it?',
+      'Nothing.',
+    ]);
+    expect(localStorage.getItem(`pubchi-cursor:${'a'.repeat(52)}`)).toBeNull();
+    expect(mocks.savePubchiCursor).not.toHaveBeenCalled();
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  it('sends one request and records one conversation pair for rapid duplicate submissions', async () => {
+    usePubchiStore.getState().setConfig(null, 'a'.repeat(52));
+    const response = Promise.withResolvers<PubchiQuerySuccess>();
+    mocks.fetchPubchiQuery.mockReturnValue(response.promise);
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+    let first!: Promise<boolean>;
+    let second!: Promise<boolean>;
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      first = result.current.submit('ask');
+      second = result.current.submit('ask');
+    });
+    try {
+      await waitFor(() => expect(mocks.fetchPubchiQuery).toHaveBeenCalledOnce());
+    } finally {
+      await act(async () => {
+        response.resolve(answer({ continuation: false }));
+        await Promise.all([first, second]);
+      });
+    }
+
+    expect(usePubchiStore.getState().conversation.turns.map((turn) => turn.text)).toEqual([
+      'What changed?',
+      'Nothing.',
+    ]);
+  });
+
+  it('does not start a request when canceled during form validation', async () => {
+    const { result } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      const pending = result.current.submit('ask');
+      result.current.cancel();
+      await expect(pending).resolves.toBe(false);
+    });
+
+    expect(mocks.fetchPubchiQuery).not.toHaveBeenCalled();
+    expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('What changed?');
+    expect(result.current.loading).toBe(false);
+  });
+
+  it.each(['owner', 'session'] as const)(
+    'does not send an old question after the %s changes during cursor lookup',
+    async (change) => {
+      const cursor = Promise.withResolvers<string | null>();
+      mocks.sessionCapabilities = ['/priv/app.pubchi/v1/:rw'];
+      mocks.loadPubchiCursor.mockReturnValueOnce(cursor.promise);
+      const { result } = renderHook(() => usePubchiQuery());
+      await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+      let pending!: Promise<boolean>;
+      await act(async () => {
+        result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What did I miss?');
+        pending = result.current.submit('ask');
+      });
+      await waitFor(() => expect(mocks.loadPubchiCursor).toHaveBeenCalledOnce());
+
+      await act(async () => {
+        if (change === 'owner') mocks.authOwner = 'b'.repeat(52);
+        mocks.authGeneration = 'replacement-generation';
+        cursor.resolve(null);
+        await expect(pending).resolves.toBe(false);
+      });
+
+      expect(mocks.fetchPubchiQuery).not.toHaveBeenCalled();
+      expect(result.current.loading).toBe(false);
+      expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('What did I miss?');
+    },
+  );
+
+  it('aborts a replaced session immediately and lets that session ask the same question', async () => {
+    const response = Promise.withResolvers<PubchiQuerySuccess>();
+    mocks.fetchPubchiQuery.mockReturnValueOnce(response.promise);
+    const { result, rerender } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+    let pending!: Promise<boolean>;
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      pending = result.current.submit('ask');
+    });
+    await waitFor(() => expect(mocks.fetchPubchiQuery).toHaveBeenCalledOnce());
+    const signal = mocks.fetchPubchiQuery.mock.calls[0][0].signal;
+
+    mocks.authGeneration = 'replacement-generation';
+    rerender();
+
+    expect(signal.aborted).toBe(true);
+    expect(result.current.loading).toBe(false);
+    await act(async () => {
+      await expect(result.current.submit('ask')).resolves.toBe(true);
+      response.resolve(answer());
+      await expect(pending).resolves.toBe(false);
+    });
+    expect(mocks.fetchPubchiQuery).toHaveBeenCalledTimes(2);
+    expect(result.current.result).toEqual(FEED_SUCCESS);
+  });
+
+  it('aborts the outgoing transport when a contextual conversation changes or the hook unmounts', async () => {
+    const first = Promise.withResolvers<PubchiQuerySuccess>();
+    const second = Promise.withResolvers<PubchiQuerySuccess>();
+    mocks.fetchPubchiQuery.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const { result, unmount } = renderHook(() => usePubchiQuery());
+    await waitFor(() => expect(result.current.signingAvailable).toBe(true));
+    let pending!: Promise<boolean>;
+    await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What changed?');
+      pending = result.current.submit('ask');
+    });
+    await waitFor(() => expect(mocks.fetchPubchiQuery).toHaveBeenCalledOnce());
+    const firstSignal = mocks.fetchPubchiQuery.mock.calls[0][0].signal;
+
+    await act(async () => {
+      usePubchiStore.getState().clearConversation();
+      first.resolve(answer());
+      await expect(pending).resolves.toBe(false);
+    });
+    expect(firstSignal.aborted).toBe(true);
+    expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('What changed?');
+
+    await act(async () => {
+      pending = result.current.submit('ask');
+    });
+    await waitFor(() => expect(mocks.fetchPubchiQuery).toHaveBeenCalledTimes(2));
+    const secondSignal = mocks.fetchPubchiQuery.mock.calls[1][0].signal;
+    unmount();
+    expect(secondSignal.aborted).toBe(true);
+    second.resolve(answer());
+    await expect(pending).resolves.toBe(false);
   });
 
   it('does not toast SIGNATURE_INVALID when no device key is available', async () => {
@@ -266,6 +478,7 @@ describe('usePubchiQuery', () => {
       await expect(result.current.submit('ask')).resolves.toBe(false);
     });
 
+    expect(result.current.form.getValues(QUERY_FORM_FIELDS.QUESTION)).toBe('What changed?');
     expect(result.current.errorCode).toBe(code);
     expect(mocks.toast).toHaveBeenCalledExactlyOnceWith({
       variant: 'error',
@@ -349,6 +562,7 @@ describe('usePubchiQuery', () => {
 
     mocks.fetchPubchiQuery.mockResolvedValue(answer({ until: '2026-09-10T07:00:00Z' }));
     await act(async () => {
+      result.current.form.setValue(QUERY_FORM_FIELDS.QUESTION, 'What did I miss?');
       await result.current.submit('ask');
     });
     expect(localStorage.getItem(`pubchi-cursor:${'a'.repeat(52)}`)).toBe('2026-09-10T08:00:00Z');

@@ -208,6 +208,7 @@ export class PubchiController {
     return PubchiApplication.query({
       owner,
       isCurrent: this.captureQueryGeneration(owner),
+      ...(params.signal ? { signal: params.signal } : {}),
       question: params.question,
       purpose: params.purpose,
       ...(params.purpose === 'ask' && params.conversation?.turns.length ? { conversation: params.conversation } : {}),

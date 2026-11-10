@@ -31,6 +31,7 @@ import {
   type EnrollPubchiFormData,
   enrollPubchiFormDefaults,
   enrollPubchiFormSchema,
+  type PubchiSyncStatus,
 } from './usePubchiEnrollment.types';
 
 const PUBCHI_SYNC_RELOAD_LIMIT = 5;
@@ -45,7 +46,6 @@ export function usePubchiEnrollment() {
   const storedConfig = usePubchiStore((state) => state.config);
   const storedContext = usePubchiStore((state) => state.context);
   const storedOwner = usePubchiStore((state) => state.ownerPubky);
-  const lastUpdatedAt = usePubchiStore((state) => state.lastUpdatedAt);
   const pubchi = owner && storedOwner === owner ? storedPubchi : undefined;
   const config = owner && storedOwner === owner ? storedConfig : null;
   const [loading, setLoading] = useState(false);
@@ -64,6 +64,12 @@ export function usePubchiEnrollment() {
   const approvalCancelRef = useRef<(() => void) | null>(null);
   const approvalFlowRef = useRef<Promise<boolean> | null>(null);
   const approvalGenerationRef = useRef(0);
+  const [syncState, setSyncState] = useState<{ owner: Pubky | null; generation: string; status: PubchiSyncStatus }>({
+    owner,
+    generation,
+    status: 'idle',
+  });
+  const retrySyncRef = useRef<(() => void) | null>(null);
   const reloadTimestampsByOwnerRef = useRef(new Map<Pubky, number[]>());
 
   const cancelReapproval = () => {
@@ -169,6 +175,13 @@ export function usePubchiEnrollment() {
   useEffect(() => {
     if (!owner) return;
 
+    let disposed = false;
+    const isCurrent = () =>
+      !disposed && readCurrentOwner(owner) === owner && useAuthStore.getState().generation === generation;
+    const updateSyncStatus = (status: PubchiSyncStatus) => {
+      if (isCurrent()) setSyncState({ owner, generation, status });
+    };
+    updateSyncStatus('idle');
     let reloadTimer: ReturnType<typeof setTimeout> | undefined;
     let rateLimitTimer: ReturnType<typeof setTimeout> | undefined;
     let reloadInFlight = false;
@@ -176,7 +189,8 @@ export function usePubchiEnrollment() {
     const reloadTimestamps = reloadTimestampsByOwnerRef.current.get(owner) ?? [];
     reloadTimestampsByOwnerRef.current.set(owner, reloadTimestamps);
     const reload = async (): Promise<void> => {
-      if (reloadInFlight || readCurrentOwner(owner) !== owner) {
+      if (!isCurrent()) return;
+      if (reloadInFlight) {
         reloadPending = true;
         return;
       }
@@ -186,6 +200,7 @@ export function usePubchiEnrollment() {
       }
       if (reloadTimestamps.length >= PUBCHI_SYNC_RELOAD_LIMIT) {
         reloadPending = true;
+        updateSyncStatus('rate-limited');
         if (!rateLimitTimer) {
           rateLimitTimer = setTimeout(
             () => {
@@ -197,7 +212,9 @@ export function usePubchiEnrollment() {
         }
         return;
       }
+      reloadPending = false;
       reloadInFlight = true;
+      updateSyncStatus('syncing');
       reloadTimestamps.push(now);
       usePubchiStore.getState().recordSyncReload();
       try {
@@ -210,7 +227,7 @@ export function usePubchiEnrollment() {
             ? PubchiController.loadPubchiContext()
             : Promise.resolve(usePubchiStore.getState().context),
         ]);
-        if (readCurrentOwner(owner) !== owner) return;
+        if (!isCurrent()) return;
         const store = usePubchiStore.getState();
         store.setPubchi(nextPubchi, owner);
         store.setConfig(nextConfig, owner);
@@ -218,25 +235,30 @@ export function usePubchiEnrollment() {
         if (nextConfig && store.pubchi) {
           store.setPubchi({ ...store.pubchi, displayName: nextConfig.display_name }, owner);
         }
+        updateSyncStatus('idle');
+      } catch {
+        updateSyncStatus('error');
       } finally {
         reloadInFlight = false;
-        if (reloadPending) {
+        if (reloadPending && isCurrent()) {
           reloadPending = false;
           scheduleReload();
         }
       }
     };
     const scheduleReload = () => {
-      if (rateLimitTimer) return;
+      if (!isCurrent() || rateLimitTimer) return;
       if (reloadTimer) clearTimeout(reloadTimer);
       reloadTimer = setTimeout(() => {
         reloadTimer = undefined;
-        void reload().catch(() => undefined);
+        void reload();
       }, PUBCHI_SYNC_DEBOUNCE_MS);
     };
+    retrySyncRef.current = scheduleReload;
     const unsubscribe = subscribeToPubchiSync((message) => {
-      if (message.owner !== readCurrentOwner(owner)) return;
+      if (!isCurrent() || message.owner !== owner) return;
       if (message.kind === 'signed-out') {
+        updateSyncStatus('idle');
         usePubchiStore.getState().clear();
         return;
       }
@@ -244,18 +266,21 @@ export function usePubchiEnrollment() {
     });
     const refreshIfStale = () => {
       if (document.visibilityState !== 'visible') return;
+      const lastUpdatedAt = usePubchiStore.getState().lastUpdatedAt;
       if (lastUpdatedAt === null || Date.now() - lastUpdatedAt > PUBCHI_SYNC_MAX_AGE_MS) scheduleReload();
     };
     document.addEventListener('visibilitychange', refreshIfStale);
     window.addEventListener('focus', refreshIfStale);
     return () => {
+      disposed = true;
+      if (retrySyncRef.current === scheduleReload) retrySyncRef.current = null;
       unsubscribe();
       if (reloadTimer) clearTimeout(reloadTimer);
       if (rateLimitTimer) clearTimeout(rateLimitTimer);
       document.removeEventListener('visibilitychange', refreshIfStale);
       window.removeEventListener('focus', refreshIfStale);
     };
-  }, [owner, lastUpdatedAt]);
+  }, [owner, generation]);
 
   const saveConfig = async (partial: Partial<PubchiConfigV1>): Promise<PubchiConfigV1 | undefined> => {
     if (typeof PubchiController.savePubchiConfig !== 'function') return undefined;
@@ -606,6 +631,8 @@ export function usePubchiEnrollment() {
     cancelReapproval,
     loading,
     enrollmentLoaded,
+    syncStatus: syncState.owner === owner && syncState.generation === generation ? syncState.status : 'idle',
+    retrySync: () => retrySyncRef.current?.(),
     enabled: isPubchiEnabled(),
   };
 }

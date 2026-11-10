@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bot } from 'lucide-react';
+import { Bot, ChevronDown } from 'lucide-react';
 import { useWatch } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent, CardTitle } from '@/atoms/Card/Card';
@@ -20,13 +20,14 @@ import {
   pubchiQueryFormDefaults,
   QUERY_FORM_FIELDS,
 } from '@/hooks/usePubchiQuery/usePubchiQuery.types';
+import { pubchiBasisHeading } from '@/libs/pubchi/basis-copy';
 import { PUBCHI_DEGRADED_SESSION_MESSAGE } from '@/libs/pubchi/capabilities';
 import { parsePostReference } from '@/libs/pubchi/capabilities-v1';
 import { effectiveTier } from '@/libs/pubchi/effective-tier';
 import { pubchiErrorCopy } from '@/libs/pubchi/error-copy';
 import { isPubchiPanelEnabled } from '@/libs/pubchi/flags';
 import { PUBCHI_QUESTION_MAX_LENGTH } from '@/libs/pubchi/limits';
-import type { PubchiTarget } from '@/libs/pubchi/schemas/ask-body';
+import type { ConversationTurn, PubchiTarget } from '@/libs/pubchi/schemas/ask-body';
 import { pubkyUriToAppHref } from '@/libs/pubchi/uri';
 import { copyToClipboard, truncateMiddle } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -53,6 +54,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   const {
     form,
     submit,
+    cancel,
     result,
     errorCode,
     loading,
@@ -65,7 +67,15 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
     setupLoading,
     cursorSource,
   } = usePubchiQuery();
-  const { needsReapproval, reapprove, loading: reapprovalLoading, pubchi, config } = usePubchiEnrollment();
+  const {
+    needsReapproval,
+    reapprove,
+    loading: reapprovalLoading,
+    pubchi,
+    config,
+    syncStatus,
+    retrySync,
+  } = usePubchiEnrollment();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const prefill = usePubchiStore((state) => state.flyout.prefill);
   const quickQuestionsOpen = usePubchiStore((state) => state.quickQuestionsOpen);
@@ -91,6 +101,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   } = useDiscoveredTagSuggestions(currentUserPubky, discoveredTargetUri, open, liveTagSuggestionRecordId);
   const [prefilledQuestion, setPrefilledQuestion] = useState<string>();
   const [editFeed, setEditFeed] = useState<FeedModelSchema | undefined>();
+  const [feedBuilderQuestion, setFeedBuilderQuestion] = useState<string>();
   const [showDatabaseBlockedNotice, setShowDatabaseBlockedNotice] = useState(false);
   const [approvalOpen, setApprovalOpen] = useState(false);
   const [feedBuilderRevision, setFeedBuilderRevision] = useState(0);
@@ -125,6 +136,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
     if (preparedPrefillRef.current?.prefill !== prefill) {
       preparedPrefillRef.current = { prefill, generation: conversationGeneration };
       setEditFeed(undefined);
+      setFeedBuilderQuestion(undefined);
       setSuggestionTarget(prefill.target);
       setPrefilledQuestion(prefill.question);
       if (prefill.feedId) {
@@ -155,9 +167,11 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   useEffect(() => {
     if (
       !prefilledQuestion ||
+      !question ||
       question === prefilledQuestion ||
       question === 'Suggest tags for this post' ||
       question === 'Suggest tags for this user' ||
+      question === 'Summarize this thread' ||
       question.startsWith('Summarize this thread ')
     ) {
       return;
@@ -203,6 +217,18 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   }
 
   const actionsDisabled = loading || setupLoading || !signingAvailable || questionOverLimit;
+  const contextTarget =
+    suggestionTarget ?? (postReference ? { kind: 'post' as const, uri: postReference.uri } : undefined);
+  const contextHref = contextTarget ? pubkyUriToAppHref(contextTarget.uri, currentUserPubky) : null;
+  const exchanges: ConversationTurn[][] = [];
+  for (const turn of conversation.turns) {
+    const previous = exchanges.at(-1);
+    if (turn.role === 'user' || !previous || previous.at(-1)?.role === 'assistant') {
+      exchanges.push([turn]);
+    } else {
+      previous.push(turn);
+    }
+  }
   const errorCopy = pubchiErrorCopy(errorCode);
   const feedInterpretationError =
     !loading && result?.kind === 'feed'
@@ -222,11 +248,17 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   ): Promise<boolean> => {
     PubchiController.consumePrefill(currentUserPubky);
     if (!requestOptions?.targetFeedId) setEditFeed(undefined);
-    return submit(purpose, requestOptions);
+    return submit(
+      purpose,
+      purpose === 'ask' && !requestOptions && suggestionTarget?.kind === 'post'
+        ? { target: suggestionTarget }
+        : requestOptions,
+    );
   };
   const openFeedBuilder = () => {
     setEditFeed(undefined);
     const initialQuestion = question.trim();
+    setFeedBuilderQuestion(initialQuestion);
     const owner = currentUserPubky ?? 'a'.repeat(52);
     PubchiController.openFeedBuilder({
       schema: 'pubchi-feed-proposal',
@@ -261,9 +293,19 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) cancel();
+          onOpenChange(nextOpen);
+        }}
+      >
         <SheetContent side="right" className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-md">
-          <div data-surface={PUBCHI_PANEL_SURFACE} data-testid={PUBCHI_PANEL_SURFACE} className="flex flex-col gap-4">
+          <div
+            data-surface={PUBCHI_PANEL_SURFACE}
+            data-testid={PUBCHI_PANEL_SURFACE}
+            className="flex min-w-0 flex-col gap-4 wrap-anywhere"
+          >
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5" />
@@ -284,6 +326,21 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
               brainLabel={config?.brain.execution === 'self-hosted' ? 'Own endpoint' : 'Hosted Kimi'}
               missedCount={proactiveSuggestions.length}
             />
+
+            {syncStatus === 'error' || syncStatus === 'rate-limited' ? (
+              <div className="flex flex-col gap-2 rounded-md border p-3">
+                <Typography role="status" size="sm">
+                  {syncStatus === 'error'
+                    ? 'Pubchi could not sync. Your current data is still available.'
+                    : 'Pubchi sync is paused briefly. It will retry automatically.'}
+                </Typography>
+                {syncStatus === 'error' ? (
+                  <Button type="button" variant="outline" size="sm" onClick={retrySync}>
+                    Retry sync
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
 
             <PubchiProactiveSuggestions
               suggestions={proactiveSuggestions}
@@ -330,20 +387,42 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
                     New conversation
                   </Button>
                 </div>
-                {conversation.turns.map((turn, index) => (
-                  <Card key={`${turn.role}-${index}`}>
-                    <CardContent className="flex flex-col gap-1 pt-4">
-                      <Typography size="xs" className="text-muted-foreground">
-                        {turn.role === 'user'
-                          ? 'You'
-                          : turn.basis && turn.basis !== 'graph'
-                            ? 'From what I know'
-                            : 'Pubchi'}
-                      </Typography>
-                      <Typography size="sm">{turn.text}</Typography>
-                    </CardContent>
-                  </Card>
-                ))}
+                {exchanges.map((turns, index) => {
+                  const latest = index === exchanges.length - 1;
+                  const questionTurn = turns[0].role === 'user' ? turns[0] : undefined;
+                  return latest ? (
+                    <Card key={`latest-${conversationGeneration}`} className="min-w-0">
+                      <CardContent className="flex min-w-0 flex-col gap-3 pt-4">
+                        <PubchiConversationTurns turns={turns} />
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Collapsible
+                      key={`${conversationGeneration}-${index}-${turns[0].text}`}
+                      className="min-w-0 rounded-lg border"
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="group h-auto w-full justify-between rounded-lg p-4 text-left whitespace-normal"
+                        >
+                          <span className="min-w-0 wrap-anywhere">{questionTurn?.text ?? 'Earlier answer'}</span>
+                          <ChevronDown
+                            aria-hidden="true"
+                            className="shrink-0 transition-transform group-data-[state=open]:rotate-180"
+                          />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="flex min-w-0 flex-col gap-3 px-4 pb-4">
+                        <PubchiConversationTurns turns={questionTurn ? turns.slice(1) : turns} />
+                        {questionTurn && turns.length === 1 ? (
+                          <Typography size="sm">No answer in this session.</Typography>
+                        ) : null}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                })}
               </div>
             ) : null}
 
@@ -354,6 +433,20 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
                 void submitQuestion('ask');
               }}
             >
+              {contextTarget ? (
+                <Typography size="sm" data-testid="pubchi-context" className="wrap-anywhere text-muted-foreground">
+                  Context:{' '}
+                  {contextHref ? (
+                    <Link href={contextHref} className="text-sm underline">
+                      {contextTarget.kind === 'post' ? 'Selected thread' : 'Selected profile'}
+                    </Link>
+                  ) : contextTarget.kind === 'post' ? (
+                    'Selected thread'
+                  ) : (
+                    'Selected profile'
+                  )}
+                </Typography>
+              ) : null}
               <ControlledTextareaField
                 name={QUERY_FORM_FIELDS.QUESTION}
                 control={form.control}
@@ -397,10 +490,15 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
                       data-testid="pubchi-summarize-thread"
                       disabled={actionsDisabled}
                       onClick={() => {
-                        const target = suggestionTarget?.kind === 'post' ? suggestionTarget : undefined;
-                        const uri = postReference?.uri ?? target?.uri;
-                        if (!uri) return;
-                        form.setValue(QUERY_FORM_FIELDS.QUESTION, `Summarize this thread ${uri}`, {
+                        const target = postReference
+                          ? { kind: 'post' as const, uri: postReference.uri }
+                          : suggestionTarget?.kind === 'post'
+                            ? suggestionTarget
+                            : undefined;
+                        if (!target) return;
+                        setSuggestionTarget(target);
+                        setPrefilledQuestion('Summarize this thread');
+                        form.setValue(QUERY_FORM_FIELDS.QUESTION, 'Summarize this thread', {
                           shouldValidate: true,
                         });
                         void submitQuestion('ask', { target });
@@ -471,7 +569,7 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
                 {feedInterpretationError}
               </Typography>
             ) : null}
-            {loading ? <PubchiAnswerSkeleton elapsedMs={elapsedMs} /> : null}
+            {loading ? <PubchiAnswerSkeleton elapsedMs={elapsedMs} onCancel={cancel} /> : null}
             {discoveredTargetUri ? (
               <PubchiAppliedTagSuggestions
                 suggestions={discoveredSuggestions}
@@ -601,8 +699,9 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
             }
           }}
           existingFeed={editFeed}
-          initialQuestion={question.trim()}
+          initialQuestion={feedBuilderQuestion ?? question.trim()}
           onInterpret={async (nextQuestion) => {
+            setFeedBuilderQuestion(nextQuestion);
             const previousQuestion = question;
             form.setValue(QUERY_FORM_FIELDS.QUESTION, nextQuestion, { shouldValidate: true });
             const interpreted = await submit('build-feed', {
@@ -624,7 +723,20 @@ export function PubchiPanel({ open, onOpenChange }: PubchiPanelProps) {
   );
 }
 
-function PubchiAnswerSkeleton({ elapsedMs }: { elapsedMs: number }) {
+function PubchiConversationTurns({ turns }: { turns: ConversationTurn[] }) {
+  return turns.map((turn, index) => (
+    <div key={`${turn.role}-${index}`} className="min-w-0">
+      <Typography size="xs" className="text-muted-foreground">
+        {turn.role === 'user' ? 'You' : pubchiBasisHeading(turn.basis)}
+      </Typography>
+      <Typography size="sm" className="wrap-anywhere whitespace-pre-wrap">
+        {turn.text}
+      </Typography>
+    </div>
+  ));
+}
+
+function PubchiAnswerSkeleton({ elapsedMs, onCancel }: { elapsedMs: number; onCancel: () => void }) {
   return (
     <div className="flex flex-col gap-2" data-testid="pubchi-answer-loading">
       <Card>
@@ -635,9 +747,17 @@ function PubchiAnswerSkeleton({ elapsedMs }: { elapsedMs: number }) {
           <Skeleton className="h-4 w-1/3" />
         </CardContent>
       </Card>
-      <Typography size="xs" className="text-muted-foreground">
-        Reading the graph… {Math.floor(elapsedMs / 1000)}s
+      <Typography role="status" size="sm" className="text-muted-foreground">
+        {elapsedMs >= 15_000 ? 'Still working on your answer…' : 'Working on your answer…'}
       </Typography>
+      <div className="flex items-center justify-between gap-2">
+        <Typography size="xs" className="text-muted-foreground">
+          {Math.floor(elapsedMs / 1000)}s elapsed
+        </Typography>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+          Cancel request
+        </Button>
+      </div>
     </div>
   );
 }

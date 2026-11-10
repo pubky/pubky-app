@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import {
   clearPubchiOwnerData,
   deletePubchiDatabase,
@@ -12,11 +13,23 @@ import { ErrorService } from '@/libs/error/error.types';
 import type { PubchiDraftPostRecord } from '@/models/pubchi/draft-post.schema';
 import type { PubchiTagApplicationRecord } from '@/models/pubchi/tag-application.schema';
 
-async function query<T>(operation: string, work: () => Promise<T>, code = DatabaseErrorCode.QUERY_FAILED): Promise<T> {
+async function query<T>(
+  operation: string,
+  work: () => Promise<T>,
+  code = DatabaseErrorCode.QUERY_FAILED,
+  signal?: AbortSignal,
+): Promise<T> {
   try {
     return await work();
   } catch (error) {
     if (isAppError(error)) throw error;
+    // Dexie wraps a guard's DOMException in DexieError; preserve only this caller's cancellation reason.
+    if (
+      signal?.aborted &&
+      (error === signal.reason || (error instanceof Dexie.DexieError && error.inner === signal.reason))
+    ) {
+      throw signal.reason;
+    }
     throw Err.database(code, 'Failed to access Pubchi records', {
       service: ErrorService.Pubchi,
       operation,
@@ -56,7 +69,7 @@ export class PubchiRecordModel {
     );
   }
 
-  static putTagApplication(record: PubchiTagApplicationRecord, assertCurrent: () => void) {
+  static putTagApplication(record: PubchiTagApplicationRecord, assertCurrent: () => void, signal?: AbortSignal) {
     return query(
       'putTagApplication',
       () => {
@@ -71,6 +84,7 @@ export class PubchiRecordModel {
         });
       },
       DatabaseErrorCode.TRANSACTION_FAILED,
+      signal,
     );
   }
 
@@ -86,7 +100,7 @@ export class PubchiRecordModel {
     );
   }
 
-  static putDraftPost(record: PubchiDraftPostRecord, assertCurrent: () => void) {
+  static putDraftPost(record: PubchiDraftPostRecord, assertCurrent: () => void, signal?: AbortSignal) {
     return query(
       'putDraftPost',
       () => {
@@ -101,6 +115,7 @@ export class PubchiRecordModel {
         });
       },
       DatabaseErrorCode.TRANSACTION_FAILED,
+      signal,
     );
   }
 }

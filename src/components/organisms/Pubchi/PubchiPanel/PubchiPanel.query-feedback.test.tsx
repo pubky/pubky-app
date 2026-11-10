@@ -49,10 +49,18 @@ vi.mock('@/libs/pubchi/device-key', () => ({
   getCurrentDeviceKey: () => Promise.resolve(mocks.signingAvailable ? {} : undefined),
 }));
 
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
-    selector({ currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' }),
-}));
+vi.mock('@/stores/auth/auth.store', () => {
+  const state = {
+    currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo',
+    generation: 'query-feedback-session',
+    session: null,
+  };
+  return {
+    useAuthStore: Object.assign((selector: (value: typeof state) => unknown) => selector(state), {
+      getState: () => state,
+    }),
+  };
+});
 
 describe('PubchiPanel query validation', () => {
   beforeEach(() => {
@@ -61,10 +69,11 @@ describe('PubchiPanel query validation', () => {
     mocks.signingAvailable = true;
   });
 
-  it('shows the field error when Ask is clicked with an empty question', async () => {
+  it.each(['', '   '])('rejects a blank question (%j) before sending a request', async (question) => {
     const user = userEvent.setup();
     render(<PubchiPanel open onOpenChange={() => {}} />);
     await waitFor(() => expect(screen.getByTestId('pubchi-ask')).not.toBeDisabled());
+    if (question) await user.type(screen.getByLabelText('Question'), question);
 
     await user.click(screen.getByTestId('pubchi-ask'));
 

@@ -12,6 +12,7 @@ export type TConfirmPubchiBackupParams = {
 };
 
 export type TPubchiQueryParams = {
+  signal?: AbortSignal;
   question: string;
   purpose: Phase0Purpose;
   conversation?: Conversation;

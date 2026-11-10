@@ -278,7 +278,7 @@ describe('usePostMenuActions', () => {
     expect(usePubchiStore.getState().flyout).toEqual({
       open: true,
       prefill: {
-        question: 'Summarize this thread pubky://author123/pub/pubky.app/posts/post456',
+        question: 'Summarize this thread',
         source: 'post-menu',
         ownerPubky: mockCurrentUserId,
         target: {

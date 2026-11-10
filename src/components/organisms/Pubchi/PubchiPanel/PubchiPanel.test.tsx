@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PubchiQuerySuccess } from '@/application/pubchi/pubchi.types';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
@@ -19,6 +20,8 @@ vi.mock('@/organisms/RingApprovalDialog/RingApprovalDialog', () => ({
 }));
 
 const submit = vi.fn();
+const cancel = vi.fn();
+const retrySync = vi.fn();
 const reapprove = vi.fn();
 const setupDevice = vi.fn();
 const watchedQuestion = vi.hoisted(() => ({ value: '' }));
@@ -49,6 +52,7 @@ const hookState = {
     reset: vi.fn(),
   },
   submit,
+  cancel,
   result: undefined as PubchiQuerySuccess | undefined,
   errorCode: undefined as string | undefined,
   loading: false,
@@ -61,6 +65,8 @@ const hookState = {
   setupLoading: false,
 };
 const enrollmentState = {
+  syncStatus: 'idle' as 'idle' | 'syncing' | 'rate-limited' | 'error',
+  retrySync,
   needsReapproval: false,
   reapprove,
   loading: false,
@@ -153,6 +159,9 @@ vi.mock('@/molecules/ControlledTextareaField/ControlledTextareaField', () => ({
 
 describe('PubchiPanel', () => {
   beforeEach(() => {
+    enrollmentState.syncStatus = 'idle';
+    retrySync.mockReset();
+    cancel.mockReset();
     enrollmentState.needsReapproval = false;
     enrollmentState.pubchi = undefined;
     enrollmentState.config = undefined;
@@ -183,6 +192,140 @@ describe('PubchiPanel', () => {
     closeFlyout.mockImplementation(() => usePubchiStore.getState().closeFlyout());
     builderProps.current = undefined;
     usePubchiStore.getState().clear();
+  });
+
+  it('collapses earlier exchanges with keyboard-accessible controls while keeping the latest visible', async () => {
+    usePubchiStore.setState({
+      conversation: {
+        turns: [
+          { role: 'user', text: 'First question' },
+          { role: 'assistant', text: 'First answer', basis: 'web' },
+          { role: 'user', text: 'Latest question' },
+          { role: 'assistant', text: 'Latest answer', basis: 'graph' },
+        ],
+      },
+    });
+    const user = userEvent.setup();
+    render(<PubchiPanel open onOpenChange={() => {}} />);
+
+    const earlier = screen.getByRole('button', { name: 'First question' });
+    expect(earlier).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('First answer')).not.toBeInTheDocument();
+    expect(screen.getByText('Latest question')).toBeVisible();
+    expect(screen.getByText('Latest answer')).toBeVisible();
+    earlier.focus();
+    await user.keyboard('{Enter}');
+    expect(earlier).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('First answer')).toBeVisible();
+    expect(screen.getByText('From the web')).toBeVisible();
+    await user.keyboard(' ');
+    expect(earlier).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('keeps an orphaned answer separate from the next question in a bounded conversation', () => {
+    usePubchiStore.setState({
+      conversation: {
+        turns: [
+          { role: 'assistant', text: 'Earlier retained answer' },
+          { role: 'user', text: 'Latest unanswered question' },
+        ],
+      },
+    });
+    render(<PubchiPanel open onOpenChange={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Earlier answer' }));
+    expect(screen.getByText('Earlier retained answer')).toBeVisible();
+    expect(screen.getByText('Latest unanswered question')).toBeVisible();
+  });
+
+  it('collapses the previous latest exchange when a new question arrives', () => {
+    usePubchiStore.setState({
+      conversation: {
+        turns: [
+          { role: 'user', text: 'Previous latest question' },
+          { role: 'assistant', text: 'Previous latest answer' },
+        ],
+      },
+    });
+    render(<PubchiPanel open onOpenChange={() => {}} />);
+    expect(screen.getByText('Previous latest answer')).toBeVisible();
+
+    act(() =>
+      usePubchiStore.setState((state) => ({
+        conversation: {
+          turns: [...state.conversation.turns, { role: 'user', text: 'New question' }],
+        },
+      })),
+    );
+
+    expect(screen.getByRole('button', { name: 'Previous latest question' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Previous latest answer')).not.toBeInTheDocument();
+    expect(screen.getByText('New question')).toBeVisible();
+  });
+
+  it.each([
+    ['graph', 'What the graph shows'],
+    ['web', 'From the web'],
+    ['knowledge', 'From Pubky docs'],
+    ['mixed', 'From more than one source'],
+    ['model', 'From what I know'],
+  ])('uses the %s heading for a saved answer', (basis, heading) => {
+    usePubchiStore.setState({ conversation: { turns: [{ role: 'assistant', text: 'Saved answer', basis }] } });
+    render(<PubchiPanel open onOpenChange={() => {}} />);
+    expect(within(screen.getByTestId('pubchi-conversation')).getByText(heading)).toBeVisible();
+  });
+
+  it('keeps the exact pasted post target outside the readable summary question', () => {
+    const owner = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+    const uri = `pubky://${owner}/pub/pubky.app/posts/POST123456789`;
+    watchedQuestion.value = uri;
+    render(<PubchiPanel open onOpenChange={() => {}} />);
+
+    fireEvent.click(screen.getByTestId('pubchi-summarize-thread'));
+
+    expect(hookState.form.setValue).toHaveBeenCalledWith('question', 'Summarize this thread', { shouldValidate: true });
+    expect(submit).toHaveBeenCalledWith('ask', { target: { kind: 'post', uri } });
+    expect(screen.getByRole('link', { name: 'Selected thread' })).toHaveAttribute(
+      'href',
+      `/post/${owner}/POST123456789`,
+    );
+    expect(screen.getByTestId('pubchi-context')).not.toHaveTextContent(uri);
+    submit.mockClear();
+    fireEvent.click(screen.getByTestId('pubchi-ask'));
+    expect(submit).toHaveBeenCalledWith('ask', { target: { kind: 'post', uri } });
+  });
+
+  it('cancels a pending answer without describing an unreported backend stage', () => {
+    hookState.loading = true;
+    hookState.elapsedMs = 2_450;
+    const view = render(<PubchiPanel open onOpenChange={() => {}} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Working on your answer…');
+    expect(screen.queryByText(/Reading the graph/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel request' }));
+    expect(cancel).toHaveBeenCalledOnce();
+
+    hookState.elapsedMs = 15_000;
+    view.rerender(<PubchiPanel open onOpenChange={() => {}} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Still working on your answer…');
+  });
+
+  it('offers a retry for failed sync while keeping the conversation available', () => {
+    enrollmentState.syncStatus = 'error';
+    usePubchiStore.setState({ conversation: { turns: [{ role: 'user', text: 'Existing question' }] } });
+    render(<PubchiPanel open onOpenChange={() => {}} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Pubchi could not sync. Your current data is still available.',
+    );
+    expect(screen.getByText('Existing question')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
+    expect(retrySync).toHaveBeenCalledOnce();
+  });
+
+  it('explains rate-limited sync without offering a cap-bypassing retry', () => {
+    enrollmentState.syncStatus = 'rate-limited';
+    render(<PubchiPanel open onOpenChange={() => {}} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Pubchi sync is paused briefly. It will retry automatically.');
+    expect(screen.queryByRole('button', { name: 'Retry sync' })).not.toBeInTheDocument();
   });
 
   it('submits immediately when opened from the post menu', () => {
@@ -695,7 +838,7 @@ describe('PubchiPanel', () => {
     const view = render(<PubchiPanel open onOpenChange={() => {}} />);
 
     expect(screen.getByTestId('pubchi-answer-loading')).toBeInTheDocument();
-    expect(screen.getByText('Reading the graph… 2s')).toBeInTheDocument();
+    expect(screen.getByText('Working on your answer…')).toBeInTheDocument();
     expect(screen.queryByTestId('pubchi-answer')).not.toBeInTheDocument();
 
     hookState.loading = false;

@@ -141,7 +141,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       icon: Bot,
       onClick: () => {
         PubchiController.openFlyout({
-          question: `Summarize this thread ${postUriBuilder(postAuthorId, parsedId.id)}`,
+          question: 'Summarize this thread',
           source: 'post-menu',
           target: { kind: 'post', uri: postUriBuilder(postAuthorId, parsedId.id) },
         });

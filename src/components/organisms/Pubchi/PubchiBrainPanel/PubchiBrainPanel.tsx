@@ -217,8 +217,8 @@ export function PubchiBrainPanel({
         </div>
 
         <Typography className="rounded-lg bg-muted/30 p-3 text-sm">
-          Your Pubchi&apos;s identity, settings, and history live on your homeserver. Changing the brain changes how it
-          thinks, not who it is.
+          Your Pubchi&apos;s identity, settings, and private About and Instructions are saved on your homeserver. This
+          session&apos;s conversation is temporary. Changing the brain keeps your saved identity and settings.
         </Typography>
 
         {previous && onRollback && JSON.stringify(previous) !== JSON.stringify(value) ? (

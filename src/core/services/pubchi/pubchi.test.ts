@@ -134,9 +134,10 @@ describe('PubchiService', () => {
           options?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
         }),
     );
-    const pending = PubchiService.query({ request: request('ask'), body: { question: 'What changed?' } }).catch(
-      (caught: unknown) => caught,
-    );
+    const pending = PubchiService.query(
+      { request: request('ask'), body: { question: 'What changed?' } },
+      new AbortController().signal,
+    ).catch((caught: unknown) => caught);
 
     await vi.advanceTimersByTimeAsync(30_000);
     const error = await pending;
@@ -148,6 +149,57 @@ describe('PubchiService', () => {
       message: "I couldn't reach the Pubchi service. Check your connection and try again in a minute.",
       supportCode: 'REQUEST_TIMEOUT',
     });
+  });
+
+  it('aborts the HTTP request on external cancellation without serializing the signal, then accepts a fresh request', async () => {
+    const controller = new AbortController();
+    vi.mocked(fetch).mockImplementationOnce(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        }),
+    );
+    const payload = { request: request('ask'), body: { question: 'What changed?' } };
+    const pending = PubchiService.query(payload, controller.signal).catch((error: unknown) => error);
+    const transportSignal = vi.mocked(fetch).mock.calls[0][1]?.signal;
+
+    controller.abort();
+
+    expect(transportSignal?.aborted).toBe(true);
+    await expect(pending).resolves.toMatchObject({ name: 'AbortError' });
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toEqual(payload);
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ answer: 'Fresh answer' }));
+    await expect(PubchiService.query(payload, new AbortController().signal)).resolves.toEqual({
+      answer: 'Fresh answer',
+    });
+  });
+
+  it('does not send an already canceled query', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      PubchiService.query({ request: request('ask'), body: { question: 'What changed?' } }, controller.signal),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects a response body that completes after external cancellation', async () => {
+    const controller = new AbortController();
+    const body = Promise.withResolvers<string>();
+    const readBody = vi.fn(() => body.promise);
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse({ ok: true, headers: new Headers(), text: readBody }));
+    const pending = PubchiService.query(
+      { request: request('ask'), body: { question: 'What changed?' } },
+      controller.signal,
+    ).catch((error: unknown) => error);
+    await vi.waitFor(() => expect(readBody).toHaveBeenCalledOnce());
+
+    controller.abort();
+    body.resolve(JSON.stringify({ answer: 'Too late' }));
+
+    await expect(pending).resolves.toMatchObject({ name: 'AbortError' });
   });
 
   it('gives retry guidance if reading the response body aborts', async () => {
