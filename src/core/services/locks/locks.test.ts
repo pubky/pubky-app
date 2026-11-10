@@ -277,7 +277,11 @@ describe('LocksService (auth)', () => {
     const error = await LocksService.lookupPaykitSetupStatus('BTC').catch((caught: unknown) => caught);
 
     expect(isAppError(error)).toBe(true);
-    expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Validation);
+    expect(error).toMatchObject({
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
+      operation: 'LocksService.lookupPaykitSetupStatus',
+    });
   });
 
   // Session-backed auth calls share the content calls' 401 → typed-auth-error promotion.

@@ -87,7 +87,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   `captureException` except `app/error.tsx` / `app/global-error.tsx`, for non-`AppError` values; no raw user data. `docs/sentry.md`
 - Tests: colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT; no
   snapshot tests (removed for VRT, must not return); no `as any` or `as unknown as T` (use the `src/test-utils`
-  helpers). `docs/component-testing.md`
+  helpers). `docs/component-testing.md`; SDK boundary contract tests: `docs/contract-testing.md`
 
 ## Before you edit, read
 

@@ -6,10 +6,12 @@ import type {
   SeedAddToCollectionArgs,
   SeedBookmarkArgs,
   SeedCreateCollectionArgs,
+  SeedCreateLockPostArgs,
   SeedCreatePostArgs,
   SeedCreateUserArgs,
   SeedDeletePostArgs,
   SeedEditPostArgs,
+  SeededLockPost,
   SeededPost,
   SeededPostKind,
   SeededUser,
@@ -245,6 +247,64 @@ export const createSeedTasks = (config: SeedConfig) => {
         const edited = author.builder.editPost(current, collectionId, nextContent);
         await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
         return { id: collectionId };
+      }),
+
+    // A paid lock as the Lock Server leaves it (the public lock.json), then its announcement as the
+    // composer posts it. The locked post itself is only ever read through the Lock Server, so it is
+    // returned for the spec's stub to serve rather than written under /priv.
+    seedCreateLockPost: ({
+      authorId,
+      title,
+      teaser,
+      lockedContent,
+      amount,
+    }: SeedCreateLockPostArgs): Promise<SeededLockPost> =>
+      step(`create lock post by '${nameOf(authorId)}': "${preview(teaser)}"`, async () => {
+        const author = sessionFor(authorId);
+        const lockId = `e2eseed${Date.now()}`;
+        const guardedPath = `post-${lockId}`;
+        const guardedPost = Buffer.from(JSON.stringify({ content: lockedContent, kind: 'short', attachments: null }));
+        const lockPath = `/pub/app.locks/${lockId}.json`;
+        await author.session.storage.putJson(toPath(lockPath), {
+          version: 1,
+          creator: `pubky${authorId}`,
+          primary_resource: {
+            path: `/priv/app.locks/content/${guardedPath}`,
+            hash: `e2e-${guardedPath}`,
+            content_type: 'application/json',
+            size: guardedPost.length,
+          },
+          secondary_resources: {},
+          criteria: [
+            {
+              criterion_id: 'criterion-1',
+              verifier_type: 'paykit-payment',
+              params: { recipient_pubky: `pubky${authorId}`, amount, asset: 'BTC' },
+            },
+          ],
+          lock_logic: { type: 'all', criteria: ['criterion-1'] },
+          access_policy: { requested_credential_ttl_seconds: 900 },
+          lock_server: { override: null },
+        });
+        const content = JSON.stringify({ lock_title: title, teaser_description: teaser, content_kind: 'note' });
+        const post = author.builder.createPost(
+          content,
+          PubkyAppPostKind.Short,
+          null,
+          null,
+          null,
+          `pubky://${authorId}${lockPath}`,
+        );
+        await author.session.storage.putJson(toPath(post.meta.path), post.post.toJson());
+        return {
+          id: post.meta.id,
+          authorId,
+          uri: post.meta.url,
+          kind: 'short',
+          lockId,
+          guardedPath,
+          guardedBytes: guardedPost.toString('base64'),
+        };
       }),
   };
 };
