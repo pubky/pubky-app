@@ -308,11 +308,19 @@ describe('ResourceDetails', () => {
       expect(lines[1]).toMatch(/^Image: /);
     });
 
-    it('shows a song as its player, paused, in place of its image and text, with its details, sources and footer', () => {
+    it('shows a song’s generic link as its card first; a service picked in the header switch plays in place of its image and text, with its details, sources and footer', () => {
       read = settled(mbRecordingEnrichedFixture);
       renderDetails(mbRecordingEnrichedFixture.uri);
 
       const card = screen.getByTestId('resource-card');
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(within(card).getByTestId('resource-card-title')).toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      const header = within(card).getByTestId('resource-card-source').parentElement!;
+      const switchButton = within(header).getByRole('button', { name: 'Card: choose another service' });
+      fireEvent.pointerDown(switchButton, { button: 0, ctrlKey: false });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Spotify' }));
+
       const player = within(card).getByTestId('resource-player-frame');
       expect(player).toHaveAttribute('src', 'https://open.spotify.com/embed/track/2OBofMJx94NryV2SK8p8Zf');
       expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
@@ -482,7 +490,21 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('show-embed')).toBeNull();
     });
 
-    it('shows our card with Show on <site> when Pinakes knows it on other services too, X’s embed only from there', () => {
+    it('shows X’s embed when Pinakes knows it on other services too, its only source: no switch, no Show on', () => {
+      read = settled(X_POST_WITH_ALSO_ON);
+      renderDetails(X_URL);
+
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-title')).toBeNull();
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+      expect(screen.queryByTestId('player-switch')).toBeNull();
+    });
+
+    it('shows our card with Show on <site> to a viewer who turned platform embeds up front off, X’s embed only from there', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
       read = settled(X_POST_WITH_ALSO_ON);
       renderDetails(X_URL);
 
@@ -538,6 +560,10 @@ describe('ResourceDetails', () => {
     });
 
     it('goes back to our card, without Show on, when X cannot show the post it was asked to', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
       tweet.state = { data: null, error: new Error('gone'), isLoading: false };
       read = settled(X_POST_WITH_ALSO_ON);
       renderDetails(X_URL);
@@ -556,10 +582,15 @@ describe('ResourceDetails', () => {
       });
       renderDetails(X_URL);
 
-      // Our card offers X's post, as in a post, not the other service's player.
-      expect(screen.queryByTestId('play-on-main')).toBeNull();
-      fireEvent.click(screen.getByTestId('show-embed'));
-      fireEvent.click(screen.getByTestId('play-on-main'));
+      // Our card, its other service in the switch (Card first), never Play on or Show on.
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+      expect(screen.queryByRole('button', { name: /^Play on/ })).toBeNull();
+      fireEvent.pointerDown(screen.getByRole('button', { name: 'Card: choose another service' }), {
+        button: 0,
+        ctrlKey: false,
+      });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'YouTube' }));
       expect(screen.getByTestId('resource-player')).toBeInTheDocument();
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
     });

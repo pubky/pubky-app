@@ -113,7 +113,7 @@ interface ResourceCardHeaderProps {
   href: string | null;
   /** The site's name (`card.site`, else the host without `www.`); never the full link. */
   siteName: string | null;
-  /** A control next to the type (a playable card's switch, `useCardPlayer`'s `switcher`). */
+  /** A control next to the type (a card's embed/card switch, `useCardPlayer`'s `switcher`). */
   control?: ReactNode;
 }
 
