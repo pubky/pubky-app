@@ -158,7 +158,17 @@ function botWithPanels() {
 
 describe('PubchiSettings — visual regression', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    enrollment.needsReapproval = false;
+    enrollment.binding = undefined;
+    enrollment.pubchi = undefined;
+    enrollment.config = undefined;
+    enrollment.devices = [];
+    enrollment.currentSigner = THIS_SIGNER;
+    enrollment.loading = false;
+    enrollment.enrollmentLoaded = true;
     enrollment.syncStatus = 'idle';
+    enrollment.enabled = true;
   });
   it('guards the production surface marker', async () => {
     bindWithDevices();
@@ -215,9 +225,18 @@ describe('PubchiSettings — visual regression', () => {
   }
 
   it('captures Ring re-approval on the production settings surface', async () => {
+    botWithPanels();
     bindWithDevices();
     enrollment.needsReapproval = true;
     const screen = await renderForVRT(<PubchiSettings />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByTestId('pubchi-degraded-session')).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Re-approve', exact: true })).toBeVisible();
+    for (const surface of ['pubchi-profile-card', 'pubchi-tier-panel', 'pubchi-brain-panel', 'pubchi-device-signers']) {
+      await expect.element(screen.getByTestId(surface)).toBeInTheDocument();
+    }
+    await expect.element(screen.getByRole('radio', { name: 'Assisted', exact: true })).toBeDisabled();
+    await expect.element(screen.getByRole('radio', { name: 'My own endpoint', exact: true })).toBeDisabled();
+    await expect.element(screen.getByRole('button', { name: 'Revoke all', exact: true })).toBeDisabled();
     await matchVrtElementScreenshot(screen.getByTestId(PUBCHI_SETTINGS_SURFACE), 'pubchi-settings-reapprove-desktop');
   });
 });
