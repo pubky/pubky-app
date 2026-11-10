@@ -1,93 +1,47 @@
-import { readFileSync } from 'node:fs';
-import { initSync, Locks, LocksOptions, VerificationTaskHandleOptions } from '@synonymdev/locks-sdk';
+import { Locks, LocksOptions, VerificationTaskHandleOptions } from '@synonymdev/locks-sdk';
 import { Pulse } from '@synonymdev/pubky-pulse-web';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import * as sentry from '@/libs/observability/sentry';
-import { getRuntimeConfig, resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
+import {
+  LOCK_SERVER_ORIGIN,
+  LOCK_SERVER_PUBKY,
+  PKARR_RELAY,
+  setupLocksContractHarness,
+  stubLockServerFetch,
+} from '@/test-utils/locks-contract';
 import { LocksService } from './locks';
 import type { TSubmittedProofBundle } from './locks.types';
 import { isLockServerRegionBlocked } from './locks.utils';
 
-// Synthetic one-seed identity and signed PKARR packet, also used by the Pubky session-store
-// contract tests. The real SDK verifies the signature and resolves it to legacy-cookie.test.
-const SERVER = 'tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy';
-const ROUTING_PACKET =
-  'FSgcCvQf4IDHyAtpTkQvSSCN3RsLYv7QC1vNT3qOf9nhNFbL89xLKYGT7LAfAeBLX723CTWU1v5jzB2PCWZnDwAGZRcomIAAAACAAAAAAAEAAAAANHRrcnE4em13YjhhM205azE1Y3N1M3ExN3FtZmdxbnA5ZHNrYnJnOXVxMXJ5ZHB5eHA3cXkAAEEAAQAADhAAFgABDWxlZ2FjeS1jb29raWUEdGVzdAA=';
-const RELAY = 'https://pkarr.test';
-const creator = `pubky${SERVER}`;
+const creator = LOCK_SERVER_PUBKY;
 const lookupRoute = { method: 'POST', path: '/verification-task-lookups' };
 const bundle: TSubmittedProofBundle = {
   version: 1,
   bundle_id: '000G40R40M30E209185GR38E1W',
-  pubky_lock_resource: `pubky${SERVER}/pub/app.locks/000G40R40M30E209185GR38E1W8124GK2GAHC5RR34D1P70X3RFG.json`,
+  pubky_lock_resource: `${LOCK_SERVER_PUBKY}/pub/app.locks/000G40R40M30E209185GR38E1W8124GK2GAHC5RR34D1P70X3RFG.json`,
   proofs: [],
 };
 
-const originalConfig = window.__PUBKY_CONFIG__;
+setupLocksContractHarness();
 
-beforeAll(() => {
-  // Load the installed web build from disk; its initialization and error conversion stay real.
-  const sdkEntry = import.meta.resolve('@synonymdev/locks-sdk');
-  initSync({ module: readFileSync(new URL('./locks_sdk_wasm_bg.wasm', sdkEntry)) });
-  window.__PUBKY_CONFIG__ = { ...getRuntimeConfig(), lockServer: `pubky${SERVER}`, pkarrRelays: [RELAY] };
-  resetRuntimeConfigForTests();
-});
-
-beforeEach(() => {
-  // Vitest aliases window to its Node global, which fails wasm-bindgen's Window instanceof check.
-  // Bridge that environment identity only; SDK request construction and response/error handling stay real.
-  const BrowserWindow = Window;
-  vi.stubGlobal(
-    'Window',
-    class extends BrowserWindow {
-      static [Symbol.hasInstance](value: unknown) {
-        return value === window || value instanceof BrowserWindow;
-      }
-    },
-  );
-  vi.spyOn(Logger, 'error').mockImplementation(() => {});
-  vi.spyOn(sentry, 'captureAppError');
-  vi.spyOn(Pulse, 'captureException');
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});
-
-afterAll(() => {
-  window.__PUBKY_CONFIG__ = originalConfig;
-  resetRuntimeConfigForTests();
-});
-
-/** Only HTTP is replaced: the service, SDK/WASM, request building and PKARR validation run unchanged. */
 function stubTransport(
   status: number | 'network-failure',
   body = '{}',
   route = { method: 'POST', path: '/proof-bundles' },
 ) {
   const submissions: Request[] = [];
-  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : new Request(input, init);
-    const url = new URL(request.url);
-    let response: Response;
-    if (url.origin === RELAY && url.pathname === `/${SERVER}`) {
-      expect(request.method).toBe('GET');
-      response = new Response(Buffer.from(ROUTING_PACKET, 'base64'));
-    } else {
-      expect(request.url).toBe(`https://legacy-cookie.test${route.path}`);
-      expect(request.method).toBe(route.method);
-      if (route.path === '/proof-bundles') {
-        expect(await request.clone().json()).toEqual({ submitted_proof_bundle: bundle });
-      }
-      submissions.push(request);
-      if (status === 'network-failure') throw new TypeError('offline');
-      response = new Response(body, { status, headers: { 'Content-Type': 'application/json' } });
+  stubLockServerFetch(async (request) => {
+    expect(request.url).toBe(`${LOCK_SERVER_ORIGIN}${route.path}`);
+    expect(request.method).toBe(route.method);
+    if (route.path === '/proof-bundles') {
+      expect(await request.clone().json()).toEqual({ submitted_proof_bundle: bundle });
     }
-    return Object.defineProperty(response, 'url', { value: request.url });
+    submissions.push(request);
+    if (status === 'network-failure') throw new TypeError('offline');
+    return new Response(body, { status, headers: { 'Content-Type': 'application/json' } });
   });
   return submissions;
 }
@@ -95,8 +49,8 @@ function stubTransport(
 describe('pinned Locks SDK 0.1.0 region error contract', () => {
   it('exposes HTTP 451 as an InvalidInput Error with the exact viewer-request message', async () => {
     const submissions = stubTransport(451);
-    const options = new LocksOptions().addPkarrRelay(RELAY);
-    const client = Locks.forServerWithOptions(`pubky${SERVER}`, options);
+    const options = new LocksOptions().addPkarrRelay(PKARR_RELAY);
+    const client = Locks.forServerWithOptions(LOCK_SERVER_PUBKY, options);
     const viewer = client.viewer;
     try {
       const error: unknown = await viewer.submitProofBundle(bundle).catch((caught: unknown) => caught);
@@ -163,7 +117,7 @@ describe('pinned Locks SDK 0.1.0 region error contract', () => {
     stubTransport(
       200,
       JSON.stringify({
-        creator: `pubky${SERVER}`,
+        creator: LOCK_SERVER_PUBKY,
         bundle_id: bundle.bundle_id,
         status: 'pending',
         submitted_at: '2026-06-01T12:00:00Z',
@@ -185,7 +139,7 @@ describe('pinned Locks SDK 0.1.0 region error contract', () => {
 describe('pinned Locks SDK 0.1.0 region error contract for the saved bundle id lookup', () => {
   it('exposes HTTP 451 on the lookup as the same InvalidInput Error the submission raises', async () => {
     const lookups = stubTransport(451, '{}', lookupRoute);
-    const options = new LocksOptions().addPkarrRelay(RELAY);
+    const options = new LocksOptions().addPkarrRelay(PKARR_RELAY);
     const client = Locks.forServerWithOptions(creator, options);
     const viewer = client.viewer;
     try {
