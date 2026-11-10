@@ -9,6 +9,8 @@ import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceC
 import { PostContentBase } from '../PostContentBase/PostContentBase';
 import { PostContent } from './PostContent';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 // Mock hooks used by PostContent
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),

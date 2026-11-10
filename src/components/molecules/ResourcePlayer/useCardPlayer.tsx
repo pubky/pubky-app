@@ -13,6 +13,8 @@ export interface CardPlayer {
   playOn?: ReactNode;
   /** Puts the open player in place of the card's image and text (`ResourceCard`'s `renderBody`). */
   renderBody?: (body: ReactNode) => ReactNode;
+  /** Whether the player is open, in the card or its dock (`ResourceCard`'s `isBodyReplaced`). */
+  isOpen?: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ export function useCardPlayer(
   const current = player.current;
   return {
     playOn: <PlayOnSplit targets={targets} player={player} surface={surface} />,
+    isOpen: current !== null,
     renderBody: (body) => (
       <AnimatedHeight>
         {current ? (

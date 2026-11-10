@@ -6,6 +6,8 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
 import { InApp } from './ProviderInApp';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => ({
   PostPreviewCard: ({ postId, className }: { postId: string; className?: string }) => (
     <div data-testid="post-preview-card" data-post-id={postId} className={className}>

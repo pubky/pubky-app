@@ -7,6 +7,7 @@ import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPrev
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: React.forwardRef(function MockContainer(

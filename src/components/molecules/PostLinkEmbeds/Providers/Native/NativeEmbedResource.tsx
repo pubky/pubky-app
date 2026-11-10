@@ -163,7 +163,13 @@ function NativeEmbedChoice({
             body
           );
     return (
-      <ResourceCard card={card} href={url} actions={actions} hasAlsoOn={alsoOn !== null} renderBody={renderBody} />
+      <ResourceCard
+        card={card}
+        href={url}
+        actions={actions}
+        renderBody={renderBody}
+        isBodyReplaced={isVideo ? player.isOpen : isPostOpen && !failed}
+      />
     );
   }
 

@@ -75,18 +75,18 @@ const DETAIL_ICON_SIZE = 14;
  * plays it. A sparse card fills a missing description or image from a general database in its
  * group (`useResourceFallback`), then a missing title or image from the link's OpenGraph data.
  *
- * The title opens the resource's page (in a new tab where links may not navigate). The card is a
- * click-through to the link unless its ⋯ menu lists Also on, its link is gone (`missing`) or its
- * body may turn into a service's player (`renderBody`); the `large` card heads the resource page,
- * lists every fact under "Details" (not while an X post's embed is its body, `isBodyReplaced`) and
- * is no click-through.
+ * The title opens the resource's page (in a new tab where links may not navigate), and so does a
+ * click on the card outside its controls (`ResourceCardFrame`); the header's source is the one link
+ * out (none on a `missing` card). A player or embed in the body (`isBodyReplaced`) is its own set of
+ * controls, as the episode's audio is. The `large` card heads the resource page, lists every fact
+ * under "Details" (not while an X post's embed is its body, `isBodyReplaced`) and is no
+ * click-through.
  * Only `http(s)` values become links, images or audio.
  */
 export function ResourceCard({
   card,
   href,
   actions,
-  hasAlsoOn = false,
   size = 'default',
   isOnScreen = true,
   renderBody,
@@ -108,12 +108,12 @@ export function ResourceCard({
   // A `missing` card's own link is gone upstream: neither the card, its heading nor its source
   // send the viewer there.
   const titleUrl = isMissing ? null : linkUrl;
-  // With other services, the viewer picks one in the ⋯ menu; the large card links out by its header only,
-  // and a card whose body may turn into a player (`renderBody`) is no click-through either.
-  const clickThroughUrl = hasAlsoOn || isLarge || renderBody ? null : titleUrl;
   // The title always opens the resource's page, as on the page itself; where links may not navigate
   // (the composer, a quoted post in a dialog) in a new tab, so the draft or dialog stays.
   const smallTitleUrl = getResourceRoute(card.uri);
+  // So does a click on the card. The large card heads that page: its header's "Open in <site>" links
+  // out, the card itself does not.
+  const clickThroughUrl = isLarge ? null : smallTitleUrl;
   const titleTarget = navigable ? undefined : '_blank';
   const descriptionId = useId();
   // A feed card reads what it lacks (its group, the link's preview) once it has been on screen.
@@ -193,6 +193,18 @@ export function ResourceCard({
     </>
   );
 
+  // A click on or around a player or embed in the body never opens the page. The wrapper stays
+  // mounted, so opening or closing a player never remounts what the body renders.
+  const showBody = (body: React.ReactNode) => (
+    <Container
+      overrideDefaults
+      data-resource-controls={isBodyReplaced || undefined}
+      className={cn('min-w-0', isBodyReplaced && 'cursor-auto')}
+    >
+      {(renderBody ?? keepBody)(body)}
+    </Container>
+  );
+
   return (
     <ResourceCardFrame
       clickThroughUrl={clickThroughUrl}
@@ -214,7 +226,7 @@ export function ResourceCard({
       >
         <ResourceCardHeader typeLabel={typeLabel} sourceUri={sourceUri} href={titleUrl} siteName={siteName} />
 
-        {(renderBody ?? keepBody)(
+        {showBody(
           <Container overrideDefaults className="flex min-w-0 gap-4">
             <ResourceCardMedia
               imageUrl={shownImage}

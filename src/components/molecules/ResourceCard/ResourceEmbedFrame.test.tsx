@@ -1,24 +1,36 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { ResourceEmbedFrame } from './ResourceEmbedFrame';
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
+
 const URL = videoFixture.uri;
 
 describe('ResourceEmbedFrame', () => {
-  it('puts the embed between the header and the footer, with no click-through', () => {
+  it('puts the embed between the header and the footer; a click on the header opens the resource page', () => {
     render(
-      <ResourceEmbedFrame url={URL} card={videoFixture} actions={<div data-testid="actions" />}>
+      <ResourceEmbedFrame url={URL} card={videoFixture} actions={<div data-resource-controls data-testid="actions" />}>
         <div data-testid="embed" />
       </ResourceEmbedFrame>,
     );
 
     const frame = screen.getByTestId('resource-embed-frame');
-    expect(frame).not.toHaveAttribute('data-click-through');
     expect(screen.getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('embed'));
     expect(frame.lastElementChild).toBe(screen.getByTestId('actions'));
+
+    // The embed, the frame around it and the footer keep their clicks.
+    fireEvent.click(screen.getByTestId('embed'));
+    fireEvent.click(screen.getByTestId('resource-embed-body'));
+    fireEvent.click(screen.getByTestId('actions'));
+    expect(mockPush).not.toHaveBeenCalled();
+
+    fireEvent.click(frame.firstElementChild?.firstElementChild as HTMLElement);
+    expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
+    expect(frame).toHaveAttribute('data-click-through', 'true');
   });
 
   it('links the type to the resource page and the site to the link in a new tab', () => {

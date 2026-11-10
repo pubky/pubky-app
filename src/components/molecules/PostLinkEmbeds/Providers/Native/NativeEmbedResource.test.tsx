@@ -7,6 +7,8 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { NativeEmbedResource, type RenderNativeEmbed } from './NativeEmbedResource';
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({ usePinakesCard: vi.fn() }));
 const viewport = vi.hoisted(() => ({ isVisible: true }));
 vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
@@ -119,11 +121,18 @@ describe('NativeEmbedResource', () => {
       mockCard(videoFixture);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
+      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
       fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
       expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
         'src',
         expect.stringContaining('youtube-nocookie.com/embed/dQw4w9WgXcQ'),
       );
+      // A click on or around the playing video stays there; the card's header still opens the page.
+      fireEvent.click(screen.getByTestId('resource-player'));
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
+      fireEvent.click(screen.getByTestId('resource-card-type'));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
     });
 
     it('shows an X post on our card from Show on, with X’s mark, and the same pill closes it', () => {
@@ -139,8 +148,15 @@ describe('NativeEmbedResource', () => {
       fireEvent.click(pill);
       expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
       expect(pill).toHaveAttribute('aria-expanded', 'true');
+      // A click on the open post stays there; the card's header still opens the page.
+      fireEvent.click(screen.getByTestId('native-embed-body'));
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
+      fireEvent.click(screen.getByTestId('resource-card-type'));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(POST_WITH_ALSO_ON.uri));
       fireEvent.click(pill);
       expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
     });
   });
 

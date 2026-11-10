@@ -23,9 +23,9 @@ interface ResourceEmbedFrameProps {
 
 /**
  * A platform's own embed, as the platform makes it, in the resource card's frame: the header's type
- * opens the resource page and its source the link; the footer is the resource's tags and actions.
- * Without a card the header names the host and `fallbackTypeLabel`. The frame is no click-through:
- * the embed is its own set of controls.
+ * and a click on the header open the resource page, its source the link; the footer is the
+ * resource's tags and actions. Without a card the header names the host and `fallbackTypeLabel`.
+ * The embed and the space around it are its own set of controls, never a click-through.
  */
 export function ResourceEmbedFrame({
   url,
@@ -37,18 +37,26 @@ export function ResourceEmbedFrame({
   const links = card ? getResourceLinks(card, url) : null;
   const typeLabel = (card ? getResourceTypeLabel(card) : null) ?? fallbackTypeLabel;
   const href = links?.linkUrl ?? getHttpUrl(url);
+  const pageUrl = getResourceRoute(card?.uri ?? url);
 
   return (
-    <ResourceCardFrame clickThroughUrl={null} data-testid="resource-embed-frame">
-      <Container overrideDefaults className={cn('flex min-w-0 flex-col gap-3 p-4', CARD_MUTED_TEXT)}>
-        <ResourceCardHeader
-          typeLabel={typeLabel}
-          typeHref={getResourceRoute(card?.uri ?? url)}
-          sourceUri={links?.sourceUri ?? url}
-          href={href}
-          siteName={links?.siteName ?? getLinkHost(href)}
-        />
-        <Container overrideDefaults className="min-w-0" data-testid="resource-embed-body">
+    <ResourceCardFrame clickThroughUrl={pageUrl} data-testid="resource-embed-frame">
+      <Container overrideDefaults className={cn('flex min-w-0 flex-col', CARD_MUTED_TEXT)}>
+        <Container overrideDefaults className="min-w-0 cursor-pointer p-4 pb-3">
+          <ResourceCardHeader
+            typeLabel={typeLabel}
+            typeHref={pageUrl}
+            sourceUri={links?.sourceUri ?? url}
+            href={href}
+            siteName={links?.siteName ?? getLinkHost(href)}
+          />
+        </Container>
+        <Container
+          overrideDefaults
+          data-resource-controls
+          className="min-w-0 px-4 pb-4"
+          data-testid="resource-embed-body"
+        >
           {children}
         </Container>
       </Container>

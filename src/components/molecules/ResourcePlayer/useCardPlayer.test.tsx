@@ -7,10 +7,10 @@ import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useCardPlayer } from './useCardPlayer';
 
 function Card({ card, testId }: { card: TPinakesResourceDetail; testId: string }) {
-  const { playOn, renderBody } = useCardPlayer(card);
+  const { playOn, renderBody, isOpen } = useCardPlayer(card);
   const body = <p>{card.name}</p>;
   return (
-    <section data-testid={testId}>
+    <section data-testid={testId} data-open={String(isOpen)}>
       {renderBody ? renderBody(body) : body}
       {playOn}
     </section>
@@ -32,10 +32,12 @@ describe('useCardPlayer', () => {
     const frame = screen.getByTestId('resource-player-frame');
     expect(frame).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
     expect(screen.queryByText(musicFixture.name!)).not.toBeInTheDocument();
+    expect(screen.getByTestId('song')).toHaveAttribute('data-open', 'true');
 
     fireEvent.click(screen.getByRole('button', { name: 'Close the Spotify player' }));
     expect(screen.queryByTestId('resource-player-frame')).not.toBeInTheDocument();
     expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
+    expect(screen.getByTestId('song')).toHaveAttribute('data-open', 'false');
   });
 
   it('lets the viewer pick another service the card is on', () => {
