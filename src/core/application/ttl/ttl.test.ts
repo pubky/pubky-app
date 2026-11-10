@@ -13,7 +13,7 @@ import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import { LocalUserService } from '@/services/local/user/user';
-import type { NexusFileDetails, NexusPost, NexusUser } from '@/services/nexus/nexus.types';
+import type { NexusPost, NexusUser } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
@@ -96,34 +96,32 @@ describe('TtlApplication', () => {
 
   describe('forceRefreshPostsByIds', () => {
     it('does not mark a batch fresh before its attachment metadata can be saved', async () => {
-      const metadata = asOpaque<NexusFileDetails>({ uri: 'pubky://author/pub/pubky.app/files/image' });
       const batch = [
         asOpaque<NexusPost>({
-          details: { author: 'author', id: 'post' },
+          details: { author: 'author', id: 'post', attachments: ['pubky://author/pub/pubky.app/files/image'] },
           tags: [],
           relationships: { reposted: null },
-          attachments_metadata: [metadata],
         }),
       ];
       vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(batch);
       const persisted = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       const failure = new Error('file table unavailable');
       const files = vi
-        .spyOn(FileApplication, 'persistFiles')
+        .spyOn(FileApplication, 'fetchFilesForPosts')
         .mockRejectedValueOnce(failure)
         .mockResolvedValue(undefined);
       vi.spyOn(PostStreamApplication, 'fetchOriginalPostsByUris').mockResolvedValue(undefined);
       await expect(TtlApplication.forceRefreshPostsByIds({ postIds: ['author:post'] })).rejects.toBe(failure);
       expect(persisted).not.toHaveBeenCalled();
       await TtlApplication.forceRefreshPostsByIds({ postIds: ['author:post'] });
-      expect(files).toHaveBeenLastCalledWith([metadata]);
+      expect(files).toHaveBeenLastCalledWith(batch);
       expect(persisted).toHaveBeenCalledOnce();
     });
 
     it('discards the post write when its session changes while attachments are being saved', async () => {
       vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
       let current = true;
-      vi.spyOn(FileApplication, 'persistFiles').mockImplementation(async () => {
+      vi.spyOn(FileApplication, 'fetchFilesForPosts').mockImplementation(async () => {
         current = false;
       });
       const persisted = vi.spyOn(LocalStreamPostsService, 'persistPosts');
@@ -175,7 +173,7 @@ describe('TtlApplication', () => {
 
       const queryNexusSpy = mockQueryNexus.mockResolvedValue(nexusPosts);
       const persistPostsSpy = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
-      const persistFilesSpy = vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      const fetchFilesSpy = vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       await TtlApplication.forceRefreshPostsByIds({ postIds, viewerId });
@@ -193,7 +191,7 @@ describe('TtlApplication', () => {
         tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
         refreshGuard: { fetchStartedAt: expect.any(Number) },
       });
-      expect(persistFilesSpy).toHaveBeenCalledWith([]);
+      expect(fetchFilesSpy).toHaveBeenCalledWith(nexusPosts.map(withLocalKind));
     });
 
     it('hands persistPosts the fetch start so locally newer rows are kept atomically', async () => {
@@ -276,7 +274,7 @@ describe('TtlApplication', () => {
 
       mockQueryNexus.mockResolvedValue([repostNexusPost]);
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
-      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       // Mock the shared helper to verify it's called with correct URIs
@@ -319,7 +317,7 @@ describe('TtlApplication', () => {
 
       mockQueryNexus.mockResolvedValue([regularPost]);
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
-      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       const fetchOriginalsSpy = vi
@@ -455,7 +453,7 @@ describe('TtlApplication', () => {
         body: { post_ids: postIds },
       } as ReturnType<typeof postStreamApi.postsByIds>);
       mockQueryNexus.mockResolvedValue([nexusPost('alice', '1')]);
-      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       vi.spyOn(PostStreamApplication, 'fetchOriginalPostsByUris').mockResolvedValue(undefined);
       const deferSpy = vi.spyOn(LocalPostService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
@@ -488,7 +486,7 @@ describe('TtlApplication', () => {
         body: { post_ids: postIds },
       } as ReturnType<typeof postStreamApi.postsByIds>);
       mockQueryNexus.mockResolvedValue([nexusPost('alice', '1')]);
-      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       vi.spyOn(PostStreamApplication, 'fetchOriginalPostsByUris').mockResolvedValue(undefined);
       const deferSpy = vi.spyOn(LocalPostService, 'upsertTtlWithDelay').mockResolvedValue(undefined);

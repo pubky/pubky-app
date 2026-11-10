@@ -735,8 +735,9 @@ export class PostStreamApplication {
         ...(viewerId ? { viewer_id: viewerId } : {}),
       });
       if (isCurrent && !isCurrent()) return false;
-      // Keep missing posts retryable until their attachment metadata is durable.
-      await FileApplication.persistFiles(postBatch.flatMap((post) => post.attachments_metadata ?? []));
+      // One file-details request per page for 0.x attachments, before the posts: a card then finds its
+      // rows instead of asking for its own. Posts stay retryable until the metadata is durable.
+      await FileApplication.fetchFilesForPosts(postBatch);
       if (isCurrent && !isCurrent()) return false;
       await LocalStreamPostsService.persistPosts({
         posts: postBatch,
@@ -814,8 +815,8 @@ export class PostStreamApplication {
         viewer_id: viewerId ?? undefined,
       });
       if (isCurrent && !isCurrent()) return;
-      // Do not cache an original post as hydrated before its attachments are stored.
-      await FileApplication.persistFiles(originalPosts.flatMap((post) => post.attachments_metadata ?? []));
+      // Do not cache an original post as hydrated before its 0.x attachment metadata is stored.
+      await FileApplication.fetchFilesForPosts(originalPosts);
       if (isCurrent && !isCurrent()) return;
       await LocalStreamPostsService.persistPosts({
         posts: originalPosts,

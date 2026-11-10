@@ -35,15 +35,7 @@ import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
-import {
-  type NexusFileDetails,
-  type NexusFileUrls,
-  type NexusPost,
-  type NexusPostsKeyStream,
-  type NexusPostWithAttachmentMetadata,
-  type NexusUser,
-  StreamSorting,
-} from '@/services/nexus/nexus.types';
+import { type NexusPost, type NexusPostsKeyStream, type NexusUser, StreamSorting } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
@@ -65,7 +57,7 @@ describe('PostStreamApplication', () => {
     author: string = DEFAULT_AUTHOR,
     timestamp: number = BASE_TIMESTAMP,
     overrides?: Partial<NexusPost>,
-  ): NexusPostWithAttachmentMetadata => ({
+  ): NexusPost => ({
     details: {
       id: postId,
       content: `Post ${postId} content`,
@@ -99,7 +91,7 @@ describe('PostStreamApplication', () => {
     startIndex: number = 1,
     author: string = DEFAULT_AUTHOR,
     startTimestamp: number = BASE_TIMESTAMP,
-  ): NexusPostWithAttachmentMetadata[] => {
+  ): NexusPost[] => {
     return Array.from({ length: count }, (_, i) => {
       const postId = `post-${startIndex + i}`;
       return createMockNexusPost(postId, author, startTimestamp + i);
@@ -206,7 +198,7 @@ describe('PostStreamApplication', () => {
 
   const setupDefaultMocks = () => ({
     persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined),
-    persistFiles: vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined),
+    fetchFilesForPosts: vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined),
     getUserDetails: vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder'),
     getUserRelationships: vi
       .spyOn(UserRelationshipsModel, 'findByIds')
@@ -1521,33 +1513,17 @@ describe('PostStreamApplication', () => {
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([postId]);
       vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(createMockNexusPosts(1));
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
-      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined);
       vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue([createMockNexusUser().details]);
     });
 
-    it('passes all inline attachment metadata to file persistence, including mixed batches', async () => {
-      const file = (id: string): NexusFileDetails => ({
-        id,
-        name: id,
-        src: '',
-        content_type: 'image/png',
-        size: 100,
-        created_at: 0,
-        indexed_at: 0,
-        metadata: {},
-        owner_id: 'user-1',
-        uri: `pubky://user-1/pub/pubky.app/files/${id}`,
-        urls: { main: '', feed: '', small: '' },
-      });
-      const attachments = [file('first'), file('second'), file('third')];
+    it('fetches the batch file metadata in one call before the posts are persisted', async () => {
       const posts = createMockNexusPosts(3);
-      posts[0].attachments_metadata = attachments.slice(0, 2);
-      posts[2].attachments_metadata = attachments.slice(2);
       vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue(posts);
 
       await hydrate();
 
-      expect(FileApplication.persistFiles).toHaveBeenCalledWith(attachments);
+      expect(FileApplication.fetchFilesForPosts).toHaveBeenCalledExactlyOnceWith(posts);
       expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledWith({
         posts,
         tagGuard: expect.objectContaining({ revisions: new Map([[postId, null]]) }),
@@ -1555,7 +1531,7 @@ describe('PostStreamApplication', () => {
     });
 
     it('leaves post details and TTL unpublished after a file write failure, allowing retry', async () => {
-      vi.mocked(FileApplication.persistFiles).mockRejectedValueOnce(
+      vi.mocked(FileApplication.fetchFilesForPosts).mockRejectedValueOnce(
         Err.database(DatabaseErrorCode.WRITE_FAILED, 'File storage unavailable', {
           service: ErrorService.Local,
           operation: 'createMany',
@@ -1570,17 +1546,17 @@ describe('PostStreamApplication', () => {
 
       await hydrate();
 
-      expect(FileApplication.persistFiles).toHaveBeenCalledTimes(2);
+      expect(FileApplication.fetchFilesForPosts).toHaveBeenCalledTimes(2);
       expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledOnce();
       expect(UserDetailsModel.findByIdsPreserveOrder).toHaveBeenCalledOnce();
     });
 
     it('does not publish posts while attachment persistence is pending or after the session changes', async () => {
       const files = Promise.withResolvers<void>();
-      vi.mocked(FileApplication.persistFiles).mockReturnValueOnce(files.promise);
+      vi.mocked(FileApplication.fetchFilesForPosts).mockReturnValueOnce(files.promise);
       let current = true;
       const hydration = hydrate(() => current);
-      await vi.waitFor(() => expect(FileApplication.persistFiles).toHaveBeenCalledOnce());
+      await vi.waitFor(() => expect(FileApplication.fetchFilesForPosts).toHaveBeenCalledOnce());
       expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
 
       current = false;
@@ -1616,7 +1592,7 @@ describe('PostStreamApplication', () => {
         posts: mockNexusPosts,
         tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
       });
-      expect(mocks.persistFiles).toHaveBeenCalledWith([]);
+      expect(mocks.fetchFilesForPosts).toHaveBeenCalledWith(mockNexusPosts);
       expect(hydrated).toBe(true);
     });
 
@@ -1881,40 +1857,11 @@ describe('PostStreamApplication', () => {
 
     it('should handle error gracefully when file persistence fails', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
-      const mockAttachments: NexusFileDetails[] = [
-        {
-          id: 'file-1',
-          name: 'file-1',
-          src: '',
-          content_type: 'image/png',
-          size: 100,
-          created_at: 0,
-          indexed_at: 0,
-          metadata: {},
-          owner_id: 'user-1',
-          uri: 'pubky://user-1/pub/pubky.app/files/file-1',
-          urls: {} as NexusFileUrls,
-        },
-        {
-          id: 'file-2',
-          name: 'file-2',
-          src: '',
-          content_type: 'image/png',
-          size: 200,
-          created_at: 0,
-          indexed_at: 0,
-          metadata: {},
-          owner_id: 'user-1',
-          uri: 'pubky://user-1/pub/pubky.app/files/file-2',
-          urls: {} as NexusFileUrls,
-        },
-      ];
-
-      mockNexusPosts[0].attachments_metadata = mockAttachments;
+      mockNexusPosts[0].details.attachments = ['pubky://user-1/pub/pubky.app/files/file-1'];
       const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
       const persistPostsSpy = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
-      const persistFilesSpy = vi
-        .spyOn(FileApplication, 'persistFiles')
+      const fetchFilesSpy = vi
+        .spyOn(FileApplication, 'fetchFilesForPosts')
         .mockRejectedValue(new Error('Failed to persist files'));
 
       const getUserDetailsSpy = vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder');
@@ -1925,7 +1872,7 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistFilesSpy).toHaveBeenCalledWith(mockAttachments);
+      expect(fetchFilesSpy).toHaveBeenCalledWith(mockNexusPosts);
       expect(persistPostsSpy).not.toHaveBeenCalled();
       expect(fetchPostsByIdsSpy).toHaveBeenCalledTimes(1);
       expect(getUserDetailsSpy).not.toHaveBeenCalled();

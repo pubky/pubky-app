@@ -104,8 +104,11 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   - **The one `/v0` call.** `filesApi.getFiles` (`POST v0/files/by_ids`) names its version explicitly: a 0.x
     attachment URI carries no extension or type, `/v1` serves no file details, and un-migrated authors keep such
     posts until they open the new app, so without it their images would degrade to file cards for every viewer
-    (D10). It is asked for 0.x addresses only. **Sunset:** remove it (with `NexusFileService.fetchFiles` and
-    `attachments_metadata`) when `/v0` gets a removal date or every author has migrated. The compliance gate lets no
+    (D10). It is asked for 0.x addresses only, once per fetched page of posts before they are persisted
+    (`FileApplication.fetchFilesForPosts`, in place of the inline `attachments_metadata` `/v0` served; at most
+    `NEXUS_FILES_BY_IDS_MAX_URIS` per request) and per card for any row still missing. **Sunset:** remove it (with
+    `NexusFileService.fetchFiles` and `FileApplication.fetchFiles*`) when `/v0` gets a removal date or every author
+    has migrated. The compliance gate lets no
     other file under `src` name `v0`.
 - **Limits** come from the package: the article body cap is `articleBodyMaxLength` for the body alone, in code
   points, which `getCharacterCount` already counts.

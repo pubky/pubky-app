@@ -4,7 +4,7 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { buildContentSearchStreamId, type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
-import { type NexusFileDetails, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
+import { type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
 import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
 import {
   StreamSource,
@@ -21,7 +21,6 @@ import {
 } from '@/services/nexus/stream/posts/postStream.types';
 import { POST_STREAM_GRAMMAR_FIXTURES } from '@/test/fixtures/stream/postStreamIds';
 import { mockNexusPostWire } from '@/test-utils/nexus';
-import { asOpaque } from '@/test-utils/type-assertions';
 import { NexusPostStreamService } from './postStream';
 import { postStreamApi } from './postStream.api';
 import { StreamKind, StreamOrder } from './postStream.types';
@@ -1717,17 +1716,6 @@ describe('NexusPostStreamService', () => {
 
       expect(result).not.toBe(mockPosts);
       expect(getNexusResponseStartedAt(result)).toBe(1_000);
-    });
-
-    it('passes attachments_metadata through when a response carries it', async () => {
-      const metadata = asOpaque<NexusFileDetails[]>([{ id: 'file-1' }]);
-      mockQueryNexus.mockResolvedValue([
-        { ...mockNexusPostWire({ id: 'post1', author: 'author1' }), attachments_metadata: metadata },
-      ]);
-
-      const [post] = await NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
-
-      expect(post.attachments_metadata).toEqual(metadata);
     });
 
     it.each([undefined, false, true])('canonicalizes the body and forwards force=%s separately', async (force) => {

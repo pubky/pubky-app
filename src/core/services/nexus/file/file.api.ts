@@ -21,7 +21,7 @@ const STATIC_PREFIX = 'files';
  * file cards for every viewer (D10). The callers send 0.x addresses only (`FileApplication.fetchFiles`
  * drops every v1 address, which the route would skip with a server-side warning).
  *
- * Sunset: remove this call, with `NexusFileService.fetchFiles` and `attachments_metadata`, when `/v0`
+ * Sunset: remove this call, with `NexusFileService.fetchFiles` and `FileApplication.fetchFiles*`, when `/v0`
  * gets a removal date or every author has migrated (ADR-0027, _Nexus API version_). The compliance
  * gate (`social-v1-compliance.gate.test.ts`) lets no other file name this version.
  */

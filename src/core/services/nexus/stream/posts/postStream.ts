@@ -3,7 +3,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
-import type { NexusPostsKeyStream, NexusPostWire, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
+import type { NexusPost, NexusPostsKeyStream, NexusPostWire } from '@/services/nexus/nexus.types';
 import { mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
 import { searchApi } from '@/services/nexus/search/search.api';
 import type { TContentSearchResult } from '@/services/nexus/search/search.types';
@@ -33,10 +33,7 @@ export class NexusPostStreamService {
    * @param params - Parameters containing post IDs and optional viewer ID
    * @returns Array of posts, past the read boundary (local kinds, tags with `relationship`)
    */
-  static async fetchByIds({
-    force,
-    ...params
-  }: TStreamPostsByIdsParams & { force?: boolean }): Promise<NexusPostWithAttachmentMetadata[]> {
+  static async fetchByIds({ force, ...params }: TStreamPostsByIdsParams & { force?: boolean }): Promise<NexusPost[]> {
     // Canonicalize (sorted post_ids) so identical concurrent batches share one query key and
     // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
     const { url, body } = postStreamApi.postsByIds({ ...params, post_ids: [...params.post_ids].sort() });

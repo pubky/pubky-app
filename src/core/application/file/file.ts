@@ -27,7 +27,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { NexusFileService } from '@/services/nexus/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
-import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.types';
+import type { NexusFileDetails, NexusFileUrls, NexusPost } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 
 /**
@@ -329,5 +329,27 @@ export class FileApplication {
 
     const nexusFiles = await NexusFileService.fetchFiles(legacyFileUris);
     await this.persistFiles(nexusFiles);
+  }
+
+  /**
+   * Fetches and persists the metadata of a batch's 0.x attachments in one request, before the posts
+   * are persisted: a page of un-migrated authors' media then costs one `files/by_ids` call instead of
+   * one per card (`useAttachmentsMetadata` asks for every row still missing). `/v0` served this inline
+   * as `attachments_metadata`; `/v1` serves no file details, and v1 addresses need none. A Nexus
+   * failure is left to the cards, which fetch their own rows (the service already reported it); a
+   * failed local write still rejects, so the posts stay retryable until their metadata is durable.
+   *
+   * @param posts - The Nexus posts about to be persisted
+   */
+  static async fetchFilesForPosts(posts: NexusPost[]) {
+    const legacyFileUris = [...new Set(posts.flatMap((post) => post.details.attachments ?? []))].filter(
+      (uri) => !isV1Address(uri),
+    );
+    if (legacyFileUris.length === 0) {
+      return;
+    }
+
+    const nexusFiles = await NexusFileService.fetchFiles(legacyFileUris).catch(() => null);
+    if (nexusFiles) await this.persistFiles(nexusFiles);
   }
 }

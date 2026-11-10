@@ -215,7 +215,9 @@ the Nexus services fold each response once at the read boundary (`PostNormalizer
 note), `relationship = relationship ?? (tag_uri != null)`. The URL builders send `kind=note|article|…`; the
 `StreamKind` values and the persisted stream ids keep `short`/`long`. `bootstrap.files`, `post.bookmark` and
 `counts.bookmarks` are optional (`UserCountsModel` stores `0`, no `DB_VERSION` change). The one `/v0` call is
-`filesApi.getFiles` (`POST v0/files/by_ids`), for 0.x attachment metadata only, with its sunset in the ADR; the
+`filesApi.getFiles` (`POST v0/files/by_ids`), for 0.x attachment metadata only: once per fetched page of posts
+(`FileApplication.fetchFilesForPosts`, before the posts are persisted, in place of the inline `attachments_metadata`
+`/v0` served) and per card for any row still missing; sunset in the ADR; the
 compliance gate (`nexusV0`) lets no other file under `src` name `v0`. `/v1` also folds tag labels by the data model's
 frozen whitespace table, which `canonicalizeTagLabel` / `isValidTagLabel` now mirror (contract-tested against `buildTag`).
 

@@ -75,7 +75,7 @@ describe('PostNormalizer', () => {
     });
 
     it('passes every other member through unchanged, those it does not name included', () => {
-      const post = { ...wirePost('article'), attachments_metadata: [], bookmark: null };
+      const post = { ...wirePost('article'), bookmark: null };
 
       expect(PostNormalizer.fromNexus(post)).toEqual({
         ...post,
