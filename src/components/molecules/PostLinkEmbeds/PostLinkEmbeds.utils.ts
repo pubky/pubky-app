@@ -39,8 +39,15 @@ const getProviderMap = (): Map<string, EmbedProvider> => {
  * (inside an embedded post preview) an in-app URL renders no embed at all — the
  * plain link text from PostText is enough, and a generic OG card of our own SPA
  * page would only add noise.
+ *
+ * A platform whose player the viewer removed from Players (`hiddenPlayers`, Settings, Links &
+ * Media) embeds nothing: its link is parsed as any other link (`Generic`).
  */
-export const parseUrlForLinkEmbed = (url: string | null, allowInApp: boolean): ParseUrlForLinkEmbedResult => {
+export const parseUrlForLinkEmbed = (
+  url: string | null,
+  allowInApp: boolean,
+  hiddenPlayers: readonly string[] = [],
+): ParseUrlForLinkEmbedResult => {
   try {
     if (!url) return { embed: null, provider: null };
 
@@ -56,7 +63,7 @@ export const parseUrlForLinkEmbed = (url: string | null, allowInApp: boolean): P
     const providerMap = getProviderMap();
     const provider = providerMap.get(hostname);
 
-    if (!provider) {
+    if (!provider || (provider.player && hiddenPlayers.includes(provider.player))) {
       const embed = Generic.parseEmbed(url);
       return { embed, provider: Generic };
     }

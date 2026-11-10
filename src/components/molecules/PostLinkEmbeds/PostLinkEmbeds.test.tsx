@@ -5,6 +5,8 @@ import { isPinakesConfigured } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -1073,6 +1075,61 @@ describe('PostLinkEmbeds', () => {
       vi.mocked(isPinakesConfigured).mockReturnValue(false);
       render(<PostLinkEmbeds url={VIDEO} />);
       expect(screen.queryByTestId('native-embed-resource')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('a platform the viewer removed from Players', () => {
+    const VIDEO = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    const hide = (hiddenPlayers: string[]) =>
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, hiddenPlayers } });
+
+    afterEach(() => {
+      hide([]);
+      vi.mocked(isPinakesConfigured).mockReturnValue(false);
+      vi.mocked(usePinakesCard).mockReturnValue({ data: null, isLoading: false, isError: false });
+    });
+
+    it('shows the post’s embedded link as our card with its footer, loading nothing from the platform', () => {
+      hide(['youtube']);
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      vi.mocked(usePinakesCard).mockReturnValue({
+        data: { ...articleFixture, uri: VIDEO, also_on: [] },
+        isLoading: false,
+        isError: false,
+      });
+      render(<PostLinkEmbeds url={VIDEO} />);
+
+      expect(screen.queryByTestId('native-embed-resource')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card')).toHaveTextContent(articleFixture.name);
+      expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
+      expect(document.querySelectorAll('iframe')).toHaveLength(0);
+    });
+
+    it('shows a link in the text as the link’s own preview', () => {
+      hide(['youtube', 'vimeo']);
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      render(<PostLinkEmbeds content={`see ${VIDEO}`} />);
+      expect(screen.getByTestId('generic-preview')).toHaveAttribute('data-url', VIDEO);
+      expect(document.querySelectorAll('iframe')).toHaveLength(0);
+    });
+
+    it('keeps every player without Pinakes, where Links & Media is hidden and could not undo it', () => {
+      hide(['youtube']);
+      render(<PostLinkEmbeds url={VIDEO} />);
+      expect(screen.getByTestId('YouTube video player')).toBeInTheDocument();
+      expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
+    });
+
+    it('keeps the embeds of the platforms still listed, and X posts, which are no player', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      hide(['vimeo', 'youtube', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer']);
+      const { unmount } = render(<PostLinkEmbeds content="see https://x.com/user/status/1234567890123456789" />);
+      expect(screen.getByTestId('twitter-tweet')).toBeInTheDocument();
+      unmount();
+
+      hide(['vimeo']);
+      render(<PostLinkEmbeds content={`see ${VIDEO}`} />);
+      expect(screen.getByTestId('YouTube video player')).toBeInTheDocument();
     });
   });
 });

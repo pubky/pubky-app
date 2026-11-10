@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
-import { getEmbedTarget, getPlayerTarget, getPlayerTargets, PlayerProvider } from './resourcePlayer.utils';
+import {
+  getEmbedTarget,
+  getPlayerList,
+  getPlayerTarget,
+  getPlayerTargets,
+  PlayerProvider,
+  PROVIDER_NAMES,
+} from './resourcePlayer.utils';
 
 const card = (uri: string, alsoOn: TPinakesAlsoOn[] = [], status = 'ok') => ({ uri, status, also_on: alsoOn });
 
@@ -216,6 +223,86 @@ describe('getPlayerTargets', () => {
   it('offers nothing for a card on services we do not embed', () => {
     expect(getPlayerTargets(card('https://music.apple.com/song/1440717826'))).toEqual([]);
   });
+
+  describe('with the viewer’s Players', () => {
+    const song = card('https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq', [
+      { uri: 'https://music.apple.com/song/1440717826', site: 'Apple Music' },
+      { uri: 'https://www.youtube.com/watch?v=5NV6Rdv1a3I', site: 'YouTube' },
+      { uri: 'https://tidal.com/track/20115564', site: 'TIDAL' },
+    ] as TPinakesAlsoOn[]);
+    const providers = (playerOrder: string[], hiddenPlayers: string[] = []) =>
+      getPlayerTargets(song, { players: { playerOrder, hiddenPlayers } }).map((target) => target.provider);
+    const auto = [PlayerProvider.SPOTIFY, PlayerProvider.YOUTUBE, PlayerProvider.TIDAL];
+
+    it('orders the card’s services by the viewer’s order', () => {
+      expect(providers(['tidal', 'youtube', 'spotify'])).toEqual([
+        PlayerProvider.TIDAL,
+        PlayerProvider.YOUTUBE,
+        PlayerProvider.SPOTIFY,
+      ]);
+    });
+
+    it('puts the services not in the order after those that are, in the Auto order', () => {
+      expect(providers(['tidal'])).toEqual([PlayerProvider.TIDAL, PlayerProvider.SPOTIFY, PlayerProvider.YOUTUBE]);
+      // A service a later version adds is in no order yet.
+      expect(providers(['youtube', 'deezer', 'napster'])).toEqual([
+        PlayerProvider.YOUTUBE,
+        PlayerProvider.SPOTIFY,
+        PlayerProvider.TIDAL,
+      ]);
+    });
+
+    it('keeps the Auto order with no order (never reordered), or none given', () => {
+      expect(providers([])).toEqual(auto);
+      expect(getPlayerTargets(song).map((target) => target.provider)).toEqual(auto);
+    });
+
+    it('leaves out the services the viewer removed, the card’s own link’s too', () => {
+      expect(providers([], ['spotify'])).toEqual([PlayerProvider.YOUTUBE, PlayerProvider.TIDAL]);
+      expect(providers(['tidal', 'youtube'], ['tidal'])).toEqual([PlayerProvider.YOUTUBE, PlayerProvider.SPOTIFY]);
+    });
+
+    it('offers nothing when every service the card is on is removed', () => {
+      expect(providers([], ['spotify', 'youtube', 'tidal'])).toEqual([]);
+    });
+
+    it('keeps a plain audio file, which is no service, after the ranked ones', () => {
+      const episode = card('https://example.com/episode.mp3', [
+        { uri: 'https://open.spotify.com/episode/4rOoJ6Egrf8K2IrywzwOMk', site: 'Spotify' },
+      ] as TPinakesAlsoOn[]);
+      const ranked = getPlayerTargets(episode, {
+        players: { playerOrder: Object.keys(PROVIDER_NAMES), hiddenPlayers: ['youtube'] },
+      });
+      expect(ranked.map((target) => target.provider)).toEqual([PlayerProvider.SPOTIFY, PlayerProvider.AUDIO_FILE]);
+    });
+  });
+});
+
+describe('getPlayerList', () => {
+  const ALL = Object.keys(PROVIDER_NAMES);
+
+  it('lists every service in the default order, none removed, with no order', () => {
+    expect(getPlayerList({ playerOrder: [], hiddenPlayers: [] })).toEqual({ shown: ALL, removed: [] });
+  });
+
+  it('shows the viewer’s order first, then the services not in it, and the removed ones apart', () => {
+    expect(getPlayerList({ playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube'] })).toEqual({
+      shown: ['tidal', 'spotify', 'vimeo', 'soundcloud', 'mixcloud', 'deezer'],
+      removed: ['youtube'],
+    });
+  });
+
+  it('shows a service a later version adds at the end, and leaves out ids it does not play', () => {
+    const order = ['deezer', 'tidal', 'mixcloud', 'soundcloud', 'spotify', 'napster', 'vimeo'];
+    expect(getPlayerList({ playerOrder: order, hiddenPlayers: ['bandcamp'] })).toEqual({
+      shown: ['deezer', 'tidal', 'mixcloud', 'soundcloud', 'spotify', 'vimeo', 'youtube'],
+      removed: [],
+    });
+  });
+
+  it('can have every service removed', () => {
+    expect(getPlayerList({ playerOrder: [], hiddenPlayers: ALL })).toEqual({ shown: [], removed: ALL });
+  });
 });
 
 describe('getEmbedTarget', () => {
@@ -262,5 +349,15 @@ describe('getEmbedTarget', () => {
   it('has none for a link on no such service or a plain audio file', () => {
     expect(getEmbedTarget('https://example.com/a')).toBeNull();
     expect(getEmbedTarget('https://example.com/a.mp3')).toBeNull();
+  });
+
+  it('has none for a service the viewer removed from Players, the card’s canonical link’s neither', () => {
+    expect(getEmbedTarget('https://vimeo.com/1084537', null, ['vimeo'])).toBeNull();
+    expect(
+      getEmbedTarget('https://example.com/share/1', { uri: 'https://tidal.com/track/3524506' }, ['tidal']),
+    ).toBeNull();
+    expect(getEmbedTarget('https://vimeo.com/1084537', null, ['tidal'])?.src).toBe(
+      'https://player.vimeo.com/video/1084537?dnt=1',
+    );
   });
 });

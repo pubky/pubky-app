@@ -1,4 +1,4 @@
-import { Bell, CircleHelp, MegaphoneOff, Shield, SunMoon, UserRound } from 'lucide-react';
+import { Bell, CircleHelp, MegaphoneOff, Music, Shield, SunMoon, UserRound } from 'lucide-react';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import type { SettingsMenuItem } from '../SettingsMenu/SettingsMenu.types';
 
@@ -26,6 +26,12 @@ export const SETTINGS_MOBILE_ITEMS: SettingsMenuItem[] = [
     id: 'privacySafety',
     label: 'Privacy & Safety',
     path: SETTINGS_ROUTES.PRIVACY_SAFETY,
+  },
+  {
+    icon: Music,
+    id: 'media',
+    label: 'Links & Media',
+    path: SETTINGS_ROUTES.MEDIA,
   },
   {
     icon: MegaphoneOff,

@@ -3,10 +3,12 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import {
+  defaultMediaPreferences,
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { TEST_PUBKY } from '../pipes.test-utils';
 
 describe('SettingsNormalizer', () => {
@@ -23,6 +25,7 @@ describe('SettingsNormalizer', () => {
   const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
     notifications: defaultNotificationPreferences,
     privacy: defaultPrivacyPreferences,
+    media: defaultMediaPreferences,
     muted: [],
     updatedAt: 1700000000000,
     version: 1,
@@ -40,6 +43,7 @@ describe('SettingsNormalizer', () => {
       expect(result).toEqual({
         notifications: input.notifications,
         privacy: input.privacy,
+        media: input.media,
         muted: ['user1', 'user2'],
         updatedAt: input.updatedAt,
         version: input.version,
@@ -66,7 +70,7 @@ describe('SettingsNormalizer', () => {
 
       expect(result).not.toHaveProperty('setShowConfirm');
       expect(result).not.toHaveProperty('syncToHomeserver');
-      expect(Object.keys(result)).toHaveLength(5);
+      expect(Object.keys(result)).toHaveLength(6);
     });
   });
 
@@ -164,6 +168,7 @@ describe('SettingsNormalizer', () => {
           ...defaultPrivacyPreferences,
           blurCensored: false,
         },
+        media: { playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube'], embedsUpFront: false },
         updatedAt: 1700000000000,
         version: 2,
       };
@@ -172,6 +177,11 @@ describe('SettingsNormalizer', () => {
 
       expect(result.notifications.follow).toBe(false);
       expect(result.privacy.blurCensored).toBe(false);
+      expect(result.media).toEqual({
+        playerOrder: ['tidal', 'spotify'],
+        hiddenPlayers: ['youtube'],
+        embedsUpFront: false,
+      });
       expect(result.muted).toEqual([]); // Muted is not synced, always empty from homeserver
       expect(result.updatedAt).toBe(1700000000000);
       expect(result.version).toBe(2);
@@ -227,12 +237,34 @@ describe('SettingsNormalizer', () => {
       expect(result.updatedAt).toBeLessThanOrEqual(after);
     });
 
+    it('fills the media defaults a file written before them lacks', () => {
+      expect(SettingsNormalizer.from({ media: { embedsUpFront: false } }).media).toEqual({
+        ...defaultMediaPreferences,
+        embedsUpFront: false,
+      });
+    });
+
+    it('ignores what is no list of ids', () => {
+      const broken = asInvalid<{ playerOrder: string[] }>({ playerOrder: 'tidal', hiddenPlayers: [3, 'vimeo'] });
+      expect(SettingsNormalizer.from({ media: broken }).media).toEqual({
+        ...defaultMediaPreferences,
+        hiddenPlayers: ['vimeo'],
+      });
+    });
+
+    it('keeps the ids of players a later version adds, so they round-trip', () => {
+      const media = { playerOrder: ['bandcamp', 'tidal'], hiddenPlayers: ['audius'], embedsUpFront: true };
+
+      expect(SettingsNormalizer.from({ media }).media).toEqual(media);
+    });
+
     it('should handle empty object gracefully', () => {
       const result = SettingsNormalizer.from({});
 
       expect(result).toEqual({
         notifications: defaultNotificationPreferences,
         privacy: defaultPrivacyPreferences,
+        media: defaultMediaPreferences,
         muted: [],
         updatedAt: expect.any(Number),
         version: 1,
@@ -247,6 +279,14 @@ describe('SettingsNormalizer', () => {
   });
 
   describe('round-trip conversion', () => {
+    it('should keep the links and media preferences', () => {
+      const media = { playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube', 'vimeo'], embedsUpFront: false };
+      const original = createMockSettingsState({ media });
+      const restored = SettingsNormalizer.from(SettingsNormalizer.to(original, TEST_PUBKY.USER_1).settings);
+
+      expect(restored.media).toEqual(media);
+    });
+
     it.each([
       ['missing', undefined],
       ['processed', TEST_PUBKY.USER_2],

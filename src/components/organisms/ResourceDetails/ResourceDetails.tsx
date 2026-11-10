@@ -32,6 +32,7 @@ import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from './ResourceOtherTags.utils';
 import { ResourceReplies } from './ResourceReplies';
 
@@ -188,11 +189,13 @@ function ResourceKnown({
 /**
  * An X post's own embed (a provider whose `resourceKind` is `post`) as the large card's body, chosen
  * as in a post (`chooseNativeEmbed`): up front without Also on, else from "Show on <site>" on our
- * card. A post X cannot show leaves our card without the pill. `null` for any other link.
+ * card. A post X cannot show leaves our card without the pill. `null` for any other link. A viewer
+ * who turned platform embeds up front off (Settings, Links & Media) gets our card with the pill.
  */
 function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   const [isPostOpen, setIsPostOpen] = useState(false);
   const [failed, setFailed] = useState(false);
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   const found = [uri, card.uri]
     .map((link) => parseUrlForLinkEmbed(link, false))
     .find(({ provider }) => provider?.resourceKind === 'post');
@@ -203,6 +206,7 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
     hasCard: getNativeEmbedCard(card) !== null,
     hasAlsoOn: getMenuAlsoOn(card, uri) !== null,
     embedFailed: failed,
+    upFront: embedsUpFront,
   });
   const isOpen = !failed && (choice === 'embed' || isPostOpen);
   // The card player's pill, as on a post's card, on the page's surface.

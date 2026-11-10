@@ -6,6 +6,7 @@ import { isPinakesConfigured } from '@/config/pinakes';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { parseUrlForLinkEmbed } from './PostLinkEmbeds.utils';
 import { NativeEmbedResource } from './Providers/Native/NativeEmbedResource';
@@ -17,13 +18,16 @@ import { NativeEmbedResource } from './Providers/Native/NativeEmbedResource';
  *
  * A post's embed with a platform embed (`resourceKind`: an X post, a YouTube or Vimeo video) shows
  * as that resource too (`NativeEmbedResource`), also in the composer. A quoted post, or an app
- * without Pinakes, shows the plain embed.
+ * without Pinakes, shows the plain embed. A YouTube or Vimeo link whose player the viewer removed
+ * from Players shows as any link does (the resource card, or the link's own preview).
  */
 export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostLinkEmbedsProps) => {
   const isNested = useIsNestedPostPreview();
+  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
   const { embed, provider } = useMemo(
-    () => parseUrlForLinkEmbed(url || getFirstLinkUrl(content), !isNested),
-    [content, url, isNested],
+    // Without Pinakes, Links & Media is hidden, so a removed player could not be put back.
+    () => parseUrlForLinkEmbed(url || getFirstLinkUrl(content), !isNested, isPinakesConfigured() ? hiddenPlayers : []),
+    [content, url, isNested, hiddenPlayers],
   );
   const mediaContainerRef = usePauseMediaOutsideViewport();
 
