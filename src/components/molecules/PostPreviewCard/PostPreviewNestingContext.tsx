@@ -13,7 +13,8 @@ const PostPreviewNestingContext = createContext(false);
  * Whether inline links in the current subtree (mentions, hashtags) may change
  * the route. `true` everywhere except inside a `PostPreviewCard` rendered with
  * `navigable={false}` — the quoted post in the Reply/Repost dialogs — where a
- * navigation would land behind the open modal. The leaves read it directly
+ * navigation would land behind the open modal, and the composer's link preview,
+ * where it would leave the post being written. The leaves read it directly
  * because they sit several layers down the markdown render.
  */
 const PostPreviewNavigableContext = createContext(true);
@@ -31,6 +32,14 @@ export function PostPreviewNestingProvider({ children, navigable = true }: PostP
       <PostPreviewNavigableContext.Provider value={navigable}>{children}</PostPreviewNavigableContext.Provider>
     </PostPreviewNestingContext.Provider>
   );
+}
+
+/**
+ * Sets only whether links below may navigate, without marking the subtree as an
+ * embedded post preview (in-app embeds still render).
+ */
+export function PostPreviewNavigableProvider({ children, navigable }: { children: ReactNode; navigable: boolean }) {
+  return <PostPreviewNavigableContext.Provider value={navigable}>{children}</PostPreviewNavigableContext.Provider>;
 }
 
 /** Whether the calling component is rendered inside an embedded post preview. */

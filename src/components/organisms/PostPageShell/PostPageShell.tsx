@@ -4,14 +4,9 @@ import type { PropsWithChildren } from 'react';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { getInteractionPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
-import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout';
-import {
-  SinglePostLeftDrawer,
-  SinglePostLeftDrawerMobile,
-  SinglePostLeftSidebar,
-} from '@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar';
 import { SinglePostRightPanel } from '@/organisms/SinglePostRightPanel/SinglePostRightPanel';
+import { PostPageLayout } from './PostPageLayout';
 
 export interface PostPageShellProps extends PropsWithChildren {
   postId: string;
@@ -22,6 +17,7 @@ export interface PostPageShellProps extends PropsWithChildren {
  *
  * Sidebars, drawers, and {@link MobileHeader} on phone — search and desktop nav
  * come from the root `Header` at `lg+` only; {@link MobileFooter} on smaller viewports.
+ * The columns are {@link PostPageLayout}'s, with the thread's participants on the right.
  *
  * When the post is missing, swaps to the Hot-style discovery layout so the
  * not-found body ({@link PostNotFoundDiscoveryView}) sits inside exactly one
@@ -42,15 +38,11 @@ export function PostPageShell({ postId, children }: PostPageShellProps) {
   }
 
   return (
-    <ContentLayout
-      classNameWrapperContent="gap-0"
-      leftSidebarContent={<SinglePostLeftSidebar />}
+    <PostPageLayout
       rightSidebarContent={<SinglePostRightPanel postId={displayedPostId} />}
-      leftDrawerContent={<SinglePostLeftDrawer />}
-      leftDrawerContentMobile={<SinglePostLeftDrawerMobile />}
       rightDrawerContent={<SinglePostRightPanel postId={displayedPostId} showFeedback={false} />}
     >
       {children}
-    </ContentLayout>
+    </PostPageLayout>
   );
 }

@@ -4,6 +4,7 @@ import { Edit, MessageCircle, Newspaper, Repeat } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { EmojiPickerDialog } from '@/molecules/EmojiPickerDialog/EmojiPickerDialog';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
+import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInputTags } from '../PostInputTags/PostInputTags';
@@ -52,7 +53,12 @@ export function PostInputExpandableSection({
   return (
     <>
       <Container className="gap-4">
-        {hasContent && !isArticle && <PostLinkEmbeds content={content} isComposing />}
+        {/* A link preview must not navigate away from the post being written. */}
+        {hasContent && !isArticle && (
+          <PostPreviewNavigableProvider navigable={false}>
+            <PostLinkEmbeds content={content} isComposing />
+          </PostPreviewNavigableProvider>
+        )}
 
         {/* Stands in for the content the lock switch stashed away. */}
         {lockCard}

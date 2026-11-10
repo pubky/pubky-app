@@ -72,6 +72,11 @@ describe('PostTag', () => {
     expect(screen.getByLabelText(/bitcoin tag \(16 posts\)/i)).toBeInTheDocument();
   });
 
+  it('takes the accessible name it is given over the default one', () => {
+    render(<PostTag label="film" count={5} aria-label="film, tagged by 5 on TMDB" />);
+    expect(screen.getByRole('button', { name: 'film, tagged by 5 on TMDB' })).toBeInTheDocument();
+  });
+
   it('preserves post-tag count selector for e2e tests', () => {
     render(<PostTag label="bitcoin" count={16} />);
     expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');

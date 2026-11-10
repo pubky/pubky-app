@@ -24,6 +24,7 @@ export function PostTag({
   onClose,
   color,
   className,
+  'aria-label': ariaLabel,
   ...rest
 }: PostTagProps) {
   const tagColor = color || generateRandomColor(label);
@@ -70,7 +71,7 @@ export function PostTag({
         backgroundImage: 'var(--tag-fill)',
         boxShadow: selected ? 'inset 0 0 0 1px var(--tag-edge)' : undefined,
       }}
-      aria-label={count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`}
+      aria-label={ariaLabel ?? (count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`)}
     >
       <Tag
         name={label}

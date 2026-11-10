@@ -115,6 +115,7 @@ vi.mock('./ResourceTagBar', () => ({
     isExpanded,
     isAdding,
     onAddingChange,
+    otherTags,
   }: {
     resourceTags: { tags: NexusTag[] };
     label: string;
@@ -122,6 +123,7 @@ vi.mock('./ResourceTagBar', () => ({
     isExpanded: boolean;
     isAdding: boolean;
     onAddingChange: (isAdding: boolean) => void;
+    otherTags?: readonly { label: string }[];
   }) => (
     <div
       id={id}
@@ -131,6 +133,7 @@ vi.mock('./ResourceTagBar', () => ({
       data-tags={resourceTags.tags.length}
       data-expanded={isExpanded}
       data-adding={isAdding}
+      data-other-tags={otherTags?.map((other) => other.label).join(',') ?? ''}
     >
       <button type="button" data-testid="tag-bar-add" onClick={() => onAddingChange(true)} />
     </div>
@@ -184,21 +187,34 @@ describe('ResourceActions', () => {
     mocks.bookmarkActive = [];
   });
 
+  it.each([
+    [undefined, 'default'],
+    ['large', 'large'],
+  ] as const)('takes the %s size of the card it closes', (size, expected) => {
+    render(<ResourceActions uri={URI} tagsLabel="Tags on this song" size={size} />);
+
+    const zone = screen.getByTestId('resource-actions');
+    expect(zone).toHaveAttribute('data-size', expected);
+  });
+
   it('lays out the post’s footer: the tags, then the post’s buttons in the post’s order', () => {
     renderActions(8);
 
     const zone = screen.getByTestId('resource-actions');
     expect(zone).toHaveAttribute('data-resource-controls');
-    expect(zone).toHaveClass('flex-col', 'items-start', 'md:flex-row', 'md:justify-between');
+    const footer = screen.getByTestId('resource-footer');
+    expect(zone.children).toHaveLength(1);
+    expect(zone.firstElementChild).toBe(footer);
+    expect(footer).toHaveClass('flex-col', 'items-start', 'md:flex-row', 'md:justify-between');
     // Stacked in a narrow grid cell, as the post footer is.
-    expect(zone).toHaveClass('@max-xl/grid:flex-col!', '@max-xl/grid:items-start!', '@max-xl/grid:gap-3!');
-    expect(zone.children).toHaveLength(2);
+    expect(footer).toHaveClass('@max-xl/grid:flex-col!', '@max-xl/grid:items-start!', '@max-xl/grid:gap-3!');
+    expect(footer.children).toHaveLength(2);
     const tags = screen.getByTestId('resource-tag-bar-stub');
-    expect(zone.firstElementChild).toBe(tags);
+    expect(footer.firstElementChild).toBe(tags);
     expect(mocks.tagsUri).toBe(URI);
     expect(tags).toHaveAttribute('data-tags', '3');
     const row = screen.getByTestId('resource-action-row');
-    expect(zone.lastElementChild).toBe(row);
+    expect(footer.lastElementChild).toBe(row);
     expect(row).toHaveClass('flex', 'flex-wrap', 'gap-2');
     expect(Array.from(row.children).map((child) => child.getAttribute('aria-label'))).toEqual([
       'Tags on this song (3)',
@@ -250,6 +266,44 @@ describe('ResourceActions', () => {
     );
   });
 
+  it('puts the tags on the same thing’s other links under the footer', () => {
+    render(
+      <ResourceActions
+        uri={URI}
+        tagsLabel="Tags on this song"
+        otherTags={<div data-testid="other-tags">other</div>}
+        size="large"
+      />,
+    );
+
+    const zone = screen.getByTestId('resource-actions');
+    expect(zone).toHaveClass('flex-col');
+    expect(zone.children).toHaveLength(2);
+    expect(zone.firstElementChild).toBe(screen.getByTestId('resource-footer'));
+    expect(zone.lastElementChild).toBe(screen.getByTestId('other-tags'));
+    expect(screen.getByTestId('resource-footer').children).toHaveLength(2);
+  });
+
+  it('gives the other services’ row the link’s own labels and whether the Tags button expanded them', () => {
+    mocks.tags.tags = [tag('Queen'), tag('rock')];
+    const otherTags = vi.fn(({ labels, isExpanded }: { labels: string[]; isExpanded: boolean }) => (
+      <div data-testid="other-tags" data-labels={labels.join(',')} data-expanded={isExpanded} />
+    ));
+    const otherTagList = [{ label: 'rock', taggers: ['b'], count: 1, isComplete: true, sources: [] }];
+    render(
+      <ResourceActions uri={URI} tagsLabel="Tags on this song" otherTags={otherTags} otherTagList={otherTagList} />,
+    );
+
+    // The bar gets the same tags as data: its chip for `rock` says it is on other services too.
+    expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-other-tags', 'rock');
+    const row = screen.getByTestId('other-tags');
+    expect(row).toHaveAttribute('data-labels', 'queen,rock');
+    expect(row).toHaveAttribute('data-expanded', 'false');
+
+    fireEvent.click(screen.getByTestId('resource-tags-button'));
+    expect(screen.getByTestId('other-tags')).toHaveAttribute('data-expanded', 'true');
+  });
+
   it('shows the tags label only as the tag list’s name and the Tags button’s tooltip', () => {
     renderActions();
 
@@ -276,6 +330,16 @@ describe('ResourceActions', () => {
     for (const pill of Array.from(row.children)) {
       expect(pill).toHaveClass('bg-card', 'hover:bg-card/70');
       expect(pill).not.toHaveClass('bg-secondary', 'hover:bg-accent');
+    }
+  });
+
+  it('keeps the post’s own pills on the page’s large card, which has the post card’s surface', () => {
+    render(<ResourceActions uri={URI} collectionsCount={8} tagsLabel="Tags on this song" size="large" />);
+
+    for (const button of within(screen.getByTestId('resource-action-row')).getAllByRole('button')) {
+      expect(button).toHaveAttribute('data-variant', 'secondary');
+      expect(button).toHaveClass('shadow-xs');
+      expect(button).not.toHaveClass('bg-card');
     }
   });
 
@@ -342,14 +406,14 @@ describe('ResourceActions', () => {
 
     it('moves the buttons down beside the expanded tags from md, like the post’s', () => {
       renderActions();
-      const zone = screen.getByTestId('resource-actions');
-      expect(zone).toHaveClass('md:items-start');
-      expect(zone).not.toHaveClass('md:items-end');
+      const footer = screen.getByTestId('resource-footer');
+      expect(footer).toHaveClass('md:items-start');
+      expect(footer).not.toHaveClass('md:items-end');
 
       fireEvent.click(screen.getByTestId('resource-tags-button'));
 
-      expect(zone).toHaveClass('md:items-end');
-      expect(zone).not.toHaveClass('md:items-start');
+      expect(footer).toHaveClass('md:items-end');
+      expect(footer).not.toHaveClass('md:items-start');
     });
 
     it('closes the "+" input when it expands or collapses the tags', () => {
@@ -408,6 +472,14 @@ describe('ResourceActions', () => {
 
       expect(screen.queryByTestId('reply-dialog')).not.toBeInTheDocument();
       expect(mocks.signInRequests).toBe(1);
+    });
+
+    it('replies on the resource page too, the resource being the parent', () => {
+      render(<ResourceActions uri={URI} postUri={LINK} tagsLabel="Tags on this song" linkUrl={LINK} size="large" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reply to this external resource' }));
+
+      expect(screen.getByTestId('reply-dialog')).toHaveAttribute('data-resource-uri', URI);
     });
   });
 
@@ -511,6 +583,23 @@ describe('ResourceActions', () => {
 
       expect(screen.getByTestId('new-post-dialog')).toHaveTextContent(URI);
       expect(mocks.dialog).toHaveBeenLastCalledWith(expect.objectContaining({ open: true, initialContent: URI }));
+    });
+
+    it('posts about the web link it is given when the tagged link is not one', () => {
+      render(<ResourceActions uri="isbn:9780140328721" postUri={URI} tagsLabel="Tags on this book" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Post about this' }));
+
+      expect(mocks.dialog).toHaveBeenLastCalledWith(expect.objectContaining({ open: true, initialContent: URI }));
+    });
+
+    it('is disabled for a resource with no web link', () => {
+      render(<ResourceActions uri="isbn:9780140328721" postUri={null} tagsLabel="Tags on this book" />);
+
+      const button = screen.getByRole('button', { name: 'Post about this' });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(screen.queryByTestId('new-post-dialog')).not.toBeInTheDocument();
     });
 
     it('asks to sign in when signed out', () => {

@@ -10,8 +10,9 @@ type UseResourceSaveTargetsOptions = {
 };
 
 /**
- * The viewer's own collections as save targets for an external resource (a web link): which of
- * them hold the link, adding it to one or taking it out, and "New collection" with the link in it.
+ * The viewer's own collections as save targets for an external resource (a link of any scheme):
+ * which of them hold the link, adding it to one or taking it out, and "New collection" with the link
+ * in it.
  * The resource counterpart of `usePostSaveTargets`, without a bookmark (the card has its own).
  *
  * @param uri - The link exactly as written: the collection item's `uri`

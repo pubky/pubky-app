@@ -45,4 +45,27 @@ describe('ResourceCardSkeleton', () => {
       expect(button).not.toHaveClass('bg-muted');
     }
   });
+
+  it('keeps the large card’s button placeholders muted, so they show on its card surface', () => {
+    render(<ResourceCardSkeleton withActions size="large" />);
+
+    const buttons = screen.getByTestId('resource-card-skeleton-actions').lastElementChild?.children ?? [];
+    expect(buttons).toHaveLength(5);
+    for (const button of Array.from(buttons)) {
+      expect(button).toHaveClass('bg-muted');
+      expect(button).not.toHaveClass('bg-card');
+    }
+  });
+
+  it('mirrors the large card’s surface when large', () => {
+    const { rerender } = render(<ResourceCardSkeleton withActions />);
+    const skeleton = screen.getByTestId('resource-card-skeleton');
+    expect(skeleton).toHaveAttribute('data-size', 'default');
+    expect(skeleton).toHaveClass('bg-embed');
+
+    rerender(<ResourceCardSkeleton withActions size="large" />);
+    expect(skeleton).toHaveAttribute('data-size', 'large');
+    expect(skeleton).toHaveClass('bg-card');
+    expect(skeleton).not.toHaveClass('bg-embed');
+  });
 });

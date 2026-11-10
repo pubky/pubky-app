@@ -18,8 +18,9 @@ export interface ResourceCardProps {
    */
   card: TPinakesCard & Partial<Pick<TPinakesResourceDetail, 'tz' | 'all_day' | 'venue' | 'event_status'>>;
   /**
-   * Where the title and source link to: the link as written in the post. Defaults to the card's
-   * `uri`. Only an `http(s)` value becomes a link; anything else renders as text.
+   * Where the source (and the title, where links may not navigate) link to: the link as written in
+   * the post. Defaults to the card's `uri`. Only an `http(s)` value becomes a link; anything else
+   * renders as text.
    */
   href?: string;
   /**
@@ -29,7 +30,13 @@ export interface ResourceCardProps {
   actions?: ReactNode;
   /**
    * Whether the actions' ⋯ menu lists other services under "Also on" (the card is on other services
-   * too). Then the viewer picks the service there and the card is no click-through; else it always is.
+   * too). Then the viewer picks the service there and the card is no click-through; else it is,
+   * unless large.
    */
   hasAlsoOn?: boolean;
+  /**
+   * `default`: a card in a post, whose title opens the resource's page. `large`: the card heading
+   * that page, whose title is no link (its header's "Open in <site>" opens the resource).
+   */
+  size?: 'default' | 'large';
 }

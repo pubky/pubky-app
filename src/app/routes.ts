@@ -228,6 +228,7 @@ export const HOME_ROUTES = {
  * - /post/[userId]/[postId] - viewing a single post
  * - /profile/[pubky] - viewing another user's profile
  * - /collections/[userId]/[postId] - viewing a single collection
+ * - /resource?uri=… - viewing an external resource (the link is in the query, the path is fixed)
  */
 export function isDynamicPublicRoute(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);
@@ -236,6 +237,7 @@ export function isDynamicPublicRoute(pathname: string): boolean {
     case segments[0] === 'shop':
     case segments[0] === 'invite' && segments.length === 2:
     case segments[0] === 'post' && segments.length === 3:
+    case pathname === RESOURCE_ROUTES.RESOURCE:
     case segments[0] === 'profile' && segments.length === 2 && isPubkyIdentifier(segments[1]):
     case matchSingleCollectionRoute(pathname) !== null:
       return true;

@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { CalendarDays, CircleAlert, CircleOff, Clock, CloudOff, type LucideProps, MapPin } from 'lucide-react';
+import { getResourceRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
+import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { PinakesStatus } from '@/services/pinakes/pinakes.types';
 import { type ResourceCardProps, ResourceFamily } from './ResourceCard.types';
 import {
@@ -46,19 +48,25 @@ const DETAIL_ICON_SIZE = 14;
  *
  * The whole card is a click-through to the link, unless its actions' ⋯ menu lists other services
  * (`hasAlsoOn`: the same thing on other services too, `also_on`), where the viewer picks the
- * service; the title and the source are its links either way.
+ * service; the source is its link either way.
  *
- * Only `http(s)` values become links or images; every text field is rendered as text.
+ * The title opens the resource's page (`/resource?uri=<card.uri>`), or links out where links may
+ * not navigate (the composer, a dialog). The `large` card heads that page: a heading title, "Open in
+ * <site>" as its one link out, an unclamped description, a bigger image and no click-through.
+ *
+ * Only `http(s)` values become external links or images; every text field is rendered as text.
  */
-export function ResourceCard({ card, href, actions, hasAlsoOn = false }: ResourceCardProps) {
+export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'default' }: ResourceCardProps) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
+  const navigable = useIsPostPreviewNavigable();
 
   const status = getResourceStatus(card.status);
   const family = getResourceFamily(card);
   const typeLabel = getResourceTypeLabel(card);
   const { linkUrl, sourceUri, siteName } = getResourceLinks(card, href);
-  // With other services to pick from, the viewer picks one in the actions' ⋯ menu (or the header's link).
-  const clickThroughUrl = hasAlsoOn ? null : linkUrl;
+  const isLarge = size === 'large';
+  // With other services, the viewer picks one in the ⋯ menu; the large card links out by its header only.
+  const clickThroughUrl = hasAlsoOn || isLarge ? null : linkUrl;
   const title = card.name || getDisplayLink(href || card.uri);
   const imageUrl = getHttpUrl(card.image);
   const showImage = imageUrl !== null && failedImage !== imageUrl;
@@ -70,41 +78,63 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false }: Resourc
   const point = family !== ResourceFamily.WEB && !venue && card.point ? formatResourcePoint(card.point) : null;
   const eventStatusNote = family === ResourceFamily.EVENT ? getEventStatusNote(card.event_status) : null;
   const statusNote = status === PinakesStatus.OK ? null : STATUS_NOTES[status];
+  // A `missing` card's link is gone upstream: the large card's source does not send the viewer there.
+  const titleUrl = status === PinakesStatus.MISSING ? null : linkUrl;
+  const smallTitleUrl = navigable ? getResourceRoute(card.uri) : linkUrl;
 
   return (
     <ResourceCardFrame
       clickThroughUrl={clickThroughUrl}
+      // The large card stands where a post stands on its page, on the post card's surface.
+      className={cn(isLarge && 'bg-card text-card-foreground shadow-sm')}
       data-testid="resource-card"
       data-status={status}
       data-family={family}
+      data-size={size}
     >
       <Container
         overrideDefaults
-        className={cn('flex min-w-0 flex-col gap-3 p-4', clickThroughUrl && 'cursor-pointer')}
+        className={cn('flex min-w-0 flex-col gap-3', isLarge ? 'p-6' : 'p-4', clickThroughUrl && 'cursor-pointer')}
       >
-        <ResourceCardHeader typeLabel={typeLabel} sourceUri={sourceUri} href={linkUrl} siteName={siteName} />
+        <ResourceCardHeader
+          typeLabel={typeLabel}
+          sourceUri={sourceUri}
+          href={isLarge ? titleUrl : linkUrl}
+          siteName={siteName}
+          openIn={isLarge}
+        />
 
         <Container overrideDefaults className="flex min-w-0 gap-4">
           {showImage && (
             <Image
               src={imageUrl}
               alt=""
-              width={isWideImage ? 160 : 96}
-              height={isWideImage ? 90 : 96}
+              width={isWideImage ? (isLarge ? 256 : 160) : isLarge ? 160 : 96}
+              height={isWideImage ? (isLarge ? 144 : 90) : isLarge ? 160 : 96}
               data-testid="resource-card-image"
               data-shape={isWideImage ? 'wide' : 'square'}
               onError={() => setFailedImage(imageUrl)}
               className={cn(
                 'shrink-0 rounded-md object-cover object-center',
-                isWideImage ? 'aspect-video w-28 sm:w-40' : 'size-20 sm:size-24',
+                isWideImage && (isLarge ? 'aspect-video w-40 sm:w-64' : 'aspect-video w-28 sm:w-40'),
+                !isWideImage && (isLarge ? 'size-24 sm:size-40' : 'size-20 sm:size-24'),
               )}
             />
           )}
 
           <Container className="min-w-0 flex-1 gap-1.5">
-            {linkUrl ? (
+            {isLarge ? (
+              <Typography
+                as="h2"
+                overrideDefaults
+                className="text-xl font-bold wrap-anywhere text-foreground sm:text-2xl"
+              >
+                {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
+                <span data-testid="resource-card-title">{title}</span>
+              </Typography>
+            ) : smallTitleUrl ? (
               <Link
-                href={linkUrl}
+                href={smallTitleUrl}
                 overrideDefaults
                 data-testid="resource-card-title"
                 className="text-base font-bold wrap-anywhere text-foreground hover:text-brand"
@@ -121,7 +151,7 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false }: Resourc
               <Typography
                 size="sm"
                 data-testid="resource-card-description"
-                className="line-clamp-2 font-normal wrap-anywhere text-muted-foreground"
+                className={cn('font-normal wrap-anywhere text-muted-foreground', !isLarge && 'line-clamp-2')}
               >
                 {card.description}
               </Typography>

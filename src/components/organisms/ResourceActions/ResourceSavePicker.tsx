@@ -11,6 +11,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useResourceBookmark } from '@/hooks/useResourceBookmark/useResourceBookmark';
 import { useResourceSaveTargets } from '@/hooks/useResourceSaveTargets/useResourceSaveTargets';
 import { cn } from '@/libs/utils/utils';
+import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import {
   postActionsButtonVariants,
   postActionsCountVariants,
@@ -29,6 +30,8 @@ interface ResourceSavePickerProps {
    * is absent or 0.
    */
   collectionsCount?: number | null;
+  /** What the row sits on: `muted` on a card in a post, `default` on the page's large card. */
+  surface?: PostActionSurface;
 }
 
 /**
@@ -39,7 +42,7 @@ interface ResourceSavePickerProps {
  * collections hold it. The bookmark has no local row, so it is read only while the picker is open.
  * Signed out, it asks to sign in.
  */
-export function ResourceSavePicker({ uri, collectionsCount }: ResourceSavePickerProps) {
+export function ResourceSavePicker({ uri, collectionsCount, surface = 'muted' }: ResourceSavePickerProps) {
   const isMobile = useIsMobile();
   const { requireAuth } = useRequireAuth();
   const [open, setOpen] = useState(false);
@@ -54,7 +57,7 @@ export function ResourceSavePicker({ uri, collectionsCount }: ResourceSavePicker
       variant="secondary"
       size="sm"
       // The post's save trigger: `w-10` keeps it as wide as its icon + count siblings without a count.
-      className={cn(postActionsButtonVariants({ variant: 'default', surface: 'muted' }), !count && 'w-10')}
+      className={cn(postActionsButtonVariants({ variant: 'default', surface }), !count && 'w-10')}
       aria-label={count ? `Save link (in ${count} public collections)` : 'Save link'}
       data-testid="resource-collections-button"
     >

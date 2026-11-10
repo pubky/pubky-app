@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { ResourceTagBar } from './ResourceTagBar';
 
@@ -96,7 +97,11 @@ const chipLabels = () =>
     .map((chip) => chip.textContent);
 
 /** The bar as the zone renders it: the tags it read once, whether they are expanded, whether "+" shows the input. */
-function TagBar({ isExpanded = false, isAdding = false }: { isExpanded?: boolean; isAdding?: boolean }) {
+function TagBar({
+  isExpanded = false,
+  isAdding = false,
+  ...other
+}: { isExpanded?: boolean; isAdding?: boolean } & Pick<React.ComponentProps<typeof ResourceTagBar>, 'otherTags'>) {
   return (
     <ResourceTagBar
       resourceTags={{
@@ -111,9 +116,17 @@ function TagBar({ isExpanded = false, isAdding = false }: { isExpanded?: boolean
       isExpanded={isExpanded}
       isAdding={isAdding}
       onAddingChange={mocks.onAddingChange}
+      {...other}
     />
   );
 }
+
+const service = (name: string, count = 1) => ({ uri: `https://${name.toLowerCase()}.example/x`, name, count });
+// The other services' tags of the same thing, merged (`mergeOtherLinkTags`): `travel` is on the link too.
+const OTHER_TAGS: TMergedTag[] = [
+  { label: 'travel', taggers: ['c', 'd'], count: 2, isComplete: true, sources: [service('Wikipedia', 2)] },
+  { label: 'capital', taggers: ['e'], count: 1, isComplete: true, sources: [service('Wikidata')] },
+];
 
 describe('ResourceTagBar', () => {
   beforeEach(() => {
@@ -304,5 +317,15 @@ describe('ResourceTagBar', () => {
     input?.onClick?.();
 
     expect(mocks.signInRequests).toBe(1);
+  });
+
+  it('says on an own chip that its label is on other services too, and shows no second chip', () => {
+    render(<TagBar otherTags={OTHER_TAGS} />);
+
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'city1']);
+    expect(screen.getByText('travel').closest('button')).toHaveAccessibleName(
+      'travel tag (2 posts), also on Wikipedia',
+    );
+    expect(screen.getByText('berlin').closest('button')).toHaveAccessibleName('berlin tag (3 posts)');
   });
 });
