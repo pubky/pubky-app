@@ -45,7 +45,7 @@ describe('PostInputLinkEmbed', () => {
     expect(screen.getByTestId('post-link-embeds')).toHaveAttribute('data-navigable', 'false');
   });
 
-  it('shows the card without its action row and tag bar, as a post being written', () => {
+  it('previews the card as a post being written', () => {
     render(<PostInputLinkEmbed url={URL} onRemove={vi.fn()} />);
 
     expect(screen.getByTestId('post-link-embeds')).toHaveAttribute('data-composing', 'true');

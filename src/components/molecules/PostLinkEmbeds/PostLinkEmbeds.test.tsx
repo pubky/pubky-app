@@ -948,14 +948,15 @@ describe('PostLinkEmbeds', () => {
       expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
     });
 
-    it('leaves the action row and tag bar out of the given link’s card while composing', () => {
+    it('keeps the action row and tag bar on the given link’s card while composing', () => {
       vi.mocked(isPinakesConfigured).mockReturnValue(true);
       vi.mocked(usePinakesCard).mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
 
       render(<PostLinkEmbeds url="https://en.wikipedia.org/wiki/Bitcoin" isComposing />);
 
-      expect(screen.getByTestId('resource-card')).toHaveTextContent(articleFixture.name);
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      const card = screen.getByTestId('resource-card');
+      expect(card).toHaveTextContent(articleFixture.name);
+      expect(within(card).getByTestId('resource-actions')).toBeInTheDocument();
     });
 
     it('keeps the website preview of a link that is only in the text, also when Pinakes knows it', () => {
@@ -1041,7 +1042,7 @@ describe('PostLinkEmbeds', () => {
       expect(within(resource).getByTestId('YouTube video player')).toBeInTheDocument();
     });
 
-    it('previews it as the resource in the composer too, asking Pinakes to read it, without the footer', () => {
+    it('previews it as the resource in the composer too, asking Pinakes to read it, with the footer', () => {
       vi.mocked(isPinakesConfigured).mockReturnValue(true);
       // A video in a mix, with list and radio parameters.
       const MIX = 'https://www.youtube.com/watch?v=CMX2lPum_pg&list=RDCMX2lPum_pg&start_radio=1';
@@ -1054,7 +1055,22 @@ describe('PostLinkEmbeds', () => {
         'src',
         expect.stringContaining('/embed/CMX2lPum_pg'),
       );
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      expect(within(resource).getByTestId('resource-actions')).toBeInTheDocument();
+    });
+
+    it.each([true, false])('keeps the resource frame and actions inside a quoted post (navigable=%s)', (navigable) => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      render(
+        <PostPreviewNestingProvider navigable={navigable}>
+          <PostLinkEmbeds url={VIDEO} />
+        </PostPreviewNestingProvider>,
+      );
+
+      const resource = screen.getByTestId('native-embed-resource');
+      expect(within(resource).getByTestId('resource-embed-frame')).toBeInTheDocument();
+      expect(within(resource).getByTestId('resource-actions')).toBeInTheDocument();
+      expect(within(resource).getAllByTestId('YouTube video player')).toHaveLength(1);
+      expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
     });
 
     it('starts over for another link (state of the old embed does not carry over)', () => {

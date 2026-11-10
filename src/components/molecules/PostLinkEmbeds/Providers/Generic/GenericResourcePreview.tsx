@@ -5,7 +5,7 @@ import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import { fileNameFromUrl, inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
-import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
 import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
@@ -55,7 +55,7 @@ function hasNothingToShow(card: TPinakesResourceDetail): boolean {
 
 interface GenericResourcePreviewProps {
   url: string;
-  /** The composer's preview: the card without its action row and tag bar. */
+  /** The composer's preview: Pinakes reads the link at once, and it previews as a post being written. */
   isComposing?: boolean;
 }
 
@@ -71,9 +71,12 @@ interface GenericResourcePreviewProps {
  * than the link's own preview, and a failed read, or one slower than `PINAKES_SLOW_READ_MS` until it
  * is read, is treated like an unknown link (no error box and no long skeleton in a feed).
  *
- * Inside a quoted or reposted post (`PostPreviewCard`) the card has no action row or tag bar, as
- * while composing: that post is itself a link (or sits in the Reply/Repost dialog), so controls
- * there would nest in it. People act on the link where its own post renders.
+ * Inside a quoted or reposted post (`PostPreviewCard`) the resource shows as in its own post: the
+ * same card or player, with its footer. While composing, and in the Reply and Repost dialogs (a
+ * post being written: `navigable` false), it previews: no card player opens and a song's player
+ * never docks (`useCardPlayer`'s `preview`), while its footer tags and saves the resource before the
+ * post is sent. The frame keeps its clicks and keys to itself (`ResourceCardFrame`), so they never
+ * open the quoted post or reach the composer.
  *
  * Without a Pinakes origin configured no request is made and the plain `GenericPreview` renders;
  * a direct media file keeps it too, since it shows or plays the file inline.
@@ -82,9 +85,10 @@ interface GenericResourcePreviewProps {
  * page) shows that service's player up front, in the resource frame (`ResourceEmbedFrame`); a
  * generic link Pinakes knows on such services (a MusicBrainz or Wikipedia page) shows our card up
  * front. Either has the embed/card switch in its header when there is a choice (Card, then the
- * services), and no Play on in its action row; in a post, the composer (without the footer) and a
- * collection alike. A player plays only on a press inside it. A viewer who turned platform embeds
- * up front off (Settings, Links & Media) gets a stand-in that loads nothing until its Play.
+ * services), and no Play on in its action row; in a post, the composer and a collection alike. A
+ * player plays only on a press inside it, and never docks in a post being written. A viewer who
+ * turned platform embeds up front off (Settings, Links & Media) gets a stand-in that loads nothing
+ * until its Play.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -118,7 +122,9 @@ function ResourcePreview({
   // A card that is the item itself (a collection's) or sits in a quoted post stands on the post
   // card's surface: its player's pills are the post's own, as its footer's (`ResourceActions`).
   const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
-  const isNested = useIsNestedPostPreview();
+  const navigable = useIsPostPreviewNavigable();
+  // A post being written (the composer, the Reply and Repost dialogs) previews the resource.
+  const isPreview = isComposing || !navigable;
   const lookupUrl = isPinakesConfigured() && !isDirectMediaFile(url) ? url : null;
   // The composer has Pinakes read the link (`resolve`) and never re-reads it: a link's re-reads are
   // once per page load, kept for the post once it is published.
@@ -127,17 +133,13 @@ function ResourcePreview({
     resolve: isComposing,
   });
   const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
-  const withActions = !isComposing && !isNested;
-  // Embed or card, with the switch; not in a quoted post. While composing, a player previews (`preview`).
-  const { embed, switcher } = useCardPlayer(
-    !isNested && card && !hasNothingToShow(card) ? card : null,
-    url,
-    actionSurface,
-    { preview: isComposing },
-  );
+  // Embed or card, with the switch; in a post being written a player previews (`preview`).
+  const { embed, switcher } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
+    preview: isPreview,
+  });
 
   if (!lookupUrl) return <GenericPreview url={url} />;
-  if (isLoading && !isSlow) return <ResourceCardSkeleton withActions={withActions} />;
+  if (isLoading && !isSlow) return <ResourceCardSkeleton withActions />;
 
   // A slow read gives way to the link's own preview; the card takes its place in the same box once read.
   const shownCard = card && !hasNothingToShow(card) ? card : null;
@@ -145,10 +147,10 @@ function ResourcePreview({
   const linkUrl = shownCard ? getResourceLinks(shownCard, url).linkUrl : getHttpUrl(url);
   // A card on other services too lists them in its ⋯ menu ("Also on"): one row per service, never
   // the card's own (`pickAlsoOn`).
-  const alsoOn = withActions && shownCard ? getMenuAlsoOn(shownCard, url) : null;
+  const alsoOn = shownCard ? getMenuAlsoOn(shownCard, url) : null;
   // The footer acts on the card's canonical link, its other spellings read along (`getResourceTarget`).
   const target = getResourceTarget(shownCard, url);
-  const actions = !withActions ? null : (
+  const actions = (
     <ResourceActions
       uri={target.uri}
       spellings={target.spellings}
