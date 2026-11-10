@@ -31,6 +31,7 @@ import {
   isCardSurfaceClick,
   isWritableResourceUri,
   MAX_LINK_SPELLINGS,
+  playsInCard,
 } from './ResourceCard.utils';
 
 const TYPE_FACETS: TPinakesTypeFacet[] = typeFacetFixture.facets.type;
@@ -579,5 +580,18 @@ describe('getResourceTarget', () => {
   it('reads at most MAX_LINK_SPELLINGS other spellings', () => {
     const refs = Array.from({ length: MAX_LINK_SPELLINGS + 5 }, (_, index) => `${TIDAL}?s=${index}`);
     expect(getResourceTarget({ uri: TIDAL, refs }, TIDAL).spellings).toHaveLength(MAX_LINK_SPELLINGS);
+  });
+});
+
+describe('playsInCard', () => {
+  const audio = { url: 'https://cdn.example.com/episode.mp3', type: 'audio/mpeg', preview: false };
+
+  it('is an episode’s whole audio or a show’s latest episodes, never a preview', () => {
+    expect(playsInCard({ stream: audio })).toBe(true);
+    expect(playsInCard({ episodes: [{ uri: 'https://example.com/e/1', guid: '1', stream: audio }] })).toBe(true);
+    expect(playsInCard({ stream: { ...audio, preview: true } })).toBe(false);
+    expect(playsInCard({ stream: { ...audio, type: 'video/mp4' } })).toBe(false);
+    expect(playsInCard({ episodes: [{ uri: 'https://example.com/e/1', guid: '1', stream: null }] })).toBe(false);
+    expect(playsInCard({})).toBe(false);
   });
 });
