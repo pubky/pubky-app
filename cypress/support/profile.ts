@@ -64,15 +64,6 @@ export const showProfileTaggedSection = (desktopTab: ProfileTab) => {
 export const getProfileTaggedSection = () =>
   cy.get('[data-cy="profile-tagged-section"]').filter(':visible').should('have.length', 1);
 
-// Desktop reaches a profile's Tagged page from the sidebar's Add Tag button; phones have no sidebar, so use the Tagged tab.
-export const openProfileTagging = () => {
-  if (isMobile()) {
-    openProfileTab('tagged');
-    return;
-  }
-  cy.get('[data-cy="profile-tag-btn"]').filter(':visible').should('have.length', 1).click();
-};
-
 // Aliases the page the edit was opened from as `@editProfileOrigin`, since Cancel goes back to it
 // and phones open it from the Profile tab (/profile/profile) rather than /profile.
 export const openEditProfile = () => {
