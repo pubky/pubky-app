@@ -86,6 +86,11 @@ export const createQuickPostWithMention = (mentionUsername: string) => {
     .within(() => {
       cy.get('textarea').should('have.value', '').type('Hey ');
       cy.get('textarea').type(`@${mentionUsername}`);
+      // Cypress's simulated Space in WebKit also pages the document down, taking the textarea and the
+      // mention popover anchored to it off-screen; bring them back before picking the suggestion.
+      if (Cypress.isBrowser('webkit')) {
+        cy.get('textarea').scrollIntoView();
+      }
     });
 
   // MentionPopover portals to document.body to escape clipping ancestors, so it is
