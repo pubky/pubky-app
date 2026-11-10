@@ -17,6 +17,8 @@ const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
 const POST_URI = `pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`;
 const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
 const COLLECTION_ID = `${VIEWER}:collection-1`;
+const YOUTUBE_URL = 'https://www.youtube.com/watch?v=P65ZQL_m9zs';
+const OSM_URL = 'https://www.openstreetmap.org/relation/1682248';
 
 const mocks = vi.hoisted(() => ({
   currentUserPubky: 'v'.repeat(52) as string | null,
@@ -27,12 +29,19 @@ const mocks = vi.hoisted(() => ({
   getOrFetchPost: vi.fn(),
   getCollectionDetails: vi.fn(),
   commitUpdateCollectionItem: vi.fn(),
+  commitUpdateCollectionResource: vi.fn(),
+  fetchResourceBookmarks: vi.fn(),
+  commitCreateResourceBookmark: vi.fn(),
+  invalidateResourceBookmarks: vi.fn(),
+  fetchCardByUri: vi.fn(),
   onSuccess: vi.fn(),
 }));
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
     exists: (...args: unknown[]) => mocks.bookmarkExists(...args),
     commitCreate: (...args: unknown[]) => mocks.commitCreateBookmark(...args),
+    fetchResourceBookmarks: (...args: unknown[]) => mocks.fetchResourceBookmarks(...args),
+    commitCreateResource: (...args: unknown[]) => mocks.commitCreateResourceBookmark(...args),
   },
 }));
 
@@ -41,7 +50,18 @@ vi.mock('@/controllers/post/post', () => ({
     getOrFetch: (...args: unknown[]) => mocks.getOrFetchPost(...args),
     getDetails: (...args: unknown[]) => mocks.getCollectionDetails(...args),
     commitUpdateCollectionItem: (...args: unknown[]) => mocks.commitUpdateCollectionItem(...args),
+    commitUpdateCollectionResource: (...args: unknown[]) => mocks.commitUpdateCollectionResource(...args),
   },
+}));
+
+vi.mock('@/controllers/pinakes/pinakes', () => ({
+  PinakesController: {
+    fetchCardByUri: (...args: unknown[]) => mocks.fetchCardByUri(...args),
+  },
+}));
+
+vi.mock('@/hooks/useResourceBookmarks/useResourceBookmarks', () => ({
+  invalidateResourceBookmarks: () => mocks.invalidateResourceBookmarks(),
 }));
 
 vi.mock('@/stores/auth/auth.store', () => {
@@ -104,6 +124,10 @@ describe('useAddContentForm', () => {
     mocks.getOrFetchPost.mockResolvedValue(livePost());
     mocks.getCollectionDetails.mockResolvedValue(collectionDetails([]));
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
+    mocks.commitUpdateCollectionResource.mockResolvedValue(undefined);
+    mocks.fetchResourceBookmarks.mockResolvedValue([]);
+    mocks.commitCreateResourceBookmark.mockResolvedValue(undefined);
+    mocks.fetchCardByUri.mockResolvedValue(null);
     mocks.onSuccess.mockResolvedValue(undefined);
   });
 
@@ -139,8 +163,9 @@ describe('useAddContentForm', () => {
 
     expect(saved).toBe(false);
     expect(mocks.getOrFetchPost).not.toHaveBeenCalled();
+    expect(mocks.fetchCardByUri).not.toHaveBeenCalled();
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'Enter a valid post URL.',
+      'Enter a valid URL.',
     );
   });
 
@@ -527,7 +552,210 @@ describe('useAddContentForm', () => {
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'Enter a valid post URL.',
+      'Enter a valid URL.',
     );
+  });
+
+  describe('links', () => {
+    const collectionTarget = { type: 'collection', collectionId: COLLECTION_ID } as const;
+
+    async function submitTo(target: Parameters<typeof useAddContentForm>[0]['target'], value: string) {
+      const { result } = renderHook(() => useAddContentForm({ target, onSuccess: mocks.onSuccess }));
+      let saved: boolean | undefined;
+      await act(async () => {
+        saved = await result.current.submit(value);
+      });
+      return {
+        saved,
+        error: result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message,
+        result,
+      };
+    }
+
+    it.each([
+      ['a YouTube link', YOUTUBE_URL],
+      ['an OpenStreetMap link', OSM_URL],
+      ['a pubky.app page that is no post', 'https://pubky.app/profile/'],
+    ])('adds %s to the collection as a link, as written when Pinakes does not know it', async (_, url) => {
+      const { saved, error, result } = await submitTo(collectionTarget, url);
+
+      expect(saved).toBe(true);
+      expect(error).toBeUndefined();
+      expect(mocks.fetchCardByUri).toHaveBeenCalledWith({ uri: url });
+      expect(mocks.getOrFetchPost).not.toHaveBeenCalled();
+      expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+      expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        uri: url,
+        shouldAdd: true,
+      });
+      // A link shows from the collection itself: no post id for the feed.
+      expect(mocks.onSuccess).toHaveBeenCalledWith();
+      expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
+    });
+
+    it("writes the card's canonical link, with the link as written among its spellings", async () => {
+      const canonical = 'https://www.youtube.com/watch?v=P65ZQL_m9zs&canonical';
+      const shareLink = 'https://youtu.be/P65ZQL_m9zs';
+      mocks.fetchCardByUri.mockResolvedValue({ uri: canonical, refs: [shareLink], aliases: [] });
+
+      const { saved } = await submitTo(collectionTarget, YOUTUBE_URL);
+
+      expect(saved).toBe(true);
+      expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        uri: canonical,
+        spellings: [YOUTUBE_URL, shareLink],
+        shouldAdd: true,
+      });
+    });
+
+    it('hands a canonical link a collection cannot hold to the collection write with its spellings', async () => {
+      const shareLink = 'https://youtu.be/P65ZQL_m9zs';
+      mocks.fetchCardByUri.mockResolvedValue({
+        uri: 'isbn:9781119473862',
+        refs: [YOUTUBE_URL, shareLink],
+        aliases: [],
+      });
+
+      const { saved } = await submitTo(collectionTarget, YOUTUBE_URL);
+
+      expect(saved).toBe(true);
+      // `commitUpdateCollectionResource` writes the first spelling a collection can hold.
+      expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        uri: 'isbn:9781119473862',
+        spellings: [YOUTUBE_URL, shareLink],
+        shouldAdd: true,
+      });
+    });
+
+    it('bookmarks the canonical link, whatever its scheme', async () => {
+      mocks.fetchCardByUri.mockResolvedValue({ uri: 'isbn:9781119473862', refs: [], aliases: [] });
+
+      const { saved } = await submitTo({ type: 'bookmarks' }, YOUTUBE_URL);
+
+      expect(saved).toBe(true);
+      expect(mocks.commitCreateResourceBookmark).toHaveBeenCalledWith({ uri: 'isbn:9781119473862', userId: VIEWER });
+    });
+
+    it('adds the link as written when Pinakes fails', async () => {
+      mocks.fetchCardByUri.mockRejectedValue(new Error('down'));
+
+      const { saved } = await submitTo(collectionTarget, YOUTUBE_URL);
+
+      expect(saved).toBe(true);
+      expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        uri: YOUTUBE_URL,
+        shouldAdd: true,
+      });
+    });
+
+    it('refuses a link the collection already holds in any spelling', async () => {
+      const shareLink = 'https://youtu.be/P65ZQL_m9zs';
+      mocks.fetchCardByUri.mockResolvedValue({ uri: YOUTUBE_URL, refs: [], aliases: [shareLink] });
+      mocks.getCollectionDetails.mockResolvedValue(collectionDetails([shareLink]));
+
+      const { saved, error } = await submitTo(collectionTarget, YOUTUBE_URL);
+
+      expect(saved).toBe(false);
+      expect(error).toBe('This link is already added.');
+      expect(mocks.commitUpdateCollectionResource).not.toHaveBeenCalled();
+      expect(mocks.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('bookmarks a link and lists the bookmarks again', async () => {
+      const { saved } = await submitTo({ type: 'bookmarks' }, YOUTUBE_URL);
+
+      expect(saved).toBe(true);
+      expect(mocks.fetchResourceBookmarks).toHaveBeenCalledWith({ userId: VIEWER });
+      expect(mocks.commitCreateResourceBookmark).toHaveBeenCalledWith({ uri: YOUTUBE_URL, userId: VIEWER });
+      expect(mocks.invalidateResourceBookmarks).toHaveBeenCalled();
+      expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+      expect(mocks.onSuccess).toHaveBeenCalledWith();
+    });
+
+    it('refuses a link already bookmarked in another spelling', async () => {
+      const shareLink = 'https://youtu.be/P65ZQL_m9zs';
+      mocks.fetchCardByUri.mockResolvedValue({ uri: YOUTUBE_URL, refs: [shareLink], aliases: [] });
+      mocks.fetchResourceBookmarks.mockResolvedValue([shareLink]);
+
+      const { saved, error } = await submitTo({ type: 'bookmarks' }, YOUTUBE_URL);
+
+      expect(saved).toBe(false);
+      expect(error).toBe('This link is already added.');
+      expect(mocks.commitCreateResourceBookmark).not.toHaveBeenCalled();
+    });
+
+    it('reads a bookmarks listing that fails to load as holding nothing', async () => {
+      mocks.fetchResourceBookmarks.mockRejectedValue(new Error('homeserver down'));
+
+      const { saved } = await submitTo({ type: 'bookmarks' }, YOUTUBE_URL);
+
+      expect(saved).toBe(true);
+      expect(mocks.commitCreateResourceBookmark).toHaveBeenCalledWith({ uri: YOUTUBE_URL, userId: VIEWER });
+    });
+
+    it('does not save a link after authorization is lost during the lookup', async () => {
+      mocks.fetchCardByUri.mockImplementationOnce(async () => {
+        mocks.restoreStatus = 'reauth-required';
+        return null;
+      });
+
+      const { saved } = await submitTo(collectionTarget, YOUTUBE_URL);
+
+      expect(saved).toBe(false);
+      expect(mocks.commitUpdateCollectionResource).not.toHaveBeenCalled();
+      expect(mocks.showSignIn).toHaveBeenCalledWith(true);
+    });
+
+    it('shows an error when the write fails', async () => {
+      mocks.commitUpdateCollectionResource.mockRejectedValue(new Error('offline'));
+
+      const { saved, error } = await submitTo(collectionTarget, YOUTUBE_URL);
+
+      expect(saved).toBe(false);
+      expect(error).toBe('Could not add this link.');
+      expect(mocks.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('adds a pubky:// post reference as the post', async () => {
+      const { saved } = await submitTo(collectionTarget, POST_URI);
+
+      expect(saved).toBe(true);
+      expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        postId: COMPOSITE_ID,
+        shouldAdd: true,
+      });
+      expect(mocks.commitUpdateCollectionResource).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['text that is no URL', 'youtube video', 'Enter a valid URL.'],
+      ['a link without a host', 'https://', 'Enter a valid URL.'],
+      ['a scheme a collection cannot hold', 'ftp://example.com/file', 'Enter a valid URL.'],
+      [
+        'a Pubky object that is no post',
+        `pubky://${AUTHOR}/pub/pubky.app/profile.json`,
+        'Only Pubky posts can be added.',
+      ],
+      [
+        'a collection link',
+        `https://pubky.app/collections/${AUTHOR}/${POST_ID}`,
+        'Collection can not be added to a collection.',
+      ],
+      ['a post link cut short', `https://pubky.app/post/${AUTHOR}/0035`, 'Enter a valid post URL.'],
+    ])('refuses %s', async (_, value, message) => {
+      const { saved, error } = await submitTo(collectionTarget, value);
+
+      expect(saved).toBe(false);
+      expect(error).toBe(message);
+      expect(mocks.fetchCardByUri).not.toHaveBeenCalled();
+      expect(mocks.getOrFetchPost).not.toHaveBeenCalled();
+      expect(mocks.commitUpdateCollectionResource).not.toHaveBeenCalled();
+      expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    });
   });
 });

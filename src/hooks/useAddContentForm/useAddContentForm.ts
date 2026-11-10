@@ -4,14 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { PinakesController } from '@/controllers/pinakes/pinakes';
 import { PostController } from '@/controllers/post/post';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { invalidateResourceBookmarks } from '@/hooks/useResourceBookmarks/useResourceBookmarks';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted, readFromClipboard } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
+import { getResourceTarget } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
-import { parsePostReference, postReferenceSpellings } from '@/pipes/post/post.reference';
+import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import {
   ADD_CONTENT_FORM_FIELDS,
@@ -20,10 +24,12 @@ import {
   addContentFormSchema,
   type AddContentTarget,
 } from './useAddContentForm.types';
+import { parseAddContentInput } from './useAddContentForm.utils';
 
 interface UseAddContentFormOptions {
   target: AddContentTarget;
-  onSuccess?: (postId: string) => Promise<void> | void;
+  /** After an item was added: `postId` is the added post's, absent for a link. */
+  onSuccess?: (postId?: string) => Promise<void> | void;
 }
 
 interface UseAddContentFormResult {
@@ -78,7 +84,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
     try {
       if (value !== undefined) {
         if (value.length > MAX_POST_URL_LENGTH) {
-          setFieldError('Enter a valid post URL.');
+          setFieldError('Enter a valid URL.');
           return false;
         }
 
@@ -91,18 +97,30 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
       const isValid = await form.trigger(ADD_CONTENT_FORM_FIELDS.POST_URL);
       if (!isValid) return false;
 
-      const parsed = parsePostReference(form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL));
-      if (!parsed) {
-        setFieldError('Enter a valid post URL.');
+      const parsed = parseAddContentInput(form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL));
+      if (parsed.type === 'invalid') {
+        setFieldError(parsed.message);
         return false;
       }
 
       if (!currentUserPubky) {
-        setFieldError('Could not add this post.');
+        setFieldError(parsed.type === 'link' ? 'Could not add this link.' : 'Could not add this post.');
         return false;
       }
 
       setIsPending(true);
+
+      if (parsed.type === 'link') {
+        try {
+          return await addLink(parsed.uri, currentUserPubky);
+        } catch (error) {
+          Logger.error('[useAddContentForm] Failed to add link', { error, target, uri: parsed.uri });
+          setFieldError('Could not add this link.');
+          return false;
+        } finally {
+          setIsPending(false);
+        }
+      }
 
       try {
         const post = await PostController.getOrFetch({
@@ -161,6 +179,40 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
     } finally {
       submitPendingRef.current = false;
     }
+  };
+
+  /**
+   * Adds a link the way a card's save picker does (`useResourceSaveTargets`, `useResourceBookmark`):
+   * on the card's canonical link when Pinakes knows it (`getResourceTarget`), else as written; a
+   * collection or bookmark already holding any spelling of it holds the link.
+   */
+  const addLink = async (written: string, userId: Pubky): Promise<boolean> => {
+    // Pinakes failing or not configured is no card: the link as written.
+    const card = await PinakesController.fetchCardByUri({ uri: written }).catch(() => null);
+    const { uri, spellings } = getResourceTarget(card, written);
+
+    if (await isLinkAlreadyAdded({ target, links: [uri, ...spellings], userId })) {
+      setFieldError('This link is already added.');
+      return false;
+    }
+
+    if (!mountedRef.current || !(await waitForAuth())) return false;
+
+    if (target.type === 'bookmarks') {
+      await BookmarkController.commitCreateResource({ uri, userId });
+      invalidateResourceBookmarks();
+    } else {
+      await PostController.commitUpdateCollectionResource({
+        collectionId: target.collectionId,
+        uri,
+        shouldAdd: true,
+        ...(spellings.length > 0 ? { spellings } : {}),
+      });
+    }
+
+    await onSuccess?.();
+    reset();
+    return true;
   };
 
   const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
@@ -224,12 +276,34 @@ async function isAlreadyAdded({ target, postId }: { target: AddContentTarget; po
     return await BookmarkController.exists(postId);
   }
 
-  const collection = await PostController.getDetails({ compositeId: target.collectionId });
+  // A stored item may spell the post the 0.x way (its author had not migrated when it was added).
+  const { pubky, id } = parseCompositeId(postId);
+  return await collectionHoldsAny(target.collectionId, postReferenceSpellings(pubky, id));
+}
+
+async function isLinkAlreadyAdded({
+  target,
+  links,
+  userId,
+}: {
+  target: AddContentTarget;
+  links: readonly string[];
+  userId: Pubky;
+}): Promise<boolean> {
+  if (target.type === 'bookmarks') {
+    // As `useResourceBookmarks`: a listing that failed (reported by the service) holds nothing.
+    const bookmarked = await BookmarkController.fetchResourceBookmarks({ userId }).catch((): string[] => []);
+    return links.some((link) => bookmarked.includes(link));
+  }
+
+  return await collectionHoldsAny(target.collectionId, links);
+}
+
+/** Whether the collection holds an item spelled as any of `spellings`. */
+async function collectionHoldsAny(collectionId: string, spellings: readonly string[]): Promise<boolean> {
+  const collection = await PostController.getDetails({ compositeId: collectionId });
   const currentContent =
     collection && !isPostDeleted(collection) ? CollectionPostContent.parse(collection.content) : null;
 
-  // A stored item may spell the post the 0.x way (its author had not migrated when it was added).
-  const { pubky, id } = parseCompositeId(postId);
-  const spellings = postReferenceSpellings(pubky, id);
   return Boolean(currentContent?.items?.some((item) => spellings.includes(item)));
 }

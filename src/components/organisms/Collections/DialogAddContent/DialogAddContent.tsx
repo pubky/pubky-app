@@ -227,13 +227,13 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
   return (
     <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
-        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Paste post url'}</CardTitle>
+        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Paste a link'}</CardTitle>
       </CardHeader>
       <CardFooter className="flex-col items-stretch px-6">
         <ControlledInputField
           name={ADD_CONTENT_FORM_FIELDS.POST_URL}
           control={addContentForm.form.control}
-          placeholder="https://"
+          placeholder="Post or link URL"
           variant="dashed"
           size="md"
           disabled={addContentForm.isPending}
@@ -296,7 +296,7 @@ function DialogAddContentBody({
   onSelectFromPosts,
 }: {
   target: NonNullable<DialogAddContentProps['target']>;
-  onSuccess: (postId: string) => Promise<void>;
+  onSuccess: (postId?: string) => Promise<void>;
   onCreatePost: () => void;
   onOpenFeed: () => void;
   onSelectFromPosts: () => void;
@@ -346,8 +346,9 @@ export function DialogAddContent({
   const timelineFeed = useTimelineFeedContext();
   const saveCreatedPostToTarget = useSaveCreatedPostToTarget();
 
-  const handleSuccess = async (postId: string) => {
-    timelineFeed?.prependOptimisticPosts(postId);
+  // A link added shows from the collection itself (`CollectionResourceItems`), not from the feed.
+  const handleSuccess = async (postId?: string) => {
+    if (postId) timelineFeed?.prependOptimisticPosts(postId);
     setOpen(false);
   };
 

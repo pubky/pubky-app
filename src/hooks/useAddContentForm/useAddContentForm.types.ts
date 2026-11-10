@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parsePostReference } from '@/pipes/post/post.reference';
+import { parseAddContentInput } from './useAddContentForm.utils';
 
 export const ADD_CONTENT_FORM_FIELDS = {
   POST_URL: 'postUrl',
@@ -9,8 +9,11 @@ export const addContentFormSchema = z.object({
   [ADD_CONTENT_FORM_FIELDS.POST_URL]: z
     .string()
     .trim()
-    .min(1, { message: 'Paste a post URL.' })
-    .refine((value) => parsePostReference(value) !== null, { message: 'Enter a valid post URL.' }),
+    .min(1, { message: 'Paste a post or link URL.' })
+    .superRefine((value, ctx) => {
+      const input = parseAddContentInput(value);
+      if (input.type === 'invalid') ctx.addIssue({ code: 'custom', message: input.message });
+    }),
 });
 
 export type AddContentFormData = z.infer<typeof addContentFormSchema>;
