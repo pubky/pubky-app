@@ -31,6 +31,7 @@ export const CREDIT_FIELD_LABELS: Readonly<Record<string, string>> = {
 const PROVIDER_NAMES: Readonly<Record<string, string>> = {
   [PinakesCreditProvider.WIKIPEDIA]: 'Wikipedia',
   [PinakesCreditProvider.WIKIMEDIA_COMMONS]: 'Wikimedia Commons',
+  [PinakesCreditProvider.WIKIDATA]: 'Wikidata',
   [MAP_DATA_PROVIDER]: 'OpenStreetMap',
 };
 

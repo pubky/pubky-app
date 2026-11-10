@@ -112,6 +112,23 @@ describe('ResourcePage', () => {
     expect(screen.getByTestId('resource-details-stub')).toBeInTheDocument();
   });
 
+  it('names the tab after the resource, and gives the route’s title back on leaving', () => {
+    document.title = 'External resource - Pubky App';
+    const { unmount } = render(<ResourcePage uri={VIDEO.uri} />);
+
+    expect(document.title).toBe(`${VIDEO.name} - Pubky App`);
+    unmount();
+    expect(document.title).toBe('External resource - Pubky App');
+  });
+
+  it('keeps the title the next page set before it left', () => {
+    const { unmount } = render(<ResourcePage uri={VIDEO.uri} />);
+
+    document.title = 'Home - Pubky App';
+    unmount();
+    expect(document.title).toBe('Home - Pubky App');
+  });
+
   it('reads the card again on Try again, for the body and the sidebar cards alike', async () => {
     // The real hook over a mocked controller: a retry has to start a new read, not re-render the old one.
     const actual = await vi.importActual<typeof import('@/hooks/usePinakesCard/usePinakesCard')>(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
@@ -30,6 +30,7 @@ export function ResourcePage({ uri }: ResourcePageProps) {
 function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () => void }) {
   const read = usePinakesCard(uri);
   const card = read.data;
+  useResourceTitle(card?.name);
 
   return (
     <PostPageLayout
@@ -46,4 +47,25 @@ function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () =>
       )}
     </PostPageLayout>
   );
+}
+
+/** The app's title suffix (`metadata.title` of the route is "External resource - Pubky App"). */
+const TITLE_SUFFIX = ' - Pubky App';
+
+/**
+ * Names the tab after the resource once its card is read ("Kind of Blue - Pubky App"), so tabs and
+ * history entries tell resources apart; the route's own title comes back on leaving.
+ */
+function useResourceTitle(name: string | null | undefined) {
+  useEffect(() => {
+    const title = name?.trim();
+    if (!title) return;
+    const previous = document.title;
+    const own = `${title}${TITLE_SUFFIX}`;
+    document.title = own;
+    return () => {
+      // After a client navigation the next route may have set its title already: keep that one.
+      if (document.title === own) document.title = previous;
+    };
+  }, [name]);
 }

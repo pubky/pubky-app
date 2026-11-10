@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { isPinakesConfigured } from '@/config/pinakes';
+import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import { fileNameFromUrl, inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
@@ -20,6 +21,22 @@ import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceC
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { GenericPreview } from './GenericPreview';
+
+/**
+ * `true` once the read of `key` has taken longer than `ms`, and from then on while `key` stays: the
+ * link's own preview stands in for the skeleton until the card is read. Another `key` (the
+ * composer's link changes) starts over.
+ */
+function useSlowRead(key: string | null, isLoading: boolean, ms: number): boolean {
+  const [slowKey, setSlowKey] = useState<string | null>(null);
+  const slow = key !== null && slowKey === key;
+  useEffect(() => {
+    if (key === null || !isLoading || slow) return;
+    const timer = setTimeout(() => setSlowKey(key), ms);
+    return () => clearTimeout(timer);
+  }, [key, isLoading, slow, ms]);
+  return slow;
+}
 
 const IMAGE_FILE_EXTENSION = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
 
@@ -70,8 +87,9 @@ interface GenericResourcePreviewProps {
  * post's own footer (`ResourceActions`: tags, actions and a ⋯ menu that copies the link and the
  * title), which reads the link's tags once the card is first on screen. A card on other services too
  * (`also_on`) lists them in the ⋯ menu under "Also on". A card that is pending or failed and has no
- * name says less than the link's own preview, and a failed read is treated like an unknown link (no
- * error box in a feed).
+ * name says less than the link's own preview, and a failed read, or one slower than
+ * `PINAKES_SLOW_READ_MS` until it is read, is treated like an unknown link (no error box and no long
+ * skeleton in a feed).
  *
  * Inside a quoted or reposted post (`PostPreviewCard`) the card has no action row or tag bar, as
  * while composing: that post is itself a link (or sits in the Reply/Repost dialog), so controls
@@ -108,11 +126,13 @@ function ResourcePreview({
     recheck: isOnScreen && !isComposing,
     resolve: isComposing,
   });
+  const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
   const withActions = !isComposing && !isNested;
 
   if (!lookupUrl) return <GenericPreview url={url} />;
-  if (isLoading) return <ResourceCardSkeleton withActions={withActions} />;
+  if (isLoading && !isSlow) return <ResourceCardSkeleton withActions={withActions} />;
 
+  // A slow read gives way to the link's own preview; the card takes its place in the same box once read.
   const shownCard = card && !hasNothingToShow(card) ? card : null;
   // The ⋯ menu copies what the card links.
   const linkUrl = shownCard ? getResourceLinks(shownCard, url).linkUrl : getHttpUrl(url);
@@ -135,5 +155,7 @@ function ResourcePreview({
     />
   );
   if (!shownCard) return <ResourceLinkCard url={url} actions={actions} />;
-  return <ResourceCard card={shownCard} href={url} actions={actions} hasAlsoOn={alsoOn !== null} />;
+  return (
+    <ResourceCard card={shownCard} href={url} actions={actions} hasAlsoOn={alsoOn !== null} isOnScreen={isOnScreen} />
+  );
 }

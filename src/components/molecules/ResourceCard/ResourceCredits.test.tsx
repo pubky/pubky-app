@@ -138,6 +138,19 @@ describe('ResourceCredits', () => {
       expectLinkOut(screen.getByRole('link', { name: 'Wikimedia Commons' }), IMAGE_CREDIT.source_url);
     });
 
+    it('lists no credit for a Wikidata text: CC0 asks for none', () => {
+      const wikidata = {
+        ...TEXT_CREDIT,
+        provider: 'wikidata',
+        source_url: 'https://www.wikidata.org/wiki/Q55825905',
+        author: null,
+        license: 'CC0-1.0',
+      };
+      render(<ResourceCredits credits={[wikidata]} variant="compact" />);
+
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
+    });
+
     it('links the licence to its text', () => {
       render(<ResourceCredits credits={[TEXT_CREDIT]} variant="compact" />);
 

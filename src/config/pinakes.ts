@@ -26,3 +26,9 @@ export const PINAKES_RELATED_LIMIT = 5;
  * plain link preview instead of a skeleton that never resolves.
  */
 export const PINAKES_REQUEST_TIMEOUT_MS = 8000;
+
+/**
+ * How long a card's read may take before a post shows the link's own preview instead of the
+ * card's skeleton: Pinakes is optional enrichment, a post never waits on it.
+ */
+export const PINAKES_SLOW_READ_MS = 5_000;

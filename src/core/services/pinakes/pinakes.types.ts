@@ -5,9 +5,9 @@
  *
  * `Card.credits` (`Credit`) is optional: not every Pinakes deployment sends it yet.
  *
- * Only the fields the app reads are typed; the API carries more (`facts`, `address`, `stream`,
- * `maybe_same`, `occurrence`, ...). Fields the schema lists as required are required here; every
- * other field is optional and nullable, as the schema declares it ("Absent values are null").
+ * Only the fields the app reads are typed; the API carries more (`bbox`, `from`, `maybe_same`,
+ * `occurrence`, ...). Fields the schema lists as required are required here; every other field is
+ * optional and nullable, as the schema declares it ("Absent values are null").
  * The captured responses in `./fixtures` are checked against these types in `pinakes.test.ts`.
  */
 
@@ -40,6 +40,35 @@ export interface TPinakesVenueRef {
   id?: string | null;
   /** Plain text: escape before rendering as HTML. */
   name?: string | null;
+}
+
+/** A place's postal address (`Details.address`, an open object): the parts Pinakes sends for OSM places. */
+export interface TPinakesAddress {
+  street?: string | null;
+  house_number?: string | null;
+  postcode?: string | null;
+  city?: string | null;
+  /** ISO 3166-1 alpha-2, in either case (`ch`, `US`). */
+  country_code?: string | null;
+}
+
+/** `OrganizerRef`: who runs an event. */
+export interface TPinakesOrganizerRef {
+  /** Plain text. */
+  name?: string | null;
+  /** Not always `http(s)`. */
+  url?: string | null;
+}
+
+/** `Stream`: audio a client can play, an episode's enclosure or a recording's public preview. */
+export interface TPinakesStream {
+  /** Not always `http(s)`: played only then. */
+  url: string;
+  /** A MIME type (`audio/mpeg`). */
+  type: string;
+  /** A short public preview, not the whole recording. */
+  preview: boolean;
+  duration_s?: number | null;
 }
 
 /** `GroupRef`: the group a card is in; its other members are in `also_on`. */
@@ -76,6 +105,8 @@ export enum PinakesCreditField {
 export enum PinakesCreditProvider {
   WIKIPEDIA = 'wikipedia',
   WIKIMEDIA_COMMONS = 'wikimedia_commons',
+  /** A Wikidata item's one-line description (CC0). */
+  WIKIDATA = 'wikidata',
 }
 
 /**
@@ -178,6 +209,19 @@ export interface TPinakesResourceDetail extends TPinakesCard {
   /** The event's status as the source gives it (`scheduled`); undocumented, so shown as written. */
   event_status?: string | null;
   updated_at?: string | null;
+  /**
+   * What the source says about the object, by name (`duration` in seconds, `artist`, `stars`,
+   * `price`, ...; docs/api.md and each source's page); every value a string, several joined with
+   * `"; "`. `null` when there are none.
+   */
+  facts?: Record<string, string> | null;
+  address?: TPinakesAddress | null;
+  /** An OSM place's `key/value` tag (`amenity/cafe`). */
+  category?: string | null;
+  organizer?: TPinakesOrganizerRef | null;
+  /** How an event is attended: `offline`, `online` or `mixed` as the source gives it. */
+  attendance?: string | null;
+  stream?: TPinakesStream | null;
 }
 
 /** `GroupDetail`: `GET /v1/groups/{id}`, every member's own card. */

@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
-import { isPinakesConfigured } from '@/config/pinakes';
+import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { MENU_VARIANT } from '@/config/ui';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
@@ -16,7 +16,10 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { PinakesStatus } from '@/services/pinakes/pinakes.types';
 import { GenericResourcePreview } from './GenericResourcePreview';
 
-vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: vi.fn() }));
+vi.mock('@/config/pinakes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/pinakes')>()),
+  isPinakesConfigured: vi.fn(),
+}));
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({ usePinakesCard: vi.fn() }));
 const viewport = vi.hoisted(() => ({ isVisible: false }));
 vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
@@ -91,6 +94,46 @@ describe('GenericResourcePreview', () => {
     expect(mockUsePinakesCard).toHaveBeenCalledWith(URL, { recheck: false, resolve: false });
   });
 
+  it('shows the link’s own preview with its actions once the card takes longer than 5 s, until the card is read', () => {
+    vi.useFakeTimers();
+    try {
+      mockUsePinakesCard.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+      const { rerender } = render(<GenericResourcePreview url={URL} />);
+      expect(screen.getByTestId('resource-card-skeleton')).toHaveAttribute('aria-busy', 'true');
+
+      act(() => vi.advanceTimersByTime(PINAKES_SLOW_READ_MS));
+      expect(screen.queryByTestId('resource-card-skeleton')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
+
+      const box = screen.getByTestId('resource-preview');
+      mockUsePinakesCard.mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+      rerender(<GenericResourcePreview url={URL} />);
+      // The card takes the preview's place in the same box, with no skeleton in between.
+      expect(screen.getByTestId('resource-preview')).toBe(box);
+      expect(within(box).getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('starts over for another link on the same preview', () => {
+    vi.useFakeTimers();
+    try {
+      mockUsePinakesCard.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+      const { rerender } = render(<GenericResourcePreview url={URL} />);
+      act(() => vi.advanceTimersByTime(PINAKES_SLOW_READ_MS));
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+
+      mockUsePinakesCard.mockReturnValue({ data: videoFixture, isLoading: false, isError: false });
+      rerender(<GenericResourcePreview url={videoFixture.uri} />);
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps the plain link preview, unchanged and without actions, when Pinakes is not configured', () => {
     vi.mocked(isPinakesConfigured).mockReturnValue(false);
     mockUsePinakesCard.mockReturnValue({ data: null, isLoading: false, isError: false });
@@ -141,7 +184,17 @@ describe('GenericResourcePreview', () => {
     expect(actions).toHaveAttribute('data-collections', String(articleFixture.collections));
     expect(actions).toHaveAttribute('data-tags-label', 'Tags on this article');
     expect(screen.queryByTestId('generic-website-preview')).not.toBeInTheDocument();
-    expect(mockUseOgMetadata).not.toHaveBeenCalled();
+    // Its Wikimedia image shows without a credit: the link's own preview is not read for it.
+    expect(mockUseOgMetadata).not.toHaveBeenCalledWith(URL);
+  });
+
+  it('does not read the link’s own preview for a card that has its title and image', () => {
+    mockUsePinakesCard.mockReturnValue({ data: videoFixture, isLoading: false, isError: false });
+
+    render(<GenericResourcePreview url={videoFixture.uri} />);
+
+    expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+    expect(mockUseOgMetadata).not.toHaveBeenCalledWith(expect.any(String));
   });
 
   it('gives the ⋯ menu the link and title the card shows', () => {
