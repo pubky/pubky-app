@@ -244,16 +244,12 @@ The release that merges `feat/social-v1` into `dev` moves the app to `pubky-soci
 account (`docs/migrations/social-v1.md`, _Rollout order and release checklist_ has the full list). What changes about the
 process above, for that release only:
 
-- **Release gate.** The app ships with, never before, the Nexus deploy that carries the social v1 steps (the epoch flip
-  and per-user backfill, v1 files, collection items, the `/v1` API) and the `tag_uri` backfill: a `/v1` app against
-  today's Nexus gets 404s, so the final PR merges to `dev` only near that deploy and `dev` stays deployable meanwhile.
-  The proxy in front of Nexus must forward `/v1/*` (the API and `/v1/static/*`). Storage allowances for the heaviest
-  accounts are raised before the deploy, because a migration temporarily doubles each user's storage, and moderation
-  service readiness is a release gate too.
-- **Order.** Nexus deploys first; pubky-stack's `social-v1` branch (pubky/pubky-stack#388) is re-pinned to that deploy
-  ref and merged, which is the staging Nexus bump; the final app PR sets `pubky_stack_ref` in
-  `.github/workflows/e2e-test.yml` back to `staging` and drops the `feat/social-v1` push trigger; then the release
-  follows the steps above. `NEXT_PUBLIC_DB_VERSION=4` is already in both Docker workflows on the branch.
+- **Release gate and order.** The app ships with, never before, the Nexus deploy that carries the social v1 steps
+  (pubky/pubky-nexus#1129): a `/v1` app against today's Nexus gets 404s, so the final PR merges to `dev` only near
+  that deploy and `dev` stays deployable meanwhile. The order (Nexus, then the pubky-stack re-pin, then the final app
+  PR with its workflow changes) and the infrastructure gates (the proxy forwarding `/v1/*`, storage allowances,
+  moderation service readiness) are kept in one place: `docs/migrations/social-v1.md`, _Rollout order and release
+  checklist_. `NEXT_PUBLIC_DB_VERSION=4` is already in both Docker workflows on the branch.
 - **No rollback after the first migrated user.** Before anyone migrates, redeploying the previous tag is safe (the
   database version mismatch recreates symmetrically). After, v1 writes are invisible to a 0.x client and Nexus has
   flipped epochs, so a defect goes through [hotfix.md](./hotfix.md); a hotfix that skips or disables the migration

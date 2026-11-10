@@ -19,9 +19,9 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
 
 ### Decisions (summary of D1–D19)
 
-- **Branching and review (D1, D5):** one integration branch, child PRs reviewed with the code-review skill and
-  Greptile; `security-review` on the foundation (capabilities), the gate and the rollout-guard PRs; `dev` merged in
-  regularly through the dev-sync routine below; port and gate ship in one deploy.
+- **Branching and review (D1, D5):** one integration branch, every child PR given a full code review, a Greptile
+  review and a `talosmachina` review; a security review on the foundation (capabilities), the gate and the
+  rollout-guard PRs; `dev` merged in regularly through the dev-sync routine below; port and gate ship in one deploy.
 - **Forced migration (D2, D11):** an un-migrated user is signed out (grant retired, Dexie cleared), told why, signs
   in again with the new scopes and migrates in a blocking `/migration` screen. The session enters the auth store
   only after the gate passes; a grant minted by the new build resumes an interrupted run instead of being logged out
@@ -81,8 +81,8 @@ File ownership: `homeserver.ts` is PR-A then PR-D only; `controllers/auth/auth.t
 PR-D only; `src/config/*` PR-A only; the lockfile changes only in PR-A and PR-F. Each child session merges
 `feat/social-v1` into its branch before opening the PR.
 
-What landed, by PR number (every PR into `feat/social-v1` unless noted; each reviewed by the code-review skill,
-Greptile and the `talosmachina` bot, merged with a merge commit once CI and both bots were green):
+What landed, by PR number (every PR into `feat/social-v1` unless noted; each given a full code review, a Greptile
+review and a `talosmachina` review, and merged with a merge commit once CI and both bots were green):
 
 | PR                                | What                                                                                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -94,9 +94,11 @@ Greptile and the `talosmachina` bot, merged with a merge commit once CI and both
 | #3051, #3054, #3055               | dev-sync 2; FIX-5 Nexus file contract (`/v1/static`, metadata from the URI, signup order A7); the Cypress port                             |
 | #3062                             | FIX-6: the mute list polled instead of a session-bound event stream                                                                        |
 | #3084, #3087, #3089, #3090        | dev-sync 3; FIX-8 `last_read` polled; branch e2e against pubky-stack `social-v1`; FIX-7 every Nexus call on `/v1`                          |
+| #3091                             | dev-sync 4 (`dev` @ `c5135dfb0`, merged 2026-11-10 as `cdd2e6ffa`)                                                                         |
 
-The branch also carries CI-owned VRT baseline commits from three `VRT Update Baselines` dispatches (after the QA-1
-fixes, after dev-sync 2 and after dev-sync 3): the new `auth/SocialMigration` suite and the fixture-driven re-captures.
+The branch also carries CI-owned VRT baseline commits from four `VRT Update Baselines` dispatches (after the QA-1
+fixes, after dev-sync 2, after dev-sync 3 and after dev-sync 4): the new `auth/SocialMigration` suite and the
+fixture-driven re-captures.
 
 History: between PR-A and PR-D the branch had a known limitation (the first bootstrap read and wrote the app files at
 `/priv/app.pubky/v1/`, so a pre-port Ring grant failed those requests until the gate signed it out, and
@@ -235,38 +237,32 @@ Reductions, reported to the team:
 Nexus serves two APIs: `/v0`, frozen (0.x kind names, bookmark fields, `attachments_metadata`, `files/by_ids`, tag
 `relationship`), and `/v1` (`pubky/pubky-nexus` `feat/social-spec-handling`, API1 #1221), which the release uses.
 Every call is built by `buildNexusUrl` under `NEXUS_API_VERSION = 'v1'` (`src/config/nexus.ts`, a config addition);
-the Nexus services fold each response once at the read boundary (`PostNormalizer.fromNexus`, `UserNormalizer.fromNexus`,
-`TagNormalizer.fromNexus`): `note`/`article` → `short`/`long` (fail-open: `unknown` stays `unknown` and renders as a
-note), `relationship = relationship ?? (tag_uri != null)`. The URL builders send `kind=note|article|…`; the
+the Nexus services fold each response once at the read boundary: the kind fold `note`/`article` → `short`/`long`
+(fail-open: `unknown` stays `unknown` and renders as a note) runs in `PostNormalizer.fromNexus`,
+`NotificationNormalizer.toLocalKind` and the server-side `fetchUserAndPostForMetadata`; the tag fold
+`relationship = relationship ?? (tag_uri != null)` runs in `TagNormalizer.fromNexus`, which `PostNormalizer.fromNexus`
+and `UserNormalizer.fromNexus` apply to their tags. The URL builders send `kind=note|article|…`; the
 `StreamKind` values and the persisted stream ids keep `short`/`long`. `post.bookmark` and `counts.bookmarks` are
 optional (`UserCountsModel` stores `0` on every row, no `DB_VERSION` change); `bootstrap.files` and `attachments_metadata`
 are gone. The one `/v0` call is
-`filesApi.getFiles` (`POST v0/files/by_ids`), for 0.x attachment metadata only: once per fetched page of posts
-(`FileApplication.fetchFilesForPosts`, before the posts are persisted, in place of the inline `attachments_metadata`
-`/v0` served) and per card for any row still missing; sunset in the ADR; the
+`filesApi.getFiles` (`POST v0/files/by_ids`), for 0.x attachment metadata only: once per fetched page of posts, before
+the posts are persisted, at the four `FileApplication.fetchFilesForPosts` call sites (the bootstrap page in
+`application/bootstrap/bootstrap.ts`, a stream page and the originals of its reposts in
+`application/stream/posts/post.ts`, a TTL refresh batch in `application/ttl/ttl.ts`), in place of the inline
+`attachments_metadata` `/v0` served, and per card for any row still missing; sunset in the ADR; the
 compliance gate (`nexusV0`) lets no other file under `src` name `v0`. `/v1` also folds tag labels by the data model's
 frozen whitespace table, which `canonicalizeTagLabel` / `isValidTagLabel` now mirror (contract-tested against `buildTag`).
 
 Deploy coupling is unchanged (D6/D10): the app follows the Nexus deploy; a `/v1` app against a `main` Nexus gets 404s.
 
-Retest (QA-3, on the local stack at nexusd `d94c3e89` or later; run on 2026-11-10, see _QA matrix_: items 1–5, 7, 8 and
-10 passed, 6 was recorded as passed without being observed because the migrator skipped the corpus' unknown-kind post,
-and 9 was covered for an image note's OG image only):
-
-1. Every feed and content filter (`short`, `long`, image, video, link, file, collection) loads on `/v1` (no 400), and
-   the content search with a kind filter.
-2. An article from Nexus renders as an article (kind fold) and its edit and lock paths keep the article kind.
-3. Tag membership from a `/v1` response: an own tag shows as tagged (`tag_uri`), untag works, a foreign tag shows
-   untagged; the taggers panel agrees.
-4. Bootstrap on `/v1` completes without `files`, makes one `files/by_ids` request for the page's 0.x media (none for a
-   v1-only page) and persists posts and notifications with local kinds.
-5. An un-migrated 0.x author's image post renders for a v1 viewer (metadata via `/v0/files/by_ids`).
-6. A post of kind `unknown` (seeded by a raw homeserver write of an unknown kind, if feasible; else skip) renders as a
-   note and cannot be edited.
-7. Profile counts render without `bookmarks`.
-8. Labels with uppercase or whitespace in search and taggers URLs resolve (`%20RUST%20`).
-9. OG and server metadata pages (`postMetadata.ts`, `ogData.ts`) render, an article OG as an article.
-10. Collections via `source=collection` on `/v1` (own, migrated, foreign).
+Retest: the FIX-7 checks were run in QA-3 on 2026-11-10 (_QA matrix_), one per row there: the feed and content filters
+and the content search with a kind filter (QA-3 item 6), an article from Nexus rendering as an article and keeping its
+kind through edit and lock (items 4 and 14), tag membership from `tag_uri` and the untag (item 8), the bootstrap
+without `files` with one `files/by_ids` request per page (item 7), an un-migrated author's image post for a v1 viewer
+(item 7), profile counts without `bookmarks` (item 10), labels with uppercase or whitespace (item 8), collections via
+`source=collection` (item 11), and the OG image of an image note (item 7; the article OG was not exercised). A post of
+kind `unknown` was not observed (item 9: the migrator skipped the corpus' unknown-kind post), so "renders as a note and
+cannot be edited" rests on the unit tests.
 
 Cypress (not run here, for the QA-3 e2e run): every Nexus intercept and probe moved to `/v1` in
 `cypress/support/{nexus,common,contacts,feeds,pagination,profile,locks}.ts`, `cypress/e2e/{onboarding,posts}.cy.ts`
@@ -335,9 +331,8 @@ test account seeds v1 or empty, except the one that exercises the migration.
 
 e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v1`, against the private pubky-stack:
 `feat/social-v1` points `pubky_stack_ref` (`.github/workflows/e2e-test.yml`) at pubky-stack's `social-v1` branch, whose
-Nexus submodule is pinned to the carrier (pubky/pubky-stack#388, a draft PR into `staging`). At the joint deploy that PR
-is re-pinned to the deploy ref and merged (the staging Nexus bump), and the final PR to `dev` sets `pubky_stack_ref`
-back to `staging` and drops the `feat/social-v1` trigger. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
+Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). How that pin and the trigger change at the release is in
+_Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
 otherwise the invite check answers 400 and onboarding stops at Continue. The branch run is green: 13 of 13 specs in Chrome
 against the carrier Nexus on the FIX-7 merge (2026-11-10), after one earlier flake on a post delete that the Nexus
 delete race explains (_External questions_). Local runs use the Chrome-family binary Playwright's VRT setup installs,
@@ -350,7 +345,7 @@ suite on the complete Nexus.
 
 ## Reductions and follow-ups
 
-After dev-sync 3 (2026-11-09), for the coordinator:
+After dev-sync 3 (2026-11-09):
 
 - **FIX-8, cross-device `last_read`: built (poll).** `dev` ships live cross-device sync of the notification read
   boundary (#3006, ADR-0029): `NotificationLastReadSyncCoordinator` follows `/pub/pubky.app/last_read` on the tab's
@@ -434,18 +429,18 @@ gate list.
 
 1. **Nexus deploys first.** The carrier `feat/social-spec-handling` (the epoch flip and per-user backfill, v1 files,
    collection items, the `/v1` API, the `tag_uri` backfill; complete at `d94c3e89` on 2026-11-06, the QA-3 reference)
-   merges to Nexus `main` through its umbrella PR and the Nexus team names the staging and production deploy ref and
-   dates. Whatever fronts `nexus.*.pubky.app` must forward `/v1/*` (the API and `/v1/static/*`) to Nexus in the same
-   deploy (open with the Nexus team). Nexus deletes its bookmark indexing at the joint deploy (agreed 2026-11-05).
+   merges to Nexus `main` through its umbrella PR, pubky/pubky-nexus#1129, whose merge commit is the deploy ref; the
+   Nexus team names the staging and production dates. Whatever fronts `nexus.*.pubky.app` must forward `/v1/*` (the
+   API and `/v1/static/*`) to Nexus in the same deploy (open with the Nexus team). Nexus deletes its bookmark indexing
+   at the joint deploy (agreed 2026-11-05).
 2. **pubky-stack.** pubky/pubky-stack#388 (branch `social-v1`, Nexus submodule pinned to the carrier) is re-pinned to
    the deploy ref and merged into `staging`: that is the staging Nexus bump, and what makes the `dev` e2e run green.
 3. **The final app PR** `feat/social-v1` → `dev` merges only near that deploy, so `dev` stays deployable meanwhile. It
    sets `pubky_stack_ref` in `.github/workflows/e2e-test.yml` back to `staging`, drops the `feat/social-v1` push trigger,
-   carries the code-review skill at high effort, `security-review`, Greptile and talosmachina, and the frontend team's
-   review. Before it: the maintainer's manual pass on the local stack (after a reset and re-seed), dev-sync 4, the e2e
-   follow-up PR, the migrator rc.2 adoption PR, and this docs sweep; after it, a staging deploy and the maintainer's
-   staging test (one real-Ring sign-in with the ten-scope grant; Locks before and after a migration), then production
-   with the Nexus deploy.
+   and gets a full code review, a security review, Greptile, talosmachina and the frontend team's review. Before it:
+   the maintainer's manual pass on the local stack (after a reset and re-seed), the e2e follow-up PR, the migrator rc.2
+   adoption PR, and this docs sweep; after it, a staging deploy and the maintainer's staging test (one real-Ring sign-in
+   with the ten-scope grant; Locks before and after a migration), then production with the Nexus deploy.
 4. **Infrastructure gates.** The production homeserver serves the same feature set as staging and the local stack at
    0.16.2 (verified 2026-11-04). A migration temporarily doubles each user's storage, so the allowances of the heaviest
    accounts are raised before the deploy. Moderation service readiness is a release gate. Bot accounts (the moderation
@@ -468,7 +463,7 @@ Checklist:
 - [ ] QA-1 and QA-3 recorded (_QA matrix_); the maintainer's manual pass done; staging checks (Ring grant, Locks)
 - [ ] Storage allowances raised; moderation service ready; bot-account migration path decided
 - [ ] Migrator rc.2 adopted (both packages, `SOCIAL_MIGRATION_TRANSFORM_REV` 4)
-- [ ] Final PR reviewed (code-review high, security-review, Greptile, talosmachina, frontend team), `pubky_stack_ref`
+- [ ] Final PR reviewed (full code review, security review, Greptile, talosmachina, frontend team), `pubky_stack_ref`
       back to `staging`, the `feat/social-v1` e2e trigger dropped
 - [ ] Release per `docs/release.md`, with the social v1 release notes
 - [ ] Post-deploy canary and Sentry check; PR-E2 scheduled per D9
@@ -536,8 +531,8 @@ delete; profile edit with avatar; notifications; settings and `last_read`; Locks
 ## Local stack runbook
 
 The local pubky-docker stack (homeserver testnet, Nexus, Neo4j, Redis, Homegate) is one shared in-memory tenant and one
-graph: one session uses it at a time, and only the coordinator starts, stops, resets or rebuilds containers (a user and
-a post written by one session once appeared in another's e2e run, 2026-11-04).
+graph: one person uses it at a time, and whoever owns the stack is the only one who starts, stops, resets or rebuilds
+its containers (a user and a post written during one check once turned up in another's e2e run, 2026-11-04).
 
 - **Components and pins.** `pubky-docker` with its testnet watcher keys; `HOMESERVER_TAG=v0.16.2`,
   `HOMEGATE_TAG=v0.2.0` in its `.env`; `nexusd` built from source at the carrier ref under test (`d94c3e89` for QA-3)

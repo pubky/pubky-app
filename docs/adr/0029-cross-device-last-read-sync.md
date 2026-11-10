@@ -94,6 +94,9 @@ A new homeserver-synced path adds a channel, not a connection.
 
 ## Consequences
 
+The consequences below are those of the event-stream channel on the public 0.x file; on the social v1 tree the
+channel is not started and the private file is polled instead, see _Social v1 note_ at the end.
+
 - ✅ A read on one device clears the badge on every open session within about a second, with no extra polling.
 - ✅ The read boundary is monotonic: concurrent marks, out-of-order events and replays cannot move it backward.
 - ✅ One long-lived SSE connection per visible signed-in tab, shared with the mute list, as before this ADR.

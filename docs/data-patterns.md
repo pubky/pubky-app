@@ -289,6 +289,11 @@ read-modify-write of the stored object: `getFreshBytes(buildUri(pubky, 'user'))`
 no fallback to the 0.x profile, which only an un-migrated account has, and `AuthApplication.userIsSignedUp` probes
 the v1 profile alone.
 
+**Feeds.** A feed's id is the hash of its filter (`buildFeed` derives it from the filter alone, `FeedNormalizer`), so it
+changes on every filter edit: a save writes the new file, swaps the local row and deletes the old file through
+`deletionPaths`, and `/feed/<id>` deep links to the old id stop resolving (an accepted reduction). The migrator derives
+the id of every 0.x feed it copies the same way, so a migrated feed's id changes once.
+
 **App files.** Settings and `last_read` are read v1 → 0.x → create: the v1 file when it exists, else the 0.x file,
 else defaults (settings) or a cursor at the current time (`last_read`). The first `SettingsApplication.initializeSettings`
 and the first `BootstrapApplication.initialize` after the gate write the v1 file from the 0.x one (fenced; the

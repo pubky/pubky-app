@@ -150,8 +150,10 @@ considered; no visible behaviour reduced; concrete imports and no barrels; tests
 and targeted tests pass; VRT, ADR, `DB_VERSION` and config changes called out; the diff reads like the surrounding code.
 
 Commits and branches: `type(scope): description` (imperative, lower-case, no period, ≤72 chars); branches
-`<type>/<issue>-<kebab-description>` cut from `dev`; PRs target `dev`, draft unless asked, one change per PR. Cypress specs
-are owned by QA: flag an invalidated spec, do not edit or run e2e yourself. `docs/commit-message.md`
+`<type>/<issue>-<kebab-description>` cut from `dev`; PRs target `dev`, draft unless asked, one change per PR. The Cypress
+suite is maintained by the app team since the social v1 port (#3055), QA owns the scenarios' intent: run it locally with
+Chrome for Testing against the local stack, CI runs it on pushes to `dev`/`master`; never report an e2e result you did
+not obtain. `docs/commit-message.md`, `docs/migrations/social-v1.md`
 
 ## People and names
 

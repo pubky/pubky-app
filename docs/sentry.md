@@ -23,7 +23,7 @@ The migration gate (ADR-0026) captures one event per (account, code) per page fo
 
 ### Data model refusals (`ErrorService.SocialSpecs`)
 
-A refusal by `pubky-social-specs` (a limit, an invalid reference, an unknown kind) reaches Sentry as `Err.validation(INVALID_INPUT)` tagged `error.service: pubky-social-specs`, built by `toSpecsValidationError` in the pipe that called the package (`src/core/pipes/specs.errors.ts`; three sites build the same shape by hand, see `docs/error-handling.md`). Its context holds the package's structured `code`, `field` and `limit` plus what the caller passed as its context: the owner key, the post or file id, the URI, and for a tag the label and for a file its name. Keys and `pubky://` URIs are redacted by the scrubber (_Privacy_); a post body is never attached. A new caller keeps to identifiers and must not add free text.
+A refusal by `pubky-social-specs` (a limit, an invalid reference, an unknown kind) reaches Sentry as `Err.validation(INVALID_INPUT)` tagged `error.service: pubky-social-specs`, built by `toSpecsValidationError` in the pipe that called the package (`src/core/pipes/specs.errors.ts`; three sites catch the package's `ValidationError` and re-map it by hand, and other app-side validations tag the same service without a package throw, see `docs/error-handling.md`). Its context holds the package's structured `code`, `field` and `limit` plus what the caller passed as its context: the owner key, the post or file id, the URI, and for a tag the label and for a file its name. Keys and `pubky://` URIs are redacted by the scrubber (_Privacy_); a post body is never attached. A new caller keeps to identifiers and must not add free text.
 
 ## Capture rule
 
