@@ -1,9 +1,8 @@
 'use client';
 
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react';
-import { ArrowUp, Check, ChevronDown, LinkIcon, Play, X } from 'lucide-react';
+import { Check, ChevronDown, LinkIcon, Play, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +16,7 @@ import { cn } from '@/libs/utils/utils';
 import { ResourceSourceIcon } from '@/molecules/ResourceCard/ResourceSourceIcon';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
+import { DOCK_CLASS, DOCK_SLOT_CLASS, DockBar, DockSlotBack, PlayerSlot, usePlayerHost } from './PlayerHost';
 import type { PlayerTarget } from './resourcePlayer.utils';
 
 interface ProviderMenuProps {
@@ -195,28 +195,52 @@ export function PlayOnPill({
   );
 }
 
+/** The page's player a card's frame is (`useResourcePlayer`'s owner), and the card's resource. */
+export interface PagePlayer {
+  owner: string;
+  resource: string;
+}
+
 /**
  * Keeps an open player on screen when its card scrolls away: the player's box becomes a small fixed
  * dock (CSS only, the frame is never moved, so it keeps playing) with Close and a way back; back in
  * view it returns to the card. The dock sits above the phone's bottom bar and left of the new-post
- * button (Fab: right-3 bottom-18 size-20, sm:right-10, md:bottom-20, lg:bottom-6), so it never
- * covers either. Audio uses the service's compact height; video keeps its ratio at the dock's width.
- * A player nobody started (a player shown up front, `dockable` off) stays in its card, and a
- * post pauses it off screen like any embed.
+ * button, so it never covers either (`DOCK_CLASS`). Audio uses the service's compact height; video
+ * keeps its ratio at the dock's width. A player nobody started (a player shown up front, `dockable` off)
+ * stays in its card, and a post pauses it off screen like any embed.
+ *
+ * In the app (`PlayerHost`), a card's player (`pagePlayer`, never a preview's) is kept by the host
+ * instead (`PlayerSlot`): laid over the card, and, while it is the page's player, in the dock when
+ * no card of it is on screen, also on another page; `dockable` is then the host's call.
  */
 export function PlayerDock({
-  target,
-  title,
-  onClose,
-  dockable = true,
-  children,
-}: {
+  pagePlayer,
+  ...props
+}: PlayerDockProps & {
+  /** The page's player the frame is: kept by the app's player host, where there is one. */
+  pagePlayer?: PagePlayer;
+}) {
+  const host = usePlayerHost();
+  if (host && pagePlayer) {
+    return (
+      <PlayerSlot {...pagePlayer} target={props.target} title={props.title} onClose={props.onClose}>
+        {props.children}
+      </PlayerSlot>
+    );
+  }
+  return <PlayerDockInPlace {...props} />;
+}
+
+interface PlayerDockProps {
   target: PlayerTarget;
   title: string;
   onClose: () => void;
   dockable?: boolean;
   children: ReactNode;
-}) {
+}
+
+/** `PlayerDock` with no player host: the dock is the player's own box, fixed by CSS. */
+function PlayerDockInPlace({ target, title, onClose, dockable = true, children }: PlayerDockProps) {
   const slotRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [isOffScreen, setIsOffScreen] = useState(false);
@@ -248,32 +272,15 @@ export function PlayerDock({
     <div
       ref={slotRef}
       style={docked && slotHeight ? { height: slotHeight } : undefined}
-      className={cn('relative min-w-0', docked && 'rounded-md border border-dashed border-border')}
+      className={cn('relative min-w-0', docked && DOCK_SLOT_CLASS)}
       data-testid="player-dock-slot"
       data-docked={docked ? 'true' : undefined}
     >
-      {docked && (
-        <Container overrideDefaults className="flex h-full items-center justify-center p-3">
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label={`Back to ${title}`}
-            data-testid="player-dock-slot-back"
-            onClick={backToCard}
-          >
-            <ArrowUp aria-hidden="true" />
-          </Button>
-        </Container>
-      )}
+      {docked && <DockSlotBack title={title} onBack={backToCard} />}
       <div
         ref={boxRef}
         data-docked={docked ? 'true' : undefined}
-        className={cn(
-          docked && [
-            'fixed right-26 bottom-18 left-3 z-40 flex items-start gap-1 rounded-lg border border-border bg-popover p-1 shadow-2xl',
-            'sm:right-34 sm:left-auto sm:w-96 md:bottom-20 lg:bottom-6 [&_[data-player-region]]:h-(--player-dock-h)',
-          ],
-        )}
+        className={cn(docked && DOCK_CLASS)}
         // A post pauses its media once off screen (`usePauseMediaOutsideViewport`); the player then
         // plays on in the dock.
         {...(dockable && { [KEEP_PLAYING_ATTRIBUTE]: 'true' })}
@@ -281,30 +288,7 @@ export function PlayerDock({
         aria-label={docked ? `Player dock: ${title}` : undefined}
       >
         <div className="min-w-0 flex-1">{children}</div>
-        {docked && (
-          <Container overrideDefaults className="flex shrink-0 flex-col" data-testid="player-dock-bar">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={`Close the ${target.name} player`}
-              data-testid="player-dock-close"
-              onClick={onClose}
-              className="size-8 text-muted-foreground hover:text-foreground"
-            >
-              <X aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={`Back to ${title}`}
-              data-testid="player-dock-back"
-              onClick={backToCard}
-              className="size-8 text-muted-foreground hover:text-foreground"
-            >
-              <ArrowUp aria-hidden="true" />
-            </Button>
-          </Container>
-        )}
+        {docked && <DockBar target={target} title={title} onClose={onClose} onBack={backToCard} />}
       </div>
     </div>
   );

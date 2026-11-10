@@ -1,6 +1,6 @@
 'use client';
 
-import { type RefObject, useEffect, useEffectEvent, useState, useSyncExternalStore } from 'react';
+import { type RefObject, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
 import { onMediaStop, stopOtherMedia } from '@/hooks/useOnePlayer/useOnePlayer';
 import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
 
@@ -9,7 +9,7 @@ import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
  * replaces it, so the card that held it unmounts its frame: two services can never play together,
  * whatever their APIs allow. Any other media starting on the page stops it too (`useOnePlayer`).
  */
-type ActivePlayer = { owner: string; provider: PlayerProvider } | null;
+export type ActivePlayer = { owner: string; provider: PlayerProvider } | null;
 
 let active: ActivePlayer = null;
 const listeners = new Set<() => void>();
@@ -23,6 +23,15 @@ function setActive(next: ActivePlayer) {
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+/** The page's player, for the app's player host (`PlayerHost`), which keeps its frame. */
+export function getPagePlayer(): ActivePlayer {
+  return active;
+}
+
+export function usePagePlayer(): ActivePlayer {
+  return useSyncExternalStore(subscribe, getPagePlayer, () => null);
 }
 
 /** Milliseconds after which a frame that has not loaded offers the service's page instead. */
@@ -47,14 +56,15 @@ export interface ResourcePlayerState {
 
 /**
  * A card's player: which of its services is open, and whether its frame has loaded. `owner` is the
- * card's place on the page (unique per rendered card); `targets` its playable services.
+ * card's place on the page (unique per rendered card); `targets` its playable services. `hosted`:
+ * the app's player host keeps the frame (`PlayerHost`), so the player plays on once the card is gone.
  */
-export function useResourcePlayer(owner: string, targets: PlayerTarget[]): ResourcePlayerState {
-  const snapshot = useSyncExternalStore(
-    subscribe,
-    () => active,
-    () => null,
-  );
+export function useResourcePlayer(
+  owner: string,
+  targets: PlayerTarget[],
+  { hosted = false }: { hosted?: boolean } = {},
+): ResourcePlayerState {
+  const snapshot = usePagePlayer();
   const provider = snapshot?.owner === owner ? snapshot.provider : null;
   const current = provider ? (targets.find((target) => target.provider === provider) ?? null) : null;
   const [load, setLoad] = useState<{ key: string | null; state: PlayerLoadState }>({ key: null, state: 'loading' });
@@ -70,8 +80,16 @@ export function useResourcePlayer(owner: string, targets: PlayerTarget[]): Resou
     return () => clearTimeout(timer);
   }, [key]);
 
-  // Leaving the page (or the card unmounting for another resource) unloads its player; other media
-  // starting stops it.
+  // Set while the card unmounts, before the effect below lets go (effects clean up in order).
+  const unmounting = useRef(false);
+  useEffect(() => {
+    unmounting.current = false;
+    return () => {
+      unmounting.current = true;
+    };
+  }, []);
+  // Leaving the page unloads its player, unless the host keeps its frame; another resource in the
+  // card unloads it either way. Other media starting stops it.
   useEffect(() => {
     const close = () => {
       if (active?.owner === owner) setActive(null);
@@ -79,9 +97,9 @@ export function useResourcePlayer(owner: string, targets: PlayerTarget[]): Resou
     const unsubscribe = onMediaStop(close);
     return () => {
       unsubscribe();
-      close();
+      if (!hosted || !unmounting.current) close();
     };
-  }, [owner]);
+  }, [owner, hosted]);
 
   const play = (target: PlayerTarget, keep: Element | null = null) => {
     stopOtherMedia(keep);
