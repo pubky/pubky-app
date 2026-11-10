@@ -1,5 +1,8 @@
 'use client';
 
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getInteractionPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { PostContentBase } from '../PostContentBase/PostContentBase';
@@ -9,8 +12,10 @@ import type { PostContentOrganismProps } from './PostContent.types';
  * PostContent - Renders post content with repost preview support.
  *
  * **Rendering logic:**
- * - **Repost with content (quote)**: PostContentBase (quote text) + PostPreviewCard (original)
- * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard
+ * - **Repost with content (quote)**: PostContentBase (quote text) + PostPreviewCard (original, with
+ *   its own tags and actions)
+ * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard, without
+ *   a footer: the repost's own footer already acts on the original (`getInteractionPostId`)
  * - **Web link embed**: PostContentBase previews the embedded link in place of the text's first link
  * - **Collection original**: PostPreviewCard renders embed `CollectionCard` (no post shell)
  */
@@ -20,6 +25,14 @@ export function PostContent({ postId, className, textClassName, mediaVariant = '
 
   // Determine if we should render the repost preview
   const shouldRenderRepostPreview = isRepost && !!originalPostId;
+  // A plain repost's own footer already acts on the original, so its preview gets none; decided once the
+  // repost is read, so no footer flashes in and out meanwhile.
+  const repostVisibility = usePostHeaderVisibility(shouldRenderRepostPreview ? postId : '');
+  const { isLoading: isRepostLoading } = usePostDetails(shouldRenderRepostPreview ? postId : null);
+  const showOriginalTagsActions =
+    !isRepostLoading &&
+    repostVisibility.originalPostId !== null &&
+    getInteractionPostId(postId, repostVisibility) !== originalPostId;
 
   return (
     <>
@@ -33,7 +46,9 @@ export function PostContent({ postId, className, textClassName, mediaVariant = '
       />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className="bg-embed" />}
+      {shouldRenderRepostPreview && (
+        <PostPreviewCard postId={originalPostId} className="bg-embed" showTagsActions={showOriginalTagsActions} />
+      )}
     </>
   );
 }

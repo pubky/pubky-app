@@ -54,14 +54,16 @@ vi.mock('../PostActionsBar/PostActionsBar', () => ({
     onReplyClick,
     onRepostClick,
     className,
+    surface,
   }: {
     postId: string;
     onTagClick: () => void;
     onReplyClick: () => void;
     onRepostClick: () => void;
     className?: string;
+    surface?: string;
   }) => (
-    <div data-testid="post-actions-bar" data-post-id={postId} className={className}>
+    <div data-testid="post-actions-bar" data-post-id={postId} data-surface={surface} className={className}>
       <button type="button" data-testid="tag-button" onClick={onTagClick}>
         Tag
       </button>
@@ -174,6 +176,14 @@ describe('PostInlineTagsActions', () => {
 
     expect(onReplyClick).toHaveBeenCalledTimes(1);
     expect(onRepostClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts the action row on the surface it is given (a quoted post’s muted one), the post’s by default', () => {
+    const { rerender } = render(<PostInlineTagsActions {...defaultProps} />);
+    expect(screen.getByTestId('post-actions-bar')).not.toHaveAttribute('data-surface');
+
+    rerender(<PostInlineTagsActions {...defaultProps} surface="muted" />);
+    expect(screen.getByTestId('post-actions-bar')).toHaveAttribute('data-surface', 'muted');
   });
 
   it('stops clicks from bubbling to the parent post', () => {

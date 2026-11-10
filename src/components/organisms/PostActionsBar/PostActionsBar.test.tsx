@@ -42,8 +42,8 @@ vi.mock('@/organisms/PostMenuActions/PostMenuActions', () => {
 
 vi.mock('../PostSavePicker/PostSavePicker', () => {
   return {
-    PostSavePicker: ({ postId }: { postId: string }) => (
-      <button aria-label="Save post" data-testid="post-save-picker" data-post-id={postId}>
+    PostSavePicker: ({ postId, buttonClassName }: { postId: string; buttonClassName?: string }) => (
+      <button aria-label="Save post" data-testid="post-save-picker" data-post-id={postId} className={buttonClassName}>
         Save
       </button>
     ),
@@ -206,6 +206,27 @@ describe('PostActionsBar', () => {
       expect(button).toHaveClass('border-none', 'shadow-xs');
       expect(button).not.toHaveClass('bg-card');
     }
+  });
+
+  it('fills every pill and the save trigger with the card colour on a muted surface (a quoted post)', () => {
+    mockUsePostCounts.mockReturnValue({
+      postCounts: { tags: 3, unique_tags: 3, replies: 5, reposts: 2 },
+      isLoading: false,
+    });
+
+    render(<PostActionsBar postId="post-2" surface="muted" />);
+
+    for (const name of ['Tag post (3)', 'Reply to post (5)', 'Repost (2)', 'Save post', 'More options']) {
+      expect(screen.getByRole('button', { name })).toHaveClass('bg-card', 'hover:bg-card/70');
+    }
+  });
+
+  it('fills the loading pills with the card colour on a muted surface', () => {
+    mockUsePostCounts.mockReturnValue({ postCounts: null, isLoading: true });
+
+    render(<PostActionsBar postId="post-2" surface="muted" />);
+
+    for (const skeleton of screen.getAllByTestId('skeleton')) expect(skeleton).toHaveClass('bg-card');
   });
 
   it('invokes callbacks when buttons are clicked', () => {

@@ -3,7 +3,8 @@ import { cva } from 'class-variance-authority';
 /**
  * Trigger styling shared by the action buttons and the save picker they sit beside. `surface` is
  * what the row sits on: a post's `bg-card` by default; `muted` is the embed surface (an external
- * resource card's `bg-embed`) and fills the pill with `bg-card`, so it stands out as much there.
+ * resource card's or a quoted post's `bg-embed`) and fills the pill with `bg-card`, so it stands out
+ * as much there.
  */
 export const postActionsButtonVariants = cva('', {
   variants: {

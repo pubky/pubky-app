@@ -1,17 +1,24 @@
 'use client';
+import { TagKind } from '@/application/tag/tag.types';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
+import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
+import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
+import { PostInlineTagsActions } from '@/organisms/PostInlineTagsActions/PostInlineTagsActions';
+
+const stopPropagation = (event: React.MouseEvent) => event.stopPropagation();
 
 interface PostPreviewCardProps {
   /** Composite post ID to preview. */
@@ -19,8 +26,9 @@ interface PostPreviewCardProps {
   /** Optional className on the outer Card wrapper (non-collection posts only). */
   className?: string;
   /**
-   * Collection embed only: when `false`, tags are read-only and Follow/Delete
-   * CTAs are hidden (share/repost dialog). Feed repost previews default to `true`.
+   * When `false`, tags are read-only and the actions are hidden (share/repost
+   * dialog): a collection's Follow/Delete CTAs, a post's action row. Feed repost
+   * previews default to `true`.
    */
   interactiveActions?: boolean;
   /**
@@ -37,6 +45,12 @@ interface PostPreviewCardProps {
    * Feed previews default to `true`.
    */
   navigable?: boolean;
+  /**
+   * Non-collection posts: show the previewed post's own tags and actions under
+   * its content (default). `PostContent` passes `false` for a contentless repost,
+   * whose own footer already acts on this post (`getInteractionPostId`).
+   */
+  showTagsActions?: boolean;
 }
 
 /**
@@ -64,6 +78,12 @@ interface PostPreviewCardProps {
  * dialogs so tags stay visible but non-interactive and CTAs are hidden; feed
  * repost previews keep full tag + Follow/Delete behavior (default).
  *
+ * Under its content the previewed post has its own footer, the post's `PostInlineTagsActions`
+ * (tags; Tag, Reply, Repost, Save, ⋯ on the `muted` surface, with its own Reply and Repost
+ * dialogs), so its tags and counts read as its own, apart from the post around it. In the Reply
+ * and Repost dialogs (`navigable={false}`) its tags show read-only and the action row is left
+ * out, as for a collection embed, so nothing in the open modal opens another dialog.
+ *
  * **TTL Tracking:**
  * Subscribes the original post to TTL tracking when visible in the viewport.
  * This ensures original posts for reposts get refreshed when stale. For
@@ -83,10 +103,13 @@ export function PostPreviewCard({
   interactiveActions = true,
   flush = false,
   navigable = true,
+  showTagsActions = true,
 }: PostPreviewCardProps) {
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { embedUrl } = useRepostInfo(postId);
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
+  const hasActionRow = showTagsActions && navigable && interactiveActions;
   const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
     id: postId,
@@ -107,6 +130,8 @@ export function PostPreviewCard({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Only the card itself: Enter or Space on a control inside (tags, actions) does what that control does.
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.stopPropagation();
       e.preventDefault();
@@ -133,7 +158,7 @@ export function PostPreviewCard({
   }
 
   return (
-    <PostPreviewNestingProvider navigable={navigable}>
+    <>
       <Card
         ref={ttlRef}
         data-cy="post-preview-card"
@@ -154,11 +179,41 @@ export function PostPreviewCard({
           <PostUnavailable message={'This post has been deleted by its author.'} />
         ) : (
           <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
-            <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" navigable={navigable} />
-            <PostContentBase postId={postId} embedUrl={embedUrl} />
+            <PostPreviewNestingProvider navigable={navigable}>
+              <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" navigable={navigable} />
+              <PostContentBase postId={postId} embedUrl={embedUrl} />
+            </PostPreviewNestingProvider>
+            {/* Outside the nesting: the footer's menus (Edit post) are no embedded preview. */}
+            {showTagsActions &&
+              (hasActionRow ? (
+                <PostInlineTagsActions
+                  postId={postId}
+                  surface="muted"
+                  onReplyClick={openReplyDialog}
+                  onRepostClick={openRepostDialog}
+                  actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+                />
+              ) : (
+                <ClickableTagsList
+                  taggedId={postId}
+                  taggedKind={TagKind.POST}
+                  maxTagLength={POST_TAGS_MAX_LENGTH}
+                  maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
+                  showCount={true}
+                  showInput={false}
+                  showAddButton={false}
+                  readOnly
+                />
+              ))}
           </CardContent>
         )}
       </Card>
-    </PostPreviewNestingProvider>
+      {/* Outside the card: a click in a dialog portal still bubbles through React. */}
+      {hasActionRow && (
+        <Container overrideDefaults className="contents" onClick={stopPropagation} onAuxClick={stopPropagation}>
+          {dialogs}
+        </Container>
+      )}
+    </>
   );
 }

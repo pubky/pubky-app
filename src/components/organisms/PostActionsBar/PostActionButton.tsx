@@ -12,7 +12,7 @@ type PostActionButtonProps = Omit<ComponentProps<typeof Button>, 'variant' | 'si
   count?: number | string;
   ariaLabel: string;
   variant?: 'default' | 'visual';
-  /** What the row sits on: `muted` is the embed surface (`bg-embed`) of an external resource card. */
+  /** What the row sits on: `muted` is the embed surface (`bg-embed`) of a resource card or a quoted post. */
   surface?: 'default' | 'muted';
   iconProps?: { fill?: string; className?: string };
 };

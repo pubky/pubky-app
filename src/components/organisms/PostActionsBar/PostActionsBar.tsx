@@ -21,18 +21,20 @@ export function PostActionsBar({
   onRepostClick,
   className,
   variant = 'default',
+  surface = 'default',
 }: PostActionsBarProps) {
   const { postCounts, isLoading: isCountsLoading } = usePostCounts(postId);
   const { postDetails } = usePostDetails(postId);
   const { requireAuth } = useRequireAuth();
   const buttonClassName = postActionsButtonVariants({
     variant,
+    surface,
   });
   const countClassName = postActionsCountVariants({
     variant,
   });
   if (isCountsLoading || !postCounts) {
-    return <PostActionsBarSkeleton className={className} />;
+    return <PostActionsBarSkeleton className={className} surface={surface} />;
   }
   const tagCount = postCounts.unique_tags ?? 0;
   const isCollection = postDetails?.kind === 'collection';
@@ -60,12 +62,18 @@ export function PostActionsBar({
     },
   ];
   const moreButton = (
-    <PostActionButton icon={Ellipsis} variant={variant} ariaLabel="More options" data-cy="post-more-btn" />
+    <PostActionButton
+      icon={Ellipsis}
+      variant={variant}
+      surface={surface}
+      ariaLabel="More options"
+      data-cy="post-more-btn"
+    />
   );
   return (
     <Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
       {actionButtons.map(({ id, ...action }) => (
-        <PostActionButton key={id} data-cy={`post-${id}-btn`} variant={variant} {...action} />
+        <PostActionButton key={id} data-cy={`post-${id}-btn`} variant={variant} surface={surface} {...action} />
       ))}
       {!isCollection && (
         <PostSavePicker postId={savePostId} buttonClassName={buttonClassName} countClassName={countClassName} />

@@ -20,6 +20,8 @@ interface PostInlineTagsActionsProps {
   className?: string;
   presentation?: 'default' | 'cards';
   actionsClassName?: string;
+  /** What the action row sits on: `muted` for a quoted post's `bg-embed` (see `PostActionsBar`). */
+  surface?: 'default' | 'muted';
 }
 
 export function PostInlineTagsActions({
@@ -31,6 +33,7 @@ export function PostInlineTagsActions({
   className,
   actionsClassName,
   presentation = 'default',
+  surface,
 }: PostInlineTagsActionsProps) {
   const [tagsExpanded, setTagsExpanded] = useState(false);
   // The tag button only reveals the tags. On mobile it must not focus the input and pop the soft
@@ -81,6 +84,7 @@ export function PostInlineTagsActions({
         onReplyClick={onReplyClick}
         onRepostClick={onRepostClick}
         className={actionsClassName}
+        surface={surface}
       />
     </Container>
   );
