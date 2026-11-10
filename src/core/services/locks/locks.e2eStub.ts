@@ -45,7 +45,8 @@ const fromBase64 = (value: string) => Uint8Array.from(atob(value), (char) => cha
 /**
  * The pinned SDK 0.1.0 rejects with a plain, unreported `Error` named after its error kind, and
  * `LocksService` maps that itself (`toLocksError`, `isLockServerRegionBlocked`, the lookup 404). An
- * `Err.*` here would be reported twice and would never match the region-refusal contract.
+ * `Err.*` here would be reported twice and would never match the region-refusal contract. This raw
+ * `Error` is a documented exception to the `Err.*` rule (`docs/error-handling.md`).
  */
 function sdkError(path: string, status: number): Error {
   if (path.startsWith('paykit/')) {
