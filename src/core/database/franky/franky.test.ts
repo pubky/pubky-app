@@ -1,7 +1,7 @@
 import Dexie from 'dexie';
 import { forceCloseDatabase, indexedDB } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DB_INIT_MAX_ATTEMPTS, DB_NAME, DB_VERSION } from '@/config/database';
+import { DB_CLOSE_RECHECK_DELAYS_MS, DB_INIT_MAX_ATTEMPTS, DB_NAME, DB_VERSION } from '@/config/database';
 import { AppDatabase, isTransientIndexedDbError } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
 import { deleteNativeDatabase, openOtherBuildDatabase } from '@/test-utils/indexed-db';
@@ -697,7 +697,7 @@ describe('Re-initialization after another tab closed the connection', () => {
     void outcome.then(() => {
       isSettled = true;
     });
-    for (let elapsed = 0; !isSettled && elapsed < 5_000; elapsed += 25) await vi.advanceTimersByTimeAsync(25);
+    for (let elapsed = 0; !isSettled && elapsed < 10_000; elapsed += 25) await vi.advanceTimersByTimeAsync(25);
     expect(isSettled).toBe(true);
     return outcome;
   };
@@ -825,12 +825,74 @@ describe('Re-initialization after another tab closed the connection', () => {
         context: { currentVersion: null, expectedVersion: DB_VERSION },
       });
       expect(await backgroundQuery).toMatchObject({ name: 'DatabaseClosedError' });
-      // Every probe was versionless, bounded by the init retry budget, and nothing was created.
-      expect(spies.open).toHaveBeenCalledTimes(DB_INIT_MAX_ATTEMPTS);
+      // Every probe was versionless, bounded by the re-check schedule, and nothing was created.
+      expect(spies.open).toHaveBeenCalledTimes(DB_CLOSE_RECHECK_DELAYS_MS.length + 1);
       expect(spies.open.mock.calls.every((args) => args.length === 1)).toBe(true);
       expect(spies.deleteDatabase).toHaveBeenCalledTimes(1); // the other tab's
       expect(spies.recreate).not.toHaveBeenCalled();
       expect(await listDatabaseNames()).not.toContain(name);
+    } finally {
+      await testDb.delete();
+    }
+  });
+
+  it('re-checks a missing database on the DB_CLOSE_RECHECK_DELAYS_MS schedule before deciding', async () => {
+    const name = `${DB_NAME}-recheck-schedule`;
+    const testDb = await startOnOtherBuildDatabase(name);
+    const versionSpy = vi.spyOn(asOpaque<InternalAppDatabase>(testDb), 'getExistingDbVersion').mockResolvedValue(null);
+
+    try {
+      closeFromOtherConnection(testDb);
+      const outcome = testDb.initialize({ allowRecreate: false }).then(
+        (value): Outcome => ({ value }),
+        (error: unknown): Outcome => ({ error }),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(versionSpy).toHaveBeenCalledTimes(1);
+
+      // Each re-check waits its full delay: not one millisecond early.
+      let probes = 1;
+      for (const waitMs of DB_CLOSE_RECHECK_DELAYS_MS) {
+        await vi.advanceTimersByTimeAsync(waitMs - 1);
+        expect(versionSpy).toHaveBeenCalledTimes(probes);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(versionSpy).toHaveBeenCalledTimes(++probes);
+      }
+
+      expect((await outcome).error).toMatchObject({
+        code: 'VERSION_CONFLICT',
+        context: { currentVersion: null, expectedVersion: DB_VERSION },
+      });
+    } finally {
+      await testDb.delete();
+    }
+  });
+
+  it('does not carry a versionchange that arrived during an earlier run into the next one', async () => {
+    const name = `${DB_NAME}-stale-versionchange`;
+    const testDb = new AppDatabase(name);
+    await deleteNativeDatabase(name, () => testDb.close());
+    const internal = asOpaque<InternalAppDatabase>(testDb);
+    vi.spyOn(Dexie, 'exists').mockResolvedValue(true);
+    vi.spyOn(internal, 'recreateDatabase').mockResolvedValue();
+    const versionSpy = vi.spyOn(internal, 'getExistingDbVersion').mockImplementationOnce(async () => {
+      // Another connection's delete lands while start-up runs; DatabaseProvider ignores that close.
+      closeFromOtherConnection(testDb);
+      return OTHER_BUILD_RAW_VERSION;
+    });
+
+    try {
+      await expect(testDb.initialize({ allowRecreate: true })).resolves.toEqual({ wasDbReset: true });
+
+      // Later a forced close (no versionchange) loses the database: it is created again, not a conflict.
+      versionSpy.mockResolvedValue(null);
+      const outcome = await runUntilSettled(
+        testDb.initialize({ allowRecreate: false }).then(
+          (value) => ({ value }),
+          (error: unknown) => ({ error }),
+        ),
+      );
+      expect(outcome).toEqual({ value: { wasDbReset: true } });
     } finally {
       await testDb.delete();
     }

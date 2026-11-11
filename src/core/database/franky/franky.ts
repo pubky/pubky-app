@@ -1,5 +1,11 @@
 import Dexie from 'dexie';
-import { DB_INIT_MAX_ATTEMPTS, DB_INIT_RETRY_BASE_DELAY_MS, DB_NAME, DB_VERSION } from '@/config/database';
+import {
+  DB_CLOSE_RECHECK_DELAYS_MS,
+  DB_INIT_MAX_ATTEMPTS,
+  DB_INIT_RETRY_BASE_DELAY_MS,
+  DB_NAME,
+  DB_VERSION,
+} from '@/config/database';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -37,9 +43,6 @@ import {
 import { type UserTtlModelSchema, userTtlTableSchema } from '@/models/user/ttl/userTtl.schema';
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-/** The init retry backoff (quadratic, see `initialize()`), shared by the close-path re-check. */
-const initRetryDelay = (attempt: number) => delay(DB_INIT_RETRY_BASE_DELAY_MS * attempt * attempt);
 
 /**
  * WebKit/iOS Safari throws these (often as the `cause` of a wrapped AppError) when an
@@ -100,7 +103,8 @@ export class AppDatabase extends Dexie {
   private recreatedThisPageLifetime = false;
 
   /**
-   * Set when another connection's delete or upgrade closed ours (`versionchange`); read and cleared by `initialize()`.
+   * Set when another connection's delete or upgrade closed ours (`versionchange`); read and cleared by `initialize()`,
+   * and cleared again when that run settles.
    * A forced close (storage eviction, cleared site data) closes the connection without it.
    */
   private closedByOtherConnection = false;
@@ -320,6 +324,19 @@ export class AppDatabase extends Dexie {
     const wasClosedByOtherConnection = this.closedByOtherConnection;
     this.closedByOtherConnection = false;
 
+    try {
+      return await this.initializeWithRetries(allowRecreate, wasClosedByOtherConnection);
+    } finally {
+      // A `versionchange` during this run closes the connection without a re-initialization of its own
+      // (DatabaseProvider ignores closes while initializing), so it must not carry over to the next run.
+      this.closedByOtherConnection = false;
+    }
+  }
+
+  private async initializeWithRetries(
+    allowRecreate: boolean,
+    wasClosedByOtherConnection: boolean,
+  ): Promise<{ wasDbReset: boolean }> {
     if (typeof indexedDB === 'undefined') {
       Logger.warn('IndexedDB is not available in this environment. Skipping database initialization.');
       return { wasDbReset: false };
@@ -356,7 +373,7 @@ export class AppDatabase extends Dexie {
           // allowed by DB_INIT_MAX_ATTEMPTS = 3): Safari evicts the DB under
           // storage pressure and needs real time to release the handles, so a
           // linear 150ms step gave up too early (PUBKY-APP-2Q).
-          await initRetryDelay(attempt);
+          await delay(DB_INIT_RETRY_BASE_DELAY_MS * attempt * attempt);
           continue;
         }
 
@@ -490,14 +507,16 @@ export class AppDatabase extends Dexie {
   /**
    * `getExistingDbVersion()` for the unexpected-close path. A missing database there is usually another tab between
    * deleting it and opening it again (a tab of this build reopens it at our version, a tab of another build at its
-   * own), so look again, on the init retry backoff, before reporting it missing.
+   * own), so look again after each of `DB_CLOSE_RECHECK_DELAYS_MS` before reporting it missing.
    */
   private async getExistingDbVersionAfterClose(): Promise<number | null> {
-    for (let probe = 1; ; probe++) {
-      const rawVersion = await this.getExistingDbVersion();
-      if (rawVersion !== null || probe >= DB_INIT_MAX_ATTEMPTS) return rawVersion;
-      await initRetryDelay(probe);
+    let rawVersion = await this.getExistingDbVersion();
+    for (const waitMs of DB_CLOSE_RECHECK_DELAYS_MS) {
+      if (rawVersion !== null) break;
+      await delay(waitMs);
+      rawVersion = await this.getExistingDbVersion();
     }
+    return rawVersion;
   }
 }
 

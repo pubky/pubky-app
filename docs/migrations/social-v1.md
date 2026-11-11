@@ -372,9 +372,10 @@ After dev-sync 3 (2026-11-09):
 - **FIX-9, mixed-build loop-breaker: fixed in jsdom, browser re-run pending.** QA-4 (F-2) found that the ADR-0019
   breaker never fired with two builds in one profile: the re-initialization after the old tab's delete ran
   `Dexie.exists()` inside that tab's delete→reopen window, created the database at v4, and the probe's stub delete
-  bounced the old tab back. That path now reads the version passively, looks again while the database is missing,
-  and after this page's own recreate shows "Close other Pubky tabs, then retry." for anything but v4 (ADR-0019
-  amendment, with the residual for the 0.x tab). QA-4 re-runs its Playwright repro on a production build.
+  bounced the old tab back. That path now reads the version passively and looks again while the database is
+  missing (about 5 s). After this page's own recreate it shows "Close other Pubky tabs, then retry." for anything
+  but v4, except after a forced close such as storage eviction, which still recreates a lost database (ADR-0019
+  amendment, with the residuals for the 0.x tab). QA-4 re-runs its Playwright repro on a production build.
 
 ### Reductions (reported, not built around)
 

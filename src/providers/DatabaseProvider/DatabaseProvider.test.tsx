@@ -211,8 +211,10 @@ describe('DatabaseProvider', () => {
 
       // The other build's tab recreates the database at its own version and keeps running.
       const deleteSpy = vi.spyOn(indexedDB, 'deleteDatabase');
-      await deleteNativeDatabase(DB_NAME);
-      otherTab = await openOtherBuildDatabase(DB_NAME, OTHER_BUILD_RAW_VERSION, () => otherTabVersionChanges++);
+      otherTab = await act(async () => {
+        await deleteNativeDatabase(DB_NAME);
+        return openOtherBuildDatabase(DB_NAME, OTHER_BUILD_RAW_VERSION, () => otherTabVersionChanges++);
+      });
 
       expect(
         await screen.findByText('Close other Pubky tabs, then retry.', undefined, { timeout: 3000 }),

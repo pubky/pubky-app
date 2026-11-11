@@ -68,7 +68,8 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     // tab running another build recreated it). Skips expected closes during recreateDatabase() via the
     // isInitializingRef guard. A version mismatch (or a database that stays missing) found from here, after this
     // page already recreated the database once, is that other tab at work: `allowRecreate: false` surfaces it as
-    // VERSION_CONFLICT instead of recreating the database back and forth between the two tabs (ADR-0019).
+    // VERSION_CONFLICT instead of recreating the database back and forth between the two tabs (ADR-0019). A devtools
+    // delete after that recreate shows the conflict screen too; Retry recovers.
     const handleUnexpectedClose = () => {
       if (isInitializingRef.current) return;
       setIsReady(false);

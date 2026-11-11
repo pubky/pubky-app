@@ -82,10 +82,16 @@ database.
 - Dexie's own `versionchange` handler closes with auto-open still on, so any query on this page would reopen
   the database at this build's version. The path turns auto-open off before it probes (after Dexie's `close()`
   has returned, which would otherwise turn it back on); every successful branch opens explicitly.
-- A missing database is usually the other tab between its delete and its reopen, so the probe looks again on
-  the init retry backoff (`DB_INIT_MAX_ATTEMPTS` and `DB_INIT_RETRY_BASE_DELAY_MS`: at most three probes over
-  750 ms). A tab of this build reopens it at the current version, which is then opened as usual; this is what
-  happens when the forced worker reload (ADR-0021 amendment) reloads several tabs at once.
+- A missing database is usually the other tab between its delete and its reopen, so the probe looks again
+  after each of `DB_CLOSE_RECHECK_DELAYS_MS` (`src/config/database.ts`: 150, 600, 1,500 and 3,000 ms, five
+  probes over about 5 s). That window is a bound, not a guarantee. A tab of this build that reopens the
+  database at the current version within it is opened as usual. This is the case of a still-running tab whose
+  connection a sibling's start-up recreate closed; tabs that the forced worker reload (ADR-0021 amendment)
+  reloads take the start-up path instead. A database still missing after the window is decided by the rules
+  below, which means the conflict screen once this page has recreated the database, and Retry recovers. That
+  covers a same-build sibling slower than the window and a database deleted in devtools after this page's
+  recreate (devtools deletes through `deleteDatabase`, so it fires `versionchange`). Preferring the conflict
+  over creating the database at this build's version in an old tab's gap is deliberate.
 - Once this page has recreated the database, another version is the conflict, and so is a database that is
   still missing or unreadable when another connection's `versionchange` closed ours (an `AppDatabase`
   subscriber records it; Dexie runs the newest subscriber first, so it is set before Dexie's own handler closes
@@ -105,8 +111,11 @@ on a `VersionError`. It can therefore still end up on the new database, writing 
 build creates the database in the gap between the old tab's delete and reopen: on the new tab's first load, when
 the user presses Retry with the old tab still open, or once when a new-build tab that started on the current
 database meets the old tab's first recreate (the first mismatch in a page lifetime still recreates; refusing it on
-the unexpected-close path too would remove this case and is left open). Rows written there stay, because the
-database is at the current version and start-up does not recreate it. Closing the old tab, which is what the screen
+the unexpected-close path too would remove this case and is left open). The same holds before this page's first
+recreate for a database still missing after the re-check window: it is created at the current version, which can
+land in a slow old tab's gap (the same end state as F-2; rare, because the old build reopens right after its
+delete). Rows written there stay, because the database is at the current version and start-up does not recreate
+it. Closing the old tab, which is what the screen
 asks, or the forced worker reload ends the exposure.
 
 One opening on this page is not covered: `clearDatabase()` (`franky.helpers.ts`) opens the database explicitly when
@@ -218,8 +227,9 @@ with snapshot tests.
   versioned opens from this page.
   `src/providers/DatabaseProvider/DatabaseProvider.test.tsx` shows the conflict screen through the real
   `db` and its `close` handler.
-- Loop-breaker: `InitializeOptions.allowRecreate`, `recreatedThisPageLifetime`, `runInitializeAfterClose`,
-  `getExistingDbVersionAfterClose` and the passive `getExistingDbVersion` in `franky.ts`,
+- Loop-breaker: `InitializeOptions.allowRecreate`, `recreatedThisPageLifetime`, `closedByOtherConnection`,
+  `runInitializeAfterClose`, `getExistingDbVersionAfterClose` and the passive `getExistingDbVersion` in
+  `franky.ts`, `DB_CLOSE_RECHECK_DELAYS_MS` in `src/config/database.ts`,
   `DatabaseErrorCode.VERSION_CONFLICT` in `src/libs/error/error.codes.ts`, the two `initDatabase` call
   sites in `src/providers/DatabaseProvider/DatabaseProvider.tsx`, and the `description` prop of
   `src/components/molecules/DatabaseErrorScreen/DatabaseErrorScreen.tsx`.
