@@ -151,8 +151,9 @@ and targeted tests pass; VRT, ADR, `DB_VERSION` and config changes called out; t
 
 Commits and branches: `type(scope): description` (imperative, lower-case, no period, ≤72 chars); branches
 `<type>/<issue>-<kebab-description>` cut from `dev`; PRs target `dev`, draft unless asked, one change per PR. Cypress specs
-are owned by QA: flag an invalidated spec, do not edit or run e2e yourself (the social v1 port updated the suite once, with
-QA's agreement, in #3055). `docs/commit-message.md`, `docs/migrations/social-v1.md`
+are owned by QA: flag an invalidated spec, do not edit or run e2e yourself (the social v1 work edits the suite under QA's
+agreement, from the port in #3055 through its later e2e PRs and dev-sync resolutions, until its final PR lands).
+`docs/commit-message.md`, `docs/migrations/social-v1.md`
 
 ## People and names
 

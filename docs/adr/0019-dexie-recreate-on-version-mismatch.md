@@ -4,7 +4,8 @@
 
 Accepted — 2026-09-15  
 Updated — 2026-10-30 (`DB_VERSION` 3 → 4 for the social v1 port; mixed-build tabs and the recreate loop-breaker)  
-Updated — 2026-11-10 (the loop-breaker never fired: the unexpected-close path probes without `Dexie.exists()`; see _Amendment_)
+Updated — 2026-11-10 (the loop-breaker never fired: the unexpected-close path probes without `Dexie.exists()`; see _Amendment_)  
+Updated — 2026-11-11 (QA-4 A.5's verification of the reworked probe on production builds, run 2026-11-10, recorded; see _Amendment_)
 
 ## Context
 
@@ -71,6 +72,12 @@ Browser QA on production builds of `dev` and `feat/social-v1` (QA-4 finding F-2:
 `VERSION_CONFLICT`. Every run ended when the old tab's `open()` lost a race to the new version and Dexie 4
 answered the `VersionError` by reopening without a version, which left the old build running on the new
 database.
+
+**Verified.** The same Playwright repro on a production build of the fix (#3112, QA-4 A.5, 2026-11-10): 7 of 7
+two-build runs (Chromium 151 ×4, Firefox 153 ×3) showed "Close other Pubky tabs, then retry." within 0.5–0.8 s of
+the old tab's recreate, with no bounce and no stub delete, and a same-build two-tab takeover showed no false
+conflict in either engine. The residual below (the old-build tab keeps running on its own database when no worker
+reloads it) was observed as described.
 
 **The rule now.** `initialize({ allowRecreate: false })` runs `runInitializeAfterClose()`:
 

@@ -64,7 +64,8 @@ export class NotificationController {
    * Marks all notifications as read by persisting the lastRead timestamp on the homeserver
    * and resetting the local unread count.
    *
-   * Requires a restored session, since the write must target the session's own `/pub/*` path.
+   * Requires a restored session, since the write targets the session's own private
+   * `/priv/app.pubky/v1/last_read.json` (`LastReadNormalizer.buildUrl`).
    * Only updates the local store after the write succeeds, so a failed write never clears the
    * badge while the server still reports unread notifications.
    */
