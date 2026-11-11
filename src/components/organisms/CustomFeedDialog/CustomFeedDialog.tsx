@@ -42,6 +42,7 @@ import {
   type CustomFeedFormReach,
 } from '@/hooks/useCustomFeedForm/useCustomFeedForm.types';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { REACH_FILTER_META } from '@/molecules/Filters/FilterReach/FilterReach';
 import { PostTag } from '@/molecules/PostTag/PostTag';
@@ -247,12 +248,13 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   };
 
   const handleDomainTagAdd = (tag: string) => {
-    const normalizedTag = tag.trim().toLowerCase();
+    // The fold the feed stores (ASCII letters only), so the label shown is the one the filter will hold.
+    const normalizedTag = canonicalizeTagLabel(tag);
     if (
       !isTaggedAsReach ||
       !normalizedTag ||
       domainTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED ||
-      domainTags.some((existingTag) => existingTag.toLowerCase() === normalizedTag)
+      domainTags.some((existingTag) => canonicalizeTagLabel(existingTag) === normalizedTag)
     ) {
       return;
     }

@@ -16,9 +16,9 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { Label } from '@/atoms/Label/Label';
 import { USER_LINK_LABEL_MAX_LENGTH, USER_LINK_URL_MAX_LENGTH } from '@/config/user';
-import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { InputField } from '@/molecules/InputField/InputField';
+import { profileLinkUrlSchema } from '@/pipes/user/user.validator';
 
 const labelSchema = z
   .string()
@@ -26,9 +26,6 @@ const labelSchema = z
   .min(1, 'Label is required')
   .max(USER_LINK_LABEL_MAX_LENGTH, `Max ${USER_LINK_LABEL_MAX_LENGTH} characters`)
   .regex(/^[a-zA-Z0-9]+$/, 'Alphanumeric only');
-const urlSchema = safeExternalUrlSchema.refine((url) => url.length <= USER_LINK_URL_MAX_LENGTH, {
-  message: `Max ${USER_LINK_URL_MAX_LENGTH} characters`,
-});
 interface DialogAddLinkProps {
   onSave: (label: string, url: string) => void;
   disabled?: boolean;
@@ -43,14 +40,14 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
     setLabelError(result.success ? null : (result.error.issues[0]?.message ?? 'Invalid label'));
   };
   const validateUrl = (value: string) => {
-    const result = urlSchema.safeParse(value);
+    const result = profileLinkUrlSchema.safeParse(value);
     setUrlError(result.success ? null : (result.error.issues[0]?.message ?? 'Invalid URL'));
   };
   const handleSave = () => {
     const trimmedLabel = label.trim();
     const trimmedUrl = url.trim();
     const isLabelValid = labelSchema.safeParse(trimmedLabel).success;
-    const isUrlValid = urlSchema.safeParse(trimmedUrl).success;
+    const isUrlValid = profileLinkUrlSchema.safeParse(trimmedUrl).success;
     if (!isLabelValid) {
       validateLabel(trimmedLabel);
     }
@@ -70,7 +67,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
     label.trim().length > 0 &&
     url.trim().length > 0 &&
     labelSchema.safeParse(label.trim()).success &&
-    urlSchema.safeParse(url.trim()).success;
+    profileLinkUrlSchema.safeParse(url.trim()).success;
   if (disabled) {
     return null;
   }

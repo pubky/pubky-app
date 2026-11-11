@@ -12,15 +12,14 @@ import type { TCommitUpdateDetailsParams } from '@/controllers/profile/profile.t
 import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { AppError } from '@/libs/error/error';
-import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
+import { isAuthError, isValidationError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { normalizeProfileLinkUrl } from '@/libs/profile/profileLinks';
-import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
 import { generateRandomUsername, isReservedUserName } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
-import { type UiUserSchema, UserValidator } from '@/pipes/user/user.validator';
+import { profileLinkUrlSchema, type UiUserSchema, UserValidator } from '@/pipes/user/user.validator';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
@@ -55,6 +54,13 @@ function getProfileFormLinks(userDetails: NexusUserDetails): ProfileLink[] {
     url: link.url,
   }));
   return formattedLinks.length > 0 ? formattedLinks : DEFAULT_LINKS;
+}
+
+/** The index of the link a v1 profile refusal names (`links[n].url`), or null for any other member. */
+function getRefusedLinkIndex(error: AppError): number | null {
+  const field = error.context?.field;
+  const match = typeof field === 'string' ? /^links\[(\d+)\]\.url$/.exec(field) : null;
+  return match ? Number(match[1]) : null;
 }
 
 function areProfileLinksEqual(left: ProfileLink[], right: ProfileLink[]): boolean {
@@ -216,7 +222,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         setLinkUrlErrors((prev) => ({ ...prev, [index]: null }));
       } else {
         // Validate what we would store: a bare X handle is rewritten to its profile URL first.
-        const res = safeExternalUrlSchema.safeParse(normalizeProfileLinkUrl(links[index]?.label ?? '', value));
+        const res = profileLinkUrlSchema.safeParse(normalizeProfileLinkUrl(links[index]?.label ?? '', value));
         setLinkUrlErrors((prev) => ({
           ...prev,
           [index]: res.success ? null : (res.error.issues[0]?.message ?? 'Invalid URL'),
@@ -477,6 +483,23 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
             variant: 'error',
             description: 'Could not save profile',
           });
+          return;
+        }
+
+        // The data model refused a link the form let through (`UserNormalizer.to` and
+        // `ProfileApplication` name the member in `context.field`): show it on that link, as the
+        // submit gate does, instead of a toast that cannot say which field to fix. The model saw
+        // the rows with a URL only, so its index counts those. A refusal that names no loaded row
+        // (the stored list is longer than the form's) falls through to the toast: an error on a
+        // row the form does not show would block the submit with nothing to fix.
+        const refusedLink = isValidationError(error) ? getRefusedLinkIndex(error) : null;
+        const row =
+          refusedLink === null
+            ? undefined
+            : links.flatMap((link, index) => (link.url.trim().length > 0 ? [index] : []))[refusedLink];
+        if (row !== undefined) {
+          setLinkUrlErrors((prev) => ({ ...prev, [row]: 'Invalid URL' }));
+          setSubmitText(idleSubmitText);
           return;
         }
       }

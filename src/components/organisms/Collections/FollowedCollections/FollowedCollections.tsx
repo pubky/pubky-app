@@ -8,7 +8,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { COLLECTIONS_SECTION_PAGE_SIZE, COLLECTIONS_SECTION_SKELETON_COUNT } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
-import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { resolveResumeAnchor } from '@/controllers/stream/posts/posts.utils';
 import { Logger } from '@/libs/logger/logger';
@@ -141,26 +140,25 @@ export function FollowedCollections() {
   const visibleLimit = pagesShown * COLLECTIONS_SECTION_PAGE_SIZE;
 
   // Live query: bookmarks table ∩ collection-kind post details, newest first.
-  // Both reads go through controllers (`BookmarkController.getAll()` /
-  // `PostController.getDetailsByIds()`) which delegate down the
-  // Application/Service/Model chain, so all data access stays inside the
-  // layered architecture per AGENTS.md. Dexie's live-query observer still picks
-  // up changes because the underlying reads go through the same Dexie instance.
-  // `getDetailsByIds` preserves bookmark order, so the result aligns to `ids` by index.
+  // One controller read (`BookmarkController.getAllWithPostDetails()`), which delegates
+  // down the Application/Service/Model chain, so all data access stays inside the
+  // layered architecture per AGENTS.md. It reads both tables in one Dexie transaction:
+  // a second read issued after an `await` can escape the live query's observation when
+  // a non-async querier runs beside it, and the section would then never follow the
+  // details the walk hydrates (reproduced in `FollowedCollections.integration.test.tsx`;
+  // the dev-server stall of F-QA6-2 matches that symptom).
   const liveIds = useLiveQuery(async () => {
     try {
-      const ids = await BookmarkController.getAll();
-      if (ids.length === 0) return EMPTY_IDS;
-      const details = await PostController.getDetailsByIds({ compositeIds: ids });
+      const bookmarked = await BookmarkController.getAllWithPostDetails();
+      if (bookmarked.length === 0) return EMPTY_IDS;
       const collectionIds: string[] = [];
-      for (let i = 0; i < ids.length; i += 1) {
-        const detail = details[i];
+      for (const { id, details } of bookmarked) {
         // Filter out deleted collections (content === '[DELETED]'). Mirrors
         // the timeline's `isPostDeleted` guard in `useVisualFeedTiles`. The
         // live query observes `post_details`, so deleting flips visibility
         // immediately without a refresh.
-        if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail)) {
-          collectionIds.push(ids[i]);
+        if (details && details.kind === COLLECTION_KIND_STRING && !isPostDeleted(details)) {
+          collectionIds.push(id);
           if (collectionIds.length > visibleLimit) break;
         }
       }

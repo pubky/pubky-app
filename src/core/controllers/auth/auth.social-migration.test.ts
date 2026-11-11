@@ -221,12 +221,13 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       });
     });
 
-    it('leaves the account on the gate when the session expired mid-run, without an error', async () => {
+    it('leaves the account on the gate when the session expired mid-run, reporting the sign-in as not completed', async () => {
       vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(
         asOpaque<MigrationReport>({ ...done(), status: 'aborted', error: { code: 'SESSION_EXPIRED', message: '' } }),
       );
 
-      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+      // F-QA6-1: a `true` here made the sign-in dialog navigate home over the signed-out explanation
+      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(false);
 
       expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'social-migration' });
       expect(useSocialMigrationStore.getState()).toMatchObject({ stage: 'reauth-required', reason: 'session-expired' });

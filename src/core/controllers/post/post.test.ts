@@ -1,4 +1,4 @@
-import { buildFile, decodeObject } from 'pubky-social-specs';
+import { buildFile, buildPost, buildUri, decodeContent, decodeObject, toPath } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
@@ -11,6 +11,7 @@ import { db } from '@/database/franky/franky';
 import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -23,15 +24,22 @@ import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { mockSession } from '@/test-utils/pubky';
+import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 
 // Mock HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     putBlob: vi.fn(),
+    list: vi.fn(),
     listAll: vi.fn(),
     getBytes: vi.fn(),
+    getBytesIfExists: vi.fn(),
+    getFreshBytes: vi.fn(),
+    request: vi.fn(),
     exists: vi.fn(),
+    delete: vi.fn(),
     deleteIdempotent: vi.fn(),
     createWriteFence: vi.fn(() => ({ enter: () => undefined, assertCurrent: () => undefined })),
   },
@@ -1737,6 +1745,152 @@ describe('PostController', () => {
       expect(post.object.kind).toBe('collection');
       expect(JSON.parse(post.object.content).cover_image).toBe(mediaUrl('x', 'image/png'));
     });
+
+    it('rolls back the uploaded cover when the collection create fails, as commitEditCollection does', async () => {
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
+      vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const createError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      });
+      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate').mockRejectedValue(createError);
+      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection(createParams())).rejects.toBe(createError);
+
+      // The upload itself goes to the sweep, named with its post, which leaves a preexisting file in place
+      const [{ compositePostId }] = commitCreateSpy.mock.calls[0];
+      expect(sweepSpy).toHaveBeenCalledWith(
+        [expect.objectContaining({ media: expect.objectContaining({ url: mediaUrl('x', 'image/png') }) })],
+        compositePostId,
+      );
+      expect(FileApplication.commitDelete).not.toHaveBeenCalled();
+    });
+
+    it('rolls back the uploaded cover when the envelope is refused after the upload, before any post is named', async () => {
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
+      vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate');
+      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection({ ...createParams(), name: '   ' })).rejects.toThrow(
+        'Collection name is required',
+      );
+
+      // No post was named yet, so the sweep has no post to leave out of its local check
+      expect(commitCreateSpy).not.toHaveBeenCalled();
+      expect(sweepSpy).toHaveBeenCalledWith(
+        [expect.objectContaining({ media: expect.objectContaining({ url: mediaUrl('x', 'image/png') }) })],
+        undefined,
+      );
+      expect(FileApplication.commitDelete).not.toHaveBeenCalled();
+    });
+
+    it('logs a failed cover rollback and still rethrows the create error', async () => {
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
+      vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const createError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      });
+      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate').mockRejectedValue(createError);
+      const cleanupError = new Error('sweep failed');
+      vi.spyOn(FileApplication, 'commitDeleteUploaded').mockRejectedValue(cleanupError);
+      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection(createParams())).rejects.toBe(createError);
+
+      const [{ compositePostId }] = commitCreateSpy.mock.calls[0];
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[PostController.commitCreateCollection] Failed to rollback newly uploaded cover',
+        { compositePostId, uploadedCoverUri: mediaUrl('x', 'image/png'), cleanupError },
+      );
+    });
+  });
+
+  // The real `PostApplication.commitEdit` on the memory homeserver: the v1 head is what the
+  // migrator wrote (items respelled `/pub/social/v1/posts/{id}`, notes kept), the Dexie row is what
+  // Nexus serves for a migrated collection (the 0.x `content` shape, items `/pub/pubky.app/posts/{id}`).
+  // An edit must keep every stored item's v1 spelling and note (SF-4).
+  describe('edits of a migrated collection', () => {
+    // `buildPost` and `editPost` take their ids and `created_at` from the package clock.
+    withFrozenSpecClock();
+
+    const curatedAuthor = fakeOwner(3);
+    const [keptUri, legacyKeptUri] = postReferenceSpellings(curatedAuthor, '0035QZPT4QG1G');
+    const [otherUri, legacyOtherUri] = postReferenceSpellings(curatedAuthor, '0035QZPT4QG20');
+    const [addedUri] = postReferenceSpellings(curatedAuthor, '0035QZPT4QG30');
+
+    let collectionPostId: string;
+
+    /** The items of the version the last PUT wrote. */
+    const lastPutItems = () => {
+      const envelope = decodeContent(lastPutPost());
+      if (envelope?.kind !== 'collection') throw new Error('not a collection');
+      return envelope.content.items;
+    };
+
+    beforeEach(async () => {
+      setupAuthUser(testData.authorPubky);
+      const homeserver = stubMemoryHomeserver(testData.authorPubky);
+      const head = buildPost(testData.authorPubky, {
+        kind: 'collection',
+        name: 'Saved posts',
+        items: [
+          { uri: keptUri, note: 'start here' },
+          { uri: otherUri, note: null },
+        ],
+      });
+      await homeserver.session.storage.putBytes(toPath(head.url), head.body);
+
+      collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: head.id });
+      await PostDetailsModel.table.add({
+        id: collectionPostId,
+        content: JSON.stringify({ name: 'Saved posts', description: '', items: [legacyKeptUri, legacyOtherUri] }),
+        indexed_at: Date.now(),
+        kind: 'collection',
+        uri: buildUri(testData.authorPubky, 'post', head.id),
+        attachments: null,
+      });
+    });
+
+    afterEach(() => {
+      cleanupAuthUser();
+    });
+
+    it('adds a post and keeps every stored item as the head spells it, note included', async () => {
+      const { PostController } = await import('./post');
+      await PostController.commitUpdateCollectionItem({
+        collectionId: collectionPostId,
+        postId: buildCompositeId({ pubky: curatedAuthor, id: '0035QZPT4QG30' }),
+        shouldAdd: true,
+      });
+
+      expect(lastPutItems()).toEqual([
+        { uri: addedUri, note: null },
+        { uri: keptUri, note: 'start here' },
+        { uri: otherUri, note: null },
+      ]);
+      // The row converges to the version that was PUT
+      const row = await PostDetailsModel.findById(collectionPostId);
+      expect(row?.content).toBe(lastPutPost().content);
+    });
+
+    it('reorders the items the row spells the 0.x way and keeps the head spelling and notes', async () => {
+      const { PostController } = await import('./post');
+      await PostController.commitReorderCollectionItems({
+        collectionId: collectionPostId,
+        items: [legacyOtherUri, legacyKeptUri],
+      });
+
+      expect(lastPutItems()).toEqual([
+        { uri: otherUri, note: null },
+        { uri: keptUri, note: 'start here' },
+      ]);
+    });
   });
 
   describe('commitEditCollection', () => {
@@ -1925,9 +2079,10 @@ describe('PostController', () => {
         ).rejects.toBe(editError);
 
         // The upload itself goes to the sweep, which leaves a preexisting file in place
-        expect(sweepSpy).toHaveBeenCalledWith([
-          expect.objectContaining({ media: expect.objectContaining({ url: newCover }) }),
-        ]);
+        expect(sweepSpy).toHaveBeenCalledWith(
+          [expect.objectContaining({ media: expect.objectContaining({ url: newCover }) })],
+          collectionPostId,
+        );
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
@@ -1962,9 +2117,10 @@ describe('PostController', () => {
         ).rejects.toBe(editError);
 
         // The restored row still shows that cover: the sweep sees it preexisting and leaves it alone
-        expect(sweepSpy).toHaveBeenCalledWith([
-          expect.objectContaining({ media: expect.objectContaining({ url: oldCover }), preexisting: true }),
-        ]);
+        expect(sweepSpy).toHaveBeenCalledWith(
+          [expect.objectContaining({ media: expect.objectContaining({ url: oldCover }), preexisting: true })],
+          collectionPostId,
+        );
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
@@ -1992,9 +2148,10 @@ describe('PostController', () => {
         ).rejects.toThrow('Collection name is required');
 
         expect(commitEditSpy).not.toHaveBeenCalled();
-        expect(sweepSpy).toHaveBeenCalledWith([
-          expect.objectContaining({ media: expect.objectContaining({ url: newCover }) }),
-        ]);
+        expect(sweepSpy).toHaveBeenCalledWith(
+          [expect.objectContaining({ media: expect.objectContaining({ url: newCover }) })],
+          collectionPostId,
+        );
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();

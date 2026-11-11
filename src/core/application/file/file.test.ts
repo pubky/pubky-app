@@ -855,6 +855,7 @@ describe('FileApplication', () => {
 
     it('keeps a file another cached object references, and asks nothing of the network', async () => {
       const attachment = createMockFileAttachment(1);
+      attachment.preexisting = false;
       vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(true);
 
       await FileApplication.commitDeleteUploaded([attachment]);
@@ -862,8 +863,35 @@ describe('FileApplication', () => {
       expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
     });
 
+    it('leaves the post the batch was for out of the local check: a failed create tombstones its row with the URIs', async () => {
+      const attachment = createMockFileAttachment(1);
+      attachment.preexisting = false;
+      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
+      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
+
+      await FileApplication.commitDeleteUploaded([attachment], 'author:post');
+
+      expect(LocalFileService.isReferencedElsewhere).toHaveBeenCalledExactlyOnceWith({
+        uri: attachment.media.url,
+        excludePostId: 'author:post',
+      });
+      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(attachment.media.url);
+    });
+
+    it('leaves a file whose probe failed alone: whether the homeserver held it before is unknown', async () => {
+      const attachment = createMockFileAttachment(1);
+      expect(attachment.preexisting).toBeUndefined();
+
+      await FileApplication.commitDeleteUploaded([attachment]);
+
+      expect(LocalFileService.isReferencedElsewhere).not.toHaveBeenCalled();
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+      expect(LocalFileService.deleteById).not.toHaveBeenCalled();
+    });
+
     it('runs only the local check: a file new to the homeserver has no other referencer there', async () => {
       const attachment = createMockFileAttachment(1);
+      attachment.preexisting = false;
       vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
       vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
 
@@ -876,6 +904,7 @@ describe('FileApplication', () => {
 
     it('propagates errors when the deletion fails, leaving the row for a retry', async () => {
       const attachment = createMockFileAttachment(1);
+      attachment.preexisting = false;
       vi.mocked(HomeserverService.deleteIdempotent).mockRejectedValue(new Error('deletion failed'));
 
       await expect(FileApplication.commitDeleteUploaded([attachment])).rejects.toThrow('deletion failed');

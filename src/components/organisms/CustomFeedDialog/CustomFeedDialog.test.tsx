@@ -810,6 +810,24 @@ describe('CustomFeedDialog', () => {
     expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
   });
 
+  // The input is mocked here, so this is the dialog's own fold of the label the input hands over (a clicked
+  // suggestion arrives as stored); the typed draft is folded by `useTagInput` and is not under test.
+  it('folds a handed-over profile tag as the data model stores it: a non-ASCII capital kept, ASCII case deduped', () => {
+    render(
+      <CustomFeedDialog mode="create" open>
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
+    fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'Äpfel' } });
+    fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'ÄPFEL' } });
+
+    expect(screen.getByTestId('post-tag-Äpfel')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-tag-äpfel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-current-tags-count', '1');
+  });
+
   it('caps profile tags at five and hides the emoji selector at the limit', () => {
     render(
       <CustomFeedDialog mode="create" open>

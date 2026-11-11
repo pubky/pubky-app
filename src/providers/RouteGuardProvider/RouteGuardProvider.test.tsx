@@ -704,6 +704,95 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
     }
   });
 
+  // SF-1: every fresh sign-in is gated, so a Shop sign-in reaches /migration before the session is placed; the
+  // return must survive that detour the way it survives staying on /sign-in.
+  it('carries a Shop sign-in return through the gate and honours it once the account is ready', () => {
+    const returnTo = '/shop/marketplace/listing/abc?checkout=1';
+    const search = new URLSearchParams({ returnTo, shopReauth: 'initial' }).toString();
+    window.history.replaceState(null, '', `/sign-in?${search}`);
+    mocks.pathname = '/sign-in';
+    try {
+      const { rerender } = render(
+        <RouteGuardProvider>
+          <div>Sign in</div>
+        </RouteGuardProvider>,
+      );
+      expect(mocks.mockRouterPush).toHaveBeenCalledWith(`/migration?${search}`);
+
+      // The gate passed: the session is placed while the tab shows /migration with the sign-in query
+      window.history.replaceState(null, '', `/migration?${search}`);
+      mocks.pathname = '/migration';
+      mocks.status = 'AUTHENTICATED';
+      mocks.restoreStatus = 'ready';
+      mocks.session = {};
+      rerender(
+        <RouteGuardProvider>
+          <div>Gate</div>
+        </RouteGuardProvider>,
+      );
+      expect(mocks.mockRouterPush).toHaveBeenLastCalledWith(returnTo);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it.each([
+    ['without a return', null],
+    ['with a return outside the Shop wrapper', '/settings'],
+    ['with a return on another origin', 'https://attacker.test/shop'],
+  ])('ends a gated sign-in %s on the home feed', (_, returnTo) => {
+    const search = returnTo === null ? '' : new URLSearchParams({ returnTo, shopReauth: 'initial' }).toString();
+    window.history.replaceState(null, '', search ? `/sign-in?${search}` : '/sign-in');
+    mocks.pathname = '/sign-in';
+    try {
+      const { rerender } = render(
+        <RouteGuardProvider>
+          <div>Sign in</div>
+        </RouteGuardProvider>,
+      );
+      expect(mocks.mockRouterPush).toHaveBeenCalledWith(search ? `/migration?${search}` : '/migration');
+
+      window.history.replaceState(null, '', search ? `/migration?${search}` : '/migration');
+      mocks.pathname = '/migration';
+      mocks.status = 'AUTHENTICATED';
+      mocks.restoreStatus = 'ready';
+      mocks.session = {};
+      rerender(
+        <RouteGuardProvider>
+          <div>Gate</div>
+        </RouteGuardProvider>,
+      );
+      expect(mocks.mockRouterPush).toHaveBeenLastCalledWith('/feed');
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it.each([
+    ['a held account on another page', '/feed', 'NEEDS_SOCIAL_MIGRATION', 'social-migration', '/migration'],
+    ['a guest on a protected page', '/settings', 'UNAUTHENTICATED', 'idle', '/login'],
+  ])('keeps every other redirect free of the query (%s)', (_, pathname, status, restoreStatus, destination) => {
+    const search = new URLSearchParams({ returnTo: '/shop/marketplace', shopReauth: 'initial' }).toString();
+    window.history.replaceState(null, '', `${pathname}?${search}`);
+    mocks.pathname = pathname;
+    mocks.status = status;
+    mocks.restoreStatus = restoreStatus;
+    if (status === 'UNAUTHENTICATED') {
+      mocks.sessionReference = null;
+      mocks.currentUserPubky = null;
+    }
+    try {
+      render(
+        <RouteGuardProvider>
+          <div>Page</div>
+        </RouteGuardProvider>,
+      );
+      expect(mocks.mockRouterPush).toHaveBeenCalledExactlyOnceWith(destination);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('lets a signed-out visitor read the gate explanation', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.restoreStatus = 'idle';

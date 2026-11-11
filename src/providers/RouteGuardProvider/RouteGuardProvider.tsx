@@ -228,9 +228,13 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     // No redirect needed if user has access to current route
     if (isRouteAccessible) return;
 
-    // An explicit Shop login returns to its validated wrapper URL after App authentication.
-    // This branch is restricted to sign-in; ordinary route protection keeps its existing target.
-    if (pathname === AUTH_ROUTES.SIGN_IN && status === AuthStatus.AUTHENTICATED) {
+    // An explicit Shop login returns to its validated wrapper URL after App authentication, from sign-in or from
+    // the migration gate the sign-in detoured through (its query travels along, below). Ordinary route protection
+    // keeps its existing target.
+    if (
+      (pathname === AUTH_ROUTES.SIGN_IN || pathname === AUTH_ROUTES.MIGRATION) &&
+      status === AuthStatus.AUTHENTICATED
+    ) {
       const shopReturn = shopSignInReturn(search);
       if (shopReturn) {
         router.push(shopReturn);
@@ -250,9 +254,11 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       return;
     }
 
-    // Only redirect if we have a target and we're not already there
+    // Only redirect if we have a target and we're not already there. A gated sign-in keeps its query through the
+    // detour: the Shop return in it is honoured from /migration once the account is ready (ADR-0026).
     if (redirectTo && pathname !== redirectTo) {
-      router.push(redirectTo);
+      const keepsQuery = pathname === AUTH_ROUTES.SIGN_IN && redirectTo === AUTH_ROUTES.MIGRATION && search !== '';
+      router.push(keepsQuery ? `${redirectTo}?${search}` : redirectTo);
     }
   }, [status, pathname, search, router, isLoading, isRouteAccessible, isGated]);
 

@@ -47,7 +47,9 @@ field is ignored.**
   `post_streams`, deletes the rows the listing no longer names, upserts the listed ones and rewrites the single
   stream row `timeline:bookmarks:all` from the table, newest bookmark first, without a Nexus cursor. A post this tab
   bookmarked or un-bookmarked after the listing started keeps its local state (a per-tab write sequence captured
-  before the LIST), and a fetch that outlives an account switch writes nothing.
+  before the LIST), and a fetch that outlives an account switch writes nothing: the `isCurrent` viewer guard is
+  the same one every private fetch of the bootstrap and of the resync receives (mutes, feeds, bookmarks), and the
+  resync's settings-store load checks it too.
 - **Wiring**: `BootstrapApplication.initialize` runs it in its first `Promise.all` beside the mute and feed fetches,
   and `MigrationApplication.resync` beside them after a database recreation. Both stay depth 1 (ADR-0009).
 - **One local stream**: `timeline:bookmarks:all` holds every bookmark, collections included.

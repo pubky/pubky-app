@@ -3,11 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
-import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
-import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -35,13 +34,7 @@ vi.mock('@/controllers/stream/posts/posts', () => ({
 
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
-    getAll: vi.fn(),
-  },
-}));
-
-vi.mock('@/controllers/post/post', () => ({
-  PostController: {
-    getDetailsByIds: vi.fn(),
+    getAllWithPostDetails: vi.fn(),
   },
 }));
 
@@ -81,8 +74,11 @@ const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockGetOrFetchStreamSlice = vi.mocked(StreamPostsController.getOrFetchStreamSlice);
 const mockPrepareStreamForInitialLoad = vi.mocked(StreamPostsController.prepareStreamForInitialLoad);
 const mockGetCachedLastPostTimestamp = vi.mocked(StreamPostsController.getCachedLastPostTimestamp);
-const mockBookmarkGetAll = vi.mocked(BookmarkController.getAll);
-const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
+const mockGetAllWithPostDetails = vi.mocked(BookmarkController.getAllWithPostDetails);
+
+/** A bookmarked post as the controller reads it: its cached details, or none while it is not cached. */
+const bookmarked = (id: string, details?: { kind: string; content?: string }) =>
+  asOpaque<BookmarkedPostDetails>({ id, details: details && { id, ...details } });
 
 function makeSlice({
   nextPageIds = [],
@@ -105,8 +101,7 @@ beforeEach(() => {
   mockPrepareStreamForInitialLoad.mockResolvedValue(undefined);
   mockGetCachedLastPostTimestamp.mockResolvedValue(0);
   mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ reachedEnd: true }));
-  mockBookmarkGetAll.mockResolvedValue([]);
-  mockGetDetailsByIds.mockResolvedValue([]);
+  mockGetAllWithPostDetails.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -185,15 +180,15 @@ describe('FollowedCollections', () => {
     });
   });
 
-  it('live-query callback joins bookmarks with post-details and keeps only collection-kind ids', async () => {
+  it('live-query callback reads bookmarks with their post details and keeps only collection-kind ids', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
 
-    const bookmarkIds = ['a:p1', 'a:p2', 'b:p3'];
-    mockBookmarkGetAll.mockResolvedValue(bookmarkIds);
-    mockGetDetailsByIds.mockResolvedValue([
-      asOpaque<PostDetailsModelSchema>({ id: 'a:p1', kind: 'collection' }),
-      asOpaque<PostDetailsModelSchema>({ id: 'a:p2', kind: 'collection' }),
-      asOpaque<PostDetailsModelSchema>({ id: 'b:p3', kind: 'short' }),
+    mockGetAllWithPostDetails.mockResolvedValue([
+      bookmarked('a:p1', { kind: 'collection' }),
+      bookmarked('a:p2', { kind: 'collection' }),
+      bookmarked('b:p3', { kind: 'short' }),
+      // Not cached yet: the walk hydrates it later and the live query follows.
+      bookmarked('b:p4'),
     ]);
 
     // Capture the live-query callback so we can invoke it ourselves.
@@ -210,8 +205,8 @@ describe('FollowedCollections', () => {
     expect(capturedFn).not.toBeNull();
     const result = await capturedFn!();
     expect(result).toEqual(['a:p1', 'a:p2']);
-    expect(mockBookmarkGetAll).toHaveBeenCalled();
-    expect(mockGetDetailsByIds).toHaveBeenCalledWith({ compositeIds: bookmarkIds });
+    // One read for both tables: a second read after an await can escape the live query's observation.
+    expect(mockGetAllWithPostDetails).toHaveBeenCalledTimes(1);
   });
 
   it('live-query callback excludes soft-deleted collections (content === [DELETED])', async () => {
@@ -221,12 +216,10 @@ describe('FollowedCollections', () => {
     // filter must drop the deleted id before the card list is built.
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
 
-    const bookmarkIds = ['a:p1', 'a:p2', 'b:p3'];
-    mockBookmarkGetAll.mockResolvedValue(bookmarkIds);
-    mockGetDetailsByIds.mockResolvedValue([
-      asOpaque<PostDetailsModelSchema>({ id: 'a:p1', kind: 'collection', content: 'live' }),
-      asOpaque<PostDetailsModelSchema>({ id: 'a:p2', kind: 'collection', content: '[DELETED]' }),
-      asOpaque<PostDetailsModelSchema>({ id: 'b:p3', kind: 'collection', content: 'live' }),
+    mockGetAllWithPostDetails.mockResolvedValue([
+      bookmarked('a:p1', { kind: 'collection', content: 'live' }),
+      bookmarked('a:p2', { kind: 'collection', content: '[DELETED]' }),
+      bookmarked('b:p3', { kind: 'collection', content: 'live' }),
     ]);
 
     let capturedFn: (() => Promise<string[]>) | null = null;

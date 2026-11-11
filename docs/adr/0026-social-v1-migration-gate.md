@@ -37,7 +37,9 @@ extension of the ADR-0004/0024 session-store read exception rather than a use of
 **One restore status, one auth status, one route.** `SessionRestoreStatus` gains `'social-migration'`;
 `useAuthStatus` maps it to `AuthStatus.NEEDS_SOCIAL_MIGRATION` with `isLoading: false`, so `RouteGuardProvider`
 redirects to `/migration` before its public-route early returns: `/post/*`, `/profile*`, `/shop/*` and the core
-explore routes are not reachable mid-gate; only `/migration`, `/logout` and the legal pages render. The same holds
+explore routes are not reachable mid-gate; only `/migration`, `/logout` and the legal pages render. A sign-in started
+from the Shop keeps its return through that detour: the guard carries the `/sign-in` query to `/migration` and, once the
+account is ready there, sends it to the validated Shop wrapper as it would from `/sign-in`. The same holds
 before the gate decides: while an account without a trusted local record restores with no session in the store (the
 exchange, account preparation and flag read of a second tab, say), the route guard renders only those routes, so no
 page mounts before the account is sent to `/migration` or passed (a retry out of `temporary-error` keeps the pages

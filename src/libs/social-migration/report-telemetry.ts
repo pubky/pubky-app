@@ -1,5 +1,6 @@
 import type { MigrationReport } from 'pubky-social-migrator';
-import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { type AppError, isAppError } from '@/libs/error/error';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
@@ -66,6 +67,40 @@ export function reportSocialMigrationCapsMissing({ pubky, report }: { pubky: str
   });
 }
 
+/**
+ * The shape of a thrown value, never its message or cause: an engine message may name one of the user's files.
+ * `errorName`, not `name`: the Sentry scrubber redacts every value under a `name` key.
+ */
+const describeThrown = (error: unknown) => ({
+  errorName: error instanceof Error ? error.name : typeof error,
+  kind: isAppError(error) ? error.category : undefined,
+  status: isAppError(error) && typeof error.context?.statusCode === 'number' ? error.context.statusCode : undefined,
+});
+
+/**
+ * The engine's chunk could not be fetched (`HomeserverService.migrateToSocialV1` throws it uncaptured): once per
+ * account and page, although every Retry, focus and reconnect throws it again. The import's own rejection is the
+ * cause; the service's error in the chain would read as already captured.
+ */
+export function reportSocialMigrationEngineUnavailable({
+  pubky,
+  error,
+  attempt,
+}: {
+  pubky: string;
+  error: AppError;
+  attempt: number;
+}): void {
+  once(pubky, 'ENGINE_LOAD', () => {
+    Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not load the migration engine', {
+      service: ErrorService.Homeserver,
+      operation: SOCIAL_MIGRATION_OPERATION,
+      cause: error.cause,
+      context: { attempt, ...describeThrown(error.cause) },
+    });
+  });
+}
+
 /** The engine rejected (a programming error, or the lock wait) instead of resolving with a report. */
 export function reportSocialMigrationFailure({
   pubky,
@@ -80,8 +115,7 @@ export function reportSocialMigrationFailure({
     Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Social migration failed', {
       service: ErrorService.Homeserver,
       operation: SOCIAL_MIGRATION_OPERATION,
-      cause: error,
-      context: { attempt },
+      context: { attempt, ...describeThrown(error) },
     });
   });
 }
