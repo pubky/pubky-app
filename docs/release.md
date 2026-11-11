@@ -259,7 +259,8 @@ process above, for that release only:
   format and must finish before the app opens; open tabs reload on their own at the cut-over, and an unsaved draft in
   a tab left open is lost; feed deep links change once; the two bookmark-derived notifications stop; a bookmark, mute
   or read-state change made on another device shows at the next sign-in (bookmarks) or within about 30 seconds
-  (mutes, read state).
+  (mutes, read state); profile links that are not plain web addresses (`mailto:`, `tel:`) are dropped by the migration,
+  shown once on the profile edit page, and can no longer be saved.
 - **After the deploy.** A team account migrates on production and its v1 post appears in Nexus; Sentry filtered on
   `operation: socialMigration` shows no terminal codes; PR-E2 (the service-worker policy revert) is opened when the
   team decides (ADR-0021, D9), not automatically with the next release.
