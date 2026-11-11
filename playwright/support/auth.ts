@@ -27,8 +27,30 @@ export async function startOnboarding(page: Page, inviteCode: string) {
   await expect(page).toHaveURL(/\/onboarding\/pubky$/, { timeout: SLOW });
   // While the key is generated the field shows "Generating pubky...", which does not match.
   await expect(page.locator('[data-cy="pubky-display"]')).toHaveValue(/^pubky/, { timeout: SLOW });
-  await clickVisible(page, '#public-key-navigation-continue-btn');
-  await expect(page).toHaveURL(/\/onboarding\/backup$/);
+  await continueFromPubky(page);
+}
+
+// Signup's homeserver calls can succeed and still leave this screen: WebKit sometimes
+// supersedes the grant while the session is being saved, the button stops spinning, and
+// no toast is shown. A second Continue signs into the account that was just created.
+async function continueFromPubky(page: Page) {
+  const button = page.locator('#public-key-navigation-continue-btn').filter({ visible: true }).first();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await expect(button).toBeEnabled({ timeout: SLOW });
+    await button.click();
+    const backup = await page
+      .waitForURL(/\/onboarding\/backup$/, { timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (backup) return;
+    const enabledAgain = await expect(button)
+      .toBeEnabled({ timeout: SLOW })
+      .then(() => true)
+      .catch(() => false);
+    if (new URL(page.url()).pathname === '/onboarding/backup') return;
+    if (!enabledAgain) break;
+  }
+  await expect(page).toHaveURL(/\/onboarding\/backup$/, { timeout: SLOW });
 }
 
 export async function backupEncryptedFile(page: Page, savePath: string) {

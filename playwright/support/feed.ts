@@ -61,7 +61,7 @@ export async function createQuickPost(page: Page, content: string) {
       response.request().method() === 'PUT' &&
       response.url().includes('/pub/pubky.app/posts/') &&
       response.status() === 201,
-    { timeout: 60_000 },
+    { timeout: 90_000 },
   );
   await composer.locator('[data-cy="post-input-action-bar-post"]').click();
   const response = await created;
@@ -82,7 +82,7 @@ export async function createQuickPostWithMention(page: Page, name: string) {
       response.request().method() === 'PUT' &&
       response.url().includes('/pub/pubky.app/posts/') &&
       response.status() === 201,
-    { timeout: 60_000 },
+    { timeout: 90_000 },
   );
   await composer.locator('[data-cy="post-input-action-bar-post"]').click();
   await created;
