@@ -728,6 +728,14 @@ jobs:
             ~/Library/Caches/ms-playwright
           key: ${{ steps.browsers.outputs.cache-primary-key }}
 
+      # Cypress attaches to a browser through its own proxy, and gives up after three minutes
+      # without a reason when the browser does not use it. This says in a second whether WebKit
+      # does. Diagnostic for now: it reports, and the job goes on to Cypress either way.
+      - name: Check that WebKit sends localhost through a proxy
+        continue-on-error: true
+        timeout-minutes: 5
+        run: node .github/scripts/e2e-webkit-proxy-check.mjs
+
       # A production build like the image the other e2e jobs run, with the build arguments
       # build-docker-image.yml passes.
       - name: Build the app
