@@ -23,7 +23,7 @@ export function MediaSettings() {
 
   return (
     <SettingsSwitchGroup>
-      <Container overrideDefaults className="flex w-full flex-col items-start gap-4">
+      <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
         <Container overrideDefaults className="flex flex-col gap-2">
           <Typography size="sm" className="leading-5 font-medium">
             {'Players'}
