@@ -11,8 +11,9 @@ import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigratio
 import { Header } from '@/organisms/Header/Header';
 import { SocialMigration } from '@/templates/Auth/SocialMigration/SocialMigration';
 
-// The forced logout never settles in these captures: the sign-out screen stays on.
-const logout = vi.hoisted(() => ({ pending: new Promise<void>(() => {}) }));
+// The forced logout never settles in these captures, so the sign-out screen stays on; `fails` rejects it instead,
+// which shows the retry screen.
+const logout = vi.hoisted(() => ({ fails: false }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -55,7 +56,11 @@ vi.mock('@/stores/socialMigration/socialMigration.store', () => ({
   }),
 }));
 vi.mock('@/libs/identity/identity', () => ({ Identity: { tryZ32FromSecret: () => 'vrt-account' } }));
-vi.mock('@/controllers/auth/auth', () => ({ AuthController: { logout: () => logout.pending } }));
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    logout: () => (logout.fails ? Promise.reject(new Error('VRT: logout failed')) : new Promise<void>(() => {})),
+  },
+}));
 vi.mock('@/controllers/social-migration/social-migration', () => ({
   SocialMigrationController: { retry: vi.fn(), acknowledge: vi.fn() },
 }));
@@ -68,6 +73,8 @@ type Scenario = {
   reason?: string;
   heading: string;
   account?: 'held' | 'signed-out' | 'backup';
+  /** The forced logout rejects (it never settles otherwise). */
+  logoutFails?: boolean;
   needBytes?: number;
   /** The engine's position; a run defaults to the copy pass at 42 of 120. */
   progress?: { phase: string; done: number; total: number };
@@ -79,6 +86,12 @@ const SCENARIOS: Record<string, Scenario> = {
     stage: 'reauth-required',
     reason: 'pre-migration-grant',
     heading: 'Your account needs an update',
+  },
+  'reauth-logout-failed': {
+    stage: 'reauth-required',
+    reason: 'pre-migration-grant',
+    logoutFails: true,
+    heading: "We couldn't sign you out yet",
   },
   'reauth-backup': {
     stage: 'reauth-required',
@@ -114,13 +127,17 @@ const SCENARIOS: Record<string, Scenario> = {
   },
 };
 
-for (const [name, viewport] of [
-  ['desktop', VRT_VIEWPORT_DESKTOP],
-  ['mobile', VRT_VIEWPORT_MOBILE],
+// Dark keeps the original `social-migration-<state>-<viewport>` names; light adds `-light-` as the other light suites do.
+for (const [name, viewport, theme] of [
+  ['desktop', VRT_VIEWPORT_DESKTOP, 'dark'],
+  ['mobile', VRT_VIEWPORT_MOBILE, 'dark'],
+  ['light-desktop', VRT_VIEWPORT_DESKTOP, 'light'],
+  ['light-mobile', VRT_VIEWPORT_MOBILE, 'light'],
 ] as const) {
   describe(`SocialMigration ${name}`, () => {
     it.each(Object.entries(SCENARIOS))('renders the %s state', async (state, scenario) => {
       const signedOut = scenario.account === 'signed-out';
+      logout.fails = scenario.logoutFails ?? false;
       Object.assign(useAuthStore.getState(), {
         currentUserPubky: signedOut ? null : 'vrt-account',
         sessionReference: signedOut ? null : { kind: 'grant', sessionStoreId: 'vrt', clientId: 'vrt', grantId: 'vrt' },
@@ -139,11 +156,12 @@ for (const [name, viewport] of [
           <Header />
           <SocialMigration />
         </>,
-        { viewport },
+        { viewport, theme },
       );
       await expect.element(page.getByRole('heading', { name: scenario.heading })).toBeVisible();
       if (state === 'running') await expect.element(page.getByText('42 of 120')).toBeVisible();
-      if (scenario.stage === 'blocked') await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+      if (scenario.stage === 'blocked' || scenario.logoutFails)
+        await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
       if (scenario.stage === 'summary')
         await expect.element(page.getByRole('button', { name: 'Continue' })).toBeVisible();
       if (signedOut) await expect.element(page.getByRole('button', { name: 'Sign in' })).toBeVisible();

@@ -137,8 +137,9 @@ sees the backup prompt first; a pre-port Ring grant sees `missing-scopes`; signu
 QUOTA, offline (auto-retry then Retry), summary with a dropped profile image; `/post/*`, `/profile/<pk>`, `/shop` redirect
 to `/migration` while gated; logout from `/migration` works with the backup prompt.
 
-Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (ten
-states × desktop/mobile), CI-owned baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
+Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (twelve
+states × desktop/mobile × dark/light), the D17 note in `settings/Settings` and the D8 conflict copy in
+`misc/DatabaseErrorScreen` (desktop/mobile × dark/light), CI-owned baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
 never reaches `/migration`, and an empty or v1-only one only passes through it while the check runs (see _Cypress_).
 
 ## Compliance gate and dev-sync routine
