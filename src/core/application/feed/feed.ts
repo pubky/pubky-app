@@ -33,6 +33,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { withSyncLock } from '@/utils/sync-lock';
 import type {
   FeedDeleteParams,
   FeedFetchOptions,
@@ -44,14 +45,17 @@ import type {
   StoredFeedWriteParams,
 } from './feed.types';
 
-/** Web Lock shared by every tab: feed writes hold it `shared`, the reconciling fetch `exclusive`. */
-const FEED_SYNC_LOCK_PREFIX = 'pubky-feeds-sync:';
+/**
+ * The user's feed sync lock (`withSyncLock`), shared by every tab: writes (`persist`, `commitDelete`)
+ * hold it `shared`, so they overlap each other; the reconciling fetch holds it `exclusive`, so it
+ * never lists while a row's PUT or DELETE is in flight and no write lands between its listing and
+ * its local write.
+ */
+const feedSyncLock = (pubky: Pubky) => `pubky-feeds-sync:${pubky}`;
 
 export class FeedApplication {
   private constructor() {}
   private static readonly FETCH_FEEDS_BATCH_SIZE = 10;
-  /** Per-tab stand-in for the Web Lock where `navigator.locks` is unavailable (an insecure origin). */
-  private static pendingSync = new Map<Pubky, Promise<unknown>>();
 
   static async getList(): Promise<FeedModelSchema[]> {
     return LocalFeedService.readAll();
@@ -62,7 +66,7 @@ export class FeedApplication {
   }
 
   static async persist({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
-    return this.withSyncLock(userId, 'shared', () => this.persistUnderLock({ userId, params }));
+    return withSyncLock(feedSyncLock(userId), 'shared', () => this.persistUnderLock({ userId, params }));
   }
 
   private static async persistUnderLock({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
@@ -120,7 +124,7 @@ export class FeedApplication {
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
-    return this.withSyncLock(userId, 'shared', () => this.commitDeleteUnderLock({ userId, params }));
+    return withSyncLock(feedSyncLock(userId), 'shared', () => this.commitDeleteUnderLock({ userId, params }));
   }
 
   private static async commitDeleteUnderLock({ userId, params }: FeedDeleteParams): Promise<void> {
@@ -193,7 +197,7 @@ export class FeedApplication {
    * switch touches nothing.
    */
   static async fetchFeeds(userId: Pubky, { isCurrent }: FeedFetchOptions = {}): Promise<FeedModelSchema[]> {
-    return this.withSyncLock(userId, 'exclusive', () => this.fetchFeedsUnderLock(userId, isCurrent));
+    return withSyncLock(feedSyncLock(userId), 'exclusive', () => this.fetchFeedsUnderLock(userId, isCurrent));
   }
 
   private static async fetchFeedsUnderLock(userId: Pubky, isCurrent?: () => boolean): Promise<FeedModelSchema[]> {
@@ -267,33 +271,6 @@ export class FeedApplication {
       ]),
     );
     return persisted;
-  }
-
-  /**
-   * Runs `task` under the user's feed sync lock. Writes (`persist`, `commitDelete`) hold it
-   * `shared`, so they overlap each other; the reconciling fetch holds it `exclusive`, so it never
-   * lists while a row's PUT or DELETE is in flight and no write lands between its listing and its
-   * local write. Web Locks share the lock with every tab of the app. Without them (an insecure
-   * origin), a queue covers this tab only, one task at a time.
-   */
-  private static async withSyncLock<T>(pubky: Pubky, mode: LockMode, task: () => Promise<T>): Promise<T> {
-    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
-      try {
-        return await navigator.locks.request(`${FEED_SYNC_LOCK_PREFIX}${pubky}`, { mode }, task);
-      } catch (error) {
-        // `request` itself can reject with a DOMException that no Err factory has reported.
-        throw toAppError(error, ErrorService.Local, 'withSyncLock');
-      }
-    }
-
-    const previousTask = this.pendingSync.get(pubky) ?? Promise.resolve();
-    const pendingTask = previousTask.catch(() => {}).then(task);
-    this.pendingSync.set(pubky, pendingTask);
-    try {
-      return await pendingTask;
-    } finally {
-      if (this.pendingSync.get(pubky) === pendingTask) this.pendingSync.delete(pubky);
-    }
   }
 
   /**

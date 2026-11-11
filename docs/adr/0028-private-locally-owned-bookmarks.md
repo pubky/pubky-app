@@ -4,6 +4,14 @@
 
 Accepted — 2026-10-30
 
+Amended — 2026-11-11 (FIX-FINAL-1, the Greptile P1 on #3140): `fetchBookmarks` holds the user's sync lock
+`pubky-bookmarks-sync:<pubky>` `exclusive` from the LIST through the GETs to the reconcile, and every bookmark write
+holds it `shared` across its row write and its PUT or DELETE (`withSyncLock` in `src/core/utils/sync-lock.ts`, the
+helper the feed sync already used, now shared). A Web Lock is one per origin, so the lock spans every tab: the
+per-tab write sequence (`captureWriteSequence`, `since`) guarded this tab only, and a bookmark made or removed in
+another tab while this tab was listing was undone by the reconcile (the Neutral residual below, now resolved). What
+remains is the fallback where Web Locks are unavailable, a queue in each tab.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two
 root-node orchestrators of ADR-0009.
@@ -45,11 +53,13 @@ field is ignored.**
   does not carry: one GET per filename not already stored locally, ten at a time with `Promise.allSettled`; a failed
   GET keeps the bookmark as made now. `LocalBookmarkService.reconcile` then, in one transaction over `bookmarks` and
   `post_streams`, deletes the rows the listing no longer names, upserts the listed ones and rewrites the single
-  stream row `timeline:bookmarks:all` from the table, newest bookmark first, without a Nexus cursor. A post this tab
-  bookmarked or un-bookmarked after the listing started keeps its local state (a per-tab write sequence captured
-  before the LIST), and a fetch that outlives an account switch writes nothing: the `isCurrent` viewer guard is
-  the same one every private fetch of the bootstrap and of the resync receives (mutes, feeds, bookmarks), and the
-  resync's settings-store load checks it too.
+  stream row `timeline:bookmarks:all` from the table, newest bookmark first, without a Nexus cursor. The whole run,
+  LIST, GETs and reconcile, holds the user's sync lock `pubky-bookmarks-sync:<pubky>` `exclusive`, and every write
+  (`persist`, the row and its PUT or DELETE) holds it `shared` (`withSyncLock`, the helper the feed sync uses: a Web
+  Lock shared by every tab of the origin, a per-tab queue where Web Locks are unavailable), so a bookmark being
+  written in any tab is either listed or written after the reconcile, never undone by it; and a fetch that outlives
+  an account switch writes nothing: the `isCurrent` viewer guard is the same one every private fetch of the
+  bootstrap and of the resync receives (mutes, feeds, bookmarks), and the resync's settings-store load checks it too.
 - **Wiring**: `BootstrapApplication.initialize` runs it in its first `Promise.all` beside the mute and feed fetches,
   and `MigrationApplication.resync` beside them after a database recreation. Both stay depth 1 (ADR-0009).
 - **One local stream**: `timeline:bookmarks:all` holds every bookmark, collections included.
@@ -79,7 +89,7 @@ field is ignored.**
 
 - An un-bookmark sticks: no Nexus response can restore it, migrated ghosts included.
 - One source for the bookmark state, the count and both bookmark surfaces; the count is exact and live.
-- A cross-tab or cross-device listing never fights a local write in this tab.
+- A listing never fights a local write, in this tab or another: the sync lock orders them.
 
 ### Negative ❌
 
@@ -101,8 +111,8 @@ field is ignored.**
 ### Neutral ⚠️
 
 - A failed LIST fails the bootstrap, like the mute and feed fetches beside it; a failed GET does not.
-- The write sequence is per tab: a write in another tab during this tab's listing can be undone locally until the
-  next listing.
+- Where Web Locks are unavailable (an insecure origin) the sync lock is a queue in each tab: a write in another tab
+  during this tab's listing can be undone locally until the next listing. With Web Locks the lock spans every tab.
 - Orphan `timeline:bookmarks:collection` rows from older builds are harmless (`DB_VERSION` 4 recreates them away).
 
 ## Alternatives Considered
@@ -124,7 +134,8 @@ Compare hydrated post details against the bookmarks. A new feature (D4) with its
 
 - `src/core/pipes/bookmark/bookmark.normalizer.ts` (`to`, `fromListing`, `fromStored`)
 - `src/core/application/bookmark/bookmark.ts` (`persist`, `fetchBookmarks`, `getCount`),
-  `src/core/services/local/bookmark/bookmark.ts` (`persist`, `reconcile`, `countPosts`, `captureWriteSequence`)
+  `src/core/services/local/bookmark/bookmark.ts` (`persist`, `reconcile`, `countPosts`),
+  `src/core/utils/sync-lock.ts` (`withSyncLock`, shared with `FeedApplication`)
 - `src/core/application/stream/posts/post.ts` (`getBookmarkStreamSlice`, the bookmark guards in
   `fetchStreamFromNexus` and `prepareStreamForInitialLoad`)
 - `src/hooks/useBookmarksCollectionSummary`, `src/components/organisms/Collections/FollowedCollections`

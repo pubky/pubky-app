@@ -158,7 +158,6 @@ describe('LocalBookmarkService', () => {
     it('replaces the rows with the listed ones and rewrites the stream newest first, without a cursor', async () => {
       await BookmarkModel.upsert({ id: otherPost('stale'), created_at: 5 });
       await PostStreamModel.upsert(STREAM, [otherPost('stale')], { tailCursor: 42 });
-      const since = LocalBookmarkService.captureWriteSequence();
 
       const ids = await LocalBookmarkService.reconcile({
         bookmarks: [
@@ -166,7 +165,6 @@ describe('LocalBookmarkService', () => {
           { id: otherPost('b'), created_at: 30 },
           { id: otherPost('c'), created_at: 20 },
         ],
-        since,
       });
 
       expect(ids).toEqual([otherPost('b'), otherPost('c'), otherPost('a')]);
@@ -174,36 +172,11 @@ describe('LocalBookmarkService', () => {
       expect(await getStream()).toEqual({ id: STREAM, stream: ids });
     });
 
-    it('keeps the local state of a post written after the listing started', async () => {
-      const since = LocalBookmarkService.captureWriteSequence();
-      await LocalBookmarkService.persist(HttpMethod.PUT, { postId: otherPost('new') });
-
-      const ids = await LocalBookmarkService.reconcile({ bookmarks: [{ id: otherPost('a'), created_at: 1 }], since });
-
-      expect(ids).toContain(otherPost('new'));
-      expect(await getStream()).toMatchObject({ stream: [otherPost('new'), otherPost('a')] });
-    });
-
-    it('does not bring back a post un-bookmarked after the listing started', async () => {
-      await LocalBookmarkService.persist(HttpMethod.PUT, { postId: otherPost('gone') });
-      const since = LocalBookmarkService.captureWriteSequence();
-      await LocalBookmarkService.persist(HttpMethod.DELETE, { postId: otherPost('gone') });
-
-      const ids = await LocalBookmarkService.reconcile({
-        bookmarks: [{ id: otherPost('gone'), created_at: 1 }],
-        since,
-      });
-
-      expect(ids).toEqual([]);
-      expect(await LocalBookmarkService.exists(otherPost('gone'))).toBe(false);
-    });
-
     it('writes nothing when the account is no longer current', async () => {
       await setupExistingBookmark();
 
       const ids = await LocalBookmarkService.reconcile({
         bookmarks: [{ id: otherPost('a'), created_at: 1 }],
-        since: LocalBookmarkService.captureWriteSequence(),
         isCurrent: () => false,
       });
 

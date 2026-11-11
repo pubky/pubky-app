@@ -77,6 +77,8 @@ describe('BookmarkController', () => {
       const [method, input] = persistSpy.mock.calls[0];
       expect(method).toBe(HttpMethod.PUT);
       expect(input.postId).toBe(testData.compositePostId);
+      // The application keys the sync lock on the user; it never parses the user out of the URL.
+      expect(input.userId).toBe(testData.userPubky);
       expect(input.bookmarkUrl).toContain(`pubky://${testData.userPubky}/priv/social/v1/bookmarks/`);
       const parsed = parseUri(input.bookmarkUrl);
       expect(parsed.kind === 'bookmark' && parsed.target).toBe(buildUri(testData.authorPubky, 'post', testData.postId));
@@ -105,6 +107,7 @@ describe('BookmarkController', () => {
       const created = persistSpy.mock.calls[0][1];
       expect(persistSpy).toHaveBeenLastCalledWith(HttpMethod.DELETE, {
         postId: testData.compositePostId,
+        userId: testData.userPubky,
         bookmarkUrl: created.bookmarkUrl,
       });
     });
