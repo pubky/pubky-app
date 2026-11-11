@@ -764,7 +764,11 @@ jobs:
         id: test-desktop
         uses: cypress-io/github-action@v7
         env:
-          DEBUG: '@cypress/github-action'
+          # Temporary, to find out why WebKit does not attach on this runner; it logs every request,
+          # so go back to '@cypress/github-action' once it does. cypress:electron is what makes the
+          # rest appear: without it the Cypress CLI, which pipes the stderr of its server process on
+          # Linux and macOS, drops the debug lines that process writes when not on a terminal.
+          DEBUG: '@cypress/github-action,cypress:electron,cypress:server:browsers*,cypress:server:routes,cypress:server:server-base,pw:browser*,pw:api'
         with:
           working-directory: cypress
           config-file: cypress.config.ts
