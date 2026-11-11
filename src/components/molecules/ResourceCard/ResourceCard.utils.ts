@@ -304,6 +304,18 @@ const ARCHIVED_KIND = 'archived';
 /** A documented `kind` whose plain wording is not its value with a capital: an acronym. */
 const KIND_LABELS: Readonly<Record<string, string>> = { pdf: 'PDF' };
 
+/** The `kind` of a derived link Pinakes matched by metadata, not by an exact ID: possibly the same thing. */
+const MAYBE_KIND = 'maybe';
+
+/**
+ * Whether an Also on entry is a match by metadata (`kind: "maybe"`: the same title, artist and length),
+ * not an exact link: it is listed after the exact links, marked "maybe", and is never a card's default
+ * player while an exact link has one (the viewer can still pick it).
+ */
+export function isMaybeAlsoOn(entry: Pick<TPinakesAlsoOn, 'kind'>): boolean {
+  return entry.kind?.trim().toLowerCase() === MAYBE_KIND;
+}
+
 /** The name of an Also on entry: its service, else the link's host, else the link as written. */
 export function getAlsoOnName(entry: Pick<TPinakesAlsoOn, 'uri' | 'site'>): string {
   return entry.site?.trim() || getLinkHost(entry.uri) || getDisplayLink(entry.uri);

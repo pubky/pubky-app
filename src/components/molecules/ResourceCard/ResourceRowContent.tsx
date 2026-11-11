@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/libs/utils/utils';
 import { ResourceSourceIcon } from './ResourceSourceIcon';
+
+/** A row's note: small capitals in the muted colour (also the "maybe" after a service, `ResourceMaybeLabel`). */
+export const RESOURCE_ROW_NOTE_CLASS_NAME = 'text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase';
 
 interface ResourceRowContentProps {
   /** The URI the row's icon is read from. */
@@ -27,9 +31,7 @@ export function ResourceRowContent({ uri, name, note, counts }: ResourceRowConte
         {note && (
           <>
             {' '}
-            <span className="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
-              {note}
-            </span>
+            <span className={cn('truncate', RESOURCE_ROW_NOTE_CLASS_NAME)}>{note}</span>
           </>
         )}
         {counts && <> {counts}</>}
