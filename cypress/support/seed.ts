@@ -4,7 +4,10 @@ import type {
   SeedCreateLockPostArgs,
   SeedCreatePostArgs,
   SeededCollectionLayout,
+  SeededLegacyLock,
   SeededLockPost,
+  SeededLockPrice,
+  SeededLockTeaser,
   SeededPost,
   SeededUser,
 } from './types/seed';
@@ -172,6 +175,25 @@ export const markNotificationsReadViaApi = (user: SeededUser) =>
 /** Writes `user`'s settings file, in the place their data layout keeps it (toggling them is covered in settings.cy.ts). */
 export const writeSettingsViaApi = (user: SeededUser, settings: Record<string, unknown>) =>
   cy.task('seedSettings', { userId: user.id, settings });
+
+/**
+ * Publishes a lock as a 0.x client did, for an account seeded with `legacy: true`: the guarded image post under
+ * `/priv/app.locks/content/`, the public lock file and the announcement (publishing one in the app is covered in
+ * locks.cy.ts). The locked image is `mustache-you.png`. The spec primes the stand-in Lock Server with what comes back.
+ */
+export const createLegacyLockViaApi = (
+  author: SeededUser,
+  lockedText: string,
+  teaser: SeededLockTeaser,
+  price: SeededLockPrice,
+) =>
+  cy.task<SeededLegacyLock>('seedLegacyLock', {
+    authorId: author.id,
+    lockedText,
+    teaser,
+    price,
+    imageFixturePath: `${Cypress.config('fixturesFolder')}/mustache-you.png`,
+  });
 
 /** Every URL under `prefix` in `user`'s homeserver tree, so a spec can count what a run left there. */
 export const listHomeserverPathsViaApi = (user: SeededUser, prefix: HomeserverDirectory) =>
