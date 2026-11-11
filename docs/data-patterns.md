@@ -256,15 +256,7 @@ Article bodies (`kind: long`) embed images, videos, audio and PDFs with one mark
 - **Ownership invariant**: a ref resolves only when `attachments[n]` is a file URI owned by the author (`isAuthorFileUri`); otherwise an unavailable placeholder renders with no request.
 - Inline slots never leak into post-media surfaces (lightbox, list thumbnails, Visual feed, OG text): those read the cover slot only.
 
-## Data Model Reference
-
-All tables defined in `src/core/database/franky/franky.ts`.
-
-### Schema changes
-
-`franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
-
-### Dexie event dispatch patch
+## Dexie event dispatch patch
 
 `patches/dexie+4.4.7.patch` replaces the dependency's recursive default event chain with an iterative,
 immutable listener list. Long-lived `liveQuery` subscriptions can otherwise exhaust the browser call
@@ -278,6 +270,14 @@ and are not patched. `patch-package` applies it during the existing `postinstall
 dependency stage copies `patches/` before `npm ci` so the image includes the same fix. On a Dexie
 upgrade, run `src/core/database/franky/dexie-events.contract.test.ts` against the unpatched dependency
 before removing the patch; preserve it if the large-listener regression still fails.
+
+## Data Model Reference
+
+All tables defined in `src/core/database/franky/franky.ts`.
+
+### Schema changes
+
+`franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
 
 ### User Tables
 
