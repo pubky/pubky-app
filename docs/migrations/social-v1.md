@@ -96,6 +96,7 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3062                             | FIX-6: the mute list polled instead of a session-bound event stream                                                                        |
 | #3084, #3087, #3089, #3090        | dev-sync 3; FIX-8 `last_read` polled; branch e2e against pubky-stack `social-v1`; FIX-7 every Nexus call on `/v1`                          |
 | #3091                             | dev-sync 4 (`dev` @ `c5135dfb0`, merged 2026-11-10 as `cdd2e6ffa`)                                                                         |
+| #3123                             | F8: the cold Followed Collections walk froze its live queries (the dependent `post_details` read went unobserved); one chained read        |
 
 The branch also carries CI-owned VRT baseline commits from four `VRT Update Baselines` dispatches (after the QA-1
 fixes, after dev-sync 2, after dev-sync 3 and after dev-sync 4): the new `auth/SocialMigration` suite and the
