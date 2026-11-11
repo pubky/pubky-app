@@ -257,3 +257,20 @@ it('binds Ring and Bitkit approval to the existing identity during Shop reauthor
     identity.mockRestore();
   }
 });
+
+it('asks for the signed-in key when Shop reauthorization is approved with another one', async () => {
+  const identity = vi.spyOn(shopSignIn, 'getShopReauthorizationIdentity').mockReturnValue({ expectedPubky: 'alice' });
+  try {
+    const pending = flow();
+    vi.mocked(AuthController.getAuthUrl).mockResolvedValue(pending.value);
+    const { result } = renderHook(() => useAuthUrl());
+    await waitFor(() => expect(result.current.url).not.toBe(''));
+    await act(async () => pending.reject(createAuthApprovalMismatchError()));
+    expect(result.current.isExpired).toBe(true);
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'Authorization failed. Approve with the key you are signed in with.' }),
+    );
+  } finally {
+    identity.mockRestore();
+  }
+});

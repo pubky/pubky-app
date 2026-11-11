@@ -10,7 +10,7 @@ import {
 import { z } from 'zod';
 import { getAuthClientId } from '@/config/auth';
 import { getDefaultHttpRelay, getDeployEnv, getHomeserver, getTestnet } from '@/config/network';
-import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import { createCanceledError, isAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { isIosDevice } from '@/libs/pwa/platform';
 import { isPubkyErrorLike } from './error.utils';
 import type { TGenerateAuthUrlResult } from './homeserver.types';
@@ -333,7 +333,13 @@ export class GrantFlowService {
       });
       const owned = owner!;
       owned.cancel = approval.cancel;
-      const awaitApproval = approval.awaitApproval.finally(() => acks?.stop());
+      const awaitApproval = approval.awaitApproval
+        .catch((error: unknown) => {
+          // The relay delivered the wrong key's approval and the SDK refused it, so this request is spent.
+          if (isAuthApprovalMismatchError(error)) this.discard(owned);
+          throw error;
+        })
+        .finally(() => acks?.stop());
       // Keep ownership until adoption or explicit cancellation, including after a retryable exchange failure.
       // A retry releases it at start; a terminated page releases it through the browser's Web Locks lifecycle.
       void awaitApproval.catch(() => {});
