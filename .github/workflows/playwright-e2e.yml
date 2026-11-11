@@ -12,6 +12,12 @@ env:
 
 on:
   workflow_dispatch:
+  # GitHub accepts workflow_dispatch only after this file is on the default branch.
+  # This push trigger exists so the proof can run on this branch before that. It is
+  # removed once that run has finished; the workflow that lands is dispatch-only.
+  push:
+    branches:
+      - cursor/playwright-e2e-poc-fe4a
 
 jobs:
   rebuild_images:
