@@ -1,3 +1,5 @@
+import { buildUri } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
@@ -276,7 +278,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
 const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapResponse) => {
   expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.homeserverRead).toHaveBeenCalledWith(MOCK_LAST_READ_URL);
-  expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+  expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
   expect(mocks.fetchBookmarks).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
   expect(mocks.persistUsers).toHaveBeenCalledWith(
@@ -469,6 +471,37 @@ describe('BootstrapApplication', () => {
         expect(result.lastRead).toBe(LEGACY_TIMESTAMP);
         expect(puts).toHaveLength(1);
         expect(puts[0][0]).toMatchObject({ url: MOCK_LAST_READ_URL, bodyJson: { timestamp: LEGACY_TIMESTAMP } });
+      });
+    });
+
+    describe('when creating the missing lastRead fails', () => {
+      const MOCK_NORMALIZED_TIMESTAMP = 9876543210;
+      const LEGACY_TIMESTAMP = 1234;
+
+      it.each([
+        ['a fresh cursor', undefined, MOCK_NORMALIZED_TIMESTAMP],
+        ['the copy of the 0.x cursor', LEGACY_TIMESTAMP, LEGACY_TIMESTAMP],
+      ])('warns and finishes the bootstrap with %s', async (_name, legacy, expectedLastRead) => {
+        setupMocks({ bootstrapData: emptyBootstrap() });
+        vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(legacyOnly(legacy));
+        const failure = new Error('put-refused');
+        vi.spyOn(HomeserverService, 'request').mockRejectedValue(failure);
+        vi.spyOn(LastReadNormalizer, 'to').mockReturnValue({
+          url: MOCK_LAST_READ_URL,
+          lastRead: { timestamp: MOCK_NORMALIZED_TIMESTAMP },
+        });
+        vi.spyOn(Logger, 'info').mockImplementation(() => {});
+        const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+        const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+        expect(result.lastRead).toBe(expectedLastRead);
+        await vi.waitFor(() =>
+          expect(loggerWarnSpy).toHaveBeenCalledWith('Failed to create the missing last read file', {
+            url: MOCK_LAST_READ_URL,
+            error: failure,
+          }),
+        );
       });
     });
 
@@ -805,7 +838,7 @@ describe('BootstrapApplication', () => {
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
       expect(result).toEqual({
         unread: 0,
         lastRead: MOCK_LAST_READ,
@@ -820,7 +853,7 @@ describe('BootstrapApplication', () => {
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
       expect(result).toEqual({
         unread: 0,
         lastRead: MOCK_LAST_READ,
@@ -837,7 +870,7 @@ describe('BootstrapApplication', () => {
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Mute fetch error');
 
-      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent: undefined });
       // fetchMutedUsers fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
     });
@@ -853,13 +886,46 @@ describe('BootstrapApplication', () => {
       expect(mocks.persistUsers).not.toHaveBeenCalled();
     });
 
-    it('passes the account guard to the bookmarks fetch', async () => {
+    it('passes the account guard to every private fetch: mutes, feeds and bookmarks', async () => {
       const mocks = setupMocks();
       const isCurrent = () => true;
 
       await BootstrapApplication.initialize({ ...getBootstrapParams(TEST_PUBKY), isCurrent });
 
+      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent });
+      expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent });
       expect(mocks.fetchBookmarks).toHaveBeenCalledWith(TEST_PUBKY, { isCurrent });
+    });
+
+    describe('with the real mute fetch', () => {
+      const MUTEE = fakeOwner(2);
+
+      /** Bootstraps with `MuteApplication.fetchMutedUsers` unmocked over a homeserver listing one mute. */
+      const bootstrapListingOneMute = async (isCurrent: () => boolean) => {
+        const mocks = setupMocks();
+        vi.mocked(MuteApplication.fetchMutedUsers).mockRestore();
+        vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([buildUri(TEST_PUBKY, 'mute', MUTEE)]);
+
+        await BootstrapApplication.initialize({ ...getBootstrapParams(TEST_PUBKY), isCurrent });
+        return mocks;
+      };
+
+      it('writes the MUTED stream while the account is still the current one', async () => {
+        const mocks = await bootstrapListingOneMute(() => true);
+
+        expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
+          streamId: UserStreamTypes.MUTED,
+          stream: [MUTEE],
+        });
+      });
+
+      it('writes no MUTED stream once the account the fetch started for is gone', async () => {
+        const mocks = await bootstrapListingOneMute(() => false);
+
+        expect(mocks.upsertInfluencersStream).not.toHaveBeenCalledWith(
+          expect.objectContaining({ streamId: UserStreamTypes.MUTED }),
+        );
+      });
     });
   });
 

@@ -31,7 +31,7 @@ import type { PostRelationshipsModelSchema } from '@/models/post/relationships/p
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
-import { pickHeadVersion } from '@/pipes/post/post.head';
+import { pickHeadVersion, pickPostVersions } from '@/pipes/post/post.head';
 import { toLocalPostKind } from '@/pipes/post/post.kind';
 import { PostNormalizer, type TPostHead } from '@/pipes/post/post.normalizer';
 import { postReferenceSpellings } from '@/pipes/post/post.reference';
@@ -221,6 +221,9 @@ export class PostApplication {
   /**
    * Rolls freshly uploaded files back after a failed create or edit: the files this write put on
    * the homeserver, never one it found there already (content-addressed media may be shared).
+   * The post's own row is no referencer: a failed create tombstones it with its `attachments`
+   * intact (the very URIs swept here), and a failed edit restores the row the edit started from,
+   * which names nothing this batch put on the homeserver.
    * Best-effort — the triggering error is what the caller rethrows.
    */
   private static async rollbackUploadedFiles({
@@ -233,7 +236,7 @@ export class PostApplication {
     operation: 'commitCreate' | 'commitEdit';
   }) {
     if (fileAttachments.length === 0) return;
-    await FileApplication.commitDeleteUploaded(fileAttachments).catch((fileRollbackError) => {
+    await FileApplication.commitDeleteUploaded(fileAttachments, compositePostId).catch((fileRollbackError) => {
       Logger.error(`[PostApplication.${operation}] Failed to rollback file attachments`, {
         compositePostId,
         fileRollbackError,
@@ -311,7 +314,9 @@ export class PostApplication {
    * first, public before private), one DELETE at a time, so a reader never sees a dangling
    * post. The copies come from a LIST of both roots; the 0.x copy from a GET, and only when the
    * grant can write the 0.x tree (a Ring session without `/pub/pubky.app/:rw` leaves it, which
-   * is logged: `legacyRefused`). Nexus deletes the logical post on any version's DELETE.
+   * is logged: `legacyRefused`). Nexus deletes the logical post on any version's DELETE. A listed
+   * entry that is no post version (a foreign file in the directory) is left alone, as every reader
+   * of the directory skips it: `deletionPaths` would refuse it after the row is tombstoned.
    *
    * Media: after the homeserver DELETEs succeed, the post's attachments (only when the row did
    * not keep its connections, `!hadConnections`) and its homeserver file cover (`cover_image`
@@ -358,7 +363,7 @@ export class PostApplication {
     }
     const listings = [
       ...(legacyExists && canWriteLegacy ? [toPath(legacyUrl)] : []),
-      ...[...publicCopies, ...privateCopies].map((url) => toPath(url)),
+      ...pickPostVersions([...publicCopies, ...privateCopies]).map((url) => toPath(url)),
     ];
     for (const path of this.deletionPaths(postId, listings)) {
       await HomeserverService.deleteIdempotent(toUrl(owner, path));

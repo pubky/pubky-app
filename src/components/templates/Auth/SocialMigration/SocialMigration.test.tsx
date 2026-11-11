@@ -3,7 +3,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { writeSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
+import { toast } from '@/molecules/Toaster/toast';
 import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
 import type { SocialMigrationState } from '@/stores/socialMigration/socialMigration.types';
 import { mockGrantReference } from '@/test-utils/pubky';
@@ -20,7 +24,15 @@ const mocks = vi.hoisted(() => {
     isLoggingOut: false,
   };
   const onboardingState = { secretKey: '', signupAttempt: null, hasHydrated: true };
-  return { authState, onboardingState, push: vi.fn(), logout: vi.fn(), retry: vi.fn(), acknowledge: vi.fn() };
+  return {
+    authState,
+    onboardingState,
+    push: vi.fn(),
+    logout: vi.fn(),
+    restore: vi.fn(),
+    retry: vi.fn(),
+    acknowledge: vi.fn(),
+  };
 });
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }) }));
@@ -34,10 +46,13 @@ vi.mock('@/hooks/useHasBackupAccount/useHasBackupAccount', () => ({
   useHasBackupAccount: () => mocks.authState.sessionReference !== null || mocks.authState.session !== null,
 }));
 vi.mock('@/libs/identity/identity', () => ({ Identity: { tryZ32FromSecret: () => 'account' } }));
-vi.mock('@/controllers/auth/auth', () => ({ AuthController: { logout: () => mocks.logout() } }));
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: { logout: () => mocks.logout(), restorePersistedSession: () => mocks.restore() },
+}));
 vi.mock('@/controllers/social-migration/social-migration', () => ({
   SocialMigrationController: { retry: () => mocks.retry(), acknowledge: () => mocks.acknowledge() },
 }));
+vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/organisms/AlertBackup/AlertBackup', () => ({ AlertBackup: () => <div>Backup controls</div> }));
 vi.mock('@/organisms/SocialMigrationProgress/SocialMigrationProgress', () => ({
   SocialMigrationProgress: (props: Record<string, unknown>) => (
@@ -70,6 +85,7 @@ describe('SocialMigration', () => {
     vi.clearAllMocks();
     sessionStorage.clear();
     mocks.logout.mockResolvedValue(undefined);
+    mocks.restore.mockResolvedValue(false);
     mocks.onboardingState.secretKey = '';
     heldAccount();
     setStore({});
@@ -168,13 +184,131 @@ describe('SocialMigration', () => {
     expect(screen.getByText(copy)).toBeInTheDocument();
   });
 
-  it('keeps showing the sign-out screen while logout runs', () => {
+  // F-QA6-3: the sign-out screen names the reason too, not only the explanation after it
+  it.each([
+    ['missing-scopes', /did not include the new permissions.*We are signing you out.*grant them/],
+    ['session-expired', /Your session ended during the update.*We are signing you out.*continue where it stopped/],
+  ] as const)('signs out with the %s reason on screen', async (reason, copy) => {
+    setStore({ stage: 'reauth-required', reason });
+    writeSocialMigrationSignedOutNotice({ reason });
+    render(<SocialMigration />);
+    expect(screen.getByText(copy)).toBeInTheDocument();
+    expect(screen.queryByText(/grant the new permissions/)).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalledOnce());
+  });
+
+  it('keeps showing the sign-out screen while logout runs, with the reason from the notice', () => {
     setStore({});
+    writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
     mocks.authState.isLoggingOut = true;
     render(<SocialMigration />);
-    expect(screen.getByText(/We are signing you out/)).toBeInTheDocument();
+    expect(screen.getByText(/Your session ended during the update.*We are signing you out/)).toBeInTheDocument();
     expect(mocks.logout).not.toHaveBeenCalled();
   });
+
+  // SF-2: a restore that failed outside a gate leaves the gate store idle; the running screen would never advance
+  it('explains a failed restore that needs a fresh sign-in instead of showing the running screen', () => {
+    mocks.authState.restoreStatus = 'reauth-required';
+    render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: 'Your account needs an update' })).toBeInTheDocument();
+    // No gate signed this account out: the copy promises nothing about permissions
+    expect(screen.getByText(/Your session could not be restored\. Sign in again to continue/)).toBeInTheDocument();
+    expect(screen.queryByText(/new permissions/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Do not close this tab/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/We are signing you out/)).not.toBeInTheDocument();
+    expect(mocks.logout).not.toHaveBeenCalled();
+    expect(unloadPrevented()).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(mocks.push).toHaveBeenCalledWith('/sign-in');
+    fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
+    expect(mocks.push).toHaveBeenCalledWith('/');
+  });
+
+  it('keeps the forced sign-out reason when the restore after it fails too', () => {
+    mocks.authState.restoreStatus = 'reauth-required';
+    writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
+    render(<SocialMigration />);
+    expect(screen.getByText(/Your session ended during the update\. Sign in to continue/)).toBeInTheDocument();
+  });
+
+  // SF-1: a Shop sign-in the gate signed out keeps its validated return on the way back to sign-in
+  it.each([
+    ['/shop/marketplace/listing/abc', '/sign-in?returnTo=%2Fshop%2Fmarketplace%2Flisting%2Fabc'],
+    ['/settings', '/sign-in'],
+    ['https://attacker.test/shop', '/sign-in'],
+  ])('sends a signed-out Shop sign-in back with its return (%s)', (returnTo, destination) => {
+    signedOut();
+    window.history.replaceState(null, '', `/migration?${new URLSearchParams({ returnTo, shopReauth: 'old' })}`);
+    try {
+      render(<SocialMigration />);
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+      expect(mocks.push).toHaveBeenCalledWith(destination);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it('offers a retry of the restore when the homeserver could not be reached', () => {
+    mocks.authState.restoreStatus = 'temporary-error';
+    render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: "We couldn't reach your homeserver" })).toBeInTheDocument();
+    expect(screen.queryByText(/Do not close this tab/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument();
+    expect(unloadPrevented()).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mocks.restore).toHaveBeenCalledOnce();
+    expect(mocks.logout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
+    expect(mocks.push).toHaveBeenCalledWith('/');
+  });
+
+  it('shows the restore screen again when the retry fails once more, without retrying on its own', async () => {
+    mocks.authState.restoreStatus = 'temporary-error';
+    mocks.restore.mockRejectedValue(new Error('offline'));
+    const { rerender } = render(<SocialMigration />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(mocks.restore).toHaveBeenCalledOnce());
+    // The controller left the status where it was: the same screen, one click = one attempt
+    rerender(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: "We couldn't reach your homeserver" })).toBeInTheDocument();
+    expect(mocks.restore).toHaveBeenCalledOnce();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('explains a key linked to another homeserver after the retry, with the toast the coordinator shows', async () => {
+    mocks.authState.restoreStatus = 'temporary-error';
+    mocks.restore.mockImplementation(async () => {
+      // What the controller does for this one rejection: the status flips before the error reaches the screen
+      mocks.authState.restoreStatus = 'reauth-required';
+      throw Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+      });
+    });
+    const { rerender } = render(<SocialMigration />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+      }),
+    );
+    rerender(<SocialMigration />);
+    expect(screen.getByText(/Your session could not be restored\. Sign in again to continue/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it.each(['reauth-required', 'temporary-error'] as const)(
+    'keeps the gate screens while a run is %s and the restore is marked as failed',
+    (restoreStatus) => {
+      mocks.authState.restoreStatus = restoreStatus;
+      setStore({ stage: 'blocked', reason: 'incomplete' });
+      render(<SocialMigration />);
+      expect(
+        screen.getByRole('heading', { name: 'We could not reach your homeserver for some of your data' }),
+      ).toBeInTheDocument();
+    },
+  );
 
   it('asks for a backup before signing out a browser key that was never backed up', () => {
     setStore({ stage: 'reauth-required', reason: 'pre-migration-grant' });
@@ -183,8 +317,9 @@ describe('SocialMigration', () => {
     expect(screen.getByRole('heading', { name: 'Back up your key before continuing' })).toBeInTheDocument();
     expect(screen.getByText('Backup controls')).toBeInTheDocument();
     expect(mocks.logout).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
-    expect(mocks.push).toHaveBeenCalledWith('/logout');
+    // The held account can reach nothing but this page: a sign-out from /logout would prompt for the backup again,
+    // and the route guard sends Homepage straight back here
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('signs out as soon as the backup is confirmed', async () => {

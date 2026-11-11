@@ -478,6 +478,30 @@ describe('DialogRestoreRecoveryPhrase', () => {
       });
     });
 
+    // F-QA6-1: the migration gate signed the account out and the tab is on /migration; navigating home from here
+    // would hide the explanation
+    it('does not call onRestore when the sign-in did not complete', async () => {
+      mockLoginWithMnemonic.mockResolvedValue(false);
+      render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);
+
+      const inputs = screen.getAllByTestId('word-input');
+      const restoreButton = screen.getByText('Restore').closest('button');
+      for (let i = 0; i < 12; i++) {
+        fireEvent.change(inputs[i], { target: { value: 'abandon' } });
+      }
+
+      fireEvent.click(restoreButton!);
+
+      await waitFor(() => {
+        expect(mockLoginWithMnemonic).toHaveBeenCalledOnce();
+      });
+      expect(mockOnRestore).not.toHaveBeenCalled();
+      // The dialog is usable again, should it still be on screen
+      await waitFor(() => {
+        expect(screen.getByText('Restore').closest('button')).not.toBeDisabled();
+      });
+    });
+
     it('handles Enter key in any word input to trigger restore', async () => {
       mockLoginWithMnemonic.mockResolvedValue({});
       render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);

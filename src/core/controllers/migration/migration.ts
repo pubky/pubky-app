@@ -16,14 +16,17 @@ export class MigrationController {
   static async resync(pubky: Pubky): Promise<void> {
     const localSettings = SettingsNormalizer.extractState(useSettingsStore.getState());
     // The resync is not cancelled when the caller stops waiting: a fetch that outlives a sign-out
-    // or an account switch must write nothing into the next account's database.
-    const remoteSettings = await MigrationApplication.resync(pubky, localSettings, {
-      isCurrent: captureViewerSession(),
-    });
+    // or an account switch must write nothing into the next account's database, and the settings
+    // it returns must not land in the next account's persisted store either.
+    const isCurrent = captureViewerSession();
+    const remoteSettings = await MigrationApplication.resync(pubky, localSettings, { isCurrent });
+    if (!remoteSettings) return;
 
-    if (remoteSettings) {
-      useSettingsStore.getState().loadFromHomeserver(remoteSettings);
-      Logger.info('Settings loaded from homeserver during DB re-sync', { pubky });
+    if (!isCurrent()) {
+      Logger.info('Settings from the DB re-sync not applied, the viewer session changed', { pubky });
+      return;
     }
+    useSettingsStore.getState().loadFromHomeserver(remoteSettings);
+    Logger.info('Settings loaded from homeserver during DB re-sync', { pubky });
   }
 }
