@@ -271,7 +271,9 @@ function tidal(value: string): PlayerTarget | null {
     provider: PlayerProvider.TIDAL,
     name: PROVIDER_NAMES.tidal,
     link: `https://tidal.com/browse/${kind}/${id}`,
-    src: `https://embed.tidal.com/${kind}s/${id}`,
+    // `hideOverlays`: TIDAL's plain player (what its Slack embeds use): no ⋯ menu, and no Sign up / Log in
+    // panel over it when a preview ends. Not for a video, which would lose its fullscreen button too.
+    src: `https://embed.tidal.com/${kind}s/${id}${kind === 'video' ? '' : '?hideOverlays=true'}`,
     element: 'iframe',
     // TIDAL's oEmbed heights: 120 for a track, 275 for an album or playlist.
     layout:

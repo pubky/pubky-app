@@ -122,7 +122,10 @@ export function ResourcePlayerFrame({ target, title, load, onLoaded }: ResourceP
           <Iframe
             ref={frameRef}
             src={target.src}
-            title={label}
+            // Named by `aria-label`; its `title` is left empty: a title is the browser's hover tooltip,
+            // which covered the dock's buttons.
+            title=""
+            aria-label={label}
             allow={target.allow}
             sandbox={`${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`}
             referrerPolicy="strict-origin-when-cross-origin"

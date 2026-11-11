@@ -74,7 +74,9 @@ describe('ResourcePlayerFrame', () => {
 
     const frame = screen.getByTestId('resource-player-frame');
     expect(frame).toHaveAttribute('src', SPOTIFY.src);
-    expect(frame).toHaveAttribute('title', 'Spotify player: Get Lucky');
+    expect(frame).toHaveAttribute('aria-label', 'Spotify player: Get Lucky');
+    // No hover tooltip over the dock's buttons.
+    expect(frame).toHaveAttribute('title', '');
     expect(frame).toHaveAttribute('allow', SPOTIFY.allow);
     expect(frame).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
     const sandbox = frame.getAttribute('sandbox')!.split(' ');
