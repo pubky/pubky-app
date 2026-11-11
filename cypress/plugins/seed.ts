@@ -12,6 +12,7 @@ import type {
   SeededPost,
   SeededUser,
   SeedFollowArgs,
+  SeedListPathsArgs,
   SeedMarkNotificationsReadArgs,
   SeedMuteArgs,
   SeedSettingsArgs,
@@ -44,6 +45,8 @@ const SEED_CLIENT_ID = 'e2e-seed.pubky.app';
 // Consecutive seed writes start at least this far apart, so records a test orders by time
 // (timelines, threads, notifications) never share a timestamp
 const SEED_WRITE_SPACING_MS = 5;
+// More than any spec seeds under one prefix, so one page lists it all
+const LIST_PAGE_SIZE = 1000;
 
 type SeededSession = { name: string; session: Session; writer: SeedWriter };
 
@@ -181,6 +184,11 @@ export const createSeedTasks = (config: SeedConfig) => {
     // Not a seed: reads a post an intercepted write carried with the library the seeds build posts with, which
     // stays on this side so the specs do not bundle it. Rejects a body that is not a stored v1 post.
     decodeStoredPost: ({ body }: { body: string }) => decodeObject({ kind: 'post' }, new TextEncoder().encode(body)),
+
+    // Not a seed: every URL under `prefix` in a seeded user's tree, read back with their session, so a spec can
+    // count what a run left on the homeserver. Deep and ascending, like the migrator's own LIST.
+    listHomeserverPaths: ({ userId, prefix }: SeedListPathsArgs): Promise<string[]> =>
+      sessionFor(userId).session.storage.list(prefix, null, false, LIST_PAGE_SIZE, false),
 
     seedCreateCollection: ({ authorId, ...collection }: SeedCreateCollectionArgs): Promise<SeededPost> =>
       step(`create collection '${collection.name}' by '${nameOf(authorId)}'`, async () => ({

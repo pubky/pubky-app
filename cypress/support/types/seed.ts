@@ -42,6 +42,9 @@ export type SeedBookmarkArgs = { userId: string; uri: string };
 export type SeedMuteArgs = { userId: string; muteeId: string };
 export type SeedMarkNotificationsReadArgs = { userId: string };
 export type SeedSettingsArgs = { userId: string; settings: Record<string, unknown> };
+// A directory of the owner's tree, as `SessionStorage.list` takes it
+export type HomeserverDirectory = `/pub/${string}/` | `/priv/${string}/`;
+export type SeedListPathsArgs = { userId: string; prefix: HomeserverDirectory };
 export type SeededCollectionLayout = 'grid' | 'list';
 
 export type SeedCreateCollectionArgs = {

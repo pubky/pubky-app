@@ -239,7 +239,11 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
 
 Cypress.Commands.add(
   'signInWithEncryptedFile',
-  (backupFilepath: string, passcode = '123456', { migrates = false, acknowledgesSummary = false } = {}) => {
+  (
+    backupFilepath: string,
+    passcode = '123456',
+    { migrates = false, whileMigrating, acknowledgesSummary = false } = {},
+  ) => {
     cy.location('pathname').then((pathname) => {
       if (pathname !== '/') cy.visit('/');
     });
@@ -265,13 +269,16 @@ Cypress.Commands.add(
     if (migrates) {
       cy.location('pathname').should('eq', '/migration');
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+      // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here
+      whileMigrating?.();
     }
     // A run that left something behind waits on its summary for a click
     if (acknowledgesSummary) {
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Your account is up to date');
       cy.get('#social-migration-summary-navigation-continue-btn').click();
     }
-    cy.location('pathname').should('eq', '/home');
+    // A run copies the whole tree before home, and its specs hold some of its answers back
+    cy.location('pathname', migrates ? extendedTimeout() : {}).should('eq', '/home');
     waitForFeedToLoad();
   },
 );
