@@ -12,3 +12,6 @@ export const APP_LAST_READ_FILE = 'last_read.json';
 
 /** Where a 0.x client kept settings; read only while the v1 file is absent. */
 export const LEGACY_SETTINGS_PATH = '/pub/pubky.app/settings.json';
+
+/** Where a 0.x client kept the notification read cursor; read only while the v1 file is absent. */
+export const LEGACY_LAST_READ_PATH = '/pub/pubky.app/last_read';

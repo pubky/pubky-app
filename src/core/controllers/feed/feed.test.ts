@@ -261,12 +261,12 @@ describe('FeedController', () => {
   });
 
   describe('fetchFeeds', () => {
-    it('should pass userId from auth store to application layer', async () => {
+    it('should pass userId from auth store and the viewer guard to application layer', async () => {
       const fetchSpy = vi.spyOn(FeedApplication, 'fetchFeeds');
 
       await FeedController.fetchFeeds();
 
-      expect(fetchSpy).toHaveBeenCalledWith(testData.userPubky);
+      expect(fetchSpy).toHaveBeenCalledWith(testData.userPubky, { isCurrent: expect.any(Function) });
     });
 
     it('should return persisted feeds from application layer', async () => {

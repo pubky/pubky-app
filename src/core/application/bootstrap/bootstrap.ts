@@ -53,9 +53,11 @@ export class BootstrapApplication {
     const [bootstrapData, userLastRead] = await Promise.all([
       NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
-      MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
+      // The three private trees, which Nexus never sees; each fetch persists its own rows and skips the
+      // write once the account it started for is gone.
+      MuteApplication.fetchMutedUsers(pubky, { isCurrent: params.isCurrent }),
       FeedApplication.fetchFeeds(pubky, { isCurrent: params.isCurrent }),
-      BookmarkApplication.fetchBookmarks(pubky, { isCurrent: params.isCurrent }), // private: Nexus never sees them
+      BookmarkApplication.fetchBookmarks(pubky, { isCurrent: params.isCurrent }),
     ]);
     if (params.isCurrent && !params.isCurrent())
       return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };
@@ -177,15 +179,21 @@ export class BootstrapApplication {
   /**
    * Creates the last-read file a read just found missing, from the 0.x cursor or a fresh one.
    * Before a retry (429, 500, 503 or the publish conflict) it is checked again, and a file
-   * another client created meanwhile is kept rather than overwritten.
+   * another client created meanwhile is kept rather than overwritten. Callers run it in the
+   * background and it never rejects: a refused write is logged here (the request already reported
+   * it) and the next bootstrap finds the file missing again.
    */
   private static async createMissingLastRead(url: string, bodyJson: Record<string, unknown>): Promise<void> {
     const fence = HomeserverService.createWriteFence();
     let seenMissing = true;
-    await retryHomeserverWriteAfterReread(fence, async () => {
-      if (!seenMissing && (await HomeserverService.exists(url))) return;
-      seenMissing = false;
-      await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson, fence });
-    });
+    try {
+      await retryHomeserverWriteAfterReread(fence, async () => {
+        if (!seenMissing && (await HomeserverService.exists(url))) return;
+        seenMissing = false;
+        await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson, fence });
+      });
+    } catch (error) {
+      Logger.warn('Failed to create the missing last read file', { url, error });
+    }
   }
 }
