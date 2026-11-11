@@ -218,6 +218,16 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByTestId('resource-player-status')).toBeEmptyDOMElement();
   });
 
+  it('sizes a video to its own ratio at the card’s width, with no floor that letterboxes it on a phone', () => {
+    const { container } = render(
+      <ResourcePlayerFrame target={YOUTUBE} title="Video" load="ready" onLoaded={() => {}} />,
+    );
+
+    const region = container.querySelector('[data-player-region]');
+    expect(region).toHaveClass('aspect-video');
+    expect(region?.className).not.toMatch(/(^|\s)min-h-/);
+  });
+
   it('offers the service’s page when the frame has not loaded after a while', () => {
     vi.useFakeTimers();
     render(<Player target={SPOTIFY} />);

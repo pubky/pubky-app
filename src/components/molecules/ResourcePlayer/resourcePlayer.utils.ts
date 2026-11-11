@@ -26,7 +26,7 @@ const PROVIDER_NAMES: Record<Exclude<PlayerProvider, PlayerProvider.AUDIO_FILE>,
 };
 
 /**
- * How the player sits in the card: a video keeps 16:9 (never under 200 px high), audio its own strip
+ * How the player sits in the card: a video keeps 16:9 at the card's width, audio its own strip
  * height; `dockHeight` is the service's own compact height, used in the dock (defaults to `height`).
  */
 export type PlayerLayout = { kind: 'video' } | { kind: 'audio'; height: number; dockHeight?: number };

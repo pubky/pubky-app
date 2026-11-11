@@ -140,7 +140,7 @@ export function PlayOnSplit({
  * dock (CSS only, the frame is never moved, so it keeps playing) with Close and a way back; back in
  * view it returns to the card. The dock sits above the phone's bottom bar and left of the new-post
  * button (Fab: right-3 bottom-18 size-20, sm:right-10, md:bottom-20, lg:bottom-6), so it never
- * covers either. Audio uses the service's compact height; video stays at least 200 px high.
+ * covers either. Audio uses the service's compact height; video keeps its ratio at the dock's width.
  */
 export function PlayerDock({
   target,
