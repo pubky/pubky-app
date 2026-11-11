@@ -1400,6 +1400,18 @@ describe('LocalPostService', () => {
         expect(await readRelationships()).toMatchObject({ embedded: OTHER, reposted: null });
       });
 
+      it("moves another scheme's URI embed, wherever the row holds it", async () => {
+        const ISBN = 'isbn:9780141036144';
+        await setupExistingPost(testData.fullPostId1, `${LINK} ${ISBN}`);
+        await PostRelationshipsModel.table.update(testData.fullPostId1, { reposted: ISBN });
+
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'x', embed: LINK });
+        expect(await readRelationships()).toMatchObject({ embedded: LINK, reposted: null });
+
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'x', embed: ISBN });
+        expect(await readRelationships()).toMatchObject({ embedded: ISBN, reposted: null });
+      });
+
       it("never touches a repost's post, nor the relationships of an edit without an embed", async () => {
         const original = `pubky://${testData.authorPubky}/pub/social/v1/posts/0035QZPT4QG00`;
         await setupExistingPost(testData.fullPostId1, 'Quote');

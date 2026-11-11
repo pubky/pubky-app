@@ -24,7 +24,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
     });
 
   const { postDetails } = usePostDetails(postId);
-  // The web link the post embeds (or none), read only while open: the composer seeds from it once,
+  // The external resource the post embeds (or none), read only while open: the composer seeds from it once,
   // so it waits for it
   const {
     isRepost,

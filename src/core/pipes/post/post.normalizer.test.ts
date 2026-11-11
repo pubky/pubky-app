@@ -311,6 +311,30 @@ describe('PostNormalizer', () => {
       expect(next(plain, LINK)).toBe(LINK);
     });
 
+    it("switches to and from another scheme's URI, and replaces a stored one", () => {
+      const LINK = 'https://tidal.com/track/3524506';
+      const ISBN = 'isbn:9780141036144';
+      const GEO = 'geo:47.3769,8.5417';
+      const content = `${LINK} ${ISBN} ${GEO}`;
+      const next = (stored: ReturnType<typeof head>, embed?: string | null) =>
+        PostNormalizer.toEdit({ owner: OWNER, head: stored, edit: { content, embed } })!.object.embed;
+
+      expect(next(head({ content, embed: LINK }), ISBN)).toBe(ISBN);
+      expect(next(head({ content, embed: ISBN }), LINK)).toBe(LINK);
+      expect(next(head({ content, embed: ISBN }), GEO)).toBe(GEO);
+      expect(next(head({ content, embed: ISBN }), null)).toBeNull();
+      expect(next(head({ content, embed: ISBN }))).toBe(ISBN);
+    });
+
+    it('keeps a stored embed that is no external resource (an unsafe scheme)', () => {
+      const embed = 'javascript:alert(1)';
+      const stored = head({ content: 'x', embed });
+      expect(
+        PostNormalizer.toEdit({ owner: OWNER, head: stored, edit: { content: 'x', embed: 'isbn:9780141036144' } })!
+          .object.embed,
+      ).toBe(embed);
+    });
+
     it("never replaces a repost's post with a web embed", () => {
       const repost = head({ content: 'Quote', embed: PARENT });
 
@@ -618,6 +642,10 @@ describe('PostNormalizer', () => {
         embed: 'https://luma.com/376whqyw',
       });
       expect(PostNormalizer.toLocalEdit({ row, edit: { embed: null } })).toEqual({ content: 'Hello', embed: null });
+      expect(PostNormalizer.toLocalEdit({ row, edit: { embed: 'isbn:9780141036144' } })).toEqual({
+        content: 'Hello',
+        embed: 'isbn:9780141036144',
+      });
       expect(PostNormalizer.toLocalEdit({ row, edit: { content: 'x' } })).not.toHaveProperty('embed');
     });
 
