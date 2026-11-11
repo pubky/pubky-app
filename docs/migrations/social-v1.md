@@ -336,6 +336,7 @@ test account seeds v1 or empty, except those that exercise the migration: the `o
 owner in `locks.cy.ts`. For that one, `createLegacyLockViaApi` also writes the files the Lock Server kept for a 0.x lock
 (the guarded 0.x post and image under `/priv/app.locks/content/`, `/pub/app.locks/<lockId>.json`) beside the 0.x
 announcement; after the migration the owner view, an unlock through the stand-in, a teaser edit and the delete run on it.
+Cypress stays QA-owned: that test is the port's last agreed suite change under the #3055 agreement.
 
 e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v1`, against the private pubky-stack:
 `feat/social-v1` points `pubky_stack_ref` (`.github/workflows/e2e-test.yml`) at pubky-stack's `social-v1` branch, whose

@@ -39,7 +39,7 @@
  * The separate pubky-e2e project (in progress) will cover Locks end to end with a real Lock Server,
  * Paykit and Bitkit; this spec covers the app's own flow until then.
  */
-import type { CyHttpMessages } from 'cypress/types/net-stubbing';
+import type { CyHttpMessages, Interception } from 'cypress/types/net-stubbing';
 import { backupDownloadFilePath } from '../support/common';
 import {
   applyLockPrice,
@@ -459,6 +459,13 @@ describe('locks published before the migration', () => {
         // lock file states.
         Object.assign(legacyLockServer.guarded, lock.guarded);
         legacyLockServer.locks[lock.lockId] = lock.price;
+        // The guarded post is in the 0.x shape, so the owner and the reader below go through the parser's 0.x
+        // fallback: a v1 primary has attachment objects, a 0.x one names each attachment by a URI string.
+        const guardedPosts = registeredGuardedPosts(legacyLockServer);
+        expect(guardedPosts, 'the guarded post').to.have.length(1);
+        expect(guardedPosts[0]).to.include({ kind: 'image', content: lockedText });
+        expect(guardedPosts[0]?.attachments, 'the guarded attachments').to.have.length(1);
+        expect(guardedPosts[0]?.attachments[0], 'a 0.x attachment').to.be.a('string');
         // Until A migrates, Nexus reads the announcement through its 0.x reader, lock URL included.
         waitForNexus(userIndexed(legacyCreator), userIndexed(legacyReader));
         waitForNexusLockPost(legacyCreator.pubky, lock.post.id, lock.lockUrl);
@@ -472,14 +479,20 @@ describe('locks published before the migration', () => {
         migrationFlag().then((flag) => {
           expect(flag.migrated, 'the paths the run copied').to.include(legacyPostPath(lock.post));
         });
-        cy.get('@announcementCopy.all').should('have.length', 1);
-        cy.wait('@announcementCopy')
-          .then(expectV1PostWrite)
-          .then((post) => {
-            expect(post.kind, 'the announcement kind').to.eq('note');
-            expect(post.lock, 'the lock URL').to.eq(lock.lockUrl);
-            expect(JSON.parse(post.content), 'the teaser envelope').to.deep.eq(teaserEnvelope);
-          });
+        // Exact only because `migrationFlag()` waited for the done flag, which the run writes last. The homeserver
+        // holds one version; the intercept may see a retried PUT beside the one that stored it.
+        listHomeserverPathsViaApi(legacyCreator, `/pub/social/v1/posts/${lock.post.id}/`).should('have.length', 1);
+        cy.get<Interception[]>('@announcementCopy.all').then((writes) => {
+          const stored = writes.filter(({ response }) => response?.statusCode === 201);
+          expect(stored, 'the stored v1 copy of the announcement').to.have.length(1);
+          stored.forEach((copy) =>
+            expectV1PostWrite(copy).then((post) => {
+              expect(post.kind, 'the announcement kind').to.eq('note');
+              expect(post.lock, 'the lock URL').to.eq(lock.lockUrl);
+              expect(JSON.parse(post.content), 'the teaser envelope').to.deep.eq(teaserEnvelope);
+            }),
+          );
+        });
 
         locksStep(3, LEGACY_STEPS, 'Owner view: A sees the locked image and text, read from the 0.x guarded post');
         openPostFromHomeFeed(legacyCreator.pubky, lock.post.id, teaser);
@@ -564,9 +577,16 @@ describe('locks published before the migration', () => {
           'legacyCopyDeleted',
         );
         cy.intercept('DELETE', `**/pub/social/v1/posts/${lock.post.id}/*`, expectLockDeletedFirst).as('versionDeleted');
+        // The stand-in takes the lock file down once it has accepted the deletion. It is A's only lock, so its
+        // directory is gone afterwards and a LIST of it answers 404: the file is checked before, and its DELETE after.
+        listHomeserverPathsViaApi(legacyCreator, '/pub/app.locks/').then((urls) => {
+          expect(urls.filter((url) => url.endsWith(`/pub/app.locks/${lock.lockId}.json`))).to.have.length(1);
+        });
+        cy.intercept('DELETE', `**/pub/app.locks/${lock.lockId}.json`).as('lockFileDeleted');
         deletePost({ filterText: editedTeaser });
         cy.wait('@deleteContentLock');
         cy.wrap(legacyLockServer).its('deletedLocks').should('deep.eq', [lock.lockId]);
+        cy.wait('@lockFileDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
         cy.wait('@legacyCopyDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
         // A v1 post is a directory of versions, one DELETE each: the migrated copy and the edit.
         cy.wait(['@versionDeleted', '@versionDeleted']).then((deletions) => {
