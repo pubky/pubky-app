@@ -5,10 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useProfileForm } from './useProfileForm';
+import { PROFILE_SUBMIT_TEXT } from './useProfileForm.types';
 
 const routerPush = vi.hoisted(() => vi.fn());
 
@@ -42,6 +46,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
 
 const pubky = 'test-pubky';
 const unsafeLink = { label: 'Website', url: 'javascript:alert(1)' };
+const SCHEME_MESSAGE = 'Links must start with http:// or https://';
 
 describe('useProfileForm profile link safety', () => {
   beforeEach(() => {
@@ -57,13 +62,61 @@ describe('useProfileForm profile link safety', () => {
       result.current.handlers.validateLinkUrl(unsafeLink.url, 0);
     });
 
-    expect(result.current.errors.linkUrlErrors[0]).toBe('Invalid URL');
+    expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
 
     await act(async () => {
       await result.current.handlers.handleSubmit();
     });
 
     expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+  });
+
+  // The v1 data model refuses these (SF-5); the field says so before the write instead of a generic toast after it
+  it.each([['mailto:test@example.com'], ['tel:+1234567890'], ['HTTPS://Example.com/x']])(
+    'refuses the link "%s" on its field, as the data model would at the write',
+    async (url) => {
+      const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+      act(() => {
+        result.current.handlers.setName('Valid User');
+        result.current.handlers.setLinks([{ label: 'CONTACT', url }]);
+        result.current.handlers.validateLinkUrl(url, 0);
+      });
+
+      expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
+      expect(result.current.isSubmitDisabled).toBe(true);
+
+      await act(async () => {
+        await result.current.handlers.handleSubmit();
+      });
+
+      expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+      expect(toast).not.toHaveBeenCalled();
+    },
+  );
+
+  it('blocks a legacy mailto: link the edit form loaded, naming the field, before the write', async () => {
+    const userDetails: NexusUserDetails = {
+      id: pubky,
+      name: 'Valid User',
+      bio: '',
+      links: [{ title: 'EMAIL', url: 'mailto:test@example.com' }],
+      status: null,
+      image: null,
+      indexed_at: 1,
+    };
+    const { result } = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
+    expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('accepts a bare X handle and saves it as the profile URL (issue #1846)', async () => {
@@ -112,13 +165,94 @@ describe('useProfileForm profile link safety', () => {
       result.current.handlers.validateLinkUrl(unsafeLink.url, 0);
     });
 
-    expect(result.current.errors.linkUrlErrors[0]).toBe('Invalid URL');
+    expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
 
     await act(async () => {
       await result.current.handlers.handleSubmit();
     });
 
     expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useProfileForm link refusals from the data model', () => {
+  const userDetails: NexusUserDetails = {
+    id: pubky,
+    name: 'Valid User',
+    bio: '',
+    links: [
+      { title: 'WEBSITE', url: 'https://example.com' },
+      { title: 'BLOG', url: 'https://blog.example.com' },
+    ],
+    status: null,
+    image: null,
+    indexed_at: 1,
+  };
+  // What `UserNormalizer.to` and `ProfileApplication` throw when `buildUser` refuses a member
+  const refusalOf = (field: string) =>
+    Err.validation(ValidationErrorCode.INVALID_INPUT, `${field} must be a canonical web URI`, {
+      service: ErrorService.SocialSpecs,
+      operation: 'buildUser',
+      context: { pubky, code: 'reference', field },
+    });
+
+  const renderEditForm = async () => {
+    const hook = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(hook.result.current.state.isLoading).toBe(false));
+    act(() => hook.result.current.handlers.setBio('New bio'));
+    return hook.result;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows a refusal of links[n].url on that link instead of the generic toast', async () => {
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(refusalOf('links[1].url'));
+    const result = await renderEditForm();
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({ 1: 'Invalid URL' });
+    expect(result.current.isSubmitDisabled).toBe(true);
+    expect(result.current.state.submitText).toBe(PROFILE_SUBMIT_TEXT.saveProfile);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('puts the refusal on the form row the link sits in, not its place among the rows with a URL', async () => {
+    vi.mocked(ProfileController.commitCreate).mockRejectedValueOnce(refusalOf('links[0].url'));
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+    act(() => {
+      result.current.handlers.setName('Valid User');
+      // The WEBSITE row is empty, so the model's first link is the X row
+      result.current.handlers.setLinks([
+        { label: 'WEBSITE', url: '' },
+        { label: 'X (TWITTER)', url: 'https://x.com/jack' },
+      ]);
+    });
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({ 1: 'Invalid URL' });
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('keeps the generic toast for a refusal that names another member', async () => {
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(refusalOf('links[1].title'));
+    const result = await renderEditForm();
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({});
+    expect(result.current.state.submitText).toBe(PROFILE_SUBMIT_TEXT.tryAgain);
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not update profile' });
   });
 });
 
