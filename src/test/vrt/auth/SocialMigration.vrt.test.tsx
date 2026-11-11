@@ -127,12 +127,10 @@ const SCENARIOS: Record<string, Scenario> = {
   },
 };
 
-// Dark keeps the original `social-migration-<state>-<viewport>` names; light adds `-light-` as the other light suites do.
-for (const [name, viewport, theme] of [
-  ['desktop', VRT_VIEWPORT_DESKTOP, 'dark'],
-  ['mobile', VRT_VIEWPORT_MOBILE, 'dark'],
-  ['light-desktop', VRT_VIEWPORT_DESKTOP, 'light'],
-  ['light-mobile', VRT_VIEWPORT_MOBILE, 'light'],
+// Dark only: `/migration` is a signed-out route (`AUTH_ROUTES`), which `ThemeProvider` always renders dark (#3081).
+for (const [name, viewport] of [
+  ['desktop', VRT_VIEWPORT_DESKTOP],
+  ['mobile', VRT_VIEWPORT_MOBILE],
 ] as const) {
   describe(`SocialMigration ${name}`, () => {
     it.each(Object.entries(SCENARIOS))('renders the %s state', async (state, scenario) => {
@@ -156,7 +154,7 @@ for (const [name, viewport, theme] of [
           <Header />
           <SocialMigration />
         </>,
-        { viewport, theme },
+        { viewport },
       );
       await expect.element(page.getByRole('heading', { name: scenario.heading })).toBeVisible();
       if (state === 'running') await expect.element(page.getByText('42 of 120')).toBeVisible();

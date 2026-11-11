@@ -44,9 +44,11 @@ data dependency (store/hook/fetch/router) so the pixels are deterministic.
 Captures are dark by default. Pass `theme: 'light'` to capture the light
 theme (the harness sets the `.dark` or `.light` class on `<html>` per render,
 exactly as next-themes does, so `dark:` and `light:` utilities apply). Light coverage is deliberately limited to a few core
-signed-in surfaces — Home feed, Hot and the own-profile posts tab, plus the screens the social v1 migration added (the twelve
-`/migration` states, the `/settings/edit` migration note and the database version-conflict screen), desktop + mobile,
-named `<surface>-light-<viewport>` — not a duplicate of every dark baseline.
+signed-in surfaces — Home feed, Hot and the own-profile posts tab, plus two screens the social v1 migration added (the
+`/settings/edit` migration note and the database version-conflict screen), desktop + mobile,
+named `<surface>-light-<viewport>` — not a duplicate of every dark baseline. A surface `ThemeProvider` forces dark (a
+signed-out route, or no one signed in) gets no light capture: it would show a theme no one sees. That is why the
+`/migration` states are captured dark only.
 
 ## Capture dimensions
 

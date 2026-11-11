@@ -138,7 +138,7 @@ QUOTA, offline (auto-retry then Retry), summary with a dropped profile image; `/
 to `/migration` while gated; logout from `/migration` works with the backup prompt.
 
 Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (twelve
-states × desktop/mobile × dark/light), the D17 note in `settings/Settings` and the D8 conflict copy in
+states × desktop/mobile, dark only: `/migration` is a signed-out route, forced dark since #3081), the D17 note in `settings/Settings` and the D8 conflict copy in
 `misc/DatabaseErrorScreen` (desktop/mobile × dark/light), CI-owned baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
 never reaches `/migration`, and an empty or v1-only one only passes through it while the check runs (see _Cypress_).
 
