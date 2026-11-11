@@ -95,6 +95,7 @@ export const MobileTabBar = forwardRef<HTMLDivElement, MobileTabBarProps>(functi
                 className={cn('px-2.5 py-2', showLabels && 'flex items-center gap-2')}
                 aria-label={item.ariaLabel ?? item.label}
                 aria-current={isActive ? 'page' : undefined}
+                data-cy={item.dataCy}
               >
                 <Icon size={20} className={isActive ? 'text-foreground' : 'text-muted-foreground'} />
                 {showLabels && (

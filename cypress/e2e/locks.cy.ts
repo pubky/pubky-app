@@ -33,15 +33,23 @@
  */
 import { backupDownloadFilePath } from '../support/common';
 import {
+  answerLockServerOnce,
   applyLockPrice,
+  completeLocksSetup,
   createLockServerState,
   editLockedArticleBody,
   editLockedPostText,
+  expectLockKept,
   expectSignedIn,
+  expectToast,
   fillLockAnnouncement,
+  holdSeededLock,
+  lockServerError,
   failNextLockDeletion,
   openPostFromHomeFeed,
+  pressPost,
   publishLock,
+  recordLockServerCalls,
   registeredGuardedPosts,
   reloadFromReaderReplica,
   signInToLockServer,
@@ -56,10 +64,10 @@ import {
   writeLockedPost,
 } from '../support/locks';
 import { flushLocksStubLog, locksStep } from '../support/locks-log';
-import { userIndexed, waitForNexus } from '../support/nexus';
-import { seedUserViaApi } from '../support/seed';
+import { lockPostIndexed, userIndexed, waitForNexus } from '../support/nexus';
+import { createLockPostViaApi, seedUserViaApi } from '../support/seed';
 import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
-import type { SeededUser } from '../support/types/seed';
+import type { SeededLockPost, SeededUser } from '../support/types/seed';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
 const creatorName = `LockCreator${uniqueSuffix}`;
@@ -76,8 +84,26 @@ const ARTICLE_STEPS = 6;
 
 const lockServer = createLockServerState();
 
+// Two paid locks the creator publishes through the API, for the reader's error cases: one the
+// reader pays for through the errors, one the reader's region refuses.
+const seedRun = Date.now();
+const paidLock = {
+  title: `Paid after errors ${seedRun}`,
+  teaser: `A lock paid through errors ${seedRun}`,
+  lockedContent: `Unlocked after errors ${seedRun}`,
+  amount: PRICE_SATS,
+};
+const refusedLock = {
+  title: `Refused in region ${seedRun}`,
+  teaser: `A lock the region refuses ${seedRun}`,
+  lockedContent: `Never shown ${seedRun}`,
+  amount: PRICE_SATS,
+};
+
 let creator: SeededUser;
 let reader: SeededUser;
+let paidPost: SeededLockPost;
+let refusedPost: SeededLockPost;
 
 const signInAs = (user: SeededUser) => {
   cy.signInWithEncryptedFile(backupDownloadFilePath(user.name));
@@ -165,14 +191,27 @@ describe('locks', () => {
     seedUserViaApi(readerName, { withRecoveryFile: true }).then((user) => {
       reader = user;
     });
-    // Both sign in, and the app reads the signed-in account's profile from Nexus
-    cy.then(() => waitForNexus(userIndexed(creator), userIndexed(reader)));
+    cy.then(() => {
+      createLockPostViaApi(creator, paidLock).then((post) => {
+        paidPost = post;
+      });
+      createLockPostViaApi(creator, refusedLock).then((post) => {
+        refusedPost = post;
+      });
+    });
+    // Both sign in, and the app reads the signed-in account's profile and the seeded locks from Nexus.
+    // A seeded post read before its lock is indexed would be cached as a normal post, with no Unlock.
+    cy.then(() =>
+      waitForNexus(userIndexed(creator), userIndexed(reader), lockPostIndexed(paidPost), lockPostIndexed(refusedPost)),
+    );
   });
 
   beforeEach(() => {
     lockServer.creatorPubky = creator.id;
+    for (const post of [paidPost, refusedPost]) {
+      holdSeededLock(lockServer, post, { amount: PRICE_SATS, asset: 'BTC', recipient: creator.pubky });
+    }
     stubLockServer(lockServer);
-    signInAs(creator);
   });
 
   afterEach(() => {
@@ -187,6 +226,7 @@ describe('locks', () => {
     const title = `Locked photo ${run}`;
     const draftTeaser = `Draft teaser ${run}`;
     const teaser = `A photo worth unlocking ${run}`;
+    signInAs(creator);
 
     locksStep(1, POST_STEPS, 'A writes a post with an image and fully locks it');
     writeLockedPost(draftText, 'mustache-you.png');
@@ -263,10 +303,25 @@ describe('locks', () => {
       signInAs(creator);
       signInToLockServer();
       failNextLockDeletion();
+      // The unlocked image makes the card tall, so the more button sits near the bottom of the
+      // viewport and the menu opens with Delete below the fold. Park the button clear of the
+      // sticky header before opening it. The menu is portaled and fixed, so the default click
+      // scroll cannot bring that clipped item back on screen.
       cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
-        cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
+        // The owner's content resolves behind a skeleton after the card renders, and the image then
+        // grows the card, so park the button only once the card has its final height.
+        cy.get('[data-cy="locked-post-unlocked-content"]')
+          .should('contain.text', lockedText)
+          .find('[data-cy="post-attachment-image"]')
+          .should('be.visible')
+          .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
+        cy.get('[data-cy="post-more-btn"]')
+          .first()
+          .scrollIntoView({ offset: { top: -200, left: 0 } })
+          .should('be.visible')
+          .click({ scrollBehavior: false });
       });
-      cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click();
+      cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click({ scrollBehavior: false });
       cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.visible').click();
       cy.wait('@deleteContentLockFailed');
       cy.contains('Could not delete the locked content. Try again.').should('be.visible');
@@ -313,6 +368,7 @@ describe('locks', () => {
     const title = `Locked essay ${run}`;
     const draftTeaser = `Draft teaser ${run}`;
     const teaser = `An essay worth unlocking ${run}`;
+    signInAs(creator);
 
     locksStep(1, ARTICLE_STEPS, 'A writes an article and fully locks it');
     writeLockedArticle(articleTitle, draftBody);
@@ -375,6 +431,105 @@ describe('locks', () => {
           singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', body);
         }),
       );
+    });
+  });
+
+  /**
+   * Lock Server and Paykit errors, one stubbed answer at a time (`answerLockServerOnce`): the app says
+   * what went wrong, keeps the lock or the payment, and recovers on the next try. Every status and
+   * error code is mapped in the unit tests (`locks.errors.contract.test.ts`), and the setup dialog's
+   * errors in `DialogLocksAuth.test.tsx`; these two cover the user-visible recovery of the key flows.
+   * The reader's locks are seeded through the homeserver API, so only the creator case uses the
+   * composer.
+   */
+  describe('Lock Server and Paykit errors', () => {
+    it('creator: a failed lock and a rejected session keep the lock, and the same lock publishes', () => {
+      const run = Date.now();
+      const text = `Locked through errors ${run}`;
+      const title = `Lock after errors ${run}`;
+      const teaser = `Published after errors ${run}`;
+      signInAs(creator);
+
+      locksStep(1, 3, 'A writes a post with an image and fully locks it');
+      writeLockedPost(text, 'mustache-you.png');
+      turnLockOnAndSetUpLocks();
+      applyLockPrice(PRICE_SATS);
+      fillLockAnnouncement(title, teaser);
+
+      locksStep(2, 3, 'Creating the lock fails: a toast, and the lock, title and teaser stay for another try');
+      answerLockServerOnce('POST', '/e2e/creator/content-locks', {
+        statusCode: 500,
+        body: lockServerError('internal_error'),
+        summary: 'internal error',
+      });
+      pressPost();
+      expectToast('Something went wrong. Try again.');
+      expectLockKept(title, teaser);
+
+      locksStep(3, 3, 'The Lock Server session is rejected: sign-in reopens, and the same lock publishes');
+      answerLockServerOnce('POST', '/e2e/creator/guarded-resources', {
+        statusCode: 401,
+        body: lockServerError('frontend_session_expired'),
+        summary: 'session expired',
+      });
+      pressPost();
+      completeLocksSetup();
+      expectLockKept(title, teaser);
+      publishLock().then(() => {
+        cy.get('@createContentLock').its('request.body').then(expectLockCriterion);
+      });
+    });
+
+    it('reader: a failed payment start and a refused credential keep the one payment, and a region refusal explains itself', () => {
+      signInAs(reader);
+      openPostFromHomeFeed(creator.pubky, paidPost.id, paidLock.teaser);
+
+      locksStep(1, 4, 'The proof submission fails: a toast, and Try again starts the payment');
+      answerLockServerOnce('POST', '/e2e/viewer/proof-bundles', {
+        statusCode: 503,
+        body: lockServerError('creator_authority_unavailable'),
+        summary: 'creator authority unavailable',
+      });
+      singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('not.be.disabled').click();
+      expectToast('The payment could not be started. Try again later.');
+      cy.get('[data-cy="pay-to-unlock-retry"]').filter(':visible').should('have.text', 'Try again');
+
+      locksStep(2, 4, 'Bitkit pays, but the access credential is refused: the payment stands and nothing opens');
+      const proofSubmissions = recordLockServerCalls('POST', '/e2e/viewer/proof-bundles');
+      answerLockServerOnce('POST', '/e2e/viewer/access-credentials', {
+        statusCode: 403,
+        body: lockServerError('entitlement_not_authorized'),
+        summary: 'entitlement not authorized',
+      });
+      cy.get('[data-cy="pay-to-unlock-retry"]').filter(':visible').click();
+      expectToast('Your payment went through, but the content could not be opened. Nothing is lost — try again.');
+      cy.get('[role="dialog"]')
+        .filter(':visible')
+        .should('contain.text', 'Payment received. The content could not be opened — nothing is lost.');
+      singlePostCard().should('not.contain.text', paidLock.lockedContent);
+
+      locksStep(3, 4, 'Check again issues the credential and opens the content, with no second payment');
+      cy.get('[data-cy="pay-to-unlock-recheck"]').filter(':visible').click();
+      cy.get('[data-cy="pay-to-unlock-view-content"]').filter(':visible').click();
+      singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', paidLock.lockedContent);
+      cy.then(() => expect(proofSubmissions, 'payment requests sent to Bitkit after Try again').to.have.length(1));
+
+      locksStep(4, 4, 'A lock the region refuses (HTTP 451) explains itself, with nothing to retry');
+      cy.go('back');
+      openPostFromHomeFeed(creator.pubky, refusedPost.id, refusedLock.teaser);
+      answerLockServerOnce('POST', '/e2e/viewer/proof-bundles', {
+        statusCode: 451,
+        body: {},
+        summary: 'unavailable for legal reasons',
+      });
+      singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('not.be.disabled').click();
+      cy.get('[data-testid="locks-region-notice"]')
+        .filter(':visible')
+        .should('contain.text', "Paid unlocks aren't available in your region yet.");
+      cy.get('[data-cy="pay-to-unlock-retry"]').should('not.exist');
+      cy.contains('[data-cy="toast"]', 'The payment could not be started').should('not.exist');
+      cy.get('[data-cy="pay-to-unlock-cancel"]').filter(':visible').should('have.text', 'Close').click();
+      singlePostCard().should('not.contain.text', refusedLock.lockedContent);
     });
   });
 });

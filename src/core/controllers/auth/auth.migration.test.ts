@@ -9,12 +9,14 @@ import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES } from '@/config/network';
+import { THEME_STORAGE_KEY } from '@/config/theme';
 import { LocksController } from '@/controllers/locks/locks';
 import { ProfileController } from '@/controllers/profile/profile';
 import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { pendingRetirements, type SessionReference } from '@/libs/auth/session.types';
 import { resetSavedSessionLossReports } from '@/libs/auth/session-loss';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -1277,6 +1279,27 @@ describe('legacy cookie logout cleanup', () => {
     expect(useAuthStore.getState().session).toBeNull();
     expect(clearDatabase).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalledWith('Local sign-out completed; remote revocation could not be confirmed.');
+  });
+  it('forgets the theme before remote revocation, even if another tab signs in meanwhile', async () => {
+    localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    const revocation = deferred<void>();
+    vi.mocked(AuthApplication.logout).mockReturnValue(revocation.promise);
+    const logout = AuthController.logout().catch((error: unknown) => error);
+    await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalled());
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+    await AuthApplication.commitPersistedAuth(
+      {
+        currentUserPubky: OTHER_PUBKY,
+        sessionReference: grantReference('new'),
+        retiringSession: null,
+        hasProfile: true,
+        generation: 'other-tab',
+      },
+      useAuthStore.getState().generation,
+    );
+    revocation.resolve();
+    expect(isAuthFlowCanceledError(await logout)).toBe(true);
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
   it('skips remote cookie cleanup when there is no retained account identity', async () => {
     seed(null, null);

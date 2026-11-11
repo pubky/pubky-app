@@ -110,6 +110,7 @@ export const ProfilePageMobileMenu = forwardRef<HTMLDivElement, ProfilePageMobil
       label: item.label,
       isActive: item.pageType === activePage,
       onSelect: () => requireAuth(() => onPageChangeAction(item.pageType)),
+      dataCy: `profile-mobile-tab-${item.pageType}`,
     }));
 
     return (

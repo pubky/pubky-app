@@ -32,6 +32,8 @@ export type SeedCreatePostArgs = {
   embed?: { uri: string; kind: SeededPostKind };
   imageFixturePath?: string;
   tags?: string[];
+  // A lock announcement's lock file, `pubky://<author>/pub/app.locks/<id>.json`
+  lock?: string;
 };
 
 export type SeedEditPostArgs = { authorId: string; postId: string; content: string };
@@ -53,4 +55,22 @@ export type SeedCreateCollectionArgs = {
   description: string;
   items: string[];
   layout: SeededCollectionLayout;
+};
+
+export type SeedCreateLockPostArgs = {
+  authorId: string;
+  title: string;
+  teaser: string;
+  // Text of the note behind the lock
+  lockedContent: string;
+  // Price in sats
+  amount: string;
+};
+
+export type SeededLockPost = SeededPost & {
+  lockId: string;
+  // Path tail under /priv/app.locks/content/, as a guarded read names it
+  guardedPath: string;
+  // The locked post as the app encodes a guarded primary, base64, for the Lock Server stub to serve
+  guardedBytes: string;
 };

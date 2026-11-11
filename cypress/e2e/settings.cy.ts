@@ -1,11 +1,14 @@
 import { latestPostInFeedContentEq, createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { searchForProfileByPubky } from '../support/contacts';
-import { goToHomePage } from '../support/header';
+import { goToHomePage, goToSettingsPage, goToProfilePageFromHeader, openSettingsSection } from '../support/header';
+import { showProfileHeader } from '../support/profile';
 import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
+import { itMobile } from '../support/mobile';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath, extendedTimeout } from '../support/common';
+import { getNotificationSwitch, leaveEditProfileForSettings, toggleNotificationSwitch } from '../support/settings';
 
 describe('settings', () => {
   before(() => {
@@ -16,7 +19,7 @@ describe('settings', () => {
     cy.deleteDownloadsFolder();
   });
 
-  it('Account settings function correctly', () => {
+  itMobile('Account settings function correctly', () => {
     // Create a new user with recovery phrase backup
     const profileName = 'MrAccountSettings';
 
@@ -36,7 +39,7 @@ describe('settings', () => {
     };
 
     cy.onboardAsNewUser(profileName, 'I like to test account settings', [BackupType.RecoveryPhraseWithConfirmation]);
-    cy.get('[data-cy="header-settings-btn"]').click();
+    goToSettingsPage();
 
     // Check sign out button
     cy.get('#sign-out-btn').click();
@@ -46,14 +49,14 @@ describe('settings', () => {
     signInFromLogoutWithRecoveryPhrase();
     cy.location('pathname').should('eq', '/home');
     waitForFeedToLoad();
-    cy.get('[data-cy="header-settings-btn"]').click();
+    goToSettingsPage();
 
     // Check edit profile button shows edit page
     cy.get('#edit-profile-btn').click();
     cy.get('#profile-name-input').should('be.visible');
 
     // Navigate back to account settings page
-    cy.get('[data-cy="header-settings-btn"]').click();
+    leaveEditProfileForSettings();
 
     // Check delete account button shows modal, confirming deletes the account and redirects to logout
     cy.get('#delete-account-btn').click();
@@ -76,7 +79,7 @@ describe('settings', () => {
     cy.get('[data-testid="tags-of-interest-form"]').should('be.visible');
   });
 
-  it('Muted users settings displays muted users and hides posts in feed', () => {
+  itMobile('Muted users settings displays muted users and hides posts in feed', () => {
     // Create user 1
     cy.onboardAsNewUser('Mr Muted', 'I like to be muted');
 
@@ -85,8 +88,9 @@ describe('settings', () => {
     createQuickPost(postContent);
 
     // Copy and store pubky for account 1
-    cy.get('[data-cy="header-nav-profile-btn"]').click();
-    cy.get('[data-cy="profile-copy-pubkey-btn"]').click();
+    goToProfilePageFromHeader();
+    showProfileHeader();
+    cy.get('[data-cy="profile-copy-pubkey-btn"]').filter(':visible').should('have.length', 1).click();
     cy.saveCopiedPubkyToAlias('pubky1');
     cy.get('@pubky1').then((ss) => {
       cy.log(`pubky1: ${ss}`);
@@ -103,8 +107,8 @@ describe('settings', () => {
     latestPostInFeedContentEq(postContent);
 
     // Confirm that no users are muted yet in settings page
-    cy.get('[data-cy="header-settings-btn"]').click();
-    cy.get('[data-cy="settings-menu-item-mutedUsers"]').click();
+    goToSettingsPage();
+    openSettingsSection('mutedUsers');
     cy.get('[data-cy="muted-users-root"]').within(() => {
       cy.contains('No muted users yet').should('be.visible');
     });
@@ -126,9 +130,8 @@ describe('settings', () => {
     cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
 
     // Confirm user 1 is now muted in settings page and unmute them
-    cy.get('[data-cy="header-settings-btn"]').click();
-    cy.location('pathname').should('eq', '/settings/account');
-    cy.get('[data-cy="settings-menu-item-mutedUsers"]').should('be.visible').click();
+    goToSettingsPage();
+    openSettingsSection('mutedUsers');
     cy.get('[data-cy="muted-users-root"]').within(() => {
       cy.contains('Mr Muted').should('be.visible');
       cy.get('#unmute-btn').click();
@@ -139,14 +142,13 @@ describe('settings', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  it('can save changes to notification settings', () => {
+  itMobile('can save changes to notification settings', () => {
     // Create a new user with encrypted file backup (profile name used for backup filename)
     cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings', [BackupType.EncryptedFile]);
 
     const navigateToNotificationsPage = () => {
-      cy.get('[data-cy="header-settings-btn"]').click();
-      cy.location('pathname').should('eq', '/settings/account');
-      cy.get('[data-cy="settings-menu-item-notifications"]').click();
+      goToSettingsPage();
+      openSettingsSection('notifications');
       cy.location('pathname').should('eq', '/settings/notifications');
     };
 
@@ -156,10 +158,10 @@ describe('settings', () => {
     cy.intercept('PUT', '**/pub/**/settings.json').as('publicSettings');
 
     // Disable some notifications
-    cy.get('#notification-switch-follow').click();
-    cy.get('#notification-switch-tagProfile').click();
-    cy.get('#notification-switch-reply').click();
-    cy.get('#notification-switch-postDeleted').click();
+    toggleNotificationSwitch('follow');
+    toggleNotificationSwitch('tagProfile');
+    toggleNotificationSwitch('reply');
+    toggleNotificationSwitch('postDeleted');
 
     // Settings go to the app's private namespace, and never back to the public 0.x file
     cy.wait('@settingsWrite').its('response.statusCode').should('eq', 201);
@@ -179,24 +181,24 @@ describe('settings', () => {
     };
 
     // Check notifications remain enabled
-    cy.get('#notification-switch-newFriend').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-tagPost').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-mention').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-repost').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-postEdited').then(checkNotificationIsEnabled);
+    getNotificationSwitch('newFriend').then(checkNotificationIsEnabled);
+    getNotificationSwitch('tagPost').then(checkNotificationIsEnabled);
+    getNotificationSwitch('mention').then(checkNotificationIsEnabled);
+    getNotificationSwitch('repost').then(checkNotificationIsEnabled);
+    getNotificationSwitch('postEdited').then(checkNotificationIsEnabled);
 
     // Check some notifications remain disabled
-    cy.get('#notification-switch-follow').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagProfile').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-reply').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postDeleted').then(checkNotificationIsDisabled);
+    getNotificationSwitch('follow').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagProfile').then(checkNotificationIsDisabled);
+    getNotificationSwitch('reply').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postDeleted').then(checkNotificationIsDisabled);
 
     // Disable remaining enabled notifications
-    cy.get('#notification-switch-newFriend').click();
-    cy.get('#notification-switch-tagPost').click();
-    cy.get('#notification-switch-mention').click();
-    cy.get('#notification-switch-repost').click();
-    cy.get('#notification-switch-postEdited').click();
+    toggleNotificationSwitch('newFriend');
+    toggleNotificationSwitch('tagPost');
+    toggleNotificationSwitch('mention');
+    toggleNotificationSwitch('repost');
+    toggleNotificationSwitch('postEdited');
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
@@ -204,20 +206,20 @@ describe('settings', () => {
     navigateToNotificationsPage();
 
     // Check all notifications are disabled
-    cy.get('#notification-switch-newFriend').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-follow').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagPost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagProfile').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-mention').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-repost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-reply').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postEdited').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postDeleted').then(checkNotificationIsDisabled);
+    getNotificationSwitch('newFriend').then(checkNotificationIsDisabled);
+    getNotificationSwitch('follow').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagPost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagProfile').then(checkNotificationIsDisabled);
+    getNotificationSwitch('mention').then(checkNotificationIsDisabled);
+    getNotificationSwitch('repost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('reply').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postEdited').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postDeleted').then(checkNotificationIsDisabled);
 
     // Enable some notifications
-    cy.get('#notification-switch-follow').click();
-    cy.get('#notification-switch-tagProfile').click();
-    cy.get('#notification-switch-postDeleted').click();
+    toggleNotificationSwitch('follow');
+    toggleNotificationSwitch('tagProfile');
+    toggleNotificationSwitch('postDeleted');
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
@@ -225,16 +227,16 @@ describe('settings', () => {
     navigateToNotificationsPage();
 
     // Check some notifications remain enabled
-    cy.get('#notification-switch-follow').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-tagProfile').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-postDeleted').then(checkNotificationIsEnabled);
+    getNotificationSwitch('follow').then(checkNotificationIsEnabled);
+    getNotificationSwitch('tagProfile').then(checkNotificationIsEnabled);
+    getNotificationSwitch('postDeleted').then(checkNotificationIsEnabled);
 
     // Check some notifications remain disabled
-    cy.get('#notification-switch-newFriend').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagPost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-mention').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-repost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-reply').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postEdited').then(checkNotificationIsDisabled);
+    getNotificationSwitch('newFriend').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagPost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('mention').then(checkNotificationIsDisabled);
+    getNotificationSwitch('repost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('reply').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postEdited').then(checkNotificationIsDisabled);
   });
 });

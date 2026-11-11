@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PassportMethodCard, PassportMethodSection } from './PassportMethodCard';
+
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@/config/network', () => ({ isPassportAppleEnabled: mockAppleEnabled }));
+beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 
 vi.mock('next/image', () => ({
   __esModule: true,
@@ -31,14 +35,32 @@ describe('PassportMethodCard', () => {
 });
 
 describe('PassportMethodSection', () => {
-  it('renders the uppercase label and button for the mobile layout', () => {
+  it('renders a heading and preserves the pending state', () => {
+    render(<PassportMethodSection onContinue={vi.fn()} isPending />);
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Quick & Easy' })).toBeInTheDocument();
+    expect(screen.getByTestId('passport-method-section')).toHaveClass('bg-card', 'p-6');
+    expect(screen.getByTestId('continue-with-google')).toBeDisabled();
+  });
+
+  it('renders the mobile card and forwards the button click', () => {
     const onContinue = vi.fn();
     render(<PassportMethodSection onContinue={onContinue} isPending={false} />);
 
     expect(screen.getByTestId('passport-method-section')).toBeInTheDocument();
-    expect(screen.getByText('Quick & Easy')).toHaveClass('uppercase');
+    expect(screen.getByRole('heading', { name: 'Quick & Easy' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('continue-with-google'));
     expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe.each([PassportMethodCard, PassportMethodSection])('Passport method flag wiring', (Component) => {
+  it.each([false, true])('uses the runtime-selected label for Apple flag=%s', (enabled) => {
+    mockAppleEnabled.mockReturnValue(enabled);
+    render(<Component onContinue={vi.fn()} isPending={false} />);
+    expect(screen.getByTestId('continue-with-google')).toHaveAccessibleName(
+      enabled ? 'Continue with Google or Apple' : 'Continue with Google',
+    );
   });
 });

@@ -361,6 +361,8 @@ An arbitrary value is fine only when the scale cannot express it: a viewport fra
 
 The dark theme is the `:root` token set in `src/app/globals.css`; the light theme overrides the same tokens under `.light`. next-themes (`ThemeProvider`) puts `dark` or `light` on `<html>` from the Settings choice (Auto resolves `prefers-color-scheme` to one of them). Prefer tokens over per-theme classes: a token such as `bg-card` or `text-brand-foreground` is already right in both themes.
 
+Light mode is for signed-in members only, chosen in Settings → Appearance (no header toggle). `ThemeProvider` forces dark on the landing, sign-in, logout and onboarding pages and whenever no one is signed in, so signed-out-only surfaces need no `light:` styles. Forcing leaves the stored `pubky-theme` alone; sign-out (`AuthController.logout`) removes it, so the next account starts on the default. Read the theme on screen as `forcedTheme ?? resolvedTheme`.
+
 When a surface really differs per theme, use the `light:` and `dark:` variants declared with `@custom-variant` in `globals.css`. Both follow the class on `<html>`, not the OS setting. Do not write the arbitrary `[.light_&]:` form.
 
 ```tsx
