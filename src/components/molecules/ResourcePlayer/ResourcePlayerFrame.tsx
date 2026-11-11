@@ -72,8 +72,8 @@ function useStartMessage(target: PlayerTarget, onLoaded: () => void) {
 
 /**
  * A service's own player, unchanged: the iframe its embed code makes (or the themed `Audio` for a
- * plain file), at the service's height for audio and 16:9 for video (never under 200 px high, YouTube's
- * minimum). Until the frame loads, a pulsing placeholder of the same size covers it, and only the
+ * plain file), at the service's height for audio and 16:9 for video (at the card's full width, no height
+ * floor). Until the frame loads, a pulsing placeholder of the same size covers it, and only the
  * status line names the service, to screen readers. A frame that has not loaded after a while
  * offers the service's page. One press on our Play starts it: by its `src` or by its start message
  * (Spotify, TIDAL). A service that cannot start that way (Mixcloud, Deezer) says a press inside its
@@ -104,7 +104,7 @@ export function ResourcePlayerFrame({ target, title, load, onLoaded }: ResourceP
         className={cn(
           'relative w-full overflow-hidden rounded-md',
           target.element !== 'audio' && 'bg-card',
-          isVideo ? 'aspect-video min-h-50' : 'h-(--player-h)',
+          isVideo ? 'aspect-video' : 'h-(--player-h)',
         )}
       >
         {target.element === 'audio' ? (
