@@ -98,13 +98,15 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   );
 });
 
-// Social v1 cut-over, one release only (ADR-0021 amendment, docs/pwa.md "Rollout note"): a page
-// still running the previous build keeps writing the retired `/pub/pubky.app/` tree until it
-// reloads, and nothing server-side reaches it. Once this worker activates over an earlier one it
-// claims every window and navigates each one to its own URL, the one reload the old bundle cannot
-// decline. A first install (no earlier worker) keeps the silent `clientsClaim` behaviour: reloading
-// a first-time visitor mid-onboarding would lose their input for nothing. The release after this
-// one removes both listeners and restores `skipWaiting: false` below.
+// Social v1 cut-over (ADR-0021 amendment, docs/pwa.md "Rollout note"), in force until PR-E2 reverts
+// it: a page still running the previous build keeps writing the retired `/pub/pubky.app/` tree
+// until it reloads, and nothing server-side reaches it. Once this worker activates over an earlier
+// one it claims every window and navigates each one to its own URL, the one reload the old bundle
+// cannot decline. A first install (no earlier worker) keeps the silent `clientsClaim` behaviour:
+// reloading a first-time visitor mid-onboarding would lose their input for nothing. PR-E2 removes
+// both listeners and restores `skipWaiting: false` below; its timing is the team's call (D9: once
+// Nexus shows migrated users' 0.x writes at about zero, or after a period the team picks), not the
+// next release.
 //
 // During `install`, `self.registration.active` is still the worker being replaced; a first
 // install has none. The flag lives in the worker instance, which `skipWaiting` activates right
@@ -137,10 +139,10 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  // Social v1 cut-over, one release only (ADR-0021 amendment): the worker activates as soon as it
-  // installs instead of waiting for the "Update available" consent (useServiceWorkerUpdate), and
-  // the activate listener above reloads every open window when it replaces an earlier worker.
-  // Restore `false` in the next release.
+  // Social v1 cut-over (ADR-0021 amendment), until PR-E2 reverts it: the worker activates as soon
+  // as it installs instead of waiting for the "Update available" consent (useServiceWorkerUpdate),
+  // and the activate listener above reloads every open window when it replaces an earlier worker.
+  // PR-E2 restores `false`, when the team decides (D9), not in the next release.
   skipWaiting: true,
   // The first install claims open tabs immediately.
   clientsClaim: true,
