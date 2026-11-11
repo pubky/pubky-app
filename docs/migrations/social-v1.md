@@ -110,6 +110,7 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3122                             | F5 (SF-6): feed filter tags folded with the stored label fold (`canonicalizeTagLabel`): pipe, dialog, sidebar filter, home store                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | #3123                             | F8: one chained `bookmarks` + `post_details` read for Followed Collections and the count; dev stall matched, not reproduced on prod                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | #3120                             | F7 (SF-8 to SF-11, the [F7] nits): the runbook, `AGENTS.md`, the ADRs, the Greptile rules and seven source comments brought up to the branch head; QA-4, QA-5, the Nexus watcher wedge (pubky/pubky-nexus#1229) and the final review recorded; the two uncaptured-`AppError` sites named in `AGENTS.md`                                                                                                                                                                                                                                                                                                                  |
+| #3132                             | G3: `publishLock` waits 30 s (`requestTimeout`) for the lock create and the announcement PUT; slow homeserver PUTs had pushed the lock create past Cypress's 5 s default (branch e2e flake, QA-owned suite)                                                                                                                                                                                                                                                                                                                                                                                                              |
 | #3133                             | second review (2026-11-12) appends: the `mailto:`/`tel:` link reduction in _Reductions_ and the release notes, fourteen `auth/SocialMigration` VRT states and the pending baseline dispatch, the e2e record with the `locks.cy.ts` timing failure, QA-6 in the QA matrix, the two uncaptured-`AppError` sites in the Greptile error rule, the storage and e2e-dispatch rollout steps                                                                                                                                                                                                                                     |
 
 The branch also carries CI-owned VRT baseline commits from the `VRT Update Baselines` dispatches after the QA-1 fixes
@@ -380,19 +381,19 @@ mobile viewport; a plain `it` is desktop only. The merge applied `dev`'s mobile 
 
 e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v1`, against the private pubky-stack:
 `feat/social-v1` points `pubky_stack_ref` (`.github/workflows/e2e-test.yml`) at pubky-stack's `social-v1` branch, whose
-Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). How that pin and the trigger change at the release is in
-_Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
-otherwise the invite check answers 400 and onboarding stops at Continue. CI runs the suite on every push to the branch
-(desktop, Chrome, 13 specs): green on the FIX-7 merge (2026-11-10, after one earlier flake on a post delete that the
-Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, on the dev-sync 5 merge
-`93db5b9dc`, on #3114's `ae4ba8ad2` and on the fix PRs #3118, #3119, #3116, #3121, #3122 and #3123 (`8fd6da28e`,
-`963cdf7e3`, `9d2780d3d`, `8652c8af2`, `ae2e20fd3`, `d98f14a6d`; 2026-11-11, 13 of 13 each). Two pushes failed: #3113's
-timed out in `posts.cy.ts` and `locks.cy.ts` and the next push was green; #3117's (`e5bca7d1e`, run 43005369209) failed
-`locks.cy.ts` on `publishLock`'s 5 s default wait for the stand-in's `createContentLock` request ("No request ever
-occurred"), test timing under a slow homeserver that predates the branch, and a fix of that wait is pending. "e2e not
-run" in the _Sync log_ means the sync session's local run. Local
-runs use the Chrome-family binary Playwright's VRT setup installs, never Electron or a snap browser, so they match CI's
-matrix.
+Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). How that pin and the trigger change at the release is
+in _Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on the
+homeserver, as CI sets it: otherwise the invite check answers 400 and onboarding stops at Continue. CI runs the suite on
+every push to the branch (desktop, Chrome, 13 specs): green on the FIX-7 merge (2026-11-10, after one earlier flake on a
+post delete that the Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, on the
+dev-sync 5 merge `93db5b9dc`, on #3114's `ae4ba8ad2` and on the fix PRs #3118, #3119, #3116, #3121, #3122 and #3123
+(`8fd6da28e`, `963cdf7e3`, `9d2780d3d`, `8652c8af2`, `ae2e20fd3`, `d98f14a6d`; 2026-11-11, 13 of 13 each). Two pushes
+failed: #3113's timed out in `posts.cy.ts` and `locks.cy.ts` and the next push was green; the #3117 merge (`e5bca7d1e`,
+run 43005369209) failed `locks.cy.ts` on `publishLock`'s `cy.wait('@createContentLock')`: slow homeserver PUTs delayed
+the lock create about 80 ms past Cypress's 5 s default `requestTimeout` ("No request ever occurred"), test timing that
+predates the branch; #3132 gives both `publishLock` waits a 30 s `requestTimeout`. "e2e not run" in the _Sync log_ means
+the sync session's local run. Local runs use the Chrome-family binary Playwright's VRT setup installs, never Electron or
+a snap browser, so they match CI's matrix.
 
 The e2e follow-up that the port left open landed as #3094 (2026-11-10): `expectImageServed` (`cypress/support/media.ts`)
 asserts the route, a 200 with an image type and the decoded image for v1 media on `/v1/static/files/` and for 0.x media
