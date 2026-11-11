@@ -10,7 +10,7 @@ const MIGRATION_SCREEN_HOLD_MS = 3000;
 export const MIGRATION_FLAG_GLOB = `**${SOCIAL_MIGRATION_FLAG_PATH}`;
 
 /** What a run recorded in its done flag: the 0.x paths it copied and those it left, by reason. */
-export type MigrationFlag = { migrated: string[]; skipped: Record<string, string[]> };
+type MigrationFlag = { migrated: string[]; skipped: Record<string, string[]> };
 
 /** The owner-relative path the migrator records for a 0.x post. */
 export const legacyPostPath = (post: { id: string }) => `pub/pubky.app/posts/${post.id}`;
