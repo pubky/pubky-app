@@ -70,6 +70,14 @@ function trackStore() {
   return { seen, unsubscribe };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -94,6 +102,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     AuthController.cancelActiveAuthFlow();
     AuthController.cancelModerationFollow();
     vi.restoreAllMocks();
+    vi.useRealTimers();
     Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
   });
 
@@ -189,6 +198,75 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       expect(await AuthController.restorePersistedSession()).toBe(false);
 
       expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'temporary-error' });
+    });
+
+    // A late exchange result re-enters `restorePersistedSession` on its own (pubky/pubky-app#3126, dev-sync 7); the
+    // gate still decides before the session is placed.
+    describe('an exchange that settles after the UI deadline', () => {
+      type Exchange = Awaited<ReturnType<typeof AuthApplication.restorePersistedSession>>;
+
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      // Each test saves its own grant: the controller keys the shared exchange on the reference.
+      it('reads the flag before placing the late session, without another lifecycle event', async () => {
+        useAuthStore.setState({ sessionReference: mockGrantReference('late-passed') });
+        persistState();
+        const exchange = deferred<Exchange>();
+        vi.mocked(AuthApplication.restorePersistedSession).mockReturnValue(exchange.promise);
+        let sessionDuringFlagRead: unknown = 'unread';
+        const read = vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(async () => {
+          sessionDuringFlagRead = useAuthStore.getState().session;
+          return flagBytes();
+        });
+        const { seen, unsubscribe } = trackStore();
+        const initial = AuthController.restorePersistedSession();
+        await vi.advanceTimersByTimeAsync(12_001);
+        expect(await initial).toBe(false);
+        expect(read).not.toHaveBeenCalled();
+
+        exchange.resolve({ status: 'restored', session });
+        await vi.advanceTimersByTimeAsync(1);
+        unsubscribe();
+
+        expect(read).toHaveBeenCalledOnce();
+        expect(sessionDuringFlagRead).toBeNull();
+        expect(seen).toEqual(['restoring', 'temporary-error', 'restoring', 'restoring+session', 'ready+session']);
+        expect(AuthApplication.restorePersistedSession).toHaveBeenCalledOnce();
+        expect(BootstrapApplication.initialize).toHaveBeenCalledOnce();
+        expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+      });
+
+      it('signs out a late session from before the gate instead of placing it', async () => {
+        useAuthStore.setState({ sessionReference: mockGrantReference('late-pre-gate') });
+        persistState();
+        const exchange = deferred<Exchange>();
+        vi.mocked(AuthApplication.restorePersistedSession).mockReturnValue(exchange.promise);
+        vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
+        const { seen, unsubscribe } = trackStore();
+        const initial = AuthController.restorePersistedSession();
+        await vi.advanceTimersByTimeAsync(12_001);
+        expect(await initial).toBe(false);
+
+        exchange.resolve({ status: 'restored', session });
+        await vi.advanceTimersByTimeAsync(60_000);
+        unsubscribe();
+
+        expect(useAuthStore.getState()).toMatchObject({
+          session: null,
+          restoreStatus: 'social-migration',
+          currentUserPubky: pubky,
+          sessionReference: mockGrantReference('late-pre-gate'),
+        });
+        expect(useSocialMigrationStore.getState()).toMatchObject({
+          stage: 'reauth-required',
+          reason: 'pre-migration-grant',
+        });
+        expect(seen).toEqual(['restoring', 'temporary-error', 'restoring', 'social-migration']);
+        expect(AuthApplication.restorePersistedSession).toHaveBeenCalledOnce();
+        expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
+      });
     });
   });
 

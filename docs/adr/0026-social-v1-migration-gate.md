@@ -130,6 +130,9 @@ failure uncaptured so this guard decides the single capture). Counts only: the r
   owns the outcome from there.
 - The local record trusts a revision it saw; a bumped `transformRev` walks the tree again through the flag read.
 - A second device still migrating while this one signs in passes on its own flag read once the first finishes.
+- A restore whose SDK exchange settles after the 12 s UI deadline (`temporary-error`, pubky/pubky-app#3126) re-enters
+  `restorePersistedSession` on its own, so the late session still passes `ensureMigrated` before `init` and a gate
+  sign-out still ends as `social-migration`; nothing places a late session directly.
 
 ## Alternatives Considered
 
