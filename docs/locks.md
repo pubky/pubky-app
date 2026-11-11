@@ -654,7 +654,8 @@ Never commit either.
   (testnet + Lock Server + nexus) is driven manually. How to run it, approve as Bitkit and pay from
   the terminal: [`locks/locks-local-stack/README.md`](locks/locks-local-stack/README.md).
 - `cypress/e2e/locks.cy.ts` covers publish, owner view and payment unlock against the real Nexus and
-  homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
+  homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed, for a lock published on the v1 app and
+  for one a 0.x client published before the social v1 migration (seeded, then migrated on sign-in). `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
   answers with `cy.intercept`, and writes the guarded bytes and `lock.json` to the creator's homeserver

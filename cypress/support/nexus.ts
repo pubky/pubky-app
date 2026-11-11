@@ -163,6 +163,7 @@ type StoredPost = {
   parent: string | null;
   embed: string | null;
   attachments: { uri: string }[];
+  lock: string | null;
 };
 
 /**

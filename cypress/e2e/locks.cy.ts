@@ -28,9 +28,18 @@
  * where the Lock Server would, so the owner view, the reader's purchase file and the reader's
  * replica all go through the homeserver; the announcement is indexed by the real Nexus.
  *
+ * A LOCK FROM BEFORE THE SOCIAL V1 MIGRATION
+ * The last test starts from what a 0.x client left on an account that has not migrated yet, seeded
+ * through the homeserver API (`createLegacyLockViaApi`): the guarded image post in the 0.x shape under
+ * `/priv/app.locks/content/`, the public `/pub/app.locks/<lockId>.json` and the 0.x announcement with
+ * the top-level `lock` URL. The stand-in is primed with the guarded bytes and the price, as the Lock
+ * Server would hold them. The account migrates on sign-in, and the lock then goes through the same
+ * owner view, unlock, edit and delete as one published on the v1 app.
+ *
  * The separate pubky-e2e project (in progress) will cover Locks end to end with a real Lock Server,
  * Paykit and Bitkit; this spec covers the app's own flow until then.
  */
+import type { Interception } from 'cypress/types/net-stubbing';
 import { backupDownloadFilePath } from '../support/common';
 import {
   applyLockPrice,
@@ -47,6 +56,7 @@ import {
   signInToLockServer,
   singlePostCard,
   stubLockServer,
+  type TLockServerState,
   turnLockOff,
   turnLockOn,
   turnLockOnAndSetUpLocks,
@@ -56,14 +66,25 @@ import {
   writeLockedPost,
 } from '../support/locks';
 import { flushLocksStubLog, locksStep } from '../support/locks-log';
-import { userIndexed, waitForNexus } from '../support/nexus';
-import { seedUserViaApi } from '../support/seed';
+import { holdMigrationFlag, legacyPostPath, migrationFlag } from '../support/migration';
+import {
+  expectV1PostWrite,
+  NEXUS_DELETE_SETTLE_MS,
+  postGone,
+  postIdFromWriteUrl,
+  postVersionFromWriteUrl,
+  userIndexed,
+  waitForNexus,
+} from '../support/nexus';
+import { createLegacyLockViaApi, listHomeserverPathsViaApi, seedUserViaApi } from '../support/seed';
 import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import type { SeededUser } from '../support/types/seed';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
 const creatorName = `LockCreator${uniqueSuffix}`;
 const readerName = `LockReader${uniqueSuffix}`;
+const legacyCreatorName = `LegacyLockCreator${uniqueSuffix}`;
+const legacyReaderName = `LegacyLockReader${uniqueSuffix}`;
 
 const FIRST_PRICE_SATS = '1000';
 const PRICE_SATS = '2100';
@@ -73,6 +94,7 @@ const DIALOG_PRICE_LABEL = '₿ 2,100';
 
 const POST_STEPS = 8;
 const ARTICLE_STEPS = 6;
+const LEGACY_STEPS = 7;
 
 const lockServer = createLockServerState();
 
@@ -109,11 +131,14 @@ const expectTaskStatus = (status: 'pending' | 'completed') => {
   });
 };
 
+/** Who pays for a lock, whose lock it is, and the stand-in Lock Server that holds it. */
+type TUnlock = { creator: SeededUser; reader: SeededUser; lockServer: TLockServerState };
+
 /**
  * Opens Pay to Unlock as the reader and pays through the stubbed wallet. The payment request must
  * be for this lock (the creator's `lock.json`), delivered to this reader, at the lock's price.
  */
-const payToUnlock = () => {
+const payToUnlock = (unlock: TUnlock) => {
   cy.intercept('PUT', '**/priv/social/unlocked/**/post.json').as('replicaMarker');
   singlePostCard().find('[data-cy="locked-post-price"]').should('have.text', CARD_PRICE_LABEL);
   singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('not.be.disabled');
@@ -131,17 +156,17 @@ const payToUnlock = () => {
       proofs: { criterion_id: string; verifier_type: string }[];
     };
     expect(bundle.pubky_lock_resource, 'the lock being paid for').to.match(
-      new RegExp(`^${creator.id}/pub/app\\.locks/[^/]+\\.json$`),
+      new RegExp(`^${unlock.creator.id}/pub/app\\.locks/[^/]+\\.json$`),
     );
-    expect(bundle.reader_public_key, 'where the payment request is delivered').to.eq(reader.pubky);
+    expect(bundle.reader_public_key, 'where the payment request is delivered').to.eq(unlock.reader.pubky);
     expect(bundle.proofs).to.have.length(1);
     expect(bundle.proofs[0]).to.include({ criterion_id: 'criterion-1', verifier_type: 'paykit-payment' });
     expect(bundle.bundle_id).to.not.eq('');
     const lockId = /\/pub\/app\.locks\/([^/]+)\.json$/.exec(bundle.pubky_lock_resource)?.[1] ?? '';
-    expect(lockServer.locks[lockId], 'the amount and recipient the Bitkit payment request carries').to.deep.eq({
+    expect(unlock.lockServer.locks[lockId], 'the amount and recipient the Bitkit payment request carries').to.deep.eq({
       amount: PRICE_SATS,
       asset: 'BTC',
-      recipient: creator.pubky,
+      recipient: unlock.creator.pubky,
     });
     cy.wrap(lockId).as('lockId');
   });
@@ -238,7 +263,7 @@ describe('locks', () => {
       singlePostCard().find('[data-cy="post-attachment-image"]').should('not.exist');
 
       locksStep(5, POST_STEPS, 'B pays in bitcoin through the stubbed Bitkit wallet');
-      payToUnlock();
+      payToUnlock({ creator, reader, lockServer });
 
       locksStep(6, POST_STEPS, 'Unlocked view: B sees the image and the locked text');
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
@@ -360,7 +385,7 @@ describe('locks', () => {
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
 
       locksStep(5, ARTICLE_STEPS, 'B pays in bitcoin through the stubbed Bitkit wallet');
-      payToUnlock();
+      payToUnlock({ creator, reader, lockServer });
 
       locksStep(6, ARTICLE_STEPS, 'Unlocked view: B sees the full article body');
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
@@ -376,5 +401,190 @@ describe('locks', () => {
         }),
       );
     });
+  });
+});
+
+describe('locks published before the migration', () => {
+  const legacyLockServer = createLockServerState();
+
+  let legacyCreator: SeededUser;
+  let legacyReader: SeededUser;
+
+  before(() => {
+    seedUserViaApi(legacyCreatorName, { legacy: true, withRecoveryFile: true }).then((user) => {
+      legacyCreator = user;
+      legacyLockServer.creatorPubky = user.id;
+    });
+    seedUserViaApi(legacyReaderName, { withRecoveryFile: true }).then((user) => {
+      legacyReader = user;
+    });
+  });
+
+  beforeEach(() => {
+    stubLockServer(legacyLockServer);
+  });
+
+  afterEach(() => {
+    flushLocksStubLog();
+  });
+
+  it('migrates a lock a 0.x client published: the owner sees it, another reader pays to unlock it, the owner edits and deletes it', () => {
+    const run = Date.now();
+    const lockedText = `Locked before the migration ${run}`;
+    const title = `Locked photo from 0.x ${run}`;
+    const teaser = `A photo locked before the migration ${run}`;
+    const editedTitle = `Locked photo, renamed ${run}`;
+    const editedTeaser = `Still worth unlocking after the migration ${run}`;
+    const teaserEnvelope = { lock_title: title, teaser_description: teaser, content_kind: 'image' };
+
+    locksStep(
+      1,
+      LEGACY_STEPS,
+      'Before the migration A has a 0.x lock: the guarded post, its lock file, the announcement',
+    );
+    createLegacyLockViaApi(legacyCreator, lockedText, teaserEnvelope, { amount: PRICE_SATS, asset: 'BTC' }).then(
+      (lock) => {
+        // The stand-in holds what the Lock Server kept for this lock: the guarded bytes and the price.
+        Object.assign(legacyLockServer.guarded, lock.guarded);
+        legacyLockServer.locks[lock.lockId] = { amount: PRICE_SATS, asset: 'BTC', recipient: legacyCreator.pubky };
+        // Until A migrates, Nexus reads the announcement through its 0.x reader, lock URL included.
+        waitForNexus(userIndexed(legacyCreator), userIndexed(legacyReader));
+        waitForNexusLockPost(legacyCreator.pubky, lock.post.id, { lockUrl: lock.lockUrl, text: teaser });
+
+        locksStep(2, LEGACY_STEPS, 'A signs in and migrates: the v1 copy of the announcement keeps the lock URL');
+        cy.intercept('PUT', '**/pub/social/v1/posts/*/*').as('postVersion');
+        // The owner view reads the guarded post from A's own homeserver; the home feed may read it first.
+        cy.intercept('GET', '**/priv/app.locks/content/*').as('ownGuardedRead');
+        holdMigrationFlag();
+        cy.signInWithEncryptedFile(backupDownloadFilePath(legacyCreator.name), undefined, { migrates: true });
+        migrationFlag().then((flag) => {
+          expect(flag.migrated, 'the paths the run copied').to.include(legacyPostPath(lock.post));
+        });
+        cy.get<Interception[]>('@postVersion.all').then((writes) => {
+          const copies = writes.filter(({ request }) => postIdFromWriteUrl(request.url) === lock.post.id);
+          expect(copies, 'v1 copies of the announcement').to.have.length(1);
+          copies.forEach((copy) =>
+            expectV1PostWrite(copy).then((post) => {
+              expect(post.kind, 'the announcement kind').to.eq('note');
+              expect(post.lock, 'the lock URL').to.eq(lock.lockUrl);
+              expect(JSON.parse(post.content), 'the teaser envelope').to.deep.eq(teaserEnvelope);
+            }),
+          );
+        });
+
+        locksStep(3, LEGACY_STEPS, 'Owner view: A sees the locked image and text, read from the 0.x guarded post');
+        openPostFromHomeFeed(legacyCreator.pubky, lock.post.id, teaser);
+        singlePostCard().should('contain.text', teaser);
+        singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
+        singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'My locked content');
+        singlePostCard()
+          .find('[data-cy="locked-post-unlocked-content"]')
+          .should('contain.text', lockedText)
+          .find('[data-cy="post-attachment-image"]')
+          .should('be.visible')
+          .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
+        singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('be.disabled');
+        // Straight from A's homeserver: the owner never reads through the Lock Server.
+        cy.wait('@ownGuardedRead').its('response.statusCode').should('eq', 200);
+        cy.get('@proxyReadGuardedResource.all').should('have.length', 0);
+
+        locksStep(4, LEGACY_STEPS, 'Locked view: B sees only the title and teaser');
+        cy.signOut(HasBackedUp.Yes);
+        signInAs(legacyReader);
+        openPostFromHomeFeed(legacyCreator.pubky, lock.post.id, teaser);
+        singlePostCard().should('contain.text', teaser).and('not.contain.text', lockedText);
+        singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
+        singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
+        singlePostCard().find('[data-cy="post-attachment-image"]').should('not.exist');
+
+        locksStep(5, LEGACY_STEPS, 'B pays in bitcoin through the stubbed Bitkit wallet and sees the image and text');
+        payToUnlock({ creator: legacyCreator, reader: legacyReader, lockServer: legacyLockServer });
+        cy.get<string>('@lockId').should('eq', lock.lockId);
+        singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
+        singlePostCard()
+          .find('[data-cy="locked-post-unlocked-content"]')
+          .should('contain.text', lockedText)
+          .find('[data-cy="post-attachment-image"]')
+          .should('be.visible')
+          .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
+        reloadFromReaderReplica(lock.lockId, () => {
+          expectSignedIn('the reader is still signed in after a reload');
+          singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', lockedText);
+          singlePostCard().find('[data-cy="post-attachment-image"]').should('be.visible');
+        });
+
+        locksStep(
+          6,
+          LEGACY_STEPS,
+          'A edits the title and teaser: the edit is a new v1 version that keeps the lock URL',
+        );
+        cy.signOut(HasBackedUp.Yes);
+        signInAs(legacyCreator);
+        cy.intercept('PUT', `**/pub/social/v1/posts/${lock.post.id}/*`).as('teaserEdited');
+        cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
+          cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
+        });
+        cy.get('[data-cy="post-menu-action-edit"]').should('be.visible').click();
+        cy.get('[data-cy="edit-post-input"]')
+          .should('be.visible')
+          .within(() => {
+            cy.get('[data-cy="lock-title-input"]').should('have.value', title).clear().type(editedTitle);
+            cy.get('[data-cy="post-input-textarea"]').should('have.value', teaser).clear().type(editedTeaser);
+            cy.get('[data-cy="post-input-action-bar-edit"]').click();
+          });
+        cy.get('[data-cy="edit-post-input"]').should('not.exist');
+        cy.wait('@teaserEdited').then((edit) => {
+          const { postId, editId } = postVersionFromWriteUrl(edit.request.url);
+          expect(postId, 'edited post').to.eq(lock.post.id);
+          expect(editId > postId, 'the edit sorts after the post').to.eq(true);
+          expectV1PostWrite(edit).then((post) => {
+            expect(post.lock, 'the lock URL').to.eq(lock.lockUrl);
+            expect(JSON.parse(post.content), 'the teaser envelope').to.deep.eq({
+              lock_title: editedTitle,
+              teaser_description: editedTeaser,
+              content_kind: 'image',
+            });
+          });
+          // The migrated version and the edit
+          listHomeserverPathsViaApi(legacyCreator, `/pub/social/v1/posts/${lock.post.id}/`).then((versions) => {
+            expect(versions, 'versions of the announcement').to.have.length(2);
+            expect(versions.filter((version) => version.endsWith(`/${editId}.json`))).to.have.length(1);
+          });
+        });
+        // Nexus takes a migrated account's v1 writes only after the flip, so the edit shows the flip end to end.
+        waitForNexusLockPost(legacyCreator.pubky, lock.post.id, { lockUrl: lock.lockUrl, text: editedTeaser });
+
+        locksStep(7, LEGACY_STEPS, 'A deletes it: the lock is taken down first, then every copy of the announcement');
+        signInToLockServer();
+        cy.intercept('DELETE', `**/pub/pubky.app/posts/${lock.post.id}`).as('legacyCopyDeleted');
+        cy.intercept('DELETE', `**/pub/social/v1/posts/${lock.post.id}/*`).as('versionDeleted');
+        cy.findPostInFeed(0, editedTeaser, CheckForNewPosts.Yes).within(() => {
+          cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
+        });
+        cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click();
+        cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.visible').click();
+        cy.get('[data-cy="dialog-content"]').should('not.exist');
+        cy.wait('@deleteContentLock');
+        cy.wrap(legacyLockServer).its('deletedLocks').should('deep.eq', [lock.lockId]);
+        cy.wait('@legacyCopyDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
+        // A v1 post is a directory of versions, one DELETE each: the migrated copy and the edit.
+        cy.wait(['@versionDeleted', '@versionDeleted']).then((deletions) => {
+          deletions.forEach(({ response }) => {
+            expect(response?.statusCode, 'version delete status').to.be.oneOf([200, 204]);
+          });
+        });
+        cy.get('body').should('not.contain.text', editedTeaser);
+        // Nothing of the announcement is left on A's homeserver, in either layout; each tree keeps the profile.
+        listHomeserverPathsViaApi(legacyCreator, '/pub/social/v1/').then((paths) => {
+          expect(paths.filter((path) => path.includes(`/posts/${lock.post.id}/`))).to.deep.eq([]);
+        });
+        listHomeserverPathsViaApi(legacyCreator, '/pub/pubky.app/').then((paths) => {
+          expect(paths.filter((path) => path.endsWith(`/posts/${lock.post.id}`))).to.deep.eq([]);
+        });
+        // pubky/pubky-nexus#1213: the first Nexus read of the post comes only after the settle window.
+        cy.wait(NEXUS_DELETE_SETTLE_MS);
+        cy.then(() => waitForNexus(postGone(lock.post)));
+      },
+    );
   });
 });

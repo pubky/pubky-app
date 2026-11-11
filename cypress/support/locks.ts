@@ -476,6 +476,16 @@ const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
 const nexusDetailsHaveLock = (body: unknown): boolean =>
   typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
 
+type TExpectedLockPost = { lockUrl: string; text?: string };
+
+/** The announcement as Nexus serves it: `lock` is that URL, and `content` holds `text` when given. */
+const nexusDetailsMatch = (body: unknown, { lockUrl, text }: TExpectedLockPost): boolean =>
+  typeof body === 'object' &&
+  body !== null &&
+  'lock' in body &&
+  body.lock === lockUrl &&
+  (text === undefined || ('content' in body && typeof body.content === 'string' && body.content.includes(text)));
+
 /**
  * Polls GET /v1/post/<author>/<id>/details until `settled` is true.
  *
@@ -509,14 +519,16 @@ const pollNexusPostDetails = (
 
 /**
  * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ * thing that tells a reader the post is locked). The one fixed wait is the poll interval. With `expected`, it
+ * waits for that exact `lock` URL, and for `content` to hold `expected.text` (an edit Nexus has picked up).
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+export const waitForNexusLockPost = (authorPubky: string, postId: string, expected?: TExpectedLockPost) => {
   pollNexusPostDetails(
     authorPubky,
     postId,
-    (status, body) => status === 200 && nexusDetailsHaveLock(body),
-    (authorId, status) => `Nexus did not index lock post ${authorId}/${postId} (last status ${status})`,
+    (status, body) => status === 200 && (expected ? nexusDetailsMatch(body, expected) : nexusDetailsHaveLock(body)),
+    (authorId, status) =>
+      `Nexus did not index lock post ${authorId}/${postId}${expected ? ` with ${JSON.stringify(expected)}` : ''} (last status ${status})`,
   );
 };
 

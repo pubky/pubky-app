@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { basename, extname } from 'path';
 import type { Path, Session } from '@synonymdev/pubky';
@@ -22,7 +23,14 @@ import {
   APP_SETTINGS_FILE,
   LEGACY_SETTINGS_PATH,
 } from '../../src/config/app-files';
-import type { SeedCreateCollectionArgs, SeedCreatePostArgs, SeededPostKind } from '../support/types/seed';
+import { LOCKS_GUARDED_CONTENT_PATH, PAYKIT_PAYMENT_IN_HOURS } from '../../src/config/locks';
+import type {
+  SeedCreateCollectionArgs,
+  SeedCreatePostArgs,
+  SeededLegacyLock,
+  SeededPostKind,
+  SeedLegacyLockArgs,
+} from '../support/types/seed';
 
 /**
  * The homeserver writes behind the seed tasks, one writer per data epoch.
@@ -40,6 +48,7 @@ import type { SeedCreateCollectionArgs, SeedCreatePostArgs, SeededPostKind } fro
 type StoredPost = { id: string; uri: string };
 type PostInput = Pick<SeedCreatePostArgs, 'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath'>;
 type CollectionInput = Pick<SeedCreateCollectionArgs, 'name' | 'description' | 'items' | 'layout'>;
+type LockInput = Pick<SeedLegacyLockArgs, 'lockedText' | 'teaser' | 'price' | 'imageFixturePath'>;
 
 export type SeedWriter = {
   /** Writes the profile, which makes the app treat the key as signed up; yields the URI a tag targets. */
@@ -52,6 +61,8 @@ export type SeedWriter = {
   writeBookmark: (uri: string) => Promise<void>;
   writeMute: (muteeId: string) => Promise<void>;
   writeCollection: (collection: CollectionInput) => Promise<StoredPost>;
+  /** Publishes a locked image post as the Lock Server left it, with its public announcement. */
+  writeLock: (lock: LockInput) => Promise<SeededLegacyLock>;
   writeLastRead: (timestamp: number) => Promise<void>;
   writeSettings: (settings: Record<string, unknown>) => Promise<void>;
 };
@@ -171,6 +182,12 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
       await put(collection);
       return { id: collection.id, uri: buildUri(owner, 'post', collection.id) };
     },
+
+    // A v1 lock is published through the composer against the stand-in Lock Server (locks.cy.ts); only
+    // a lock from before the migration has to be seeded, and that is the legacy writer's.
+    writeLock: () => {
+      throw new Error('a lock is seeded for an un-migrated account only; publish a v1 one through the app');
+    },
   };
 };
 
@@ -287,5 +304,75 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
         content: JSON.stringify({ name, description, items: items.map(toLegacyReference), layout }),
         kind: LEGACY_POST_KINDS.collection,
       }),
+
+    // What a 0.x client left behind after publishing a lock (`docs/locks.md`, Where the data lives): the
+    // guarded image and the guarded post, a 0.x `PubkyAppPost` JSON naming the image by its guarded URI,
+    // under `/priv/app.locks/content/`; the public lock file; and the announcement, a 0.x `short` post
+    // whose `content` is the teaser envelope and whose top-level `lock` names the lock file. The Lock
+    // Server wrote the first three with the creator's session, so a root session writes them the same way.
+    // The hashes are the stand-in Lock Server's spelling (`cypress/support/locks.ts`): nothing reads them.
+    writeLock: async ({ lockedText, teaser, price, imageFixturePath }) => {
+      const image = readImage(imageFixturePath);
+      const imageTail = randomUUID();
+      const postTail = randomUUID();
+      const guardedPath = (tail: string) => `${LOCKS_GUARDED_CONTENT_PATH}${tail}`;
+      await session.storage.putBytes(guardedPath(imageTail) as Path, image.bytes);
+      const guardedPost = {
+        content: lockedText,
+        kind: LEGACY_POST_KINDS.image,
+        parent: null,
+        embed: null,
+        attachments: [`pubky://${owner}${guardedPath(imageTail)}`],
+      };
+      const postBytes = new TextEncoder().encode(JSON.stringify(guardedPost));
+      await session.storage.putBytes(guardedPath(postTail) as Path, postBytes);
+
+      const lockId = `legacy${Date.now()}`;
+      const lockFile = {
+        version: 1,
+        creator: `pubky${owner}`,
+        primary_resource: {
+          path: guardedPath(postTail),
+          hash: `e2e-${postTail}`,
+          content_type: 'application/octet-stream',
+          size: postBytes.length,
+        },
+        secondary_resources: {
+          [guardedPath(imageTail)]: { hash: `e2e-${imageTail}`, content_type: image.type, size: image.bytes.length },
+        },
+        criteria: [
+          {
+            criterion_id: 'criterion-1',
+            verifier_type: 'paykit-payment',
+            params: {
+              recipient_pubky: `pubky${owner}`,
+              amount: price.amount,
+              asset: price.asset,
+              payment_in: PAYKIT_PAYMENT_IN_HOURS,
+            },
+          },
+        ],
+        lock_logic: { type: 'all', criteria: ['criterion-1'] },
+        access_policy: { requested_credential_ttl_seconds: 900 },
+        lock_server: { override: null },
+      };
+      await session.storage.putJson(`/pub/app.locks/${lockId}.json` as Path, lockFile);
+      const lockUrl = `pubky://${owner}/pub/app.locks/${lockId}.json`;
+
+      const post = await writeStoredPost({
+        content: JSON.stringify(teaser),
+        kind: LEGACY_POST_KINDS.note,
+        lock: lockUrl,
+      });
+      return {
+        post: { ...post, authorId: owner, kind: 'note' },
+        lockId,
+        lockUrl,
+        guarded: {
+          [postTail]: Buffer.from(postBytes).toString('base64'),
+          [imageTail]: Buffer.from(image.bytes).toString('base64'),
+        },
+      };
+    },
   };
 };

@@ -8,10 +8,12 @@ import type {
   SeedCreatePostArgs,
   SeedCreateUserArgs,
   SeedDeletePostArgs,
+  SeededLegacyLock,
   SeedEditPostArgs,
   SeededPost,
   SeededUser,
   SeedFollowArgs,
+  SeedLegacyLockArgs,
   SeedListPathsArgs,
   SeedMarkNotificationsReadArgs,
   SeedMuteArgs,
@@ -180,6 +182,11 @@ export const createSeedTasks = (config: SeedConfig) => {
         await sessionFor(userId).writer.writeSettings(settings);
         return settings;
       }),
+
+    seedLegacyLock: ({ authorId, ...lock }: SeedLegacyLockArgs): Promise<SeededLegacyLock> =>
+      step(`publish a lock by '${nameOf(authorId)}': "${preview(lock.teaser.teaser_description)}"`, () =>
+        sessionFor(authorId).writer.writeLock(lock),
+      ),
 
     // Not a seed: reads a post an intercepted write carried with the library the seeds build posts with, which
     // stays on this side so the specs do not bundle it. Rejects a body that is not a stored v1 post.

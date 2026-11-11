@@ -45,6 +45,31 @@ export type SeedSettingsArgs = { userId: string; settings: Record<string, unknow
 // A directory of the owner's tree, as `SessionStorage.list` takes it
 export type HomeserverDirectory = `/pub/${string}/` | `/priv/${string}/`;
 export type SeedListPathsArgs = { userId: string; prefix: HomeserverDirectory };
+
+/** The amount and asset a lock asks for; the recipient is always the lock's creator. */
+export type SeededLockPrice = { amount: string; asset: 'BTC' | 'USD' };
+
+/** The public teaser envelope a lock announcement stores in its `content` (`docs/locks.md`, Data shape). */
+export type SeededLockTeaser = { lock_title: string; teaser_description: string; content_kind?: string };
+
+export type SeedLegacyLockArgs = {
+  authorId: string;
+  /** The text of the locked post; it is an image post, with `imageFixturePath` as its one attachment. */
+  lockedText: string;
+  teaser: SeededLockTeaser;
+  price: SeededLockPrice;
+  imageFixturePath: string;
+};
+
+/** A lock a 0.x client published: its announcement, the public lock file and what the Lock Server guarded. */
+export type SeededLegacyLock = {
+  post: SeededPost;
+  lockId: string;
+  /** `pubky://<owner>/pub/app.locks/<lockId>.json`, the announcement's top-level `lock`. */
+  lockUrl: string;
+  /** The guarded bytes (base64) by path tail, as the stand-in Lock Server keeps them (`TLockServerState.guarded`). */
+  guarded: Record<string, string>;
+};
 export type SeededCollectionLayout = 'grid' | 'list';
 
 export type SeedCreateCollectionArgs = {
