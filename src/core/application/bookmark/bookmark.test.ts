@@ -171,6 +171,19 @@ describe('BookmarkApplication', () => {
     );
   });
 
+  describe('getAllWithPostDetails', () => {
+    it('returns every bookmark newest first with the cached details of its post', async () => {
+      await LocalBookmarkService.persist(HttpMethod.PUT, { postId: compositeAt(1) });
+      await LocalBookmarkService.persist(HttpMethod.PUT, { postId: compositeAt(2) });
+      await seedDetails(1, 'collection');
+
+      const bookmarked = await BookmarkApplication.getAllWithPostDetails();
+
+      expect(bookmarked.map(({ id }) => id)).toEqual([compositeAt(2), compositeAt(1)]);
+      expect(bookmarked.map(({ details }) => details?.kind)).toEqual([undefined, 'collection']);
+    });
+  });
+
   describe('getCount', () => {
     it('counts bookmarked posts, collections excluded and posts not cached yet included', async () => {
       await Promise.all(

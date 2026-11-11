@@ -7,8 +7,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
-import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
-import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { BookmarkedPostDetails, BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import type { TBookmarkReconcileParams } from '@/services/local/bookmark/bookmark.types';
@@ -159,13 +158,21 @@ export class LocalBookmarkService {
   }
 
   /**
+   * Every bookmark, newest first, with the cached details of its post (`undefined` while the post
+   * is not cached). The one read for the surfaces that tell bookmarked collections from bookmarked
+   * posts live (the Bookmarks card count, Followed Collections, the Discover overlay): read in one
+   * Dexie transaction so a live query observes both tables (`BookmarkModel.findAllWithPostDetails`).
+   */
+  static async readAllWithPostDetails(): Promise<BookmarkedPostDetails[]> {
+    return await BookmarkModel.findAllWithPostDetails();
+  }
+
+  /**
    * How many bookmarked posts there are: every bookmark but those of collections, which the
    * Collections page lists as followed instead. A bookmark whose post is not cached yet counts.
    */
   static async countPosts(): Promise<number> {
-    const ids = await BookmarkModel.findAll();
-    if (ids.length === 0) return 0;
-    const details = await PostDetailsModel.findByIdsPreserveOrder(ids);
-    return details.filter((detail) => detail?.kind !== 'collection').length;
+    const bookmarked = await this.readAllWithPostDetails();
+    return bookmarked.filter(({ details }) => details?.kind !== 'collection').length;
   }
 }

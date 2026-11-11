@@ -1,6 +1,7 @@
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
 import { parseCompositeId } from '@/models/models.utils';
 import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 
@@ -30,6 +31,17 @@ export class BookmarkController {
    */
   static async getAll(): Promise<string[]> {
     return BookmarkApplication.getAll();
+  }
+
+  /**
+   * Every bookmark of the current user, newest first, with the cached details of its post
+   * (`undefined` while the post is not cached). Local-only read, designed for `useLiveQuery`: the
+   * surfaces that tell bookmarked collections from bookmarked posts (Followed Collections, the
+   * Discover overlay) read both tables through it in one Dexie transaction, so the live query
+   * follows the details as the bookmarks stream walk hydrates them.
+   */
+  static async getAllWithPostDetails(): Promise<BookmarkedPostDetails[]> {
+    return BookmarkApplication.getAllWithPostDetails();
   }
 
   /**

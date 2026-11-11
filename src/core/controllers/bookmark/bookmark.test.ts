@@ -50,6 +50,16 @@ describe('BookmarkController', () => {
     });
   });
 
+  describe('getAllWithPostDetails', () => {
+    it('delegates to BookmarkApplication.getAllWithPostDetails and returns its rows', async () => {
+      const rows = [{ id: 'authorA:p1', created_at: 2, details: undefined }];
+      const spy = vi.spyOn(BookmarkApplication, 'getAllWithPostDetails').mockResolvedValue(rows);
+
+      await expect(BookmarkController.getAllWithPostDetails()).resolves.toBe(rows);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('getCount', () => {
     it('delegates to BookmarkApplication.getCount', async () => {
       vi.spyOn(BookmarkApplication, 'getCount').mockResolvedValue(7);
