@@ -2074,6 +2074,114 @@ it('shares a single deadline for concurrent and late legacy cleanup callers', as
 });
 
 describe('final review session ownership regressions', () => {
+  it('adopts a restored session that arrives after the UI deadline without another lifecycle event', async () => {
+    vi.useFakeTimers();
+    seed(null, grantReference('late-completion'));
+    const exchange = deferred<{ status: 'restored'; session: Session }>();
+    const restore = vi.spyOn(AuthApplication, 'restorePersistedSession').mockReturnValue(exchange.promise);
+    const initial = AuthController.restorePersistedSession();
+    await vi.advanceTimersByTimeAsync(12_001);
+    expect(await initial).toBe(false);
+    expect(useAuthStore.getState().restoreStatus).toBe('temporary-error');
+
+    exchange.resolve({ status: 'restored', session: narrowGrant });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(useAuthStore.getState()).toMatchObject({ session: narrowGrant, restoreStatus: 'ready' });
+    expect(restore).toHaveBeenCalledOnce();
+    expect(clearDatabase).not.toHaveBeenCalled();
+  });
+
+  it('settles a late terminal restore result without another lifecycle event', async () => {
+    vi.useFakeTimers();
+    const reference = grantReference('late-terminal');
+    seed(null, reference);
+    const exchange = deferred<{ status: 'reauth-required' }>();
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockReturnValue(exchange.promise);
+    const initial = AuthController.restorePersistedSession();
+    await vi.advanceTimersByTimeAsync(12_001);
+    expect(await initial).toBe(false);
+
+    exchange.resolve({ status: 'reauth-required' });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(useAuthStore.getState()).toMatchObject({
+      session: null,
+      sessionReference: reference,
+      currentUserPubky: PUBKY,
+      restoreStatus: 'reauth-required',
+    });
+    expect(clearDatabase).not.toHaveBeenCalled();
+  });
+
+  it.each(
+    (['restored', 'reauth-required'] as const).flatMap((status) =>
+      (['logout', 'new-sign-in', 'remote-account'] as const).map((change) => ({ status, change })),
+    ),
+  )('does not apply a late $status result after $change', async ({ status, change }) => {
+    vi.useFakeTimers();
+    seed(null, grantReference(`late-${status}-${change}`));
+    const exchange = deferred<{ status: 'restored'; session: Session } | { status: 'reauth-required' }>();
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockReturnValue(exchange.promise);
+    const initial = AuthController.restorePersistedSession();
+    await vi.advanceTimersByTimeAsync(12_001);
+    expect(await initial).toBe(false);
+
+    if (change === 'logout') await AuthController.logout();
+    else if (change === 'new-sign-in') {
+      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
+      const replacement = grantSession(undefined, OTHER_PUBKY);
+      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
+      vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: replacement });
+      await AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' });
+    } else {
+      // Another tab changed only durable metadata; the storage listener has not run yet.
+      const stored = JSON.parse(localStorage.getItem(AUTH_PERSIST_KEY)!);
+      stored.state.generation = 'remote-replacement';
+      stored.state.currentUserPubky = OTHER_PUBKY;
+      localStorage.setItem(AUTH_PERSIST_KEY, JSON.stringify(stored));
+    }
+    const before = useAuthStore.getState();
+    exchange.resolve(status === 'restored' ? { status, session: narrowGrant } : { status });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(useAuthStore.getState()).toBe(before);
+    expect(useAuthStore.getState().session).not.toBe(narrowGrant);
+  });
+
+  it.each([true, false])(
+    'settles transient application retries after the UI timeout (recovers: %s)',
+    async (recovers) => {
+      vi.useFakeTimers();
+      const reference = grantReference(`late-network-${recovers}`);
+      const session = grantSession([APP_CAPABILITIES], PUBKY, reference.grantId);
+      seed(null, reference);
+      const firstAttempt = deferred<Session>();
+      const restore = vi.spyOn(HomeserverService, 'restoreReference');
+      if (recovers) restore.mockResolvedValue(session);
+      else restore.mockRejectedValue(offline());
+      restore.mockReturnValueOnce(firstAttempt.promise);
+      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
+      const initial = AuthController.restorePersistedSession();
+      await vi.advanceTimersByTimeAsync(12_001);
+      expect(await initial).toBe(false);
+
+      firstAttempt.reject(offline());
+      await vi.advanceTimersByTimeAsync(801);
+
+      expect(useAuthStore.getState()).toMatchObject({
+        session: recovers ? session : null,
+        sessionReference: reference,
+        currentUserPubky: PUBKY,
+        restoreStatus: recovers ? 'ready' : 'temporary-error',
+      });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(restore).toHaveBeenCalledTimes(recovers ? 2 : 3);
+      expect(AuthApplication.readPersistedAuth()?.sessionReference).toEqual(reference);
+      expect(clearDatabase).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([false, true])('shares an exchange across UI timeouts (settled before retry: %s)', async (settled) => {
     vi.useFakeTimers();
     seed(null);

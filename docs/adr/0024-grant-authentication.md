@@ -68,7 +68,9 @@ remain available for retry; generic auth errors do not prove revocation succeede
   Retained candidates must pass client validation and must not repeat a failed save.
 - One profile bootstrap task owns a generation/session, including after its UI deadline. Retry joins that task;
   late success restores readiness. Session restoration also shares its underlying exchange across UI deadlines;
-  a retry consumes its pending or completed result. Restore attempts retry only transient network/server failures with a fixed bound.
+  a retry consumes its pending or completed result. A late restored session or reauthentication result updates the still-owning
+  generation automatically; logout or replacement prevents that result from changing the new account's state.
+  Restore attempts retry only transient network/server failures with a fixed bound.
   Automatic foreground recovery is throttled; the UI has no manual session-retry control.
 - Terminal failures of active, owned HS storage requests notify AuthCoordinator through a controller/application
   subscription. The controller drops only the matching live session and requires ordinary sign-in, retaining saved

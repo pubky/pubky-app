@@ -386,20 +386,36 @@ export class AuthController {
               reference: snapshot.sessionReference,
               expectedPubky: snapshot.currentUserPubky,
             });
-            this.sessionRestore = { key, task: exchange };
-            // Keep a late success for the next retry; a failed exchange may be retried anew.
-            void exchange.then(
-              (outcome) => {
-                if (outcome.status !== 'restored' && this.sessionRestore?.task === exchange) this.sessionRestore = null;
-              },
-              () => {
-                if (this.sessionRestore?.task === exchange) this.sessionRestore = null;
-              },
-            );
+            const restore = { key, task: exchange };
+            this.sessionRestore = restore;
+            void exchange
+              .then(
+                async (outcome) => {
+                  if (outcome.status === 'temporary-error') {
+                    if (this.sessionRestore === restore) this.sessionRestore = null;
+                    return;
+                  }
+                  // A late result must leave recovery without requiring another focus event.
+                  // Join the current caller first; an on-time result is consumed by it normally.
+                  await this.restorePromise?.catch(() => false);
+                  if (
+                    this.sessionRestore !== restore ||
+                    !isCurrent() ||
+                    useAuthStore.getState().isLoggingOut ||
+                    useAuthStore.getState().restoreStatus !== 'temporary-error'
+                  )
+                    return;
+                  await this.restorePersistedSession();
+                },
+                () => {
+                  if (this.sessionRestore === restore) this.sessionRestore = null;
+                },
+              )
+              .catch(() => {});
           }
-          const exchange = this.sessionRestore.task;
-          result = await this.bounded(exchange, 'restoreSession');
-          if (this.sessionRestore?.task === exchange) this.sessionRestore = null;
+          const restore = this.sessionRestore;
+          result = await this.bounded(restore.task, 'restoreSession');
+          if (this.sessionRestore === restore) this.sessionRestore = null;
         }
         if (!isCurrent()) return false;
         if (result.status !== 'restored') {
