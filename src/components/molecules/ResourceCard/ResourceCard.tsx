@@ -39,6 +39,8 @@ import {
 } from './ResourceCard.utils';
 import { CARD_MUTED_TEXT, ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
 import { ResourceCardMedia } from './ResourceCardMedia';
+import { ResourceChainBody, ResourceChainCopy, ResourceChainLines } from './ResourceChain';
+import { getChainView } from './ResourceChain.utils';
 import { ResourceCredits } from './ResourceCredits';
 import { getCardAttribution, getMapDataCredit, getShownCredits } from './ResourceCredits.utils';
 import { ResourceFactList } from './ResourceFactList';
@@ -141,7 +143,11 @@ export function ResourceCard({
   const title = card.name?.trim() || og?.title?.trim() || getDisplayLink(href || card.uri);
   const shownDescription = description ?? fallback.description?.value ?? null;
 
-  const summary = getResourceSummary(card);
+  // A Bitcoin or Lightning card shows its lines, with links to what it names, instead of a summary.
+  const chain = getChainView(card);
+  const summary = chain ? null : getResourceSummary(card);
+  // A transaction's ID in its title is shortened; the copy button and the title's tooltip have it whole.
+  const shownTitle = chain?.title ?? title;
   const dates = isEvent ? formatResourceDates(card) : null;
   const venue = isEvent ? card.venue?.name?.trim() || null : null;
   const organizer = isEvent ? getOrganizer(card, venue) : null;
@@ -165,7 +171,10 @@ export function ResourceCard({
     ),
   ];
   // An X post's embed in the large card's body (`isBodyReplaced`) shows who wrote it and when.
-  const detailRows = isLarge && !isBodyReplaced ? getResourceDetailRows(card, { withDates: !isEvent }) : [];
+  const detailRows =
+    isLarge && !isBodyReplaced
+      ? getResourceDetailRows(card, { withDates: !isEvent }).filter((row) => !chain?.shownFacts.includes(row.key))
+      : [];
   const isLongDescription = isLarge && (shownDescription?.length ?? 0) > LONG_DESCRIPTION_CHARS;
   const clampOnPhone = isLongDescription && !expanded;
 
@@ -193,6 +202,17 @@ export function ResourceCard({
       )}
     </>
   );
+
+  // A chain card's ID is copied by a button next to its title, outside the heading's name.
+  const withCopy = (heading: React.ReactNode) =>
+    chain?.copy ? (
+      <Container overrideDefaults className="flex min-w-0 items-start gap-1">
+        {heading}
+        <ResourceChainCopy copy={chain.copy} />
+      </Container>
+    ) : (
+      heading
+    );
 
   // A click on or around a player or embed in the body never opens the page. The wrapper stays
   // mounted, so opening or closing a player never remounts what the body renders.
@@ -252,18 +272,22 @@ export function ResourceCard({
                 </Badge>
               )}
               {isLarge ? (
-                <Typography
-                  as="h2"
-                  overrideDefaults
-                  dir="auto"
-                  className={cn(
-                    'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
-                    isMissing && 'text-foreground/70',
-                  )}
-                >
-                  {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
-                  <span data-testid="resource-card-title">{title}</span>
-                </Typography>
+                withCopy(
+                  <Typography
+                    as="h2"
+                    overrideDefaults
+                    dir="auto"
+                    className={cn(
+                      'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
+                      isMissing && 'text-foreground/70',
+                    )}
+                  >
+                    {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
+                    <span data-testid="resource-card-title" title={shownTitle === title ? undefined : title}>
+                      {shownTitle}
+                    </span>
+                  </Typography>,
+                )
               ) : (
                 <Link
                   href={smallTitleUrl}
@@ -275,7 +299,7 @@ export function ResourceCard({
                   data-testid="resource-card-title"
                   className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
                 >
-                  {title}
+                  {shownTitle}
                 </Link>
               )}
 
@@ -290,6 +314,8 @@ export function ResourceCard({
                   <ResourceArrowText text={summary} />
                 </Typography>
               )}
+
+              {chain && <ResourceChainLines view={chain} isLarge={isLarge} target={titleTarget} />}
 
               {/* An event leads with when and where. */}
               {eventDetails}
@@ -351,6 +377,8 @@ export function ResourceCard({
             )}
           </Container>
         )}
+
+        {isLarge && chain && !isBodyReplaced && <ResourceChainBody view={chain} target={titleTarget} />}
 
         {isLarge && <ResourceFactList rows={detailRows} />}
 
