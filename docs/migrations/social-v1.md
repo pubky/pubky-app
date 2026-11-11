@@ -110,6 +110,7 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3122                             | F5 (SF-6): feed filter tags folded with the stored label fold (`canonicalizeTagLabel`): pipe, dialog, sidebar filter, home store                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | #3123                             | F8: one chained `bookmarks` + `post_details` read for Followed Collections and the count; dev stall matched, not reproduced on prod                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | #3120                             | F7 (SF-8 to SF-11, the [F7] nits): the runbook, `AGENTS.md`, the ADRs, the Greptile rules and seven source comments brought up to the branch head; QA-4, QA-5, the Nexus watcher wedge (pubky/pubky-nexus#1229) and the final review recorded; the two uncaptured-`AppError` sites named in `AGENTS.md`                                                                                                                                                                                                                                                                                                                  |
+| #3132                             | G3: `publishLock` waits 30 s (`requestTimeout`) for the lock create and the announcement PUT; slow homeserver PUTs had pushed the lock create past Cypress's 5 s default (branch e2e flake, QA-owned suite)                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 The branch also carries CI-owned VRT baseline commits from the `VRT Update Baselines` dispatches after the QA-1 fixes
 (two dispatches, 2026-10-31 and 2026-11-02), after dev-sync 2, 3 and 4, and after #3113 (`495ddbca3`): the new
@@ -382,9 +383,11 @@ otherwise the invite check answers 400 and onboarding stops at Continue. CI runs
 (desktop, Chrome, 13 specs): green on the FIX-7 merge (2026-11-10, after one earlier flake on a post delete that the
 Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, on the dev-sync 5 merge
 `93db5b9dc` and on #3114's `ae4ba8ad2` (2026-11-11, 13 of 13 each); the push for #3113 timed out in `posts.cy.ts` and
-`locks.cy.ts` and the next push was green. "e2e not run" in the _Sync log_ means the sync session's local run. Local
-runs use the Chrome-family binary Playwright's VRT setup installs, never Electron or a snap browser, so they match CI's
-matrix.
+`locks.cy.ts` and the next push was green. The #3117 merge (`e5bca7d1e`) failed `locks.cy.ts` on `publishLock`'s
+`cy.wait('@createContentLock')`: slow homeserver PUTs delayed the lock create about 80 ms past Cypress's 5 s default
+`requestTimeout`; #3132 gives both `publishLock` waits a 30 s `requestTimeout`. "e2e not run" in the _Sync log_ means
+the sync session's local run. Local runs use the Chrome-family binary Playwright's VRT setup installs, never Electron or
+a snap browser, so they match CI's matrix.
 
 The e2e follow-up that the port left open landed as #3094 (2026-11-10): `expectImageServed` (`cypress/support/media.ts`)
 asserts the route, a 200 with an image type and the decoded image for v1 media on `/v1/static/files/` and for 0.x media
