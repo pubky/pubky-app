@@ -11,6 +11,7 @@ import { PostTag } from '@/molecules/PostTag/PostTag';
 import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton';
 import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import { TaggedList } from '@/molecules/TaggedList/TaggedList';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
 
@@ -32,7 +33,8 @@ interface ResourceTagBarProps {
  * The tags people put on an external resource, like a post's tag list: the app's tag chips (label
  * and count, the viewer's own highlighted, tagger avatars on hover), each toggling the viewer's
  * tag. Like the post footer it shows the first few tags that fit the post's budget, then "+" to add
- * one; expanded (the Tags button) it shows every tag and the tag input. With no tags yet only "+"
+ * one; expanded (the Tags button) it is the post's tags panel (`PostTagsPanel`): the tag input on top,
+ * then every tag on its own line with its search button and taggers. With no tags yet only "+"
  * shows. Signed out, every write asks to sign in.
  */
 export function ResourceTagBar({ resourceTags, label, id, isExpanded, isAdding, onAddingChange }: ResourceTagBarProps) {
@@ -44,12 +46,44 @@ export function ResourceTagBar({ resourceTags, label, id, isExpanded, isAdding, 
     tags.map((tag): TagWithAvatars => ({ ...tag, taggers: tag.taggers.map((id) => ({ id })) })),
   );
   const viewerTags = tags.filter((tag) => tag.relationship);
+
+  if (isExpanded) {
+    // `PostTagsPanel`'s layout and parts. The input stays until the Tags button collapses the tags.
+    return (
+      <Container
+        id={id}
+        role="group"
+        aria-label={label}
+        data-testid="resource-tag-bar"
+        className="min-w-0 flex-1 gap-2"
+      >
+        <Container overrideDefaults className="flex w-fit max-w-full flex-col gap-2">
+          <TagInput
+            onTagAdd={addTag}
+            existingTags={tags}
+            viewerTags={viewerTags}
+            disabled={!isAuthenticated}
+            onClick={isAuthenticated ? undefined : () => requireAuth(() => undefined)}
+            currentTagsCount={tags.length}
+            enableApiSuggestions={isAuthenticated}
+            excludeFromApiSuggestions={tags.map((tag) => tag.label)}
+            addOnSuggestionClick
+            autoFocus={isAuthenticated && !isMobile}
+          />
+          {tags.length > 0 && (
+            <Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
+              <TaggedList tags={enrichedTags} onTagToggle={(tag) => requireAuth(() => void toggleTag(tag))} />
+            </Container>
+          )}
+        </Container>
+      </Container>
+    );
+  }
   const displayLabels = getDisplayTags(
     enrichedTags.map((tag) => tag.label),
     { maxTagLength: POST_TAGS_MAX_LENGTH, maxTotalChars: POST_TAGS_MAX_TOTAL_CHARS },
   );
-  const visibleTags = isExpanded ? enrichedTags : enrichedTags.filter((tag) => displayLabels.includes(tag.label));
-  const showInput = isExpanded || isAdding;
+  const visibleTags = enrichedTags.filter((tag) => displayLabels.includes(tag.label));
 
   return (
     <Container
@@ -78,7 +112,7 @@ export function ResourceTagBar({ resourceTags, label, id, isExpanded, isAdding, 
         </PostTagPopoverWrapper>
       ))}
       <TagInputToggle
-        showInput={showInput}
+        showInput={isAdding}
         widthByState={{ input: TAG_INPUT_WIDTH_DEFAULT, addButton: 34 }}
         inputContent={
           <TagInput
@@ -86,8 +120,7 @@ export function ResourceTagBar({ resourceTags, label, id, isExpanded, isAdding, 
             onTagAdd={addTag}
             existingTags={tags}
             viewerTags={viewerTags}
-            // Expanded, the input stays until the Tags button collapses the tags again.
-            showCloseButton={!isExpanded}
+            showCloseButton={isAuthenticated}
             onClose={() => onAddingChange(false)}
             onBlur={() => onAddingChange(false)}
             disabled={!isAuthenticated}
@@ -96,7 +129,7 @@ export function ResourceTagBar({ resourceTags, label, id, isExpanded, isAdding, 
             enableApiSuggestions={isAuthenticated}
             excludeFromApiSuggestions={tags.map((tag) => tag.label)}
             addOnSuggestionClick
-            autoFocus={isAuthenticated && (isAdding || !isMobile)}
+            autoFocus={isAuthenticated}
             containerVariant="plain"
             className="w-full shrink-0"
           />

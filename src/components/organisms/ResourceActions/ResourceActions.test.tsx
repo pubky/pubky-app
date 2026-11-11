@@ -304,6 +304,11 @@ describe('ResourceActions', () => {
 
       expect(tags).toHaveAttribute('data-expanded', 'false');
       expect(button).toHaveAttribute('aria-expanded', 'false');
+
+      fireEvent.click(button);
+
+      expect(tags).toHaveAttribute('data-expanded', 'true');
+      expect(button).toHaveAttribute('aria-expanded', 'true');
     });
 
     it('points the Tags button at the tag list it expands', () => {

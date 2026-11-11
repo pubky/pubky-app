@@ -40,6 +40,18 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
 vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => ({
   PostTagPopoverWrapper: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
+vi.mock('@/molecules/TaggedList/TaggedList', () => ({
+  TaggedList: ({ tags, onTagToggle }: { tags: NexusTag[]; onTagToggle: (tag: NexusTag) => unknown }) => (
+    <div data-testid="tagged-list">
+      {tags.map((tag) => (
+        <button key={tag.label} type="button" onClick={() => void onTagToggle(tag)}>
+          {tag.label}
+          {tag.taggers_count}
+        </button>
+      ))}
+    </div>
+  ),
+}));
 vi.mock('@/molecules/TagInput/TagInput', () => ({
   TagInput: ({
     onTagAdd,
@@ -136,15 +148,52 @@ describe('ResourceTagBar', () => {
     expect(screen.queryByTestId('tag-input')).not.toBeInTheDocument();
   });
 
-  it('shows every tag and the tag input when expanded', async () => {
+  it('is the post’s tags panel when expanded: the input on top, then every tag on its own line', async () => {
     mocks.tags = MANY_TAGS;
     render(<TagBar isExpanded />);
 
+    const input = await screen.findByTestId('tag-input');
+    const list = screen.getByTestId('tagged-list');
+    expect(input.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(chipLabels()).toEqual(MANY_TAGS.map((tag) => `${tag.label}1`));
-    expect(await screen.findByTestId('tag-input')).toBeInTheDocument();
+    expect(within(list).getAllByRole('button')).toHaveLength(MANY_TAGS.length);
     expect(screen.queryByRole('button', { name: 'Add new tag' })).not.toBeInTheDocument();
-    // It stays open until the Tags button collapses the tags, and focuses only off a phone.
-    expect(mocks.inputProps.at(-1)).toMatchObject({ showCloseButton: false, autoFocus: true });
+    // It stays open until the Tags button collapses the tags (no close button), and focuses only off a phone.
+    expect(mocks.inputProps.at(-1)?.showCloseButton).toBeUndefined();
+    expect(mocks.inputProps.at(-1)).toMatchObject({ autoFocus: true });
+  });
+
+  it('follows the Tags button like the post’s: panel with the input, then a few chips and "+", then the panel', async () => {
+    mocks.tags = MANY_TAGS;
+    const { rerender } = render(<TagBar />);
+    expect(screen.queryByTestId('tag-input')).not.toBeInTheDocument();
+
+    rerender(<TagBar isExpanded />);
+    expect(await screen.findByTestId('tag-input')).toBeInTheDocument();
+    expect(screen.getByTestId('tagged-list')).toBeInTheDocument();
+
+    rerender(<TagBar />);
+    await waitFor(() => expect(screen.queryByTestId('tag-input')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('tagged-list')).not.toBeInTheDocument();
+    expect(chipLabels()).toEqual(['music1', '80s1', 'rickroll1']);
+    expect(screen.getByRole('button', { name: 'Add new tag' })).toBeInTheDocument();
+
+    rerender(<TagBar isExpanded />);
+    expect(await screen.findByTestId('tag-input')).toBeInTheDocument();
+    expect(screen.getByTestId('tagged-list')).toBeInTheDocument();
+  });
+
+  it('toggles the viewer’s tag from the expanded list, asking to sign in when signed out', async () => {
+    const { unmount } = render(<TagBar isExpanded />);
+    fireEvent.click(within(await screen.findByTestId('tagged-list')).getByRole('button', { name: 'travel2' }));
+    expect(mocks.toggleTag).toHaveBeenCalledWith(expect.objectContaining({ label: 'travel', relationship: true }));
+    unmount();
+
+    mocks.isSignedIn = false;
+    render(<TagBar isExpanded />);
+    fireEvent.click(within(await screen.findByTestId('tagged-list')).getByRole('button', { name: 'berlin3' }));
+    expect(mocks.toggleTag).toHaveBeenCalledTimes(1);
+    expect(mocks.signInRequests).toBe(1);
   });
 
   it('does not pop the phone keyboard when expanded, only from "+"', async () => {

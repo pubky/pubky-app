@@ -80,7 +80,7 @@ export function ResourceActions({
       data-resource-controls
       data-testid="resource-actions"
       // The post footer's layout (`PostInlineTagsActions`), also staying stacked in a narrow grid cell.
-      // Beside the expanded tags the buttons sit at the bottom, next to the tag input.
+      // Beside the expanded tags the buttons sit at the bottom, as beside the post's tags panel.
       className={cn(
         'flex min-w-0 flex-col items-start gap-3 px-4 py-3 md:flex-row md:justify-between md:gap-4',
         '@max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3!',
