@@ -648,6 +648,9 @@ jobs:
       PEER_JOB: WebKit stack on Ubuntu (${{ matrix.spec }})
       CLIENT_KEY_ARTIFACT: e2e-webkit-client-key-${{ matrix.spec }}-${{ github.run_attempt }}
       ENDPOINT_ARTIFACT: e2e-webkit-stack-endpoint-${{ matrix.spec }}-${{ github.run_attempt }}
+      # Cypress reads this as its `port` option, the port of its proxy. Fixed, so that
+      # e2e-loopback-demux.mjs, started by "Connect to the stack", knows where the proxy is.
+      CYPRESS_PORT: 4599
     permissions:
       contents: read
       # read the stack job's state and download its artifact

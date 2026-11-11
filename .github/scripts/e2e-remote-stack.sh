@@ -11,10 +11,11 @@
 #                            key, the ports and the app's runtime config for the workflow to upload.
 #   3. macOS   `connect`     waits for that upload and forwards the stack's ports to its own localhost.
 #              `start-app`   starts the built app with the runtime config the Docker app would get.
+#                            Both sit behind e2e-loopback-demux.mjs, see LOCAL_PORT_OFFSET.
 #   4. Ubuntu  `hold`        keeps the stack up until the macOS job completes and ends as it did, so
 #                            "Re-run failed jobs" re-runs the pair.
 #
-# Forwarding the ports one to one means nothing has to be told where the stack is: the app, the SDK's
+# Keeping the port numbers means nothing has to be told where the stack is: the app, the SDK's
 # testnet mode (which reads the homeserver's port from its pkarr record) and the Cypress tasks use
 # the same `localhost:<port>` addresses as in the Docker jobs. Every port a browser or the Node SDK
 # uses is HTTP; the testnet DHT (UDP) is only used between the containers and stays on Ubuntu.
@@ -27,7 +28,7 @@
 # Environment (the remaining commands only need RUNNER_TEMP):
 #   expose, hold, connect   GH_TOKEN, REPO, RUN_ID, RUN_ATTEMPT, PEER_JOB (the other half's job name)
 #   expose                  CLIENT_KEY_ARTIFACT; run it in pubky-stack/docker with the compose variables set
-#   connect                 ENDPOINT_ARTIFACT
+#   connect                 ENDPOINT_ARTIFACT, CYPRESS_PORT (the port Cypress's proxy is told to use)
 set -euo pipefail
 
 # Asset digests of this release, as the GitHub release API reports them.
@@ -40,10 +41,18 @@ CLOUDFLARED_SHA256_DARWIN_X86_64=02f3edfd87684dd5b705607688e4eb4b323f6e777b81e7b
 # publishes for the browser, the SDK and the Cypress tasks, so both jobs wait for them. `expose`
 # adds the other localhost ports of the app's runtime config. The databases are deliberately left out.
 REQUIRED_PORTS=(6286 6288 8080 15411 15412)
-APP_URL=http://localhost:3000
+APP_PORT=3000
+APP_URL=http://localhost:$APP_PORT
+# In run 42930147161 WebKit on macOS sent most requests for the page on localhost:3000 to the app
+# on that port instead of to Cypress's proxy (e2e-loopback-demux.mjs has the details). So on macOS
+# the app and the forwarded stack ports listen this much higher, and the demux takes the ports
+# everything is configured with: it passes what was meant for the proxy to Cypress on CYPRESS_PORT
+# and the rest to the real port.
+LOCAL_PORT_OFFSET=20000
 SSH_PORT=22022
 SSH_ALIAS=e2e-stack
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 WORK_DIR="${RUNNER_TEMP:?RUNNER_TEMP is not set}/e2e-remote-stack"
 LOG_DIR="$WORK_DIR/logs"
 mkdir -p "$LOG_DIR"
@@ -122,10 +131,16 @@ kill_tree() {
   for child in $children; do kill_tree "$child"; done
 }
 
+# Waits a moment for the process to end, so that what it logs on the way out is in its log.
 stop_process() {
-  local pid_file=$1
+  local pid_file=$1 pid tries=0
   [ -f "$pid_file" ] || return 0
-  kill_tree "$(cat "$pid_file")"
+  pid=$(cat "$pid_file")
+  kill_tree "$pid"
+  while kill -0 "$pid" 2>/dev/null && [ "$tries" -lt 20 ]; do
+    tries=$((tries + 1))
+    sleep 0.1
+  done
   rm -f "$pid_file"
 }
 
@@ -339,9 +354,9 @@ hold() {
 }
 
 connect() {
-  require_env GH_TOKEN REPO RUN_ID RUN_ATTEMPT PEER_JOB ENDPOINT_ARTIFACT
+  require_env GH_TOKEN REPO RUN_ID RUN_ATTEMPT PEER_JOB ENDPOINT_ARTIFACT CYPRESS_PORT
   local dir="$WORK_DIR/endpoint" host user port ports
-  local -a forwards=() forward=() ready=()
+  local -a forwards=() forward=() ready=() routes=("$APP_PORT:$((APP_PORT + LOCAL_PORT_OFFSET))")
   wait_for_artifact "$ENDPOINT_ARTIFACT" "$dir" "${ENDPOINT_TIMEOUT:-1200}"
 
   host=$(cat "$dir/tunnel-host")
@@ -354,8 +369,13 @@ connect() {
   read -r -a forward < "$dir/forward-ports"
   read -r -a ready < "$dir/ready-ports"
   for port in "${forward[@]}"; do
-    forwards+=(-L "$port:127.0.0.1:$port")
+    [ "$port" -le $((65535 - LOCAL_PORT_OFFSET)) ] || fail "Port $port is too high to move up by $LOCAL_PORT_OFFSET."
+    forwards+=(-L "127.0.0.1:$((port + LOCAL_PORT_OFFSET)):127.0.0.1:$port")
+    routes+=("$port:$((port + LOCAL_PORT_OFFSET))")
   done
+
+  nohup node "$SCRIPT_DIR/e2e-loopback-demux.mjs" "$CYPRESS_PORT" "${routes[@]}" > "$LOG_DIR/demux.log" 2>&1 < /dev/null &
+  echo $! > "$WORK_DIR/client/demux.pid"
 
   # The loop reopens the tunnel if the connection drops mid-run.
   nohup bash -c 'while true; do "$@"; echo "Tunnel closed (exit $?); reconnecting."; sleep 3; done' tunnel \
@@ -369,7 +389,7 @@ connect() {
   echo $! > "$WORK_DIR/client/tunnel.pid"
 
   wait_for_ports 180 "${ready[@]}" || {
-    cat "$LOG_DIR/tunnel.log"
+    cat "$LOG_DIR/demux.log" "$LOG_DIR/tunnel.log"
     fail "The stack is not reachable through the tunnel."
   }
   echo "Forwarded port(s) ${forward[*]}; the stack answers on localhost port(s) ${ready[*]}."
@@ -382,7 +402,7 @@ start_app() {
     export "$pair"
   done < <(jq -r 'to_entries[] | select(.key | test("^PUBKY_RUNTIME_[A-Z0-9_]+$")) | "\(.key)=\(.value)"' "$env_file")
 
-  nohup npm run start > "$LOG_DIR/app.log" 2>&1 < /dev/null &
+  PORT=$((APP_PORT + LOCAL_PORT_OFFSET)) nohup npm run start > "$LOG_DIR/app.log" 2>&1 < /dev/null &
   pid=$!
   echo "$pid" > "$WORK_DIR/client/app.pid"
 
