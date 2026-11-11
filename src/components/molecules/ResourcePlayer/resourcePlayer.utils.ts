@@ -635,6 +635,15 @@ function audioFile(value: string): PlayerTarget | null {
   }
   if (url.protocol !== 'https:' || url.username || url.password) return null;
   if (inferMediaKindFromUrl(url.href) !== 'audio') return null;
+  return getAudioPlayer(url.href);
+}
+
+/**
+ * The browser's own `<audio>` player for an audio file known to be one (a podcast episode's
+ * enclosure, whose type Pinakes read: `getAudioStreamUrl`), started by the press that opens it.
+ */
+export function getAudioPlayer(src: string): PlayerTarget {
+  const url = new URL(src);
   return {
     provider: PlayerProvider.AUDIO_FILE,
     name: url.hostname.replace(/^www\./, ''),

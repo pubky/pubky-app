@@ -3,6 +3,7 @@
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, LinkIcon, Play, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,6 +204,55 @@ export function PlayOnPill({
       <ResourceSourceIcon uri={uri} />
       {isOpen && <X aria-hidden="true" />}
     </Button>
+  );
+}
+
+/**
+ * A player that is not loaded yet, as one row: the action row's Play button (`label` its name and
+ * tooltip) beside the title and a line under it. Without `onPlay` (its player open under it) only
+ * the title and line. `useCardPlayer`'s stand-in with platform embeds up front off, a show's episode
+ * (`ResourceAudioPlayer`).
+ */
+export function PlayStandIn({
+  title,
+  detail,
+  label,
+  onPlay,
+  surface = 'muted',
+  className,
+  ...props
+}: {
+  title: string;
+  detail?: string | null;
+  label: string;
+  onPlay?: () => void;
+  surface?: PostActionSurface;
+} & Omit<ComponentProps<typeof Container>, 'title' | 'children'>) {
+  return (
+    <Container overrideDefaults className={cn('flex min-w-0 items-center gap-3', className)} {...props}>
+      {onPlay && (
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={label}
+          title={label}
+          onClick={onPlay}
+          className={postActionsButtonVariants({ surface })}
+        >
+          <Play aria-hidden="true" className="fill-current" />
+        </Button>
+      )}
+      <Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
+        <Typography as="span" size="sm" dir="auto" className="truncate font-bold text-foreground">
+          {title}
+        </Typography>
+        {detail && (
+          <Typography as="span" size="xs" dir="auto" className="truncate font-normal text-muted-foreground">
+            {detail}
+          </Typography>
+        )}
+      </Container>
+    </Container>
   );
 }
 

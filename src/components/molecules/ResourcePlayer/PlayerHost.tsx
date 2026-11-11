@@ -199,6 +199,27 @@ export function usePlayerHost(): PlayerHostStore | null {
   return useContext(PlayerHostContext);
 }
 
+/**
+ * Whether the page's player, kept by the host, plays `match` (`<resource>|<provider>`) away from its
+ * own card (that card gone or hidden) and would be laid over the card of `owner`: that card then
+ * shows its slot (`PlayerSlot`), which the host lays the playing frame over instead of a frame of its
+ * own. With several such cards, the one the host picks (`placePlayers`: the latest) keeps it.
+ */
+export function usePlaysElsewhere(match: string, owner: string): boolean {
+  const store = usePlayerHost();
+  const active = usePagePlayer();
+  return useSyncExternalStore(
+    store?.subscribe ?? noSubscribe,
+    () => {
+      const playing = store ? findPlaying(store.players, active) : null;
+      if (!store || playing === null || store.get(playing)?.match !== match) return false;
+      const on = store.placements.get(playing)?.on ?? null;
+      return on === null || (on !== playing && store.get(on)?.owner === owner);
+    },
+    () => false,
+  );
+}
+
 const isPlaying = (player: HostedPlayer, active: ActivePlayer) =>
   active?.owner === player.owner && active.provider === player.provider;
 

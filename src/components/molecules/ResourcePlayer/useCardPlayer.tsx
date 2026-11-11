@@ -1,15 +1,10 @@
 'use client';
 
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
-import { Play } from 'lucide-react';
-import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
 import { pauseMedia, tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { getResourceStatus, getResourceTarget, playsInCard } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { getResourceSummary } from '@/molecules/ResourceCard/ResourceFacts.utils';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
-import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { usePlayerHost } from './PlayerHost';
@@ -24,7 +19,7 @@ import {
   isCardFirstFor,
   type PlayerTarget,
 } from './resourcePlayer.utils';
-import { type PagePlayer, PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
+import { type PagePlayer, PlayerDock, PlayerSwitch, PlayStandIn } from './ResourcePlayerControls';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
 import { type ResourcePlayerState, useResourcePlayer } from './useResourcePlayer';
 
@@ -278,35 +273,16 @@ function EmbedPlayer({
       : preview
         ? `Show the ${target.name} player`
         : `Play on ${target.name}`;
-    const summary = getResourceSummary(card);
     return (
-      <Container
-        overrideDefaults
+      <PlayStandIn
         data-resource-controls
         data-testid="embed-player"
-        className="flex min-w-0 items-center gap-3"
-      >
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={label}
-          title={label}
-          onClick={open}
-          className={postActionsButtonVariants({ surface })}
-        >
-          <Play aria-hidden="true" className="fill-current" />
-        </Button>
-        <Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
-          <Typography as="span" size="sm" dir="auto" className="truncate font-bold text-foreground">
-            {title}
-          </Typography>
-          {summary && (
-            <Typography as="span" size="xs" dir="auto" className="truncate font-normal text-muted-foreground">
-              {summary}
-            </Typography>
-          )}
-        </Container>
-      </Container>
+        label={label}
+        title={title}
+        detail={getResourceSummary(card)}
+        onPlay={open}
+        surface={surface}
+      />
     );
   }
 
