@@ -123,7 +123,13 @@ export function MediaPlayerList({ category, players, onChange }: MediaPlayerList
 
   return (
     <Container overrideDefaults className="flex w-full flex-col items-start gap-2">
-      <Typography as="h3" id={labelId} size="sm" className="leading-5 font-medium">
+      {/* The app's group label (as "Tags on other services"), under the Players title. */}
+      <Typography
+        as="h3"
+        id={labelId}
+        overrideDefaults
+        className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+      >
         {categoryName}
       </Typography>
       <DndContext
