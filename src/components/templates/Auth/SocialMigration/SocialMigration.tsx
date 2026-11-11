@@ -13,6 +13,7 @@ import { SocialMigrationController } from '@/controllers/social-migration/social
 import { useBeforeUnloadGuard } from '@/hooks/useBeforeUnloadGuard/useBeforeUnloadGuard';
 import { useHasBackupAccount } from '@/hooks/useHasBackupAccount/useHasBackupAccount';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { shopSignInReturn } from '@/libs/shop-embed/bridge';
@@ -26,6 +27,7 @@ import { cn } from '@/libs/utils/utils';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
+import { toast } from '@/molecules/Toaster/toast';
 import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { SocialMigrationProgress } from '@/organisms/SocialMigrationProgress/SocialMigrationProgress';
 import { hasAccountState } from '@/stores/auth/auth.selectors';
@@ -212,10 +214,18 @@ export function SocialMigration() {
     setLogoutFailed(false);
     setLogoutAttempt((attempt) => attempt + 1);
   };
-  // The same retry the auth coordinator runs on reconnect; a wrong-environment failure flips the status to
-  // `reauth-required`, which this screen explains, so nothing is left to handle here.
+  // The same retry the auth coordinator runs on reconnect. The status is the feedback: `restoring` shows the
+  // guard's spinner, a second failure brings this screen back, and the one rejection it can end in (a key linked to
+  // another homeserver) flips it to `reauth-required`, which the sign-in explanation above covers, with the same
+  // toast the coordinator's own retry shows for it.
   const onRetryRestore = () => {
-    void AuthController.restorePersistedSession().catch(() => {});
+    void AuthController.restorePersistedSession().catch((error: unknown) => {
+      if (isWrongEnvironmentHomeserverError(error))
+        toast({
+          variant: 'error',
+          description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+        });
+    });
   };
 
   let content: React.ReactNode;

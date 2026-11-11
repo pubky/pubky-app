@@ -3,7 +3,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { writeSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
+import { toast } from '@/molecules/Toaster/toast';
 import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
 import type { SocialMigrationState } from '@/stores/socialMigration/socialMigration.types';
 import { mockGrantReference } from '@/test-utils/pubky';
@@ -48,6 +52,7 @@ vi.mock('@/controllers/auth/auth', () => ({
 vi.mock('@/controllers/social-migration/social-migration', () => ({
   SocialMigrationController: { retry: () => mocks.retry(), acknowledge: () => mocks.acknowledge() },
 }));
+vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/organisms/AlertBackup/AlertBackup', () => ({ AlertBackup: () => <div>Backup controls</div> }));
 vi.mock('@/organisms/SocialMigrationProgress/SocialMigrationProgress', () => ({
   SocialMigrationProgress: (props: Record<string, unknown>) => (
@@ -255,6 +260,42 @@ describe('SocialMigration', () => {
     expect(mocks.logout).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
     expect(mocks.push).toHaveBeenCalledWith('/');
+  });
+
+  it('shows the restore screen again when the retry fails once more, without retrying on its own', async () => {
+    mocks.authState.restoreStatus = 'temporary-error';
+    mocks.restore.mockRejectedValue(new Error('offline'));
+    const { rerender } = render(<SocialMigration />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(mocks.restore).toHaveBeenCalledOnce());
+    // The controller left the status where it was: the same screen, one click = one attempt
+    rerender(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: "We couldn't reach your homeserver" })).toBeInTheDocument();
+    expect(mocks.restore).toHaveBeenCalledOnce();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('explains a key linked to another homeserver after the retry, with the toast the coordinator shows', async () => {
+    mocks.authState.restoreStatus = 'temporary-error';
+    mocks.restore.mockImplementation(async () => {
+      // What the controller does for this one rejection: the status flips before the error reaches the screen
+      mocks.authState.restoreStatus = 'reauth-required';
+      throw Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+      });
+    });
+    const { rerender } = render(<SocialMigration />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+      }),
+    );
+    rerender(<SocialMigration />);
+    expect(screen.getByText(/Your session could not be restored\. Sign in again to continue/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it.each(['reauth-required', 'temporary-error'] as const)(

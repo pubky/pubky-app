@@ -25,6 +25,7 @@ import {
   logSocialMigrationFinished,
   reportSocialMigrationBlocked,
   reportSocialMigrationCapsMissing,
+  reportSocialMigrationEngineUnavailable,
   reportSocialMigrationFailure,
 } from '@/libs/social-migration/report-telemetry';
 import {
@@ -239,12 +240,15 @@ export class SocialMigrationController {
           });
         } catch (error) {
           if (signal.aborted || !isCurrent()) return 'canceled';
-          // The engine's chunk could not be fetched (the service captured it): the network, not the engine. Blocked
-          // like an unreachable homeserver, so Retry and the reconnect retry both apply.
-          const reason: SocialMigrationBlockedReason =
-            isAppError(error) && isNetworkError(error) ? 'incomplete' : 'unexpected';
-          if (reason === 'unexpected') reportSocialMigrationFailure({ pubky, error, attempt });
-          if ((await this.block(gate, reason)) !== 'retry') return 'canceled';
+          // The engine's chunk could not be fetched: the network, not the engine. Blocked like an unreachable
+          // homeserver, so Retry and the reconnect retry both apply; reported once per account and page.
+          if (isAppError(error) && isNetworkError(error)) {
+            reportSocialMigrationEngineUnavailable({ pubky, error, attempt });
+            if ((await this.block(gate, 'incomplete')) !== 'retry') return 'canceled';
+          } else {
+            reportSocialMigrationFailure({ pubky, error, attempt });
+            if ((await this.block(gate, 'unexpected')) !== 'retry') return 'canceled';
+          }
           autoRetries = 0;
           continue;
         }

@@ -768,6 +768,31 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
     }
   });
 
+  it.each([
+    ['a held account on another page', '/feed', 'NEEDS_SOCIAL_MIGRATION', 'social-migration', '/migration'],
+    ['a guest on a protected page', '/settings', 'UNAUTHENTICATED', 'idle', '/login'],
+  ])('keeps every other redirect free of the query (%s)', (_, pathname, status, restoreStatus, destination) => {
+    const search = new URLSearchParams({ returnTo: '/shop/marketplace', shopReauth: 'initial' }).toString();
+    window.history.replaceState(null, '', `${pathname}?${search}`);
+    mocks.pathname = pathname;
+    mocks.status = status;
+    mocks.restoreStatus = restoreStatus;
+    if (status === 'UNAUTHENTICATED') {
+      mocks.sessionReference = null;
+      mocks.currentUserPubky = null;
+    }
+    try {
+      render(
+        <RouteGuardProvider>
+          <div>Page</div>
+        </RouteGuardProvider>,
+      );
+      expect(mocks.mockRouterPush).toHaveBeenCalledExactlyOnceWith(destination);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('lets a signed-out visitor read the gate explanation', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.restoreStatus = 'idle';

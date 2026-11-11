@@ -63,7 +63,9 @@ with no screen (the engine writes the flag; the app never hand-writes `_migrated
 (Continue) only when the run skipped or dropped something. `incomplete` and `IO_ERROR` retry on their own
 (`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry; `AuthCoordinator` retries that reason on
 foreground and network return under its cooldown. `QUOTA` blocks with `needBytes`; `PRIV_UNSUPPORTED`,
-`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it; `SESSION_EXPIRED` and
+`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it, except a rejected load of the
+migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure: it blocks as `incomplete`,
+so the reconnect retry applies, and is reported once per account and page; `SESSION_EXPIRED` and
 `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
 `AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns its transport retries
 (429 backoff, three network retries, read-back before every cleanup delete); the app retries whole runs. This is the

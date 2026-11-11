@@ -929,8 +929,12 @@ export class HomeserverService {
       import('pubky-social-migrator/pubky-sdk'),
     ]).catch((error: unknown) => {
       // The chunk is fetched when a run starts: a load that fails is the network, not the engine, so the gate
-      // retries it on reconnect (ADR-0026).
-      throw Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not load the migration engine', {
+      // retries it on reconnect (ADR-0026). Constructed directly rather than via the Err factory: every Retry,
+      // focus and reconnect re-throws it, and the gate reports it once per account and page.
+      throw new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'Could not load the migration engine',
         service: ErrorService.Homeserver,
         operation: 'migrateToSocialV1',
         cause: error,

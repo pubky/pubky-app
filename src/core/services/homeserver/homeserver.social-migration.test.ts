@@ -148,6 +148,7 @@ describe('HomeserverService.migrateToSocialV1', () => {
         category: ErrorCategory.Network,
         code: NetworkErrorCode.CONNECTION_FAILED,
         operation: 'migrateToSocialV1',
+        cause: expect.any(Error),
       });
       expect(await homeserver.session.storage.exists(V1_PROFILE)).toBe(false);
     } finally {

@@ -5,11 +5,14 @@ import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/e
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
+import { SENSITIVE_VALUE_REDACTED } from '@/libs/observability/sentry.constants';
+import { sanitizeForSentry } from '@/libs/observability/sentry.utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
   logSocialMigrationFinished,
   reportSocialMigrationBlocked,
   reportSocialMigrationCapsMissing,
+  reportSocialMigrationEngineUnavailable,
   reportSocialMigrationFailure,
   resetSocialMigrationReports,
 } from './report-telemetry';
@@ -110,10 +113,39 @@ describe('social migration telemetry', () => {
     expect(server).toHaveBeenCalledExactlyOnceWith(ServerErrorCode.UNKNOWN_ERROR, 'Social migration failed', {
       service: ErrorService.Homeserver,
       operation: 'socialMigration',
-      context: { attempt: 2, name: 'TypeError', kind: undefined, status: undefined },
+      context: { attempt: 2, errorName: 'TypeError', kind: undefined, status: undefined },
     });
-    expect(server.mock.calls[0][2]).not.toHaveProperty('cause');
+    const [, , params] = server.mock.calls[0];
+    expect(params).not.toHaveProperty('cause');
     expect(JSON.stringify(server.mock.calls)).not.toContain('private-path');
+
+    // The type survives the Sentry scrubber, which redacts every value under a `name` key
+    const scrubbed = sanitizeForSentry(params.context);
+    expect(scrubbed).toMatchObject({ attempt: 2, errorName: 'TypeError' });
+    expect(JSON.stringify(scrubbed)).not.toContain('private-path');
+    expect(sanitizeForSentry({ name: 'TypeError' })).toEqual({ name: SENSITIVE_VALUE_REDACTED });
+  });
+
+  it('reports an unavailable engine once per account, with the import rejection as the cause', () => {
+    const network = vi.spyOn(Err, 'network');
+    const loadFailure = () =>
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'Could not load the migration engine',
+        service: ErrorService.Homeserver,
+        operation: 'migrateToSocialV1',
+        cause: new TypeError('Failed to fetch dynamically imported module'),
+      });
+    reportSocialMigrationEngineUnavailable({ pubky: 'a', error: loadFailure(), attempt: 1 });
+    reportSocialMigrationEngineUnavailable({ pubky: 'a', error: loadFailure(), attempt: 2 });
+    reportSocialMigrationEngineUnavailable({ pubky: 'b', error: loadFailure(), attempt: 1 });
+    expect(network).toHaveBeenCalledTimes(2);
+    const [code, , params] = network.mock.calls[0];
+    expect(code).toBe(NetworkErrorCode.CONNECTION_FAILED);
+    // The import's own rejection, not the service's AppError: an AppError in the chain reads as already captured
+    expect(params.cause).toBeInstanceOf(TypeError);
+    expect(params.context).toEqual({ attempt: 1, errorName: 'TypeError', kind: undefined, status: undefined });
   });
 
   it('describes a thrown AppError by its category and HTTP status only', () => {
@@ -132,8 +164,8 @@ describe('social migration telemetry', () => {
     });
     reportSocialMigrationFailure({ pubky: 'c', error: 'not an error', attempt: 1 });
     expect(server.mock.calls.map(([, , params]) => params.context)).toEqual([
-      { attempt: 1, name: 'AppError', kind: ErrorCategory.Network, status: 502 },
-      { attempt: 1, name: 'string', kind: undefined, status: undefined },
+      { attempt: 1, errorName: 'AppError', kind: ErrorCategory.Network, status: 502 },
+      { attempt: 1, errorName: 'string', kind: undefined, status: undefined },
     ]);
     expect(JSON.stringify(server.mock.calls)).not.toContain('private-path');
   });

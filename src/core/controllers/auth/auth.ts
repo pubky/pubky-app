@@ -1078,6 +1078,8 @@ export class AuthController {
             await assertCurrent();
             let completed = false;
             try {
+              // The outcome is not needed here: a gate sign-out ends the attempt below (`social-migration`), and the
+              // page learns it from the route guard, which already sent the tab to `/migration`.
               await this.completeAuthenticatedSession(
                 { session },
                 {
