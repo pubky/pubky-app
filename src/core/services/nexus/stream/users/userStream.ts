@@ -91,7 +91,7 @@ export class NexusUserStreamService {
       const { url, body } = userStreamApi.usersByIds({ ...params, user_ids });
       return await queryUsersByIds({ url, body, force });
     };
-    // One request returns the response as queryNexus stamped it (see getNexusResponseStartedAt)
+    // Preserve the slice's start evidence, including when it combines overlapping batches.
     if (sortedIds.length <= NEXUS_USERS_BY_IDS_MAX_IDS) {
       return await fetchSlice(sortedIds);
     }

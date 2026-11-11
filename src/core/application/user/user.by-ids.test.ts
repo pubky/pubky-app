@@ -39,7 +39,7 @@ it('preserves a follow when a later card joins a subrequest of a still-incomplet
     const body = JSON.parse(String(options?.body));
     if (body.user_ids.length === 1 && body.user_ids[0] === 'alice') return aliceResponse.promise;
     if (body.user_ids.includes('bob') && fetch.mock.calls.length <= 2) return bobResponse.promise;
-    return Promise.resolve(response([makeUser('bob', true)]));
+    return Promise.resolve(response([makeUser('bob', false)]));
   });
   const alice = UserApplication.fetch({ userId: 'alice', viewerId: 'viewer' });
   await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
@@ -63,4 +63,5 @@ it('preserves a follow when a later card joins a subrequest of a still-incomplet
   aliceResponse.resolve(response([makeUser('alice')]));
   await Promise.all([alice, batch]);
   expect(followingAfterCard).toBe(true);
+  expect(fetch).toHaveBeenCalledTimes(2);
 });

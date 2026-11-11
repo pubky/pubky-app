@@ -440,6 +440,21 @@ describe('LocalStreamUsersService', () => {
         expect((await UserRelationshipsModel.findById(userId))?.following).toBe(following);
       });
 
+      it.each([
+        { callerStartedAt: undefined, responseStartedAt: 1_000 },
+        { callerStartedAt: 1_000, responseStartedAt: 2_000 },
+      ])('keeps a local follow with request evidence %j', async ({ callerStartedAt, responseStartedAt }) => {
+        const userId = 'user-1' as Pubky;
+        await UserRelationshipsModel.create({ id: userId, following: true, followed_by: false });
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: 1_500 });
+        const users = [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })];
+        markNexusResponseStartedAt(users, responseStartedAt);
+
+        await LocalStreamUsersService.persistUsers(users, { viewerId: VIEWER_ID, fetchStartedAt: callerStartedAt });
+
+        expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
+      });
+
       it('should overwrite the relationship when no local write landed after the fetch started', async () => {
         const userId = 'user-1' as Pubky;
         await LocalStreamUsersService.persistUsers(

@@ -127,7 +127,8 @@ export class LocalStreamUsersService {
    * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows.
    *   `fetchStartedAt` skips relationship rows whose user TTL was written at or after that
    *   time so a local follow/unfollow during the request is not overwritten. A shared
-   *   response can predate this caller; its actual request start tightens that cutoff.
+   *   response supplies a cutoff when the caller has none; otherwise the earlier of
+   *   the caller's and response's request starts protects local writes.
    * @returns Array of user IDs (Pubky)
    */
   static async persistUsers(users: NexusUser[], tagGuard: PersistUsersGuard = {}): Promise<Pubky[]> {
