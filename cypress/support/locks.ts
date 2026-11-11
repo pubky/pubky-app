@@ -545,8 +545,12 @@ export const publishLock = (): Cypress.Chainable<string> => {
 
 const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
 
-const nexusDetailsHaveLock = (body: unknown): boolean =>
-  typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
+/** The announcement as Nexus serves it carries a `lock` URL: that one, when given. */
+const nexusDetailsHaveLock = (body: unknown, lockUrl?: string): boolean =>
+  typeof body === 'object' &&
+  body !== null &&
+  'lock' in body &&
+  (lockUrl === undefined ? Boolean(body.lock) : body.lock === lockUrl);
 
 /**
  * Polls GET /v1/post/<author>/<id>/details until `settled` is true.
@@ -581,14 +585,16 @@ const pollNexusPostDetails = (
 
 /**
  * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ * thing that tells a reader the post is locked), and that exact URL when `lockUrl` is given. The one
+ * fixed wait is the poll interval.
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+export const waitForNexusLockPost = (authorPubky: string, postId: string, lockUrl?: string) => {
   pollNexusPostDetails(
     authorPubky,
     postId,
-    (status, body) => status === 200 && nexusDetailsHaveLock(body),
-    (authorId, status) => `Nexus did not index lock post ${authorId}/${postId} (last status ${status})`,
+    (status, body) => status === 200 && nexusDetailsHaveLock(body, lockUrl),
+    (authorId, status) =>
+      `Nexus did not index lock post ${authorId}/${postId}${lockUrl ? ` with lock ${lockUrl}` : ''} (last status ${status})`,
   );
 };
 
