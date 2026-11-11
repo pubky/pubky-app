@@ -529,6 +529,9 @@ export const expectToast = (description: string) => {
   cy.contains('[data-cy="toast"]', description).should('be.visible');
 };
 
+/** Slow homeserver PUTs can delay the lock create past Cypress's 5 s default `requestTimeout`. */
+const LOCK_PUBLISH_REQUEST_TIMEOUT_MS = 30_000;
+
 /**
  * Publishes the configured lock from the home composer and yields the announcement's post id, read
  * from its homeserver PUT.
@@ -536,8 +539,8 @@ export const expectToast = (description: string) => {
 export const publishLock = (): Cypress.Chainable<string> => {
   cy.intercept('PUT', '**/pub/social/v1/posts/**').as('announcementCreated');
   homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
-  cy.wait('@createContentLock');
-  return cy.wait('@announcementCreated').then((interception) => {
+  cy.wait('@createContentLock', { requestTimeout: LOCK_PUBLISH_REQUEST_TIMEOUT_MS });
+  return cy.wait('@announcementCreated', { requestTimeout: LOCK_PUBLISH_REQUEST_TIMEOUT_MS }).then((interception) => {
     expect(interception.response?.statusCode).to.eq(201);
     return postIdFromWriteUrl(interception.request.url);
   });
