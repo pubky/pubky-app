@@ -232,6 +232,23 @@ export interface TPinakesCard {
   credits?: TPinakesCredit[] | null;
 }
 
+/**
+ * `Related`: an object a chain card points at (a transaction's inputs and outputs and its block, a
+ * block's neighbours and coinbase, an address's latest transactions, a Lightning node's channels),
+ * with its own card root when it has one.
+ */
+export interface TPinakesRelated {
+  /** What it is to the card: `input`, `output`, `block`, `previous`, `next`, `coinbase`, `tx`, `channel`, ... */
+  rel: string;
+  /** Its card root (`btc:address/…`, `btc:tx/…`, `ln:node/…`), `null` for one with none (`OP_RETURN`). */
+  uri?: string | null;
+  name?: string | null;
+  /** An amount in sats; signed for an address's transactions (+ received, − sent). */
+  amount_sat?: number | null;
+  /** RFC 3339. */
+  at?: string | null;
+}
+
 /** `ResourceDetail`: a resource read (`by-uri`, `resources/{id}`), the card plus `Details`. */
 export interface TPinakesResourceDetail extends TPinakesCard {
   /** Other spellings of this link that resolve to it (at most 50). */
@@ -258,6 +275,10 @@ export interface TPinakesResourceDetail extends TPinakesCard {
   /** How an event is attended: `offline`, `online` or `mixed` as the source gives it. */
   attendance?: string | null;
   stream?: TPinakesStream | null;
+  /** A chain card's related objects, bounded per `rel`; absent on other cards and older instances. */
+  related?: TPinakesRelated[] | null;
+  /** How many of each `rel` the object has when `related` lists fewer (`{ "input": 400 }`). */
+  related_total?: Record<string, number> | null;
 }
 
 /** `GroupDetail`: `GET /v1/groups/{id}`, every member's own card. */
