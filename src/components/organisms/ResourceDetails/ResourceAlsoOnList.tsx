@@ -9,8 +9,8 @@ import { getAlsoOnSource, mergeAlsoOn } from './ResourceAlsoOnList.utils';
 import { ResourceSection } from './ResourceSection';
 
 interface ResourceAlsoOnListProps {
-  /** The page's card: its `also_on`, its `group`, and its own service and links (left out of the list). */
-  card: Pick<TPinakesResourceDetail, 'id' | 'uri' | 'site' | 'refs' | 'aliases' | 'also_on' | 'group' | 'open_in'>;
+  /** The page's card: its `also_on`, its `group`, and its own service and link (left out of the list). */
+  card: Pick<TPinakesResourceDetail, 'id' | 'uri' | 'site' | 'refs' | 'also_on' | 'group' | 'open_in'>;
 }
 
 /**

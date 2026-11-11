@@ -33,24 +33,26 @@ export function getLinkKey(uri: string): string {
 /**
  * The resource page's Also on, one row per service (`pickAlsoOn`, `groupAlsoOn`): Pinakes' entries
  * first, then the group members shared on Pubky for a service Pinakes has no link for. Never the
- * card's own links (`getLinkKey`) or the service its header opens.
+ * card's own link (`getLinkKey`) or the service its header opens.
  *
  * @param members - The group's members (`GET /v1/groups/{id}`), the card among them; absent while
  *   read, when the read failed, or for a card outside a group (then Also on alone)
  */
 export function mergeAlsoOn(
-  card: Pick<TPinakesResourceDetail, 'uri' | 'site' | 'refs' | 'also_on' | 'open_in'> & { aliases?: string[] | null },
+  card: Pick<TPinakesResourceDetail, 'uri' | 'site' | 'refs' | 'also_on' | 'open_in'>,
   members: TGroupMember[] | null | undefined,
 ): TAlsoOnRow[] {
-  const own = new Set([card.uri, ...card.refs, ...(card.aliases ?? [])].map(getLinkKey));
+  const own = getLinkKey(card.uri);
   const shared = (members ?? []).map((member): TPinakesAlsoOn => ({
     uri: member.uri,
     id: member.id,
     site: member.site,
   }));
-  const entries = [...card.also_on, ...shared].filter((entry) => !own.has(getLinkKey(entry.uri)));
-  // The service left out is the one the card's header opens; the other services people wrote links
-  // for (`refs`: an ISBN reached through Goodreads and Open Library) stay.
+  const entries = [...card.also_on, ...shared].filter((entry) => getLinkKey(entry.uri) !== own);
+  // The service left out is the one the card's header opens, by name or host (any spelling on it).
+  // Other services stay, also when their link is the card's: the links people wrote (`refs`: an
+  // ISBN reached through Goodreads and Open Library) and the ones Pinakes resolved to it (`aliases`:
+  // every explorer's link to a Bitcoin transaction is an alias of the one `btc:` card).
   const { linkUrl, siteName } = getResourceLinks(card);
   return groupAlsoOn(pickAlsoOn(entries, { site: siteName, uris: [card.uri, linkUrl] }));
 }

@@ -118,6 +118,57 @@ describe('mergeAlsoOn', () => {
     expect(describeRows(mergeAlsoOn(card, null))).toEqual([`entry:${IMDB.uri}`]);
   });
 
+  it('keeps the services whose links Pinakes resolved to the card, all but the one its header opens', () => {
+    const txid = '3d365ba65953e39c2ff64186022fe9ccf4ac0694888d9bf0c57a45de23e46fd5';
+    const explorer = (site: string, uri: string) => ({ uri, site, derived: true, via: 'mempool' });
+    const header = explorer('mempool.space', `https://mempool.space/tx/${txid}`);
+    const others = [
+      explorer('Blockchain.com', `https://www.blockchain.com/explorer/transactions/btc/${txid}`),
+      explorer('Blockstream Explorer', `https://blockstream.info/tx/${txid}`),
+      explorer('BTCScan', `https://btcscan.org/tx/${txid}`),
+      explorer('mempool.emzy.de', `https://mempool.emzy.de/tx/${txid}`),
+      explorer('OKLink', `https://www.oklink.com/bitcoin/tx/${txid}`),
+    ];
+    const tx = {
+      uri: `btc:tx/${txid}`,
+      site: 'mempool.space',
+      open_in: [],
+      refs: [header.uri],
+      // Each explorer link opened on its own page was resolved to this one card.
+      aliases: [header.uri, ...others.map((entry) => entry.uri)],
+      also_on: [header, ...others],
+    };
+    expect(describeRows(mergeAlsoOn(tx, [member('self', tx.uri, 'mempool.space')]))).toEqual(
+      others.map((entry) => `entry:${entry.uri}`),
+    );
+  });
+
+  it('shows a service once whatever spellings of it the card holds, none on the header’s', () => {
+    const apple = (country: string) => `https://music.apple.com/${country}/song/get-lucky/1440717826`;
+    const spotify = { uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq', site: 'Spotify', id: 's' };
+    const song = {
+      uri: 'https://www.deezer.com/track/67238735',
+      site: 'Deezer',
+      open_in: [],
+      refs: [],
+      aliases: [apple('us'), apple('gb')],
+      also_on: [{ uri: apple('us'), site: 'Apple Music', derived: true, via: 'musicbrainz' }, spotify],
+    };
+    expect(describeRows(mergeAlsoOn(song, [member('a', apple('gb'), 'Apple Music')]))).toEqual([
+      `entry:${apple('us')}`,
+      `entry:${spotify.uri}`,
+    ]);
+
+    const onApple = {
+      ...song,
+      uri: apple('us'),
+      site: 'Apple Music',
+      aliases: [apple('gb')],
+      also_on: [{ uri: apple('gb'), site: 'Apple Music' }, spotify],
+    };
+    expect(describeRows(mergeAlsoOn(onApple, null))).toEqual([`entry:${spotify.uri}`]);
+  });
+
   it('keeps a service in several languages as one row', () => {
     const wiki = (lang: string) => ({ uri: `https://${lang}.wikipedia.org/wiki/Berlin`, site: `Wikipedia (${lang})` });
     const card = { ...CARD, also_on: [wiki('de'), wiki('en'), IMDB] };
