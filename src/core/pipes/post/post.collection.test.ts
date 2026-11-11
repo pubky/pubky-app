@@ -19,6 +19,16 @@ const LEGACY_ITEM_URI = `pubky://${ITEM_AUTHOR}/pub/pubky.app/posts/0034A0X7NJ52
 const stored = (items: StoredCollectionContent['items'], overrides: Partial<StoredCollectionContent> = {}) =>
   encodeContent({ name: 'Stored', description: null, cover_image: null, layout: null, items, ...overrides });
 
+/** The stored envelope of a collection with `items`, decoded as `toEdit` reads the head. */
+const storedCollection = (
+  items: StoredCollectionContent['items'],
+  overrides: Partial<StoredCollectionContent> = {},
+): StoredCollectionContent => {
+  const envelope = decodeContent({ kind: 'collection', content: stored(items, overrides) });
+  if (envelope?.kind !== 'collection') throw new Error('not a collection');
+  return envelope.content;
+};
+
 describe('CollectionPostContent', () => {
   describe('normalize', () => {
     it('trims name and description', () => {
@@ -248,12 +258,10 @@ describe('CollectionPostContent', () => {
 
   describe('toStored', () => {
     it('merges the shown envelope onto the stored one, keeping item notes and unknown members', () => {
-      const storedEnvelope = decodeContent({
-        kind: 'collection',
-        content: stored([{ uri: VALID_ITEM_URI, note: 'start here' }], { description: 'Old' }),
-      });
-      if (storedEnvelope?.kind !== 'collection') throw new Error('not a collection');
-      const withUnknown = { ...storedEnvelope.content, $unknown: '{"mood":"calm"}' };
+      const withUnknown = {
+        ...storedCollection([{ uri: VALID_ITEM_URI, note: 'start here' }], { description: 'Old' }),
+        $unknown: '{"mood":"calm"}',
+      };
 
       const next = CollectionPostContent.toStored(withUnknown, {
         name: 'Renamed',
@@ -278,6 +286,83 @@ describe('CollectionPostContent', () => {
         kind: 'collection',
         content: next,
       });
+    });
+
+    it('matches a post item by identity: a 0.x-spelled item in `next` keeps the stored v1 URI and note, in `next` order', () => {
+      // The migrator wrote the v1 head with the respelled items and their notes; Nexus still
+      // serves the collection's `content` in the 0.x shape, so the row `next` is parsed from
+      // spells the same post the 0.x way (SF-4).
+      const head = storedCollection([
+        { uri: VALID_ITEM_URI, note: 'start here' },
+        { uri: 'https://example.com/post', note: 'read later' },
+      ]);
+      const addedUri = `pubky://${fakeOwner(4)}/pub/social/v1/posts/0034A0X7NJ52B`;
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Stored',
+        description: '',
+        items: [addedUri, 'https://example.com/post', LEGACY_ITEM_URI],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([
+        { uri: addedUri, note: null },
+        { uri: 'https://example.com/post', note: 'read later' },
+        { uri: VALID_ITEM_URI, note: 'start here' },
+      ]);
+    });
+
+    it('collapses the two spellings of one post in `next` to the stored item, once', () => {
+      const head = storedCollection([{ uri: VALID_ITEM_URI, note: 'start here' }]);
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Stored',
+        description: '',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([{ uri: VALID_ITEM_URI, note: 'start here' }]);
+    });
+
+    it('keeps the first stored item, note included, when the head spells one post both ways', () => {
+      // Another client curated the post twice, once per spelling: an edit that leaves the items
+      // alone must not lose the note the first one carries.
+      const head = storedCollection([
+        { uri: LEGACY_ITEM_URI, note: 'read first' },
+        { uri: VALID_ITEM_URI, note: null },
+      ]);
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Renamed',
+        description: '',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([{ uri: LEGACY_ITEM_URI, note: 'read first' }]);
+    });
+
+    it('matches anything that is not a post reference by its exact URI', () => {
+      const fileUri = `pubky://${ITEM_AUTHOR}/pub/social/v1/files/AKSZ57W2RFKHV1EHK007FQQ8TW.png`;
+      const legacyFileUri = `pubky://${ITEM_AUTHOR}/pub/pubky.app/files/AKSZ57W2RFKHV1EHK007FQQ8TW`;
+      const head = storedCollection([
+        { uri: fileUri, note: 'the slides' },
+        { uri: 'https://example.com/post', note: 'read later' },
+      ]);
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Stored',
+        description: '',
+        items: [fileUri, legacyFileUri, 'https://example.com/post/'],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([
+        { uri: fileUri, note: 'the slides' },
+        { uri: legacyFileUri, note: null },
+        { uri: 'https://example.com/post/', note: null },
+      ]);
     });
 
     it('spells an empty description as null and a cover as given', () => {
@@ -381,6 +466,18 @@ describe('CollectionPostContent', () => {
       const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, uriB] });
 
       expect(CollectionPostContent.reorderItems(collection, [`  ${uriB}  `, uriA]).items).toEqual([uriB, uriA]);
+    });
+
+    it('matches a drafted post whichever way the collection spells it, and keeps that spelling', () => {
+      // The draft was taken from the Nexus-served row (0.x spelling); the row has since converged
+      // to the stored v1 spelling.
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, VALID_ITEM_URI] });
+
+      expect(CollectionPostContent.reorderItems(collection, [LEGACY_ITEM_URI, uriA]).items).toEqual([
+        VALID_ITEM_URI,
+        uriA,
+      ]);
+      expect(CollectionPostContent.reorderItems(collection, [uriA, LEGACY_ITEM_URI])).toBe(collection);
     });
   });
 });

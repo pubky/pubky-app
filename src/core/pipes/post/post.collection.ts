@@ -13,6 +13,8 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { collectionItemUris } from '@/libs/post/collectionContent';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import type { CollectionContent, CollectionContentInput } from '@/models/post/collection/collectionPost.types';
 
 const ALLOWED_COLLECTION_URL_PROTOCOLS = new Set(
@@ -95,6 +97,16 @@ function normalizeCoverImage(input: string | null | undefined): string | undefin
   }
 
   return trimmed;
+}
+
+/**
+ * What makes two item URIs the same item: a post reference is the post it names, so its 0.x and v1
+ * spellings (`postReferenceSpellings`) are one item; anything else is its exact URI. The row an edit
+ * starts from may spell a post the 0.x way (Nexus serves a migrated collection's `content` as it
+ * was) while the stored v1 head spells it the v1 way.
+ */
+function collectionItemKey(uri: string): string {
+  return buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.POSTS }) ?? uri;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -234,12 +246,15 @@ export class CollectionPostContent {
   static reorderItems(collection: CollectionContent, orderedItems: string[]): CollectionContent {
     const currentItems = collection.items ?? [];
     const trimmedOrder = orderedItems.map((item) => item.trim());
-    const orderedSet = new Set(trimmedOrder);
-    const currentSet = new Set(currentItems);
+    // By item identity, as `toStored`: a draft taken from the Nexus-served row may spell a post
+    // the 0.x way while the row has since converged to the stored v1 spelling. A drafted item is
+    // emitted as the collection spells it.
+    const orderedKeys = new Set(trimmedOrder.map(collectionItemKey));
+    const currentByKey = new Map(currentItems.map((item) => [collectionItemKey(item), item]));
 
     const merged = [
-      ...currentItems.filter((item) => !orderedSet.has(item)),
-      ...trimmedOrder.filter((item) => currentSet.has(item)),
+      ...currentItems.filter((item) => !orderedKeys.has(collectionItemKey(item))),
+      ...trimmedOrder.flatMap((item) => currentByKey.get(collectionItemKey(item)) ?? []),
     ];
 
     if (merged.length === currentItems.length && merged.every((item, index) => item === currentItems[index])) {
@@ -266,18 +281,33 @@ export class CollectionPostContent {
   }
 
   /**
-   * `next` merged onto the stored envelope: each kept item keeps its note and unknown members, and
-   * the envelope keeps the members this client does not know.
+   * `next` merged onto the stored envelope: the items come in `next`'s order, a kept one is the
+   * stored item unchanged (its spelling, note and unknown members, matched by `collectionItemKey`),
+   * only a new one is spelled as `next` gives it, and the envelope keeps the members this client
+   * does not know. Two spellings of one post, in `next` or in `stored`, are one kept item: the
+   * first stored one.
    */
   static toStored(stored: StoredCollectionContent, next: CollectionContent): StoredCollectionContent {
-    const storedItems = new Map(stored.items.map((item) => [item.uri, item]));
+    const storedItems = new Map<string, StoredCollectionContent['items'][number]>();
+    for (const item of stored.items) {
+      const key = collectionItemKey(item.uri);
+      if (!storedItems.has(key)) storedItems.set(key, item);
+    }
+    const seen = new Set<string>();
+    const items: StoredCollectionContent['items'] = [];
+    for (const uri of next.items ?? []) {
+      const key = collectionItemKey(uri);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(storedItems.get(key) ?? { uri, note: null });
+    }
     return {
       ...stored,
       name: next.name,
       description: next.description || null,
       cover_image: next.cover_image ?? null,
       layout: next.layout,
-      items: (next.items ?? []).map((uri) => storedItems.get(uri) ?? { uri, note: null }),
+      items,
     };
   }
 }
