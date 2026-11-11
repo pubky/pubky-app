@@ -11,7 +11,7 @@ import { reportMediaStart, stopOtherMedia, useMediaBox } from '@/hooks/useOnePla
 import { tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { cn } from '@/libs/utils/utils';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
-import type { PlayerStart, PlayerTarget } from './resourcePlayer.utils';
+import { getMinFrameWidth, type PlayerStart, type PlayerTarget } from './resourcePlayer.utils';
 import { type PlayerLoadState, useFramePress } from './useResourcePlayer';
 
 interface ResourcePlayerFrameProps {
@@ -86,6 +86,28 @@ function useStartMessage(target: PlayerTarget, onLoaded: () => void) {
 }
 
 /**
+ * The scale that fits a frame laid out at `minWidth` (`getMinFrameWidth`) into its region: below 1
+ * only while the region is narrower; 1 when it fits, without a minimum width, or before the width is
+ * known.
+ */
+function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: number | undefined): number {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const region = regionRef.current;
+    if (!minWidth || !region || typeof ResizeObserver === 'undefined') return;
+    // The layout width (untransformed, with fractions); the first report comes before the next paint.
+    // A hidden region reports 0: the last scale is kept, so the frame comes back scaled.
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry?.contentRect.width ?? 0;
+      if (width > 0) setScale(width < minWidth ? width / minWidth : 1);
+    });
+    observer.observe(region);
+    return () => observer.disconnect();
+  }, [regionRef, minWidth]);
+  return minWidth ? scale : 1;
+}
+
+/**
  * A service's own player, unchanged: the iframe its embed code makes (or the themed `Audio` for a
  * plain file), at the service's height for audio and 16:9 for video (at the card's full width, no height
  * floor). Until the frame loads, a pulsing placeholder of the same size covers it, and only the
@@ -141,11 +163,19 @@ export function ResourcePlayerFrame({
   useMediaBox(regionRef, onPlay ? { onStart: onPlay, onPause } : { onStart: startHere, onStop: stop });
   const label = `${target.name} player: ${title}`;
   const isVideo = target.layout.kind === 'video';
+  // An embed with a minimum width (Apple's) is laid out at it and scaled to the region, the region's
+  // height with it: the player keeps its proportions, with no scrollbar, cut edge or gap under it.
+  const minWidth = target.element === 'iframe' ? getMinFrameWidth(target) : undefined;
+  const fit = useFitScale(regionRef, minWidth);
+  const fitStyle: CSSProperties | undefined =
+    minWidth && fit < 1
+      ? { width: minWidth, height: `${100 / fit}%`, transform: `scale(${fit})`, transformOrigin: '0 0' }
+      : undefined;
   const style =
     target.layout.kind === 'audio'
       ? ({
-          '--player-h': `${target.layout.height}px`,
-          '--player-dock-h': `${target.layout.dockHeight ?? target.layout.height}px`,
+          '--player-h': `${target.layout.height * fit}px`,
+          '--player-dock-h': `${(target.layout.dockHeight ?? target.layout.height) * fit}px`,
         } as CSSProperties)
       : undefined;
 
@@ -198,6 +228,7 @@ export function ResourcePlayerFrame({
               onLoad();
               setLoadedRound(round);
             }}
+            style={fitStyle}
             data-testid="resource-player-frame"
             className={cn(
               'absolute inset-0 size-full border-0 transition-opacity duration-300 motion-reduce:transition-none',

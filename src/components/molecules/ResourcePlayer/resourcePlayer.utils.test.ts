@@ -174,7 +174,7 @@ describe('getPlayerTarget', () => {
     });
     expect(getPlayerTarget('https://podcasts.apple.com/us/podcast/darknet-diaries/id1296350485')).toMatchObject({
       src: 'https://embed.podcasts.apple.com/us/podcast/1296350485',
-      layout: { kind: 'audio', height: 450 },
+      layout: { kind: 'audio', height: 175 },
     });
   });
 
