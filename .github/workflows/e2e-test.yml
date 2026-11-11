@@ -768,11 +768,12 @@ jobs:
         id: test-desktop
         uses: cypress-io/github-action@v7
         env:
-          # Temporary, to find out why WebKit does not attach on this runner; it logs every request,
-          # so go back to '@cypress/github-action' once it does. cypress:electron is what makes the
-          # rest appear: without it the Cypress CLI, which pipes the stderr of its server process on
+          # Temporary, while the specs are being brought to pass on this runner: webkit-automation
+          # logs every request of the browser and how it ended, which is what a failure is traced
+          # with. Go back to '@cypress/github-action' after that. cypress:electron is what makes it
+          # appear: without it the Cypress CLI, which pipes the stderr of its server process on
           # Linux and macOS, drops the debug lines that process writes when not on a terminal.
-          DEBUG: '@cypress/github-action,cypress:electron,cypress:server:browsers*,cypress:server:routes,cypress:server:server-base,pw:browser*,pw:api'
+          DEBUG: '@cypress/github-action,cypress:electron,cypress:server:browsers:webkit-automation'
           # Cypress reads this as its `requestTimeout` option: how long cy.wait('@alias') waits for
           # the request to reach the proxy, 5 seconds by default. Under WebKit the proxy holds every
           # CORS preflight for half a second, so a post with an upload (blob, file and post, each
