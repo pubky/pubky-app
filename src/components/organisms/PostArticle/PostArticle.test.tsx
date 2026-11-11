@@ -1,4 +1,6 @@
 import { render, screen } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
@@ -354,6 +356,144 @@ describe('PostArticle', () => {
 
       const image = screen.getByTestId('cover-image');
       expect(image).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
+    });
+  });
+
+  // ADR-0023 as amended by ADR-0027 (D14): an article this app writes keeps its cover in the
+  // envelope's `cover_image` and its inline media in the slots, so slot 0 is a body image. Only
+  // unlocked (Locks) content and a 0.x article keep the cover in slot 0 (rule B), and only an
+  // image there is one. The hook is mocked, so these pin the component's own gates.
+  describe('Envelope cover and the slot-0 rule', () => {
+    const OWNER = fakeOwner(1);
+    const mediaUri = (byte: number, type: string) => buildFile(OWNER, { bytes: new Uint8Array([byte]), type }).url;
+    const COVER_URI = mediaUri(1, 'image/png');
+    const INLINE_URI = mediaUri(2, 'image/png');
+    const envelope = (body: string, coverImage?: string) =>
+      JSON.stringify({ title: 'Essay', body, ...(coverImage && { cover_image: coverImage }) });
+
+    /** The session's own copies: the cover (`articleCovers`) and the media at slot 0 (`posts`). */
+    const sessionCover: AttachmentConstructed = {
+      type: 'image/png',
+      name: 'cover.png',
+      urls: { main: 'blob:http://localhost/session-cover' },
+    };
+    const slotZeroImage: AttachmentConstructed = {
+      type: 'image/png',
+      name: 'shot.png',
+      urls: { main: 'blob:http://localhost/shot' },
+    };
+    const slotZeroVideo: AttachmentConstructed = {
+      type: 'video/mp4',
+      name: 'clip.mp4',
+      urls: { main: 'blob:http://localhost/clip' },
+    };
+    /** Unlocked (Locks) content: the reader's copy of the locked post's slot 0, named as `toUnlockedMedia` names it. */
+    const unlockedCover: AttachmentConstructed = {
+      type: 'image/png',
+      name: 'attachment-0',
+      urls: { main: 'blob:http://localhost/unlocked-cover', feed: 'blob:http://localhost/unlocked-cover' },
+      slot: 0,
+    };
+    const hookParams = (content: string, attachments: string[] | null) => ({
+      content,
+      attachments,
+      coverImageVariant: FileVariant.FEED,
+    });
+
+    it('paints the envelope cover and never slot 0, which is a body image', () => {
+      const content = envelope('Intro\n\n![shot](attachment:0)', COVER_URI);
+
+      render(<PostArticle content={content} attachments={[INLINE_URI]} localAttachments={[slotZeroImage]} />);
+
+      expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
+      // Slot 0 is no cover here, so its type is not the cover's either
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        ...hookParams(content, [INLINE_URI]),
+        localAttachmentCount: 1,
+        localCoverType: undefined,
+      });
+    });
+
+    it('lets the cover this session published win over the envelope cover', () => {
+      const content = envelope('Intro\n\n![clip](attachment:0)', COVER_URI);
+
+      render(
+        <PostArticle
+          content={content}
+          attachments={[INLINE_URI]}
+          localAttachments={[slotZeroVideo]}
+          localCover={sessionCover}
+        />,
+      );
+
+      expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'blob:http://localhost/session-cover');
+      // The entry's type stands in for the cover's row, never the slot's
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        ...hookParams(content, [INLINE_URI]),
+        localAttachmentCount: 1,
+        localCoverType: 'image/png',
+      });
+    });
+
+    it('takes slot 0 of unlocked content as its cover when the body leaves the slot alone', () => {
+      // No Nexus copy of the files, so the hook has no cover URL of its own
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
+      const content = envelope('Intro\n\n![shot](attachment:1)');
+
+      render(
+        <PostArticle
+          content={content}
+          attachments={null}
+          localAttachments={[unlockedCover, { ...slotZeroImage, slot: 1 }]}
+        />,
+      );
+
+      expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'blob:http://localhost/unlocked-cover');
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        ...hookParams(content, null),
+        localAttachmentCount: 2,
+        localCoverType: 'image/png',
+      });
+    });
+
+    it('hands a non-image slot 0 to the hook as the slot type and never paints it as the cover', () => {
+      // Rule B settles on that type in the hook (a video there leaves the article without a cover);
+      // whatever the hook reports, the component's own rule is image-only too
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
+      const content = envelope('Intro\n\n![shot](attachment:1)');
+
+      render(
+        <PostArticle
+          content={content}
+          attachments={null}
+          localAttachments={[
+            { ...slotZeroVideo, slot: 0 },
+            { ...slotZeroImage, slot: 1 },
+          ]}
+        />,
+      );
+
+      expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        ...hookParams(content, null),
+        localAttachmentCount: 2,
+        localCoverType: 'video/mp4',
+      });
+    });
+
+    it('leaves slot 0 to the body when the body references it', () => {
+      mockUsePostArticle.mockReturnValue({ ...mockHookReturnWithoutImage, hasCover: false });
+      const content = envelope('Intro\n\n![first](attachment:0)');
+
+      render(<PostArticle content={content} attachments={null} localAttachments={[{ ...slotZeroImage, slot: 0 }]} />);
+
+      expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+      // A referenced slot 0 is inline media: its type never reaches the hook as a cover's
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        ...hookParams(content, null),
+        localAttachmentCount: 1,
+        localCoverType: undefined,
+      });
     });
   });
 

@@ -77,7 +77,8 @@ vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
     AUTHENTICATED: { allowedRoutes: ['/feed', '/settings', '/collections'], redirectTo: '/feed' },
     UNAUTHENTICATED: {
-      allowedRoutes: ['/login', '/landing', '/home', '/hot', '/search', '/collections'],
+      // `/migration` as in the real map (`UNAUTHENTICATED_ROUTES`, pinned by routes.test): the gate's signed-out page
+      allowedRoutes: ['/login', '/landing', '/home', '/hot', '/search', '/collections', '/migration'],
       redirectTo: '/login',
     },
     NEEDS_PROFILE_CREATION: { allowedRoutes: ['/create-profile'], redirectTo: '/create-profile' },
@@ -805,8 +806,10 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
         <div>Explanation</div>
       </RouteGuardProvider>,
     );
-    // The mocked map keeps the signed-out routes of the real one apart; the real map allows /migration (routes.test)
-    expect(mocks.mockRouterPush).not.toHaveBeenCalledWith('/migration');
+    // Rendered, not redirected: the gate's page is a signed-out route, and no account is pending behind the gate
+    expect(screen.getByText('Explanation')).toBeInTheDocument();
+    expect(screen.queryByText('Redirecting...')).not.toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
   });
 });
 

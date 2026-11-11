@@ -3,7 +3,7 @@ import type { ProgressEvent } from 'pubky-social-migrator';
 import { memoryHomeserver } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCIAL_MIGRATION_FLAG_PATH, SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
-import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -197,6 +197,16 @@ describe('HomeserverService.getBytesIfExists with an explicit session', () => {
     await expect(
       HomeserverService.getBytesIfExists(`pubky://${owner}/priv/social/v1/_migrated.json`, refused),
     ).rejects.toMatchObject({ context: expect.objectContaining({ statusCode: 403 }) });
+  });
+
+  it('throws on a 401 instead of reading the flag as absent (ADR-0026)', async () => {
+    const expired = sessionFor(async () => new Response('Unauthorized', { status: 401 }));
+    await expect(
+      HomeserverService.getBytesIfExists(`pubky://${owner}/priv/social/v1/_migrated.json`, expired),
+    ).rejects.toMatchObject({
+      code: AuthErrorCode.SESSION_EXPIRED,
+      context: expect.objectContaining({ statusCode: 401 }),
+    });
   });
 
   it("refuses another owner's URL for the given session", async () => {
