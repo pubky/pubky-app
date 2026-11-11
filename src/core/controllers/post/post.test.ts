@@ -292,15 +292,15 @@ describe('PostController', () => {
       // Nexus serves the 0.x spelling for a reply written before the parent's author migrated; a v1 reply
       // references the parent the way `buildUri` spells it, pinned as the `postUrl` literal. One thread finds both.
       const legacyParentUri = `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`;
-      const legacyReplyId = buildCompositeId({ pubky: 'reply-author-1' as Pubky, id: 'reply-1' });
-      const v1ReplyId = buildCompositeId({ pubky: 'reply-author-2' as Pubky, id: 'reply-2' });
+      const legacyReplyId = buildCompositeId({ pubky: fakeOwner(2), id: '0035QZPT4QG01' });
+      const v1ReplyId = buildCompositeId({ pubky: fakeOwner(3), id: '0035QZPT4QG02' });
 
       await PostRelationshipsModel.table.bulkAdd([
         { id: legacyReplyId, replied: legacyParentUri, reposted: null, mentioned: [] },
         { id: v1ReplyId, replied: postUrl, reposted: null, mentioned: [] },
         {
-          id: buildCompositeId({ pubky: 'reply-author-3' as Pubky, id: 'reply-3' }),
-          replied: 'pubky://someone/pub/pubky.app/posts/another-parent',
+          id: buildCompositeId({ pubky: fakeOwner(4), id: '0035QZPT4QG03' }),
+          replied: `pubky://${fakeOwner(5)}/pub/pubky.app/posts/0035QZPT4QG04`,
           reposted: null,
           mentioned: [],
         },
