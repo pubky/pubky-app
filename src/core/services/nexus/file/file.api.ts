@@ -16,10 +16,12 @@ const STATIC_PREFIX = 'files';
  * The one Nexus call that stays on the frozen `/v0` API. A 0.x attachment URI
  * (`pubky://{owner}/pub/pubky.app/files/{tsid}`) carries no extension and no type, and only Nexus
  * knows its `content_type`, `name`, `size` and variant URLs; `/v1` serves no file details (neither
- * `attachments_metadata` nor `files/by_ids`, a 404 there). Un-migrated authors keep such posts for as
- * long as they have not opened the new app, so without this call their images would render as generic
- * file cards for every viewer (D10). The callers send 0.x addresses only (`FileApplication.fetchFiles`
- * drops every v1 address, which the route would skip with a server-side warning).
+ * `attachments_metadata` nor a `files/by_ids` route: `POST /v1/files/by_ids` is a 404). Un-migrated authors
+ * keep such posts for as long as they have not opened the new app, so without this call their images
+ * would render as generic file cards for every viewer (D10). A v1 address in the body is not an error:
+ * `/v0/files/by_ids` skips it with a server-side warning and answers 200 with the rest (Nexus contract,
+ * verified live on the carrier). The callers still never send one: `FileApplication.fetchFiles` and
+ * `fetchFilesForPosts` drop every v1 address first, since Nexus has nothing to say about it.
  *
  * Sunset: remove this call, with `NexusFileService.fetchFiles` and `FileApplication.fetchFiles*`, when `/v0`
  * gets a removal date or every author has migrated (ADR-0027, _Nexus API version_). The compliance

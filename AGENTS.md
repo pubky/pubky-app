@@ -53,7 +53,10 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Errors: `Err.*` factories (`src/libs/error/error.factories.ts`), never raw `Error`. Factories log and capture, so never
   log-then-throw. Only the documented pinned SDK boundary checks may classify by message, including Locks SDK 0.1.0
   `InvalidInput` + exact viewer HTTP 451; the optional `ClientRegionService.fetchCountry` availability probe uses
-  non-reporting raw `fetch`. Keep these exceptions narrow and contract-tested. `docs/error-handling.md`
+  non-reporting raw `fetch`; the only two uncaptured-`AppError` sites are `HomeserverService.migrateToSocialV1` (a failed
+  migrator chunk load, thrown for the gate's once-per-(account, code)-per-page capture) and
+  `HomeserverService.assertUserHomeserverAllowed` (`docs/error-handling.md`, _The migration gate_). Keep these exceptions
+  narrow and contract-tested. `docs/error-handling.md`
 - Local-first reads in hooks: `useLocalFirstQuery` (`@/hooks/useLocalFirstQuery/useLocalFirstQuery`). Never network, TanStack
   or retry logic inside `useLiveQuery`; no hand-rolled `useEffect` + `useLiveQuery`. A cache hit is never refreshed by it,
   a tombstone counts as data, a settled `null` means missing. `docs/local-first.md`
@@ -151,8 +154,9 @@ and targeted tests pass; VRT, ADR, `DB_VERSION` and config changes called out; t
 
 Commits and branches: `type(scope): description` (imperative, lower-case, no period, ≤72 chars); branches
 `<type>/<issue>-<kebab-description>` cut from `dev`; PRs target `dev`, draft unless asked, one change per PR. Cypress specs
-are owned by QA: flag an invalidated spec, do not edit or run e2e yourself (the social v1 port updated the suite once, with
-QA's agreement, in #3055). `docs/commit-message.md`, `docs/migrations/social-v1.md`
+are owned by QA: flag an invalidated spec, do not edit or run e2e yourself (the social v1 work edits the suite under QA's
+agreement, from the port in #3055 through its later e2e PRs and dev-sync resolutions, until its final PR lands).
+`docs/commit-message.md`, `docs/migrations/social-v1.md`
 
 ## People and names
 

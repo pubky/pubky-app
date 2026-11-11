@@ -23,9 +23,9 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * streaming: the social v1 `last_read` file is private, a private event stream needs a session, and a session-bound
  * stream holds the shared session lock until its response headers reach the SDK, with no timeout; behind anything that
  * buffers event streams that is unbounded and a 401 refresh then waits forever (pubky/pubky-homeserver#798). Polling
- * has no such exposure. `NotificationLastReadSyncCoordinator`, the channel of the shared stream that follows the
- * public 0.x file, stays in the tree unregistered until the SDK bounds that lease or the team accepts the exposure
- * (ADR-0029).
+ * has no such exposure. `NotificationLastReadSyncCoordinator`, the channel of the shared stream that followed the
+ * public 0.x file on `dev` (its path constant now names the private v1 file), stays in the tree unregistered until
+ * the SDK bounds that lease or the team accepts the exposure (ADR-0029).
  *
  * Policy (aligned with {@link MuteListSyncCoordinator}):
  * - Requires authenticated session with profile and current pubky.

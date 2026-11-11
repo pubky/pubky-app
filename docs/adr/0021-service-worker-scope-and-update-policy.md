@@ -4,7 +4,8 @@
 
 Accepted — 2026-09-15  
 Updated — 2026-10-30 (exception for the social v1 cut-over: forced worker takeover; see _Amendment_)  
-Updated — 2026-11-10 (the revert is not tied to the following release; its timing is the team's call, see _Amendment_)
+Updated — 2026-11-10 (the revert is not tied to the following release; its timing is the team's call, see _Amendment_)  
+Updated — 2026-11-11 (the revert's scope spelled out; `WindowClient.navigate` verified in WebKit by QA-4)
 
 ## Context
 
@@ -54,12 +55,16 @@ tabs without the consent toast; the new-build tab that
 triggered the install reloads too (it sits at the sign-in or migration gate, so nothing is lost); discovery
 still depends on the browser's `sw.js` check (immediate on any navigation, within
 `SW_UPDATE_CHECK_MIN_INTERVAL_MS` of a tab becoming visible, at most 24 h), so a tab that never triggers a
-check keeps writing 0.x until it does; `WindowClient.navigate` on WebKit is unverified; no worker means no
-effect (dev without `SERWIST_DEV`, a rejected registration).
+check keeps writing 0.x until it does; no worker means no effect (dev without `SERWIST_DEV`, a rejected
+registration). `WindowClient.navigate` itself reloaded every open tab onto the new build in Chromium 151 (signed
+out) and the signed-in tab in Firefox 153 and WebKit 26.5, on production builds (QA-4, 2026-11-10), so the engine
+is not a residual.
 
-Revert: PR-E2 restores `skipWaiting: false`, removes the listener and its test ("claims then navigates every
-window client"), and drops the rollout note from `docs/pwa.md`. It is **not** tied to the release after the
-cut-over (D9): nobody can tell when the last 0.x tab is gone, so the forced policy stays until Nexus
+Revert: PR-E2 removes the cut-over `install` and `activate` listeners and the `replacesActiveWorker` flag they share
+from `src/sw.ts` (the earlier `activate` listener that deletes the legacy Nexus cache stays), restores
+`skipWaiting: false`, drops the four cut-over tests in `src/sw.test.ts` ("activates as soon as it installs" and the
+three under "social v1 cut-over takeover"), and drops the rollout note from `docs/pwa.md`. It is **not** tied to the
+release after the cut-over (D9): nobody can tell when the last 0.x tab is gone, so the forced policy stays until Nexus
 shows migrated users' 0.x writes at about zero, or for a period the team picks; keeping it costs only the
 consented-update toast, since every deploy meanwhile reloads open tabs. The revert date is the team's decision and
 is recorded in `docs/migrations/social-v1.md` when taken. The consent policy above stays the rule; this amendment

@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2026-10-30, for the `pubky-social-specs` 1.x port (`docs/migrations/social-v1.md`).
+Accepted — 2026-10-30, for the `pubky-social-specs` 1.x port (`docs/migrations/social-v1.md`).  
+Updated — 2026-11-11 (outcome policy and telemetry brought in line with the controller and `report-telemetry.ts`)
 
 ## Context
 
@@ -61,16 +62,19 @@ with no screen (the engine writes the flag; the app never hand-writes `_migrated
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen
 (Continue) only when the run skipped or dropped something. `incomplete` and `IO_ERROR` retry on their own
-(`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry; `AuthCoordinator` retries that reason on
+(`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry, and the controller treats `ALREADY_RUNNING`
+the same way defensively (the engine reports it only for a lock adapter that yields when another holder exists; the
+app's adapter waits, see _Cross-tab_, so the code does not arise there); `AuthCoordinator` retries that reason on
 foreground and network return under its cooldown. `QUOTA` blocks with `needBytes`; `PRIV_UNSUPPORTED`,
 `UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it, except a rejected load of the
 migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure: it blocks at once as
 `incomplete` (no automatic retries), so Retry and the reconnect retry apply, and is reported once per account and page;
-`SESSION_EXPIRED` and
-`CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
+`SESSION_EXPIRED` and `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
 `AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns its transport retries
-(429 backoff, three network retries, read-back before every cleanup delete); the app retries whole runs. This is the
-one documented second retry policy beside `retryHomeserverWrite` (`docs/error-handling.md`).
+(429 backoff, three network retries, read-back before every cleanup delete); the app retries whole runs. Those are the
+one set of homeserver retries that `retryHomeserverWrite` does not run; `HomeserverService.deleteIdempotent` and
+`ProfileApplication.deleteFile` are attempt loops over single-attempt `HomeserverService.delete` calls, not a policy of
+their own (`docs/error-handling.md`).
 
 **Cross-tab.** The Web Lock `pubky-social-migrator:<owner>` is taken waiting (`navigator.locks.request(name,
 { signal }, fn)`, never `ifAvailable`): a second tab shows "Another tab is updating your account" and, once the first
@@ -93,12 +97,14 @@ write per `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS`). The reauth state reuses the 
 (`useHasBackupAccount`, `AlertBackup`) and then calls `AuthController.logout()` once (Strict Mode included); after the
 logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
 
-**Telemetry.** One `Err.server` (`SERVICE_UNAVAILABLE` for an unreachable or full homeserver, `UNKNOWN_ERROR`
-otherwise), `Err.auth(FORBIDDEN)` or `Err.network(CONNECTION_FAILED)` (a failed load of the migrator's chunk, code
-`ENGINE_LOAD`, the import rejection as the cause; the service throws that failure uncaptured so this guard decides the
-single capture) per (account, code) per page, operation `socialMigration`, counts only: the report's `skipped`,
-`notes`, `droppedValues` and `current` name the user's files and never leave the browser, and a thrown engine error is
-described by `errorName`, `kind` and `status` only (`docs/error-handling.md`).
+**Telemetry.** One capture per (account, code) per page, operation `socialMigration`
+(`src/libs/social-migration/report-telemetry.ts`): a blocked run is `Err.server` with `SERVICE_UNAVAILABLE` for
+`incomplete`, `IO_ERROR`, `QUOTA` and `PRIV_UNSUPPORTED` (the homeserver is unreachable, full or does not serve the
+private root) and `UNKNOWN_ERROR` for any other code; a thrown engine error is `Err.server(UNKNOWN_ERROR)`, described
+by `errorName`, `kind` and `status` only; `CAPS_MISSING` is `Err.auth(FORBIDDEN)`; a failed load of the migrator's chunk
+is `Err.network(CONNECTION_FAILED)` (code `ENGINE_LOAD`, the import rejection as the cause; the service throws that
+failure uncaptured so this guard decides the single capture). Counts only: the report's `skipped`, `notes`,
+`droppedValues` and `current` name the user's files and never leave the browser (`docs/error-handling.md`).
 
 ## Consequences
 
