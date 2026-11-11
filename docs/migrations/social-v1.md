@@ -98,7 +98,7 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3091                             | dev-sync 4 (`dev` @ `c5135dfb0`, merged 2026-11-10 as `cdd2e6ffa`)                                                                         |
 | #3118                             | F2 (SF-3): a failed first PUT sweeps its uploads; a failed collection create rolls its cover back; stray `posts/{id}/` entries skipped     |
 | #3119                             | F4: profile links validated as the v1 data model stores them; a `links[n].url` refusal lands on its field (SF-5)                           |
-| #3123                             | F8: the cold Followed Collections walk froze its live queries (the dependent `post_details` read went unobserved); one chained read        |
+| #3123                             | F8: one chained `bookmarks` + `post_details` read for Followed Collections and the count; dev stall matched, not reproduced on prod        |
 
 The branch also carries CI-owned VRT baseline commits from four `VRT Update Baselines` dispatches (after the QA-1
 fixes, after dev-sync 2, after dev-sync 3 and after dev-sync 4): the new `auth/SocialMigration` suite and the

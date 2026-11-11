@@ -82,11 +82,13 @@ const detailsOf = (id: string): PostDetailsModelSchema => ({
 
 /**
  * The Bookmarks card's count beside the section (`useBookmarksCollectionSummary`), written as a
- * non-async querier: a stand-in for any non-async neighbour that re-runs on the same write. Dexie
- * gives an await slot only to an async querier, so a non-async one awaiting a Dexie promise ends
- * the shared echo the previous two-read shape relied on. The real hook's querier is async, and the
- * non-async production queriers (`usePostTags`'s `readCounts`, `useTagCache`, `useContextualBanner`'s
- * `readSnapshot`) do not run on /collections; the mechanism is what this test pins.
+ * non-async querier: a stand-in that isolates the mechanism. Dexie gives an await slot only to an
+ * async querier, so a non-async one awaiting a Dexie promise ends the shared echo the previous
+ * two-read shape relied on. The real count hook's querier is async; the page's non-async queriers
+ * (`usePostTags`'s `readCounts` and `useTagCache` under every card, `CardCounts` below;
+ * `useContextualBanner`'s `readSnapshot` in the shell, which reads Dexie only for guests) are
+ * single-read queriers that the independent review found cannot pre-empt the section's querier
+ * first in a dispatch.
  */
 function BookmarksCardCount() {
   const count = useLiveQuery(() => BookmarkController.getCount(), []);
