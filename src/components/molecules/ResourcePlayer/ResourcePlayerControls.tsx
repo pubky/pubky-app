@@ -114,6 +114,8 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
  * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
  * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
  * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card.
+ * On a phone it shows the favicon (or the card's link icon) and the chevron only; the name stays in
+ * its accessible name.
  */
 export function PlayerSwitch({
   targets,
@@ -150,7 +152,7 @@ export function PlayerSwitch({
           className={cn(postActionsButtonVariants({ surface }), 'w-fit max-w-full')}
         >
           {icons && (current ? <ResourceSourceIcon uri={current.link} /> : <LinkIcon aria-hidden="true" />)}
-          <Typography as="span" overrideDefaults className="truncate">
+          <Typography as="span" overrideDefaults className={cn('truncate', icons && 'max-sm:hidden')}>
             {name}
           </Typography>
           <ChevronDown aria-hidden="true" />

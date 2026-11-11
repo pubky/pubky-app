@@ -407,6 +407,19 @@ function deezer(value: string): PlayerTarget | null {
   };
 }
 
+const APPLE_MUSIC_LIST_EMBED = /^https:\/\/embed\.music\.apple\.com\/[a-z]{2}\/(?:album|playlist)\//;
+
+/**
+ * The narrowest width a service's embed lays itself out at, if any: Apple Podcasts' show and episode
+ * embeds and Apple Music's album and playlist embeds keep 290 px, and scroll sideways (and so down) in
+ * a narrower frame. `ResourcePlayerFrame` lays such a frame out at that width and scales it to the card.
+ */
+export function getMinFrameWidth(target: Pick<PlayerTarget, 'provider' | 'src'>): number | undefined {
+  if (target.provider === PlayerProvider.APPLE_PODCASTS) return 290;
+  if (target.provider === PlayerProvider.APPLE_MUSIC && APPLE_MUSIC_LIST_EMBED.test(target.src)) return 290;
+  return undefined;
+}
+
 /** What Apple's embed code asks for. */
 const APPLE_ALLOW = 'autoplay *; encrypted-media *; fullscreen *; clipboard-write';
 /** A storefront (`us`), then a song, album or playlist with or without its name (`/us/album/<name>/<id>`). */
@@ -461,7 +474,8 @@ function applePodcasts(value: string): PlayerTarget | null {
       ? `https://embed.podcasts.apple.com/${storefront}/episode/${episode}`
       : `https://embed.podcasts.apple.com/${storefront}/podcast/${show}`,
     element: 'iframe',
-    layout: { kind: 'audio', height: isEpisode ? 175 : 450, dockHeight: 175 },
+    // A show's embed is its header only now, no episode list (175 px at every width, 2026-11-10).
+    layout: { kind: 'audio', height: 175, dockHeight: 175 },
     allow: APPLE_ALLOW,
     autoplay: false,
   };
