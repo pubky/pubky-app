@@ -331,7 +331,10 @@ Seeding (`cypress/plugins/seed.ts`, `cypress/plugins/seed.writers.ts`): `seedUse
 who never signs in stays un-migrated, and each writer spells references the way its own clients do. That is the
 backwards-compatibility coverage: `deep-links.cy.ts` opens a 0.x account's post, article, profile and collection and a
 thread and reposts across both layouts, and `notifications.cy.ts` receives a 0.x account's follow, tag and reply. A signed-in
-test account seeds v1 or empty, except the one that exercises the migration.
+test account seeds v1 or empty, except those that exercise the migration: the `onboarding.cy.ts` runs, and the 0.x lock
+owner in `locks.cy.ts`. For that one, `createLegacyLockViaApi` also writes the files the Lock Server kept for a 0.x lock
+(the guarded 0.x post and image under `/priv/app.locks/content/`, `/pub/app.locks/<lockId>.json`) beside the 0.x
+announcement; after the migration the owner view, an unlock through the stand-in, a teaser edit and the delete run on it.
 
 e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v1`, against the private pubky-stack:
 `feat/social-v1` points `pubky_stack_ref` (`.github/workflows/e2e-test.yml`) at pubky-stack's `social-v1` branch, whose

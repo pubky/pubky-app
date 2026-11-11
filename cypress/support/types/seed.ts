@@ -67,9 +67,12 @@ export type SeededLegacyLock = {
   lockId: string;
   /** `pubky://<owner>/pub/app.locks/<lockId>.json`, the announcement's top-level `lock`. */
   lockUrl: string;
+  /** The price as the lock file's payment criterion states it, as the stand-in keeps it (`TLockServerState.locks`). */
+  price: { amount: string; asset: string; recipient: string };
   /** The guarded bytes (base64) by path tail, as the stand-in Lock Server keeps them (`TLockServerState.guarded`). */
   guarded: Record<string, string>;
 };
+
 export type SeededCollectionLayout = 'grid' | 'list';
 
 export type SeedCreateCollectionArgs = {

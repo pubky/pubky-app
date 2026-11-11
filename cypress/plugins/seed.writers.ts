@@ -39,7 +39,9 @@ import type {
  * - `legacyWriter` writes what a 0.x client wrote under `/pub/pubky.app/`, spelled by hand because
  *   the 0.x package is gone. Nexus reads such a user through its 0.x reader until they migrate, and
  *   only a sign-in migrates them, so a supporting user who never signs in stays un-migrated: that
- *   is the coverage for content the app renders from users who have not come back yet.
+ *   is the coverage for content the app renders from users who have not come back yet. Its
+ *   `writeLock` also writes the files the Lock Server kept for a 0.x lock (`/priv/app.locks/content/`
+ *   and `/pub/app.locks/`).
  *
  * Each writer spells a reference the way its own clients do, whichever epoch the target is on, so
  * a seeded thread exercises both spellings of one post.
@@ -356,18 +358,21 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
         access_policy: { requested_credential_ttl_seconds: 900 },
         lock_server: { override: null },
       };
-      await session.storage.putJson(`/pub/app.locks/${lockId}.json` as Path, lockFile);
-      const lockUrl = `pubky://${owner}/pub/app.locks/${lockId}.json`;
+      const lockPath = `/pub/app.locks/${lockId}.json`;
+      await session.storage.putJson(lockPath as Path, lockFile);
+      const lockUrl = `pubky://${owner}${lockPath}`;
 
       const post = await writeStoredPost({
         content: JSON.stringify(teaser),
         kind: LEGACY_POST_KINDS.note,
         lock: lockUrl,
       });
+      const { params } = lockFile.criteria[0]!;
       return {
         post: { ...post, authorId: owner, kind: 'note' },
         lockId,
         lockUrl,
+        price: { amount: params.amount, asset: params.asset, recipient: params.recipient_pubky },
         guarded: {
           [postTail]: Buffer.from(postBytes).toString('base64'),
           [imageTail]: Buffer.from(image.bytes).toString('base64'),

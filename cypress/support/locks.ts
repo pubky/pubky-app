@@ -473,18 +473,12 @@ export const publishLock = (): Cypress.Chainable<string> => {
 
 const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
 
-const nexusDetailsHaveLock = (body: unknown): boolean =>
-  typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
-
-type TExpectedLockPost = { lockUrl: string; text?: string };
-
-/** The announcement as Nexus serves it: `lock` is that URL, and `content` holds `text` when given. */
-const nexusDetailsMatch = (body: unknown, { lockUrl, text }: TExpectedLockPost): boolean =>
+/** The announcement as Nexus serves it carries a `lock` URL: that one, when given. */
+const nexusDetailsHaveLock = (body: unknown, lockUrl?: string): boolean =>
   typeof body === 'object' &&
   body !== null &&
   'lock' in body &&
-  body.lock === lockUrl &&
-  (text === undefined || ('content' in body && typeof body.content === 'string' && body.content.includes(text)));
+  (lockUrl === undefined ? Boolean(body.lock) : body.lock === lockUrl);
 
 /**
  * Polls GET /v1/post/<author>/<id>/details until `settled` is true.
@@ -519,16 +513,16 @@ const pollNexusPostDetails = (
 
 /**
  * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval. With `expected`, it
- * waits for that exact `lock` URL, and for `content` to hold `expected.text` (an edit Nexus has picked up).
+ * thing that tells a reader the post is locked), and that exact URL when `lockUrl` is given. The one
+ * fixed wait is the poll interval.
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string, expected?: TExpectedLockPost) => {
+export const waitForNexusLockPost = (authorPubky: string, postId: string, lockUrl?: string) => {
   pollNexusPostDetails(
     authorPubky,
     postId,
-    (status, body) => status === 200 && (expected ? nexusDetailsMatch(body, expected) : nexusDetailsHaveLock(body)),
+    (status, body) => status === 200 && nexusDetailsHaveLock(body, lockUrl),
     (authorId, status) =>
-      `Nexus did not index lock post ${authorId}/${postId}${expected ? ` with ${JSON.stringify(expected)}` : ''} (last status ${status})`,
+      `Nexus did not index lock post ${authorId}/${postId}${lockUrl ? ` with lock ${lockUrl}` : ''} (last status ${status})`,
   );
 };
 
