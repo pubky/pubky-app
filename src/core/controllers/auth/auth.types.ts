@@ -1,8 +1,3 @@
-export interface TSignUpParams {
-  secretKey: string;
-  signupToken: string;
-}
-
 export interface TLoginWithMnemonicParams {
   mnemonic: string;
   expectedPubky?: string;

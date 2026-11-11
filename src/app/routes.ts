@@ -3,12 +3,10 @@ import { isPubkyIdentifier } from '@/libs/utils/utils';
 export const ROOT_ROUTES = '/';
 
 export enum ONBOARDING_ROUTES {
-  BACKUP = '/onboarding/backup',
   INSTALL = '/onboarding/install',
   /** Step 1 when Pubky Passport is available: "Manage your own keys" vs "Continue with Google". */
   JOIN = '/onboarding/join',
   PROFILE = '/onboarding/profile',
-  PUBKY = '/onboarding/pubky',
   SCAN = '/onboarding/scan',
   HUMAN = '/onboarding/human',
   TAGS = '/onboarding/tags',
@@ -139,8 +137,6 @@ export const UNAUTHENTICATED_ROUTES = {
     AUTH_ROUTES.SIGN_IN,
     ONBOARDING_ROUTES.INSTALL,
     ONBOARDING_ROUTES.SCAN,
-    ONBOARDING_ROUTES.PUBKY,
-    ONBOARDING_ROUTES.BACKUP,
     ONBOARDING_ROUTES.HUMAN,
     ONBOARDING_ROUTES.JOIN,
     ...EXPLORE_ROUTES,
@@ -151,7 +147,7 @@ export const UNAUTHENTICATED_ROUTES = {
 };
 
 export const NEEDS_PROFILE_CREATION_ROUTES = {
-  allowedRoutes: [ONBOARDING_ROUTES.PROFILE, ONBOARDING_ROUTES.BACKUP],
+  allowedRoutes: [ONBOARDING_ROUTES.PROFILE],
   redirectTo: ONBOARDING_ROUTES.PROFILE,
 };
 
