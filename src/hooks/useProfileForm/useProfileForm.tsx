@@ -488,12 +488,17 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
         // The data model refused a link the form let through (`UserNormalizer.to` and
         // `ProfileApplication` name the member in `context.field`): show it on that link, as the
-        // submit gate does, instead of a toast that cannot say which field to fix.
+        // submit gate does, instead of a toast that cannot say which field to fix. The model saw
+        // the rows with a URL only, so its index counts those. A refusal that names no loaded row
+        // (the stored list is longer than the form's) falls through to the toast: an error on a
+        // row the form does not show would block the submit with nothing to fix.
         const refusedLink = isValidationError(error) ? getRefusedLinkIndex(error) : null;
-        if (refusedLink !== null) {
-          // The model saw the rows with a URL only, so its index counts those; the error goes on the form row
-          const row = links.flatMap((link, index) => (link.url.trim().length > 0 ? [index] : []))[refusedLink];
-          setLinkUrlErrors((prev) => ({ ...prev, [row ?? refusedLink]: 'Invalid URL' }));
+        const row =
+          refusedLink === null
+            ? undefined
+            : links.flatMap((link, index) => (link.url.trim().length > 0 ? [index] : []))[refusedLink];
+        if (row !== undefined) {
+          setLinkUrlErrors((prev) => ({ ...prev, [row]: 'Invalid URL' }));
           setSubmitText(idleSubmitText);
           return;
         }

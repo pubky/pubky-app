@@ -3,6 +3,7 @@ import { buildFile } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
+import { USER_LINK_URL_MAX_LENGTH } from '@/config/user';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -173,6 +174,21 @@ describe('useProfileForm profile link safety', () => {
 
     expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
   });
+
+  it(`accepts a link of ${USER_LINK_URL_MAX_LENGTH} code points and refuses one code point more`, () => {
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+    const prefix = 'https://example.com/';
+    // Counted in code points, as the data model counts: an emoji is one, not two UTF-16 units
+    const atCap = `${prefix}${'🎉'.repeat(USER_LINK_URL_MAX_LENGTH - prefix.length)}`;
+
+    act(() => result.current.handlers.validateLinkUrl(atCap, 0));
+    expect(result.current.errors.linkUrlErrors[0]).toBeNull();
+
+    act(() => result.current.handlers.validateLinkUrl(`${atCap}a`, 0));
+    expect(result.current.errors.linkUrlErrors[0]).toBe(
+      `Links must be no more than ${USER_LINK_URL_MAX_LENGTH} characters`,
+    );
+  });
 });
 
 describe('useProfileForm link refusals from the data model', () => {
@@ -251,6 +267,21 @@ describe('useProfileForm link refusals from the data model', () => {
     });
 
     expect(result.current.errors.linkUrlErrors).toEqual({});
+    expect(result.current.state.submitText).toBe(PROFILE_SUBMIT_TEXT.tryAgain);
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not update profile' });
+  });
+
+  it('falls through to the generic toast when the refusal names a row the form does not show', async () => {
+    // The form loaded two rows; a longer stored list made the model refuse a third
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(refusalOf('links[2].url'));
+    const result = await renderEditForm();
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({});
+    expect(result.current.isSubmitDisabled).toBe(false);
     expect(result.current.state.submitText).toBe(PROFILE_SUBMIT_TEXT.tryAgain);
     expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not update profile' });
   });
