@@ -1,6 +1,8 @@
 import { StrictMode, useInsertionEffect } from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getPlayableEpisodes } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { ResourceEpisodes } from '@/molecules/ResourceCard/ResourceEpisodes';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -471,5 +473,107 @@ describe('PlayerHost', () => {
     fireEvent.click(within(dock()!).getByRole('button', { name: 'Close the Spotify player' }));
     expect(frames()).toEqual([]);
     expect(dock()).toBeNull();
+  });
+
+  describe('a show’s episode', () => {
+    const EPISODE = {
+      uri: 'https://darknetdiaries.com/episode/181/',
+      name: '181: Ricky',
+      guid: 'guid-181',
+      published: '2026-10-20T08:00:00Z',
+      stream: { url: 'https://cdn.example.com/ep181.mp3', type: 'audio/mpeg', duration_s: 4815, preview: false },
+    };
+    const Episodes = ({ testId }: { testId: string }) => (
+      <section data-testid={testId}>
+        <ResourceEpisodes episodes={getPlayableEpisodes({ episodes: [EPISODE] })} />
+      </section>
+    );
+    const audios = () => Array.from(document.querySelectorAll('audio'));
+    const episodeDock = () => screen.queryByRole('complementary', { name: `Player dock: ${EPISODE.name}` });
+
+    it('loads nothing before Play, then plays in the host and on across pages in the same element, Close unloading it', () => {
+      const { rerender } = render(
+        <PlayerHost>
+          <Episodes key="show" testId="show" />
+        </PlayerHost>,
+      );
+      expect(audios()).toEqual([]);
+      expect(screen.getByText('Oct 20, 2026 · 1:20:15')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: `Play ${EPISODE.name}` }));
+      const [audio] = audios();
+      expect(audio).toHaveAttribute('src', EPISODE.stream.url);
+      expect(screen.getByTestId('player-host')).toContainElement(audio);
+      expect(audio.closest('[data-keep-playing]')).not.toBeNull();
+
+      // Another page: it plays on in the dock, the same element.
+      rerender(<PlayerHost>{null}</PlayerHost>);
+      expect(episodeDock()).toContainElement(audio);
+
+      // A card of the same show again: its row shows the playing one, loads no second.
+      rerender(
+        <PlayerHost>
+          <Episodes key="show-again" testId="show-again" />
+        </PlayerHost>,
+      );
+      expect(episodeDock()).toBeNull();
+      expect(audios()).toEqual([audio]);
+      expect(within(screen.getByTestId('show-again')).queryByRole('button', { name: /^Play / })).toBeNull();
+
+      rerender(<PlayerHost>{null}</PlayerHost>);
+      fireEvent.click(within(episodeDock()!).getByRole('button', { name: /^Close the / }));
+      expect(audios()).toEqual([]);
+      expect(episodeDock()).toBeNull();
+    });
+
+    it('shows the playing one in one card of the same show on the next page; the other keeps its Play', () => {
+      const { rerender } = render(
+        <PlayerHost>
+          <Episodes key="show" testId="show" />
+        </PlayerHost>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: `Play ${EPISODE.name}` }));
+      const [audio] = audios();
+
+      rerender(
+        <PlayerHost>
+          <Episodes key="first" testId="first" />
+          <Episodes key="second" testId="second" />
+        </PlayerHost>,
+      );
+      expect(audios()).toEqual([audio]);
+      expect(episodeDock()).toBeNull();
+      const playing = ['first', 'second'].filter(
+        (id) => within(screen.getByTestId(id)).queryByRole('button', { name: `Play ${EPISODE.name}` }) === null,
+      );
+      expect(playing).toHaveLength(1);
+      // The host lays the playing one over that row.
+      expect(slotOf(playing[0])).toHaveAttribute('aria-owns', audio.closest('[data-testid="hosted-player"]')!.id);
+    });
+
+    it('stays in its card once paused there, and stops a service’s player when it starts', () => {
+      const page = (away: boolean) => (
+        <PlayerHost>
+          <Song key="song" testId="song" />
+          <div data-offscreen={away || undefined}>
+            <Episodes key="show" testId="show" />
+          </div>
+        </PlayerHost>
+      );
+      const { rerender } = render(page(false));
+      const [song] = frames();
+      press(song);
+
+      fireEvent.click(screen.getByRole('button', { name: `Play ${EPISODE.name}` }));
+      const [audio] = audios();
+      fireEvent.play(audio);
+      expect(song.closest('[data-keep-playing]')).toBeNull();
+
+      fireEvent.pause(audio);
+      rerender(page(true));
+      scroll();
+      expect(episodeDock()).toBeNull();
+      expect(audios()).toEqual([audio]);
+    });
   });
 });

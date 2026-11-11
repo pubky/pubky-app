@@ -603,7 +603,7 @@ describe('ResourceCard', () => {
       expect(screen.queryByText('Preview')).not.toBeInTheDocument();
     });
 
-    it('lists a show’s latest episodes, each in the app’s audio player', () => {
+    it('lists a show’s latest episodes, each with its Play for the app’s audio player', () => {
       const episodes = [182, 181, 180, 179].map((n) => ({
         uri: `https://darknetdiaries.com/episode/${n}/`,
         name: `Episode ${n}`,
@@ -612,11 +612,9 @@ describe('ResourceCard', () => {
       }));
       render(<ResourceCard card={{ ...podcastFixture, episodes }} href={podcastFixture.uri} />);
 
-      expect(screen.getAllByTestId('resource-card-episode-audio').map((el) => el.getAttribute('src'))).toEqual([
-        'https://example.org/ep182.mp3',
-        'https://example.org/ep181.mp3',
-        'https://example.org/ep180.mp3',
-      ]);
+      expect(
+        screen.getAllByRole('button', { name: /^Play Episode/ }).map((el) => el.getAttribute('aria-label')),
+      ).toEqual(['Play Episode 182', 'Play Episode 181', 'Play Episode 180']);
       expect(screen.getByTestId('resource-card-episodes-toggle')).toHaveTextContent('Show more');
       // A show has no audio of its own.
       expect(audio()).not.toBeInTheDocument();

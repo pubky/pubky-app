@@ -1,10 +1,10 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
+import { ResourceAudioPlayer } from '@/molecules/ResourcePlayer/ResourceAudioPlayer';
+import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import type { TPlayableEpisode } from './ResourceCard.utils';
 import { formatDuration, formatFactDate } from './ResourceFacts.utils';
 
@@ -12,12 +12,20 @@ import { formatDuration, formatFactDate } from './ResourceFacts.utils';
 export const SHOWN_EPISODES = 3;
 
 /**
- * A show's latest episodes in its card, newest first: each its title, date and length over the
- * app's own audio player (`Audio`), which loads nothing until played. One plays at a time, as any
- * media on the page (`useOnePlayer`). The first few show; the app's Show more button lists the rest.
- * The list is the card's controls: a click in it never opens the resource's page.
+ * A show's latest episodes in its card, newest first: each its Play, title, date and length
+ * (`ResourceAudioPlayer`), which loads nothing until played and then plays as the page's player, in
+ * the app's player host and dock like a service's player. One plays at a time, as any media on the
+ * page (`useOnePlayer`). The first few show; the app's Show more button lists the rest. The list is
+ * the card's controls: a click in it never opens the resource's page.
  */
-export function ResourceEpisodes({ episodes }: { episodes: TPlayableEpisode[] }) {
+export function ResourceEpisodes({
+  episodes,
+  surface,
+}: {
+  episodes: TPlayableEpisode[];
+  /** What the Play buttons sit on (`ResourceActions`' `surface`). */
+  surface?: PostActionSurface;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const listId = useId();
   const shown = isExpanded ? episodes : episodes.slice(0, SHOWN_EPISODES);
@@ -30,33 +38,19 @@ export function ResourceEpisodes({ episodes }: { episodes: TPlayableEpisode[] })
       className="flex flex-col gap-3"
     >
       <ul id={listId} aria-label="Latest episodes" className="flex flex-col gap-3">
-        {shown.map(({ episode, audioUrl }) => {
-          const name = episode.name?.trim() || 'Episode';
-          const meta = [formatFactDate(episode.published), formatDuration(episode.stream?.duration_s)].filter(Boolean);
-          return (
-            <li
-              key={`${episode.guid}|${episode.uri}`}
-              data-testid="resource-card-episode"
-              className="flex min-w-0 flex-col gap-1"
-            >
-              <Typography
-                as="p"
-                size="sm"
-                dir="auto"
-                className="flex min-w-0 gap-1.5 font-normal text-muted-foreground"
-              >
-                <span className="min-w-0 truncate font-bold text-foreground">{name}</span>
-                {meta.length > 0 && <span className="shrink-0">· {meta.join(' · ')}</span>}
-              </Typography>
-              <Audio
-                src={audioUrl}
-                preload="none"
-                data-testid="resource-card-episode-audio"
-                aria-label={`Play ${name}`}
-              />
-            </li>
-          );
-        })}
+        {shown.map(({ episode, audioUrl }) => (
+          <li key={`${episode.guid}|${episode.uri}`} data-testid="resource-card-episode" className="min-w-0">
+            <ResourceAudioPlayer
+              src={audioUrl}
+              resource={episode.uri || audioUrl}
+              title={episode.name?.trim() || 'Episode'}
+              date={formatFactDate(episode.published)}
+              length={formatDuration(episode.stream?.duration_s)}
+              surface={surface}
+              data-testid="resource-card-episode-audio"
+            />
+          </li>
+        ))}
       </ul>
       {episodes.length > SHOWN_EPISODES && (
         // The app's Show more button (`PostAttachmentsImagesAndVideos`), centred under the list.
