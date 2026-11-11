@@ -4,6 +4,7 @@ import { createContext, type ReactNode, useEffect, useRef, useState } from 'reac
 import { Container } from '@/atoms/Container/Container';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { db } from '@/database/franky/franky';
+import { isClosingForIndexedDbRecovery } from '@/database/franky/franky.recovery';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -62,9 +63,10 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     initDatabase();
 
     // Re-initialize when the DB is unexpectedly closed (e.g. user deletes IndexedDB via devtools).
-    // Skips expected closes during recreateDatabase() via the isInitializingRef guard.
+    // Recovery owns its synchronous close; keep the mounted app while it reopens.
+    // Initialization also owns expected closes during recreateDatabase().
     const handleUnexpectedClose = () => {
-      if (isInitializingRef.current) return;
+      if (isInitializingRef.current || isClosingForIndexedDbRecovery(db)) return;
       setIsReady(false);
       initDatabase();
     };

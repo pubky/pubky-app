@@ -14,6 +14,11 @@ type RecoveryState = {
 const states = new WeakMap<Dexie, RecoveryState>();
 const suspensions = new WeakMap<Dexie, number>();
 
+/** Read inside a synchronous close listener; false while the subsequent open is pending. */
+export function isClosingForIndexedDbRecovery(database: Dexie): boolean {
+  return states.get(database)?.closingForRecovery ?? false;
+}
+
 function getState(database: Dexie): RecoveryState {
   const existing = states.get(database);
   if (existing) return existing;

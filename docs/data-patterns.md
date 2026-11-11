@@ -270,6 +270,8 @@ All tables defined in `src/core/database/franky/franky.ts`.
 
 Concurrent failures on the same native connection share a reconnect. Explicit close, delete, version change, and account cache cleanup invalidate pending recoveries; a later open cannot revive them. Recovery does not delete data or change the schema. It has no timer, network request, or scheduled retry: the same promise chain retains Dexie `liveQuery` observations, covered by a real Dexie subscription regression test. Initial opening keeps its separate bounded initialization retry.
 
+`DatabaseProvider` ignores only the synchronous close event owned by recovery, keeping the mounted page and its state intact. An unrelated close still reinitializes the database, including while recovery is awaiting the new connection.
+
 ### User Tables
 
 ```
