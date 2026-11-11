@@ -2773,6 +2773,81 @@ describe('usePostInput', () => {
       });
     });
 
+    describe('with a URI of another scheme (isbn:, geo:, …)', () => {
+      const ISBN = 'isbn:9780141036144';
+      const GEO = 'geo:47.3769,8.5417';
+
+      it('embeds a URI written first, lists it among the links in text order, and publishes the pick', async () => {
+        mockContent = `Reading ${ISBN}, then ${LINK} at ${GEO}.`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedUrl).toBe(ISBN);
+        expect(result.current.embedChoices).toEqual([ISBN, LINK, GEO]);
+
+        act(() => result.current.pickEmbed(GEO));
+        expect(result.current.embedUrl).toBe(GEO);
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+        expect(mockPost).toHaveBeenCalledWith({ embedUrl: GEO, onSuccess: expect.any(Function) });
+      });
+
+      it('removes and restores a URI embed like a link', () => {
+        mockContent = `Reading ${ISBN}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        act(() => result.current.removeEmbed());
+        expect(result.current.embedUrl).toBeNull();
+        expect(result.current.isEmbedRemoved).toBe(true);
+        act(() => result.current.restoreEmbed());
+        expect(result.current.embedUrl).toBe(ISBN);
+      });
+
+      it('offers no unsafe scheme, mailto: or prose', () => {
+        mockContent = 'javascript:alert(1) mailto:a@b.com at 10:30, Note:this';
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedUrl).toBeNull();
+      });
+
+      it('opens an edit on the stored URI and saves a switch to and from it', async () => {
+        const text = `Read ${LINK} and ${ISBN}`;
+        mockContent = text;
+        const { result } = renderHook(() =>
+          usePostInput({ variant: 'edit', editPostId: 'post-to-edit-id', editContent: text, editEmbedUrl: ISBN }),
+        );
+
+        expect(result.current.embedUrl).toBe(ISBN);
+        expect(result.current.embedChoices).toEqual([LINK, ISBN]);
+        act(() => result.current.pickEmbed(LINK));
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+        expect(mockEdit).toHaveBeenCalledWith(
+          expect.objectContaining({ editPostId: 'post-to-edit-id', embedUrl: LINK }),
+        );
+      });
+
+      it('saves a switch from a web link to a URI in an edit', async () => {
+        const text = `Read ${LINK} and ${GEO}`;
+        mockContent = text;
+        const { result } = renderHook(() =>
+          usePostInput({ variant: 'edit', editPostId: 'post-to-edit-id', editContent: text, editEmbedUrl: LINK }),
+        );
+
+        act(() => result.current.pickEmbed(GEO));
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+        expect(mockEdit).toHaveBeenCalledWith(
+          expect.objectContaining({ editPostId: 'post-to-edit-id', embedUrl: GEO }),
+        );
+      });
+    });
+
     describe('in an edit', () => {
       const LUMA = 'https://luma.com/376whqyw';
       const TEXT = `Read ${LINK} and ${LUMA}`;

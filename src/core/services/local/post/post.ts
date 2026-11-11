@@ -8,7 +8,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { getWebEmbedUrl } from '@/libs/post/postEmbedUrl';
+import { getResourceEmbedUrl } from '@/libs/post/postEmbedUrl';
 import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
@@ -177,7 +177,7 @@ export class LocalPostService {
    * @param params.content - New content for the post
    * @param params.attachments - New attachment URIs (`null` clears them); `undefined` leaves the column untouched
    * @param params.kind - New lowercase kind; `undefined` leaves the column untouched
-   * @param params.embed - The web link the post embeds (`null`: none); `undefined` leaves the
+   * @param params.embed - The external resource the post embeds (`null`: none); `undefined` leaves the
    *   relationships untouched, and so does a repost (its embed is a post)
    *
    * @throws {DatabaseError} When database operations fail
@@ -224,10 +224,11 @@ export class LocalPostService {
         }
         await PostDetailsModel.update(compositePostId, changes);
         if (embed !== undefined) {
-          // Nexus serves a web embed as `embedded`; a post created here holds it in `reposted` (as
-          // `create` writes it). A repost's `reposted` names its post and stays.
+          // Nexus serves an external resource's embed (a web link, `isbn:…`) as `embedded`; a post
+          // created here holds it in `reposted` (as `create` writes it). A repost's `reposted` names
+          // its post and stays.
           const relationships = await PostRelationshipsModel.findById(compositePostId);
-          const isRepost = !!relationships?.reposted && getWebEmbedUrl(relationships.reposted) === null;
+          const isRepost = !!relationships?.reposted && getResourceEmbedUrl(relationships.reposted) === null;
           if (relationships && !isRepost) {
             await PostRelationshipsModel.update(compositePostId, { embedded: embed, reposted: null });
           }

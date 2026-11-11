@@ -79,8 +79,9 @@ interface GenericResourcePreviewProps {
  * post is sent. The frame keeps its clicks and keys to itself (`ResourceCardFrame`), so they never
  * open the quoted post or reach the composer.
  *
- * Without a Pinakes origin configured no request is made and the plain `GenericPreview` renders;
- * a direct media file keeps it too, since it shows or plays the file inline.
+ * Without a Pinakes origin configured no request is made and the plain `GenericPreview` renders (a
+ * URI that is not web, such as `isbn:`, renders nothing); a direct media file keeps it too, since it
+ * shows or plays the file inline.
  *
  * Embed or card (`useCardPlayer`): a link on a service with a player (a Spotify track or artist
  * page) shows that service's player up front, in the resource frame (`ResourceEmbedFrame`); a
@@ -147,7 +148,8 @@ function ResourcePreview({
     preview: isPreview,
   });
 
-  if (!lookupUrl) return <GenericPreview url={url} />;
+  // A URI that is not web (`isbn:…`) has no preview of its own to read.
+  if (!lookupUrl) return getHttpUrl(url) ? <GenericPreview url={url} /> : null;
   if (isReading && !isSlow) return <ResourceCardSkeleton withActions />;
 
   // A slow read gives way to the link's own preview; the card takes its place in the same box once read.

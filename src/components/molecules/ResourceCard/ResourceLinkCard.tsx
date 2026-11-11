@@ -30,8 +30,8 @@ interface ResourceLinkCardProps {
  * An external resource Pinakes has no card for: the link's own preview (its Open Graph title and
  * image) in the same frame as a card, with the host as the source on the right and the same
  * actions. Without a preview the link itself, without its scheme, is the title (a link that is not
- * web, such as `isbn:`, keeps its scheme and has no preview). The title and a click on the card open
- * the link's resource page; the source opens the link.
+ * web, such as `isbn:`, keeps its scheme and has no preview, nor a source link: it is never a link
+ * out). The title and a click on the card open the link's resource page; the source opens the link.
  *
  * A link the preview reads as an image, video or audio file keeps `GenericPreview`, which shows or
  * plays it inline; not on the resource page (`large`), which keeps the frame and its footer. There,
@@ -57,7 +57,7 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
   const imageUrl = getHttpUrl(metadata?.image);
   const showImage = imageUrl !== null && failedImage !== imageUrl;
   // The large card heads the link's own page: no click-through to it.
-  const clickThroughUrl = linkUrl && !isLarge ? getResourceRoute(url) : null;
+  const clickThroughUrl = isLarge ? null : getResourceRoute(url);
 
   return (
     <ResourceCardFrame
@@ -99,7 +99,7 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
             >
               {title}
             </Typography>
-          ) : linkUrl ? (
+          ) : (
             <Link
               href={getResourceRoute(url)}
               target={navigable ? undefined : '_blank'}
@@ -110,10 +110,6 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
             >
               {title}
             </Link>
-          ) : (
-            <Typography data-testid="resource-link-card-title" className="min-w-0 flex-1 font-bold wrap-anywhere">
-              {title}
-            </Typography>
           )}
         </Container>
       </Container>

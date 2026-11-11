@@ -933,6 +933,25 @@ describe('PostLinkEmbeds', () => {
       expect(screen.getByTestId('YouTube video player')).toBeInTheDocument();
     });
 
+    it.each(['ws://www.youtube.com/watch?v=dQw4w9WgXcQ', 'intent://x.com/i/status/1'])(
+      'never reads a platform from the host of a URI that is not web: %s',
+      (url) => {
+        vi.mocked(isPinakesConfigured).mockReturnValue(true);
+        render(<PostLinkEmbeds url={url} />);
+
+        expect(screen.queryByTestId('YouTube video player')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('native-embed-resource')).not.toBeInTheDocument();
+        expect(screen.getByTestId('resource-preview')).toBeInTheDocument();
+      },
+    );
+
+    it('makes no preview request for a URI that is not web without Pinakes', () => {
+      const { container } = render(<PostLinkEmbeds url="isbn:9780141036144" />);
+
+      expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
+      expect(container.querySelector('a')).toBeNull();
+    });
+
     it('shows the external resource card of the given link when Pinakes knows it', () => {
       vi.mocked(isPinakesConfigured).mockReturnValue(true);
       vi.mocked(usePinakesCard).mockReturnValue({ data: articleFixture, isLoading: false, isError: false });

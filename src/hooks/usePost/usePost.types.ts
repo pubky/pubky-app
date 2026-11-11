@@ -33,7 +33,7 @@ export interface LatestArticle {
 export interface UsePostPostOptions {
   /** Article publishes pass the latest editor values; omitted, the debounced state is used. */
   article?: LatestArticle;
-  /** The web link the post embeds (`embed`); an article embeds none. */
+  /** The external resource the post embeds (`embed`); an article embeds none. */
   embedUrl?: string;
   onSuccess?: (createdPostId: string) => void;
 }

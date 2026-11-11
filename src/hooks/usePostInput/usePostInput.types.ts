@@ -26,7 +26,7 @@ export interface UsePostInputOptions {
   /** Whether the post being edited is an article (edit variant only) */
   editIsArticle?: boolean;
   /**
-   * The web link the post being edited embeds, as stored (Nexus serves it normalized), or null for
+   * The external resource the post being edited embeds, as stored (Nexus serves it normalized), or null for
    * none (edit variant only): the edit shows it and may embed another link or none, and writes the
    * embed only once it differs from the one the edit opened with. Left out for a post whose embed the
    * edit leaves as stored (a repost, a reply, an article, a lock announcement, unknown relationships).
@@ -118,8 +118,8 @@ export interface UsePostInputReturn {
    */
   discardPendingArticle: () => void;
   /**
-   * The web link a new post (or an edited note) embeds: the first link of its text, or the one the
-   * author picked, unless removed; null for none.
+   * The link a new post (or an edited note) embeds, a web link or a URI such as `isbn:…`: the first
+   * link of its text, or the one the author picked, unless removed; null for none.
    */
   embedUrl: string | null;
   /** The text's links that can be embedded while there are several and one is embedded; else empty. */

@@ -185,7 +185,7 @@ export class PostController {
    * @param params.parentPostId - ID of the post being replied to (optional for root posts)
    * @param params.parentUri - URI of the external resource being replied to (optional, never with `parentPostId`)
    * @param params.originalPostId - ID of the post being reposted (optional for reposts)
-   * @param params.embedUrl - A web link the post embeds (optional, never with `originalPostId`)
+   * @param params.embedUrl - The external resource the post embeds (optional, never with `originalPostId`)
    * @returns The composite post ID of the created post
    */
   static async commitCreate({
@@ -227,7 +227,7 @@ export class PostController {
     if (originalPostId) {
       repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
     }
-    // The data model has one `embed`: a repost's original or a web link, never both.
+    // The data model has one `embed`: a repost's original or an external resource, never both.
     if (repostedUri && embedUrl) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'A post embeds either a post or a link', {
         service: ErrorService.Local,
@@ -591,7 +591,7 @@ export class PostController {
    * current attachments not in `kept` leave the post, and the post kind is
    * recomputed to match the resulting attachment set (articles and collections
    * keep their kind). An article's `coverImage` replaces (a string) or clears
-   * (`null`) the envelope's cover. `embedUrl` sets the web link the next version
+   * (`null`) the envelope's cover. `embedUrl` sets the resource the next version
    * embeds (`null`: none); a repost keeps the post it embeds. Nothing an edit
    * removes is deleted: the earlier versions still reference it (ADR-0027).
    */
@@ -613,7 +613,7 @@ export class PostController {
     // An article's cover, as asked for.
     const coverEdit =
       coverImage === undefined ? {} : { coverImage: this.articleCover({ current, coverImage, authorId }) };
-    // The web link to embed, or none
+    // The external resource to embed, or none
     const embedEdit = embedUrl === undefined ? {} : { embed: embedUrl };
 
     if (!attachments) {
