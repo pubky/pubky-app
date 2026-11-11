@@ -28,6 +28,17 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
     const ids = 'user_ids' in body ? body.user_ids : body.post_ids;
     const bodyFor = (requestedIds: string[]) =>
       JSON.stringify('user_ids' in body ? { ...body, user_ids: requestedIds } : { ...body, post_ids: requestedIds });
+    const queryKeyFor = (requestedIds: string[]) => ['nexus', url, HttpMethod.POST, bodyFor(requestedIds)];
+    const getFreshResponse = (requestedIds: string[]): T[] | undefined => {
+      const queryKey = queryKeyFor(requestedIds);
+      const query = nexusQueryClient.getQueryCache().find<T[]>({ queryKey, exact: true });
+      if (!query || query.state.data === undefined) return undefined;
+      // Use the same resolved ordinary-query defaults and freshness decision as
+      // TanStack's fetchQuery, even when a forced refresh is fetching or paused.
+      const { staleTime } = nexusQueryClient.defaultQueryOptions<T[]>({ queryKey });
+      const resolvedStaleTime = typeof staleTime === 'function' ? staleTime(query) : staleTime;
+      return query.isStaleByTime(resolvedStaleTime) ? undefined : query.state.data;
+    };
     const execute = (requestedIds: string[]) =>
       queryNexus<T[]>({ url, method: HttpMethod.POST, body: bodyFor(requestedIds), force });
 
@@ -36,8 +47,9 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
     // An exact refresh may be newer than an overlapping pending batch. Let
     // TanStack reuse, join or revalidate that query under its ordinary policy,
     // rather than bypassing its cached result, invalidation or pending refresh.
-    const exactQueryKey = ['nexus', url, HttpMethod.POST, bodyFor(ids)];
-    const hasExactQuery = nexusQueryClient.getQueryState(exactQueryKey) !== undefined;
+    const cachedExact = getFreshResponse(ids);
+    if (cachedExact !== undefined) return cachedExact;
+    const hasExactQuery = nexusQueryClient.getQueryState(queryKeyFor(ids)) !== undefined;
 
     // Viewer, depth, attachment options and endpoint all affect the result.
     const scopeKey = JSON.stringify([url, bodyFor([])]);
@@ -60,8 +72,9 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
     }
 
     if (missing.length > 0) {
-      const promise = execute(missing);
-      const queryKey = ['nexus', url, HttpMethod.POST, bodyFor(missing)];
+      const cached = getFreshResponse(missing);
+      const promise = cached === undefined ? execute(missing) : Promise.resolve(cached);
+      const queryKey = queryKeyFor(missing);
       const query = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
       const batch: PendingBatch<T> = {
         ids: missing,
@@ -74,7 +87,9 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
           nexusQueryClient.getQueryCache().find({ queryKey, exact: true }) === query,
       };
       for (const id of missing) {
-        pending.set(id, batch);
+        // Cache hits are only this caller's result, never pending work. Genuine
+        // paused fetches stay registered so they can be shared after resuming.
+        if (cached === undefined) pending.set(id, batch);
         selectedById.set(id, batch);
       }
       batches.add(batch);

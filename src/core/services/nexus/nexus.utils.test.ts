@@ -1,3 +1,4 @@
+import { onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCdnUrl, getNexusUrl } from '@/config/nexus';
 import { ClientErrorCode, RateLimitErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -486,6 +487,148 @@ describe('nexus.utils', () => {
           }
         },
       );
+
+      it.each(['pending', 'settled'])(
+        'preserves active batch ownership when an exact cache-hit promise is %s',
+        async (cachedState) => {
+          const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+          const thirdId = kind === 'users' ? 'carol' : 'carol:three';
+          const running = Promise.withResolvers<Response>();
+          mockFetch
+            .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Cached')]))
+            .mockReturnValueOnce(running.promise)
+            .mockResolvedValueOnce(nexusResponse([record(thirdId, 'Third')]));
+          const cached = await fetchIds([ids[1]]);
+          now.mockReturnValue(2_000);
+          const old = fetchIds(ids);
+          now.mockReturnValue(3_000);
+          const exact = fetchIds([ids[1]]);
+          if (cachedState === 'settled') await exact;
+          const overlap = fetchIds([ids[1], thirdId]);
+          try {
+            await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
+            const requested = JSON.parse(mockFetch.mock.calls[2][1].body);
+            expect(requested[kind === 'users' ? 'user_ids' : 'post_ids']).toEqual([thirdId]);
+            expect(await exact).toBe(cached);
+            expect(getNexusResponseStartedAt(await exact)).toBe(1_000);
+          } finally {
+            running.resolve(nexusResponse([record(ids[1], 'Active batch')]));
+            await Promise.all([old, exact, overlap]);
+            now.mockRestore();
+          }
+          expect(await overlap).toEqual([record(ids[1], 'Active batch'), record(thirdId, 'Third')]);
+          expect(getNexusResponseStartedAt(await overlap)).toBe(2_000);
+        },
+      );
+
+      it.each(['fetching', 'paused'] as const)(
+        'preserves active batch ownership when a fresh exact query is also %s',
+        async (fetchStatus) => {
+          const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+          const thirdId = kind === 'users' ? 'carol' : 'carol:three';
+          const running = Promise.withResolvers<Response>();
+          const refreshing = Promise.withResolvers<Response>();
+          mockFetch
+            .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Cached')]))
+            .mockReturnValueOnce(running.promise)
+            .mockReturnValueOnce(refreshing.promise)
+            .mockResolvedValueOnce(nexusResponse([record(thirdId, 'Third')]));
+          const cached = await fetchIds([ids[1]]);
+          now.mockReturnValue(2_000);
+          const old = fetchIds(ids);
+          nexusQueryClient.mount();
+          if (fetchStatus === 'paused') onlineManager.setOnline(false);
+          now.mockReturnValue(3_000);
+          const forced = fetchIds([ids[1]], true);
+          let overlap: ReturnType<typeof fetchIds> | undefined;
+          try {
+            await vi.waitFor(() =>
+              expect(nexusQueryClient.getQueryState(exactQueryKey())?.fetchStatus).toBe(fetchStatus),
+            );
+            const exact = await fetchIds([ids[1]]);
+            expect(exact).toBe(cached);
+            expect(getNexusResponseStartedAt(exact)).toBe(1_000);
+            onlineManager.setOnline(true);
+            await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
+            overlap = fetchIds([ids[1], thirdId]);
+            await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(4));
+            const requested = JSON.parse(mockFetch.mock.calls[3][1].body);
+            expect(requested[kind === 'users' ? 'user_ids' : 'post_ids']).toEqual([thirdId]);
+          } finally {
+            onlineManager.setOnline(true);
+            running.resolve(nexusResponse([record(ids[1], 'Active batch')]));
+            refreshing.resolve(nexusResponse([record(ids[1], 'Forced')]));
+            await Promise.all([old, forced, overlap]);
+            nexusQueryClient.unmount();
+            now.mockRestore();
+          }
+          expect(await overlap).toEqual([record(ids[1], 'Active batch'), record(thirdId, 'Third')]);
+        },
+      );
+
+      it('keeps a cached missing slice out of the pending registry during a forced refresh', async () => {
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+        const thirdId = kind === 'users' ? 'carol' : 'carol:three';
+        const running = Promise.withResolvers<Response>();
+        const refreshing = Promise.withResolvers<Response>();
+        mockFetch
+          .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Cached')]))
+          .mockReturnValueOnce(running.promise)
+          .mockReturnValueOnce(refreshing.promise)
+          .mockResolvedValueOnce(nexusResponse([record(ids[1], 'New batch'), record(thirdId, 'Third')]));
+        await fetchIds([ids[1]]);
+        now.mockReturnValue(2_000);
+        const old = fetchIds([ids[0]]);
+        now.mockReturnValue(3_000);
+        const forced = fetchIds([ids[1]], true);
+        await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
+        now.mockReturnValue(4_000);
+        const assembling = fetchIds(ids);
+        const overlap = fetchIds([ids[1], thirdId]);
+        try {
+          await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(4));
+          const requested = JSON.parse(mockFetch.mock.calls[3][1].body);
+          expect(requested[kind === 'users' ? 'user_ids' : 'post_ids']).toEqual([ids[1], thirdId]);
+          expect(await overlap).toEqual([record(ids[1], 'New batch'), record(thirdId, 'Third')]);
+          expect(getNexusResponseStartedAt(await overlap)).toBe(4_000);
+        } finally {
+          running.resolve(nexusResponse([record(ids[0], 'Other')]));
+          refreshing.resolve(nexusResponse([record(ids[1], 'Forced')]));
+          await Promise.all([old, forced, assembling, overlap]);
+          now.mockRestore();
+        }
+        expect(await assembling).toEqual([record(ids[0], 'Other'), record(ids[1], 'Cached')]);
+        expect(getNexusResponseStartedAt(await assembling)).toBe(1_000);
+      });
+
+      it('shares an actual paused exact refetch after it resumes', async () => {
+        const refreshing = Promise.withResolvers<Response>();
+        mockFetch
+          .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Cached')]))
+          .mockReturnValueOnce(refreshing.promise)
+          .mockResolvedValueOnce(nexusResponse([record(ids[0], 'Other')]));
+        await fetchIds([ids[1]]);
+        await nexusQueryClient.invalidateQueries({ queryKey: exactQueryKey(), exact: true });
+        nexusQueryClient.mount();
+        onlineManager.setOnline(false);
+        const exact = fetchIds([ids[1]]);
+        let overlap: ReturnType<typeof fetchIds> | undefined;
+        try {
+          await vi.waitFor(() => expect(nexusQueryClient.getQueryState(exactQueryKey())?.fetchStatus).toBe('paused'));
+          onlineManager.setOnline(true);
+          await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+          overlap = fetchIds(ids);
+          await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
+          const requested = JSON.parse(mockFetch.mock.calls[2][1].body);
+          expect(requested[kind === 'users' ? 'user_ids' : 'post_ids']).toEqual([ids[0]]);
+        } finally {
+          onlineManager.setOnline(true);
+          refreshing.resolve(nexusResponse([record(ids[1], 'Refreshed')]));
+          await Promise.all([exact, overlap]);
+          nexusQueryClient.unmount();
+        }
+        expect(await overlap).toEqual([record(ids[0], 'Other'), record(ids[1], 'Refreshed')]);
+      });
 
       it.each(['stale', 'invalidated'])(
         'revalidates the %s exact response instead of joining an older overlapping batch',
