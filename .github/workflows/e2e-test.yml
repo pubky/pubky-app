@@ -773,6 +773,11 @@ jobs:
           # rest appear: without it the Cypress CLI, which pipes the stderr of its server process on
           # Linux and macOS, drops the debug lines that process writes when not on a terminal.
           DEBUG: '@cypress/github-action,cypress:electron,cypress:server:browsers*,cypress:server:routes,cypress:server:server-base,pw:browser*,pw:api'
+          # Cypress reads this as its `requestTimeout` option: how long cy.wait('@alias') waits for
+          # the request to reach the proxy, 5 seconds by default. Under WebKit the proxy holds every
+          # CORS preflight for half a second, so a post with an upload (blob, file and post, each
+          # preflighted and written one after the other) can take longer than that to send its last one.
+          CYPRESS_REQUEST_TIMEOUT: 30000
         with:
           working-directory: cypress
           config-file: cypress.config.ts
