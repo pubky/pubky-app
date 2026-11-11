@@ -252,6 +252,16 @@ describe('HomeStore', () => {
       expect(useHomeStore.getState().profileTags).toEqual(['bitcoin🔥']);
     });
 
+    it('keeps a non-ASCII capital in a profile tag, as the data model stores it, and dedupes by the same fold', () => {
+      const store = useHomeStore.getState();
+
+      store.addProfileTag('Äpfel');
+      store.addProfileTag('ÄPFEL');
+      store.setProfileTags([...useHomeStore.getState().profileTags, ' İstanbul ', 'RUST']);
+
+      expect(useHomeStore.getState().profileTags).toEqual(['Äpfel', 'İstanbul', 'rust']);
+    });
+
     it('should prevent duplicate profile tags', () => {
       const store = useHomeStore.getState();
 

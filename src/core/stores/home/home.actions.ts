@@ -1,4 +1,4 @@
-import { sanitizeTagInput } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, sanitizeTagInput } from '@/libs/utils/utils';
 import { ZustandSet } from '../stores.types';
 import {
   HOME_PROFILE_TAGS_MAX_SELECTED,
@@ -9,8 +9,9 @@ import {
   REACH,
 } from './home.types';
 
+/** A profile tag as the Nexus query and the stored feed filter spell it: banned characters dropped, then the data model's label fold. */
 function normalizeProfileTag(profileTag: string): string {
-  return sanitizeTagInput(profileTag.trim()).toLowerCase();
+  return canonicalizeTagLabel(sanitizeTagInput(profileTag));
 }
 
 function normalizeProfileTags(profileTags: string[]): string[] {

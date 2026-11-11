@@ -13,7 +13,8 @@ interface SearchAutocompletePlan {
 }
 
 const USER_ID_PREFIX_PATTERN = /^[a-z0-9]+$/i;
-// Match Rust char::is_whitespace in pubky-app-specs: NEL is whitespace, U+FEFF is not.
+// The data model's frozen whitespace set (`TAG_FROZEN_WHITESPACE_CODE_POINTS`, the one `canonicalizeTagLabel`
+// trims by; Unicode White_Space): NEL is whitespace, U+FEFF is not.
 const WHITESPACE_PATTERN = /\p{White_Space}/u;
 
 /**

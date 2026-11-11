@@ -356,6 +356,48 @@ describe('TagInput - API Suggestions', () => {
     });
   });
 
+  // A suggestion is a stored label: the data model folds ASCII letters only, so lowercasing `Äpfel` would
+  // add `äpfel`, a second tag beside the one suggested.
+  it('adds a clicked suggestion with a non-ASCII capital as the data model stores it', async () => {
+    mockUseTagSuggestions.mockReturnValue({ suggestions: ['Äpfel'], isLoading: false });
+
+    render(<TagInput onTagAdd={mockOnTagAdd} enableApiSuggestions={true} addOnSuggestionClick={true} />);
+
+    const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'äp' } });
+    fireEvent.focus(input);
+    await waitFor(() => expect(screen.getByText('Äpfel')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Äpfel'));
+
+    expect(mockOnTagAdd).toHaveBeenCalledWith('Äpfel');
+  });
+
+  it('skips a clicked suggestion that only differs from an existing tag by ASCII case', async () => {
+    mockUseTagSuggestions.mockReturnValue({ suggestions: ['ÄPFEL'], isLoading: false });
+
+    // `viewerTags` feeds the duplicate check without feeding the local suggestion list, so the API
+    // suggestion is the one shown.
+    render(
+      <TagInput
+        onTagAdd={mockOnTagAdd}
+        viewerTags={[{ label: 'Äpfel' }]}
+        enableApiSuggestions={true}
+        addOnSuggestionClick={true}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'äp' } });
+    fireEvent.focus(input);
+    await waitFor(() => expect(screen.getByText('ÄPFEL')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('ÄPFEL'));
+
+    expect(mockOnTagAdd).not.toHaveBeenCalled();
+    expect(input.value).toBe('');
+  });
+
   it('keeps text typed while a clicked suggestion was still saving', async () => {
     mockUseTagSuggestions.mockReturnValue({
       suggestions: ['bitcoin'],
