@@ -35,6 +35,7 @@ describe('ResourceCard', () => {
       expect(source()).toHaveTextContent('Wikipedia (en)');
       expect(source()).not.toHaveTextContent('en.wikipedia.org/wiki');
       expect(source().querySelector('svg.lucide-arrow-up-right')).toBeInTheDocument();
+      expect(source()).toHaveAccessibleName('Open in Wikipedia (en)');
     });
 
     it('opens the link in a new tab on a click anywhere on the card', () => {
@@ -488,7 +489,8 @@ describe('ResourceCard', () => {
       expect(title()).not.toHaveAttribute('href');
       expect(source()).toHaveAttribute('href', videoFixture.uri);
       expect(source()).toHaveAttribute('target', '_blank');
-      expect(source()).toHaveTextContent('Open in YouTube');
+      expect(source().textContent).toBe('YouTube');
+      expect(source()).toHaveAccessibleName('Open in YouTube');
 
       fireEvent.click(screen.getByTestId('resource-card-description'));
       expect(open).not.toHaveBeenCalled();

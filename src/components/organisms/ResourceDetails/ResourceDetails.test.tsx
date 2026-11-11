@@ -103,7 +103,8 @@ describe('ResourceDetails', () => {
       // One way to open the source: "Open in YouTube", no second link on the title.
       expect(screen.getByTestId('resource-card-title')).not.toHaveAttribute('href');
       expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', VIDEO.uri);
-      expect(screen.getByTestId('resource-card-source')).toHaveTextContent('Open in YouTube');
+      expect(screen.getByTestId('resource-card-source').textContent).toBe('YouTube');
+      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in YouTube');
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('External resource');
       // The lists are the page's sidebar cards (`ResourceSidebar`), not part of the body.
       expect(screen.queryByTestId('resource-also-on-list')).not.toBeInTheDocument();

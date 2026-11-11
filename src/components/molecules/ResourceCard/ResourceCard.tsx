@@ -101,7 +101,6 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
           sourceUri={sourceUri}
           href={isLarge ? titleUrl : linkUrl}
           siteName={siteName}
-          openIn={isLarge}
         />
 
         <Container overrideDefaults className="flex min-w-0 gap-4">

@@ -67,12 +67,10 @@ interface ResourceCardHeaderProps {
   href: string | null;
   /** The site's name (`card.site`, else the host without `www.`); never the full link. */
   siteName: string | null;
-  /** Names the source link "Open in <site>": the large card's one link out. */
-  openIn?: boolean;
 }
 
 /** The type line on the left and the source on the right: the site's icon and name, linking out. */
-export function ResourceCardHeader({ typeLabel, sourceUri, href, siteName, openIn = false }: ResourceCardHeaderProps) {
+export function ResourceCardHeader({ typeLabel, sourceUri, href, siteName }: ResourceCardHeaderProps) {
   return (
     <Container overrideDefaults className="flex min-w-0 items-center justify-between gap-3">
       {typeLabel && (
@@ -85,26 +83,16 @@ export function ResourceCardHeader({ typeLabel, sourceUri, href, siteName, openI
           {typeLabel}
         </Typography>
       )}
-      <ResourceSource uri={sourceUri} href={href} name={siteName} openIn={openIn} />
+      <ResourceSource uri={sourceUri} href={href} name={siteName} />
     </Container>
   );
 }
 
 /**
- * The site the card's link goes to: favicon, name and ↗, linking out when the link is web. On a phone
- * the link shows the favicon and ↗ only; "Open in <site>" stays its accessible name.
+ * The site the card's link goes to: favicon, name and ↗, linking out when the link is web. The same
+ * text on every card; the link's accessible name says what it does: "Open in <site>".
  */
-function ResourceSource({
-  uri,
-  href,
-  name,
-  openIn,
-}: {
-  uri: string;
-  href: string | null;
-  name: string | null;
-  openIn: boolean;
-}) {
+function ResourceSource({ uri, href, name }: { uri: string; href: string | null; name: string | null }) {
   const className = 'ml-auto flex min-w-0 shrink items-center gap-1.5 text-xs font-medium text-muted-foreground';
 
   // Without a name the icon alone would be an unlabelled link: the title opens the resource instead.
@@ -119,13 +107,13 @@ function ResourceSource({
   return (
     <Link
       href={href}
-      aria-label={`Open in ${name}`}
       overrideDefaults
+      aria-label={`Open in ${name}`}
       data-testid="resource-card-source"
       className={cn(className, 'hover:text-brand max-sm:shrink-0')}
     >
       <ResourceSourceIcon uri={uri} />
-      <span className="truncate max-sm:hidden">{openIn ? `Open in ${name}` : name}</span>
+      <span className="truncate max-sm:hidden">{name}</span>
       <ArrowUpRight aria-hidden="true" className="size-3 shrink-0" />
     </Link>
   );

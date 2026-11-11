@@ -29,6 +29,7 @@ describe('ResourceLinkCard', () => {
     expect(screen.getByTestId('resource-link-card-title')).toHaveAttribute('href', URL);
     expect(screen.getByTestId('resource-link-card-image')).toHaveAttribute('src', 'https://cdn.example.com/a.png');
     expect(screen.getByTestId('resource-card-source')).toHaveTextContent('example.com');
+    expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in example.com');
     expect(screen.getByTestId('resource-card-source')).not.toHaveTextContent('articles');
     expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', URL);
     expect(screen.queryByTestId('resource-card-type')).not.toBeInTheDocument();
