@@ -130,13 +130,20 @@ describe('HomeserverService.migrateToSocialV1', () => {
   });
 
   // The engine's chunk is fetched when a run starts: a load that fails is the network, so the gate retries it on
-  // reconnect like an unreachable homeserver instead of blocking on "Something went wrong".
-  it('throws a network error when the engine chunk cannot be loaded', async () => {
+  // reconnect like an unreachable homeserver instead of blocking on "Something went wrong". Every Retry, focus and
+  // reconnect throws it again, so the service must not capture it: the controller's once-per-(account, code)-per-page
+  // guard does (`docs/error-handling.md`, "The migration gate"). This is the contract test for that exception.
+  it('throws the load failure uncaptured so the controller can capture it once', async () => {
     vi.doMock('pubky-social-migrator', () => {
       throw new TypeError('Failed to fetch dynamically imported module');
     });
     try {
       vi.resetModules();
+      // The spies go on the fresh module graph the fresh service will import, before it is imported
+      const { Err: freshErr } = await import('@/libs/error/error.factories');
+      const { Logger: freshLogger } = await import('@/libs/logger/logger');
+      const network = vi.spyOn(freshErr, 'network');
+      const captured = vi.spyOn(freshLogger, 'error');
       const { HomeserverService: fresh } = await import('@/services/homeserver/homeserver');
       const failure = await fresh.migrateToSocialV1({ session }).then(
         () => null,
@@ -150,6 +157,8 @@ describe('HomeserverService.migrateToSocialV1', () => {
         operation: 'migrateToSocialV1',
         cause: expect.any(Error),
       });
+      expect(network).not.toHaveBeenCalled();
+      expect(captured).not.toHaveBeenCalled();
       expect(await homeserver.session.storage.exists(V1_PROFILE)).toBe(false);
     } finally {
       vi.doUnmock('pubky-social-migrator');

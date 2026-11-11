@@ -217,7 +217,8 @@ export function SocialMigration() {
   // The same retry the auth coordinator runs on reconnect. The status is the feedback: `restoring` shows the
   // guard's spinner, a second failure brings this screen back, and the one rejection it can end in (a key linked to
   // another homeserver) flips it to `reauth-required`, which the sign-in explanation above covers, with the same
-  // toast the coordinator's own retry shows for it.
+  // toast the coordinator's own retry shows for it. A focus or online event during the click joins this in-flight
+  // restore and may show that static toast a second time; cosmetic, left as is.
   const onRetryRestore = () => {
     void AuthController.restorePersistedSession().catch((error: unknown) => {
       if (isWrongEnvironmentHomeserverError(error))
