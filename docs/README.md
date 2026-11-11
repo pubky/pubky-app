@@ -4,21 +4,21 @@ Single source of truth for all project standards, conventions, and architectural
 
 ## Quick Reference
 
-| Working on...                                                                                                                         | Read these docs                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Anything                                                                                                                              | `../AGENTS.md`, `development-workflow.md`                                         |
-| `src/core/`                                                                                                                           | `architecture.md`, `local-first.md`, `error-handling.md`, `data-patterns.md`      |
-| `src/hooks/`                                                                                                                          | `local-first.md`, `data-patterns.md`                                              |
-| `src/components/`                                                                                                                     | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md` |
-| `src/libs/env/`, `src/libs/runtime-config/`                                                                                           | `environment.md`                                                                  |
-| Observability (Sentry, Pulse)                                                                                                         | `sentry.md`                                                                       |
-| PWA: `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/`, `src/hooks/use{ServiceWorkerUpdate,NetworkStatus,AppBadge,InstallPrompt}*` | `pwa.md`                                                                          |
-| Lock posts                                                                                                                            | `locks.md`                                                                        |
-| Writing tests                                                                                                                         | `component-testing.md`, `contract-testing.md`, `visual-regression-testing.md`     |
-| Making commits, branches, PRs                                                                                                         | `commit-message.md`                                                               |
-| Cutting a release                                                                                                                     | `release.md`                                                                      |
-| Cutting a hotfix                                                                                                                      | `hotfix.md`                                                                       |
-| Architectural decisions                                                                                                               | `adr-guidelines.md`, `adr/`                                                       |
+| Working on...                                                                                                                         | Read these docs                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Anything                                                                                                                              | `../AGENTS.md`, `development-workflow.md`                                                          |
+| `src/core/`                                                                                                                           | `architecture.md`, `local-first.md`, `error-handling.md`, `data-patterns.md`                       |
+| `src/hooks/`                                                                                                                          | `local-first.md`, `data-patterns.md`                                                               |
+| `src/components/`                                                                                                                     | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md`                  |
+| `src/libs/env/`, `src/libs/runtime-config/`                                                                                           | `environment.md`                                                                                   |
+| Observability (Sentry, Pulse)                                                                                                         | `sentry.md`                                                                                        |
+| PWA: `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/`, `src/hooks/use{ServiceWorkerUpdate,NetworkStatus,AppBadge,InstallPrompt}*` | `pwa.md`                                                                                           |
+| Lock posts                                                                                                                            | `locks.md`                                                                                         |
+| Writing tests                                                                                                                         | `component-testing.md`, `contract-testing.md`, `visual-regression-testing.md`, `playwright-e2e.md` |
+| Making commits, branches, PRs                                                                                                         | `commit-message.md`                                                                                |
+| Cutting a release                                                                                                                     | `release.md`                                                                                       |
+| Cutting a hotfix                                                                                                                      | `hotfix.md`                                                                                        |
+| Architectural decisions                                                                                                               | `adr-guidelines.md`, `adr/`                                                                        |
 
 ## Documentation Files
 
@@ -33,6 +33,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `component-testing.md`              | Unit test rules for UI components                                                                                  |
 | `contract-testing.md`               | Contract tests: the real pinned SDK against faked HTTP, coverage, fixtures, staying aligned with upstream          |
 | `visual-regression-testing.md`      | VRT tests, determinism, CI-owned baselines                                                                         |
+| `playwright-e2e.md`                 | Playwright proof-of-concept suite, projects, cross-runner WebKit, shared seed                                      |
 | `skeleton-architecture.md`          | Skeleton loader placement, naming, and testing patterns                                                            |
 | `z-index.md`                        | Z-index layering conventions                                                                                       |
 | `sentry.md`                         | What Sentry and Pulse capture, capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps    |
@@ -86,7 +87,7 @@ When making significant changes to:
 - **Component patterns** (layout, Shadcn, icon imports, toasts, forms): Update `components.md`
 - **Skeleton loaders**: Update `skeleton-architecture.md`
 - **Error handling**: Update `error-handling.md`
-- **Testing patterns**: Update `component-testing.md`, `contract-testing.md`, `visual-regression-testing.md`
+- **Testing patterns**: Update `component-testing.md`, `contract-testing.md`, `visual-regression-testing.md`, `playwright-e2e.md`
 - **Environment or runtime variables**: Update `environment.md`
 - **Observability**: Update `sentry.md`
 - **Service worker, manifest or installed-app behaviour**: Update `pwa.md`

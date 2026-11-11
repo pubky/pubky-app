@@ -18,6 +18,13 @@ coverage/
 # Logs
 *.log
 
+# Playwright proof-of-concept output
+test-results/
+test-results-*/
+playwright-report/
+playwright-report-*/
+blob-report/
+
 # OS files
 .DS_Store
 

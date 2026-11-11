@@ -1,0 +1,609 @@
+name: playwright-e2e
+
+# Manual proof of concept. Not a required check, and not run on push.
+# Chromium, Firefox and Pixel each run on Ubuntu beside their own pubky-stack.
+# WebKit and iPhone run on one macOS runner against one Ubuntu stack, through the
+# quick tunnel in .github/scripts/playwright-remote-stack.sh. Docs: docs/playwright-e2e.md.
+
+env:
+  pubky_stack_ref: 'staging'
+  platforms: 'linux/amd64'
+  registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rebuild_images:
+    name: Getting images to rebuild
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      homeserver-testnet_tag: ${{ steps.set_tag.outputs.homeserver-testnet_tag }}
+      pubky-nexus_tag: ${{ steps.set_tag.outputs.pubky-nexus_tag }}
+    strategy:
+      matrix:
+        include:
+          - app: "pubky-nexus"
+            submodule_dir: "pubky-stack/pubky-nexus/"
+            image: "pubky-nexus"
+
+          - app: "homeserver"
+            submodule_dir: "pubky-stack/pubky-homeserver/"
+            image: "homeserver-testnet"
+            build_args: |
+              BUILD_TARGET=testnet
+
+    steps:
+      - name: Checkout pubky-stack
+        uses: actions/checkout@v7
+        with:
+          repository: pubky/pubky-stack
+          ref: ${{ env.pubky_stack_ref }}
+          path: pubky-stack
+          submodules: true
+          token: ${{ secrets.READ_REPOS }}
+
+      - name: Set HEAD commit hash
+        id: sha_tag
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        with:
+          path: ${{ matrix.submodule_dir }}
+
+      - name: Set Current Tag as Output
+        id: set_tag
+        run: |
+          echo ${{ matrix.image }}_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Check if image needs to be rebuild
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        id: check_image
+        with:
+          image: ${{ env.registry }}/${{ matrix.image }}
+          tag: ${{ steps.sha_tag.outputs.hash }}
+          arch: ${{ env.platforms }}
+
+      - name: Rebuild the images if needed
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        with:
+          registry: ${{ env.registry }}
+          image: ${{ matrix.image }}
+          cache_from: type=gha,scope=${{ matrix.image }}
+          cache_to: type=gha,mode=max,scope=${{ matrix.image }}
+          context: ${{ matrix.submodule_dir }}
+          platforms: ${{ env.platforms }}
+          build_args: ${{ matrix.build_args }}
+        if: ${{ steps.check_image.outputs.exists != 'true' }}
+
+  rebuild_pubky_app:
+    uses: ./.github/workflows/build-docker-image.yml
+    with:
+      platforms: linux/amd64
+      tag_mode: content
+    secrets: inherit
+
+  browsers:
+    name: Playwright (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: [rebuild_images]
+    env:
+      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
+      PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
+    permissions:
+      contents: read
+      statuses: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, pixel]
+
+    steps:
+      - name: Validate envs from rebuild_images job
+        run: |
+          if [ -z "${{ env.HOMESERVER_TAG }}" ]; then
+            echo "Error: env HOMESERVER_TAG is empty!"
+            exit 1
+          fi
+
+          if [ -z "${{ env.PUBKY_NEXUS_TAG }}" ]; then
+            echo "Error: env PUBKY_NEXUS_TAG is empty!"
+            exit 1
+          fi
+
+      - name: Checkout pubky-stack
+        uses: actions/checkout@v7
+        with:
+          repository: pubky/pubky-stack
+          ref: ${{ env.pubky_stack_ref }}
+          path: pubky-stack
+          submodules: true
+          token: ${{ secrets.READ_REPOS }}
+
+      - name: Checkout this repository
+        uses: actions/checkout@v7
+        with:
+          path: pubky-app
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
+
+      - name: Resolve the pubky-app image tag
+        id: app_tag
+        working-directory: pubky-app
+        run: |
+          echo "content_tag=$(bash .github/scripts/docker-content-tag.sh '${{ env.platforms }}')" >> $GITHUB_OUTPUT
+
+      - name: Restore node_modules cache
+        id: node-modules
+        uses: actions/cache/restore@v6
+        with:
+          path: pubky-app/node_modules
+          key: playwright-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: 'pubky-app/.nvmrc'
+          cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
+          cache-dependency-path: 'pubky-app/package-lock.json'
+
+      - name: Install dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        working-directory: pubky-app
+        run: npm ci
+
+      - name: Save node_modules cache
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: pubky-app/node_modules
+          key: ${{ steps.node-modules.outputs.cache-primary-key }}
+
+      - name: Restore Playwright browsers
+        id: browsers
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-e2e-browsers-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/package-lock.json') }}
+
+      - name: Install Chromium and Firefox
+        working-directory: pubky-app
+        run: node ./node_modules/playwright/cli.js install --with-deps chromium firefox
+
+      - name: Save Playwright browsers
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browsers.outputs.cache-primary-key }}
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Modify neo4j.env
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/NEO4J_server_memory_pagecache_size=2G/NEO4J_server_memory_pagecache_size=1G/' neo4j.env
+          sed -i 's/NEO4J_server_memory_heap_initial__size=4G/NEO4J_server_memory_heap_initial__size=1G/' neo4j.env
+          sed -i 's/NEO4J_server_memory_heap_max__size=8G/NEO4J_server_memory_heap_max__size=2G/' neo4j.env
+
+      - name: Increase watcher sleep in Nexus config
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/watcher_sleep = 100/watcher_sleep = 500/' pubky-nexus-config-testnet.toml
+
+      - name: Prepare pubky-stack .env
+        working-directory: pubky-stack/docker
+        run: |
+          cp .env-sample .env
+          printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
+          if [ -f docker-compose.override.yml ]; then
+            echo 'docker-compose.override.yml already exists in pubky-stack; merge the PUBKY_RUNTIME_* poll interval into it instead of overwriting.'
+            exit 1
+          fi
+          cat > docker-compose.override.yml <<'EOF'
+          services:
+            pubky-app:
+              environment:
+                PUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS: "2000"
+          EOF
+
+      - name: Require signup tokens for e2e invite codes
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/signup_mode = "open"/signup_mode = "token_required"/' homeserver.config.toml
+          grep -q 'signup_mode = "token_required"' homeserver.config.toml || {
+            echo 'Error: homeserver.config.toml is missing signup_mode = "token_required"'
+            exit 1
+          }
+
+      - name: Run pubky-stack infra services
+        working-directory: pubky-stack/docker
+        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis postgres
+        env:
+          REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: ${{ steps.app_tag.outputs.content_tag }}
+
+      - name: Wait for dockerised pubky-stack to start
+        run: |
+          PORT=8080
+          MAX_WAIT=300
+          WAIT_INTERVAL=5
+          ELAPSED=0
+
+          while ! curl -s http://localhost:$PORT; do
+            if [ $ELAPSED -ge $MAX_WAIT ]; then
+              echo "Service did not start within 5 minutes."
+              exit 1
+            fi
+            echo "Waiting for service on port $PORT to be ready... ($ELAPSED seconds elapsed)"
+            sleep $WAIT_INTERVAL
+            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+          done
+
+          echo "Service is ready."
+
+      - name: Wait for the pubky-app image
+        working-directory: pubky-app
+        env:
+          REGISTRY: ${{ env.registry }}
+          GH_TOKEN: ${{ github.token }}
+          CONTENT_TAG: ${{ steps.app_tag.outputs.content_tag }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: bash .github/scripts/wait-for-app-image.sh
+
+      - name: Run pubky-app
+        working-directory: pubky-stack/docker
+        run: docker compose up -d --no-build pubky-app
+        env:
+          REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: ${{ steps.app_tag.outputs.content_tag }}
+
+      - name: Wait for pubky-app
+        run: |
+          for _ in $(seq 1 60); do
+            curl -sf -o /dev/null http://127.0.0.1:3000/ && exit 0
+            sleep 3
+          done
+          echo "pubky-app did not answer on port 3000"
+          exit 1
+
+      - name: Run Playwright (${{ matrix.project }})
+        id: playwright
+        working-directory: pubky-app
+        run: node ./node_modules/@playwright/test/cli.js test --project=${{ matrix.project }}
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report-${{ matrix.project }}
+          PLAYWRIGHT_OUTPUT_DIR: test-results-${{ matrix.project }}
+
+      - name: Upload Playwright HTML report (${{ matrix.project }})
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: pubky-app/playwright-report-${{ matrix.project }}
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Playwright evidence (${{ matrix.project }})
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-evidence-${{ matrix.project }}
+          path: pubky-app/test-results-${{ matrix.project }}
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Dump docker logs on failure
+        if: failure()
+        uses: jwalton/gh-docker-logs@v2
+
+  # One stack for both WebKit projects. The job name is the PEER_JOB the macOS job waits on,
+  # so it must stay exactly "Playwright stack on Ubuntu" (no matrix suffix).
+  webkit-stack:
+    name: Playwright stack on Ubuntu
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    needs: [rebuild_images]
+    env:
+      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
+      PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
+      REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      PEER_JOB: Playwright WebKit on macOS
+      CLIENT_KEY_ARTIFACT: playwright-webkit-client-key-${{ github.run_attempt }}
+      ENDPOINT_ARTIFACT: playwright-webkit-stack-endpoint-${{ github.run_attempt }}
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Validate envs from rebuild_images job
+        run: |
+          if [ -z "${{ env.HOMESERVER_TAG }}" ]; then
+            echo "Error: env HOMESERVER_TAG is empty!"
+            exit 1
+          fi
+
+          if [ -z "${{ env.PUBKY_NEXUS_TAG }}" ]; then
+            echo "Error: env PUBKY_NEXUS_TAG is empty!"
+            exit 1
+          fi
+
+      - name: Checkout pubky-stack
+        uses: actions/checkout@v7
+        with:
+          repository: pubky/pubky-stack
+          ref: ${{ env.pubky_stack_ref }}
+          path: pubky-stack
+          submodules: true
+          token: ${{ secrets.READ_REPOS }}
+
+      - name: Checkout this repository
+        uses: actions/checkout@v7
+        with:
+          path: pubky-app
+          sparse-checkout: .github/scripts
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Modify neo4j.env
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/NEO4J_server_memory_pagecache_size=2G/NEO4J_server_memory_pagecache_size=1G/' neo4j.env
+          sed -i 's/NEO4J_server_memory_heap_initial__size=4G/NEO4J_server_memory_heap_initial__size=1G/' neo4j.env
+          sed -i 's/NEO4J_server_memory_heap_max__size=8G/NEO4J_server_memory_heap_max__size=2G/' neo4j.env
+
+      - name: Increase watcher sleep in Nexus config
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/watcher_sleep = 100/watcher_sleep = 500/' pubky-nexus-config-testnet.toml
+
+      - name: Prepare pubky-stack .env
+        working-directory: pubky-stack/docker
+        run: |
+          cp .env-sample .env
+          printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
+          if [ -f docker-compose.override.yml ]; then
+            echo 'docker-compose.override.yml already exists in pubky-stack; merge the PUBKY_RUNTIME_* poll interval into it instead of overwriting.'
+            exit 1
+          fi
+          cat > docker-compose.override.yml <<'EOF'
+          services:
+            pubky-app:
+              environment:
+                PUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS: "2000"
+          EOF
+
+      - name: Require signup tokens for e2e invite codes
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/signup_mode = "open"/signup_mode = "token_required"/' homeserver.config.toml
+          grep -q 'signup_mode = "token_required"' homeserver.config.toml || {
+            echo 'Error: homeserver.config.toml is missing signup_mode = "token_required"'
+            exit 1
+          }
+
+      - name: Run pubky-stack infra services
+        working-directory: pubky-stack/docker
+        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis postgres
+        env:
+          REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: unused
+
+      - name: Wait for dockerised pubky-stack to start
+        run: |
+          PORT=8080
+          MAX_WAIT=300
+          WAIT_INTERVAL=5
+          ELAPSED=0
+
+          while ! curl -s http://localhost:$PORT; do
+            if [ $ELAPSED -ge $MAX_WAIT ]; then
+              echo "Service did not start within 5 minutes."
+              exit 1
+            fi
+            echo "Waiting for service on port $PORT to be ready... ($ELAPSED seconds elapsed)"
+            sleep $WAIT_INTERVAL
+            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+          done
+
+          echo "Service is ready."
+
+      - name: Install cloudflared
+        run: bash pubky-app/.github/scripts/playwright-remote-stack.sh install-cloudflared
+
+      - name: Expose the stack to the macOS job
+        working-directory: pubky-stack/docker
+        timeout-minutes: 40
+        run: bash ../../pubky-app/.github/scripts/playwright-remote-stack.sh expose
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: unused
+          CLIENT_KEY_TIMEOUT: 1800
+
+      - name: Upload the stack endpoint
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ENDPOINT_ARTIFACT }}
+          path: ${{ runner.temp }}/playwright-remote-stack/endpoint
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Keep the stack up until the macOS job finishes
+        run: bash pubky-app/.github/scripts/playwright-remote-stack.sh hold
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HOLD_TIMEOUT: 6600
+
+      - name: Close the tunnel
+        if: always()
+        run: bash pubky-app/.github/scripts/playwright-remote-stack.sh close
+
+      - name: Dump docker logs on failure
+        if: failure()
+        uses: jwalton/gh-docker-logs@v2
+
+  # Job name must stay exactly "Playwright WebKit on macOS" (the stack job's PEER_JOB).
+  webkit-test:
+    name: Playwright WebKit on macOS
+    runs-on: macos-latest
+    timeout-minutes: 120
+    needs: [rebuild_images]
+    env:
+      REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      PEER_JOB: Playwright stack on Ubuntu
+      CLIENT_KEY_ARTIFACT: playwright-webkit-client-key-${{ github.run_attempt }}
+      ENDPOINT_ARTIFACT: playwright-webkit-stack-endpoint-${{ github.run_attempt }}
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v7
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
+
+      - name: Create the tunnel key
+        run: bash .github/scripts/playwright-remote-stack.sh client-key
+
+      - name: Upload the tunnel public key
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.CLIENT_KEY_ARTIFACT }}
+          path: ${{ runner.temp }}/playwright-remote-stack/client-key
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Restore WebKit
+        id: browsers
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-e2e-browsers-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install WebKit
+        working-directory: .
+        run: node ./node_modules/playwright/cli.js install webkit
+
+      - name: Save WebKit
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: ${{ steps.browsers.outputs.cache-primary-key }}
+
+      - name: Build the app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_DB_VERSION: 3
+          NEXT_PUBLIC_DB_NAME: franky
+          NEXT_PUBLIC_DEBUG_MODE: false
+          NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Install cloudflared
+        run: bash .github/scripts/playwright-remote-stack.sh install-cloudflared
+
+      - name: Connect to the stack
+        timeout-minutes: 25
+        run: bash .github/scripts/playwright-remote-stack.sh connect
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Start the app
+        run: bash .github/scripts/playwright-remote-stack.sh start-app
+
+      - name: Run Playwright (webkit)
+        id: webkit
+        continue-on-error: true
+        run: node ./node_modules/@playwright/test/cli.js test --project=webkit
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report-webkit
+          PLAYWRIGHT_OUTPUT_DIR: test-results-webkit
+
+      - name: Upload Playwright HTML report (webkit)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-webkit
+          path: playwright-report-webkit
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Playwright evidence (webkit)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-evidence-webkit
+          path: test-results-webkit
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Run Playwright (iphone)
+        id: iphone
+        continue-on-error: true
+        run: node ./node_modules/@playwright/test/cli.js test --project=iphone
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report-iphone
+          PLAYWRIGHT_OUTPUT_DIR: test-results-iphone
+
+      - name: Upload Playwright HTML report (iphone)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-iphone
+          path: playwright-report-iphone
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Playwright evidence (iphone)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-evidence-iphone
+          path: test-results-iphone
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Require WebKit and iPhone to pass
+        if: always()
+        run: |
+          echo "webkit=${{ steps.webkit.outcome }} iphone=${{ steps.iphone.outcome }}"
+          [ "${{ steps.webkit.outcome }}" = "success" ]
+          [ "${{ steps.iphone.outcome }}" = "success" ]
+
+      - name: Close the tunnel and print the app and tunnel logs
+        if: always()
+        run: bash .github/scripts/playwright-remote-stack.sh close
