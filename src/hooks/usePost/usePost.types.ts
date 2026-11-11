@@ -63,8 +63,8 @@ export interface UsePostEditOptions {
    */
   originalAttachmentUris?: string[];
   /**
-   * Article-only: the cover the composer was seeded with (the envelope's `cover_image`, or slot 0
-   * of a 0.x article), so a save can tell a kept cover from a replaced or cleared one.
+   * Article-only: the cover the composer was seeded with (the envelope's `cover_image`, or the image
+   * at slot 0 of a 0.x article), so a save can tell a kept cover from a replaced or cleared one.
    */
   originalCoverUri?: string;
   /**

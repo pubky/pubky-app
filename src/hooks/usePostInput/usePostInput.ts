@@ -33,7 +33,7 @@ import { usePost } from '@/hooks/usePost/usePost';
 import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { resolveArticleCover } from '@/libs/post/articleCover';
+import { isArticleCoverContentType, resolveArticleCover, settleArticleSlotZero } from '@/libs/post/articleCover';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineMedia';
 import { isPubkyIdentifier, stripPubkyPrefix } from '@/libs/utils/utils';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
@@ -171,10 +171,37 @@ export function usePostInput({
   // lives in the body. Where the cover is and what each `attachment:{n}` names
   // depends on the stored shape (the envelope's `cover_image`, or a 0.x
   // article's slot 0 under the slot-0 rule): `resolveArticleCover` says.
-  const editArticle =
+  const editArticleLocated =
     variant === POST_INPUT_VARIANT.EDIT && editIsArticle
       ? resolveArticleCover({ content: editContent ?? '', attachments: editAttachmentUris })
       : undefined;
+  // Rule B in the composer: a 0.x article's slot 0 is its cover unless its file row says it is not an
+  // image, so the row is read before the strip seeds and a PDF there is neither shown nor saved as the
+  // cover (it rides with the unreferenced originals, kept, never deleted). The reader shows nothing
+  // until the row says image; the composer cannot afford that: a slow or missing row must never cost
+  // the article its cover on save, so past the wait cap, or when the read settles without a row, slot
+  // 0 stays the cover, as it did before the row was read. Decided once, when the strip seeds: a row
+  // that lands later changes neither the strip nor what the save compares against.
+  const [editInlineWaitExpired, setEditInlineWaitExpired] = useState(false);
+  const editCoverCandidate = editArticleLocated?.coverCandidate ?? null;
+  const { files: editCoverFiles, isLoading: isEditCoverLoading } = useAttachmentsMetadata({
+    fileUris: editCoverCandidate ? [editCoverCandidate] : [],
+  });
+  const editCoverRow = editCoverFiles.find((file) => file.uri === editCoverCandidate);
+  const [editSlotZeroIsCover, setEditSlotZeroIsCover] = useState<boolean | undefined>(undefined);
+  const liveSlotZeroIsCover = editCoverRow
+    ? isArticleCoverContentType(editCoverRow.content_type)
+    : isEditCoverLoading && !editInlineWaitExpired
+      ? undefined
+      : true;
+  if (editCoverCandidate && editSlotZeroIsCover === undefined && liveSlotZeroIsCover !== undefined) {
+    setEditSlotZeroIsCover(liveSlotZeroIsCover);
+  }
+  const editArticle =
+    editArticleLocated && editCoverCandidate && editSlotZeroIsCover !== undefined
+      ? settleArticleSlotZero(editArticleLocated, editSlotZeroIsCover)
+      : editArticleLocated;
+  const isEditCoverPending = Boolean(editArticle?.coverCandidate);
   const editReferencedUris = editArticle
     ? new Set(
         [...collectAttachmentRefIndexes(parseArticleContent(editContent)?.body ?? '')]
@@ -201,12 +228,12 @@ export function usePostInput({
   });
   // Past the cap the editor opens with whatever rows landed: a slot without one imports as an image,
   // exactly as it does when the read settles without a row
-  const [editInlineWaitExpired, setEditInlineWaitExpired] = useState(false);
+  const isEditMetadataLoading = isEditInlineMetadataLoading || isEditCoverLoading;
   useTimeout(
     () => setEditInlineWaitExpired(true),
-    isEditInlineMetadataLoading && !editInlineWaitExpired ? EDIT_INLINE_MEDIA_MAX_WAIT_MS : null,
+    isEditMetadataLoading && !editInlineWaitExpired ? EDIT_INLINE_MEDIA_MAX_WAIT_MS : null,
   );
-  const isEditInlineMediaLoading = isEditInlineMetadataLoading && !editInlineWaitExpired;
+  const isEditInlineMediaLoading = isEditMetadataLoading && !editInlineWaitExpired;
   // Session uploads know their own type; an edited article's attachments are typed by their rows
   const inlineMedia = {
     upload: inlineMediaSession.upload,
@@ -219,11 +246,12 @@ export function usePostInput({
       inlineMediaSession.getMediaName(uri) ?? editInlineFiles.find((file) => file.uri === uri.trim())?.name ?? null,
   };
 
-  // Seed and resolve the post's current attachments for the edit composer
+  // Seed and resolve the post's current attachments for the edit composer. Seeding happens once,
+  // so it waits for the slot-0 decision above.
   const { seededUris: seededAttachmentUris } = useEditAttachments({
     enabled: variant === POST_INPUT_VARIANT.EDIT,
     postId: editPostId,
-    uris: editAttachmentUris,
+    uris: isEditCoverPending ? undefined : editAttachmentUris,
     displayUris: editDisplayUris,
     existingAttachments,
     setExistingAttachments,
@@ -453,6 +481,9 @@ export function usePostInput({
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
+    // The strip is not seeded yet (a 0.x article's slot-0 row is still out): a save now would diff the
+    // attachments against an empty snapshot and refuse the article's own inline files as foreign.
+    if (isEditCoverPending) return;
 
     // Articles publish what the editor holds right now: `articleTitle` and `content` trail the inputs
     // by the debounce, and a publish read from them would drop an image inserted in the last half
@@ -623,6 +654,7 @@ export function usePostInput({
     editCoverUri,
     editPreservedUris,
     isSubmitting,
+    isEditCoverPending,
     setArticleTitle,
     setContent,
     onSuccess,

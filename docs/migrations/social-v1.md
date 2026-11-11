@@ -388,12 +388,11 @@ After dev-sync 3 (2026-11-09):
 ### Follow-ups (not in this round)
 
 - **Migrator rc.2 adoption PR** (after the maintainer tags `v1.0.0-rc.2` of pubky/pubky-social-specs with #210): bump
-  `pubky-social-specs` and `pubky-social-migrator`, mirror `SOCIAL_MIGRATION_TRANSFORM_REV` 4 (contract-tested), keep
-  rule A′ and say so in the `src/libs/post/articleCover.ts` docblock (it goes only after every rc.1-migrated tree has
-  been migrated again: the revision bump re-walks but rewrites nothing), and
-  make rule B take `attachments[0]` as the cover only when it is an image (the fixed migrator leaves `cover_image` null
-  for a non-image slot 0, and today the app would show a PDF as the cover). Re-QA a migrated article with cover and
-  inline media.
+  `pubky-social-specs` and `pubky-social-migrator`, mirror `SOCIAL_MIGRATION_TRANSFORM_REV` 4 (contract-tested) and
+  keep rule A′: it goes only once no rc.1-written article is left to read (the revision bump re-walks but rewrites
+  nothing, so pinning rc.2 retires nothing), as the `src/libs/post/articleCover.ts` docblock says since the pre-rc.2
+  cleanup PR, which also made rule B image-only (`attachments[0]` is the cover only when its file row says image; a
+  PDF or video at slot 0 is no cover and never paints as one). Re-QA a migrated article with cover and inline media.
 - Restore the mute and `last_read` event streams when the SDK bounds the session lease for streams or the team
   accepts the exposure (pubky/pubky-homeserver#798): register the `last_read` channel and remove the poller
   (ADR-0029), bring back the mute channel (ADR-0014). The compliance gate's `.session(` rule goes with them.

@@ -1186,8 +1186,10 @@ export class HomeserverService {
    * aborted subscribe resolves to a closed stream, so the caller never has to win a race.
    *
    * Public paths only. The request is anonymous, so a `/priv/` path would need a session, and in `@synonymdev/pubky`
-   * a session-bound stream keeps the shared session Web Lock for its whole lifetime: the SDK's exclusive bearer
-   * refresh after any 401 never resolves and every session request hangs behind it (ADR-0014).
+   * a session-bound stream holds the shared session Web Lock until its response headers reach the SDK, with no
+   * timeout: behind anything that buffers event streams the SDK's exclusive bearer refresh after any 401 waits for
+   * as long as the headers are withheld, and every session request queues behind it (pubky/pubky-homeserver#798,
+   * ADR-0014).
    */
   static async subscribeUserEventStream(
     params: THomeserverUserEventStreamParams,
@@ -1197,7 +1199,7 @@ export class HomeserverService {
     if (privatePaths.length > 0) {
       throw Err.client(
         ClientErrorCode.BAD_REQUEST,
-        'A private event stream would hold the SDK session lock and hang every bearer refresh; poll instead (ADR-0014).',
+        'A private event stream would hold the SDK session lock for as long as its response headers are outstanding and stall every bearer refresh; poll instead (ADR-0014).',
         {
           service: ErrorService.Homeserver,
           // Not the stream-connect operation: the Sentry drop rule for routine reconnects must not hide this.

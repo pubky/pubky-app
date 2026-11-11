@@ -231,9 +231,10 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     global.URL.createObjectURL = vi.fn(() => 'blob:preview');
     global.URL.revokeObjectURL = vi.fn();
     mocks.editor = null;
-    // A row read for the new file would be a fresh key, which the real hook reports as loading
+    // A row read for the new file would be a fresh key, which the real hook reports as loading. The 0.x
+    // article's slot 0 is its cover only once its row says image, so that row answers at once.
     mocks.useAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
-      files: [],
+      files: fileUris.includes(COVER_URI) ? [{ uri: COVER_URI, content_type: 'image/jpeg', name: 'cover.jpg' }] : [],
       isLoading: fileUris.includes(NEW_URI),
     }));
     mocks.commitDeleteFile.mockResolvedValue(undefined);
