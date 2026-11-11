@@ -54,6 +54,19 @@ describe('mergeAlsoOn', () => {
     expect(describeRows(rows).filter((row) => row.includes('netflix'))).toEqual([`entry:${NETFLIX.uri}`]);
   });
 
+  it('lists Pinakes’ matches by metadata last, after the members, and a member over a match on its service', () => {
+    const maybe = (uri: string, site: string) => ({ uri, site, derived: true, via: 'youtube_match', kind: 'maybe' });
+    const prime = maybe('https://www.primevideo.com/detail/0', 'Prime Video');
+    const netflix = maybe('https://www.netflix.com/title/1', 'Netflix');
+    const card = { ...CARD, also_on: [prime, netflix, TMDB, IMDB] };
+    expect(describeRows(mergeAlsoOn(card, [member('n', NETFLIX.uri, 'Netflix')]))).toEqual([
+      `entry:${TMDB.uri}`,
+      `entry:${IMDB.uri}`,
+      `entry:${NETFLIX.uri}`,
+      `entry:${prime.uri}`,
+    ]);
+  });
+
   it('reads the same before the group is read', () => {
     expect(describeRows(mergeAlsoOn(CARD, undefined))).toEqual([
       `entry:${NETFLIX.uri}`,

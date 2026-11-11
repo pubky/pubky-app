@@ -11,7 +11,7 @@ import unreachableFixture from '@/services/pinakes/fixtures/by-uri.unreachable.j
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesAlsoOn, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceAlsoOn } from './ResourceAlsoOn';
-import { dedupeAlsoOn } from './ResourceAlsoOn.utils';
+import { dedupeAlsoOn, pickAlsoOn } from './ResourceAlsoOn.utils';
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
 
@@ -57,6 +57,35 @@ describe('ResourceAlsoOn', () => {
       'href',
       getResourceRoute(VIDEO.also_on[6].uri),
     );
+  });
+
+  it('lists a match by metadata after the exact links with a short "maybe", its note in its name', () => {
+    const alsoOn: TPinakesAlsoOn[] = [
+      {
+        uri: 'https://www.deezer.com/track/67238735',
+        site: 'Deezer',
+        derived: true,
+        via: 'youtube_match',
+        kind: 'maybe',
+      },
+      { uri: 'https://open.spotify.com/track/1', site: 'Spotify', derived: true, via: 'musicbrainz' },
+      { id: 't', uri: 'https://tidal.com/track/1', site: 'TIDAL' },
+    ];
+    const menu = renderAlsoOn(pickAlsoOn(alsoOn, { site: 'YouTube', uris: [] }));
+
+    expect(rows().map((row) => row.textContent)).toEqual(['Spotify', 'TIDAL', 'Deezer maybe']);
+    expect(within(menu).getAllByTestId('resource-maybe-label')).toHaveLength(1);
+    expect(within(rows()[2]).getByTestId('resource-maybe-label')).toHaveTextContent('maybe');
+    expect(screen.getByRole('menuitem', { name: 'Deezer, Maybe · found via youtube_match' })).toHaveAttribute(
+      'href',
+      getResourceRoute('https://www.deezer.com/track/67238735'),
+    );
+  });
+
+  it('marks no row of a card with exact links only', () => {
+    renderAlsoOn(VIDEO.also_on);
+
+    expect(screen.queryByTestId('resource-maybe-label')).not.toBeInTheDocument();
   });
 
   it('opens every entry’s page on Pubky in the same tab, with its site’s favicon', () => {

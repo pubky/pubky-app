@@ -1,6 +1,7 @@
 import { inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
 import { extractVimeoVideoId, extractYouTubeVideoId } from '@/libs/utils/videoUrl';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
+import { isMaybeAlsoOn } from '@/molecules/ResourceCard/ResourceCard.utils';
 import type { TPinakesCard, TPinakesEmbed, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import type { MediaPreferences } from '@/stores/settings/settings.types';
 
@@ -158,6 +159,11 @@ export interface PlayerTarget {
   autoplay: boolean;
   /** How a player without an autoplay parameter is told to start, through its embed's own messages. */
   start?: PlayerStart;
+  /**
+   * From an Also on link Pinakes matched by metadata (`isMaybeAlsoOn`), possibly not the same thing:
+   * it comes after every exact link's player (`getPlayerTargets`) and says "maybe" in the switch.
+   */
+  maybe?: boolean;
   /**
    * A frame that is no player (Pinakes' `embed` of kind `post`, `map` or `rich`: a Mastodon post, a
    * place's map, slides): shown like one, it never docks.
@@ -718,28 +724,37 @@ export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
 /**
  * Every player the card offers, one per service: the card's own first (its `embed`, or from an
  * older Pinakes its link's, `getOwnLink`), then its `also_on` links' in Pinakes' order (its best
- * link of a service first); a post, map or document frame Pinakes names counts as one too. A
- * `missing` card's own link is gone upstream and offers no player. A player shows paused and starts on a press inside
- * it, so no service is put first for starting on our press.
+ * link of a service first), then the `also_on` links Pinakes matched by metadata
+ * (`isMaybeAlsoOn`, marked `maybe`); a post, map or document frame Pinakes names counts as one
+ * too. A `missing` card's own link is gone upstream and offers no player. A player shows paused
+ * and starts on a press inside it, so no service is put first for starting on our press.
  *
  * The viewer's Players (`players`, Settings, Links & Media) come last: a removed service offers no
  * player, and the services in the viewer's order go first, in that order,
  * before those not in it (Auto order). With no ranked order (never reordered, or only Card moved:
- * `isRankedOrder`) it all stays Auto.
+ * `isRankedOrder`) it all stays Auto. A match by metadata stays after every exact link in any
+ * order: it is never the default player while an exact link has one (the viewer can still pick it).
  */
 export function getPlayerTargets(
   card: Pick<TPinakesCard, 'status' | 'also_on'> & TOwnLinks,
   { href, players }: { href?: string | null; players?: PlayerPreferences } = {},
 ): PlayerTarget[] {
   const own = card.status === 'missing' ? null : getOwnTarget(card, href);
-  const others = card.also_on.map((entry) => getLinkTarget(entry.uri, entry.embed, entry.site));
+  const exact = card.also_on.filter((entry) => !isMaybeAlsoOn(entry));
+  const maybe = card.also_on.filter((entry) => isMaybeAlsoOn(entry));
+  const links = [
+    { target: own, maybe: false },
+    ...exact.map((entry) => ({ target: getLinkTarget(entry.uri, entry.embed, entry.site), maybe: false })),
+    ...maybe.map((entry) => ({ target: getLinkTarget(entry.uri, entry.embed, entry.site), maybe: true })),
+  ];
 
   const seen = new Set<EmbedProvider>();
   const targets: PlayerTarget[] = [];
-  for (const target of [own, ...others]) {
+  for (const link of links) {
+    const target = link.target;
     if (!target || seen.has(target.provider)) continue;
     seen.add(target.provider);
-    targets.push(target);
+    targets.push(link.maybe ? { ...target, maybe: true } : target);
   }
   const shown = targets.filter((target) => isPlayerShown(target.provider, players?.hiddenPlayers));
   const order = players && isRankedOrder(players.playerOrder) ? players.playerOrder : [];
@@ -748,5 +763,5 @@ export function getPlayerTargets(
     return index === -1 ? order.length : index;
   };
   // A stable sort: those not in the order keep the Auto order among themselves.
-  return [...shown].sort((a, b) => rank(a) - rank(b));
+  return [...shown].sort((a, b) => Number(Boolean(a.maybe)) - Number(Boolean(b.maybe)) || rank(a) - rank(b));
 }

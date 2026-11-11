@@ -578,6 +578,71 @@ describe('getPlayerTargets in Pinakes’ order', () => {
   });
 });
 
+describe('getPlayerTargets with matches by metadata (kind maybe)', () => {
+  // A label's YouTube upload: Pinakes found Deezer and TIDAL by artist, title and length (maybes), and
+  // Spotify by its ISRC (exact), listed by service name as Pinakes lists derived links.
+  const DEEZER_MAYBE: TPinakesAlsoOn = {
+    uri: 'https://www.deezer.com/track/67238735',
+    site: 'Deezer',
+    derived: true,
+    via: 'youtube_match',
+    kind: 'maybe',
+  };
+  const SPOTIFY_EXACT: TPinakesAlsoOn = {
+    uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq',
+    site: 'Spotify',
+    derived: true,
+    via: 'musicbrainz',
+  };
+  const TIDAL_MAYBE: TPinakesAlsoOn = {
+    uri: 'https://tidal.com/track/20115564',
+    site: 'TIDAL',
+    derived: true,
+    via: 'youtube_match',
+    kind: 'maybe',
+  };
+  const generic = 'https://musicbrainz.org/recording/b1a9c0e9-d987-4042-ae91-78d6a3267d69';
+
+  it('lists the exact links’ players first, then the matches, marked maybe', () => {
+    const targets = getPlayerTargets(card(generic, [DEEZER_MAYBE, SPOTIFY_EXACT, TIDAL_MAYBE]));
+    expect(targets.map((target) => [target.provider, Boolean(target.maybe)])).toEqual([
+      [PlayerProvider.SPOTIFY, false],
+      [PlayerProvider.DEEZER, true],
+      [PlayerProvider.TIDAL, true],
+    ]);
+  });
+
+  it('keeps a match after every exact link whatever the viewer’s order, which still orders each part', () => {
+    const players = { playerOrder: ['tidal', 'deezer', 'youtube', 'spotify'], hiddenPlayers: [] };
+    const own = card('https://www.youtube.com/watch?v=5NV6Rdv1a3I', [DEEZER_MAYBE, SPOTIFY_EXACT, TIDAL_MAYBE]);
+    expect(getPlayerTargets(own, { players }).map((target) => target.provider)).toEqual([
+      PlayerProvider.YOUTUBE,
+      PlayerProvider.SPOTIFY,
+      PlayerProvider.TIDAL,
+      PlayerProvider.DEEZER,
+    ]);
+  });
+
+  it('plays a service’s exact link over its match', () => {
+    const exactDeezer: TPinakesAlsoOn = { id: 'd', uri: 'https://www.deezer.com/track/3135556', site: 'Deezer' };
+    const targets = getPlayerTargets(card(generic, [DEEZER_MAYBE, exactDeezer]));
+    expect(targets).toHaveLength(1);
+    expect(targets[0]).toMatchObject({ link: 'https://www.deezer.com/track/3135556' });
+    expect(targets[0].maybe).toBeUndefined();
+  });
+
+  it('still offers a match where no exact link has a player', () => {
+    const targets = getPlayerTargets(card(generic, [DEEZER_MAYBE]));
+    expect(targets.map((target) => [target.provider, target.maybe])).toEqual([[PlayerProvider.DEEZER, true]]);
+  });
+
+  it('leaves a card with exact links only as it was: no player marked maybe', () => {
+    const targets = getPlayerTargets(card(generic, [SPOTIFY_EXACT, { ...TIDAL_MAYBE, kind: undefined }]));
+    expect(targets.map((target) => target.provider)).toEqual([PlayerProvider.SPOTIFY, PlayerProvider.TIDAL]);
+    expect(targets.some((target) => 'maybe' in target)).toBe(false);
+  });
+});
+
 describe('from Pinakes’ embed', () => {
   const PLAYER_ALLOW = [
     'accelerometer',
