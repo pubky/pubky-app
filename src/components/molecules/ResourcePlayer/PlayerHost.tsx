@@ -21,7 +21,7 @@ import { KEEP_PLAYING_ATTRIBUTE } from '@/hooks/usePauseMediaOutsideViewport/use
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { pauseMedia } from '@/libs/utils/mediaPlayback';
 import { cn } from '@/libs/utils/utils';
-import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
+import type { EmbedProvider, PlayerTarget } from './resourcePlayer.utils';
 import { type ActivePlayer, getPagePlayer, usePagePlayer } from './useResourcePlayer';
 
 /**
@@ -96,7 +96,7 @@ interface HostedPlayer {
   match: string;
   /** The page's player it is (`useResourcePlayer`): it plays while that one is the page's. */
   owner: string;
-  provider: PlayerProvider;
+  provider: EmbedProvider;
   target: PlayerTarget;
   title: string;
   /** The post the card is in (`PlayerFrom`): the dock's way back once no card of it is on the page. */

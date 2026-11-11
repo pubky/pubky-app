@@ -115,7 +115,8 @@ function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: numb
  * offers the service's page. One press on our Play starts it: by its `src` or by its start message
  * (Spotify, TIDAL). A service that cannot start that way (Mixcloud, Deezer) says a press inside its
  * player is needed, to screen readers only; the card never claims playback. One media plays on the
- * page (`useMediaBox`).
+ * page (`useMediaBox`). A frame that is no player (`target.frame`: a post, a map, a document) is shown
+ * the same way at the size Pinakes names, and a press inside it starts no media.
  */
 export function ResourcePlayerFrame({
   target,
@@ -150,7 +151,8 @@ export function ResourcePlayerFrame({
       setStarted(true);
       if (frameRef.current) reportMediaStart(frameRef.current);
     },
-    !tells && !started,
+    // A post, map or document frame plays nothing: a press inside it (panning a map) starts no media.
+    !tells && !started && !target.frame,
   );
   const startHere = (media: Element) => {
     setStarted(true);
@@ -162,7 +164,7 @@ export function ResourcePlayerFrame({
     if (!tells) setRound((value) => value + 1);
   };
   useMediaBox(regionRef, onPlay ? { onStart: onPlay, onPause } : { onStart: startHere, onStop: stop });
-  const label = `${target.name} player: ${title}`;
+  const label = `${target.name} ${target.frame ? 'embed' : 'player'}: ${title}`;
   const isVideo = target.layout.kind === 'video';
   // An embed with a minimum width (Apple's) is laid out at it and scaled to the region, the region's
   // height with it: the player keeps its proportions, with no scrollbar, cut edge or gap under it.
@@ -178,7 +180,9 @@ export function ResourcePlayerFrame({
           '--player-h': `${target.layout.height * fit}px`,
           '--player-dock-h': `${(target.layout.dockHeight ?? target.layout.height) * fit}px`,
         } as CSSProperties)
-      : undefined;
+      : target.layout.aspect
+        ? { aspectRatio: String(target.layout.aspect) }
+        : undefined;
 
   return (
     <Container overrideDefaults className="flex min-w-0 flex-col gap-2" data-testid="resource-player">
@@ -197,7 +201,8 @@ export function ResourcePlayerFrame({
         className={cn(
           'relative w-full overflow-hidden rounded-lg',
           target.element !== 'audio' && load !== 'ready' && 'bg-card',
-          isVideo ? 'aspect-video' : 'h-(--player-h)',
+          // A tall frame (a 9:16 video) stays within the screen.
+          isVideo ? 'aspect-video max-h-[80vh]' : 'h-(--player-h)',
         )}
       >
         {target.element === 'audio' ? (
@@ -260,8 +265,8 @@ export function ResourcePlayerFrame({
         data-testid="resource-player-status"
         className={cn('font-normal text-muted-foreground', load !== 'slow' && 'sr-only', quiet && 'hidden')}
       >
-        {load === 'loading' && `Loading the ${target.name} player`}
-        {load === 'ready' && !target.autoplay && `Press play in the ${target.name} player to start.`}
+        {load === 'loading' && `Loading the ${target.name} ${target.frame ? 'embed' : 'player'}`}
+        {load === 'ready' && !target.autoplay && !target.frame && `Press play in the ${target.name} player to start.`}
         {load === 'slow' && (
           <>
             {target.name} has not answered.{' '}
