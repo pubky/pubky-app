@@ -26,6 +26,7 @@ import {
   getResourceTagsLabel,
   getResourceTarget,
   isWritableResourceUri,
+  playsInCard,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
@@ -209,6 +210,11 @@ function ResourceKnown({
   // post's embed, or its Show on, is its only source; once X cannot show it, its card is generic.
   const showsPost = postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined);
   const { embed, switcher } = useCardPlayer(showsPost ? null : card, uri, 'default');
+  // A service's player loaded in the body: a card that plays whole in our player (a show's latest
+  // episodes, an episode's audio) gives way to it, as in a post's resource frame. A recording's
+  // preview, and the stand-in that loads nothing (platform embeds up front off), keep ours.
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
+  const ownPlayerAside = embed !== undefined && embedsUpFront && playsInCard(card);
   const actions = (
     <ResourceActions
       uri={actionUri}
@@ -230,7 +236,7 @@ function ResourceKnown({
   return (
     <Container overrideDefaults data-testid="resource-details" className="min-w-0">
       <ResourceCard
-        card={card}
+        card={ownPlayerAside ? { ...card, stream: null, episodes: null } : card}
         size="large"
         actions={actions}
         renderBody={
