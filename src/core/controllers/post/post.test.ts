@@ -1737,6 +1737,28 @@ describe('PostController', () => {
       expect(post.object.kind).toBe('collection');
       expect(JSON.parse(post.object.content).cover_image).toBe(mediaUrl('x', 'image/png'));
     });
+
+    it('rolls back the uploaded cover when the collection create fails, as commitEditCollection does', async () => {
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
+      vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const createError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      });
+      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate').mockRejectedValue(createError);
+      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection(createParams())).rejects.toBe(createError);
+
+      // The upload itself goes to the sweep, named with its post, which leaves a preexisting file in place
+      const [{ compositePostId }] = commitCreateSpy.mock.calls[0];
+      expect(sweepSpy).toHaveBeenCalledWith(
+        [expect.objectContaining({ media: expect.objectContaining({ url: mediaUrl('x', 'image/png') }) })],
+        compositePostId,
+      );
+      expect(FileApplication.commitDelete).not.toHaveBeenCalled();
+    });
   });
 
   describe('commitEditCollection', () => {
@@ -1925,9 +1947,10 @@ describe('PostController', () => {
         ).rejects.toBe(editError);
 
         // The upload itself goes to the sweep, which leaves a preexisting file in place
-        expect(sweepSpy).toHaveBeenCalledWith([
-          expect.objectContaining({ media: expect.objectContaining({ url: newCover }) }),
-        ]);
+        expect(sweepSpy).toHaveBeenCalledWith(
+          [expect.objectContaining({ media: expect.objectContaining({ url: newCover }) })],
+          collectionPostId,
+        );
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
@@ -1962,9 +1985,10 @@ describe('PostController', () => {
         ).rejects.toBe(editError);
 
         // The restored row still shows that cover: the sweep sees it preexisting and leaves it alone
-        expect(sweepSpy).toHaveBeenCalledWith([
-          expect.objectContaining({ media: expect.objectContaining({ url: oldCover }), preexisting: true }),
-        ]);
+        expect(sweepSpy).toHaveBeenCalledWith(
+          [expect.objectContaining({ media: expect.objectContaining({ url: oldCover }), preexisting: true })],
+          collectionPostId,
+        );
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
@@ -1992,9 +2016,10 @@ describe('PostController', () => {
         ).rejects.toThrow('Collection name is required');
 
         expect(commitEditSpy).not.toHaveBeenCalled();
-        expect(sweepSpy).toHaveBeenCalledWith([
-          expect.objectContaining({ media: expect.objectContaining({ url: newCover }) }),
-        ]);
+        expect(sweepSpy).toHaveBeenCalledWith(
+          [expect.objectContaining({ media: expect.objectContaining({ url: newCover }) })],
+          collectionPostId,
+        );
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
