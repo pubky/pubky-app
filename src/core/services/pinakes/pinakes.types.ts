@@ -78,6 +78,26 @@ export interface TPinakesGroupRef {
   size: number;
 }
 
+/**
+ * `Embed`: the frame that shows a link as its own site does (a service's player, a social post, a
+ * map, slides), for a sandboxed iframe. `src` is `https:` and never starts playing by itself.
+ */
+export interface TPinakesEmbed {
+  /** `youtube`, `spotify`, ... (the `PlayerProvider` ids), `x`, `mastodon`, `openstreetmap`, an oEmbed provider (`speaker-deck`) or a host. */
+  provider: string;
+  /** `audio` or `video` (a player), `post`, `map` or `rich`; or a value added after this client was written. */
+  kind: string;
+  src: string;
+  /** CSS pixels, for a frame of fixed height. */
+  height?: number | null;
+  /** Width divided by height, for a frame that scales with its width. */
+  aspect?: number | null;
+  /** Permissions Policy features for the frame's `allow` attribute. */
+  allow: string[];
+  /** `autoplay=1`, `auto_play=true`: added to `src` only for a press on Play. */
+  autoplay_param?: string | null;
+}
+
 /** `AlsoOn`: the same thing on another service, a tagged group member or a derived link. */
 export interface TPinakesAlsoOn {
   uri: string;
@@ -98,6 +118,8 @@ export interface TPinakesAlsoOn {
   via?: string | null;
   /** For a derived link, a time that belongs to it (an archived copy's capture). RFC 3339. */
   at?: string | null;
+  /** The frame that shows this link; `null` when it has none, absent from an older Pinakes. */
+  embed?: TPinakesEmbed | null;
 }
 
 /** The card fields a `Credit` names. A credit for any other field is ignored. */
@@ -186,6 +208,12 @@ export interface TPinakesCard {
   attribution?: string | null;
   group?: TPinakesGroupRef | null;
   also_on: TPinakesAlsoOn[];
+  /**
+   * The frame that shows the link as its own site does (`TPinakesEmbed`); `null` when it has none
+   * (and on a `missing` card), absent from an older Pinakes, which the players then build from the
+   * link (`resourcePlayer.utils`).
+   */
+  embed?: TPinakesEmbed | null;
   open_in: TPinakesOpenIn[];
   /** On a `related` search row only (absent elsewhere and on older instances): why it is listed. */
   because?: TPinakesBecause | null;
