@@ -185,7 +185,8 @@ This is in-flight deduplication, not another data cache: TanStack still owns set
 receives only its requested records, and assembled arrays carry the earliest proven response start time, so joining a
 pending read cannot turn older data into evidence newer than a local edit. Forced refreshes retain `queryNexus`'s
 revalidation ordering and never join an older overlapping batch. Cleared or replaced queries are not shareable across
-auth/cache lifetimes.
+auth/cache lifetimes. User relationship persistence uses the earlier of the caller's fetch time and the actual
+response start, so a later card joining a pending stream batch cannot undo a local follow or unfollow.
 
 TTL refresh races are the second class (TTL rules: `docs/data-patterns.md`, _TTL Management_):
 

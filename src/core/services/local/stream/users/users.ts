@@ -126,11 +126,20 @@ export class LocalStreamUsersService {
    * @param users - Array of users from Nexus API
    * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows.
    *   `fetchStartedAt` skips relationship rows whose user TTL was written at or after that
-   *   time so a local follow/unfollow during the request is not overwritten.
+   *   time so a local follow/unfollow during the request is not overwritten. A shared
+   *   response can predate this caller; its actual request start tightens that cutoff.
    * @returns Array of user IDs (Pubky)
    */
   static async persistUsers(users: NexusUser[], tagGuard: PersistUsersGuard = {}): Promise<Pubky[]> {
-    tagGuard = { ...tagGuard, validatedAt: tagGuard.validatedAt ?? getNexusResponseStartedAt(users) };
+    const responseStartedAt = getNexusResponseStartedAt(users);
+    tagGuard = {
+      ...tagGuard,
+      validatedAt: tagGuard.validatedAt ?? responseStartedAt,
+      fetchStartedAt:
+        responseStartedAt === undefined
+          ? tagGuard.fetchStartedAt
+          : Math.min(tagGuard.fetchStartedAt ?? responseStartedAt, responseStartedAt),
+    };
     if (tagGuard.isCurrent && !tagGuard.isCurrent()) return [];
     const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
     const userRelationships: NexusModelTuple<NexusUserRelationship>[] = [];
