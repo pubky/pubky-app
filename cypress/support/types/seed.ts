@@ -32,8 +32,6 @@ export type SeedCreatePostArgs = {
   embed?: { uri: string; kind: SeededPostKind };
   imageFixturePath?: string;
   tags?: string[];
-  // A lock announcement's lock file, `pubky://<author>/pub/app.locks/<id>.json`
-  lock?: string;
 };
 
 export type SeedEditPostArgs = { authorId: string; postId: string; content: string };

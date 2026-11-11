@@ -38,10 +38,10 @@ import type { SeedCreateCollectionArgs, SeedCreatePostArgs, SeededPostKind } fro
  */
 
 type StoredPost = { id: string; uri: string };
-type PostInput = Pick<
-  SeedCreatePostArgs,
-  'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath' | 'lock'
->;
+type PostInput = Pick<SeedCreatePostArgs, 'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath'> & {
+  // A lock announcement's lock file, `pubky://<author>/pub/app.locks/<id>.json` (`seedCreateLockPost`)
+  lock?: string;
+};
 type CollectionInput = Pick<SeedCreateCollectionArgs, 'name' | 'description' | 'items' | 'layout'>;
 
 export type SeedWriter = {
@@ -109,7 +109,7 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
               cover_image: media?.url ?? null,
               parent,
               embed: embedded,
-              lock: lock ?? null,
+              lock,
             })
           : buildPost(owner, {
               kind: kind === 'image' ? 'image' : 'note',
@@ -117,7 +117,7 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
               parent,
               embed: embedded,
               attachments: image && media ? [{ uri: media.url, name: image.name }] : [],
-              lock: lock ?? null,
+              lock,
             });
       await put(post);
       return { id: post.id, uri: buildUri(owner, 'post', post.id) };

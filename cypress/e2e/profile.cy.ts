@@ -36,7 +36,7 @@ describe('profile', () => {
     // navigate to edit profile page
     goToProfilePageFromHeader();
     showProfileHeader();
-    cy.get('[data-cy="profile-copy-pubkey-btn"]').filter(':visible').click();
+    cy.get('[data-cy="profile-copy-pubkey-btn"]').filter(':visible').should('have.length', 1).click();
     cy.saveCopiedPubkyToAlias('ownPubky');
     openEditProfile();
 
