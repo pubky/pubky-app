@@ -92,7 +92,9 @@ export async function withIndexedDbRecovery<T>(database: Dexie, operation: () =>
       recovery = { connection, reopened: reopen(database, state) };
       state.recovery = recovery;
     }
-    const reopened = await recovery.reopened;
+    // The reconnect belongs to its first caller's Dexie scope. Wrap the shared
+    // native promise in each caller's scope before replaying its observed read.
+    const reopened = await Dexie.Promise.resolve(recovery.reopened);
     if (
       state.generation !== generation ||
       state.recovery !== recovery ||

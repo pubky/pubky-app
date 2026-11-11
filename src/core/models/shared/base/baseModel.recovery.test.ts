@@ -82,6 +82,49 @@ describe('model read connection recovery', () => {
       subscription.unsubscribe();
     }
   });
+  it('keeps concurrent recovered live queries in their own observation scopes', async () => {
+    await RecoveryModel.table.put({ id: 'bob', name: 'Bob Example' });
+    const failedReads = Promise.withResolvers<void>();
+    const fail = () =>
+      Dexie.Promise.resolve(failedReads.promise).then(() => {
+        throw new DOMException('The operation was aborted.', 'AbortError');
+      });
+    const get = vi.spyOn(RecoveryModel.table, 'get').mockImplementationOnce(fail).mockImplementationOnce(fail);
+    const close = vi.spyOn(database, 'close');
+    const aliceValues: (string | undefined)[] = [];
+    const bobValues: (string | undefined)[] = [];
+    const errors: unknown[] = [];
+    const alice = liveQuery(async () => (await RecoveryModel.findById('alice'))?.name).subscribe({
+      next: (value) => aliceValues.push(value),
+      error: (error: unknown) => errors.push(error),
+    });
+    const bob = liveQuery(async () => (await RecoveryModel.findById('bob'))?.name).subscribe({
+      next: (value) => bobValues.push(value),
+      error: (error: unknown) => errors.push(error),
+    });
+
+    try {
+      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+      failedReads.resolve();
+      await vi.waitFor(() => {
+        expect(aliceValues).toEqual(['Alice Example']);
+        expect(bobValues).toEqual(['Bob Example']);
+      });
+      expect(close).toHaveBeenCalledTimes(1);
+      await RecoveryModel.table.put({ id: 'alice', name: 'Alice Updated' });
+      await RecoveryModel.table.put({ id: 'bob', name: 'Bob Updated' });
+      await vi.waitFor(() => {
+        expect(aliceValues).toEqual(['Alice Example', 'Alice Updated']);
+        expect(bobValues).toEqual(['Bob Example', 'Bob Updated']);
+      });
+      expect(errors).toEqual([]);
+    } finally {
+      failedReads.resolve();
+      alice.unsubscribe();
+      bob.unsubscribe();
+    }
+  });
+
   it('stops after one reconnect when the fresh connection fails too', async () => {
     const failure = new DOMException('No live transaction', 'UnknownError');
     const get = vi.spyOn(RecoveryModel.table, 'get').mockRejectedValue(failure);
