@@ -48,10 +48,15 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       const hasErrors = newErrors.some((error) => error);
       const allFilled = userWords.every((word) => word !== '');
       const mnemonic = userWords.join(' ');
-      await AuthController.loginWithMnemonic({
+      const restored = await AuthController.loginWithMnemonic({
         ...getShopReauthorizationIdentity(),
         mnemonic,
       });
+      // Not completed: the migration gate signed the account out and `/migration` explains it; leaving would hide that.
+      if (!restored) {
+        setIsRestoring(false);
+        return;
+      }
       if (!hasErrors && allFilled) {
         onRestore?.();
       }

@@ -36,7 +36,9 @@ extension of the ADR-0004/0024 session-store read exception rather than a use of
 **One restore status, one auth status, one route.** `SessionRestoreStatus` gains `'social-migration'`;
 `useAuthStatus` maps it to `AuthStatus.NEEDS_SOCIAL_MIGRATION` with `isLoading: false`, so `RouteGuardProvider`
 redirects to `/migration` before its public-route early returns: `/post/*`, `/profile*`, `/shop/*` and the core
-explore routes are not reachable mid-gate; only `/migration`, `/logout` and the legal pages render. The same holds
+explore routes are not reachable mid-gate; only `/migration`, `/logout` and the legal pages render. A sign-in started
+from the Shop keeps its return through that detour: the guard carries the `/sign-in` query to `/migration` and, once the
+account is ready there, sends it to the validated Shop wrapper as it would from `/sign-in`. The same holds
 before the gate decides: while an account without a trusted local record restores with no session in the store (the
 exchange, account preparation and flag read of a second tab, say), the route guard renders only those routes, so no
 page mounts before the account is sent to `/migration` or passed (a retry out of `temporary-error` keeps the pages
@@ -61,7 +63,10 @@ with no screen (the engine writes the flag; the app never hand-writes `_migrated
 (Continue) only when the run skipped or dropped something. `incomplete` and `IO_ERROR` retry on their own
 (`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry; `AuthCoordinator` retries that reason on
 foreground and network return under its cooldown. `QUOTA` blocks with `needBytes`; `PRIV_UNSUPPORTED`,
-`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it; `SESSION_EXPIRED` and
+`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it, except a rejected load of the
+migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure: it blocks at once as
+`incomplete` (no automatic retries), so Retry and the reconnect retry apply, and is reported once per account and page;
+`SESSION_EXPIRED` and
 `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
 `AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns its transport retries
 (429 backoff, three network retries, read-back before every cleanup delete); the app retries whole runs. This is the
@@ -89,8 +94,11 @@ write per `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS`). The reauth state reuses the 
 logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
 
 **Telemetry.** One `Err.server` (`SERVICE_UNAVAILABLE` for an unreachable or full homeserver, `UNKNOWN_ERROR`
-otherwise) or `Err.auth(FORBIDDEN)` per (account, code) per page, operation `socialMigration`, counts only: the report's
-`skipped`, `notes`, `droppedValues` and `current` name the user's files and never leave the browser.
+otherwise), `Err.auth(FORBIDDEN)` or `Err.network(CONNECTION_FAILED)` (a failed load of the migrator's chunk, code
+`ENGINE_LOAD`, the import rejection as the cause; the service throws that failure uncaptured so this guard decides the
+single capture) per (account, code) per page, operation `socialMigration`, counts only: the report's `skipped`,
+`notes`, `droppedValues` and `current` name the user's files and never leave the browser, and a thrown engine error is
+described by `errorName`, `kind` and `status` only (`docs/error-handling.md`).
 
 ## Consequences
 

@@ -1,6 +1,6 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
-import { cn } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, cn } from '@/libs/utils/utils';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
@@ -18,7 +18,8 @@ export function FilterProfileTags({
   const existingTags = selectedTags.map((label) => ({ label }));
 
   const handleTagAdd = (tag: string) => {
-    const normalizedTag = tag.trim().toLowerCase();
+    // The fold the feed stores (ASCII letters only), so a suggested `Äpfel` is added as the label it names.
+    const normalizedTag = canonicalizeTagLabel(tag);
     if (!normalizedTag || selectedTags.length >= maxTags) {
       return;
     }

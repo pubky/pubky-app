@@ -13,8 +13,10 @@ import { SocialMigrationController } from '@/controllers/social-migration/social
 import { useBeforeUnloadGuard } from '@/hooks/useBeforeUnloadGuard/useBeforeUnloadGuard';
 import { useHasBackupAccount } from '@/hooks/useHasBackupAccount/useHasBackupAccount';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import { shopSignInReturn } from '@/libs/shop-embed/bridge';
 import {
   clearSocialMigrationSignedOutNotice,
   readSocialMigrationSignedOutNotice,
@@ -25,13 +27,17 @@ import { cn } from '@/libs/utils/utils';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
+import { toast } from '@/molecules/Toaster/toast';
 import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { SocialMigrationProgress } from '@/organisms/SocialMigrationProgress/SocialMigrationProgress';
 import { hasAccountState } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
-import type { SocialMigrationReason } from '@/stores/socialMigration/socialMigration.types';
+import type {
+  SocialMigrationReason,
+  SocialMigrationReauthReason,
+} from '@/stores/socialMigration/socialMigration.types';
 
 // Same bottom-inset rule as the logout page: `.onboarding-nav` supplies the mobile inset.
 const NAV_CLASSNAME = 'pb-0 lg:pb-6';
@@ -45,6 +51,23 @@ const SIGNED_OUT_COPY: Record<SocialMigrationSignedOutNotice['reason'], string> 
     'Pubky.app moved to a new data format and your previous session did not include the new permissions. Sign in again to grant them; your data is upgraded right after.',
   'session-expired': 'Your session ended during the update. Sign in to continue where it stopped.',
 };
+
+/** A restore that failed with no gate behind it (the grant is gone): nothing about permissions is known here. */
+const RESTORE_SIGN_IN_COPY =
+  'Your session could not be restored. Sign in again to continue the update where it stopped.';
+
+/** While the forced sign-out runs; the same reasons as the explanation that follows it. */
+const SIGNING_OUT_COPY: Record<SocialMigrationReauthReason, string> = {
+  'pre-migration-grant':
+    'Pubky.app moved to a new data format. We are signing you out so you can sign in again and grant the new permissions. Your data is upgraded right after.',
+  'missing-scopes':
+    'Pubky.app moved to a new data format and your previous session did not include the new permissions. We are signing you out so you can sign in again and grant them. Your data is upgraded right after.',
+  'session-expired':
+    'Your session ended during the update. We are signing you out so you can sign in again and continue where it stopped.',
+};
+
+const isReauthReason = (reason: SocialMigrationReason | undefined): reason is SocialMigrationReauthReason =>
+  reason !== undefined && reason in SIGNING_OUT_COPY;
 
 const BLOCKED_COPY: Record<
   Extract<SocialMigrationReason, 'incomplete' | 'homeserver-unsupported' | 'unexpected'>,
@@ -139,6 +162,12 @@ export function SocialMigration() {
 
   const isHydrated = authHydrated && onboardingHydrated;
   const isReauth = stage === 'reauth-required';
+  // A restore that failed outside a gate (a reload after the grant was lost, or with the homeserver unreachable)
+  // leaves the gate store idle, so no run advances this screen: it explains and offers the way out itself.
+  const failedRestore =
+    stage === 'idle' && (restoreStatus === 'reauth-required' || restoreStatus === 'temporary-error');
+  // The sign-out screen names the reason; logout resets the gate store, so the notice carries it from then on.
+  const signingOutReason = isReauth && isReauthReason(reason) ? reason : (notice?.reason ?? 'pre-migration-grant');
   // Same rule as /logout: a browser key that may own an account is backed up before the account is signed out.
   const needsBackup = Boolean(
     hasBackupAccount && secretKey && currentUserPubky && Identity.tryZ32FromSecret(secretKey) === currentUserPubky,
@@ -175,37 +204,49 @@ export function SocialMigration() {
   const onSignOut = () => router.push(AUTH_ROUTES.LOGOUT);
   const onSignIn = () => {
     clearSocialMigrationSignedOutNotice();
-    router.push(AUTH_ROUTES.SIGN_IN);
+    // A Shop sign-in the gate signed out keeps its validated return; the stale `shopReauth` generation stays behind.
+    const shopReturn = shopSignInReturn(window.location.search);
+    router.push(
+      shopReturn ? `${AUTH_ROUTES.SIGN_IN}?${new URLSearchParams({ returnTo: shopReturn })}` : AUTH_ROUTES.SIGN_IN,
+    );
   };
   const onRetryLogout = () => {
     setLogoutFailed(false);
     setLogoutAttempt((attempt) => attempt + 1);
+  };
+  // The same retry the auth coordinator runs on reconnect. The status is the feedback: `restoring` shows the
+  // guard's spinner, a second failure brings this screen back, and the one rejection it can end in (a key linked to
+  // another homeserver) flips it to `reauth-required`, which the sign-in explanation above covers, with the same
+  // toast the coordinator's own retry shows for it. A focus or online event during the click joins this in-flight
+  // restore and may show that static toast a second time; cosmetic, left as is.
+  const onRetryRestore = () => {
+    void AuthController.restorePersistedSession().catch((error: unknown) => {
+      if (isWrongEnvironmentHomeserverError(error))
+        toast({
+          variant: 'error',
+          description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+        });
+    });
   };
 
   let content: React.ReactNode;
   if (!isHydrated) {
     content = <Waiting title={UPDATE_TITLE} subtitle="Checking your account." />;
   } else if (isReauth && hasAccount && !isLoggingOut && needsBackup) {
+    // No way out but the backup: the account is held, so a Homepage button would bounce back here, and a sign-out
+    // from /logout would only ask for the backup again. Done confirms it and the sign-out follows.
     content = (
-      <>
-        <Container className="gap-6">
-          <PageHeader>
-            <PageTitle size="large">Back up your key before continuing</PageTitle>
-            <PageSubtitle>
-              Pubky.app moved to a new data format, so you have to sign in again with the new permissions. Your recovery
-              key is still saved only in this browser: back it up first. If you already have a backup, choose Done to
-              confirm and sign out.
-            </PageSubtitle>
-          </PageHeader>
-          <AlertBackup />
-        </Container>
-        <Navigation
-          id="social-migration-backup-navigation"
-          backText="Sign out"
-          hiddenContinueButton
-          onHandleBackButton={onSignOut}
-        />
-      </>
+      <Container className="gap-6">
+        <PageHeader>
+          <PageTitle size="large">Back up your key before continuing</PageTitle>
+          <PageSubtitle>
+            Pubky.app moved to a new data format, so you have to sign in again with the new permissions. Your recovery
+            key is still saved only in this browser: back it up first. If you already have a backup, choose Done to
+            confirm and sign out.
+          </PageSubtitle>
+        </PageHeader>
+        <AlertBackup />
+      </Container>
     );
   } else if (isReauth && hasAccount && logoutFailed && !isLoggingOut) {
     content = (
@@ -221,22 +262,39 @@ export function SocialMigration() {
       </>
     );
   } else if ((isReauth && hasAccount) || isLoggingOut) {
-    content = (
-      <Waiting
-        title={UPDATE_TITLE}
-        subtitle="Pubky.app moved to a new data format. We are signing you out so you can sign in again and grant the new permissions. Your data is upgraded right after."
-      />
-    );
-  } else if (!hasAccount) {
+    content = <Waiting title={UPDATE_TITLE} subtitle={SIGNING_OUT_COPY[signingOutReason]} />;
+  } else if (!hasAccount || (failedRestore && restoreStatus === 'reauth-required')) {
+    // The notice explains a forced sign-out; without one, a lost grant explains itself and a guest gets the default.
+    const subtitle = notice
+      ? SIGNED_OUT_COPY[notice.reason]
+      : hasAccount
+        ? RESTORE_SIGN_IN_COPY
+        : SIGNED_OUT_COPY['pre-migration-grant'];
     content = (
       <>
-        <Screen title={UPDATE_TITLE} subtitle={SIGNED_OUT_COPY[notice?.reason ?? 'pre-migration-grant']} />
+        <Screen title={UPDATE_TITLE} subtitle={subtitle} />
         <Navigation
           id="social-migration-signed-out-navigation"
           backText="Homepage"
           continueText="Sign in"
           onHandleBackButton={onHome}
           onHandleContinueButton={onSignIn}
+        />
+      </>
+    );
+  } else if (failedRestore) {
+    content = (
+      <>
+        <Screen
+          title="We couldn't reach your homeserver"
+          subtitle="Your account stays on this device. Check your connection, then retry to continue the update."
+        />
+        <Navigation
+          id="social-migration-restore-error-navigation"
+          backText="Homepage"
+          continueText="Retry"
+          onHandleBackButton={onHome}
+          onHandleContinueButton={onRetryRestore}
         />
       </>
     );
