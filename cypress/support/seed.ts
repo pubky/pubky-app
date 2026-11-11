@@ -1,5 +1,11 @@
 import { backupDownloadFilePath } from './common';
-import type { SeedCreatePostArgs, SeededCollectionLayout, SeededPost, SeededUser } from './types/seed';
+import type {
+  HomeserverDirectory,
+  SeedCreatePostArgs,
+  SeededCollectionLayout,
+  SeededPost,
+  SeededUser,
+} from './types/seed';
 
 // Spec-side helpers for the seed tasks in cypress/plugins/seed.ts.
 //
@@ -156,3 +162,7 @@ export const markNotificationsReadViaApi = (user: SeededUser) =>
 /** Writes `user`'s settings file, in the place their data layout keeps it (toggling them is covered in settings.cy.ts). */
 export const writeSettingsViaApi = (user: SeededUser, settings: Record<string, unknown>) =>
   cy.task('seedSettings', { userId: user.id, settings });
+
+/** Every URL under `prefix` in `user`'s homeserver tree, so a spec can count what a run left there. */
+export const listHomeserverPathsViaApi = (user: SeededUser, prefix: HomeserverDirectory) =>
+  cy.task<string[]>('listHomeserverPaths', { userId: user.id, prefix });
