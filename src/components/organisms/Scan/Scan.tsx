@@ -60,7 +60,7 @@ export const ScanContent = () => {
   ) : (
     <>
       <Key className="mr-2 size-4" />
-      {'Authorize with Pubky Ring'}
+      {'Continue with Pubky Ring'}
     </>
   );
   return (
@@ -80,7 +80,7 @@ export const ScanContent = () => {
             />
           }
         >
-          <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
+          <div className="relative flex size-48 items-center justify-center rounded-md bg-white p-2">
             <QrCodeSlot
               isLoading={isLoading}
               isExpired={isExpired}

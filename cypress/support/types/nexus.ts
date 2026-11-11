@@ -19,6 +19,7 @@ export type NexusExpectation =
   | { kind: 'tags'; labels: string[] }
   | { kind: 'notifications'; type: NexusNotificationType; actorId?: string; count: number }
   | { kind: 'bookmark' }
+  | { kind: 'lock' }
   | { kind: 'streamKeys'; postIds: string[] };
 
 export type NexusCheck = {

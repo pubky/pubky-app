@@ -48,6 +48,7 @@ export function IllustratedCard({
   visual,
   visualClassName,
   contentClassName,
+  layoutClassName,
   layout = 'row',
   paddingBreakpoint = 'lg',
   visualSizing = 'fixed',
@@ -56,7 +57,7 @@ export function IllustratedCard({
 }: IllustratedCardProps) {
   return (
     <Card className={cn(illustratedCardVariants({ paddingBreakpoint }), className)} {...props}>
-      <CardContent className={cn(illustratedCardLayoutVariants({ layout }), 'p-0')}>
+      <CardContent className={cn(illustratedCardLayoutVariants({ layout }), 'p-0', layoutClassName)}>
         {visual && (
           <div
             data-slot="illustrated-card-visual"

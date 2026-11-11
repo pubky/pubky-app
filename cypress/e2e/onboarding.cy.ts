@@ -2,12 +2,15 @@ import { slowCypressDown } from 'cypress-slow-down';
 import { backupDownloadFilePath, extendedTimeout } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
-import { addProfileTags } from '../support/profile';
+import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
+import { addProfileTags, openProfileTab, showProfileHeader } from '../support/profile';
 import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 
 const waitUntilStarterPackHasUsers = (tag: string) => {
-  const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
+    // The deadline starts when the poll runs: this wait is queued behind a full onboarding,
+    // so a Date.now() at the call can be spent before the first request.
+    const deadline = Date.now() + 90_000;
     const nexusOrigin = String(nexusUrl).replace(/\/$/, '');
     const poll = () => {
       cy.request({
@@ -41,6 +44,7 @@ describe('Onboarding', () => {
   const checkOwnProfile = (profileName: string, profileBio: string) => {
     goToProfilePageFromHeader();
     cy.location('pathname').should('eq', '/profile');
+    showProfileHeader();
     cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
     cy.get('[data-cy="profile-bio-header"]')
       .filter(':visible')
@@ -117,7 +121,7 @@ describe('Onboarding', () => {
     createQuickPost(`Seed post for ${interestTag}`, [interestTag]);
     cy.findFirstPostInFeed(CheckForNewPosts.Yes);
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-tagged"]').click();
+    openProfileTab('tagged');
     addProfileTags([interestTag]);
     waitUntilStarterPackHasUsers(interestTag);
     cy.signOut(HasBackedUp.Yes);
@@ -153,14 +157,10 @@ describe('Onboarding', () => {
     cy.finishFollowBestMatchesStep();
 
     // With at least one follow the landing feed is My network
-    cy.get('[data-cy="filter-reach-radiogroup"]')
-      .find('[data-cy="network-reach-toggle"]')
-      .should('have.attr', 'data-selected', 'true');
+    expectVisibleReachSelected('network-reach-toggle');
 
     // Choosing interests creates an Interests custom feed (#2508)
-    cy.get('[data-cy="feed-navigation"]')
-      .find('[data-cy="feed-navigation-custom-tab"][aria-label="Interests"]', { timeout: 15_000 })
-      .should('be.visible');
+    expectFeedTab('Interests');
   });
 
   it('shows most active people without interests and lands on the All feed after finishing', () => {
@@ -179,14 +179,12 @@ describe('Onboarding', () => {
     cy.finishFollowBestMatchesStep();
 
     // With zero follows the landing feed stays on All
-    cy.get('[data-cy="filter-reach-radiogroup"]')
-      .find('[data-cy="all-reach-toggle"]')
-      .should('have.attr', 'data-selected', 'true');
+    expectVisibleReachSelected('all-reach-toggle');
 
     // No interest tags means no Interests feed (#2508)
     cy.get('@feedPut.all').should('have.length', 0);
-    cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-home-tab"]').should('be.visible');
-    cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-create-btn"]').should('be.visible');
+    getFeedNavigationItem('[data-cy="feed-navigation-home-tab"]').should('be.visible');
+    getFeedNavigationItem('[data-cy="feed-navigation-create-btn"]').should('be.visible');
     cy.get('[data-cy="feed-navigation"]')
       .find('[data-cy="feed-navigation-custom-tab"][aria-label="Interests"]')
       .should('not.exist');

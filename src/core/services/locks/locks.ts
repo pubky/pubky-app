@@ -2,6 +2,7 @@ import {
   BundleId,
   ConnectUrlOptions,
   CreateContentLockRequestBuilder,
+  DeleteGuardedResourceOptions,
   ExchangeFrontendSessionCodeOptions,
   type Locks,
   RegisterGuardedResourceOptions,
@@ -49,7 +50,10 @@ import {
   getPaykitServerOrigin,
   initLockClient,
   isLockServerRegionBlocked,
+  LOCKS_TRANSFER_TIMEOUT_MS,
+  READYZ_TIMEOUT_MS,
   toLocksError,
+  withLocksTimeout,
 } from './locks.utils';
 
 /** Opt-in flag telling the Lock Server `/connect` shell to deliver the code via postMessage
@@ -58,6 +62,14 @@ const DELIVERY_POSTMESSAGE = 'postmessage';
 
 /** The only `status_message` the Lock Server sends; the SDK rejects any other. */
 const READER_WALLET_SETUP_NEEDED = 'Reader wallet setup needed';
+
+/**
+ * The Lock Server's `failure_message` for Paykit's `reader_not_payable`, from its closed invoice-admission list
+ * (`docs/API.md` in pubky/locks). The SDK only requires a non-empty message, so a rewording would silently bring back
+ * the generic failure screen; `docs/locks.md` (Pay to Unlock, step 6) says when to re-check it.
+ * TODO:[Locks] locks#99 — match a typed failure reason once the Lock Server and SDK expose one.
+ */
+const READER_NOT_PAYABLE = 'reader is not payable';
 
 /**
  * IO boundary for the Lock Server via the locks-sdk. Client building, session/config reads, wasm
@@ -96,12 +108,15 @@ export class LocksService {
 
   /**
    * True when the Lock Server's `/readyz` returns 2xx. Gates the auth flow before the iframe loads,
-   * so a down (throws) / not-ready (503) server is a boolean branch, not a logged error. No SDK
+   * so a down (throws), not-ready (503) or silent server is a boolean branch, not a logged error. No SDK
    * health surface, so it fetches `<origin>/readyz` directly (`origin` from the connect URL).
    */
   static async isServerReady(origin: string): Promise<boolean> {
     try {
-      const response = await fetch(`${origin}/readyz`, { method: 'GET' });
+      const response = await fetch(`${origin}/readyz`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(READYZ_TIMEOUT_MS),
+      });
       return response.ok;
     } catch {
       return false;
@@ -133,7 +148,7 @@ export class LocksService {
       await ensureLocksSdkReady();
       // `readContentLock` rejects the `pubky://` scheme — pass the bare `<pubky>/pub/...` resource.
       const resource = lockUrl.replace(/^pubky:\/\//, '');
-      return await getLocksReads().readContentLock(resource);
+      return await withLocksTimeout(getLocksReads().readContentLock(resource), 'LocksService.readContentLock');
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.readContentLock');
     }
@@ -154,7 +169,9 @@ export class LocksService {
   static async submitProof(bundle: TSubmittedProofBundle): Promise<TSubmitProofOutcome> {
     try {
       const viewer = await this.getViewer();
-      const result = submitProofResultSchema.safeParse(await viewer.submitProofBundle(bundle));
+      const result = submitProofResultSchema.safeParse(
+        await withLocksTimeout(viewer.submitProofBundle(bundle), 'LocksService.submitProof'),
+      );
       if (!result.success) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'proof submission response is invalid', {
           service: ErrorService.Locks,
@@ -162,7 +179,7 @@ export class LocksService {
           cause: result.error,
         });
       }
-      return result.data;
+      return { status: result.data.status, readerNotPayable: result.data.failure_message === READER_NOT_PAYABLE };
     } catch (error) {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
       throw toAppError(error, ErrorService.Locks, 'LocksService.submitProof');
@@ -183,7 +200,11 @@ export class LocksService {
     try {
       const viewer = await this.getViewer();
       const response = paykitConnectionStateResponseSchema.safeParse(
-        await viewer.lookupPaykitConnectionState(new VerificationTaskHandleOptions(creator, bundleId)),
+        await withLocksTimeout(
+          viewer.lookupPaykitConnectionState(new VerificationTaskHandleOptions(creator, bundleId)),
+          'LocksService.lookupPaykitConnectionState',
+          { report },
+        ),
       );
       if (!response.success) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit connection state response is invalid', {
@@ -207,7 +228,10 @@ export class LocksService {
   static async hasPaykitReceiver(readerPubky: string): Promise<boolean> {
     try {
       await ensureLocksSdkReady();
-      return await getLocksReads().hasPaykitData(withPubkyPrefix(readerPubky));
+      return await withLocksTimeout(
+        getLocksReads().hasPaykitData(withPubkyPrefix(readerPubky)),
+        'LocksService.hasPaykitReceiver',
+      );
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.hasPaykitReceiver');
     }
@@ -227,7 +251,11 @@ export class LocksService {
     try {
       const viewer = await this.getViewer();
       const response = verificationTaskResponseSchema.safeParse(
-        await viewer.lookupVerificationTask(new VerificationTaskHandleOptions(creator, bundleId)),
+        await withLocksTimeout(
+          viewer.lookupVerificationTask(new VerificationTaskHandleOptions(creator, bundleId)),
+          'LocksService.lookupVerificationTask',
+          { report },
+        ),
       );
       if (!response.success) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'verification task response is invalid', {
@@ -240,7 +268,9 @@ export class LocksService {
       return {
         status: response.data.status,
         walletSetupNeeded: response.data.status_message === READER_WALLET_SETUP_NEEDED,
+        readerNotPayable: response.data.failure_message === READER_NOT_PAYABLE,
         admissionDeadlineAt: response.data.admission_deadline_at,
+        completedAt: response.data.completed_at,
       };
     } catch (error) {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
@@ -253,8 +283,9 @@ export class LocksService {
   static async issueAccessCredential(creator: string, bundleId: string): Promise<TAccessCredential> {
     try {
       const viewer = await this.getViewer();
-      return (await viewer.issueAccessCredential(
-        new VerificationTaskHandleOptions(creator, bundleId),
+      return (await withLocksTimeout(
+        viewer.issueAccessCredential(new VerificationTaskHandleOptions(creator, bundleId)),
+        'LocksService.issueAccessCredential',
       )) as TAccessCredential;
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.issueAccessCredential');
@@ -265,7 +296,11 @@ export class LocksService {
   static async proxyReadGuardedResource(credential: string, path: string): Promise<Uint8Array> {
     try {
       const viewer = await this.getViewer();
-      return await viewer.proxyReadGuardedResource(credential, path);
+      return await withLocksTimeout(
+        viewer.proxyReadGuardedResource(credential, path),
+        'LocksService.proxyReadGuardedResource',
+        { timeoutMs: LOCKS_TRANSFER_TIMEOUT_MS },
+      );
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.proxyReadGuardedResource');
     }
@@ -278,7 +313,10 @@ export class LocksService {
   static async generateConnectUrl({ returnTo, state }: TGenerateConnectUrlParams): Promise<string> {
     try {
       const locks = await this.getLocksClient();
-      const url = await locks.createConnectUrl(new ConnectUrlOptions(returnTo, state));
+      const url = await withLocksTimeout(
+        locks.createConnectUrl(new ConnectUrlOptions(returnTo, state)),
+        'LocksService.generateConnectUrl',
+      );
       const withDelivery = new URL(url);
       withDelivery.searchParams.set('delivery', DELIVERY_POSTMESSAGE);
       return withDelivery.toString();
@@ -299,7 +337,11 @@ export class LocksService {
   static async exchangeSessionCode({ code, state }: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
     try {
       const locks = await this.getLocksClient();
-      const session = await locks.exchangeFrontendSessionCode(new ExchangeFrontendSessionCodeOptions(code, state));
+      const session = await withLocksTimeout(
+        locks.exchangeFrontendSessionCode(new ExchangeFrontendSessionCodeOptions(code, state)),
+        'LocksService.exchangeSessionCode',
+        { undoLateWrite: (late) => late.signout() },
+      );
       // secret is freshly minted here — export it so the caller can persist it.
       return { session, secret: session.exportSecret() };
     } catch (error) {
@@ -346,7 +388,10 @@ export class LocksService {
     const session = getLockSession();
     try {
       await ensureLocksSdkReady();
-      await session.creator.setLockServicePointer(new SetLockServicePointerOptions(getLockServerPubky()));
+      await withLocksTimeout(
+        session.creator.setLockServicePointer(new SetLockServicePointerOptions(getLockServerPubky())),
+        'LocksService.setLockServiceConfig',
+      );
     } catch (error) {
       throw toLocksError(error, 'LocksService.setLockServiceConfig');
     }
@@ -359,7 +404,9 @@ export class LocksService {
   static async lookupPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
     const session = getLockSession();
     try {
-      const response = paykitSetupStatusResponseSchema.safeParse(await session.creator.paykitSetupStatus(asset));
+      const response = paykitSetupStatusResponseSchema.safeParse(
+        await withLocksTimeout(session.creator.paykitSetupStatus(asset), 'LocksService.lookupPaykitSetupStatus'),
+      );
       if (!response.success) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit setup status response is invalid', {
           service: ErrorService.Locks,
@@ -388,8 +435,13 @@ export class LocksService {
     const session = getLockSession();
     try {
       await ensureLocksSdkReady();
-      const response = (await session.creator.registerGuardedResource(
-        new RegisterGuardedResourceOptions(path, contentType, bytes),
+      const response = (await withLocksTimeout(
+        session.creator.registerGuardedResource(new RegisterGuardedResourceOptions(path, contentType, bytes)),
+        'LocksService.registerGuardedResource',
+        {
+          timeoutMs: LOCKS_TRANSFER_TIMEOUT_MS,
+          undoLateWrite: () => session.creator.deleteGuardedResource(new DeleteGuardedResourceOptions(path)),
+        },
       )) as { creator: string; guarded_resource: TGuardedResource };
       return { resource: response.guarded_resource, creator: response.creator };
     } catch (error) {
@@ -398,19 +450,26 @@ export class LocksService {
   }
 
   /**
+   * Takes the same `path` that `registerGuardedResource` was given, not the descriptor's full path.
+   * The Lock Server deletes it even when a content lock still references it.
+   */
+  static async deleteGuardedResource(path: string): Promise<void> {
+    const session = getLockSession();
+    try {
+      await ensureLocksSdkReady();
+      await withLocksTimeout(
+        session.creator.deleteGuardedResource(new DeleteGuardedResourceOptions(path)),
+        'LocksService.deleteGuardedResource',
+      );
+    } catch (error) {
+      throw toLocksError(error, 'LocksService.deleteGuardedResource');
+    }
+  }
+
+  /**
    * Bundles already-uploaded resources into one content lock and returns the lock descriptor
    * (`lock_id`, `content_lock_path`). Validated all-or-nothing: every referenced
    * resource must exist with a matching hash, and size/count limits are enforced here (not at upload).
-   *
-   * TODO:[Locks] #2039 — orphan cleanup. A failure here leaves the resources uploaded by the
-   * preceding `registerGuardedResource` calls on the server, unreferenced.
-   * Scenario: 3 of 4 files upload, then this rejects (size/count limit, hash mismatch, malformed
-   * body) and the 3 blobs linger under `/priv/app.locks/content/`. Harmless — each path is minted
-   * fresh, so no existing lock breaks — but it wastes the creator's private storage. Closing the tab
-   * between the two calls has the same effect and no `catch` can cover it.
-   * When #2039 lands: best-effort `deleteGuardedResource` per path on a deterministic 4xx or a user
-   * cancel. Transient failures (network / 5xx / 401) must retry this call instead of deleting: the
-   * uploaded resources are still valid and their hashes unchanged.
    */
   static async createContentLock({
     primaryResource,
@@ -438,7 +497,12 @@ export class LocksService {
 
       // TODO:[Locks] the SDK hands creator responses to JS unparsed (locks#22). Viewer
       // responses are parsed on the Rust side, so only the creator ones need a guard until that lands.
-      const response = (await session.creator.createContentLock(body)) as {
+      const response = (await withLocksTimeout(
+        session.creator.createContentLock(body),
+        'LocksService.createContentLock',
+        // A lock that lands after the publish failed has no teaser, and nothing in the UI can delete it.
+        { undoLateWrite: (late: { lock_id: string }) => session.creator.deleteContentLock(late.lock_id) },
+      )) as {
         lock_id: string;
         content_lock_path: string;
         content_lock: { creator: string };
@@ -461,7 +525,7 @@ export class LocksService {
     const session = getLockSession();
     try {
       await ensureLocksSdkReady();
-      await session.creator.deleteContentLock(lockId);
+      await withLocksTimeout(session.creator.deleteContentLock(lockId), 'LocksService.deleteContentLock');
     } catch (error) {
       throw toLocksError(error, 'LocksService.deleteContentLock');
     }

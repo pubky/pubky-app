@@ -125,6 +125,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         isEditInlineMediaLoading: false,
         serializeArticleForLock: vi.fn(),
         getLatestArticle: () => ({ title: articleTitle, body: content }),
+        discardPendingArticle: () => {},
         isArticle,
         setIsArticle,
         handleArticleClick: vi.fn(),
@@ -430,12 +431,16 @@ describe('PostInput lock flow (integration)', () => {
         },
       ],
     ])('when the %s', async (_name, cancel) => {
+      const image = new File(['i'], 'pic.png', { type: 'image/png' });
       await renderComposer();
       act(() => mocks.composer.setContent('secret body'));
+      act(() => mocks.composer.setAttachments([image]));
 
       await cancel();
 
       expect(mocks.composer.content).toBe('secret body'); // draft restored
+      expect(mocks.composer.attachments).toEqual([image]);
+      expect(lockSwitch()).toHaveAttribute('aria-checked', 'false');
       fireEvent.click(postButton());
       await act(async () => {});
 

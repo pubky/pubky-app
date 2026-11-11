@@ -10,7 +10,7 @@ import type {
   TLocksPollReport,
   TPaykitConnectionState,
   TUnlockedContent,
-  TVerificationStatus,
+  TVerificationTask,
 } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { TPayToUnlockStage, UsePayToUnlockParams, UsePayToUnlockResult } from './usePayToUnlock.types';
@@ -118,8 +118,11 @@ export function usePayToUnlock({
   /**
    * Credential and guarded read together — a read failure has to reach the same retry and the same
    * parked state as a credential failure, or the reader is left on a spinner with nothing to press.
+   *
+   * `fresh` comes from Check again only: the download it retries may be the one that hung, so it must
+   * not join it. The first finish joins a running recovery download of the same purchase.
    */
-  const finish = async (gen: number, bundleId: string) => {
+  const finish = async (gen: number, bundleId: string, fresh: boolean) => {
     if (!lockFile) return;
     const call = ++finishCall.current;
     const isLatest = () => generation.current === gen && finishCall.current === call;
@@ -134,7 +137,7 @@ export function usePayToUnlock({
 
     let content: TUnlockedContent;
     try {
-      content = await LocksController.fetchPaidContent({ lockFile, bundleId });
+      content = await LocksController.fetchPaidContent({ lockFile, bundleId }, { fresh });
     } catch {
       // Already reported by the Err factory. The payment stands — only the download failed — so
       // this gets its own stage rather than the waiting copy that asks the reader to go pay.
@@ -163,11 +166,16 @@ export function usePayToUnlock({
     return true;
   };
 
-  const applyStatus = (gen: number, bundleId: string, status: TVerificationStatus): boolean => {
+  const applyStatus = (
+    gen: number,
+    bundleId: string,
+    { status, readerNotPayable }: Pick<TVerificationTask, 'status' | 'readerNotPayable'>,
+    freshDownload = false,
+  ): boolean => {
     if (status === 'completed') {
       setConnectionState(null);
       setIsConnectionPending(false);
-      void finish(gen, bundleId);
+      void finish(gen, bundleId, freshDownload);
       return false;
     }
     if (status === 'failed' || status === 'expired') {
@@ -176,6 +184,11 @@ export function usePayToUnlock({
       checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
       setIsConnectionPending(false);
+      // No toast: the generic ones say to try again, which cannot help until the wallet changes.
+      if (readerNotPayable) {
+        setStage('reader-not-payable');
+        return false;
+      }
       toast({
         variant: 'error',
         description:
@@ -201,7 +214,8 @@ export function usePayToUnlock({
     {
       lookupNow = false,
       admissionDeadlineAt = null,
-    }: { lookupNow?: boolean; admissionDeadlineAt?: string | null } = {},
+      freshDownload = false,
+    }: { lookupNow?: boolean; admissionDeadlineAt?: string | null; freshDownload?: boolean } = {},
   ) => {
     if (!lockFile) return;
     waitingBundleId.current = bundleId;
@@ -300,7 +314,7 @@ export function usePayToUnlock({
         stallNotBefore = notBefore;
         armStallTimer();
       }
-      if (applyStatus(gen, bundleId, task.status)) return true;
+      if (applyStatus(gen, bundleId, task, freshDownload)) return true;
       stop();
       return false;
     });
@@ -430,13 +444,13 @@ export function usePayToUnlock({
         if (generation.current === gen) setStage('region-blocked');
         return;
       }
-      const { bundleId, status } = started;
+      const { bundleId } = started;
       const lockId = LockContentParser.lockIdFromUrl(lockUrl);
       if (lockId) onPurchased(lockId);
       if (generation.current !== gen) return;
       // The submission only reports lifecycle now, so the connection state is unknown until the
       // loop reads it — the QR appears one round trip later.
-      if (applyStatus(gen, bundleId, status)) startPolling(gen, bundleId, true);
+      if (applyStatus(gen, bundleId, started)) startPolling(gen, bundleId, true);
     } catch (error) {
       // Already reported by the Err factory. Try again replays the saved id; a failure that started
       // on the install screen goes back there, the only screen whose button always checks the wallet.
@@ -483,19 +497,19 @@ export function usePayToUnlock({
         // An ended payment is settled by the lookup alone: submitting it again would only echo the
         // same status back.
         if (resolved?.kind === 'terminal') {
-          applyStatus(gen, resolved.bundleId, resolved.status);
+          applyStatus(gen, resolved.bundleId, resolved);
           return;
         }
         if (resolved?.task) {
           const { bundleId, task } = resolved;
           if (task.status === 'completed') {
-            applyStatus(gen, bundleId, task.status);
+            applyStatus(gen, bundleId, task);
             return;
           }
           // A task that is already running needs no second submission: the connection state has its
           // own lookup now, and re-submitting would only re-confirm what the lookup just said.
           setWalletSetupNeeded(task.walletSetupNeeded);
-          if (applyStatus(gen, bundleId, task.status)) {
+          if (applyStatus(gen, bundleId, task)) {
             startPolling(gen, bundleId, true, { admissionDeadlineAt: task.admissionDeadlineAt });
           }
           return;
@@ -559,7 +573,12 @@ export function usePayToUnlock({
     setStage(paymentStillRunning ? 'waiting' : 'finishing');
     // Unknown state included: only a settled link (or an operator block) ends the watch.
     const watchConnection = paymentStillRunning && connectionState !== 'connected' && connectionState !== 'blocked';
-    startPolling(generation.current, bundleId, watchConnection, { lookupNow: true });
+    // A retry of the content read starts a new download rather than joining the one that parked. A wait
+    // re-check has no download of its own out, so a payment that completes there joins as usual.
+    startPolling(generation.current, bundleId, watchConnection, {
+      lookupNow: true,
+      freshDownload: !paymentStillRunning,
+    });
   };
 
   // Link state does not acknowledge a QR scan. Keep the contact handoff available through

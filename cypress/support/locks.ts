@@ -10,6 +10,7 @@
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
+import { isMobile } from './mobile';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
@@ -42,6 +43,8 @@ export type TLockServerState = {
   guarded: Record<string, string>;
   /** The price of each content lock the creator published, by lock id. */
   locks: Record<string, TLockPrice>;
+  /** Lock ids the creator deleted, in order. */
+  deletedLocks: string[];
   /** Bundle ids the reader submitted: the lock each pays for, and the task lookups it has had. */
   tasks: Record<string, { lockId: string; lookups: number }>;
 };
@@ -50,6 +53,7 @@ export const createLockServerState = (): TLockServerState => ({
   creatorPubky: '',
   guarded: {},
   locks: {},
+  deletedLocks: [],
   tasks: {},
 });
 
@@ -184,6 +188,11 @@ export const stubLockServer = (state: TLockServerState) => {
       },
     });
   }).as('createContentLock');
+  cy.intercept(route('POST', '/e2e/creator/content-locks/delete'), (req) => {
+    const { lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
+    state.deletedLocks.push(lock_id);
+    answer(req, 'delete content lock', `lock ${lock_id} (${describePrice(state.locks[lock_id])})`, {});
+  }).as('deleteContentLock');
 
   // The reader's Bitkit wallet: it has published Paykit data, it is linked to the creator, and the
   // payment request is paid on the second task lookup (the first one still reads `pending`).
@@ -247,6 +256,45 @@ export const stubLockServer = (state: TLockServerState) => {
   }).as('proxyReadGuardedResource');
 };
 
+/** The Lock Server's error body (`locks-server/src/api/errors.rs`). */
+export const lockServerError = (code: string) => ({ error: { code, message: code.replaceAll('_', ' ') } });
+
+/**
+ * Answers the next matching stand-in call with `statusCode` and `body` instead of `stubLockServer`'s
+ * route, once: Cypress tries the latest intercept first, and `times: 1` hands every later call back.
+ * A non-2xx answer reaches the app as the Locks SDK's own error (`locks.e2eStub.ts`).
+ */
+export const answerLockServerOnce = (
+  method: 'GET' | 'POST',
+  pathname: string,
+  { statusCode, body, summary }: { statusCode: number; body: unknown; summary: string },
+) =>
+  cy.intercept({ ...route(method, pathname), times: 1 }, (req) => {
+    answer(req, 'one-off answer', `${method} ${pathname}: ${summary}`, body, statusCode);
+  });
+
+/**
+ * Records every later call to one stand-in route and leaves the answer to the routes registered
+ * before it. A one-off answer registered after this one replies first, so its call is not recorded.
+ */
+export const recordLockServerCalls = (method: 'GET' | 'POST', pathname: string): string[] => {
+  const calls: string[] = [];
+  cy.intercept(route(method, pathname), (req) => {
+    calls.push(redactLocksStubUrl(req.url));
+  });
+  return calls;
+};
+
+/** Adds a paid lock the creator published without the composer to the stand-in Lock Server. */
+export const holdSeededLock = (
+  state: TLockServerState,
+  lock: { lockId: string; guardedPath: string; guardedBytes: string },
+  price: TLockPrice,
+) => {
+  state.guarded[lock.guardedPath] = lock.guardedBytes;
+  state.locks[lock.lockId] = price;
+};
+
 /** The app's Dexie database (`NEXT_PUBLIC_DB_NAME`, unset in the e2e stack) and its unlocked-lock table. */
 const APP_DB_NAME = 'franky';
 const LOCKS_TABLE = 'locks';
@@ -289,8 +337,11 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
     },
   );
   const replicaReads: string[] = [];
+  // Record the status only once the homeserver has answered. `req.continue(callback)`
+  // tells Cypress the test is waiting on that response, so it fails the test when a
+  // later navigation (sign-out, reload, `cy.visit`) aborts the request first.
   cy.intercept({ method: 'GET', url: /\/priv\/social\/unlocked\// }, (req) => {
-    req.continue((res) => {
+    req.on('response', (res) => {
       replicaReads.push(`${new URL(req.url).pathname} → ${res.statusCode}`);
     });
   }).as('replicaRead');
@@ -345,7 +396,18 @@ const waitForArticleEditorFocus = () => {
   cy.focused().closest('.mdxeditor-root-contenteditable').should('exist');
 };
 
+// Phones split the article composer into tabs: the title and the body each sit on their own tab.
+const showArticleComposerTab = (tab: 'title' | 'content') => {
+  if (isMobile()) homeComposer().find(`[data-cy="article-composer-tab-${tab}"]`).filter(':visible').click();
+};
+
+const articleTitleInput = () => {
+  showArticleComposerTab('title');
+  return homeComposer().find('[data-cy="article-title-input"]').filter(':visible');
+};
+
 const typeArticleBody = (body: string) => {
+  showArticleComposerTab('content');
   // The rich-text toolbar is sticky, so Cypress counts its buttons as hidden while the page header
   // covers them; earlier steps scroll the composer under the header.
   homeComposer().scrollIntoView({ offset: { top: -200, left: 0 } });
@@ -370,18 +432,14 @@ export const writeLockedArticle = (title: string, body: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click();
   homeComposer().find('[data-cy="post-input-action-bar-add-article"]').filter(':visible').click();
   waitForArticleEditorFocus();
-  homeComposer()
-    .find('[data-cy="article-title-input"]')
-    .filter(':visible')
-    .type(title, { delay: 0 })
-    .should('have.value', title);
+  articleTitleInput().type(title, { delay: 0 }).should('have.value', title);
   typeArticleBody(body);
 };
 
 /** Replaces the body of an article draft the lock switch put back into the composer. */
 export const editLockedArticleBody = (title: string, body: string) => {
   waitForArticleEditorFocus();
-  homeComposer().find('[data-cy="article-title-input"]').filter(':visible').should('have.value', title);
+  articleTitleInput().should('have.value', title);
   typeArticleBody(body);
 };
 
@@ -397,6 +455,32 @@ export const turnLockOnAndSetUpLocks = () => {
   cy.wait('@locksExchange');
   cy.wait('@paykitSetupStatus');
   cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
+};
+
+/** Walks an open setup dialog through a working Lock Server: intro, approval, Paykit `ready`, done. */
+export const completeLocksSetup = () => {
+  cy.get('[data-cy="locks-auth-intro-continue"]').filter(':visible').should('not.be.disabled').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').should('not.exist');
+};
+
+/** The Lock Server refuses the next lock deletion, as a Lock Server outage would. */
+export const failNextLockDeletion = () => {
+  cy.intercept({ ...route('POST', '/e2e/creator/content-locks/delete'), times: 1 }, (req) => {
+    answer(req, 'delete content lock', 'Lock Server unavailable', { error: 'unavailable' }, 503);
+  }).as('deleteContentLockFailed');
+};
+
+/**
+ * Signing out drops the Locks session, and only the composer's lock switch signs back in: walk the
+ * setup on a throwaway draft, then cancel the price dialog, which turns it back into a normal post.
+ */
+export const signInToLockServer = () => {
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click().type('Lock Server sign-in');
+  turnLockOnAndSetUpLocks();
+  cy.get('[data-cy="lock-content-cancel"]').filter(':visible').click();
+  lockSwitch().should('have.attr', 'aria-checked', 'false');
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').clear();
 };
 
 /** Flips the lock switch on once Locks is set up in this tab: the price dialog opens straight away. */
@@ -426,6 +510,24 @@ export const fillLockAnnouncement = (title: string, teaser: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').type(teaser);
 };
 
+/** Presses Post on the configured lock, for a publish that is expected to fail. */
+export const pressPost = () => {
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
+};
+
+/** A failed publish keeps the lock, its title and its teaser, and lets the creator press Post again. */
+export const expectLockKept = (title: string, teaser: string) => {
+  lockSwitch().should('have.attr', 'aria-checked', 'true');
+  homeComposer().find('[data-cy="lock-title-input"]').filter(':visible').should('have.value', title);
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', teaser);
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled');
+};
+
+/** The toast with exactly this copy. */
+export const expectToast = (description: string) => {
+  cy.contains('[data-cy="toast"]', description).should('be.visible');
+};
+
 /**
  * Publishes the configured lock from the home composer and yields the announcement's post id, read
  * from its homeserver PUT.
@@ -442,20 +544,33 @@ export const publishLock = (): Cypress.Chainable<string> => {
   });
 };
 
+const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
+
+const nexusDetailsHaveLock = (body: unknown): boolean =>
+  typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
+
 /**
- * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ * Polls GET /v0/post/<author>/<id>/details until `settled` is true.
+ *
+ * The 90s deadline is taken when this command runs. locks.cy.ts calls both waiters from one
+ * post-id callback that also queues the later steps, so a Date.now() at the call has already
+ * passed by the time the delete poll starts.
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+const pollNexusPostDetails = (
+  authorPubky: string,
+  postId: string,
+  settled: (status: number, body: unknown) => boolean,
+  timedOut: (authorId: string, status: number) => string,
+) => {
   const authorId = userIdFromPubky(authorPubky);
-  const deadline = Date.now() + 90_000;
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
     const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
+    const deadline = Date.now() + NEXUS_POST_POLL_TIMEOUT_MS;
     const poll = () => {
       cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
-        if (response.status === 200 && response.body?.lock) return;
+        if (settled(response.status, response.body)) return;
         if (Date.now() >= deadline) {
-          throw new Error(`Nexus did not index lock post ${authorId}/${postId} (last status ${response.status})`);
+          throw new Error(timedOut(authorId, response.status));
         }
         cy.wait(1000);
         poll();
@@ -463,6 +578,29 @@ export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
     };
     poll();
   });
+};
+
+/**
+ * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
+ * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ */
+export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+  pollNexusPostDetails(
+    authorPubky,
+    postId,
+    (status, body) => status === 200 && nexusDetailsHaveLock(body),
+    (authorId, status) => `Nexus did not index lock post ${authorId}/${postId} (last status ${status})`,
+  );
+};
+
+/** Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there. */
+export const waitForNexusPostDeleted = (authorPubky: string, postId: string) => {
+  pollNexusPostDetails(
+    authorPubky,
+    postId,
+    (status) => status === 404,
+    (authorId, status) => `Nexus still serves deleted post ${authorId}/${postId} (last status ${status})`,
+  );
 };
 
 export const singlePostCard = () => cy.get('[data-cy="single-post-card"]').filter(':visible');

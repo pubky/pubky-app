@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { HumanBitcoinCard } from './HumanBitcoinCard';
 
@@ -42,12 +42,32 @@ describe('BitcoinPaymentCard', () => {
   it('renders bitcoin payment details and action', () => {
     render(<HumanBitcoinCard />);
 
-    expect(screen.getByText(/Bitcoin Payment/i)).toBeInTheDocument();
-    // Price appears in the mobile badge, desktop headline, and conversion line
-    expect(screen.getAllByText(/₿ 1[,.]000/)).toHaveLength(3);
-    expect(screen.getByText(/₿ 1[,.]000 = \$ 0\.50/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Pay Once/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Pay Once/i })).not.toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'Small payment' })).toBeInTheDocument();
+    expect(screen.getByText('Pay ₿1,000 for secure verification')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Bitcoin payment ($0.50)' });
+    expect(button).toHaveAttribute('data-variant', 'secondary');
+    expect(button).toHaveAttribute('data-size', 'lg');
+    expect(button).toBeEnabled();
+  });
+
+  it('uses the current price and opens payment when selected', () => {
+    mockUseLnVerificationInfo.mockReturnValue({ available: true, amountSat: 2500 });
+    const onClick = vi.fn();
+    render(<HumanBitcoinCard onClick={onClick} />);
+
+    expect(screen.getByText('Pay ₿2,500 for secure verification')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Bitcoin payment ($1.25)' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start payment when geoblocked', () => {
+    mockUseLnVerificationInfo.mockReturnValue({ available: false });
+    const onClick = vi.fn();
+    render(<HumanBitcoinCard onClick={onClick} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bitcoin payment' }));
+    expect(onClick).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Pay ₿/)).not.toBeInTheDocument();
   });
 
   it('renders full skeleton card when availability is loading', () => {
@@ -67,8 +87,41 @@ describe('BitcoinPaymentCard', () => {
     const skeletonContainer = container.querySelector('.animate-pulse');
     expect(skeletonContainer).toBeInTheDocument();
 
-    // Button should be disabled when data is not available
-    expect(screen.getByRole('button', { name: /Pay Once/i })).toBeDisabled();
+    // The exchange rate is display-only; the satoshi price is sufficient to pay.
+    expect(screen.getByRole('button', { name: /^Bitcoin payment/i })).toBeEnabled();
+  });
+
+  it('allows payment without a dollar estimate when the exchange rate fails', () => {
+    mockUseBtcRate.mockReturnValue({ rate: null, status: 'failed' });
+    const onClick = vi.fn();
+    const { container } = render(<HumanBitcoinCard onClick={onClick} />);
+    const button = screen.getByRole('button', { name: 'Bitcoin payment' });
+    expect(button).toBeEnabled();
+    expect(container.querySelector('[data-slot="skeleton"]')).not.toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps payment disabled when no satoshi price is available', () => {
+    mockUseLnVerificationInfo.mockReturnValue({ available: true });
+    const onClick = vi.fn();
+    render(<HumanBitcoinCard onClick={onClick} />);
+    const button = screen.getByRole('button', { name: 'Bitcoin payment' });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [false, 'Not available in your country'],
+    [true, 'Service temporarily unavailable'],
+  ] as const)('explains the mobile unavailable state with error=%s', (error, title) => {
+    mockUseLnVerificationInfo.mockReturnValue({ available: false, error });
+    render(<HumanBitcoinCard />);
+    fireEvent.click(screen.getByRole('button', { name: 'Why Bitcoin payment is unavailable' }));
+    const explanation = within(screen.getByRole('dialog', { name: title }));
+    expect(explanation.getByText(title)).toBeInTheDocument();
+    expect(explanation.getByText('Try a different verification method')).toBeInTheDocument();
   });
 
   it('renders geo-blocking overlay when not available', () => {
@@ -77,15 +130,15 @@ describe('BitcoinPaymentCard', () => {
 
     // Check for geo-blocking alert
     expect(screen.getByTestId('geo-block-alert')).toBeInTheDocument();
-    expect(screen.getByText(/Currently not available in your country/i)).toBeInTheDocument();
+    expect(screen.getByText(/Not available in your country/i)).toBeInTheDocument();
 
     // Card should have blur class
     const card = screen.getByTestId('bitcoin-payment-card');
-    expect(card).toHaveClass('blur-[5px]');
-    expect(card).toHaveClass('opacity-60');
+    expect(card).toHaveClass('lg:blur-xs');
+    expect(card).toHaveClass('lg:opacity-50');
 
     // Button should be disabled
-    expect(screen.getByRole('button', { name: /Pay Once/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Bitcoin payment/i })).toBeDisabled();
   });
   it('renders generic error overlay when service fails (not geo-blocked)', () => {
     // Issue #919: Generic errors should NOT show "Country not available" message
@@ -98,13 +151,13 @@ describe('BitcoinPaymentCard', () => {
 
     // Should NOT show geo-blocking message
     expect(screen.queryByTestId('geo-block-alert')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Currently not available in your country/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not available in your country/i)).not.toBeInTheDocument();
 
     // Card should still have blur class (service unavailable)
     const card = screen.getByTestId('bitcoin-payment-card');
-    expect(card).toHaveClass('blur-[5px]');
+    expect(card).toHaveClass('lg:blur-xs');
 
     // Button should be disabled
-    expect(screen.getByRole('button', { name: /Pay Once/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Bitcoin payment/i })).toBeDisabled();
   });
 });

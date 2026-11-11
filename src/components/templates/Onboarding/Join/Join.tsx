@@ -46,7 +46,7 @@ export function Join() {
       type="button"
       variant={ButtonVariant.SECONDARY}
       size="lg"
-      className="w-full"
+      className="h-15 w-full border-0 leading-5"
       onClick={() => router.push(ONBOARDING_ROUTES.HUMAN)}
       disabled={isPending}
       data-testid="join-manage-own-keys"
@@ -57,13 +57,13 @@ export function Join() {
   );
 
   return (
-    <OnboardingLayout testId="join-content">
-      <PageHeader>
+    <OnboardingLayout testId="join-content" className="pt-0 md:pt-4">
+      <PageHeader className="pt-0 md:pt-2">
         <PageTitle size="large">
-          {"Let's join "}
-          <span className="text-brand">{'Pubky.'}</span>
+          {'Let’s join '}
+          <span className="block text-brand md:inline">{'Pubky.'}</span>
         </PageTitle>
-        <PageSubtitle>{'How would you like to create your pubky?'}</PageSubtitle>
+        <PageSubtitle className="hidden md:block">{'How would you like to create your pubky?'}</PageSubtitle>
       </PageHeader>
 
       {/* Desktop: two method cards side by side */}
@@ -95,10 +95,10 @@ export function Join() {
         {isPassportEnabled && <PassportMethodCard onContinue={startPassportAuth} isPending={isPending} />}
       </Container>
 
-      {/* Mobile: stacked labelled sections */}
+      {/* Mobile: compact method cards */}
       <Container className="gap-6 md:hidden" data-testid="join-methods-mobile">
-        <Container className="gap-3">
-          <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
+        <Container className="gap-4 rounded-md bg-card p-6" data-testid="join-sovereign-card-mobile">
+          <Typography as="h3" className="text-xl leading-7 font-bold">
             {SOVEREIGN_METHOD_TITLE}
           </Typography>
           {manageOwnKeysButton}
@@ -106,7 +106,7 @@ export function Join() {
         {isPassportEnabled && <PassportMethodSection onContinue={startPassportAuth} isPending={isPending} />}
       </Container>
 
-      <HumanFooter />
+      <HumanFooter variant="inline" showBranding />
     </OnboardingLayout>
   );
 }

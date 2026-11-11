@@ -99,8 +99,9 @@ export function DialogPayToUnlock({
     (stage === 'finishing' && !isStalled) ||
     (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
   const showHandshakeSpinner = showQr && connectionState === 'handshake' && !isStalled && !hasNotice;
-  const showPrimary = stage === 'retry' || stage === 'expired' || isInstall;
-  const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
+  const isNotPayable = stage === 'reader-not-payable';
+  const showPrimary = stage === 'retry' || stage === 'expired' || isNotPayable || isInstall;
+  const primaryLabel = isInstall ? 'I completed the steps' : isNotPayable ? 'Check again' : 'Try again';
   // Downloading or retrying paid content must not look like another payment is required.
   const isPaid = stage === 'finishing' || stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
@@ -250,6 +251,14 @@ export function DialogPayToUnlock({
               </Typography>
             )}
 
+            {isNotPayable && (
+              <Typography className="text-base text-secondary-foreground">
+                {
+                  "Your wallet can't receive payment requests on this profile. Connect Bitkit to this profile, then check again."
+                }
+              </Typography>
+            )}
+
             {showPrimary && (
               <AppDownload
                 logo={BITKIT_LOGO}
@@ -295,7 +304,7 @@ export function DialogPayToUnlock({
               onClick={() => copyToClipboard(handshakeValue)}
               aria-label="Copy creator pubky"
               data-cy="pay-to-unlock-handshake-qr"
-              className="group hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 lg:block"
+              className="group hidden shrink-0 cursor-pointer self-center rounded-md bg-white p-2 lg:block"
             >
               <QRCodeSVG value={handshakeValue} size={112} className={QR_HOVER_OPACITY} />
             </Button>

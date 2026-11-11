@@ -367,7 +367,7 @@ describe('captureAppError filtering', () => {
 
 /**
  * Drop rules are asserted against errors produced by the real pipeline (`safeFetch`,
- * homeserver `handleError` via `HomeserverService.subscribeUserEventStreamForPath` in
+ * homeserver `handleError` via `HomeserverService.subscribeUserEventStream` in
  * homeserver.test.ts), not hand-built `new AppError(...)` shapes: a rule that matches a
  * shape the pipeline never emits is dead code that looks green.
  */
@@ -1281,5 +1281,119 @@ describe('Sentry span PII scrubbing', () => {
   it('returns the same span object reference', () => {
     const span = asOpaque<SpanJSON>({ trace_id: 't', span_id: 's', start_timestamp: 1, data: {} });
     expect(runBeforeSendSpan(span)).toBe(span);
+  });
+});
+
+describe('Sentry beforeBreadcrumb drops UI breadcrumbs from sentry-block subtrees', () => {
+  function renderBlockedButton(): { blocked: HTMLButtonElement; open: HTMLButtonElement; cleanup: () => void } {
+    const root = document.createElement('div');
+    root.innerHTML =
+      '<div class="sentry-block"><span><button id="backup-recovery-phrase-choice-1">w</button></span></div>' +
+      '<button id="profile-logout-btn">out</button>';
+    document.body.appendChild(root);
+    return {
+      blocked: root.querySelector('#backup-recovery-phrase-choice-1') as HTMLButtonElement,
+      open: root.querySelector('#profile-logout-btn') as HTMLButtonElement,
+      cleanup: () => root.remove(),
+    };
+  }
+
+  function runBeforeBreadcrumb(breadcrumb: Sentry.Breadcrumb, hint?: Sentry.BreadcrumbHint) {
+    const beforeBreadcrumb = getSentryInitBase().beforeBreadcrumb;
+    expect(beforeBreadcrumb).toBeTypeOf('function');
+    return beforeBreadcrumb!(breadcrumb, hint);
+  }
+
+  it('drops a ui.click whose event target is inside a sentry-block subtree', () => {
+    const { blocked, cleanup } = renderBlockedButton();
+    try {
+      const event = new MouseEvent('click', { bubbles: true });
+      blocked.dispatchEvent(event);
+      expect(
+        runBeforeBreadcrumb({ category: 'ui.click', message: 'button#backup-recovery-phrase-choice-1' }, { event }),
+      ).toBeNull();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('drops a ui.input whose hint carries the blocked element itself', () => {
+    const { blocked, cleanup } = renderBlockedButton();
+    try {
+      expect(runBeforeBreadcrumb({ category: 'ui.input', message: 'x' }, { event: blocked })).toBeNull();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps a ui.click outside any sentry-block subtree', () => {
+    const { open, cleanup } = renderBlockedButton();
+    try {
+      const event = new MouseEvent('click', { bubbles: true });
+      open.dispatchEvent(event);
+      const crumb = { category: 'ui.click', message: 'button#profile-logout-btn' };
+      expect(runBeforeBreadcrumb(crumb, { event })).toBe(crumb);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps non-UI breadcrumbs, even when the hint points into a blocked subtree', () => {
+    const { blocked, cleanup } = renderBlockedButton();
+    try {
+      const crumb = { category: 'navigation', data: { from: '/a', to: '/b' } };
+      expect(runBeforeBreadcrumb(crumb, { event: blocked })).toBe(crumb);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps a ui breadcrumb with no hint', () => {
+    const crumb = { category: 'ui.click', message: 'button#x' };
+    expect(runBeforeBreadcrumb(crumb)).toBe(crumb);
+  });
+
+  /**
+   * The cases above hand-build the hint. This one lets the SDK build it: a real `BrowserClient` with the
+   * breadcrumbs integration's DOM instrumentation, real clicks on attached elements, and the app's
+   * `beforeBreadcrumb`. If an SDK bump changes the hint shape, the filter fails open and this case goes red.
+   */
+  it('drops real SDK click breadcrumbs from a blocked subtree and keeps the rest', () => {
+    const recorded: Sentry.Breadcrumb[] = [];
+    const client = new SentryBrowser.BrowserClient({
+      dsn: TEST_DSN,
+      beforeBreadcrumb: getSentryInitBase().beforeBreadcrumb,
+      transport: () => Sentry.createTransport({ recordDroppedEvent: () => {} }, async () => ({ statusCode: 200 })),
+      stackParser: SentryBrowser.defaultStackParser,
+      integrations: [
+        SentryBrowser.breadcrumbsIntegration({
+          dom: true,
+          fetch: false,
+          history: false,
+          sentry: false,
+          xhr: false,
+        }),
+      ],
+      sendClientReports: false,
+    });
+    client.on('beforeAddBreadcrumb', (breadcrumb) => {
+      recorded.push(breadcrumb);
+    });
+    const previousClient = SentryBrowser.getCurrentScope().getClient();
+    SentryBrowser.setCurrentClient(client);
+    client.init();
+    const { blocked, open, cleanup } = renderBlockedButton();
+    try {
+      blocked.click();
+      open.click();
+
+      const clicks = recorded.filter((breadcrumb) => breadcrumb.category === 'ui.click');
+      expect(clicks).toHaveLength(1);
+      expect(clicks[0].message).toMatch(/button#profile-logout-btn$/);
+      expect(JSON.stringify(recorded)).not.toContain('backup-recovery-phrase-choice-1');
+    } finally {
+      cleanup();
+      SentryBrowser.getCurrentScope().setClient(previousClient);
+    }
   });
 });

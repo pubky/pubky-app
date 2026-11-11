@@ -41,6 +41,32 @@ export const mockHotStore = (partial: Partial<HotStore> = {}): HotStore => build
 
 export const mockSearchStore = (partial: Partial<SearchStore> = {}): SearchStore => buildStore(partial);
 
+/** Own keys that identify an auth-store snapshot among the other store doubles. */
+const AUTH_SNAPSHOT_KEYS = [
+  'currentUserPubky',
+  'selectCurrentUserPubky',
+  'selectSession',
+  'selectIsAuthenticated',
+  'setShowSignInDialog',
+  'sessionExport',
+  'sessionReference',
+] as const;
+
+/**
+ * Auth snapshots that omit `session` read it back as `null`.
+ *
+ * The auth store's session is `Session | null` and starts at `null` (`authInitialState`). A partial
+ * double leaves the property missing, so `session !== null` is true and `session.info` throws once
+ * DialogLocksAuth mounts from the post menu (#3052). `null` is that signed-out value. Snapshots that
+ * already set `session`, and snapshots for other stores, pass through. The same object is returned,
+ * so later writes on it stay visible to the hook.
+ */
+function withOmittedAuthSession<T extends object>(snapshot: T): T {
+  if ('session' in snapshot) return snapshot;
+  if (!AUTH_SNAPSHOT_KEYS.some((key) => key in snapshot)) return snapshot;
+  return Object.assign(snapshot, { session: null });
+}
+
 /**
  * Wrap a store snapshot in a Zustand-style hook with selector + getState support.
  *
@@ -50,12 +76,13 @@ export const mockSearchStore = (partial: Partial<SearchStore> = {}): SearchStore
  * both.
  */
 export function createZustandLikeHook<T extends object>(snapshot: T) {
+  const state = withOmittedAuthSession(snapshot);
   function hook(): T;
   function hook<U>(selector: (state: T) => U): U;
   function hook<U>(selector?: (state: T) => U): T | U {
-    return selector ? selector(snapshot) : snapshot;
+    return selector ? selector(state) : state;
   }
-  hook.getState = () => snapshot;
+  hook.getState = () => state;
   hook.setState = vi.fn();
   hook.subscribe = vi.fn(() => () => {});
   return hook;

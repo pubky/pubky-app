@@ -1,5 +1,12 @@
 import { backupDownloadFilePath } from './common';
-import type { SeedCreatePostArgs, SeededCollectionLayout, SeededPost, SeededUser } from './types/seed';
+import type {
+  SeedCreateLockPostArgs,
+  SeedCreatePostArgs,
+  SeededCollectionLayout,
+  SeededLockPost,
+  SeededPost,
+  SeededUser,
+} from './types/seed';
 
 // Spec-side helpers for the seed tasks in cypress/plugins/seed.ts.
 //
@@ -57,6 +64,14 @@ export const createImagePostViaApi = (
 /** Replies to `parent` as `author` (the reply dialogs are covered in posts.cy.ts). */
 export const replyViaApi = (author: SeededUser, parent: SeededPost, content: string) =>
   createPost({ authorId: author.id, content, kind: 'short', parentUri: parent.uri });
+
+/**
+ * Publishes a paid lock on a short post as `author`: its `lock.json` and its announcement (publishing
+ * through the composer is covered in locks.cy.ts). Yields the locked post's bytes for the Lock Server
+ * stub to serve once the reader has paid.
+ */
+export const createLockPostViaApi = (author: SeededUser, lock: Omit<SeedCreateLockPostArgs, 'authorId'>) =>
+  cy.task<SeededLockPost>('seedCreateLockPost', { authorId: author.id, ...lock });
 
 /** Reposts `original` as `author`, with optional quote `content` (the repost dialog is covered in posts.cy.ts). */
 export const repostViaApi = (author: SeededUser, original: SeededPost, content = '') =>

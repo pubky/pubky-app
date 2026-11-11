@@ -53,9 +53,14 @@
       "scope": ["src/components/**", "**/*.test.*"]
     },
     {
+      "path": "docs/contract-testing.md",
+      "description": "Contract tests of the real pinned SDKs at the service boundary, fixtures, e2e stub alignment",
+      "scope": ["**/*.contract.test.*", "src/core/services/locks/locks.e2eStub*", "src/core/services/**/*.fixture.json"]
+    },
+    {
       "path": "docs/visual-regression-testing.md",
       "description": "VRT tests, determinism rules, CI-owned baselines",
-      "scope": ["src/test/vrt/**", "src/test-utils/vrt*", ".github/workflows/vrt*.yml"]
+      "scope": ["src/test/vrt/**", "src/test-utils/vrt*", "src/test-utils/stores.ts", ".github/workflows/vrt*.yml"]
     },
     {
       "path": "docs/skeleton-architecture.md",

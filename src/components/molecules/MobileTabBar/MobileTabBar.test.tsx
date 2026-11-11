@@ -167,6 +167,13 @@ describe('MobileTabBar', () => {
     expect(screen.queryByLabelText('Tags')).not.toBeInTheDocument();
   });
 
+  it('renders dataCy on the tab button only when provided', () => {
+    const items = makeItems({ tags: { dataCy: 'tab-tags' } });
+    render(<MobileTabBar items={items} />);
+    expect(screen.getByLabelText('Tags')).toHaveAttribute('data-cy', 'tab-tags');
+    expect(screen.getByLabelText('Users')).not.toHaveAttribute('data-cy');
+  });
+
   it('merges className onto the root', () => {
     const { container } = render(<MobileTabBar items={makeItems()} className="-mx-6 mb-6" />);
     const root = container.firstChild as HTMLElement;

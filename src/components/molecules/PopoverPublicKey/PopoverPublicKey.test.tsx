@@ -40,7 +40,7 @@ vi.mock('@/atoms/Button/Button', () => {
         data-testid="popover-button"
         data-variant={variant}
         data-size={size}
-        className={className !== undefined ? className : 'hover:bg-white/10'}
+        className={className !== undefined ? className : 'hover:bg-foreground/10'}
         onClick={onClick}
         {...props}
       >

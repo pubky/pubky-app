@@ -20,6 +20,7 @@ import {
   RAW_PUBKY_PATTERN,
   SENSITIVE_CONTEXT_KEYS,
   SENSITIVE_VALUE_REDACTED,
+  SENTRY_BLOCK_SELECTOR,
 } from './sentry.constants';
 
 function normalizeContextKey(key: string): string {
@@ -151,13 +152,14 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'homeserver-event-stream-connect',
     reason:
-      'The mute-list SSE subscribe drops routinely (homeserver deploys, idle timeouts, mobile backgrounding) and ' +
-      'MuteListSyncCoordinator reconnects with backoff by design. Connect failures reach here as ' +
+      'The shared homeserver SSE subscribe (mute list and notification last_read) drops routinely (homeserver ' +
+      'deploys, idle timeouts, mobile backgrounding) and HomeserverEventStreamCoordinator reconnects with backoff ' +
+      'by design. Connect failures reach here as ' +
       'handleError → httpStatusCodeToError(500) → Err.server(INTERNAL_ERROR) tagged with the subscribe operation ' +
       '(PUBKY-APP-11/1Y/6G/CX), or as Err.network(CONNECTION_FAILED) when the SDK cannot resolve the homeserver ' +
       "from PKARR first ('PkarrError', @synonymdev/pubky >= 0.10). Auth/validation failures on the same operation and every other Homeserver " +
-      'operation stay reportable, and the coordinator reports a persistent outage once via the ' +
-      "'muteListEventStreamExhausted' operation after MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD consecutive failures.",
+      'operation stay reportable, and the coordinator reports a persistent outage once via its own operation ' +
+      "('homeserverEventStreamExhausted') after HOMESERVER_EVENT_STREAM_FAILURE_ALERT_THRESHOLD.",
     matches: (error) =>
       error.service === ErrorService.Homeserver &&
       error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&
@@ -377,6 +379,25 @@ export function scrubTransactionEvent(event: TransactionEvent): TransactionEvent
   // Tags are app-controlled operational labels; do not walk them as user payload.
 
   return event;
+}
+
+/**
+ * `beforeBreadcrumb` for every runtime. A `ui.*` breadcrumb (click, keypress, input) raised inside a
+ * `SENTRY_BLOCK_SELECTOR` subtree is dropped from the SDK breadcrumb trail, since its message is the target's id and
+ * classes. This does not reach Replay: its click events carry the same id and classes and never pass through
+ * `beforeBreadcrumb`, so position-only ids in blocked subtrees remain the required control. The hint carries the DOM
+ * event, or the element itself, the way the SDK's breadcrumbs integration reads it.
+ */
+export function dropBlockedUiBreadcrumb(
+  breadcrumb: Sentry.Breadcrumb,
+  hint?: Sentry.BreadcrumbHint,
+): Sentry.Breadcrumb | null {
+  if (!breadcrumb.category?.startsWith('ui.')) return breadcrumb;
+  if (typeof Element === 'undefined') return breadcrumb;
+  const source: unknown = hint?.event;
+  const target: unknown = source instanceof Event ? source.target : source;
+  if (target instanceof Element && target.closest(SENTRY_BLOCK_SELECTOR)) return null;
+  return breadcrumb;
 }
 
 /**
