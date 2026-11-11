@@ -264,6 +264,20 @@ All tables defined in `src/core/database/franky/franky.ts`.
 
 `franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
 
+### Dexie event dispatch patch
+
+`patches/dexie+4.4.7.patch` replaces the dependency's recursive default event chain with an iterative,
+immutable listener list. Long-lived `liveQuery` subscriptions can otherwise exhaust the browser call
+stack when Dexie broadcasts a mutation (#2225). Reverse subscription order, `false` short-circuiting,
+callback context and the listener snapshot during dispatch stay unchanged; custom event chains are
+untouched. This does not cap subscriptions or change database contents, indexes or versions.
+
+The patch covers the CommonJS, ESM and modern ESM distributions and composes their source maps so
+later dependency frames still resolve correctly. Minified CDN bundles are not package entry points
+and are not patched. `patch-package` applies it during the existing `postinstall` step. On a Dexie
+upgrade, run `src/core/database/franky/dexie-events.contract.test.ts` against the unpatched dependency
+before removing the patch; preserve it if the large-listener regression still fails.
+
 ### User Tables
 
 ```
