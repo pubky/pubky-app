@@ -5,11 +5,13 @@ import { getFramePlayer, listenToFrame, pauseMedia, readFrameMessage } from '@/l
 
 /**
  * A media box on the page (`useMediaBox`): what its media starting does instead of stopping the
- * others' (`onStart`), and how it stops when other media starts (`onStop`).
+ * others' (`onStart`), how it stops when other media starts (`onStop`), and what its media
+ * pausing or ending does (`onPause`).
  */
 export interface MediaBox {
   onStart?: (media: Element) => void;
   onStop?: () => void;
+  onPause?: () => void;
 }
 const boxes = new Map<Element, MediaBox>();
 
@@ -52,9 +54,21 @@ export function reportMediaStart(media: Element): void {
   stopOtherMedia(media);
 }
 
+/** `media` paused or ended: its box's `onPause`, where it has one. */
+function reportMediaPause(media: Element): void {
+  for (const [box, { onPause }] of boxes) {
+    if (onPause && box.contains(media)) return onPause();
+  }
+}
+
 // A muted video (a page's decoration) plays no sound: it stops nothing.
 const onPlay = (event: Event) => {
   if (event.target instanceof HTMLMediaElement && !event.target.muted) reportMediaStart(event.target);
+};
+
+// Also sent when it ends.
+const onPause = (event: Event) => {
+  if (event.target instanceof HTMLMediaElement) reportMediaPause(event.target);
 };
 
 const onFrameLoad = (event: Event) => {
@@ -79,9 +93,11 @@ const onMessage = (event: MessageEvent) => {
   const frame = Array.from(document.querySelectorAll('iframe')).find((iframe) => iframe.contentWindow === source);
   if (!frame || getFramePlayer(frame.src)?.origin !== event.origin) return;
   if (said === 'ready') listenToFrame(frame);
-  else if (said === 'pause') frames.set(source, 'paused');
-  else if (said === 'stop') frames.delete(source);
-  else {
+  else if (said === 'pause' || said === 'stop') {
+    if (said === 'pause') frames.set(source, 'paused');
+    else frames.delete(source);
+    reportMediaPause(frame);
+  } else {
     frames.set(source, 'playing');
     reportMediaStart(frame);
   }
@@ -93,6 +109,7 @@ function watchMedia() {
   watchers += 1;
   if (watchers === 1) {
     document.addEventListener('play', onPlay, true);
+    document.addEventListener('pause', onPause, true);
     document.addEventListener('load', onFrameLoad, true);
     window.addEventListener('message', onMessage);
     document.querySelectorAll('iframe').forEach(listenToFrame);
@@ -101,6 +118,7 @@ function watchMedia() {
     watchers -= 1;
     if (watchers > 0) return;
     document.removeEventListener('play', onPlay, true);
+    document.removeEventListener('pause', onPause, true);
     document.removeEventListener('load', onFrameLoad, true);
     window.removeEventListener('message', onMessage);
   };
@@ -117,21 +135,28 @@ export function useOnePlayer(): void {
 
 /**
  * A player's box while mounted (`useOnePlayer`): its media starting calls `onStart` instead of
- * stopping the others; other media starting calls `onStop`.
+ * stopping the others; other media starting calls `onStop`; its media pausing or ending (the
+ * browser's `pause`, a player's own message) calls `onPause`.
  */
-export function useMediaBox(box: RefObject<HTMLElement | null>, { onStart, onStop }: MediaBox): void {
+export function useMediaBox(box: RefObject<HTMLElement | null>, { onStart, onStop, onPause }: MediaBox): void {
   const start = useEffectEvent((media: Element) => onStart?.(media));
   const stop = useEffectEvent(() => onStop?.());
+  const pause = useEffectEvent(() => onPause?.());
   const starts = onStart !== undefined;
   const stops = onStop !== undefined;
+  const pauses = onPause !== undefined;
   useEffect(() => {
     const element = box.current;
     if (!element) return;
-    boxes.set(element, { onStart: starts ? start : undefined, onStop: stops ? stop : undefined });
+    boxes.set(element, {
+      onStart: starts ? start : undefined,
+      onStop: stops ? stop : undefined,
+      onPause: pauses ? pause : undefined,
+    });
     const unwatch = watchMedia();
     return () => {
       boxes.delete(element);
       unwatch();
     };
-  }, [box, starts, stops]);
+  }, [box, starts, stops, pauses]);
 }

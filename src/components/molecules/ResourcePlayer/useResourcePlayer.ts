@@ -8,14 +8,18 @@ import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
  * The one player open on the page: `{ owner, provider }`, or `null`. Opening a player anywhere
  * replaces it, so the card that held it unmounts its frame: two services can never play together,
  * whatever their APIs allow. Any other media starting on the page stops it too (`useOnePlayer`).
+ * `paused`: the viewer paused it, or it ended, as far as the player tells (`useMediaBox`'s
+ * `onPause`): paused in its card, it does not go to the dock (`PlayerHost`).
  */
-export type ActivePlayer = { owner: string; provider: PlayerProvider } | null;
+export type ActivePlayer = { owner: string; provider: PlayerProvider; paused?: boolean } | null;
 
 let active: ActivePlayer = null;
 const listeners = new Set<() => void>();
 
 function setActive(next: ActivePlayer) {
-  if (active?.owner === next?.owner && active?.provider === next?.provider) return;
+  if (active?.owner === next?.owner && active?.provider === next?.provider && !active?.paused === !next?.paused) {
+    return;
+  }
   active = next;
   listeners.forEach((listener) => listener());
 }
@@ -42,12 +46,16 @@ export type PlayerLoadState = 'loading' | 'ready' | 'slow';
 export interface ResourcePlayerState {
   /** The player open in this card, or `null` (the card shows its content). */
   current: PlayerTarget | null;
+  /** The open player was paused or has ended, where its player tells (`ActivePlayer`'s `paused`). */
+  paused: boolean;
   load: PlayerLoadState;
   /**
    * Open `target`'s player here, closing any other on the page and stopping any other media; `keep`
-   * (the media that started it) plays on.
+   * (the media that started it) plays on. Also its playing again after a pause.
    */
   play: (target: PlayerTarget, keep?: Element | null) => void;
+  /** This card's player was paused or ended: it stays open; paused in its card, it does not dock. */
+  pause: () => void;
   /** Unload this card's player and show the card again. */
   close: () => void;
   /** The frame's `load` event (the frame exists, not proof it plays). */
@@ -105,12 +113,23 @@ export function useResourcePlayer(
     stopOtherMedia(keep);
     setActive({ owner, provider: target.provider });
   };
+  const pause = () => {
+    if (active?.owner === owner) setActive({ ...active, paused: true });
+  };
   const close = () => {
     if (active?.owner === owner) setActive(null);
   };
   const onLoaded = () => setLoad({ key, state: 'ready' });
 
-  return { current, load: loadState, play, close, onLoaded };
+  return {
+    current,
+    paused: current !== null && snapshot?.paused === true,
+    load: loadState,
+    play,
+    pause,
+    close,
+    onLoaded,
+  };
 }
 
 /** How often the page looks where the focus is while it is inside a frame (`useFramePress`). */

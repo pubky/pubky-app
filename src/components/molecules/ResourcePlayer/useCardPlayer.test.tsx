@@ -732,12 +732,18 @@ describe('useCardPlayer, a song', () => {
       expect(screen.getAllByRole('complementary')).toHaveLength(1);
     });
 
-    it('keeps a player the viewer paused docked, until other media starts', () => {
+    it('leaves a player the viewer paused in its card out of the dock, until it plays again', () => {
       vi.useFakeTimers();
       render(<Page withVideo />);
       const youtube = frameOf('youtube');
       youtubeSays(youtube, 1);
       youtubeSays(youtube, 2);
+      report(false);
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+      // Still loaded, paused, in its card.
+      expect(frameOf('youtube')).toBe(youtube);
+
+      youtubeSays(youtube, 1);
       report(false);
       expect(screen.getByRole('complementary')).toContainElement(youtube);
 

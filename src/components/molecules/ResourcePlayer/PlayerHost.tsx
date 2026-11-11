@@ -214,12 +214,16 @@ const isShown = (slot: HTMLElement) => slot.isConnected && slot.getClientRects()
  * Where each frame goes. The playing one is laid over its own card while that is on the page, else
  * over the latest card of the same resource and service (a post opened from the feed, the feed
  * again after another page), whose own frame then waits; with no such card on the page, or that
- * card scrolled away, it is in the dock. Any other frame stays over its card, hidden with it.
+ * card scrolled away, it is in the dock. Paused or ended in its card (`paused`, not `docked` before)
+ * it does not dock: it stays over that card, also scrolled away, and hidden with it (a feed behind an
+ * open post); leaving that card's page closes it (`PlayerHost`); paused in the dock, it stays there.
+ * Any other frame stays over its card, hidden with it.
  */
 function placePlayers(
   players: Map<string, HostedPlayer>,
   playing: string | null,
   isOnScreen: (slot: HTMLElement) => boolean,
+  { paused = false, docked = false }: { paused?: boolean; docked?: boolean } = {},
 ): { placements: Map<string, Placement>; views: Map<string, SlotView> } {
   const placements = new Map<string, Placement>();
   const views = new Map<string, SlotView>();
@@ -234,11 +238,12 @@ function placePlayers(
       if (id !== playing && player.match === current.match && shown(id)) on = id;
     }
   }
+  const stays = paused && !docked;
   for (const [id, player] of players) {
     if (id === playing) {
       const slot = on ? players.get(on)?.slot : null;
-      const attached = slot ? isOnScreen(slot) : false;
-      placements.set(id, { mode: attached ? 'attached' : 'docked', on });
+      const attached = slot ? stays || isOnScreen(slot) : false;
+      placements.set(id, { mode: attached ? 'attached' : stays ? 'hidden' : 'docked', on });
       if (on) views.set(on, attached ? `frame:${id}` : 'away');
     } else if (player.slot && id !== on) {
       placements.set(id, { mode: shown(id) ? 'attached' : 'hidden', on: id });
@@ -317,7 +322,12 @@ export function PlayerHost({ children }: { children: ReactNode }) {
   const place = useEffectEvent(() => {
     const layer = layerRef.current;
     if (!layer) return;
-    const { placements, views } = placePlayers(store.players, findPlaying(store.players, getPagePlayer()), isOnScreen);
+    const active = getPagePlayer();
+    const playing = findPlaying(store.players, active);
+    const { placements, views } = placePlayers(store.players, playing, isOnScreen, {
+      paused: active?.paused === true,
+      docked: playing !== null && store.placements.get(playing)?.mode === 'docked',
+    });
     // Changed: placed again once rendered.
     if (store.place(placements, views)) return;
     const laid: [HTMLDivElement, HTMLElement][] = [];
@@ -396,8 +406,15 @@ export function PlayerHost({ children }: { children: ReactNode }) {
   });
 
   // A frame whose card is gone is let go once it no longer plays, and stops when other media starts.
+  // Paused in its card, leaving that card's page closes it (its card gone, none of it laid out yet):
+  // nothing would show it. Only its place in the episode or song is lost.
   useEffect(() => {
-    const playing = findPlaying(store.players, getPagePlayer());
+    const active = getPagePlayer();
+    const playing = findPlaying(store.players, active);
+    const current = playing ? store.get(playing) : undefined;
+    if (playing && current?.slot === null && active?.paused && store.placements.get(playing)?.mode === 'hidden') {
+      current.onClose();
+    }
     const gone = Array.from(store.players)
       .filter(([id, player]) => player.slot === null && id !== playing)
       .map(([id]) => id);

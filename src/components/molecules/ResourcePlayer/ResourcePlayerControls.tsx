@@ -207,7 +207,9 @@ export interface PagePlayer {
  * view it returns to the card. The dock sits above the phone's bottom bar and left of the new-post
  * button, so it never covers either (`DOCK_CLASS`). Audio uses the service's compact height; video
  * keeps its ratio at the dock's width. A player nobody started (a player shown up front, `dockable` off)
- * stays in its card, and a post pauses it off screen like any embed.
+ * stays in its card, and a post pauses it off screen like any embed. Here (no player host: tests, a
+ * tree outside the app) a paused player is not `dockable`, so one paused in this dock goes back to
+ * its card; the host keeps one paused in the dock there.
  *
  * In the app (`PlayerHost`), a card's player (`pagePlayer`, never a preview's) is kept by the host
  * instead (`PlayerSlot`): laid over the card, and, while it is the page's player, in the dock when

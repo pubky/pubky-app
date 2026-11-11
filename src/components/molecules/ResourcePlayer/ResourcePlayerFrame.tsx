@@ -25,6 +25,8 @@ interface ResourcePlayerFrameProps {
    * it, the frame stops itself: paused, or loaded anew when it cannot be paused.
    */
   onPlay?: (media: Element) => void;
+  /** Its media was paused or has ended, where its player tells (`useMediaBox`): paused in its card, it does not dock. */
+  onPause?: () => void;
   /**
    * An embed shown up front (a card without Also on, `GenericResourcePreview`), not opened by Play:
    * no status line, since nothing was asked to start; loaded once near the screen, like a post's
@@ -100,6 +102,7 @@ export function ResourcePlayerFrame({
   onLoaded,
   quiet = false,
   onPlay,
+  onPause,
 }: ResourcePlayerFrameProps) {
   const { frameRef, onLoad } = useStartMessage(target, onLoaded);
   const regionRef = useRef<HTMLDivElement>(null);
@@ -135,7 +138,7 @@ export function ResourcePlayerFrame({
     setStarted(false);
     if (!tells) setRound((value) => value + 1);
   };
-  useMediaBox(regionRef, onPlay ? { onStart: onPlay } : { onStart: startHere, onStop: stop });
+  useMediaBox(regionRef, onPlay ? { onStart: onPlay, onPause } : { onStart: startHere, onStop: stop });
   const label = `${target.name} player: ${title}`;
   const isVideo = target.layout.kind === 'video';
   const style =
