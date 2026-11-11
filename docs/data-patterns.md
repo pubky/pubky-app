@@ -274,7 +274,8 @@ untouched. This does not cap subscriptions or change database contents, indexes 
 
 The patch covers the CommonJS, ESM and modern ESM distributions and composes their source maps so
 later dependency frames still resolve correctly. Minified CDN bundles are not package entry points
-and are not patched. `patch-package` applies it during the existing `postinstall` step. On a Dexie
+and are not patched. `patch-package` applies it during the existing `postinstall` step; the Docker
+dependency stage copies `patches/` before `npm ci` so the image includes the same fix. On a Dexie
 upgrade, run `src/core/database/franky/dexie-events.contract.test.ts` against the unpatched dependency
 before removing the patch; preserve it if the large-listener regression still fails.
 
