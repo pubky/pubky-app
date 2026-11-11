@@ -111,6 +111,7 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3123                             | F8: one chained `bookmarks` + `post_details` read for Followed Collections and the count; dev stall matched, not reproduced on prod                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | #3120                             | F7 (SF-8 to SF-11, the [F7] nits): the runbook, `AGENTS.md`, the ADRs, the Greptile rules and seven source comments brought up to the branch head; QA-4, QA-5, the Nexus watcher wedge (pubky/pubky-nexus#1229) and the final review recorded; the two uncaptured-`AppError` sites named in `AGENTS.md`                                                                                                                                                                                                                                                                                                                  |
 | #3132                             | G3: `publishLock` waits 30 s (`requestTimeout`) for the lock create and the announcement PUT; slow homeserver PUTs had pushed the lock create past Cypress's 5 s default (branch e2e flake, QA-owned suite)                                                                                                                                                                                                                                                                                                                                                                                                              |
+| #3133                             | second review (2026-11-12) appends: the `mailto:`/`tel:` link reduction in _Reductions_ and the release notes, fourteen `auth/SocialMigration` VRT states and the pending baseline dispatch, the e2e record with the `locks.cy.ts` timing failure, QA-6 in the QA matrix, the two uncaptured-`AppError` sites in the Greptile error rule, the storage and e2e-dispatch rollout steps                                                                                                                                                                                                                                     |
 
 The branch also carries CI-owned VRT baseline commits from the `VRT Update Baselines` dispatches after the QA-1 fixes
 (two dispatches, 2026-10-31 and 2026-11-02), after dev-sync 2, 3 and 4, and after #3113 (`495ddbca3`): the new
@@ -153,9 +154,12 @@ sees the backup prompt first; a pre-port Ring grant sees `missing-scopes`; signu
 QUOTA, offline (auto-retry then Retry), summary with a dropped profile image; `/post/*`, `/profile/<pk>`, `/shop` redirect
 to `/migration` while gated; logout from `/migration` works with the backup prompt.
 
-Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (twelve
-states × desktop/mobile, dark only: `/migration` is a signed-out route, forced dark since #3081), the D17 note in `settings/Settings` and the D8 conflict copy in
-`misc/DatabaseErrorScreen` (desktop/mobile × dark/light), CI-owned baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
+Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (fourteen
+states × desktop/mobile, dark only: `/migration` is a signed-out route, forced dark since #3081; #3121 added
+`restore-reauth-required` and `restore-temporary-error` and changed the `reauth-backup` capture, whose Sign out button
+is gone, so those baselines wait for the next `VRT Update Baselines` dispatch, see the checklist), the D17 note in
+`settings/Settings` and the D8 conflict copy in `misc/DatabaseErrorScreen` (desktop/mobile × dark/light), CI-owned
+baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
 never reaches `/migration`, and an empty or v1-only one only passes through it while the check runs (see _Cypress_).
 
 ## Compliance gate and dev-sync routine
@@ -377,15 +381,17 @@ mobile viewport; a plain `it` is desktop only. The merge applied `dev`'s mobile 
 
 e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v1`, against the private pubky-stack:
 `feat/social-v1` points `pubky_stack_ref` (`.github/workflows/e2e-test.yml`) at pubky-stack's `social-v1` branch, whose
-Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). How that pin and the trigger change at the release is in
-_Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
-otherwise the invite check answers 400 and onboarding stops at Continue. CI runs the suite on every push to the branch
-(desktop, Chrome, 13 specs): green on the FIX-7 merge (2026-11-10, after one earlier flake on a post delete that the
-Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, on the dev-sync 5 merge
-`93db5b9dc` and on #3114's `ae4ba8ad2` (2026-11-11, 13 of 13 each); the push for #3113 timed out in `posts.cy.ts` and
-`locks.cy.ts` and the next push was green. The #3117 merge (`e5bca7d1e`) failed `locks.cy.ts` on `publishLock`'s
-`cy.wait('@createContentLock')`: slow homeserver PUTs delayed the lock create about 80 ms past Cypress's 5 s default
-`requestTimeout`; #3132 gives both `publishLock` waits a 30 s `requestTimeout`. "e2e not run" in the _Sync log_ means
+Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). How that pin and the trigger change at the release is
+in _Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on the
+homeserver, as CI sets it: otherwise the invite check answers 400 and onboarding stops at Continue. CI runs the suite on
+every push to the branch (desktop, Chrome, 13 specs): green on the FIX-7 merge (2026-11-10, after one earlier flake on a
+post delete that the Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, on the
+dev-sync 5 merge `93db5b9dc`, on #3114's `ae4ba8ad2` and on the fix PRs #3118, #3119, #3116, #3121, #3122 and #3123
+(`8fd6da28e`, `963cdf7e3`, `9d2780d3d`, `8652c8af2`, `ae2e20fd3`, `d98f14a6d`; 2026-11-11, 13 of 13 each). Two pushes
+failed: #3113's timed out in `posts.cy.ts` and `locks.cy.ts` and the next push was green; the #3117 merge (`e5bca7d1e`,
+run 43005369209) failed `locks.cy.ts` on `publishLock`'s `cy.wait('@createContentLock')`: slow homeserver PUTs delayed
+the lock create about 80 ms past Cypress's 5 s default `requestTimeout` ("No request ever occurred"), test timing that
+predates the branch; #3132 gives both `publishLock` waits a 30 s `requestTimeout`. "e2e not run" in the _Sync log_ means
 the sync session's local run. Local runs use the Chrome-family binary Playwright's VRT setup installs, never Electron or
 a snap browser, so they match CI's matrix.
 
@@ -440,6 +446,10 @@ After dev-sync 3 (2026-11-09):
   interval (≤30 s) or on focus, not live: a session-bound stream's lease is unbounded while its response headers are
   outstanding (pubky/pubky-homeserver#798; ADR-0014, and the `last_read` poll is ADR-0029).
 - Item notes and attachment alt text are preserved on write but not shown (D4).
+- Profile links that are not plain web URLs (`mailto:`, `tel:`, an upper-case scheme) are dropped by the migrator, shown
+  once on `/settings/edit` as dropped values (D17), and refused by the profile form since #3119: the v1 data model
+  admits only lower-case `http://` or `https://` URLs with a host, no whitespace or control character, of at most 300
+  code points.
 
 ### Follow-ups (not in this round)
 
@@ -507,10 +517,14 @@ gate list.
    (the `fix/social-v1-*` PRs listed after step 7; the code ones are merged), the
    migrator rc.2 adoption PR, and this docs sweep (the e2e follow-up landed as #3094); after it, a staging deploy and
    the maintainer's staging test (one real-Ring sign-in with the ten-scope grant; Locks before and after a migration
-   with a real Paykit and Bitkit), then production with the Nexus deploy.
+   with a real Paykit and Bitkit), then production with the Nexus deploy. Once step 2 is done, dispatch `e2e-test.yml`
+   by hand (`workflow_dispatch`) on the final PR's head, where `pubky_stack_ref` already reads `staging`, and merge only
+   when that run is green; pubky-stack's `social-v1` branch is deleted only after the merge, because the branch's own
+   push runs still point at it.
 4. **Infrastructure gates.** The production homeserver serves the same feature set as staging and the local stack at
-   0.16.2 (verified 2026-11-04). A migration temporarily doubles each user's storage, so the allowances of the heaviest
-   accounts are raised before the deploy. Moderation service readiness is a release gate. Bot accounts (the moderation
+   0.16.2 (verified 2026-11-04). A migration temporarily doubles each user's storage (the 0.x tree stays until the
+   cleanup pass), so before the deploy the infrastructure owner raises the allowances of the accounts nearest their cap
+   first, then the heaviest. Moderation service readiness is a release gate. Bot accounts (the moderation
    bot) need a migration path (open). `NEXT_PUBLIC_DB_VERSION=4` is in both Docker workflows (PR-CI).
 5. **No rollback after the first migrated user** (ADR-0019, ADR-0026): before anyone migrates, redeploying the previous
    image tag is safe (the database version mismatch recreates symmetrically); after, v1 writes are invisible to a 0.x
@@ -521,19 +535,23 @@ gate list.
    `operation: socialMigration` shows no terminal codes; the branch e2e trigger is gone; PR-E2 is opened when the team
    decides (D9); #2928 and #2929 (the spec author's draft PRs) are closed.
 
-Final review (2026-11-11): an independent review of the whole branch diff against `dev` (`93db5b9dc` vs `0e4278661`,
-15 lenses, every finding confirmed by two verifiers) found no blocking defect, seven should-fix code defects and the
-docs drift this sweep fixes. The defects landed as six PRs into `feat/social-v1`, all merged on 2026-11-11 before
-the final PR: the Shop sign-in return kept through the gate and `/migration` settled for a failed restore (#3121), the
+Final review (2026-11-11): an independent review of the whole branch diff against `dev` (`93db5b9dc` vs `0e4278661`, 15
+lenses, every finding checked by two independent verifiers) found no blocking defect, seven should-fix code defects and
+the docs drift #3120 fixes. The defects landed as six PRs into `feat/social-v1`, all merged on 2026-11-11 before the
+final PR: the Shop sign-in return kept through the gate and `/migration` settled for a failed restore (#3121), the
 uploads of a post whose PUT failed swept (#3118), collection items matched by post identity on an edit instead of being
 rewritten to 0.x spellings (#3117), profile links validated the way the v1 data model does (#3119), feed filter tags
-folded with the stored label fold (#3122) and every private fetch of the resync guarded with the viewer session
-(#3116); the docs drift is this sweep (#3120). The QA-6 live pass that followed (its findings are recorded in #3121
-and #3123) added a seventh code fix, merged the same day: the `/collections` live queries kept observing bookmarked
-post details on a cold visit (#3123). Two findings identical on `dev` are `dev` follow-ups, not merge gates:
-clearing an article's cover can re-promote an unreferenced slot 0 under rule B, and the attachment-reference collector
-misses a backslash-escaped `attachment:n`. The review also confirmed step 3's `pubky_stack_ref` flip as a hard
-precondition of the final PR.
+folded with the stored label fold (#3122) and every private fetch of the resync guarded with the viewer session (#3116);
+the docs drift is the sweep #3120. The QA-6 live pass that followed (its findings are recorded in #3121 and #3123) added
+a seventh code fix, merged the same day: the `/collections` live queries kept observing bookmarked post details on a
+cold visit (#3123). Two findings identical on `dev` are `dev` follow-ups, not merge gates: clearing an article's cover
+can re-promote an unreferenced slot 0 under rule B, and the attachment-reference collector misses a backslash-escaped
+`attachment:n`. The review also confirmed step 3's `pubky_stack_ref` flip as a hard precondition of the final PR. Final
+review 2 (Opus, 2026-11-12, seven lenses on the merged head `d98f14a6d`): no blocking finding; the seven fixes hold
+together as one change; five regression-guard test gaps (the D11 gate for a capability upgrade, reply lookup under both
+spellings of the parent post, and three article-cover paths: `PostArticle`'s `localCover`, `legacyCoverSlot` and
+`setArticleCover`) are closed in test-only PRs (pending), and its one docs gap, the `mailto:`/`tel:` link reduction, is
+recorded above.
 
 Checklist:
 
@@ -541,8 +559,10 @@ Checklist:
 - [ ] pubky/pubky-stack#388 re-pinned to the deploy ref and merged (staging Nexus bump)
 - [ ] Integration branch green: lint, typecheck, full `npm test`, `npm run build`, branch e2e 13/13, VRT baselines
       regenerated by CI after the last dev-sync
-- [ ] QA-1, QA-3, QA-4 and QA-5 recorded (_QA matrix_, done 2026-11-11); the maintainer's manual pass done; staging
-      checks (Ring grant, Locks with a real Paykit)
+- [ ] `VRT Update Baselines` dispatched after #3121 (two new `auth/SocialMigration` states and the changed
+      `reauth-backup` capture have no CI baseline yet; the second review bundles it with the dispatch after dev-sync 6)
+- [ ] QA-1, QA-3, QA-4, QA-5 and QA-6 recorded (_QA matrix_, done 2026-11-12); the maintainer's manual pass done;
+      staging checks (Ring grant, Locks with a real Paykit)
 - [ ] Storage allowances raised; moderation service ready; bot-account migration path decided
 - [ ] Migrator rc.2 adopted (both packages, `SOCIAL_MIGRATION_TRANSFORM_REV` 4)
 - [ ] Final PR reviewed (full code review, security review, Greptile, talosmachina, frontend team), `pubky_stack_ref`
@@ -554,9 +574,9 @@ Checklist:
 
 Four QA passes ran on the local stack (_Local stack runbook_): QA-1, QA-3 and QA-5 with the built-in browser, QA-4 with
 Playwright on production builds, each verifying every step against the homeserver (`/storage/<pk>/…` LIST and GET,
-admin WebDAV for `/priv/`, the request log), Nexus and the browser console. The full reports with screenshots live with
-the plan, outside the repository (`qa1-report.md`, `qa-3-results.md`, `qa-4-results.md`, `qa-5-results.md`); the
-summary by item:
+admin WebDAV for `/priv/`, the request log), Nexus and the browser console; a fifth, QA-6, was a live pass of the gate
+and collections UI whose record is in the fix PRs it fed. The full reports with screenshots live with the plan, outside
+the repository (`qa1-report.md`, `qa-3-results.md`, `qa-4-results.md`, `qa-5-results.md`); the summary by item:
 
 **QA-1 (2026-10-30/31, `feat/social-v1` with B3 merged, Nexus placeholder `feat/v1-social-indexing`): 19 PASS, 1 N/A of 20.** Persisted 0.x sessions signed out (`pre-migration-grant`, a Ring 0.x grant `missing-scopes`, a never-backed-up key
 with the backup prompt first) · phrase sign-in → `/migration` → summary → home, flag revision 3, 0.x tree
@@ -648,6 +668,16 @@ so there is no creator-API gap. Still only testable on staging or with real comp
 (invoice creation, the Noise link, settlement timing, `reader_setup_pending`, USD quotes, drains with cancellations),
 Ring with HPKE and the phone approval flow, sessions from before Locks and the grant upgrade path, a large 0.x tree with
 locks on the `/migration` screen, the Lock Server's current HEAD against SDK 0.1.0, and the deletion job's later phases.
+
+**QA-6 (2026-11-11, a live pass of the gate and collections UI on the branch before the fix round; its captures and
+video sit in the UI review sheet outside the repository and its three findings in the PR bodies of #3121 and #3123; no
+results file): three findings, all fixed.** F-QA6-1: after a gate sign-out the sign-in dialog's `onRestore` pushed
+`/home` over the signed-out explanation, because `AuthController.signIn()` resolved `true` when the gate had signed the
+account out (fixed in #3121, which reports a gate sign-out as not completed) · F-QA6-2: on the first cold visit to
+`/collections` after sign-in, Followed Collections stopped at 7 of 25 with no "Show more" and the Bookmarks card count
+dropped while Dexie held every row; a reload fixed it (the live queries stopped observing `post_details`; fixed in
+#3123) · F-QA6-3: the sign-out subtitle did not name its reason (`pre-migration-grant`, `missing-scopes`,
+`session-expired`; fixed in #3121).
 
 Browser QA matrix for a later pass (sign-in paths: Ring simulator scoped grant, recovery phrase, encrypted file, fresh
 signup; pass = the stated outcome, no unexpected `AppError` toast, homeserver and Nexus agree): un-migrated persisted
