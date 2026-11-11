@@ -592,10 +592,11 @@ export class AuthController {
   }
 
   /**
-   * Gets a homeserver service instance using the secret key from the onboarding store.
+   * Signs the keypair in and adopts the session.
    * @param params - The authentication parameters
    * @param params.keypair - The cryptographic keypair for the user
-   * @returns Configured homeserver service instance
+   * @returns true once the account is ready; false when the sign-in did not complete, including a migration
+   * gate that signed the account out (the tab is on `/migration`, which explains it)
    */
   private static async signIn({ keypair }: TKeypairParams, expectedPubky?: string): Promise<boolean> {
     this.cancelActiveAuthFlow();
@@ -611,8 +612,7 @@ export class AuthController {
     }
     if (epoch !== this.epoch) throw createCanceledError();
     if (!result) return false;
-    await this.completeAuthenticatedSession(result, { epoch, expectedPubky });
-    return true;
+    return await this.completeAuthenticatedSession(result, { epoch, expectedPubky });
   }
 
   /**
@@ -705,7 +705,7 @@ export class AuthController {
       /** How the migration gate treats the session; a signup runs inline on its empty tree. */
       entry?: SocialMigrationEntry;
     } = {},
-  ) {
+  ): Promise<boolean> {
     const previous = useAuthStore.getState();
     const pubky = Identity.z32FromSession({ session });
     const wrongAccount = Boolean(expectedPubky) && pubky !== expectedPubky;
@@ -802,7 +802,7 @@ export class AuthController {
         });
         if (!this.isCurrentGeneration(generation) || gate === 'canceled') throw createCanceledError();
         // The /migration screen signs the account out; the grant stays durable for its retirement.
-        if (gate === 'reauth-required') return;
+        if (gate === 'reauth-required') return false;
         // One write: a session beside a `social-migration` status would read as the account for a tick.
         useAuthStore.setState({ session, restoreStatus: 'restoring', isRestoringSession: true });
         placed = true;
@@ -819,6 +819,7 @@ export class AuthController {
         await this.bootstrapProfile(session, generation);
       if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
         useAuthStore.getState().setRestoreStatus('ready');
+      return true;
     } catch (error) {
       // The replacement is already durable. Never resurrect the previous session or erase this grant.
       // Before the gate placed the session the store holds none; the failure is still this adoption's.
@@ -1009,7 +1010,8 @@ export class AuthController {
    * Authenticates the keypair with the homeserver and saves the authenticated data if successful.
    * @param params - Object containing the mnemonic phrase for key derivation
    * @param params.mnemonic - The mnemonic phrase for key derivation
-   * @returns Promise resolving to true if authentication succeeded, false otherwise
+   * @returns Promise resolving to true once the account is ready, false when the sign-in did not complete
+   * (the migration gate signed the account out: the tab is on `/migration`)
    */
   static async loginWithMnemonic({ mnemonic, expectedPubky }: TLoginWithMnemonicParams): Promise<boolean> {
     const keypair = Identity.keypairFromMnemonic(mnemonic);
@@ -1021,7 +1023,8 @@ export class AuthController {
    * @param params - Object containing the encrypted file and password for decryption
    * @param params.encryptedFile - The encrypted recovery file
    * @param params.password - The password to decrypt the recovery file
-   * @returns Promise resolving to true if authentication succeeded, false otherwise
+   * @returns Promise resolving to true once the account is ready, false when the sign-in did not complete
+   * (the migration gate signed the account out: the tab is on `/migration`)
    */
   static async loginWithEncryptedFile({
     encryptedFile,
@@ -1075,6 +1078,8 @@ export class AuthController {
             await assertCurrent();
             let completed = false;
             try {
+              // The outcome is not needed here: a gate sign-out ends the attempt below (`social-migration`), and the
+              // page learns it from the route guard, which already sent the tab to `/migration`.
               await this.completeAuthenticatedSession(
                 { session },
                 {

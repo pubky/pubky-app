@@ -3,8 +3,10 @@ import type { MigrationReport, Outcome } from 'pubky-social-migrator';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCIAL_MIGRATION_FLAG_PATH, SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
-import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
 import { resetSocialMigrationReports } from '@/libs/social-migration/report-telemetry';
 import { readSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
@@ -414,19 +416,56 @@ describe('SocialMigrationController', () => {
       expect(await migrating).toBe('passed');
     });
 
-    it('blocks on a thrown engine error and captures counts only', async () => {
-      runs(new Error('wasm fault'), report());
+    it('blocks on a thrown engine error and captures its shape only', async () => {
+      runs(new Error('wasm fault at /pub/pubky.app/posts/secret'), report());
       const captured = vi.spyOn(Err, 'server');
       const migrating = ensure('signin');
 
       await vi.waitFor(() => expect(stage().stage).toBe('blocked'));
       expect(stage().reason).toBe('unexpected');
       const [, , params] = captured.mock.calls[0];
-      expect(params.cause).toBeInstanceOf(Error);
-      expect(Object.keys(params.context ?? {})).toEqual(['attempt']);
+      expect(params).not.toHaveProperty('cause');
+      expect(params.context).toEqual({ attempt: 1, errorName: 'Error', kind: undefined, status: undefined });
+      expect(JSON.stringify(captured.mock.calls)).not.toContain('secret');
       SocialMigrationController.retry();
 
       expect(await migrating).toBe('passed');
+    });
+
+    it('blocks a run whose engine chunk could not be fetched as unreachable, reports it once and retries on reconnect', async () => {
+      // What `HomeserverService.migrateToSocialV1` throws, uncaptured, when the import rejects
+      const loadFailure = () =>
+        new AppError({
+          category: ErrorCategory.Network,
+          code: NetworkErrorCode.CONNECTION_FAILED,
+          message: 'Could not load the migration engine',
+          service: ErrorService.Homeserver,
+          operation: 'migrateToSocialV1',
+          cause: new TypeError('Failed to fetch dynamically imported module'),
+        });
+      runs(loadFailure(), loadFailure(), report());
+      const network = vi.spyOn(Err, 'network');
+      const server = vi.spyOn(Err, 'server');
+      const migrating = ensure('signin');
+
+      await vi.waitFor(() => expect(stage().stage).toBe('blocked'));
+      expect(stage().reason).toBe('incomplete');
+      SocialMigrationController.retryAfterReconnect();
+      await vi.waitFor(() => expect(stage().attempt).toBe(2));
+      await vi.waitFor(() => expect(stage().stage).toBe('blocked'));
+      expect(stage().reason).toBe('incomplete');
+      // Captured once for the account, with the import rejection as the cause; the second failure is not filed again
+      expect(network).toHaveBeenCalledOnce();
+      expect(network.mock.calls[0][2]).toMatchObject({
+        operation: 'socialMigration',
+        cause: expect.any(TypeError),
+        context: { attempt: 1, errorName: 'TypeError' },
+      });
+      expect(server).not.toHaveBeenCalled();
+      SocialMigrationController.retry();
+
+      expect(await migrating).toBe('passed');
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
     });
 
     it('never puts a path, a note or a dropped value into a capture', async () => {

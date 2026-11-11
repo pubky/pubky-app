@@ -59,11 +59,16 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
     setIsRestoring(true);
     setError('');
     try {
-      await AuthController.loginWithEncryptedFile({
+      const restored = await AuthController.loginWithEncryptedFile({
         ...getShopReauthorizationIdentity(),
         encryptedFile: selectedFile,
         password,
       });
+      // Not completed: the migration gate signed the account out and `/migration` explains it; leaving would hide that.
+      if (!restored) {
+        setIsRestoring(false);
+        return;
+      }
       onRestore?.();
     } catch (error) {
       if (isWrongEnvironmentHomeserverError(error)) {

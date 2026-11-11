@@ -351,6 +351,27 @@ describe('DialogRestoreEncryptedFile', () => {
     });
   });
 
+  // F-QA6-1: the migration gate signed the account out and the tab is on /migration; navigating home from here
+  // would hide the explanation
+  it('does not call onRestore when the sign-in did not complete', async () => {
+    mockLoginWithEncryptedFile.mockResolvedValue(false);
+
+    render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
+
+    fireEvent.change(screen.getByLabelText('Select file'), { target: { files: [mockFile('test.pkarr')] } });
+    fireEvent.change(screen.getByTestId('input'), { target: { value: 'testpassword' } });
+    fireEvent.click(screen.getByText('Restore').closest('button')!);
+
+    await waitFor(() => {
+      expect(mockLoginWithEncryptedFile).toHaveBeenCalledOnce();
+    });
+    expect(mockOnRestore).not.toHaveBeenCalled();
+    // The dialog is usable again, should it still be on screen
+    await waitFor(() => {
+      expect(screen.getByText('Restore').closest('button')).not.toBeDisabled();
+    });
+  });
+
   it('enables restore button when a file is selected', async () => {
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
 

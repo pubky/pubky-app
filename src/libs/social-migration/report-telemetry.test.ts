@@ -1,14 +1,18 @@
 import type { MigrationReport } from 'pubky-social-migrator';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
+import { SENSITIVE_VALUE_REDACTED } from '@/libs/observability/sentry.constants';
+import { sanitizeForSentry } from '@/libs/observability/sentry.utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
   logSocialMigrationFinished,
   reportSocialMigrationBlocked,
   reportSocialMigrationCapsMissing,
+  reportSocialMigrationEngineUnavailable,
   reportSocialMigrationFailure,
   resetSocialMigrationReports,
 } from './report-telemetry';
@@ -98,16 +102,72 @@ describe('social migration telemetry', () => {
     );
   });
 
-  it('captures a thrown engine error once with its cause', () => {
+  it('captures a thrown engine error once, by its shape and never its message or cause', () => {
     const server = vi.spyOn(Err, 'server');
-    const cause = new Error('fault');
-    reportSocialMigrationFailure({ pubky: 'a', error: cause, attempt: 2 });
+    reportSocialMigrationFailure({
+      pubky: 'a',
+      error: new TypeError('fetch failed for /pub/pubky.app/posts/private-path'),
+      attempt: 2,
+    });
     reportSocialMigrationFailure({ pubky: 'a', error: new Error('again'), attempt: 3 });
-    expect(server).toHaveBeenCalledExactlyOnceWith(
-      ServerErrorCode.UNKNOWN_ERROR,
-      'Social migration failed',
-      expect.objectContaining({ cause, context: { attempt: 2 } }),
-    );
+    expect(server).toHaveBeenCalledExactlyOnceWith(ServerErrorCode.UNKNOWN_ERROR, 'Social migration failed', {
+      service: ErrorService.Homeserver,
+      operation: 'socialMigration',
+      context: { attempt: 2, errorName: 'TypeError', kind: undefined, status: undefined },
+    });
+    const [, , params] = server.mock.calls[0];
+    expect(params).not.toHaveProperty('cause');
+    expect(JSON.stringify(server.mock.calls)).not.toContain('private-path');
+
+    // The type survives the Sentry scrubber, which redacts every value under a `name` key
+    const scrubbed = sanitizeForSentry(params.context);
+    expect(scrubbed).toMatchObject({ attempt: 2, errorName: 'TypeError' });
+    expect(JSON.stringify(scrubbed)).not.toContain('private-path');
+    expect(sanitizeForSentry({ name: 'TypeError' })).toEqual({ name: SENSITIVE_VALUE_REDACTED });
+  });
+
+  it('reports an unavailable engine once per account, with the import rejection as the cause', () => {
+    const network = vi.spyOn(Err, 'network');
+    const loadFailure = () =>
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'Could not load the migration engine',
+        service: ErrorService.Homeserver,
+        operation: 'migrateToSocialV1',
+        cause: new TypeError('Failed to fetch dynamically imported module'),
+      });
+    reportSocialMigrationEngineUnavailable({ pubky: 'a', error: loadFailure(), attempt: 1 });
+    reportSocialMigrationEngineUnavailable({ pubky: 'a', error: loadFailure(), attempt: 2 });
+    reportSocialMigrationEngineUnavailable({ pubky: 'b', error: loadFailure(), attempt: 1 });
+    expect(network).toHaveBeenCalledTimes(2);
+    const [code, , params] = network.mock.calls[0];
+    expect(code).toBe(NetworkErrorCode.CONNECTION_FAILED);
+    // The import's own rejection, not the service's AppError: an AppError in the chain reads as already captured
+    expect(params.cause).toBeInstanceOf(TypeError);
+    expect(params.context).toEqual({ attempt: 1, errorName: 'TypeError', kind: undefined, status: undefined });
+  });
+
+  it('describes a thrown AppError by its category and HTTP status only', () => {
+    const server = vi.spyOn(Err, 'server');
+    reportSocialMigrationFailure({
+      pubky: 'b',
+      error: new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'Could not load /pub/pubky.app/posts/private-path',
+        service: ErrorService.Homeserver,
+        operation: 'migrateToSocialV1',
+        context: { statusCode: 502, url: 'pubky://owner/pub/pubky.app/posts/private-path' },
+      }),
+      attempt: 1,
+    });
+    reportSocialMigrationFailure({ pubky: 'c', error: 'not an error', attempt: 1 });
+    expect(server.mock.calls.map(([, , params]) => params.context)).toEqual([
+      { attempt: 1, errorName: 'AppError', kind: ErrorCategory.Network, status: 502 },
+      { attempt: 1, errorName: 'string', kind: undefined, status: undefined },
+    ]);
+    expect(JSON.stringify(server.mock.calls)).not.toContain('private-path');
   });
 
   it('logs a finished run as information only', () => {

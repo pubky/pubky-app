@@ -3,6 +3,8 @@ import type { ProgressEvent } from 'pubky-social-migrator';
 import { memoryHomeserver } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCIAL_MIGRATION_FLAG_PATH, SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -125,6 +127,43 @@ describe('HomeserverService.migrateToSocialV1', () => {
     const report = await HomeserverService.migrateToSocialV1({ session });
 
     expect(report.status).toBe('done');
+  });
+
+  // The engine's chunk is fetched when a run starts: a load that fails is the network, so the gate retries it on
+  // reconnect like an unreachable homeserver instead of blocking on "Something went wrong". Every Retry, focus and
+  // reconnect throws it again, so the service must not capture it: the controller's once-per-(account, code)-per-page
+  // guard does (`docs/error-handling.md`, "The migration gate"). This is the contract test for that exception.
+  it('throws the load failure uncaptured so the controller can capture it once', async () => {
+    vi.doMock('pubky-social-migrator', () => {
+      throw new TypeError('Failed to fetch dynamically imported module');
+    });
+    try {
+      vi.resetModules();
+      // The spies go on the fresh module graph the fresh service will import, before it is imported
+      const { Err: freshErr } = await import('@/libs/error/error.factories');
+      const { Logger: freshLogger } = await import('@/libs/logger/logger');
+      const network = vi.spyOn(freshErr, 'network');
+      const captured = vi.spyOn(freshLogger, 'error');
+      const { HomeserverService: fresh } = await import('@/services/homeserver/homeserver');
+      const failure = await fresh.migrateToSocialV1({ session }).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      // The reset module graph has its own `AppError` class, so the shape is asserted rather than the instance
+      expect(failure).toMatchObject({
+        name: 'AppError',
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        operation: 'migrateToSocialV1',
+        cause: expect.any(Error),
+      });
+      expect(network).not.toHaveBeenCalled();
+      expect(captured).not.toHaveBeenCalled();
+      expect(await homeserver.session.storage.exists(V1_PROFILE)).toBe(false);
+    } finally {
+      vi.doUnmock('pubky-social-migrator');
+      vi.resetModules();
+    }
   });
 });
 
