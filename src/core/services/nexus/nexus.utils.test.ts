@@ -4,6 +4,7 @@ import { ClientErrorCode, RateLimitErrorCode, ServerErrorCode } from '@/libs/err
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { mockResponse } from '@/test-utils/dom';
@@ -436,6 +437,109 @@ describe('nexus.utils', () => {
       } finally {
         now.mockRestore();
       }
+    });
+
+    describe.each(['users', 'posts'] as const)('exact %s queries before overlapping batches', (kind) => {
+      beforeEach(() => {
+        mockFetch.mockReset();
+      });
+      const ids = kind === 'users' ? ['alice', 'bob'] : ['alice:one', 'bob:two'];
+      const record = (id: string, version: string) =>
+        kind === 'users'
+          ? { details: { id, name: version } }
+          : { details: { author: id.split(':')[0], id: id.split(':')[1], content: version } };
+      const fetchIds = (requested: string[], force = false) =>
+        kind === 'users'
+          ? NexusUserStreamService.fetchByIds({ user_ids: requested, force })
+          : NexusPostStreamService.fetchByIds({ post_ids: requested, force });
+      const exactQueryKey = () => [
+        'nexus',
+        `${getNexusUrl()}/v0/stream/${kind}/by_ids`,
+        HttpMethod.POST,
+        JSON.stringify(
+          kind === 'users' ? { user_ids: [ids[1]] } : { post_ids: [ids[1]], include_attachment_metadata: true },
+        ),
+      ];
+
+      it.each(['older record', 'omitted record'])(
+        'returns the completed exact refresh before a pending batch with an %s',
+        async (olderResult) => {
+          const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+          const running = Promise.withResolvers<Response>();
+          const refreshedRecords = [record(ids[1], 'Refreshed')];
+          mockFetch.mockReturnValueOnce(running.promise).mockResolvedValueOnce(nexusResponse(refreshedRecords));
+          const old = fetchIds(ids);
+          now.mockReturnValue(2_000);
+          const refreshed = await fetchIds([ids[1]], true);
+          now.mockReturnValue(3_000);
+          const resolved = vi.fn();
+          const ordinary = fetchIds([ids[1]]).then(resolved);
+          try {
+            await vi.waitFor(() => expect(resolved).toHaveBeenCalledOnce());
+            expect(resolved.mock.calls[0][0]).toBe(refreshed);
+            expect(getNexusResponseStartedAt(resolved.mock.calls[0][0])).toBe(2_000);
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+          } finally {
+            running.resolve(nexusResponse(olderResult === 'older record' ? [record(ids[1], 'Older')] : []));
+            await Promise.all([old, ordinary]);
+            now.mockRestore();
+          }
+        },
+      );
+
+      it.each(['stale', 'invalidated'])(
+        'revalidates the %s exact response instead of joining an older overlapping batch',
+        async (state) => {
+          const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+          const running = Promise.withResolvers<Response>();
+          mockFetch
+            .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Cached')]))
+            .mockReturnValueOnce(running.promise)
+            .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Revalidated')]));
+          await fetchIds([ids[1]]);
+          now.mockReturnValue(2_000);
+          const old = fetchIds(ids);
+          if (state === 'stale') now.mockReturnValue(30_000);
+          else await nexusQueryClient.invalidateQueries({ queryKey: exactQueryKey(), exact: true });
+          const resolved = vi.fn();
+          const ordinary = fetchIds([ids[1]]).then(resolved);
+          try {
+            await vi.waitFor(() => expect(resolved).toHaveBeenCalledOnce());
+            expect(resolved.mock.calls[0][0]).toEqual([record(ids[1], 'Revalidated')]);
+            expect(mockFetch).toHaveBeenCalledTimes(3);
+          } finally {
+            running.resolve(nexusResponse([record(ids[1], 'Older')]));
+            await Promise.all([old, ordinary]);
+            now.mockRestore();
+          }
+        },
+      );
+
+      it('joins a pending exact forced refresh instead of an older overlapping batch', async () => {
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+        const running = Promise.withResolvers<Response>();
+        const refreshing = Promise.withResolvers<Response>();
+        mockFetch.mockReturnValueOnce(running.promise).mockReturnValueOnce(refreshing.promise);
+        const old = fetchIds(ids);
+        now.mockReturnValue(2_000);
+        const forced = fetchIds([ids[1]], true);
+        await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+        now.mockReturnValue(3_000);
+        const resolved = vi.fn();
+        const ordinary = fetchIds([ids[1]]).then(resolved);
+        refreshing.resolve(nexusResponse([record(ids[1], 'Refreshed')]));
+        const refreshed = await forced;
+        try {
+          await vi.waitFor(() => expect(resolved).toHaveBeenCalledOnce());
+          expect(resolved.mock.calls[0][0]).toBe(refreshed);
+          expect(getNexusResponseStartedAt(resolved.mock.calls[0][0])).toBe(2_000);
+          expect(mockFetch).toHaveBeenCalledTimes(2);
+        } finally {
+          running.resolve(nexusResponse([record(ids[1], 'Older')]));
+          await Promise.all([old, ordinary]);
+          now.mockRestore();
+        }
+      });
     });
 
     it('releases shared failed batches so a later caller can retry', async () => {

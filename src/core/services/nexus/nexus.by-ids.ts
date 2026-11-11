@@ -33,6 +33,12 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
 
     if (force || ids.length === 0) return await execute(ids);
 
+    // An exact refresh may be newer than an overlapping pending batch. Let
+    // TanStack reuse, join or revalidate that query under its ordinary policy,
+    // rather than bypassing its cached result, invalidation or pending refresh.
+    const exactQueryKey = ['nexus', url, HttpMethod.POST, bodyFor(ids)];
+    if (nexusQueryClient.getQueryState(exactQueryKey) !== undefined) return await execute(ids);
+
     // Viewer, depth, attachment options and endpoint all affect the result.
     const scopeKey = JSON.stringify([url, bodyFor([])]);
     let pending = scopes.get(scopeKey);
