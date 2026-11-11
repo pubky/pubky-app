@@ -64,11 +64,9 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
   },
   'src/config/app-files.ts': {
     patterns: ['legacyTree'],
-    reason: '`LEGACY_SETTINGS_PATH`: the 0.x settings, read while the v1 file is absent',
-  },
-  'src/core/pipes/lastRead/lastRead.normalizer.ts': {
-    patterns: ['legacyTree'],
-    reason: '`buildLegacyUrl`: the 0.x notification cursor, read while the v1 file is absent',
+    reason:
+      '`LEGACY_SETTINGS_PATH` and `LEGACY_LAST_READ_PATH`: the 0.x settings and notification cursor, read while ' +
+      'the v1 file is absent',
   },
   'src/libs/post/articleInlineMedia.ts': {
     patterns: ['legacyTree', 'blobs'],

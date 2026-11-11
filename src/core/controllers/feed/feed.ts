@@ -1,6 +1,7 @@
 import { FeedApplication } from '@/application/feed/feed';
 import type { TFeedPersistCreateParams } from '@/application/feed/feed.types';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { FeedNormalizer } from '@/pipes/feed/feed.normalizer';
 import { FeedValidators } from '@/pipes/feed/feed.validators';
@@ -27,12 +28,13 @@ export class FeedController {
   }
 
   /**
-   * Fetch all feeds from the homeserver and persist them locally.
+   * Fetch all feeds from the homeserver and persist them locally. The listing is reconciled under
+   * the viewer guard, so a fetch that outlives a sign-out writes nothing for the next account.
    * @returns The list of persisted feeds
    */
   static async fetchFeeds(): Promise<FeedModelSchema[]> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
-    return FeedApplication.fetchFeeds(userId);
+    return FeedApplication.fetchFeeds(userId, { isCurrent: captureViewerSession() });
   }
 
   /**

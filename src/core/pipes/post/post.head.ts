@@ -1,6 +1,20 @@
 import { parseUri } from 'pubky-social-specs';
 
 /**
+ * The post version a listed URL names, or null for an entry that is no canonical post version
+ * (a foreign file name, a slug-only leaf, a directory, no URI at all).
+ */
+function parsePostVersion(url: string): { url: string; id: string; editId: string } | null {
+  let at: ReturnType<typeof parseUri>;
+  try {
+    at = parseUri(url);
+  } catch {
+    return null;
+  }
+  return at.kind === 'post' && at.editId !== undefined ? { url, id: at.id, editId: at.editId } : null;
+}
+
+/**
  * The URL of a post's head among the URLs a LIST of its directory (`posts/{id}/`) returned: the
  * version with the highest `editId`, which ids compare as plain strings. Entries that are no
  * canonical post version (a foreign file name, a slug-only leaf) are skipped; null when the
@@ -9,16 +23,19 @@ import { parseUri } from 'pubky-social-specs';
 export function pickHeadVersion(urls: readonly string[]): string | null {
   let head: { url: string; editId: string } | null = null;
   for (const url of urls) {
-    let at: ReturnType<typeof parseUri>;
-    try {
-      at = parseUri(url);
-    } catch {
-      continue;
-    }
-    if (at.kind !== 'post' || at.editId === undefined) continue;
-    if (head === null || at.editId > head.editId) head = { url, editId: at.editId };
+    const version = parsePostVersion(url);
+    if (version && (head === null || version.editId > head.editId)) head = version;
   }
   return head?.url ?? null;
+}
+
+/**
+ * The URLs among a LIST of a post's directory (`posts/{id}/`, public or private) that are a
+ * canonical post version, in listing order. Entries that are no post version are skipped, as
+ * `pickHeadVersion` skips them: `deletionPaths` refuses a listing that holds one.
+ */
+export function pickPostVersions(urls: readonly string[]): string[] {
+  return urls.flatMap((url) => parsePostVersion(url)?.url ?? []);
 }
 
 /**
@@ -27,15 +44,5 @@ export function pickHeadVersion(urls: readonly string[]): string | null {
  * as `pickHeadVersion` skips them.
  */
 export function pickListedPostIds(urls: readonly string[]): string[] {
-  const ids = new Set<string>();
-  for (const url of urls) {
-    let at: ReturnType<typeof parseUri>;
-    try {
-      at = parseUri(url);
-    } catch {
-      continue;
-    }
-    if (at.kind === 'post' && at.editId !== undefined) ids.add(at.id);
-  }
-  return [...ids];
+  return [...new Set(urls.flatMap((url) => parsePostVersion(url)?.id ?? []))];
 }

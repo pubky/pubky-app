@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MigrationApplication } from '@/application/migration/migration';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -13,6 +14,7 @@ vi.mock('@/libs/logger/logger', () => ({
 }));
 
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
+const OTHER_PUBKY = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 
 describe('MigrationController', () => {
   beforeEach(() => {
@@ -53,6 +55,28 @@ describe('MigrationController', () => {
       expect(isCurrent!()).toBe(true);
       useAuthStore.setState({ currentUserPubky: null });
       expect(isCurrent!()).toBe(false);
+    });
+
+    it('does not load the settings of an account that signed out during the resync', async () => {
+      const remoteSettings = { version: 6, updatedAt: 600 } as SettingsState;
+      useAuthStore.setState({ currentUserPubky: TEST_PUBKY });
+      vi.spyOn(MigrationApplication, 'resync').mockImplementation(async () => {
+        // The next account signs in while the first one's resync is still out.
+        useAuthStore.setState({ currentUserPubky: OTHER_PUBKY });
+        return remoteSettings;
+      });
+      const loadFromHomeserverSpy = vi.fn();
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(
+        mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy }),
+      );
+      vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue({ version: 1, updatedAt: 1 } as SettingsState);
+
+      await MigrationController.resync(TEST_PUBKY);
+
+      expect(loadFromHomeserverSpy).not.toHaveBeenCalled();
+      expect(Logger.info).toHaveBeenCalledWith('Settings from the DB re-sync not applied, the viewer session changed', {
+        pubky: TEST_PUBKY,
+      });
     });
 
     it('should not apply settings to store when MigrationApplication.resync returns null', async () => {

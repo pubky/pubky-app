@@ -1,4 +1,4 @@
-import { APP_LAST_READ_FILE, APP_PRIVATE_PATH } from '@/config/app-files';
+import { APP_LAST_READ_FILE, APP_PRIVATE_PATH, LEGACY_LAST_READ_PATH } from '@/config/app-files';
 import type { Pubky } from '@/models/models.types';
 
 /** The notification read cursor as the app stores it, `{ timestamp }` in milliseconds, with its URL. */
@@ -17,7 +17,7 @@ export class LastReadNormalizer {
 
   /** Where a 0.x client kept the cursor; read while the v1 file is absent. */
   static buildLegacyUrl(pubky: Pubky): string {
-    return `pubky://${pubky}/pub/pubky.app/last_read`;
+    return `pubky://${pubky}${LEGACY_LAST_READ_PATH}`;
   }
 
   /** A cursor at the current time, the document a mark-all-as-read or a first bootstrap writes. */
