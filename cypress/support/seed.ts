@@ -8,7 +8,7 @@ import type {
   SeededUser,
 } from './types/seed';
 
-// Spec-side helpers for the seed tasks in cypress/plugins/seed.ts.
+// Spec-side helpers for the seed tasks in e2e/shared/seed.ts (registered by cypress/plugins/seed.ts).
 //
 // They create the users and activity a test only observes (followers, other people's posts,
 // notifications to receive) through the homeserver API instead of driving the UI for every

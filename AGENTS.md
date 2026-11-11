@@ -17,6 +17,7 @@ Node 24 (`.nvmrc`), dependencies via `npm ci`. The pre-commit hook runs `lint-st
 | Visual regression (VRT) | `npm run test:vrt` (`npm run test:vrt:setup` once); baselines are CI-owned, never commit local |
 | Production build        | `npm run build` (`next build --webpack`)                                                       |
 | E2E (Cypress)           | `npm run test:e2e`; needs the full pubky-stack, not runnable from a bare checkout              |
+| E2E (Playwright)        | `npm run test:e2e:playwright`; same stack, see `docs/playwright-e2e.md`                        |
 
 ## Architecture (`src/core`)
 
@@ -150,7 +151,7 @@ to people. See [People and names](docs/development-workflow.md#people-and-names)
 - Sign in with the staging account: `npm run dev`, open `http://localhost:3000`, **Sign In** → **Use recovery phrase**,
   enter the 12 words from the `STAGING_RECOVERY_PHRASE` secret, **Restore**.
 - Account creation needs SMS verification or a Bitcoin payment against staging infrastructure; do not try it in the VM.
-- Unit tests need no browser (`fake-indexeddb` + jsdom); `npm run test:e2e` needs external staging services, skip it.
+- Unit tests need no browser (`fake-indexeddb` + jsdom); `npm run test:e2e` and `npm run test:e2e:playwright` need the pubky-stack, skip them.
 
 ## Tooling map
 

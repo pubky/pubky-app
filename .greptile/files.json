@@ -63,6 +63,16 @@
       "scope": ["src/test/vrt/**", "src/test-utils/vrt*", "src/test-utils/stores.ts", ".github/workflows/vrt*.yml"]
     },
     {
+      "path": "docs/playwright-e2e.md",
+      "description": "Playwright proof-of-concept e2e suite, shared seed, projects, and the macOS WebKit tunnel",
+      "scope": [
+        "playwright/**",
+        "e2e/shared/**",
+        ".github/workflows/playwright-e2e.yml",
+        ".github/scripts/playwright-*"
+      ]
+    },
+    {
       "path": "docs/skeleton-architecture.md",
       "description": "Skeleton loader placement, naming, implementation, and testing rules",
       "scope": ["src/components/**/*skeleton*", "src/components/**/*Skeleton*"]

@@ -2,11 +2,14 @@ import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
 import { appendFileSync, existsSync, readdirSync, rename, rm, unlink } from 'fs';
+import { e2eStackConfigFromEnv } from '../e2e/shared/homeserver';
 import { createNexusTasks } from './plugins/nexus';
 import { createSeedTasks } from './plugins/seed';
 import { defaultMs } from './support/slow-down';
 
 config({ path: '../.env' });
+
+const stack = e2eStackConfigFromEnv(process.env);
 
 export default defineConfig({
   e2e: {
@@ -24,13 +27,12 @@ export default defineConfig({
     // Safari support
     experimentalWebKitSupport: true,
     env: {
-      // Server-side only admin credentials (not exposed to client bundle)
-      homeserverAdminUrl: process.env['HOMESERVER_ADMIN_URL'] || 'http://localhost:6288/generate_signup_token',
-      homeserverAdminPassword: process.env['HOMESERVER_ADMIN_PASSWORD'] || 'admin',
-      nexusUrl: process.env['PUBKY_RUNTIME_NEXUS_URL'] || 'http://localhost:8080',
-      // The pubky-testnet homeserver key, which the app's testnet mode also defaults to
-      homeserverPublicKey:
-        process.env['PUBKY_RUNTIME_HOMESERVER'] || '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo',
+      // Server-side only admin credentials (not exposed to client bundle). Defaults live in
+      // e2e/shared/homeserver.ts so Playwright reads the same stack.
+      homeserverAdminUrl: stack.homeserverAdminUrl,
+      homeserverAdminPassword: stack.homeserverAdminPassword,
+      nexusUrl: stack.nexusUrl,
+      homeserverPublicKey: stack.homeserverPublicKey,
     },
     expose: {
       // slow down execution more in CI to avoid flaky tests
