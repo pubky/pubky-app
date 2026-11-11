@@ -838,6 +838,37 @@ describe('useVisualFeedTiles', () => {
         fileAttachments: ['pubky://user-1/pub/pubky.app/files/cover-1'],
       });
     });
+
+    it('renders no tile for a 0.x article whose slot 0 is a video or a PDF: the cover is image-only', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        articlePost('author:article-video', 'Text ![a](attachment:1)', [
+          'pubky://user-1/pub/pubky.app/files/clip-1',
+          'pubky://user-1/pub/pubky.app/files/inline-1',
+        ]),
+        articlePost('author:article-pdf', 'Text ![a](attachment:1)', [
+          'pubky://user-1/pub/pubky.app/files/doc-1',
+          'pubky://user-1/pub/pubky.app/files/inline-2',
+        ]),
+      ]);
+      // Only the rows can say what slot 0 is, so both are read; neither is an image
+      mockGetMetadata.mockResolvedValue([
+        createFileDetails({ id: 'user-1:clip-1', contentType: 'video/mp4', width: 1280, height: 720 }),
+        createFileDetails({ id: 'user-1:doc-1', contentType: 'application/pdf' }),
+      ]);
+
+      const { result } = renderHook(() =>
+        useVisualFeedTiles({ postIds: ['author:article-video', 'author:article-pdf'], hasMore: false }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.hiddenPostCount).toBe(2);
+      });
+      expect(result.current.tiles).toEqual([]);
+      expect(result.current.hasPendingFiles).toBe(false);
+      expect(mockGetMetadata).toHaveBeenCalledWith({
+        fileAttachments: ['pubky://user-1/pub/pubky.app/files/clip-1', 'pubky://user-1/pub/pubky.app/files/doc-1'],
+      });
+    });
   });
   describe('link video tiles', () => {
     const YOUTUBE_URL = 'https://youtu.be/dQw4w9WgXcQ';

@@ -69,8 +69,8 @@ export const PostArticle = ({
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
-  // TODO:[Locks] #2660 — the other half of the cover rule: the hook says a slot 0 exists, this says
-  // whether it is an image, so a video in slot 0 reports a cover that never renders.
+  // TODO:[Locks] #2660 — the same local slot-0 entry goes to the hook as `localCoverType` and is read
+  // again here for its URL; pass the attachments to `usePostArticle` instead.
   const localCover = localCoverEntry ?? (legacyCoverSlot ? getAttachmentAtSlot(localAttachments, 0) : undefined);
   const localCoverImage =
     hasCover && localCover?.type.startsWith('image')

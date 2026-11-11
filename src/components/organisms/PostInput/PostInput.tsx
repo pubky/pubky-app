@@ -326,7 +326,10 @@ export function PostInput({
   const isValid = () => {
     // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
     // so leaving it out lets a second click publish a duplicate lock while the first is in flight.
+    // So does an edited article whose rows are still resolving: the strip is not seeded until a 0.x
+    // slot 0 is known to be the cover or not, and a save before that would diff against nothing.
     return (
+      !isEditInlineMediaLoading &&
       canSubmitPost(
         variant,
         content,

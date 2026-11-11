@@ -6,7 +6,7 @@ Accepted — 2026-01-12
 Updated — 2026-05-06 (homeserver event-stream cross-session mute sync; Nexus mute APIs removed from client)  
 Updated — 2026-10-30 (social v1: mutes are private at `/priv/social/v1/mutes/{mutee}.json`; an unmute deletes both copies; the event stream is session-bound; no union with the 0.x directory)  
 Updated — 2026-11-04 (open sessions poll the private directory instead of holding a session-bound event stream)  
-Updated — 2026-11-10 (the reason corrected after the pubky/pubky-homeserver#798 probe: a stream's session lease is unbounded while its response headers are outstanding, not a deadlock)
+Updated — 2026-11-10 (the reason corrected after the pubky/pubky-homeserver#798 probe: a stream's session lease is unbounded while its response headers are outstanding, not a deadlock; the issue was closed on 2026-11-10 as not a deadlock and holds the hardening note)
 
 ## Context
 

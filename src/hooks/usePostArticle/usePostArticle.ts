@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { resolveArticleCover } from '@/libs/post/articleCover';
+import { isArticleCoverContentType, resolveArticleCover, settleArticleSlotZero } from '@/libs/post/articleCover';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
@@ -32,14 +32,15 @@ interface UsePostArticleParams {
    * Attachments the caller holds locally. Unlocked content has no Nexus attachments at all — the
    * bytes live in the reader's own `/priv` — so without this its cover would never count as one.
    *
-   * TODO:[Locks] #2660 — a count only answers "is there a slot 0"; whether slot 0 is an image is
-   * decided again in `PostArticle`, so the two can disagree. Take the attachments here instead.
+   * TODO:[Locks] #2660 — a count only answers "is there a slot 0"; `localCoverType` says what it
+   * holds, and `PostArticle` reads the same entry again for its URL. Take the attachments here instead.
    */
   localAttachmentCount?: number;
   /**
    * Content type of the caller's local slot-0 entry, when it holds one (a same-session publish or
-   * unlocked content). A known non-image vetoes the provisional cover at once instead of painting a
-   * broken image until the file row says the same.
+   * unlocked content). It is the slot's metadata: under the slot-0 rule a known non-image means no
+   * cover at all (`resolveArticleCover`), and for an envelope cover it vetoes the provisional paint
+   * at once instead of painting a broken image until the file row says the same.
    */
   localCoverType?: string;
   /**
@@ -59,9 +60,9 @@ interface UsePostArticleResult {
   body: string;
   coverImage: CoverImage | null;
   /**
-   * Whether the article has a cover: the envelope's `cover_image`, or slot 0 of a 0.x article
-   * unless the body references `attachment:0` (`resolveArticleCover`). Callers must gate any
-   * locally sourced cover on this too.
+   * Whether the article has a cover: the envelope's `cover_image`, or slot 0 of a 0.x article when
+   * the body does not reference `attachment:0` and its file is an image or not read yet
+   * (`resolveArticleCover`). Callers must gate any locally sourced cover on this too.
    */
   hasCover: boolean;
   isCoverLoading: boolean;
@@ -70,13 +71,15 @@ interface UsePostArticleResult {
 /**
  * Custom hook to extract article data from post content and attachments
  *
- * The cover URL is a pure function of the cover URI and the variant, so it
+ * An envelope cover's URL is a pure function of the cover URI and the variant, so it
  * exists on the first render that has post details: no file-metadata round trip
  * stands in front of the hero. The metadata row is a progressive refinement (alt
  * text, intrinsic size) and stays authoritative once the lookup settles: a row
  * that is not an image, or a lookup that settles with no row, drops the cover,
- * as it did when the cover waited for the row. A row persisted after the post
- * row still renders, because the lookup is live.
+ * as it did when the cover waited for the row. A 0.x article's slot 0 (rule B) is
+ * different: only its row can say it is an image, so nothing paints until the row
+ * does, and a PDF or a video there never flashes as a cover. A row persisted after
+ * the post row still renders, because the lookup is live.
  *
  * @param params.content - The article envelope: title, body and, for a v1 article, its cover
  * @param params.attachments - The file attachment URIs for the post
@@ -123,14 +126,15 @@ export function usePostArticle({
   // Where the cover is, computed synchronously from the envelope and the published body so the
   // cover never flashes for articles whose slot 0 is an inline image. Unlocked (Locks) content has
   // no Nexus attachments at all, its files are the reader's own: it keeps the slot-0 convention,
-  // so a local slot 0 is its cover exactly when the slot-0 rule says so.
-  const resolved = resolveArticleCover({ content, attachments });
-  const hasCover = resolved.cover !== null || (Boolean(localAttachmentCount) && resolved.legacyCoverSlot);
+  // so a local slot 0 is its cover exactly when the slot-0 rule says so, and its entry's type says
+  // whether it is an image.
+  const located = resolveArticleCover({ content, attachments, slotZeroContentType: localCoverType });
 
   // Only the cover is relevant; inline attachments render inside the
   // article body and are never resolved here. An edit that replaces or removes
-  // the cover derives a new result, so no stale cover can linger.
-  const coverFileUri = resolved.cover ?? undefined;
+  // the cover derives a new result, so no stale cover can linger. A 0.x article's slot 0 is read
+  // too: its row is what says it is an image, and so the cover (rule B).
+  const coverFileUri = located.cover ?? located.coverCandidate ?? undefined;
   const { files, isLoading: isCoverLoading } = useAttachmentsMetadata({
     fileUris: coverFileUri ? [coverFileUri] : [],
     onError: () => toast({ variant: 'error', description: 'Could not load cover image' }),
@@ -138,24 +142,34 @@ export function usePostArticle({
   // The row for *this* uri, not merely the first of a retained previous snapshot: when the
   // attachment is replaced, the old row must not carry its alt text onto the new cover.
   const coverFile = files.find((file) => file.uri === coverFileUri);
+  // Rule B settles on the row: an image makes slot 0 the cover; anything else, or no row once the
+  // read settled, leaves the article without one.
+  const resolved =
+    located.coverCandidate && (coverFile || !isCoverLoading)
+      ? settleArticleSlotZero(located, Boolean(coverFile && isArticleCoverContentType(coverFile.content_type)))
+      : located;
+  const hasCover =
+    resolved.cover !== null ||
+    resolved.coverCandidate !== null ||
+    (Boolean(localAttachmentCount) && resolved.legacyCoverSlot);
+  const coverUri = resolved.cover ?? undefined;
 
   // `pubkyUriToCdnUrl` ends in the same `filesApi.getFileUrl` the server preload
   // (`resolvePostCoverPreloadUrls`) resolves through, and both read the shared cover variants, so
   // the URL rendered here is the one the document already preloaded. It returns `null` for
   // anything that is not a homeserver file URI, which the CDN cannot serve.
-  const coverSrc = pubkyUriToCdnUrl(coverFileUri, coverImageVariant);
-  const coverDesktopSrc = coverImageDesktopVariant ? pubkyUriToCdnUrl(coverFileUri, coverImageDesktopVariant) : null;
+  const coverSrc = pubkyUriToCdnUrl(coverUri, coverImageVariant);
+  const coverDesktopSrc = coverImageDesktopVariant ? pubkyUriToCdnUrl(coverUri, coverImageDesktopVariant) : null;
   // The desktop fallback (`main`, the untouched upload) waits for the row to confirm an image: a
   // provisional slot 0 that turns out to be a video would otherwise pull its multi-megabyte original
   // through the `<img>` when `large` fails. A failure recorded before the row lands still swaps as
   // soon as it does.
   const coverDesktopFallbackSrc =
-    coverFile && coverImageDesktopFallbackVariant
-      ? pubkyUriToCdnUrl(coverFileUri, coverImageDesktopFallbackVariant)
-      : null;
-  // A local slot-0 entry already knows its type; otherwise only the row can say slot 0 is not an
-  // image, or that Nexus no longer serves it (the lookup settles with no row). Until it lands the
-  // cover is provisional.
+    coverFile && coverImageDesktopFallbackVariant ? pubkyUriToCdnUrl(coverUri, coverImageDesktopFallbackVariant) : null;
+  // An envelope cover paints before its row lands and is provisional until then: a local entry
+  // already knows its type; otherwise only the row can say it is not an image, or that Nexus no
+  // longer serves it (the lookup settles with no row). A 0.x slot 0 never gets here before its row
+  // says image (`resolved.cover` is null until then).
   const coverType = localCoverType || coverFile?.content_type;
   const isCoverUnavailable = coverType ? !coverType.startsWith('image') : !isCoverLoading;
 

@@ -16,8 +16,11 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  *
  * Refreshes through {@link MuteController.fetchMutedUsers} (debounced) on start, when the tab becomes
  * visible, on `online`, and every {@link MUTE_SYNC_POLL_INTERVAL_MS}. It polls instead of streaming: the
- * mute directory is private, a private event stream needs a session, and a session-bound stream deadlocks
- * the SDK's bearer refresh for as long as it stays open (ADR-0014).
+ * mute directory is private, a private event stream needs a session, and a session-bound stream holds the
+ * shared session lock until its response headers reach the SDK, with no timeout; behind anything that buffers
+ * event streams that is unbounded and a 401 refresh then waits forever (pubky/pubky-homeserver#798). Polling
+ * has no such exposure; the stream comes back when the SDK bounds that lease or the team accepts the exposure
+ * (ADR-0014).
  *
  * Policy (aligned with {@link NotificationCoordinator}):
  * - Requires authenticated session with profile and current pubky.
