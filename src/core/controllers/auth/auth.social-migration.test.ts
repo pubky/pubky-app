@@ -4,6 +4,7 @@ import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
+import { APP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
@@ -265,6 +266,98 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       await expect(AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).rejects.toThrow('cleanup failed');
 
       expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'temporary-error' });
+    });
+  });
+
+  describe('upgrade', () => {
+    // A signed-in grant without the Locks scopes; the approved replacement is root, like `session`.
+    const narrowSession = mockSession({
+      info: asOpaque({
+        publicKey: { z32: () => pubky },
+        capabilities: [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES],
+      }),
+      grant: asOpaque({ sessionInfo: async () => mockGrantReference('narrow-grant') }),
+    });
+
+    beforeEach(() => {
+      useAuthStore.setState({
+        session: narrowSession,
+        sessionReference: mockGrantReference('narrow-grant'),
+        currentUserPubky: pubky,
+        hasProfile: true,
+        generation: 'upgrade-generation',
+        restoreStatus: 'ready',
+      });
+      persistState();
+      vi.spyOn(AuthApplication, 'startGrantFlow').mockResolvedValue(
+        asOpaque({
+          url: 'pubkyauth://flow',
+          awaitApproval: Promise.resolve(session),
+          cancelAuthFlow: vi.fn(),
+          completeAuthFlow: vi.fn(),
+        }),
+      );
+      vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('upgraded-grant'));
+      // The replaced grant's retirement runs detached once the upgrade is adopted (asserted by each case)
+      vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      vi.spyOn(AuthApplication, 'removeSessionRecord').mockResolvedValue(undefined);
+    });
+
+    it('gates an upgrade of an account this browser never saw pass: the engine runs before the session is placed (D11)', async () => {
+      let sessionDuringRun: unknown = 'unread';
+      let statusDuringRun: string | undefined;
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockImplementation(async () => {
+        sessionDuringRun = useAuthStore.getState().session;
+        statusDuringRun = useAuthStore.getState().restoreStatus;
+        return done();
+      });
+      const { seen, unsubscribe } = trackStore();
+
+      const flow = await AuthController.getUpgradeAuthUrl(true);
+      await flow?.awaitApproval;
+      unsubscribe();
+
+      expect(flow).not.toBeNull();
+      expect(run).toHaveBeenCalledOnce();
+      expect(sessionDuringRun).toBeNull();
+      expect(statusDuringRun).toBe('social-migration');
+      expect(seen).toEqual(['restoring', 'social-migration', 'restoring+session', 'ready+session']);
+      expect(useAuthStore.getState()).toMatchObject({
+        session,
+        sessionReference: mockGrantReference('upgraded-grant'),
+        restoreStatus: 'ready',
+      });
+      expect(readSocialMigrationRecord(pubky)).toMatchObject({
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+        admittedGrantIds: ['upgraded-grant'],
+      });
+      // Still an upgrade: no profile bootstrap, and the replaced grant is retired
+      expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
+    });
+
+    it('keeps the context of an upgrade once this browser saw the account pass: no gate, no request', async () => {
+      writeSocialMigrationRecord(pubky, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV, admittedGrantIds: [] });
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const read = vi.spyOn(HomeserverService, 'getBytesIfExists');
+      const { seen, unsubscribe } = trackStore();
+
+      const flow = await AuthController.getUpgradeAuthUrl(true);
+      await flow?.awaitApproval;
+      unsubscribe();
+
+      expect(flow).not.toBeNull();
+      expect(run).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+      // The replacement is written in place: the status never leaves ready and the store never lacks a session
+      expect(seen).toEqual(['ready+session']);
+      expect(useAuthStore.getState()).toMatchObject({
+        session,
+        sessionReference: mockGrantReference('upgraded-grant'),
+        restoreStatus: 'ready',
+      });
+      expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
     });
   });
 

@@ -164,13 +164,15 @@ describe('SocialMigrationController', () => {
     expect(status()).toBe('restoring');
   });
 
-  it('walks a record from an older transform revision again', async () => {
+  it('does not trust a record from an older transform revision: the flag is read again and an unadmitted grant signed out', async () => {
     writeSocialMigrationRecord(owner, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV - 1, admittedGrantIds: [] });
     const read = vi.spyOn(HomeserverService, 'getBytesIfExists');
 
     expect(await ensure('restore')).toBe('reauth-required');
 
     expect(read).toHaveBeenCalledOnce();
+    expect(status()).toBe('social-migration');
+    expect(stage()).toMatchObject({ stage: 'reauth-required', reason: 'pre-migration-grant' });
   });
 
   it('passes a restore whose flag is on the homeserver and writes the record, without the engine', async () => {

@@ -286,16 +286,18 @@ describe('PostController', () => {
   });
 
   describe('getReplies', () => {
-    it('should return replies for a post when relationships store parent as URI', async () => {
+    it('returns the replies stored under either spelling of the parent, 0.x and v1 (ADR-0027)', async () => {
       const { PostController } = await import('./post');
 
-      const parentUri = `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`;
-      const replyOneId = buildCompositeId({ pubky: 'reply-author-1' as Pubky, id: 'reply-1' });
-      const replyTwoId = buildCompositeId({ pubky: 'reply-author-2' as Pubky, id: 'reply-2' });
+      // Nexus serves the 0.x spelling for a reply written before the parent's author migrated; a v1 reply
+      // references the parent the way `buildUri` spells it, pinned as the `postUrl` literal. One thread finds both.
+      const legacyParentUri = `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`;
+      const legacyReplyId = buildCompositeId({ pubky: 'reply-author-1' as Pubky, id: 'reply-1' });
+      const v1ReplyId = buildCompositeId({ pubky: 'reply-author-2' as Pubky, id: 'reply-2' });
 
       await PostRelationshipsModel.table.bulkAdd([
-        { id: replyOneId, replied: parentUri, reposted: null, mentioned: [] },
-        { id: replyTwoId, replied: parentUri, reposted: null, mentioned: [] },
+        { id: legacyReplyId, replied: legacyParentUri, reposted: null, mentioned: [] },
+        { id: v1ReplyId, replied: postUrl, reposted: null, mentioned: [] },
         {
           id: buildCompositeId({ pubky: 'reply-author-3' as Pubky, id: 'reply-3' }),
           replied: 'pubky://someone/pub/pubky.app/posts/another-parent',
@@ -306,9 +308,9 @@ describe('PostController', () => {
 
       const replies = await PostController.getReplies({ compositeId: testData.fullPostId });
 
-      expect(replies).toHaveLength(2);
-      expect(replies.map((reply) => reply.id)).toEqual(expect.arrayContaining([replyOneId, replyTwoId]));
-      expect(replies.every((reply) => reply.replied === parentUri)).toBe(true);
+      expect(replies.map((reply) => reply.id).sort()).toEqual([legacyReplyId, v1ReplyId].sort());
+      expect(replies.find((reply) => reply.id === legacyReplyId)?.replied).toBe(legacyParentUri);
+      expect(replies.find((reply) => reply.id === v1ReplyId)?.replied).toBe(postUrl);
     });
 
     it('should return empty array when a post has no replies', async () => {
