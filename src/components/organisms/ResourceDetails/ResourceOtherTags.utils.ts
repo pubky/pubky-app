@@ -11,9 +11,6 @@ import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pi
 /** Links read for their tags at most: a place can be on dozens of services (Wikipedia editions). */
 export const MAX_OTHER_LINKS = 40;
 
-/** Tags on other services shown at most, as many as the link's own tag bar asks for. */
-export const MAX_OTHER_TAGS = 20;
-
 /**
  * The URIs that are the page's link itself: its tags are the "Tags on this …" bar, so they are not
  * read again as another link's. The page's link, the link acted on, the card's canonical link, the
@@ -61,8 +58,9 @@ export function getOtherLinks(
  * Merges the tags of the other links (`getOtherLinks`, which already leaves out the page link's own
  * URIs) into one chip per label, labels compared as Nexus stores them, case-folded: taggers are
  * joined so a person who put the same tag on two links counts once, and each chip keeps the links
- * it came from, once each (two spellings of a label on one link keep the larger count). Most
- * taggers first, then on most links, then by label.
+ * it came from, once each, with the taggers listed there (two spellings of a label on one link are
+ * joined, keeping the larger count), so a detail can say who put it where. Most taggers first, then
+ * on most links, then by label.
  */
 export function mergeOtherLinkTags(reads: TOtherLinkTags[]): TMergedTag[] {
   const merged = new Map<
@@ -79,7 +77,8 @@ export function mergeOtherLinkTags(reads: TOtherLinkTags[]): TMergedTag[] {
       entry.most = Math.max(entry.most, count);
       entry.isComplete &&= tag.taggers.length >= tag.taggers_count;
       const source = entry.sources.get(link.uri);
-      if (!source || source.count < count) entry.sources.set(link.uri, { ...link, count });
+      const taggers = [...new Set([...(source?.taggers ?? []), ...tag.taggers])];
+      entry.sources.set(link.uri, { ...link, count: Math.max(source?.count ?? 0, count, taggers.length), taggers });
       merged.set(label, entry);
     }
   }

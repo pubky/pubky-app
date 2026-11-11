@@ -20,6 +20,7 @@ export function TaggedList({
   isLoadingMore = false,
   onLoadMore,
   onTagToggle,
+  renderExpandedTaggers,
 }: TaggedListProps) {
   // Track which tag is currently expanded (only one at a time - accordion behavior)
   const [expandedTagLabel, setExpandedTagLabel] = useState<string | null>(null);
@@ -104,6 +105,7 @@ export function TaggedList({
               void loadMoreTaggers(tag.label);
               if (mergeTarget) void loadMoreMergeTaggers(tag.label);
             }}
+            expandedTaggers={isExpanded ? renderExpandedTaggers?.(tag) : undefined}
           />
         );
       })}

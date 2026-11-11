@@ -118,9 +118,10 @@ describe('mergeOtherLinkTags', () => {
     ]);
     expect(merged[0].taggers.sort()).toEqual(['ann', 'bob', 'cy']);
     expect(merged[0].isComplete).toBe(true);
+    // Each link keeps who Nexus listed there, so a detail can say who put the tag where.
     expect(merged[0].sources).toEqual([
-      { uri: TMDB, name: 'TMDB', count: 3 },
-      { uri: NETFLIX, name: 'Netflix', count: 1 },
+      { uri: TMDB, name: 'TMDB', count: 3, taggers: ['ann', 'bob', 'cy'] },
+      { uri: NETFLIX, name: 'Netflix', count: 1, taggers: ['ann'] },
     ]);
   });
 
@@ -146,8 +147,20 @@ describe('mergeOtherLinkTags', () => {
   it('lists a link once per chip when it holds two spellings of the label, with the larger count', () => {
     const merged = mergeOtherLinkTags([{ link: netflix, tags: [tag('Film', ['ann']), tag('film', ['ann', 'bob'])] }]);
     expect(merged).toEqual([
-      { label: 'film', taggers: ['ann', 'bob'], count: 2, isComplete: true, sources: [{ ...netflix, count: 2 }] },
+      {
+        label: 'film',
+        taggers: ['ann', 'bob'],
+        count: 2,
+        isComplete: true,
+        sources: [{ ...netflix, count: 2, taggers: ['ann', 'bob'] }],
+      },
     ]);
+  });
+
+  it('joins the taggers of two spellings on one link, counting each once', () => {
+    const merged = mergeOtherLinkTags([{ link: netflix, tags: [tag('Film', ['ann', 'cy']), tag('film', ['bob'])] }]);
+    expect(merged[0].sources).toEqual([{ ...netflix, count: 3, taggers: ['ann', 'cy', 'bob'] }]);
+    expect(merged[0].count).toBe(3);
   });
 
   it('keeps each label’s taggers to its own links: no tagger of one label shows under another', () => {

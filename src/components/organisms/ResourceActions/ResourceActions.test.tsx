@@ -116,6 +116,7 @@ vi.mock('./ResourceTagBar', () => ({
     isAdding,
     onAddingChange,
     otherTags,
+    uri,
   }: {
     resourceTags: { tags: NexusTag[] };
     label: string;
@@ -124,6 +125,7 @@ vi.mock('./ResourceTagBar', () => ({
     isAdding: boolean;
     onAddingChange: (isAdding: boolean) => void;
     otherTags?: readonly { label: string }[];
+    uri?: string;
   }) => (
     <div
       id={id}
@@ -134,6 +136,7 @@ vi.mock('./ResourceTagBar', () => ({
       data-expanded={isExpanded}
       data-adding={isAdding}
       data-other-tags={otherTags?.map((other) => other.label).join(',') ?? ''}
+      data-uri={uri}
     >
       <button type="button" data-testid="tag-bar-add" onClick={() => onAddingChange(true)} />
     </div>
@@ -266,42 +269,17 @@ describe('ResourceActions', () => {
     );
   });
 
-  it('puts the tags on the same thing’s other links under the footer', () => {
-    render(
-      <ResourceActions
-        uri={URI}
-        tagsLabel="Tags on this song"
-        otherTags={<div data-testid="other-tags">other</div>}
-        size="large"
-      />,
-    );
-
-    const zone = screen.getByTestId('resource-actions');
-    expect(zone).toHaveClass('flex-col');
-    expect(zone.children).toHaveLength(2);
-    expect(zone.firstElementChild).toBe(screen.getByTestId('resource-footer'));
-    expect(zone.lastElementChild).toBe(screen.getByTestId('other-tags'));
-    expect(screen.getByTestId('resource-footer').children).toHaveLength(2);
-  });
-
-  it('gives the other services’ row the link’s own labels and whether the Tags button expanded them', () => {
-    mocks.tags.tags = [tag('Queen'), tag('rock')];
-    const otherTags = vi.fn(({ labels, isExpanded }: { labels: string[]; isExpanded: boolean }) => (
-      <div data-testid="other-tags" data-labels={labels.join(',')} data-expanded={isExpanded} />
-    ));
+  it('gives the tag bar the link and the tags on the same thing’s other links, and adds no row', () => {
     const otherTagList = [{ label: 'rock', taggers: ['b'], count: 1, isComplete: true, sources: [] }];
-    render(
-      <ResourceActions uri={URI} tagsLabel="Tags on this song" otherTags={otherTags} otherTagList={otherTagList} />,
-    );
+    render(<ResourceActions uri={URI} tagsLabel="Tags on this song" otherTagList={otherTagList} size="large" />);
 
-    // The bar gets the same tags as data: its chip for `rock` says it is on other services too.
-    expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-other-tags', 'rock');
-    const row = screen.getByTestId('other-tags');
-    expect(row).toHaveAttribute('data-labels', 'queen,rock');
-    expect(row).toHaveAttribute('data-expanded', 'false');
-
-    fireEvent.click(screen.getByTestId('resource-tags-button'));
-    expect(screen.getByTestId('other-tags')).toHaveAttribute('data-expanded', 'true');
+    // The bar merges them into its one list: an own chip counts across services, the rest are secondary.
+    const bar = screen.getByTestId('resource-tag-bar-stub');
+    expect(bar).toHaveAttribute('data-other-tags', 'rock');
+    expect(bar).toHaveAttribute('data-uri', URI);
+    const zone = screen.getByTestId('resource-actions');
+    expect(zone.children).toHaveLength(1);
+    expect(zone.firstElementChild).toBe(screen.getByTestId('resource-footer'));
   });
 
   it('shows the tags label only as the tag list’s name and the Tags button’s tooltip', () => {

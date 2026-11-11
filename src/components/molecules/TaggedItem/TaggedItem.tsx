@@ -26,11 +26,12 @@ export function TaggedItem({
   hasMoreTaggers,
   hasTaggersError,
   onLoadMoreTaggers,
+  expandedTaggers,
 }: TaggedItemProps) {
   const router = useRouter();
   const { requireAuth } = useRequireAuth();
   const visibleTaggers = tag.taggers.slice(0, MAX_VISIBLE_AVATARS);
-  const totalTaggersCount = tag.taggers_count ?? tag.taggers.length;
+  const totalTaggersCount = tag.total ?? tag.taggers_count ?? tag.taggers.length;
   const overflowCount = Math.max(0, totalTaggersCount - MAX_VISIBLE_AVATARS);
   const handleTagClick = () => {
     onTagClick(tag);
@@ -58,6 +59,8 @@ export function TaggedItem({
         <Tag
           name={tag.label}
           count={tag.taggers_count}
+          total={tag.total}
+          variant={tag.isSecondary ? 'secondary' : 'default'}
           clicked={!!tag.relationship}
           onClick={handleTagClick}
           className="cursor-pointer transition-opacity hover:opacity-80"
@@ -75,7 +78,7 @@ export function TaggedItem({
             onClick={handleAvatarGroupClick}
             className="flex cursor-pointer items-center pr-2 transition-opacity hover:opacity-80"
             aria-expanded={isExpanded}
-            aria-label={`Show ${tag.taggers_count} users who tagged`}
+            aria-label={`Show ${totalTaggersCount} users who tagged`}
           >
             {visibleTaggers.map((tagger, index) => (
               <AvatarWithFallback
@@ -109,17 +112,19 @@ export function TaggedItem({
       </Container>
 
       {/* Expanded user list */}
-      {isExpanded && !hideAvatars && (
-        <WhoTaggedExpandedList
-          taggerIds={expandedTaggerIds ?? tag.taggers.map((tagger) => tagger.id)}
-          fallbackTaggers={tag.taggers}
-          isLoadingTaggers={isLoadingTaggers}
-          isLoadingMore={isLoadingMoreTaggers}
-          hasMore={hasMoreTaggers}
-          hasError={hasTaggersError}
-          onLoadMore={onLoadMoreTaggers}
-        />
-      )}
+      {isExpanded &&
+        !hideAvatars &&
+        (expandedTaggers ?? (
+          <WhoTaggedExpandedList
+            taggerIds={expandedTaggerIds ?? tag.taggers.map((tagger) => tagger.id)}
+            fallbackTaggers={tag.taggers}
+            isLoadingTaggers={isLoadingTaggers}
+            isLoadingMore={isLoadingMoreTaggers}
+            hasMore={hasMoreTaggers}
+            hasError={hasTaggersError}
+            onLoadMore={onLoadMoreTaggers}
+          />
+        ))}
     </Container>
   );
 }

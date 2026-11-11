@@ -16,4 +16,6 @@ export interface PostTagPopoverWrapperProps {
   tagLabel?: string;
   /** The tag element to wrap */
   children: React.ReactNode;
+  /** Shown on hover in place of the tagger avatars (e.g. the taggers grouped by where they tagged it) */
+  content?: React.ReactNode;
 }

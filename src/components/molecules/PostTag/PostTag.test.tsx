@@ -135,4 +135,21 @@ describe('PostTag', () => {
     render(<PostTag label="bitcoin" className="custom-tag" />);
     expect(screen.getByRole('button')).toHaveClass('custom-tag', 'rounded-md', 'h-8');
   });
+
+  it('shows the total muted after the count', () => {
+    render(<PostTag label="dance" count={5} total={10} />);
+    expect(screen.getByRole('button')).toHaveTextContent('dance5(10)');
+    expect(screen.getByTestId('tag-total')).toHaveTextContent('(10)');
+  });
+
+  it('draws the secondary variant without the fill, still a toggle', () => {
+    const onClick = vi.fn();
+    render(<PostTag label="dance" count={2} variant="secondary" onClick={onClick} />);
+    const tag = screen.getByRole('button');
+    expect(tag).toHaveAttribute('data-variant', 'secondary');
+    expect(tag.style.backgroundImage).toBe('none');
+    expect(tag.style.getPropertyValue('--tag-day-label')).toBe('var(--foreground)');
+    fireEvent.click(tag);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
 });

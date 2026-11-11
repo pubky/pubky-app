@@ -34,7 +34,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     linkUrl,
     title,
     extraMenuContent,
-    otherTags,
+    otherTagList,
     size,
   }: {
     uri: string;
@@ -44,7 +44,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     linkUrl?: string | null;
     title?: string | null;
     extraMenuContent?: unknown;
-    otherTags?: React.ReactNode | ((own: { labels: string[]; isExpanded: boolean }) => React.ReactNode);
+    otherTagList?: readonly { label: string }[];
     size?: string;
   }) => (
     <div
@@ -58,13 +58,9 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-extra-menu={extraMenuContent ? 'yes' : 'no'}
       data-size={size}
     >
-      {typeof otherTags === 'function' ? otherTags({ labels: [], isExpanded: false }) : otherTags}
+      <div data-testid="resource-other-tag-list" data-labels={otherTagList?.map((tag) => tag.label).join(',')} />
     </div>
   ),
-}));
-// The second tag group has its own test; here only that it shows.
-vi.mock('./ResourceOtherTags', () => ({
-  ResourceOtherTags: () => <div data-testid="resource-other-tags-stub" />,
 }));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
@@ -189,11 +185,11 @@ describe('ResourceDetails', () => {
       expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-post-uri', 'none');
     });
 
-    it('shows under the card’s tags the tags of its other links: group members, then Also on, by URI', () => {
+    it('merges into the card’s tag list the tags of its other links: group members, then Also on, by URI', () => {
       renderDetails(VIDEO.uri);
 
       const card = within(screen.getByTestId('resource-card'));
-      expect(card.getByTestId('resource-actions')).toContainElement(card.getByTestId('resource-other-tags-stub'));
+      expect(card.getByTestId('resource-actions')).toContainElement(card.getByTestId('resource-other-tag-list'));
       const links = otherLinks();
       // A member's written link is read, as is its canonical one; then the Also on entries not seen yet.
       expect(links.slice(0, 3)).toEqual([

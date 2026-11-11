@@ -7,9 +7,24 @@ import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 import { Typography } from '../Typography/Typography';
 import type { TagProps } from './Tag.types';
 
+/**
+ * The secondary look of a tag chip (`variant="secondary"`, also `PostTag`'s): the same tag colour, a
+ * faint tint of it for the fill and a dashed edge, with the theme's label colour (a saturated day
+ * palette's white label needs the full fill).
+ */
+export const SECONDARY_TAG_STYLE = {
+  backgroundImage: 'none',
+  backgroundColor: 'color-mix(in oklab, var(--tag-edge) 12%, transparent)',
+  border: '1px dashed var(--tag-edge)',
+  '--tag-day-label': 'var(--foreground)',
+  '--tag-day-count': 'color-mix(in oklab, var(--foreground) 60%, transparent)',
+} as React.CSSProperties;
+
 export const Tag = ({
   name,
   count,
+  total,
+  variant = 'default',
   clicked = false,
   onClick,
   className,
@@ -52,11 +67,13 @@ export const Tag = ({
         backgroundColor: 'var(--tag-fill)',
         border: clicked ? '1px solid var(--tag-edge)' : '1px solid transparent',
         boxShadow: !clicked && isHovered ? 'inset 0 0 10px 2px var(--tag-edge)' : undefined,
+        ...(variant === 'secondary' && !clicked ? SECONDARY_TAG_STYLE : undefined),
       }}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       title={name}
+      data-variant={variant === 'secondary' ? variant : undefined}
       data-testid={dataTestId || 'tag'}
       data-cy={dataCy || 'tag'}
       {...props}
@@ -78,6 +95,12 @@ export const Tag = ({
           data-cy={countDataCy || `${dataCy || 'tag'}-count`}
         >
           {count}
+        </Typography>
+      )}
+
+      {total !== undefined && (
+        <Typography size="sm" className="ml-1 shrink-0 font-normal text-(--tag-count)" data-testid="tag-total">
+          ({total})
         </Typography>
       )}
     </div>

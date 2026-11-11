@@ -16,7 +16,6 @@ import { getHttpUrl, getResourceLinks, getResourceTagsLabel } from '@/molecules/
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { ResourceOtherTags } from './ResourceOtherTags';
 import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from './ResourceOtherTags.utils';
 
 const EMPTY_STATE_IMAGE = '/images/post-not-found-empty-state.webp';
@@ -112,7 +111,7 @@ function ResourceBody({ uri, read, onRetry }: ResourceDetailsProps) {
 
 /**
  * The card, large, closed by a post's footer. The other links' tags are read once the group is read
- * (so the chips do not reorder when it arrives), for the row under the footer and the tag bar.
+ * (so the chips do not reorder when it arrives), for the tag bar's one list.
  */
 function ResourceKnown({ card, uri }: { card: TPinakesResourceDetail; uri: string }) {
   const actionUri = getActionUri(card, uri);
@@ -129,7 +128,6 @@ function ResourceKnown({ card, uri }: { card: TPinakesResourceDetail; uri: strin
       linkUrl={getResourceLinks(card, actionUri).linkUrl}
       title={card.name || null}
       otherTagList={otherTags}
-      otherTags={(own) => <ResourceOtherTags tags={otherTags} ownLabels={own.labels} isExpanded={own.isExpanded} />}
       size="large"
     />
   );

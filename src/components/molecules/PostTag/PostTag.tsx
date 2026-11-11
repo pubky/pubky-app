@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { Tag } from '@/atoms/Tag/Tag';
+import { SECONDARY_TAG_STYLE, Tag } from '@/atoms/Tag/Tag';
 import { Toggle } from '@/atoms/Toggle/Toggle';
 import { useTagDayPalette } from '@/hooks/useTagDayPalette/useTagDayPalette';
 import { getTagPaletteStyle } from '@/libs/utils/tagPalette';
@@ -18,6 +18,8 @@ const TAG_OVERLAY = 'var(--tag-overlay)';
 export function PostTag({
   label,
   count,
+  total,
+  variant = 'default',
   showClose = false,
   selected = false,
   onClick,
@@ -56,6 +58,7 @@ export function PostTag({
       }}
       data-cy="post-tag"
       data-tag-label={label}
+      data-variant={variant === 'secondary' ? variant : undefined}
       className={cn(
         'tag-palette group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
         'border-0 text-sm leading-5 font-bold text-(--tag-label) subpixel-antialiased',
@@ -70,12 +73,14 @@ export function PostTag({
         ...paletteStyle,
         backgroundImage: 'var(--tag-fill)',
         boxShadow: selected ? 'inset 0 0 0 1px var(--tag-edge)' : undefined,
+        ...(variant === 'secondary' && !selected ? SECONDARY_TAG_STYLE : undefined),
       }}
       aria-label={ariaLabel ?? (count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`)}
     >
       <Tag
         name={label}
         count={count}
+        total={total}
         countDataCy="post-tag-count"
         className="px-0"
         style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}

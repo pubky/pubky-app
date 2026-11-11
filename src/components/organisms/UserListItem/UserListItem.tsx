@@ -124,6 +124,7 @@ function CompactVariant({
   onUserClick,
   onFollowClick,
   ttlRef,
+  nameAside,
 }: VariantProps) {
   return (
     <Container
@@ -165,6 +166,8 @@ function CompactVariant({
           )}
         </Container>
       </Button>
+
+      {nameAside}
 
       {/* Follow button or Me button */}
       {isCurrentUser ? (
@@ -379,6 +382,7 @@ export function UserListItem({
   onFollowClick,
   className,
   'data-testid': dataTestId,
+  nameAside,
 }: UserListItemProps) {
   // Auth requirement for follow action
 
@@ -433,6 +437,7 @@ export function UserListItem({
     followButtonVariant: followButtonVariantProp ?? 'icon',
     onFollowClick: handleFollowClick,
     ttlRef,
+    nameAside,
   };
   if (variant === 'compact') {
     return <CompactVariant {...commonProps} />;

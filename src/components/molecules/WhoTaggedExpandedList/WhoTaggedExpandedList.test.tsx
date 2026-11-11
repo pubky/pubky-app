@@ -53,15 +53,18 @@ vi.mock('@/molecules/TaggerUserRow/TaggerUserRow', () => {
       onFollowClick,
       isLoading,
       isCurrentUser,
+      nameAside,
     }: {
       tagger: { id: string; name?: string };
       onUserClick?: (id: string) => void;
       onFollowClick?: (id: string, isFollowing: boolean) => void;
       isLoading?: boolean;
       isCurrentUser?: boolean;
+      nameAside?: React.ReactNode;
     }) => (
       <div data-testid={`user-list-item-${tagger.id}`} data-loading={isLoading} data-current-user={isCurrentUser}>
         <span>{tagger.name || tagger.id}</span>
+        {nameAside}
         <button data-testid={`user-click-${tagger.id}`} onClick={() => onUserClick?.(tagger.id)}>
           View Profile
         </button>
@@ -208,5 +211,54 @@ describe('WhoTaggedExpandedList', () => {
   it('applies custom data-testid', () => {
     render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} data-testid="custom-test-id" />);
     expect(screen.getByTestId('custom-test-id')).toBeInTheDocument();
+  });
+
+  it('lists a second group after a thin rule, both named for screen readers only', () => {
+    render(
+      <WhoTaggedExpandedList
+        taggerIds={['user1']}
+        secondaryTaggerIds={['user2', 'user3']}
+        groupNames={['Tagged on this link', 'Tagged only on other services']}
+      />,
+    );
+    const list = screen.getByTestId('who-tagged-expanded-list');
+    const order = [...list.children].map((child) => child.getAttribute('data-testid') ?? child.textContent ?? '');
+    expect(order).toEqual([
+      'Tagged on this link',
+      'user-list-item-user1',
+      'who-tagged-expanded-list-divider',
+      'Tagged only on other services',
+      'user-list-item-user2',
+      'user-list-item-user3',
+    ]);
+    expect(screen.getByText('Tagged on this link')).toHaveClass('sr-only');
+    expect(screen.getByTestId('who-tagged-expanded-list-divider')).toHaveAttribute('aria-hidden');
+  });
+
+  it('has no rule when only the second group has people', () => {
+    render(<WhoTaggedExpandedList taggerIds={[]} secondaryTaggerIds={['user2']} />);
+    expect(screen.getByTestId('user-list-item-user2')).toBeInTheDocument();
+    expect(screen.queryByTestId('who-tagged-expanded-list-divider')).not.toBeInTheDocument();
+  });
+
+  it('shows in each tagger’s row what the caller renders for that tagger', () => {
+    render(
+      <WhoTaggedExpandedList
+        taggerIds={['user1']}
+        secondaryTaggerIds={['user2']}
+        renderTaggerAside={(id) => <span data-testid={`aside-${id}`} />}
+      />,
+    );
+    for (const id of ['user1', 'user2']) {
+      expect(screen.getByTestId(`user-list-item-${id}`)).toContainElement(screen.getByTestId(`aside-${id}`));
+    }
+  });
+
+  it('shows "+N" for people counted but not listed', () => {
+    const { rerender } = render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} moreCount={4} />);
+    expect(screen.getByText('+4')).toHaveTextContent('+4 more, not listed');
+
+    rerender(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
+    expect(screen.queryByText(/not listed/)).not.toBeInTheDocument();
   });
 });

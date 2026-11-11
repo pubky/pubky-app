@@ -58,6 +58,8 @@ export interface UserListItemProps {
   className?: string;
   /** Test ID */
   'data-testid'?: string;
+  /** Compact variant: shown after the name, e.g. the icons of the services a tagger put a tag on */
+  nameAside?: React.ReactNode;
 }
 
 // =============================================================================
@@ -88,4 +90,5 @@ export interface VariantProps {
   onFollowClick: (e: React.MouseEvent) => void;
   /** TTL viewport subscription ref for freshness tracking */
   ttlRef: (node: HTMLElement | null) => void;
+  nameAside?: React.ReactNode;
 }

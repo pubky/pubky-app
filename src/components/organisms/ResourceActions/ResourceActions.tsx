@@ -1,13 +1,13 @@
 'use client';
 
-import { type ReactNode, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { MessageCircle, Tag } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useResourceTags } from '@/hooks/useResourceTags/useResourceTags';
 import { isExternalParentUri } from '@/libs/post/externalParent';
-import { canonicalizeTagLabel, cn } from '@/libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { PostActionButton } from '@/organisms/PostActionsBar/PostActionButton';
 import { type ResourceExtraMenuContent, ResourceMoreMenu } from './ResourceMoreMenu';
@@ -38,12 +38,7 @@ interface ResourceActionsProps {
   extraMenuContent?: ResourceExtraMenuContent;
   /** Whether the card is on screen: the tags are read from the first time it is. */
   isOnScreen?: boolean;
-  /**
-   * The resource page's tags on other services, under the footer; a function gets the link's own
-   * (canonical) labels and whether the Tags button expanded the tags.
-   */
-  otherTags?: ReactNode | ((own: { labels: string[]; isExpanded: boolean }) => ReactNode);
-  /** The same tags as data (`mergeOtherLinkTags`): an own chip whose label is also there says so. */
+  /** The resource page's tags on the same thing's other links (`mergeOtherLinkTags`), in the tag list. */
   otherTagList?: readonly TMergedTag[];
   /** `large`: under the resource page's large card, with its padding and the post's pills. */
   size?: 'default' | 'large';
@@ -64,7 +59,7 @@ interface ResourceActionsProps {
  * asked for) and the public collections from Pinakes. Nexus counts neither the replies to a link nor
  * the posts that embed it, so Reply and Post about this have no number.
  *
- * On the resource page, the tags on the same thing's other links go under the footer (`otherTags`).
+ * On the resource page, the tags on the same thing's other links join the tag list (`otherTagList`).
  *
  * The zone is all controls, so a click on it never counts as a click through the card.
  */
@@ -77,7 +72,6 @@ export function ResourceActions({
   title,
   extraMenuContent,
   isOnScreen = true,
-  otherTags,
   otherTagList,
   size = 'default',
 }: ResourceActionsProps) {
@@ -127,6 +121,7 @@ export function ResourceActions({
           isExpanded={isTagsExpanded}
           isAdding={isAddingTag}
           onAddingChange={setIsAddingTag}
+          uri={uri}
           otherTags={otherTagList}
         />
         {/*
@@ -182,12 +177,6 @@ export function ResourceActions({
           />
         </Container>
       </Container>
-      {typeof otherTags === 'function'
-        ? otherTags({
-            labels: resourceTags.tags.map((tag) => canonicalizeTagLabel(tag.label)),
-            isExpanded: isTagsExpanded,
-          })
-        : otherTags}
       {isReplying && <DialogReply resourceUri={uri} open={isReplying} onOpenChangeAction={setIsReplying} />}
     </Container>
   );

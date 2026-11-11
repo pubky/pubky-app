@@ -14,9 +14,11 @@ export interface TOtherLinkTags {
   tags: NexusTag[];
 }
 
-/** One link a merged tag was put on, with how many people put it there. */
+/** One link a merged tag was put on, with how many people put it there and who Nexus listed. */
 export interface TMergedTagSource extends TOtherLink {
   count: number;
+  /** The taggers Nexus listed for the tag on this link (it may list fewer than `count`). */
+  taggers: string[];
 }
 
 /** A tag across the other links: one chip per label, each tagger counted once. */

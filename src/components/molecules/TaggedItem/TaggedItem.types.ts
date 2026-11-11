@@ -11,6 +11,13 @@ export interface TaggerWithAvatar {
 
 export interface TagWithAvatars extends Omit<NexusTag, 'taggers'> {
   taggers: TaggerWithAvatar[];
+  /**
+   * People with the tag across the same thing's links (an external resource's page), each once:
+   * shown muted after the count, and `taggers` then lists them all.
+   */
+  total?: number;
+  /** On the same thing's other links only, not on this one yet: drawn as a secondary chip. */
+  isSecondary?: boolean;
 }
 
 export interface TaggedItemProps {
@@ -37,4 +44,6 @@ export interface TaggedItemProps {
   hasTaggersError?: boolean;
   /** Callback to load the next page of taggers */
   onLoadMoreTaggers?: () => void;
+  /** Shown in place of the expanded user list (e.g. the taggers grouped by where they tagged it) */
+  expandedTaggers?: React.ReactNode;
 }
