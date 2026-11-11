@@ -64,8 +64,10 @@ with no screen (the engine writes the flag; the app never hand-writes `_migrated
 the same way defensively (the engine reports it only for a lock adapter that yields when another holder exists; the
 app's adapter waits, see _Cross-tab_, so the code does not arise there); `AuthCoordinator` retries that reason on
 foreground and network return under its cooldown. `QUOTA` blocks with `needBytes`; `PRIV_UNSUPPORTED`,
-`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it; `SESSION_EXPIRED` and
-`CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
+`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it, except a rejected load of the
+migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure: it blocks at once as
+`incomplete` (no automatic retries), so Retry and the reconnect retry apply, and is reported once per account and page;
+`SESSION_EXPIRED` and `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
 `AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns its transport retries
 (429 backoff, three network retries, read-back before every cleanup delete); the app retries whole runs. Those are the
 one set of homeserver retries that `retryHomeserverWrite` does not run; `HomeserverService.deleteIdempotent` and
@@ -96,9 +98,11 @@ logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in
 **Telemetry.** One capture per (account, code) per page, operation `socialMigration`
 (`src/libs/social-migration/report-telemetry.ts`): a blocked run is `Err.server` with `SERVICE_UNAVAILABLE` for
 `incomplete`, `IO_ERROR`, `QUOTA` and `PRIV_UNSUPPORTED` (the homeserver is unreachable, full or does not serve the
-private root) and `UNKNOWN_ERROR` for any other code; a thrown engine error is `Err.server(UNKNOWN_ERROR)`;
-`CAPS_MISSING` is `Err.auth(FORBIDDEN)`. Counts only: the report's `skipped`, `notes`, `droppedValues` and `current`
-name the user's files and never leave the browser.
+private root) and `UNKNOWN_ERROR` for any other code; a thrown engine error is `Err.server(UNKNOWN_ERROR)`, described
+by `errorName`, `kind` and `status` only; `CAPS_MISSING` is `Err.auth(FORBIDDEN)`; a failed load of the migrator's chunk
+is `Err.network(CONNECTION_FAILED)` (code `ENGINE_LOAD`, the import rejection as the cause; the service throws that
+failure uncaptured so this guard decides the single capture). Counts only: the report's `skipped`, `notes`,
+`droppedValues` and `current` name the user's files and never leave the browser (`docs/error-handling.md`).
 
 ## Consequences
 

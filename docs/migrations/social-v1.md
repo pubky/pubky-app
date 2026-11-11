@@ -493,7 +493,7 @@ gate list.
    sets `pubky_stack_ref` in `.github/workflows/e2e-test.yml` back to `staging`, drops the `feat/social-v1` push trigger,
    and gets a full code review, a security review, Greptile, talosmachina and the frontend team's review. Before it:
    the maintainer's manual pass on the local stack (after a reset and re-seed), the final review's should-fix PRs
-   (the `fix/social-v1-*` PRs listed after step 7), the
+   (the `fix/social-v1-*` PRs listed after step 7; the code ones are merged), the
    migrator rc.2 adoption PR, and this docs sweep (the e2e follow-up landed as #3094); after it, a staging deploy and
    the maintainer's staging test (one real-Ring sign-in with the ten-scope grant; Locks before and after a migration
    with a real Paykit and Bitkit), then production with the Nexus deploy.
@@ -512,15 +512,18 @@ gate list.
 
 Final review (2026-11-11): an independent review of the whole branch diff against `dev` (`93db5b9dc` vs `0e4278661`,
 15 lenses, every finding confirmed by two verifiers) found no blocking defect, seven should-fix code defects and the
-docs drift this sweep fixes. Each defect gets its own PR into `feat/social-v1` before the final PR (any not merged by
-then is accepted explicitly in the final PR description): the Shop sign-in return kept through the gate and `/migration`
-settled for a failed restore (#3121), the uploads of a post whose PUT failed swept (#3118), collection items matched by
-post identity on an edit instead of being rewritten to 0.x spellings (#3117), profile links validated the way the v1
-data model does (#3119), feed filter tags folded with the stored label fold (#3122), every private fetch of the resync
-guarded with the viewer session (#3116), and this docs sweep (#3120). Two findings identical on `dev` are `dev`
-follow-ups, not merge gates: clearing an article's cover can re-promote an unreferenced slot 0 under rule B, and the
-attachment-reference collector misses a backslash-escaped `attachment:n`. The review also confirmed step 3's
-`pubky_stack_ref` flip as a hard precondition of the final PR.
+docs drift this sweep fixes. Each got its own PR into `feat/social-v1` before the final PR (the six code fixes merged on
+2026-11-11): the Shop sign-in return kept through the gate and `/migration` settled for a failed restore (#3121), the
+uploads of a post whose PUT failed swept (#3118), collection items matched by post identity on an edit instead of being
+rewritten to 0.x
+spellings (#3117), profile links validated the way the v1 data model does (#3119), feed filter tags folded with the
+stored label fold (#3122), every private fetch of the resync guarded with the viewer session (#3116), and this docs
+sweep (#3120). The QA-6 live pass that followed (its findings are recorded in #3121 and #3123) added one more: the
+`/collections` live queries kept observing bookmarked post details on a cold visit (#3123). Two findings identical on
+`dev` are `dev` follow-ups, not merge gates:
+clearing an article's cover can re-promote an unreferenced slot 0 under rule B, and the attachment-reference collector
+misses a backslash-escaped `attachment:n`. The review also confirmed step 3's `pubky_stack_ref` flip as a hard
+precondition of the final PR.
 
 Checklist:
 
