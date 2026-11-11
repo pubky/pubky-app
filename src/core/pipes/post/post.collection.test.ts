@@ -496,5 +496,20 @@ describe('CollectionPostContent', () => {
         VALID_ITEM_URI,
       ]);
     });
+
+    it('matches a drafted post at most as many times as the collection holds it', () => {
+      // A lookup by key alone (no queue) would hand every mention the same entry.
+      const collection = CollectionPostContent.normalize({
+        name: 'Saved',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI, uriA],
+      });
+
+      expect(
+        CollectionPostContent.reorderItems(collection, [VALID_ITEM_URI, LEGACY_ITEM_URI, VALID_ITEM_URI, uriA]),
+      ).toBe(collection);
+      expect(
+        CollectionPostContent.reorderItems(collection, [uriA, VALID_ITEM_URI, VALID_ITEM_URI, VALID_ITEM_URI]).items,
+      ).toEqual([uriA, LEGACY_ITEM_URI, VALID_ITEM_URI]);
+    });
   });
 });

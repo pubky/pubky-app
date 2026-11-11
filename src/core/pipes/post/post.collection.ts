@@ -249,7 +249,8 @@ export class CollectionPostContent {
     // By item identity, as `toStored`: a draft taken from the Nexus-served row may spell a post
     // the 0.x way while the row has since converged to the stored v1 spelling. A drafted item is
     // emitted as the collection spells it, and each current item is matched once, so a post the
-    // collection spells both ways keeps both entries and an unchanged draft is still no change.
+    // collection spells both ways keeps both entries here (`toStored` collapses them on write) and
+    // an unchanged draft is still no change.
     const unmatched = new Map<string, string[]>();
     for (const item of currentItems) {
       const key = collectionItemKey(item);
