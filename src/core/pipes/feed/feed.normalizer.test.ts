@@ -1,4 +1,4 @@
-import { decodeObject, feedId, feedPaths } from 'pubky-social-specs';
+import { buildTag, buildUri, decodeObject, feedId, feedPaths } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it } from 'vitest';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
@@ -48,6 +48,22 @@ describe('FeedNormalizer', () => {
 
       expect(result.object.feed.tags).toEqual(['bitcoin', 'lightning']);
       expect(result.object.feed.domain_tags).toBeNull();
+    });
+
+    // The stored fold is the data model's (`foldLabel`, reached through `buildTag`): ASCII letters only, so
+    // the Nexus stream filter and the feed id agree with every spec-folding client. `toLowerCase()` would
+    // store `äpfel`, a label the `/v1` fold never matches.
+    it('folds a label with a non-ASCII capital the way the data model stores a tag', () => {
+      const target = buildUri(fakeOwner(2), 'post', '0032PARTQP4G0');
+      const labels = ['Äpfel', 'RUST'];
+      const stored = labels.map((label) => buildTag(userId, target, label).object.label);
+
+      const result = FeedNormalizer.to({ params: createValidParams({ tags: labels, domain_tags: ['ÄPFEL'] }), userId });
+
+      expect(result.object.feed.tags).toHaveLength(labels.length);
+      expect(result.object.feed.tags).toEqual(expect.arrayContaining(stored));
+      expect(result.object.feed.tags).toContain('Äpfel');
+      expect(result.object.feed.domain_tags).toEqual([buildTag(userId, target, 'ÄPFEL').object.label]);
     });
 
     it('normalizes profile tags independently and stores them as domain_tags', () => {

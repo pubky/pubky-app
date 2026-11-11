@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { SEARCH_CONTENT_TAGS_MAX_TOTAL, SEARCH_CONTENT_TAGS_PER_TERM_LIMIT } from '@/config/search';
 import { SearchController } from '@/controllers/search/search';
-import { getCharacterCount, sanitizeTagInput } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, getCharacterCount, sanitizeTagInput } from '@/libs/utils/utils';
 
 interface UseContentSearchTagsResult {
   /** Deduped tag names — exact term matches first, then prefix extensions. */
@@ -38,16 +38,18 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
     let cancelled = false;
 
     // The query arrives normalized (trimmed, whitespace collapsed) from
-    // `validateContentSearchQuery`. Tags are lowercase everywhere (store
-    // writes, chip rendering), so terms are lowercased to match. Tag-banned
-    // punctuation is stripped — tags can never contain it, so "bitcoin," would
-    // never match while its natural "bitcoin" chip does — with the dedupe
-    // after stripping because stripping can merge terms. A term longer than
-    // the tag length cap (in code points, like tag validation) can never
-    // prefix-match any tag.
-    const terms = Array.from(new Set(query.toLowerCase().split(' ').map(sanitizeTagInput))).filter(
-      (term) => term.length > 0 && getCharacterCount(term) <= TAG_MAX_LENGTH,
-    );
+    // `validateContentSearchQuery`. Tag-banned punctuation is stripped — tags
+    // can never contain it, so "bitcoin," would never match while its natural
+    // "bitcoin" chip does — and each term is then folded the way a stored label
+    // is (`canonicalizeTagLabel`: ASCII letters lowercased, every other
+    // character kept): Nexus `/v1` `by_prefix` matches the prefix as given, so
+    // `Är` finds a stored `Ärger` only unfolded, and `/search?tags=` folds the
+    // same way (`useSearchCriteria`). The dedupe runs after both steps because
+    // either can merge terms. A term longer than the tag length cap (in code
+    // points, like tag validation) can never prefix-match any tag.
+    const terms = Array.from(
+      new Set(query.split(' ').map((term) => canonicalizeTagLabel(sanitizeTagInput(term)))),
+    ).filter((term) => term.length > 0 && getCharacterCount(term) <= TAG_MAX_LENGTH);
 
     void (async () => {
       const resultsPerTerm = await Promise.all(

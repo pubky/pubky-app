@@ -10,7 +10,7 @@ import tsPlugin from '@typescript-eslint/eslint-plugin';
 
 // The 0.x data model package (wasm, `/pub/pubky.app/`) is gone; the app is on pubky-social-specs 1.x.
 const LEGACY_SPECS_IMPORTS = {
-  group: ['pubky-app-specs', 'pubky-app-specs/*'],
+  group: ['pubky-app-specs', 'pubky-app-specs/**'],
   message:
     "pubky-app-specs was removed by the social v1 port. Use 'pubky-social-specs' (docs/migrations/social-v1.md).",
 };
