@@ -2889,7 +2889,7 @@ describe('HomeserverService', () => {
       });
 
       it.each(['/priv/social/v1/mutes/', '/priv/app.pubky/v1/last_read.json'])(
-        'refuses the private path %s before any request: a session-bound stream would hang every bearer refresh',
+        'refuses the private path %s before any request: a session-bound stream holds the session lock while its headers are outstanding',
         async (privatePath) => {
           const error = (await subscribe({ paths: [MUTES, privatePath] }).catch(
             (caught: unknown) => caught,

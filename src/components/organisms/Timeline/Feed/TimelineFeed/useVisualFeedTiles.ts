@@ -8,7 +8,7 @@ import { ModerationController } from '@/controllers/moderation/moderation';
 import { PostController } from '@/controllers/post/post';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { Logger } from '@/libs/logger/logger';
-import { resolveArticleCover } from '@/libs/post/articleCover';
+import { isArticleCoverContentType, resolveArticleCover } from '@/libs/post/articleCover';
 import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
@@ -80,12 +80,14 @@ const EMPTY_SNAPSHOT: VisualFeedSnapshot = {
  * Articles carry inline body media in `attachments`, but only the cover is
  * tile-worthy media — inline media renders inside the article body, never as
  * standalone visual tiles. `resolveArticleCover` says where the cover is (the
- * envelope, or slot 0 of a 0.x article). Non-articles pass through.
+ * envelope, or slot 0 of a 0.x article, whose row has to say it is an image
+ * first: the tile loop checks the row). Non-articles pass through.
  */
 function visualMediaAttachments(post: EnrichedPostDetails, attachments: readonly string[]): readonly string[] {
   if (post.kind !== 'long') return attachments;
-  const { cover } = resolveArticleCover({ content: post.content, attachments });
-  return cover ? [cover] : [];
+  const { cover, coverCandidate } = resolveArticleCover({ content: post.content, attachments });
+  const coverUri = cover ?? coverCandidate;
+  return coverUri ? [coverUri] : [];
 }
 
 function buildPlaceholderTile(postId: string, placeholderKind: VisualPlaceholderKind, indexedAt = 0): VisualTile {
@@ -464,6 +466,12 @@ export function useVisualFeedTiles({
           if (!file) {
             missingFileUris.add(attachmentUri);
             hasUnresolvedFile = true;
+            return [];
+          }
+
+          // An article's one URI here is its cover, image-only (ADR-0023): a 0.x slot 0 whose row
+          // says video is no cover, so no tile, where a video attachment of any other post is one.
+          if (post.kind === 'long' && !isArticleCoverContentType(file.content_type)) {
             return [];
           }
 

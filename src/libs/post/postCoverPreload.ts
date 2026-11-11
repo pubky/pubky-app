@@ -13,7 +13,9 @@ export interface PostCoverPreloadUrls {
 /**
  * CDN URLs of the image a post page renders as its cover ("hero"), or `null` when it renders
  * none. Both are resolved from the article's cover as `resolveArticleCover` finds it: the
- * envelope's `cover_image`, or slot 0 of a 0.x article under the slot-0 rule (ADR-0023).
+ * envelope's `cover_image`, or slot 0 of a 0.x article under the slot-0 rule (ADR-0023). That
+ * slot 0 is a cover only when its file is an image, which the client learns from its row; the
+ * server has no row, so it preloads the candidate and the client renders it once the row agrees.
  *
  * Mirrors the client's article rendering: `PostArticleDetail` is the surface that puts the
  * cover above the body, and it does so only for `kind: long` posts whose content
@@ -23,19 +25,20 @@ export interface PostCoverPreloadUrls {
  *
  * Server-side, so the post page can emit a `rel=preload` for the LCP image before any client
  * JavaScript runs. The cover's content type is only known after the client resolves file
- * metadata, so a non-image cover is preloaded and discarded. Pure: no IO, safe in a Server
- * Component.
+ * metadata, so a non-image cover or candidate is preloaded and discarded. Pure: no IO, safe in a
+ * Server Component.
  */
 export function resolvePostCoverPreloadUrls(
   post: Pick<NexusPostDetails, 'kind' | 'content' | 'attachments'>,
 ): PostCoverPreloadUrls | null {
   if (post.kind !== 'long' || !isArticleContent(post.content)) return null;
 
-  const { cover } = resolveArticleCover({ content: post.content, attachments: post.attachments });
-  if (!cover) return null;
+  const { cover, coverCandidate } = resolveArticleCover({ content: post.content, attachments: post.attachments });
+  const coverUri = cover ?? coverCandidate;
+  if (!coverUri) return null;
 
-  const mobile = resolvePostAttachmentUrl(cover, POST_COVER_MOBILE_VARIANT);
-  const desktop = resolvePostAttachmentUrl(cover, POST_COVER_DESKTOP_VARIANT);
+  const mobile = resolvePostAttachmentUrl(coverUri, POST_COVER_MOBILE_VARIANT);
+  const desktop = resolvePostAttachmentUrl(coverUri, POST_COVER_DESKTOP_VARIANT);
 
   return mobile && desktop ? { mobile, desktop } : null;
 }

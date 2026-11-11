@@ -5,7 +5,7 @@ import { asOpaque } from '@/test-utils/type-assertions';
  * `src/sw.ts` runs inside a service worker; here it is evaluated in jsdom with the
  * `serwist` runtime mocked so the test can assert the configuration that matters:
  * no data caching, a NetworkOnly navigation route with the static offline fallback, the
- * one-release forced takeover of the social v1 cut-over (ADR-0021 amendment), and the
+ * forced takeover of the social v1 cut-over (ADR-0021 amendment, until PR-E2), and the
  * share-target / legacy-cache listeners.
  */
 
@@ -80,7 +80,7 @@ describe('src/sw.ts', () => {
     Reflect.deleteProperty(globalThis, 'registration');
   });
 
-  it('builds a worker that activates as soon as it installs (social v1 cut-over, one release)', () => {
+  it('builds a worker that activates as soon as it installs (social v1 cut-over, until PR-E2)', () => {
     expect(mocks.options).toMatchObject({
       skipWaiting: true,
       clientsClaim: true,

@@ -2,7 +2,7 @@
 
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import { resolveArticleCover } from '@/libs/post/articleCover';
+import { isArticleCoverContentType, resolveArticleCover } from '@/libs/post/articleCover';
 import {
   categorizeAttachments,
   splitAttachmentsByMediaType,
@@ -36,13 +36,16 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
   // Articles carry inline body media in `attachments`, but only the cover is
   // post-level media — inline media renders inside the article body, never as
   // thumbnails or gallery items. `resolveArticleCover` says where the cover is
-  // (the envelope, or slot 0 of a 0.x article under the slot-0 rule).
+  // (the envelope, or slot 0 of a 0.x article under the slot-0 rule); a 0.x slot 0
+  // is the cover only when its row says image, so its row is read like the cover's.
   const isArticle = postDetails?.kind === 'long';
   const articleCover = isArticle
-    ? resolveArticleCover({ content: postDetails.content, attachments: postDetails.attachments }).cover
+    ? resolveArticleCover({ content: postDetails.content, attachments: postDetails.attachments })
     : null;
+  const articleCoverUri = articleCover?.cover ?? articleCover?.coverCandidate ?? null;
+  const articleUris = articleCoverUri ? [articleCoverUri] : [];
 
-  const remoteAttachmentUris = isArticle ? (articleCover ? [articleCover] : []) : (postDetails?.attachments ?? []);
+  const remoteAttachmentUris = isArticle ? articleUris : (postDetails?.attachments ?? []);
   const hasLocalMedia = isArticle ? Boolean(localArticleCover) : Boolean(localAttachments);
 
   const { files } = useAttachmentsMetadata({
@@ -57,9 +60,10 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
   if (!postDetails) return { mediaItems: [] };
 
   if (isArticle) {
-    const mediaItems = localArticleCover
-      ? categorizeAttachments([localArticleCover]).imagesAndVideos
-      : splitAttachmentsByMediaType(files).imagesAndVideos;
+    // The cover is image-only (ADR-0023): a slot 0 whose row says video or PDF is no media here.
+    const mediaItems = (
+      localArticleCover ? categorizeAttachments([localArticleCover]) : splitAttachmentsByMediaType(files)
+    ).imagesAndVideos.filter((item) => isArticleCoverContentType(item.type));
     return { mediaItems };
   }
 

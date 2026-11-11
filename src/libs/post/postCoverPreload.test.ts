@@ -25,6 +25,21 @@ describe('resolvePostCoverPreloadUrls', () => {
     vi.clearAllMocks();
   });
 
+  it('preloads the slot-0 candidate of a 0.x article whatever its file is; the client drops a non-image', () => {
+    // The server has no file row, so it cannot apply the image-only rule; the candidate is preloaded
+    // and the client paints it only once its row says image (`usePostArticle`).
+    const urls = resolvePostCoverPreloadUrls({
+      kind: 'long',
+      content: article('Body'),
+      attachments: [`pubky://${AUTHOR}/pub/pubky.app/files/0035R8SA18DE9`],
+    });
+
+    expect(urls).toEqual({
+      mobile: `https://cdn.test/files/${AUTHOR}/0035R8SA18DE9/${POST_COVER_MOBILE_VARIANT}`,
+      desktop: `https://cdn.test/files/${AUTHOR}/0035R8SA18DE9/${POST_COVER_DESKTOP_VARIANT}`,
+    });
+  });
+
   it('resolves both cover variants of slot 0, the ones the hero renders', () => {
     const urls = resolvePostCoverPreloadUrls({
       kind: 'long',

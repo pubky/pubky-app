@@ -84,11 +84,13 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
 const LEGACY_RATCHET: readonly string[] = [];
 
 /**
- * No session on an event stream, anywhere, so no allow-list. In `@synonymdev/pubky` 0.16.2 a session-bound
- * request holds the shared session Web Lock, and an open SSE holds it for the stream's whole lifetime. The SDK's
- * exclusive bearer refresh after any 401 then never resolves and every session request queues behind it, so writes
- * hang with no toast and no rollback (ADR-0014). Private directories are polled instead. Lift this once the SDK
- * releases the lock for streams.
+ * No session on an event stream, anywhere, so no allow-list. In `@synonymdev/pubky` 0.16.2 and 0.17.1 a
+ * session-bound request holds the shared session Web Lock until its response headers reach the SDK, with no
+ * timeout. Behind anything that buffers event streams until the body completes (the Cypress proxy does; an
+ * intermediary in the wild could) the headers never arrive, so the SDK's exclusive bearer refresh after any 401
+ * waits forever and every session request queues behind it: writes hang with no toast and no rollback
+ * (pubky/pubky-homeserver#798, closed as not a deadlock; ADR-0014). Private directories are polled instead. Lift
+ * this once the SDK bounds that lease or the team accepts the exposure.
  */
 const EVENT_STREAM_BUILDER = /\beventStreamFor(?:User)?\s*\(/;
 /** A method call on a builder, with up to one level of nested parentheses in its arguments. */

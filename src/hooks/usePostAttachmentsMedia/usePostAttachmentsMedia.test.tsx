@@ -240,6 +240,42 @@ describe('article (kind long) attachments', () => {
     expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
   });
 
+  it('resolves no media for a 0.x article whose slot 0 is a video: the cover is image-only', async () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      isLoading: false,
+    });
+    mockGetMetadata.mockResolvedValue([
+      createFileMetadata({ uri: coverUri, id: `${AUTHOR}:cover`, content_type: 'video/mp4', name: 'clip.mp4' }),
+    ]);
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    // Only the row can say what slot 0 is, so it is read; a video there is no cover and no thumbnail,
+    // where a video attachment of any other post would be one
+    await waitFor(() => {
+      expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
+    });
+    expect(result.current.mediaItems).toEqual([]);
+  });
+
+  it('resolves no media for a 0.x article whose slot 0 is a PDF', async () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      isLoading: false,
+    });
+    mockGetMetadata.mockResolvedValue([
+      createFileMetadata({ uri: coverUri, id: `${AUTHOR}:cover`, content_type: 'application/pdf', name: 'doc.pdf' }),
+    ]);
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    await waitFor(() => {
+      expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
+    });
+    expect(result.current.mediaItems).toEqual([]);
+  });
+
   it('resolves no media for coverless (slot-0) articles', async () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: articleDetails('![a](attachment:0)', [inlineUri]),
