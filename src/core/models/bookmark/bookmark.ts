@@ -74,10 +74,13 @@ export class BookmarkModel extends RecordModelBase<string, BookmarkModelSchema> 
    * The details read is chained on the Dexie promise of the bookmarks read, not issued after the
    * layers above have awaited it. A live query observes a read through the zone (PSD) the read is
    * issued in; Dexie restores that zone across native `await`s only with a best-effort echo whose
-   * bookkeeping is one counter shared by every live query in flight, and a neighbouring live query
-   * awaiting a Dexie promise meanwhile can end it. A dependent read issued after such hops then runs
-   * in the global zone, is never observed, and the live query stays on its first result for good
-   * (the Followed Collections stall, F-QA6-2). A Dexie `then` callback re-enters its zone explicitly.
+   * bookkeeping is one counter shared by every live query in flight, and a neighbouring non-async
+   * querier awaiting a Dexie promise meanwhile can end it. A dependent read issued after such hops
+   * then runs in the global zone, is never observed, and the live query stays on its first result
+   * for good: a reproducible way the previous two-read shape stopped observing `post_details`
+   * (`FollowedCollections.integration.test.tsx`). The dev-server stall QA-6 saw (F-QA6-2) matches
+   * that symptom but was not reproduced on a production build. A Dexie `then` callback re-enters
+   * its zone explicitly.
    */
   static async findAllWithPostDetails(): Promise<BookmarkedPostDetails[]> {
     try {

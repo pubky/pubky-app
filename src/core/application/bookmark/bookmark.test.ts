@@ -173,8 +173,9 @@ describe('BookmarkApplication', () => {
 
   describe('getAllWithPostDetails', () => {
     it('returns every bookmark newest first with the cached details of its post', async () => {
-      await LocalBookmarkService.persist(HttpMethod.PUT, { postId: compositeAt(1) });
-      await LocalBookmarkService.persist(HttpMethod.PUT, { postId: compositeAt(2) });
+      // Explicit bookmark times: two persists in one tick would share `Date.now()` and tie on order.
+      await BookmarkModel.upsert({ id: compositeAt(1), created_at: T0 + 1 });
+      await BookmarkModel.upsert({ id: compositeAt(2), created_at: T0 + 2 });
       await seedDetails(1, 'collection');
 
       const bookmarked = await BookmarkApplication.getAllWithPostDetails();

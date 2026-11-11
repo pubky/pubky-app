@@ -144,8 +144,9 @@ export function FollowedCollections() {
   // down the Application/Service/Model chain, so all data access stays inside the
   // layered architecture per AGENTS.md. It reads both tables in one Dexie transaction:
   // a second read issued after an `await` can escape the live query's observation when
-  // other live queries run beside it, and the section would then never follow the
-  // details the walk hydrates (F-QA6-2).
+  // a non-async querier runs beside it, and the section would then never follow the
+  // details the walk hydrates (reproduced in `FollowedCollections.integration.test.tsx`;
+  // the dev-server stall of F-QA6-2 matches that symptom).
   const liveIds = useLiveQuery(async () => {
     try {
       const bookmarked = await BookmarkController.getAllWithPostDetails();
