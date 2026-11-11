@@ -5,9 +5,13 @@ import { PostApplication } from '@/application/post/post';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
+import { FileDetailsModel } from '@/models/file/fileDetails';
 import type { Pubky } from '@/models/models.types';
+import { buildCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { pickHeadVersion } from '@/pipes/post/post.head';
 import type { NexusPost } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
@@ -33,6 +37,15 @@ describe('content-addressed media lifetime', () => {
     return file.url;
   };
   const stored = (url: string) => homeserver.session.storage.exists(toPath(url));
+  /** The file as the composer hands it to the create path: not uploaded yet. */
+  const attachment = (file: ReturnType<typeof media>): TFileAttachmentResult => ({
+    media: file,
+    bytes: file.bytes,
+    name: `${file.id}.png`,
+    contentType: 'image/png',
+  });
+  const fileRow = (url: string, id: string) =>
+    FileDetailsModel.table.get(buildCompositeId({ pubky: OWNER, id })).then((row) => row?.uri === url);
 
   const publishProfile = async (image: string | null) => {
     const user = buildUser(OWNER, { name: 'Alice', image });
@@ -84,7 +97,7 @@ describe('content-addressed media lifetime', () => {
     );
     vi.spyOn(Logger, 'debug').mockImplementation(() => {});
     vi.spyOn(Logger, 'warn').mockImplementation(() => {});
-    await Promise.all([PostDetailsModel.table.clear(), UserDetailsModel.table.clear()]);
+    await Promise.all([PostDetailsModel.table.clear(), UserDetailsModel.table.clear(), FileDetailsModel.table.clear()]);
   });
 
   afterEach(() => {
@@ -151,6 +164,47 @@ describe('content-addressed media lifetime', () => {
       expect(JSON.parse((await head(article)).content)).toMatchObject({ cover_image: nextCover });
       expect(await stored(cover)).toBe(true);
       expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalledWith(cover);
+    });
+  });
+
+  describe('a create whose first-version PUT fails', () => {
+    it('sweeps the uploads the post made, keeps a file an earlier post shares, and leaves the tombstone', async () => {
+      // The earlier post's photo is on the homeserver already; the new post attaches the same
+      // bytes (content addressed: one file) and a fresh one, then its first version is refused.
+      const shared = await store(media(1));
+      await publishProfile(null);
+      await publish(buildPost(OWNER, { content: 'earlier', kind: 'image', attachments: [{ uri: shared }] }));
+      const sharedAgain = media(1);
+      const fresh = media(2);
+      const post = buildPost(OWNER, {
+        content: 'photos',
+        kind: 'image',
+        attachments: [{ uri: sharedAgain.url }, { uri: fresh.url }],
+      });
+      const compositePostId = `${OWNER}:${post.id}`;
+      const putBytes = homeserver.spies.putBlob.getMockImplementation()!;
+      homeserver.spies.putBlob.mockImplementation(async (params) => {
+        if (params.url === post.url) throw new Error('Homeserver refused the post');
+        return putBytes(params);
+      });
+
+      await expect(
+        PostApplication.commitCreate({
+          compositePostId,
+          post,
+          fileAttachments: [attachment(sharedAgain), attachment(fresh)],
+        }),
+      ).rejects.toThrow('Homeserver refused the post');
+
+      // The upload this post made is gone from the homeserver and from `file_details`
+      expect(await stored(fresh.url)).toBe(false);
+      expect(await fileRow(fresh.url, fresh.id)).toBe(false);
+      // The file the earlier post uploaded stays, with its row
+      expect(await stored(shared)).toBe(true);
+      expect(await fileRow(shared, sharedAgain.id)).toBe(true);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalledWith(shared);
+      // The row is a tombstone, as any failed create leaves
+      expect(isPostDeleted(await PostDetailsModel.findById(compositePostId))).toBe(true);
     });
   });
 

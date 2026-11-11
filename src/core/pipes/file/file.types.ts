@@ -9,9 +9,12 @@ export interface TFileAttachmentResult {
   name: string;
   contentType: string;
   /**
-   * Set by `FileApplication.commitCreate` once the upload ran: the homeserver already held these
-   * bytes (media is content addressed, so another post may reference the same file), and a
-   * rollback of this upload must leave them in place.
+   * What `FileApplication.commitCreate` learned before the PUT, read by a rollback of this upload
+   * (`commitDeleteUploaded`). Three-valued: `true`, the homeserver already held these bytes (media
+   * is content addressed, so another post may reference the same file) and a rollback leaves them
+   * in place; `false`, this upload created the file and a rollback deletes it; unset, the probe
+   * failed and nothing was PUT, so a rollback has nothing of this batch to clean and leaves the
+   * file alone.
    */
   preexisting?: boolean;
 }

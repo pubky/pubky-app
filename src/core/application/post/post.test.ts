@@ -211,7 +211,7 @@ describe('Post Application', () => {
         const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
 
         await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed');
-        expect(sweepSpy).toHaveBeenCalledWith(fileAttachments);
+        expect(sweepSpy).toHaveBeenCalledWith(fileAttachments, mockData.compositePostId);
         expect(saveSpy).not.toHaveBeenCalled();
         expect(putBlobSpy).not.toHaveBeenCalled();
       });
@@ -224,7 +224,7 @@ describe('Post Application', () => {
         const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
 
         await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('Database write failed');
-        expect(sweepSpy).toHaveBeenCalledWith(fileAttachments);
+        expect(sweepSpy).toHaveBeenCalledWith(fileAttachments, mockData.compositePostId);
         expect(putBlobSpy).not.toHaveBeenCalled();
       });
 
@@ -292,7 +292,7 @@ describe('Post Application', () => {
 
       await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('Homeserver sync failed');
       expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
-      expect(sweepSpy).toHaveBeenCalledWith(fileAttachments);
+      expect(sweepSpy).toHaveBeenCalledWith(fileAttachments, mockData.compositePostId);
       expect(tagCreateSpy).not.toHaveBeenCalled();
       expect(mockData.onPostSynced).not.toHaveBeenCalled();
     });
@@ -383,6 +383,18 @@ describe('Post Application', () => {
       await PostApplication.commitDelete({ compositePostId, canWriteLegacy: true });
 
       expect(deleteIdempotentSpy).not.toHaveBeenCalled();
+    });
+
+    it('leaves a stray entry in the post directory alone and still deletes every version', async () => {
+      const stray = `pubky://${OWNER}/pub/social/v1/posts/${post.id}/notes.txt`;
+      const { findByIdSpy, deleteIdempotentSpy } = setupDeleteSpies({
+        listings: { public: [second.url, stray, post.url], private: [] },
+      });
+      findByIdSpy.mockResolvedValue(asOpaque<PostDetailsModel>(row()));
+
+      await PostApplication.commitDelete({ compositePostId, canWriteLegacy: true });
+
+      expect(deleteIdempotentSpy.mock.calls.map(([url]) => url)).toEqual([post.url, second.url]);
     });
 
     it('deletes a private version after the public ones', async () => {
@@ -821,7 +833,7 @@ describe('Post Application', () => {
           attachments: originalRow.attachments,
           kind: originalRow.kind,
         });
-        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added]);
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added], compositePostId);
       });
 
       it('should sweep new files and skip the local edit when file upload fails', async () => {
@@ -836,7 +848,7 @@ describe('Post Application', () => {
           }),
         ).rejects.toThrow('upload failed');
 
-        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added]);
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added], compositePostId);
         expect(editSpy).not.toHaveBeenCalled();
       });
 
@@ -853,7 +865,7 @@ describe('Post Application', () => {
           }),
         ).rejects.toThrow('local edit failed');
 
-        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added]);
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added], compositePostId);
         expect(putBlobSpy).not.toHaveBeenCalled();
       });
 
