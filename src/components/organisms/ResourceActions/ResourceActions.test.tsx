@@ -229,6 +229,19 @@ describe('ResourceActions', () => {
     expect(screen.getByTestId('resource-tag-bar-stub').nextElementSibling).toBe(row);
   });
 
+  it('closes up the buttons on a narrow card, so ⋯ stays on their row', () => {
+    renderActions(8);
+
+    // Container queries on the footer's own width: a phone's card, a card in a quoted post.
+    expect(screen.getByTestId('resource-actions')).toHaveClass('@container/resource-actions');
+    expect(screen.getByTestId('resource-action-row')).toHaveClass(
+      '@max-sm/resource-actions:gap-1.5',
+      '@max-sm/resource-actions:[&>*]:px-2.5!',
+      '@max-3xs/resource-actions:gap-1',
+      '@max-3xs/resource-actions:[&>*]:px-2!',
+    );
+  });
+
   it('shows the tags label only as the tag list’s name and the Tags button’s tooltip', () => {
     renderActions();
 

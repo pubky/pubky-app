@@ -77,7 +77,7 @@ export function ResourceCardHeader({ typeLabel, sourceUri, href, siteName }: Res
           as="span"
           overrideDefaults
           data-testid="resource-card-type"
-          className="truncate text-xs font-medium tracking-wide text-muted-foreground uppercase"
+          className="min-w-0 text-xs font-medium tracking-wide text-muted-foreground uppercase"
         >
           {typeLabel}
         </Typography>
@@ -87,7 +87,10 @@ export function ResourceCardHeader({ typeLabel, sourceUri, href, siteName }: Res
   );
 }
 
-/** The site the card's link goes to: favicon, name and ↗, linking out when the link is web. */
+/**
+ * The site the card's link goes to: favicon, name and ↗, linking out when the link is web. On a phone
+ * the link shows the favicon and ↗ only; "Open in <site>" stays its accessible name.
+ */
 function ResourceSource({ uri, href, name }: { uri: string; href: string | null; name: string | null }) {
   const className = 'ml-auto flex min-w-0 shrink items-center gap-1.5 text-xs font-medium text-muted-foreground';
 
@@ -101,9 +104,15 @@ function ResourceSource({ uri, href, name }: { uri: string; href: string | null;
     );
   }
   return (
-    <Link href={href} overrideDefaults data-testid="resource-card-source" className={cn(className, 'hover:text-brand')}>
+    <Link
+      href={href}
+      aria-label={`Open in ${name}`}
+      overrideDefaults
+      data-testid="resource-card-source"
+      className={cn(className, 'hover:text-brand max-sm:shrink-0')}
+    >
       <ResourceSourceIcon uri={uri} />
-      <span className="truncate">{name}</span>
+      <span className="truncate max-sm:hidden">{name}</span>
       <ArrowUpRight aria-hidden="true" className="size-3 shrink-0" />
     </Link>
   );

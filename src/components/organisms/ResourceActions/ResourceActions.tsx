@@ -82,7 +82,7 @@ export function ResourceActions({
       // The post footer's layout (`PostInlineTagsActions`), also staying stacked in a narrow grid cell.
       // Beside the expanded tags the buttons sit at the bottom, as beside the post's tags panel.
       className={cn(
-        'flex min-w-0 flex-col items-start gap-3 px-4 py-3 md:flex-row md:justify-between md:gap-4',
+        '@container/resource-actions flex min-w-0 flex-col items-start gap-3 px-4 py-3 md:flex-row md:justify-between md:gap-4',
         '@max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3!',
         isTagsExpanded ? 'md:items-end' : 'md:items-start',
       )}
@@ -102,7 +102,12 @@ export function ResourceActions({
       <Container
         overrideDefaults
         data-testid="resource-action-row"
-        className="flex flex-wrap gap-2 md:shrink-0 md:flex-nowrap @max-xl/grid:flex-wrap!"
+        className={cn(
+          'flex flex-wrap gap-2 md:shrink-0 md:flex-nowrap @max-xl/grid:flex-wrap!',
+          // On a narrow card (a phone, a quoted post) the buttons close up, so ⋯ stays on their row.
+          '@max-sm/resource-actions:gap-1.5 @max-sm/resource-actions:[&>*]:px-2.5!',
+          '@max-3xs/resource-actions:gap-1 @max-3xs/resource-actions:[&>*]:gap-1! @max-3xs/resource-actions:[&>*]:px-2!',
+        )}
       >
         <PostActionButton
           icon={Tag}
