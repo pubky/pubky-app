@@ -149,12 +149,22 @@ export class FileApplication {
    * Deletes freshly uploaded media during a rollback: the files this batch put on the homeserver,
    * never one it found there already (`preexisting`), which another post may reference. Identical
    * bytes within the batch share one URI. Only the local reference check applies: a file that was
-   * not on the homeserver before this upload can have no other referencer there.
+   * not on the homeserver before this upload can have no other referencer there. A file whose
+   * probe never answered (`preexisting` unset: `exists` failed before the PUT) was never put there
+   * by this batch and is left alone. The post the batch was for, `excludePostId`, is no referencer
+   * either: a failed create leaves its row behind as a tombstone whose `attachments` still name
+   * these very files, and a restored row names nothing this batch put on the homeserver.
+   *
+   * @param fileAttachments - The batch that was uploaded, `preexisting` set by `commitCreate`
+   * @param excludePostId - The post the batch was for, whose own references do not count
    */
-  static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[]) {
+  static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[], excludePostId?: string) {
     await this.deleteMedia(
       await this.filterLocallyUnreferenced(
-        fileAttachments.filter((attachment) => !attachment.preexisting).map((attachment) => attachment.media.url),
+        fileAttachments
+          .filter((attachment) => attachment.preexisting === false)
+          .map((attachment) => attachment.media.url),
+        excludePostId,
       ),
     );
   }

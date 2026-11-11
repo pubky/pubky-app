@@ -44,7 +44,9 @@ export const TAG_BANNED_CHARS = new RegExp(`[${TAG_INVALID_CHARS_FOR_REGEX}]`, '
  * engine's Unicode version like `\s` and `String.prototype.trim` do (U+0085 is in it and not in the
  * engine's trim; U+FEFF and U+200B the other way round). Nexus `/v1` folds labels by the same table, so a
  * label the app accepts is one Nexus accepts. The package does not export the table; a contract test
- * pins this copy against `buildTag`.
+ * pins this copy against `buildTag`. It is the package's one whitespace table, so `profileLinkUrlSchema`
+ * (`src/core/pipes/user/user.validator.ts`) refuses a profile link URL carrying one of these as `buildUser`
+ * does, pinned against `buildUser` by that validator's contract test.
  */
 export const TAG_FROZEN_WHITESPACE_CODE_POINTS: readonly number[] = [
   0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0x85, 0xa0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006,
