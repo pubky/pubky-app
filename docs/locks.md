@@ -667,17 +667,20 @@ Never commit either.
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
   (testnet + Lock Server + nexus) is driven manually. How to run it, approve as Bitkit and pay from
   the terminal: [`locks/locks-local-stack/README.md`](locks/locks-local-stack/README.md).
-- `cypress/e2e/locks.cy.ts` covers publish, owner view and payment unlock against the real Nexus and
-  homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
+- `cypress/e2e/locks.cy.ts` covers publish, owner view, payment unlock and delete against the real Nexus
+  and homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
   answers with `cy.intercept`, and writes the guarded bytes and `lock.json` to the creator's homeserver
   itself. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
   creator or code-exchange `... failed with HTTP <status>` message), so a stubbed 401, 404 or 451
-  takes the same path as the real Lock Server's. The pubky-e2e project will replace it with real end-to-end coverage.
-  Every stubbed answer is a `[locks-stub]` entry in the Cypress command log, with the redacted
-  request and response in its console details, and the same lines are printed in the terminal after
-  each `[locks-step]` marker (`cypress/support/locks-log.ts`).
+  takes the same path as the real Lock Server's. A lock a 0.x client published before the social v1
+  migration is seeded instead (its guarded 0.x post, `lock.json` and announcement, by the `seedLegacyLock`
+  task); the account migrates on sign-in, then the owner view, an unlock, a teaser edit and the delete run
+  on it. The pubky-e2e project will replace the stub with real end-to-end coverage. Every stubbed answer
+  is a `[locks-stub]` entry in the Cypress command log, with the redacted request and response in its
+  console details, and the same lines are printed in the terminal after each `[locks-step]` marker
+  (`cypress/support/locks-log.ts`).
 
 ## References
 
