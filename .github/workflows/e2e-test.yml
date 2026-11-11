@@ -732,9 +732,10 @@ jobs:
           key: ${{ steps.browsers.outputs.cache-primary-key }}
 
       # Cypress attaches to a browser through its own proxy, and gives up after three minutes
-      # without a reason when the browser does not use it. This says in a second whether WebKit
-      # does. Diagnostic for now: it reports, and the job goes on to Cypress either way.
-      - name: Check that WebKit sends localhost through a proxy
+      # without a reason when requests of the browser miss it. This loads a page the way Cypress
+      # does and reports in the job summary where WebKit sent each request, with and without
+      # e2e-loopback-demux.mjs. Diagnostic for now: the job goes on to Cypress either way.
+      - name: Check where WebKit sends the requests of a localhost page
         continue-on-error: true
         timeout-minutes: 5
         run: node .github/scripts/e2e-webkit-proxy-check.mjs
