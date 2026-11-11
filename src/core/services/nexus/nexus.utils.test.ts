@@ -321,6 +321,154 @@ describe('nexus.utils', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
+    it.each(['users', 'posts'] as const)(
+      'shares in-flight %s across overlapping batches and individual cards',
+      async (kind) => {
+        const batch = Promise.withResolvers<Response>();
+        const ids = kind === 'users' ? ['alice', 'bob', 'carol'] : ['alice:one', 'bob:two', 'carol:three'];
+        const records =
+          kind === 'users'
+            ? ids.map((id) => ({ details: { id } }))
+            : [
+                { details: { author: 'alice', id: 'one' } },
+                { details: { author: 'bob', id: 'two' } },
+                { details: { author: 'carol', id: 'three' } },
+              ];
+        const fetchIds = (requested: string[]) =>
+          kind === 'users'
+            ? NexusUserStreamService.fetchByIds({ user_ids: requested })
+            : NexusPostStreamService.fetchByIds({ post_ids: requested });
+        mockFetch.mockReturnValueOnce(batch.promise).mockImplementation((_url, options) => {
+          const requested = JSON.parse(options.body)[kind === 'users' ? 'user_ids' : 'post_ids'] as string[];
+          return Promise.resolve(nexusResponse(records.filter((_record, index) => requested.includes(ids[index]))));
+        });
+
+        const full = fetchIds(ids.slice(0, 2));
+        await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+        const overlap = fetchIds(ids.slice(1));
+        const card = fetchIds([ids[1]]);
+        batch.resolve(nexusResponse(records.slice(0, 2)));
+
+        const [fullResult, overlapResult, cardResult] = await Promise.all([full, overlap, card]);
+        expect(fullResult).toEqual(records.slice(0, 2));
+        expect(overlapResult).toEqual(records.slice(1));
+        expect(cardResult).toEqual([records[1]]);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        const bodies = mockFetch.mock.calls.map(([, options]) => JSON.parse(options.body));
+        expect(bodies.map((body) => body[kind === 'users' ? 'user_ids' : 'post_ids'])).toEqual([
+          ids.slice(0, 2),
+          ids.slice(2),
+        ]);
+      },
+    );
+
+    it('retains the oldest start time and sorted caller subset when combining pending users', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      const running = Promise.withResolvers<Response>();
+      mockFetch
+        .mockReturnValueOnce(running.promise)
+        .mockResolvedValueOnce(nexusResponse([{ details: { id: 'alice' } }]));
+      try {
+        const original = NexusUserStreamService.fetchByIds({ user_ids: ['bob', 'carol', 'missing'] });
+        now.mockReturnValue(2_000);
+        const overlap = NexusUserStreamService.fetchByIds({ user_ids: ['missing', 'bob', 'alice'] });
+        const missing = NexusUserStreamService.fetchByIds({ user_ids: ['missing'] });
+        running.resolve(nexusResponse([{ details: { id: 'bob' } }, { details: { id: 'carol' } }]));
+
+        await original;
+        const result = await overlap;
+        expect(result).toEqual([{ details: { id: 'alice' } }, { details: { id: 'bob' } }]);
+        expect(getNexusResponseStartedAt(result)).toBe(1_000);
+        const absent = await missing;
+        expect(absent).toEqual([]);
+        expect(getNexusResponseStartedAt(absent)).toBe(1_000);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      } finally {
+        now.mockRestore();
+      }
+    });
+
+    it('isolates overlapping user reads by viewer and depth', async () => {
+      const running = Promise.withResolvers<Response>();
+      mockFetch.mockReturnValueOnce(running.promise).mockImplementation(() => Promise.resolve(nexusResponse([])));
+      const first = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'], viewer_id: 'viewer-a', depth: 1 });
+      const otherViewer = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], viewer_id: 'viewer-b', depth: 1 });
+      const otherDepth = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], viewer_id: 'viewer-a', depth: 2 });
+      const publicRead = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], depth: 1 });
+      running.resolve(nexusResponse([{ details: { id: 'bob' } }]));
+
+      expect(await first).toEqual([{ details: { id: 'bob' } }]);
+      expect(await Promise.all([otherViewer, otherDepth, publicRead])).toEqual([[], [], []]);
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+    });
+
+    it('isolates overlapping posts by attachment metadata options', async () => {
+      const running = Promise.withResolvers<Response>();
+      mockFetch.mockReturnValueOnce(running.promise).mockResolvedValueOnce(nexusResponse([]));
+      const withMetadata = NexusPostStreamService.fetchByIds({ post_ids: ['alice:one', 'bob:two'] });
+      const withoutMetadata = NexusPostStreamService.fetchByIds({
+        post_ids: ['bob:two'],
+        include_attachment_metadata: false,
+      });
+      running.resolve(nexusResponse([{ details: { author: 'bob', id: 'two' } }]));
+
+      await withMetadata;
+      expect(await withoutMetadata).toEqual([]);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not use an older overlapping batch for a forced user refresh', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      const running = Promise.withResolvers<Response>();
+      mockFetch
+        .mockReturnValueOnce(running.promise)
+        .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob', name: 'New name' } }]));
+      try {
+        const old = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] });
+        now.mockReturnValue(2_000);
+        const forced = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], force: true });
+        const refreshed = await forced;
+        expect(refreshed).toEqual([{ details: { id: 'bob', name: 'New name' } }]);
+        expect(getNexusResponseStartedAt(refreshed)).toBe(2_000);
+        running.resolve(nexusResponse([{ details: { id: 'bob', name: 'Old name' } }]));
+        expect(await old).toEqual([{ details: { id: 'bob', name: 'Old name' } }]);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      } finally {
+        now.mockRestore();
+      }
+    });
+
+    it('releases shared failed batches so a later caller can retry', async () => {
+      const running = Promise.withResolvers<Response>();
+      mockFetch.mockReturnValueOnce(running.promise).mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob' } }]));
+      const original = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] });
+      const joined = NexusUserStreamService.fetchByIds({ user_ids: ['bob'] });
+      const failures = Promise.allSettled([original, joined]);
+      running.resolve(new Response('Bad request', { status: 400 }));
+
+      expect((await failures).map((result) => result.status)).toEqual(['rejected', 'rejected']);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(await NexusUserStreamService.fetchByIds({ user_ids: ['bob'] })).toEqual([{ details: { id: 'bob' } }]);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not join requests removed by a query-cache clear before their promises settle', async () => {
+      const { nexusQueryClient } = await import('./nexus.query-client');
+      const running = Promise.withResolvers<Response>();
+      mockFetch
+        .mockReturnValueOnce(running.promise)
+        .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob', name: 'New session' } }]));
+      const old = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] });
+      const oldResult = Promise.allSettled([old]);
+      nexusQueryClient.clear();
+      const current = NexusUserStreamService.fetchByIds({ user_ids: ['bob'] });
+      running.resolve(nexusResponse([{ details: { id: 'bob', name: 'Old session' } }]));
+
+      expect(await current).toEqual([{ details: { id: 'bob', name: 'New session' } }]);
+      expect((await oldResult)[0].status).toBe('rejected');
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
     it('does not reuse a forced revalidation that is already fetching, and starts the follow-up after it settles', async () => {
       const posts = [{ details: { author: 'author1', id: 'post1' } }];
       const inFlight = Promise.withResolvers<Response>();

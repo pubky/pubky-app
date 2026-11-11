@@ -179,6 +179,14 @@ Two bug classes account for most regressions on read paths. Check them before to
 - `isLoading` is true while a cache-miss fetch is in flight, and `.finally()` clears it whether `fetchFn` resolves or rejects. A Nexus 404 therefore settles at `data === null`; it does not leave a skeleton without an exit, and the hook exposes no error value. `usePostMissing` turns that settled `null` into `postMissing`. Branch on the settled value, not on `isLoading` and `data` alone.
 - `isMissing = postDetails === null` is the established "not found" shape (#2081, #1986); keep that meaning.
 
+Ordinary Nexus `users/by_ids` and `posts/by_ids` reads share pending IDs across overlapping batches within the same
+endpoint and request options (viewer, user depth and attachment metadata). Only uncovered IDs start another request.
+This is in-flight deduplication, not another data cache: TanStack still owns settled responses and retries. Each caller
+receives only its requested records, and assembled arrays carry the earliest proven response start time, so joining a
+pending read cannot turn older data into evidence newer than a local edit. Forced refreshes retain `queryNexus`'s
+revalidation ordering and never join an older overlapping batch. Cleared or replaced queries are not shareable across
+auth/cache lifetimes.
+
 TTL refresh races are the second class (TTL rules: `docs/data-patterns.md`, _TTL Management_):
 
 - A background refresh that lands after a local write reverts the user's action (#1781) or flickers the tag UI (#1452, #1276). A local write must mark every affected row fresh (`*_ttl.lastUpdatedAt`) so the coordinator skips it; a stale Nexus response must never overwrite a fresher local write. `persistUsers` skips the relationship row for any user whose `user_ttl.lastUpdatedAt >= fetchStartedAt`, and `LocalFollowService.create`/`delete` stamp the followee TTL so a follow that lands mid-request wins (#1803).
