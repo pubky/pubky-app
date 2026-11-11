@@ -1,6 +1,6 @@
 # Component Testing
 
-Rules and patterns for unit tests of UI components. Unit tests assert behaviour and prop contracts; visual appearance is covered by VRT — see `docs/visual-regression-testing.md`.
+Rules and patterns for unit tests of UI components. Unit tests assert behaviour and prop contracts; visual appearance is covered by VRT — see `docs/visual-regression-testing.md`. Tests of the real pinned SDKs at the service boundary are in `docs/contract-testing.md`.
 
 Snapshot tests (`toMatchSnapshot`, `toMatchInlineSnapshot`, `.snap` files) were removed in favour of VRT and must not come back. They pinned markup rather than behaviour, broke on every unrelated class change, and duplicated what VRT already captures.
 

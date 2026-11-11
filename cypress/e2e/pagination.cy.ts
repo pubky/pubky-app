@@ -14,6 +14,7 @@ import {
   THREAD_INITIAL_REPLIES,
 } from '../support/pagination';
 import { waitForServiceWorker } from '../support/common';
+import { itMobile } from '../support/mobile';
 import { waitForNexus } from '../support/nexus';
 import { createPostViaApi, replyViaApi, seedUserViaApi } from '../support/seed';
 
@@ -105,7 +106,7 @@ describe('pagination', () => {
     waitForServiceWorker();
   });
 
-  it('profile posts tab loads every page once and stops at the end', () => {
+  itMobile('profile posts tab loads every page once and stops at the end', () => {
     const pages = recordStreamPages(
       (query) =>
         query['source'] === 'author' &&
@@ -121,7 +122,7 @@ describe('pagination', () => {
     assertSeededTextsInOrder(TIMELINE, postPrefix, seededTextsFor(profileKeys));
   });
 
-  it('tag search results load every page once and stop at the end', () => {
+  itMobile('tag search results load every page once and stop at the end', () => {
     expect(searchKeys, 'tagged posts').to.have.length(POST_COUNT);
     const pages = recordStreamPages(
       (query) => query['source'] === 'all' && query['tags'] === tag && isPostTimelineQuery(query),

@@ -1,8 +1,17 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthStore } from '@/stores/auth/auth.types';
+import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
+import { mockSession } from '@/test-utils/pubky';
+import { mockAuthStore } from '@/test-utils/stores';
 import { ThemeProvider } from './ThemeProvider';
 
-const { providerProps } = vi.hoisted(() => ({ providerProps: vi.fn() }));
+const { providerProps, mockPathname, authState, authListeners } = vi.hoisted(() => ({
+  providerProps: vi.fn(),
+  mockPathname: { current: '/home' },
+  authState: { current: {} as Partial<AuthStore> },
+  authListeners: new Set<() => void>(),
+}));
 
 vi.mock('next-themes', () => ({
   ThemeProvider: ({ children, ...props }: { children: React.ReactNode }) => {
@@ -11,7 +20,38 @@ vi.mock('next-themes', () => ({
   },
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockPathname.current,
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: Object.assign(<T,>(selector: (state: AuthStore) => T) => selector(mockAuthStore(authState.current)), {
+    subscribe: (listener: () => void) => {
+      authListeners.add(listener);
+      return () => authListeners.delete(listener);
+    },
+  }),
+}));
+
+const MEMBER: Partial<AuthStore> = { hasHydrated: true, currentUserPubky: 'pubky-1', session: mockSession() };
+const GUEST: Partial<AuthStore> = { hasHydrated: true, currentUserPubky: null, session: null };
+
+function storeSession() {
+  localStorage.setItem(AUTH_PERSIST_KEY, JSON.stringify({ state: { sessionReference: { kind: 'grant' } } }));
+}
+
+function forcedTheme() {
+  render(<ThemeProvider>{null}</ThemeProvider>);
+  return providerProps.mock.lastCall?.[0].forcedTheme;
+}
+
 describe('ThemeProvider', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockPathname.current = '/home';
+    authState.current = MEMBER;
+  });
+
   it('renders children', () => {
     render(
       <ThemeProvider>
@@ -35,5 +75,105 @@ describe('ThemeProvider', () => {
     expect(providerProps).toHaveBeenCalledWith(
       expect.objectContaining({ themes: ['dark', 'light'], enableSystem: true }),
     );
+  });
+
+  it('leaves the stored preference to a signed-in member', () => {
+    expect(forcedTheme()).toBeUndefined();
+  });
+
+  it.each(['/', '/sign-in', '/logout', '/onboarding/profile'])('forces dark on %s, even for a member', (path) => {
+    mockPathname.current = path;
+
+    expect(forcedTheme()).toBe('dark');
+  });
+
+  it('forces dark for a guest', () => {
+    authState.current = GUEST;
+
+    expect(forcedTheme()).toBe('dark');
+  });
+
+  it('reads the stored session until the auth store rehydrates', () => {
+    authState.current = { ...GUEST, hasHydrated: false };
+    expect(forcedTheme()).toBe('dark');
+
+    storeSession();
+    expect(forcedTheme()).toBeUndefined();
+  });
+
+  describe('another tab changing the session on a public document', () => {
+    function announceStoredAuth() {
+      act(() => window.dispatchEvent(new StorageEvent('storage', { key: AUTH_PERSIST_KEY })));
+    }
+
+    function lastForcedTheme() {
+      return providerProps.mock.lastCall?.[0].forcedTheme;
+    }
+
+    beforeEach(() => {
+      mockPathname.current = '/privacy-policy';
+    });
+
+    it('lets the stored preference apply after another tab signs in', () => {
+      authState.current = GUEST;
+      render(<ThemeProvider>{null}</ThemeProvider>);
+      expect(lastForcedTheme()).toBe('dark');
+
+      storeSession();
+      announceStoredAuth();
+
+      expect(lastForcedTheme()).toBeUndefined();
+    });
+
+    it('forces dark after another tab signs out', () => {
+      storeSession();
+      render(<ThemeProvider>{null}</ThemeProvider>);
+      expect(lastForcedTheme()).toBeUndefined();
+
+      localStorage.removeItem(AUTH_PERSIST_KEY);
+      announceStoredAuth();
+
+      expect(lastForcedTheme()).toBe('dark');
+    });
+
+    it('follows this tab again once its auth store changes', () => {
+      authState.current = GUEST;
+      render(<ThemeProvider>{null}</ThemeProvider>);
+      storeSession();
+      announceStoredAuth();
+
+      act(() => authListeners.forEach((listener) => listener()));
+
+      expect(lastForcedTheme()).toBe('dark');
+    });
+  });
+
+  describe('pre-paint script', () => {
+    const root = document.documentElement;
+
+    function runScript() {
+      render(<ThemeProvider>{null}</ThemeProvider>);
+      new Function(document.querySelector('script')?.innerHTML ?? '')();
+    }
+
+    beforeEach(() => {
+      localStorage.setItem('pubky-theme', 'light');
+      root.className = 'light';
+    });
+
+    it('swaps light for dark without touching the stored preference when no session is stored', () => {
+      runScript();
+
+      expect(root.className).toBe('dark');
+      expect(localStorage.getItem('pubky-theme')).toBe('light');
+    });
+
+    it('keeps light when a session is stored', () => {
+      storeSession();
+
+      runScript();
+
+      expect(root.className).toBe('light');
+    });
   });
 });

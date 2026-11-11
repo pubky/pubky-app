@@ -111,7 +111,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   snapshot tests (removed for VRT, must not return); no `as any` or `as unknown as T` (use the `src/test-utils`
   helpers). The data model package is real in tests, never `vi.mock('pubky-social-specs')`: `fakeOwner` for keys,
   `setClock` via `src/test-utils/spec-clock.ts` for deterministic ids, `stubMemoryHomeserver` for the homeserver.
-  `docs/component-testing.md`, `docs/development-workflow.md`
+  `docs/component-testing.md`, `docs/development-workflow.md`; SDK boundary contract tests: `docs/contract-testing.md`
 
 ## Before you edit, read
 

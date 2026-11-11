@@ -64,6 +64,14 @@ const DELIVERY_POSTMESSAGE = 'postmessage';
 const READER_WALLET_SETUP_NEEDED = 'Reader wallet setup needed';
 
 /**
+ * The Lock Server's `failure_message` for Paykit's `reader_not_payable`, from its closed invoice-admission list
+ * (`docs/API.md` in pubky/locks). The SDK only requires a non-empty message, so a rewording would silently bring back
+ * the generic failure screen; `docs/locks.md` (Pay to Unlock, step 6) says when to re-check it.
+ * TODO:[Locks] locks#99 — match a typed failure reason once the Lock Server and SDK expose one.
+ */
+const READER_NOT_PAYABLE = 'reader is not payable';
+
+/**
  * IO boundary for the Lock Server via the locks-sdk. Client building, session/config reads, wasm
  * init, and error mapping live in `locks.utils.ts`; this class composes them into the app's calls.
  *
@@ -171,7 +179,7 @@ export class LocksService {
           cause: result.error,
         });
       }
-      return result.data;
+      return { status: result.data.status, readerNotPayable: result.data.failure_message === READER_NOT_PAYABLE };
     } catch (error) {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
       throw toAppError(error, ErrorService.Locks, 'LocksService.submitProof');
@@ -260,7 +268,9 @@ export class LocksService {
       return {
         status: response.data.status,
         walletSetupNeeded: response.data.status_message === READER_WALLET_SETUP_NEEDED,
+        readerNotPayable: response.data.failure_message === READER_NOT_PAYABLE,
         admissionDeadlineAt: response.data.admission_deadline_at,
+        completedAt: response.data.completed_at,
       };
     } catch (error) {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
