@@ -184,7 +184,9 @@ endpoint and request options (viewer, user depth and attachment metadata). For a
 start another request.
 Existing exact queries go through TanStack first, so an older overlapping batch cannot replace a refreshed result
 or bypass an exact query's pending refresh or invalidation. TanStack decides whether that exact query is fresh or
-needs another request. This is in-flight deduplication, not another data cache: TanStack still owns settled responses
+needs another request; an active exact refetch remains shareable with later overlapping reads. When batches overlap,
+each requested ID keeps its selected source, so another page cannot replace a newer record or undo its omission.
+This is in-flight deduplication, not another data cache: TanStack still owns settled responses
 and retries. Each caller receives only its requested records, and assembled arrays carry the earliest proven response
 start time, so joining a pending read cannot turn older data into evidence newer than a local edit. Forced refreshes retain `queryNexus`'s
 revalidation ordering and never join an older overlapping batch. Cleared or replaced queries are not shareable across

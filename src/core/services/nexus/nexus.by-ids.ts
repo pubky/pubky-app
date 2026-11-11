@@ -37,7 +37,7 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
     // TanStack reuse, join or revalidate that query under its ordinary policy,
     // rather than bypassing its cached result, invalidation or pending refresh.
     const exactQueryKey = ['nexus', url, HttpMethod.POST, bodyFor(ids)];
-    if (nexusQueryClient.getQueryState(exactQueryKey) !== undefined) return await execute(ids);
+    const hasExactQuery = nexusQueryClient.getQueryState(exactQueryKey) !== undefined;
 
     // Viewer, depth, attachment options and endpoint all affect the result.
     const scopeKey = JSON.stringify([url, bodyFor([])]);
@@ -47,11 +47,16 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
       scopes.set(scopeKey, pending);
     }
     const batches = new Set<PendingBatch<T>>();
+    const selectedById = new Map<string, PendingBatch<T>>();
     const missing: string[] = [];
     for (const id of ids) {
-      const batch = pending.get(id);
-      if (batch?.isActive()) batches.add(batch);
-      else missing.push(id);
+      // An existing exact query goes through execute/register as a whole, so a
+      // stale refetch also remains shareable with subsequent overlapping reads.
+      const batch = hasExactQuery ? undefined : pending.get(id);
+      if (batch?.isActive()) {
+        batches.add(batch);
+        selectedById.set(id, batch);
+      } else missing.push(id);
     }
 
     if (missing.length > 0) {
@@ -68,7 +73,10 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
           query.state.fetchStatus === 'fetching' &&
           nexusQueryClient.getQueryCache().find({ queryKey, exact: true }) === query,
       };
-      for (const id of missing) pending.set(id, batch);
+      for (const id of missing) {
+        pending.set(id, batch);
+        selectedById.set(id, batch);
+      }
       batches.add(batch);
       const clear = () => {
         for (const id of missing) {
@@ -90,7 +98,16 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
     }
 
     const pages = await Promise.all(selected.map((batch) => batch.promise));
-    const records = new Map(pages.flatMap((page) => page.map((record) => [getId(record), record] as const)));
+    // A newer exact request can replace only some IDs in an older batch. Use
+    // each ID's selected source, including omissions, rather than page order.
+    const records = new Map(
+      pages.flatMap((page, index) =>
+        page.flatMap((record) => {
+          const id = getId(record);
+          return selectedById.get(id) === selected[index] ? [[id, record] as const] : [];
+        }),
+      ),
+    );
     const result = ids.flatMap((id) => {
       const record = records.get(id);
       return record === undefined ? [] : [record];

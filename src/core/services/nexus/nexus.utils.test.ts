@@ -515,6 +515,65 @@ describe('nexus.utils', () => {
         },
       );
 
+      it.each(['stale', 'invalidated'])('shares an exact %s refetch with a later overlapping batch', async (state) => {
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+        const refreshing = Promise.withResolvers<Response>();
+        mockFetch
+          .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Cached')]))
+          .mockReturnValueOnce(refreshing.promise)
+          .mockResolvedValueOnce(nexusResponse([record(ids[0], 'Other')]));
+        await fetchIds([ids[1]]);
+        if (state === 'stale') now.mockReturnValue(30_000);
+        else await nexusQueryClient.invalidateQueries({ queryKey: exactQueryKey(), exact: true });
+        const exact = fetchIds([ids[1]]);
+        await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+        const overlap = fetchIds(ids);
+        try {
+          await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
+          const requested = JSON.parse(mockFetch.mock.calls[2][1].body);
+          expect(requested[kind === 'users' ? 'user_ids' : 'post_ids']).toEqual([ids[0]]);
+        } finally {
+          refreshing.resolve(nexusResponse([record(ids[1], 'Refreshed')]));
+          await Promise.all([exact, overlap]);
+          now.mockRestore();
+        }
+        expect(await overlap).toEqual([record(ids[0], 'Other'), record(ids[1], 'Refreshed')]);
+      });
+
+      it.each(['updated', 'omitted'])(
+        'keeps each selected batch authoritative when its newer record is %s',
+        async (newerResult) => {
+          const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+          const thirdId = kind === 'users' ? 'carol' : 'carol:three';
+          const running = Promise.withResolvers<Response>();
+          const refreshing = Promise.withResolvers<Response>();
+          mockFetch
+            .mockResolvedValueOnce(nexusResponse([record(ids[1], 'Cached')]))
+            .mockReturnValueOnce(running.promise)
+            .mockReturnValueOnce(refreshing.promise)
+            .mockResolvedValueOnce(nexusResponse([record(ids[0], 'Other')]));
+          await fetchIds([ids[1]]);
+          now.mockReturnValue(2_000);
+          const old = fetchIds([ids[1], thirdId]);
+          now.mockReturnValue(30_000);
+          const exact = fetchIds([ids[1]]);
+          await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
+          now.mockReturnValue(31_000);
+          const overlap = fetchIds([...ids, thirdId]);
+          const newer = newerResult === 'updated' ? [record(ids[1], 'Refreshed')] : [];
+          refreshing.resolve(nexusResponse(newer));
+          running.resolve(nexusResponse([record(ids[1], 'Older'), record(thirdId, 'Third')]));
+          try {
+            const [, , result] = await Promise.all([old, exact, overlap]);
+            expect(result).toEqual([record(ids[0], 'Other'), ...newer, record(thirdId, 'Third')]);
+            expect(getNexusResponseStartedAt(result)).toBe(2_000);
+            expect(mockFetch).toHaveBeenCalledTimes(4);
+          } finally {
+            now.mockRestore();
+          }
+        },
+      );
+
       it('joins a pending exact forced refresh instead of an older overlapping batch', async () => {
         const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
         const running = Promise.withResolvers<Response>();
