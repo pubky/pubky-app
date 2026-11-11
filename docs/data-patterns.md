@@ -264,6 +264,12 @@ All tables defined in `src/core/database/franky/franky.ts`.
 
 `franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
 
+### Runtime connection recovery
+
+`franky.recovery.ts` reconnects once after a structured IndexedDB `UnknownError` or `AbortError` on an already-open connection. `ModelBase` uses it only for reads; `LocalTagCacheService` uses it around a complete local-only transaction after its failure has rolled back every write. The replay rereads rows and rechecks revision/session guards. Never wrap an individual write, an existing caller-owned transaction, or a callback with network/store side effects. Other error names and the failed replay propagate through the existing `Err.database` boundary.
+
+Concurrent failures on the same native connection share a reconnect. Explicit close, delete, version change, and account cache cleanup invalidate pending recoveries; a later open cannot revive them. Recovery does not delete data or change the schema. It has no timer, network request, or scheduled retry: the same promise chain retains Dexie `liveQuery` observations, covered by a real Dexie subscription regression test. Initial opening keeps its separate bounded initialization retry.
+
 ### User Tables
 
 ```
