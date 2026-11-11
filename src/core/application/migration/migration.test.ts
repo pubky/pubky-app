@@ -39,21 +39,23 @@ describe('MigrationApplication', () => {
 
       const result = await MigrationApplication.resync(TEST_PUBKY, mockLocalSettings);
 
-      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
-      expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
+      expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
       expect(initSettingsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, mockLocalSettings);
       expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
       expect(result).toBe(mockSettings);
     });
 
-    it('passes the account guard to the bookmarks fetch', async () => {
-      vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
-      vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+    it('passes the account guard to every private fetch: mutes, feeds and bookmarks', async () => {
+      const fetchMutedSpy = vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+      const fetchFeedsSpy = vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([]);
       vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
       const isCurrent = () => true;
 
       await MigrationApplication.resync(TEST_PUBKY, { version: 3, updatedAt: 300 } as SettingsState, { isCurrent });
 
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent });
+      expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent });
       expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent });
     });
 
@@ -88,7 +90,7 @@ describe('MigrationApplication', () => {
 
       await MigrationApplication.resync(TEST_PUBKY, mockLocalSettings);
 
-      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
     });
 
     it('should still call fetchMutedUsers when feeds fetch fails', async () => {
@@ -100,7 +102,7 @@ describe('MigrationApplication', () => {
 
       const result = await MigrationApplication.resync(TEST_PUBKY, mockLocalSettings);
 
-      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
       expect(result).toBeNull();
     });
 
