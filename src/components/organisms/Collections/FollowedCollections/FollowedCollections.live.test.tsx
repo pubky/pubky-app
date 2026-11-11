@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { buildUri } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
@@ -9,6 +11,8 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { db } from '@/database/franky/franky';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
+import type { Pubky } from '@/models/models.types';
+import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -56,9 +60,13 @@ const mockGetOrFetchStreamSlice = vi.mocked(StreamPostsController.getOrFetchStre
 const mockPrepareStreamForInitialLoad = vi.mocked(StreamPostsController.prepareStreamForInitialLoad);
 const mockGetCachedLastPostTimestamp = vi.mocked(StreamPostsController.getCachedLastPostTimestamp);
 
-const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy';
+const author = fakeOwner(2) as Pubky;
+/** Thirteen-character Crockford post ids, distinct per index. */
+const postIdAt = (index: number) => `0035V9A20W${String(index).padStart(2, '0')}0`;
 /** 27 bookmarks, newest first: 25 followed collections and two bookmarked posts (QA-6's QA6F account). */
-const BOOKMARKED = Array.from({ length: 27 }, (_, index) => `${AUTHOR}:p${String(index + 1).padStart(2, '0')}`);
+const BOOKMARKED = Array.from({ length: 27 }, (_, index) =>
+  buildCompositeId({ pubky: author, id: postIdAt(index + 1) }),
+);
 const POSTS = new Set([BOOKMARKED[10], BOOKMARKED[20]]);
 /** Collections whose details the Home timeline cached before the Collections page was opened. */
 const CACHED_BEFORE_VISIT = BOOKMARKED.slice(0, 7);
@@ -69,7 +77,7 @@ const detailsOf = (id: string): PostDetailsModelSchema => ({
   kind: POSTS.has(id) ? 'short' : 'collection',
   indexed_at: 1,
   attachments: null,
-  uri: `pubky://${AUTHOR}/pub/social/v1/posts/${id.split(':')[1]}`,
+  uri: buildUri(author, 'post', parseCompositeId(id).id),
 });
 
 /** The Bookmarks card beside the section: its count is a live query too (`useBookmarksCollectionSummary`). */

@@ -1,21 +1,27 @@
+import { buildUri } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
+import type { Pubky } from '@/models/models.types';
+import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { asInvalid } from '@/test-utils/type-assertions';
 
-const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy';
-const postId = (index: number) => `${AUTHOR}:p${String(index).padStart(2, '0')}`;
+const author = fakeOwner(2) as Pubky;
+/** Thirteen-character Crockford post ids, distinct per index. */
+const postIdAt = (index: number) => `0035V9A20W${String(index).padStart(2, '0')}0`;
+const postId = (index: number) => buildCompositeId({ pubky: author, id: postIdAt(index) });
 const details = (id: string, kind: string): PostDetailsModelSchema => ({
   id,
   content: kind === 'collection' ? JSON.stringify({ title: 'Collection', items: [] }) : 'a note',
   kind,
   indexed_at: 1,
   attachments: null,
-  uri: `pubky://${AUTHOR}/pub/social/v1/posts/${id.split(':')[1]}`,
+  uri: buildUri(author, 'post', parseCompositeId(id).id),
 });
 
 describe('BookmarkModel', () => {
@@ -64,13 +70,34 @@ describe('BookmarkModel', () => {
       await expect(BookmarkModel.findAllWithPostDetails()).resolves.toEqual([]);
     });
 
-    it('wraps a failed read in a database error', async () => {
-      vi.spyOn(db, 'transaction').mockRejectedValue(new Error('closed'));
+    it('wraps a failed transaction in a database error', async () => {
+      const closed = new Error('closed');
+      vi.spyOn(db, 'transaction').mockRejectedValue(closed);
 
       const failure = await BookmarkModel.findAllWithPostDetails().catch((error: unknown) => error);
 
       expect(failure).toBeInstanceOf(AppError);
-      expect((failure as AppError).code).toBe(DatabaseErrorCode.QUERY_FAILED);
+      expect(failure).toMatchObject({
+        code: DatabaseErrorCode.QUERY_FAILED,
+        operation: 'findAllWithPostDetails',
+        cause: closed,
+      });
+    });
+
+    it('rethrows the details read failure as reported, without wrapping it again', async () => {
+      await BookmarkModel.table.put({ id: postId(1), created_at: 100 });
+      const closed = new Error('closed');
+      vi.spyOn(PostDetailsModel.table, 'bulkGet').mockRejectedValue(closed);
+
+      const failure = await BookmarkModel.findAllWithPostDetails().catch((error: unknown) => error);
+
+      expect(failure).toBeInstanceOf(AppError);
+      // `findByIdsPreserveOrder`'s own report, its cause the raw failure: captured once, context kept.
+      expect(failure).toMatchObject({
+        code: DatabaseErrorCode.QUERY_FAILED,
+        operation: 'findByIdsPreserveOrder',
+        cause: closed,
+      });
     });
   });
 });

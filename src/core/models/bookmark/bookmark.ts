@@ -3,6 +3,7 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isAppError } from '@/libs/error/error.utils';
 import type { BookmarkedPostDetails, BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
@@ -85,12 +86,14 @@ export class BookmarkModel extends RecordModelBase<string, BookmarkModelSchema> 
           const bookmarks = this.sortNewestFirst(all);
           if (bookmarks.length === 0) return [];
           // Called inside the Dexie callback, so its `bulkGet` is issued in this zone and transaction.
-          return PostDetailsModel.findByIdsPreserveOrder(bookmarks.map((bookmark) => bookmark.id)).then((details) =>
-            bookmarks.map((bookmark, index) => ({ ...bookmark, details: details[index] })),
+          return PostDetailsModel.findByIdsPreserveOrder(bookmarks.map(({ id }) => id)).then((details) =>
+            bookmarks.map(({ id, created_at }, index) => ({ id, created_at, details: details[index] })),
           );
         }),
       );
     } catch (error) {
+      // The details read already reports as an AppError; only a failed transaction or bookmarks read is new.
+      if (isAppError(error)) throw error;
       throw Err.database(
         DatabaseErrorCode.QUERY_FAILED,
         `Failed to read records from ${this.table.name} with their post details`,
