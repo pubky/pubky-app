@@ -476,7 +476,7 @@ jobs:
     runs-on: ubuntu-latest
     # Longer than webkit-test, which may start late if macOS runners are busy: the macOS job, not
     # this one, decides how a run ends.
-    timeout-minutes: 75
+    timeout-minutes: 90
     needs: [rebuild_images]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
@@ -623,6 +623,8 @@ jobs:
         run: bash pubky-app/.github/scripts/e2e-remote-stack.sh hold
         env:
           GH_TOKEN: ${{ github.token }}
+          # Seconds. Longer than webkit-test may run, which starts before the stack is held.
+          HOLD_TIMEOUT: 3900
 
       - name: Close the tunnel
         if: ${{ always() }}
@@ -636,7 +638,8 @@ jobs:
     name: WebKit specs on macOS
     if: ${{ github.event.schedule == '0 5 * * 1-5' || inputs.browsers == 'webkit' }}
     runs-on: macos-latest
-    timeout-minutes: 45
+    # In run 42936378908 the posts job took 38 minutes with 11 of its 42 tests skipped.
+    timeout-minutes: 60
     # Uses none of its outputs: needing rebuild_images starts both halves together, and skips this
     # one when the stack's images cannot be resolved.
     needs: [rebuild_images]
