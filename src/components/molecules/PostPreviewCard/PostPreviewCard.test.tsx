@@ -124,15 +124,25 @@ vi.mock('@/organisms/PostInlineTagsActions/PostInlineTagsActions', () => ({
   PostInlineTagsActions: ({
     postId,
     surface,
+    className,
+    actionsClassName,
     onReplyClick,
     onRepostClick,
   }: {
     postId: string;
     surface?: string;
+    className?: string;
+    actionsClassName?: string;
     onReplyClick: () => void;
     onRepostClick: () => void;
   }) => (
-    <div data-testid="post-inline-tags-actions" data-post-id={postId} data-surface={surface}>
+    <div
+      data-testid="post-inline-tags-actions"
+      data-post-id={postId}
+      data-surface={surface}
+      data-class-name={className}
+      data-actions-class-name={actionsClassName}
+    >
       <button type="button" data-testid="footer-reply" onClick={onReplyClick}>
         Reply
       </button>
@@ -346,6 +356,26 @@ describe('PostPreviewCard', () => {
       fireEvent.click(screen.getByTestId('footer-repost'));
       expect(mockOpenReplyDialog).toHaveBeenCalledTimes(1);
       expect(mockOpenRepostDialog).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes up its buttons in a narrow quote, so ⋯ stays on their row', () => {
+      render(<PostPreviewCard postId="test-post-123" />);
+
+      // Container queries on the footer's own width (a quote in a post on a phone), in a resource card's steps.
+      const footer = screen.getByTestId('post-inline-tags-actions');
+      expect(footer).toHaveAttribute('data-class-name', '@container/post-preview-actions');
+      expect(footer.getAttribute('data-actions-class-name')?.split(' ')).toEqual(
+        expect.arrayContaining([
+          'w-full',
+          '@max-sm/post-preview-actions:gap-1.5',
+          '@max-sm/post-preview-actions:[&>*]:px-2.5!',
+          '@max-[17rem]/post-preview-actions:gap-1',
+          '@max-[17rem]/post-preview-actions:[&>*]:gap-1!',
+          '@max-[17rem]/post-preview-actions:[&>*]:px-2!',
+          '@max-[14.5rem]/post-preview-actions:[&>*]:px-1.5!',
+          '@max-[13.75rem]/post-preview-actions:gap-0.5',
+        ]),
+      );
     });
 
     it('keeps Enter and Space on a footer control for that control, not the card link', () => {

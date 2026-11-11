@@ -107,6 +107,8 @@ export function ResourceActions({
           // On a narrow card (a phone, a quoted post) the buttons close up, so ⋯ stays on their row.
           '@max-sm/resource-actions:gap-1.5 @max-sm/resource-actions:[&>*]:px-2.5!',
           '@max-3xs/resource-actions:gap-1 @max-3xs/resource-actions:[&>*]:gap-1! @max-3xs/resource-actions:[&>*]:px-2!',
+          '@max-[14.5rem]/resource-actions:[&>*]:px-1.5!',
+          '@max-[13.75rem]/resource-actions:gap-0.5',
         )}
       >
         <PostActionButton

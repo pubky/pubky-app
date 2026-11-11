@@ -191,7 +191,17 @@ export function PostPreviewCard({
                   surface="muted"
                   onReplyClick={openReplyDialog}
                   onRepostClick={openRepostDialog}
-                  actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+                  // Container queries on the footer's own width: in a narrow quote (a phone) the buttons close up,
+                  // so ⋯ stays on their row, in the steps of a resource card's footer (the second from 17rem: counts
+                  // of two digits still fit at 390 px).
+                  className="@container/post-preview-actions"
+                  actionsClassName={cn(
+                    'w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!',
+                    '@max-sm/post-preview-actions:gap-1.5 @max-sm/post-preview-actions:[&>*]:px-2.5!',
+                    '@max-[17rem]/post-preview-actions:gap-1 @max-[17rem]/post-preview-actions:[&>*]:gap-1! @max-[17rem]/post-preview-actions:[&>*]:px-2!',
+                    '@max-[14.5rem]/post-preview-actions:[&>*]:px-1.5!',
+                    '@max-[13.75rem]/post-preview-actions:gap-0.5',
+                  )}
                 />
               ) : (
                 <ClickableTagsList
