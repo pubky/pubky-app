@@ -25,6 +25,7 @@ import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { mockSession } from '@/test-utils/pubky';
+import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 
 // Mock HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
@@ -1750,6 +1751,9 @@ describe('PostController', () => {
   // Nexus serves for a migrated collection (the 0.x `content` shape, items `/pub/pubky.app/posts/{id}`).
   // An edit must keep every stored item's v1 spelling and note (SF-4).
   describe('edits of a migrated collection', () => {
+    // `buildPost` and `editPost` take their ids and `created_at` from the package clock.
+    withFrozenSpecClock();
+
     const curatedAuthor = fakeOwner(3);
     const [keptUri, legacyKeptUri] = postReferenceSpellings(curatedAuthor, '0035QZPT4QG1G');
     const [otherUri, legacyOtherUri] = postReferenceSpellings(curatedAuthor, '0035QZPT4QG20');

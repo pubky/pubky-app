@@ -471,13 +471,30 @@ describe('CollectionPostContent', () => {
     it('matches a drafted post whichever way the collection spells it, and keeps that spelling', () => {
       // The draft was taken from the Nexus-served row (0.x spelling); the row has since converged
       // to the stored v1 spelling.
-      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, VALID_ITEM_URI] });
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, VALID_ITEM_URI, uriB] });
 
-      expect(CollectionPostContent.reorderItems(collection, [LEGACY_ITEM_URI, uriA]).items).toEqual([
+      expect(CollectionPostContent.reorderItems(collection, [uriB, LEGACY_ITEM_URI, uriA]).items).toEqual([
+        uriB,
         VALID_ITEM_URI,
         uriA,
       ]);
-      expect(CollectionPostContent.reorderItems(collection, [uriA, LEGACY_ITEM_URI])).toBe(collection);
+      expect(CollectionPostContent.reorderItems(collection, [uriA, LEGACY_ITEM_URI, uriB])).toBe(collection);
+    });
+
+    it('returns the same collection when a post it spells both ways is drafted unchanged', () => {
+      // Another client curated the post twice, once per spelling; the draft names both entries.
+      const collection = CollectionPostContent.normalize({
+        name: 'Saved',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI, uriA],
+      });
+
+      expect(CollectionPostContent.reorderItems(collection, [LEGACY_ITEM_URI, VALID_ITEM_URI, uriA])).toBe(collection);
+      expect(CollectionPostContent.reorderItems(collection, [VALID_ITEM_URI, LEGACY_ITEM_URI, uriA])).toBe(collection);
+      expect(CollectionPostContent.reorderItems(collection, [uriA, LEGACY_ITEM_URI, VALID_ITEM_URI]).items).toEqual([
+        uriA,
+        LEGACY_ITEM_URI,
+        VALID_ITEM_URI,
+      ]);
     });
   });
 });

@@ -85,18 +85,18 @@ PR-D only; `src/config/*` PR-A only; the lockfile changes only in PR-A and PR-F.
 What landed, by PR number (every PR into `feat/social-v1` unless noted; each given a full code review, a Greptile
 review and a `talosmachina` review, and merged with a merge commit once CI and both bots were green):
 
-| PR                                | What                                                                                                                                                                                                                                      |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| #2986 (into `dev`)                | PR-0: untag via Nexus `tag_uri`                                                                                                                                                                                                           |
-| #2987, #2988, #2989               | PR-A foundation; PR-E rollout guards; PR-CI `NEXT_PUBLIC_DB_VERSION=4`                                                                                                                                                                    |
-| #2990, #2991, #2992, #2994, #2995 | PR-C profile and app files; PR-D migration gate; PR-B1 posts, media, articles, collections, Locks; PR-B4 feeds; PR-B2 tags, follows, mutes                                                                                                |
-| #3008, #3009, #3010, #3011        | attachment MIME parity (`text/csv` deferred); PR-D2 dropped-values note; dev-sync 1; PR-B3 bookmarks                                                                                                                                      |
-| #3012, #3013, #3014, #3015, #3016 | QA-1 fixes: gate UX polish, small fixes (BUG-1, BUG-3), media GC (BUG-2), PR-F cleanup, VRT fixtures                                                                                                                                      |
-| #3051, #3054, #3055               | dev-sync 2; FIX-5 Nexus file contract (`/v1/static`, metadata from the URI, signup order A7); the Cypress port                                                                                                                            |
-| #3062                             | FIX-6: the mute list polled instead of a session-bound event stream                                                                                                                                                                       |
-| #3084, #3087, #3089, #3090        | dev-sync 3; FIX-8 `last_read` polled; branch e2e against pubky-stack `social-v1`; FIX-7 every Nexus call on `/v1`                                                                                                                         |
-| #3091                             | dev-sync 4 (`dev` @ `c5135dfb0`, merged 2026-11-10 as `cdd2e6ffa`)                                                                                                                                                                        |
-| #3117                             | F3 (final review SF-4): a collection edit matches the stored items by the post they name, so the 0.x-spelled row Nexus serves for a migrated collection keeps the v1 head's spelling and notes; `reorderItems` matches both spellings too |
+| PR                                | What                                                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| #2986 (into `dev`)                | PR-0: untag via Nexus `tag_uri`                                                                                                            |
+| #2987, #2988, #2989               | PR-A foundation; PR-E rollout guards; PR-CI `NEXT_PUBLIC_DB_VERSION=4`                                                                     |
+| #2990, #2991, #2992, #2994, #2995 | PR-C profile and app files; PR-D migration gate; PR-B1 posts, media, articles, collections, Locks; PR-B4 feeds; PR-B2 tags, follows, mutes |
+| #3008, #3009, #3010, #3011        | attachment MIME parity (`text/csv` deferred); PR-D2 dropped-values note; dev-sync 1; PR-B3 bookmarks                                       |
+| #3012, #3013, #3014, #3015, #3016 | QA-1 fixes: gate UX polish, small fixes (BUG-1, BUG-3), media GC (BUG-2), PR-F cleanup, VRT fixtures                                       |
+| #3051, #3054, #3055               | dev-sync 2; FIX-5 Nexus file contract (`/v1/static`, metadata from the URI, signup order A7); the Cypress port                             |
+| #3062                             | FIX-6: the mute list polled instead of a session-bound event stream                                                                        |
+| #3084, #3087, #3089, #3090        | dev-sync 3; FIX-8 `last_read` polled; branch e2e against pubky-stack `social-v1`; FIX-7 every Nexus call on `/v1`                          |
+| #3091                             | dev-sync 4 (`dev` @ `c5135dfb0`, merged 2026-11-10 as `cdd2e6ffa`)                                                                         |
+| #3117                             | F3 (SF-4): collection edits match stored items by the post they name; a migrated 0.x row keeps the head's v1 spelling and notes            |
 
 The branch also carries CI-owned VRT baseline commits from four `VRT Update Baselines` dispatches (after the QA-1
 fixes, after dev-sync 2, after dev-sync 3 and after dev-sync 4): the new `auth/SocialMigration` suite and the

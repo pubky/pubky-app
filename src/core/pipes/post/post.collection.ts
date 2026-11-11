@@ -248,14 +248,17 @@ export class CollectionPostContent {
     const trimmedOrder = orderedItems.map((item) => item.trim());
     // By item identity, as `toStored`: a draft taken from the Nexus-served row may spell a post
     // the 0.x way while the row has since converged to the stored v1 spelling. A drafted item is
-    // emitted as the collection spells it.
-    const orderedKeys = new Set(trimmedOrder.map(collectionItemKey));
-    const currentByKey = new Map(currentItems.map((item) => [collectionItemKey(item), item]));
+    // emitted as the collection spells it, and each current item is matched once, so a post the
+    // collection spells both ways keeps both entries and an unchanged draft is still no change.
+    const unmatched = new Map<string, string[]>();
+    for (const item of currentItems) {
+      const key = collectionItemKey(item);
+      unmatched.set(key, [...(unmatched.get(key) ?? []), item]);
+    }
+    const reordered = trimmedOrder.flatMap((item) => unmatched.get(collectionItemKey(item))?.shift() ?? []);
+    const remaining = new Set(Array.from(unmatched.values()).flat());
 
-    const merged = [
-      ...currentItems.filter((item) => !orderedKeys.has(collectionItemKey(item))),
-      ...trimmedOrder.flatMap((item) => currentByKey.get(collectionItemKey(item)) ?? []),
-    ];
+    const merged = [...currentItems.filter((item) => remaining.has(item)), ...reordered];
 
     if (merged.length === currentItems.length && merged.every((item, index) => item === currentItems[index])) {
       return collection;
