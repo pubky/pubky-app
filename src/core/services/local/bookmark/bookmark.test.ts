@@ -311,18 +311,18 @@ describe('LocalBookmarkService', () => {
     });
   });
 
-  describe('BookmarkController.getAll — liveQuery reactivity', () => {
+  describe('BookmarkController.getAllWithPostDetails — liveQuery reactivity', () => {
     // Regression guard for the FollowedCollections / DiscoverCollections live
-    // queries: those sections wrap `BookmarkController.getAll()` in
+    // queries: those sections wrap `BookmarkController.getAllWithPostDetails()` in
     // `useLiveQuery(...)`, which only re-runs when Dexie's table-observation
     // proxy is hit on the same Dexie instance the query subscribes to.
     //
-    // The call path goes Controller → Application → Service → Model.table.toArray().
-    // If any future refactor adds an `await` that breaks out of the Dexie
-    // async-context (e.g. a `fetch` round-trip in the middle), the live query
-    // would silently stop reacting to bookmark writes — cards would stop
-    // appearing in Followed / disappearing from Discover until a manual
-    // reload. These tests fail loudly in that scenario.
+    // The call path goes Controller → Application → Service → Model, one read
+    // transaction over `bookmarks` and `post_details`. If any future refactor
+    // adds an `await` that breaks out of the Dexie async-context (e.g. a `fetch`
+    // round-trip in the middle), the live query would silently stop reacting to
+    // bookmark writes — cards would stop appearing in Followed / disappearing
+    // from Discover until a manual reload. These tests fail loudly in that scenario.
 
     const waitForEmission = <T>(promise: Promise<T>, timeoutMs = 1000): Promise<T> =>
       Promise.race<T>([
@@ -333,7 +333,9 @@ describe('LocalBookmarkService', () => {
       ]);
 
     it('emits initial value on subscription', async () => {
-      const observable = liveQuery(() => BookmarkController.getAll());
+      const observable = liveQuery(() =>
+        BookmarkController.getAllWithPostDetails().then((rows) => rows.map(({ id }) => id)),
+      );
 
       const first = await waitForEmission(
         new Promise<string[]>((resolve, reject) => {
@@ -351,7 +353,9 @@ describe('LocalBookmarkService', () => {
     });
 
     it('re-emits when a bookmark is added', async () => {
-      const observable = liveQuery(() => BookmarkController.getAll());
+      const observable = liveQuery(() =>
+        BookmarkController.getAllWithPostDetails().then((rows) => rows.map(({ id }) => id)),
+      );
       const emissions: string[][] = [];
 
       // Capture the first emission, then write, then capture the second.
@@ -388,7 +392,9 @@ describe('LocalBookmarkService', () => {
       const seedId = 'authorB:p-live-2';
       await BookmarkModel.upsert({ id: seedId, created_at: 2000 });
 
-      const observable = liveQuery(() => BookmarkController.getAll());
+      const observable = liveQuery(() =>
+        BookmarkController.getAllWithPostDetails().then((rows) => rows.map(({ id }) => id)),
+      );
       const emissions: string[][] = [];
 
       const secondEmission = new Promise<string[]>((resolve, reject) => {

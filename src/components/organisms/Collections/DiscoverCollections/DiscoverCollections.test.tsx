@@ -3,11 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
-import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
-import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
 import { buildDiscoverCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -34,7 +33,7 @@ vi.mock('@/controllers/stream/posts/posts', () => ({
 
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
-    getAll: vi.fn(),
+    getAllWithPostDetails: vi.fn(),
   },
 }));
 
@@ -684,9 +683,9 @@ describe('DiscoverCollections', () => {
   });
 
   describe('followed collections query', () => {
-    const mockGetAll = vi.mocked(BookmarkController.getAll);
-    const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
-    const detailsOfKind = (kind: string) => asOpaque<PostDetailsModelSchema>({ kind });
+    const mockGetAllWithPostDetails = vi.mocked(BookmarkController.getAllWithPostDetails);
+    const bookmarkedOfKind = (id: string, kind?: string) =>
+      asOpaque<BookmarkedPostDetails>({ id, details: kind === undefined ? undefined : { id, kind } });
 
     /** Runs the live query the component registers for the followed collections. */
     const runFollowedQuery = async (viewerId: string | null = 'me') => {
@@ -700,26 +699,26 @@ describe('DiscoverCollections', () => {
     };
 
     it('keeps followed collections and leaves ordinary post bookmarks out', async () => {
-      mockGetAll.mockResolvedValue(['a:collection', 'b:post']);
-      mockGetDetailsByIds.mockResolvedValue([detailsOfKind('collection'), detailsOfKind('short')]);
+      mockGetAllWithPostDetails.mockResolvedValue([
+        bookmarkedOfKind('a:collection', 'collection'),
+        bookmarkedOfKind('b:post', 'short'),
+      ]);
 
       expect(await runFollowedQuery()).toEqual({ viewerId: 'me', ids: ['a:collection'] });
     });
 
     it('leaves out a bookmark whose post details are not local', async () => {
       // Its kind resolving later must not read as an unfollow and reload Discover.
-      mockGetAll.mockResolvedValue(['a:unknown']);
-      mockGetDetailsByIds.mockResolvedValue([undefined]);
+      mockGetAllWithPostDetails.mockResolvedValue([bookmarkedOfKind('a:unknown')]);
 
       expect(await runFollowedQuery()).toEqual({ viewerId: 'me', ids: [] });
     });
 
     it('does not read the previous account bookmarks while signed out', async () => {
-      mockGetAll.mockResolvedValue(['a:collection']);
+      mockGetAllWithPostDetails.mockResolvedValue([bookmarkedOfKind('a:collection', 'collection')]);
 
       expect(await runFollowedQuery(null)).toEqual({ viewerId: null, ids: [] });
-      expect(mockGetAll).not.toHaveBeenCalled();
-      expect(mockGetDetailsByIds).not.toHaveBeenCalled();
+      expect(mockGetAllWithPostDetails).not.toHaveBeenCalled();
     });
   });
 

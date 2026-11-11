@@ -5,6 +5,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
 import type { Pubky } from '@/models/models.types';
 import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 import type { TBookmarkListing } from '@/pipes/bookmark/bookmark.types';
@@ -55,6 +56,14 @@ export class BookmarkApplication {
    */
   static async getAll(): Promise<string[]> {
     return LocalBookmarkService.getAllBookmarksSorted();
+  }
+
+  /**
+   * Every bookmark, newest first, with the cached details of its post (`undefined` while the post
+   * is not cached). Local-only read, in one Dexie transaction so a live query observes both tables.
+   */
+  static async getAllWithPostDetails(): Promise<BookmarkedPostDetails[]> {
+    return LocalBookmarkService.readAllWithPostDetails();
   }
 
   /**
