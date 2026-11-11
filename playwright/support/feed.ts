@@ -95,8 +95,12 @@ export async function deletePost(page: Page, content: string) {
   await page.locator('[data-cy="post-menu-action-delete"]').click();
   await page.locator('[data-cy="dialog-content"] [data-cy="dialog-confirm-delete-btn"]').click();
   await expect(page.locator('[data-cy="dialog-content"]')).toBeHidden();
-  await expect(page.locator('[data-cy="timeline-posts"]')).not.toContainText(content);
+  // An exhausted feed unmounts timeline-posts and shows the empty state, so a missing
+  // list container is not proof the post is still there. The card is.
+  await expect(page).toHaveURL(/\/home/);
+  await expect(postCard(page, content)).toHaveCount(0);
   await reload(page);
   await waitForFeed(page);
-  await expect(page.locator('[data-cy="timeline-posts"]')).not.toContainText(content);
+  await expect(page).toHaveURL(/\/home/);
+  await expect(postCard(page, content)).toHaveCount(0);
 }

@@ -81,14 +81,36 @@ export async function signOut(page: Page) {
 
 // Restores a recovery file through the sign-in screen. storageState cannot carry the
 // non-extractable IndexedDB keys, so every signed-in test starts here.
+// WebKit sometimes leaves the dialog on /sign-in after Restore (the login call neither
+// navigates nor returns). The button becoming enabled is the signal the file change
+// event landed. A couple of fresh attempts covers that without burning the whole test.
 export async function signInWithRecoveryFile(page: Page, filePath: string) {
-  await open(page, '/');
-  await clickVisible(page, '[data-cy="header-sign-in-btn"]');
-  await expect(page).toHaveURL(/\/sign-in$/);
-  await page.locator('#restore-encrypted-file-btn').click();
-  await page.locator('#encrypted-file-input').setInputFiles(filePath);
-  await page.locator('#restore-password').fill('123456');
-  await page.locator('#encrypted-file-restore-btn').click();
-  await expect(page).toHaveURL(/\/home$/, { timeout: SLOW });
-  await waitForFeed(page);
+  let dialogError = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await open(page, '/');
+      await clickVisible(page, '[data-cy="header-sign-in-btn"]');
+      await expect(page).toHaveURL(/\/sign-in$/);
+      await page.locator('#restore-encrypted-file-btn').click();
+      await page.locator('#encrypted-file-input').setInputFiles(filePath);
+      const restore = page.locator('#encrypted-file-restore-btn');
+      await expect(restore).toBeEnabled();
+      await page.locator('#restore-password').fill('123456');
+      await restore.click();
+      await page.waitForURL(/\/home$/, { timeout: 30_000 });
+      await waitForFeed(page);
+      return;
+    } catch {
+      dialogError =
+        (
+          await page
+            .locator('.text-destructive')
+            .first()
+            .textContent()
+            .catch(() => '')
+        )?.trim() ?? '';
+    }
+  }
+  const detail = dialogError ? `: ${dialogError}` : '';
+  throw new Error(`Recovery file sign-in did not reach /home (${page.url()})${detail}`);
 }

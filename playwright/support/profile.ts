@@ -5,7 +5,11 @@ export async function openProfileTab(page: Page, tab: string) {
   const selector = isMobileProject()
     ? `[data-cy="profile-mobile-tab-${tab === 'tagged' ? 'unique_tags' : tab}"]`
     : `[data-cy="profile-filter-item-${tab}"]`;
-  await clickVisible(page, selector);
+  const tabButton = page.locator(selector).filter({ visible: true }).first();
+  await tabButton.click();
+  // Phones push a route per tab (/profile/profile, /profile/tagged, …). Cancel on the edit
+  // screen goes back to that route, so the click has to finish before the caller reads the URL.
+  if (isMobileProject()) await expect(tabButton).toHaveAttribute('aria-current', 'page');
 }
 
 export async function goToOwnProfile(page: Page) {
@@ -37,11 +41,15 @@ export function taggedSection(page: Page) {
 }
 
 export async function addProfileTags(page: Page, tags: string[]) {
-  const input = page.locator('[data-cy="add-tag-input"]').filter({ visible: true }).first();
   for (const tag of tags) {
+    // The first tag replaces the empty state, which remounts the input. Re-query it and wait
+    // until this tag is actually in the list before typing the next, or a second submit can
+    // land while the first write is still in flight and the list keeps only the later tag.
+    const input = page.locator('[data-cy="add-tag-input"]').filter({ visible: true }).first();
     await input.fill(tag);
     await input.press('Enter');
-    await expect(input).toHaveValue('');
+    const chip = page.locator('[data-cy="tag-name"]').filter({ visible: true }).getByText(tag, { exact: true });
+    await expect(chip).toBeVisible();
   }
 }
 

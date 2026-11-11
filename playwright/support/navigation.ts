@@ -45,8 +45,9 @@ export function deviceContextOptions(): BrowserContextOptions {
 /**
  * Runs `run` in a second browser context of the same project (same browser engine and device).
  * IndexedDB keys are non-extractable, so this context signs in through the UI like the first one
- * rather than reusing storageState. Its trace, video and screenshot are attached beside the
- * first context's automatic evidence.
+ * rather than reusing storageState. Its video and screenshot are attached beside the first
+ * context's automatic evidence. Tracing is not started here: with `trace: 'on'` the runner
+ * already starts a trace for every context it sees created, and a second start throws.
  */
 export async function withSecondPage(browser: Browser, run: (page: Page) => Promise<void>) {
   const testInfo = test.info();
@@ -55,15 +56,12 @@ export async function withSecondPage(browser: Browser, run: (page: Page) => Prom
     recordVideo: { dir: testInfo.outputDir },
   });
   await prepareContext(context);
-  await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
   const page = await context.newPage();
   try {
     await run(page);
   } finally {
     const screenshotPath = testInfo.outputPath('second-context.png');
-    const tracePath = testInfo.outputPath('second-context-trace.zip');
     await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
-    await context.tracing.stop({ path: tracePath }).catch(() => undefined);
     const video = page.video();
     await context.close().catch(() => undefined);
     if (video) {
@@ -75,9 +73,6 @@ export async function withSecondPage(browser: Browser, run: (page: Page) => Prom
     }
     await testInfo
       .attach('second-context-screenshot', { path: screenshotPath, contentType: 'image/png' })
-      .catch(() => undefined);
-    await testInfo
-      .attach('second-context-trace', { path: tracePath, contentType: 'application/zip' })
       .catch(() => undefined);
   }
 }
