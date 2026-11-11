@@ -51,6 +51,25 @@ const press = (frame: HTMLElement) =>
     vi.advanceTimersByTime(1);
   });
 
+/** Spotify's own word from inside its frame (`playback_update`): it plays or was paused. */
+const tell = (frame: HTMLElement, payload: { isPaused: boolean }) =>
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: 'https://open.spotify.com',
+        source: (frame as HTMLIFrameElement).contentWindow,
+        data: { type: 'playback_update', payload },
+      }),
+    );
+  });
+
+/** A scroll: the host places its frames again at the next frame. */
+const scroll = () =>
+  act(() => {
+    window.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(20);
+  });
+
 describe('PlayerHost', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -356,5 +375,79 @@ describe('PlayerHost', () => {
     );
 
     expect(screen.getByTestId('composer')).toContainElement(frames()[0]);
+  });
+
+  it('never docks a player paused in its card: it stays over its card off screen, and docks once played on', () => {
+    const page = (away: boolean) => (
+      <PlayerHost>
+        <div data-offscreen={away || undefined}>
+          <Song key="feed" testId="feed" />
+        </div>
+      </PlayerHost>
+    );
+    const { rerender } = render(page(false));
+    const [frame] = frames();
+    const box = frame.closest('[data-testid="hosted-player"]')!;
+    press(frame);
+    tell(frame, { isPaused: true });
+
+    rerender(page(true));
+    scroll();
+    expect(dock()).toBeNull();
+    expect(slotOf('feed')).not.toHaveAttribute('data-docked');
+    expect(slotOf('feed')).toHaveAttribute('aria-owns', box.id);
+    expect(frames()).toEqual([frame]);
+
+    tell(frame, { isPaused: false });
+    scroll();
+    expect(dock()).toContainElement(frame);
+  });
+
+  it('keeps a player paused in its card hidden with it behind an open post, and closes it once its card is gone', () => {
+    const page = (postOpen: boolean, shown = true) => (
+      <PlayerHost>
+        <div data-hidden={postOpen || undefined}>{shown && <Song key="feed" testId="feed" />}</div>
+      </PlayerHost>
+    );
+    const { rerender } = render(page(false));
+    const [frame] = frames();
+    const box = frame.closest('[data-testid="hosted-player"]')!;
+    press(frame);
+    tell(frame, { isPaused: true });
+
+    rerender(page(true));
+    scroll();
+    expect(dock()).toBeNull();
+    expect(frames()).toEqual([frame]);
+    expect(box).toHaveClass('hidden');
+
+    rerender(page(false));
+    scroll();
+    expect(box).not.toHaveClass('hidden');
+
+    // Another page: nothing would show it, so it is closed and unloaded.
+    rerender(page(false, false));
+    expect(dock()).toBeNull();
+    expect(frames()).toEqual([]);
+    expect(document.querySelector('[data-keep-playing]')).toBeNull();
+  });
+
+  it('keeps a player paused in the dock in the dock, where Close still unloads it', () => {
+    const { rerender } = render(
+      <PlayerHost>
+        <Song key="feed" testId="feed" />
+      </PlayerHost>,
+    );
+    const [frame] = frames();
+    press(frame);
+    rerender(<PlayerHost>{null}</PlayerHost>);
+    expect(dock()).toContainElement(frame);
+
+    tell(frame, { isPaused: true });
+    scroll();
+    expect(dock()).toContainElement(frame);
+    fireEvent.click(within(dock()!).getByRole('button', { name: 'Close the Spotify player' }));
+    expect(frames()).toEqual([]);
+    expect(dock()).toBeNull();
   });
 });

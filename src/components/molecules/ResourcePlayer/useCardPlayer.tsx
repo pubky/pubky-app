@@ -282,7 +282,13 @@ function EmbedPlayer({
 
   return (
     <div ref={boxRef} data-resource-controls data-testid="embed-player" className="min-w-0">
-      <PlayerDock target={target} title={title} onClose={close} dockable={isActive && !preview} pagePlayer={pagePlayer}>
+      <PlayerDock
+        target={target}
+        title={title}
+        onClose={close}
+        dockable={isActive && !player.paused && !preview}
+        pagePlayer={pagePlayer}
+      >
         <ResourcePlayerFrame
           key={frameKey}
           target={autoStart ? target : getUpFrontTarget(target)}
@@ -293,6 +299,8 @@ function EmbedPlayer({
           onLoaded={autoStart && isActive ? player.onLoaded : () => setLoadedKey(frameKey)}
           quiet={!autoStart}
           onPlay={(media) => player.play(target, media)}
+          // Paused or ended in its card, it does not go to the dock.
+          onPause={player.pause}
         />
       </PlayerDock>
     </div>
