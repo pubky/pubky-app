@@ -60,7 +60,9 @@ describe('getPlayerTarget', () => {
     expect(getPlayerTarget('https://www.mixcloud.com/spartacus/party-time/')?.src).toBe(
       'https://www.mixcloud.com/widget/iframe/?feed=https%3A%2F%2Fwww.mixcloud.com%2Fspartacus%2Fparty-time%2F&hide_cover=1&autoplay=1',
     );
-    expect(getPlayerTarget('https://tidal.com/track/490851477')?.src).toBe('https://embed.tidal.com/tracks/490851477');
+    expect(getPlayerTarget('https://tidal.com/track/490851477')?.src).toBe(
+      'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
+    );
     expect(getPlayerTarget('https://tidal.com/browse/album/20115556')?.layout).toEqual({
       kind: 'audio',
       height: 275,
@@ -104,7 +106,7 @@ describe('getPlayerTarget', () => {
     const target = getPlayerTarget(`https://tidal.com/${kind}/${id}/u`);
     expect(target?.provider).toBe(PlayerProvider.TIDAL);
     expect(target?.link).toBe(`https://tidal.com/browse/${kind}/${id}`);
-    expect(target?.src).toBe(`https://embed.tidal.com/${kind}s/${id}`);
+    expect(target?.src).toBe(`https://embed.tidal.com/${kind}s/${id}${kind === 'video' ? '' : '?hideOverlays=true'}`);
     expect(getPlayerTarget(`https://tidal.com/browse/${kind}/${id}/u/`)?.link).toBe(target?.link);
   });
 
