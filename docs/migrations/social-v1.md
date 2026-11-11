@@ -4,8 +4,9 @@
 final PR merges it into `dev`). The port is complete and verified: every slice, the QA-1 fixes, the Cypress port, the
 Nexus `/v1` move (FIX-7) and the private-file polling (FIX-6, FIX-8) are merged, `pubky-app-specs` is gone from the
 tree, the compliance ratchet is empty, QA-3 against the complete Nexus carrier found no app regression, QA-4 verified
-the rollout guards on production builds in Chromium, Firefox and WebKit and a 2,050-post migration, and QA-5 ran Locks
-before and after a migration against a real Lock Server (_QA matrix_). What is left before the final PR is step 3 of
+the forced takeover and the database recreate on production builds in Chromium, Firefox and WebKit, the FIX-9
+loop-breaker in Chromium and Firefox, and a 2,050-post migration, and QA-5 ran Locks before and after a migration
+against a real Lock Server (_QA matrix_). What is left before the final PR is step 3 of
 _Rollout order and release checklist_. The approved plan, its decisions D1–D19, the design documents and the QA reports
 live outside the repository (`qa1-report.md`, `qa-3-results.md`, `qa-4-results.md`, `qa-5-results.md`); this file is
 the in-repo record and is kept current by every child PR.
@@ -166,8 +167,8 @@ Two gate tests keep the branch honest while it lives, and ship to `dev` with the
   emptied it. A file that matches outside `PERMANENT` fails the gate: a new 0.x spelling is ported, never listed.
   The same test (FIX-6) fails on `.session(` chained onto `eventStreamForUser` / `eventStreamFor`, directly or
   through variables, anywhere in non-test `src/**`: no session-bound event stream may be held open (ADR-0014).
-- ESLint `no-restricted-imports` bans `pubky-app-specs` and `pubky-app-specs/*` everywhere linted (`cypress/` is not),
-  and the compliance gate also catches a dynamic `import('pubky-app-specs')`. The package itself is uninstalled (see
+- ESLint `no-restricted-imports` bans `pubky-app-specs`, the package and every subpath, everywhere linted (`cypress/` is
+  not), and the compliance gate also catches a dynamic `import('pubky-app-specs')`. The package itself is uninstalled (see
   _Cypress_).
 
 Dev-sync routine (its own short-lived session, daily or before a child PR merges, in the integration worktree):
@@ -354,7 +355,7 @@ test account seeds v1 or empty, except those that exercise the migration: the `o
 owner in `locks.cy.ts`. For that one, `createLegacyLockViaApi` also writes the files the Lock Server kept for a 0.x lock
 (the guarded 0.x post and image under `/priv/app.locks/content/`, `/pub/app.locks/<lockId>.json`) beside the 0.x
 announcement; after the migration the owner view, an unlock through the stand-in, a teaser edit and the delete run on it.
-Cypress stays QA-owned: that test is the port's last agreed suite change under the #3055 agreement.
+Cypress stays QA-owned; that test landed under the agreement described at the top of this section.
 `seedCreateLockPost` (from `dev`'s Locks error coverage, dev-sync 5) publishes a paid lock for a v1 account without
 the composer: the Locks `lock.json` under `/pub/app.locks/`, then the announcement through the author's writer as a v1
 `note` whose `lock` names it. The guarded post is returned, encoded as `GuardedPostBuilder.toPrimary` encodes it, for the stand-in
@@ -371,10 +372,11 @@ Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). How that pin a
 _Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on the homeserver, as CI sets it:
 otherwise the invite check answers 400 and onboarding stops at Continue. CI runs the suite on every push to the branch
 (desktop, Chrome, 13 specs): green on the FIX-7 merge (2026-11-10, after one earlier flake on a post delete that the
-Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, and on the dev-sync 5 merge
-`93db5b9dc` (2026-11-11, 13 of 13); the push for #3113 timed out in `posts.cy.ts` and `locks.cy.ts` and the next push
-was green. "e2e not run" in the _Sync log_ means the sync session's local run. Local runs use the Chrome-family binary
-Playwright's VRT setup installs, never Electron or a snap browser, so they match CI's matrix.
+Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, on the dev-sync 5 merge
+`93db5b9dc` and on #3114's `ae4ba8ad2` (2026-11-11, 13 of 13 each); the push for #3113 timed out in `posts.cy.ts` and
+`locks.cy.ts` and the next push was green. "e2e not run" in the _Sync log_ means the sync session's local run. Local
+runs use the Chrome-family binary Playwright's VRT setup installs, never Electron or a snap browser, so they match CI's
+matrix.
 
 The e2e follow-up that the port left open landed as #3094 (2026-11-10): `expectImageServed` (`cypress/support/media.ts`)
 asserts the route, a 200 with an image type and the decoded image for v1 media on `/v1/static/files/` and for 0.x media
@@ -451,9 +453,14 @@ After dev-sync 3 (2026-11-09):
   the carrier (QA-3 O-2). Align when the Nexus team says which one stays.
 - Ring folds the ten requested scopes into nine (`/priv/social/v1/:rw` is covered by `/priv/social/:rw`); adoption and
   the gate work with the folded grant (QA-1 O-7, QA-3 O-4). Known, nothing to do unless Ring changes.
-- Nexus post delete vs. read-repair race (an upstream issue, found 2026-11-10): a read concurrent with a delete can
-  resurrect the post in Redis. The e2e `postGone` waiter stays at 404, which is right; deletes in e2e may flake until
-  Nexus fixes it.
+- Nexus post delete vs. read-repair race (pubky/pubky-nexus#1213, found 2026-11-10): a read concurrent with a delete
+  can resurrect the post in Redis. The e2e `postGone` waiter stays at 404, which is right; deletes in e2e may flake
+  until Nexus fixes it.
+- Nexus watcher wedge on a duplicate post id (pubky/pubky-nexus#1229, pre-existing on Nexus `main`; QA-1 S-1, QA-4
+  F-3): post ids are per-author microsecond timestamps, but the graph makes `Post.id` globally unique, so when two
+  authors publish the same id the indexer fails that batch with a non-retryable constraint error, retries it forever
+  and stops indexing for every user until an operator moves the Redis cursor past the event. No app change; the local
+  stack recovered by a cursor bump in QA-4.
 - Migrated articles are served by Nexus in the 0.x content shape on `/v1` (QA-3 F-1, Nexus contract point 24); the app
   renders both shapes through the reader rules, so no change here.
 - Cleanup pass of the `/pub/pubky.app/` copies: not at release (meeting 2026-11-04: no app-side deletion; Nexus clears
@@ -486,7 +493,7 @@ gate list.
    sets `pubky_stack_ref` in `.github/workflows/e2e-test.yml` back to `staging`, drops the `feat/social-v1` push trigger,
    and gets a full code review, a security review, Greptile, talosmachina and the frontend team's review. Before it:
    the maintainer's manual pass on the local stack (after a reset and re-seed), the final review's should-fix PRs
-   (`fix/social-v1-*`, 2026-11-11; any not merged is accepted explicitly in the final PR description), the
+   (the `fix/social-v1-*` PRs listed after step 7), the
    migrator rc.2 adoption PR, and this docs sweep (the e2e follow-up landed as #3094); after it, a staging deploy and
    the maintainer's staging test (one real-Ring sign-in with the ten-scope grant; Locks before and after a migration
    with a real Paykit and Bitkit), then production with the Nexus deploy.
@@ -502,6 +509,18 @@ gate list.
 7. **After the deploy.** A team account migrates on production and its v1 post appears in Nexus; Sentry filtered on
    `operation: socialMigration` shows no terminal codes; the branch e2e trigger is gone; PR-E2 is opened when the team
    decides (D9); #2928 and #2929 (the spec author's draft PRs) are closed.
+
+Final review (2026-11-11): an independent review of the whole branch diff against `dev` (`93db5b9dc` vs `0e4278661`,
+15 lenses, every finding confirmed by two verifiers) found no blocking defect, seven should-fix code defects and the
+docs drift this sweep fixes. Each defect gets its own PR into `feat/social-v1` before the final PR (any not merged by
+then is accepted explicitly in the final PR description): the Shop sign-in return kept through the gate and `/migration`
+settled for a failed restore (#3121), the uploads of a post whose PUT failed swept (#3118), collection items matched by
+post identity on an edit instead of being rewritten to 0.x spellings (#3117), profile links validated the way the v1
+data model does (#3119), feed filter tags folded with the stored label fold (#3122), every private fetch of the resync
+guarded with the viewer session (#3116), and this docs sweep (#3120). Two findings identical on `dev` are `dev`
+follow-ups, not merge gates: clearing an article's cover can re-promote an unreferenced slot 0 under rule B, and the
+attachment-reference collector misses a backslash-escaped `attachment:n`. The review also confirmed step 3's
+`pubky_stack_ref` flip as a hard precondition of the final PR.
 
 Checklist:
 
@@ -566,26 +585,31 @@ _Follow-ups_ (O-3, a bootstrap that skipped the private-tree fetches after a for
 with genuinely empty storage).
 
 **QA-4 (2026-11-10, `feat/social-v1` @ `4ff5475cb` and the FIX-9 build from #3112, production builds under `next start`,
-Playwright headless, one engine at a time): rollout guards PASS in Chromium 151, Firefox 153 and WebKit 26.5 after
-FIX-9; heavy migration PASS.** Part A, forced service-worker takeover and `DB_VERSION` 3 → 4 (build A = `dev`
-`0e4278661` at `DB_VERSION` 3 with the consent worker, build B = the branch, same origin): the new worker reloads every
-open tab onto the new build (Chromium +3.4 s, Firefox +23.1 s with a cold HTTP cache) PASS · the database is recreated
-at v4 once, no loop PASS · the mixed-build loop-breaker FAIL on `4ff5475cb` in 0 of 4 Chromium and 0 of 3 Firefox runs
-(F-2: the two tabs closed each other with 3 to 50 deletes in under a second and the old build ended up on the new
+Playwright headless, one engine at a time): takeover and database recreate PASS in Chromium 151, Firefox 153 and WebKit
+26.5; the mixed-build loop-breaker FAIL on `4ff5475cb` and PASS on the FIX-9 build, in Chromium and Firefox; heavy
+migration PASS.** Part A, forced service-worker takeover and `DB_VERSION` 3 → 4 (build A = `dev` `0e4278661` at
+`DB_VERSION` 3 with the consent worker, build B = the branch, same origin, signed out throughout): the new worker
+reloads every open tab onto the new build (Chromium +3.4 s, Firefox +23.1 s with a cold HTTP cache) PASS · the database
+is recreated at v4 once, no loop PASS · the mixed-build loop-breaker FAIL on `4ff5475cb` in 0 of 4 Chromium and 0 of 3
+Firefox runs (F-2: the two tabs closed each other with 3 to 50 deletes in under a second and the old build ended up on the new
 database; fixed by FIX-9, #3112, ADR-0019 amendment) and PASS on the FIX-9 build, 7 of 7 runs (Chromium ×4, Firefox
 ×3): the conflict screen within 0.5–0.8 s of the old tab's recreate, no bounce, no stub delete, and no false conflict
 in a same-build two-tab takeover · the migrator chunks stay out of the precache PASS · F-1 (pre-existing on `dev`): the
 3.46 MB `@synonymdev/pubky` chunk is over Serwist's 3 MiB `maximumFileSizeToCacheInBytes` and is dropped from the
-precache with a build warning (_Cleanup_, follow-ups). Part B, a heavy 0.x account (2,050 posts incl. 50 articles with
-cover and inline images, 301 files for 308 MB, 500 tags, 200 follows, 300 bookmarks, 50 mutes, 3 feeds): the run walked
+precache with a build warning (_Cleanup_, follow-ups) · F-3 (Nexus, pre-existing, the same as QA-1 S-1): two seed
+clients posted in the same microsecond and the watcher wedged on the global `Post.id` constraint until a Redis cursor
+bump past the event, which cost Nexus that one note (pubky/pubky-nexus#1229, _Follow-ups_). Part B, a heavy 0.x
+account (2,050 posts incl. 50 articles with cover and inline images, 301 files for 308 MB, 500 tags, 200 follows, 300
+bookmarks, 50 mutes, 3 feeds): the run walked
 3,708 objects, hit a 507 quota pause set for the test ("Your homeserver is out of space", the bytes needed, Sign out /
 Retry), resumed on Retry skipping the copies already present, and finished in 277 s wall (189 s without the wait) with
 a continuously moving counter and a peak JS heap of 34.5 MB; every v1 tree complete and the 0.x tree untouched, Nexus at
 epoch `v1` with the author stream paging without duplicates; home, profile, posts, bookmarks and a migrated article
 render, a second sign-in costs only the flag read; the engine's 404 presence checks fill the console (O-1, harmless) and
-a quota pause re-reads blobs read but not yet written (O-2, by design). Part C, the whole flow in Firefox and WebKit
-from a persisted 0.x session: the worker reloads the signed-in tab (Firefox +6.1 s, WebKit +0.86 s, so
-`WindowClient.navigate` is confirmed on WebKit; `docs/pwa.md`), the D2 sign-out notice, sign in → `/migration` → home,
+a quota pause re-reads blobs read but not yet written (O-2, by design). Part C, the whole flow in Firefox and WebKit on
+build B (before FIX-9) from a persisted 0.x session: the worker reloads the signed-in tab (Firefox +6.1 s, WebKit
++0.86 s, so `WindowClient.navigate` is confirmed on WebKit; `docs/pwa.md`), the D2 sign-out notice, sign in →
+`/migration` → home,
 the `beforeunload` guard holds a reload during the copy, the migrated article renders and a note posts to v1; 0 console
 errors in Firefox, only O-1 in WebKit; desktop and 390 px layouts without overflow. PASS.
 
@@ -594,8 +618,8 @@ migration against a real Lock Server, both flows PASS.** The Lock Server was bui
 the pinned SDK) and run beside the stack with its own Postgres, its pkarr record on the stack relay and the app's
 `PUBKY_RUNTIME_LOCK_SERVER` pointing at it; Paykit was a scripted double of the six Lock Server → Paykit calls (setup
 status, invoices, payment status, connection status, drain lookups and drains), so payments settled on a timer. Flow 1,
-a lock created
-after the migration (a v1 creator from the Ring simulator, a reader whose small 0.x tree migrated inline): the real
+a lock created after the migration (a v1 creator from the Ring simulator, a reader whose small 0.x tree migrated
+inline): the real
 `/connect` shell in an iframe and the relay approval open the Locks session; the article with an inline image is locked
 at ₿1,000, the guarded bytes go through the creator API and never get a public copy, the server writes the lock file
 and the announcement is a v1 `image` with `lock`; Nexus `/v1/post` carries `lock` and the Locks feed filter lists it;
@@ -625,8 +649,8 @@ including a migrated one; collections add, remove, follow in both reference spel
 tags and untag including migrated tags; follow and unfollow; mute and unmute with a second tab; feeds create, edit,
 delete; profile edit with avatar; notifications; settings and `last_read`; Locks creator and reader; account export
 (no UI entry point today) and delete; the forced reload. Of these, QA-4 ran the QUOTA pause with Retry, the old-build
-tab reload (Chromium, Firefox, WebKit) and the two-build recovery screen (on the FIX-9 build), and QA-5 ran Locks
-creator and reader before and after a migration; the rest waits for the maintainer's pass.
+tab reload (Chromium, Firefox, WebKit) and the two-build recovery screen (on the FIX-9 build, Chromium and Firefox),
+and QA-5 ran Locks creator and reader before and after a migration; the rest waits for the maintainer's pass.
 
 ## Local stack runbook
 
@@ -680,7 +704,8 @@ where they changed the app.
   Nexus, in the same deploy; the owner and timing of the `/pub/pubky.app/` cleanup pass (the Nexus gate PR calls it a
   requirement, the 2026-11-04 meeting said no deletion at release); a removal date for `/v0`; whether the extension
   Nexus picks for a copied blob always equals the migrator's; E1 (head selection by edit id) timing; the 0.x content
-  shape served for migrated articles (QA-3 F-1); the delete race.
+  shape served for migrated articles (QA-3 F-1); the delete race (pubky/pubky-nexus#1213); the watcher wedge on a
+  duplicate post id (pubky/pubky-nexus#1229, _Follow-ups_).
 - **Data model author:** the migrator's article cover promotion is fixed in pubky/pubky-social-specs#210 (renumbered
   references, no promotion of a referenced slot 0, transform revision 4), awaiting the maintainer's review and the
   rc.2 tag; `/priv/app.pubky/v1/` is the app namespace the port adopted (its confirmation was asked and no answer is
