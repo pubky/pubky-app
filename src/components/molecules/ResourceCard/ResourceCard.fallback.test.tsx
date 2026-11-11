@@ -356,4 +356,37 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
 
     expect(mockGroup).toHaveBeenCalledWith(GROUP_ID);
   });
+
+  describe('a card whose own link is not a web link (btc:, isbn:)', () => {
+    const BLOCK: TPinakesResourceDetail = {
+      ...SPARSE,
+      uri: 'btc:block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a',
+      type: 'BitcoinBlock',
+      type_path: ['Thing', 'BitcoinBlock'],
+      name: 'Block 975,255',
+      site: 'mempool.space',
+      image: null,
+      group: null,
+      refs: ['https://mempool.space/block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a'],
+      aliases: ['https://mempool.space/block/0000000000000000000029eb73ea7fbb1e1706781d5db0259f0c3df42f26614a'],
+    };
+
+    it('opens and previews the web link people wrote for it on the large card', () => {
+      withOg('Block 975,255 | mempool - Bitcoin Explorer');
+      render(<ResourceCard card={BLOCK} size="large" />);
+
+      expect(mockOg).toHaveBeenCalledWith(BLOCK.refs[0]);
+      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', OG_IMAGE);
+      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', BLOCK.refs[0]);
+      expect(screen.getByTestId('resource-card-source').textContent).toBe('mempool.space');
+      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in mempool.space');
+    });
+
+    it('asks nothing for a missing one', () => {
+      render(<ResourceCard card={{ ...BLOCK, status: 'missing' }} size="large" />);
+
+      expect(mockOg).not.toHaveBeenCalledWith(expect.any(String));
+      expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+    });
+  });
 });
