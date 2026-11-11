@@ -1,14 +1,17 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 import { Keypair, Pubky, PublicKey, type Session } from '@synonymdev/pubky';
-import { decodeObject } from 'pubky-social-specs';
+import { decodeObject, encodeObject } from 'pubky-social-specs';
+import { LOCKS_GUARDED_CONTENT_PATH } from '../../src/config/locks';
 import type {
   SeedBookmarkArgs,
   SeedCreateCollectionArgs,
+  SeedCreateLockPostArgs,
   SeedCreatePostArgs,
   SeedCreateUserArgs,
   SeedDeletePostArgs,
   SeedEditPostArgs,
+  SeededLockPost,
   SeededPost,
   SeededUser,
   SeedFollowArgs,
@@ -48,7 +51,7 @@ const SEED_WRITE_SPACING_MS = 5;
 // More than any spec seeds under one prefix, so one page lists it all
 const LIST_PAGE_SIZE = 1000;
 
-type SeededSession = { name: string; session: Session; writer: SeedWriter };
+type SeededSession = { name: string; session: Session; writer: SeedWriter; legacy: boolean };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -118,7 +121,7 @@ export const createSeedTasks = (config: SeedConfig) => {
         }
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
         await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v1/ingest/${id}`, { method: 'PUT' }).catch(() => null);
-        sessions.set(id, { name, session, writer });
+        sessions.set(id, { name, session, writer, legacy });
         return { id, pubky: `pubky${id}`, uri, name };
       }),
 
@@ -196,5 +199,66 @@ export const createSeedTasks = (config: SeedConfig) => {
         authorId,
         kind: 'collection',
       })),
+
+    // A paid lock as the Lock Server leaves it (the public lock.json), then its announcement as the
+    // composer posts it: a note whose `content` is the teaser envelope and whose `lock` names the lock
+    // file. The locked post itself is only ever read through the Lock Server, so it is returned, encoded
+    // as the app encodes a guarded primary (`GuardedPostBuilder.toPrimary`), for the spec's stub to
+    // serve rather than written under /priv.
+    seedCreateLockPost: ({
+      authorId,
+      title,
+      teaser,
+      lockedContent,
+      amount,
+    }: SeedCreateLockPostArgs): Promise<SeededLockPost> =>
+      step(`create lock post by '${nameOf(authorId)}': "${preview(teaser)}"`, async () => {
+        const author = sessionFor(authorId);
+        // The guarded post below is the v1 encoding, which a 0.x client never wrote
+        if (author.legacy) {
+          throw new Error('a lock post is seeded for a v1 account only');
+        }
+        const lockId = `e2eseed${Date.now()}`;
+        const guardedPath = `post-${lockId}`;
+        const guardedPost = encodeObject(
+          { kind: 'post', root: 'private' },
+          { content: lockedContent, kind: 'note', parent: null, embed: null, attachments: [], lock: null },
+        );
+        const lockPath = `/pub/app.locks/${lockId}.json` as const;
+        await author.session.storage.putJson(lockPath, {
+          version: 1,
+          creator: `pubky${authorId}`,
+          primary_resource: {
+            path: `${LOCKS_GUARDED_CONTENT_PATH}${guardedPath}`,
+            hash: `e2e-${guardedPath}`,
+            content_type: 'application/octet-stream',
+            size: guardedPost.length,
+          },
+          secondary_resources: {},
+          criteria: [
+            {
+              criterion_id: 'criterion-1',
+              verifier_type: 'paykit-payment',
+              params: { recipient_pubky: `pubky${authorId}`, amount, asset: 'BTC' },
+            },
+          ],
+          lock_logic: { type: 'all', criteria: ['criterion-1'] },
+          access_policy: { requested_credential_ttl_seconds: 900 },
+          lock_server: { override: null },
+        });
+        const post = await author.writer.writePost({
+          content: JSON.stringify({ lock_title: title, teaser_description: teaser, content_kind: 'note' }),
+          kind: 'note',
+          lock: `pubky://${authorId}${lockPath}`,
+        });
+        return {
+          ...post,
+          authorId,
+          kind: 'note',
+          lockId,
+          guardedPath,
+          guardedBytes: Buffer.from(guardedPost).toString('base64'),
+        };
+      }),
   };
 };

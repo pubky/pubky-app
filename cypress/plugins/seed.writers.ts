@@ -38,7 +38,10 @@ import type { SeedCreateCollectionArgs, SeedCreatePostArgs, SeededPostKind } fro
  */
 
 type StoredPost = { id: string; uri: string };
-type PostInput = Pick<SeedCreatePostArgs, 'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath'>;
+type PostInput = Pick<SeedCreatePostArgs, 'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath'> & {
+  // A lock announcement's lock file, `pubky://<author>/pub/app.locks/<id>.json` (`seedCreateLockPost`)
+  lock?: string;
+};
 type CollectionInput = Pick<SeedCreateCollectionArgs, 'name' | 'description' | 'items' | 'layout'>;
 
 export type SeedWriter = {
@@ -89,7 +92,7 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
 
     // Same two writes as the app's upload: the media under its content hash, then the post pointing at it.
     // An article names its image as the cover, in its envelope; any other post attaches it.
-    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath }) => {
+    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath, lock }) => {
       const image = imageFixturePath ? readImage(imageFixturePath) : null;
       const media = image ? buildFile(owner, { bytes: image.bytes, type: image.type }) : null;
       if (image && media) {
@@ -106,6 +109,7 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
               cover_image: media?.url ?? null,
               parent,
               embed: embedded,
+              lock,
             })
           : buildPost(owner, {
               kind: kind === 'image' ? 'image' : 'note',
@@ -113,6 +117,7 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
               parent,
               embed: embedded,
               attachments: image && media ? [{ uri: media.url, name: image.name }] : [],
+              lock,
             });
       await put(post);
       return { id: post.id, uri: buildUri(owner, 'post', post.id) };
@@ -211,13 +216,14 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
 
     // Same three writes as a 0.x client's upload: the blob, its file record, then the post pointing at the file.
     // A 0.x article keeps its cover in the first attachment and its title and body in an envelope.
-    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath }) => {
+    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath, lock }) => {
       const body: Record<string, unknown> = {
         content: kind === 'article' ? JSON.stringify({ title: title ?? '', body: content }) : content,
         kind: LEGACY_POST_KINDS[kind],
       };
       if (parentUri) body['parent'] = toLegacyReference(parentUri);
       if (embed) body['embed'] = { uri: toLegacyReference(embed.uri), kind: LEGACY_POST_KINDS[embed.kind] };
+      if (lock) body['lock'] = lock;
       if (imageFixturePath) {
         const { bytes, type, name } = readImage(imageFixturePath);
         // A 0.x blob id is the hash a v1 media id is

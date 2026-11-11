@@ -282,7 +282,7 @@ describe('ScanContent', () => {
 
     // Wait for the component to finish loading
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeEnabled();
     });
 
     expect(screen.queryByRole('button', { name: /Bitkit/ })).not.toBeInTheDocument();
@@ -300,10 +300,10 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByRole('button', { name: 'Authorize with Pubky Ring' });
+    const authorizeButton = screen.getByRole('button', { name: 'Continue with Pubky Ring' });
 
     await act(async () => {
       fireEvent.click(authorizeButton);
@@ -316,7 +316,7 @@ describe('ScanContent', () => {
   it.each([
     { isLoading: true, isOpeningRing: false, url: '', label: 'Generating...' },
     { isLoading: false, isOpeningRing: true, url: 'mock-auth-url', label: 'Opening Pubky Ring...' },
-    { isLoading: false, isOpeningRing: false, url: '', label: 'Authorize with Pubky Ring' },
+    { isLoading: false, isOpeningRing: false, url: '', label: 'Continue with Pubky Ring' },
   ])('prevents signup handoff while $label is unavailable', ({ isLoading, isOpeningRing, url, label }) => {
     vi.mocked(useMobileAuth).mockReturnValue({
       url,

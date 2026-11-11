@@ -15,7 +15,7 @@ Single source of truth for all project standards, conventions, and architectural
 | PWA: `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/`, `src/hooks/use{ServiceWorkerUpdate,NetworkStatus,AppBadge,InstallPrompt}*` | `pwa.md`                                                                          |
 | Lock posts                                                                                                                            | `locks.md`                                                                        |
 | The social data model (`pubky-social-specs`), the migration gate, the rollout                                                         | `migrations/social-v1.md`, `adr/0026`, `adr/0027`, `adr/0028`                     |
-| Writing tests                                                                                                                         | `component-testing.md`, `visual-regression-testing.md`                            |
+| Writing tests                                                                                                                         | `component-testing.md`, `contract-testing.md`, `visual-regression-testing.md`     |
 | Making commits, branches, PRs                                                                                                         | `commit-message.md`                                                               |
 | Cutting a release                                                                                                                     | `release.md`                                                                      |
 | Cutting a hotfix                                                                                                                      | `hotfix.md`                                                                       |
@@ -32,6 +32,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `error-handling.md`                 | Error conventions using AppError and Err.\* factories                                                              |
 | `components.md`                     | Component patterns, Shadcn, atomic design, Figma, icon imports, toasts, forms                                      |
 | `component-testing.md`              | Unit test rules for UI components                                                                                  |
+| `contract-testing.md`               | Contract tests: the real pinned SDK against faked HTTP, coverage, fixtures, staying aligned with upstream          |
 | `visual-regression-testing.md`      | VRT tests, determinism, CI-owned baselines                                                                         |
 | `skeleton-architecture.md`          | Skeleton loader placement, naming, and testing patterns                                                            |
 | `z-index.md`                        | Z-index layering conventions                                                                                       |
@@ -88,7 +89,7 @@ When making significant changes to:
 - **Component patterns** (layout, Shadcn, icon imports, toasts, forms): Update `components.md`
 - **Skeleton loaders**: Update `skeleton-architecture.md`
 - **Error handling**: Update `error-handling.md`
-- **Testing patterns**: Update `component-testing.md`, `visual-regression-testing.md`
+- **Testing patterns**: Update `component-testing.md`, `contract-testing.md`, `visual-regression-testing.md`
 - **Environment or runtime variables**: Update `environment.md`
 - **Observability**: Update `sentry.md`
 - **Service worker, manifest or installed-app behaviour**: Update `pwa.md`

@@ -2,8 +2,8 @@ import type {
   LockFile,
   ReplicatedPost,
   TLockPrice,
+  TSubmitProofResult,
   TUnlockedContent,
-  TVerificationStatus,
   TVerificationTask,
 } from '@/services/locks/locks.types';
 
@@ -15,8 +15,8 @@ export type TPaymentLockParams = {
 };
 
 /**
- * `isRetry`: the reader pressed Try again (or I completed the steps). Only then may an ended id be
- * replaced by a fresh one: an automatic start that waited behind another submission can find its id
+ * `isRetry`: the reader pressed Try again (or I completed the steps, or Check again). Only then may an
+ * ended id be replaced by a fresh one: an automatic start that waited behind another submission can find its id
  * ended (the reader rejected it in Bitkit), and replacing it would send a request nobody asked for.
  */
 export type TStartPaymentParams = TPaymentLockParams & { isRetry: boolean };
@@ -24,13 +24,14 @@ export type TStartPaymentParams = TPaymentLockParams & { isRetry: boolean };
 /**
  * The saved bundle id a payment continues with, by the Lock Server's view of every id the reader
  * saved for the lock. `reusable` carries the task (null when the server never received the
- * submission). `terminal` means every saved id ended `failed`/`expired`, so only a fresh one can pay.
+ * submission). `terminal` means every saved id ended `failed`/`expired`, so only a fresh one can pay;
+ * `readerNotPayable` is true when the attempt that ended last failed for that reason.
  * `region-blocked` means the Lock Server refused to look the saved ids up (HTTP 451): their state is
  * unknown, and so is whether anything can be done from here.
  */
 export type TResolvedPurchase =
   | { kind: 'reusable'; bundleId: string; task: TVerificationTask | null }
-  | { kind: 'terminal'; bundleId: string; status: 'failed' | 'expired' }
+  | { kind: 'terminal'; bundleId: string; status: 'failed' | 'expired'; readerNotPayable: boolean }
   | { kind: 'region-blocked' };
 
 /**
@@ -40,7 +41,7 @@ export type TResolvedPurchase =
  * created, and the saved bundle id stays reusable. The id is absent when the refusal came from the lookup.
  */
 export type TStartPaymentResult =
-  { bundleId: string; status: TVerificationStatus; regionBlocked?: false } | { bundleId?: string; regionBlocked: true };
+  ({ bundleId: string; regionBlocked?: false } & TSubmitProofResult) | { bundleId?: string; regionBlocked: true };
 
 /** A submitted payment: the lock file and the bundle id the proof was submitted with. */
 export type TPaymentBundleParams = {

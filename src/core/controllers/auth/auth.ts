@@ -45,6 +45,7 @@ import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
+import { clearThemePreference } from '@/libs/theme/clear-theme-preference';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
@@ -1357,6 +1358,8 @@ export class AuthController {
       } finally {
         if (!persisted) useAuthStore.persist.setOptions({ storage });
       }
+      // Before the remote wait: a sign-in from another tab meanwhile would skip cleanup and inherit the preference.
+      clearThemePreference();
       const isCurrent = () =>
         this.epoch === epoch &&
         useAuthStore.getState().generation === localGeneration &&

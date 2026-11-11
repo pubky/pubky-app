@@ -10,6 +10,7 @@
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
+import { isMobile } from './mobile';
 import { postIdFromWriteUrl } from './nexus';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
@@ -256,6 +257,45 @@ export const stubLockServer = (state: TLockServerState) => {
   }).as('proxyReadGuardedResource');
 };
 
+/** The Lock Server's error body (`locks-server/src/api/errors.rs`). */
+export const lockServerError = (code: string) => ({ error: { code, message: code.replaceAll('_', ' ') } });
+
+/**
+ * Answers the next matching stand-in call with `statusCode` and `body` instead of `stubLockServer`'s
+ * route, once: Cypress tries the latest intercept first, and `times: 1` hands every later call back.
+ * A non-2xx answer reaches the app as the Locks SDK's own error (`locks.e2eStub.ts`).
+ */
+export const answerLockServerOnce = (
+  method: 'GET' | 'POST',
+  pathname: string,
+  { statusCode, body, summary }: { statusCode: number; body: unknown; summary: string },
+) =>
+  cy.intercept({ ...route(method, pathname), times: 1 }, (req) => {
+    answer(req, 'one-off answer', `${method} ${pathname}: ${summary}`, body, statusCode);
+  });
+
+/**
+ * Records every later call to one stand-in route and leaves the answer to the routes registered
+ * before it. A one-off answer registered after this one replies first, so its call is not recorded.
+ */
+export const recordLockServerCalls = (method: 'GET' | 'POST', pathname: string): string[] => {
+  const calls: string[] = [];
+  cy.intercept(route(method, pathname), (req) => {
+    calls.push(redactLocksStubUrl(req.url));
+  });
+  return calls;
+};
+
+/** Adds a paid lock the creator published without the composer to the stand-in Lock Server. */
+export const holdSeededLock = (
+  state: TLockServerState,
+  lock: { lockId: string; guardedPath: string; guardedBytes: string },
+  price: TLockPrice,
+) => {
+  state.guarded[lock.guardedPath] = lock.guardedBytes;
+  state.locks[lock.lockId] = price;
+};
+
 /** The app's Dexie database (`NEXT_PUBLIC_DB_NAME`, unset in the e2e stack) and its unlocked-lock table. */
 const APP_DB_NAME = 'franky';
 const LOCKS_TABLE = 'locks';
@@ -357,7 +397,18 @@ const waitForArticleEditorFocus = () => {
   cy.focused().closest('.mdxeditor-root-contenteditable').should('exist');
 };
 
+// Phones split the article composer into tabs: the title and the body each sit on their own tab.
+const showArticleComposerTab = (tab: 'title' | 'content') => {
+  if (isMobile()) homeComposer().find(`[data-cy="article-composer-tab-${tab}"]`).filter(':visible').click();
+};
+
+const articleTitleInput = () => {
+  showArticleComposerTab('title');
+  return homeComposer().find('[data-cy="article-title-input"]').filter(':visible');
+};
+
 const typeArticleBody = (body: string) => {
+  showArticleComposerTab('content');
   // The rich-text toolbar is sticky, so Cypress counts its buttons as hidden while the page header
   // covers them; earlier steps scroll the composer under the header.
   homeComposer().scrollIntoView({ offset: { top: -200, left: 0 } });
@@ -382,18 +433,14 @@ export const writeLockedArticle = (title: string, body: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click();
   homeComposer().find('[data-cy="post-input-action-bar-add-article"]').filter(':visible').click();
   waitForArticleEditorFocus();
-  homeComposer()
-    .find('[data-cy="article-title-input"]')
-    .filter(':visible')
-    .type(title, { delay: 0 })
-    .should('have.value', title);
+  articleTitleInput().type(title, { delay: 0 }).should('have.value', title);
   typeArticleBody(body);
 };
 
 /** Replaces the body of an article draft the lock switch put back into the composer. */
 export const editLockedArticleBody = (title: string, body: string) => {
   waitForArticleEditorFocus();
-  homeComposer().find('[data-cy="article-title-input"]').filter(':visible').should('have.value', title);
+  articleTitleInput().should('have.value', title);
   typeArticleBody(body);
 };
 
@@ -409,6 +456,13 @@ export const turnLockOnAndSetUpLocks = () => {
   cy.wait('@locksExchange');
   cy.wait('@paykitSetupStatus');
   cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
+};
+
+/** Walks an open setup dialog through a working Lock Server: intro, approval, Paykit `ready`, done. */
+export const completeLocksSetup = () => {
+  cy.get('[data-cy="locks-auth-intro-continue"]').filter(':visible').should('not.be.disabled').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').should('not.exist');
 };
 
 /** The Lock Server refuses the next lock deletion, as a Lock Server outage would. */
@@ -455,6 +509,24 @@ export const fillLockAnnouncement = (title: string, teaser: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', '').click();
   homeComposer().find('[data-cy="lock-title-input"]').filter(':visible').clear().type(title);
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').type(teaser);
+};
+
+/** Presses Post on the configured lock, for a publish that is expected to fail. */
+export const pressPost = () => {
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
+};
+
+/** A failed publish keeps the lock, its title and its teaser, and lets the creator press Post again. */
+export const expectLockKept = (title: string, teaser: string) => {
+  lockSwitch().should('have.attr', 'aria-checked', 'true');
+  homeComposer().find('[data-cy="lock-title-input"]').filter(':visible').should('have.value', title);
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', teaser);
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled');
+};
+
+/** The toast with exactly this copy. */
+export const expectToast = (description: string) => {
+  cy.contains('[data-cy="toast"]', description).should('be.visible');
 };
 
 /**

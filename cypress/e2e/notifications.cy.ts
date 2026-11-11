@@ -10,7 +10,9 @@ import {
 import { HasBackedUp, LatestNotificationReadState } from '../support/types/enums';
 import type { SeededUser } from '../support/types/seed';
 import { verifyNotificationCounter } from '../support/common';
-import { goToProfilePageFromHeader } from '../support/header';
+import { goToProfilePageFromHeader, goToSettingsPage, openSettingsSection } from '../support/header';
+import { itMobile } from '../support/mobile';
+import { toggleNotificationSwitch } from '../support/settings';
 import { notificationsIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import {
   createPostViaApi,
@@ -98,7 +100,7 @@ describe('notifications', () => {
     });
   });
 
-  it('can be notified for tagged post and profile', () => {
+  itMobile('can be notified for tagged post and profile', () => {
     // helper function to verify the tag is visible on desktop and not on mobile
     const expectNotificationTagAt = (index: number, tagLabel: string) => {
       const isMobile = Cypress.expose('isMobile');
@@ -188,11 +190,10 @@ describe('notifications', () => {
 
       // * the recipient signs in and disables mention notifications
       cy.signInWithEncryptedFile(backupDownloadFilePath(recipient.name));
-      cy.get('[data-cy="header-settings-btn"]').click();
-      cy.location('pathname').should('eq', '/settings/account');
-      cy.get('[data-cy="settings-menu-item-notifications"]').click();
+      goToSettingsPage();
+      openSettingsSection('notifications');
       cy.location('pathname').should('eq', '/settings/notifications');
-      cy.get('#notification-switch-mention').click();
+      toggleNotificationSwitch('mention');
       cy.signOut(HasBackedUp.Yes);
 
       // * a profile creates a post mentioning the recipient
@@ -356,7 +357,7 @@ describe('notifications', () => {
     });
   });
 
-  it('groups notifications for posts being edited that you reposted', () => {
+  itMobile('groups notifications for posts being edited that you reposted', () => {
     // * the receiver reposts two of a profile's posts, which that profile then edits. Two distinct
     // posts form a grouped row on their own (repeated edits of one post deduplicate instead), and
     // a fresh author keeps the row to this test's edits.
