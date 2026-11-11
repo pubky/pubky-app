@@ -7,7 +7,12 @@ declare global {
       signInWithEncryptedFile(
         backupFilepath: string,
         passcode?: string,
-        options?: { migrates?: boolean; acknowledgesSummary?: boolean },
+        options?: {
+          migrates?: boolean;
+          /** Runs on the gate's progress screen, before the command waits for home; with `migrates` only. */
+          whileMigrating?: () => void;
+          acknowledgesSummary?: boolean;
+        },
       ): Chainable<void>;
       signInWithRecoveryPhrase(recoveryPhrase: string): Chainable<void>;
       completeOnboardingFromInstall(

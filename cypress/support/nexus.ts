@@ -2,6 +2,13 @@ import type { NexusCheck, NexusNotificationType } from './types/nexus';
 import type { SeededPost, SeededUser } from './types/seed';
 
 const NEXUS_WAIT_TIMEOUT_MS = 60_000;
+/**
+ * How long a spec waits after a post's last DELETE before its first read of that post on Nexus. Nexus deletes a post
+ * from its cache first and from the graph last (pubky/pubky-nexus#1213), and a read inside that window, about 575 ms
+ * on a CI runner, rebuilds the cache entry from the graph: the post then answers 200 for good and a `postGone` wait
+ * times out. The settle is a plain pause, so the waiter's own timeout and its 404 assertion stay as they are.
+ */
+export const NEXUS_DELETE_SETTLE_MS = 1500;
 // Enough to see every notification a spec gives one receiver
 const NOTIFICATIONS_LIMIT = 100;
 // The most labels a spec puts on one post or profile (feed.cy.ts tags Profile 3's post five times)

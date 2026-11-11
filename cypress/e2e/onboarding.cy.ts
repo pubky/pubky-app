@@ -1,11 +1,21 @@
 import type { Interception } from 'cypress/types/net-stubbing';
 import { slowCypressDown } from 'cypress-slow-down';
+import { SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS } from '../../src/config/social-migration';
 import { backupDownloadFilePath, extendedTimeout, verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
+import {
+  holdMigrationFlag,
+  holdMigrationProbe,
+  legacyPostPath,
+  MIGRATION_FLAG_GLOB,
+  migrationFlag,
+  waitForMigrationCopying,
+} from '../support/migration';
 import {
   expectV1PostWrite,
   followGone,
   followIndexed,
+  NEXUS_DELETE_SETTLE_MS,
   notificationsIndexed,
   parseRequestBody,
   postContentIndexed,
@@ -27,6 +37,7 @@ import {
   createImagePostViaApi,
   createPostViaApi,
   followUserViaApi,
+  listHomeserverPathsViaApi,
   markNotificationsReadViaApi,
   muteViaApi,
   seedUserViaApi,
@@ -36,28 +47,41 @@ import {
 import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 import type { SeededPost, SeededUser } from '../support/types/seed';
 
-const MIGRATION_SCREEN_HOLD_MS = 3000;
-
-type MigrationFlag = { migrated: string[]; skipped: Record<string, string[]> };
-
-// A tree this small migrates in a moment. The done flag is written last, so holding its answer
-// back keeps the progress screen up long enough to see it.
-const holdMigrationFlag = () => {
-  cy.intercept('PUT', '**/priv/social/v1/_migrated.json', (req) => {
-    req.on('response', (res) => {
-      res.setDelay(MIGRATION_SCREEN_HOLD_MS);
+// The routes a tab visits from the progress screen on, while an interrupted run is picked up again. Started on the
+// screen, after the sign-in's own visit to /sign-in, into the test's own list, which the assertion below reads once the
+// run is over. Kept as reported: Cypress also reports an empty URL between tests.
+const recordRoutes = (visited: string[]) => {
+  cy.then(() => {
+    cy.on('url:changed', (url) => {
+      visited.push(url);
     });
-  }).as('migrationDone');
+  });
 };
 
-// What the run recorded, once its flag landed: the 0.x paths it copied and those it left, by reason
-const migrationFlag = () =>
-  cy.wait('@migrationDone').then(({ request, response }) => {
-    expect(response?.statusCode, 'flag write').to.eq(201);
-    return parseRequestBody(request.body) as MigrationFlag;
+// A sign-out during an interrupted run would show as a visit to /sign-in or /logout
+const expectNoSignOutRoutes = (visited: string[], label: string) => {
+  cy.then(() => {
+    expect(
+      visited.filter((url) => /\/(sign-in|logout)(\?|$)/.test(url)),
+      label,
+    ).to.deep.eq([]);
   });
+};
 
-const legacyPostPath = (post: SeededPost) => `pub/pubky.app/posts/${post.id}`;
+// A migrated post is one version file, `posts/{id}/{id}.json`: a run that copied anything twice shows here. Yields
+// every URL under the public v1 root, for what else a test checks there.
+const expectOneVersionPerPost = (user: SeededUser, posts: SeededPost[]) =>
+  listHomeserverPathsViaApi(user, '/pub/social/v1/').then((urls) => {
+    const versions = urls.filter((url) => url.includes('/pub/social/v1/posts/'));
+    expect(versions, 'v1 post versions').to.have.length(posts.length);
+    posts.forEach((post) => {
+      expect(
+        versions.filter((url) => url.includes(`/posts/${post.id}/`)),
+        `versions of ${post.id}`,
+      ).to.have.length(1);
+    });
+    return cy.wrap(urls, { log: false });
+  });
 
 const waitUntilStarterPackHasUsers = (tag: string) => {
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
@@ -124,7 +148,7 @@ describe('Onboarding', () => {
         visitedUrls.push(url);
       });
     });
-    cy.intercept('PUT', '**/priv/social/v1/_migrated.json').as('signupFlag');
+    cy.intercept('PUT', MIGRATION_FLAG_GLOB).as('signupFlag');
 
     cy.onboardAsNewUser(profileName, profileBio, backupWithFileAndPhrase);
 
@@ -422,10 +446,10 @@ describe('Onboarding', () => {
     cy.wait('@versionDeleted').then(({ request }) => {
       expect(postIdFromWriteUrl(request.url)).to.eq(deletable.id);
     });
-    // Known Nexus race: a read of a post while Nexus processes its delete can put it back in the cache, where it
-    // answers 200 with `deleted: false` for good. So nothing here reads this post between the DELETEs and the waiter,
-    // whose own polls are the only reads left, and a timeout on a 200 is that bug. The waiter stays at 404: the stale
-    // copy says `deleted: false` too.
+    // Nothing reads this post between the DELETEs and the waiter, whose own polls are the only reads left and start
+    // once the delete race has settled (see NEXUS_DELETE_SETTLE_MS); a timeout on a 200 is that race. The waiter
+    // stays at 404: the stale copy says `deleted: false` too.
+    cy.wait(NEXUS_DELETE_SETTLE_MS);
     cy.then(() => {
       waitForNexus(postGone(deletable));
     });
@@ -448,6 +472,175 @@ describe('Onboarding', () => {
       waitForNexus(followGone(user, followee));
     });
 
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // The record of an admitted grant resumes a run the tab lost (ADR-0026): the restore after the reload finds no
+  // flag yet and runs the engine again, which skips every copy that already landed.
+  it('resumes a migration interrupted by a reload without signing the account out', () => {
+    const profileName = `Reloading ${Cypress._.random(100_000)}`;
+    const run = Date.now();
+    // Enough posts that the Copying step is on screen to reload into, once each copy is slowed down below
+    const postCount = 40;
+    const copyDelayMs = 300;
+
+    let user: SeededUser;
+    const posts: SeededPost[] = [];
+    const visited: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true, withRecoveryFile: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      for (let index = 0; index < postCount; index += 1) {
+        createPostViaApi(user, `Copied across a reload ${index} ${run}`).then((post) => {
+          posts.push(post);
+        });
+      }
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), ...posts.map(postIndexed));
+    });
+
+    // Each copied version answers late, so the run is still copying when the tab reloads
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', (req) => {
+      req.on('response', (res) => {
+        res.setDelay(copyDelayMs);
+      });
+    }).as('postCopied');
+    holdMigrationFlag();
+
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, {
+      migrates: true,
+      whileMigrating: () => {
+        recordRoutes(visited);
+        waitForMigrationCopying();
+        holdMigrationProbe();
+        cy.reload();
+        // The restored grant was admitted by this build, so the run resumes where the record left it
+        cy.location('pathname').should('eq', '/migration');
+        cy.get('[data-testid="social-migration"]')
+          .should('contain.text', 'Updating your account')
+          .and('contain.text', 'Continuing from an earlier run');
+      },
+    });
+
+    // One flag for the two runs, naming every post, and no sign-out in between
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include.members(posts.map(legacyPostPath));
+    });
+    cy.get('@migrationDone.all').should('have.length', 1);
+    expectNoSignOutRoutes(visited, 'sign-out routes during the resumed run');
+
+    // The second run copied only what the first had not
+    cy.then(() => {
+      expectOneVersionPerPost(user, posts);
+    });
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A homeserver that stops answering writes ends a run `incomplete`; the gate retries three times on its own
+  // (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), then blocks on Retry, and the retried run copies only what never landed.
+  it('retries a migration the homeserver stops answering, blocks on Retry and finishes without duplicates', () => {
+    const profileName = `Interrupted ${Cypress._.random(100_000)}`;
+    const run = Date.now();
+    // Every object that cannot be written costs the engine its three retries (1, 2 and 4 s), so few of them
+    const postCount = 2;
+    // Four runs of those retries plus the gate's own waits between them
+    const blockedScreenTimeoutMs = 180_000;
+    // Two timestamps taken in this frame, a few ms apart at most
+    const clockSlackMs = 100;
+
+    let user: SeededUser;
+    const posts: SeededPost[] = [];
+    // The homeserver "goes away" for the v1 writes, then comes back for Retry
+    let writesFail = true;
+    // When each refused write was sent: a run ends right after its last one, with no backoff after the last try
+    const failedWritesAt: number[] = [];
+    // Every run opens with one HEAD of the done flag: the probes say how many runs the gate started, and when
+    const runsStartedAt: number[] = [];
+    const visited: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true, withRecoveryFile: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      for (let index = 0; index < postCount; index += 1) {
+        createPostViaApi(user, `Copied once the homeserver is back ${index} ${run}`).then((post) => {
+          posts.push(post);
+        });
+      }
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), ...posts.map(postIndexed));
+    });
+
+    // Only the Copying step writes under the public v1 root, so this bites once copying starts and nowhere else
+    cy.intercept('PUT', '**/pub/social/v1/**', (req) => {
+      if (!writesFail) {
+        req.continue();
+        return;
+      }
+      failedWritesAt.push(Date.now());
+      req.reply({ forceNetworkError: true });
+    }).as('v1Write');
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }, () => {
+      runsStartedAt.push(Date.now());
+    });
+    holdMigrationFlag();
+
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, {
+      migrates: true,
+      whileMigrating: () => {
+        recordRoutes(visited);
+        cy.get('[data-testid="social-migration"]', { timeout: blockedScreenTimeoutMs })
+          .should('contain.text', 'We could not reach your homeserver for some of your data')
+          .and('contain.text', 'Nothing was lost. Retry to continue where it stopped.');
+        cy.then(() => {
+          expect(failedWritesAt, 'writes the homeserver never answered').to.not.be.empty;
+          // The first run and the three automatic retries, each after its configured wait: from the last refused
+          // write of one run (its end) to the probe that opens the next
+          expect(runsStartedAt, 'runs before the blocked screen').to.have.length(
+            SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS.length + 1,
+          );
+          SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS.forEach((delay, index) => {
+            const nextRunAt = runsStartedAt[index + 1];
+            const runEndedAt = Math.max(...failedWritesAt.filter((at) => at < nextRunAt));
+            expect(nextRunAt - runEndedAt, `wait before retry ${index + 1}`).to.be.gte(delay - clockSlackMs);
+          });
+          writesFail = false;
+        });
+        cy.get('#social-migration-blocked-navigation-continue-btn').click();
+        cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+      },
+    });
+
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include.members(['pub/pubky.app/profile.json', ...posts.map(legacyPostPath)]);
+    });
+    cy.get('@migrationDone.all').should('have.length', 1);
+    cy.then(() => {
+      expect(runsStartedAt, 'runs in all').to.have.length(SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS.length + 2);
+    });
+    expectNoSignOutRoutes(visited, 'sign-out routes during the retried run');
+
+    // The refused writes never landed, and the retried run wrote each object once
+    cy.then(() => {
+      expectOneVersionPerPost(user, posts).then((urls) => {
+        expect(
+          urls.filter((url) => url.endsWith('/profile.json')),
+          'v1 profile',
+        ).to.have.length(1);
+      });
+    });
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.get('[data-cy="profile-filter-item-posts"]').click();
+    cy.get('[data-cy="profile-tab-content"]').should('contain.text', `Copied once the homeserver is back 0 ${run}`);
     cy.signOut(HasBackedUp.Yes);
   });
 
