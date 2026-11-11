@@ -10,8 +10,8 @@ export interface UseEditAttachmentsOptions {
   uris?: string[];
   /**
    * What to show in the attachment strip. Articles pass the cover only (the
-   * envelope's `cover_image`, or the image at slot 0 of a 0.x article, as
-   * `resolveArticleCover` finds it): inline media lives in the body, not the strip. `seededUris` still
+   * envelope's `cover_image`, or slot 0 of a 0.x article unless its row says it is
+   * not an image): inline media lives in the body, not the strip. `seededUris` still
    * snapshots the full `uris` list so submit-time removal diffing sees every
    * original attachment. Defaults to `uris`.
    */

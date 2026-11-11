@@ -71,9 +71,10 @@ export function settleArticleSlotZero(resolved: ResolvedArticleCover, slotZeroIs
  *   so a reference `n` still means the file that is now at `attachments[n - 1]`. Told apart from A
  *   by references that exist but never name slot 0, which this app's writer always does when it
  *   has any inline media. A' goes only once no rc.1-written article is left to read, never "once
- *   rc.2 is pinned": the rc.2 migrator (transform revision 4) writes shape A, but its writes are
- *   create-only, so neither pinning it nor raising `SOCIAL_MIGRATION_TRANSFORM_REV` rewrites an
- *   article rc.1 copied (ADR-0023, amended 2026-11-10).
+ *   rc.2 is pinned": the rc.2 migrator (transform revision 4) writes shape A, or a null cover (rule
+ *   B) when slot 0 is not an image, never A'; but its writes are create-only, so neither pinning it
+ *   nor raising `SOCIAL_MIGRATION_TRANSFORM_REV` rewrites an article rc.1 copied (ADR-0023, amended
+ *   2026-11-10).
  * - **B** (0.x, never migrated; also every migrated article as Nexus serves it, in the 0.x content
  *   shape): no `cover_image`; `attachments[0]` is the cover when the body does not reference
  *   `attachment:0` and its file is an image, which only its metadata says
