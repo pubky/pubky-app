@@ -47,9 +47,8 @@ import {
 import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 import type { SeededPost, SeededUser } from '../support/types/seed';
 
-// The routes a tab visits from the progress screen on, while an interrupted run is picked up again. Started on the
-// screen, after the sign-in's own visit to /sign-in, into the test's own list, which the assertion below reads once the
-// run is over. Kept as reported: Cypress also reports an empty URL between tests.
+// Records every route the tab visits from here on into the test's own list, which an assertion reads later. Kept as
+// reported: Cypress also reports an empty URL between tests, and a listener that throws hangs the run.
 const recordRoutes = (visited: string[]) => {
   cy.then(() => {
     cy.on('url:changed', (url) => {
@@ -141,13 +140,8 @@ describe('Onboarding', () => {
     const backupWithFileAndPhrase = [BackupType.EncryptedFile, BackupType.RecoveryPhraseWithConfirmation];
 
     // A signup has nothing to move: it records that inline, and never passes through the gate's route
-    // Kept as reported: Cypress also reports an empty URL between tests, and a listener that throws hangs the run
     const visitedUrls: string[] = [];
-    cy.then(() => {
-      cy.on('url:changed', (url) => {
-        visitedUrls.push(url);
-      });
-    });
+    recordRoutes(visitedUrls);
     cy.intercept('PUT', MIGRATION_FLAG_GLOB).as('signupFlag');
 
     cy.onboardAsNewUser(profileName, profileBio, backupWithFileAndPhrase);
@@ -480,13 +474,19 @@ describe('Onboarding', () => {
   it('resumes a migration interrupted by a reload without signing the account out', () => {
     const profileName = `Reloading ${Cypress._.random(100_000)}`;
     const run = Date.now();
-    // Enough posts that the Copying step is on screen to reload into, once each copy is slowed down below
+    // Enough posts that the Copying step is on screen to reload into, once each copy is slowed down below: the engine
+    // copies two at a time, so 40 posts at 300 ms each is about 6 s of Copying. Were Copying ever over before the
+    // reload, the held flag PUT would already have reached the homeserver, the restore would find the flag and the
+    // test would fail on the resumed screen below, never pass by accident.
     const postCount = 40;
     const copyDelayMs = 300;
+    // Copies that must have landed before the reload, so the resumed run has something to skip
+    const copiesBeforeReload = 8;
 
     let user: SeededUser;
     const posts: SeededPost[] = [];
     const visited: string[] = [];
+    let copiesAtReload = 0;
 
     seedUserViaApi(profileName, { legacy: true, withRecoveryFile: true }).then((seeded) => {
       user = seeded;
@@ -515,6 +515,10 @@ describe('Onboarding', () => {
       whileMigrating: () => {
         recordRoutes(visited);
         waitForMigrationCopying();
+        Cypress._.times(copiesBeforeReload, () => cy.wait('@postCopied'));
+        cy.get<Interception[]>('@postCopied.all').then((copies) => {
+          copiesAtReload = copies.length;
+        });
         holdMigrationProbe();
         cy.reload();
         // The restored grant was admitted by this build, so the run resumes where the record left it
@@ -532,7 +536,13 @@ describe('Onboarding', () => {
     cy.get('@migrationDone.all').should('have.length', 1);
     expectNoSignOutRoutes(visited, 'sign-out routes during the resumed run');
 
-    // The second run copied only what the first had not
+    // The resumed run copied only what the first had not: it sent fewer post copies than there are posts (the engine
+    // writes each object once, to one URL, and skips one that is already there), and every post has one version
+    cy.get<Interception[]>('@postCopied.all').then((copies) => {
+      expect(copies.length - copiesAtReload, 'post copies by the resumed run')
+        .to.be.greaterThan(0)
+        .and.lessThan(postCount);
+    });
     cy.then(() => {
       expectOneVersionPerPost(user, posts);
     });
@@ -543,7 +553,9 @@ describe('Onboarding', () => {
   });
 
   // A homeserver that stops answering writes ends a run `incomplete`; the gate retries three times on its own
-  // (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), then blocks on Retry, and the retried run copies only what never landed.
+  // (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), then blocks on Retry, and the retried run writes each object once.
+  // The other interruption the gate handles, a second tab waiting on the first one's run ("Another tab is updating
+  // your account"), is not testable here: Cypress drives a single tab.
   it('retries a migration the homeserver stops answering, blocks on Retry and finishes without duplicates', () => {
     const profileName = `Interrupted ${Cypress._.random(100_000)}`;
     const run = Date.now();
@@ -551,8 +563,8 @@ describe('Onboarding', () => {
     const postCount = 2;
     // Four runs of those retries plus the gate's own waits between them
     const blockedScreenTimeoutMs = 180_000;
-    // Two timestamps taken in this frame, a few ms apart at most
-    const clockSlackMs = 100;
+    // Both timestamps are taken in this frame as the requests pass the proxy, so a little apart from the app's own timers
+    const clockSlackMs = 250;
 
     let user: SeededUser;
     const posts: SeededPost[] = [];
@@ -608,8 +620,11 @@ describe('Onboarding', () => {
           );
           SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS.forEach((delay, index) => {
             const nextRunAt = runsStartedAt[index + 1];
-            const runEndedAt = Math.max(...failedWritesAt.filter((at) => at < nextRunAt));
-            expect(nextRunAt - runEndedAt, `wait before retry ${index + 1}`).to.be.gte(delay - clockSlackMs);
+            const refusedBefore = failedWritesAt.filter((at) => at < nextRunAt);
+            expect(refusedBefore, `refused writes before retry ${index + 1}`).to.not.be.empty;
+            expect(nextRunAt - Math.max(...refusedBefore), `wait before retry ${index + 1}`).to.be.gte(
+              delay - clockSlackMs,
+            );
           });
           writesFail = false;
         });
@@ -627,7 +642,14 @@ describe('Onboarding', () => {
     });
     expectNoSignOutRoutes(visited, 'sign-out routes during the retried run');
 
-    // The refused writes never landed, and the retried run wrote each object once
+    // The refused writes never landed, so the retried run is the one that wrote the posts: one landed copy per post
+    // on the wire, and one version per post on the homeserver
+    cy.get<Interception[]>('@v1Write.all').then((writes) => {
+      const landedPostCopies = writes.filter(
+        ({ request, response }) => response?.statusCode === 201 && request.url.includes('/pub/social/v1/posts/'),
+      );
+      expect(landedPostCopies, 'post copies the homeserver accepted').to.have.length(postCount);
+    });
     cy.then(() => {
       expectOneVersionPerPost(user, posts).then((urls) => {
         expect(
