@@ -3,6 +3,8 @@ import type { ProgressEvent } from 'pubky-social-migrator';
 import { memoryHomeserver } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCIAL_MIGRATION_FLAG_PATH, SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -125,6 +127,33 @@ describe('HomeserverService.migrateToSocialV1', () => {
     const report = await HomeserverService.migrateToSocialV1({ session });
 
     expect(report.status).toBe('done');
+  });
+
+  // The engine's chunk is fetched when a run starts: a load that fails is the network, so the gate retries it on
+  // reconnect like an unreachable homeserver instead of blocking on "Something went wrong".
+  it('throws a network error when the engine chunk cannot be loaded', async () => {
+    vi.doMock('pubky-social-migrator', () => {
+      throw new TypeError('Failed to fetch dynamically imported module');
+    });
+    try {
+      vi.resetModules();
+      const { HomeserverService: fresh } = await import('@/services/homeserver/homeserver');
+      const failure = await fresh.migrateToSocialV1({ session }).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      // The reset module graph has its own `AppError` class, so the shape is asserted rather than the instance
+      expect(failure).toMatchObject({
+        name: 'AppError',
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        operation: 'migrateToSocialV1',
+      });
+      expect(await homeserver.session.storage.exists(V1_PROFILE)).toBe(false);
+    } finally {
+      vi.doUnmock('pubky-social-migrator');
+      vi.resetModules();
+    }
   });
 });
 

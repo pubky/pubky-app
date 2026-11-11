@@ -924,10 +924,19 @@ export class HomeserverService {
     onProgress?: (event: ProgressEvent) => void;
     onLockWait?: () => void;
   }): Promise<MigrationReport> {
-    const [{ runMigration }, { sdkPort }] = await Promise.all([
+    const engine = await Promise.all([
       import('pubky-social-migrator'),
       import('pubky-social-migrator/pubky-sdk'),
-    ]);
+    ]).catch((error: unknown) => {
+      // The chunk is fetched when a run starts: a load that fails is the network, not the engine, so the gate
+      // retries it on reconnect (ADR-0026).
+      throw Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not load the migration engine', {
+        service: ErrorService.Homeserver,
+        operation: 'migrateToSocialV1',
+        cause: error,
+      });
+    });
+    const [{ runMigration }, { sdkPort }] = engine;
     const locks = globalThis.navigator?.locks;
     const lock: MigrationLock | undefined = locks
       ? async (name, fn) => {

@@ -59,6 +59,7 @@ vi.mock('@/libs/identity/identity', () => ({ Identity: { tryZ32FromSecret: () =>
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     logout: () => (logout.fails ? Promise.reject(new Error('VRT: logout failed')) : new Promise<void>(() => {})),
+    restorePersistedSession: () => new Promise<boolean>(() => {}),
   },
 }));
 vi.mock('@/controllers/social-migration/social-migration', () => ({
@@ -73,6 +74,8 @@ type Scenario = {
   reason?: string;
   heading: string;
   account?: 'held' | 'signed-out' | 'backup';
+  /** A restore that failed outside a gate; the gate store stays idle (SF-2). */
+  restoreStatus?: 'reauth-required' | 'temporary-error';
   /** The forced logout rejects (it never settles otherwise). */
   logoutFails?: boolean;
   needBytes?: number;
@@ -100,6 +103,16 @@ const SCENARIOS: Record<string, Scenario> = {
     heading: 'Back up your key before continuing',
   },
   'reauth-signed-out': { stage: 'idle', account: 'signed-out', heading: 'Your account needs an update' },
+  'restore-reauth-required': {
+    stage: 'idle',
+    restoreStatus: 'reauth-required',
+    heading: 'Your account needs an update',
+  },
+  'restore-temporary-error': {
+    stage: 'idle',
+    restoreStatus: 'temporary-error',
+    heading: "We couldn't reach your homeserver",
+  },
   waiting: { stage: 'waiting-for-tab', heading: 'Another tab is updating your account' },
   checking: { stage: 'running', progress: { phase: 'probe', done: 0, total: 0 }, heading: 'Checking your account' },
   running: { stage: 'running', heading: 'Updating your account' },
@@ -139,7 +152,7 @@ for (const [name, viewport] of [
       Object.assign(useAuthStore.getState(), {
         currentUserPubky: signedOut ? null : 'vrt-account',
         sessionReference: signedOut ? null : { kind: 'grant', sessionStoreId: 'vrt', clientId: 'vrt', grantId: 'vrt' },
-        restoreStatus: signedOut ? 'idle' : 'social-migration',
+        restoreStatus: scenario.restoreStatus ?? (signedOut ? 'idle' : 'social-migration'),
       });
       Object.assign(useOnboardingStore.getState(), { secretKey: scenario.account === 'backup' ? 'fixture-key' : '' });
       Object.assign(useSocialMigrationStore.getState(), {
@@ -158,11 +171,12 @@ for (const [name, viewport] of [
       );
       await expect.element(page.getByRole('heading', { name: scenario.heading })).toBeVisible();
       if (state === 'running') await expect.element(page.getByText('42 of 120')).toBeVisible();
-      if (scenario.stage === 'blocked' || scenario.logoutFails)
+      if (scenario.stage === 'blocked' || scenario.logoutFails || scenario.restoreStatus === 'temporary-error')
         await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
       if (scenario.stage === 'summary')
         await expect.element(page.getByRole('button', { name: 'Continue' })).toBeVisible();
-      if (signedOut) await expect.element(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+      if (signedOut || scenario.restoreStatus === 'reauth-required')
+        await expect.element(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
       await matchVrtFrameScreenshot(`social-migration-${state}-${name}`);
     });
   });

@@ -1,4 +1,5 @@
 import type { MigrationReport } from 'pubky-social-migrator';
+import { isAppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -66,6 +67,13 @@ export function reportSocialMigrationCapsMissing({ pubky, report }: { pubky: str
   });
 }
 
+/** The shape of a thrown value, never its message or cause: an engine message may name one of the user's files. */
+const describeThrown = (error: unknown) => ({
+  name: error instanceof Error ? error.name : typeof error,
+  kind: isAppError(error) ? error.category : undefined,
+  status: isAppError(error) && typeof error.context?.statusCode === 'number' ? error.context.statusCode : undefined,
+});
+
 /** The engine rejected (a programming error, or the lock wait) instead of resolving with a report. */
 export function reportSocialMigrationFailure({
   pubky,
@@ -80,8 +88,7 @@ export function reportSocialMigrationFailure({
     Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Social migration failed', {
       service: ErrorService.Homeserver,
       operation: SOCIAL_MIGRATION_OPERATION,
-      cause: error,
-      context: { attempt },
+      context: { attempt, ...describeThrown(error) },
     });
   });
 }

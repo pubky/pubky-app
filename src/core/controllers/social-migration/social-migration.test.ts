@@ -3,8 +3,9 @@ import type { MigrationReport, Outcome } from 'pubky-social-migrator';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCIAL_MIGRATION_FLAG_PATH, SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
-import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
 import { resetSocialMigrationReports } from '@/libs/social-migration/report-telemetry';
 import { readSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
@@ -414,19 +415,41 @@ describe('SocialMigrationController', () => {
       expect(await migrating).toBe('passed');
     });
 
-    it('blocks on a thrown engine error and captures counts only', async () => {
-      runs(new Error('wasm fault'), report());
+    it('blocks on a thrown engine error and captures its shape only', async () => {
+      runs(new Error('wasm fault at /pub/pubky.app/posts/secret'), report());
       const captured = vi.spyOn(Err, 'server');
       const migrating = ensure('signin');
 
       await vi.waitFor(() => expect(stage().stage).toBe('blocked'));
       expect(stage().reason).toBe('unexpected');
       const [, , params] = captured.mock.calls[0];
-      expect(params.cause).toBeInstanceOf(Error);
-      expect(Object.keys(params.context ?? {})).toEqual(['attempt']);
+      expect(params).not.toHaveProperty('cause');
+      expect(params.context).toEqual({ attempt: 1, name: 'Error', kind: undefined, status: undefined });
+      expect(JSON.stringify(captured.mock.calls)).not.toContain('secret');
       SocialMigrationController.retry();
 
       expect(await migrating).toBe('passed');
+    });
+
+    it('blocks a run whose engine chunk could not be fetched as unreachable, so the reconnect retry applies', async () => {
+      runs(
+        Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not load the migration engine', {
+          service: ErrorService.Homeserver,
+          operation: 'migrateToSocialV1',
+        }),
+        report(),
+      );
+      const captured = vi.spyOn(Err, 'server');
+      const migrating = ensure('signin');
+
+      await vi.waitFor(() => expect(stage().stage).toBe('blocked'));
+      expect(stage().reason).toBe('incomplete');
+      // The service captured the load failure; the controller files nothing on top
+      expect(captured).not.toHaveBeenCalled();
+      SocialMigrationController.retryAfterReconnect();
+
+      expect(await migrating).toBe('passed');
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
     });
 
     it('never puts a path, a note or a dropped value into a capture', async () => {
