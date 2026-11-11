@@ -48,7 +48,7 @@ It is not a consumer-driven contract (no Pact, no provider verification). The ot
 - **`grant-flow.recovery`**: a pending grant survives lost page storage, with real signing and a verified delegated PoP.
 - **`grant-hidden-ios`**: iOS hiding the page while the relay ACK is in flight still delivers the approval once.
 
-Not covered by contract tests: Nexus (no SDK; plain HTTP through `safeFetch`), direct homeserver storage calls, `pubky-app-specs`, and the Paykit `/setup` and `/connect` pages (a cross-origin iframe).
+Not covered by contract tests: Nexus (no SDK; plain HTTP through `safeFetch`), direct homeserver storage calls, `pubky-social-specs`, and the Paykit `/setup` and `/connect` pages (a cross-origin iframe).
 
 ## How to write one
 
@@ -78,7 +78,7 @@ Contract tests decide what the SDK does; the stub copies it. If a contract test 
 
 ### When the upstream changes
 
-1. Dependabot groups `@synonymdev/*` and `pubky-app-specs` into one monthly `pubky-sdk` PR (`.github/dependabot.yml`), and CI runs every contract test on it in the `unit` project. A manual bump gets the same check.
+1. Dependabot groups `@synonymdev/*` into one monthly `pubky-sdk` PR (`.github/dependabot.yml`), and CI runs every contract test on it in the `unit` project. A manual bump gets the same check.
 2. Read the upstream changelog and diff for error names, messages, statuses, request paths and persisted formats. Our tests only catch what they already assert.
 3. For a new or changed status or code, add or update the `it.each` row, quoting the upstream source.
 4. When the SDK changes its stored state, keep the old fixture, since users still have it, and add a fixture generated with the new version.
@@ -95,7 +95,7 @@ Contract tests decide what the SDK does; the stub copies it. If a contract test 
 - **Vitest aliases `window` to its Node global**, which fails wasm-bindgen's `Window` instanceof check. The Locks harness stubs `Window` for you; change nothing else about the environment.
 - **Restore everything**: `vi.unstubAllGlobals()`, `vi.restoreAllMocks()`, the runtime config (`resetRuntimeConfigForTests()`) and the stores you seeded, or the next file inherits a stubbed `fetch` or Lock Server. The Locks harness restores all but the stores.
 - **The routing packets live once for Locks**, in `src/test-utils/locks-contract.ts`: the one-seed server (`LOCK_SERVER`) and the zero-seed user whose homeserver it is (`READER`, for reads from a reader's homeserver). The Pubky `session-store` and `grant-flow.recovery` files sign the same identities into their own fixtures; keep those byte-identical if you touch a packet.
-- **Don't mock the SDK** in a contract test. If you need `vi.mock('@synonymdev/…')`, write a unit test instead. Mocking an unrelated module (the Pubky files mock `pubky-app-specs`) is fine.
+- **Don't mock the SDK** in a contract test. If you need `vi.mock('@synonymdev/…')`, write a unit test instead. Mocking an unrelated module is fine, except `pubky-social-specs`, which stays real in every test (`development-workflow.md`).
 - **A 404 isn't always an error**: the Locks task lookup reads 404 as "no task yet" (`null`). Assert that kind of exception explicitly.
 
 ## Gaps
