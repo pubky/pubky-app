@@ -66,9 +66,9 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
 
     // Re-initialize when the DB is unexpectedly closed (e.g. user deletes IndexedDB via devtools, or a
     // tab running another build recreated it). Skips expected closes during recreateDatabase() via the
-    // isInitializingRef guard. A version mismatch found from here, after this page already recreated the
-    // database once, is that other tab at work: `allowRecreate: false` surfaces it as VERSION_CONFLICT
-    // instead of recreating the database back and forth between the two tabs (ADR-0019).
+    // isInitializingRef guard. A version mismatch (or a database that stays missing) found from here, after this
+    // page already recreated the database once, is that other tab at work: `allowRecreate: false` surfaces it as
+    // VERSION_CONFLICT instead of recreating the database back and forth between the two tabs (ADR-0019).
     const handleUnexpectedClose = () => {
       if (isInitializingRef.current) return;
       setIsReady(false);

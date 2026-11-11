@@ -30,8 +30,9 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
   the app never ships before Nexus is complete, with a retest list run in a final full-stack pass.
 - **Media (D6):** no app-side media fallback; CDN rendering stays with the v1 hash as the file id.
 - **Bookmarks (D7):** locally owned; the two Nexus-generated notifications that needed public bookmarks are removed.
-- **Rollout guards (D8, D9):** `DB_VERSION` 3 → 4 with a loop-breaker, and a forced service-worker reload on
-  activation (`skipWaiting` plus claim-and-navigate). Its revert (PR-E2) is not tied to the next release: nobody can
+- **Rollout guards (D8, D9):** `DB_VERSION` 3 → 4 with a loop-breaker (its unexpected-close probe reworked by FIX-9
+  after QA-4 found it never fired; ADR-0019 amendment), and a forced service-worker reload on activation
+  (`skipWaiting` plus claim-and-navigate). Its revert (PR-E2) is not tied to the next release: nobody can
   tell when the last 0.x tab is gone, so the forced policy stays until Nexus shows migrated users' 0.x writes at about
   zero or for a period the team picks; keeping it costs only the consented-update toast (ADR-0021 amendment).
 - **Write path (D12):** `HomeserverService` is the only homeserver write path; `pubky-social-specs/client` is never
@@ -368,6 +369,12 @@ After dev-sync 3 (2026-11-09):
 - **FIX-7, Nexus `/v1` API: done** (see _Nexus API version_). The read sites dev-sync 3 listed (`tag-cache.ts`
   `tag_uri` and `relationship`, `application/tag/tag.ts`, `tag.utils.ts`) are served by the derived `relationship` and
   stay unchanged; `locked=true` exists on `/v1` with the same rules (OpenAPI) and is pinned in the stream api test.
+- **FIX-9, mixed-build loop-breaker: fixed in jsdom, browser re-run pending.** QA-4 (F-2) found that the ADR-0019
+  breaker never fired with two builds in one profile: the re-initialization after the old tab's delete ran
+  `Dexie.exists()` inside that tab's delete→reopen window, created the database at v4, and the probe's stub delete
+  bounced the old tab back. That path now reads the version passively, looks again while the database is missing,
+  and after this page's own recreate shows "Close other Pubky tabs, then retry." for anything but v4 (ADR-0019
+  amendment, with the residual for the 0.x tab). QA-4 re-runs its Playwright repro on a production build.
 
 ### Reductions (reported, not built around)
 
