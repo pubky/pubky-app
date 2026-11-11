@@ -36,6 +36,24 @@ function failTagPutOnce() {
   });
 }
 
+function abortTagCommitWith(cause: DOMException) {
+  const put = IDBObjectStore.prototype.put;
+  return vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, value, key) {
+    const request = key === undefined ? put.call(this, value) : put.call(this, value, key);
+    if (this.name === 'user_tags') {
+      request.addEventListener(
+        'success',
+        () => {
+          Object.defineProperty(this.transaction, 'error', { value: cause });
+          this.transaction.abort();
+        },
+        { once: true },
+      );
+    }
+    return request;
+  });
+}
+
 describe('tag-cache transaction connection recovery', () => {
   beforeEach(async () => {
     await db.open();
@@ -48,6 +66,25 @@ describe('tag-cache transaction connection recovery', () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
+
+  it.each(['QuotaExceededError', 'ConstraintError'])(
+    'does not replay a transaction aborted by %s at commit',
+    async (name) => {
+      const cause = new DOMException('Commit failed', name);
+      abortTagCommitWith(cause);
+      const transaction = vi.spyOn(db, 'transaction');
+      const close = vi.spyOn(db, 'close');
+
+      await expect(
+        LocalTagCacheService.savePreviews('user', [[entity.id, [tag]]], {}, [[entity.id, counts]]),
+      ).rejects.toMatchObject({ cause: { name: 'AbortError', inner: cause } });
+
+      expect(transaction).toHaveBeenCalledTimes(1);
+      expect(close).not.toHaveBeenCalled();
+      expect(await db.user_tags.get(entity.id)).toMatchObject({ tags: [], cache: { revision: 2 } });
+      expect(await db.user_counts.get(entity.id)).toMatchObject({ tags: 0, unique_tags: 0 });
+    },
+  );
 
   it('replays the whole aborted transaction with both tables rolled back', async () => {
     failTagPutOnce();
@@ -92,7 +129,8 @@ describe('tag-cache transaction connection recovery', () => {
     // Hold the outer promise of an aborted transaction, with no work left active
     // in IndexedDB, while the account cleanup empties the real tables.
     const transaction = vi.spyOn(db, 'transaction').mockReturnValueOnce(Dexie.Promise.resolve(pending.promise));
-    const save = LocalTagCacheService.savePage(entity, [tag], { skip: 0, limit: 5, revision: 2 });
+    // This write can create the row after a clear: no revision guard can mask a replay.
+    const save = LocalTagCacheService.savePreviews('user', [[entity.id, [tag]]]);
     const rejection = expect(save).rejects.toMatchObject({ cause: { name: 'AbortError' } });
     await clearDatabase();
     pending.reject(new DOMException('Transaction aborted', 'AbortError'));
@@ -113,7 +151,7 @@ describe('tag-cache transaction connection recovery', () => {
         return database;
       }),
     );
-    const save = LocalTagCacheService.savePage(entity, [tag], { skip: 0, limit: 5, revision: 2 });
+    const save = LocalTagCacheService.savePreviews('user', [[entity.id, [tag]]]);
     const rejection = expect(save).rejects.toMatchObject({ cause: { name: 'AbortError' } });
     await opened.promise;
     await clearDatabase();

@@ -29,7 +29,7 @@ export async function clearDatabase(isCurrent: () => boolean = () => true): Prom
     if (failure?.status === 'rejected') throw failure.reason;
     cacheGeneration += 1;
   } finally {
-    // Also discard recovery work started while the account's tables were clearing.
+    // Work started during cleanup bypasses recovery; release only this cleanup's suspension.
     resumeRecovery();
   }
 }

@@ -134,21 +134,17 @@ describe('model read connection recovery', () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    'ConstraintError',
-    'DataError',
-    'QuotaExceededError',
-    'DatabaseClosedError',
-    'TransactionInactiveError',
-    'Error',
-  ])('does not reconnect for %s, even when the message resembles WebKit', async (name) => {
-    const failure = new DOMException('connection to indexed database server lost', name);
-    const get = vi.spyOn(RecoveryModel.table, 'get').mockRejectedValueOnce(failure);
-    const close = vi.spyOn(database, 'close');
-    await expect(RecoveryModel.findById('alice')).rejects.toMatchObject({ cause: failure });
-    expect(get).toHaveBeenCalledTimes(1);
-    expect(close).not.toHaveBeenCalled();
-  });
+  it.each(['ConstraintError', 'DataError', 'DatabaseClosedError', 'TransactionInactiveError', 'Error'])(
+    'does not reconnect for %s, even when the message resembles WebKit',
+    async (name) => {
+      const failure = new DOMException('connection to indexed database server lost', name);
+      const get = vi.spyOn(RecoveryModel.table, 'get').mockRejectedValueOnce(failure);
+      const close = vi.spyOn(database, 'close');
+      await expect(RecoveryModel.findById('alice')).rejects.toMatchObject({ cause: failure });
+      expect(get).toHaveBeenCalledTimes(1);
+      expect(close).not.toHaveBeenCalled();
+    },
+  );
 
   it('coalesces concurrent failures, including one rejected after reconnect completes', async () => {
     const first = Promise.withResolvers<Row | undefined>();
@@ -204,4 +200,29 @@ describe('model read connection recovery', () => {
       expect(get).toHaveBeenCalledTimes(1);
     },
   );
+
+  it('rejects an invalidated recovery even when open returns the latest connection', async () => {
+    const failure = new DOMException('Connection lost', 'UnknownError');
+    const get = vi.spyOn(RecoveryModel.table, 'get').mockRejectedValueOnce(failure);
+    const open = database.open.bind(database);
+    const opened = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    vi.spyOn(database, 'open').mockImplementationOnce(() =>
+      open().then(async (result) => {
+        opened.resolve();
+        await resume.promise;
+        return result;
+      }),
+    );
+    const read = RecoveryModel.findById('alice');
+    const rejection = expect(read).rejects.toMatchObject({ cause: failure });
+    await opened.promise;
+    database.close();
+    await database.open();
+    resume.resolve();
+    await rejection;
+    // reopen() observes this latest backend handle after its awaited open returns,
+    // so connection identity alone would allow the stale read to replay.
+    expect(get).toHaveBeenCalledTimes(1);
+  });
 });

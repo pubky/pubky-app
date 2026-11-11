@@ -116,6 +116,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 ### Database (`src/core/database/`)
 
 - Single Dexie schema version (`DB_VERSION`), safe initialization and recovery
+- Bounded runtime reconnect and one replay for eligible local reads or fully aborted local transactions, preserving each caller's Dexie scope and lifecycle fences ([ADR-0030](adr/0030-bounded-indexeddb-connection-recovery.md))
 - A version mismatch deletes and recreates the database; there is no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_)
 
 ## Allowed Dependencies
@@ -341,6 +342,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0023 | Article inline media as attachment slots                                  |
 | 0024 | Grant-only authentication                                                 |
 | 0025 | App-owned grant for same-origin Shop                                      |
+| 0030 | Bounded IndexedDB connection recovery                                     |
 
 ## Quick Checklist
 

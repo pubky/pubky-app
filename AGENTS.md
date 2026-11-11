@@ -54,7 +54,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   `InvalidInput` + exact viewer HTTP 451; the optional `ClientRegionService.fetchCountry` availability probe uses
   non-reporting raw `fetch`. Keep these exceptions narrow and contract-tested. `docs/error-handling.md`
 - Local-first reads in hooks: `useLocalFirstQuery` (`@/hooks/useLocalFirstQuery/useLocalFirstQuery`). Never network, TanStack
-  or retry logic inside `useLiveQuery`; no hand-rolled `useEffect` + `useLiveQuery`. A cache hit is never refreshed by it,
+  or application retry logic inside `useLiveQuery`; only ADR-0030's bounded database reconnect may use one `Dexie.asap` transition task in a Dexie promise and replay an eligible local read in its own scope. Hooks add no timers or retry loops. No hand-rolled `useEffect` + `useLiveQuery`. A cache hit is never refreshed by it,
   a tombstone counts as data, a settled `null` means missing. `docs/local-first.md`
 - Local-first writes: Dexie first, homeserver sync after, roll back on failure, refresh every affected `*_ttl` row, persist
   dependencies before dependents; stream cursors only from Nexus, never `indexed_at`. `docs/local-first.md`, `docs/data-patterns.md`
