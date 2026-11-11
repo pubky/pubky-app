@@ -29,7 +29,8 @@ describe('normalizeTagList', () => {
     ['ASCII labels', [' Lightning ', 'BITCOIN', 'bitcoin']],
     ['a non-ASCII capital', ['Äpfel', 'rust']],
     ['labels that only Unicode case folding would merge', ['Äpfel', 'äpfel', 'İstanbul', 'Café']],
-    // U+FEFF is outside the data model's frozen whitespace set, so it is part of the label (String.prototype.trim would drop it).
+    // U+FEFF is outside the data model's frozen whitespace set, so it is part of the label
+    // (String.prototype.trim would drop it).
     ['a label with a leading BOM', ['\uFEFFbitcoin', 'bitcoin']],
   ])('agrees with the fold buildFeed applies for %s', (_name, labels) => {
     const folded = buildFeed(owner, filter(labels)).object.feed.tags;

@@ -9,7 +9,10 @@ import {
   REACH,
 } from './home.types';
 
-/** A profile tag as the Nexus query and the stored feed filter spell it: banned characters dropped, then the data model's label fold. */
+/**
+ * A profile tag as the Nexus query and the stored feed filter spell it: banned characters dropped,
+ * then the data model's label fold.
+ */
 function normalizeProfileTag(profileTag: string): string {
   return canonicalizeTagLabel(sanitizeTagInput(profileTag));
 }

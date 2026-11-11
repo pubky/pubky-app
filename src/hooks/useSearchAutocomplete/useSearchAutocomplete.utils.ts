@@ -1,5 +1,6 @@
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { sanitizeTagInput } from '@/libs/utils/utils';
+import { TAG_FROZEN_WHITESPACE } from '@/libs/utils/utils.constants';
 import {
   COMPACT_USER_ID_PREFIX,
   DELIMITED_USER_ID_PREFIXES,
@@ -13,9 +14,9 @@ interface SearchAutocompletePlan {
 }
 
 const USER_ID_PREFIX_PATTERN = /^[a-z0-9]+$/i;
-// The data model's frozen whitespace set (`TAG_FROZEN_WHITESPACE_CODE_POINTS`, the one `canonicalizeTagLabel`
-// trims by; Unicode White_Space): NEL is whitespace, U+FEFF is not.
-const WHITESPACE_PATTERN = /\p{White_Space}/u;
+// The data model's frozen whitespace set, the one `canonicalizeTagLabel` trims by: NEL is whitespace,
+// U+FEFF is not.
+const WHITESPACE_PATTERN = TAG_FROZEN_WHITESPACE;
 
 /**
  * A tag can never hold whitespace or a tag-banned character, and Nexus answers

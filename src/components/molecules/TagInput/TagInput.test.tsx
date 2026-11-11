@@ -398,6 +398,30 @@ describe('TagInput - API Suggestions', () => {
     expect(input.value).toBe('');
   });
 
+  it('adds a clicked suggestion that an existing tag matches only under Unicode case folding', async () => {
+    mockUseTagSuggestions.mockReturnValue({ suggestions: ['Äpfel'], isLoading: false });
+
+    // `äpfel` and `Äpfel` are two labels in the data model (ASCII fold only); the old Unicode fold
+    // equated them and skipped the add.
+    render(
+      <TagInput
+        onTagAdd={mockOnTagAdd}
+        viewerTags={[{ label: 'äpfel' }]}
+        enableApiSuggestions={true}
+        addOnSuggestionClick={true}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'äp' } });
+    fireEvent.focus(input);
+    await waitFor(() => expect(screen.getByText('Äpfel')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Äpfel'));
+
+    expect(mockOnTagAdd).toHaveBeenCalledWith('Äpfel');
+  });
+
   it('keeps text typed while a clicked suggestion was still saving', async () => {
     mockUseTagSuggestions.mockReturnValue({
       suggestions: ['bitcoin'],
