@@ -52,7 +52,7 @@ vi.mock('@/organisms/ResourceDetails/ResourceDetails', () => ({
     onRetry,
   }: {
     uri: string | null;
-    read: UsePinakesQueryResult<TPinakesResourceDetail>;
+    read: UsePinakesQueryResult<TPinakesResourceDetail> & { isResolving?: boolean };
     onRetry: () => void;
   }) => (
     <div
@@ -60,6 +60,7 @@ vi.mock('@/organisms/ResourceDetails/ResourceDetails', () => ({
       data-uri={uri ?? 'none'}
       data-card={read.data?.id ?? 'none'}
       data-loading={String(read.isLoading)}
+      data-resolving={String(Boolean(read.isResolving))}
     >
       {read.isError && (
         <button type="button" onClick={onRetry}>
@@ -161,10 +162,11 @@ describe('ResourcePage', () => {
     expect(mocks.repliesUri).toBeNull();
   });
 
-  it('shows the link, its thread and Participants at once while Pinakes is asked to read it', () => {
+  it('tells the body Pinakes is reading the link (its skeleton), with its thread and Participants at once', () => {
     mockCard.mockReturnValue({ data: null, isLoading: false, isError: false, isResolving: true });
     render(<ResourcePage uri={VIDEO.uri} />);
 
+    expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-resolving', 'true');
     expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-loading', 'false');
     expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-card', 'none');
     expect(mocks.repliesUri).toBe(VIDEO.uri);
@@ -191,7 +193,7 @@ describe('ResourcePage', () => {
       vi.useRealTimers();
     });
 
-    it('has Pinakes read it once on opening the page, showing the link meanwhile, then the card it read', async () => {
+    it('has Pinakes read it once on opening the page, the body told so meanwhile, then the card it read', async () => {
       const uri = 'https://tidal.com/artist/7429906';
       let answer: (card: TPinakesResourceDetail) => void = () => {};
       mocks.resolveCard.mockReturnValue(new Promise<TPinakesResourceDetail>((resolve) => (answer = resolve)));
@@ -199,15 +201,18 @@ describe('ResourcePage', () => {
       await advance(0);
       await advance(resolveDebounceMs);
 
-      // While Pinakes reads it, after its 404: the link without a card, its thread on the link as written.
+      // While Pinakes reads it, after its 404: no card yet, the body told it is being read (its skeleton),
+      // the thread on the link as written.
       expect(mocks.fetchCardByUri).toHaveBeenCalledWith({ uri });
       expect(mocks.resolveCard).toHaveBeenCalledWith({ uri });
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-resolving', 'true');
       expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-loading', 'false');
       expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-card', 'none');
       expect(mocks.repliesUri).toBe(uri);
 
       await act(async () => answer({ ...VIDEO, id: 'read-on-open', uri }));
       expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-card', 'read-on-open');
+      expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-resolving', 'false');
       expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-loading', 'false');
       expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
       expect(mocks.repliesUri).toBe(uri);

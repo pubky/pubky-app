@@ -719,7 +719,7 @@ describe('ResourceDetails', () => {
     });
 
     it('keeps the thread and a half-typed quick reply when the card arrives on the same link', () => {
-      // Pinakes is asked to read the link (`resolve`): its preview shows until the card comes.
+      // Pinakes refused or gave up: the link's preview shows; a card read later (a re-read) takes its place.
       read = settled(null);
       const { rerender } = renderDetails(NOT_KNOWN);
       const composer = screen.getByTestId('quick-reply-stub');
