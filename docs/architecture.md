@@ -342,6 +342,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0023 | Article inline media as attachment slots                                  |
 | 0024 | Grant-only authentication                                                 |
 | 0025 | App-owned grant for same-origin Shop                                      |
+| 0029 | Cross-device notification `last_read` sync                                |
 | 0030 | Bounded IndexedDB connection recovery                                     |
 
 ## Quick Checklist

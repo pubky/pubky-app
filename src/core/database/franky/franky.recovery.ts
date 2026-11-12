@@ -110,19 +110,29 @@ function reopen(database: Dexie, state: RecoveryState): Promise<IDBDatabase> {
 }
 
 function isRecoverableConnectionError(error: unknown): error is Error | DOMException {
-  const seen = new Set<unknown>();
-  let current = error;
-  while (current instanceof Error || current instanceof DOMException) {
-    if (seen.has(current)) return false;
-    seen.add(current);
-    if (current.name === 'AbortError' && 'inner' in current && current.inner != null) {
-      // Dexie wraps any transaction abort, including quota and constraint errors.
-      current = current.inner;
-      continue;
+  const ancestors = new Set<unknown>();
+  const inspect = (current: unknown): boolean => {
+    if (!(current instanceof Error || current instanceof DOMException) || ancestors.has(current)) return false;
+    ancestors.add(current);
+    try {
+      if (current instanceof Dexie.BulkError || current instanceof Dexie.ModifyError) {
+        // Request failures can reach the transaction scope before its AbortError.
+        // Every reported failure must qualify; empty/sparse-only lists do not.
+        if (!Array.isArray(current.failures)) return false;
+        const failures = Object.values(current.failures);
+        return failures.length > 0 && failures.every(inspect);
+      }
+      if (current.name === 'AbortError' && 'inner' in current && current.inner != null) {
+        // Dexie wraps any transaction abort, including quota and constraint errors.
+        return inspect(current.inner);
+      }
+      return TRANSIENT_INDEXED_DB_ERROR_NAMES.has(current.name);
+    } finally {
+      // An aggregate may legitimately repeat the same failure in sibling branches.
+      ancestors.delete(current);
     }
-    return TRANSIENT_INDEXED_DB_ERROR_NAMES.has(current.name);
-  }
-  return false;
+  };
+  return inspect(error);
 }
 
 /**

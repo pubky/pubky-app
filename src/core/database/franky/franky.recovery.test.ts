@@ -215,6 +215,143 @@ describe('IndexedDB recovery lifecycle', () => {
     expect(operation).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    {
+      name: 'BulkError with sparse failed positions',
+      create: () =>
+        new Dexie.BulkError('Bulk write failed', {
+          2: new DOMException('Connection lost', 'UnknownError'),
+          7: new Dexie.AbortError('Transaction aborted'),
+        }),
+    },
+    {
+      name: 'ModifyError with a sparse failures array',
+      create: () => {
+        const failures: Error[] = [];
+        failures[3] = new DOMException('Connection lost', 'UnknownError');
+        return new Dexie.ModifyError('Modification failed', failures, 1, []);
+      },
+    },
+    {
+      name: 'AbortError wrapping a BulkError',
+      create: () =>
+        new Dexie.AbortError(
+          new Dexie.BulkError('Bulk write failed', [
+            new Dexie.AbortError(new DOMException('Connection lost', 'UnknownError')),
+          ]),
+        ),
+    },
+    {
+      name: 'nested aggregates sharing the same failure',
+      create: () => {
+        const failure = new DOMException('Connection lost', 'UnknownError');
+        const abort = new Dexie.AbortError(failure);
+        return new Dexie.BulkError('Bulk write failed', [
+          new Dexie.ModifyError('Modification failed', [failure, abort], 0, []),
+          abort,
+          failure,
+        ]);
+      },
+    },
+  ])('recovers a transaction rejected with $name', async ({ create }) => {
+    const operation = vi.fn().mockRejectedValueOnce(create()).mockResolvedValueOnce('recovered');
+    const close = vi.spyOn(database, 'close');
+
+    await expect(withIndexedDbRecovery(database, operation)).resolves.toBe('recovered');
+    expect(operation).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  describe.each([
+    { name: 'BulkError', create: (failures: Error[]) => new Dexie.BulkError('Bulk write failed', failures) },
+    {
+      name: 'ModifyError',
+      create: (failures: Error[]) => new Dexie.ModifyError('Modification failed', failures, 1, []),
+    },
+  ])('$name classification', ({ create }) => {
+    it.each([
+      { name: 'constraint', failure: new DOMException('Duplicate row', 'ConstraintError') },
+      { name: 'quota', failure: new Dexie.AbortError(new DOMException('Quota exceeded', 'QuotaExceededError')) },
+      { name: 'programming', failure: new TypeError('Invalid local transformation') },
+    ])('does not recover a mixture of connection and $name failures', async ({ failure }) => {
+      const aggregate = create([new DOMException('Connection lost', 'UnknownError'), failure]);
+      const operation = vi.fn().mockRejectedValue(aggregate);
+      const close = vi.spyOn(database, 'close');
+
+      await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(aggregate);
+      expect(operation).toHaveBeenCalledTimes(1);
+      expect(close).not.toHaveBeenCalled();
+    });
+
+    it('never recovers an empty failure list', async () => {
+      const aggregate = create([]);
+      const operation = vi.fn().mockRejectedValue(aggregate);
+      const close = vi.spyOn(database, 'close');
+
+      await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(aggregate);
+      expect(operation).toHaveBeenCalledTimes(1);
+      expect(close).not.toHaveBeenCalled();
+    });
+
+    it('retains the one-replay bound when connection failures persist', async () => {
+      const aggregate = create([new DOMException('Connection lost', 'UnknownError')]);
+      const operation = vi.fn().mockRejectedValue(aggregate);
+      const close = vi.spyOn(database, 'close');
+
+      await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(aggregate);
+      await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(aggregate);
+      expect(operation).toHaveBeenCalledTimes(3);
+      expect(close).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it.each([
+    {
+      name: 'an all-hole ModifyError failure list',
+      create: () => new Dexie.ModifyError('Modification failed', new Array<Error>(3), 0, []),
+    },
+    {
+      name: 'a malformed BulkError failure list',
+      create: () => Object.defineProperty(new Dexie.BulkError('Bulk write failed', []), 'failures', { value: null }),
+    },
+    {
+      name: 'a name-only BulkError lookalike',
+      create: () =>
+        Object.assign(new Error('Bulk write failed'), {
+          name: 'BulkError',
+          failures: [new DOMException('Connection lost', 'UnknownError')],
+        }),
+    },
+    {
+      name: 'a generic AggregateError',
+      create: () => new AggregateError([new DOMException('Connection lost', 'UnknownError')]),
+    },
+    {
+      name: 'a self-referencing aggregate',
+      create: () => {
+        const aggregate = new Dexie.BulkError('Bulk write failed', []);
+        aggregate.failures.push(aggregate);
+        return aggregate;
+      },
+    },
+    {
+      name: 'a cycle through AbortError.inner',
+      create: () => {
+        const aggregate = new Dexie.ModifyError('Modification failed', [], 0, []);
+        aggregate.failures.push(new Dexie.AbortError(aggregate));
+        return aggregate;
+      },
+    },
+  ])('rejects $name without reconnecting', async ({ create }) => {
+    const failure = create();
+    const operation = vi.fn().mockRejectedValue(failure);
+    const close = vi.spyOn(database, 'close');
+
+    await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(failure);
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
+  });
+
   it('retains the original operation error when reopening fails', async () => {
     const failure = new DOMException('Connection lost', 'UnknownError');
     const openFailure = new DOMException('Reopen failed', 'UnknownError');

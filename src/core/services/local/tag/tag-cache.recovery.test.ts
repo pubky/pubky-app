@@ -86,23 +86,85 @@ describe('tag-cache transaction connection recovery', () => {
     },
   );
 
-  it('replays the whole aborted transaction with both tables rolled back', async () => {
-    failTagPutOnce();
+  it('replays a pending bulk request failure once with both tables rolled back', async () => {
+    const secondId = 'bob';
+    const put = IDBObjectStore.prototype.put;
+    const tagRequests: IDBRequest[] = [];
+    const successfulWritesBeforeAbort: string[] = [];
+    let pendingState: IDBRequestReadyState | undefined;
+    let aborted = false;
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, value, key) {
+      const request = key === undefined ? put.call(this, value) : put.call(this, value, key);
+      request.addEventListener(
+        'success',
+        () => {
+          if (!aborted) successfulWritesBeforeAbort.push(this.name);
+        },
+        { once: true },
+      );
+      if (this.name === 'user_tags' && !aborted) {
+        tagRequests.push(request);
+        if (tagRequests.length === 1) {
+          request.addEventListener(
+            'success',
+            () => {
+              // Both count writes and the first tag write have succeeded, but
+              // the second tag request is still pending when the connection fails.
+              pendingState = tagRequests[1]?.readyState;
+              aborted = true;
+              Object.defineProperty(this.transaction, 'error', {
+                value: new DOMException('Connection lost', 'UnknownError'),
+              });
+              this.transaction.abort();
+            },
+            { once: true },
+          );
+        }
+      }
+      return request;
+    });
+    const transaction = vi.spyOn(db, 'transaction');
+    const close = vi.spyOn(db, 'close');
+    const isCurrent = vi.fn(() => true);
     const open = db.open.bind(db);
     let observedRollback = false;
-    vi.spyOn(db, 'open').mockImplementation(() =>
+    const reopen = vi.spyOn(db, 'open').mockImplementation(() =>
       open().then(async (database) => {
         expect(await db.user_counts.get(entity.id)).toMatchObject({ tags: 0, unique_tags: 0 });
         expect(await db.user_tags.get(entity.id)).toMatchObject({ tags: [], cache: { revision: 2 } });
+        expect(await db.user_counts.get(secondId)).toBeUndefined();
+        expect(await db.user_tags.get(secondId)).toBeUndefined();
         observedRollback = true;
         return database;
       }),
     );
 
-    await LocalTagCacheService.savePreviews('user', [[entity.id, [tag]]], {}, [[entity.id, counts]]);
+    await LocalTagCacheService.savePreviews(
+      'user',
+      [
+        [entity.id, [tag]],
+        [secondId, [tag]],
+      ],
+      { isCurrent },
+      [
+        [entity.id, counts],
+        [secondId, counts],
+      ],
+    );
+    await expect(transaction.mock.results[0].value).rejects.toBeInstanceOf(Dexie.BulkError);
+    await expect(transaction.mock.results[0].value).rejects.toMatchObject({ failures: [{ name: 'AbortError' }] });
+    expect(tagRequests).toHaveLength(2);
+    expect(pendingState).toBe('pending');
+    expect(successfulWritesBeforeAbort).toEqual(['user_counts', 'user_counts', 'user_tags']);
     expect(observedRollback).toBe(true);
+    expect(transaction).toHaveBeenCalledTimes(2);
+    expect(isCurrent).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(reopen).toHaveBeenCalledTimes(1);
     expect(await db.user_counts.get(entity.id)).toMatchObject({ tags: 1, unique_tags: 1 });
     expect(await db.user_tags.get(entity.id)).toMatchObject({ tags: [tag], cache: { revision: 3 } });
+    expect(await db.user_counts.get(secondId)).toMatchObject({ tags: 1, unique_tags: 1 });
+    expect(await db.user_tags.get(secondId)).toMatchObject({ tags: [tag], cache: { revision: 1 } });
   });
 
   it('reruns the guard after reconnect instead of persisting a superseded response', async () => {
@@ -126,6 +188,7 @@ describe('tag-cache transaction connection recovery', () => {
 
   it('never replays a failed write delivered after account cleanup', async () => {
     const pending = Promise.withResolvers<unknown>();
+    const close = vi.spyOn(db, 'close');
     // Hold the outer promise of an aborted transaction, with no work left active
     // in IndexedDB, while the account cleanup empties the real tables.
     const transaction = vi.spyOn(db, 'transaction').mockReturnValueOnce(Dexie.Promise.resolve(pending.promise));
@@ -136,6 +199,7 @@ describe('tag-cache transaction connection recovery', () => {
     pending.reject(new DOMException('Transaction aborted', 'AbortError'));
     await rejection;
     expect(transaction).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
     expect(await db.user_tags.count()).toBe(0);
   });
 
