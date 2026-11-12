@@ -9,7 +9,7 @@ import {
   showProfileTaggedSection,
 } from '../support/profile';
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath } from '../support/auth';
 import { searchForProfileByName, searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
@@ -26,7 +26,7 @@ describe('profile', () => {
   const profileName = 'Edit Me';
 
   beforeEach(() => {
-    cy.onboardAsNewUser(profileName, 'This bio is editable', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(profileName, 'This bio is editable');
   });
 
   itMobile('editing should retain any changes made to own profile', () => {
@@ -128,7 +128,7 @@ describe('profile', () => {
     const profileToTagPubkyName = `${Cypress._.random(100_000)}-Tag Me`;
     cy.signOut(HasBackedUp.Yes);
     cy.onboardAsNewUser(profileToTagPubkyName, 'This profile is destined to be tagged');
-    cy.signOut(HasBackedUp.No);
+    cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
 
     // navigate to the profile to tag
@@ -174,7 +174,7 @@ describe('profile', () => {
     const profileToFollowName = `${Cypress._.random(100_000)}-Follow Me`;
     cy.signOut(HasBackedUp.Yes);
     cy.onboardAsNewUser(profileToFollowName, 'This profile is never actually followed');
-    cy.signOut(HasBackedUp.No);
+    cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
 
     searchForProfileByName(profileToFollowName);

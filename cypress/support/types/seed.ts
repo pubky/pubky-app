@@ -22,6 +22,19 @@ export type SeededPost = {
 
 export type SeedCreateUserArgs = { name: string; bio: string; recoveryFilePath?: string };
 
+export type SeedSignUpArgs = { name: string; recoveryFilePath: string };
+
+// A key signed up on the homeserver with no profile yet, the state a Pubky Ring sign-up leaves
+// the app in before the Profile step
+export type SeededSignUp = {
+  id: string;
+  pubky: string;
+  // The 12 words `cy.signInWithRecoveryPhrase` restores the key from
+  recoveryPhrase: string;
+  // The signup token the sign-up consumed
+  inviteCode: string;
+};
+
 export type SeedCreatePostArgs = {
   authorId: string;
   content: string;

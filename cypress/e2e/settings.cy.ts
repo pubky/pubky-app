@@ -6,7 +6,7 @@ import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
 import { itMobile } from '../support/mobile';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath, extendedTimeout } from '../support/common';
 import { getNotificationSwitch, leaveEditProfileForSettings, toggleNotificationSwitch } from '../support/settings';
 
@@ -20,7 +20,7 @@ describe('settings', () => {
   });
 
   itMobile('Account settings function correctly', () => {
-    // Create a new user with recovery phrase backup
+    // Create a new user; onboarding aliases the recovery phrase to sign back in with
     const profileName = 'MrAccountSettings';
 
     const signInFromLogoutWithRecoveryPhrase = () => {
@@ -38,7 +38,7 @@ describe('settings', () => {
       cy.get('#recovery-phrase-restore-btn').click();
     };
 
-    cy.onboardAsNewUser(profileName, 'I like to test account settings', [BackupType.RecoveryPhraseWithConfirmation]);
+    cy.onboardAsNewUser(profileName, 'I like to test account settings');
     goToSettingsPage();
 
     // Check sign out button
@@ -97,7 +97,7 @@ describe('settings', () => {
     });
 
     // Sign out
-    cy.signOut(HasBackedUp.No);
+    cy.signOut(HasBackedUp.Yes);
 
     // Create user 2
     cy.onboardAsNewUser('Mr Mute', 'I like to mute people');
@@ -138,8 +138,8 @@ describe('settings', () => {
   });
 
   itMobile('can save changes to notification settings', () => {
-    // Create a new user with encrypted file backup (profile name used for backup filename)
-    cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings', [BackupType.EncryptedFile]);
+    // Create a new user; onboarding saves the recovery file under the profile name
+    cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings');
 
     const navigateToNotificationsPage = () => {
       goToSettingsPage();

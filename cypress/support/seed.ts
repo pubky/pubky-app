@@ -5,6 +5,7 @@ import type {
   SeededCollectionLayout,
   SeededLockPost,
   SeededPost,
+  SeededSignUp,
   SeededUser,
 } from './types/seed';
 
@@ -24,6 +25,15 @@ import type {
 // deletion is lost: wait for every record an edit or deletion depends on before writing it.
 // Consecutive seed writes are a few milliseconds apart, so records seeded in order also sort in
 // that order wherever a surface orders them by time.
+
+/**
+ * Signs a new key up on the test homeserver without a profile, standing in for the Pubky Ring
+ * sign-up the browser can no longer do itself. Yields the key's recovery phrase, and saves its
+ * encrypted recovery file at `backupDownloadFilePath(name)`, so the spec can sign the app in with
+ * either and complete onboarding from the Profile step (see `cy.onboardAsNewUser`).
+ */
+export const signUpViaApi = (name: string) =>
+  cy.task<SeededSignUp>('seedSignUp', { name, recoveryFilePath: backupDownloadFilePath(name) });
 
 /**
  * Signs a new user up on the test homeserver and writes their profile, the API equivalent of UI

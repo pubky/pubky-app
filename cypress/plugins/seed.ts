@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { basename, dirname, extname } from 'path';
 import { Keypair, Pubky, PublicKey, type Path, type Session } from '@synonymdev/pubky';
+import * as bip39 from 'bip39';
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind, PubkySpecsBuilder } from 'pubky-app-specs';
 import type {
   SeedAddToCollectionArgs,
@@ -14,9 +15,11 @@ import type {
   SeededLockPost,
   SeededPost,
   SeededPostKind,
+  SeededSignUp,
   SeededUser,
   SeedFollowArgs,
   SeedMarkNotificationsReadArgs,
+  SeedSignUpArgs,
   SeedTagArgs,
 } from '../support/types/seed';
 
@@ -115,6 +118,18 @@ export const createSeedTasks = (config: SeedConfig) => {
     return (await response.text()).trim();
   };
 
+  // Signs `keypair` up on the test homeserver with a fresh signup token, as Pubky Ring would
+  const signUp = async (keypair: Keypair) => {
+    const inviteCode = await fetchSignupToken();
+    await pubky().signer(keypair).signup(PublicKey.from(config.homeserverPublicKey), inviteCode);
+    return inviteCode;
+  };
+
+  const writeRecoveryFile = (keypair: Keypair, recoveryFilePath: string) => {
+    mkdirSync(dirname(recoveryFilePath), { recursive: true });
+    writeFileSync(recoveryFilePath, keypair.createRecoveryFile(RECOVERY_FILE_PASSCODE));
+  };
+
   const putTag = async (tagger: SeededSession, uri: string, label: string) => {
     const tag = tagger.builder.createTag(uri, label);
     await tagger.session.storage.putJson(toPath(tag.meta.path), tag.tag.toJson());
@@ -139,21 +154,30 @@ export const createSeedTasks = (config: SeedConfig) => {
     PubkyAppPost.fromJson(await author.session.storage.getJson(postPath(postId)));
 
   return {
+    // The browser no longer creates keys, so this stands in for Pubky Ring: the key is signed up here
+    // and the spec signs the app in with its recovery phrase or file, which lands on the Profile step
+    seedSignUp: ({ name, recoveryFilePath }: SeedSignUpArgs): Promise<SeededSignUp> =>
+      step(`sign up key for '${name}'`, async () => {
+        const recoveryPhrase = bip39.generateMnemonic();
+        // Same derivation as the app's recovery-phrase sign-in: the first 32 bytes of the BIP39 seed
+        const keypair = Keypair.fromSecret(new Uint8Array(bip39.mnemonicToSeedSync(recoveryPhrase).subarray(0, 32)));
+        const inviteCode = await signUp(keypair);
+        writeRecoveryFile(keypair, recoveryFilePath);
+        const id = keypair.publicKey.z32();
+        return { id, pubky: `pubky${id}`, recoveryPhrase, inviteCode };
+      }),
+
     seedCreateUser: ({ name, bio, recoveryFilePath }: SeedCreateUserArgs): Promise<SeededUser> =>
       step(`create user '${name}'`, async () => {
         const keypair = Keypair.random();
-        const signer = pubky().signer(keypair);
-        await signer.signup(PublicKey.from(config.homeserverPublicKey), await fetchSignupToken());
-        const session = await signer.signin(SEED_CLIENT_ID);
+        await signUp(keypair);
+        const session = await pubky().signer(keypair).signin(SEED_CLIENT_ID);
         const id = keypair.publicKey.z32();
         const builder = new PubkySpecsBuilder(id);
         // profile.json is what makes the app treat the key as signed up
         const profile = builder.createUser(name, bio, null, null, null);
         await session.storage.putJson(toPath(profile.meta.path), profile.user.toJson());
-        if (recoveryFilePath) {
-          mkdirSync(dirname(recoveryFilePath), { recursive: true });
-          writeFileSync(recoveryFilePath, keypair.createRecoveryFile(RECOVERY_FILE_PASSCODE));
-        }
+        if (recoveryFilePath) writeRecoveryFile(keypair, recoveryFilePath);
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
         await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v0/ingest/${id}`, { method: 'PUT' }).catch(() => null);
         sessions.set(id, { name, session, builder });

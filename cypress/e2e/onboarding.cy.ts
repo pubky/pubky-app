@@ -4,7 +4,29 @@ import { goToProfilePageFromHeader } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
 import { addProfileTags, openProfileTab, showProfileHeader } from '../support/profile';
-import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
+import { signUpViaApi } from '../support/seed';
+import { CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
+
+// A fresh signup token from the homeserver admin API, as the suite hands them out to testers
+const fetchInviteCode = () =>
+  cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(({ homeserverAdminUrl, homeserverAdminPassword }) =>
+    cy
+      .request({
+        method: 'GET',
+        url: homeserverAdminUrl,
+        headers: {
+          'X-Admin-Password': homeserverAdminPassword,
+        },
+      })
+      .then((response) => response.body as string),
+  );
+
+// The Install step only offers Pubky Ring now that the browser no longer creates keys
+const expectInstallStepOffersPubkyRingOnly = () => {
+  cy.location('pathname').should('eq', '/onboarding/install');
+  cy.get('#continue-with-pubky-ring-btn').should('be.visible');
+  cy.get('#create-keys-in-browser-btn').should('not.exist');
+};
 
 const waitUntilStarterPackHasUsers = (tag: string) => {
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
@@ -58,26 +80,18 @@ describe('Onboarding', () => {
     cy.get('[data-cy="header-sign-in-btn"]').should('exist').should('be.visible');
   };
 
-  it('can onboard as a new user backing up with encrypted file and recovery phrase, sign out, then sign in with both methods', () => {
-    // profile name is also used for the backup file name
+  it('can onboard a new key from the profile step, sign out, then sign in with recovery file and recovery phrase', () => {
+    // profile name is also used for the recovery file name
     const profileName = 'Test User';
     const profileBio = 'Test Bio';
-    const backupWithFileAndPhrase = [BackupType.EncryptedFile, BackupType.RecoveryPhraseWithConfirmation];
 
-    cy.onboardAsNewUser(profileName, profileBio, backupWithFileAndPhrase);
+    cy.onboardAsNewUser(profileName, profileBio);
 
-    // confirm backup reminder is shown
-    cy.get('#backup-btn').should('exist').click();
-    // confirm backup dialog can be shown and closed
-    cy.get('#backup-dialog-title').should('exist');
-    cy.get('[data-testid="dialog-close"]').click();
-    // confirm backup done button can be clicked
-    cy.get('#backup-done-btn').click();
-    // confirm backup confirmation dialog can be shown and dismissed
-    cy.get('#backup-done-warning-text').should('exist');
-    cy.get('#backup-done-confirm-btn').click();
-    // confirm backup reminder is not shown
+    // a key restored from a backup is not reminded to back up on the home feed
+    cy.location('pathname').should('eq', '/home');
+    cy.get('[data-cy="timeline-container"]').should('be.visible');
     cy.get('#backup-btn').should('not.exist');
+    checkOwnProfile(profileName, profileBio);
 
     cy.signOut(HasBackedUp.Yes);
 
@@ -126,7 +140,7 @@ describe('Onboarding', () => {
     waitUntilStarterPackHasUsers(interestTag);
     cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser('Interested User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+    cy.onboardAsNewUser('Interested User', '', undefined, OnboardingExperience.StopAtTags);
 
     cy.get('[data-testid="tags-of-interest-form"]').within(() => {
       cy.get('[data-testid="popular-interests-empty"], [data-testid^="popular-tag-"]', extendedTimeout()).should(
@@ -164,7 +178,7 @@ describe('Onboarding', () => {
   });
 
   it('shows most active people without interests and lands on the All feed after finishing', () => {
-    cy.onboardAsNewUser('Undecided User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+    cy.onboardAsNewUser('Undecided User', '', undefined, OnboardingExperience.StopAtTags);
 
     // Continue with zero tags
     cy.get('[data-testid="tags-of-interest-form"]').within(() => {
@@ -228,33 +242,32 @@ describe('Onboarding', () => {
     cy.location('pathname').should('eq', '/onboarding/human');
   });
 
-  it('cannot proceed with a reused invite code', () => {
-    const profileName = 'Reused Invite User';
-    const signupTokensPath = '/signup_tokens/';
-    let capturedInviteCode = '';
-
-    // Pass verification through to the homeserver and capture the invite code from the request URL.
-    cy.intercept('GET', '**/signup_tokens/*', (req) => {
-      const tokenStart = req.url.indexOf(signupTokensPath);
-      if (tokenStart !== -1) {
-        const encodedToken = req.url.slice(tokenStart + signupTokensPath.length).split('?')[0];
-        capturedInviteCode = decodeURIComponent(encodedToken);
-      }
-      req.continue();
-    }).as('verifyInviteCode');
-
-    // First signup: homeserver verifies the fresh code as valid
-    cy.onboardAsNewUser(profileName);
-    cy.signOut(HasBackedUp.Yes);
-
-    // Second signup: reuse the captured invite code; homeserver should report it as used
+  it('accepts a valid invite code and continues to the Pubky Ring install step', () => {
     cy.get('#create-account-btn').click();
     cy.location('pathname').should('eq', '/onboarding/human');
-    cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
 
-    cy.then(() => {
-      expect(capturedInviteCode, 'invite code captured from first verification').to.be.a('string').and.not.be.empty;
-      cy.get('[data-cy="human-invite-code-input"]').type(capturedInviteCode);
+    // Click 'enter invite code' button
+    cy.get('[data-cy="invite-code-link"]').should('exist').click();
+
+    fetchInviteCode().then((inviteCode) => {
+      cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
+    });
+    cy.get('[data-cy="human-invite-code-continue-btn"]').should('not.be.disabled').click();
+
+    expectInstallStepOffersPubkyRingOnly();
+  });
+
+  it('cannot proceed with a reused invite code', () => {
+    cy.intercept('GET', '**/signup_tokens/*').as('verifyInviteCode');
+
+    // A sign-up consumes its invite code (here through the homeserver API, as Pubky Ring would)
+    signUpViaApi('Reused Invite User').then(({ inviteCode }) => {
+      // Reuse that invite code; homeserver should report it as used
+      cy.get('#create-account-btn').click();
+      cy.location('pathname').should('eq', '/onboarding/human');
+      cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
+
+      cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
       cy.wait('@verifyInviteCode');
       cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code already used');
       cy.get('[data-cy="human-invite-code-continue-btn"]').should('be.disabled');
@@ -262,29 +275,13 @@ describe('Onboarding', () => {
     });
   });
 
-  it('can sign up via /invite/<code> URL', () => {
-    const profileName = 'Invite URL User';
+  it('applies the invite code from an /invite/<code> URL and continues to the Pubky Ring install step', () => {
+    fetchInviteCode().then((inviteCode) => {
+      cy.visit(`/invite/${inviteCode}`);
+    });
 
-    cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(
-      ({ homeserverAdminUrl, homeserverAdminPassword }) => {
-        cy.request({
-          method: 'GET',
-          url: homeserverAdminUrl,
-          headers: {
-            'X-Admin-Password': homeserverAdminPassword,
-          },
-        }).then((response) => {
-          const inviteCode = response.body as string;
-
-          cy.visit(`/invite/${inviteCode}`);
-          cy.location('pathname').should('eq', '/onboarding/install');
-          cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code applied');
-          cy.get('#create-keys-in-browser-btn').should('be.visible');
-
-          cy.completeOnboardingFromInstall(profileName);
-        });
-      },
-    );
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code applied');
+    expectInstallStepOffersPubkyRingOnly();
   });
 
   it('redirects home when /invite/<code> verification returns 404', () => {

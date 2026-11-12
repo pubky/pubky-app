@@ -27,7 +27,7 @@ import { isMobile } from '../support/mobile';
 import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
 import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
-import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
 const MY_SECTION = '[data-cy="my-collections-section"]';
 const FOLLOWED_SECTION = '[data-cy="followed-collections-section"]';
@@ -53,14 +53,14 @@ describe('collections', () => {
     cy.deleteDownloadsFolder();
 
     // create the curator profile and a few posts to curate
-    cy.onboardAsNewUser(curator.username, curator.bio, [BackupType.EncryptedFile], curator.pubkyAlias);
+    cy.onboardAsNewUser(curator.username, curator.bio, curator.pubkyAlias);
     createQuickPost(curator.postText1);
     createQuickPost(curator.postText2);
     createQuickPost(curator.postText3);
     cy.signOut(HasBackedUp.Yes);
 
     // create the follower profile
-    cy.onboardAsNewUser(follower.username, follower.bio, [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(follower.username, follower.bio);
     cy.signOut(HasBackedUp.Yes);
   });
 
@@ -263,7 +263,7 @@ describe('collections', () => {
 
     // beforeEach signs in as the curator, who may already have collections — use a fresh user
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser('Intro Newbie', 'I have never made a collection.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser('Intro Newbie', 'I have never made a collection.');
 
     goToCollectionsPage();
     createCollection(collectionName, 'Seen the welcome intro.', { expectIntro: true });

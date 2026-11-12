@@ -45,7 +45,7 @@ import { goToCollectionsPage } from '../support/header';
 import { itMobile } from '../support/mobile';
 import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
-import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
 
 const username = 'Poster';
 
@@ -156,7 +156,7 @@ describe('posts', () => {
     cy.deleteDownloadsFolder();
 
     // create profile to post from
-    cy.onboardAsNewUser(username, 'Big on posting.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(username, 'Big on posting.');
     waitForFeedToLoad();
   });
 
@@ -344,12 +344,7 @@ describe('posts', () => {
     const pubkyAlias = 'mention_pubky';
 
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser(
-      fullUsername,
-      'My account will be referenced in a post.',
-      [BackupType.EncryptedFile],
-      pubkyAlias,
-    );
+    cy.onboardAsNewUser(fullUsername, 'My account will be referenced in a post.', pubkyAlias);
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(username));
 
@@ -419,7 +414,7 @@ describe('posts', () => {
 
   it("cannot delete other profile's post", () => {
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser('Del Boy', 'Try delete my post.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser('Del Boy', 'Try delete my post.');
 
     const postContent = `No one else can delete this post! ${Date.now()}`;
     createQuickPost(postContent);
@@ -441,7 +436,7 @@ describe('posts', () => {
 
     createQuickPost(canReportPostContent);
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser('Reporter', 'I can report a post.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser('Reporter', 'I can report a post.');
 
     createQuickPost(cannotReportPostContent);
 

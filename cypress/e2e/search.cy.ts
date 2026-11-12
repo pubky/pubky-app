@@ -12,7 +12,7 @@ import {
 } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { addProfileTags, openProfileTab } from '../support/profile';
-import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 
 const username = 'Mr Search';
 // second author, whose posts share a word with one of Mr Search's posts
@@ -58,12 +58,12 @@ describe('search', () => {
     cy.deleteDownloadsFolder();
 
     // created first so they are indexed before Mr Search's posts
-    cy.onboardAsNewUser(otherPoster.username, '', undefined, otherPoster.pubkyAlias);
+    cy.onboardAsNewUser(otherPoster.username, '', otherPoster.pubkyAlias);
     createQuickPost(otherPostWithSharedWord);
     createQuickPost(otherPostWithoutSharedWord);
-    cy.signOut(HasBackedUp.No);
+    cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser(username, 'I like to search', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(username, 'I like to search');
 
     // create the posts searched for by the tests below
     createQuickPost(postTag1, [tag1]);

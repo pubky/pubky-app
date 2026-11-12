@@ -1,5 +1,5 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
 import { backupDownloadFilePath } from '../support/auth';
@@ -27,15 +27,10 @@ describe('contacts', () => {
     const actorName = 'Unfollow Actor';
     const targetAlias = 'unfollowTarget';
 
-    cy.onboardAsNewUser(
-      targetName,
-      'Follow me, then stop',
-      [BackupType.RecoveryPhraseWithoutConfirmation],
-      targetAlias,
-    );
+    cy.onboardAsNewUser(targetName, 'Follow me, then stop', targetAlias);
     cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser(actorName, 'I follow and then unfollow', [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(actorName, 'I follow and then unfollow');
 
     cy.get(`@${targetAlias}`).then((pubky) => {
       searchAndFollowProfile(`${pubky}`, targetName);
@@ -114,13 +109,13 @@ describe('contacts', () => {
     // * create two profiles
 
     // Create profile 1
-    cy.onboardAsNewUser(profileName1, "Man's best friend", [BackupType.RecoveryPhraseWithoutConfirmation], pubkyAlias1);
+    cy.onboardAsNewUser(profileName1, "Man's best friend", pubkyAlias1);
 
     // Sign out of profile 1
     cy.signOut(HasBackedUp.Yes);
 
     // Create profile 2
-    cy.onboardAsNewUser(profileName2, "Man's second best friend", [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(profileName2, "Man's second best friend");
 
     // * search for profile and follow
 
