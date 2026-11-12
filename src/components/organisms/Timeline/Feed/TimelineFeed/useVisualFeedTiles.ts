@@ -16,7 +16,7 @@ import { isPostDeleted } from '@/libs/utils/utils';
 import { parseVideoUrl } from '@/libs/utils/videoUrl';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import { CompositeIdDomain } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { buildCompositeIdFromPubkyUri, isV1Address } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
@@ -402,9 +402,11 @@ export function useVisualFeedTiles({
       const remoteFiles = remoteAttachmentUris.length
         ? await FileController.getMetadata({ fileAttachments: remoteAttachmentUris })
         : [];
-      // By URI, not id: one `owner:hash` key stands for every `{hash}.{ext}` of the same bytes, and
-      // `getMetadata` answers each URI with the row or details that describe it.
+      // As `getMetadata` answers: a v1 attachment by URI, since one `owner:hash` key stands for every
+      // `{hash}.{ext}` of the same bytes; a 0.x attachment by id, since its row stands however Nexus
+      // spelled the row's `uri`.
       const remoteFilesByUri = new Map(remoteFiles.map((file) => [file.uri, file]));
+      const remoteFilesById = new Map(remoteFiles.map((file) => [file.id, file]));
 
       let hiddenPostCount = 0;
       let pendingDetailPostCount = 0;
@@ -455,12 +457,15 @@ export function useVisualFeedTiles({
 
         let hasUnresolvedFile = false;
         const postTiles = attachmentUris.flatMap((attachmentUri) => {
+          const attachmentId = buildCompositeIdFromPubkyUri({ uri: attachmentUri, domain: CompositeIdDomain.FILES });
           // A URI the key builder refuses is one `getMetadata` never answers: skipped, not awaited.
-          if (!buildCompositeIdFromPubkyUri({ uri: attachmentUri, domain: CompositeIdDomain.FILES })) {
+          if (!attachmentId) {
             return [];
           }
 
-          const file = remoteFilesByUri.get(attachmentUri);
+          const file = isV1Address(attachmentUri)
+            ? remoteFilesByUri.get(attachmentUri)
+            : remoteFilesById.get(attachmentId);
           if (!file) {
             missingFileUris.add(attachmentUri);
             hasUnresolvedFile = true;

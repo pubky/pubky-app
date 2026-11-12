@@ -370,6 +370,27 @@ describe('useVisualFeedTiles', () => {
     expect(mockFetchFiles).not.toHaveBeenCalled();
   });
 
+  it('renders the tile of a 0.x row returned under another spelling of its URI, matched by id', async () => {
+    // `getMetadata` answers a 0.x attachment with its row whatever the row says its URI is; only a v1
+    // attachment is matched by URI, since only v1 rows can share an id across extensions.
+    const owner = fakeOwner(5);
+    const post = compositeAt(owner, 4);
+    const attachment = `pubky://${owner}/pub/pubky.app/files/0034A0X7NJ52C`;
+    const fileId = `${owner}:0034A0X7NJ52C`;
+    mockFindByIdsPreserveOrder.mockResolvedValue([createPostDetails({ id: post, attachments: [attachment] })]);
+    mockGetMetadata.mockResolvedValue([
+      createFileDetails({ id: fileId, contentType: 'image/jpeg', width: 1000, height: 800, uri: `${attachment}/` }),
+    ]);
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: [post], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(snapshot.tiles.map(({ attachmentId }: VisualTile) => attachmentId)).toEqual([fileId]);
+    expect(snapshot.missingFileUris).toEqual([]);
+    expect(mockFetchFiles).not.toHaveBeenCalled();
+  });
+
   it('fetches post details for each requested post id', async () => {
     renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1', 'author:post-2'], hasMore: false }));
 
