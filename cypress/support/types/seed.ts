@@ -36,6 +36,9 @@ export type SeededSignUp = {
 // `authUrl` is the `pubkyauth://` request the app shows as its sign-in QR code or Ring deeplink
 export type SeedApprovePubkyAuthArgs = { name: string; authUrl: string };
 
+/** A homeserver write the stand-in Lock Server makes for `owner`: a PUT of `bytes` (base64), or a DELETE without. */
+export type SeedLockServerWriteArgs = { owner: string; path: string; bytes?: string };
+
 export type SeedCreatePostArgs = {
   authorId: string;
   content: string;

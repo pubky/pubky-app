@@ -5,13 +5,16 @@
  * `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` is set (the Locks CI job only). That client sends every Lock
  * Server call as a `POST <stub>/e2e/<operation>` and the routes below answer them. Nothing else is
  * intercepted: the homeserver writes (guarded bytes, `lock.json`, the announcement, the reader's
- * purchase file and replica) and every Nexus read stay real.
+ * purchase file and replica) and every Nexus read stay real. As in production, the Lock Server, not
+ * the app, writes the guarded bytes and `lock.json`: those routes have Node make the write with the
+ * session the creator granted the Lock Server (`seedLockServerWrite`), then answer.
  */
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
 import { isMobile } from './mobile';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
+import type { SeedLockServerWriteArgs } from './types/seed';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
 export const locksStubUrl = (): string => String(Cypress.expose('locksStubUrl'));
@@ -74,6 +77,35 @@ const answer = (req: TStubRequest, operation: string, summary: string, body: unk
     Response: { statusCode, body },
   });
   req.reply({ statusCode, body, headers: CORS_HEADERS });
+};
+
+/**
+ * Answers one stand-in call the way the real Lock Server does: its homeserver write first
+ * (`plugins/lock-server.ts`), then the answer, or a 500 when the write failed.
+ */
+const answerAfterWrite = (
+  req: TStubRequest,
+  write: SeedLockServerWriteArgs,
+  operation: string,
+  summary: string,
+  body: unknown,
+) => {
+  const request = { method: req.method, url: redactLocksStubUrl(req.url), body: parseBody(req.body) };
+  const writesUrl = Cypress.expose('lockServerWritesUrl');
+  if (!writesUrl) throw new Error('lockServerWritesUrl is not set: cypress.config.ts starts it in setupNodeEvents');
+  req.url = String(writesUrl);
+  req.body = JSON.stringify(write);
+  req.continue((res) => {
+    const written = res.statusCode === 204;
+    const statusCode = written ? 200 : 500;
+    const action = `${write.bytes === undefined ? 'DELETE' : 'PUT'} ${write.path}`;
+    logLocksStub(operation, `${summary}; Lock Server ${action}: ${written ? 'done' : 'failed'} → ${statusCode}`, {
+      Request: request,
+      'Lock Server homeserver write': { action, statusCode: res.statusCode, error: written ? undefined : res.body },
+      Response: { statusCode, body: written ? body : 'homeserver write failed' },
+    });
+    res.send({ statusCode, body: written ? body : { error: 'internal_error' }, headers: CORS_HEADERS });
+  });
 };
 
 const toSecondaryRecord = (resources: TContentLockRequest['secondary_resources']) => {
@@ -162,10 +194,16 @@ export const stubLockServer = (state: TLockServerState) => {
       bytes: string;
     }>(req.body);
     state.guarded[path] = bytes;
-    answer(req, 'register guarded resource', `${path} (${content_type}, ${bytes.length} base64 chars)`, {
-      creator: `pubky${owner}`,
-      guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
-    });
+    answerAfterWrite(
+      req,
+      { owner, path: `${GUARDED_CONTENT_PATH}${path}`, bytes },
+      'register guarded resource',
+      `${path} (${content_type}, ${bytes.length} base64 chars)`,
+      {
+        creator: `pubky${owner}`,
+        guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
+      },
+    );
   }).as('registerGuardedResource');
 
   cy.intercept(route('POST', '/e2e/creator/content-locks'), (req) => {
@@ -173,25 +211,36 @@ export const stubLockServer = (state: TLockServerState) => {
     const lockId = `e2e${Date.now()}`;
     const price = priceOf(body, owner);
     state.locks[lockId] = price;
-    answer(req, 'create content lock', `lock ${lockId} for ${describePrice(price)}`, {
-      lock_id: lockId,
-      content_lock_path: `/pub/app.locks/${lockId}.json`,
-      content_lock: {
-        version: 1,
-        creator: `pubky${owner}`,
-        primary_resource: body.primary_resource,
-        secondary_resources: toSecondaryRecord(body.secondary_resources),
-        criteria: body.criteria,
-        lock_logic: body.lock_logic,
-        access_policy: body.access_policy,
-        lock_server: body.lock_server ?? { override: null },
-      },
-    });
+    const contentLockPath = `/pub/app.locks/${lockId}.json`;
+    const contentLock = {
+      version: 1,
+      creator: `pubky${owner}`,
+      primary_resource: body.primary_resource,
+      secondary_resources: toSecondaryRecord(body.secondary_resources),
+      criteria: body.criteria,
+      lock_logic: body.lock_logic,
+      access_policy: body.access_policy,
+      lock_server: body.lock_server ?? { override: null },
+    };
+    answerAfterWrite(
+      req,
+      { owner, path: contentLockPath, bytes: Cypress.Buffer.from(JSON.stringify(contentLock)).toString('base64') },
+      'create content lock',
+      `lock ${lockId} for ${describePrice(price)}`,
+      { lock_id: lockId, content_lock_path: contentLockPath, content_lock: contentLock },
+    );
   }).as('createContentLock');
+  // The Lock Server takes the public `lock.json` down only once it has accepted the deletion.
   cy.intercept(route('POST', '/e2e/creator/content-locks/delete'), (req) => {
-    const { lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
+    const { owner, lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
     state.deletedLocks.push(lock_id);
-    answer(req, 'delete content lock', `lock ${lock_id} (${describePrice(state.locks[lock_id])})`, {});
+    answerAfterWrite(
+      req,
+      { owner, path: `/pub/app.locks/${lock_id}.json` },
+      'delete content lock',
+      `lock ${lock_id} (${describePrice(state.locks[lock_id])})`,
+      {},
+    );
   }).as('deleteContentLock');
 
   // The reader's Bitkit wallet: it has published Paykit data, it is linked to the creator, and the

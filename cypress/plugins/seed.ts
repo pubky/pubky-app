@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { basename, extname } from 'path';
-import { Keypair, Pubky, PublicKey, type Path, type Session } from '@synonymdev/pubky';
+import { AuthFlowKind, Keypair, Pubky, PublicKey, type Capabilities, type Path, type Session } from '@synonymdev/pubky';
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind, PubkySpecsBuilder } from 'pubky-app-specs';
 import type {
   SeedAddToCollectionArgs,
@@ -18,6 +18,7 @@ import type {
   SeededUser,
   SeedApprovePubkyAuthArgs,
   SeedFollowArgs,
+  SeedLockServerWriteArgs,
   SeedMarkNotificationsReadArgs,
   SeedSignUpArgs,
   SeedTagArgs,
@@ -40,6 +41,10 @@ export type SeedConfig = {
 };
 
 const SEED_CLIENT_ID = 'e2e-seed.pubky.app';
+// What a real Lock Server asks the creator to grant it, and the only scopes it writes with
+// (pubky/locks `locks_connect_capabilities`)
+const LOCK_SERVER_CAPABILITIES: Capabilities = '/priv/app.locks/:rw,/pub/app.locks/:rw';
+const LOCK_SERVER_CLIENT_ID = 'lock-server.e2e.test';
 // Consecutive seed writes start at least this far apart, so records a test orders by time
 // (timelines, threads, notifications) never share a timestamp
 const SEED_WRITE_SPACING_MS = 5;
@@ -63,6 +68,13 @@ const toPath = (path: string): Path => {
 };
 
 const postPath = (postId: string) => toPath(`/pub/pubky.app/posts/${postId}`);
+
+const lockServerPath = (path: string): Path => {
+  if (!path.startsWith('/pub/app.locks/') && !path.startsWith('/priv/app.locks/')) {
+    throw new Error(`the Lock Server only writes under /pub/app.locks/ and /priv/app.locks/, got ${path}`);
+  }
+  return path as Path;
+};
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -98,6 +110,36 @@ export const createSeedTasks = (config: SeedConfig) => {
       throw new Error(`no key was signed up for '${name}' in this Cypress run`);
     }
     return keypair;
+  };
+  const keypairOf = (userId: string): Keypair => {
+    const keypair = [...keypairs.values()].find((candidate) => candidate.publicKey.z32() === userId);
+    if (!keypair) {
+      throw new Error(`no key was signed up for ${userId} in this Cypress run`);
+    }
+    return keypair;
+  };
+  // The relay of the app's own Pubky Ring requests, which the stand-in Lock Server's grant uses too
+  let relay: string | undefined;
+  // One creator-granted session per creator, reused across that creator's locks as the Lock Server does
+  const lockServerSessions = new Map<string, Promise<Session>>();
+  const lockServerSessionFor = (owner: string): Promise<Session> => {
+    const existing = lockServerSessions.get(owner);
+    if (existing) return existing;
+    const granted = (async () => {
+      if (!relay) {
+        throw new Error('no sign-in has gone through the mock Pubky Ring yet, so the relay is unknown');
+      }
+      const flow = await pubky().startGrantAuthFlow(LOCK_SERVER_CAPABILITIES, AuthFlowKind.signin(), {
+        clientId: LOCK_SERVER_CLIENT_ID,
+        relay,
+      });
+      const approval = flow.awaitApproval();
+      await pubky().signer(keypairOf(owner)).approveAuthRequest(flow.authorizationUrl);
+      return approval;
+    })();
+    granted.catch(() => lockServerSessions.delete(owner));
+    lockServerSessions.set(owner, granted);
+    return granted;
   };
   let lastStepAt = 0;
 
@@ -172,7 +214,21 @@ export const createSeedTasks = (config: SeedConfig) => {
     // sending the grant through the request's relay exactly as Ring does when the user taps Authorize
     seedApprovePubkyAuth: ({ name, authUrl }: SeedApprovePubkyAuthArgs) =>
       step(`approve sign-in as '${name}' in mock Pubky Ring`, async () => {
+        relay = new URL(authUrl).searchParams.get('relay') ?? relay;
         await pubky().signer(keypairFor(name)).approveAuthRequest(authUrl);
+        return null;
+      }),
+
+    // Stand-in Lock Server: the homeserver writes the real one makes for a creator before it answers
+    // (guarded bytes, lock.json), with the session the creator granted it in Pubky Ring, not the app's
+    seedLockServerWrite: ({ owner, path, bytes }: SeedLockServerWriteArgs) =>
+      step(`Lock Server ${bytes === undefined ? 'deletes' : 'writes'} ${path} for '${nameOf(owner)}'`, async () => {
+        const { storage } = await lockServerSessionFor(owner);
+        if (bytes === undefined) {
+          await storage.delete(lockServerPath(path));
+        } else {
+          await storage.putBytes(lockServerPath(path), Buffer.from(bytes, 'base64'));
+        }
         return null;
       }),
 

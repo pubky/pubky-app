@@ -2,6 +2,7 @@ import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
 import { appendFileSync, readdirSync } from 'fs';
+import { startLockServerWrites } from './plugins/lock-server';
 import { createNexusTasks } from './plugins/nexus';
 import { createSeedTasks } from './plugins/seed';
 import { defaultMs } from './support/slow-down';
@@ -43,7 +44,7 @@ export default defineConfig({
 
     // Plugins
 
-    setupNodeEvents(on, cypressConfig) {
+    async setupNodeEvents(on, cypressConfig) {
       on('before:browser:launch', (browser, launchOptions) => {
         if (browser.family === 'firefox') {
           // Firefox to treat localhost as secure context (needed for win.navigator.clipboard)
@@ -81,18 +82,20 @@ export default defineConfig({
       });
 
       // Seed supporting users and activity through the homeserver API (see plugins/seed.ts)
-      on(
-        'task',
-        createSeedTasks({
-          homeserverAdminUrl: String(cypressConfig.env['homeserverAdminUrl']),
-          homeserverAdminPassword: String(cypressConfig.env['homeserverAdminPassword']),
-          homeserverPublicKey: String(cypressConfig.env['homeserverPublicKey']),
-          nexusUrl: String(cypressConfig.env['nexusUrl']),
-        }),
-      );
+      const seedTasks = createSeedTasks({
+        homeserverAdminUrl: String(cypressConfig.env['homeserverAdminUrl']),
+        homeserverAdminPassword: String(cypressConfig.env['homeserverAdminPassword']),
+        homeserverPublicKey: String(cypressConfig.env['homeserverPublicKey']),
+        nexusUrl: String(cypressConfig.env['nexusUrl']),
+      });
+      on('task', seedTasks);
 
       // Wait for a phase's seeds to be indexed, all at once (see plugins/nexus.ts)
       on('task', createNexusTasks(String(cypressConfig.env['nexusUrl'])));
+
+      // The stubbed Lock Server's homeserver writes, for locks.cy.ts (see plugins/lock-server.ts)
+      cypressConfig.expose['lockServerWritesUrl'] = await startLockServerWrites(seedTasks.seedLockServerWrite);
+      return cypressConfig;
     },
     experimentalModifyObstructiveThirdPartyCode: true,
     // Chrome's native network path (Cypress 16) instruments the service worker script on the
