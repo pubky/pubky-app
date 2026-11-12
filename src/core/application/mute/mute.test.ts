@@ -1,6 +1,7 @@
 import { buildUri, listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TMuteApplicationCommitParams } from '@/application/mute/mute.types';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
@@ -14,6 +15,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalMuteService } from '@/services/local/mute/mute';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { stubMemoryHomeserver } from '@/test-utils/homeserver';
+import { createTestWebLocks } from '@/test-utils/web-locks';
 import { MuteApplication } from './mute';
 
 const MUTER = fakeOwner(1);
@@ -208,28 +210,6 @@ describe('MuteApplication.commitMute', () => {
     expect(putBlob).toHaveBeenCalledOnce();
   });
 
-  it('does not make commits for different pairs wait on each other', async () => {
-    const other = MuteNormalizer.to({ muter: MUTER, mutee: OTHER });
-    const pendingDelete = Promise.withResolvers<void>();
-    vi.spyOn(HomeserverService, 'deleteIdempotent').mockImplementation(() => pendingDelete.promise);
-    const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
-
-    const unmuteCommit = MuteApplication.commitMute(unmute);
-    const otherCommit = MuteApplication.commitMute({
-      eventType: HttpMethod.PUT,
-      muteUrl: other.url,
-      muteBody: other.body,
-      muter: MUTER,
-      mutee: OTHER,
-    });
-
-    await expect(otherCommit).resolves.toBeUndefined();
-    expect(putBlob).toHaveBeenCalledWith({ url: other.url, blob: other.body });
-
-    pendingDelete.resolve();
-    await expect(unmuteCommit).resolves.toBeUndefined();
-  });
-
   it('reports the local failure when both the database and the homeserver would fail', async () => {
     const createSpy = vi.spyOn(LocalMuteService, 'create').mockRejectedValue(new Error('db-fail'));
     const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(new Error('homeserver-fail'));
@@ -254,14 +234,17 @@ describe('MuteApplication against the in-memory homeserver', () => {
     vi.restoreAllMocks();
   });
 
-  const commit = (eventType: HttpMethod.PUT | HttpMethod.DELETE, mutee: Pubky) => {
+  /** The commit params the controller builds for `mutee`. */
+  const commitParams = (eventType: HttpMethod.PUT | HttpMethod.DELETE, mutee: Pubky): TMuteApplicationCommitParams => {
     const params = { muter: MUTER, mutee };
     if (eventType === HttpMethod.DELETE) {
-      return MuteApplication.commitMute({ ...params, eventType, deleteUrls: MuteNormalizer.toDeleteUrls(params) });
+      return { ...params, eventType, deleteUrls: MuteNormalizer.toDeleteUrls(params) };
     }
     const { url, body } = MuteNormalizer.to(params);
-    return MuteApplication.commitMute({ ...params, eventType, muteUrl: url, muteBody: body });
+    return { ...params, eventType, muteUrl: url, muteBody: body };
   };
+  const commit = (eventType: HttpMethod.PUT | HttpMethod.DELETE, mutee: Pubky) =>
+    MuteApplication.commitMute(commitParams(eventType, mutee));
 
   it('stores a mute as a private v1 file that fetchMutedUsers lists back', async () => {
     await commit(HttpMethod.PUT, MUTEE);
@@ -297,6 +280,205 @@ describe('MuteApplication against the in-memory homeserver', () => {
 
     await expect(MuteApplication.fetchMutedUsers(MUTER)).resolves.toEqual([MUTEE]);
     expect(homeserver.spies.listAll).toHaveBeenCalledExactlyOnceWith({ baseDirectory: PRIVATE_MUTES });
+  });
+
+  describe('sync lock', () => {
+    const SYNC_LOCK = `pubky-mutes-sync:${MUTER}`;
+    const writeLock = (mutee: Pubky) => `pubky-mute-write:${MUTER}:${mutee}`;
+    const muteUri = (mutee: Pubky) => buildUri(MUTER, 'mute', mutee);
+    let otherTab: Awaited<ReturnType<typeof openOtherTab>> | null = null;
+    /** Holds a failing test may leave, released after it so the next test does not wait on them. */
+    const holds: Array<() => void> = [];
+    /** The runs a test started, settled after it so none is still writing when the next test begins. */
+    const runs: Promise<unknown>[] = [];
+    const run = <T>(promise: Promise<T>) => {
+      runs.push(promise);
+      return promise;
+    };
+
+    // Through the app's own listing, which reads a directory that is gone as empty.
+    const storedMutes = () => HomeserverService.listAll({ baseDirectory: PRIVATE_MUTES });
+
+    /**
+     * Another tab of the app: a second instance of every module, sharing only what tabs share (the one
+     * IndexedDB behind both Dexie instances, `navigator.locks`, the homeserver). Its homeserver writes go
+     * to this tab's in-memory homeserver.
+     */
+    async function openOtherTab() {
+      vi.resetModules();
+      const { MuteApplication: application } = await import('@/application/mute/mute');
+      const { HomeserverService: service } = await import('@/services/homeserver/homeserver');
+      const { db: database } = await import('@/database/franky/franky');
+      vi.spyOn(service, 'putBlob').mockImplementation((params) => HomeserverService.putBlob(params));
+      vi.spyOn(service, 'deleteIdempotent').mockImplementation((url) => HomeserverService.deleteIdempotent(url));
+      return { application, close: () => database.close() };
+    }
+    /** Web Locks as the browser provides them: one manager shared by every tab (every module instance). */
+    const installWebLocks = () => {
+      const locks = createTestWebLocks();
+      Object.defineProperty(navigator, 'locks', { value: locks, configurable: true });
+      return locks;
+    };
+    /** Holds this tab's listing once it is taken, until `release`; `taken` resolves meanwhile. */
+    const holdListing = () => {
+      const taken = Promise.withResolvers<void>();
+      const released = Promise.withResolvers<void>();
+      const list = homeserver.spies.listAll.getMockImplementation()!;
+      homeserver.spies.listAll.mockImplementationOnce(async (params) => {
+        const urls = await list(params);
+        taken.resolve();
+        await released.promise;
+        return urls;
+      });
+      holds.push(() => released.resolve());
+      return { taken: taken.promise, release: () => released.resolve() };
+    };
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+    afterEach(async () => {
+      holds.splice(0).forEach((release) => release());
+      await Promise.allSettled(runs.splice(0));
+      Reflect.deleteProperty(navigator, 'locks');
+      otherTab?.close();
+      otherTab = null;
+    });
+
+    it('keeps a mute another tab makes while this tab is listing', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      const listing = holdListing();
+      const settled: string[] = [];
+
+      const fetching = run(MuteApplication.fetchMutedUsers(MUTER).then(() => settled.push('fetch')));
+      await listing.taken;
+      const params = commitParams(HttpMethod.PUT, MUTEE);
+      const muting = run(otherTab.application.commitMute(params).then(() => settled.push('write')));
+      await tick();
+      listing.release();
+      await Promise.all([fetching, muting]);
+
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
+      await expect(storedMutes()).resolves.toEqual([muteUri(MUTEE)]);
+      expect(settled).toEqual(['fetch', 'write']);
+    });
+
+    it('keeps an unmute another tab makes while this tab is listing', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      await commit(HttpMethod.PUT, MUTEE);
+      const listing = holdListing();
+      const settled: string[] = [];
+
+      const fetching = run(MuteApplication.fetchMutedUsers(MUTER).then(() => settled.push('fetch')));
+      await listing.taken;
+      const params = commitParams(HttpMethod.DELETE, MUTEE);
+      const unmuting = run(otherTab.application.commitMute(params).then(() => settled.push('write')));
+      await tick();
+      listing.release();
+      await Promise.all([fetching, unmuting]);
+
+      await expect(mutedStream()).resolves.toEqual([]);
+      await expect(storedMutes()).resolves.toEqual([]);
+      expect(settled).toEqual(['fetch', 'write']);
+    });
+
+    it('orders a mute from another tab behind an unmute whose delete is still retrying', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      await commit(HttpMethod.PUT, MUTEE);
+      const settled: string[] = [];
+      // The v1 copy's first DELETE failed: `deleteIdempotent` waits out its back-off outside the
+      // homeserver's per-file queue, then deletes again.
+      const retrying = Promise.withResolvers<void>();
+      holds.push(() => retrying.resolve());
+      const remove = homeserver.spies.deleteIdempotent.getMockImplementation()!;
+      homeserver.spies.deleteIdempotent.mockImplementation(async (url) => {
+        if (url === muteUri(MUTEE)) await retrying.promise;
+        return remove(url);
+      });
+
+      const unmuting = run(commit(HttpMethod.DELETE, MUTEE).then(() => settled.push('unmute')));
+      await vi.waitFor(() => expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledTimes(2));
+      const params = commitParams(HttpMethod.PUT, MUTEE);
+      const muting = run(otherTab.application.commitMute(params).then(() => settled.push('mute')));
+      await tick();
+      retrying.resolve();
+      await Promise.all([unmuting, muting]);
+
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
+      await expect(storedMutes()).resolves.toEqual([muteUri(MUTEE)]);
+      expect(settled).toEqual(['unmute', 'mute']);
+    });
+
+    it('does not make commits for different pairs wait on each other', async () => {
+      installWebLocks();
+      const settled: string[] = [];
+      // The unmute's v1 DELETE is still retrying: it holds the user lock shared and its pair lock exclusive.
+      const retrying = Promise.withResolvers<void>();
+      holds.push(() => retrying.resolve());
+      const remove = homeserver.spies.deleteIdempotent.getMockImplementation()!;
+      homeserver.spies.deleteIdempotent.mockImplementation(async (url) => {
+        if (url === muteUri(MUTEE)) await retrying.promise;
+        return remove(url);
+      });
+
+      const unmuting = run(commit(HttpMethod.DELETE, MUTEE).then(() => settled.push('unmute')));
+      await vi.waitFor(() => expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledTimes(2));
+      await run(commit(HttpMethod.PUT, OTHER));
+
+      expect(settled).toEqual([]);
+      await expect(mutedStream()).resolves.toEqual([OTHER]);
+      await expect(storedMutes()).resolves.toEqual([muteUri(OTHER)]);
+      retrying.resolve();
+      await unmuting;
+      expect(settled).toEqual(['unmute']);
+    });
+
+    it('releases the user lock when the LIST fails, so another tab still writes', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      homeserver.spies.listAll.mockRejectedValueOnce(new Error('offline'));
+
+      await expect(MuteApplication.fetchMutedUsers(MUTER)).rejects.toThrow('offline');
+
+      await expect(otherTab.application.commitMute(commitParams(HttpMethod.PUT, MUTEE))).resolves.toBeUndefined();
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
+    });
+
+    it('releases both locks when the homeserver write fails, so another tab and the fetch go on', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      homeserver.spies.putBlob.mockRejectedValueOnce(new Error('offline'));
+
+      await expect(commit(HttpMethod.PUT, MUTEE)).rejects.toThrow('offline');
+
+      await expect(otherTab.application.commitMute(commitParams(HttpMethod.DELETE, MUTEE))).resolves.toBeUndefined();
+      await expect(MuteApplication.fetchMutedUsers(MUTER)).resolves.toEqual([]);
+      await expect(mutedStream()).resolves.toEqual([]);
+    });
+
+    it('holds the user lock shared and the pair lock exclusive for a write, the user lock exclusive for the fetch', async () => {
+      const request = vi.spyOn(installWebLocks(), 'request');
+      const other = fakeOwner(4);
+
+      await commit(HttpMethod.PUT, MUTEE);
+      await commit(HttpMethod.PUT, OTHER);
+      await MuteApplication.fetchMutedUsers(MUTER);
+      await commit(HttpMethod.DELETE, MUTEE);
+      homeserver.spies.listAll.mockResolvedValueOnce([]);
+      await MuteApplication.fetchMutedUsers(other);
+
+      expect(request.mock.calls.map(([name, options]) => [name, (options as LockOptions).mode])).toEqual([
+        [SYNC_LOCK, 'shared'],
+        [writeLock(MUTEE), 'exclusive'],
+        [SYNC_LOCK, 'shared'],
+        [writeLock(OTHER), 'exclusive'],
+        [SYNC_LOCK, 'exclusive'],
+        [SYNC_LOCK, 'shared'],
+        [writeLock(MUTEE), 'exclusive'],
+        [`pubky-mutes-sync:${other}`, 'exclusive'],
+      ]);
+    });
   });
 });
 
@@ -399,45 +581,39 @@ describe('MuteApplication.fetchMutedUsers', () => {
 
     const flushIndexedDb = () => new Promise((resolve) => setTimeout(resolve, 20));
 
-    it('keeps a mute whose homeserver write is still running when the LIST answers', async () => {
+    it('waits for a commit whose homeserver write is still running, then lists what it wrote', async () => {
       const finishPut = pendingPut();
       const commit = MuteApplication.commitMute(mute);
       await flushIndexedDb();
       await expect(mutedStream()).resolves.toEqual([MUTEE]);
+      const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([buildUri(MUTER, 'mute', MUTEE)]);
 
-      vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([]);
-      await expect(MuteApplication.fetchMutedUsers(MUTER)).resolves.toEqual([]);
+      const refresh = MuteApplication.fetchMutedUsers(MUTER);
+      await flushIndexedDb();
+      // The refresh holds the sync lock exclusive, so it does not even LIST while the commit is out.
+      expect(listSpy).not.toHaveBeenCalled();
 
-      await expect(mutedStream()).resolves.toEqual([MUTEE]);
       finishPut();
       await commit;
+      await expect(refresh).resolves.toEqual([MUTEE]);
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
     });
 
-    it('keeps a mute that started and finished while the LIST was out', async () => {
+    it('makes a commit wait while the LIST is out, then applies the listing before the commit writes', async () => {
       vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+      const createSpy = vi.spyOn(LocalMuteService, 'create');
       const answerList = pendingList();
       const refresh = MuteApplication.fetchMutedUsers(MUTER);
 
-      await MuteApplication.commitMute(mute);
-      answerList([]);
-      await refresh;
-
-      await expect(mutedStream()).resolves.toEqual([MUTEE]);
-    });
-
-    it('keeps a mute that started before the LIST and finished while it was out', async () => {
-      const finishPut = pendingPut();
       const commit = MuteApplication.commitMute(mute);
       await flushIndexedDb();
+      expect(createSpy).not.toHaveBeenCalled();
 
-      const answerList = pendingList();
-      const refresh = MuteApplication.fetchMutedUsers(MUTER);
-      finishPut();
+      // Another device muted OTHER meanwhile: the listing lands, then the waiting mute lands on top of it.
+      answerList([buildUri(MUTER, 'mute', OTHER)]);
+      await expect(refresh).resolves.toEqual([OTHER]);
       await commit;
-      answerList([]);
-      await refresh;
-
-      await expect(mutedStream()).resolves.toEqual([MUTEE]);
+      await expect(mutedStream()).resolves.toEqual([MUTEE, OTHER]);
     });
 
     it('writes again on the next refresh once no commit overlaps it', async () => {
@@ -450,58 +626,29 @@ describe('MuteApplication.fetchMutedUsers', () => {
       await expect(mutedStream()).resolves.toEqual([OTHER]);
     });
 
-    describe('two LISTs out at once', () => {
-      /** Two LISTs the test answers by hand, in the order they were started. */
-      function twoPendingLists() {
-        const answers: Array<(urls: string[]) => void> = [];
-        const pending = () =>
+    it('runs refreshes started at once one after the other, each applying its own listing', async () => {
+      /** The LISTs the test answers by hand, in the order they were started. */
+      const answers: Array<(urls: string[]) => void> = [];
+      vi.spyOn(HomeserverService, 'listAll').mockImplementation(
+        () =>
           new Promise<string[]>((resolve) => {
             answers.push(resolve);
-          });
-        vi.spyOn(HomeserverService, 'listAll').mockImplementationOnce(pending).mockImplementationOnce(pending);
-        return answers;
-      }
+          }),
+      );
+      const older = MuteApplication.fetchMutedUsers(MUTER);
+      const newer = MuteApplication.fetchMutedUsers(MUTER);
+      await flushIndexedDb();
+      // The later refresh waits for the sync lock: one LIST is out, never two.
+      expect(answers).toHaveLength(1);
 
-      it('drops an older LIST that answers after a newer one', async () => {
-        const answers = twoPendingLists();
-        const older = MuteApplication.fetchMutedUsers(MUTER);
-        const newer = MuteApplication.fetchMutedUsers(MUTER);
+      answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
+      await expect(older).resolves.toEqual([MUTEE]);
+      await expect(mutedStream()).resolves.toEqual([MUTEE]);
 
-        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
-        await newer;
-        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
-        await older;
-
-        await expect(mutedStream()).resolves.toEqual([OTHER]);
-      });
-
-      it('drops an older LIST after a newer one that found nothing to rewrite', async () => {
-        await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [OTHER] });
-        const answers = twoPendingLists();
-        const older = MuteApplication.fetchMutedUsers(MUTER);
-        const newer = MuteApplication.fetchMutedUsers(MUTER);
-
-        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
-        await newer;
-        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
-        await older;
-
-        await expect(mutedStream()).resolves.toEqual([OTHER]);
-      });
-
-      it('applies both when they answer in order, so a sign-in LIST still persists before a later poll', async () => {
-        const answers = twoPendingLists();
-        const older = MuteApplication.fetchMutedUsers(MUTER);
-        const newer = MuteApplication.fetchMutedUsers(MUTER);
-
-        answers[0]([buildUri(MUTER, 'mute', MUTEE)]);
-        await older;
-        await expect(mutedStream()).resolves.toEqual([MUTEE]);
-
-        answers[1]([buildUri(MUTER, 'mute', OTHER)]);
-        await newer;
-        await expect(mutedStream()).resolves.toEqual([OTHER]);
-      });
+      await vi.waitFor(() => expect(answers).toHaveLength(2));
+      answers[1]([buildUri(MUTER, 'mute', OTHER)]);
+      await expect(newer).resolves.toEqual([OTHER]);
+      await expect(mutedStream()).resolves.toEqual([OTHER]);
     });
 
     it('writes nothing once the session the fetch started for has ended', async () => {
