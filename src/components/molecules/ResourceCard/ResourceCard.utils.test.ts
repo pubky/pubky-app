@@ -20,6 +20,7 @@ import {
   getFaviconUrl,
   getHttpUrl,
   getLinkHost,
+  getPubkyObjectApp,
   getResourceFamily,
   getResourceLinks,
   getResourceListNote,
@@ -448,6 +449,19 @@ describe('getAlsoOnName', () => {
     expect(getAlsoOnName(videoFixture.also_on[0])).toBe('TIDAL');
     expect(getAlsoOnName({ uri: 'https://www.example.com/a', site: null })).toBe('example.com');
     expect(getAlsoOnName({ uri: 'isbn:9780140328721', site: '  ' })).toBe('9780140328721');
+  });
+});
+
+describe('getPubkyObjectApp', () => {
+  it('names a Pubky object by its app, never by its path; nothing for any other URI', () => {
+    expect(
+      getPubkyObjectApp(
+        'pubky://1kzgu8sshfqyaqqbm8hkxww18juw6mms8rszs1e8hrg8sy4uasio/pub/loopky/decks/a/manifest.json',
+      ),
+    ).toBe('loopky');
+    expect(getPubkyObjectApp('pubky://1kzgu8sshfqyaqqbm8hkxww18juw6mms8rszs1e8hrg8sy4uasio/pub/')).toBeNull();
+    expect(getPubkyObjectApp('isbn:9780140328721')).toBeNull();
+    expect(getPubkyObjectApp('https://example.com/pub/x/y')).toBeNull();
   });
 });
 

@@ -34,6 +34,7 @@ describe('FilterContent', () => {
       { value: CONTENT.LINKS, label: 'Links' },
       { value: CONTENT.FILES, label: 'Files' },
       { value: CONTENT.LOCKS, label: 'Locks' },
+      { value: CONTENT.RESOURCES, label: 'External resources' },
     ];
 
     tabsToTest.forEach(({ value, label }) => {

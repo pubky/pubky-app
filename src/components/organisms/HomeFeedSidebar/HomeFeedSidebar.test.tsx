@@ -82,6 +82,16 @@ const {
   mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
 }));
 
+// Whether the configured Pinakes serves My network (`wot_2`)
+const reachSet = vi.hoisted(() => ({ served: false }));
+vi.mock('@/config/pinakes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/pinakes')>()),
+  isPinakesReachSetServed: () => reachSet.served,
+}));
+beforeEach(() => {
+  reachSet.served = false;
+});
+
 // Mock useHomeStore; getState() reads the same state so handlers see it too
 vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: Object.assign(
@@ -118,6 +128,14 @@ vi.mock('@/atoms/Container/Container', () => {
     ),
   };
 });
+
+// Search's External resources filters have their own tests: here only where and on which feed they show
+const mockResourceFilters = vi.hoisted(() =>
+  vi.fn((_props: { feed?: unknown }) => <div data-testid="resource-filters" />),
+);
+vi.mock('@/organisms/SearchResources/SearchResourceFilters', () => ({
+  SearchResourceFilters: (props: { feed?: unknown }) => mockResourceFilters(props),
+}));
 
 // Mock Molecules
 vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
@@ -238,7 +256,7 @@ describe('HomeFeedSidebar', () => {
 
     expect(screen.getByTestId('filter-content')).toHaveAttribute(
       'data-disabled-tabs',
-      'short,long,collections,links,files,locks',
+      'short,long,collections,links,files,locks,resources',
     );
   });
 
@@ -391,6 +409,93 @@ describe('HomeFeedSidebar', () => {
 
     expect(mockSetTaggedAsActive).toHaveBeenCalledWith(true);
     expect(mockSetReach).not.toHaveBeenCalled();
+  });
+});
+
+describe('HomeFeedSidebar - External resources', () => {
+  const resourceState = () => ({
+    ...mockUseHomeStore(),
+    reach: 'following',
+    sort: 'total_engagement',
+    taggedAsActive: false,
+    profileTags: ['bitcoiner'],
+    content: CONTENT.RESOURCES,
+  });
+
+  it('keeps Following, gives Search’s filters in place of Sort, and leaves out My network, Me, Tagged as and Visual with no note', () => {
+    mockUseHomeStore.mockReturnValue(resourceState());
+    mockFilterSort.mockClear();
+
+    render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+
+    expect(mockFilterReach).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selectedTab: REACH.FOLLOWING,
+        hiddenTabs: [REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.ME],
+        profileTagsDisabled: true,
+      }),
+    );
+    expect(mockFilterReach.mock.lastCall![0]).not.toHaveProperty('subtitle');
+    // Search's filters on the Home feed (its reach, its sort the order without one picked), with their own Sort
+    expect(mockResourceFilters).toHaveBeenLastCalledWith({
+      feed: { tags: [], reach: 'following', sort: 'total_engagement' },
+    });
+    expect(mockFilterSort).not.toHaveBeenCalled();
+    expect(mockFilterLayout).toHaveBeenLastCalledWith(expect.objectContaining({ showVisual: false }));
+    expect(mockFilterLayout.mock.lastCall![0]).not.toHaveProperty('subtitle');
+    expect(mockFilterContent).toHaveBeenLastCalledWith(expect.objectContaining({ selectedTab: CONTENT.RESOURCES }));
+  });
+
+  it('lists My network for External resources where Pinakes serves it, still not Me or Tagged as', () => {
+    reachSet.served = true;
+    mockUseHomeStore.mockReturnValue(resourceState());
+
+    render(<HomeFeedSidebar allowVisualLayout />);
+
+    expect(mockFilterReach).toHaveBeenLastCalledWith(
+      expect.objectContaining({ hiddenTabs: [TAGGED_AS_FILTER_KEY, REACH.ME] }),
+    );
+  });
+
+  it('hands a Me reach, which is not applied to external resources, to the reach filter as a hidden one', () => {
+    mockUseHomeStore.mockReturnValue({ ...resourceState(), reach: REACH.ME, taggedAsActive: false });
+
+    render(<HomeFeedSidebar allowVisualLayout />);
+
+    const { selectedTab, hiddenTabs } = mockFilterReach.mock.lastCall![0] as {
+      selectedTab?: string;
+      hiddenTabs?: string[];
+    };
+    expect(hiddenTabs).toContain(selectedTab);
+  });
+
+  it('leaves the post filters as they are for post content', () => {
+    mockResourceFilters.mockClear();
+    render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+    expect(mockResourceFilters).not.toHaveBeenCalled();
+
+    expect(mockFilterReach).toHaveBeenLastCalledWith(
+      expect.objectContaining({ selectedTab: REACH.FOLLOWING, hiddenTabs: undefined }),
+    );
+    expect(mockFilterLayout).toHaveBeenLastCalledWith(expect.objectContaining({ showVisual: true }));
+  });
+
+  it('disables External resources while Visual is active, as other non-media content', () => {
+    mockUseHomeStore.mockReturnValue(resourceState());
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'visual',
+      effectiveLayout: 'visual',
+      isVisualRequested: true,
+      isVisualActive: true,
+      isPhoneViewport: false,
+    });
+
+    render(<HomeFeedSidebar allowVisualLayout />);
+
+    const { disabledTabs, selectedTab } = mockFilterContent.mock.lastCall![0];
+    expect(disabledTabs).toContain(CONTENT.RESOURCES);
+    expect(selectedTab).toBe(CONTENT.ALL);
+    expect(mockFilterReach).toHaveBeenLastCalledWith(expect.objectContaining({ hiddenTabs: undefined }));
   });
 });
 

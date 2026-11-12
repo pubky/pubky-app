@@ -81,6 +81,7 @@ const mockReplace = vi.fn();
 const mockUsePathname = vi.fn();
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({
     push: mockPush,
     replace: mockReplace,
@@ -89,6 +90,34 @@ vi.mock('next/navigation', () => ({
 
 // Mock toast
 vi.mock('@/molecules/Toaster/toast');
+
+// The saved services' names: Pinakes' host facet of a search on them
+const resourceSearch = vi.hoisted(() => ({
+  hostFacets: null as { host: string; site: string; count: number }[] | null,
+  loading: false,
+  queries: [] as unknown[],
+}));
+vi.mock('@/hooks/useResourceSearch/useResourceSearch', () => ({
+  useResourceSearch: (query: unknown) => {
+    resourceSearch.queries.push(query);
+    return { hostFacets: query ? resourceSearch.hostFacets : null, loading: !!query && resourceSearch.loading };
+  },
+}));
+beforeEach(() => {
+  resourceSearch.hostFacets = null;
+  resourceSearch.loading = false;
+  resourceSearch.queries = [];
+});
+
+// Whether the configured Pinakes serves My network (`wot_2`)
+const reachSet = vi.hoisted(() => ({ served: false }));
+vi.mock('@/config/pinakes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/pinakes')>()),
+  isPinakesReachSetServed: () => reachSet.served,
+}));
+beforeEach(() => {
+  reachSet.served = false;
+});
 
 vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
@@ -325,8 +354,17 @@ vi.mock('@/atoms/Select/Select', () => {
     ),
     SelectValue: ({ placeholder }: { placeholder?: string }) => <span data-testid="select-value">{placeholder}</span>,
     SelectContent: ({ children }: { children: React.ReactNode }) => <div data-testid="select-content">{children}</div>,
-    SelectItem: ({ children, value }: { children: React.ReactNode; key?: string; value: string }) => (
-      <div data-testid={`select-item-${value}`} data-value={value}>
+    SelectItem: ({
+      children,
+      value,
+      disabled,
+    }: {
+      children: React.ReactNode;
+      key?: string;
+      value: string;
+      disabled?: boolean;
+    }) => (
+      <div data-testid={`select-item-${value}`} data-value={value} data-disabled={disabled}>
         {children}
       </div>
     ),
@@ -1070,6 +1108,484 @@ describe('CustomFeedDialog', () => {
     expect(within(section).getByText('Files')).toBeInTheDocument();
   });
 
+  describe('External resources', () => {
+    it('offers External resources as a content choice', () => {
+      render(<CustomFeedDialog mode="create" open />);
+
+      const section = screen.getByTestId('content-filter-section');
+      expect(within(section).getByText('External resources')).toBeInTheDocument();
+    });
+
+    it('moves a Me reach to All and leaves out the reaches and layout the resource search has none for', async () => {
+      render(<CustomFeedDialog mode="create" open />);
+      changeSelectValue('reach-select', 'me');
+      changeSelectValue('sort-select', 'popularity');
+
+      changeSelectValue('content-select', 'RESOURCES');
+
+      await waitFor(() => expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', 'all'));
+      // Popularity is served (Pinakes' activity rank)
+      expect(screen.getByTestId('sort-select')).toHaveAttribute('data-value', 'popularity');
+      const reach = screen.getByTestId('reach-filter-section');
+      for (const value of ['all', 'following', 'friends']) {
+        expect(within(reach).getByTestId(`select-item-${value}`)).not.toHaveAttribute('data-disabled', 'true');
+      }
+      for (const value of ['wot', TAGGED_AS_FILTER_KEY, 'me']) {
+        expect(within(reach).queryByTestId(`select-item-${value}`)).not.toBeInTheDocument();
+      }
+      const sort = screen.getByTestId('sort-filter-section');
+      expect(within(sort).getByTestId('select-item-popularity')).not.toHaveAttribute('data-disabled', 'true');
+      // Resource cards have no Visual tiles
+      expect(
+        within(screen.getByTestId('layout-filter-section')).queryByTestId('select-item-visual'),
+      ).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('layout-filter-section')).getByTestId('select-item-columns'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/have no My network/)).not.toBeInTheDocument();
+    });
+
+    it('keeps a network reach when External resources is chosen, and offers every kind and its sub-kinds', async () => {
+      render(<CustomFeedDialog mode="create" open />);
+      expect(screen.queryByTestId('resource-type-section')).not.toBeInTheDocument();
+      changeSelectValue('reach-select', 'following');
+
+      changeSelectValue('content-select', 'RESOURCES');
+
+      await waitFor(() => expect(screen.getByTestId('resource-type-section')).toBeInTheDocument());
+      expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', 'following');
+      const type = screen.getByTestId('resource-type-section');
+      expect(within(type).getByTestId('select-item-all')).toHaveTextContent('All types');
+      // Each kind of the search, its types as the feed stores them (sorted), then its sub-kinds
+      for (const [value, label] of [
+        ['MusicGroup,MusicPlaylist,MusicRecording', 'Music'],
+        ['MusicRecording', 'Songs'],
+        ['MusicAlbum', 'Albums'],
+        ['Event', 'Events'],
+        ['Place', 'Places'],
+        ['Restaurant', 'Restaurants'],
+        ['Report,ScholarlyArticle', 'Papers & reports'],
+        ['Recipe', 'Recipes'],
+        ['JobPosting', 'Jobs'],
+        ['Product', 'Products'],
+      ]) {
+        expect(within(type).getByTestId(`select-item-${value}`)).toHaveTextContent(label);
+      }
+      // A sub-kind tells a screen reader which kind it belongs to; a kind needs no such text
+      expect(within(type).getByTestId('select-item-MusicRecording')).toHaveTextContent('Songs, in Music');
+      expect(within(type).getByTestId('select-item-Restaurant')).toHaveTextContent('Restaurants, in Places');
+      expect(within(screen.getByTestId('select-item-Place')).queryByText(/, in /)).not.toBeInTheDocument();
+    });
+
+    it('shows each Type with its kind’s icon, as the Kind filter does', () => {
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({ target: 'resources', resource_types: ['Restaurant', 'BarOrPub'], content: null })}
+        />,
+      );
+      const icon = (value: string) =>
+        within(screen.getByTestId('resource-type-section')).getByTestId(`select-item-${value}`).querySelector('svg');
+      // All types: the Kind filter's All kinds icon
+      expect(icon('all')).toHaveClass('lucide-layout-grid');
+      expect(icon('MusicGroup,MusicPlaylist,MusicRecording')).toHaveClass('lucide-music');
+      // A sub-kind: its kind's icon
+      expect(icon('MusicRecording')).toHaveClass('lucide-music');
+      expect(icon('Restaurant')).toHaveClass('lucide-map-pin');
+      expect(icon('Event')).toHaveClass('lucide-calendar-days');
+      // Types no option stands for: the Kind filter's icon for a kind it has none for
+      expect(icon('BarOrPub,Restaurant')).toHaveClass('lucide-shapes');
+    });
+
+    it('labels the tag field for resources, not posts', async () => {
+      render(<CustomFeedDialog mode="create" open />);
+      expect(screen.getByText('Post Tags')).toBeInTheDocument();
+
+      changeSelectValue('content-select', 'RESOURCES');
+
+      await waitFor(() => expect(screen.queryByText('Post Tags')).not.toBeInTheDocument());
+      expect(screen.getByText('Tags')).toBeInTheDocument();
+      expect(screen.getByText('Filter by what external resources are tagged with.')).toBeInTheDocument();
+    });
+
+    it('creates a feed of external resources', async () => {
+      mockCommitCreate.mockResolvedValue(createMockFeed({ id: 'new-feed-123', name: 'Music' }));
+      render(<CustomFeedDialog mode="create" open />);
+      fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Music' } });
+      fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'music' } });
+      changeSelectValue('content-select', 'RESOURCES');
+      await waitFor(() => expect(screen.getByTestId('resource-type-section')).toBeInTheDocument());
+      changeSelectValue('resource-type-select', 'MusicRecording');
+
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+
+      await waitFor(() =>
+        expect(mockCommitCreate).toHaveBeenCalledWith({
+          name: 'Music',
+          icon: 'activity',
+          reach: 'all',
+          sort: 'recent',
+          layout: 'columns',
+          content: null,
+          target: 'resources',
+          resource_types: ['MusicRecording'],
+          resource_filters: null,
+          tags: ['music'],
+          domain_tags: [],
+        }),
+      );
+    });
+
+    it('keeps a Visual layout another client stored on a feed of external resources', async () => {
+      mockCommitUpdate.mockResolvedValue(createMockFeed());
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({ target: 'resources', content: null, reach: 'all', sort: 'recent', layout: 'visual' })}
+        />,
+      );
+
+      expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'RESOURCES');
+      expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', 'visual');
+      // The stored Visual stays listed, so the Select reads what the feed holds
+      expect(within(screen.getByTestId('layout-filter-section')).getByTestId('select-item-visual')).toBeInTheDocument();
+      expect(within(screen.getByTestId('content-filter-section')).getByText('External resources')).toBeInTheDocument();
+      fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Renamed' } });
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+
+      await waitFor(() =>
+        expect(mockCommitUpdate).toHaveBeenCalledWith({
+          feedId: 'feed-abc123',
+          changes: expect.objectContaining({ name: 'Renamed', layout: 'visual', target: 'resources', content: null }),
+        }),
+      );
+    });
+
+    it('reads a stored reach a feed of external resources has no counterpart for as All, with no note', async () => {
+      mockCommitUpdate.mockResolvedValue(createMockFeed());
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({ target: 'resources', content: null, reach: 'wot', sort: 'recent', layout: 'columns' })}
+        />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', 'all'));
+      expect(
+        within(screen.getByTestId('reach-filter-section')).queryByTestId('select-item-wot'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/have no My network/)).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+      await waitFor(() =>
+        expect(mockCommitUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ changes: expect.objectContaining({ reach: 'all', target: 'resources' }) }),
+        ),
+      );
+    });
+
+    it('keeps and lists My network on a feed of external resources where Pinakes serves it', async () => {
+      reachSet.served = true;
+      mockCommitUpdate.mockResolvedValue(createMockFeed());
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({ target: 'resources', content: null, reach: 'wot', sort: 'recent', layout: 'columns' })}
+        />,
+      );
+
+      const reachSection = within(screen.getByTestId('reach-filter-section'));
+      expect(reachSection.getByTestId('select-item-wot')).toHaveTextContent('My network');
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', 'wot');
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+      await waitFor(() =>
+        expect(mockCommitUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ changes: expect.objectContaining({ reach: 'wot', target: 'resources' }) }),
+        ),
+      );
+    });
+
+    it('drops profile tags another client stored on a feed of external resources, so it saves', async () => {
+      mockCommitUpdate.mockResolvedValue(createMockFeed());
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({
+            target: 'resources',
+            content: null,
+            reach: 'wot',
+            domain_tags: ['dev'],
+            sort: 'recent',
+            layout: 'columns',
+          })}
+        />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+      await waitFor(() =>
+        expect(mockCommitUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ changes: expect.objectContaining({ reach: 'all', domain_tags: [] }) }),
+        ),
+      );
+    });
+
+    it('offers no Visual layout for a new feed of external resources', async () => {
+      render(<CustomFeedDialog mode="create" open />);
+
+      changeSelectValue('content-select', 'RESOURCES');
+
+      await waitFor(() =>
+        expect(
+          within(screen.getByTestId('layout-filter-section')).queryByTestId('select-item-visual'),
+        ).not.toBeInTheDocument(),
+      );
+    });
+
+    it('creates a feed of a whole kind with every type of the kind', async () => {
+      mockCommitCreate.mockResolvedValue(createMockFeed({ id: 'new-feed-123', name: 'Music' }));
+      render(<CustomFeedDialog mode="create" open />);
+      fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Music' } });
+      fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'music' } });
+      changeSelectValue('content-select', 'RESOURCES');
+      await waitFor(() => expect(screen.getByTestId('resource-type-section')).toBeInTheDocument());
+      changeSelectValue('resource-type-select', 'MusicGroup,MusicPlaylist,MusicRecording');
+
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+
+      await waitFor(() =>
+        expect(mockCommitCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            target: 'resources',
+            resource_types: ['MusicGroup', 'MusicPlaylist', 'MusicRecording'],
+          }),
+        ),
+      );
+    });
+
+    it('keeps the types another client saved that no option stands for', async () => {
+      mockCommitUpdate.mockResolvedValue(createMockFeed());
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({ target: 'resources', resource_types: ['Restaurant', 'BarOrPub'], content: null })}
+        />,
+      );
+
+      expect(screen.getByTestId('resource-type-select')).toHaveAttribute('data-value', 'BarOrPub,Restaurant');
+      expect(
+        within(screen.getByTestId('resource-type-section')).getByTestId('select-item-BarOrPub,Restaurant'),
+      ).toHaveTextContent('Bars, Restaurants');
+      fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Renamed' } });
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+
+      await waitFor(() =>
+        expect(mockCommitUpdate).toHaveBeenCalledWith({
+          feedId: 'feed-abc123',
+          changes: expect.objectContaining({ name: 'Renamed', resource_types: ['BarOrPub', 'Restaurant'] }),
+        }),
+      );
+    });
+
+    it('lists the saved filters as plain rows, removes one, and drops a kind’s own with another Type', async () => {
+      mockCommitUpdate.mockResolvedValue(createMockFeed());
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({
+            target: 'resources',
+            resource_types: ['Event'],
+            resource_filters: { when: 'week', near: '47.37,8.54', place: 'Zürich', rows: 'links' },
+            content: null,
+          })}
+        />,
+      );
+
+      const rows = screen.getByTestId('resource-filter-rows');
+      expect(within(rows).getByTestId('resource-filter-row-when')).toHaveTextContent('When: This week');
+      expect(within(rows).getByTestId('resource-filter-row-near')).toHaveTextContent('Where: Zürich · Within 10 km');
+      // Plain rows, not tags
+      expect(within(rows).queryByTestId(/readonly-tag/)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('resource-filter-row-rows'));
+      // Places have Where, not When
+      changeSelectValue('resource-type-select', 'Place');
+      await waitFor(() => expect(screen.queryByTestId('resource-filter-row-when')).not.toBeInTheDocument());
+      expect(screen.getByTestId('resource-filter-row-near')).toBeInTheDocument();
+
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+      await waitFor(() =>
+        expect(mockCommitUpdate).toHaveBeenCalledWith({
+          feedId: 'feed-abc123',
+          changes: expect.objectContaining({
+            resource_types: ['Place'],
+            resource_filters: { near: '47.37,8.54', place: 'Zürich' },
+          }),
+        }),
+      );
+    });
+
+    it('names the saved services, read with them from Pinakes while the dialog is open', () => {
+      resourceSearch.hostFacets = [
+        { host: 'music.amazon.co.uk', site: 'Amazon Music', count: 1 },
+        { host: 'music.amazon.com', site: 'Amazon Music', count: 1 },
+        { host: 'open.spotify.com', site: 'Spotify', count: 27 },
+      ];
+      const hosts = ['music.amazon.co.uk', 'music.amazon.com', 'open.spotify.com'];
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({
+            target: 'resources',
+            resource_types: ['MusicGroup', 'MusicPlaylist', 'MusicRecording'],
+            resource_filters: { host: hosts.join(',') },
+            content: null,
+          })}
+        />,
+      );
+
+      expect(screen.getByTestId('resource-filter-row-host')).toHaveTextContent('Service: Amazon Music, Spotify');
+      expect(resourceSearch.queries).toContainEqual(expect.objectContaining({ hosts, extraFacets: ['host'] }));
+    });
+
+    it('shows the Service row loading, never its hosts, until the names are read, and the hosts once it failed', () => {
+      resourceSearch.loading = true;
+      const feed = createMockFeed({
+        target: 'resources',
+        resource_types: ['MusicGroup', 'MusicPlaylist', 'MusicRecording'],
+        resource_filters: { host: 'music.amazon.com,open.spotify.com' },
+        content: null,
+      });
+      const { rerender } = render(<CustomFeedDialog mode="edit" open feed={feed} />);
+
+      const row = screen.getByTestId('resource-filter-row-host');
+      expect(row.textContent).toBe('Service:');
+      expect(row).toHaveAccessibleName('Remove Service: (loading)');
+      expect(within(row).getByTestId('removable-row-skeleton')).toBeInTheDocument();
+
+      // The read failed: a host reads as itself
+      resourceSearch.loading = false;
+      rerender(
+        <TooltipProvider delayDuration={0}>
+          <CustomFeedDialog mode="edit" open feed={feed} />
+        </TooltipProvider>,
+      );
+      expect(screen.getByTestId('resource-filter-row-host')).toHaveTextContent(
+        'Service: music.amazon.com, open.spotify.com',
+      );
+      expect(screen.queryByTestId('removable-row-skeleton')).not.toBeInTheDocument();
+    });
+
+    it('keeps the names the last read gave while they are read again', () => {
+      resourceSearch.hostFacets = [
+        { host: 'music.amazon.com', site: 'Amazon Music', count: 1 },
+        { host: 'open.spotify.com', site: 'Spotify', count: 27 },
+      ];
+      const feed = createMockFeed({
+        target: 'resources',
+        resource_types: ['MusicGroup', 'MusicPlaylist', 'MusicRecording'],
+        resource_filters: { host: 'music.amazon.com,open.spotify.com' },
+        content: null,
+      });
+      const dialog = (open: boolean) => (
+        <TooltipProvider delayDuration={0}>
+          <CustomFeedDialog mode="edit" open={open} feed={feed} />
+        </TooltipProvider>
+      );
+      const { rerender } = render(<CustomFeedDialog mode="edit" open feed={feed} />);
+      expect(screen.getByTestId('resource-filter-row-host')).toHaveTextContent('Service: Amazon Music, Spotify');
+
+      // The names are read again (closed and opened while mounted, as the Create Feed dialog stays)
+      rerender(dialog(false));
+      resourceSearch.hostFacets = null;
+      resourceSearch.loading = true;
+      rerender(dialog(true));
+      const row = screen.getByTestId('resource-filter-row-host');
+      expect(row).toHaveTextContent('Service: Amazon Music, Spotify');
+      expect(within(row).queryByTestId('removable-row-skeleton')).not.toBeInTheDocument();
+    });
+
+    it('reads no service names while closed, or for a feed without saved services', () => {
+      const saved = createMockFeed({
+        target: 'resources',
+        resource_types: ['MusicRecording'],
+        resource_filters: { host: 'open.spotify.com' },
+        content: null,
+      });
+      const { unmount } = render(<CustomFeedDialog mode="edit" open={false} feed={saved} />);
+      unmount();
+      const unsaved = createMockFeed({
+        target: 'resources',
+        resource_types: ['MusicRecording'],
+        resource_filters: { when: 'week' },
+        content: null,
+      });
+      render(<CustomFeedDialog mode="edit" open feed={unsaved} />);
+
+      expect(resourceSearch.queries.length).toBeGreaterThan(0);
+      expect(resourceSearch.queries.every((query) => query === null)).toBe(true);
+    });
+
+    it('keeps a feed of the type named ALL, which is no "every type"', async () => {
+      mockCommitUpdate.mockResolvedValue(createMockFeed());
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({ target: 'resources', resource_types: ['ALL'], content: null })}
+        />,
+      );
+
+      expect(screen.getByTestId('resource-type-select')).toHaveAttribute('data-value', 'ALL');
+      fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Renamed' } });
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+
+      await waitFor(() =>
+        expect(mockCommitUpdate).toHaveBeenCalledWith({
+          feedId: 'feed-abc123',
+          changes: expect.objectContaining({ resource_types: ['ALL'] }),
+        }),
+      );
+    });
+
+    it('reopens a feed of external resources as such, keeping its layout', () => {
+      render(
+        <CustomFeedDialog
+          mode="edit"
+          open
+          feed={createMockFeed({
+            target: 'resources',
+            resource_types: ['Book'],
+            content: null,
+            reach: 'all',
+            sort: 'recent',
+            layout: 'cards',
+          })}
+        />,
+      );
+
+      expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'RESOURCES');
+      expect(screen.getByTestId('resource-type-select')).toHaveAttribute('data-value', 'Book');
+      expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', 'cards');
+      expect(screen.getByText('Tags')).toBeInTheDocument();
+    });
+  });
+
   it('limits content filter options when layout is Visual', async () => {
     render(
       <CustomFeedDialog mode="create" open>
@@ -1316,6 +1832,9 @@ describe('CustomFeedDialog', () => {
         sort: 'recent',
         layout: 'columns',
         content: null, // ALL maps to null
+        target: 'posts',
+        resource_types: null,
+        resource_filters: null,
         tags: ['bitcoin'],
         domain_tags: [],
       });
@@ -1463,6 +1982,9 @@ describe('CustomFeedDialog', () => {
           sort: 'popularity',
           layout,
           content: 'note',
+          target: 'posts',
+          resource_types: null,
+          resource_filters: null,
           tags: ['bitcoin', 'lightning', 'crypto'],
           domain_tags: [],
         },

@@ -19,8 +19,10 @@ export class FeedNormalizer {
 
   /**
    * The private feed object for `params`: `buildFeed` derives the id from the filter alone
-   * (reach, layout, sort, content, tags, domain tags), so a rename or a new icon keeps the id and
-   * an edited filter moves the feed. Tag lists are folded here and by the package; an empty list
+   * (reach, layout, sort, content, tags, domain tags, target), so a rename or a new icon keeps the
+   * id and an edited filter moves the feed. A feed of external resources passes `target`, which
+   * gives it its own id, and its saved search filters, which give it another (none keeps the id it
+   * had); posts pass none, so a post feed keeps the id it always had. Tag lists are folded here and by the package; an empty list
    * is left out, which the package requires. The content kind crosses the local vocabulary once
    * (`short` → `note`, `long` → `article`) so a caller holding a stream kind cannot store a 0.x name.
    */
@@ -48,6 +50,15 @@ export class FeedNormalizer {
         content,
         tags: tags.length > 0 ? tags : null,
         domain_tags: domainTags.length > 0 ? domainTags : null,
+        // A feed of external resources keeps its schema.org types where a post feed keeps its post kind
+        // and its search filters (`filters`), which only it has
+        ...(params.target === 'resources'
+          ? {
+              target: params.target,
+              content: params.resource_types?.length ? params.resource_types.join(',') : null,
+              ...(params.resource_filters ? { filters: params.resource_filters } : {}),
+            }
+          : {}),
       });
     } catch (error) {
       throw toSpecsValidationError(error, 'buildFeed', { params, userId });

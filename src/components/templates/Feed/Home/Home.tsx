@@ -1,6 +1,7 @@
 'use client';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useDefaultHomeReach } from '@/hooks/useDefaultHomeReach/useDefaultHomeReach';
+import { useResourceFiltersTab } from '@/hooks/useResourceFiltersTab/useResourceFiltersTab';
 import { TaggedAsHeadline } from '@/molecules/TaggedAsHeadline/TaggedAsHeadline';
 import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { AlertInstall } from '@/organisms/AlertInstall/AlertInstall';
@@ -17,6 +18,8 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
  */
 export function Home() {
   useDefaultHomeReach();
+  // The External resources filters live in the URL, as on Search
+  useResourceFiltersTab({ feed: true });
 
   return (
     <>

@@ -92,6 +92,12 @@ describe('Feed Helpers', () => {
       ...overrides,
     });
 
+    it('gives a feed of external resources no post stream, while the same filter over posts keeps its own', () => {
+      expect(buildFeedStreamId(createFeed({ target: 'resources' }), TEST_VIEWER)).toBeNull();
+      expect(buildFeedStreamId(createFeed({ target: 'posts' }), TEST_VIEWER)).toBe('timeline:all:all:bitcoin');
+      expect(buildFeedStreamId(createFeed(), TEST_VIEWER)).toBe('timeline:all:all:bitcoin');
+    });
+
     it('should build stream ID for timeline:all:all with single tag', () => {
       const feed = createFeed({
         reach: 'all',

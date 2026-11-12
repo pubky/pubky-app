@@ -3,7 +3,12 @@ import { isProfileTagReachSupported, type ProfileTagSupportedReach } from '@/con
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import {
+  FEED_RESOURCE_FILTER_NAMES,
+  type FeedModelSchema,
+  type TFeedResourceFilterName,
+  type TFeedResourceFilters,
+} from '@/models/feed/feed.schema';
 import type { PostKind, Pubky } from '@/models/models.types';
 import {
   buildSortedAuthorStreamId,
@@ -73,7 +78,13 @@ const WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH = {
   me: 0,
 } as const satisfies Record<ProfileTagSupportedReach, WotDomainDepth>;
 
-export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): PostStreamId {
+/**
+ * The post stream of a feed; `null` for a feed of external resources, which lists no posts: it runs
+ * as a resource search (Pinakes, with Nexus' resource stream as a fallback), so it never shares a
+ * post stream, its cache or its unread state with the post feed of the same filter.
+ */
+export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): PostStreamId | null {
+  if (feed.target === 'resources') return null;
   const sorting = sortToStreamSorting(feed.sort);
   const kind = contentToStreamKind(feed.content) ?? 'all';
   const domainTags = feed.domain_tags ?? [];
@@ -99,4 +110,16 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
   const tags = feed.tags.join(POST_STREAM_TAG_DELIMITER);
 
   return `${sorting}:${source}:${kind}:${tags}` as PostStreamId;
+}
+
+/** The members of a decoded feed's filters that are set (`feed.filters`, every member a string or null). */
+export function readFeedResourceFilters(filters: object | null | undefined): TFeedResourceFilters | null {
+  if (!filters) return null;
+  const source = filters as Partial<Record<TFeedResourceFilterName, unknown>>;
+  const out: TFeedResourceFilters = {};
+  for (const name of FEED_RESOURCE_FILTER_NAMES) {
+    const value = source[name];
+    if (typeof value === 'string') out[name] = value;
+  }
+  return Object.keys(out).length > 0 ? out : null;
 }

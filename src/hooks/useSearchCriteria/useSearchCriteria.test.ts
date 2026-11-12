@@ -39,6 +39,31 @@ describe('useSearchCriteria', () => {
     });
   });
 
+  describe('resource mode', () => {
+    it('takes a link no post search takes as a search of external resources', () => {
+      mockQueryParam.value = 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({
+        mode: 'resource',
+        query: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq',
+        input: { kind: 'url', url: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq' },
+      });
+    });
+
+    it('takes a long identifier the same way, and leaves a short one a post search', () => {
+      mockQueryParam.value = 'doi:10.1038/nature14539-and-a-long-suffix';
+      expect(renderHook(() => useSearchCriteria()).result.current).toMatchObject({
+        mode: 'resource',
+        input: { kind: 'key', key: 'doi:10.1038/nature14539-and-a-long-suffix' },
+      });
+      mockQueryParam.value = 'isbn:9780262033848';
+      expect(renderHook(() => useSearchCriteria()).result.current).toEqual({
+        mode: 'content',
+        query: 'isbn:9780262033848',
+      });
+    });
+  });
+
   describe('invalid mode', () => {
     it('returns invalid mode with a message when q is too short', () => {
       mockQueryParam.value = 'b';

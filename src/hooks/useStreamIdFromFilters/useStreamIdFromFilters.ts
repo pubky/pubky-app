@@ -10,7 +10,7 @@ import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
  * This hook reads the current filter state from the filters store and
  * generates the appropriate streamId following the pattern: sorting:source:kind
  *
- * @returns The current streamId
+ * @returns The current streamId; undefined before hydration and for External resources, which has no post stream
  *
  * @example
  * ```tsx
@@ -41,12 +41,14 @@ export function useStreamIdFromFilters(contentOverride?: ContentType): PostStrea
     return undefined;
   }
 
-  return getHomeStreamIdFromFilters({
-    sort,
-    reach,
-    content: effectiveContent,
-    currentUserPubky,
-    profileTags,
-    taggedAsActive,
-  });
+  return (
+    getHomeStreamIdFromFilters({
+      sort,
+      reach,
+      content: effectiveContent,
+      currentUserPubky,
+      profileTags,
+      taggedAsActive,
+    }) ?? undefined
+  );
 }

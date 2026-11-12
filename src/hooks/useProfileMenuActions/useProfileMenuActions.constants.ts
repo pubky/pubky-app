@@ -6,5 +6,6 @@ export const PROFILE_MENU_ACTION_IDS = {
   FOLLOW: 'follow',
   COPY_PUBKY: 'copy-pubky',
   COPY_LINK: 'copy-link',
+  SHARED_LINKS: 'shared-links',
   MUTE: 'mute',
 } as const;

@@ -10,7 +10,15 @@ import {
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
-import { CONTENT, type ContentType, REACH, type ReachType, SORT, type SortType } from './home.types';
+import {
+  CONTENT,
+  type ContentType,
+  type PostContentType,
+  REACH,
+  type ReachType,
+  SORT,
+  type SortType,
+} from './home.types';
 
 // ============================================
 // Bidirectional Mappings (DRY principle)
@@ -62,10 +70,15 @@ const CONTENT_TO_KIND = {
   [CONTENT.LINKS]: StreamKind.LINK,
   [CONTENT.FILES]: StreamKind.FILE,
   [CONTENT.LOCKS]: 'locked',
-} as const satisfies Record<ContentType, PostStreamKindSegment>;
+} as const satisfies Record<PostContentType, PostStreamKindSegment>;
+
+/** Whether `content` lists posts, so it has a post stream; External resources lists none. */
+export function isPostContent(content: ContentType): content is PostContentType {
+  return content !== CONTENT.RESOURCES;
+}
 
 /** Maps a CONTENT filter directly to the stream-id kind segment. */
-export function getKindFromContent(content: ContentType): PostStreamKindSegment {
+export function getKindFromContent(content: PostContentType): PostStreamKindSegment {
   return CONTENT_TO_KIND[content];
 }
 
@@ -78,8 +91,9 @@ export function resolveEnabledContent(content: ContentType, disabledContent: Con
 }
 
 /** The kind a text search applies, which is the filter the sidebar shows there. */
-export function getTextSearchKind(content: ContentType): ContentSearchKindSegment {
-  const kind = getKindFromContent(resolveEnabledContent(content, TEXT_SEARCH_DISABLED_CONTENT));
+export function getTextSearchKind(content: PostContentType): ContentSearchKindSegment {
+  const enabled = resolveEnabledContent(content, TEXT_SEARCH_DISABLED_CONTENT);
+  const kind = getKindFromContent(isPostContent(enabled) ? enabled : CONTENT.ALL);
   // Unreachable while Locks is disabled above; keeps `locked` out by type if that list changes.
   return kind === 'locked' ? 'all' : kind;
 }
@@ -97,6 +111,7 @@ const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
 interface HomeStreamFilters {
   sort: SortType;
   reach: ReachType;
+  /** External resources has no post stream: the id is then `null`. */
   content: ContentType;
   currentUserPubky?: Pubky | null;
   profileTags?: string[];
@@ -116,7 +131,7 @@ interface HomeStreamFilters {
  * getStreamIdFromFilters('popularity', 'following', 'images') // => 'total_engagement:following:image'
  * getStreamIdFromFilters('recent', 'friends', 'posts') // => 'timeline:friends:short'
  */
-export function getStreamIdFromFilters(sort: SortType, reach: ReachType, content: ContentType): string {
+export function getStreamIdFromFilters(sort: SortType, reach: ReachType, content: PostContentType): string {
   if (reach === REACH.ME) {
     throw new Error('Me reach requires the current user id. Use getHomeStreamIdFromFilters instead.');
   }
@@ -138,7 +153,7 @@ export function getStreamIdFromFilters(sort: SortType, reach: ReachType, content
  * getStreamId('recent', 'following', 'images') // => PostStreamTypes.TIMELINE_FOLLOWING_IMAGE
  * getStreamId('popularity', 'friends', 'videos') // => PostStreamTypes.POPULARITY_FRIENDS_VIDEO
  */
-export function getStreamId(sort: SortType, reach: ReachType, content: ContentType): PostStreamId {
+export function getStreamId(sort: SortType, reach: ReachType, content: PostContentType): PostStreamId {
   const streamId = getStreamIdFromFilters(sort, reach, content);
 
   return streamId as PostStreamId;
@@ -151,7 +166,8 @@ export function getHomeStreamIdFromFilters({
   currentUserPubky,
   profileTags = [],
   taggedAsActive = false,
-}: HomeStreamFilters): PostStreamId {
+}: HomeStreamFilters): PostStreamId | null {
+  if (!isPostContent(content)) return null;
   const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const kind = CONTENT_TO_KIND[content];
 
@@ -173,7 +189,7 @@ export function getHomeStreamIdFromFilters({
  * matchesFilters('timeline:all:all', 'recent', 'all', 'all') // => true
  * matchesFilters('timeline:following:all', 'recent', 'all', 'all') // => false
  */
-export function matchesFilters(streamId: string, sort: SortType, reach: ReachType, content: ContentType): boolean {
+export function matchesFilters(streamId: string, sort: SortType, reach: ReachType, content: PostContentType): boolean {
   // Me streams require viewer-aware author ids, which this legacy matcher cannot derive.
   if (reach === REACH.ME) {
     return false;
@@ -193,7 +209,7 @@ export function matchesFilters(streamId: string, sort: SortType, reach: ReachTyp
 export function parseStreamId(streamId: string): {
   sort: SortType;
   reach: ReachType;
-  content: ContentType;
+  content: PostContentType;
 } | null {
   const parts = streamId.split(':');
   if (parts.length !== 3) {

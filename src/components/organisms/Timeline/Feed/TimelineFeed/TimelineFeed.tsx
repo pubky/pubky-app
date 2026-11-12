@@ -2,17 +2,27 @@
 
 import { useParams } from 'next/navigation';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import {
+  toCustomResourceFeedSearch,
+  useCustomResourceFeed,
+  useSeedCustomResourceFeed,
+} from '@/hooks/useCustomResourceFeed/useCustomResourceFeed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useHomeResourceFeed } from '@/hooks/useHomeResourceFeed/useHomeResourceFeed';
 import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useProfilePostsFilter } from '@/hooks/useProfilePostsFilter/useProfilePostsFilter';
+import type { UseResourceSearchResult } from '@/hooks/useResourceSearch/useResourceSearch';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchReach } from '@/hooks/useSearchReach/useSearchReach';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { collectionItemsToPostIds } from '@/libs/post/collectionItemOrder';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { buildCompositeId } from '@/models/models.utils';
 import {
   type AuthorStreamCompositeId,
@@ -28,11 +38,13 @@ import { PostsEmpty } from '@/molecules/PostsEmpty/PostsEmpty';
 import { SearchResultsEmpty } from '@/molecules/SearchResultsEmpty/SearchResultsEmpty';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
+import { SearchResourceResults } from '@/organisms/SearchResources/SearchResourceResults';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, LAYOUT, REACH } from '@/stores/home/home.types';
+import { CONTENT, LAYOUT, type LayoutType, REACH } from '@/stores/home/home.types';
+import { ResourceTimelineFeed } from '../ResourceTimelineFeed/ResourceTimelineFeed';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
 import type { HomeTimelineFeedProps, TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
@@ -104,6 +116,11 @@ function HomeTimelineFeed({
   const streamId = useStreamIdFromFilters(resolvedContent);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
+  // Every external resource in the Home reach and sort (Home has no tag filter)
+  if (resolvedContent === CONTENT.RESOURCES) {
+    return <HomeResourceTimelineFeed layout={layoutResolution.effectiveLayout}>{children}</HomeResourceTimelineFeed>;
+  }
+
   return (
     <TimelineFeedWithStream
       streamId={streamId}
@@ -118,9 +135,19 @@ function HomeTimelineFeed({
 }
 
 function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+  const customFeed = useCustomFeed();
   const streamId = useCustomStreamId();
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.CUSTOM);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
+
+  // A feed of external resources has no post stream: its filter runs as a resource search
+  if (customFeed?.target === 'resources') {
+    return (
+      <CustomResourceTimelineFeed feed={customFeed} layout={layoutResolution.effectiveLayout}>
+        {children}
+      </CustomResourceTimelineFeed>
+    );
+  }
 
   return (
     <TimelineFeedWithStream
@@ -302,7 +329,18 @@ function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['childr
   });
   useSyncInteractiveVisualContent(resolvedContent);
   const streamId = useSearchStreamId(resolvedContent);
+  const criteria = useSearchCriteria();
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
+
+  // The External resources tab: the resource search of the box, with its own controls
+  if (resolvedContent === CONTENT.RESOURCES) {
+    return (
+      <SearchResourceResults
+        key={`${currentUserPubky ?? 'public'}:${JSON.stringify(criteria)}`}
+        layout={layoutResolution.effectiveLayout}
+      />
+    );
+  }
 
   return (
     // useStreamPagination resets in place on a stream change; the key only covers a viewer swap.
@@ -323,3 +361,64 @@ function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['childr
     </TimelineFeedWithStream>
   );
 }
+
+function HomeResourceTimelineFeed({
+  layout,
+  children,
+}: {
+  layout: LayoutType;
+  children?: TimelineFeedProps['children'];
+}) {
+  // Every external resource in the Home reach and sort, with the filter panel's filters (in the URL)
+  const feed = useHomeResourceFeed();
+  return (
+    <SearchResourceResults layout={layout} feed={feed}>
+      {children}
+    </SearchResourceResults>
+  );
+}
+
+function CustomResourceTimelineFeed({
+  feed,
+  layout,
+  children,
+}: {
+  feed: FeedModelSchema;
+  layout: LayoutType;
+  children?: TimelineFeedProps['children'];
+}) {
+  // The feed's tags, reach and sort, with the filter panel's filters, which start as the feed's saved
+  // types and filters (put in the URL first; nothing is searched until they are)
+  useSeedCustomResourceFeed(feed);
+  const { isReady } = useCustomResourceFeed();
+  if (!isReady) {
+    return (
+      <ResourceTimelineFeed search={SEEDING_SEARCH} layout={layout}>
+        {children}
+      </ResourceTimelineFeed>
+    );
+  }
+  return (
+    <SearchResourceResults layout={layout} feed={toCustomResourceFeedSearch(feed)}>
+      {children}
+    </SearchResourceResults>
+  );
+}
+
+/** What the list shows while a custom feed's saved filters are put in the URL: loading. */
+const SEEDING_SEARCH: UseResourceSearchResult = {
+  uris: [],
+  typeFacets: null,
+  relatedTags: [],
+  hostFacets: null,
+  categoryFacets: null,
+  source: 'pinakes',
+  unavailable: false,
+  reachTruncated: false,
+  loading: true,
+  loadingMore: false,
+  error: null,
+  hasMore: false,
+  loadMore: async () => {},
+  retry: () => {},
+};

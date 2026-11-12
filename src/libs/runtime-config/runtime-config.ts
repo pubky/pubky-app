@@ -181,6 +181,8 @@ export const getE2eLocksStubUrl = (): string | undefined => getRuntimeConfig().e
 
 // Optional Pinakes origin for external resource cards (undefined = cards disabled, no request).
 export const getPinakesUrl = (): string | undefined => getRuntimeConfig().pinakesUrl;
+// Whether that Pinakes answers the `wot_2` reach (My network for external resources); off by default.
+export const getPinakesReachSet = (): boolean => getRuntimeConfig().pinakesReachSet;
 
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;

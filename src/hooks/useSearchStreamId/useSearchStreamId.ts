@@ -6,7 +6,7 @@ import { buildContentSearchStreamId, type PostStreamId } from '@/models/stream/p
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { useHomeStore } from '@/stores/home/home.store';
 import type { ContentType } from '@/stores/home/home.types';
-import { getStreamIdFromFilters, getTextSearchKind } from '@/stores/home/home.utils';
+import { getStreamIdFromFilters, getTextSearchKind, isPostContent } from '@/stores/home/home.utils';
 
 /**
  * Custom hook that returns the search streamId based on the URL search criteria,
@@ -19,7 +19,8 @@ import { getStreamIdFromFilters, getTextSearchKind } from '@/stores/home/home.ut
  *
  * Tags are limited to PUBKY_RUNTIME_MAX_STREAM_TAGS (default 5).
  *
- * @returns The search streamId, or undefined when there is no valid search criteria
+ * @returns The search streamId, or undefined when there is no valid search criteria or the Content
+ *   filter is External resources, which lists no posts
  */
 export function useSearchStreamId(contentOverride?: ContentType): PostStreamId | undefined {
   const criteria = useSearchCriteria();
@@ -27,6 +28,10 @@ export function useSearchStreamId(contentOverride?: ContentType): PostStreamId |
   const sort = useHomeStore((state) => state.sort);
   const storeContent = useHomeStore((state) => state.content);
   const content = contentOverride ?? storeContent;
+
+  if (!isPostContent(content)) {
+    return undefined;
+  }
 
   if (criteria.mode === 'content') {
     return buildContentSearchStreamId(

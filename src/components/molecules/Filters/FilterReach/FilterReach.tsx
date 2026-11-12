@@ -38,9 +38,12 @@ interface FilterReachSharedProps {
   onProfileTagAdd?: (tag: string) => void;
   onProfileTagRemove?: (tag: string) => void;
   profileTagsDisabled?: boolean;
+  /** Reaches this surface cannot apply: not listed, and a selection of one shows All. */
+  hiddenTabs?: readonly ReachFilterValue[];
 }
 
 const DEFAULT_REACH_OPTIONS = [REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS] as const;
+const NO_HIDDEN_REACHES: readonly ReachFilterValue[] = [];
 
 /** `options` sets the reaches and their order; `onTabChange` only ever receives one of them. */
 interface StandardFilterReachProps<T extends ReachType> extends BaseFilterProps<T>, FilterReachSharedProps {
@@ -66,10 +69,13 @@ export function FilterReach<T extends ReachType = ReachType>({
   onProfileTagAdd,
   onProfileTagRemove,
   profileTagsDisabled = false,
+  hiddenTabs = NO_HIDDEN_REACHES,
 }: FilterReachProps<T>) {
-  const orderedReachKeys: readonly ReachFilterValue[] = showTaggedAs
-    ? [REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.FOLLOWING, REACH.FRIENDS, REACH.ME, REACH.ALL]
-    : (options ?? DEFAULT_REACH_OPTIONS);
+  const orderedReachKeys: readonly ReachFilterValue[] = (
+    showTaggedAs
+      ? [REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.FOLLOWING, REACH.FRIENDS, REACH.ME, REACH.ALL]
+      : (options ?? DEFAULT_REACH_OPTIONS)
+  ).filter((key) => !hiddenTabs.includes(key));
 
   const reachItems: FilterListItem<ReachFilterValue>[] = orderedReachKeys.map((key) => ({
     key,
@@ -105,7 +111,7 @@ export function FilterReach<T extends ReachType = ReachType>({
       title={'Reach'}
       items={reachItems}
       itemExtras={showTaggedAs ? { [TAGGED_AS_FILTER_KEY]: profileTagEditor } : undefined}
-      selectedValue={selectedTab}
+      selectedValue={selectedTab !== undefined && hiddenTabs.includes(selectedTab) ? REACH.ALL : selectedTab}
       defaultValue={defaultSelectedTab ?? REACH.ALL}
       onChange={handleReachChange}
       testId="filter-reach-radiogroup"

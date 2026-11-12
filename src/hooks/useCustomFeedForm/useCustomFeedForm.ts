@@ -1,21 +1,30 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
+import type { KnownFeedTarget } from 'pubky-social-specs';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { APP_ROUTES } from '@/app/routes';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { FeedController } from '@/controllers/feed/feed';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { hasResourceFeedFilters } from '@/hooks/useResourceSearchFilters/useResourceSearchFilters';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { toast } from '@/molecules/Toaster/toast';
+import { useCustomResourceFeedStore } from '@/stores/customResourceFeed/customResourceFeed.store';
+import { useHomeStore } from '@/stores/home/home.store';
+import { CONTENT } from '@/stores/home/home.types';
 import {
   CUSTOM_FEED_CONTENT_ALL,
+  CUSTOM_FEED_CONTENT_RESOURCES,
+  CUSTOM_FEED_RESOURCE_TYPES_ALL,
   type CustomFeedFormData,
   customFeedFormDefaults,
   customFeedFormSchema,
   customFeedFormValuesFromFeed,
   type UseCustomFeedFormParams,
+  withPageResourceFilters,
 } from './useCustomFeedForm.types';
 
 type UseCustomFeedFormResult = {
@@ -32,6 +41,12 @@ type UseCustomFeedFormResult = {
   /** Delete the feed being edited. Resolves `false` in create mode. */
   deleteFeed: () => Promise<boolean>;
 };
+
+/** The form's values: the feed's (a new one's defaults), with the page's External resources filters (`pageSearch`). */
+function getFormValues(feed: FeedModelSchema | undefined, pageSearch: string | null): CustomFeedFormData {
+  const values = feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults;
+  return pageSearch !== null ? withPageResourceFilters(values, new URLSearchParams(pageSearch)) : values;
+}
 
 /**
  * Encapsulates the "create / edit custom feed" form on top of react-hook-form + zod.
@@ -53,10 +68,32 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   const inFlightRef = useRef(false);
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // The External resources filters on screen: Home's, or a custom resources feed's panel. A feed
+  // created there starts with them; the feed on screen, edited, saves them.
+  const isFiltersPage =
+    mode === 'create'
+      ? pathname === APP_ROUTES.HOME || pathname.startsWith(`${APP_ROUTES.FEED}/`)
+      : pathname === `${APP_ROUTES.FEED}/${feed.id}`;
+  // The feed's own page holds its filters once they are seeded (`useSeedCustomResourceFeed`), even
+  // when the viewer cleared every one
+  const readyFeedId = useCustomResourceFeedStore((state) => state.readyFeedId);
+  const homeContent = useHomeStore((state) => state.content);
+  // Home's External resources, or a custom resources feed's page, lists resources also with no filter in
+  // its URL: a feed created there starts as one
+  const isResourcesPage =
+    (pathname === APP_ROUTES.HOME && homeContent === CONTENT.RESOURCES) ||
+    (readyFeedId !== null && pathname === `${APP_ROUTES.FEED}/${readyFeedId}`);
+  const hasPageFilters =
+    mode === 'edit' ? readyFeedId === feed.id : isResourcesPage || hasResourceFeedFilters(searchParams);
+  const pageSearch = isFiltersPage && hasPageFilters ? searchParams.toString() : null;
+  // A post feed edited keeps its own values
+  const takesPage = mode === 'create' || feed.target === 'resources';
+  const pageFilters = takesPage ? pageSearch : null;
 
   const form = useForm<CustomFeedFormData>({
     resolver: zodResolver(customFeedFormSchema),
-    defaultValues: feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults,
+    defaultValues: getFormValues(feed, pageFilters),
     mode: 'onChange',
   });
 
@@ -70,8 +107,8 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   // `defaultValues` and this effect never runs for it.
   useEffect(() => {
     if (open) return;
-    form.reset(feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults);
-  }, [open, feed, form]);
+    form.reset(getFormValues(feed, pageFilters));
+  }, [open, feed, form, pageFilters]);
 
   const submit = async (): Promise<boolean> => {
     if (inFlightRef.current) return false;
@@ -85,12 +122,24 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
         if (!(await waitForAuth())) return;
         // `null` is the feed record's "no content filter"; the form carries a
         // sentinel instead because a Select cannot hold null as an option value.
+        // External resources is a target, not a post kind: no content filter.
         // Tagged as is a UI-only reach: persist as WoT + the form's domain_tags.
-        const { reach: formReach, content: formContent, ...rest } = data;
+        const {
+          reach: formReach,
+          content: formContent,
+          resource_types: formTypes,
+          resource_filters: formFilters,
+          ...rest
+        } = data;
+        const isResources = formContent === CUSTOM_FEED_CONTENT_RESOURCES;
+        const target: KnownFeedTarget = isResources ? 'resources' : 'posts';
         const changes = {
           ...rest,
           reach: formReach === TAGGED_AS_FILTER_KEY ? 'wot' : formReach,
-          content: formContent === CUSTOM_FEED_CONTENT_ALL ? null : formContent,
+          content: formContent === CUSTOM_FEED_CONTENT_ALL || isResources ? null : formContent,
+          target,
+          resource_types: isResources && formTypes !== CUSTOM_FEED_RESOURCE_TYPES_ALL ? formTypes.split(',') : null,
+          resource_filters: isResources ? formFilters : null,
         };
 
         try {
