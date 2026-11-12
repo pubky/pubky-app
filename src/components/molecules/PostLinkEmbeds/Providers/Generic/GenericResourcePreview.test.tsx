@@ -182,6 +182,36 @@ describe('GenericResourcePreview', () => {
     }
   });
 
+  it('shows the skeleton while Pinakes reads a link it did not know, the link’s own preview past 5 s, then the card', () => {
+    vi.useFakeTimers();
+    try {
+      // The composer's resolve, or the one a post just published waits for (`isResolving`).
+      mockUsePinakesCard.mockReturnValue({ data: null, isLoading: false, isError: false, isResolving: true });
+      const { rerender } = render(<GenericResourcePreview url={URL} isComposing />);
+      expect(screen.getByTestId('resource-card-skeleton')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
+
+      // No long skeleton: the link's own preview stands in until the card is read.
+      act(() => vi.advanceTimersByTime(PINAKES_SLOW_READ_MS));
+      expect(screen.queryByTestId('resource-card-skeleton')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+
+      mockUsePinakesCard.mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+      rerender(<GenericResourcePreview url={URL} isComposing />);
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows the link’s own preview at once when Pinakes refuses to read it', () => {
+    mockUsePinakesCard.mockReturnValue({ data: null, isLoading: false, isError: false });
+    render(<GenericResourcePreview url={URL} isComposing />);
+
+    expect(screen.queryByTestId('resource-card-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+  });
+
   it('starts over for another link on the same preview', () => {
     vi.useFakeTimers();
     try {

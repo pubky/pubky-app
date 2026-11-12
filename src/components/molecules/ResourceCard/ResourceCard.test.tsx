@@ -665,6 +665,38 @@ describe('ResourceCard', () => {
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute('src', 'https://mempool.space/favicon.ico');
     });
 
+    it.each(['default', 'large'] as const)(
+      'links a %s btc: card read on demand (no web link written) to the page Pinakes opens it in',
+      (size) => {
+        const hash = '0000000000000000002dc2b16821a39010c212e2d84ee1fe7b2115f345df2696';
+        const page = `https://mempool.space/block/${hash}`;
+        const block = {
+          ...ARTICLE,
+          uri: `btc:block/${hash}`,
+          type: 'BitcoinBlock',
+          type_path: ['Thing', 'BitcoinBlock'],
+          site: 'mempool.space',
+          image: null,
+          refs: [],
+          aliases: [],
+          open_in: [{ client: 'mempool.space', url: page }],
+        };
+        render(<ResourceCard card={block} size={size} />);
+
+        // "mempool.space ↗", a link out, named by what it does, with the site's favicon.
+        expect(source().tagName).toBe('A');
+        expect(source()).toHaveAttribute('href', page);
+        expect(source()).toHaveAttribute('target', '_blank');
+        expect(source()).toHaveTextContent('mempool.space');
+        expect(source().querySelector('svg.lucide-arrow-up-right')).not.toBeNull();
+        expect(source()).toHaveAccessibleName('Open in mempool.space');
+        expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
+          'src',
+          'https://mempool.space/favicon.ico',
+        );
+      },
+    );
+
     it('opens a pubky:// card at the address Pinakes gives for it, and hides its pubky:// image', () => {
       render(<ResourceCard card={pubkyFixture} />);
 

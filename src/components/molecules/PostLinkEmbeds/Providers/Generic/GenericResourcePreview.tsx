@@ -69,7 +69,8 @@ interface GenericResourcePreviewProps {
  * spelling's tags, replies and saves show as one. A card on other services too (`also_on`) lists
  * them in the ⋯ menu under "Also on". A card that is pending or failed and has no name says less
  * than the link's own preview, and a failed read, or one slower than `PINAKES_SLOW_READ_MS` until it
- * is read, is treated like an unknown link (no error box and no long skeleton in a feed).
+ * is read (on demand included), is treated like an unknown link (no error box and no long skeleton
+ * in a feed).
  *
  * Inside a quoted or reposted post (`PostPreviewCard`) the resource shows as in its own post: the
  * same card or player, with its footer. While composing, and in the Reply and Repost dialogs (a
@@ -94,8 +95,9 @@ interface GenericResourcePreviewProps {
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
  * same box once Pinakes has read it, with no loading state in between. In the composer, Pinakes is
  * asked to read such a link right away (`resolve`) instead of re-reading it, so the published post
- * shows its card at once, and still has its own re-reads if Pinakes had not read it yet. Outside
- * the composer the box grows smoothly to the card (`AnimatedHeight`).
+ * shows its card at once, and still has its own re-reads if Pinakes had not read it yet. While that
+ * read is in flight, the composer's preview and the published post's show the skeleton (at most
+ * `PINAKES_SLOW_READ_MS`). Outside the composer the box grows smoothly to the card (`AnimatedHeight`).
  */
 export function GenericResourcePreview(props: GenericResourcePreviewProps) {
   const { ref, isVisible } = useViewportObserver({ rootMargin: '0px' });
@@ -128,18 +130,25 @@ function ResourcePreview({
   const lookupUrl = isPinakesConfigured() && !isDirectMediaFile(url) ? url : null;
   // The composer has Pinakes read the link (`resolve`) and never re-reads it: a link's re-reads are
   // once per page load, kept for the post once it is published.
-  const { data: card, isLoading } = usePinakesCard(lookupUrl, {
+  const {
+    data: card,
+    isLoading,
+    isResolving,
+  } = usePinakesCard(lookupUrl, {
     recheck: isOnScreen && !isComposing,
     resolve: isComposing,
   });
-  const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
+  // While Pinakes reads a link it did not know (the composer's resolve, which a post just published
+  // waits for too), the skeleton holds the place as for the first read, as a native embed's does.
+  const isReading = isLoading || Boolean(isResolving);
+  const isSlow = useSlowRead(lookupUrl, isReading, PINAKES_SLOW_READ_MS);
   // Embed or card, with the switch; in a post being written a player previews (`preview`).
   const { embed, switcher } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
     preview: isPreview,
   });
 
   if (!lookupUrl) return <GenericPreview url={url} />;
-  if (isLoading && !isSlow) return <ResourceCardSkeleton withActions />;
+  if (isReading && !isSlow) return <ResourceCardSkeleton withActions />;
 
   // A slow read gives way to the link's own preview; the card takes its place in the same box once read.
   const shownCard = card && !hasNothingToShow(card) ? card : null;

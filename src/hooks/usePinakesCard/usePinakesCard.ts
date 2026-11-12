@@ -36,14 +36,25 @@ export interface UsePinakesCardOptions {
  * A link Pinakes refused (`null`: a budget used up, a failure) may be asked again later.
  */
 const resolving = new Map<string, Promise<TPinakesResourceDetail | null>>();
+/** The links of `resolving` whose read has not answered yet. */
+const inFlight = new Set<string>();
 
 function resolveOnce(uri: string): Promise<TPinakesResourceDetail | null> {
   let read = resolving.get(uri);
   if (!read) {
-    read = PinakesController.resolveCard({ uri }).then((card) => {
-      if (!card) resolving.delete(uri);
-      return card;
-    });
+    inFlight.add(uri);
+    read = PinakesController.resolveCard({ uri }).then(
+      (card) => {
+        inFlight.delete(uri);
+        if (!card) resolving.delete(uri);
+        return card;
+      },
+      () => {
+        inFlight.delete(uri);
+        resolving.delete(uri);
+        return null;
+      },
+    );
     resolving.set(uri, read);
   }
   return read;
@@ -78,26 +89,42 @@ function recheckOnce(uri: string): Promise<TPinakesResourceDetail | null> {
 /**
  * The card Pinakes read on demand for `uri`, once `uri` has stayed for the debounce; `null` before,
  * when Pinakes refused, or for no `uri`. A link changed or removed before then is never sent.
+ * Without `ask`, nothing is sent: a resolve of `uri` already in flight (the composer's, the
+ * resource page's) is waited for, as a post just published shows the link its composer is reading.
  */
-function useResolvedCard(uri: string | null): { card: TPinakesResourceDetail | null; pending: boolean } {
+function useResolvedCard(uri: string | null, ask: boolean): { card: TPinakesResourceDetail | null; pending: boolean } {
   const [resolved, setResolved] = useState<{ uri: string; card: TPinakesResourceDetail | null } | null>(null);
+  // Read on each render: a preview that re-renders while a resolve is in flight waits for it.
+  const joinable = !ask && uri !== null && inFlight.has(uri);
 
   useEffect(() => {
     if (!uri) return;
     let cancelled = false;
+    const settle = (card: TPinakesResourceDetail | null) => {
+      if (!cancelled) setResolved({ uri, card });
+    };
+    if (!ask) {
+      if (joinable) {
+        // Answered (refused) between that render and this effect: nothing to wait for.
+        const read = resolving.get(uri);
+        if (read) read.then(settle);
+        else settle(null);
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
     const timer = setTimeout(() => {
-      resolveOnce(uri).then((card) => {
-        if (!cancelled) setResolved({ uri, card });
-      });
+      resolveOnce(uri).then(settle);
     }, PINAKES_RESOLVE_DEBOUNCE_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [uri]);
+  }, [uri, ask, joinable]);
 
   const settled = resolved?.uri === uri;
-  return { card: settled ? resolved.card : null, pending: uri !== null && !settled };
+  return { card: settled ? resolved.card : null, pending: uri !== null && !settled && (ask || joinable) };
 }
 
 /**
@@ -107,6 +134,9 @@ function useResolvedCard(uri: string | null): { card: TPinakesResourceDetail | n
  * not configured (`PUBKY_RUNTIME_PINAKES_URL` unset, no request is made), or `uri` is empty.
  * Callers keep their plain link preview then. See `UsePinakesCardOptions` for re-reading a link
  * Pinakes is about to know and for having it read one it does not (`isResolving` while it is asked).
+ * Without `resolve`, a link Pinakes does not know that is being read on demand elsewhere in the
+ * page load (a post just published from the composer) is `isResolving` too, until that read answers,
+ * and shows the card it read.
  *
  * @param uri - The link as written in the post
  *
@@ -133,10 +163,11 @@ export function usePinakesCard(
       fetchFn: () => recheckOnce(uri!),
     },
   });
-  // Only a link Pinakes answered it does not know is sent to be read.
-  const resolved = useResolvedCard(resolve && enabled && read.data === null && !read.isError ? uri! : null);
+  // Only a link Pinakes answered it does not know is sent to be read (or waited for, see above).
+  const resolved = useResolvedCard(enabled && read.data === null && !read.isError ? uri! : null, resolve);
   if (resolved.card && read.data === null) return { data: resolved.card, isLoading: false, isError: false };
-  // `isResolving`: Pinakes did not know the link and is being asked to read it (`resolve`), so a
-  // card may still come; a preview that must not load anything before it knows waits for it.
+  // `isResolving`: Pinakes did not know the link and is being asked to read it (`resolve`, or a
+  // resolve already in flight elsewhere in the page load), so a card may still come; a preview that
+  // must not load anything before it knows waits for it.
   return resolved.pending ? { ...read, isResolving: true } : read;
 }
