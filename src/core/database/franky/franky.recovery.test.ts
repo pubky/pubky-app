@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { suspendIndexedDbRecovery, withIndexedDbRecovery } from './franky.recovery';
+import { isClosingForIndexedDbRecovery, suspendIndexedDbRecovery, withIndexedDbRecovery } from './franky.recovery';
 
 describe('IndexedDB recovery lifecycle', () => {
   let database: Dexie;
@@ -86,6 +86,121 @@ describe('IndexedDB recovery lifecycle', () => {
     await expect(withIndexedDbRecovery(database, operation)).resolves.toBe('first');
     await expect(withIndexedDbRecovery(database, operation)).resolves.toBe('second');
     expect(close).toHaveBeenCalledTimes(2);
+    expect(database.on('populate').subscribers).toHaveLength(0);
+  });
+
+  it.each([
+    { name: 'constraint failure', failure: new DOMException('Duplicate row', 'ConstraintError') },
+    {
+      name: 'wrapped quota failure',
+      failure: new Dexie.AbortError(new DOMException('Quota exceeded', 'QuotaExceededError')),
+    },
+    { name: 'application failure', failure: new TypeError('Invalid local transformation') },
+  ])('allows a later reconnect after a replay ends with $name', async ({ failure: replayFailure }) => {
+    const failure = new DOMException('Connection lost', 'UnknownError');
+    const operation = vi.fn().mockRejectedValueOnce(failure).mockRejectedValueOnce(replayFailure);
+    const close = vi.spyOn(database, 'close');
+
+    await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(replayFailure);
+    expect(database.isOpen()).toBe(true);
+    await rows.put({ id: 'saved' });
+    const later = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockImplementation(() => rows.get('saved'));
+
+    await expect(withIndexedDbRecovery(database, later)).resolves.toEqual({ id: 'saved' });
+    expect(later).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains a connection-failure fence when another shared replay fails for a different reason', async () => {
+    const failure = new DOMException('Connection lost', 'UnknownError');
+    const applicationFailure = new TypeError('Invalid local transformation');
+    const firstReplay = Promise.withResolvers<string>();
+    const secondReplay = Promise.withResolvers<string>();
+    const firstStarted = Promise.withResolvers<void>();
+    const secondStarted = Promise.withResolvers<void>();
+    const first = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockImplementationOnce(() => {
+        firstStarted.resolve();
+        return firstReplay.promise;
+      });
+    const second = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockImplementationOnce(() => {
+        secondStarted.resolve();
+        return secondReplay.promise;
+      });
+    const close = vi.spyOn(database, 'close');
+    const firstResult = expect(withIndexedDbRecovery(database, first)).rejects.toBe(failure);
+    const secondResult = expect(withIndexedDbRecovery(database, second)).rejects.toBe(applicationFailure);
+    await Promise.all([firstStarted.promise, secondStarted.promise]);
+
+    firstReplay.reject(failure);
+    await firstResult;
+    secondReplay.reject(applicationFailure);
+    await secondResult;
+    const later = vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce('unexpected replay');
+    await expect(withIndexedDbRecovery(database, later)).rejects.toBe(failure);
+    expect(later).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses to recreate a deleted database and leaves creation to initialization', async () => {
+    await rows.put({ id: 'saved' });
+    const populate = vi.fn();
+    database.on('populate', populate);
+    const closeOwnership: boolean[] = [];
+    database.on('close', () => closeOwnership.push(isClosingForIndexedDbRecovery(database)));
+    // Model a server-side deletion without the browser delivering versionchange.
+    database.backendDB().onversionchange = null;
+    const blocked = Promise.withResolvers<void>();
+    const deleted = Promise.withResolvers<void>();
+    const request = indexedDB.deleteDatabase(database.name);
+    request.onblocked = () => blocked.resolve();
+    request.onsuccess = () => deleted.resolve();
+    request.onerror = () => deleted.reject(request.error);
+    await blocked.promise;
+
+    const failure = new DOMException('Database deleted by request of the user', 'UnknownError');
+    const operation = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockImplementation(() => rows.get('saved'));
+    await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(failure);
+    await deleted.promise;
+
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(populate).not.toHaveBeenCalled();
+    expect(closeOwnership).toEqual([true, false]);
+    expect(await Dexie.exists(database.name)).toBe(false);
+    // AppDatabase.initialize() detects that absence and can now create normally.
+    await database.open();
+    expect(populate).toHaveBeenCalledTimes(1);
+    expect(await rows.count()).toBe(0);
+  });
+
+  it('releases its creation guard before an unrelated failed-open close is observed', async () => {
+    const populateCounts: number[] = [];
+    database.on('close', () => populateCounts.push(database.on('populate').subscribers.length));
+    const failure = new DOMException('Connection lost', 'UnknownError');
+    const openFailure = new DOMException('Storage unavailable', 'NotReadableError');
+    vi.spyOn(indexedDB, 'open').mockImplementationOnce(() => {
+      throw openFailure;
+    });
+    const operation = vi.fn().mockRejectedValue(failure);
+
+    await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(failure);
+    expect(failure).toHaveProperty('cause', openFailure);
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(populateCounts).toEqual([1, 0]);
+    expect(database.on('populate').subscribers).toHaveLength(0);
+    await database.open();
+    expect(database.isOpen()).toBe(true);
   });
 
   it.each([
@@ -109,6 +224,22 @@ describe('IndexedDB recovery lifecycle', () => {
     await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(failure);
     expect(failure).toMatchObject({ cause: { name: 'UnknownError', inner: openFailure } });
     expect(operation).toHaveBeenCalledTimes(1);
+    expect(database.on('populate').subscribers).toHaveLength(0);
+  });
+
+  it.each(['close', 'open'] as const)('releases its creation guard when %s throws synchronously', async (method) => {
+    const failure = new DOMException('Connection lost', 'UnknownError');
+    const transitionFailure = new TypeError('Connection transition failed');
+    vi.spyOn(database, method).mockImplementationOnce(() => {
+      throw transitionFailure;
+    });
+    const operation = vi.fn().mockRejectedValue(failure);
+
+    await expect(withIndexedDbRecovery(database, operation)).rejects.toBe(failure);
+    expect(failure).toHaveProperty('cause', transitionFailure);
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(isClosingForIndexedDbRecovery(database)).toBe(false);
+    expect(database.on('populate').subscribers).toHaveLength(0);
   });
 
   it('lets a caller transaction scheduled beside a failing read commit', async () => {
@@ -118,7 +249,9 @@ describe('IndexedDB recovery lifecycle', () => {
       .mockRejectedValueOnce(failure)
       .mockImplementation(() => rows.get('saved'));
     const read = withIndexedDbRecovery(database, operation);
-    const write = database.transaction('rw', rows, () => rows.put({ id: 'saved' }));
+    // This microtask admits the caller transaction before its native transaction
+    // is created; a microtask-only reconnect closes the connection in that gap.
+    const write = Promise.resolve().then(() => database.transaction('rw', rows, () => rows.put({ id: 'saved' })));
 
     const [, savedId] = await Promise.all([read, write]);
     expect(savedId).toBe('saved');
@@ -131,8 +264,6 @@ describe('IndexedDB recovery lifecycle', () => {
     });
     const read = withIndexedDbRecovery(database, () => rows.get('saved'));
     const write = Promise.resolve()
-      .then(() => undefined)
-      .then(() => undefined)
       .then(() => undefined)
       .then(() => undefined)
       .then(() => database.transaction('rw', rows, () => rows.put({ id: 'saved' })));

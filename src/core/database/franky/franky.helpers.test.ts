@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   isOpen: vi.fn(),
   open: vi.fn(),
   close: vi.fn(),
-  on: vi.fn(),
+  on: vi.fn(() => ({ unsubscribe: vi.fn() })),
   backendDB: vi.fn(),
   clear: vi.fn(),
   otherClear: vi.fn(),

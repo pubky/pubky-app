@@ -1,4 +1,4 @@
-import Dexie from 'dexie';
+import Dexie, { type Transaction } from 'dexie';
 import { TRANSIENT_INDEXED_DB_ERROR_NAMES } from '@/database/franky/franky.constants';
 
 type ConnectionRecovery = {
@@ -62,19 +62,47 @@ function reopen(database: Dexie, state: RecoveryState): Promise<IDBDatabase> {
   // Keep resolution in Dexie promises so each caller retains its observation scope.
   return new Dexie.Promise<IDBDatabase>((resolve, reject) => {
     Dexie.asap(() => {
+      const releaseCreationGuard = () => {
+        database.on('populate').unsubscribe(preventCreation);
+        database.on('close').unsubscribe(handleUnexpectedClose);
+      };
+      const preventCreation = (transaction: Transaction) => {
+        // Abort creation atomically, before any existing populate hooks run.
+        // The failed open's ordinary close lets initialize() report the reset.
+        releaseCreationGuard();
+        transaction.abort();
+        return false;
+      };
+      const handleUnexpectedClose = () => {
+        // Dexie invokes the newest close subscriber first. Release our guard
+        // before DatabaseProvider can start initialization after a failed open.
+        if (!state.closingForRecovery) releaseCreationGuard();
+      };
       try {
         if (state.generation !== generation || !database.isOpen() || database.backendDB() !== connection) {
           resolve(connection);
           return;
         }
+        database.on('populate', preventCreation);
+        database.on('close', handleUnexpectedClose);
         state.closingForRecovery = true;
         try {
           database.close({ disableAutoOpen: false });
         } finally {
           state.closingForRecovery = false;
         }
-        database.open().then(() => resolve(database.backendDB()), reject);
+        database.open().then(
+          () => {
+            releaseCreationGuard();
+            resolve(database.backendDB());
+          },
+          (error) => {
+            releaseCreationGuard();
+            reject(error);
+          },
+        );
       } catch (error) {
+        releaseCreationGuard();
         reject(error);
       }
     });
@@ -162,7 +190,12 @@ export async function withIndexedDbRecovery<T>(database: Dexie, operation: () =>
       try {
         return await operation();
       } catch (replayError) {
-        if (state.generation === generation && database.isOpen() && database.backendDB() === reopened) {
+        if (
+          isRecoverableConnectionError(replayError) &&
+          state.generation === generation &&
+          database.isOpen() &&
+          database.backendDB() === reopened
+        ) {
           state.failedReplayConnection = reopened;
         }
         throw replayError;
