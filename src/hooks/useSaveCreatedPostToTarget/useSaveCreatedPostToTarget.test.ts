@@ -45,7 +45,7 @@ describe('useSaveCreatedPostToTarget', () => {
     vi.clearAllMocks();
     mocks.currentUserPubky = 'viewer-pubky';
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
-    mocks.commitCreateBookmark.mockResolvedValue(undefined);
+    mocks.commitCreateBookmark.mockResolvedValue(true);
   });
 
   it('saves a created post to a collection, runs onSaved, and shows success toast', async () => {
@@ -78,6 +78,20 @@ describe('useSaveCreatedPostToTarget', () => {
     expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalledWith('author:post-2', bookmarksTarget);
     expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
+  });
+
+  it('neither reports nor runs onSaved when the controller skipped the bookmark for a signed-out viewer', async () => {
+    mocks.commitCreateBookmark.mockResolvedValue(false);
+    const onSaved = vi.fn();
+    const { result } = renderHook(() => useSaveCreatedPostToTarget());
+
+    await act(async () => {
+      await result.current({ target: bookmarksTarget, createdPostId: 'author:post-4', onSaved });
+    });
+
+    expect(mocks.commitCreateBookmark).toHaveBeenCalledTimes(1);
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('shows login-required feedback and skips bookmarking when the current pubky is missing', async () => {

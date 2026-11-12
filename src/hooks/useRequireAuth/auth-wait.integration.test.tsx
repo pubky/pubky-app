@@ -16,8 +16,8 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/post/author/post' }));
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
     exists: vi.fn(async () => false),
-    commitCreate: vi.fn(async () => {}),
-    commitDelete: vi.fn(async () => {}),
+    commitCreate: vi.fn(async () => true),
+    commitDelete: vi.fn(async () => true),
   },
 }));
 vi.mock('@/controllers/user/user', () => ({ UserController: { commitFollow: vi.fn(async () => {}) } }));

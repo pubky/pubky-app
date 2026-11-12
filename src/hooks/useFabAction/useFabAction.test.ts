@@ -49,7 +49,7 @@ describe('useFabAction', () => {
     mocks.pathname = '/home';
     mocks.currentUserPubky = ME;
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
-    mocks.commitCreate.mockResolvedValue(undefined);
+    mocks.commitCreate.mockResolvedValue(true);
     useFeedOptimisticStore.setState({ pendingByKey: {} });
   });
 

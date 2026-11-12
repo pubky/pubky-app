@@ -96,6 +96,9 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
         try {
           if (mode === 'create') {
             const createdFeed = await FeedController.commitCreate(changes);
+            // The account changed while the write waited for the sync lock: nothing was created, and
+            // the viewer is gone, so there is nothing to announce or open.
+            if (!createdFeed) return;
 
             toast({
               title: 'Feed created',
@@ -111,6 +114,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
             feedId: feed.id,
             changes,
           });
+          if (!updatedFeed) return;
 
           toast({
             title: 'Feed updated',
@@ -148,9 +152,11 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
       if (!(await waitForAuth())) return false;
       const currentFeedHref = `${APP_ROUTES.FEED}/${feed.id}`;
 
-      await FeedController.commitDelete({
+      const deleted = await FeedController.commitDelete({
         feedId: feed.id,
       });
+      // false: the account changed while the delete waited for the sync lock; nothing to announce.
+      if (!deleted) return false;
       toast({
         title: 'Feed deleted',
       });

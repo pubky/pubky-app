@@ -22,20 +22,12 @@ const BOOKMARKS_STREAM = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 export class LocalBookmarkService {
   private static readonly BOOKMARK_TABLES = [BookmarkModel.table, PostStreamModel.table] as const;
 
-  /** Counts the local bookmark writes of this tab; see `captureWriteSequence`. */
-  private static writeSequence = 0;
-  /** The sequence number of the latest local write per composite post id. */
-  private static readonly lastWriteSequence = new Map<string, number>();
-
   /**
-   * Persists a bookmark operation (create or delete).
-   *
-   * The write is numbered before it runs, so a reconcile whose listing started earlier leaves this
-   * post alone (`reconcile`).
+   * Persists a bookmark operation (create or delete). `BookmarkApplication.persist` runs it under
+   * the user's sync lock, so it never overlaps a `reconcile`.
    */
   static async persist(action: HttpMethod, { postId }: Pick<TBookmarkEventParams, 'postId'>) {
     const isCreate = action === HttpMethod.PUT;
-    this.lastWriteSequence.set(postId, ++this.writeSequence);
 
     try {
       await db.transaction('rw', this.BOOKMARK_TABLES, async () => {
@@ -78,33 +70,23 @@ export class LocalBookmarkService {
   }
 
   /**
-   * The position of this tab's local bookmark writes, for a reconcile to take before it lists the
-   * homeserver directory: every write after it is newer than that listing.
-   */
-  static captureWriteSequence(): number {
-    return this.writeSequence;
-  }
-
-  /**
    * Replaces the local bookmarks with what the homeserver listing holds, in one transaction:
    * deletes every row the listing no longer names (un-bookmarked elsewhere), upserts the listed
    * ones and rewrites the bookmarks stream from the table, newest bookmark first and without a
-   * Nexus cursor. A post this tab bookmarked or un-bookmarked after `since` keeps its local state:
-   * the listing predates that write. `isCurrent` is checked inside the transaction, so a listing
-   * that finished after an account switch writes nothing for the next account.
+   * Nexus cursor. No write lands between the listing and this transaction: `fetchBookmarks` holds
+   * the user's sync lock `exclusive` across both. `isCurrent` is checked inside the transaction,
+   * so a listing that finished after an account switch writes nothing for the next account.
    *
    * @returns The stored bookmark ids, newest first, or null when nothing was written.
    */
-  static async reconcile({ bookmarks, since, isCurrent }: TBookmarkReconcileParams): Promise<string[] | null> {
-    const writtenSince = (postId: string) => (this.lastWriteSequence.get(postId) ?? 0) > since;
+  static async reconcile({ bookmarks, isCurrent }: TBookmarkReconcileParams): Promise<string[] | null> {
     try {
       return await db.transaction('rw', this.BOOKMARK_TABLES, async () => {
         if (isCurrent && !isCurrent()) return null;
         const listedIds = new Set(bookmarks.map((bookmark) => bookmark.id));
-        const stale = (await BookmarkModel.findAll()).filter((id) => !listedIds.has(id) && !writtenSince(id));
-        const listed = bookmarks.filter((bookmark) => !writtenSince(bookmark.id));
+        const stale = (await BookmarkModel.findAll()).filter((id) => !listedIds.has(id));
         if (stale.length > 0) await BookmarkModel.table.bulkDelete(stale);
-        if (listed.length > 0) await BookmarkModel.bulkSave(listed);
+        if (bookmarks.length > 0) await BookmarkModel.bulkSave(bookmarks);
 
         const ids = (await BookmarkModel.findAllSorted()).map((bookmark) => bookmark.id);
         await LocalStreamPostsService.upsert({ streamId: BOOKMARKS_STREAM, stream: ids });

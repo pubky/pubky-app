@@ -130,10 +130,12 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
         if (!mountedRef.current || !(await waitForAuth())) return false;
 
         if (target.type === 'bookmarks') {
-          await BookmarkController.commitCreate({
+          const saved = await BookmarkController.commitCreate({
             postId: parsed.compositeId,
             userId: currentUserPubky,
           });
+          // false: the account changed while the write waited for the sync lock or ran; nothing to announce.
+          if (!saved) return false;
         } else {
           await PostController.commitUpdateCollectionItem({
             collectionId: target.collectionId,

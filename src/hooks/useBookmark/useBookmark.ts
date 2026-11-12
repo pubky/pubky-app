@@ -101,14 +101,16 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
     setIsToggling(true);
     try {
       if (!(await waitForAuth())) return false;
+      // false: the account changed while the write waited for the sync lock or ran, so it did not complete
+      // for the viewer that is current now, and there is nothing to show.
       if (isBookmarked) {
-        await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
+        if (!(await BookmarkController.commitDelete({ postId, userId: currentUserPubky }))) return false;
         setIsBookmarked(false);
         toast({
           title: removedTitle,
         });
       } else {
-        await BookmarkController.commitCreate({ postId, userId: currentUserPubky });
+        if (!(await BookmarkController.commitCreate({ postId, userId: currentUserPubky }))) return false;
         setIsBookmarked(true);
         toast({
           title: addedTitle,

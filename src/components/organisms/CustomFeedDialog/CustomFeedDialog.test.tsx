@@ -1616,7 +1616,7 @@ describe('CustomFeedDialog', () => {
 
   it('calls FeedController.commitDelete when delete button is clicked', async () => {
     const mockFeed = createMockFeed();
-    mockCommitDelete.mockResolvedValue(undefined);
+    mockCommitDelete.mockResolvedValue(true);
 
     render(
       <CustomFeedDialog mode="edit" feed={mockFeed} open>
@@ -1633,7 +1633,7 @@ describe('CustomFeedDialog', () => {
 
   it('shows success toast and replaces the active route with home after successful delete', async () => {
     const mockFeed = createMockFeed();
-    mockCommitDelete.mockResolvedValue(undefined);
+    mockCommitDelete.mockResolvedValue(true);
 
     render(
       <CustomFeedDialog mode="edit" feed={mockFeed} open>
@@ -1654,7 +1654,7 @@ describe('CustomFeedDialog', () => {
   it('stays on the current route after deleting an inactive explicitly supplied feed', async () => {
     const mockFeed = createMockFeed({ id: 'feed-inactive' });
     mockUsePathname.mockReturnValue('/home');
-    mockCommitDelete.mockResolvedValue(undefined);
+    mockCommitDelete.mockResolvedValue(true);
 
     render(
       <CustomFeedDialog mode="edit" feed={mockFeed} open>

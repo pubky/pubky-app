@@ -50,7 +50,7 @@ describe('FeedController', () => {
 
     // Mock FeedApplication
     vi.spyOn(FeedApplication, 'persist').mockResolvedValue(createMockFeedSchema());
-    vi.spyOn(FeedApplication, 'commitDelete').mockResolvedValue(undefined);
+    vi.spyOn(FeedApplication, 'commitDelete').mockResolvedValue(true);
     vi.spyOn(FeedApplication, 'getList').mockResolvedValue([createMockFeedSchema()]);
     vi.spyOn(FeedApplication, 'get').mockResolvedValue(createMockFeedSchema());
     vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([createMockFeedSchema()]);
@@ -72,9 +72,10 @@ describe('FeedController', () => {
         params: {
           feed: expect.any(Object),
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
-      expect(result.id).toBe('feed-abc123');
+      expect(result?.id).toBe('feed-abc123');
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {
@@ -106,6 +107,7 @@ describe('FeedController', () => {
       expect(FeedApplication.persist).toHaveBeenCalledWith({
         userId: testData.userPubky,
         params: { feed: expect.any(Object) },
+        isCurrent: expect.any(Function),
       });
     });
 
@@ -140,6 +142,7 @@ describe('FeedController', () => {
       expect(FeedApplication.persist).toHaveBeenCalledWith({
         userId: testData.userPubky,
         params: { feed: expect.any(Object) },
+        isCurrent: expect.any(Function),
       });
     });
 
@@ -176,8 +179,27 @@ describe('FeedController', () => {
           feed: expect.any(Object),
           existingId: 'feed-abc123',
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
+    });
+
+    it('captures the viewer guard before the local read, so a logout during it turns the guard false', async () => {
+      const persistSpy = vi.spyOn(FeedApplication, 'persist');
+      vi.spyOn(FeedApplication, 'prepareUpdateParams').mockImplementation(async () => {
+        // Signed out while the stored feed was being read.
+        vi.spyOn(useAuthStore, 'getState').mockReturnValue({
+          selectCurrentUserPubky: () => testData.userPubky,
+          currentUserPubky: null,
+          session: null,
+        } as AuthStore);
+        return createFeedParams({ tags: ['bitcoin', 'mining'] });
+      });
+
+      await FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { tags: ['bitcoin', 'mining'] } });
+
+      const { isCurrent } = persistSpy.mock.calls[0][0];
+      expect(isCurrent!()).toBe(false);
     });
 
     it('should throw when feed not found', async () => {
@@ -214,6 +236,7 @@ describe('FeedController', () => {
           feed: expect.any(Object),
           existingId: 'feed-abc123',
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
     });
@@ -248,9 +271,19 @@ describe('FeedController', () => {
       const deleteSpy = vi.spyOn(FeedApplication, 'commitDelete');
       const deleteParams: TFeedIdParam = { feedId: 'feed-abc123' };
 
-      await FeedController.commitDelete(deleteParams);
+      await expect(FeedController.commitDelete(deleteParams)).resolves.toBe(true);
 
-      expect(deleteSpy).toHaveBeenCalledWith({ userId: testData.userPubky, params: { feedId: 'feed-abc123' } });
+      expect(deleteSpy).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: { feedId: 'feed-abc123' },
+        isCurrent: expect.any(Function),
+      });
+    });
+
+    it('reports a delete skipped for a signed-out viewer as not run', async () => {
+      vi.spyOn(FeedApplication, 'commitDelete').mockResolvedValue(false);
+
+      await expect(FeedController.commitDelete({ feedId: 'feed-abc123' })).resolves.toBe(false);
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {

@@ -11,6 +11,16 @@ import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 import type { TBookmarkListing } from '@/pipes/bookmark/bookmark.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
+import { withSyncLock } from '@/utils/sync-lock';
+
+/**
+ * The user's bookmark sync lock (`withSyncLock`), shared by every tab: `persist` holds it `shared`
+ * across the row write and the PUT or DELETE, so writes overlap each other; `fetchBookmarks` holds it
+ * `exclusive` from the listing through the GETs to the reconcile. So no write lands between the
+ * listing and the reconcile, in this tab or another, and a bookmark being written in any tab (its
+ * row stored, its PUT not yet landed) is either listed or written after the fetch, never undone by it.
+ */
+const bookmarkSyncLock = (pubky: Pubky) => `pubky-bookmarks-sync:${pubky}`;
 
 /**
  * Bookmark application service.
@@ -48,8 +58,8 @@ export class BookmarkApplication {
    * first).
    *
    * Local-only read — the bookmarks table is hydrated from the homeserver
-   * listing at bootstrap (`fetchBookmarks`) and kept current by this tab's
-   * own bookmark writes.
+   * listing at bootstrap (`fetchBookmarks`) and kept current by the bookmark
+   * writes (`persist`) of every tab.
    *
    * @returns Composite post IDs (`authorId:postId`), newest-bookmarked
    *   first.
@@ -73,8 +83,16 @@ export class BookmarkApplication {
     return LocalBookmarkService.countPosts();
   }
 
-  static async persist(action: HttpMethod, params: TBookmarkPersistInput) {
-    const { postId, bookmarkUrl, bookmarkBody } = params;
+  /**
+   * Writes the bookmark locally, then PUTs or DELETEs its file, holding `bookmarkSyncLock` `shared`.
+   * Resolves true once the write ran, false when it was skipped because the account changed while it
+   * waited for the lock or ran (`TBookmarkPersistInput.isCurrent`): nothing landed for the account that is
+   * current now, so the caller announces nothing. A row written before the change is cleared by the logout
+   * or account switch that changed the viewer; after a same-account session replacement it stays until
+   * the next listing reconciles it.
+   */
+  static async persist(action: HttpMethod, params: TBookmarkPersistInput): Promise<boolean> {
+    const { postId, userId, bookmarkUrl, bookmarkBody } = params;
 
     // Checked before the local write: a PUT without its bytes must never fall through to a delete.
     if (action === HttpMethod.PUT && !bookmarkBody) {
@@ -85,7 +103,24 @@ export class BookmarkApplication {
       });
     }
 
+    return withSyncLock(bookmarkSyncLock(userId), 'shared', () => this.persistUnderLock(action, params));
+  }
+
+  private static async persistUnderLock(
+    action: HttpMethod,
+    { postId, bookmarkUrl, bookmarkBody, isCurrent }: TBookmarkPersistInput,
+  ): Promise<boolean> {
+    // Viewer guard before each write (`TBookmarkPersistInput.isCurrent`); a stale viewer writes nothing
+    // further and does not throw (see `persist`).
+    const stale = () => {
+      if (!isCurrent || isCurrent()) return false;
+      Logger.debug('Skipping a bookmark write: the account changed while it waited for the sync lock', { postId });
+      return true;
+    };
+
+    if (stale()) return false;
     await LocalBookmarkService.persist(action, { postId });
+    if (stale()) return false;
     if (action === HttpMethod.PUT) {
       await HomeserverService.putBlob({ url: bookmarkUrl, blob: bookmarkBody! });
     } else {
@@ -93,6 +128,7 @@ export class BookmarkApplication {
       // A missing file is the state a delete wants.
       await HomeserverService.deleteIdempotent(bookmarkUrl);
     }
+    return true;
   }
 
   /**
@@ -101,12 +137,15 @@ export class BookmarkApplication {
    * and the bookmarks feed is ordered by it), then reconciles the `bookmarks` table and the
    * bookmarks stream in one transaction. A bookmark whose read fails is kept as made now. Files
    * that bookmark no post (a web page, a profile, a post version) are skipped with a warning.
+   * The whole run holds `bookmarkSyncLock` `exclusive`.
    *
    * @returns The stored bookmark ids, newest first (empty when the account changed meanwhile).
    */
   static async fetchBookmarks(pubky: Pubky, { isCurrent }: TBookmarkFetchOptions = {}): Promise<string[]> {
-    // Taken before the listing: a local write after it is newer than anything the listing says.
-    const since = LocalBookmarkService.captureWriteSequence();
+    return withSyncLock(bookmarkSyncLock(pubky), 'exclusive', () => this.fetchBookmarksUnderLock(pubky, isCurrent));
+  }
+
+  private static async fetchBookmarksUnderLock(pubky: Pubky, isCurrent?: () => boolean): Promise<string[]> {
     const urls = await HomeserverService.listAll({ baseDirectory: `${listPrefix(pubky, 'private')}bookmarks/` });
     if (isCurrent && !isCurrent()) return [];
 
@@ -153,7 +192,6 @@ export class BookmarkApplication {
 
     const ids = await LocalBookmarkService.reconcile({
       bookmarks: [...createdAt].map(([id, created_at]) => ({ id, created_at })),
-      since,
       isCurrent,
     });
     return ids ?? [];

@@ -158,7 +158,7 @@ describe('DialogAddContent', () => {
     mocks.currentUserPubky = VIEWER;
     mocks.restoreStatus = 'ready';
     mocks.bookmarkExists.mockResolvedValue(false);
-    mocks.commitCreateBookmark.mockResolvedValue(undefined);
+    mocks.commitCreateBookmark.mockResolvedValue(true);
     mocks.getOrFetchPost.mockResolvedValue(livePost());
     mocks.getCollectionDetails.mockResolvedValue(collectionDetails());
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);

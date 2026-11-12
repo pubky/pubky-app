@@ -7,6 +7,8 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { BookmarkController } from './bookmark';
 import type { TBookmarkEventParams } from './bookmark.types';
 
@@ -29,7 +31,8 @@ const createBookmarkParams = (): TBookmarkEventParams => ({
 describe('BookmarkController', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(undefined);
+    useAuthStore.setState({ currentUserPubky: null, session: null });
+    vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(true);
   });
 
   describe('getAll', () => {
@@ -77,10 +80,35 @@ describe('BookmarkController', () => {
       const [method, input] = persistSpy.mock.calls[0];
       expect(method).toBe(HttpMethod.PUT);
       expect(input.postId).toBe(testData.compositePostId);
+      // The application keys the sync lock on the user; it never parses the user out of the URL.
+      expect(input.userId).toBe(testData.userPubky);
+      expect(input.isCurrent).toEqual(expect.any(Function));
       expect(input.bookmarkUrl).toContain(`pubky://${testData.userPubky}/priv/social/v1/bookmarks/`);
       const parsed = parseUri(input.bookmarkUrl);
       expect(parsed.kind === 'bookmark' && parsed.target).toBe(buildUri(testData.authorPubky, 'post', testData.postId));
       expect(decodeObject(input.bookmarkUrl, input.bookmarkBody!, 'bookmark').target).toBeNull();
+    });
+
+    it('hands the application a session guard that expires on logout and same-account re-login', async () => {
+      useAuthStore.setState({ currentUserPubky: testData.userPubky, session: mockSession() });
+
+      await BookmarkController.commitCreate(createBookmarkParams());
+
+      // Checked by the application once the sync lock is acquired: a write that waited may start after a logout.
+      const isCurrent = vi.mocked(BookmarkApplication.persist).mock.calls[0][1].isCurrent!;
+      expect(isCurrent()).toBe(true);
+      useAuthStore.setState({ currentUserPubky: null, session: null });
+      expect(isCurrent()).toBe(false);
+      useAuthStore.setState({ currentUserPubky: testData.userPubky, session: mockSession() });
+      expect(isCurrent()).toBe(false);
+    });
+
+    it('reports whether the write ran, so a skip for a signed-out viewer reaches the hooks', async () => {
+      await expect(BookmarkController.commitCreate(createBookmarkParams())).resolves.toBe(true);
+      vi.mocked(BookmarkApplication.persist).mockResolvedValueOnce(false);
+      await expect(BookmarkController.commitCreate(createBookmarkParams())).resolves.toBe(false);
+      vi.mocked(BookmarkApplication.persist).mockResolvedValueOnce(false);
+      await expect(BookmarkController.commitDelete(createBookmarkParams())).resolves.toBe(false);
     });
 
     it('refuses a post id the data model cannot reference, before any write', async () => {
@@ -105,7 +133,9 @@ describe('BookmarkController', () => {
       const created = persistSpy.mock.calls[0][1];
       expect(persistSpy).toHaveBeenLastCalledWith(HttpMethod.DELETE, {
         postId: testData.compositePostId,
+        userId: testData.userPubky,
         bookmarkUrl: created.bookmarkUrl,
+        isCurrent: expect.any(Function),
       });
     });
   });

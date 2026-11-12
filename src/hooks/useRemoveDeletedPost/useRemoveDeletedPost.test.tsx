@@ -105,8 +105,8 @@ describe('useRemoveDeletedPost', () => {
   });
 
   it('optimistically removes a bookmark before persistence resolves', async () => {
-    let resolveDelete: (() => void) | undefined;
-    const deletePromise = new Promise<void>((resolve) => {
+    let resolveDelete: ((ran: boolean) => void) | undefined;
+    const deletePromise = new Promise<boolean>((resolve) => {
       resolveDelete = resolve;
     });
     vi.mocked(BookmarkController.commitDelete).mockReturnValue(deletePromise);
@@ -126,13 +126,30 @@ describe('useRemoveDeletedPost', () => {
     await waitFor(() => expect(result.current.isRemoving).toBe(true));
 
     await act(async () => {
-      resolveDelete?.();
+      resolveDelete?.(true);
       await removePromise;
     });
 
     expect(rollbackRemoval).not.toHaveBeenCalled();
     expect(commitRemoval).toHaveBeenCalledTimes(1);
     expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post removed from bookmarks' });
+  });
+
+  it('rolls the optimistic removal back without a toast when the controller skipped the delete', async () => {
+    vi.mocked(BookmarkController.commitDelete).mockResolvedValue(false);
+
+    const { result } = renderHook(() => useRemoveDeletedPost(postId));
+    let removed: boolean | undefined;
+    await act(async () => {
+      removed = await result.current.remove();
+    });
+
+    // The account changed while the delete waited for the sync lock: nothing was removed anywhere.
+    expect(removed).toBe(false);
+    expect(commitRemoval).not.toHaveBeenCalled();
+    expect(rollbackRemoval).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    expect(result.current.isRemoving).toBe(false);
   });
 
   it('removes a deleted post from an owned collection', async () => {
@@ -274,8 +291,8 @@ describe('useRemoveDeletedPost', () => {
   });
 
   it('prevents duplicate removal requests while one is pending', async () => {
-    let resolveDelete: (() => void) | undefined;
-    const deletePromise = new Promise<void>((resolve) => {
+    let resolveDelete: ((ran: boolean) => void) | undefined;
+    const deletePromise = new Promise<boolean>((resolve) => {
       resolveDelete = resolve;
     });
     vi.mocked(BookmarkController.commitDelete).mockReturnValue(deletePromise);
@@ -291,7 +308,7 @@ describe('useRemoveDeletedPost', () => {
     expect(BookmarkController.commitDelete).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      resolveDelete?.();
+      resolveDelete?.(true);
       await deletePromise;
     });
   });

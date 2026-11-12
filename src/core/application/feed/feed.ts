@@ -33,6 +33,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { withSyncLock } from '@/utils/sync-lock';
 import type {
   FeedDeleteParams,
   FeedFetchOptions,
@@ -44,14 +45,17 @@ import type {
   StoredFeedWriteParams,
 } from './feed.types';
 
-/** Web Lock shared by every tab: feed writes hold it `shared`, the reconciling fetch `exclusive`. */
-const FEED_SYNC_LOCK_PREFIX = 'pubky-feeds-sync:';
+/**
+ * The user's feed sync lock (`withSyncLock`), shared by every tab: writes (`persist`, `commitDelete`)
+ * hold it `shared`, so they overlap each other; the reconciling fetch holds it `exclusive`, so it
+ * never lists while a row's PUT or DELETE is in flight and no write lands between its listing and
+ * its local write.
+ */
+const feedSyncLock = (pubky: Pubky) => `pubky-feeds-sync:${pubky}`;
 
 export class FeedApplication {
   private constructor() {}
   private static readonly FETCH_FEEDS_BATCH_SIZE = 10;
-  /** Per-tab stand-in for the Web Lock where `navigator.locks` is unavailable (an insecure origin). */
-  private static pendingSync = new Map<Pubky, Promise<unknown>>();
 
   static async getList(): Promise<FeedModelSchema[]> {
     return LocalFeedService.readAll();
@@ -61,11 +65,20 @@ export class FeedApplication {
     return LocalFeedService.read(params);
   }
 
-  static async persist({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
-    return this.withSyncLock(userId, 'shared', () => this.persistUnderLock({ userId, params }));
+  /**
+   * Stores the feed locally and on the homeserver under the sync lock. Returns the stored row, or
+   * null when the account changed while the write waited for the lock or ran: logout and account
+   * preparation clear the shared database without waiting for the lock, so a stale write would land
+   * in the next account's table. The viewer is re-checked before every local and homeserver write
+   * (`isCurrent`, like a mute commit); what landed before the change is left as it is: an edit that
+   * changes the id and is interrupted after its PUT leaves both stored copies, which the account's
+   * next sign-in lists as two feeds.
+   */
+  static async persist({ userId, params, isCurrent }: FeedPutParams): Promise<FeedModelSchema | null> {
+    return withSyncLock(feedSyncLock(userId), 'shared', () => this.persistUnderLock({ userId, params, isCurrent }));
   }
 
-  private static async persistUnderLock({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
+  private static async persistUnderLock({ userId, params, isCurrent }: FeedPutParams): Promise<FeedModelSchema | null> {
     const { feed: builtFeed, existingId } = params as TFeedPersistCreateParams;
     // The id is the filter's hash, computed by the builder from this client's input alone, so it
     // is known before any homeserver round trip and never changes once the stored copy is merged in.
@@ -100,11 +113,14 @@ export class FeedApplication {
       // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
 
+      if (isCurrent && !isCurrent()) return null;
       await this.putStoredFeed({ storedUrl, feedUrl, feed: builtFeed.object });
 
+      if (isCurrent && !isCurrent()) return null;
       const persistedNewFeed = await this.migrateLocalFeedAtomically({ userId, existingId, feedSchema, oldFeed });
 
       // Best-effort cleanup of old homeserver feed. Keep local new feed as source of truth if cleanup fails.
+      if (isCurrent && !isCurrent()) return null;
       await this.deleteStoredFeed(userId, existingId).catch((cleanupError) => {
         Logger.warn('Failed to cleanup old homeserver feed after successful migration to new feed ID', {
           oldFeedId: existingId,
@@ -116,14 +132,21 @@ export class FeedApplication {
       return persistedNewFeed;
     }
 
-    return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object });
+    return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object, isCurrent });
   }
 
-  static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
-    return this.withSyncLock(userId, 'shared', () => this.commitDeleteUnderLock({ userId, params }));
+  /**
+   * Removes the feed locally and on the homeserver under the sync lock. Resolves true once the delete
+   * ran, false when it was skipped because the account changed while it waited for the lock (`persist`):
+   * nothing was removed, and the caller announces nothing.
+   */
+  static async commitDelete({ userId, params, isCurrent }: FeedDeleteParams): Promise<boolean> {
+    return withSyncLock(feedSyncLock(userId), 'shared', () =>
+      this.commitDeleteUnderLock({ userId, params, isCurrent }),
+    );
   }
 
-  private static async commitDeleteUnderLock({ userId, params }: FeedDeleteParams): Promise<void> {
+  private static async commitDeleteUnderLock({ userId, params, isCurrent }: FeedDeleteParams): Promise<boolean> {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
 
     // Model errors are already logged; cache cleanup must not block the delete itself.
@@ -137,6 +160,8 @@ export class FeedApplication {
       }
     }
 
+    // Viewer guard, before the local and the homeserver delete start together: see `FeedPutParams.isCurrent`.
+    if (isCurrent && !isCurrent()) return false;
     await Promise.all([
       LocalFeedService.delete({ feedId }),
       this.deleteStoredFeed(userId, feedId),
@@ -144,6 +169,7 @@ export class FeedApplication {
         ? [LocalStreamPostsService.deleteById({ streamId }), LocalStreamPostsService.clearUnreadStream({ streamId })]
         : []),
     ]);
+    return true;
   }
 
   /**
@@ -193,7 +219,7 @@ export class FeedApplication {
    * switch touches nothing.
    */
   static async fetchFeeds(userId: Pubky, { isCurrent }: FeedFetchOptions = {}): Promise<FeedModelSchema[]> {
-    return this.withSyncLock(userId, 'exclusive', () => this.fetchFeedsUnderLock(userId, isCurrent));
+    return withSyncLock(feedSyncLock(userId), 'exclusive', () => this.fetchFeedsUnderLock(userId, isCurrent));
   }
 
   private static async fetchFeedsUnderLock(userId: Pubky, isCurrent?: () => boolean): Promise<FeedModelSchema[]> {
@@ -267,33 +293,6 @@ export class FeedApplication {
       ]),
     );
     return persisted;
-  }
-
-  /**
-   * Runs `task` under the user's feed sync lock. Writes (`persist`, `commitDelete`) hold it
-   * `shared`, so they overlap each other; the reconciling fetch holds it `exclusive`, so it never
-   * lists while a row's PUT or DELETE is in flight and no write lands between its listing and its
-   * local write. Web Locks share the lock with every tab of the app. Without them (an insecure
-   * origin), a queue covers this tab only, one task at a time.
-   */
-  private static async withSyncLock<T>(pubky: Pubky, mode: LockMode, task: () => Promise<T>): Promise<T> {
-    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
-      try {
-        return await navigator.locks.request(`${FEED_SYNC_LOCK_PREFIX}${pubky}`, { mode }, task);
-      } catch (error) {
-        // `request` itself can reject with a DOMException that no Err factory has reported.
-        throw toAppError(error, ErrorService.Local, 'withSyncLock');
-      }
-    }
-
-    const previousTask = this.pendingSync.get(pubky) ?? Promise.resolve();
-    const pendingTask = previousTask.catch(() => {}).then(task);
-    this.pendingSync.set(pubky, pendingTask);
-    try {
-      return await pendingTask;
-    } finally {
-      if (this.pendingSync.get(pubky) === pendingTask) this.pendingSync.delete(pubky);
-    }
   }
 
   /**
@@ -415,9 +414,13 @@ export class FeedApplication {
     storedUrl,
     feedUrl,
     feed,
-  }: PersistAndSyncParams): Promise<FeedModelSchema> {
+    isCurrent,
+  }: PersistAndSyncParams): Promise<FeedModelSchema | null> {
+    // Viewer guard before each write: see `FeedPutParams.isCurrent`.
+    if (isCurrent && !isCurrent()) return null;
     const { persisted: persistedFeed, prior: priorFeed } = await LocalFeedService.createOrUpdate(feedSchema);
 
+    if (isCurrent && !isCurrent()) return null;
     try {
       await this.putStoredFeed({ storedUrl, feedUrl, feed });
     } catch (error) {
