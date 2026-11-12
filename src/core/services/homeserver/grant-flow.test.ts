@@ -2,16 +2,18 @@ import { webcrypto } from 'node:crypto';
 import type { GrantAuthFlow, Pubky } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_CAPABILITIES } from '@/config/auth';
+import { createAuthApprovalMismatchError, isAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 import { type GrantFlowRequest, GrantFlowService } from './grant-flow';
 
+const approvals = vi.hoisted(() => ({ next: undefined as Promise<never> | undefined }));
 vi.mock('@/config/network', async (original) => ({
   ...(await original<typeof import('@/config/network')>()),
   getHomeserver: () => '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y',
 }));
 vi.mock('./homeserver.utils', () => ({
-  createCancelableAuthApproval: () => ({ awaitApproval: new Promise(() => {}), cancel: vi.fn() }),
+  createCancelableAuthApproval: () => ({ awaitApproval: approvals.next ?? new Promise(() => {}), cancel: vi.fn() }),
 }));
 const savedKey = 'pubky-app-pending-grant-v1';
 const request: GrantFlowRequest = { purpose: 'signin', capabilities: APP_CAPABILITIES, generation: 'generation' };
@@ -39,6 +41,7 @@ beforeEach(() => {
   GrantFlowService.clear();
 });
 afterEach(() => {
+  approvals.next = undefined;
   vi.restoreAllMocks();
   GrantFlowService.clear();
   vi.useRealTimers();
@@ -152,6 +155,38 @@ describe('pending Ring grant flow', () => {
     const saved = sessionStorage.getItem(savedKey);
     first.completeAuthFlow?.();
     expect(sessionStorage.getItem(savedKey)).toBe(saved);
+  });
+  describe('wrong-key approval refused by the SDK', () => {
+    const hinted: GrantFlowRequest = { ...request, purpose: 'upgrade', expectedSigner: 'signed-in-pubky' };
+    const refusable = () => {
+      let refuse!: (error: unknown) => void;
+      approvals.next = new Promise<never>((_, reject) => {
+        refuse = reject;
+      });
+      return (error: unknown) => refuse(error);
+    };
+
+    it('discards the pending flow that owns the refused approval', async () => {
+      const refuse = refusable();
+      const flow = await GrantFlowService.start(makeSdk(), hinted);
+      expect(sessionStorage.getItem(savedKey)).not.toBeNull();
+      refuse(createAuthApprovalMismatchError());
+      await expect(flow.awaitApproval).rejects.toSatisfy(isAuthApprovalMismatchError);
+      expect(sessionStorage.getItem(savedKey)).toBeNull();
+    });
+
+    it('leaves a newer pending flow in place when the refusal belongs to a superseded flow', async () => {
+      const sdk = makeSdk();
+      const refuse = refusable();
+      const first = await GrantFlowService.start(sdk, hinted);
+      approvals.next = undefined;
+      await GrantFlowService.start(sdk, { ...hinted, fresh: true });
+      const newer = sessionStorage.getItem(savedKey);
+      expect(newer).not.toBeNull();
+      refuse(createAuthApprovalMismatchError());
+      await expect(first.awaitApproval).rejects.toSatisfy(isAuthApprovalMismatchError);
+      expect(sessionStorage.getItem(savedKey)).toBe(newer);
+    });
   });
   it('cancel during asynchronous start prevents a late pending record', async () => {
     const flow = makeFlow();
