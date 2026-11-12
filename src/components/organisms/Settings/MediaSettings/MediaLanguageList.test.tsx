@@ -6,6 +6,12 @@ import { WIKIPEDIA_LANGUAGES } from './MediaLanguageList.constants';
 
 const mockOnChange = vi.fn();
 
+// `qqq` is reserved for local use: no runtime has a name for it, so it stands for a code the browser cannot name.
+vi.mock('./MediaLanguageList.constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./MediaLanguageList.constants')>();
+  return { WIKIPEDIA_LANGUAGES: [...actual.WIKIPEDIA_LANGUAGES, 'qqq'] };
+});
+
 // The drop handler the list gives dnd-kit, to drop with the pointer: jsdom has no layout to drag in.
 type CapturedDragEnd = (event: { active: { id: string }; over: { id: string } | null }) => void;
 const capturedDnd = vi.hoisted(() => ({ onDragEnd: undefined as CapturedDragEnd | undefined }));
@@ -77,10 +83,10 @@ describe('MediaLanguageList', () => {
     expect(names.indexOf('Dansk (da)')).toBeLessThan(names.indexOf('Eesti (et)'));
     expect(names.indexOf('Eesti (et)')).toBeLessThan(names.indexOf('Español (es)'));
     expect(names.indexOf('Español (es)')).toBeLessThan(names.indexOf('Français (fr)'));
-    // A code the runtime cannot name (Amis here) comes after every named language, with the others like it.
-    const bare = names.indexOf('ami');
+    // The codes the runtime cannot name come after every named language.
+    const bare = names.findIndex((name) => !name.endsWith(')'));
     expect(bare).toBeGreaterThan(0);
-    expect(names.slice(0, bare).every((name) => name.endsWith(')'))).toBe(true);
+    expect(names.slice(bare)).toContain('qqq');
     expect(names.slice(bare).some((name) => name.endsWith(')'))).toBe(false);
     expect(menu).toHaveClass('max-h-72', 'overflow-y-auto');
     expect(within(menu).getByText('Français (fr)')).toHaveAttribute('lang', 'fr');
