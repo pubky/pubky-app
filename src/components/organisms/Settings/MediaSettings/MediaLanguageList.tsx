@@ -1,6 +1,7 @@
 'use client';
 
 import { arrayMove } from '@dnd-kit/sortable';
+import { Languages } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getLanguageName, getLanguageTag } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
@@ -14,9 +15,14 @@ interface MediaLanguageListProps {
   onChange: (languages: string[]) => void;
 }
 
-/** A row and an Add entry: the language's own name with its code (`Deutsch (de)`). */
+/** An Add entry: the language's own name with its code (`Deutsch (de)`). */
 function toItem(lang: string): MediaRankedItem {
   return { id: lang, name: getLanguageName(lang), lang: getLanguageTag(lang) };
+}
+
+/** A row: as an Add entry, after the app's languages icon, so the names line up with the Players'. */
+function toRow(lang: string): MediaRankedItem {
+  return { ...toItem(lang), icon: <Languages className="size-4 shrink-0" aria-hidden="true" /> };
 }
 
 /**
@@ -44,7 +50,7 @@ export function MediaLanguageList({ languages, onChange }: MediaLanguageListProp
       <MediaRankedList
         kind="language"
         labelId="media-languages-label"
-        items={languages.map(toItem)}
+        items={languages.map(toRow)}
         addable={addable}
         addLabel="Add a Wikipedia language"
         addMenuClassName="max-h-72 overflow-y-auto"
