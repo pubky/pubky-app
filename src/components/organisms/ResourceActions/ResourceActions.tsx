@@ -104,9 +104,10 @@ export function ResourceActions({
         data-testid="resource-action-row"
         className={cn(
           'flex flex-wrap gap-2 md:shrink-0 md:flex-nowrap @max-xl/grid:flex-wrap!',
-          // On a narrow card (a phone, a quoted post) the buttons close up, so ⋯ stays on their row.
+          // On a narrow card (a phone, a quoted post) the buttons close up, so ⋯ stays on their row. A card in a
+          // post on a phone (the body is at least 375 px wide) gets the 2xs step, with room for counts.
           '@max-sm/resource-actions:gap-1.5 @max-sm/resource-actions:[&>*]:px-2.5!',
-          '@max-3xs/resource-actions:gap-1 @max-3xs/resource-actions:[&>*]:gap-1! @max-3xs/resource-actions:[&>*]:px-2!',
+          '@max-2xs/resource-actions:gap-1 @max-2xs/resource-actions:[&>*]:gap-1! @max-2xs/resource-actions:[&>*]:px-2!',
           '@max-[14.5rem]/resource-actions:[&>*]:px-1.5!',
           '@max-[13.75rem]/resource-actions:gap-0.5',
         )}

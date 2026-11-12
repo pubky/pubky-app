@@ -237,8 +237,9 @@ describe('ResourceActions', () => {
     expect(screen.getByTestId('resource-action-row')).toHaveClass(
       '@max-sm/resource-actions:gap-1.5',
       '@max-sm/resource-actions:[&>*]:px-2.5!',
-      '@max-3xs/resource-actions:gap-1',
-      '@max-3xs/resource-actions:[&>*]:px-2!',
+      '@max-2xs/resource-actions:gap-1',
+      '@max-2xs/resource-actions:[&>*]:gap-1!',
+      '@max-2xs/resource-actions:[&>*]:px-2!',
       '@max-[14.5rem]/resource-actions:[&>*]:px-1.5!',
       '@max-[13.75rem]/resource-actions:gap-0.5',
     );
