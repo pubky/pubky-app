@@ -1,4 +1,4 @@
-import { backupDownloadFilePath, userIdFromPubky } from '../support/common';
+import { userIdFromPubky } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { addTagsToCollectionHero, createCollection, findCollectionCardInSection } from '../support/collections';
@@ -55,7 +55,6 @@ const filterProfilePosts = (query: string) => {
 describe('search', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
     // created first so they are indexed before Mr Search's posts
     cy.onboardAsNewUser(otherPoster.username, '', otherPoster.pubkyAlias);
@@ -79,7 +78,7 @@ describe('search', () => {
     // sign in if not already
     cy.location('pathname').then((currentPath) => {
       if (currentPath !== '/home') {
-        cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+        cy.signInWithPubkyRing(username);
         waitForFeedToLoad();
       }
     });

@@ -10,7 +10,6 @@ import {
 } from '../support/profile';
 import { slowCypressDown } from 'cypress-slow-down';
 import { HasBackedUp } from '../support/types/enums';
-import { backupDownloadFilePath } from '../support/auth';
 import { searchForProfileByName, searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
 import { itMobile } from '../support/mobile';
@@ -20,7 +19,6 @@ import { seedUserViaApi } from '../support/seed';
 describe('profile', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
   });
 
   const profileName = 'Edit Me';
@@ -129,7 +127,7 @@ describe('profile', () => {
     cy.signOut(HasBackedUp.Yes);
     cy.onboardAsNewUser(profileToTagPubkyName, 'This profile is destined to be tagged');
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+    cy.signInWithPubkyRing(profileName);
 
     // navigate to the profile to tag
     searchForProfileByName(profileToTagPubkyName);
@@ -175,7 +173,7 @@ describe('profile', () => {
     cy.signOut(HasBackedUp.Yes);
     cy.onboardAsNewUser(profileToFollowName, 'This profile is never actually followed');
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+    cy.signInWithPubkyRing(profileName);
 
     searchForProfileByName(profileToFollowName);
 

@@ -1,5 +1,4 @@
 import type { Interception } from 'cypress/types/net-stubbing';
-import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
@@ -153,7 +152,6 @@ const waitForHeadPollOffering = (postId: string, timeout: number, polls = 8) => 
 describe('posts', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
     // create profile to post from
     cy.onboardAsNewUser(username, 'Big on posting.');
@@ -167,7 +165,7 @@ describe('posts', () => {
     // sign in if not already
     cy.location('pathname').then((currentPath) => {
       if (currentPath !== '/home') {
-        cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+        cy.signInWithPubkyRing(username);
       }
     });
   });
@@ -346,7 +344,7 @@ describe('posts', () => {
     cy.signOut(HasBackedUp.Yes);
     cy.onboardAsNewUser(fullUsername, 'My account will be referenced in a post.', pubkyAlias);
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+    cy.signInWithPubkyRing(username);
 
     cy.get(`@${pubkyAlias}`).then((pubky) => {
       const pubkyText = String(pubky);
@@ -420,7 +418,7 @@ describe('posts', () => {
     createQuickPost(postContent);
 
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+    cy.signInWithPubkyRing(username);
 
     cy.findPostInFeed(0, postContent, CheckForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-more-btn"]').click();

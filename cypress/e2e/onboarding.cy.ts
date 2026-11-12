@@ -1,5 +1,5 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { backupDownloadFilePath, extendedTimeout } from '../support/common';
+import { extendedTimeout } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
@@ -58,7 +58,6 @@ describe('Onboarding', () => {
   });
 
   beforeEach(() => {
-    cy.deleteDownloadsFolder();
     cy.visit('/');
     checkHeaderIsVisible();
   });
@@ -80,14 +79,13 @@ describe('Onboarding', () => {
     cy.get('[data-cy="header-sign-in-btn"]').should('exist').should('be.visible');
   };
 
-  it('can onboard a new key from the profile step, sign out, then sign in with recovery file and recovery phrase', () => {
-    // profile name is also used for the recovery file name
+  it('can onboard a new Pubky Ring key from the profile step, sign out, then sign back in with Pubky Ring', () => {
     const profileName = 'Test User';
     const profileBio = 'Test Bio';
 
     cy.onboardAsNewUser(profileName, profileBio);
 
-    // a key restored from a backup is not reminded to back up on the home feed
+    // a key held in Pubky Ring is not reminded to back up on the home feed
     cy.location('pathname').should('eq', '/home');
     cy.get('[data-cy="timeline-container"]').should('be.visible');
     cy.get('#backup-btn').should('not.exist');
@@ -95,14 +93,7 @@ describe('Onboarding', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
-    checkOwnProfile(profileName, profileBio);
-
-    cy.signOut(HasBackedUp.Yes);
-
-    cy.get(`@recoveryPhrase-${profileName}`).then((recoveryPhrase) => {
-      cy.signInWithRecoveryPhrase(recoveryPhrase.toString());
-    });
+    cy.signInWithPubkyRing(profileName);
     checkOwnProfile(profileName, profileBio);
 
     cy.signOut(HasBackedUp.Yes);

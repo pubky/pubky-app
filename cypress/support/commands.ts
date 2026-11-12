@@ -1,11 +1,12 @@
 // <reference types="cypress" />
 
-import { backupDownloadFilePath, extendedTimeout, waitForServiceWorker } from './common';
+import { extendedTimeout, waitForServiceWorker } from './common';
 import { goToProfilePageFromHeader } from './header';
+import { isMobile } from './mobile';
 import { showProfileHeader } from './profile';
 import { confirmLogoutBackupBeforeNavigation } from './logout';
 import { waitForFeedToLoad } from './posts';
-import { signUpViaApi } from './seed';
+import { approvePubkyAuthViaApi, signUpViaApi } from './seed';
 import { CheckForNewPosts, HasBackedUp, OnboardingExperience, PostType, WaitForNewPosts } from './types/enums';
 // ***********************************************
 // This example commands.ts shows you how to
@@ -17,44 +18,46 @@ import { CheckForNewPosts, HasBackedUp, OnboardingExperience, PostType, WaitForN
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
-// The passcode every recovery file the suite writes or downloads is encrypted with
-const RECOVERY_FILE_PASSCODE = '123456';
+// TypeScript's DOM types do not include the Navigation API yet
+type NavigationApi = {
+  addEventListener(type: 'navigate', listener: (event: Event & { destination: { url: string } }) => void): void;
+};
 
-// From the homepage, open /sign-in and pick a restore method. The caller asserts where the app
-// lands: /home for a key with a profile, /onboarding/profile for one without.
+// Open /sign-in from the homepage, unless already there (e.g. after "Sign back in" on /logout)
 function openSignInPage(): void {
   cy.location('pathname').then((pathname) => {
+    if (pathname === '/sign-in') return;
     if (pathname !== '/') cy.visit('/');
+    cy.location('pathname').should('eq', '/');
+    waitForServiceWorker();
+    cy.get('[data-cy="header-sign-in-btn"]').click();
   });
-  cy.location('pathname').should('eq', '/');
-  waitForServiceWorker();
-
-  cy.get('[data-cy="header-sign-in-btn"]').click();
   cy.location('pathname').should('eq', '/sign-in');
 }
 
-function restoreWithEncryptedFile(backupFilepath: string, passcode: string): void {
-  openSignInPage();
-
-  cy.get('#restore-encrypted-file-btn').click();
-
-  cy.get('#encrypted-file-input').selectFile(
-    backupFilepath,
-    { force: true }, // force to bypass visibility check of hidden input field
-  );
-
-  if (passcode) {
-    cy.get('#restore-password').type(passcode);
+// The app's Pubky Ring request, taken where a user hands it to Ring: the link the desktop QR code
+// copies, or the deeplink the mobile "Continue with Pubky Ring" button opens
+function readPubkyRingAuthUrl(): Cypress.Chainable<string> {
+  if (isMobile()) {
+    const deeplink: { url?: string } = {};
+    cy.window().then((win) => {
+      // Ring is not installed here: cancel the deeplink navigation and keep its URL for the mock Ring
+      const navigation: NavigationApi = Reflect.get(win, 'navigation');
+      navigation.addEventListener('navigate', (event) => {
+        if (!event.destination.url.startsWith('pubkyauth://')) return;
+        event.preventDefault();
+        deeplink.url = event.destination.url;
+      });
+    });
+    cy.contains('button:visible', 'Continue with Pubky Ring').should('not.be.disabled').click();
+    cy.contains('button:visible', 'Opening Pubky Ring...').should('be.disabled');
+    return cy.wrap(deeplink).its('url');
   }
-  cy.get('#encrypted-file-restore-btn').click();
-}
 
-function restoreWithRecoveryPhrase(recoveryPhrase: string): void {
-  openSignInPage();
-
-  cy.get('#restore-recovery-phrase-btn').click();
-  inputRecoveryPhraseWords(recoveryPhrase);
-  cy.get('#recovery-phrase-restore-btn').click();
+  cy.get('button[aria-label="Copy authentication link"]:visible').should('not.be.disabled').click();
+  cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Authentication link copied');
+  cy.saveCopiedTextToAlias('pubkyAuthUrl');
+  return cy.get<string>('@pubkyAuthUrl');
 }
 
 // Complete onboarding from the Profile step, where a signed-in key without a profile lands
@@ -107,10 +110,9 @@ Cypress.Commands.add('finishFollowBestMatchesStep', () => {
 });
 
 // Creates a new account the way the product now allows: the key is created and signed up outside
-// the browser (Pubky Ring's part, done by the `seedSignUp` task), then the app signs in with its
-// recovery file and completes onboarding from the Profile step. The account's recovery phrase is
-// aliased as `recoveryPhrase-<profileName>` and its recovery file saved at
-// `backupDownloadFilePath(profileName)`, so a spec can sign back in with either.
+// the browser (Pubky Ring's part, done by the `seedSignUp` task), then the app signs in with Pubky
+// Ring and completes onboarding from the Profile step. `cy.signInWithPubkyRing(profileName)` signs
+// back in as the account.
 Cypress.Commands.add(
   'onboardAsNewUser',
   (
@@ -119,12 +121,11 @@ Cypress.Commands.add(
     pubkyAlias?: string,
     experience: OnboardingExperience = OnboardingExperience.Skip,
   ) => {
-    signUpViaApi(profileName).then(({ pubky, recoveryPhrase }) => {
-      cy.wrap(recoveryPhrase).as(`recoveryPhrase-${profileName}`);
+    signUpViaApi(profileName).then(({ pubky }) => {
       if (pubkyAlias) storeStringToAlias(pubky, pubkyAlias);
     });
 
-    restoreWithEncryptedFile(backupDownloadFilePath(profileName), RECOVERY_FILE_PASSCODE);
+    cy.signInWithPubkyRing(profileName, '/onboarding/profile');
 
     completeOnboardingFromProfile(profileName, profileBio, experience);
   },
@@ -144,43 +145,18 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
   cy.location('pathname').should('eq', '/');
 });
 
-Cypress.Commands.add('signInWithEncryptedFile', (backupFilepath: string, passcode = RECOVERY_FILE_PASSCODE) => {
-  restoreWithEncryptedFile(backupFilepath, passcode);
-
-  cy.location('pathname').should('eq', '/home');
-  waitForFeedToLoad();
-});
-
-Cypress.Commands.add('signInWithRecoveryPhrase', (recoveryPhrase: string) => {
-  restoreWithRecoveryPhrase(recoveryPhrase);
-
-  cy.location('pathname').should('eq', '/home');
-  waitForFeedToLoad();
-});
-
-// Input recovery phrase words into the form
-function inputRecoveryPhraseWords(recoveryPhrase: string): void {
-  const words = recoveryPhrase.split(' ');
-  words.forEach((word, index) => {
-    cy.get(`#word-slot-input-${index + 1}`).type(word);
+// Signs the app in as `name` (signed up by `cy.onboardAsNewUser`, `seedUserViaApi` or `signUpViaApi`)
+// through its Pubky Ring flow, with the seed tasks approving in Ring's place. A key with a profile
+// lands on /home; one without lands on /onboarding/profile.
+Cypress.Commands.add('signInWithPubkyRing', (name: string, landingPath = '/home') => {
+  openSignInPage();
+  readPubkyRingAuthUrl().then((authUrl) => {
+    expect(authUrl).to.match(/^pubkyauth:\/\//);
+    approvePubkyAuthViaApi(name, authUrl);
   });
-}
 
-Cypress.Commands.add('deleteDownloadsFolder', () => {
-  const downloadsFolder = Cypress.config('downloadsFolder');
-  cy.task('deleteFolder', downloadsFolder);
-});
-
-Cypress.Commands.add('deleteFile', (filePath: string) => {
-  cy.task('deleteFile', filePath).then(() => {
-    cy.log(`${filePath} has been deleted`);
-  });
-});
-
-Cypress.Commands.add('renameFile', (fromPath: string, toPath: string) => {
-  cy.task('renameFile', { fromPath, toPath }).then(() => {
-    cy.log(`File has been renamed from ${fromPath} to ${toPath}`);
-  });
+  cy.location('pathname').should('eq', landingPath);
+  if (landingPath === '/home') waitForFeedToLoad();
 });
 
 // Useful when 'should.be' doesn't work due to additional space inserted before final word.

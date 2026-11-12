@@ -20,20 +20,21 @@ export type SeededPost = {
   kind: SeededPostKind;
 };
 
-export type SeedCreateUserArgs = { name: string; bio: string; recoveryFilePath?: string };
+export type SeedCreateUserArgs = { name: string; bio: string };
 
-export type SeedSignUpArgs = { name: string; recoveryFilePath: string };
+export type SeedSignUpArgs = { name: string };
 
 // A key signed up on the homeserver with no profile yet, the state a Pubky Ring sign-up leaves
 // the app in before the Profile step
 export type SeededSignUp = {
   id: string;
   pubky: string;
-  // The 12 words `cy.signInWithRecoveryPhrase` restores the key from
-  recoveryPhrase: string;
   // The signup token the sign-up consumed
   inviteCode: string;
 };
+
+// `authUrl` is the `pubkyauth://` request the app shows as its sign-in QR code or Ring deeplink
+export type SeedApprovePubkyAuthArgs = { name: string; authUrl: string };
 
 export type SeedCreatePostArgs = {
   authorId: string;

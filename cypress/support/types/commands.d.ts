@@ -4,8 +4,7 @@ declare global {
   namespace Cypress {
     interface Chainable<Subject = any> {
       signOut(hasBackedUp: HasBackedUp): Chainable<void>;
-      signInWithEncryptedFile(backupFilepath: string, passcode?: string): Chainable<void>;
-      signInWithRecoveryPhrase(recoveryPhrase: string): Chainable<void>;
+      signInWithPubkyRing(name: string, landingPath?: string): Chainable<void>;
       onboardAsNewUser(
         profileName: string,
         profileBio?: string,
@@ -13,10 +12,7 @@ declare global {
         experience?: OnboardingExperience,
       ): Chainable<void>;
       finishFollowBestMatchesStep(): Chainable<void>;
-      deleteDownloadsFolder(): Chainable<void>;
       waitForFileExistsWithSuffix(folder: string, suffix: string): Chainable<void>;
-      deleteFile(filePath: string): Chainable<void>;
-      renameFile(fromPath: string, toPath: string): Chainable<void>;
       innerTextShouldEq(text: string): Chainable<Subject>;
       innerTextShouldContain(text: string): Chainable<Subject>;
       innerTextContains(text: string): Chainable<Subject>;

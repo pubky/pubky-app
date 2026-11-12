@@ -1,7 +1,6 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { basename, dirname, extname } from 'path';
+import { readFileSync } from 'fs';
+import { basename, extname } from 'path';
 import { Keypair, Pubky, PublicKey, type Path, type Session } from '@synonymdev/pubky';
-import * as bip39 from 'bip39';
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind, PubkySpecsBuilder } from 'pubky-app-specs';
 import type {
   SeedAddToCollectionArgs,
@@ -17,6 +16,7 @@ import type {
   SeededPostKind,
   SeededSignUp,
   SeededUser,
+  SeedApprovePubkyAuthArgs,
   SeedFollowArgs,
   SeedMarkNotificationsReadArgs,
   SeedSignUpArgs,
@@ -39,8 +39,6 @@ export type SeedConfig = {
   nexusUrl: string;
 };
 
-// The passcode `cy.signInWithEncryptedFile` types by default
-const RECOVERY_FILE_PASSCODE = '123456';
 const SEED_CLIENT_ID = 'e2e-seed.pubky.app';
 // Consecutive seed writes start at least this far apart, so records a test orders by time
 // (timelines, threads, notifications) never share a timestamp
@@ -80,6 +78,9 @@ export const createSeedTasks = (config: SeedConfig) => {
   // earlier. They are not persisted: re-running one test in `cypress open` without the hook that
   // seeded its users fails with "was not seeded in this Cypress run", so re-run the whole spec.
   const sessions = new Map<string, SeededSession>();
+  // The key behind each signed-up name, for the mock Pubky Ring to approve sign-ins with. A name
+  // signed up again maps to its newest key, as a spec re-creating a user expects.
+  const keypairs = new Map<string, Keypair>();
   let sdk: Pubky | undefined;
   const pubky = () => (sdk ??= Pubky.testnet('localhost'));
 
@@ -91,6 +92,13 @@ export const createSeedTasks = (config: SeedConfig) => {
     return seeded;
   };
   const nameOf = (userId: string) => sessions.get(userId)?.name ?? userId;
+  const keypairFor = (name: string): Keypair => {
+    const keypair = keypairs.get(name);
+    if (!keypair) {
+      throw new Error(`no key was signed up for '${name}' in this Cypress run`);
+    }
+    return keypair;
+  };
   let lastStepAt = 0;
 
   // Runs one seed step, timing it and naming it in any failure so a broken seed points at its step
@@ -118,16 +126,13 @@ export const createSeedTasks = (config: SeedConfig) => {
     return (await response.text()).trim();
   };
 
-  // Signs `keypair` up on the test homeserver with a fresh signup token, as Pubky Ring would
-  const signUp = async (keypair: Keypair) => {
+  // Signs a new key up on the test homeserver with a fresh signup token, as Pubky Ring would
+  const signUp = async (name: string) => {
+    const keypair = Keypair.random();
     const inviteCode = await fetchSignupToken();
     await pubky().signer(keypair).signup(PublicKey.from(config.homeserverPublicKey), inviteCode);
-    return inviteCode;
-  };
-
-  const writeRecoveryFile = (keypair: Keypair, recoveryFilePath: string) => {
-    mkdirSync(dirname(recoveryFilePath), { recursive: true });
-    writeFileSync(recoveryFilePath, keypair.createRecoveryFile(RECOVERY_FILE_PASSCODE));
+    keypairs.set(name, keypair);
+    return { keypair, inviteCode };
   };
 
   const putTag = async (tagger: SeededSession, uri: string, label: string) => {
@@ -154,30 +159,32 @@ export const createSeedTasks = (config: SeedConfig) => {
     PubkyAppPost.fromJson(await author.session.storage.getJson(postPath(postId)));
 
   return {
-    // The browser no longer creates keys, so this stands in for Pubky Ring: the key is signed up here
-    // and the spec signs the app in with its recovery phrase or file, which lands on the Profile step
-    seedSignUp: ({ name, recoveryFilePath }: SeedSignUpArgs): Promise<SeededSignUp> =>
+    // The key Pubky Ring would create and sign up, without a profile: signing the app in with it
+    // lands on the Profile step
+    seedSignUp: ({ name }: SeedSignUpArgs): Promise<SeededSignUp> =>
       step(`sign up key for '${name}'`, async () => {
-        const recoveryPhrase = bip39.generateMnemonic();
-        // Same derivation as the app's recovery-phrase sign-in: the first 32 bytes of the BIP39 seed
-        const keypair = Keypair.fromSecret(new Uint8Array(bip39.mnemonicToSeedSync(recoveryPhrase).subarray(0, 32)));
-        const inviteCode = await signUp(keypair);
-        writeRecoveryFile(keypair, recoveryFilePath);
+        const { keypair, inviteCode } = await signUp(name);
         const id = keypair.publicKey.z32();
-        return { id, pubky: `pubky${id}`, recoveryPhrase, inviteCode };
+        return { id, pubky: `pubky${id}`, inviteCode };
       }),
 
-    seedCreateUser: ({ name, bio, recoveryFilePath }: SeedCreateUserArgs): Promise<SeededUser> =>
+    // Mock Pubky Ring: approves the app's `pubkyauth://` request as the key signed up for `name`,
+    // sending the grant through the request's relay exactly as Ring does when the user taps Authorize
+    seedApprovePubkyAuth: ({ name, authUrl }: SeedApprovePubkyAuthArgs) =>
+      step(`approve sign-in as '${name}' in mock Pubky Ring`, async () => {
+        await pubky().signer(keypairFor(name)).approveAuthRequest(authUrl);
+        return null;
+      }),
+
+    seedCreateUser: ({ name, bio }: SeedCreateUserArgs): Promise<SeededUser> =>
       step(`create user '${name}'`, async () => {
-        const keypair = Keypair.random();
-        await signUp(keypair);
+        const { keypair } = await signUp(name);
         const session = await pubky().signer(keypair).signin(SEED_CLIENT_ID);
         const id = keypair.publicKey.z32();
         const builder = new PubkySpecsBuilder(id);
         // profile.json is what makes the app treat the key as signed up
         const profile = builder.createUser(name, bio, null, null, null);
         await session.storage.putJson(toPath(profile.meta.path), profile.user.toJson());
-        if (recoveryFilePath) writeRecoveryFile(keypair, recoveryFilePath);
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
         await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v0/ingest/${id}`, { method: 'PUT' }).catch(() => null);
         sessions.set(id, { name, session, builder });
