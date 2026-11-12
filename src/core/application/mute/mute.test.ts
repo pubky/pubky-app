@@ -2,9 +2,10 @@ import { buildUri, listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TMuteApplicationCommitParams } from '@/application/mute/mute.types';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
-import { ServerErrorCode } from '@/libs/error/error.codes';
+import { ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
@@ -478,6 +479,63 @@ describe('MuteApplication against the in-memory homeserver', () => {
         [writeLock(MUTEE), 'exclusive'],
         [`pubky-mutes-sync:${other}`, 'exclusive'],
       ]);
+    });
+
+    describe('a LIST that never answers', () => {
+      // Only the timers are faked: IndexedDB schedules its work with `setImmediate`.
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      /** Holds this tab's next LIST page as an SDK read that never answers; `taken` resolves once it is out. */
+      const hangListing = () => {
+        const taken = Promise.withResolvers<void>();
+        const answer = Promise.withResolvers<string[]>();
+        homeserver.spies.list.mockImplementationOnce(() => {
+          taken.resolve();
+          return answer.promise;
+        });
+        return { taken: taken.promise, answer: (urls: string[]) => answer.resolve(urls) };
+      };
+      /** Lets the pending microtasks and IndexedDB work run; the faked timers stay where they are. */
+      const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+      it('lets a mute queued behind it write once the wait is bounded, and applies nothing the LIST answers late', async () => {
+        installWebLocks();
+        const listing = hangListing();
+
+        const fetching = MuteApplication.fetchMutedUsers(MUTER).then(
+          () => null,
+          (error: unknown) => error,
+        );
+        await listing.taken;
+        const muting = run(commit(HttpMethod.PUT, MUTEE));
+        await settle();
+        // The mute waits for the lock the listing holds: nothing written, locally or on the homeserver.
+        await expect(mutedStream()).resolves.toEqual([]);
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+        expect(await fetching).toMatchObject({
+          category: ErrorCategory.Timeout,
+          code: TimeoutErrorCode.REQUEST_TIMEOUT,
+          service: ErrorService.Homeserver,
+          operation: 'fetchMutedUsers',
+        });
+        await muting;
+        await expect(mutedStream()).resolves.toEqual([MUTEE]);
+        await expect(storedMutes()).resolves.toEqual([muteUri(MUTEE)]);
+
+        // The abandoned LIST answers now, from before the mute: the fetch stopped at the read, so nothing applies it.
+        listing.answer([]);
+        await settle();
+        await expect(mutedStream()).resolves.toEqual([MUTEE]);
+      });
     });
   });
 });

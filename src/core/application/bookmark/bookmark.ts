@@ -11,6 +11,7 @@ import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 import type { TBookmarkListing } from '@/pipes/bookmark/bookmark.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
+import { awaitBounded } from '@/utils/bounded-read';
 import { withSyncLock } from '@/utils/sync-lock';
 
 /**
@@ -149,7 +150,8 @@ export class BookmarkApplication {
    * and the bookmarks feed is ordered by it), then reconciles the `bookmarks` table and the
    * bookmarks stream in one transaction. A bookmark whose read fails is kept as made now. Files
    * that bookmark no post (a web page, a profile, a post version) are skipped with a warning.
-   * The whole run holds `bookmarkSyncLock` `exclusive`.
+   * The whole run holds `bookmarkSyncLock` `exclusive`; the wait for the LIST and for each GET batch is
+   * bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`), after which the run fails like a failed LIST.
    *
    * @returns The stored bookmark ids, newest first (empty when the account changed meanwhile).
    */
@@ -158,7 +160,13 @@ export class BookmarkApplication {
   }
 
   private static async fetchBookmarksUnderLock(pubky: Pubky, isCurrent?: () => boolean): Promise<string[]> {
-    const urls = await HomeserverService.listAll({ baseDirectory: `${listPrefix(pubky, 'private')}bookmarks/` });
+    const baseDirectory = `${listPrefix(pubky, 'private')}bookmarks/`;
+    // The lock is held across every read of this run: a timeout rejects here or at a GET batch below, before the
+    // reconcile, so nothing an abandoned read answers late is ever applied.
+    const urls = await awaitBounded(HomeserverService.listAll({ baseDirectory }), {
+      operation: 'fetchBookmarks',
+      context: { baseDirectory },
+    });
     if (isCurrent && !isCurrent()) return [];
 
     const listings = urls.flatMap((url) => {
@@ -178,8 +186,13 @@ export class BookmarkApplication {
 
     for (let index = 0; index < unread.length; index += this.FETCH_BOOKMARKS_BATCH_SIZE) {
       const batch = unread.slice(index, index + this.FETCH_BOOKMARKS_BATCH_SIZE);
-      const results = await Promise.allSettled(
-        batch.map(async ({ url }) => BookmarkNormalizer.fromStored(url, await HomeserverService.getBytes(url))),
+      // The batch is bounded as a whole: a GET that fails is kept as made now (below), which for a GET that
+      // merely stalled would store a wrong time for good, so a timeout fails the run like a failed LIST instead.
+      const results = await awaitBounded(
+        Promise.allSettled(
+          batch.map(async ({ url }) => BookmarkNormalizer.fromStored(url, await HomeserverService.getBytes(url))),
+        ),
+        { operation: 'fetchBookmarks', context: { urls: batch.map(({ url }) => url) } },
       );
 
       results.forEach((result, batchIndex) => {

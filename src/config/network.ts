@@ -91,3 +91,12 @@ export function getHomeserverCapabilities(): Capabilities {
     ...new Set([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES]),
   ].join(',') as Capabilities;
 }
+
+/**
+ * How long one homeserver read held under a per-user sync lock may stay pending before `awaitBounded`
+ * (`src/core/utils/bounded-read.ts`) stops waiting for it: the whole paginated LIST of the mute, bookmark or feed
+ * fetch (every page shares the one bound), a bookmark GET batch, a feed GET. A bound on how long a read that never
+ * answers can hold the lock, and the writes of every tab behind it; not a product limit.
+ * Fixed (not configurable via env); see `docs/environment.md`.
+ */
+export const HOMESERVER_SYNC_READ_TIMEOUT_MS = 20_000;
