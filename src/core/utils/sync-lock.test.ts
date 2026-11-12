@@ -59,6 +59,50 @@ describe('withSyncLock', () => {
       expect(log).toEqual(['fetch:start', 'fetch:end', 'write']);
     });
 
+    it('lets shared tasks overlap, runs an exclusive one once every holder has ended, and grants in order', async () => {
+      installWebLocks();
+      const log: string[] = [];
+      const first = heldTask(log, 'write-a', undefined);
+      const second = heldTask(log, 'write-b', undefined);
+
+      const writingA = withSyncLock(LOCK, 'shared', first.task);
+      const writingB = withSyncLock(LOCK, 'shared', second.task);
+      const fetching = withSyncLock(LOCK, 'exclusive', async () => log.push('fetch'));
+      // Asked after the exclusive task: it waits for it, although it could share with the two holders.
+      const writingC = withSyncLock(LOCK, 'shared', async () => log.push('write-c'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(log).toEqual(['write-a:start', 'write-b:start']);
+
+      first.finish();
+      await writingA;
+      expect(log).toEqual(['write-a:start', 'write-b:start', 'write-a:end']);
+
+      second.finish();
+      await Promise.all([writingB, fetching, writingC]);
+      expect(log).toEqual(['write-a:start', 'write-b:start', 'write-a:end', 'write-b:end', 'fetch', 'write-c']);
+    });
+
+    it('lists a waiting task as pending and runs it once the holder has failed', async () => {
+      installWebLocks();
+      const failure = new Error('Database error');
+      const held = Promise.withResolvers<void>();
+
+      const failing = withSyncLock(LOCK, 'exclusive', async () => {
+        await held.promise;
+        throw failure;
+      });
+      const waiting = withSyncLock(LOCK, 'shared', async () => 'ran');
+      expect(await navigator.locks.query()).toEqual({
+        held: [{ name: LOCK, mode: 'exclusive', clientId: 'test' }],
+        pending: [{ name: LOCK, mode: 'shared', clientId: 'test' }],
+      });
+
+      held.resolve();
+      await expect(failing).rejects.toBe(failure);
+      await expect(waiting).resolves.toBe('ran');
+      expect(await navigator.locks.query()).toEqual({ held: [], pending: [] });
+    });
+
     it('rethrows a raw task failure unchanged, as the fallback does', async () => {
       installWebLocks();
       const failure = new Error('Database error');

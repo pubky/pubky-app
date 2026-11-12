@@ -42,6 +42,17 @@ const homeserverFailure = (method: HttpMethod) =>
     context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
   });
 
+/** A transient refusal `deleteIdempotent` retries. */
+const serviceUnavailable = (method: HttpMethod) =>
+  new AppError({
+    category: ErrorCategory.Server,
+    code: ServerErrorCode.SERVICE_UNAVAILABLE,
+    message: `Failed to ${method} homeserver: 503`,
+    service: ErrorService.Homeserver,
+    operation: method,
+    context: { statusCode: HttpStatusCode.SERVICE_UNAVAILABLE },
+  });
+
 describe('BookmarkApplication', () => {
   let homeserver: ReturnType<typeof stubMemoryHomeserver>;
   let warn: ReturnType<typeof vi.spyOn>;
@@ -351,6 +362,7 @@ describe('BookmarkApplication', () => {
 
   describe('sync lock', () => {
     const SYNC_LOCK = `pubky-bookmarks-sync:${owner}`;
+    const writeLockOf = (index: number) => `pubky-bookmark-write:${owner}:${compositeAt(index)}`;
     let otherTab: Awaited<ReturnType<typeof openOtherTab>> | null = null;
 
     /**
@@ -406,6 +418,14 @@ describe('BookmarkApplication', () => {
       });
     };
     const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+    /** Holds this tab's next PUT until `landed` resolves, as a retry backing off would. */
+    const holdPut = (landed: Promise<void>) => {
+      const put = homeserver.spies.putBlob.getMockImplementation()!;
+      homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
+        await landed;
+        return put(params);
+      });
+    };
 
     afterEach(() => {
       Reflect.deleteProperty(navigator, 'locks');
@@ -452,7 +472,7 @@ describe('BookmarkApplication', () => {
       expect(settled).toEqual(['fetch', 'write']);
     });
 
-    it('holds the per-user Web Lock shared for writes and exclusive for the fetch', async () => {
+    it('holds the user lock shared and the bookmark lock exclusive for a write, the user lock exclusive for the fetch', async () => {
       const request = vi.spyOn(installWebLocks(), 'request');
       const other = fakeOwner(3) as Pubky;
 
@@ -464,24 +484,104 @@ describe('BookmarkApplication', () => {
 
       expect(request.mock.calls.map(([name, options]) => [name, (options as LockOptions).mode])).toEqual([
         [SYNC_LOCK, 'shared'],
+        [writeLockOf(1), 'exclusive'],
         [SYNC_LOCK, 'exclusive'],
         [SYNC_LOCK, 'shared'],
+        [writeLockOf(1), 'exclusive'],
         [`pubky-bookmarks-sync:${other}`, 'exclusive'],
       ]);
+    });
+
+    it('orders a PUT from another tab behind a DELETE that is retrying, so the retry never removes the file the PUT stored', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      // The real `deleteIdempotent` loop over the stub's single-attempt `delete`: the first attempt
+      // fails with a 503 and the loop backs off before the second, lock held. The second attempt is
+      // held until the test lets it land, so the window below does not ride on the back-off timer.
+      homeserver.spies.deleteIdempotent.mockRestore();
+      const remove = homeserver.spies.delete.getMockImplementation()!;
+      const firstAttemptFailed = Promise.withResolvers<void>();
+      const secondAttempt = Promise.withResolvers<void>();
+      homeserver.spies.delete
+        .mockImplementationOnce(async () => {
+          firstAttemptFailed.resolve();
+          throw serviceUnavailable(HttpMethod.DELETE);
+        })
+        .mockImplementationOnce(async (url) => {
+          await secondAttempt.promise;
+          return remove(url);
+        });
+      const { path } = BookmarkNormalizer.to(postAt(1), owner);
+      await bookmark(BookmarkApplication, 1);
+      const settled: string[] = [];
+
+      const deleting = unbookmark(BookmarkApplication, 1).then(() => settled.push('delete'));
+      await firstAttemptFailed.promise;
+      expect(await BookmarkApplication.exists(compositeAt(1))).toBe(false);
+      expect(await storedPaths()).toEqual([path]);
+      // Another tab saves the same bookmark during the back-off: it waits for the whole delete.
+      const saving = bookmark(otherTab.application, 1).then(() => settled.push('write'));
+      await tick();
+      expect(await BookmarkApplication.exists(compositeAt(1))).toBe(false);
+      expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1);
+      secondAttempt.resolve();
+      await Promise.all([deleting, saving]);
+
+      expect(settled).toEqual(['delete', 'write']);
+      expect(homeserver.spies.delete).toHaveBeenCalledTimes(2);
+      // The last write wins on both sides: the row is back, and so is the file.
+      expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true);
+      expect(await streamIds()).toEqual([compositeAt(1)]);
+      expect(await storedPaths()).toEqual([path]);
+      expect(await BookmarkApplication.fetchBookmarks(owner)).toEqual([compositeAt(1)]);
+    });
+
+    it('orders a DELETE from another tab behind a PUT still syncing, so the file goes with the row', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      const landed = Promise.withResolvers<void>();
+      holdPut(landed.promise);
+      const settled: string[] = [];
+
+      const saving = bookmark(BookmarkApplication, 1).then(() => settled.push('write'));
+      await vi.waitFor(async () => expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true));
+      // The row is written and the PUT is in flight: the other tab's un-bookmark waits for it.
+      const removing = unbookmark(otherTab.application, 1).then(() => settled.push('delete'));
+      await tick();
+      expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true);
+      expect(homeserver.spies.delete).not.toHaveBeenCalled();
+      landed.resolve();
+      await Promise.all([saving, removing]);
+
+      expect(settled).toEqual(['write', 'delete']);
+      expect(await BookmarkApplication.exists(compositeAt(1))).toBe(false);
+      expect(await streamIds()).toEqual([]);
+      expect(await storedPaths()).toEqual([]);
+    });
+
+    it('lets a write to another bookmark land while one is syncing, from this tab or another', async () => {
+      installWebLocks();
+      otherTab = await openOtherTab();
+      const landed = Promise.withResolvers<void>();
+      holdPut(landed.promise);
+      const paths = [1, 2].map((index) => BookmarkNormalizer.to(postAt(index), owner).path);
+
+      const saving = bookmark(BookmarkApplication, 1);
+      await vi.waitFor(async () => expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true));
+      // The other bookmark lands while the first PUT is in flight.
+      const other = bookmark(otherTab.application, 2);
+      await vi.waitFor(async () => expect(await storedPaths()).toEqual([paths[1]]));
+      landed.resolve();
+
+      await expect(Promise.all([saving, other])).resolves.toEqual([true, true]);
+      expect((await storedPaths()).sort()).toEqual([...paths].sort());
     });
 
     it.each([
       {
         method: HttpMethod.PUT,
         write: bookmark,
-        /** Holds the PUT until `landed` resolves. */
-        hold: (landed: Promise<void>) => {
-          const put = homeserver.spies.putBlob.getMockImplementation()!;
-          homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
-            await landed;
-            return put(params);
-          });
-        },
+        hold: holdPut,
       },
       {
         method: HttpMethod.DELETE,

@@ -20,6 +20,18 @@ instead, as feed writes do, and reports the skip (`BookmarkApplication.persist` 
 resolve false, `FeedApplication.persist` null), so no hook shows a success state or toast for a write that never
 happened.
 
+Amended — 2026-11-11 (FIX-FINAL-2, the Greptile P1 on #3140, round 2): writes to one bookmark no longer overlap
+each other. `persist` nests the bookmark's own lock `pubky-bookmark-write:<pubky>:<postId>` `exclusive` inside the
+shared user lock, so a `deleteIdempotent` retry and its back-off, which run outside the per-path write queue, and a
+PUT's retries, which that per-tab queue orders in its own tab only, are ordered against every other write to the same
+bookmark in any tab: a PUT from another tab or surface during a DELETE's back-off had been erased by the retry,
+leaving the row saved and the file gone until the next listing reconciled the row away. Writes to different bookmarks
+still overlap under Web Locks (the fallback queue runs every write of the user one at a time, whatever the mode); the
+lock order is always user then bookmark, and `fetchBookmarks` takes the user lock alone, so the two cannot deadlock.
+Feed writes (`FeedApplication.persist`, `commitDelete`) take the user's feed lock `exclusive` instead of a nested
+lock: they are rare, and an edit that changes the id touches two ids; `commitDelete` keeps it until every delete it
+started has settled, so a homeserver DELETE never retries outside the lock after a local failure.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two
 root-node orchestrators of ADR-0009.
@@ -64,8 +76,10 @@ field is ignored.**
   stream row `timeline:bookmarks:all` from the table, newest bookmark first, without a Nexus cursor. The whole run,
   LIST, GETs and reconcile, holds the user's sync lock `pubky-bookmarks-sync:<pubky>` `exclusive`, and every write
   (`persist`, the row and its PUT or DELETE) holds it `shared` (`withSyncLock`, the helper the feed sync uses: a Web
-  Lock shared by every tab of the origin, a per-tab queue where Web Locks are unavailable), so a bookmark being
-  written in any tab is either listed or written after the reconcile, never undone by it; and a fetch that outlives
+  Lock shared by every tab of the origin, a per-tab queue where Web Locks are unavailable) with the bookmark's own
+  lock `pubky-bookmark-write:<pubky>:<postId>` `exclusive` inside it, so a bookmark being written in any tab is
+  either listed or written after the reconcile, never undone by it, and two writes to one bookmark never overlap,
+  retries included, while writes to different bookmarks do; and a fetch that outlives
   an account switch writes nothing: the `isCurrent` viewer guard is the same one every private fetch of the
   bootstrap and of the resync receives (mutes, feeds, bookmarks), and the resync's settings-store load checks it too.
 - **Wiring**: `BootstrapApplication.initialize` runs it in its first `Promise.all` beside the mute and feed fetches,
@@ -97,7 +111,8 @@ field is ignored.**
 
 - An un-bookmark sticks: no Nexus response can restore it, migrated ghosts included.
 - One source for the bookmark state, the count and both bookmark surfaces; the count is exact and live.
-- A listing never fights a local write, in this tab or another: the sync lock orders them.
+- A listing never fights a local write, and two writes to one bookmark never fight each other, in this tab or
+  another: the sync locks order them.
 
 ### Negative ❌
 
