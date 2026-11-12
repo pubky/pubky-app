@@ -118,11 +118,11 @@ const viewerCalls = {
 
 describe('Lock Server viewer errors through the pinned SDK and LocksService', () => {
   // Statuses and codes each viewer endpoint documents (locks-server docs/API.md), apart from the
-  // 451 region refusal and the lookup 404, which have their own results. submitProof leaves out the
-  // documented 422 unsupported_verifier_type: the server raises it in its background worker, not on submission.
+  // 451 region refusal and the lookup 404, which have their own results.
   it.each([
     ['submitProof', 400, 'invalid_request'],
     ['submitProof', 409, 'task_state_conflict'],
+    ['submitProof', 422, 'unsupported_verifier_type'],
     ['submitProof', 422, 'paykit_not_configured'],
     ['submitProof', 429, 'rate_limited'],
     ['submitProof', 503, 'creator_authority_unavailable'],
