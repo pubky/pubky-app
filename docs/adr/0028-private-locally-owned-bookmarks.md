@@ -33,7 +33,7 @@ lock: they are rare, and an edit that changes the id touches two ids; `commitDel
 started has settled, so a homeserver DELETE never retries outside the lock after a local failure.
 
 Amended — 2026-11-11 (FIX-FINAL-5, the Greptile P1 on #3140, round 3): every homeserver read `fetchBookmarks` holds
-the lock across, the LIST and each GET batch, is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` (20 s, `awaitBounded`
+the lock across, the LIST and each GET batch, is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` (30 s, `awaitBounded`
 in `src/core/utils/bounded-read.ts`). The SDK's reads take no `AbortSignal` and have no timeout, so a read that never
 answered held the lock, and every bookmark write of every tab queued behind it, for as long as it hung; past the
 bound the fetch rejects with `REQUEST_TIMEOUT` before its reconcile, so it fails like a failed LIST, the lock is

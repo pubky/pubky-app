@@ -99,4 +99,4 @@ export function getHomeserverCapabilities(): Capabilities {
  * answers can hold the lock, and the writes of every tab behind it; not a product limit.
  * Fixed (not configurable via env); see `docs/environment.md`.
  */
-export const HOMESERVER_SYNC_READ_TIMEOUT_MS = 20_000;
+export const HOMESERVER_SYNC_READ_TIMEOUT_MS = 30_000;

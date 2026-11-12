@@ -387,28 +387,35 @@ describe('MuteListSyncCoordinator', () => {
       expect(fetchMuted()).toHaveBeenLastCalledWith(OTHER_PUBKY);
     });
 
-    it('frees its slot once the bounded wait for a LIST that never answers ends, and the next tick lists again', async () => {
+    it('frees its slot once the bounded wait for a LIST that never answers ends, so the next trigger lists again', async () => {
       // The real controller and application, down to an in-memory homeserver whose LIST never answers.
       fetchMuted().mockRestore();
       const homeserver = stubMemoryHomeserver(PUBKY);
       homeserver.spies.list.mockImplementation(() => new Promise<string[]>(() => {}));
       const error = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      const refreshFailures = () => error.mock.calls.filter(([message]) => message === 'Mute list refresh failed');
       signIn();
       startOn(APP_ROUTES.HOME);
       await settleDebounce();
       expect(homeserver.spies.listAll).toHaveBeenCalledTimes(1);
 
-      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
-      expect(error).toHaveBeenCalledWith('Mute list refresh failed', {
-        error: expect.objectContaining({ code: TimeoutErrorCode.REQUEST_TIMEOUT }),
-      });
+      // A trigger just before the bound ends is debounced into a refresh the taken slot would hide.
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS - 1);
+      window.dispatchEvent(new Event('online'));
+      expect(refreshFailures()).toHaveLength(0);
 
-      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(refreshFailures()).toEqual([
+        ['Mute list refresh failed', { error: expect.objectContaining({ code: TimeoutErrorCode.REQUEST_TIMEOUT }) }],
+      ]);
+      expect(homeserver.spies.listAll).toHaveBeenCalledTimes(1);
+
+      await settleDebounce();
       expect(homeserver.spies.listAll).toHaveBeenCalledTimes(2);
 
       // The second LIST never answers either: let its wait end, so no task is left in the per-tab lock queue.
       await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
-      expect(error.mock.calls.filter(([message]) => message === 'Mute list refresh failed')).toHaveLength(2);
+      expect(refreshFailures()).toHaveLength(2);
     });
   });
 
