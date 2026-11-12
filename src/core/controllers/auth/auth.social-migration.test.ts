@@ -462,12 +462,13 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
   });
 
   it('runs a Ring signup inline: the status never leaves restoring for the gate', async () => {
+    const complete = vi.fn();
     vi.spyOn(AuthApplication, 'startGrantFlow').mockResolvedValue(
       asOpaque({
         url: 'pubkyauth://flow',
         awaitApproval: Promise.resolve(session),
         cancelAuthFlow: vi.fn(),
-        completeAuthFlow: vi.fn(),
+        completeAuthFlow: complete,
       }),
     );
     vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('signup-grant'));
@@ -478,10 +479,13 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     await flow.awaitApproval;
     unsubscribe();
 
-    expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'signup' }));
+    expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose: 'signup', inviteCode: 'invite' }),
+    );
     expect(run).toHaveBeenCalledOnce();
     expect(seen).not.toContain('social-migration');
-    expect(useAuthStore.getState().restoreStatus).toBe('ready');
+    expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
+    expect(complete).toHaveBeenCalledOnce();
   });
 
   it('keeps waiting for a session held behind the gate', async () => {
