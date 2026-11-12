@@ -15,12 +15,22 @@ import { withSyncLock } from '@/utils/sync-lock';
 
 /**
  * The user's bookmark sync lock (`withSyncLock`), shared by every tab: `persist` holds it `shared`
- * across the row write and the PUT or DELETE, so writes overlap each other; `fetchBookmarks` holds it
- * `exclusive` from the listing through the GETs to the reconcile. So no write lands between the
- * listing and the reconcile, in this tab or another, and a bookmark being written in any tab (its
- * row stored, its PUT not yet landed) is either listed or written after the fetch, never undone by it.
+ * across the row write and the PUT or DELETE, so writes to different bookmarks overlap each other;
+ * `fetchBookmarks` holds it `exclusive` from the listing through the GETs to the reconcile. So no
+ * write lands between the listing and the reconcile, in this tab or another, and a bookmark being
+ * written in any tab (its row stored, its PUT not yet landed) is either listed or written after the
+ * fetch, never undone by it.
  */
 const bookmarkSyncLock = (pubky: Pubky) => `pubky-bookmarks-sync:${pubky}`;
+
+/**
+ * One bookmark's write lock, held `exclusive` inside the user lock by `persist`: writes to the same
+ * bookmark run one after another, in this tab or another, retries and their back-off included
+ * (`deleteIdempotent` backs off outside the per-path write queue), so an older write's retry never
+ * lands on top of a newer write. Always taken after the user lock, and `fetchBookmarks` takes the
+ * user lock alone, so the two cannot deadlock.
+ */
+const bookmarkWriteLock = (pubky: Pubky, postId: string) => `pubky-bookmark-write:${pubky}:${postId}`;
 
 /**
  * Bookmark application service.
@@ -84,12 +94,12 @@ export class BookmarkApplication {
   }
 
   /**
-   * Writes the bookmark locally, then PUTs or DELETEs its file, holding `bookmarkSyncLock` `shared`.
-   * Resolves true once the write ran, false when it was skipped because the account changed while it
-   * waited for the lock or ran (`TBookmarkPersistInput.isCurrent`): nothing landed for the account that is
-   * current now, so the caller announces nothing. A row written before the change is cleared by the logout
-   * or account switch that changed the viewer; after a same-account session replacement it stays until
-   * the next listing reconciles it.
+   * Writes the bookmark locally, then PUTs or DELETEs its file, holding `bookmarkSyncLock` `shared` and
+   * `bookmarkWriteLock` `exclusive`. Resolves true once the write ran, false when it was skipped because
+   * the account changed while it waited for the locks or ran (`TBookmarkPersistInput.isCurrent`): nothing
+   * landed for the account that is current now, so the caller announces nothing. A row written before the
+   * change is cleared by the logout or account switch that changed the viewer; after a same-account session
+   * replacement it stays until the next listing reconciles it.
    */
   static async persist(action: HttpMethod, params: TBookmarkPersistInput): Promise<boolean> {
     const { postId, userId, bookmarkUrl, bookmarkBody } = params;
@@ -103,7 +113,9 @@ export class BookmarkApplication {
       });
     }
 
-    return withSyncLock(bookmarkSyncLock(userId), 'shared', () => this.persistUnderLock(action, params));
+    return withSyncLock(bookmarkSyncLock(userId), 'shared', () =>
+      withSyncLock(bookmarkWriteLock(userId, postId), 'exclusive', () => this.persistUnderLock(action, params)),
+    );
   }
 
   private static async persistUnderLock(
