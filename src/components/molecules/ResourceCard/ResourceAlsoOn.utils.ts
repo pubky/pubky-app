@@ -161,21 +161,43 @@ export function groupAlsoOn(alsoOn: TPinakesAlsoOn[]): TAlsoOnRow[] {
 }
 
 /**
- * The language a row of editions shows first: the viewer's first preferred language it has
- * (`de-CH` takes `de`), else English, else its first edition. A hyphenated edition (`zh-yue`) is a
+ * The editions a row has in the viewer's languages, in the viewer's order, each once: for each
+ * language the edition of that language (`de-CH` takes `de`). A hyphenated edition (`zh-yue`) is a
  * language of its own, never matched as a region.
  *
- * @param preferred - The viewer's languages in order (`navigator.languages`)
+ * @param preferred - The viewer's languages in order (the Links and Media setting, else `navigator.languages`)
+ * @param options.exact - Edition codes (the setting's): `nds-nl` is Dutch Low Saxon, never `nds`
  */
-export function pickAlsoOnLanguage(langs: string[], preferred: readonly string[]): string {
+export function matchAlsoOnLanguages(
+  langs: string[],
+  preferred: readonly string[],
+  { exact: exactOnly = false }: { exact?: boolean } = {},
+): string[] {
   const tags = langs.map(toLanguageTag);
+  const matches: string[] = [];
   for (const language of preferred) {
     const wanted = toLanguageTag(language);
     const exact = tags.indexOf(wanted);
-    const index = exact >= 0 ? exact : tags.indexOf(toLanguageTag(wanted.split('-')[0]));
-    if (index >= 0) return langs[index];
+    const index = exact >= 0 || exactOnly ? exact : tags.indexOf(toLanguageTag(wanted.split('-')[0]));
+    if (index >= 0 && !matches.includes(langs[index])) matches.push(langs[index]);
   }
-  const english = tags.indexOf('en');
+  return matches;
+}
+
+/**
+ * The language a row of editions shows first: the viewer's first preferred language it has
+ * (`matchAlsoOnLanguages`, with its `options`), else English, else its first edition.
+ *
+ * @param preferred - The viewer's languages in order (the Links and Media setting, else `navigator.languages`)
+ */
+export function pickAlsoOnLanguage(
+  langs: string[],
+  preferred: readonly string[],
+  options?: { exact?: boolean },
+): string {
+  const [first] = matchAlsoOnLanguages(langs, preferred, options);
+  if (first !== undefined) return first;
+  const english = langs.map(toLanguageTag).indexOf('en');
   return langs[english >= 0 ? english : 0];
 }
 
@@ -203,11 +225,9 @@ export function getLanguageTag(lang: string): string {
 }
 
 /**
- * What the resource page's row of editions says under its name: the language shown, then the
- * entry's own note, without where it was found (that is in the row's tooltip).
+ * What the resource page's row of editions says under its name: the entry's own note, without where
+ * it was found or the language (both are in the row's tooltip), or `null` for none.
  */
-export function getAlsoOnEditionNote(edition: TAlsoOnEdition): string {
-  const note = getAlsoOnNote(edition.entry, undefined, { withSource: false });
-  const language = getLanguageName(edition.lang);
-  return note ? `${language} · ${note}` : language;
+export function getAlsoOnEditionNote(edition: TAlsoOnEdition): string | null {
+  return getAlsoOnNote(edition.entry, undefined, { withSource: false });
 }

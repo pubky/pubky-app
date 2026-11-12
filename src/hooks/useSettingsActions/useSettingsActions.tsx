@@ -70,6 +70,8 @@ export function useSettingsActions(): UseSettingsActionsResult {
 
   const setEmbedsUpFront = (embedsUpFront: boolean) => run(() => SettingsController.setEmbedsUpFront(embedsUpFront));
 
+  const setLanguages = (languages: string[]) => run(() => SettingsController.setLanguages(languages));
+
   return {
     setNotificationPreference,
     setShowConfirm,
@@ -82,6 +84,7 @@ export function useSettingsActions(): UseSettingsActionsResult {
     setNeverShowPosts,
     setPlayers,
     setEmbedsUpFront,
+    setLanguages,
     error,
   };
 }

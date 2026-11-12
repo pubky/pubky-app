@@ -7,6 +7,7 @@ import { getCategoryPlayers, PlayerCategory } from '@/molecules/ResourcePlayer/r
 import { SettingsSwitchGroup } from '@/molecules/Settings/SettingsSwitchGroup/SettingsSwitchGroup';
 import { SettingsSwitchItem } from '@/molecules/Settings/SettingsSwitchItem/SettingsSwitchItem';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+import { MediaLanguageList } from './MediaLanguageList';
 import { MediaPlayerList } from './MediaPlayerList';
 
 /** The kinds of resource with their own Players, in the page's order. */
@@ -14,12 +15,13 @@ const CATEGORIES = [PlayerCategory.MUSIC, PlayerCategory.PODCASTS, PlayerCategor
 
 /**
  * Links and media: the services cards play on, ranked, with the ones the viewer removed never played,
- * one list per kind of resource (`MediaPlayerList`: Music, Podcasts, Video), and whether a link's
- * platform embed shows up front.
+ * one list per kind of resource (`MediaPlayerList`: Music, Podcasts, Video), the languages
+ * Wikipedia and other wikis open in (`MediaLanguageList`), and whether a link's platform embed
+ * shows up front.
  */
 export function MediaSettings() {
   const { media } = useSettingsStore();
-  const { setPlayers, setEmbedsUpFront } = useSettingsActions();
+  const { setPlayers, setEmbedsUpFront, setLanguages } = useSettingsActions();
 
   return (
     <SettingsSwitchGroup>
@@ -43,6 +45,7 @@ export function MediaSettings() {
           />
         ))}
       </Container>
+      <MediaLanguageList languages={media.languages ?? []} onChange={setLanguages} />
       <SettingsSwitchItem
         id="media-switch-embedsUpFront"
         label={'Show platform embeds up front'}

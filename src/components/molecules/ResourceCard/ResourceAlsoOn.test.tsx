@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { MENU_VARIANT } from '@/config/ui';
@@ -10,6 +10,8 @@ import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
 import unreachableFixture from '@/services/pinakes/fixtures/by-uri.unreachable.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesAlsoOn, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { ResourceAlsoOn } from './ResourceAlsoOn';
 import { dedupeAlsoOn, pickAlsoOn } from './ResourceAlsoOn.utils';
 
@@ -198,8 +200,14 @@ describe('ResourceAlsoOn', () => {
     const wikipedia = () => screen.getByRole('menuitem', { name: /^Wikipedia / });
     const languagesTrigger = () => screen.getByRole('menuitem', { name: 'Change Wikipedia language' });
 
+    // A viewer whose languages no edition has (Danish): English shows, every edition is a choice.
+    beforeEach(() => {
+      vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['da']);
+    });
+
     afterEach(() => {
       vi.restoreAllMocks();
+      useSettingsStore.setState({ media: defaultMediaPreferences });
     });
 
     it('is one Wikipedia row, named after the edition it links to', () => {
@@ -223,6 +231,40 @@ describe('ResourceAlsoOn', () => {
       expect(wikipedia()).toHaveAccessibleName('Wikipedia (de), Found via wikidata');
       expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://de.wikipedia.org/wiki/Berlin'));
       expect(wikipedia()).not.toHaveAttribute('target');
+    });
+
+    it('shows the viewer’s one language the service has, with no switcher', () => {
+      vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US', 'en']);
+      renderAlsoOn(placeFixture.also_on);
+
+      expect(wikipedia()).toHaveAccessibleName('Wikipedia (en), Found via wikidata');
+      expect(screen.queryByRole('menuitem', { name: 'Change Wikipedia language' })).not.toBeInTheDocument();
+    });
+
+    it('takes the Wikipedia languages of Links and Media over the browser’s', () => {
+      vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US', 'en']);
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, languages: ['da', 'de'] } });
+      renderAlsoOn(placeFixture.also_on);
+
+      expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://de.wikipedia.org/wiki/Berlin'));
+      expect(screen.queryByRole('menuitem', { name: 'Change Wikipedia language' })).not.toBeInTheDocument();
+    });
+
+    it('lists only the viewer’s languages the service has, in the viewer’s order', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, languages: ['fr', 'sk', 'de'] } });
+      renderAlsoOn(placeFixture.also_on);
+
+      expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://fr.wikipedia.org/wiki/Berlin'));
+      fireEvent.click(languagesTrigger());
+      const list = screen.getByRole('group', { name: 'Wikipedia language' });
+      expect(
+        within(list)
+          .getAllByRole('menuitemradio')
+          .map((item) => item.textContent),
+      ).toEqual(['Français (fr)', 'Deutsch (de)']);
+
+      fireEvent.click(within(list).getByRole('menuitemradio', { name: 'Deutsch (de)' }));
+      expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://de.wikipedia.org/wiki/Berlin'));
     });
 
     it('unfolds the languages in the menu as radio items named in their own language', () => {
@@ -330,8 +372,14 @@ describe('ResourceAlsoOn', () => {
   describe('in the bottom sheet on a phone', () => {
     const BOOK: TPinakesResourceDetail = bookFixture;
 
+    // A viewer whose languages no edition has (Danish): English shows, every edition is a choice.
+    beforeEach(() => {
+      vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['da']);
+    });
+
     afterEach(() => {
       vi.restoreAllMocks();
+      useSettingsStore.setState({ media: defaultMediaPreferences });
     });
 
     it('is a group named "Also on", with plain links that close the sheet once followed', () => {
@@ -396,6 +444,28 @@ describe('ResourceAlsoOn', () => {
       expect(toggle).toHaveFocus();
       expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://fr.wikipedia.org/wiki/Berlin'));
       expect(closeMenu).not.toHaveBeenCalled();
+    });
+
+    it('shows the viewer’s one language with no toggle, and only the viewer’s languages with several', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, languages: ['de'] } });
+      const first = render(
+        <ResourceAlsoOn alsoOn={dedupeAlsoOn(placeFixture.also_on)} variant={MENU_VARIANT.SHEET} closeMenu={vi.fn()} />,
+      );
+      expect(screen.getByRole('link', { name: /^Wikipedia / })).toHaveAttribute(
+        'href',
+        getResourceRoute('https://de.wikipedia.org/wiki/Berlin'),
+      );
+      expect(screen.queryByRole('button', { name: 'Change Wikipedia language' })).not.toBeInTheDocument();
+      first.unmount();
+
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, languages: ['de', 'it'] } });
+      renderSheet(placeFixture.also_on);
+      fireEvent.click(screen.getByRole('button', { name: 'Change Wikipedia language' }));
+      expect(
+        within(screen.getByRole('radiogroup', { name: 'Wikipedia language' }))
+          .getAllByRole('radio')
+          .map((radio) => radio.textContent),
+      ).toEqual(['Deutsch (de)', 'Italiano (it)']);
     });
 
     it('makes the languages one Tab stop that the arrow keys move through without picking', () => {

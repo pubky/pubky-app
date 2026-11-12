@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
@@ -14,6 +14,8 @@ import groupFixture from '@/services/pinakes/fixtures/group.video.json';
 import becauseFixture from '@/services/pinakes/fixtures/search.related.because.json';
 import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import type { TPinakesCard, TPinakesGroupDetail, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { SHARED_ON_PUBKY_NOTE } from './ResourceAlsoOnList.utils';
 import { ResourceSidebar } from './ResourceSidebar';
 
@@ -237,7 +239,7 @@ describe('ResourceSidebar', () => {
     describe('a service in several languages', () => {
       const PLACE: TPinakesResourceDetail = placeFixture;
       const section = () => screen.getByTestId('resource-also-on-list');
-      const wikipedia = () => within(section()).getByRole('link', { name: /^Wikipedia / });
+      const wikipedia = () => within(section()).getByRole('link', { name: /^Wikipedia(?! \()/ });
       const languages = (name = 'Wikipedia') =>
         within(section()).getByRole('combobox', { name: new RegExp(`^${name} language: `) });
       const voyage = (lang: string) => ({
@@ -260,6 +262,16 @@ describe('ResourceSidebar', () => {
         for (const api of POINTER_APIS) Reflect.deleteProperty(Element.prototype, api);
       });
 
+      // A viewer whose languages no edition has (Danish): English shows, every edition is a choice.
+      let browserLanguages: ReturnType<typeof vi.spyOn>;
+      beforeEach(() => {
+        browserLanguages = vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['da']);
+      });
+      afterEach(() => {
+        browserLanguages.mockRestore();
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
+
       it('is one Wikipedia row with a language select, and the count names the rows', () => {
         card = PLACE;
         render(<ResourceSidebar card={card} />);
@@ -268,8 +280,10 @@ describe('ResourceSidebar', () => {
         expect(within(section()).getByRole('heading', { level: 2 })).toHaveTextContent('Also on · 6');
         const rows = within(section()).getAllByTestId('resource-also-on-list-row');
         expect(rows).toHaveLength(6);
-        expect(wikipedia()).toHaveAccessibleName('Wikipedia English (en)');
+        // The language is in the tooltip and the select, not on a line of its own.
+        expect(wikipedia()).toHaveAccessibleName('Wikipedia');
         expect(wikipedia()).toHaveAttribute('title', 'Wikipedia · English (en) · Found via wikidata');
+        expect(within(rows[5]).queryByText('English (en)', { selector: 'a *' })).not.toBeInTheDocument();
         expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://en.wikipedia.org/wiki/Berlin'));
         expect(wikipedia()).not.toHaveAttribute('target');
         // The select is the link's sibling in the list item, never inside it.
@@ -303,7 +317,7 @@ describe('ResourceSidebar', () => {
 
         expect(languages()).toHaveAccessibleName('Wikipedia language: Français (fr)');
         expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://fr.wikipedia.org/wiki/Berlin'));
-        expect(wikipedia()).toHaveAccessibleName('Wikipedia Français (fr)');
+        expect(wikipedia()).toHaveAttribute('title', 'Wikipedia · Français (fr) · Found via wikidata');
         expect(within(section()).getByRole('link', { name: 'Open in Wikipedia' })).toHaveAttribute(
           'href',
           'https://fr.wikipedia.org/wiki/Berlin',
@@ -311,17 +325,48 @@ describe('ResourceSidebar', () => {
         expect(window.location.href).toBe(location);
       });
 
-      it('starts on the browser’s language', () => {
-        const spy = vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['de-CH', 'de']);
-        try {
-          card = PLACE;
-          render(<ResourceSidebar card={card} />);
+      it('starts on the browser’s language and lists only the browser’s languages the service has', async () => {
+        const user = userEvent.setup();
+        browserLanguages.mockReturnValue(['de-CH', 'de', 'sk', 'fr']);
+        card = PLACE;
+        render(<ResourceSidebar card={card} />);
 
-          expect(languages()).toHaveAccessibleName('Wikipedia language: Deutsch (de)');
-          expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://de.wikipedia.org/wiki/Berlin'));
-        } finally {
-          spy.mockRestore();
-        }
+        expect(languages()).toHaveAccessibleName('Wikipedia language: Deutsch (de)');
+        expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://de.wikipedia.org/wiki/Berlin'));
+        await user.click(languages());
+        expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+          'Deutsch (de)',
+          'Français (fr)',
+        ]);
+      });
+
+      it('shows the viewer’s one language the service has with no select', () => {
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, languages: ['sk', 'it'] } });
+        card = PLACE;
+        render(<ResourceSidebar card={card} />);
+
+        expect(wikipedia()).toHaveAttribute('title', 'Wikipedia · Italiano (it) · Found via wikidata');
+        expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://it.wikipedia.org/wiki/Berlino'));
+        expect(within(section()).queryByRole('combobox')).not.toBeInTheDocument();
+        expect(within(section()).getByRole('link', { name: 'Open in Wikipedia' })).toHaveAttribute(
+          'href',
+          'https://it.wikipedia.org/wiki/Berlino',
+        );
+      });
+
+      it('lists only the Wikipedia languages of Links and Media the service has, in their order', async () => {
+        const user = userEvent.setup();
+        browserLanguages.mockReturnValue(['en']);
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, languages: ['fr', 'sk', 'de'] } });
+        card = PLACE;
+        render(<ResourceSidebar card={card} />);
+
+        expect(languages()).toHaveAccessibleName('Wikipedia language: Français (fr)');
+        await user.click(languages());
+        expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+          'Français (fr)',
+          'Deutsch (de)',
+        ]);
       });
 
       it('puts the chosen edition’s counts under the row', () => {
@@ -333,7 +378,7 @@ describe('ResourceSidebar', () => {
         card = PLACE;
         render(<ResourceSidebar card={card} />);
 
-        expect(wikipedia()).toHaveAccessibleName('Wikipedia English (en) 3 tags, 1 post');
+        expect(wikipedia()).toHaveAccessibleName('Wikipedia 3 tags, 1 post');
         expect(within(wikipedia()).getByTestId('resource-also-on-list-row-counts-tags')).toHaveTextContent('3');
         expect(within(wikipedia()).queryByTestId('resource-also-on-list-row-counts-replies')).not.toBeInTheDocument();
         expect(within(wikipedia()).getByTestId('resource-also-on-list-row-counts-posts')).toHaveTextContent('1');
@@ -347,8 +392,8 @@ describe('ResourceSidebar', () => {
 
         const row = within(section()).getByRole('link', { name: /^Wikivoyage / });
         expect(section().textContent).not.toMatch(/maybe/i);
-        expect(row).toHaveAccessibleName('Wikivoyage English (en) Matched by title and length');
-        expect(row).toHaveAttribute('title', 'Wikivoyage · English (en) · Matched by title and length · Found via x');
+        expect(row).toHaveAccessibleName('Wikivoyage Matched by title and length');
+        expect(row).toHaveAttribute('title', 'Wikivoyage · Matched by title and length · English (en) · Found via x');
       });
 
       it('gives each service its own row and select, and leaves a service in one language a plain row', () => {

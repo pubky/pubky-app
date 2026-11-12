@@ -121,6 +121,11 @@ export class SettingsController {
     await this.commitUpdate();
   }
 
+  static async setLanguages(languages: string[]): Promise<void> {
+    useSettingsStore.getState().setLanguages(languages);
+    await this.commitUpdate();
+  }
+
   /**
    * Muted users management (local-only, not synced to homeserver).
    * These methods update the local store directly without triggering

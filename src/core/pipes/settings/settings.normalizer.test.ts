@@ -276,6 +276,18 @@ describe('SettingsNormalizer', () => {
       );
     });
 
+    it('keeps the Wikipedia languages in their order, dropping what is no language code', () => {
+      const media = { ...defaultMediaPreferences, languages: ['de', 'simple', 'als'] };
+      expect(SettingsNormalizer.from({ media }).media).toEqual(media);
+      expect(
+        SettingsNormalizer.from({ media: asInvalid<typeof media>({ languages: ['fr', 3, null, '', 'de', 'fr'] }) })
+          .media,
+      ).toEqual({ ...defaultMediaPreferences, languages: ['fr', 'de'] });
+      expect(SettingsNormalizer.from({ media: asInvalid<typeof media>({ languages: 'de' }) }).media).toEqual(
+        defaultMediaPreferences,
+      );
+    });
+
     it('should handle empty object gracefully', () => {
       const result = SettingsNormalizer.from({});
 
@@ -303,6 +315,19 @@ describe('SettingsNormalizer', () => {
       const restored = SettingsNormalizer.from(SettingsNormalizer.to(original, TEST_PUBKY.USER_1).settings);
 
       expect(restored.media).toEqual(media);
+    });
+
+    it('should write the Wikipedia languages into settings.json under media and read them back', () => {
+      const media = { ...defaultMediaPreferences, languages: ['de', 'fr'] };
+      const { settings } = SettingsNormalizer.to(createMockSettingsState({ media }), TEST_PUBKY.USER_1);
+
+      expect(JSON.parse(JSON.stringify(settings)).media).toEqual({
+        playerOrder: [],
+        hiddenPlayers: [],
+        embedsUpFront: true,
+        languages: ['de', 'fr'],
+      });
+      expect(SettingsNormalizer.from(settings).media).toEqual(media);
     });
 
     it.each([
