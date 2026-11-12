@@ -244,20 +244,31 @@ export class FileApplication {
   /**
    * Gets the metadata for a list of file attachments: the local rows, and for v1 media without one
    * what its URI says. Nexus keeps no metadata for v1 files, so only a file this device uploaded has
-   * a row, and that row wins. A 0.x file without a row stays missing, for `fetchFiles` to complete.
+   * a row, and that row wins for the URI it describes. The row's key drops the extension, so the
+   * same bytes uploaded under two types leave one row, the later upload's: it answers its own URI
+   * only, and the other URI gets what it says (the filename as its name, no size). A 0.x file
+   * without a row stays missing, for `fetchFiles` to complete.
    * @param fileAttachments - The file attachments to get the metadata for
-   * @returns The metadata for the file attachments
+   * @returns The metadata for the file attachments, one per distinct URI, in the order asked for
    */
   static async getMetadata({ fileAttachments }: TGetMetadataParams) {
-    const uriByFileId = new Map<string, string>();
+    const fileIdByUri = new Map<string, string>();
     for (const uri of fileAttachments) {
+      if (fileIdByUri.has(uri)) continue;
       const compositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
-      if (compositeId && !uriByFileId.has(compositeId)) uriByFileId.set(compositeId, uri);
+      if (compositeId) fileIdByUri.set(uri, compositeId);
     }
-    const rows = await LocalFileService.findByIds([...uriByFileId.keys()]);
+    const rows = await LocalFileService.findByIds([...new Set(fileIdByUri.values())]);
     const rowById = new Map(rows.map((row) => [row.id, row]));
     // In the order asked for, which rows and URIs share: a post mixes both after an edit on another device.
-    return [...uriByFileId].flatMap(([id, uri]) => rowById.get(id) ?? FileNormalizer.toV1FileDetails(uri) ?? []);
+    return [...fileIdByUri].flatMap(([uri, id]) => {
+      const row = rowById.get(id);
+      if (row?.uri === uri) return row;
+      // A v1 row describes one `{hash}.{ext}`, so another URI of the hash is answered from the URI
+      // alone (nothing when the data model refuses its name). A 0.x row is Nexus's own, and its URI
+      // says nothing a row could be checked against: it stands.
+      return isV1Address(uri) ? (FileNormalizer.toV1FileDetails(uri) ?? []) : (row ?? []);
+    });
   }
 
   /**

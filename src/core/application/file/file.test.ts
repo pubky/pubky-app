@@ -449,6 +449,57 @@ describe('FileApplication', () => {
         await expect(FileApplication.getMetadata({ fileAttachments: [png.url, png.url] })).resolves.toHaveLength(1);
       });
 
+      describe('the same bytes uploaded under two types, which share the one row keyed by their hash', () => {
+        // Images are normalized before hashing, so only two non-image types can collide.
+        const report = buildFile(OWNER, { bytes: new Uint8Array([3]), type: 'application/pdf' });
+        const notes = buildFile(OWNER, { bytes: new Uint8Array([3]), type: 'text/plain' });
+        // The row as `LocalFileService.create` leaves it after the later upload.
+        const notesRow = createMockFile(`${OWNER}:${notes.id}`, 'notes.txt', notes.url, {
+          content_type: 'text/plain',
+          size: 30,
+        });
+
+        it('answers each URI once from one row read, the row standing for its own URI only', async () => {
+          vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([notesRow]);
+
+          const result = await FileApplication.getMetadata({ fileAttachments: [report.url, notes.url, report.url] });
+
+          expect(report.id).toBe(notes.id);
+          expect(LocalFileService.findByIds).toHaveBeenCalledWith([`${OWNER}:${notes.id}`]);
+          expect(result.map(({ uri }) => uri)).toEqual([report.url, notes.url]);
+          // The earlier upload: what its URI says, not the row of the other file.
+          expect(result[0]).toMatchObject({
+            id: `${OWNER}:${report.id}`,
+            content_type: 'application/pdf',
+            name: `${report.id}.pdf`,
+            size: 0,
+          });
+          expect(result[1]).toBe(notesRow);
+        });
+
+        it('answers both URIs from what they say when neither has a row, under the one id', async () => {
+          vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([]);
+
+          const result = await FileApplication.getMetadata({ fileAttachments: [report.url, notes.url] });
+
+          expect(result.map(({ id, uri, content_type }) => ({ id, uri, content_type }))).toEqual([
+            { id: `${OWNER}:${notes.id}`, uri: report.url, content_type: 'application/pdf' },
+            { id: `${OWNER}:${notes.id}`, uri: notes.url, content_type: 'text/plain' },
+          ]);
+        });
+
+        it('answers nothing for a v1 name the data model refuses, never the row of another extension', async () => {
+          vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([notesRow]);
+
+          const result = await FileApplication.getMetadata({
+            fileAttachments: [`pubky://${OWNER}/pub/social/v1/files/${notes.id}.exe`],
+          });
+
+          expect(LocalFileService.findByIds).toHaveBeenCalledWith([`${OWNER}:${notes.id}`]);
+          expect(result).toEqual([]);
+        });
+      });
+
       it('synthesizes nothing for a 0.x file: its row comes from Nexus', async () => {
         vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([]);
 
@@ -457,6 +508,16 @@ describe('FileApplication', () => {
         });
 
         expect(result).toEqual([]);
+      });
+
+      it('answers a 0.x file with its row whatever the row says its URI is: Nexus wrote both', async () => {
+        // Nothing derives from a 0.x URI, and the card renders every row returned, so the row is never
+        // withheld over a spelling: the only one its id can have is the one Nexus served.
+        const uri = `pubky://${OWNER}/pub/pubky.app/files/0034A0X7NJ52C`;
+        const row = createMockFile(`${OWNER}:0034A0X7NJ52C`, 'scan.jpg', `${uri}/`);
+        vi.spyOn(LocalFileService, 'findByIds').mockResolvedValue([row]);
+
+        await expect(FileApplication.getMetadata({ fileAttachments: [uri] })).resolves.toEqual([row]);
       });
     });
 
