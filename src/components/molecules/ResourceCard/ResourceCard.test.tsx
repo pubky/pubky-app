@@ -662,7 +662,10 @@ describe('ResourceCard', () => {
 
       expect(source()).toHaveAttribute('href', block.refs[0]);
       expect(source()).toHaveTextContent('mempool.space');
-      expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute('src', 'https://mempool.space/favicon.ico');
+      expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
+        'src',
+        'https://mempool.space/resources/favicons/favicon-32x32.png',
+      );
     });
 
     it.each(['default', 'large'] as const)(
@@ -683,7 +686,7 @@ describe('ResourceCard', () => {
         };
         render(<ResourceCard card={block} size={size} />);
 
-        // "mempool.space ↗", a link out, named by what it does, with the site's favicon.
+        // "mempool.space ↗", a link out, named by what it does, with mempool's own icon.
         expect(source().tagName).toBe('A');
         expect(source()).toHaveAttribute('href', page);
         expect(source()).toHaveAttribute('target', '_blank');
@@ -692,7 +695,7 @@ describe('ResourceCard', () => {
         expect(source()).toHaveAccessibleName('Open in mempool.space');
         expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
           'src',
-          'https://mempool.space/favicon.ico',
+          'https://mempool.space/resources/favicons/favicon-32x32.png',
         );
       },
     );

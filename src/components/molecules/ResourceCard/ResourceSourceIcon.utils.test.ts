@@ -53,6 +53,14 @@ describe('getFaviconOverride', () => {
     expect(getFaviconOverride('audius.co')).toBe('https://audius.co/favicons/favicon-32x32.png');
   });
 
+  it('gives mempool.space its own icon, not the Angular logo at its /favicon.ico', () => {
+    const icon = 'https://mempool.space/resources/favicons/favicon-32x32.png';
+    expect(getFaviconOverride('mempool.space')).toBe(icon);
+    expect(getFaviconOverride('MEMPOOL.SPACE')).toBe(icon);
+    expect(getFaviconOverride('notmempool.space')).toBeNull();
+    expect(getFaviconOverride('mempool.space.evil.example')).toBeNull();
+  });
+
   it('gives Amazon Music its own icon on every country site, not the shop’s', () => {
     const icon = 'https://m.media-amazon.com/images/G/01/music/logo/1.0/smile_256x256.png';
     expect(getFaviconOverride('music.amazon.com')).toBe(icon);

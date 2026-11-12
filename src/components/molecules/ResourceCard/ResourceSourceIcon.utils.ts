@@ -54,12 +54,14 @@ function isOnDomain(host: string, domain: string): boolean {
 /**
  * Sites whose icon is not at `/favicon.ico` for us, for the domain and its subdomains, at the
  * address their own pages name: `www.discogs.com` answers an image request with 403, Bandcamp
- * (`<artist>.bandcamp.com`) and Audius with a web page.
+ * (`<artist>.bandcamp.com`) and Audius with a web page, and mempool.space's `/favicon.ico` is the
+ * Angular framework's default logo, not mempool's.
  */
 const FAVICON_OVERRIDES: Readonly<Record<string, string>> = {
   'discogs.com': 'https://st.discogs.com/favicon.ico',
   'bandcamp.com': 'https://s4.bcbits.com/img/favicon/favicon-32x32.png',
   'audius.co': 'https://audius.co/favicons/favicon-32x32.png',
+  'mempool.space': 'https://mempool.space/resources/favicons/favicon-32x32.png',
 };
 
 /**
