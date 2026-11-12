@@ -5,6 +5,7 @@ import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
@@ -198,6 +199,34 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       expect(await AuthController.restorePersistedSession()).toBe(false);
 
       expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'temporary-error' });
+    });
+
+    it('offers recovery when the flag read never answers, and a retry that gets an answer passes the gate', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const hung = deferred<ReturnType<typeof flagBytes>>();
+      const read = vi.spyOn(HomeserverService, 'getBytesIfExists').mockReturnValueOnce(hung.promise);
+      const { seen, unsubscribe } = trackStore();
+
+      const restore = AuthController.restorePersistedSession();
+      await vi.waitFor(() => expect(read).toHaveBeenCalledOnce());
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+      expect(await restore).toBe(false);
+      expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'temporary-error' });
+      expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
+
+      // The abandoned GET answering late places nothing; the retry (focus, network, or the screen's Retry) does.
+      hung.resolve(flagBytes());
+      await vi.advanceTimersByTimeAsync(0);
+      read.mockResolvedValueOnce(flagBytes());
+
+      expect(await AuthController.restorePersistedSession()).toBe(true);
+      unsubscribe();
+
+      expect(seen).toEqual(['restoring', 'temporary-error', 'restoring', 'restoring+session', 'ready+session']);
+      expect(read).toHaveBeenCalledTimes(2);
+      expect(BootstrapApplication.initialize).toHaveBeenCalledOnce();
+      expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
     });
 
     // A late exchange result re-enters `restorePersistedSession` on its own (pubky/pubky-app#3126, dev-sync 7); the

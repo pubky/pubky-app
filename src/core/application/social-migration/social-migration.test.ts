@@ -1,10 +1,11 @@
 import type { Session } from '@synonymdev/pubky';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { SOCIAL_MIGRATION_FLAG_PATH } from '@/config/social-migration';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -57,6 +58,33 @@ describe('SocialMigrationApplication', () => {
     it("refuses to read another account's flag through this session", async () => {
       await expect(SocialMigrationApplication.readFlag({ session, pubky: fakeOwner(2) })).rejects.toMatchObject({
         service: ErrorService.Homeserver,
+      });
+    });
+
+    describe('a read that never answers', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('rejects with a request timeout after the sync-read bound when the GET never answers', async () => {
+        homeserver.spies.getBytesIfExists.mockReturnValueOnce(new Promise(() => {}));
+        const reading = SocialMigrationApplication.readFlag({ session, pubky: homeserver.owner });
+        const outcome = expect(reading).rejects.toMatchObject({
+          category: ErrorCategory.Timeout,
+          code: TimeoutErrorCode.REQUEST_TIMEOUT,
+          service: ErrorService.Homeserver,
+          operation: 'readMigrationFlag',
+          context: { pubky: homeserver.owner, timeoutMs: HOMESERVER_SYNC_READ_TIMEOUT_MS },
+        });
+
+        await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+        await outcome;
+        expect(vi.getTimerCount()).toBe(0);
       });
     });
   });

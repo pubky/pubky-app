@@ -2,9 +2,10 @@ import type { Session } from '@synonymdev/pubky';
 import type { MigrationReport, Outcome } from 'pubky-social-migrator';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { SOCIAL_MIGRATION_FLAG_PATH, SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
@@ -248,6 +249,27 @@ describe('SocialMigrationController', () => {
 
     await expect(ensure('restore')).rejects.toThrow('offline');
     expect(status()).toBe('restoring');
+  });
+
+  it('throws a timeout to the caller when the flag read never answers, without running the engine', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    homeserver.spies.getBytesIfExists.mockReturnValueOnce(new Promise(() => {}));
+    const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+    const gate = ensure('restore').then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+    expect(await gate).toMatchObject({
+      category: ErrorCategory.Timeout,
+      code: TimeoutErrorCode.REQUEST_TIMEOUT,
+      operation: 'readMigrationFlag',
+    });
+    expect(run).not.toHaveBeenCalled();
+    expect(status()).toBe('restoring');
+    expect(stage()).toMatchObject({ stage: 'idle' });
   });
 
   it('runs a signup inline on its empty tree without the screen, and the engine writes the flag', async () => {

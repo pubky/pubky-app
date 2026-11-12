@@ -3,6 +3,7 @@ import type { MigrationReport, ProgressEvent } from 'pubky-social-migrator';
 import { z } from 'zod';
 import { SOCIAL_MIGRATION_FLAG_PATH } from '@/config/social-migration';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { awaitBounded } from '@/utils/bounded-read';
 
 /** The one member of the done flag the gate reads; the engine owns the rest (ADR-0026). */
 const flagSchema = z.object({ transform_rev: z.number().int().nonnegative() });
@@ -18,10 +19,15 @@ export class SocialMigrationApplication {
    * The transform revision the done flag records: `null` when the flag is absent (a 404 only;
    * a missing session, a refused `/priv/` read or a transport failure throw, so a refused flag
    * never reads as a missing one), `0` when it holds anything but what a run writes (the engine
-   * reads such a flag the same way and walks the tree again).
+   * reads such a flag the same way and walks the tree again). The read is bounded like a sync read: past
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` it rejects with `REQUEST_TIMEOUT`, so a GET that never answers fails the
+   * restore into its retry instead of holding it (the engine run that may follow is not bounded).
    */
   static async readFlag({ session, pubky }: { session: Session; pubky: string }): Promise<number | null> {
-    const result = await HomeserverService.getBytesIfExists(`pubky://${pubky}${SOCIAL_MIGRATION_FLAG_PATH}`, session);
+    const result = await awaitBounded(
+      HomeserverService.getBytesIfExists(`pubky://${pubky}${SOCIAL_MIGRATION_FLAG_PATH}`, session),
+      { operation: 'readMigrationFlag', context: { pubky } },
+    );
     if (!result) return null;
     try {
       const parsed = flagSchema.safeParse(JSON.parse(new TextDecoder().decode(result.bytes)));
