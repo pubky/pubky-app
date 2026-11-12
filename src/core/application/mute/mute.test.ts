@@ -410,6 +410,30 @@ describe('MuteApplication against the in-memory homeserver', () => {
       expect(settled).toEqual(['unmute', 'mute']);
     });
 
+    it('does not make commits for different pairs wait on each other', async () => {
+      installWebLocks();
+      const settled: string[] = [];
+      // The unmute's v1 DELETE is still retrying: it holds the user lock shared and its pair lock exclusive.
+      const retrying = Promise.withResolvers<void>();
+      holds.push(() => retrying.resolve());
+      const remove = homeserver.spies.deleteIdempotent.getMockImplementation()!;
+      homeserver.spies.deleteIdempotent.mockImplementation(async (url) => {
+        if (url === muteUri(MUTEE)) await retrying.promise;
+        return remove(url);
+      });
+
+      const unmuting = run(commit(HttpMethod.DELETE, MUTEE).then(() => settled.push('unmute')));
+      await vi.waitFor(() => expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledTimes(2));
+      await run(commit(HttpMethod.PUT, OTHER));
+
+      expect(settled).toEqual([]);
+      await expect(mutedStream()).resolves.toEqual([OTHER]);
+      await expect(storedMutes()).resolves.toEqual([muteUri(OTHER)]);
+      retrying.resolve();
+      await unmuting;
+      expect(settled).toEqual(['unmute']);
+    });
+
     it('releases the user lock when the LIST fails, so another tab still writes', async () => {
       installWebLocks();
       otherTab = await openOtherTab();
