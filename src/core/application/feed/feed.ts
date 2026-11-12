@@ -46,10 +46,12 @@ import type {
 } from './feed.types';
 
 /**
- * The user's feed sync lock (`withSyncLock`), shared by every tab: writes (`persist`, `commitDelete`)
- * hold it `shared`, so they overlap each other; the reconciling fetch holds it `exclusive`, so it
- * never lists while a row's PUT or DELETE is in flight and no write lands between its listing and
- * its local write.
+ * The user's feed sync lock (`withSyncLock`), one per user across every tab, always held `exclusive`:
+ * writes (`persist`, `commitDelete`) run one after another, retries and their back-off included, so an
+ * older write's retry never lands on top of a newer write to the same feed (a per-feed lock would not
+ * order an edit that changes the id; feed writes are rare, see ADR-0028); the reconciling fetch never
+ * lists while a row's PUT or DELETE is in flight, and no write lands between its listing and its local
+ * write.
  */
 const feedSyncLock = (pubky: Pubky) => `pubky-feeds-sync:${pubky}`;
 
@@ -75,7 +77,7 @@ export class FeedApplication {
    * next sign-in lists as two feeds.
    */
   static async persist({ userId, params, isCurrent }: FeedPutParams): Promise<FeedModelSchema | null> {
-    return withSyncLock(feedSyncLock(userId), 'shared', () => this.persistUnderLock({ userId, params, isCurrent }));
+    return withSyncLock(feedSyncLock(userId), 'exclusive', () => this.persistUnderLock({ userId, params, isCurrent }));
   }
 
   private static async persistUnderLock({ userId, params, isCurrent }: FeedPutParams): Promise<FeedModelSchema | null> {
@@ -141,7 +143,7 @@ export class FeedApplication {
    * nothing was removed, and the caller announces nothing.
    */
   static async commitDelete({ userId, params, isCurrent }: FeedDeleteParams): Promise<boolean> {
-    return withSyncLock(feedSyncLock(userId), 'shared', () =>
+    return withSyncLock(feedSyncLock(userId), 'exclusive', () =>
       this.commitDeleteUnderLock({ userId, params, isCurrent }),
     );
   }

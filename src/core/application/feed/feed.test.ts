@@ -110,6 +110,14 @@ describe('FeedApplication', () => {
     });
     return { taken: taken.promise, release: () => released.resolve() };
   };
+  /** Holds the next PUT until `landed` resolves, as a retry backing off would. */
+  const holdPut = (landed: Promise<void>) => {
+    const putBlob = homeserver.spies.putBlob.getMockImplementation()!;
+    homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
+      await landed;
+      return putBlob(params);
+    });
+  };
 
   afterEach(() => {
     Reflect.deleteProperty(navigator, 'locks');
@@ -687,12 +695,8 @@ describe('FeedApplication', () => {
 
     it('waits for a feed whose create is still syncing instead of removing it', async () => {
       const inFlight = built({ tags: ['syncing'] });
-      const putBlob = homeserver.spies.putBlob.getMockImplementation()!;
       const landed = Promise.withResolvers<void>();
-      homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
-        await landed.promise;
-        return putBlob(params);
-      });
+      holdPut(landed.promise);
       const creating = FeedApplication.persist({ userId: owner, params: { feed: inFlight } });
       await vi.waitFor(async () => expect(await FeedModel.table.get(inFlight.id)).toBeDefined());
 
@@ -712,7 +716,7 @@ describe('FeedApplication', () => {
       expect(await storedExists(inFlight.path)).toBe(true);
     });
 
-    it('holds the per-user Web Lock shared for writes and exclusive for the fetch', async () => {
+    it('holds the per-user Web Lock exclusive for the writes and for the fetch', async () => {
       const locks = createTestWebLocks();
       const request = vi.spyOn(locks, 'request');
       Object.defineProperty(navigator, 'locks', { value: locks, configurable: true });
@@ -726,10 +730,35 @@ describe('FeedApplication', () => {
       }
 
       expect(request.mock.calls.map(([name, options]) => [name, (options as LockOptions).mode])).toEqual([
-        [`pubky-feeds-sync:${owner}`, 'shared'],
         [`pubky-feeds-sync:${owner}`, 'exclusive'],
-        [`pubky-feeds-sync:${owner}`, 'shared'],
+        [`pubky-feeds-sync:${owner}`, 'exclusive'],
+        [`pubky-feeds-sync:${owner}`, 'exclusive'],
       ]);
+    });
+
+    it('runs a delete of a feed only once its create has landed, so the file goes with the row', async () => {
+      installWebLocks();
+      const feed = built();
+      const landed = Promise.withResolvers<void>();
+      holdPut(landed.promise);
+      const settled: string[] = [];
+
+      // The row is written and the create's PUT is in flight (a retry backing off): the delete waits.
+      const creating = FeedApplication.persist({ userId: owner, params: { feed } }).then(() => settled.push('create'));
+      await vi.waitFor(async () => expect(await FeedModel.table.get(feed.id)).toBeDefined());
+      const deleting = FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } }).then(() =>
+        settled.push('delete'),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(await FeedModel.table.get(feed.id)).toBeDefined();
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+
+      landed.resolve();
+      await Promise.all([creating, deleting]);
+
+      expect(settled).toEqual(['create', 'delete']);
+      expect(await FeedModel.table.get(feed.id)).toBeUndefined();
+      expect(await storedExists(feed.path)).toBe(false);
     });
 
     it('touches no local row once the account is no longer current', async () => {
