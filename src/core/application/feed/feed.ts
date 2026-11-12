@@ -138,9 +138,9 @@ export class FeedApplication {
   }
 
   /**
-   * Removes the feed locally and on the homeserver under the sync lock. Resolves true once the delete
-   * ran, false when it was skipped because the account changed while it waited for the lock (`persist`):
-   * nothing was removed, and the caller announces nothing.
+   * Removes the feed locally and on the homeserver under the sync lock, held until every started delete
+   * has settled. Resolves true once the delete ran, false when it was skipped because the account changed
+   * while it waited for the lock (`persist`): nothing was removed, and the caller announces nothing.
    */
   static async commitDelete({ userId, params, isCurrent }: FeedDeleteParams): Promise<boolean> {
     return withSyncLock(feedSyncLock(userId), 'exclusive', () =>
@@ -164,13 +164,18 @@ export class FeedApplication {
 
     // Viewer guard, before the local and the homeserver delete start together: see `FeedPutParams.isCurrent`.
     if (isCurrent && !isCurrent()) return false;
-    await Promise.all([
+    // Every started delete settles before this returns and the lock is released: a homeserver DELETE
+    // still retrying after a local failure would otherwise run outside the lock, and a queued write of
+    // the same feed could PUT between its attempts. The first failure is rethrown as it is.
+    const results = await Promise.allSettled([
       LocalFeedService.delete({ feedId }),
       this.deleteStoredFeed(userId, feedId),
       ...(streamId
         ? [LocalStreamPostsService.deleteById({ streamId }), LocalStreamPostsService.clearUnreadStream({ streamId })]
         : []),
     ]);
+    const failed = results.find((result) => result.status === 'rejected');
+    if (failed?.status === 'rejected') throw failed.reason;
     return true;
   }
 

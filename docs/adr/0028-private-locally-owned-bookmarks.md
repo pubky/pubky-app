@@ -29,7 +29,8 @@ leaving the row saved and the file gone until the next listing reconciled the ro
 still overlap under Web Locks (the fallback queue runs every write of the user one at a time, whatever the mode); the
 lock order is always user then bookmark, and `fetchBookmarks` takes the user lock alone, so the two cannot deadlock.
 Feed writes (`FeedApplication.persist`, `commitDelete`) take the user's feed lock `exclusive` instead of a nested
-lock: they are rare, and an edit that changes the id touches two ids.
+lock: they are rare, and an edit that changes the id touches two ids; `commitDelete` keeps it until every delete it
+started has settled, so a homeserver DELETE never retries outside the lock after a local failure.
 
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two

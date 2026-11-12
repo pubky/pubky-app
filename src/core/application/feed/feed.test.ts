@@ -54,6 +54,16 @@ const retriedFailure = () =>
     context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
   });
 
+/** A local delete the database refuses. */
+const localDeleteFailure = () =>
+  new AppError({
+    category: ErrorCategory.Database,
+    code: DatabaseErrorCode.DELETE_FAILED,
+    message: 'Failed to delete feed',
+    service: ErrorService.Local,
+    operation: 'delete',
+  });
+
 /** A write the homeserver refuses for good. */
 const refusedWrite = () =>
   new AppError({
@@ -116,6 +126,14 @@ describe('FeedApplication', () => {
     homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
       await landed;
       return putBlob(params);
+    });
+  };
+  /** Holds the next DELETE until `landed` resolves, as a retry backing off would. */
+  const holdDelete = (landed: Promise<void>) => {
+    const remove = homeserver.spies.deleteIdempotent.getMockImplementation()!;
+    homeserver.spies.deleteIdempotent.mockImplementationOnce(async (url) => {
+      await landed;
+      return remove(url);
     });
   };
 
@@ -556,6 +574,48 @@ describe('FeedApplication', () => {
       await expect(FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } })).rejects.toThrow(
         'Failed to PUT to homeserver: 500',
       );
+    });
+
+    it('holds the lock until the homeserver DELETE has settled when the local delete fails, then rethrows it', async () => {
+      installWebLocks();
+      const feed = built();
+      await FeedApplication.persist({ userId: owner, params: { feed } });
+      homeserver.spies.putBlob.mockClear();
+      const failure = localDeleteFailure();
+      vi.spyOn(LocalFeedService, 'delete').mockRejectedValueOnce(failure);
+      // The homeserver DELETE is in flight (a retry backing off) while the local delete has already failed.
+      const released = Promise.withResolvers<void>();
+      holdDelete(released.promise);
+      const settled: string[] = [];
+
+      const deleting = FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } }).finally(() =>
+        settled.push('delete'),
+      );
+      const creating = FeedApplication.persist({ userId: owner, params: { feed } }).then(() => settled.push('create'));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      // The create of the same feed waits: the lock stays held until every started delete has settled.
+      expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+      expect(settled).toEqual([]);
+
+      released.resolve();
+      await expect(deleting).rejects.toBe(failure);
+      await creating;
+
+      expect(settled).toEqual(['delete', 'create']);
+      expect(await FeedModel.table.get(feed.id)).toBeDefined();
+      expect(await storedExists(feed.path)).toBe(true);
+    });
+
+    it('rethrows the first failure in order when both the local and the homeserver delete fail', async () => {
+      const feed = built();
+      await FeedApplication.persist({ userId: owner, params: { feed } });
+      const failure = localDeleteFailure();
+      vi.spyOn(LocalFeedService, 'delete').mockRejectedValueOnce(failure);
+      homeserver.spies.deleteIdempotent.mockRejectedValue(refusedWrite());
+
+      await expect(FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } })).rejects.toBe(failure);
+
+      expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledOnce();
     });
 
     it('refuses an id the data model cannot spell as a validation error', async () => {
