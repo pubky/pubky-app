@@ -77,6 +77,11 @@ describe('MediaLanguageList', () => {
     expect(names.indexOf('Dansk (da)')).toBeLessThan(names.indexOf('Eesti (et)'));
     expect(names.indexOf('Eesti (et)')).toBeLessThan(names.indexOf('Español (es)'));
     expect(names.indexOf('Español (es)')).toBeLessThan(names.indexOf('Français (fr)'));
+    // A code the runtime cannot name (Amis here) comes after every named language, with the others like it.
+    const bare = names.indexOf('ami');
+    expect(bare).toBeGreaterThan(0);
+    expect(names.slice(0, bare).every((name) => name.endsWith(')'))).toBe(true);
+    expect(names.slice(bare).some((name) => name.endsWith(')'))).toBe(false);
     expect(menu).toHaveClass('max-h-72', 'overflow-y-auto');
     expect(within(menu).getByText('Français (fr)')).toHaveAttribute('lang', 'fr');
     // The whole list renders into the menu: slow in jsdom under load.
