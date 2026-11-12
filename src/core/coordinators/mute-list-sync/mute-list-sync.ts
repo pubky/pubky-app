@@ -40,7 +40,9 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   /**
    * The LIST still out, so a slow one does not stack up. Cleared on stop, so one that never settles cannot end
-   * polling; `MuteApplication.fetchMutedUsers` keeps an older LIST that answers late from undoing a newer one.
+   * polling, and freed once the fetch settles, which `MuteApplication.fetchMutedUsers` bounds by
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`); `fetchMutedUsers` also keeps an older LIST that answers
+   * late from undoing a newer one.
    */
   private activeRefresh: symbol | null = null;
   private accountUnsubscribe: (() => void) | null = null;

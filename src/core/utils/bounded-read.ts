@@ -20,7 +20,9 @@ type BoundedReadOptions = {
  * the read keeps running, since it cannot be cancelled, but nothing awaits it any more (`Promise.race` holds its
  * late answer or failure), so a caller whose local write follows the awaited read never applies what it answers
  * late. A read that settles first is returned, or rethrown, as it is. `withLocksTimeout`
- * (`src/core/services/locks/locks.utils.ts`) is the same race for the Locks SDK, with that service's extras.
+ * (`src/core/services/locks/locks.utils.ts`) is the same race for the Locks SDK, with that service's extras, and
+ * `AuthController.bounded` (`src/core/controllers/auth/auth.ts`) the same for the auth steps; a change to the race
+ * belongs in all three.
  */
 export async function awaitBounded<T>(
   read: Promise<T>,

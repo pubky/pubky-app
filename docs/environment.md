@@ -196,7 +196,11 @@ Which Nexus API the app speaks is not configurable: `NEXUS_API_VERSION = 'v1'` i
 
 ### Homeserver mute list sync
 
-Cross-session mute alignment polls the private mute directory on the homeserver. The poll interval and the debounce are fixed in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_POLL_INTERVAL_MS`, 30 s; `MUTE_SYNC_DEBOUNCE_MS`), not environment variables. The page-visibility pause follows `PUBKY_RUNTIME_NOTIFICATION_RESPECT_PAGE_VISIBILITY`. It polls rather than following a session-bound event stream because such a stream's session lease is unbounded while its response headers are outstanding (ADR-0014, pubky/pubky-homeserver#798). The wait for one homeserver read held under a sync lock (the whole paginated LIST of the mute, bookmark and feed fetches, a bookmark GET batch, a feed GET) is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` in [`src/config/network.ts`](../src/config/network.ts) (30 s), not an environment variable.
+Cross-session mute alignment polls the private mute directory on the homeserver. The poll interval and the debounce are fixed in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_POLL_INTERVAL_MS`, 30 s; `MUTE_SYNC_DEBOUNCE_MS`), not environment variables. The page-visibility pause follows `PUBKY_RUNTIME_NOTIFICATION_RESPECT_PAGE_VISIBILITY`. It polls rather than following a session-bound event stream because such a stream's session lease is unbounded while its response headers are outstanding (ADR-0014, pubky/pubky-homeserver#798).
+
+### Homeserver sync read bound (fixed policy)
+
+The wait for one homeserver read held under a per-user sync lock (the whole paginated LIST of the mute, bookmark and feed fetches, a bookmark GET batch, a feed GET, the feed write's fenced re-read of the stored copy) is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` in [`src/config/network.ts`](../src/config/network.ts) (30 s), not an environment variable; the PUTs and DELETEs held under those locks are not bounded (ADR-0028, `docs/local-first.md`).
 
 Where the app keeps its own files on the homeserver (`/priv/app.pubky/v1/settings.json`, `last_read.json`, and the 0.x `settings.json` it still reads as a fallback) is product policy in [`src/config/app-files.ts`](../src/config/app-files.ts), not an environment variable: every deployment of one version writes the same paths, and a deployment-specific namespace would split one account's settings across versions (`docs/data-patterns.md`, _Homeserver Trees and App Files_).
 

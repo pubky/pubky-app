@@ -32,13 +32,15 @@ Feed writes (`FeedApplication.persist`, `commitDelete`) take the user's feed loc
 lock: they are rare, and an edit that changes the id touches two ids; `commitDelete` keeps it until every delete it
 started has settled, so a homeserver DELETE never retries outside the lock after a local failure.
 
-Amended — 2026-11-11 (FIX-FINAL-5, the Greptile P1 on #3140, round 3): every homeserver read `fetchBookmarks` holds
-the lock across, the LIST and each GET batch, is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` (30 s, `awaitBounded`
-in `src/core/utils/bounded-read.ts`). The SDK's reads take no `AbortSignal` and have no timeout, so a read that never
-answered held the lock, and every bookmark write of every tab queued behind it, for as long as it hung; past the
-bound the fetch rejects with `REQUEST_TIMEOUT` before its reconcile, so it fails like a failed LIST, the lock is
-released, and nothing the abandoned read answers late is applied. The mute and feed fetches hold the same bound
-(ADR-0014, `docs/local-first.md`).
+Amended — 2026-11-11 (FIX-FINAL-5, the Greptile P1 on #3140, round 3): every homeserver read that `fetchBookmarks`
+holds the lock across (the LIST and each GET batch) is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` (30 s,
+`awaitBounded` in `src/core/utils/bounded-read.ts`). The SDK's reads take no `AbortSignal` and have no timeout, so a
+read that never answered held the lock, and every bookmark write of every tab queued behind it, for as long as it
+hung; past the bound the fetch rejects with `REQUEST_TIMEOUT` before its reconcile, so it fails like a failed LIST,
+the lock is released, and nothing the abandoned read answers late is applied. The mute and feed fetches hold the same
+bound, as does the feed write's fenced re-read of the stored copy (ADR-0014, `docs/local-first.md`). The PUTs and
+DELETEs held under the locks are not bounded: they rely on `HomeserverService`'s retry policy and the browser's
+connection timeout.
 
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two
@@ -92,7 +94,8 @@ field is ignored.**
   bootstrap and of the resync receives (mutes, feeds, bookmarks), and the resync's settings-store load checks it too.
   The wait for each read held under the lock, the LIST and each GET batch, is bounded by
   `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`): the SDK cannot cancel a read, so past the bound the fetch fails
-  like a failed LIST, before the reconcile, and a read that answers later is applied by nothing.
+  like a failed LIST, before the reconcile, and a read that answers later is applied by nothing; the PUT or DELETE a
+  write holds the lock across is not bounded.
 - **Wiring**: `BootstrapApplication.initialize` runs it in its first `Promise.all` beside the mute and feed fetches,
   and `MigrationApplication.resync` beside them after a database recreation. Both stay depth 1 (ADR-0009).
 - **One local stream**: `timeline:bookmarks:all` holds every bookmark, collections included.

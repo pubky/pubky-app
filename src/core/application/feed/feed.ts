@@ -385,7 +385,14 @@ export class FeedApplication {
 
   /** The feed stored at `url`, or null when there is none or its bytes do not decode (then the write starts fresh). */
   private static async readStoredFeed(url: string): Promise<Feed | null> {
-    const stored = await HomeserverService.getBytesIfExists(url);
+    // Held under the exclusive sync lock like the fetch's reads: a timeout rejects the pass here, before its PUT
+    // (`retryHomeserverWriteAfterReread` does not retry it), and `commit` rolls the local row back as after a PUT
+    // that finally fails (an id-changing edit has written nothing locally yet), so nothing the abandoned read
+    // answers late is applied.
+    const stored = await awaitBounded(HomeserverService.getBytesIfExists(url), {
+      operation: 'readStoredFeed',
+      context: { url },
+    });
     if (!stored) return null;
     const read = tryDecodeObject(url, stored.bytes, 'feed');
     if (read.ok) return read.value;

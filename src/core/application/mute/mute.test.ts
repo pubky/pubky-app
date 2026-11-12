@@ -499,6 +499,9 @@ describe('MuteApplication against the in-memory homeserver', () => {
           taken.resolve();
           return answer.promise;
         });
+        // Released after a failing test, like `holdListing`: the fetch holding the user lock settles once the
+        // LIST answers, so the queued commit in `runs` cannot keep the outer `afterEach` waiting.
+        holds.push(() => answer.resolve([]));
         return { taken: taken.promise, answer: (urls: string[]) => answer.resolve(urls) };
       };
       /** Lets the pending microtasks and IndexedDB work run; the faked timers stay where they are. */
@@ -506,6 +509,7 @@ describe('MuteApplication against the in-memory homeserver', () => {
 
       it('lets a mute queued behind it write once the wait is bounded, and applies nothing the LIST answers late', async () => {
         installWebLocks();
+        otherTab = await openOtherTab();
         const listing = hangListing();
 
         const fetching = MuteApplication.fetchMutedUsers(MUTER).then(
@@ -513,7 +517,8 @@ describe('MuteApplication against the in-memory homeserver', () => {
           (error: unknown) => error,
         );
         await listing.taken;
-        const muting = run(commit(HttpMethod.PUT, MUTEE));
+        // From another tab, so this tab's settle counter does not shield the late-answer check below.
+        const muting = run(otherTab.application.commitMute(commitParams(HttpMethod.PUT, MUTEE)));
         await settle();
         // The mute waits for the lock the listing holds: nothing written, locally or on the homeserver.
         await expect(mutedStream()).resolves.toEqual([]);
