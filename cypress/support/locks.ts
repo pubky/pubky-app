@@ -81,7 +81,8 @@ const answer = (req: TStubRequest, operation: string, summary: string, body: unk
 
 /**
  * Answers one stand-in call the way the real Lock Server does: its homeserver write first
- * (`plugins/lock-server.ts`), then the answer, or a 500 when the write failed.
+ * (`plugins/lock-server.ts`), then the answer, or a 500 when the write failed. The write goes out
+ * as its own request, so the alias keeps the request the app sent. Return it from the handler.
  */
 const answerAfterWrite = (
   req: TStubRequest,
@@ -90,22 +91,20 @@ const answerAfterWrite = (
   summary: string,
   body: unknown,
 ) => {
-  const request = { method: req.method, url: redactLocksStubUrl(req.url), body: parseBody(req.body) };
   const writesUrl = Cypress.expose('lockServerWritesUrl');
   if (!writesUrl) throw new Error('lockServerWritesUrl is not set: cypress.config.ts starts it in setupNodeEvents');
-  req.url = String(writesUrl);
-  req.body = JSON.stringify(write);
-  req.continue((res) => {
-    const written = res.statusCode === 204;
-    const statusCode = written ? 200 : 500;
-    const action = `${write.bytes === undefined ? 'DELETE' : 'PUT'} ${write.path}`;
-    logLocksStub(operation, `${summary}; Lock Server ${action}: ${written ? 'done' : 'failed'} → ${statusCode}`, {
-      Request: request,
-      'Lock Server homeserver write': { action, statusCode: res.statusCode, error: written ? undefined : res.body },
-      Response: { statusCode, body: written ? body : 'homeserver write failed' },
+  const action = `Lock Server ${write.bytes === undefined ? 'DELETE' : 'PUT'} ${write.path}`;
+  return fetch(String(writesUrl), {
+    method: 'POST',
+    headers: { 'content-type': 'text/plain' },
+    body: JSON.stringify(write),
+  })
+    .then(async (res) => (res.status === 204 ? '' : `HTTP ${res.status}: ${await res.text()}`), String)
+    .then((failure) => {
+      if (failure)
+        answer(req, operation, `${summary}; ${action} failed (${failure})`, { error: 'internal_error' }, 500);
+      else answer(req, operation, `${summary}; ${action} done`, body);
     });
-    res.send({ statusCode, body: written ? body : { error: 'internal_error' }, headers: CORS_HEADERS });
-  });
 };
 
 const toSecondaryRecord = (resources: TContentLockRequest['secondary_resources']) => {
@@ -194,7 +193,7 @@ export const stubLockServer = (state: TLockServerState) => {
       bytes: string;
     }>(req.body);
     state.guarded[path] = bytes;
-    answerAfterWrite(
+    return answerAfterWrite(
       req,
       { owner, path: `${GUARDED_CONTENT_PATH}${path}`, bytes },
       'register guarded resource',
@@ -222,7 +221,7 @@ export const stubLockServer = (state: TLockServerState) => {
       access_policy: body.access_policy,
       lock_server: body.lock_server ?? { override: null },
     };
-    answerAfterWrite(
+    return answerAfterWrite(
       req,
       { owner, path: contentLockPath, bytes: Cypress.Buffer.from(JSON.stringify(contentLock)).toString('base64') },
       'create content lock',
@@ -234,7 +233,7 @@ export const stubLockServer = (state: TLockServerState) => {
   cy.intercept(route('POST', '/e2e/creator/content-locks/delete'), (req) => {
     const { owner, lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
     state.deletedLocks.push(lock_id);
-    answerAfterWrite(
+    return answerAfterWrite(
       req,
       { owner, path: `/pub/app.locks/${lock_id}.json` },
       'delete content lock',

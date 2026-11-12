@@ -2,13 +2,16 @@ import { createServer } from 'http';
 import type { AddressInfo } from 'net';
 import type { SeedLockServerWriteArgs } from '../support/types/seed';
 
+// The spec's intercept handlers call this from the app's origin
+const CORS_HEADERS = { 'access-control-allow-origin': '*' };
+
 /**
  * Serves the stand-in Lock Server's homeserver writes (`seedLockServerWrite`) over HTTP on an
  * ephemeral local port, and resolves with its URL.
  *
  * The real Lock Server writes before it answers the app, so the Locks spec's intercept handlers must
- * wait for the write. A handler cannot run `cy.task`, but it can forward the request here with
- * `req.continue()` and answer the app once this replies: 204 when the write landed, 500 when not.
+ * wait for the write. A handler cannot run `cy.task`, but it can `fetch` the write here and answer
+ * the app once this replies: 204 when the write landed, 500 when not.
  */
 export const startLockServerWrites = (write: (args: SeedLockServerWriteArgs) => Promise<unknown>) =>
   new Promise<string>((resolve) => {
@@ -19,10 +22,10 @@ export const startLockServerWrites = (write: (args: SeedLockServerWriteArgs) => 
         Promise.resolve()
           .then(() => write(JSON.parse(Buffer.concat(chunks).toString())))
           .then(
-            () => res.writeHead(204).end(),
+            () => res.writeHead(204, CORS_HEADERS).end(),
             (error) => {
               console.error(`[lock-server] ${error}`);
-              res.writeHead(500, { 'content-type': 'text/plain' }).end(String(error));
+              res.writeHead(500, { ...CORS_HEADERS, 'content-type': 'text/plain' }).end(String(error));
             },
           );
       });
