@@ -7,6 +7,7 @@ import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalMuteService } from '@/services/local/mute/mute';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { awaitBounded } from '@/utils/bounded-read';
 import { withSyncLock } from '@/utils/sync-lock';
 
 /**
@@ -106,7 +107,8 @@ export class MuteApplication {
    * Only the v1 private tree is listed: the migration gate guarantees every 0.x mute was copied there,
    * and an unmute deletes both copies, so the 0.x tree has nothing the v1 one lacks (ADR-0014).
    *
-   * The whole run holds `muteSyncLock` `exclusive`.
+   * The whole run holds `muteSyncLock` `exclusive`; the wait for the LIST is bounded by
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`), after which the run fails like a failed LIST.
    *
    * The sync coordinator calls this on a timer, so the local write also stands down in four cases: the session
    * the fetch started for ended; a commit of this tab settled during the run; a LIST started later has already
@@ -125,7 +127,13 @@ export class MuteApplication {
     const settledBeforeList = this.settledMuteCommits;
     this.listsStarted += 1;
     const list = this.listsStarted;
-    const muteUris = await HomeserverService.listAll({ baseDirectory: `${listPrefix(pubky, 'private')}mutes/` });
+    const baseDirectory = `${listPrefix(pubky, 'private')}mutes/`;
+    // The lock is held across this read: a timeout rejects here, before the local read and the upsert below, so
+    // nothing the abandoned LIST answers late is ever applied.
+    const muteUris = await awaitBounded(HomeserverService.listAll({ baseDirectory }), {
+      operation: 'fetchMutedUsers',
+      context: { baseDirectory },
+    });
     const stream = muteUris.map(mutedKey).filter((id): id is Pubky => id !== null);
 
     const local = await LocalStreamUsersService.findById(UserStreamTypes.MUTED);

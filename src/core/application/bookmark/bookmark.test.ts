@@ -1,9 +1,10 @@
 import { buildBookmark, buildUri, decodeObject, listPrefix, parseUri } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -751,6 +752,110 @@ describe('BookmarkApplication', () => {
       expect(settled).toEqual(['fetch', 'write']);
       expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true);
       expect(await streamIds()).toEqual([compositeAt(1)]);
+    });
+
+    describe('a read that never answers', () => {
+      // Only the timers are faked: IndexedDB schedules its work with `setImmediate`.
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      const timedOut = {
+        category: ErrorCategory.Timeout,
+        code: TimeoutErrorCode.REQUEST_TIMEOUT,
+        service: ErrorService.Homeserver,
+        operation: 'fetchBookmarks',
+      };
+      /** Holds this tab's next LIST page as an SDK read that never answers; `taken` resolves once it is out. */
+      const hangListing = () => {
+        const taken = Promise.withResolvers<void>();
+        const answer = Promise.withResolvers<string[]>();
+        homeserver.spies.list.mockImplementationOnce(() => {
+          taken.resolve();
+          return answer.promise;
+        });
+        return { taken: taken.promise, answer: (urls: string[]) => answer.resolve(urls) };
+      };
+      /** Holds the GET of `url` as an SDK read that never answers; every other GET answers as before. */
+      const hangRead = (url: string) => {
+        const taken = Promise.withResolvers<void>();
+        const answer = Promise.withResolvers<Uint8Array>();
+        const getBytes = homeserver.spies.getBytes.getMockImplementation()!;
+        homeserver.spies.getBytes.mockImplementation((read) => {
+          if (read !== url) return getBytes(read);
+          taken.resolve();
+          return answer.promise;
+        });
+        return { taken: taken.promise, answer: (bytes: Uint8Array) => answer.resolve(bytes) };
+      };
+      /** Lets the pending microtasks and IndexedDB work run; the faked timers stay where they are. */
+      const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+      it('lets a bookmark queued behind the LIST write once the wait is bounded, and applies nothing the LIST answers late', async () => {
+        installWebLocks();
+        const listing = hangListing();
+
+        const fetching = BookmarkApplication.fetchBookmarks(owner).then(
+          () => null,
+          (error: unknown) => error,
+        );
+        await listing.taken;
+        const writing = bookmark(BookmarkApplication, 1);
+        await settle();
+        // The write waits for the lock the listing holds: nothing written, locally or on the homeserver.
+        expect(await BookmarkModel.findById(compositeAt(1))).toBeNull();
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+        expect(await fetching).toMatchObject(timedOut);
+        await expect(writing).resolves.toBe(true);
+        expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true);
+        expect(await streamIds()).toEqual([compositeAt(1)]);
+        expect(await storedPaths()).toEqual([BookmarkNormalizer.to(postAt(1), owner).path]);
+
+        // The abandoned LIST answers now, from before the write: its reconcile would have removed the row, but
+        // the fetch stopped at the read, so nothing applies it.
+        listing.answer([]);
+        await settle();
+        expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true);
+        expect(await streamIds()).toEqual([compositeAt(1)]);
+      });
+
+      it('lets a bookmark queued behind a GET batch write once the wait is bounded, and applies nothing the GET answers late', async () => {
+        installWebLocks();
+        const stored = await storeRemote(1, T0);
+        const reading = hangRead(stored.url);
+
+        const fetching = BookmarkApplication.fetchBookmarks(owner).then(
+          () => null,
+          (error: unknown) => error,
+        );
+        await reading.taken;
+        const writing = bookmark(BookmarkApplication, 2);
+        await settle();
+        // The listing is done and the GET is out: the write still waits for the lock.
+        expect(await BookmarkModel.findById(compositeAt(2))).toBeNull();
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+        expect(await fetching).toMatchObject(timedOut);
+        await expect(writing).resolves.toBe(true);
+        expect(await BookmarkApplication.exists(compositeAt(2))).toBe(true);
+        // The fetch stopped at the GET, before its reconcile: the listed bookmark was not stored.
+        expect(await BookmarkApplication.exists(compositeAt(1))).toBe(false);
+
+        // The abandoned GET answers now: nothing applies it.
+        reading.answer(stored.body);
+        await settle();
+        expect(await BookmarkApplication.exists(compositeAt(1))).toBe(false);
+        expect(await streamIds()).toEqual([compositeAt(2)]);
+      });
     });
   });
 });

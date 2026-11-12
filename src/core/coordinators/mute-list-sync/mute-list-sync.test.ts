@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { MUTE_SYNC_DEBOUNCE_MS, MUTE_SYNC_POLL_INTERVAL_MS } from '@/config/mute-sync';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { MuteController } from '@/controllers/mute/mute';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
+import { TimeoutErrorCode } from '@/libs/error/error.codes';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { mockSession } from '@/test-utils/pubky';
 
 const PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
@@ -381,6 +385,37 @@ describe('MuteListSyncCoordinator', () => {
       await settleDebounce();
 
       expect(fetchMuted()).toHaveBeenLastCalledWith(OTHER_PUBKY);
+    });
+
+    it('frees its slot once the bounded wait for a LIST that never answers ends, so the next trigger lists again', async () => {
+      // The real controller and application, down to an in-memory homeserver whose LIST never answers.
+      fetchMuted().mockRestore();
+      const homeserver = stubMemoryHomeserver(PUBKY);
+      homeserver.spies.list.mockImplementation(() => new Promise<string[]>(() => {}));
+      const error = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      const refreshFailures = () => error.mock.calls.filter(([message]) => message === 'Mute list refresh failed');
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(homeserver.spies.listAll).toHaveBeenCalledTimes(1);
+
+      // A trigger just before the bound ends is debounced into a refresh the taken slot would hide.
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS - 1);
+      window.dispatchEvent(new Event('online'));
+      expect(refreshFailures()).toHaveLength(0);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(refreshFailures()).toEqual([
+        ['Mute list refresh failed', { error: expect.objectContaining({ code: TimeoutErrorCode.REQUEST_TIMEOUT }) }],
+      ]);
+      expect(homeserver.spies.listAll).toHaveBeenCalledTimes(1);
+
+      await settleDebounce();
+      expect(homeserver.spies.listAll).toHaveBeenCalledTimes(2);
+
+      // The second LIST never answers either: let its wait end, so no task is left in the per-tab lock queue.
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+      expect(refreshFailures()).toHaveLength(2);
     });
   });
 

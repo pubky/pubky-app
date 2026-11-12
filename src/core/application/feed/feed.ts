@@ -33,6 +33,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { awaitBounded } from '@/utils/bounded-read';
 import { withSyncLock } from '@/utils/sync-lock';
 import type {
   FeedDeleteParams,
@@ -223,7 +224,9 @@ export class FeedApplication {
    * listing and the local write hold the sync lock exclusively, so a feed being written in any tab
    * (its row stored, its PUT not yet landed) is either listed or written after this returns, never
    * removed. `isCurrent` is checked inside the local write: a listing that outlives an account
-   * switch touches nothing.
+   * switch touches nothing. The wait for the LIST and for each GET is bounded by
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`): a LIST that times out fails the run like a
+   * failed LIST; a GET that times out skips its feed like a failed GET.
    */
   static async fetchFeeds(userId: Pubky, { isCurrent }: FeedFetchOptions = {}): Promise<FeedModelSchema[]> {
     return withSyncLock(feedSyncLock(userId), 'exclusive', () => this.fetchFeedsUnderLock(userId, isCurrent));
@@ -231,16 +234,27 @@ export class FeedApplication {
 
   private static async fetchFeedsUnderLock(userId: Pubky, isCurrent?: () => boolean): Promise<FeedModelSchema[]> {
     const feedsDirectory = `${listPrefix(userId, 'private')}feeds/`;
-    const feedUris = await HomeserverService.listAll({ baseDirectory: feedsDirectory });
+    // The lock is held across every read of this run: a timeout rejects here, before the reconcile below, so
+    // nothing the abandoned LIST answers late is ever applied.
+    const feedUris = await awaitBounded(HomeserverService.listAll({ baseDirectory: feedsDirectory }), {
+      operation: 'fetchFeeds',
+      context: { baseDirectory: feedsDirectory },
+    });
     const listedIds = new Set(feedUris.flatMap((feedUri) => this.feedIdOfUri(feedUri) ?? []));
 
     const validFeeds: FeedModelSchema[] = [];
 
     for (let index = 0; index < feedUris.length; index += this.FETCH_FEEDS_BATCH_SIZE) {
       const batch = feedUris.slice(index, index + this.FETCH_FEEDS_BATCH_SIZE);
+      // Each GET is bounded on its own: a GET that fails only skips its feed (below), whose listed row stays as it
+      // is until the next fetch reads it, so a GET that timed out is one more skipped read, not a failed run. The
+      // batches run one after another, so a run with a stalled GET in each holds the lock for one bound per batch.
       const batchResults = await Promise.allSettled(
         batch.map(async (feedUri) => {
-          const bytes = await HomeserverService.getBytes(feedUri);
+          const bytes = await awaitBounded(HomeserverService.getBytes(feedUri), {
+            operation: 'fetchFeeds',
+            context: { url: feedUri },
+          });
           return this.normalizeRemoteFeed(feedUri, bytes);
         }),
       );
@@ -371,7 +385,14 @@ export class FeedApplication {
 
   /** The feed stored at `url`, or null when there is none or its bytes do not decode (then the write starts fresh). */
   private static async readStoredFeed(url: string): Promise<Feed | null> {
-    const stored = await HomeserverService.getBytesIfExists(url);
+    // Held under the exclusive sync lock like the fetch's reads: a timeout rejects the pass here, before its PUT
+    // (`retryHomeserverWriteAfterReread` does not retry it), and `commit` rolls the local row back as after a PUT
+    // that finally fails (an id-changing edit has written nothing locally yet), so nothing the abandoned read
+    // answers late is applied.
+    const stored = await awaitBounded(HomeserverService.getBytesIfExists(url), {
+      operation: 'readStoredFeed',
+      context: { url },
+    });
     if (!stored) return null;
     const read = tryDecodeObject(url, stored.bytes, 'feed');
     if (read.ok) return read.value;

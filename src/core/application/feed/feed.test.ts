@@ -1,10 +1,17 @@
 import { buildUri, decodeObject, type Feed, feedId, feedPaths, listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode, DatabaseErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import {
+  ClientErrorCode,
+  DatabaseErrorCode,
+  ServerErrorCode,
+  TimeoutErrorCode,
+  ValidationErrorCode,
+} from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -866,6 +873,166 @@ describe('FeedApplication', () => {
       await expect(FeedApplication.fetchFeeds(owner)).rejects.toBeInstanceOf(AppError);
 
       expect(await FeedModel.table.count()).toBe(1);
+    });
+  });
+
+  describe('a read that never answers', () => {
+    // Only the timers are faked: IndexedDB schedules its work with `setImmediate`.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** Holds the next LIST page as an SDK read that never answers; `taken` resolves once it is out. */
+    const hangListing = () => {
+      const taken = Promise.withResolvers<void>();
+      const answer = Promise.withResolvers<string[]>();
+      homeserver.spies.list.mockImplementationOnce(() => {
+        taken.resolve();
+        return answer.promise;
+      });
+      return { taken: taken.promise, answer: (urls: string[]) => answer.resolve(urls) };
+    };
+    /** Holds the GET of `url` as an SDK read that never answers; every other GET answers as before. */
+    const hangRead = (url: string) => {
+      const taken = Promise.withResolvers<void>();
+      const answer = Promise.withResolvers<Uint8Array>();
+      const getBytes = homeserver.spies.getBytes.getMockImplementation()!;
+      homeserver.spies.getBytes.mockImplementation((read) => {
+        if (read !== url) return getBytes(read);
+        taken.resolve();
+        return answer.promise;
+      });
+      return { taken: taken.promise, answer: (bytes: Uint8Array) => answer.resolve(bytes) };
+    };
+    /** Holds the fenced re-read of the stored copy at `url` (`getBytesIfExists`) as an SDK read that never answers. */
+    const hangStoredRead = (url: string) => {
+      const taken = Promise.withResolvers<void>();
+      const answer = Promise.withResolvers<null>();
+      const read = homeserver.spies.getBytesIfExists.getMockImplementation()!;
+      homeserver.spies.getBytesIfExists.mockImplementation((readUrl, session) => {
+        if (readUrl !== url) return read(readUrl, session);
+        taken.resolve();
+        return answer.promise;
+      });
+      return { taken: taken.promise, answer: () => answer.resolve(null) };
+    };
+    /** Lets the pending microtasks and IndexedDB work run; the faked timers stay where they are. */
+    const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+    it('lets a create queued behind the LIST run once the wait is bounded, and applies nothing the LIST answers late', async () => {
+      installWebLocks();
+      const feed = built();
+      const listing = hangListing();
+
+      const fetching = FeedApplication.fetchFeeds(owner).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      await listing.taken;
+      const creating = FeedApplication.persist({ userId: owner, params: { feed } });
+      await settle();
+      // The create waits for the lock the listing holds: nothing written, locally or on the homeserver.
+      expect(await FeedModel.table.get(feed.id)).toBeUndefined();
+      expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+      expect(await fetching).toMatchObject({
+        category: ErrorCategory.Timeout,
+        code: TimeoutErrorCode.REQUEST_TIMEOUT,
+        service: ErrorService.Homeserver,
+        operation: 'fetchFeeds',
+      });
+      await expect(creating).resolves.toMatchObject({ id: feed.id });
+      expect(await FeedModel.table.get(feed.id)).toBeDefined();
+      expect(await storedExists(feed.path)).toBe(true);
+
+      // The abandoned LIST answers now, from before the create: its reconcile would have removed the row, but
+      // the fetch stopped at the read, so nothing applies it.
+      listing.answer([]);
+      await settle();
+      expect(await FeedModel.table.get(feed.id)).toBeDefined();
+    });
+
+    it('skips a feed whose GET never answers once the wait is bounded, keeping its row and the rest, and applies nothing late', async () => {
+      const kept = built();
+      const hung = built({ tags: ['hung'] });
+      await homeserver.session.storage.putBytes(kept.path, kept.body);
+      await homeserver.session.storage.putBytes(hung.path, hung.body);
+      const hungRow: FeedModelSchema = {
+        ...feedParams({ tags: ['hung'] }),
+        id: hung.id,
+        created_at: 1,
+        updated_at: 1,
+      };
+      await FeedModel.upsert(hungRow);
+      const hungUri = buildUri(owner, 'feed', hung.id);
+      const reading = hangRead(hungUri);
+
+      const fetching = FeedApplication.fetchFeeds(owner);
+      await reading.taken;
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+      expect((await fetching).map((feed) => feed.id)).toEqual([kept.id]);
+      expect(warn).toHaveBeenCalledWith('Skipping feed during bootstrap fetch due to request failure', {
+        feedUri: hungUri,
+        error: expect.objectContaining({ code: TimeoutErrorCode.REQUEST_TIMEOUT }),
+      });
+      // Listed, so kept as it was; the stored copy is read again on the next fetch.
+      expect(await FeedModel.table.get(hung.id)).toEqual(hungRow);
+      expect(await FeedModel.table.get(kept.id)).toMatchObject({ id: kept.id, name: 'Bitcoin News' });
+
+      // The abandoned GET answers now: nothing applies it.
+      reading.answer(hung.body);
+      await settle();
+      expect(await FeedModel.table.get(hung.id)).toEqual(hungRow);
+    });
+
+    it('rolls a create back once the bounded wait for its fenced re-read ends, runs the queued write, and applies nothing late', async () => {
+      installWebLocks();
+      const hung = built();
+      const next = built({ tags: ['next'] });
+      const reading = hangStoredRead(buildUri(owner, 'feed', hung.id));
+
+      const creating = FeedApplication.persist({ userId: owner, params: { feed: hung } }).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      await reading.taken;
+      // The row is written and the write's re-read is out: the next write waits for the lock.
+      expect(await FeedModel.table.get(hung.id)).toBeDefined();
+      const queued = FeedApplication.persist({ userId: owner, params: { feed: next } }).then(
+        (row) => row,
+        (error: unknown) => error,
+      );
+      await settle();
+      expect(await FeedModel.table.get(next.id)).toBeUndefined();
+      expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+      expect(await creating).toMatchObject({
+        category: ErrorCategory.Timeout,
+        code: TimeoutErrorCode.REQUEST_TIMEOUT,
+        service: ErrorService.Homeserver,
+        operation: 'readStoredFeed',
+      });
+      // Rolled back as after any failed pass of the PUT: no row, no file.
+      expect(await FeedModel.table.get(hung.id)).toBeUndefined();
+      expect(await storedExists(hung.path)).toBe(false);
+      expect(await queued).toMatchObject({ id: next.id });
+      expect(await storedExists(next.path)).toBe(true);
+      expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1);
+
+      // The abandoned re-read answers now: the write stopped at the read, so no PUT follows it.
+      reading.answer();
+      await settle();
+      expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1);
+      expect(await storedExists(hung.path)).toBe(false);
     });
   });
 });
