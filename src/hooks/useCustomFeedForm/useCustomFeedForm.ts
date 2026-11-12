@@ -152,9 +152,11 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
       if (!(await waitForAuth())) return false;
       const currentFeedHref = `${APP_ROUTES.FEED}/${feed.id}`;
 
-      await FeedController.commitDelete({
+      const deleted = await FeedController.commitDelete({
         feedId: feed.id,
       });
+      // false: the account changed while the delete waited for the sync lock; nothing to announce.
+      if (!deleted) return false;
       toast({
         title: 'Feed deleted',
       });

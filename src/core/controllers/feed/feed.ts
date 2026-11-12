@@ -99,13 +99,13 @@ export class FeedController {
    * Commit the delete feed operation, this will delete the feed from the local database and sync to the homeserver.
    * @param params - The parameters object
    * @param params.feedId - The ID of the feed
-   * @returns void; a delete skipped because the account changed while it waited for the sync lock resolves like
-   *   a completed one (the viewer is gone, and the next sign-in lists what the homeserver holds)
+   * @returns Whether the delete ran: false when it was skipped because the account changed while it waited
+   *   for the sync lock (`FeedApplication.commitDelete`), so there is nothing to announce
    */
-  static async commitDelete(params: TFeedIdParam): Promise<void> {
+  static async commitDelete(params: TFeedIdParam): Promise<boolean> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
     FeedValidators.validateDeleteParams({ feedId: params.feedId });
-    await FeedApplication.commitDelete({
+    return FeedApplication.commitDelete({
       userId,
       params: { feedId: params.feedId },
       isCurrent: captureViewerSession(),

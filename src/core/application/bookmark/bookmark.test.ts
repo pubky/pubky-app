@@ -133,7 +133,7 @@ describe('BookmarkApplication', () => {
 
       await expect(
         BookmarkApplication.persist(HttpMethod.DELETE, { postId: compositeAt(1), userId: owner, bookmarkUrl: url }),
-      ).resolves.toBeUndefined();
+      ).resolves.toBe(true);
     });
 
     it('refuses a PUT without its bytes before any write', async () => {
@@ -515,8 +515,9 @@ describe('BookmarkApplication', () => {
         expect(homeserver.spies.listAll).not.toHaveBeenCalled();
 
         landed.resolve();
-        const [, ids] = await Promise.all([writing, fetching]);
+        const [written, ids] = await Promise.all([writing, fetching]);
 
+        expect(written).toBe(true);
         expect(ids).toEqual(after);
         expect(await streamIds()).toEqual(after);
         expect(await storedPaths()).toEqual(isCreate ? [BookmarkNormalizer.to(postAt(1), owner).path] : []);
@@ -561,8 +562,10 @@ describe('BookmarkApplication', () => {
       // Signed out (or into another account) while the write waits: logout cleared the shared database.
       current = false;
       listing.release();
-      await Promise.all([fetching, writing]);
+      await fetching;
 
+      // The write reports that it did not run, so no caller announces it.
+      await expect(writing).resolves.toBe(false);
       expect(await BookmarkModel.findById(compositeAt(1))).toBeNull();
       expect(await streamIds()).toEqual([]);
       expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
@@ -580,8 +583,9 @@ describe('BookmarkApplication', () => {
       const removing = unbookmark(BookmarkApplication, 1, () => current);
       current = false;
       listing.release();
-      await Promise.all([fetching, removing]);
+      await fetching;
 
+      await expect(removing).resolves.toBe(false);
       expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true);
       expect(await storedPaths()).toEqual([stored.path]);
       expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();

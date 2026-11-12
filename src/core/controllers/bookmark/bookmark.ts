@@ -58,11 +58,13 @@ export class BookmarkController {
    * @param params - Parameters object
    * @param params.userId - ID of the user creating the bookmark (current user)
    * @param params.postId - Composite post ID (authorId:postId)
+   * @returns Whether the write ran: false when it was skipped because the account changed while it waited
+   *   for the sync lock (`BookmarkApplication.persist`), so there is nothing to announce
    */
-  static async commitCreate({ postId, userId }: TBookmarkEventParams) {
+  static async commitCreate({ postId, userId }: TBookmarkEventParams): Promise<boolean> {
     const { url, body } = BookmarkNormalizer.to(parseCompositeId(postId), userId);
 
-    await BookmarkApplication.persist(HttpMethod.PUT, {
+    return BookmarkApplication.persist(HttpMethod.PUT, {
       postId,
       userId,
       bookmarkUrl: url,
@@ -76,12 +78,14 @@ export class BookmarkController {
    * @param params - Parameters object
    * @param params.userId - ID of the user removing the bookmark (current user)
    * @param params.postId - Composite post ID (authorId:postId)
+   * @returns Whether the delete ran: false when it was skipped because the account changed while it waited
+   *   for the sync lock (`BookmarkApplication.persist`), so there is nothing to announce
    */
-  static async commitDelete({ postId, userId }: TBookmarkEventParams) {
+  static async commitDelete({ postId, userId }: TBookmarkEventParams): Promise<boolean> {
     // The bookmark's path spells its target, so building it again names the file to delete.
     const { url } = BookmarkNormalizer.to(parseCompositeId(postId), userId);
 
-    await BookmarkApplication.persist(HttpMethod.DELETE, {
+    return BookmarkApplication.persist(HttpMethod.DELETE, {
       postId,
       userId,
       bookmarkUrl: url,

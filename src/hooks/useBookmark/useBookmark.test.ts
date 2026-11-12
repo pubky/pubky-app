@@ -81,7 +81,7 @@ describe('useBookmark', () => {
 
   it('creates bookmark when toggle is called and not bookmarked', async () => {
     vi.mocked(BookmarkController.exists).mockResolvedValue(false);
-    vi.mocked(BookmarkController.commitCreate).mockResolvedValue(undefined);
+    vi.mocked(BookmarkController.commitCreate).mockResolvedValue(true);
 
     const { result } = renderHook(() => useBookmark(mockPostId));
 
@@ -105,7 +105,7 @@ describe('useBookmark', () => {
 
   it('deletes bookmark when toggle is called and is bookmarked', async () => {
     vi.mocked(BookmarkController.exists).mockResolvedValue(true);
-    vi.mocked(BookmarkController.commitDelete).mockResolvedValue(undefined);
+    vi.mocked(BookmarkController.commitDelete).mockResolvedValue(true);
 
     const { result } = renderHook(() => useBookmark(mockPostId));
 
@@ -126,6 +126,34 @@ describe('useBookmark', () => {
       title: 'Post removed from bookmarks',
     });
   });
+
+  it.each([
+    { method: 'commitCreate' as const, initially: false },
+    { method: 'commitDelete' as const, initially: true },
+  ])(
+    'reports nothing and keeps its state when the controller skipped the $method for a signed-out viewer',
+    async ({ method, initially }) => {
+      vi.mocked(BookmarkController.exists).mockResolvedValue(initially);
+      vi.mocked(BookmarkController[method]).mockResolvedValue(false);
+
+      const { result } = renderHook(() => useBookmark(mockPostId));
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      let toggled: boolean | undefined;
+      await act(async () => {
+        toggled = await result.current.toggle();
+      });
+
+      // The write was issued and skipped: no state change, no toast, and the toggle is free again.
+      expect(BookmarkController[method]).toHaveBeenCalledTimes(1);
+      expect(toggled).toBe(false);
+      expect(result.current.isBookmarked).toBe(initially);
+      expect(result.current.isToggling).toBe(false);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not write a bookmark for a guest', async () => {
     vi.mocked(useAuthStore).mockImplementation((selector) => selector(mockAuthStore({ currentUserPubky: null })));
@@ -195,7 +223,7 @@ describe('useBookmark', () => {
   describe('toastMessages option', () => {
     it('uses custom add-success toast copy when the bookmark is created', async () => {
       vi.mocked(BookmarkController.exists).mockResolvedValue(false);
-      vi.mocked(BookmarkController.commitCreate).mockResolvedValue(undefined);
+      vi.mocked(BookmarkController.commitCreate).mockResolvedValue(true);
 
       const { result } = renderHook(() =>
         useBookmark(mockPostId, {
@@ -221,7 +249,7 @@ describe('useBookmark', () => {
 
     it('uses custom remove-success toast copy when the bookmark is deleted', async () => {
       vi.mocked(BookmarkController.exists).mockResolvedValue(true);
-      vi.mocked(BookmarkController.commitDelete).mockResolvedValue(undefined);
+      vi.mocked(BookmarkController.commitDelete).mockResolvedValue(true);
 
       const { result } = renderHook(() =>
         useBookmark(mockPostId, {

@@ -16,7 +16,9 @@ Amended — 2026-11-11 (the Greptile P1 on #3141): a write that waited on the lo
 it, before the local write and again before the homeserver write, like a mute commit (`isCurrent`, the
 `captureViewerSession()` guard the controller passes). Logout and account preparation clear the shared database
 without waiting for the lock, so a stale write would otherwise land in the next account's table; it writes nothing
-instead, as feed writes do.
+instead, as feed writes do, and reports the skip (`BookmarkApplication.persist` and `FeedApplication.commitDelete`
+resolve false, `FeedApplication.persist` null), so no hook shows a success state or toast for a write that never
+happened.
 
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two

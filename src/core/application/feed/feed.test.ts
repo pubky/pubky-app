@@ -508,7 +508,6 @@ describe('FeedApplication', () => {
     it('removes nothing when the account changed while the delete waited for the sync lock', async () => {
       const feed = built();
       await FeedApplication.persist({ userId: owner, params: { feed } });
-      homeserver.spies.putBlob.mockClear();
       installWebLocks();
       const listing = holdListing();
       let current = true;
@@ -522,8 +521,10 @@ describe('FeedApplication', () => {
       });
       current = false;
       listing.release();
-      await Promise.all([fetching, deleting]);
+      await fetching;
 
+      // The delete reports that it did not run, so no caller announces it.
+      await expect(deleting).resolves.toBe(false);
       expect(await FeedModel.table.get(feed.id)).toBeDefined();
       expect(await storedExists(feedPaths(feed.id).private)).toBe(true);
       expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
@@ -533,9 +534,7 @@ describe('FeedApplication', () => {
       const feed = built();
       await FeedModel.upsert({ ...feedParams(), id: feed.id, created_at: 1, updated_at: 1 });
 
-      await expect(
-        FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } }),
-      ).resolves.toBeUndefined();
+      await expect(FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } })).resolves.toBe(true);
 
       expect(await FeedModel.table.get(feed.id)).toBeUndefined();
       expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledTimes(2);

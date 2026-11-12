@@ -100,7 +100,7 @@ describe('useAddContentForm', () => {
     mocks.currentUserPubky = VIEWER;
     mocks.restoreStatus = 'ready';
     mocks.bookmarkExists.mockResolvedValue(false);
-    mocks.commitCreateBookmark.mockResolvedValue(undefined);
+    mocks.commitCreateBookmark.mockResolvedValue(true);
     mocks.getOrFetchPost.mockResolvedValue(livePost());
     mocks.getCollectionDetails.mockResolvedValue(collectionDetails([]));
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
@@ -248,6 +248,23 @@ describe('useAddContentForm', () => {
     expect(mocks.commitCreateBookmark).toHaveBeenCalledWith({ postId: COMPOSITE_ID, userId: VIEWER });
     expect(mocks.onSuccess).toHaveBeenCalledWith(COMPOSITE_ID);
     expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
+  });
+
+  it('reports nothing saved when the controller skipped the bookmark for a signed-out viewer', async () => {
+    mocks.commitCreateBookmark.mockResolvedValue(false);
+    const { result } = renderHook(() =>
+      useAddContentForm({ target: { type: 'bookmarks' }, onSuccess: mocks.onSuccess }),
+    );
+
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.submit(POST_URL);
+    });
+
+    expect(saved).toBe(false);
+    expect(mocks.commitCreateBookmark).toHaveBeenCalledTimes(1);
+    expect(mocks.onSuccess).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('rejects collection posts when adding to a collection', async () => {

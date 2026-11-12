@@ -34,7 +34,9 @@ export function useSaveCreatedPostToTarget() {
         return;
       }
 
-      await BookmarkController.commitCreate({ postId: createdPostId, userId: currentUserPubky });
+      const saved = await BookmarkController.commitCreate({ postId: createdPostId, userId: currentUserPubky });
+      // false: the account changed while the write waited for the sync lock; nothing to announce.
+      if (!saved) return;
       await onSaved?.(createdPostId, target);
       toast({ title: 'Post saved to bookmarks' });
     } catch (error) {

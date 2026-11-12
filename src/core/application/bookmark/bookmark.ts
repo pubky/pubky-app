@@ -83,8 +83,14 @@ export class BookmarkApplication {
     return LocalBookmarkService.countPosts();
   }
 
-  /** Writes the bookmark locally, then PUTs or DELETEs its file, holding `bookmarkSyncLock` `shared`. */
-  static async persist(action: HttpMethod, params: TBookmarkPersistInput) {
+  /**
+   * Writes the bookmark locally, then PUTs or DELETEs its file, holding `bookmarkSyncLock` `shared`.
+   * Resolves true once the write ran, false when it was skipped because the account changed while it
+   * waited for the lock or ran (`TBookmarkPersistInput.isCurrent`): nothing landed for the account that is
+   * current now (a row written before the change goes with that account's database), so the caller
+   * announces nothing.
+   */
+  static async persist(action: HttpMethod, params: TBookmarkPersistInput): Promise<boolean> {
     const { postId, userId, bookmarkUrl, bookmarkBody } = params;
 
     // Checked before the local write: a PUT without its bytes must never fall through to a delete.
@@ -96,25 +102,24 @@ export class BookmarkApplication {
       });
     }
 
-    await withSyncLock(bookmarkSyncLock(userId), 'shared', () => this.persistUnderLock(action, params));
+    return withSyncLock(bookmarkSyncLock(userId), 'shared', () => this.persistUnderLock(action, params));
   }
 
   private static async persistUnderLock(
     action: HttpMethod,
     { postId, bookmarkUrl, bookmarkBody, isCurrent }: TBookmarkPersistInput,
-  ) {
-    // Viewer guard before each write (`TBookmarkPersistInput.isCurrent`). A stale viewer writes nothing
-    // and does not throw: the user signed out, and `useBookmark` and `useRemoveDeletedPost` re-read the
-    // local state afterwards, so nothing is left to report.
+  ): Promise<boolean> {
+    // Viewer guard before each write (`TBookmarkPersistInput.isCurrent`); a stale viewer writes nothing
+    // further and does not throw (see `persist`).
     const stale = () => {
       if (!isCurrent || isCurrent()) return false;
       Logger.debug('Skipping a bookmark write: the account changed while it waited for the sync lock', { postId });
       return true;
     };
 
-    if (stale()) return;
+    if (stale()) return false;
     await LocalBookmarkService.persist(action, { postId });
-    if (stale()) return;
+    if (stale()) return false;
     if (action === HttpMethod.PUT) {
       await HomeserverService.putBlob({ url: bookmarkUrl, blob: bookmarkBody! });
     } else {
@@ -122,6 +127,7 @@ export class BookmarkApplication {
       // A missing file is the state a delete wants.
       await HomeserverService.deleteIdempotent(bookmarkUrl);
     }
+    return true;
   }
 
   /**

@@ -83,7 +83,12 @@ export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult
 
     try {
       if (target.type === 'bookmarks') {
-        await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
+        const removed = await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
+        if (!removed) {
+          // The account changed while the delete waited for the sync lock: nothing was removed anywhere.
+          optimisticRemoval.rollback();
+          return false;
+        }
         toast({ title: 'Post removed from bookmarks' });
       } else {
         await PostController.commitUpdateCollectionItem({

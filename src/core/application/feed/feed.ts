@@ -135,14 +135,18 @@ export class FeedApplication {
     return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object, isCurrent });
   }
 
-  /** Removes the feed locally and on the homeserver under the sync lock; a stale viewer removes nothing (`persist`). */
-  static async commitDelete({ userId, params, isCurrent }: FeedDeleteParams): Promise<void> {
+  /**
+   * Removes the feed locally and on the homeserver under the sync lock. Resolves true once the delete
+   * ran, false when it was skipped because the account changed while it waited for the lock (`persist`):
+   * nothing was removed, and the caller announces nothing.
+   */
+  static async commitDelete({ userId, params, isCurrent }: FeedDeleteParams): Promise<boolean> {
     return withSyncLock(feedSyncLock(userId), 'shared', () =>
       this.commitDeleteUnderLock({ userId, params, isCurrent }),
     );
   }
 
-  private static async commitDeleteUnderLock({ userId, params, isCurrent }: FeedDeleteParams): Promise<void> {
+  private static async commitDeleteUnderLock({ userId, params, isCurrent }: FeedDeleteParams): Promise<boolean> {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
 
     // Model errors are already logged; cache cleanup must not block the delete itself.
@@ -157,7 +161,7 @@ export class FeedApplication {
     }
 
     // Viewer guard, before the local and the homeserver delete start together: see `FeedPutParams.isCurrent`.
-    if (isCurrent && !isCurrent()) return;
+    if (isCurrent && !isCurrent()) return false;
     await Promise.all([
       LocalFeedService.delete({ feedId }),
       this.deleteStoredFeed(userId, feedId),
@@ -165,6 +169,7 @@ export class FeedApplication {
         ? [LocalStreamPostsService.deleteById({ streamId }), LocalStreamPostsService.clearUnreadStream({ streamId })]
         : []),
     ]);
+    return true;
   }
 
   /**

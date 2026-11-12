@@ -32,7 +32,7 @@ describe('BookmarkController', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     useAuthStore.setState({ currentUserPubky: null, session: null });
-    vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(undefined);
+    vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(true);
   });
 
   describe('getAll', () => {
@@ -101,6 +101,14 @@ describe('BookmarkController', () => {
       expect(isCurrent()).toBe(false);
       useAuthStore.setState({ currentUserPubky: testData.userPubky, session: mockSession() });
       expect(isCurrent()).toBe(false);
+    });
+
+    it('reports whether the write ran, so a skip for a signed-out viewer reaches the hooks', async () => {
+      await expect(BookmarkController.commitCreate(createBookmarkParams())).resolves.toBe(true);
+      vi.mocked(BookmarkApplication.persist).mockResolvedValueOnce(false);
+      await expect(BookmarkController.commitCreate(createBookmarkParams())).resolves.toBe(false);
+      vi.mocked(BookmarkApplication.persist).mockResolvedValueOnce(false);
+      await expect(BookmarkController.commitDelete(createBookmarkParams())).resolves.toBe(false);
     });
 
     it('refuses a post id the data model cannot reference, before any write', async () => {
