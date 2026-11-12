@@ -264,17 +264,32 @@ stack when Dexie broadcasts a mutation (#2225). Reverse subscription order, `fal
 callback context and the listener snapshot during dispatch stay unchanged; custom event chains are
 untouched. This does not cap subscriptions or change database contents, indexes or versions.
 
-The patch covers `dist/dexie.js` and composes its source map so later dependency frames still resolve
-correctly. All root package exports use this CommonJS distribution, including ES imports through
-`import-wrapper.mjs`. The unused ESM and minified CDN distributions are not patched.
+The patch covers only `dist/dexie.js`. Generated dispatchers hold their immutable chain head under a
+private symbol, avoiding WeakMap overhead when unsubscribe rebuilds the chain and avoiding collisions
+with callback properties. Original line positions are preserved, so the stock source map remains exact
+outside the replaced helper; mappings inside that helper are approximate. All root package exports use
+this CommonJS distribution, including ES imports through `import-wrapper.mjs`. The unused ESM and
+minified CDN distributions are not patched.
 `patch-package --error-on-fail` applies the patch during `postinstall` and fails installation if it
 cannot apply. The Docker dependency stage copies `patches/` before `npm ci` because postinstall
 silently skips patching when that directory is absent.
 
-After pulling changes to `patches/`, run `npm ci` before starting the app or running tests, even when
-`package.json` and `package-lock.json` are unchanged. On a Dexie upgrade, run
-`src/core/database/franky/dexie-events.contract.test.ts` against the unpatched dependency before
-removing the patch; preserve it if the stack-depth or large-listener regression still fails.
+After pulling changes to `patches/`, stop the dev server, run `npm ci`, and clear `.next/cache` before
+restarting the app or building it, even when `package.json` and `package-lock.json` are unchanged.
+Webpack's persistent cache can reuse the old dependency code when its package version is unchanged;
+reinstalling dependencies alone does not invalidate it. Clean builds without a saved cache are unaffected.
+
+On a Dexie upgrade, update the manifest and lockfile, then bypass postinstall for the unpatched check:
+
+```bash
+npm ci --ignore-scripts
+npm test -- src/core/database/franky/dexie-events.contract.test.ts
+```
+
+If the stack-depth or large-listener regression still fails, regenerate the Dexie patch for the new
+version; remove it only when the unpatched dependency passes the contract tests. This temporary install
+skips all lifecycle scripts, so after regenerating or removing the patch, run `npm ci` normally and
+rerun the contract tests to verify the final installation. Clear `.next/cache` before restarting the app.
 
 ## Data Model Reference
 

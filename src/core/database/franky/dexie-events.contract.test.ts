@@ -88,6 +88,65 @@ describe('Dexie default event dispatch', () => {
     event.fire();
     expect(last).toHaveBeenCalledTimes(2);
     expect(first).toHaveBeenCalledTimes(1);
+    event.unsubscribe(last);
+    event.fire();
+    expect(last).toHaveBeenCalledTimes(2);
+    expect(first).toHaveBeenCalledTimes(2);
+  });
+
+  it('propagates a listener exception and resumes dispatch after that listener is removed', () => {
+    const event = Dexie.Events().addEventType('mutation');
+    const failure = new Dexie.AbortError('Listener failed');
+    const first = vi.fn();
+    const throwing = () => {
+      throw failure;
+    };
+    const last = vi.fn();
+    event.subscribe(first);
+    event.subscribe(throwing);
+    event.subscribe(last);
+
+    let thrown: unknown;
+    try {
+      event.fire();
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBe(failure);
+    expect(last).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+
+    event.unsubscribe(throwing);
+    event.fire();
+    expect(last).toHaveBeenCalledTimes(2);
+    expect(first).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts frozen callbacks without interpreting their own properties as listeners', () => {
+    const event = Dexie.Events().addEventType('mutation');
+    const calls: string[] = [];
+    const unexpected = vi.fn();
+    const first = Object.freeze(
+      Object.assign(
+        () => {
+          calls.push('first');
+          return 'result';
+        },
+        { __dexieChainHead: { callback: unexpected, next: null } },
+      ),
+    );
+    const last = () => {
+      calls.push('last');
+    };
+    event.subscribe(first);
+    event.subscribe(last);
+
+    expect(event.fire()).toBe('result');
+    expect(calls).toEqual(['last', 'first']);
+    expect(unexpected).not.toHaveBeenCalled();
+    event.unsubscribe(last);
+    expect(event.fire()).toBe('result');
+    expect(calls).toEqual(['last', 'first', 'first']);
   });
 
   it('retains the in-progress listener set when a callback changes subscriptions', () => {
