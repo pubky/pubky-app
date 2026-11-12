@@ -174,6 +174,16 @@ describe('matchAlsoOnLanguages', () => {
     expect(pickAlsoOnLanguage(['nds', 'en'], ['nds-nl'], { exact: true })).toBe('en');
   });
 
+  it('takes any stored code as a plain code, an object’s own key names included', () => {
+    expect(matchAlsoOnLanguages(['en', 'de'], ['constructor', '__proto__', 'toString', 'de'], { exact: true })).toEqual(
+      ['de'],
+    );
+    expect(pickAlsoOnLanguage(['en', 'de'], ['constructor', 'hasOwnProperty'])).toBe('en');
+    expect(getLanguageName('constructor')).toBe('constructor');
+    expect(getLanguageTag('constructor')).toBe('constructor');
+    expect(getLanguageTag('__proto__')).toBe('__proto__');
+  });
+
   it('matches Wikimedia’s own codes and keeps hyphenated editions apart', () => {
     expect(matchAlsoOnLanguages(['en', 'als', 'no'], ['nb', 'als'])).toEqual(['no', 'als']);
     expect(matchAlsoOnLanguages(['en', 'zh-yue', 'simple'], ['zh-TW', 'simple'])).toEqual(['simple']);
