@@ -242,6 +242,8 @@ describe('ResourceActions', () => {
       '@max-2xs/resource-actions:[&>*]:px-2!',
       '@max-[14.5rem]/resource-actions:[&>*]:px-1.5!',
       '@max-[13.75rem]/resource-actions:gap-0.5',
+      '@max-[13.5rem]/resource-actions:[&>*]:gap-0.5!',
+      '@max-[13.5rem]/resource-actions:[&>*]:px-1!',
     );
   });
 
