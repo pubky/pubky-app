@@ -4,6 +4,8 @@ import { TRANSIENT_INDEXED_DB_ERROR_NAMES } from '@/database/franky/franky.const
 type ConnectionRecovery = {
   connection: IDBDatabase;
   reopened: Promise<IDBDatabase>;
+  /** Callers that joined this reconnect and have not finished their replay. */
+  callers: number;
 };
 
 type RecoveryState = {
@@ -127,35 +129,46 @@ export async function withIndexedDbRecovery<T>(database: Dexie, operation: () =>
     let recovery = state.recovery;
     if (recovery?.connection !== connection) {
       if (!database.isOpen() || database.backendDB() !== connection) throw error;
-      recovery = { connection, reopened: reopen(database, state) };
+      // Never replace a reopened connection while a replay on it is unfinished:
+      // its outcome decides whether that connection is fenced.
+      if (recovery && recovery.callers > 0) throw error;
+      recovery = { connection, reopened: reopen(database, state), callers: 0 };
       state.recovery = recovery;
     }
-    // Await through Dexie in each caller before replaying its observed read;
-    // the reconnect is shared across independent observation scopes.
-    let reopened: IDBDatabase;
+    // Joining is synchronous bookkeeping on this caller's own record, released on
+    // every exit, so a later invalidation cannot miscount a newer reconnect.
+    const joined = recovery;
+    joined.callers += 1;
     try {
-      reopened = await Dexie.Promise.resolve(recovery.reopened);
-    } catch (openError) {
-      // Preserve the failed operation and retain the reconnect failure for diagnosis.
-      Object.defineProperty(error, 'cause', { value: openError, configurable: true });
-      throw error;
-    }
-    if (
-      state.generation !== generation ||
-      state.recovery !== recovery ||
-      !database.isOpen() ||
-      database.backendDB() !== reopened
-    ) {
-      throw error;
-    }
-    // One replay only. Its failure is reported by the model/service as usual.
-    try {
-      return await operation();
-    } catch (replayError) {
-      if (state.generation === generation && database.isOpen() && database.backendDB() === reopened) {
-        state.failedReplayConnection = reopened;
+      // Await through Dexie in each caller before replaying its observed read;
+      // the reconnect is shared across independent observation scopes.
+      let reopened: IDBDatabase;
+      try {
+        reopened = await Dexie.Promise.resolve(joined.reopened);
+      } catch (openError) {
+        // Preserve the failed operation and retain the reconnect failure for diagnosis.
+        Object.defineProperty(error, 'cause', { value: openError, configurable: true });
+        throw error;
       }
-      throw replayError;
+      if (
+        state.generation !== generation ||
+        state.recovery !== joined ||
+        !database.isOpen() ||
+        database.backendDB() !== reopened
+      ) {
+        throw error;
+      }
+      // One replay only. Its failure is reported by the model/service as usual.
+      try {
+        return await operation();
+      } catch (replayError) {
+        if (state.generation === generation && database.isOpen() && database.backendDB() === reopened) {
+          state.failedReplayConnection = reopened;
+        }
+        throw replayError;
+      }
+    } finally {
+      joined.callers -= 1;
     }
   }
 }

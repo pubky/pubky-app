@@ -20,7 +20,7 @@ A shared reconnect promise must be wrapped in each caller's Dexie scope so indep
 
 Only structured `UnknownError` and `AbortError` failures are eligible. For a Dexie abort with an `inner` error, inspect that cause instead; quota, constraint, schema and other non-connection errors must propagate without reconnecting. Preserve the existing bounded fallback for an abort with no available inner cause: production Sentry reports include raw aborts, but do not expose enough detail to classify every missing cause as intentional. Error-message matching is not added.
 
-Every close outside the recovery-owned synchronous close, and the start of account cleanup, invalidates pending recovery. Cleanup suspends recovery until all overlapping clears finish. Recheck ownership before replay; a later open must not revive stale work. If a replay fails, subsequent failures on that reopened connection propagate without another reconnect during the same recovery lifetime. An unrelated close or account cleanup resets that lifetime.
+Every close outside the recovery-owned synchronous close, and the start of account cleanup, invalidates pending recovery. Cleanup suspends recovery until all overlapping clears finish. Recheck ownership before replay; a later open must not revive stale work. Recovery never replaces a connection it reopened while a caller of that reconnect is still replaying: a fresh failure on that connection in the meantime propagates without recovery. If a replay fails, subsequent failures on that reopened connection propagate without another reconnect during the same recovery lifetime. An unrelated close or account cleanup resets that lifetime.
 
 The model or service remains the single terminal `Err.database` reporting boundary. If reopening fails, retain the original operation error and attach the open failure as its cause. Do not delete data, change the schema or reduce visible behavior as part of recovery.
 
@@ -28,8 +28,9 @@ The model or service remains the single terminal `Err.database` reporting bounda
 
 - Transient stale-connection failures can recover while mounted pages and live-query observations remain intact.
 - Whole-transaction replay preserves rollback, reread and session/revision checks; arbitrary writes remain ineligible.
-- The shared connection requires explicit lifecycle and replay-failure fences. Tests must cover concurrent observers, caller transactions, nested abort causes, cleanup, external closes and failed reopening.
+- The shared connection requires explicit lifecycle and replay-failure fences. Tests must cover concurrent observers, caller transactions, nested abort causes, cleanup, external closes, failed reopening and a fresh failure that overlaps an unfinished replay.
 - Browsers may throttle the single transition task while a tab is backgrounded. Operations wait for it; cleanup or an external close while it is pending still invalidates recovery.
+- A fresh failure on a reopened connection is not recovered while an earlier replay on it is unfinished; it reports through the usual boundary.
 - An abort without an exposed cause can still incur one unsuccessful reconnect; the failed-replay fence prevents a reconnect cycle across later operations on that connection.
 
 ## Alternatives

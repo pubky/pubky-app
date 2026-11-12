@@ -41,6 +41,53 @@ describe('IndexedDB recovery lifecycle', () => {
     expect(schedule).toHaveBeenCalledTimes(2);
   });
 
+  it('does not replace a reopened connection while a replay on it is unfinished', async () => {
+    const failure = new DOMException('Connection lost', 'UnknownError');
+    const replayFailure = new DOMException('Still lost', 'UnknownError');
+    let rejectReplay: (error: unknown) => void = () => {};
+    let markReplayStarted: () => void = () => {};
+    const replayStarted = new Promise<void>((resolve) => (markReplayStarted = resolve));
+    const slow = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockImplementationOnce(() => {
+        markReplayStarted();
+        return new Promise((_resolve, reject) => (rejectReplay = reject));
+      });
+    const fresh = vi.fn().mockRejectedValue(failure);
+    const close = vi.spyOn(database, 'close');
+    const schedule = vi.spyOn(Dexie, 'asap');
+
+    const slowResult = expect(withIndexedDbRecovery(database, slow)).rejects.toBe(replayFailure);
+    await replayStarted;
+    // A fresh failure on the reopened connection must not reconnect past the pending replay.
+    await expect(withIndexedDbRecovery(database, fresh)).rejects.toBe(failure);
+    expect(fresh).toHaveBeenCalledTimes(1);
+
+    rejectReplay(replayFailure);
+    await slowResult;
+    await expect(withIndexedDbRecovery(database, fresh)).rejects.toBe(failure);
+
+    expect(fresh).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(schedule).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconnects again from a reopened connection once its replays have succeeded', async () => {
+    const failure = new DOMException('Connection lost', 'UnknownError');
+    const operation = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce('first')
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce('second');
+    const close = vi.spyOn(database, 'close');
+
+    await expect(withIndexedDbRecovery(database, operation)).resolves.toBe('first');
+    await expect(withIndexedDbRecovery(database, operation)).resolves.toBe('second');
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
   it.each([
     { name: 'absent abort cause', failure: new Dexie.AbortError('Transaction aborted') },
     {
