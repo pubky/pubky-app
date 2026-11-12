@@ -11,6 +11,7 @@ vi.mock('@/libs/logger/logger', async (importOriginal) => {
     ...actual,
     Logger: {
       ...actual.Logger,
+      debug: vi.fn(),
       error: vi.fn(),
     },
   };
@@ -129,6 +130,37 @@ describe('GlobalErrorHandlerProvider', () => {
     expect(Logger.error).toHaveBeenCalledTimes(2);
     expect(toast).toHaveBeenCalledTimes(2);
     expect(toast).toHaveBeenCalledWith({ variant: 'error', description: message });
+  });
+
+  it.each([
+    ['ResizeObserver loop completed with undelivered notifications.', 'https://pubky.app/home'],
+    ['ResizeObserver loop limit exceeded', 'https://pubky.app/home'],
+    ['Script error.', ''],
+  ])('logs browser notices without an error object and never toasts them: %s', (message, filename) => {
+    render(<GlobalErrorHandlerProvider>child</GlobalErrorHandlerProvider>);
+
+    act(() => {
+      window.dispatchEvent(new ErrorEvent('error', { message, filename }));
+    });
+
+    expect(Logger.debug).toHaveBeenCalledWith('[GlobalErrorHandlerProvider] browser notice', { message, filename });
+    expect(Logger.error).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a thrown error whose message reads like a browser notice', new Error('Script error.'), 'Script error.'],
+    ['a message-only event that only contains a notice text', undefined, 'Uncaught Script error.'],
+  ])('keeps feedback for %s', (_case, error, message) => {
+    render(<GlobalErrorHandlerProvider>child</GlobalErrorHandlerProvider>);
+
+    act(() => {
+      window.dispatchEvent(new ErrorEvent('error', { error, message }));
+    });
+
+    expect(Logger.debug).not.toHaveBeenCalled();
+    expect(Logger.error).toHaveBeenCalledOnce();
+    expect(toast).toHaveBeenCalledOnce();
   });
 
   it('keeps feedback for unknown errors from a third-party source URL', () => {
