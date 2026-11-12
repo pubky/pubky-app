@@ -315,7 +315,9 @@ the failed write created (`preexisting` stays). Orphans accumulate until server-
 400), a 0.x route the id (`{nexus}/static/files/{owner}/{id}/{variant}`). Nexus keeps no metadata for v1 files, so only
 a file this device uploaded has a row; `FileApplication.getMetadata` answers any other v1 file with what its URI says
 (`FileNormalizer.toV1FileDetails`: the type from the extension, the filename as its name, no size or dimensions), a real
-row winning, and `FileApplication.fetchFiles` never sends Nexus a v1 address.
+row winning for the URI it describes, and `FileApplication.fetchFiles` never sends Nexus a v1 address. Because the key
+drops the extension, the same bytes uploaded under two types leave one row (the later upload's), which answers only its
+own URI; the other URI is answered from the URI, and consumers match rows to attachments by `uri`, never by id.
 
 **Signup order (Nexus "A7").** Nexus ignores a new user's file uploads until their first v1 `profile.json` is indexed, and
 for good: `useProfileForm`'s create path hashes the avatar first, PUTs the profile naming it, then uploads the bytes. An

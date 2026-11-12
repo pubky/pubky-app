@@ -104,28 +104,34 @@ function createPostDetails({
   };
 }
 
+/** A row as the local table holds it: keyed `owner:id`, its `uri` the one the posts name (a 0.x file unless given). */
 function createFileDetails({
   id,
   contentType,
   width,
   height,
+  uri,
+  name = `${id}.bin`,
 }: {
   id: string;
   contentType: string;
   width?: number;
   height?: number;
+  uri?: string;
+  name?: string;
 }): FileDetailsModelSchema {
+  const [owner, fileId] = id.split(':');
   return {
     id,
-    name: `${id}.bin`,
+    name,
     src: `/src/${id}`,
     content_type: contentType,
     size: 1024,
     created_at: 1,
     indexed_at: 1,
     metadata: width && height ? { width: String(width), height: String(height) } : {},
-    owner_id: 'user-1',
-    uri: `pubky://user-1/pub/pubky.app/files/${id}`,
+    owner_id: owner,
+    uri: uri ?? `pubky://${owner}/pub/pubky.app/files/${fileId}`,
     urls: { feed: `/feed/${id}`, main: `/main/${id}`, small: `/small/${id}` },
   };
 }
@@ -293,6 +299,65 @@ describe('useVisualFeedTiles', () => {
     expect(snapshot.missingFileUris).toEqual([]);
     // A file type the visual layout does not show hides the post, as a real row of that type does.
     expect(snapshot.hiddenPostCount).toBe(1);
+    expect(mockFetchFiles).not.toHaveBeenCalled();
+  });
+
+  it('matches rows to attachments by URI, so two files of one hash each get their own tile', async () => {
+    // The same bytes uploaded under two types share one `owner:hash` key; `getMetadata` answers the
+    // cached row for its own URI and the other URI from what it says. Video bytes are not normalized.
+    const owner = fakeOwner(3);
+    const mp4 = buildFile(owner, { bytes: new Uint8Array([3]), type: 'video/mp4' });
+    const mpeg = buildFile(owner, { bytes: new Uint8Array([3]), type: 'video/mpeg' });
+    const mpegRow = createFileDetails({
+      id: `${owner}:${mpeg.id}`,
+      contentType: 'video/mpeg',
+      uri: mpeg.url,
+      name: 'clip.mpeg',
+    });
+    mockFindByIdsPreserveOrder.mockResolvedValue([
+      createPostDetails({ id: 'author:post-mp4', attachments: [mp4.url] }),
+      createPostDetails({ id: 'author:post-mpeg', attachments: [mpeg.url] }),
+    ]);
+    mockGetMetadata.mockImplementation(async ({ fileAttachments }: { fileAttachments: string[] }) =>
+      fileAttachments.flatMap((uri) => (uri === mpeg.url ? [mpegRow] : (FileNormalizer.toV1FileDetails(uri) ?? []))),
+    );
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: ['author:post-mp4', 'author:post-mpeg'], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(mp4.id).toBe(mpeg.id);
+    expect(
+      snapshot.tiles.map(({ postId, attachmentName, contentType }: VisualTile) => ({
+        postId,
+        attachmentName,
+        contentType,
+      })),
+    ).toEqual([
+      { postId: 'author:post-mp4', attachmentName: `${mp4.id}.mp4`, contentType: 'video/mp4' },
+      { postId: 'author:post-mpeg', attachmentName: 'clip.mpeg', contentType: 'video/mpeg' },
+    ]);
+    expect(snapshot.missingFileUris).toEqual([]);
+    expect(snapshot.hiddenPostCount).toBe(0);
+  });
+
+  it('skips an attachment URI the key builder refuses instead of waiting on a fetch for it', async () => {
+    mockFindByIdsPreserveOrder.mockResolvedValue([
+      createPostDetails({
+        id: 'author:post-odd',
+        attachments: ['not-a-pubky-uri', 'pubky://user-1/pub/pubky.app/files/file-1'],
+      }),
+    ]);
+    mockGetMetadata.mockResolvedValue([
+      createFileDetails({ id: 'user-1:file-1', contentType: 'image/jpeg', width: 1000, height: 800 }),
+    ]);
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: ['author:post-odd'], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(snapshot.tiles.map(({ attachmentId }: VisualTile) => attachmentId)).toEqual(['user-1:file-1']);
+    expect(snapshot.missingFileUris).toEqual([]);
     expect(mockFetchFiles).not.toHaveBeenCalled();
   });
 

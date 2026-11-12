@@ -402,7 +402,9 @@ export function useVisualFeedTiles({
       const remoteFiles = remoteAttachmentUris.length
         ? await FileController.getMetadata({ fileAttachments: remoteAttachmentUris })
         : [];
-      const remoteFilesById = new Map(remoteFiles.map((file) => [file.id, file]));
+      // By URI, not id: one `owner:hash` key stands for every `{hash}.{ext}` of the same bytes, and
+      // `getMetadata` answers each URI with the row or details that describe it.
+      const remoteFilesByUri = new Map(remoteFiles.map((file) => [file.uri, file]));
 
       let hiddenPostCount = 0;
       let pendingDetailPostCount = 0;
@@ -453,16 +455,12 @@ export function useVisualFeedTiles({
 
         let hasUnresolvedFile = false;
         const postTiles = attachmentUris.flatMap((attachmentUri) => {
-          const attachmentId = buildCompositeIdFromPubkyUri({
-            uri: attachmentUri,
-            domain: CompositeIdDomain.FILES,
-          });
-
-          if (!attachmentId) {
+          // A URI the key builder refuses is one `getMetadata` never answers: skipped, not awaited.
+          if (!buildCompositeIdFromPubkyUri({ uri: attachmentUri, domain: CompositeIdDomain.FILES })) {
             return [];
           }
 
-          const file = remoteFilesById.get(attachmentId);
+          const file = remoteFilesByUri.get(attachmentUri);
           if (!file) {
             missingFileUris.add(attachmentUri);
             hasUnresolvedFile = true;
