@@ -217,7 +217,7 @@ const isShown = (slot: HTMLElement) => slot.isConnected && slot.getClientRects()
  * card scrolled away, it is in the dock. Paused or ended in its card (`paused`, not `docked` before)
  * it does not dock: it stays over that card, also scrolled away, and hidden with it (a feed behind an
  * open post); leaving that card's page closes it (`PlayerHost`); paused in the dock, it stays there.
- * Any other frame stays over its card, hidden with it.
+ * Any other frame stays over its card, hidden with it (and unloaded meanwhile, `HostedFrame`).
  */
 function placePlayers(
   players: Map<string, HostedPlayer>,
@@ -306,8 +306,9 @@ const frameId = (id: string) => `hosted-player-${id}`;
  * moved in the page (a moved iframe loads anew): it is laid over its card's slot (synced to the
  * slot's box on scroll, resize and size changes, at most once a frame; the slot takes the frame's
  * height), and the playing one goes to the dock when no card of it is on screen (scrolled away, a
- * post open over the feed, another page). A frame whose card is gone is let go once it no longer plays;
- * a full page load still stops it.
+ * post open over the feed, another page). Any other frame hidden with its card is unloaded until the
+ * card shows again. A frame whose card is gone is let go once it no longer plays; a full page load
+ * still stops it.
  */
 export function PlayerHost({ children }: { children: ReactNode }) {
   const [store] = useState(() => new PlayerHostStore());
@@ -481,6 +482,9 @@ function HostedFrame({
   );
   if (!player) return null;
   const docked = mode === 'docked';
+  // A frame hidden with its card (a feed behind an open post) that is not the page's player is let
+  // go until its card shows again, then loads anew: a hidden player loads nothing.
+  const isIdle = mode === 'hidden' && !playing;
   const close = () => {
     const frame = frames.get(id);
     if (frame) pauseMedia(frame);
@@ -502,7 +506,7 @@ function HostedFrame({
       aria-label={docked ? `Player dock: ${player.title}` : undefined}
       className={cn(mode === 'hidden' && 'hidden', mode === 'attached' && 'absolute z-10', docked && DOCK_CLASS)}
     >
-      <div className="min-w-0 flex-1">{player.frame}</div>
+      <div className="min-w-0 flex-1">{isIdle ? null : player.frame}</div>
       {docked && <DockBar target={player.target} title={player.title} onClose={close} onBack={() => onBack(player)} />}
     </div>
   );

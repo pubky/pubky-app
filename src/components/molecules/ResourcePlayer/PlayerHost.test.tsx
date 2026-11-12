@@ -323,7 +323,7 @@ describe('PlayerHost', () => {
     expect(dock()).toContainElement(frame);
   });
 
-  it('hides a quiet player with its card behind an open post', () => {
+  it('unloads a quiet player hidden with its card behind an open post, and loads it again with the feed', () => {
     const page = (postOpen: boolean) => (
       <PlayerHost>
         <div data-hidden={postOpen || undefined}>
@@ -341,9 +341,18 @@ describe('PlayerHost', () => {
       window.dispatchEvent(new Event('resize'));
       vi.advanceTimersByTime(20);
     });
-    expect(frames()).toEqual([frame]);
+    // Hidden, it loads nothing: no frame of it is left on the page
+    expect(frames()).toEqual([]);
     expect(box).toHaveClass('hidden');
     expect(dock()).toBeNull();
+
+    rerender(page(false));
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+      vi.advanceTimersByTime(20);
+    });
+    expect(frames()).toHaveLength(1);
+    expect(box).not.toHaveClass('hidden');
   });
 
   it('lets a quiet player go with its card, and never docks one', () => {
