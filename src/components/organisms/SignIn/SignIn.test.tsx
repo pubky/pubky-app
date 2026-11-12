@@ -852,11 +852,9 @@ describe('SignInFooter', () => {
   it('renders footer with recovery message', () => {
     render(<SignInFooter />);
 
-    expect(screen.getAllByRole('link').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Not able to sign in with', { exact: false })).toBeInTheDocument();
-    expect(
-      screen.getByText('? Use the recovery phrase or encrypted file to restore your account.', { exact: false }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('footer-links')).toHaveTextContent(
+      'Have a recovery phrase or encrypted file? Import it into Pubky Ring to sign in securely.',
+    );
   });
 
   it('renders Pubky Ring link', () => {
