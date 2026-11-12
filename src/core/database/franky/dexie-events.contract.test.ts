@@ -17,6 +17,42 @@ describe('Dexie default event dispatch', () => {
     expect(calls).toBe(30_000);
   });
 
+  it('keeps stack depth constant across the listener set', () => {
+    const originalStackTraceLimit = Error.stackTraceLimit;
+    try {
+      // Worker pools can have enough stack to pass the large-listener test unpatched.
+      // Capture complete stacks so this guard does not depend on the overflow limit.
+      Error.stackTraceLimit = Infinity;
+      const event = Dexie.Events().addEventType('mutation');
+      const depths: number[] = [];
+      const captureDepth = () => {
+        const trace = { stack: '' };
+        Error.captureStackTrace(trace, captureDepth);
+        depths.push(trace.stack.split('\n').length);
+      };
+      event.subscribe(() => {
+        captureDepth();
+      });
+      let calls = 0;
+      for (let index = 0; index < 128; index++) {
+        event.subscribe(() => {
+          calls++;
+        });
+      }
+      event.subscribe(() => {
+        captureDepth();
+      });
+
+      event.fire({});
+      expect(calls).toBe(128);
+      expect(depths).toHaveLength(2);
+      expect(depths[0]).toBeGreaterThan(1);
+      expect(depths[1]).toBe(depths[0]);
+    } finally {
+      Error.stackTraceLimit = originalStackTraceLimit;
+    }
+  });
+
   it('preserves reverse order, callback context, arguments, and the oldest result', () => {
     const context = { marker: 'event-context' };
     const event = Dexie.Events().addEventType('mutation');

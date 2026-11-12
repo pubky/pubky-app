@@ -264,12 +264,17 @@ stack when Dexie broadcasts a mutation (#2225). Reverse subscription order, `fal
 callback context and the listener snapshot during dispatch stay unchanged; custom event chains are
 untouched. This does not cap subscriptions or change database contents, indexes or versions.
 
-The patch covers the CommonJS, ESM and modern ESM distributions and composes their source maps so
-later dependency frames still resolve correctly. Minified CDN bundles are not package entry points
-and are not patched. `patch-package` applies it during the existing `postinstall` step; the Docker
-dependency stage copies `patches/` before `npm ci` so the image includes the same fix. On a Dexie
-upgrade, run `src/core/database/franky/dexie-events.contract.test.ts` against the unpatched dependency
-before removing the patch; preserve it if the large-listener regression still fails.
+The patch covers `dist/dexie.js` and composes its source map so later dependency frames still resolve
+correctly. All root package exports use this CommonJS distribution, including ES imports through
+`import-wrapper.mjs`. The unused ESM and minified CDN distributions are not patched.
+`patch-package --error-on-fail` applies the patch during `postinstall` and fails installation if it
+cannot apply. The Docker dependency stage copies `patches/` before `npm ci` because postinstall
+silently skips patching when that directory is absent.
+
+After pulling changes to `patches/`, run `npm ci` before starting the app or running tests, even when
+`package.json` and `package-lock.json` are unchanged. On a Dexie upgrade, run
+`src/core/database/franky/dexie-events.contract.test.ts` against the unpatched dependency before
+removing the patch; preserve it if the stack-depth or large-listener regression still fails.
 
 ## Data Model Reference
 

@@ -4,7 +4,7 @@ RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Copy package files and postinstall patches before installing dependencies.
+# Keep patches available before npm ci: patch-package skips missing patches during postinstall.
 COPY package.json package-lock.json ./
 COPY patches ./patches
 
