@@ -4,6 +4,9 @@
 
 Accepted — 2025-12-14
 
+Amendment proposed — 2026-11-11 (PR #3129): [ADR-0030](0030-bounded-indexeddb-connection-recovery.md) proposes a narrow exception to
+decision 2 for the database-layer connection recovery. It takes effect when ADR-0030 is accepted; decision 2 is otherwise unchanged.
+
 ## Summary
 
 **Problem**
