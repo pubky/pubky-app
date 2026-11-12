@@ -33,7 +33,7 @@ import { cn } from '@/libs/utils/utils';
 export interface MediaRankedItem {
   id: string;
   name: string;
-  /** Before the name (a service's icon); none for a language. */
+  /** Before the name (a service's icon, the languages icon on a language's row). */
   icon?: ReactNode;
   /** The name's language when it is not the page's (a language's own name). */
   lang?: string;

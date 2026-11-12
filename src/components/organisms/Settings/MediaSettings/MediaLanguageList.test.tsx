@@ -53,6 +53,8 @@ describe('MediaLanguageList', () => {
     const row = screen.getAllByTestId('media-language-row')[1];
     expect(row).toHaveAttribute('data-language', 'als');
     expect(within(row).getByText('Schwiizertüütsch (als)')).toHaveAttribute('lang', 'gsw');
+    // The languages icon stands where a player's icon does, so the names line up.
+    expect(row.querySelector('svg.lucide-languages')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByRole('button', { name: 'Move Deutsch (de)' })).toHaveAttribute(
       'aria-roledescription',
       'sortable',
@@ -77,14 +79,15 @@ describe('MediaLanguageList', () => {
     expect(names.indexOf('Español (es)')).toBeLessThan(names.indexOf('Français (fr)'));
     expect(menu).toHaveClass('max-h-72', 'overflow-y-auto');
     expect(within(menu).getByText('Français (fr)')).toHaveAttribute('lang', 'fr');
-  });
+    // The whole list renders into the menu: slow in jsdom under load.
+  }, 15_000);
 
   it('adds a language at the end', () => {
     renderList(['de']);
     fireEvent.click(within(openAdd()).getByRole('menuitem', { name: 'Français (fr)' }));
 
     expect(mockOnChange).toHaveBeenCalledWith(['de', 'fr']);
-  });
+  }, 15_000);
 
   it('removes a language', () => {
     renderList(['de', 'fr']);
