@@ -250,12 +250,13 @@ const isTransientPollError = (error: unknown): boolean => {
 /**
  * With `expectedSigner` (`spk`) set, the SDK refuses an approval from another key inside the poll, before the
  * exchange, so the session-level key check never sees it. The SDK names no distinct error for it; the message is
- * the only signal.
+ * the only signal. Exact SDK 0.18.0 text, pinned by `grant-flow.recovery.contract.test.ts` (docs/error-handling.md).
  */
+const WRONG_SIGNER_APPROVAL_MESSAGE =
+  'Authentication error: General authentication error: approved grant was issued by a different key than the request expected';
+
 const isWrongSignerApproval = (error: unknown): boolean =>
-  isPubkyErrorLike(error) &&
-  error.name === 'AuthenticationError' &&
-  error.message.includes('approved grant was issued by a different key than the request expected');
+  isPubkyErrorLike(error) && error.name === 'AuthenticationError' && error.message === WRONG_SIGNER_APPROVAL_MESSAGE;
 
 /**
  * Resolves at once when the page is visible (after a second), else on the next `visibilitychange` to visible.
