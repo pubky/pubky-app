@@ -24,7 +24,8 @@ interface ResourcePageProps {
  * since the mobile header's right button is "Join Pubky" for visitors.
  *
  * A link Pinakes does not know is sent to be read when its page opens (`POST /v1/resolve`): the page
- * shows the link itself, its footer and thread meanwhile, and the card once Pinakes has read it.
+ * shows the card's skeleton and the thread meanwhile, the card once Pinakes has read it, and the link
+ * itself with its footer once Pinakes refused or gave up.
  */
 export function ResourcePage({ uri }: ResourcePageProps) {
   // A failed read is not cached: a new attempt remounts the read and asks again.

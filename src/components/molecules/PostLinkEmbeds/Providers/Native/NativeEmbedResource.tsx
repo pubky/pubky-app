@@ -109,8 +109,8 @@ function NativeEmbedChoice({
     url,
     isComposing ? { resolve: true } : { recheck: isOnScreen },
   );
-  // In the composer a link Pinakes did not know is being read (`resolve`): wait for it too, so no
-  // platform embed loads only to give way to the card.
+  // In the composer a link Pinakes did not know is being read (`resolve`), and a post just published
+  // waits for that read too: wait for it, so no platform embed loads only to give way to the card.
   const isReading = isLoading || Boolean(isResolving);
   const isSlow = useSlowRead(url, isReading, PINAKES_SLOW_READ_MS);
   const embedRef = useRef<HTMLDivElement>(null);

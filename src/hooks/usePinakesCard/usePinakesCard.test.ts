@@ -312,6 +312,53 @@ describe('usePinakesCard', () => {
 });
 
 describe('usePinakesCard isResolving', () => {
+  it('lets a preview of a link that is being read on demand (a post just published) wait for that read, asking nothing', async () => {
+    vi.useFakeTimers();
+    try {
+      const uri = 'https://example.com/isresolving-joined';
+      let answer: (card: typeof videoFixture) => void = () => {};
+      mocks.fetchCardByUri.mockResolvedValue(null);
+      mocks.resolveCard.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+      // The composer has Pinakes read the link.
+      const composer = renderHook(() => usePinakesCard(uri, { resolve: true }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PINAKES_RESOLVE_DEBOUNCE_MS + 10);
+      });
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+
+      // The published post's preview of it, read while that read is in flight.
+      const post = renderHook(() => usePinakesCard(uri));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PINAKES_RESOLVE_DEBOUNCE_MS + 10);
+      });
+      expect(post.result.current).toEqual({ data: null, isLoading: false, isError: false, isResolving: true });
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        answer(videoFixture);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(post.result.current).toEqual({ data: videoFixture, isLoading: false, isError: false });
+      expect(composer.result.current.data).toEqual(videoFixture);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says nothing is being read for an unknown link no one asked Pinakes to read', async () => {
+    mocks.fetchCardByUri.mockResolvedValue(null);
+    const { result } = renderHook(() => usePinakesCard('https://example.com/isresolving-nobody'));
+
+    await waitFor(() => expect(result.current).toEqual({ data: null, isLoading: false, isError: false }));
+    expect(mocks.resolveCard).not.toHaveBeenCalled();
+  });
+
   it('says a resolve is in flight for a link Pinakes did not know, until it is answered', async () => {
     vi.useFakeTimers();
     try {

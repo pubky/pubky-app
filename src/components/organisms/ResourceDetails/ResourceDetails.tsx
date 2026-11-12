@@ -42,8 +42,11 @@ const EMPTY_STATE_IMAGE = '/images/post-not-found-empty-state.webp';
 interface ResourceDetailsProps {
   /** The link the page is for (`?uri=`), as given; `null` when the page was opened without one. */
   uri: string | null;
-  /** The page's read of the link's card (`usePinakesCard(uri)`), shared with its sidebar cards. */
-  read: UsePinakesQueryResult<TPinakesResourceDetail>;
+  /**
+   * The page's read of the link's card (`usePinakesCard(uri)`), shared with its sidebar cards;
+   * `isResolving` while Pinakes is asked to read a link it did not know.
+   */
+  read: UsePinakesQueryResult<TPinakesResourceDetail> & { isResolving?: boolean };
   /** Reads the card again (the page remounts its read: a failed read is not cached). */
   onRetry: () => void;
   /** The page's read of the link's replies (`useResourceReplies`), shared with Participants. */
@@ -54,7 +57,9 @@ interface ResourceDetailsProps {
  * The resource page's body, where a post's page has the post: the heading, then the link's large
  * card with a post's footer. Without a card (Pinakes does not know the link or is not configured),
  * the link's own preview takes its place, with the same footer; when Pinakes cannot be read, it
- * says so and offers the plain link. When a card replaces the link's preview (a resolve answering),
+ * says so and offers the plain link. While Pinakes reads a link it did not know (`resolve`: until it
+ * answers, up to about two minutes while a pending card settles), the card's skeleton holds its place, as on the first read; the link's preview shows only
+ * once Pinakes has refused or given up. When a card replaces the link's preview (a resolve answering),
  * the footer is a new one (its tags and actions reset); the thread stays when its link is the same.
  */
 export function ResourceDetails(props: ResourceDetailsProps) {
@@ -78,14 +83,7 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
     );
   }
   const { data: card, isLoading, isError } = read;
-  if (isPinakesConfigured() && isLoading) {
-    return (
-      // A labelled section, so the name is announced (a plain `div` cannot carry one).
-      <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading external resource">
-        <ResourceCardSkeleton withActions size="large" />
-      </Container>
-    );
-  }
+  if (isPinakesConfigured() && isLoading) return <ResourceLoading />;
 
   // The thread is on the acted-on link: the card's canonical one, else the page's.
   let threadUri = uri;
@@ -111,7 +109,8 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
       </ResourceEmptyState>
     );
   } else if (!card) {
-    body = <ResourceUnknown uri={uri} replies={replies} />;
+    // Pinakes is reading the link (`resolve`): its card may still come.
+    body = read.isResolving ? <ResourceLoading /> : <ResourceUnknown uri={uri} replies={replies} />;
   } else {
     // The card's canonical link; the page's link, its refs and aliases are its spellings, read along.
     const target = getResourceTarget(card, uri);
@@ -125,6 +124,16 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
       {body}
       <ResourceReplies key={threadUri} uri={threadUri} replies={replies} />
     </>
+  );
+}
+
+/** The large card's skeleton, while the card is read. */
+function ResourceLoading() {
+  return (
+    // A labelled section, so the name is announced (a plain `div` cannot carry one).
+    <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading external resource">
+      <ResourceCardSkeleton withActions size="large" />
+    </Container>
   );
 }
 

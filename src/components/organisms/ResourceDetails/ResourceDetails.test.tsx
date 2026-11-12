@@ -626,6 +626,48 @@ describe('ResourceDetails', () => {
     expect(mockRelated).not.toHaveBeenCalled();
   });
 
+  describe('while Pinakes reads a link it did not know', () => {
+    const RESOLVING = { data: null, isLoading: false, isError: false, isResolving: true };
+
+    it('shows the large card’s skeleton, announced as loading, in place of the link’s preview', () => {
+      read = RESOLVING;
+      renderDetails(NOT_KNOWN);
+
+      expect(screen.getByRole('region', { name: 'Loading external resource' })).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByTestId('resource-card-skeleton')).toHaveAttribute('data-size', 'large');
+      expect(screen.getByTestId('resource-card-skeleton-actions')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-unknown')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
+    });
+
+    it('keeps the thread and a half-typed quick reply through to the card it read', () => {
+      read = RESOLVING;
+      const { rerender } = renderDetails(NOT_KNOWN);
+      expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+      const composer = screen.getByTestId('quick-reply-stub');
+      fireEvent.change(composer, { target: { value: 'Half a reply' } });
+
+      read = settled({ ...ORDINARY_VIDEO, uri: NOT_KNOWN, refs: [NOT_KNOWN], aliases: [], group: null });
+      rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+      expect(screen.queryByTestId('resource-loading')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.getByTestId('quick-reply-stub')).toBe(composer);
+      expect(composer).toHaveValue('Half a reply');
+    });
+
+    it('shows the link’s preview once Pinakes refused or gave up', () => {
+      read = RESOLVING;
+      const { rerender } = renderDetails(NOT_KNOWN);
+
+      read = settled(null);
+      rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+      expect(screen.queryByTestId('resource-loading')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-link-card')).toHaveAttribute('data-size', 'large');
+    });
+  });
+
   describe('when the link is not known', () => {
     it('shows the link in the large card’s frame with the card’s footer, acting on the link as written', () => {
       read = settled(null);
