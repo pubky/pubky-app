@@ -590,6 +590,42 @@ the selected denomination. Setup is Bitcoin-only when Paykit Server's optional `
 configuration is absent. USD pricing by itself does not request a USDT address. An approval
 callback is checked against the server before setup is marked ready.
 
+Paykit Server refuses the initial `/setup` for a creator it already holds (`422 setup_failed`, which its
+setup page posts as `setup-failed`), for example after an earlier approval stopped before it finished. The
+failure callback carries no reason, and the Lock Server's `setup_required` is the same answer for a held
+and an unknown creator, so the Enable Payments step asks Paykit directly through `GET /api/paykit-creator`:
+a server-side read of Paykit's `GET /setup/creator-held?creator=…`, which answers `{ "held": true | false }`
+and nothing else, needed because Paykit sends no CORS headers. It is asked before `/setup` opens and again when
+a setup or reconnect fails. Paykit can commit either flow and still post `setup-failed` when its relay acknowledgement fails,
+so after either failure the Lock Server is asked first: a ready creator finishes there, with no reconnect (which
+would rotate its Bitcoin receiving account for nothing), and a failed readiness check shows that payments are
+unavailable. Only `setup_required` goes on to the presence read:
+
+- Paykit holds the creator: the dialog offers **Reconnect Bitkit** as its main action (no **Try again**), which
+  loads `/setup/reconnect?creator=…&return_to=…&state=…` in the same iframe. A reconnect moves Bitcoin receiving
+  to a new Bitcoin account, so it only opens on that click. A failed reconnect offers another reconnect only
+  after readiness still requires setup and Paykit confirms it holds the creator. An error retry checks readiness
+  again before asking for another approval.
+- Paykit does not hold the creator, after a failed setup: the dialog says nothing was set up and offers
+  **Connect Bitkit**, which checks again and opens `/setup`.
+- Paykit cannot say: the dialog says payments are unavailable and offers **Try again**, both before setup
+  and after a failed setup. Neither setup nor reconnect opens until a later check answers held or not held.
+
+`/setup/creator-held` starts no setup flow and spends neither Paykit's setup-start budget nor its pending-flow
+capacity. It has its own per-client-IP read limit (600 a minute by default). A refused read is `429`
+(`Retry-After: 60`) and storage trouble is `503` (`Retry-After: 1`), so neither is read as "not held"; a `400`
+means Paykit rejected the query and is not an answer either. The service behind the route asks once more after a
+`503` when its `Retry-After` is at most two seconds and fits the six-second timeout; a `429` is not retried
+server-side, so the dialog's **Try again** is the retry. Every caller of the route shares the app server's
+address and so that read limit, which is why the service reuses an answer per creator (two minutes when Paykit
+holds the creator, fifteen seconds when it does not) and lets concurrent callers share one request. A failed read
+is not kept. The cache is per server instance. Presence is not payment readiness: the Lock Server still confirms
+readiness after either flow.
+
+`/setup/creator-held` first shipped in Paykit Server v0.1.1-rc2. An older Paykit Server answers it with `404`,
+which reads as "Paykit cannot say", so no creator could open setup: the Paykit Server behind an environment must
+run v0.1.1-rc2 or later before this app does.
+
 Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
 USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
 transaction hashes. Retry, stored purchase IDs, and content recovery use the same flow for

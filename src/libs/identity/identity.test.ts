@@ -25,19 +25,6 @@ vi.mock('@synonymdev/pubky', () => ({
   },
 }));
 
-// Mock crypto for browser environment
-Object.defineProperty(global, 'crypto', {
-  value: {
-    getRandomValues: vi.fn((arr) => {
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = Math.floor(Math.random() * 256);
-      }
-      return arr;
-    }),
-  },
-  writable: true,
-});
-
 describe('Identity', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -45,53 +32,6 @@ describe('Identity', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  describe('generateSecrets mnemonic generation', () => {
-    it('should generate valid BIP39 mnemonic in secrets result', () => {
-      const result = Identity.generateSecrets();
-
-      const words = result.mnemonic.split(' ');
-      expect(words).toHaveLength(12);
-      expect(words.every((word) => typeof word === 'string' && word.length > 0)).toBe(true);
-
-      // Verify the generated mnemonic is valid
-      expect(bip39.validateMnemonic(result.mnemonic)).toBe(true);
-    });
-
-    it('should generate different mnemonics on each call', () => {
-      const result1 = Identity.generateSecrets();
-      const result2 = Identity.generateSecrets();
-
-      // Should generate different mnemonics (very unlikely to be the same)
-      expect(result1.mnemonic).not.toBe(result2.mnemonic);
-    });
-
-    it('should generate exactly 12 words in mnemonic', () => {
-      const result = Identity.generateSecrets();
-      const words = result.mnemonic.split(' ');
-      expect(words).toHaveLength(12);
-    });
-
-    it('should generate a secretKey as a hex string', () => {
-      const result = Identity.generateSecrets();
-      expect(typeof result.secretKey).toBe('string');
-      // Hex string should be 64 characters (32 bytes * 2)
-      expect(result.secretKey.length).toBe(64);
-      // Should only contain hex characters
-      expect(/^[0-9a-f]+$/.test(result.secretKey)).toBe(true);
-    });
-
-    it('should throw CommonError if BIP39 generation fails', () => {
-      // Mock bip39.generateMnemonic to throw
-      const mockGenerateMnemonic = vi.spyOn(bip39, 'generateMnemonic').mockImplementation(() => {
-        throw new Error('BIP39 generation failed');
-      });
-
-      expect(() => Identity.generateSecrets()).toThrow();
-
-      mockGenerateMnemonic.mockRestore();
-    });
   });
 
   describe('createRecoveryFile', () => {
@@ -233,61 +173,24 @@ describe('Identity', () => {
     });
   });
 
-  describe('generateSecrets', () => {
-    it('should generate secrets with mnemonic using BIP39 strategy', () => {
-      const result = Identity.generateSecrets();
-
-      expect(result).toBeDefined();
-      expect(result.secretKey).toBeDefined();
-      expect(result.mnemonic).toBeDefined();
-      expect(typeof result.mnemonic).toBe('string');
-      expect(typeof result.secretKey).toBe('string');
-
-      // Verify mnemonic is valid BIP39
-      expect(bip39.validateMnemonic(result.mnemonic)).toBe(true);
-
-      // Verify mnemonic has 12 words
-      const words = result.mnemonic.split(' ');
-      expect(words).toHaveLength(12);
-
-      // Verify secretKey is a valid hex string (64 chars for 32 bytes)
-      expect(result.secretKey.length).toBe(64);
-      expect(/^[0-9a-f]+$/.test(result.secretKey)).toBe(true);
-    });
-
-    it('should generate different secrets on each call', () => {
-      const result1 = Identity.generateSecrets();
-      const result2 = Identity.generateSecrets();
-
-      expect(result1.mnemonic).not.toBe(result2.mnemonic);
-      expect(result1.secretKey).not.toBe(result2.secretKey);
-    });
-
-    it('should generate secretKey that is consistent with mnemonic', () => {
-      const result = Identity.generateSecrets();
-
-      // Generate keypair from the mnemonic using the public API
-      const keypairFromMnemonic = Identity.keypairFromMnemonic(result.mnemonic);
-
-      // Generate keypair from the secretKey
-      const keypairFromSecret = Identity.keypairFromSecretKey(result.secretKey);
-
-      // Both should produce valid keypairs
-      expect(keypairFromMnemonic).toBeDefined();
-      expect(keypairFromSecret).toBeDefined();
-    });
-  });
-
   describe('keypairFromMnemonic', () => {
-    it('should generate a valid keypair from mnemonic', () => {
-      // Generate a mnemonic using generateSecrets
-      const { mnemonic } = Identity.generateSecrets();
+    // Standard BIP39 test vector; any valid 12-word phrase works here.
+    const mnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
+    it('should generate a valid keypair from mnemonic', () => {
       const keypair = Identity.keypairFromMnemonic(mnemonic);
 
       expect(keypair).toBeDefined();
       // The mock returns a keypair object
       expect(keypair.publicKey).toBeDefined();
+    });
+
+    it('derives the secret key from the first 32 bytes of the BIP39 seed', () => {
+      // Recovery phrases created by the former in-browser sign-up used this derivation, so it must not change.
+      Identity.keypairFromMnemonic(mnemonic);
+
+      const expectedSecret = bip39.mnemonicToSeedSync(mnemonic).subarray(0, 32);
+      expect(Array.from(vi.mocked(Keypair.fromSecret).mock.calls[0][0])).toEqual(Array.from(expectedSecret));
     });
 
     it('should throw error for invalid mnemonic', () => {
@@ -297,42 +200,12 @@ describe('Identity', () => {
     });
 
     it('should generate consistent keypairs for same mnemonic', () => {
-      // Generate a mnemonic using generateSecrets
-      const { mnemonic } = Identity.generateSecrets();
-
       const keypair1 = Identity.keypairFromMnemonic(mnemonic);
       const keypair2 = Identity.keypairFromMnemonic(mnemonic);
 
       // Both calls should succeed (the mock returns the same keypair)
       expect(keypair1).toBeDefined();
       expect(keypair2).toBeDefined();
-    });
-  });
-
-  describe('seed phrase consistency', () => {
-    it('should restore a valid keypair from generated mnemonic', () => {
-      // Generate secrets with mnemonic
-      const { mnemonic } = Identity.generateSecrets();
-
-      // Restore keypair using keypairFromMnemonic
-      const restoredKeypair = Identity.keypairFromMnemonic(mnemonic);
-
-      // The restored keypair should be valid
-      expect(restoredKeypair).toBeDefined();
-      expect(restoredKeypair.publicKey).toBeDefined();
-    });
-
-    it('should have consistent restore process', () => {
-      // Generate secrets with mnemonic
-      const { mnemonic } = Identity.generateSecrets();
-
-      // Restore keypair multiple times
-      const restoredKeypair1 = Identity.keypairFromMnemonic(mnemonic);
-      const restoredKeypair2 = Identity.keypairFromMnemonic(mnemonic);
-
-      // Both restorations should succeed
-      expect(restoredKeypair1).toBeDefined();
-      expect(restoredKeypair2).toBeDefined();
     });
   });
 

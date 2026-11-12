@@ -30,7 +30,6 @@ import { createTestWebLocks } from '@/test-utils/web-locks';
 
 const mockState = vi.hoisted(() => ({
   // Signer methods
-  signup: vi.fn(),
   signin: vi.fn(),
   publishHomeserverForce: vi.fn(),
   // Session methods
@@ -129,7 +128,6 @@ vi.mock('@synonymdev/pubky', () => {
       list: (...args: unknown[]) => mockState.publicStorageList(...args),
     },
     signer: () => ({
-      signup: (...args: unknown[]) => mockState.signup(...args),
       signin: (...args: unknown[]) => mockState.signin(...args),
       pkdns: {
         publishHomeserverForce: (...args: unknown[]) => mockState.publishHomeserverForce(...args),
@@ -247,7 +245,6 @@ describe('HomeserverService', () => {
     Object.defineProperty(navigator, 'locks', { configurable: true, value: createTestWebLocks() });
     localStorage.clear();
     sessionStorage.clear();
-    mockState.signup.mockResolvedValue(undefined);
     mockState.signin.mockResolvedValue(createMockSession());
     mockState.restoreGrant.mockResolvedValue(createMockSession());
     mockState.publishHomeserverForce.mockResolvedValue(undefined);
@@ -293,7 +290,6 @@ describe('HomeserverService', () => {
       expect(HomeserverService).toBeDefined();
 
       const expectedMethods = [
-        'createAccount',
         'verifySignupToken',
         'signIn',
         'logout',
@@ -321,77 +317,6 @@ describe('HomeserverService', () => {
   // ===========================================================================
 
   describe('Authentication', () => {
-    describe('createAccount', () => {
-      it('creates the account separately from issuing a grant', async () => {
-        const keypair = createMockKeypair();
-        const signupToken = 'valid-signup-token';
-        const expectedSession = createMockSession();
-
-        mockState.signin.mockResolvedValue(expectedSession);
-
-        const result = await HomeserverService.createAccount({ keypair, signupToken });
-
-        expect(result).toBeUndefined();
-        expect(mockState.signin).not.toHaveBeenCalled();
-      });
-
-      it('should call signer.signup with signup token', async () => {
-        const keypair = createMockKeypair();
-        const signupToken = 'test-token';
-
-        await HomeserverService.createAccount({ keypair, signupToken });
-
-        expect(mockState.signup).toHaveBeenCalledWith(
-          expect.anything(), // homeserver public key
-          signupToken,
-        );
-      });
-
-      it('should throw SIGNUP_FAILED error when signup fails with Error', async () => {
-        const keypair = createMockKeypair();
-        const signupToken = 'invalid-token';
-
-        mockState.signup.mockRejectedValue(new Error('Invalid token'));
-
-        await expect(HomeserverService.createAccount({ keypair, signupToken })).rejects.toMatchObject({
-          category: ErrorCategory.Server,
-          code: ServerErrorCode.INTERNAL_ERROR,
-          operation: 'createAccount',
-        });
-      });
-
-      it('should throw SIGNUP_FAILED error when signup fails with non-Error', async () => {
-        const keypair = createMockKeypair();
-        const signupToken = 'bad-token';
-
-        mockState.signup.mockRejectedValue('string error');
-
-        await expect(HomeserverService.createAccount({ keypair, signupToken })).rejects.toMatchObject({
-          category: ErrorCategory.Server,
-          code: ServerErrorCode.UNKNOWN_ERROR,
-          operation: 'createAccount',
-        });
-      });
-
-      it('should preserve original error message in error details', async () => {
-        const keypair = createMockKeypair();
-        const signupToken = 'token';
-        const originalMessage = 'Token expired';
-
-        mockState.signup.mockRejectedValue(new Error(originalMessage));
-
-        try {
-          await HomeserverService.createAccount({ keypair, signupToken });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          // Use name check instead of instanceof due to module reset
-          expect((error as Error).name).toBe('AppError');
-          // The original error message becomes the error message
-          expect((error as AppError).message).toBe(originalMessage);
-        }
-      });
-    });
-
     describe('verifySignupToken', () => {
       it('should return valid when the homeserver responds with status valid', async () => {
         mockState.clientFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'valid' }), { status: 200 }));
@@ -2667,13 +2592,11 @@ describe('HomeserverService', () => {
           service: ErrorService.Homeserver,
           operation: 'test',
         });
-        mockState.signup.mockRejectedValue(appError);
+        mockState.getHomeserverOf.mockResolvedValue('https://homeserver.example.com');
+        mockState.signin.mockRejectedValue(appError);
 
         try {
-          await HomeserverService.createAccount({
-            keypair: createMockKeypair(),
-            signupToken: 'token',
-          });
+          await HomeserverService.signIn({ keypair: createMockKeypair() });
           expect.fail('Should have thrown');
         } catch (error) {
           // Should be the exact same error instance (not wrapped)
@@ -3072,33 +2995,6 @@ describe('SDK grant session persistence', () => {
   });
 });
 
-describe('signup-specific PKARR recovery', () => {
-  beforeEach(() => vi.clearAllMocks());
-  it('republishes a proven absent record for the original signup key before grant signin', async () => {
-    const { HomeserverService } = await import('./homeserver');
-    const { getAuthClientId } = await import('@/config/auth');
-    mockState.getHomeserverOf.mockResolvedValue(null);
-    mockState.publishHomeserverForce.mockResolvedValue(undefined);
-    mockState.signin.mockResolvedValue(createMockSession());
-    await HomeserverService.signInCreatedAccount({ keypair: createMockKeypair() });
-    expect(mockState.publishHomeserverForce).toHaveBeenCalledOnce();
-    expect(mockState.signin).toHaveBeenCalledWith(getAuthClientId());
-    expect(mockState.publishHomeserverForce.mock.invocationCallOrder[0]).toBeLessThan(
-      mockState.signin.mock.invocationCallOrder[0],
-    );
-    expect(mockState.signup).not.toHaveBeenCalled();
-  });
-  it('does not republish an inconclusive lookup', async () => {
-    const { HomeserverService } = await import('./homeserver');
-    mockState.getHomeserverOf.mockRejectedValue({ name: 'PkarrError', message: 'offline' });
-    await expect(HomeserverService.signInCreatedAccount({ keypair: createMockKeypair() })).rejects.toMatchObject({
-      category: ErrorCategory.Network,
-    });
-    expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
-    expect(mockState.signin).not.toHaveBeenCalled();
-  });
-});
-
 describe('missing SDK grant material', () => {
   const reference = {
     kind: 'grant' as const,
@@ -3163,14 +3059,6 @@ describe('grant-only SDK boundaries', () => {
     await expect(HomeserverService.saveSession(session)).rejects.toMatchObject({ code: AuthErrorCode.UNAUTHORIZED });
     expect(session.export).not.toHaveBeenCalled();
     expect(mockState.saveGrant).not.toHaveBeenCalled();
-  });
-  it('does not consume a signup token when shared browser session storage is unavailable', async () => {
-    const { HomeserverService } = await import('./homeserver');
-    mockState.sessionStoreAvailable.mockResolvedValue(false);
-    await expect(
-      HomeserverService.createAccount({ keypair: createMockKeypair(), signupToken: 'invite' }),
-    ).rejects.toMatchObject({ category: ErrorCategory.Database, code: 'INIT_FAILED' });
-    expect(mockState.signup).not.toHaveBeenCalled();
   });
   it('does not attempt key sign-in or grant restore without shared session storage', async () => {
     const { HomeserverService } = await import('./homeserver');

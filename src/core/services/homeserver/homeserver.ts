@@ -29,7 +29,6 @@ import { sleep } from '@/libs/utils/utils';
 import type {
   TGenerateAuthUrlResult,
   THomeserverSessionResult,
-  THomeserverSignUpParams,
   TSignupTokenVerificationStatus,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -386,36 +385,6 @@ export class HomeserverService {
       return { session };
     } catch (signinError) {
       return handleError({ error: signinError, additionalContext: { operation: 'signIn' } });
-    }
-  }
-
-  /** Account creation and session issuance are separate so retries cannot spend the invite twice. */
-  static async createAccount({ keypair, signupToken }: THomeserverSignUpParams): Promise<void> {
-    try {
-      await this.assertSessionStoreAvailable();
-      await this.getSigner(keypair).signup(PublicKey.from(getHomeserver()), signupToken);
-    } catch (error) {
-      return handleError({ error, additionalContext: { operation: 'createAccount' } });
-    }
-  }
-
-  static async signInCreatedAccount({ keypair }: TKeypairParams): Promise<THomeserverSessionResult> {
-    try {
-      await this.assertSessionStoreAvailable();
-      const signer = this.getSigner(keypair);
-      const record = await this.resolveHomeserverRecord({ publicKey: keypair.publicKey });
-      // Only this signup-specific path knows the generated key's intended homeserver.
-      // A lost create response can leave an account without its PKARR publication.
-      if (record === null) await signer.pkdns.publishHomeserverForce(PublicKey.from(getHomeserver()));
-      else if (record.z32() !== getHomeserver()) {
-        throw Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'This signup belongs to another homeserver.', {
-          service: ErrorService.Homeserver,
-          operation: 'signInCreatedAccount',
-        });
-      }
-      return { session: await signer.signin(getAuthClientId()) };
-    } catch (error) {
-      return handleError({ error, additionalContext: { operation: 'signInCreatedAccount' } });
     }
   }
 
