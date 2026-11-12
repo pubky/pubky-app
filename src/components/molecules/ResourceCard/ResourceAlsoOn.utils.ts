@@ -47,10 +47,13 @@ const WIKIMEDIA_LANGUAGES: Readonly<Record<string, string>> = {
   'zh-yue': 'yue',
 };
 
-/** The BCP 47 tag of a language code, lower case, Wikimedia's own codes included. */
+/**
+ * The BCP 47 tag of a language code, lower case, Wikimedia's own codes included. Own keys only: a
+ * stored code such as `constructor` is no Wikimedia code.
+ */
 function toLanguageTag(code: string): string {
   const lower = code.toLowerCase();
-  return WIKIMEDIA_LANGUAGES[lower] ?? lower;
+  return Object.hasOwn(WIKIMEDIA_LANGUAGES, lower) ? WIKIMEDIA_LANGUAGES[lower] : lower;
 }
 
 /**
