@@ -120,9 +120,8 @@ for (const [name, viewport] of [
       await matchVrtFrameScreenshot(`onboarding-join-passport-pending-${name}`);
     });
 
-    // Passport users skip the Backup step: Passport stores an encrypted backup
-    // in Google Drive. This popover is where the app explains that backup and
-    // how recovery works.
+    // Passport stores an encrypted backup in Google Drive. This popover is
+    // where the app explains that backup and how recovery works.
     it('renders the Passport backup and recovery explainer', async () => {
       await renderForVRT(<JoinWithHeader />, { viewport });
       await page.getByRole('button', { name: 'About signing in with Google' }).click();

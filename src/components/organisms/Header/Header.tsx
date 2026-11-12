@@ -50,10 +50,9 @@ export function Header() {
   const shouldHideHeaderOnMobile =
     !isLegalPage &&
     (isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute));
-  // Show the step title on every onboarding page regardless of auth state: sign-up happens on the
-  // pubky step, so the later key steps (pubky, backup) and the post-auth steps (profile, experience)
-  // are all reached while authenticated. Outside onboarding (i.e. /logout) the title is only for
-  // signed-out users.
+  // Show the step title on every onboarding page regardless of auth state: the post-auth steps
+  // (profile, experience) are reached while authenticated. Outside onboarding (i.e. /logout) the
+  // title is only for signed-out users.
   const shouldShowTitle = currentTitle && (isOnboarding || !isAuthenticated);
 
   // Determine which header content to show:

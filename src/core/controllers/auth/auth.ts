@@ -10,12 +10,11 @@ import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-q
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
-import { getDeployEnv, getHomeserver, getHomeserverCapabilities } from '@/config/network';
+import { getHomeserverCapabilities } from '@/config/network';
 import type {
   SessionReadiness,
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
-  TSignUpParams,
 } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
 import { SocialMigrationController, type SocialMigrationEntry } from '@/controllers/social-migration/social-migration';
@@ -40,7 +39,7 @@ import {
 import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError, isNotFound, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
+import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
@@ -170,7 +169,6 @@ export class AuthController {
   private static restoreVersion = 0;
   private static logoutOwner: symbol | null = null;
   private static restorePromise: Promise<boolean> | null = null;
-  private static signupPromise: Promise<void> | null = null;
   private static legacyRevocation: { task: Promise<void>; wait: Promise<void> } | null = null;
   private static retirementTasks = new Map<string, Promise<void>>();
   private static profileBootstrap: { generation: string; session: Session; task: Promise<void> } | null = null;
@@ -593,7 +591,7 @@ export class AuthController {
       current.setNeedsAccountSync(current.currentUserPubky !== null);
       if (current.currentUserPubky) await useLocksAuthStore.persist.rehydrate();
       if (epoch !== this.epoch) return;
-      // Another tab may have just signed up and still need its recovery backup.
+      // Another tab may hold recovery keys from the former in-browser sign-up that still need a backup.
       await useOnboardingStore.persist.rehydrate();
       if (epoch !== this.epoch) return;
       const onboarding = useOnboardingStore.getState();
@@ -747,7 +745,7 @@ export class AuthController {
       throw createCanceledError();
     }
     const persisted = AuthApplication.readPersistedAuth();
-    // The onboarding key generator sets currentUserPubky before the account is authenticated.
+    // currentUserPubky alone does not prove an authenticated account (the former in-browser key step set it early).
     const sameAccount =
       previous.currentUserPubky === pubky &&
       (previous.session !== null || previous.sessionReference !== null || persisted?.currentUserPubky === pubky);
@@ -957,69 +955,6 @@ export class AuthController {
       })
       .catch(() => {});
     return task;
-  }
-
-  /**
-   * Signs up a new user with the homeserver using the provided secret key and signup token.
-   * @param params - Object containing secret key and signup token for registration
-   * @param params.secretKey - The secret key for the user
-   * @param params.signupToken - Invitation code for user registration
-   */
-  static async signUp({ secretKey, signupToken }: TSignUpParams): Promise<void> {
-    if (this.signupPromise) return this.signupPromise;
-    this.cancelActiveAuthFlow();
-    const epoch = this.epoch;
-    const task = (async () => {
-      void this.retrySessionRetirement();
-      const keypair = Identity.keypairFromSecretKey(secretKey);
-      const pubky = keypair.publicKey.z32();
-      const onboarding = useOnboardingStore.getState();
-      const context = { pubky, homeserver: getHomeserver(), environment: getDeployEnv() };
-      const attempt = onboarding.signupAttempt;
-      const continuing =
-        attempt?.pubky === pubky &&
-        attempt.homeserver === context.homeserver &&
-        attempt.environment === context.environment;
-      let result: THomeserverSessionResult | undefined;
-      if (continuing) {
-        // The previous create response may have been lost after the invite was consumed.
-        try {
-          result = await AuthApplication.signInCreatedAccount({ keypair });
-        } catch (error) {
-          if (epoch !== this.epoch) throw createCanceledError();
-          if (attempt.phase === 'created' || !isAppError(error) || !isNotFound(error)) throw error;
-        }
-      }
-      if (!result) {
-        onboarding.setSignupAttempt({ ...context, phase: 'creating' });
-        try {
-          await AuthApplication.createAccount({ keypair, signupToken });
-        } catch (error) {
-          // A definitive invite rejection did not create the account. Keep its recovery keys,
-          // but let the user correct the invite instead of treating it as an uncertain creation.
-          if (
-            epoch === this.epoch &&
-            isAppError(error) &&
-            (error.code === AuthErrorCode.UNAUTHORIZED ||
-              error.code === AuthErrorCode.FORBIDDEN ||
-              error.code === AuthErrorCode.SESSION_EXPIRED)
-          )
-            onboarding.setSignupAttempt(null);
-          throw error;
-        }
-        if (epoch !== this.epoch) throw createCanceledError();
-        onboarding.setSignupAttempt({ ...context, phase: 'created' });
-        result = await AuthApplication.signInCreatedAccount({ keypair });
-      }
-      if (epoch !== this.epoch) throw createCanceledError();
-      await this.completeAuthenticatedSession(result, { epoch, entry: 'signup' });
-    })();
-    this.signupPromise = task;
-    try {
-      await task;
-    } finally {
-      if (this.signupPromise === task) this.signupPromise = null;
-    }
   }
 
   /**

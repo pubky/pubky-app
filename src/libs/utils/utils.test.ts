@@ -43,6 +43,7 @@ import {
   shouldBypassLinkConfirmation,
   stripPubkyPrefix,
   truncateString,
+  withPubkyPrefix,
 } from './utils';
 import { HASHTAG_IN_TEXT_REGEX, TAG_BANNED_CHARS, TAG_FROZEN_WHITESPACE_CODE_POINTS } from './utils.constants';
 
@@ -1605,6 +1606,32 @@ describe('Utils', () => {
         const result = formatUSDate(testDate);
         expect(result).toBe('01/01/2024');
       });
+    });
+  });
+
+  describe('withPubkyPrefix', () => {
+    const rawKey = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    const rawKeyStartingWithPubky = `pubkyb${'o'.repeat(46)}`;
+
+    it.each([
+      [rawKey, `pubky${rawKey}`],
+      [`pubky${rawKey}`, `pubky${rawKey}`],
+      [`pk:${rawKey}`, `pubky${rawKey}`],
+      [rawKeyStartingWithPubky, `pubky${rawKeyStartingWithPubky}`],
+      [`pubky${rawKeyStartingWithPubky}`, `pubky${rawKeyStartingWithPubky}`],
+      [`pk:${rawKeyStartingWithPubky}`, `pubky${rawKeyStartingWithPubky}`],
+    ])('gives %j as %j', (input, expected) => {
+      expect(withPubkyPrefix(input)).toBe(expected);
+    });
+
+    it('round-trips with stripPubkyPrefix for a raw key starting with pubky', () => {
+      expect(withPubkyPrefix(stripPubkyPrefix(`pubky${rawKeyStartingWithPubky}`))).toBe(
+        `pubky${rawKeyStartingWithPubky}`,
+      );
+    });
+
+    it('returns an empty string for empty input', () => {
+      expect(withPubkyPrefix('')).toBe('');
     });
   });
 
