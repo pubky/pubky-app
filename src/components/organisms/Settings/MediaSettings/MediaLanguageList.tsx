@@ -28,14 +28,16 @@ function toRow(lang: string): MediaRankedItem {
 /**
  * The Wikipedia languages of Links & Media, ranked as the Players (`MediaRankedList`): a service in
  * several languages opens in the first of these it has, and its language switch lists only these
- * (`useAlsoOnEdition`). Add offers every Wikipedia language not in the list, by its own name, in a
- * menu that scrolls (and jumps to a typed name, as menus do). Until one is added, the list is empty
+ * (`useAlsoOnEdition`). Add offers every Wikipedia language not in the list, by its own name (by
+ * its code after those, where the browser has no name), in a menu that scrolls (and jumps to a typed
+ * name, as menus do). Until one is added, the list is empty
  * and the browser's languages are used.
  */
 export function MediaLanguageList({ languages, onChange }: MediaLanguageListProps) {
+  // By name; the codes the browser cannot name (it names about half of them) after, by code.
   const addable = WIKIPEDIA_LANGUAGES.filter((lang) => !languages.includes(lang))
     .map(toItem)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => Number(a.name === a.id) - Number(b.name === b.id) || a.name.localeCompare(b.name));
 
   return (
     <Container overrideDefaults className="flex w-full flex-col items-start gap-2">
