@@ -21,7 +21,8 @@ export function useCustomStreamId(): PostStreamId | undefined {
   if (customFeed.tags.length === 0 && customFeed.domain_tags.length === 0) return;
 
   try {
-    return buildFeedStreamId(customFeed, currentUserPubky) as PostStreamId;
+    // A feed of external resources has none: `CustomTimelineFeed` runs it as a resource search.
+    return buildFeedStreamId(customFeed, currentUserPubky) ?? undefined;
   } catch {
     return;
   }

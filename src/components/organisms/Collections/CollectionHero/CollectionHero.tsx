@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Link, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
+import { Check, Link, Loader2, Minus, Move, Pencil, Plus, StickyNote, TextSearch, Trash2, X } from 'lucide-react';
 import { APP_ROUTES, getCollectionRoute, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -14,6 +14,7 @@ import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { getResourceSearchUrl } from '@/hooks/useResourceSearchFilters/useResourceSearchFilters';
 import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
@@ -30,6 +31,7 @@ import { DialogEditCollection } from '@/organisms/Collections/DialogEditCollecti
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
 import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagToggleButton';
+import { buildPostUriOrNull } from '@/pipes/post/post.reference';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -127,6 +129,12 @@ function CollectionHeroContent({
   const title = collection?.name ?? '';
   const description = collection?.description?.trim() ?? '';
   const itemCount = collection?.items?.length ?? 0;
+  // A collection holding external resources can be searched: its links, with every resource filter
+  const collectionUri = buildPostUriOrNull(authorPubky, postId);
+  const linksSearchUrl =
+    collectionUri && (collection?.items ?? []).some((uri) => !uri.startsWith('pubky:'))
+      ? getResourceSearchUrl({ inCollection: collectionUri })
+      : null;
 
   // Prefer a recently-uploaded blob URL stashed in the local-files store —
   // covers the window between commit and CDN availability so the cover renders
@@ -475,6 +483,27 @@ function CollectionHeroContent({
                 </TooltipPortal>
               </Tooltip>
             </>
+          )}
+          {linksSearchUrl && !isReorderActive && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => router.push(linksSearchUrl)}
+                    disabled={isDeleting}
+                    aria-label="Search the links in this collection"
+                    data-cy="collection-hero-search-links-btn"
+                  >
+                    <TextSearch className="size-4" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent variant="accent">Search its links</TooltipContent>
+              </TooltipPortal>
+            </Tooltip>
           )}
           {!isReorderActive && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}
           {tagToggle}

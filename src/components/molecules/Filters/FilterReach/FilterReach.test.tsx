@@ -450,3 +450,22 @@ describe('FilterReach - Performance', () => {
     expect(followingRadio.onclick).toBe(initialOnClick);
   });
 });
+
+describe('FilterReach - hidden reaches', () => {
+  it('leaves out the reaches a surface cannot apply, and shows All for a selection of one', () => {
+    render(
+      <FilterReach
+        selectedTab={REACH.NETWORK}
+        showTaggedAs
+        hiddenTabs={[REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.ME]}
+      />,
+    );
+
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('aria-label'))).toEqual([
+      'Following',
+      'Friends',
+      'All',
+    ]);
+    expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'true');
+  });
+});

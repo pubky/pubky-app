@@ -372,6 +372,14 @@ export function getAlsoOnName(entry: Pick<TPinakesAlsoOn, 'uri' | 'site'>): stri
   return entry.site?.trim() || getLinkHost(entry.uri) || getDisplayLink(entry.uri);
 }
 
+/**
+ * The app a Pubky object belongs to, from its path (`pubky://<key>/pub/loopky/decks/…` → `loopky`),
+ * to name the object by when there is no card for it: its path is no name. `null` for any other URI.
+ */
+export function getPubkyObjectApp(uri: string): string | null {
+  return /^pubky:\/\/[^/]+\/pub\/([^/]+)\//.exec(uri)?.[1] ?? null;
+}
+
 /** Where an Also on entry opens: the link's resource page; `null` for a Pubky object, no external resource. */
 export function getAlsoOnRoute(uri: string): string | null {
   return uri.startsWith('pubky:') ? null : getResourceRoute(uri);

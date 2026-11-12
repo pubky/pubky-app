@@ -30,6 +30,13 @@ describe('FilterRadioGroup', () => {
     expect(screen.getByText('Option 3')).toBeInTheDocument();
   });
 
+  it('shows an item’s count after its label and in its name', () => {
+    render(<FilterRadioGroup title="Kind" items={[{ ...mockItems[0], count: 12 }, mockItems[1]]} />);
+
+    expect(screen.getByRole('radio', { name: 'Option 1, 12' })).toHaveTextContent('Option 112');
+    expect(screen.getByRole('radio', { name: 'Option 2' }).textContent).toBe('Option 2');
+  });
+
   it('generates default testId from title', () => {
     render(<FilterRadioGroup title="My Custom Filter" items={mockItems} />);
 

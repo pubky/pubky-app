@@ -17,6 +17,8 @@ import { FilterListItem } from '../Filters.types';
 
 export interface FilterRadioGroupProps<T = string> {
   title: string;
+  /** A short line under the title, part of the group's name (why some options are disabled). */
+  subtitle?: string;
   items: FilterListItem<T>[];
   itemExtras?: Partial<Record<T & string, React.ReactNode>>;
   selectedValue?: T;
@@ -29,6 +31,7 @@ export interface FilterRadioGroupProps<T = string> {
 
 export function FilterRadioGroup<T extends string = string>({
   title,
+  subtitle,
   items,
   itemExtras,
   selectedValue: controlledValue,
@@ -69,7 +72,7 @@ export function FilterRadioGroup<T extends string = string>({
 
   return (
     <FilterRoot>
-      <FilterHeader title={title} id={headerId} />
+      <FilterHeader title={title} subtitle={subtitle} id={headerId} />
 
       <Container
         overrideDefaults
@@ -80,7 +83,7 @@ export function FilterRadioGroup<T extends string = string>({
         data-testid={testId || `filter-${title.toLowerCase()}-radiogroup`}
       >
         <FilterList>
-          {items.map(({ key, label, icon: Icon, disabled, dataCy: itemDataCy }, index) => {
+          {items.map(({ key, label, icon: Icon, disabled, dataCy: itemDataCy, count }, index) => {
             const isSelected = selectedValue === key;
 
             return (
@@ -91,7 +94,7 @@ export function FilterRadioGroup<T extends string = string>({
                   onKeyDown={(e) => handleRadiogroupKeyDown(e, index)}
                   role="radio"
                   aria-checked={isSelected}
-                  aria-label={label}
+                  aria-label={count === undefined ? label : `${label}, ${count}`}
                   aria-disabled={disabled}
                   tabIndex={isSelected ? 0 : -1}
                   data-cy={itemDataCy}
@@ -99,6 +102,11 @@ export function FilterRadioGroup<T extends string = string>({
                 >
                   <FilterItemIcon icon={Icon} />
                   <FilterItemLabel>{label}</FilterItemLabel>
+                  {count !== undefined && (
+                    <FilterItemLabel className="text-muted-foreground" aria-hidden>
+                      {count}
+                    </FilterItemLabel>
+                  )}
                   {isSelected && <FilterItemCheck />}
                 </FilterItem>
                 {itemExtras?.[key]}

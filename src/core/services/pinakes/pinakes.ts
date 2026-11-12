@@ -1,8 +1,14 @@
-import { getPinakesUrl, PINAKES_REQUEST_TIMEOUT_MS, PINAKES_URI_MAX_BYTES } from '@/config/pinakes';
+import {
+  getPinakesUrl,
+  PINAKES_REQUEST_TIMEOUT_MS,
+  PINAKES_SEARCH_STALE_MS,
+  PINAKES_URI_MAX_BYTES,
+} from '@/config/pinakes';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { isResolvableLink } from '@/pipes/resource/resource.search';
 import { pinakesCardStaleTime, pinakesQueryClient } from './pinakes.query-client';
 import type {
   TPinakesCard,
@@ -180,6 +186,39 @@ export class PinakesService {
   }
 
   /**
+   * One page of a resource search (`GET /v1/search`): the rows, the cursor of the next page and,
+   * when asked for, the type and tag facets of the whole filtered set. A page is kept briefly, so
+   * views of the same page share one request of Pinakes' per-minute budget.
+   *
+   * @param params - The query parameters (`buildResourceSearchParams`)
+   * @param options.fresh - Ask Pinakes again whatever the cache holds
+   * @returns The page, or `null` when Pinakes is not configured or does not serve search (404)
+   * @throws AppError when Pinakes fails or refuses the query (an expired cursor is a 400)
+   */
+  static async search(
+    params: Record<string, string>,
+    { fresh = false }: { fresh?: boolean } = {},
+  ): Promise<TPinakesSearchResponse | null> {
+    const base = getPinakesBaseUrl();
+    if (!base) return null;
+
+    const query = new URLSearchParams(params).toString();
+    return pinakesQueryClient.fetchQuery({
+      queryKey: ['pinakes', 'search', query],
+      // `fresh`: a search started over (its cursor was refused) asks again, whatever the cache holds
+      staleTime: fresh ? 0 : PINAKES_SEARCH_STALE_MS,
+      // A refused query is answered the same way again: the caller decides (restart, error state)
+      retry: false,
+      queryFn: () =>
+        fetchPinakesOrNull<TPinakesSearchResponse>({
+          url: `${base}${SEARCH_PATH}?${query}`,
+          endpoint: `${base}${SEARCH_PATH}`,
+          operation: 'search',
+        }),
+    });
+  }
+
+  /**
    * What the people who tagged a resource also referenced (`GET /v1/search?related=<id>`), ranked
    * by how many of them did. A resource in a group stands for the group, whose members are never
    * listed.
@@ -236,16 +275,6 @@ export class PinakesService {
 function getPinakesBaseUrl(): string | null {
   const base = getPinakesUrl();
   return base ? base.replace(/\/+$/, '') : null;
-}
-
-/** Whether a link may be sent to be read: it parses and carries no username or password. */
-function isResolvableLink(uri: string): boolean {
-  try {
-    const url = new URL(uri);
-    return !url.username && !url.password;
-  } catch {
-    return false;
-  }
 }
 
 /** The cache key of a group's read. */

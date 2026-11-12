@@ -6,6 +6,7 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { PollingServiceConfig } from '@/coordinators/base/coordinators.types';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import type { StreamCoordinatorConfig } from '@/coordinators/streams/stream.types';
+import { Logger } from '@/libs/logger/logger';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -1267,6 +1268,37 @@ describe('StreamCoordinator', () => {
     });
   });
 
+  describe("Home's External resources", () => {
+    it('does not poll or warn: it lists no posts', async () => {
+      const warnSpy = vi.spyOn(Logger, 'warn');
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest({
+        homeStore: { content: CONTENT.RESOURCES },
+      });
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute(APP_ROUTES.HOME);
+      coordinator.start();
+
+      await flushPromises();
+      vi.advanceTimersByTime(3_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalledWith('Cannot poll: invalid stream ID');
+    });
+
+    it('still warns while the home store is not hydrated', async () => {
+      const warnSpy = vi.spyOn(Logger, 'warn');
+      const { coordinator } = setupIntegrationTest({ homeStore: { content: CONTENT.RESOURCES, hasHydrated: false } });
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute(APP_ROUTES.HOME);
+      coordinator.start();
+
+      await flushPromises();
+
+      expect(warnSpy).toHaveBeenCalledWith('Cannot poll: invalid stream ID');
+    });
+  });
+
   describe('Feed Route Polling', () => {
     const mockFeed: FeedModelSchema = {
       id: 'feed123',
@@ -1300,6 +1332,24 @@ describe('StreamCoordinator', () => {
       await flushPromises();
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
+    });
+
+    it('does not poll a feed of external resources, which has no post stream', async () => {
+      const warnSpy = vi.spyOn(Logger, 'warn');
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      const feedGetSpy = setupFeedControllerSpy({ ...mockFeed, target: 'resources' });
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feed123');
+      coordinator.start();
+
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(5_000);
+      await flushPromises();
+
+      expect(feedGetSpy).toHaveBeenCalledTimes(1);
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalledWith('Cannot poll: invalid stream ID');
     });
 
     it('does not poll when feed ID is missing from route', async () => {

@@ -346,10 +346,35 @@ export interface TPinakesTypeFacet {
   count: number;
 }
 
+/** `TagFacet`: one tag label and how many resources of the search carry it. */
+export interface TPinakesTagFacet {
+  label: string;
+  count: number;
+}
+
+/** `HostFacet`: one service (as `host=` takes it), the name cards show for it, and its links. */
+export interface TPinakesHostFacet {
+  host: string;
+  site: string;
+  count: number;
+}
+
+/** `CategoryFacet`: one category (as `category=` takes it: OpenStreetMap's `amenity/cafe`) and its links. */
+export interface TPinakesCategoryFacet {
+  category: string;
+  count: number;
+}
+
 /** `SearchResponse`: `GET /v1/search` (without `cluster`). */
 export interface TPinakesSearchResponse {
   items: TPinakesCard[];
   cursor?: string | null;
   reach_truncated: boolean;
-  facets?: { type?: TPinakesTypeFacet[] | null } | null;
+  /** Counts over the whole filtered set, with `facet=type,tags` (and `host`, `category`). */
+  facets?: {
+    type?: TPinakesTypeFacet[] | null;
+    tags?: TPinakesTagFacet[] | null;
+    host?: TPinakesHostFacet[] | null;
+    category?: TPinakesCategoryFacet[] | null;
+  } | null;
 }

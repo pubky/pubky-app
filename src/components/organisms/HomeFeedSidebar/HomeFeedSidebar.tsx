@@ -4,26 +4,44 @@ import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
+import { isPinakesReachSetServed } from '@/config/pinakes';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useHomeResourceFeed } from '@/hooks/useHomeResourceFeed/useHomeResourceFeed';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
+import { SearchResourceFilters } from '@/organisms/SearchResources/SearchResourceFilters';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ReachFilterValue } from '@/stores/home/home.types';
-import { type ContentType, REACH, type ReachType, type SortType } from '@/stores/home/home.types';
+import { CONTENT, type ContentType, REACH, type ReachType, type SortType } from '@/stores/home/home.types';
 import { getHomeStreamIdFromFilters, resolveEnabledContent } from '@/stores/home/home.utils';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
 } from '../Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
 
+/**
+ * The reaches the external resource search has no counterpart for: not listed for external
+ * resources. My network is one unless the configured Pinakes serves reach sets (`wot_2`).
+ */
+const RESOURCE_HIDDEN_REACHES: readonly ReachFilterValue[] = [TAGGED_AS_FILTER_KEY, REACH.ME];
+const RESOURCE_HIDDEN_REACHES_WITHOUT_NETWORK: readonly ReachFilterValue[] = [
+  REACH.NETWORK,
+  ...RESOURCE_HIDDEN_REACHES,
+];
+
 interface HomeFeedSidebarProps {
   /** Replaces the Home-store reach filter (e.g. Search's own reach); `null` renders none. */
   reachFilter?: ReactNode;
+  /**
+   * Sections of a surface's own, under the reach filter (Search's External resources filters). Home's
+   * External resources have Search's (`SearchResourceFilters`, on the Home feed) in place of Sort.
+   */
+  extraFilters?: ReactNode;
   hideSortFilter?: boolean;
   hideLayoutFilter?: boolean;
   disabledContent?: ContentType[];
@@ -43,6 +61,7 @@ interface HomeFeedSidebarProps {
  */
 function HomeFeedFilters({
   reachFilter,
+  extraFilters,
   hideSortFilter = false,
   hideLayoutFilter = false,
   disabledContent = [],
@@ -70,6 +89,7 @@ function HomeFeedFilters({
   const selectedReach = useSelectedReachFilter();
   const effectiveProfileTags = isAuthenticated ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
+  const homeResourceFeed = useHomeResourceFeed();
 
   const getSelectedStreamId = () => {
     const state = useHomeStore.getState();
@@ -131,6 +151,15 @@ function HomeFeedFilters({
   const disabledContentTabs = isVisualActive ? VISUAL_DISABLED_CONTENT : disabledContent;
   // Shown only: the store keeps the choice for the surfaces that allow it.
   const selectedContent = resolveEnabledContent(resolvedContent, disabledContentTabs);
+  // External resources are searched in the network reaches (not Me or Tagged as, and My network only
+  // where Pinakes serves it) and their cards have no Visual tiles: those choices are not listed and
+  // never applied, while the store keeps them.
+  const isResourceContent = selectedContent === CONTENT.RESOURCES;
+  const resourceHiddenReaches = isPinakesReachSetServed()
+    ? RESOURCE_HIDDEN_REACHES
+    : RESOURCE_HIDDEN_REACHES_WITHOUT_NETWORK;
+  // Home's External resources are filtered as on Search, their own Sort included
+  const isHomeResources = isResourceContent && feedVariant === TIMELINE_FEED_VARIANT.HOME;
   const showVisualLayout = allowVisualLayout && !isPhoneViewport;
   const showCardsLayout = feedVariant === TIMELINE_FEED_VARIANT.HOME || feedVariant === TIMELINE_FEED_VARIANT.SEARCH;
 
@@ -144,19 +173,21 @@ function HomeFeedFilters({
           profileTags={effectiveProfileTags}
           onProfileTagAdd={handleProfileTagAdd}
           onProfileTagRemove={handleProfileTagRemove}
-          profileTagsDisabled={!isAuthenticated || !taggedAsActive}
+          profileTagsDisabled={!isAuthenticated || !taggedAsActive || isResourceContent}
+          hiddenTabs={isResourceContent ? resourceHiddenReaches : undefined}
         />
       ) : (
         reachFilter
       )}
-      {!hideSortFilter && <FilterSort selectedTab={sort} onTabChange={handleSortChange} />}
+      {extraFilters ?? (isHomeResources && <SearchResourceFilters feed={homeResourceFeed} />)}
+      {!hideSortFilter && !isHomeResources && <FilterSort selectedTab={sort} onTabChange={handleSortChange} />}
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
           {!hideLayoutFilter && (
             <FilterLayout
               selectedTab={layout}
               onTabChange={setLayout}
-              showVisual={showVisualLayout}
+              showVisual={showVisualLayout && !isResourceContent}
               showCards={showCardsLayout}
             />
           )}
@@ -172,7 +203,7 @@ function HomeFeedFilters({
             <FilterLayout
               selectedTab={layout}
               onTabChange={setLayout}
-              showVisual={showVisualLayout}
+              showVisual={showVisualLayout && !isResourceContent}
               showCards={showCardsLayout}
             />
           )}
@@ -195,6 +226,7 @@ function HomeFeedFilters({
  */
 export function HomeFeedSidebar({
   reachFilter,
+  extraFilters,
   hideSortFilter = false,
   disabledContent,
   allowVisualLayout = false,
@@ -203,6 +235,7 @@ export function HomeFeedSidebar({
   return (
     <HomeFeedFilters
       reachFilter={reachFilter}
+      extraFilters={extraFilters}
       hideSortFilter={hideSortFilter}
       disabledContent={disabledContent}
       allowVisualLayout={allowVisualLayout}
@@ -219,6 +252,7 @@ export function HomeFeedSidebar({
  */
 export function HomeFeedDrawer({
   reachFilter,
+  extraFilters,
   hideSortFilter = false,
   disabledContent,
   allowVisualLayout = false,
@@ -227,6 +261,7 @@ export function HomeFeedDrawer({
   return (
     <HomeFeedFilters
       reachFilter={reachFilter}
+      extraFilters={extraFilters}
       hideSortFilter={hideSortFilter}
       disabledContent={disabledContent}
       allowVisualLayout={allowVisualLayout}
@@ -244,6 +279,7 @@ export function HomeFeedDrawer({
  */
 export function HomeFeedDrawerMobile({
   reachFilter,
+  extraFilters,
   hideSortFilter = false,
   disabledContent,
   allowVisualLayout = false,
@@ -252,6 +288,7 @@ export function HomeFeedDrawerMobile({
   return (
     <HomeFeedFilters
       reachFilter={reachFilter}
+      extraFilters={extraFilters}
       hideSortFilter={hideSortFilter}
       disabledContent={disabledContent}
       hideLayoutFilter

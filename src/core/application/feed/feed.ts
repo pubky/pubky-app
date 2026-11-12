@@ -5,6 +5,7 @@ import {
   encodeObject,
   type Feed,
   feedId,
+  feedResourceTypes,
   isOneOf,
   listPrefix,
   parseUri,
@@ -22,7 +23,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
-import { buildFeedStreamId } from '@/models/feed/feed.helpers';
+import { buildFeedStreamId, readFeedResourceFilters } from '@/models/feed/feed.helpers';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
@@ -94,12 +95,13 @@ export class FeedApplication {
       ? ((await LocalFeedService.read({ feedId: existingId }).catch(() => null)) ?? { created_at: now }).created_at
       : now;
 
-    const { content } = builtFeed.object.feed;
+    const { content, target } = builtFeed.object.feed;
     const feedSchema = this.toLocalFeed({
       id: newId,
       feed: builtFeed.object,
       // Built from this client's input, so always a kind it knows; the type stays open for reads.
-      content: isOneOf(postKinds, content) ? content : null,
+      // A feed of external resources holds its schema.org types there, kept as `resource_types`.
+      content: target !== 'resources' && isOneOf(postKinds, content) ? content : null,
       createdAt,
       updatedAt: now,
     });
@@ -154,7 +156,7 @@ export class FeedApplication {
 
     // Model errors are already logged; cache cleanup must not block the delete itself.
     const feed = await LocalFeedService.read({ feedId }).catch(() => null);
-    let streamId: ReturnType<typeof buildFeedStreamId> | null = null;
+    let streamId: ReturnType<typeof buildFeedStreamId> = null;
     if (feed) {
       try {
         streamId = buildFeedStreamId(feed, userId);
@@ -210,6 +212,9 @@ export class FeedApplication {
       sort: changes.sort ?? existing.sort,
       content: changes.content !== undefined ? changes.content : existing.content,
       layout: changes.layout ?? existing.layout,
+      target: changes.target ?? existing.target,
+      resource_types: changes.resource_types !== undefined ? changes.resource_types : existing.resource_types,
+      resource_filters: changes.resource_filters !== undefined ? changes.resource_filters : existing.resource_filters,
     };
   }
 
@@ -301,7 +306,8 @@ export class FeedApplication {
     const { persisted, removed } = await LocalFeedService.reconcile({ feeds, keepIds: listedIds, isCurrent });
     const streamIds = removed.flatMap((feed) => {
       try {
-        return [buildFeedStreamId(feed, userId)];
+        const streamId = buildFeedStreamId(feed, userId);
+        return streamId ? [streamId] : [];
       } catch {
         // Cache cleanup is ancillary; a malformed row leaves no cache to clear.
         return [];
@@ -322,11 +328,14 @@ export class FeedApplication {
    */
   private static normalizeRemoteFeed(feedUri: string, bytes: Uint8Array): FeedModelSchema | null {
     try {
+      // A target this data model does not know is refused here: such a feed is skipped below.
       const feed = decodeObject(feedUri, bytes, 'feed');
-      const { domain_tags, reach, content } = feed.feed;
+      const { domain_tags, reach, content, target } = feed.feed;
 
-      // A content kind from a newer data model has no stream here.
-      if (content !== null && !isOneOf(postKinds, content)) {
+      // A content kind from a newer data model has no stream here. A feed of external resources
+      // holds its schema.org types there, which the data model has checked.
+      const postKind = target !== 'resources' && content !== null && isOneOf(postKinds, content) ? content : null;
+      if (target !== 'resources' && content !== null && postKind === null) {
         Logger.warn('Skipping feed with an unknown content kind during bootstrap fetch', { content });
         return null;
       }
@@ -341,7 +350,13 @@ export class FeedApplication {
 
       // `created_at` is microseconds; the local row keeps milliseconds.
       const createdAt = Math.floor(feed.created_at / 1000);
-      return this.toLocalFeed({ id: feedId(feed), feed, content, createdAt, updatedAt: createdAt });
+      return this.toLocalFeed({
+        id: feedId(feed),
+        feed,
+        content: postKind,
+        createdAt,
+        updatedAt: createdAt,
+      });
     } catch (error) {
       Logger.warn('Skipping invalid feed during bootstrap fetch', error);
       return null;
@@ -350,7 +365,9 @@ export class FeedApplication {
 
   /** The local row of a stored feed; `content` is the known kind the caller checked. */
   private static toLocalFeed({ id, feed, content, createdAt, updatedAt }: LocalFeedRowParams): FeedModelSchema {
-    const { tags, domain_tags, reach, sort, layout } = feed.feed;
+    const { tags, domain_tags, reach, sort, layout, target } = feed.feed;
+    const types = feedResourceTypes(feed.feed);
+    const filters = target === 'resources' ? readFeedResourceFilters(feed.feed.filters) : null;
     return {
       id,
       name: feed.name,
@@ -361,6 +378,10 @@ export class FeedApplication {
       sort,
       content,
       layout,
+      // A post feed keeps the row it always had: no `target`.
+      ...(target === 'resources' ? { target } : {}),
+      ...(types ? { resource_types: types } : {}),
+      ...(filters ? { resource_filters: filters } : {}),
       created_at: createdAt,
       updated_at: updatedAt,
     };
@@ -483,7 +504,7 @@ export class FeedApplication {
       await FeedModel.deleteById(existingId);
 
       if (oldFeed) {
-        let oldStreamId: ReturnType<typeof buildFeedStreamId> | null = null;
+        let oldStreamId: ReturnType<typeof buildFeedStreamId> = null;
         try {
           oldStreamId = buildFeedStreamId(oldFeed, userId);
         } catch {

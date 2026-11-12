@@ -1035,4 +1035,241 @@ describe('FeedApplication', () => {
       expect(await storedExists(hung.path)).toBe(false);
     });
   });
+
+  describe('feeds of external resources (target)', () => {
+    const resources = (overrides: Partial<TFeedCreateParams> = {}) => built({ target: 'resources', ...overrides });
+
+    it('keeps the id and the bytes a post feed always had, and gives a resources feed its own', async () => {
+      // The id 1.0.0-rc.1, which had no target, gave this filter
+      const post = built();
+      expect(post.id).toBe('E82XC9WBRFDCEAPPAKBC8ZE1EM');
+      expect(built({ target: 'posts' }).id).toBe(post.id);
+      expect(bodyJson(post).feed).not.toHaveProperty('target');
+
+      const feed = resources();
+      expect(feed.id).not.toBe(post.id);
+      expect(bodyJson(feed).feed).toMatchObject({ target: 'resources', content: null });
+      expect(feed.path).toBe(feedPaths(feed.id).private);
+    });
+
+    it('refuses profile tags on a resources feed, as the data model does', () => {
+      expect(() => resources({ domain_tags: ['dev'], reach: 'wot' })).toThrow(AppError);
+    });
+
+    it('creates, reloads, edits and reopens a resources feed with its target, tags, sort and layout', async () => {
+      const feed = resources({ tags: ['music'], layout: 'cards' });
+      const created = await FeedApplication.persist({ userId: owner, params: { feed } });
+      expect(created).toMatchObject({ id: feed.id, target: 'resources', content: null, tags: ['music'] });
+
+      // Reload from the homeserver into a fresh table: the row comes back as it was
+      await FeedModel.table.clear();
+      const [reloaded] = await FeedApplication.fetchFeeds(owner);
+      expect(reloaded).toMatchObject({
+        id: feed.id,
+        target: 'resources',
+        content: null,
+        tags: ['music'],
+        domain_tags: [],
+        reach: 'all',
+        sort: 'recent',
+        layout: 'cards',
+      });
+      expect(buildFeedStreamId(reloaded, owner)).toBeNull();
+
+      // A rename keeps the target, so the id
+      const params = await FeedApplication.prepareUpdateParams({ feedId: feed.id, changes: { name: 'Songs' } });
+      expect(params).toMatchObject({ target: 'resources', content: null, tags: ['music'], layout: 'cards' });
+      const renamed = FeedNormalizer.to({ params, userId: owner });
+      expect(renamed.id).toBe(feed.id);
+      const updated = await FeedApplication.persist({ userId: owner, params: { feed: renamed, existingId: feed.id } });
+      expect(updated).toMatchObject({ id: feed.id, name: 'Songs', target: 'resources' });
+      expect((await storedFeed(feed.id)).feed.target).toBe('resources');
+    });
+
+    it('keeps a post feed and the resources feed of the same filter apart: rows, paths and stream caches', async () => {
+      const post = built();
+      const feed = resources();
+      const postRow = (await FeedApplication.persist({ userId: owner, params: { feed: post } }))!;
+      const resourceRow = (await FeedApplication.persist({ userId: owner, params: { feed } }))!;
+      const postStreamId = await seedStreamCaches(postRow);
+
+      expect(postRow).not.toHaveProperty('target');
+      expect(resourceRow.target).toBe('resources');
+      expect(buildFeedStreamId(resourceRow, owner)).toBeNull();
+      expect((await storedFeed(post.id)).feed.target).toBeNull();
+
+      await FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } });
+
+      expect(await FeedModel.table.get(post.id)).toEqual(postRow);
+      expect(await storedExists(feedPaths(post.id).private)).toBe(true);
+      expect(await PostStreamModel.findById(postStreamId)).not.toBeNull();
+      expect(await UnreadPostStreamModel.findById(postStreamId)).not.toBeNull();
+    });
+
+    it('moves a post feed to its resources id and back through the edit migration', async () => {
+      const post = built();
+      const created = (await FeedApplication.persist({ userId: owner, params: { feed: post } }))!;
+      const oldStreamId = await seedStreamCaches(created);
+
+      const toResources = FeedNormalizer.to({
+        params: await FeedApplication.prepareUpdateParams({ feedId: post.id, changes: { target: 'resources' } }),
+        userId: owner,
+      });
+      const moved = (await FeedApplication.persist({
+        userId: owner,
+        params: { feed: toResources, existingId: post.id },
+      }))!;
+
+      expect(moved).toMatchObject({ id: toResources.id, target: 'resources', created_at: created.created_at });
+      expect(toResources.id).not.toBe(post.id);
+      expect(await FeedModel.table.get(post.id)).toBeUndefined();
+      expect(await storedExists(feedPaths(post.id).private)).toBe(false);
+      expect(await PostStreamModel.findById(oldStreamId!)).toBeNull();
+      expect(await UnreadPostStreamModel.findById(oldStreamId!)).toBeNull();
+
+      const toPosts = FeedNormalizer.to({
+        params: await FeedApplication.prepareUpdateParams({ feedId: moved.id, changes: { target: 'posts' } }),
+        userId: owner,
+      });
+      const back = (await FeedApplication.persist({ userId: owner, params: { feed: toPosts, existingId: moved.id } }))!;
+
+      expect(back.id).toBe(post.id);
+      expect(back).not.toHaveProperty('target');
+      expect(await storedExists(feedPaths(moved.id).private)).toBe(false);
+      expect(bodyJson(toPosts).feed).not.toHaveProperty('target');
+    });
+
+    it('keeps a feed of some schema.org types through create, reload, edit and reopen, under its own id', async () => {
+      const every = resources({ tags: ['music'] });
+      const feed = resources({ tags: ['music'], resource_types: ['MusicRecording', 'MusicAlbum'] });
+      // The types take the content segment, stored sorted: three feeds with three ids
+      expect(new Set([feed.id, every.id, built({ tags: ['music'] }).id]).size).toBe(3);
+      expect(bodyJson(feed).feed).toMatchObject({ target: 'resources', content: 'MusicAlbum,MusicRecording' });
+      expect(resources({ tags: ['music'], resource_types: ['MusicAlbum', 'MusicRecording'] }).id).toBe(feed.id);
+
+      const created = await FeedApplication.persist({ userId: owner, params: { feed } });
+      const types = ['MusicAlbum', 'MusicRecording'];
+      expect(created).toMatchObject({ id: feed.id, target: 'resources', resource_types: types, content: null });
+
+      await FeedModel.table.clear();
+      const [reloaded] = await FeedApplication.fetchFeeds(owner);
+      expect(reloaded).toMatchObject({ id: feed.id, target: 'resources', resource_types: types, content: null });
+
+      const renamed = FeedNormalizer.to({
+        params: await FeedApplication.prepareUpdateParams({ feedId: feed.id, changes: { name: 'Songs' } }),
+        userId: owner,
+      });
+      expect(renamed.id).toBe(feed.id);
+
+      // Every type again moves it to the id of every resource
+      const widened = FeedNormalizer.to({
+        params: await FeedApplication.prepareUpdateParams({ feedId: feed.id, changes: { resource_types: null } }),
+        userId: owner,
+      });
+      expect(widened.id).toBe(every.id);
+      const moved = await FeedApplication.persist({ userId: owner, params: { feed: widened, existingId: feed.id } });
+      expect(moved).not.toHaveProperty('resource_types');
+      expect(await storedExists(feedPaths(feed.id).private)).toBe(false);
+    });
+
+    it('keeps a resources feed’s saved filters through create, reload and edit, under their own id', async () => {
+      const plain = resources({ tags: ['concert'], resource_types: ['Event'] });
+      const filters = { when: 'week', near: '47.37,8.54', radius: '50', place: 'Zürich' };
+      const feed = resources({ tags: ['concert'], resource_types: ['Event'], resource_filters: filters });
+      expect(feed.id).not.toBe(plain.id);
+      expect(bodyJson(feed).feed).toMatchObject({ target: 'resources', content: 'Event', filters });
+      // The point's name is no filter: renaming the place keeps the id
+      expect(
+        resources({ tags: ['concert'], resource_types: ['Event'], resource_filters: { ...filters, place: 'Zurich' } })
+          .id,
+      ).toBe(feed.id);
+
+      const created = await FeedApplication.persist({ userId: owner, params: { feed } });
+      expect(created).toMatchObject({ id: feed.id, resource_types: ['Event'], resource_filters: filters });
+      await FeedModel.table.clear();
+      const [reloaded] = await FeedApplication.fetchFeeds(owner);
+      expect(reloaded).toEqual({ ...created, created_at: reloaded.created_at, updated_at: reloaded.updated_at });
+
+      // Clearing them moves it to the id it has without
+      const cleared = FeedNormalizer.to({
+        params: await FeedApplication.prepareUpdateParams({ feedId: feed.id, changes: { resource_filters: null } }),
+        userId: owner,
+      });
+      expect(cleared.id).toBe(plain.id);
+      const moved = await FeedApplication.persist({ userId: owner, params: { feed: cleared, existingId: feed.id } });
+      expect(moved).not.toHaveProperty('resource_filters');
+      expect(bodyJson(cleared).feed).not.toHaveProperty('filters');
+      // The feed under the old id is gone: its row and its stored object
+      expect(await FeedModel.table.get(feed.id)).toBeUndefined();
+      expect(await FeedModel.table.get(plain.id)).toEqual(moved);
+      expect(await storedExists(feedPaths(feed.id).private)).toBe(false);
+      expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledWith(`pubky://${owner}${feedPaths(feed.id).private}`);
+    });
+
+    it('edits only the place’s name in place: same feed, no delete, the new name written', async () => {
+      const filters = { when: 'week', near: '47.37,8.54', place: 'Zürich' };
+      const feed = resources({ tags: ['concert'], resource_types: ['Event'], resource_filters: filters });
+      await FeedApplication.persist({ userId: owner, params: { feed } });
+      homeserver.spies.putBlob.mockClear();
+
+      const renamed = FeedNormalizer.to({
+        params: await FeedApplication.prepareUpdateParams({
+          feedId: feed.id,
+          changes: { resource_filters: { ...filters, place: 'Zürich Altstadt' } },
+        }),
+        userId: owner,
+      });
+      expect(renamed.id).toBe(feed.id);
+      const edited = await FeedApplication.persist({ userId: owner, params: { feed: renamed, existingId: feed.id } });
+
+      expect(edited).toMatchObject({ id: feed.id, resource_filters: { ...filters, place: 'Zürich Altstadt' } });
+      expect(await FeedModel.table.get(feed.id)).toEqual(edited);
+      expect(await FeedModel.table.count()).toBe(1);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+      expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1);
+      expect((await storedFeed(feed.id)).feed.filters).toMatchObject({ place: 'Zürich Altstadt', near: '47.37,8.54' });
+    });
+
+    it('stores no filters on a post feed', () => {
+      expect(bodyJson(built({ tags: ['music'], resource_filters: { when: 'week' } })).feed).not.toHaveProperty(
+        'filters',
+      );
+    });
+
+    it('round-trips a feed of one schema.org type with no local content filter', async () => {
+      const feed = resources({ tags: ['film'], resource_types: ['VideoObject'] });
+
+      const created = await FeedApplication.persist({ userId: owner, params: { feed } });
+
+      expect(created).toMatchObject({ target: 'resources', resource_types: ['VideoObject'], content: null });
+      await FeedModel.table.clear();
+      const [reloaded] = await FeedApplication.fetchFeeds(owner);
+      // The same row, but for the times (the reload reads the stored microseconds)
+      expect(reloaded).toEqual({ ...created, created_at: reloaded.created_at, updated_at: reloaded.updated_at });
+    });
+
+    it('skips a resources feed whose content is no type list (an older draft saved a family)', async () => {
+      const kept = built();
+      await homeserver.session.storage.putBytes(kept.path, kept.body);
+      const every = resources({ tags: ['music'] });
+      await storeRaw(every.id, { ...bodyJson(every), feed: { ...every.object.feed, content: 'music' } });
+
+      const result = await FeedApplication.fetchFeeds(owner);
+
+      expect(result.map((feed) => feed.id)).toEqual([kept.id]);
+      expect(warn).toHaveBeenCalledWith('Skipping invalid feed during bootstrap fetch', expect.any(Error));
+    });
+
+    it('skips a feed whose target this data model does not know, keeping the rest', async () => {
+      const kept = built();
+      await homeserver.session.storage.putBytes(kept.path, kept.body);
+      const unknown = built({ tags: ['events'] });
+      await storeRaw(unknown.id, { ...bodyJson(unknown), feed: { ...unknown.object.feed, target: 'events' } });
+
+      const result = await FeedApplication.fetchFeeds(owner);
+
+      expect(result.map((feed) => feed.id)).toEqual([kept.id]);
+      expect(warn).toHaveBeenCalledWith('Skipping invalid feed during bootstrap fetch', expect.any(Error));
+    });
+  });
 });

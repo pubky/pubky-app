@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
-import { CONTENT, ContentType, REACH, ReachType, SORT, SortType } from './home.types';
+import { CONTENT, PostContentType, REACH, ReachType, SORT, SortType } from './home.types';
 import {
   getHomeStreamIdFromFilters,
   getKindFromContent,
@@ -8,6 +8,7 @@ import {
   getStreamId,
   getStreamIdFromFilters,
   getTextSearchKind,
+  isPostContent,
   matchesFilters,
   parseStreamId,
   postBelongsToStream,
@@ -33,7 +34,8 @@ describe('filters.utils', () => {
       expect(getKindFromContent(content)).toBe(kind);
     });
 
-    it('covers every CONTENT filter', () => {
+    // External resources lists no posts: it has no kind segment, and no post stream id is built for it
+    it('covers every CONTENT filter over posts', () => {
       const covered = new Set([
         CONTENT.ALL,
         CONTENT.SHORT,
@@ -45,7 +47,7 @@ describe('filters.utils', () => {
         CONTENT.FILES,
         CONTENT.LOCKS,
       ]);
-      expect([...covered].sort()).toEqual(Object.values(CONTENT).sort());
+      expect([...covered].sort()).toEqual(Object.values(CONTENT).filter(isPostContent).sort());
     });
 
     it('builds and parses the Locks stream ids', () => {
@@ -58,6 +60,23 @@ describe('filters.utils', () => {
         reach: REACH.FOLLOWING,
         content: CONTENT.LOCKS,
       });
+    });
+
+    it('gives no post stream for External resources, which lists no posts', () => {
+      for (const reach of [REACH.ALL, REACH.FOLLOWING, REACH.ME]) {
+        expect(
+          getHomeStreamIdFromFilters({
+            sort: SORT.ENGAGEMENT,
+            reach,
+            content: CONTENT.RESOURCES,
+            currentUserPubky: 'viewer-pubky',
+            profileTags: ['bitcoin'],
+            taggedAsActive: true,
+          }),
+        ).toBeNull();
+      }
+      expect(isPostContent(CONTENT.RESOURCES)).toBe(false);
+      expect(isPostContent(CONTENT.LINKS)).toBe(true);
     });
 
     it('carries Locks into the Me and Tagged as stream ids', () => {
@@ -520,7 +539,7 @@ describe('filters.utils', () => {
       ];
 
       testCases.forEach(([sort, reach, content]) => {
-        const streamId = getStreamId(sort as SortType, reach as ReachType, content as ContentType);
+        const streamId = getStreamId(sort as SortType, reach as ReachType, content as PostContentType);
         const parsed = parseStreamId(streamId);
 
         expect(parsed).toEqual({ sort, reach, content });

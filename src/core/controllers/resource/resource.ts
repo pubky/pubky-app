@@ -1,8 +1,48 @@
-import { ResourceApplication } from '@/application/resource/resource';
+import { PinakesApplication } from '@/application/pinakes/pinakes';
+import { ResourceApplication, type TResourceStreamPage } from '@/application/resource/resource';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
+import {
+  getRelatedResourceTags,
+  getResourceSearchRowUri,
+  isNexusRepresentable,
+  type TResourceQuery,
+} from '@/pipes/resource/resource.search';
 import type { TResourceCounts } from '@/services/nexus/resource/resource.types';
+import type {
+  TPinakesCategoryFacet,
+  TPinakesHostFacet,
+  TPinakesPoint,
+  TPinakesTypeFacet,
+} from '@/services/pinakes/pinakes.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
+/** Where the next page of a resource search starts: a Pinakes cursor, or an offset in Nexus' stream. */
+export type TResourceSearchCursor = { source: 'pinakes'; cursor: string } | { source: 'nexus'; skip: number };
+
+/** One page of a resource search. */
+export type TResourceSearchPage = {
+  /**
+   * `pinakes`, or `nexus` when Pinakes failed and the resource stream answered the same query;
+   * `unavailable` when Pinakes is not configured and the stream cannot answer the query.
+   */
+  source: 'pinakes' | 'nexus' | 'unavailable';
+  /** The rows' links, in order (the first web link people wrote for each, else its own). */
+  uris: string[];
+  next: TResourceSearchCursor | null;
+  /** Pinakes' type facet as it came (each type, its path and links), on a page asked with `facets`. */
+  typeFacets?: TPinakesTypeFacet[];
+  /** Tags the rows also carry, to narrow by, on a page asked with `facets`. */
+  relatedTags?: string[];
+  /** The services (hosts) and categories of the whole result, on a page asked with `facets` and the query's `extraFacets`. */
+  hostFacets?: TPinakesHostFacet[];
+  categoryFacets?: TPinakesCategoryFacet[];
+  /** Pinakes searched part of a large network only (Following or Friends). */
+  reachTruncated?: boolean;
+};
+
+/** A place Pinakes knows, with its point: what a search's Where can be around. */
+export type TResourcePlace = { id: string; name: string; point: TPinakesPoint };
 
 /**
  * External resources on Nexus: the counts on a link and the posts replying to it, for the resource
@@ -43,5 +83,116 @@ export class ResourceController {
     const viewerId = useAuthStore.getState().currentUserPubky;
     const isCurrent = captureViewerSession();
     return PostStreamApplication.fetchResourceReplies({ resourceId, viewerId, skip, limit, isCurrent });
+  }
+
+  /**
+   * A page of the external resources people tagged, the latest tagged first; with `tags`, those
+   * tagged with any of them. Network only, for the viewer signed in now.
+   */
+  static fetchStream({
+    tags,
+    skip,
+    limit,
+  }: {
+    tags: readonly string[];
+    skip: number;
+    limit: number;
+  }): Promise<TResourceStreamPage> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    return ResourceApplication.fetchStream({ tags, viewerId, skip, limit });
+  }
+
+  /**
+   * A page of a resource search: Pinakes ranks and filters (and counts the types and tags with
+   * `facets`), each row's card reads its own tags from Nexus. When Pinakes fails on the first page,
+   * or is not configured, Nexus' resource stream answers the query if it can carry it (any of some
+   * tags, Recent, everyone: `isNexusRepresentable`); otherwise the failure stands, never an
+   * unfiltered list.
+   *
+   * @throws AppError when Pinakes fails and the stream cannot stand in, or the stream fails
+   */
+  static async fetchSearchPage({
+    query,
+    cursor = null,
+    limit,
+    facets = false,
+    fresh = false,
+  }: {
+    query: TResourceQuery;
+    cursor?: TResourceSearchCursor | null;
+    limit: number;
+    facets?: boolean;
+    /** Ask Pinakes again whatever its cache holds (a search started over). */
+    fresh?: boolean;
+  }): Promise<TResourceSearchPage> {
+    if (cursor?.source === 'nexus') return this.fetchStreamPage(query, cursor.skip, limit);
+    let page: Awaited<ReturnType<typeof PinakesApplication.searchResources>>;
+    try {
+      page = await PinakesApplication.searchResources(query, { limit, cursor: cursor?.cursor, facets, fresh });
+    } catch (error) {
+      // The error is reported by its factory; a later page keeps its own source
+      if (cursor || !isNexusRepresentable(query)) throw error;
+      return this.fetchStreamPage(query, 0, limit);
+    }
+    if (!page) {
+      // A later page Pinakes no longer serves ends the list; the stream never takes over midway
+      if (cursor) return { source: 'pinakes', uris: [], next: null };
+      return isNexusRepresentable(query)
+        ? this.fetchStreamPage(query, 0, limit)
+        : { source: 'unavailable', uris: [], next: null };
+    }
+    const searched = query.input.kind === 'tags' ? query.input.tags : [];
+    return {
+      source: 'pinakes',
+      uris: page.items.map(getResourceSearchRowUri),
+      next: page.cursor ? { source: 'pinakes', cursor: page.cursor } : null,
+      reachTruncated: page.reach_truncated,
+      ...(facets
+        ? {
+            typeFacets: page.facets?.type ?? [],
+            relatedTags: getRelatedResourceTags(page.facets?.tags ?? [], searched),
+            ...(query.extraFacets?.includes('host') ? { hostFacets: page.facets?.host ?? [] } : {}),
+            ...(query.extraFacets?.includes('category') ? { categoryFacets: page.facets?.category ?? [] } : {}),
+          }
+        : {}),
+    };
+  }
+
+  private static async fetchStreamPage(
+    query: TResourceQuery,
+    skip: number,
+    limit: number,
+  ): Promise<TResourceSearchPage> {
+    const tags = query.input.kind === 'tags' ? query.input.tags : [];
+    const page = await this.fetchStream({ tags, skip, limit });
+    return {
+      source: 'nexus',
+      uris: page.uris,
+      next: page.reachedEnd ? null : { source: 'nexus', skip: skip + page.uris.length },
+    };
+  }
+
+  /**
+   * The places Pinakes knows by this name, best match first, each with its point on the map (one
+   * without a point is left out): what the search's Where offers for a place typed by name.
+   * `[]` when Pinakes is not configured.
+   *
+   * @throws AppError when Pinakes fails
+   */
+  static async fetchPlaces(name: string, limit: number): Promise<TResourcePlace[]> {
+    const page = await PinakesApplication.searchResources(
+      {
+        input: { kind: 'text', text: name },
+        types: ['Place'],
+        sort: 'relevance',
+        reach: 'all',
+        viewer: null,
+        collapse: true,
+      },
+      { limit },
+    );
+    return (page?.items ?? []).flatMap((card) =>
+      card.point ? [{ id: card.id, name: card.name || card.uri, point: card.point }] : [],
+    );
   }
 }

@@ -462,6 +462,59 @@ describe('PinakesService.fetchRelated', () => {
   });
 });
 
+describe('PinakesService.search', () => {
+  const PAGE: TPinakesSearchResponse = {
+    items: [],
+    cursor: 'next',
+    reach_truncated: false,
+    facets: {
+      type: [{ type: 'MusicRecording', type_path: ['Thing', 'CreativeWork', 'MusicRecording'], count: 55 }],
+      tags: [{ label: 'track', count: 29 }],
+    },
+  };
+
+  it('asks for one page with exactly the parameters it is given', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify(PAGE), { status: 200 }));
+
+    await expect(
+      PinakesService.search({ tags: 'music', sort: 'activity', facet: 'type,tags', limit: '10' }),
+    ).resolves.toEqual(PAGE);
+
+    const url = requestedUrl();
+    expect(url.pathname).toBe('/v1/search');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      tags: 'music',
+      sort: 'activity',
+      facet: 'type,tags',
+      limit: '10',
+    });
+  });
+
+  it('answers a page asked again from the cache, and nothing without Pinakes or its search', async () => {
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify(PAGE), { status: 200 }));
+    await PinakesService.search({ tags: 'jazz', limit: '10' });
+    await PinakesService.search({ tags: 'jazz', limit: '10' });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    mockFetch.mockResolvedValue(new Response(null, { status: 404 }));
+    await expect(PinakesService.search({ tags: 'nothing', limit: '10' })).resolves.toBeNull();
+
+    mocks.pinakesUrl = undefined;
+    mockFetch.mockClear();
+    await expect(PinakesService.search({ tags: 'music', limit: '10' })).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('fails as an AppError with the status when Pinakes refuses the query, without asking again', async () => {
+    mockFetch.mockResolvedValue(new Response('{"error":"invalid cursor"}', { status: 400 }));
+
+    const error = await PinakesService.search({ cursor: 'garbage', limit: '10' }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ context: expect.objectContaining({ statusCode: 400 }) });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('PinakesService.fetchGroup', () => {
   it('returns every member card of the group', async () => {
     mockFetch.mockResolvedValue(capturedResponse('group.video'));

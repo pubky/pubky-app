@@ -1,0 +1,149 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import type { TResourceQuery } from '@/pipes/resource/resource.search';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { ResourceController } from './resource';
+
+const mocks = vi.hoisted(() => ({ search: vi.fn(), stream: vi.fn() }));
+
+vi.mock('@/application/pinakes/pinakes', () => ({ PinakesApplication: { searchResources: mocks.search } }));
+vi.mock('@/application/resource/resource', () => ({ ResourceApplication: { fetchStream: mocks.stream } }));
+
+const card = (uri: string, refs: string[] = [uri]) => ({
+  id: uri,
+  uri,
+  refs,
+  status: 'ok',
+  type_path: [],
+  also_on: [],
+  open_in: [],
+  collections: 0,
+});
+const recentTags = (overrides: Partial<TResourceQuery> = {}): TResourceQuery => ({
+  input: { kind: 'tags', tags: ['music'] },
+  sort: 'recent',
+  reach: 'all',
+  viewer: null,
+  collapse: true,
+  ...overrides,
+});
+const failure = () =>
+  Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'Pinakes is down', {
+    service: ErrorService.Pinakes,
+    operation: 'search',
+  });
+
+describe('ResourceController.fetchSearchPage', () => {
+  beforeEach(() => {
+    mocks.search.mockReset();
+    mocks.stream.mockReset();
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
+  });
+
+  it('reads the page from Pinakes, with its rows’ links, next cursor and facets rolled up', async () => {
+    mocks.search.mockResolvedValue({
+      items: [card('isbn:1', ['https://example.com/book']), card('https://example.com/song')],
+      cursor: 'c2',
+      reach_truncated: false,
+      facets: {
+        type: [{ type: 'Book', type_path: ['Thing', 'CreativeWork', 'Book'], count: 3 }],
+        tags: [
+          { label: 'music', count: 9 },
+          { label: 'track', count: 4 },
+        ],
+      },
+    });
+    const query = recentTags({ sort: 'activity' });
+
+    const page = await ResourceController.fetchSearchPage({ query, limit: 10, facets: true });
+
+    expect(mocks.search).toHaveBeenCalledWith(query, { limit: 10, cursor: undefined, facets: true, fresh: false });
+    expect(page).toEqual({
+      source: 'pinakes',
+      uris: ['https://example.com/book', 'https://example.com/song'],
+      next: { source: 'pinakes', cursor: 'c2' },
+      typeFacets: [{ type: 'Book', type_path: ['Thing', 'CreativeWork', 'Book'], count: 3 }],
+      relatedTags: ['track'],
+      reachTruncated: false,
+    });
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the resource stream for a first page the stream can answer as asked', async () => {
+    mocks.search.mockRejectedValue(failure());
+    mocks.stream.mockResolvedValue({ uris: ['https://example.com/a'], reachedEnd: false });
+
+    const page = await ResourceController.fetchSearchPage({ query: recentTags(), limit: 10 });
+
+    expect(mocks.stream).toHaveBeenCalledWith({ tags: ['music'], viewerId: 'viewer', skip: 0, limit: 10 });
+    expect(page).toEqual({ source: 'nexus', uris: ['https://example.com/a'], next: { source: 'nexus', skip: 1 } });
+
+    // and keeps paging the stream from there
+    mocks.stream.mockResolvedValue({ uris: ['https://example.com/b'], reachedEnd: true });
+    await expect(
+      ResourceController.fetchSearchPage({ query: recentTags(), cursor: { source: 'nexus', skip: 1 }, limit: 10 }),
+    ).resolves.toEqual({ source: 'nexus', uris: ['https://example.com/b'], next: null });
+    expect(mocks.search).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['Popular', recentTags({ sort: 'activity' })],
+    ['a reach', recentTags({ reach: 'following', viewer: 'viewer' })],
+    ['a type', recentTags({ types: ['MusicRecording'] })],
+    ['a text', recentTags({ input: { kind: 'text', text: 'daft punk' } })],
+  ])('keeps the failure for a query the stream cannot carry (%s), never an unfiltered list', async (_, query) => {
+    mocks.search.mockRejectedValue(failure());
+
+    await expect(ResourceController.fetchSearchPage({ query, limit: 10 })).rejects.toThrow('Pinakes is down');
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  it('keeps the failure of a later Pinakes page', async () => {
+    mocks.search.mockRejectedValue(failure());
+
+    await expect(
+      ResourceController.fetchSearchPage({
+        query: recentTags(),
+        cursor: { source: 'pinakes', cursor: 'c2' },
+        limit: 10,
+      }),
+    ).rejects.toThrow('Pinakes is down');
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  it('ends the list when Pinakes no longer serves a later page, without the stream taking over', async () => {
+    mocks.search.mockResolvedValue(null);
+
+    await expect(
+      ResourceController.fetchSearchPage({
+        query: recentTags(),
+        cursor: { source: 'pinakes', cursor: 'c2' },
+        limit: 10,
+      }),
+    ).resolves.toEqual({ source: 'pinakes', uris: [], next: null });
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  it('asks Pinakes past its cache when told', async () => {
+    mocks.search.mockResolvedValue({ items: [], cursor: null, reach_truncated: false });
+    const query = recentTags({ sort: 'activity' });
+
+    await ResourceController.fetchSearchPage({ query, limit: 10, fresh: true });
+
+    expect(mocks.search).toHaveBeenCalledWith(query, { limit: 10, cursor: undefined, facets: false, fresh: true });
+  });
+
+  it('without Pinakes, answers from the stream when it can and says so when it cannot', async () => {
+    mocks.search.mockResolvedValue(null);
+    mocks.stream.mockResolvedValue({ uris: [], reachedEnd: true });
+
+    await expect(ResourceController.fetchSearchPage({ query: recentTags(), limit: 10 })).resolves.toMatchObject({
+      source: 'nexus',
+    });
+    await expect(
+      ResourceController.fetchSearchPage({ query: recentTags({ sort: 'trending' }), limit: 10 }),
+    ).resolves.toEqual({ source: 'unavailable', uris: [], next: null });
+  });
+});

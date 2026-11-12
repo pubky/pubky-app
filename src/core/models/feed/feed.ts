@@ -1,10 +1,16 @@
 import { Table } from 'dexie';
-import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
+import type {
+  KnownFeedLayout,
+  KnownFeedReach,
+  KnownFeedSort,
+  KnownFeedTarget,
+  KnownPostKind,
+} from 'pubky-social-specs';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { FeedModelSchema, TFeedResourceFilters } from '@/models/feed/feed.schema';
 import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
 
 export class FeedModel extends RecordModelBase<string, FeedModelSchema> implements FeedModelSchema {
@@ -18,6 +24,9 @@ export class FeedModel extends RecordModelBase<string, FeedModelSchema> implemen
   sort: KnownFeedSort;
   content: KnownPostKind | null;
   layout: KnownFeedLayout;
+  target?: KnownFeedTarget;
+  resource_types?: string[] | null;
+  resource_filters?: TFeedResourceFilters | null;
   created_at: number;
   updated_at: number;
 
@@ -31,6 +40,10 @@ export class FeedModel extends RecordModelBase<string, FeedModelSchema> implemen
     this.sort = feed.sort;
     this.content = feed.content;
     this.layout = feed.layout;
+    // Absent on a post feed's row, as on every row before the field existed.
+    if (feed.target !== undefined) this.target = feed.target;
+    if (feed.resource_types != null) this.resource_types = feed.resource_types;
+    if (feed.resource_filters != null) this.resource_filters = feed.resource_filters;
     this.created_at = feed.created_at;
     this.updated_at = feed.updated_at;
   }
