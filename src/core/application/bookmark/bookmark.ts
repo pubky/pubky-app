@@ -87,8 +87,9 @@ export class BookmarkApplication {
    * Writes the bookmark locally, then PUTs or DELETEs its file, holding `bookmarkSyncLock` `shared`.
    * Resolves true once the write ran, false when it was skipped because the account changed while it
    * waited for the lock or ran (`TBookmarkPersistInput.isCurrent`): nothing landed for the account that is
-   * current now (a row written before the change goes with that account's database), so the caller
-   * announces nothing.
+   * current now, so the caller announces nothing. A row written before the change is cleared by the logout
+   * or account switch that changed the viewer; after a same-account session replacement it stays until
+   * the next listing reconciles it.
    */
   static async persist(action: HttpMethod, params: TBookmarkPersistInput): Promise<boolean> {
     const { postId, userId, bookmarkUrl, bookmarkBody } = params;

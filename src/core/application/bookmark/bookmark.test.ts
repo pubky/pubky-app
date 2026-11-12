@@ -591,6 +591,29 @@ describe('BookmarkApplication', () => {
       expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
     });
 
+    it.each([HttpMethod.PUT, HttpMethod.DELETE])(
+      'reports a %s skipped when the account changes during the local write, and syncs nothing',
+      async (method) => {
+        const isCreate = method === HttpMethod.PUT;
+        if (!isCreate) await LocalBookmarkService.persist(HttpMethod.PUT, { postId: compositeAt(1) });
+        let current = true;
+        const persist = LocalBookmarkService.persist.bind(LocalBookmarkService);
+        vi.spyOn(LocalBookmarkService, 'persist').mockImplementationOnce(async (action, params) => {
+          await persist(action, params);
+          // Signed out while the row was being written: the second guard, before the sync, must fire.
+          current = false;
+        });
+
+        const ran = await (isCreate ? bookmark : unbookmark)(BookmarkApplication, 1, () => current);
+
+        // The row landed as written (the logout clears it); the homeserver never hears of it.
+        expect(ran).toBe(false);
+        expect(await BookmarkApplication.exists(compositeAt(1))).toBe(isCreate);
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+        expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+      },
+    );
+
     it('releases the lock when the listing fails, so a write that follows runs', async () => {
       installWebLocks();
       homeserver.spies.listAll.mockRejectedValueOnce(homeserverFailure(HttpMethod.GET));

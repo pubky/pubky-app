@@ -134,7 +134,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
             postId: parsed.compositeId,
             userId: currentUserPubky,
           });
-          // false: the account changed while the write waited for the sync lock; nothing to announce.
+          // false: the account changed while the write waited for the sync lock or ran; nothing to announce.
           if (!saved) return false;
         } else {
           await PostController.commitUpdateCollectionItem({
