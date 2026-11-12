@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from './ResourceCardSkeleton';
 
+const LONG_LINK = 'btc:block/00000000000000000002a7c4c1e48d76c5a37902165a270156b7a8d72728a054';
+
 describe('ResourceCardSkeleton', () => {
   it('renders the card outline from skeleton blocks', () => {
     render(<ResourceCardSkeleton />);
@@ -68,6 +70,41 @@ describe('ResourceCardSkeleton', () => {
     expect(skeleton).toHaveAttribute('data-size', 'large');
     expect(skeleton).toHaveClass('bg-card');
     expect(skeleton).not.toHaveClass('bg-embed');
+  });
+
+  describe('given the link being read', () => {
+    it('shows the link as the title, shortened, the full link in its tooltip, and says the rest is loading', () => {
+      render(<ResourceCardSkeleton size="large" link={LONG_LINK} />);
+
+      const title = screen.getByTestId('resource-card-skeleton-title');
+      expect(title.tagName).toBe('H2');
+      expect(title).toHaveTextContent('btc:block/0000...7a8d72728a054');
+      expect(title).toHaveAttribute('title', LONG_LINK);
+      expect(title).toHaveClass('text-xl', 'font-bold', 'wrap-anywhere', 'text-foreground', 'sm:text-2xl');
+      expect(screen.getByRole('status')).toHaveTextContent('Loading details...');
+      // The image and the two description lines stay skeletons; a link that is not web has no site.
+      expect(screen.queryByTestId('resource-card-source')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-skeleton').querySelectorAll('[data-slot="skeleton"]')).toHaveLength(5);
+    });
+
+    it('keeps a short link whole and names a web link’s site in the header, as its preview does', () => {
+      render(<ResourceCardSkeleton size="large" link="https://www.example.com/a" />);
+
+      expect(screen.getByTestId('resource-card-skeleton-title').textContent).toBe('example.com/a');
+      const source = screen.getByTestId('resource-card-source');
+      expect(source).toHaveAttribute('href', 'https://www.example.com/a');
+      expect(source).toHaveAccessibleName('Open in example.com');
+      // Only the image and the two description lines are left to load.
+      expect(screen.getByTestId('resource-card-skeleton').querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
+    });
+  });
+
+  it('shows the given footer in place of the bottom zone’s skeleton', () => {
+    render(<ResourceCardSkeleton withActions size="large" actions={<div data-testid="real-actions" />} />);
+
+    expect(screen.getByTestId('real-actions')).toBeInTheDocument();
+    expect(screen.queryByTestId('resource-card-skeleton-actions')).not.toBeInTheDocument();
+    expect(screen.getByTestId('resource-card-skeleton').children).toHaveLength(2);
   });
 
   it('takes the large card’s surface and placeholders, at the normal size, for a card that is the item itself', () => {
