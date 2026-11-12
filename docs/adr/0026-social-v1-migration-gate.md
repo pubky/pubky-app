@@ -3,7 +3,8 @@
 ## Status
 
 Accepted — 2026-10-30, for the `pubky-social-specs` 1.x port (`docs/migrations/social-v1.md`).  
-Updated — 2026-11-11 (outcome policy and telemetry brought in line with the controller and `report-telemetry.ts`)
+Updated — 2026-11-11 (outcome policy and telemetry brought in line with the controller and `report-telemetry.ts`)  
+Updated — 2026-11-12 (the restore's flag read bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; a timeout ends in `temporary-error`)
 
 ## Context
 
@@ -104,7 +105,12 @@ private root) and `UNKNOWN_ERROR` for any other code; a thrown engine error is `
 by `errorName`, `kind` and `status` only; `CAPS_MISSING` is `Err.auth(FORBIDDEN)`; a failed load of the migrator's chunk
 is `Err.network(CONNECTION_FAILED)` (code `ENGINE_LOAD`, the import rejection as the cause; the service throws that
 failure uncaptured so this guard decides the single capture). Counts only: the report's `skipped`, `notes`,
-`droppedValues` and `current` name the user's files and never leave the browser (`docs/error-handling.md`).
+`droppedValues` and `current` name the user's files and never leave the browser (`docs/error-handling.md`). The
+restore's flag read is the one gate step with a deadline: `awaitBounded` waits `HOMESERVER_SYNC_READ_TIMEOUT_MS` (30 s)
+for the GET, which the SDK cannot cancel, then rejects with `Err.timeout(REQUEST_TIMEOUT)` (operation
+`readMigrationFlag`, context the pubky and the bound only), and `AuthController` ends the restore in `temporary-error`
+(`/migration` shows Retry; the focus and network-return retries apply); the engine run, its Web Lock wait and the flag
+write are not bounded.
 
 ## Consequences
 

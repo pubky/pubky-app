@@ -96,7 +96,8 @@ export function getHomeserverCapabilities(): Capabilities {
  * How long one homeserver read held under a per-user sync lock may stay pending before `awaitBounded`
  * (`src/core/utils/bounded-read.ts`) stops waiting for it: the whole paginated LIST of the mute, bookmark or feed
  * fetch (every page shares the one bound), a bookmark GET batch, a feed GET. A bound on how long a read that never
- * answers can hold the lock, and the writes of every tab behind it; not a product limit.
+ * answers can hold the lock, and the writes of every tab behind it; not a product limit. The migration gate's flag
+ * read on a restore (`SocialMigrationApplication.readFlag`) reuses it: it holds no lock, but it holds the restore.
  * Fixed (not configurable via env); see `docs/environment.md`.
  */
 export const HOMESERVER_SYNC_READ_TIMEOUT_MS = 30_000;
