@@ -14,18 +14,21 @@ import { PostActionButton, type PostActionSurface } from '@/organisms/PostAction
  * in. Without a web link (`null`: a resource known only as `isbn:`, `doi:`, ...) it is disabled, as
  * the composer embeds web links only. Inside a post being written (`isWriting`) it is disabled too,
  * its count kept: it would open another composer over that one.
- * `surface` is what the row sits on (`muted` on a card in a post).
+ * `surface` is what the row sits on (`muted` on a card in a post). With `onPost` its owner opens the
+ * composer (`ResourceActions` `onPost`).
  */
 export function ResourcePostButton({
   uri,
   count,
   surface = 'muted',
   isWriting = false,
+  onPost,
 }: {
   uri: string | null;
   count?: number;
   surface?: PostActionSurface;
   isWriting?: boolean;
+  onPost?: (uri: string) => void;
 }) {
   const { requireAuth } = useRequireAuth();
   const [open, setOpen] = useState(false);
@@ -42,7 +45,7 @@ export function ResourcePostButton({
         }
         title={label}
         disabled={!uri || isWriting}
-        onClick={() => requireAuth(() => setOpen(true))}
+        onClick={() => requireAuth(() => (onPost && uri ? onPost(uri) : setOpen(true)))}
         data-testid="resource-post-button"
       />
       {open && uri && <DialogNewPost open={open} onOpenChangeAction={setOpen} initialContent={uri} />}

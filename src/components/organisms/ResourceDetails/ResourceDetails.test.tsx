@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
@@ -62,6 +63,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     playOn,
     size,
     replyCount,
+    onReply,
+    onPost,
   }: {
     uri: string;
     spellings?: readonly string[];
@@ -76,6 +79,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     playOn?: React.ReactNode;
     size?: string;
     replyCount?: number;
+    onReply?: (uri: string) => void;
+    onPost?: (uri: string) => void;
   }) => (
     <div
       data-testid="resource-actions"
@@ -93,6 +98,37 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     >
       {playOn}
       <div data-testid="resource-other-tag-list" data-labels={otherTagList?.map((tag) => tag.label).join(',')} />
+      <button type="button" data-testid="reply-button-stub" onClick={() => onReply?.(uri)}>
+        Reply
+      </button>
+      <button type="button" data-testid="post-button-stub" onClick={() => postUri && onPost?.(postUri)}>
+        Post about this
+      </button>
+    </div>
+  ),
+}));
+// The page's Reply dialog: only which link it answers and whether it keeps its draft matter.
+vi.mock('@/organisms/DialogReply/DialogReply', () => ({
+  DialogReply: ({
+    resourceUri,
+    onOpenChangeAction,
+  }: {
+    resourceUri: string;
+    onOpenChangeAction: (o: boolean) => void;
+  }) => (
+    <div data-testid="reply-dialog-stub" data-uri={resourceUri}>
+      <textarea aria-label="Reply" data-testid="reply-dialog-text" />
+      <button type="button" onClick={() => onOpenChangeAction(false)}>
+        Close reply
+      </button>
+    </div>
+  ),
+}));
+// The page's Post about this composer: only its text and whether it keeps its draft matter.
+vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => ({
+  DialogNewPost: ({ initialContent }: { initialContent?: string }) => (
+    <div data-testid="new-post-dialog-stub" data-content={initialContent}>
+      <textarea aria-label="New post" data-testid="new-post-dialog-text" />
     </div>
   ),
 }));
@@ -616,26 +652,120 @@ describe('ResourceDetails', () => {
     expect(screen.getByRole('region', { name: 'Loading external resource' })).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('shows the card skeleton while the link is read', () => {
+  it('shows the link, its site and its footer in the card skeleton while the link is read', () => {
     read = LOADING;
-    renderDetails(VIDEO.uri);
+    renderDetails(NOT_KNOWN);
 
-    expect(screen.getByTestId('resource-card-skeleton')).toHaveAttribute('data-size', 'large');
-    // The same frame as the card: its bottom zone of actions and tags too.
-    expect(screen.getByTestId('resource-card-skeleton-actions')).toBeInTheDocument();
+    const skeleton = screen.getByTestId('resource-card-skeleton');
+    expect(skeleton).toHaveAttribute('data-size', 'large');
+    // The link as its preview shows it, shortened, the full link in its tooltip.
+    const title = screen.getByRole('heading', { level: 2 });
+    expect(title).toHaveTextContent('example.com/pi...his-link-1104');
+    expect(title).toHaveAttribute('title', NOT_KNOWN);
+    expect(within(skeleton).getByRole('status')).toHaveTextContent('Loading details...');
+    const source = within(skeleton).getByTestId('resource-card-source');
+    expect(source).toHaveAttribute('href', NOT_KNOWN);
+    expect(source).toHaveAccessibleName('Open in example.com');
+    // The real footer, as the link's preview has it: tags and replies are Nexus', by link.
+    expect(screen.queryByTestId('resource-card-skeleton-actions')).not.toBeInTheDocument();
+    const actions = within(skeleton).getByTestId('resource-actions');
+    expect(actions).toHaveAttribute('data-uri', NOT_KNOWN);
+    expect(actions).toHaveAttribute('data-spellings', '');
+    expect(actions).toHaveAttribute('data-post-uri', NOT_KNOWN);
+    expect(actions).toHaveAttribute('data-link-url', NOT_KNOWN);
+    expect(actions).toHaveAttribute('data-tags-label', 'Tags on the external resource');
+    expect(actions).toHaveAttribute('data-size', 'large');
+    expect(actions).toHaveAttribute('data-reply-count', '2');
     expect(mockRelated).not.toHaveBeenCalled();
   });
+
+  it('keeps the header skeleton for a link that is not web, and its scheme in the title', () => {
+    read = LOADING;
+    renderDetails('isbn:0000000000');
+
+    const skeleton = screen.getByTestId('resource-card-skeleton');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('isbn:0000000000');
+    expect(within(skeleton).queryByTestId('resource-card-source')).not.toBeInTheDocument();
+    expect(within(skeleton).queryByRole('link')).not.toBeInTheDocument();
+    const actions = within(skeleton).getByTestId('resource-actions');
+    expect(actions).toHaveAttribute('data-uri', 'isbn:0000000000');
+    expect(actions).toHaveAttribute('data-post-uri', 'none');
+    expect(actions).toHaveAttribute('data-link-url', 'none');
+  });
+
+  it('keeps the loading card’s footer from the first read through the resolve', () => {
+    read = LOADING;
+    const { rerender } = renderDetails(NOT_KNOWN);
+    const actions = screen.getByTestId('resource-actions');
+    // No thread until the card is first read.
+    expect(screen.queryByTestId('resource-replies-stub')).not.toBeInTheDocument();
+
+    read = { data: null, isLoading: false, isError: false, isResolving: true } as typeof read;
+    rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+    expect(screen.getByTestId('resource-actions')).toBe(actions);
+    expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+  });
+
+  it('opens the page’s Reply dialog on the acted-on link from the card’s footer, and closes it', () => {
+    renderDetails(VIDEO.uri);
+
+    fireEvent.click(screen.getByTestId('reply-button-stub'));
+    expect(screen.getByTestId('reply-dialog-stub')).toHaveAttribute('data-uri', VIDEO.uri);
+    fireEvent.click(screen.getByRole('button', { name: 'Close reply' }));
+    expect(screen.queryByTestId('reply-dialog-stub')).not.toBeInTheDocument();
+  });
+
+  it('opens the Reply dialog pressed during the first read once the thread’s link is known', () => {
+    read = LOADING;
+    const { rerender } = renderDetails(NOT_KNOWN);
+    fireEvent.click(screen.getByTestId('reply-button-stub'));
+    expect(screen.queryByTestId('reply-dialog-stub')).not.toBeInTheDocument();
+
+    read = { data: null, isLoading: false, isError: false, isResolving: true } as typeof read;
+    rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+    expect(screen.getByTestId('reply-dialog-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+  });
+
+  it('opens one composer at a time: Post about this pressed after a Reply waiting for the first read', () => {
+    read = LOADING;
+    const { rerender } = renderDetails(NOT_KNOWN);
+    fireEvent.click(screen.getByTestId('reply-button-stub'));
+    fireEvent.click(screen.getByTestId('post-button-stub'));
+    expect(screen.getByTestId('new-post-dialog-stub')).toHaveAttribute('data-content', NOT_KNOWN);
+
+    read = { data: null, isLoading: false, isError: false, isResolving: true } as typeof read;
+    rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+    expect(screen.getByTestId('new-post-dialog-stub')).toBeInTheDocument();
+    expect(screen.queryByTestId('reply-dialog-stub')).not.toBeInTheDocument();
+  });
+
+  it.each(['btc:block/850000', 'javascript:alert(1)'])(
+    'holds the footer’s place with its skeleton for %s, which the app writes only once it has a card',
+    (uri) => {
+      read = LOADING;
+      renderDetails(uri);
+
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(uri);
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-skeleton-actions')).toBeInTheDocument();
+    },
+  );
 
   describe('while Pinakes reads a link it did not know', () => {
     const RESOLVING = { data: null, isLoading: false, isError: false, isResolving: true };
 
-    it('shows the large card’s skeleton, announced as loading, in place of the link’s preview', () => {
+    it('shows the large card’s loading card, announced as loading, in place of the link’s preview', () => {
       read = RESOLVING;
       renderDetails(NOT_KNOWN);
 
       expect(screen.getByRole('region', { name: 'Loading external resource' })).toHaveAttribute('aria-busy', 'true');
-      expect(screen.getByTestId('resource-card-skeleton')).toHaveAttribute('data-size', 'large');
-      expect(screen.getByTestId('resource-card-skeleton-actions')).toBeInTheDocument();
+      const skeleton = screen.getByTestId('resource-card-skeleton');
+      expect(skeleton).toHaveAttribute('data-size', 'large');
+      expect(within(skeleton).getByRole('status')).toHaveTextContent('Loading details...');
+      expect(within(skeleton).getByTestId('resource-actions')).toHaveAttribute('data-uri', NOT_KNOWN);
       expect(screen.queryByTestId('resource-unknown')).not.toBeInTheDocument();
       expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
     });
@@ -656,15 +786,87 @@ describe('ResourceDetails', () => {
       expect(composer).toHaveValue('Half a reply');
     });
 
-    it('shows the link’s preview once Pinakes refused or gave up', () => {
+    it.each([
+      [
+        'the card it read',
+        () => settled({ ...ORDINARY_VIDEO, uri: NOT_KNOWN, refs: [NOT_KNOWN], aliases: [], group: null }),
+        'resource-card',
+      ],
+      ['the link’s preview', () => settled(null), 'resource-link-card'],
+    ])('keeps a reply being written in the Reply dialog through to %s', (_name, next, shown) => {
       read = RESOLVING;
       const { rerender } = renderDetails(NOT_KNOWN);
+      fireEvent.click(screen.getByTestId('reply-button-stub'));
+      const draft = screen.getByTestId('reply-dialog-text');
+      fireEvent.change(draft, { target: { value: 'Half a reply' } });
+
+      read = next();
+      rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+      expect(screen.getByTestId(shown)).toBeInTheDocument();
+      expect(screen.getByTestId('reply-dialog-text')).toBe(draft);
+      expect(draft).toHaveValue('Half a reply');
+      expect(screen.getByTestId('reply-dialog-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+    });
+
+    it('keeps a post being written about the link through to the card it read', () => {
+      read = RESOLVING;
+      const { rerender } = renderDetails(NOT_KNOWN);
+      fireEvent.click(screen.getByTestId('post-button-stub'));
+      const draft = screen.getByTestId('new-post-dialog-text');
+      fireEvent.change(draft, { target: { value: 'Half a post' } });
+
+      read = settled({ ...ORDINARY_VIDEO, uri: NOT_KNOWN, refs: [NOT_KNOWN], aliases: [], group: null });
+      rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.getByTestId('new-post-dialog-text')).toBe(draft);
+      expect(draft).toHaveValue('Half a post');
+      expect(screen.getByTestId('new-post-dialog-stub')).toHaveAttribute('data-content', NOT_KNOWN);
+    });
+
+    it('keeps the Reply dialog on the link pressed when the card read has another canonical link', () => {
+      read = RESOLVING;
+      const { rerender } = renderDetails(NOT_KNOWN);
+      fireEvent.click(screen.getByTestId('reply-button-stub'));
+
+      read = settled({ ...ORDINARY_VIDEO, refs: [NOT_KNOWN], aliases: [], group: null });
+      rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-uri', ORDINARY_VIDEO.uri);
+      expect(screen.getByTestId('reply-dialog-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+    });
+
+    it('shows the loading card, not a bare skeleton, while the link’s preview is read after a refusal', () => {
+      read = RESOLVING;
+      const { rerender } = renderDetails(NOT_KNOWN);
+      vi.mocked(useOgMetadata).mockReturnValue({ metadata: null, isLoading: true, error: null });
+      onTestFinished(() => {
+        vi.mocked(useOgMetadata).mockReturnValue({ metadata: null, isLoading: false, error: null });
+      });
+
+      read = settled(null);
+      rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
+
+      const skeleton = within(screen.getByTestId('resource-unknown')).getByTestId('resource-card-skeleton');
+      expect(within(skeleton).getByRole('status')).toHaveTextContent('Loading details...');
+      expect(within(skeleton).getByTestId('resource-actions')).toHaveAttribute('data-uri', NOT_KNOWN);
+      expect(screen.queryByTestId('resource-card-skeleton-actions')).not.toBeInTheDocument();
+    });
+
+    it('shows the link’s preview once Pinakes refused or gave up, keeping the thread and a half-typed quick reply', () => {
+      read = RESOLVING;
+      const { rerender } = renderDetails(NOT_KNOWN);
+      const composer = screen.getByTestId('quick-reply-stub');
+      fireEvent.change(composer, { target: { value: 'Half a reply' } });
 
       read = settled(null);
       rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
 
       expect(screen.queryByTestId('resource-loading')).not.toBeInTheDocument();
       expect(screen.getByTestId('resource-link-card')).toHaveAttribute('data-size', 'large');
+      expect(screen.getByTestId('quick-reply-stub')).toBe(composer);
+      expect(composer).toHaveValue('Half a reply');
     });
   });
 

@@ -738,6 +738,37 @@ describe('ResourceActions', () => {
       expect(mocks.signInRequests).toBe(1);
     });
 
+    it('hands the reply to its owner’s dialog when it has one, opening none of its own', () => {
+      const onReply = vi.fn();
+      render(<ResourceActions uri={URI} postUri={LINK} tagsLabel="Tags on this song" onReply={onReply} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reply to this external resource' }));
+
+      expect(onReply).toHaveBeenCalledWith(URI);
+      expect(screen.queryByTestId('reply-dialog')).not.toBeInTheDocument();
+    });
+
+    it('asks to sign in instead of handing the reply to its owner when signed out', () => {
+      mocks.isSignedIn = false;
+      const onReply = vi.fn();
+      render(<ResourceActions uri={URI} postUri={LINK} tagsLabel="Tags on this song" onReply={onReply} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reply to this external resource' }));
+
+      expect(onReply).not.toHaveBeenCalled();
+      expect(mocks.signInRequests).toBe(1);
+    });
+
+    it('hands Post about this to its owner’s composer when it has one, opening none of its own', () => {
+      const onPost = vi.fn();
+      render(<ResourceActions uri={URI} postUri={LINK} tagsLabel="Tags on this song" onPost={onPost} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Post about this' }));
+
+      expect(onPost).toHaveBeenCalledWith(LINK);
+      expect(screen.queryByTestId('new-post-dialog')).not.toBeInTheDocument();
+    });
+
     it('replies on the resource page too, the resource being the parent', () => {
       render(<ResourceActions uri={URI} postUri={LINK} tagsLabel="Tags on this song" linkUrl={LINK} size="large" />);
 

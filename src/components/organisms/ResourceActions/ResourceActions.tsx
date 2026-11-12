@@ -52,8 +52,19 @@ interface ResourceActionsProps {
   collectionsCount?: number | null;
   /** The page thread's reply count (`useResourceReplies`); else Nexus' count read with the tags. */
   replyCount?: number;
-  /** Called with a reply's id once the Reply dialog wrote it: the page's thread shows it at once. */
+  /**
+   * Called with a reply's id once the footer's own Reply dialog wrote it: the page's thread shows it
+   * at once. Not called with `onReply`: the owner's dialog reports its replies itself.
+   */
   onReplySubmitted?: (replyId: string) => void;
+  /**
+   * Opens the Reply dialog on `uri` where its owner renders it, as a post's page owns its dialogs
+   * (`usePostReplyRepostDialogs`): the resource page, whose cards replace each other while it loads.
+   * Without it the footer opens its own.
+   */
+  onReply?: (uri: string) => void;
+  /** Opens Post about this's composer on `postUri` where its owner renders it, as `onReply`. */
+  onPost?: (postUri: string) => void;
   /** Names what is tagged ("Tags on this video"): the tag list's name and the Tags button's tooltip. */
   tagsLabel: string;
   /** The link's web address (`getResourceLinks().linkUrl`) for the ⋯ menu; `null` for a non-web URI. */
@@ -122,6 +133,8 @@ export function ResourceActions({
   size = 'default',
   replyCount,
   onReplySubmitted,
+  onReply,
+  onPost,
 }: ResourceActionsProps) {
   const { requireAuth } = useRequireAuth();
   const isWriting = !useIsPostPreviewNavigable();
@@ -239,10 +252,10 @@ export function ResourceActions({
             }
             title={replyLabel}
             disabled={!canReply || isWriting}
-            onClick={() => requireAuth(() => setIsReplying(true))}
+            onClick={() => requireAuth(() => (onReply ? onReply(uri) : setIsReplying(true)))}
             data-testid="resource-reply-button"
           />
-          <ResourcePostButton uri={postUri} count={embeds} surface={surface} isWriting={isWriting} />
+          <ResourcePostButton uri={postUri} count={embeds} surface={surface} isWriting={isWriting} onPost={onPost} />
           <ResourceSavePicker uri={uri} spellings={spellings} collectionsCount={collections} surface={surface} />
           <ResourceMoreMenu
             uri={uri}
