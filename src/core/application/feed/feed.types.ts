@@ -7,6 +7,8 @@ import type { Pubky } from '@/models/models.types';
 export interface FeedDeleteParams {
   userId: string;
   params: TFeedPersistParams;
+  /** See `FeedPutParams.isCurrent`. */
+  isCurrent?: () => boolean;
 }
 
 export interface FeedUpdateParams {
@@ -17,6 +19,12 @@ export interface FeedUpdateParams {
 export interface FeedPutParams {
   userId: string;
   params: TFeedPersistParams;
+  /**
+   * Whether the account the write started for is still the current one; checked once the sync lock is
+   * held, before every local write and before every homeserver write. A write that waited on the lock
+   * may start after a logout cleared the database, which then belongs to the next account.
+   */
+  isCurrent?: () => boolean;
 }
 
 /** One stored-feed write: the object to store at `feedUrl`, merged over what `storedUrl` holds. */
@@ -31,6 +39,8 @@ export interface StoredFeedWriteParams {
 
 export interface PersistAndSyncParams extends StoredFeedWriteParams {
   feedSchema: FeedModelSchema;
+  /** See `FeedPutParams.isCurrent`. */
+  isCurrent?: () => boolean;
 }
 
 export interface LocalFeedRowParams {

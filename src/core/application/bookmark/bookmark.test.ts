@@ -386,18 +386,24 @@ describe('BookmarkApplication', () => {
       });
       return { taken: taken.promise, release: () => released.resolve() };
     };
-    const bookmark = (application: typeof BookmarkApplication, index: number) => {
+    const bookmark = (application: typeof BookmarkApplication, index: number, isCurrent?: () => boolean) => {
       const { url, body } = BookmarkNormalizer.to(postAt(index), owner);
       return application.persist(HttpMethod.PUT, {
         postId: compositeAt(index),
         bookmarkUrl: url,
         bookmarkBody: body,
         userId: owner,
+        isCurrent,
       });
     };
-    const unbookmark = (application: typeof BookmarkApplication, index: number) => {
+    const unbookmark = (application: typeof BookmarkApplication, index: number, isCurrent?: () => boolean) => {
       const { url } = BookmarkNormalizer.to(postAt(index), owner);
-      return application.persist(HttpMethod.DELETE, { postId: compositeAt(index), bookmarkUrl: url, userId: owner });
+      return application.persist(HttpMethod.DELETE, {
+        postId: compositeAt(index),
+        bookmarkUrl: url,
+        userId: owner,
+        isCurrent,
+      });
     };
     const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -464,6 +470,59 @@ describe('BookmarkApplication', () => {
       ]);
     });
 
+    it.each([
+      {
+        method: HttpMethod.PUT,
+        write: bookmark,
+        /** Holds the PUT until `landed` resolves. */
+        hold: (landed: Promise<void>) => {
+          const put = homeserver.spies.putBlob.getMockImplementation()!;
+          homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
+            await landed;
+            return put(params);
+          });
+        },
+      },
+      {
+        method: HttpMethod.DELETE,
+        write: unbookmark,
+        hold: (landed: Promise<void>) => {
+          const remove = homeserver.spies.deleteIdempotent.getMockImplementation()!;
+          homeserver.spies.deleteIdempotent.mockImplementationOnce(async (url) => {
+            await landed;
+            return remove(url);
+          });
+        },
+      },
+    ])(
+      'holds the lock across the $method sync, so a fetch lists only once the write has landed',
+      async ({ method, write, hold }) => {
+        installWebLocks();
+        const isCreate = method === HttpMethod.PUT;
+        const after = isCreate ? [compositeAt(1)] : [];
+        if (!isCreate) {
+          await storeRemote(1, T0);
+          await LocalBookmarkService.persist(HttpMethod.PUT, { postId: compositeAt(1) });
+        }
+        const landed = Promise.withResolvers<void>();
+        hold(landed.promise);
+
+        const writing = write(BookmarkApplication, 1);
+        await vi.waitFor(async () => expect(await BookmarkApplication.exists(compositeAt(1))).toBe(isCreate));
+        // The row is written and the sync is in flight: the fetch, exclusive, lists only once it has landed.
+        const fetching = BookmarkApplication.fetchBookmarks(owner);
+        await tick();
+        expect(homeserver.spies.listAll).not.toHaveBeenCalled();
+
+        landed.resolve();
+        const [, ids] = await Promise.all([writing, fetching]);
+
+        expect(ids).toEqual(after);
+        expect(await streamIds()).toEqual(after);
+        expect(await storedPaths()).toEqual(isCreate ? [BookmarkNormalizer.to(postAt(1), owner).path] : []);
+      },
+    );
+
     it('holds the lock through the GET batch, so a write waits for the whole fetch', async () => {
       installWebLocks();
       await storeRemote(1, T0);
@@ -489,6 +548,43 @@ describe('BookmarkApplication', () => {
 
       expect(settled).toEqual(['fetch', 'write']);
       expect(await streamIds()).toEqual([compositeAt(2), compositeAt(1)]);
+    });
+
+    it('writes nothing when the account changed while a create waited for the lock', async () => {
+      installWebLocks();
+      const listing = holdListing();
+      let current = true;
+
+      const fetching = BookmarkApplication.fetchBookmarks(owner);
+      await listing.taken;
+      const writing = bookmark(BookmarkApplication, 1, () => current);
+      // Signed out (or into another account) while the write waits: logout cleared the shared database.
+      current = false;
+      listing.release();
+      await Promise.all([fetching, writing]);
+
+      expect(await BookmarkModel.findById(compositeAt(1))).toBeNull();
+      expect(await streamIds()).toEqual([]);
+      expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+    });
+
+    it('removes nothing when the account changed while a delete waited for the lock', async () => {
+      installWebLocks();
+      const stored = await storeRemote(1, T0);
+      await LocalBookmarkService.persist(HttpMethod.PUT, { postId: compositeAt(1) });
+      const listing = holdListing();
+      let current = true;
+
+      const fetching = BookmarkApplication.fetchBookmarks(owner);
+      await listing.taken;
+      const removing = unbookmark(BookmarkApplication, 1, () => current);
+      current = false;
+      listing.release();
+      await Promise.all([fetching, removing]);
+
+      expect(await BookmarkApplication.exists(compositeAt(1))).toBe(true);
+      expect(await storedPaths()).toEqual([stored.path]);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
     });
 
     it('releases the lock when the listing fails, so a write that follows runs', async () => {

@@ -1,5 +1,6 @@
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
 import { parseCompositeId } from '@/models/models.utils';
@@ -61,7 +62,13 @@ export class BookmarkController {
   static async commitCreate({ postId, userId }: TBookmarkEventParams) {
     const { url, body } = BookmarkNormalizer.to(parseCompositeId(postId), userId);
 
-    await BookmarkApplication.persist(HttpMethod.PUT, { postId, userId, bookmarkUrl: url, bookmarkBody: body });
+    await BookmarkApplication.persist(HttpMethod.PUT, {
+      postId,
+      userId,
+      bookmarkUrl: url,
+      bookmarkBody: body,
+      isCurrent: captureViewerSession(),
+    });
   }
 
   /**
@@ -74,6 +81,11 @@ export class BookmarkController {
     // The bookmark's path spells its target, so building it again names the file to delete.
     const { url } = BookmarkNormalizer.to(parseCompositeId(postId), userId);
 
-    await BookmarkApplication.persist(HttpMethod.DELETE, { postId, userId, bookmarkUrl: url });
+    await BookmarkApplication.persist(HttpMethod.DELETE, {
+      postId,
+      userId,
+      bookmarkUrl: url,
+      isCurrent: captureViewerSession(),
+    });
   }
 }

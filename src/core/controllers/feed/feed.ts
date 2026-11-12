@@ -41,9 +41,10 @@ export class FeedController {
    * Commit the create feed operation, this will persist the feed to the local database and sync to the homeserver.
    * @param params - The parameters object
    * @param params.tags - The tags for the feed
-   * @returns The created feed
+   * @returns The created feed, or null when the account changed while the write waited for the sync lock
+   *   (nothing was created)
    */
-  static async commitCreate(params: TFeedCreateParams): Promise<FeedModelSchema> {
+  static async commitCreate(params: TFeedCreateParams): Promise<FeedModelSchema | null> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
 
     // Validate tag scope early to fail fast before normalization and persistence.
@@ -53,9 +54,7 @@ export class FeedController {
 
     FeedValidators.validatePutParams({ feed: normalizedFeed });
 
-    const feed = await FeedApplication.persist({ userId, params: { feed: normalizedFeed } });
-
-    return feed!;
+    return FeedApplication.persist({ userId, params: { feed: normalizedFeed }, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -63,10 +62,13 @@ export class FeedController {
    * @param params - The parameters object
    * @param params.feedId - The ID of the feed
    * @param params.changes - The changes to the feed
-   * @returns The updated feed
+   * @returns The updated feed, or null when the account changed while the write waited for the sync lock
+   *   (nothing was updated)
    */
-  static async commitUpdate(params: TFeedUpdateParams): Promise<FeedModelSchema> {
+  static async commitUpdate(params: TFeedUpdateParams): Promise<FeedModelSchema | null> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
+    // Captured with the user, before the local read below: a logout during that read must turn the guard false.
+    const isCurrent = captureViewerSession();
 
     const mergedParams = await FeedApplication.prepareUpdateParams({
       feedId: params.feedId,
@@ -90,23 +92,23 @@ export class FeedController {
 
     // When the config-derived ID differs from existingId, persist handles the
     // create-new + delete-old cycle on the homeserver automatically.
-    const feed = await FeedApplication.persist({
-      userId,
-      params: persistParams,
-    });
-
-    return feed!;
+    return FeedApplication.persist({ userId, params: persistParams, isCurrent });
   }
 
   /**
    * Commit the delete feed operation, this will delete the feed from the local database and sync to the homeserver.
    * @param params - The parameters object
    * @param params.feedId - The ID of the feed
-   * @returns void
+   * @returns void; a delete skipped because the account changed while it waited for the sync lock resolves like
+   *   a completed one (the viewer is gone, and the next sign-in lists what the homeserver holds)
    */
   static async commitDelete(params: TFeedIdParam): Promise<void> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
     FeedValidators.validateDeleteParams({ feedId: params.feedId });
-    await FeedApplication.commitDelete({ userId, params: { feedId: params.feedId } });
+    await FeedApplication.commitDelete({
+      userId,
+      params: { feedId: params.feedId },
+      isCurrent: captureViewerSession(),
+    });
   }
 }

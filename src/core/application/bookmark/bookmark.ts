@@ -101,9 +101,20 @@ export class BookmarkApplication {
 
   private static async persistUnderLock(
     action: HttpMethod,
-    { postId, bookmarkUrl, bookmarkBody }: TBookmarkPersistInput,
+    { postId, bookmarkUrl, bookmarkBody, isCurrent }: TBookmarkPersistInput,
   ) {
+    // Viewer guard before each write (`TBookmarkPersistInput.isCurrent`). A stale viewer writes nothing
+    // and does not throw: the user signed out, and `useBookmark` and `useRemoveDeletedPost` re-read the
+    // local state afterwards, so nothing is left to report.
+    const stale = () => {
+      if (!isCurrent || isCurrent()) return false;
+      Logger.debug('Skipping a bookmark write: the account changed while it waited for the sync lock', { postId });
+      return true;
+    };
+
+    if (stale()) return;
     await LocalBookmarkService.persist(action, { postId });
+    if (stale()) return;
     if (action === HttpMethod.PUT) {
       await HomeserverService.putBlob({ url: bookmarkUrl, blob: bookmarkBody! });
     } else {

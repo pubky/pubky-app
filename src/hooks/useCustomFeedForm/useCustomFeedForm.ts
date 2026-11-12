@@ -96,6 +96,9 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
         try {
           if (mode === 'create') {
             const createdFeed = await FeedController.commitCreate(changes);
+            // The account changed while the write waited for the sync lock: nothing was created, and
+            // the viewer is gone, so there is nothing to announce or open.
+            if (!createdFeed) return;
 
             toast({
               title: 'Feed created',
@@ -111,6 +114,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
             feedId: feed.id,
             changes,
           });
+          if (!updatedFeed) return;
 
           toast({
             title: 'Feed updated',

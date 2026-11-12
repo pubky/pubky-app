@@ -59,6 +59,19 @@ describe('withSyncLock', () => {
       expect(log).toEqual(['fetch:start', 'fetch:end', 'write']);
     });
 
+    it('rethrows a raw task failure unchanged, as the fallback does', async () => {
+      installWebLocks();
+      const failure = new Error('Database error');
+
+      await expect(
+        withSyncLock(LOCK, 'shared', async () => {
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      // The failed task released the lock.
+      await expect(withSyncLock(LOCK, 'exclusive', async () => 'listed')).resolves.toBe('listed');
+    });
+
     it('reports a refused request as an AppError and passes a task failure through as it is', async () => {
       const refused = new DOMException('The request was aborted.', 'AbortError');
       vi.spyOn(installWebLocks(), 'request').mockRejectedValueOnce(refused);

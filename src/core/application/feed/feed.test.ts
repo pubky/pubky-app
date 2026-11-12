@@ -91,7 +91,28 @@ describe('FeedApplication', () => {
     installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0, now: () => 0 });
   });
 
+  /** Web Locks as the browser provides them, shared by every tab; removed again in `afterEach`. */
+  const installWebLocks = () => {
+    const locks = createTestWebLocks();
+    Object.defineProperty(navigator, 'locks', { value: locks, configurable: true });
+    return locks;
+  };
+  /** Holds the listing once it is taken, until `release`; `taken` resolves meanwhile. */
+  const holdListing = () => {
+    const taken = Promise.withResolvers<void>();
+    const released = Promise.withResolvers<void>();
+    const list = homeserver.spies.listAll.getMockImplementation()!;
+    homeserver.spies.listAll.mockImplementationOnce(async (params) => {
+      const urls = await list(params);
+      taken.resolve();
+      await released.promise;
+      return urls;
+    });
+    return { taken: taken.promise, release: () => released.resolve() };
+  };
+
   afterEach(() => {
+    Reflect.deleteProperty(navigator, 'locks');
     installHomeserverWriteRetryDependenciesForTests(null);
     restoreSpecClock();
     vi.restoreAllMocks();
@@ -134,6 +155,44 @@ describe('FeedApplication', () => {
       expect(homeserver.spies.getBytesIfExists).toHaveBeenCalledExactlyOnceWith(feed.url);
     });
 
+    it('writes nothing when the account changed while the create waited for the sync lock', async () => {
+      installWebLocks();
+      const listing = holdListing();
+      let current = true;
+
+      const fetching = FeedApplication.fetchFeeds(owner);
+      await listing.taken;
+      const creating = FeedApplication.persist({ userId: owner, params: { feed: built() }, isCurrent: () => current });
+      // Signed out (or into another account) while the write waits: logout cleared the shared database.
+      current = false;
+      listing.release();
+      await fetching;
+
+      await expect(creating).resolves.toBeNull();
+      expect(await FeedModel.table.count()).toBe(0);
+      expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+    });
+
+    it('stops before the PUT when the account changes during the local write', async () => {
+      let current = true;
+      const createOrUpdate = LocalFeedService.createOrUpdate.bind(LocalFeedService);
+      vi.spyOn(LocalFeedService, 'createOrUpdate').mockImplementationOnce(async (schema) => {
+        const written = await createOrUpdate(schema);
+        current = false;
+        return written;
+      });
+
+      const result = await FeedApplication.persist({
+        userId: owner,
+        params: { feed: built() },
+        isCurrent: () => current,
+      });
+
+      // The row is left as it is (logout clears it); nothing reaches the homeserver.
+      expect(result).toBeNull();
+      expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+    });
+
     it('persists profile tags and the v1 content kind, keeping the Nexus stream id in the 0.x vocabulary', async () => {
       const tagged = built({ tags: [], domain_tags: ['bitcoiner', '🔥'], reach: 'wot', layout: 'cards' });
       const notes = built({ content: 'note', sort: 'popularity' });
@@ -143,10 +202,10 @@ describe('FeedApplication', () => {
 
       expect(taggedRow).toMatchObject({ tags: [], domain_tags: ['bitcoiner', '🔥'], reach: 'wot', layout: 'cards' });
       expect((await storedFeed(tagged.id)).feed).toMatchObject({ tags: null, domain_tags: ['bitcoiner', '🔥'] });
-      expect(buildFeedStreamId(taggedRow, owner)).toBe('timeline:wot_domain:2:all:bitcoiner,🔥');
-      expect(notesRow.content).toBe('note');
+      expect(buildFeedStreamId(taggedRow!, owner)).toBe('timeline:wot_domain:2:all:bitcoiner,🔥');
+      expect(notesRow?.content).toBe('note');
       expect((await storedFeed(notes.id)).feed.content).toBe('note');
-      expect(buildFeedStreamId(notesRow, owner)).toBe('total_engagement:all:short:bitcoin,lightning');
+      expect(buildFeedStreamId(notesRow!, owner)).toBe('total_engagement:all:short:bitcoin,lightning');
     });
 
     it('keeps the members and creation time of a feed with the same filter another client stored', async () => {
@@ -268,8 +327,8 @@ describe('FeedApplication', () => {
       expect(renamed.id).toBe(feed.id);
       const result = await FeedApplication.persist({ userId: owner, params: { feed: renamed, existingId: feed.id } });
 
-      expect(result).toMatchObject({ id: feed.id, name: 'Renamed', icon: 'rss', created_at: created.created_at });
-      expect(result.updated_at).toBeGreaterThanOrEqual(created.updated_at);
+      expect(result).toMatchObject({ id: feed.id, name: 'Renamed', icon: 'rss', created_at: created!.created_at });
+      expect(result?.updated_at).toBeGreaterThanOrEqual(created!.updated_at);
       expect(await FeedModel.table.count()).toBe(1);
       const edited = await storedFeed(feed.id);
       expect(edited).toMatchObject({ name: 'Renamed', icon: 'rss', created_at: stored.created_at });
@@ -284,13 +343,13 @@ describe('FeedApplication', () => {
       const createdStored = await storedFeed(feed.id);
       // A published copy, as another client may leave one.
       await homeserver.session.storage.putBytes(feedPaths(feed.id).public, feed.body);
-      const oldStreamId = await seedStreamCaches(created);
+      const oldStreamId = await seedStreamCaches(created!);
       const moved = built({ sort: 'popularity' });
       expect(moved.id).not.toBe(feed.id);
 
       const result = await FeedApplication.persist({ userId: owner, params: { feed: moved, existingId: feed.id } });
 
-      expect(result).toMatchObject({ id: moved.id, sort: 'popularity', created_at: created.created_at });
+      expect(result).toMatchObject({ id: moved.id, sort: 'popularity', created_at: created!.created_at });
       expect(await FeedModel.table.get(feed.id)).toBeUndefined();
       expect(await FeedModel.table.get(moved.id)).toEqual(result);
       expect(await PostStreamModel.findById(oldStreamId)).toBeNull();
@@ -304,6 +363,32 @@ describe('FeedApplication', () => {
       ]);
       // The old object is read first: what another client added to it moves with the feed.
       expect(homeserver.spies.getBytesIfExists).toHaveBeenLastCalledWith(feed.url);
+    });
+
+    it('keeps the row on its old id when the account changes once the new-id PUT has landed', async () => {
+      const feed = built();
+      await FeedApplication.persist({ userId: owner, params: { feed } });
+      const moved = built({ sort: 'popularity' });
+      let current = true;
+      const put = homeserver.spies.putBlob.getMockImplementation()!;
+      homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
+        await put(params);
+        current = false;
+      });
+
+      const result = await FeedApplication.persist({
+        userId: owner,
+        params: { feed: moved, existingId: feed.id },
+        isCurrent: () => current,
+      });
+
+      // The new copy is stored, the local migration and the old-copy cleanup are skipped: both copies stay.
+      expect(result).toBeNull();
+      expect(await FeedModel.table.get(feed.id)).toBeDefined();
+      expect(await FeedModel.table.get(moved.id)).toBeUndefined();
+      expect(await storedExists(feedPaths(moved.id).private)).toBe(true);
+      expect(await storedExists(feedPaths(feed.id).private)).toBe(true);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
     });
 
     it('does not touch local state when the migration PUT fails', async () => {
@@ -331,7 +416,7 @@ describe('FeedApplication', () => {
 
       const result = await FeedApplication.persist({ userId: owner, params: { feed: moved, existingId: feed.id } });
 
-      expect(result.id).toBe(moved.id);
+      expect(result?.id).toBe(moved.id);
       expect(await FeedModel.table.get(feed.id)).toBeUndefined();
       expect(await FeedModel.table.get(moved.id)).toEqual(result);
       expect(warn).toHaveBeenCalledWith(
@@ -375,7 +460,7 @@ describe('FeedApplication', () => {
       const result = await FeedApplication.persist({ userId: owner, params: { feed, existingId: feed.id } });
 
       nowSpy.mockRestore();
-      expect(result.created_at).toBe(5_000_000);
+      expect(result?.created_at).toBe(5_000_000);
       expect(warn).not.toHaveBeenCalled();
     });
   });
@@ -405,7 +490,7 @@ describe('FeedApplication', () => {
       const feed = built();
       const created = await FeedApplication.persist({ userId: owner, params: { feed } });
       await homeserver.session.storage.putBytes(feedPaths(feed.id).public, feed.body);
-      const streamId = await seedStreamCaches(created);
+      const streamId = await seedStreamCaches(created!);
 
       await FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } });
 
@@ -418,6 +503,30 @@ describe('FeedApplication', () => {
         [`pubky://${owner}${feedPaths(feed.id).public}`],
         [`pubky://${owner}${feedPaths(feed.id).private}`],
       ]);
+    });
+
+    it('removes nothing when the account changed while the delete waited for the sync lock', async () => {
+      const feed = built();
+      await FeedApplication.persist({ userId: owner, params: { feed } });
+      homeserver.spies.putBlob.mockClear();
+      installWebLocks();
+      const listing = holdListing();
+      let current = true;
+
+      const fetching = FeedApplication.fetchFeeds(owner);
+      await listing.taken;
+      const deleting = FeedApplication.commitDelete({
+        userId: owner,
+        params: { feedId: feed.id },
+        isCurrent: () => current,
+      });
+      current = false;
+      listing.release();
+      await Promise.all([fetching, deleting]);
+
+      expect(await FeedModel.table.get(feed.id)).toBeDefined();
+      expect(await storedExists(feedPaths(feed.id).private)).toBe(true);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
     });
 
     it('deletes a row whose stored copy is already gone', async () => {

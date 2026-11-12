@@ -72,9 +72,10 @@ describe('FeedController', () => {
         params: {
           feed: expect.any(Object),
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
-      expect(result.id).toBe('feed-abc123');
+      expect(result?.id).toBe('feed-abc123');
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {
@@ -106,6 +107,7 @@ describe('FeedController', () => {
       expect(FeedApplication.persist).toHaveBeenCalledWith({
         userId: testData.userPubky,
         params: { feed: expect.any(Object) },
+        isCurrent: expect.any(Function),
       });
     });
 
@@ -140,6 +142,7 @@ describe('FeedController', () => {
       expect(FeedApplication.persist).toHaveBeenCalledWith({
         userId: testData.userPubky,
         params: { feed: expect.any(Object) },
+        isCurrent: expect.any(Function),
       });
     });
 
@@ -176,6 +179,7 @@ describe('FeedController', () => {
           feed: expect.any(Object),
           existingId: 'feed-abc123',
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
     });
@@ -214,6 +218,7 @@ describe('FeedController', () => {
           feed: expect.any(Object),
           existingId: 'feed-abc123',
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
     });
@@ -250,7 +255,11 @@ describe('FeedController', () => {
 
       await FeedController.commitDelete(deleteParams);
 
-      expect(deleteSpy).toHaveBeenCalledWith({ userId: testData.userPubky, params: { feedId: 'feed-abc123' } });
+      expect(deleteSpy).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: { feedId: 'feed-abc123' },
+        isCurrent: expect.any(Function),
+      });
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {

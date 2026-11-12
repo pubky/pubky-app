@@ -65,11 +65,20 @@ export class FeedApplication {
     return LocalFeedService.read(params);
   }
 
-  static async persist({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
-    return withSyncLock(feedSyncLock(userId), 'shared', () => this.persistUnderLock({ userId, params }));
+  /**
+   * Stores the feed locally and on the homeserver under the sync lock. Returns the stored row, or
+   * null when the account changed while the write waited for the lock or ran: logout and account
+   * preparation clear the shared database without waiting for the lock, so a stale write would land
+   * in the next account's table. The viewer is re-checked before every local and homeserver write
+   * (`isCurrent`, like a mute commit); what landed before the change is left as it is: an edit that
+   * changes the id and is interrupted after its PUT leaves both stored copies, which the account's
+   * next sign-in lists as two feeds.
+   */
+  static async persist({ userId, params, isCurrent }: FeedPutParams): Promise<FeedModelSchema | null> {
+    return withSyncLock(feedSyncLock(userId), 'shared', () => this.persistUnderLock({ userId, params, isCurrent }));
   }
 
-  private static async persistUnderLock({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
+  private static async persistUnderLock({ userId, params, isCurrent }: FeedPutParams): Promise<FeedModelSchema | null> {
     const { feed: builtFeed, existingId } = params as TFeedPersistCreateParams;
     // The id is the filter's hash, computed by the builder from this client's input alone, so it
     // is known before any homeserver round trip and never changes once the stored copy is merged in.
@@ -104,11 +113,14 @@ export class FeedApplication {
       // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
 
+      if (isCurrent && !isCurrent()) return null;
       await this.putStoredFeed({ storedUrl, feedUrl, feed: builtFeed.object });
 
+      if (isCurrent && !isCurrent()) return null;
       const persistedNewFeed = await this.migrateLocalFeedAtomically({ userId, existingId, feedSchema, oldFeed });
 
       // Best-effort cleanup of old homeserver feed. Keep local new feed as source of truth if cleanup fails.
+      if (isCurrent && !isCurrent()) return null;
       await this.deleteStoredFeed(userId, existingId).catch((cleanupError) => {
         Logger.warn('Failed to cleanup old homeserver feed after successful migration to new feed ID', {
           oldFeedId: existingId,
@@ -120,14 +132,17 @@ export class FeedApplication {
       return persistedNewFeed;
     }
 
-    return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object });
+    return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object, isCurrent });
   }
 
-  static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
-    return withSyncLock(feedSyncLock(userId), 'shared', () => this.commitDeleteUnderLock({ userId, params }));
+  /** Removes the feed locally and on the homeserver under the sync lock; a stale viewer removes nothing (`persist`). */
+  static async commitDelete({ userId, params, isCurrent }: FeedDeleteParams): Promise<void> {
+    return withSyncLock(feedSyncLock(userId), 'shared', () =>
+      this.commitDeleteUnderLock({ userId, params, isCurrent }),
+    );
   }
 
-  private static async commitDeleteUnderLock({ userId, params }: FeedDeleteParams): Promise<void> {
+  private static async commitDeleteUnderLock({ userId, params, isCurrent }: FeedDeleteParams): Promise<void> {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
 
     // Model errors are already logged; cache cleanup must not block the delete itself.
@@ -141,6 +156,8 @@ export class FeedApplication {
       }
     }
 
+    // Viewer guard, before the local and the homeserver delete start together: see `FeedPutParams.isCurrent`.
+    if (isCurrent && !isCurrent()) return;
     await Promise.all([
       LocalFeedService.delete({ feedId }),
       this.deleteStoredFeed(userId, feedId),
@@ -392,9 +409,13 @@ export class FeedApplication {
     storedUrl,
     feedUrl,
     feed,
-  }: PersistAndSyncParams): Promise<FeedModelSchema> {
+    isCurrent,
+  }: PersistAndSyncParams): Promise<FeedModelSchema | null> {
+    // Viewer guard before each write: see `FeedPutParams.isCurrent`.
+    if (isCurrent && !isCurrent()) return null;
     const { persisted: persistedFeed, prior: priorFeed } = await LocalFeedService.createOrUpdate(feedSchema);
 
+    if (isCurrent && !isCurrent()) return null;
     try {
       await this.putStoredFeed({ storedUrl, feedUrl, feed });
     } catch (error) {

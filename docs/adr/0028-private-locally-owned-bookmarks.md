@@ -12,6 +12,12 @@ per-tab write sequence (`captureWriteSequence`, `since`) guarded this tab only, 
 another tab while this tab was listing was undone by the reconcile (the Neutral residual below, now resolved). What
 remains is the fallback where Web Locks are unavailable, a queue in each tab.
 
+Amended — 2026-11-11 (the Greptile P1 on #3141): a write that waited on the lock re-checks the viewer once it holds
+it, before the local write and again before the homeserver write, like a mute commit (`isCurrent`, the
+`captureViewerSession()` guard the controller passes). Logout and account preparation clear the shared database
+without waiting for the lock, so a stale write would otherwise land in the next account's table; it writes nothing
+instead, as feed writes do.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two
 root-node orchestrators of ADR-0009.
