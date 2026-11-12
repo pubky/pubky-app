@@ -80,6 +80,10 @@ function useExecutedLiveQuery(
   return snapshot;
 }
 
+/** Thirteen-character Crockford post ids, distinct per index, under a real key (the older cases predate this). */
+const postIdAt = (index: number) => `0035V9A20W${String(index).padStart(2, '0')}0`;
+const compositeAt = (author: string, index: number) => `${author}:${postIdAt(index)}`;
+
 function createPostDetails({
   id,
   content = 'hello world',
@@ -306,6 +310,8 @@ describe('useVisualFeedTiles', () => {
     // The same bytes uploaded under two types share one `owner:hash` key; `getMetadata` answers the
     // cached row for its own URI and the other URI from what it says. Video bytes are not normalized.
     const owner = fakeOwner(3);
+    const postMp4 = compositeAt(owner, 1);
+    const postMpeg = compositeAt(owner, 2);
     const mp4 = buildFile(owner, { bytes: new Uint8Array([3]), type: 'video/mp4' });
     const mpeg = buildFile(owner, { bytes: new Uint8Array([3]), type: 'video/mpeg' });
     const mpegRow = createFileDetails({
@@ -315,14 +321,14 @@ describe('useVisualFeedTiles', () => {
       name: 'clip.mpeg',
     });
     mockFindByIdsPreserveOrder.mockResolvedValue([
-      createPostDetails({ id: 'author:post-mp4', attachments: [mp4.url] }),
-      createPostDetails({ id: 'author:post-mpeg', attachments: [mpeg.url] }),
+      createPostDetails({ id: postMp4, attachments: [mp4.url] }),
+      createPostDetails({ id: postMpeg, attachments: [mpeg.url] }),
     ]);
     mockGetMetadata.mockImplementation(async ({ fileAttachments }: { fileAttachments: string[] }) =>
       fileAttachments.flatMap((uri) => (uri === mpeg.url ? [mpegRow] : (FileNormalizer.toV1FileDetails(uri) ?? []))),
     );
     mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
-    renderHook(() => useVisualFeedTiles({ postIds: ['author:post-mp4', 'author:post-mpeg'], hasMore: false }));
+    renderHook(() => useVisualFeedTiles({ postIds: [postMp4, postMpeg], hasMore: false }));
 
     const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
 
@@ -334,29 +340,32 @@ describe('useVisualFeedTiles', () => {
         contentType,
       })),
     ).toEqual([
-      { postId: 'author:post-mp4', attachmentName: `${mp4.id}.mp4`, contentType: 'video/mp4' },
-      { postId: 'author:post-mpeg', attachmentName: 'clip.mpeg', contentType: 'video/mpeg' },
+      { postId: postMp4, attachmentName: `${mp4.id}.mp4`, contentType: 'video/mp4' },
+      { postId: postMpeg, attachmentName: 'clip.mpeg', contentType: 'video/mpeg' },
     ]);
     expect(snapshot.missingFileUris).toEqual([]);
     expect(snapshot.hiddenPostCount).toBe(0);
   });
 
   it('skips an attachment URI the key builder refuses instead of waiting on a fetch for it', async () => {
+    const owner = fakeOwner(4);
+    const post = compositeAt(owner, 3);
+    const fileId = `${owner}:0034A0X7NJ52C`;
     mockFindByIdsPreserveOrder.mockResolvedValue([
       createPostDetails({
-        id: 'author:post-odd',
-        attachments: ['not-a-pubky-uri', 'pubky://user-1/pub/pubky.app/files/file-1'],
+        id: post,
+        attachments: ['not-a-pubky-uri', `pubky://${owner}/pub/pubky.app/files/0034A0X7NJ52C`],
       }),
     ]);
     mockGetMetadata.mockResolvedValue([
-      createFileDetails({ id: 'user-1:file-1', contentType: 'image/jpeg', width: 1000, height: 800 }),
+      createFileDetails({ id: fileId, contentType: 'image/jpeg', width: 1000, height: 800 }),
     ]);
     mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
-    renderHook(() => useVisualFeedTiles({ postIds: ['author:post-odd'], hasMore: false }));
+    renderHook(() => useVisualFeedTiles({ postIds: [post], hasMore: false }));
 
     const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
 
-    expect(snapshot.tiles.map(({ attachmentId }: VisualTile) => attachmentId)).toEqual(['user-1:file-1']);
+    expect(snapshot.tiles.map(({ attachmentId }: VisualTile) => attachmentId)).toEqual([fileId]);
     expect(snapshot.missingFileUris).toEqual([]);
     expect(mockFetchFiles).not.toHaveBeenCalled();
   });
