@@ -153,7 +153,8 @@ contract-tested against the engine's `transformRev`; a higher build revision wal
 
 Paths. Ring QR/deep link, Bitkit and Passport adopt then gate (Passport stops its timers before adoption, so a run that
 takes minutes does not time the attempt out); recovery phrase and encrypted file sign in then gate (the dialog closes
-when the gate takes over); browser and Ring signup run inline; a capability upgrade (Locks, Shop) consults the local
+when the gate takes over); Ring signup runs inline (#3142 removed browser signup; a browser key created before it
+still gets the backup prompt at the forced sign-out); a capability upgrade (Locks, Shop) consults the local
 record only and keeps its context. Shop learns the account as `restoring` while gated.
 
 Verification matrix (QA-1, local stack, see _QA matrix_): seed user X with 0.x data on the current build, deploy the branch, restore → sign-out

@@ -87,8 +87,6 @@ vi.mock('@/app/routes', async (importOriginal) => {
       HUMAN: '/onboarding/human',
       INSTALL: '/onboarding/install',
       SCAN: '/onboarding/scan',
-      PUBKY: '/onboarding/pubky',
-      BACKUP: '/onboarding/backup',
       PROFILE: '/onboarding/profile',
       TAGS: '/onboarding/tags',
       FOLLOW: '/onboarding/follow',
@@ -338,26 +336,6 @@ describe('Header', () => {
     expect(screen.getByTestId('logo')).toBeInTheDocument();
   });
 
-  it('displays correct step for pubky path', () => {
-    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PUBKY);
-
-    render(<Header />);
-
-    const onboardingHeader = screen.getByTestId('onboarding-header');
-    expect(onboardingHeader).toHaveAttribute('data-step', '2');
-    expect(screen.getByTestId('logo')).toBeInTheDocument();
-  });
-
-  it('displays correct step for backup path', () => {
-    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.BACKUP);
-
-    render(<Header />);
-
-    const onboardingHeader = screen.getByTestId('onboarding-header');
-    expect(onboardingHeader).toHaveAttribute('data-step', '2');
-    expect(screen.getByTestId('logo')).toBeInTheDocument();
-  });
-
   it('handles unknown paths with default values', () => {
     mockUsePathname.mockReturnValue('/unknown-path');
 
@@ -385,12 +363,7 @@ describe('Header', () => {
   });
 
   it('correctly identifies onboarding paths', () => {
-    const onboardingPaths = [
-      ONBOARDING_ROUTES.INSTALL,
-      ONBOARDING_ROUTES.SCAN,
-      ONBOARDING_ROUTES.PUBKY,
-      ONBOARDING_ROUTES.BACKUP,
-    ];
+    const onboardingPaths = [ONBOARDING_ROUTES.INSTALL, ONBOARDING_ROUTES.SCAN];
 
     onboardingPaths.forEach((path) => {
       mockUsePathname.mockReturnValue(path);
@@ -656,26 +629,6 @@ describe('Header', () => {
       expect(screen.queryByTestId('header-title')).not.toBeInTheDocument();
     });
 
-    it('keeps the key-step titles once sign-up has created the session (#2493)', () => {
-      // Sign-up runs on the pubky step, so pubky and backup are reached while authenticated;
-      // the title used to vanish there and only come back on Profile.
-      mockCurrentUserPubky = 'test-pubky-123';
-      const authenticatedKeySteps = [
-        { path: ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
-        { path: ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
-      ];
-
-      authenticatedKeySteps.forEach(({ path, expectedTitle }) => {
-        mockUsePathname.mockReturnValue(path);
-
-        const { rerender } = render(<Header />);
-
-        expect(screen.getByTestId('header-title')).toHaveTextContent(expectedTitle);
-
-        rerender(<></>); // Clear for next iteration
-      });
-    });
-
     it('renders HeaderTitle on every onboarding step regardless of authentication state', () => {
       const onboardingPaths = Object.values(ONBOARDING_ROUTES);
 
@@ -698,8 +651,6 @@ describe('Header', () => {
         { path: ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Create account' },
         { path: ONBOARDING_ROUTES.INSTALL, expectedTitle: 'Identity keys' },
         { path: ONBOARDING_ROUTES.SCAN, expectedTitle: 'Use Pubky Ring' },
-        { path: ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
-        { path: ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
         { path: ONBOARDING_ROUTES.PROFILE, expectedTitle: 'Profile' },
         { path: ONBOARDING_ROUTES.TAGS, expectedTitle: 'Experience' },
         { path: ONBOARDING_ROUTES.FOLLOW, expectedTitle: 'Experience' },
@@ -739,8 +690,6 @@ describe('Header', () => {
       const nonPostAuthPaths = [
         ONBOARDING_ROUTES.INSTALL,
         ONBOARDING_ROUTES.SCAN,
-        ONBOARDING_ROUTES.PUBKY,
-        ONBOARDING_ROUTES.BACKUP,
         ONBOARDING_ROUTES.HUMAN,
         ROOT_ROUTES,
         AUTH_ROUTES.LOGOUT,

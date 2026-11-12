@@ -28,11 +28,13 @@ import type {
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
   TGenerateConnectUrlParams,
+  TGeneratePaykitReconnectUrlParams,
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLockPriceAsset,
   TLocksPollReport,
   TLocksSessionResult,
+  TLookupPaykitCreatorHeldParams,
   TPaykitConnectionState,
   TPaykitSetupStatus,
   TRegisterGuardedResourceResult,
@@ -111,6 +113,15 @@ export class LocksApplication {
 
   static generatePaykitSetupUrl(params: TGeneratePaykitSetupUrlParams): string {
     return LocksService.generatePaykitSetupUrl(params);
+  }
+
+  static generatePaykitReconnectUrl(params: TGeneratePaykitReconnectUrlParams): string {
+    return LocksService.generatePaykitReconnectUrl(params);
+  }
+
+  /** Whether the Paykit Server already holds this creator (so `/setup` is refused for it). */
+  static fetchPaykitCreatorHeld(params: TLookupPaykitCreatorHeldParams): Promise<boolean> {
+    return LocksService.lookupPaykitCreatorHeld(params);
   }
 
   /** Whether the Paykit payout account of the current Locks session's creator is set up. */

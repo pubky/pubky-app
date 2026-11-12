@@ -461,17 +461,24 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     expect(complete).toHaveBeenCalledOnce();
   });
 
-  it('runs a signup inline: the status never leaves restoring for the gate', async () => {
-    vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(asOpaque({ publicKey: { z32: () => pubky } }));
-    vi.spyOn(AuthApplication, 'createAccount').mockResolvedValue(undefined);
-    vi.spyOn(AuthApplication, 'signInCreatedAccount').mockResolvedValue({ session });
+  it('runs a Ring signup inline: the status never leaves restoring for the gate', async () => {
+    vi.spyOn(AuthApplication, 'startGrantFlow').mockResolvedValue(
+      asOpaque({
+        url: 'pubkyauth://flow',
+        awaitApproval: Promise.resolve(session),
+        cancelAuthFlow: vi.fn(),
+        completeAuthFlow: vi.fn(),
+      }),
+    );
     vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('signup-grant'));
     const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
     const { seen, unsubscribe } = trackStore();
 
-    await AuthController.signUp({ secretKey: 'secret', signupToken: 'invite' });
+    const flow = await AuthController.getSignupAuthUrl('invite');
+    await flow.awaitApproval;
     unsubscribe();
 
+    expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'signup' }));
     expect(run).toHaveBeenCalledOnce();
     expect(seen).not.toContain('social-migration');
     expect(useAuthStore.getState().restoreStatus).toBe('ready');

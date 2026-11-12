@@ -691,7 +691,7 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.restoreStatus = 'restoring';
     mocks.isLoading = true;
-    mocks.pathname = '/onboarding/pubky';
+    mocks.pathname = '/onboarding/scan';
     useSocialMigrationStore.setState({ stage: 'running' });
     try {
       render(
