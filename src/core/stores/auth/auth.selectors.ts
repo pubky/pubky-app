@@ -16,8 +16,8 @@ export const isAuthenticatedState = (state: Pick<AuthState, 'session'>): boolean
 
 /**
  * Pure snapshot check: this browser holds an account — a session, a session reference to restore, or a
- * restore that is still running or needs recovery. A stored pubky alone is not one: the onboarding key step
- * stores a generated pubky before sign-up, and `useAuthStatus` treats that visitor as a guest.
+ * restore that is still running or needs recovery. A stored pubky alone is not one (the former in-browser key
+ * step stored a generated pubky before sign-up), and `useAuthStatus` treats that visitor as a guest.
  *
  * Surfaces that must stay for a member whose restore failed use this instead of `selectDisplayUserPubky`, which
  * also hides the identity after `reauth-required` / `temporary-error`; `docs/components.md` (Guest access) lists them.
@@ -33,8 +33,8 @@ export const selectAccountUserPubky = (
 /**
  * Preserve account chrome during restoration; show guest UI once restoration has failed. Not an action guard.
  *
- * A pubky without an account (`hasAccountState`) is a guest too: the onboarding key step stores a generated
- * pubky before sign-up, and `useAuthStatus` already treats that visitor as a guest.
+ * A pubky without an account (`hasAccountState`) is a guest too (the former in-browser key step stored one before
+ * sign-up), and `useAuthStatus` already treats that visitor as a guest.
  */
 export const selectDisplayUserPubky = (
   state: Pick<AuthState, 'currentUserPubky' | 'session' | 'sessionReference' | 'restoreStatus'>,
