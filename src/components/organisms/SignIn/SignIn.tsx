@@ -326,11 +326,11 @@ export const SignInFooter = () => {
   if (authUrlResolved) return null;
   return (
     <FooterLinks className="py-6">
-      {'Not able to sign in with '}
+      {'Have a recovery phrase or encrypted file? Import it into '}
       <Link href="https://pubkyring.app/" target="_blank" rel="noopener noreferrer">
         {'Pubky Ring'}
       </Link>
-      {' or Bitkit? Use the recovery phrase or encrypted file to restore your account.'}
+      {' to sign in securely.'}
     </FooterLinks>
   );
 };
