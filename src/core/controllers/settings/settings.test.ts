@@ -41,6 +41,7 @@ const mockStoreActions = {
   setNeverShowPosts: vi.fn(),
   setPlayers: vi.fn(),
   setEmbedsUpFront: vi.fn(),
+  setLanguages: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
   setMutedUsers: vi.fn(),
@@ -197,6 +198,15 @@ describe('SettingsController', () => {
       await SettingsController.setEmbedsUpFront(false);
 
       expect(mockStoreActions.setEmbedsUpFront).toHaveBeenCalledWith(false);
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+  });
+
+  describe('setLanguages', () => {
+    it('should update zustand store and sync to homeserver', async () => {
+      await SettingsController.setLanguages(['de', 'fr']);
+
+      expect(mockStoreActions.setLanguages).toHaveBeenCalledWith(['de', 'fr']);
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

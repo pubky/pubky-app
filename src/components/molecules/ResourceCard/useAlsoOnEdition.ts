@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
-import { pickAlsoOnLanguage, type TAlsoOnEdition } from './ResourceAlsoOn.utils';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { matchAlsoOnLanguages, pickAlsoOnLanguage, type TAlsoOnEdition } from './ResourceAlsoOn.utils';
 
 function subscribe(onChange: () => void) {
   window.addEventListener('languagechange', onChange);
@@ -19,19 +20,29 @@ function getServerLanguages(): string {
 }
 
 /**
- * The edition a row of editions shows and links to: the viewer's pick, kept as long as the row is
- * mounted, else the one `pickAlsoOnLanguage` chooses for the browser's languages.
+ * The edition a row of editions shows and links to, and the editions its language switcher lists
+ * (`choices`; with fewer than two there is no switcher). The viewer's languages are the Wikipedia
+ * languages set in Links and Media, else the browser's. The editions in those languages are the
+ * choices, in that order, and the first one shows; with none of them, every edition is a choice and
+ * `pickAlsoOnLanguage`'s fallback shows (English, else the first). The viewer's pick is kept as
+ * long as the row is mounted.
  */
 export function useAlsoOnEdition(editions: TAlsoOnEdition[]) {
   const languages = useSyncExternalStore(subscribe, getLanguages, getServerLanguages);
+  const chosen = useSettingsStore((state) => state.media.languages);
   const [picked, setPicked] = useState<string | null>(null);
+  const langs = editions.map((edition) => edition.lang);
+  const isChosen = Boolean(chosen?.length);
+  const preferred = chosen?.length ? chosen : languages ? languages.split(',') : [];
+  // The setting holds edition codes: matched as they are, never by their base language.
+  const matches = matchAlsoOnLanguages(langs, preferred, { exact: isChosen });
+  // Editions are one per language (`groupAlsoOn`), so each match is one edition.
+  const choices =
+    matches.length > 0 ? matches.flatMap((lang) => editions.filter((edition) => edition.lang === lang)) : editions;
   const lang =
-    picked !== null && editions.some((edition) => edition.lang === picked)
+    picked !== null && choices.some((edition) => edition.lang === picked)
       ? picked
-      : pickAlsoOnLanguage(
-          editions.map((edition) => edition.lang),
-          languages ? languages.split(',') : [],
-        );
+      : pickAlsoOnLanguage(langs, preferred, { exact: isChosen });
   const edition = editions.find((candidate) => candidate.lang === lang) ?? editions[0];
-  return { edition, setLang: setPicked };
+  return { edition, choices, setLang: setPicked };
 }

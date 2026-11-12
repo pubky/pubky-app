@@ -23,6 +23,8 @@ export interface UseSettingsActionsResult {
   setPlayers: (playerOrder: string[], hiddenPlayers: string[], category?: string) => Promise<void>;
   /** Updates the platform-embeds-up-front preference and syncs to homeserver */
   setEmbedsUpFront: (embedsUpFront: boolean) => Promise<void>;
+  /** Updates the Wikipedia languages (`media.languages`) and syncs to homeserver */
+  setLanguages: (languages: string[]) => Promise<void>;
   /** Error message if the action failed */
   error: string | null;
 }

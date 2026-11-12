@@ -25,10 +25,12 @@ interface ResourceAlsoOnLanguagesRowProps {
 /**
  * One service in several languages: a row opening the Pubky page of the edition in the viewer's
  * language (else English, else the first), with a `Select` of the languages that changes where the
- * row and its ↗ link.
+ * row and its ↗ link. The Select lists the viewer's languages the service has (`useAlsoOnEdition`);
+ * with only one of them, the row shows that edition and there is no Select. The language shown is
+ * in the row's tooltip, not on a line of its own.
  */
 export function ResourceAlsoOnLanguagesRow({ name, editions, testId }: ResourceAlsoOnLanguagesRowProps) {
-  const { edition, setLang } = useAlsoOnEdition(editions);
+  const { edition, choices, setLang } = useAlsoOnEdition(editions);
   // The chosen edition's counts, as its row opens it.
   const counts = useResourceRowCounts(edition.entry.uri);
 
@@ -42,27 +44,29 @@ export function ResourceAlsoOnLanguagesRow({ name, editions, testId }: ResourceA
       note={getAlsoOnEditionNote(edition)}
       // A match by metadata shows no label: its note is in the tooltip and name only.
       hint={isMaybeAlsoOn(edition.entry) ? MAYBE_ALSO_ON_NOTE : null}
-      source={getAlsoOnSource(edition.entry)}
+      source={[getLanguageName(edition.lang), getAlsoOnSource(edition.entry)].filter(Boolean).join(' · ')}
       counts={counts}
       testId={testId}
       trailing={
-        <Select value={edition.lang} onValueChange={setLang}>
-          <SelectTrigger
-            size="sm"
-            aria-label={`${name} language: ${getLanguageName(edition.lang)}`}
-            data-testid={`${testId}-language`}
-            className="max-w-32 min-w-0 shrink-0 gap-1 px-2 text-xs font-normal text-muted-foreground hover:text-foreground focus-visible:text-foreground"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper" align="end" className="max-h-72">
-            {editions.map(({ lang }) => (
-              <SelectItem key={lang} value={lang} className="text-sm">
-                <span lang={getLanguageTag(lang)}>{getLanguageName(lang)}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        choices.length > 1 && (
+          <Select value={edition.lang} onValueChange={setLang}>
+            <SelectTrigger
+              size="sm"
+              aria-label={`${name} language: ${getLanguageName(edition.lang)}`}
+              data-testid={`${testId}-language`}
+              className="max-w-32 min-w-0 shrink-0 gap-1 px-2 text-xs font-normal text-muted-foreground hover:text-foreground focus-visible:text-foreground"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" align="end" className="max-h-72">
+              {choices.map(({ lang }) => (
+                <SelectItem key={lang} value={lang} className="text-sm">
+                  <span lang={getLanguageTag(lang)}>{getLanguageName(lang)}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
       }
     />
   );
