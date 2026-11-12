@@ -233,7 +233,9 @@ describe('Onboarding', () => {
     cy.location('pathname').should('eq', '/onboarding/human');
   });
 
-  it('accepts a valid invite code and continues to the Pubky Ring install step', () => {
+  it('signs up a new Pubky Ring key with an invite code through the scan QR and completes onboarding', () => {
+    const profileName = 'Ring Signup User';
+
     cy.get('#create-account-btn').click();
     cy.location('pathname').should('eq', '/onboarding/human');
 
@@ -246,6 +248,18 @@ describe('Onboarding', () => {
     cy.get('[data-cy="human-invite-code-continue-btn"]').should('not.be.disabled').click();
 
     expectInstallStepOffersPubkyRingOnly();
+    cy.get('#continue-with-pubky-ring-btn').click();
+
+    // Pubky Ring creates the key and signs it up with the invite code carried by the scan request
+    cy.completeSignUpWithPubkyRing(profileName);
+
+    goToProfilePageFromHeader();
+    showProfileHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+
+    // the key Ring signed up is the account: signing back in with it lands on the home feed
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithPubkyRing(profileName);
   });
 
   it('cannot proceed with a reused invite code', () => {

@@ -1,6 +1,15 @@
 import { readFileSync } from 'fs';
 import { basename, extname } from 'path';
-import { AuthFlowKind, Keypair, Pubky, PublicKey, type Capabilities, type Path, type Session } from '@synonymdev/pubky';
+import {
+  AuthFlowKind,
+  Keypair,
+  Pubky,
+  PublicKey,
+  SignupGrantDeepLink,
+  type Capabilities,
+  type Path,
+  type Session,
+} from '@synonymdev/pubky';
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind, PubkySpecsBuilder } from 'pubky-app-specs';
 import type {
   SeedAddToCollectionArgs,
@@ -74,6 +83,18 @@ const lockServerPath = (path: string): Path => {
     throw new Error(`the Lock Server only writes under /pub/app.locks/ and /priv/app.locks/, got ${path}`);
   }
   return path as Path;
+};
+
+// Pubky Ring approves a sign-up request as the sign-in grant it carries (pubky-ring `createSignupAuthData`)
+const SIGNIN_GRANT_PARAMS = ['relay', 'secret', 'caps', 'cid', 'cpk', 'af', 'epk'];
+const signinGrantUrlOf = (signupUrl: string) => {
+  const signup = new URL(signupUrl).searchParams;
+  const query = new URLSearchParams();
+  for (const param of SIGNIN_GRANT_PARAMS) {
+    const value = signup.get(param);
+    if (value !== null) query.set(param, value);
+  }
+  return `pubkyauth://signin_grant?${query.toString()}`;
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -168,13 +189,25 @@ export const createSeedTasks = (config: SeedConfig) => {
     return (await response.text()).trim();
   };
 
-  // Signs a new key up on the test homeserver with a fresh signup token, as Pubky Ring would
-  const signUp = async (name: string) => {
+  // Creates a new key and signs it up on `homeserver` with `signupToken`, as Pubky Ring does
+  const signUpKey = async (name: string, homeserver: PublicKey, signupToken: string) => {
     const keypair = Keypair.random();
-    const inviteCode = await fetchSignupToken();
-    await pubky().signer(keypair).signup(PublicKey.from(config.homeserverPublicKey), inviteCode);
+    await pubky().signer(keypair).signup(homeserver, signupToken);
     keypairs.set(name, keypair);
+    return keypair;
+  };
+
+  // Signs a new key up on the test homeserver with a fresh signup token
+  const signUp = async (name: string) => {
+    const inviteCode = await fetchSignupToken();
+    const keypair = await signUpKey(name, PublicKey.from(config.homeserverPublicKey), inviteCode);
     return { keypair, inviteCode };
+  };
+
+  // Sends the grant for the app's request through its relay, as Ring does when the user taps Authorize
+  const approvePubkyAuth = async (name: string, authUrl: string) => {
+    relay = new URL(authUrl).searchParams.get('relay') ?? relay;
+    await pubky().signer(keypairFor(name)).approveAuthRequest(authUrl);
   };
 
   const putTag = async (tagger: SeededSession, uri: string, label: string) => {
@@ -210,13 +243,25 @@ export const createSeedTasks = (config: SeedConfig) => {
         return { id, pubky: `pubky${id}`, inviteCode };
       }),
 
-    // Mock Pubky Ring: approves the app's `pubkyauth://` request as the key signed up for `name`,
-    // sending the grant through the request's relay exactly as Ring does when the user taps Authorize
+    // Mock Pubky Ring: approves the app's `pubkyauth://` request as the key signed up for `name`
     seedApprovePubkyAuth: ({ name, authUrl }: SeedApprovePubkyAuthArgs) =>
       step(`approve sign-in as '${name}' in mock Pubky Ring`, async () => {
-        relay = new URL(authUrl).searchParams.get('relay') ?? relay;
-        await pubky().signer(keypairFor(name)).approveAuthRequest(authUrl);
+        await approvePubkyAuth(name, authUrl);
         return null;
+      }),
+
+    // Mock Pubky Ring handling the app's sign-up request (pubky-ring `signupAction`): a new key signs up
+    // on the request's homeserver (`hs`) with its signup token (`st`), then approves the request's grant
+    seedSignUpAndApprovePubkyAuth: ({ name, authUrl }: SeedApprovePubkyAuthArgs): Promise<SeededSignUp> =>
+      step(`sign up and approve as '${name}' in mock Pubky Ring`, async () => {
+        const { homeserver, signupToken } = SignupGrantDeepLink.parse(authUrl);
+        if (!signupToken) {
+          throw new Error('the sign-up request carries no signup token');
+        }
+        const keypair = await signUpKey(name, homeserver, signupToken);
+        await approvePubkyAuth(name, signinGrantUrlOf(authUrl));
+        const id = keypair.publicKey.z32();
+        return { id, pubky: `pubky${id}`, inviteCode: signupToken };
       }),
 
     // Stand-in Lock Server: the homeserver writes the real one makes for a creator before it answers

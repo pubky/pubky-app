@@ -11,6 +11,7 @@ declare global {
         pubkyAlias?: string,
         experience?: OnboardingExperience,
       ): Chainable<void>;
+      completeSignUpWithPubkyRing(profileName: string): Chainable<void>;
       finishFollowBestMatchesStep(): Chainable<void>;
       waitForFileExistsWithSuffix(folder: string, suffix: string): Chainable<void>;
       innerTextShouldEq(text: string): Chainable<Subject>;

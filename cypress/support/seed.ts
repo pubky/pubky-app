@@ -42,6 +42,13 @@ export const seedUserViaApi = (name: string, { bio = '' } = {}) => cy.task<Seede
 export const approvePubkyAuthViaApi = (name: string, authUrl: string) =>
   cy.task('seedApprovePubkyAuth', { name, authUrl });
 
+/**
+ * Handles the app's `pubkyauth://` sign-up request as Pubky Ring does: a new key for `name` signs up
+ * with the request's signup token, then approves it. Leaves the app on the Profile step.
+ */
+export const signUpWithPubkyAuthViaApi = (name: string, authUrl: string) =>
+  cy.task<SeededSignUp>('seedSignUpAndApprovePubkyAuth', { name, authUrl });
+
 const createPost = (args: SeedCreatePostArgs) => cy.task<SeededPost>('seedCreatePost', args);
 
 /**

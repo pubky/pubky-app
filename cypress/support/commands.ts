@@ -6,7 +6,7 @@ import { isMobile } from './mobile';
 import { showProfileHeader } from './profile';
 import { confirmLogoutBackupBeforeNavigation } from './logout';
 import { waitForFeedToLoad } from './posts';
-import { approvePubkyAuthViaApi, signUpViaApi } from './seed';
+import { approvePubkyAuthViaApi, signUpViaApi, signUpWithPubkyAuthViaApi } from './seed';
 import { CheckForNewPosts, HasBackedUp, OnboardingExperience, PostType, WaitForNewPosts } from './types/enums';
 // ***********************************************
 // This example commands.ts shows you how to
@@ -130,6 +130,19 @@ Cypress.Commands.add(
     completeOnboardingFromProfile(profileName, profileBio, experience);
   },
 );
+
+// From /onboarding/scan: hands the app's sign-up request to Pubky Ring (the mock Ring creates the key,
+// signs it up with the request's invite code and approves), then completes onboarding as a new user
+// would from the Profile step. `cy.signInWithPubkyRing(profileName)` signs back in as the account.
+Cypress.Commands.add('completeSignUpWithPubkyRing', (profileName: string) => {
+  cy.location('pathname').should('eq', '/onboarding/scan');
+  readPubkyRingAuthUrl().then((authUrl) => {
+    expect(authUrl).to.match(/^pubkyauth:\/\//);
+    signUpWithPubkyAuthViaApi(profileName, authUrl);
+  });
+
+  completeOnboardingFromProfile(profileName, '', OnboardingExperience.Skip);
+});
 
 Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
   goToProfilePageFromHeader();
