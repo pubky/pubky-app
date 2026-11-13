@@ -710,6 +710,32 @@ describe('Onboarding', () => {
     cy.signOut(HasBackedUp.Yes);
   });
 
+  // The cut-over worker reloads a tab to its creation URL, not its current route, so a tab the gate signed out at
+  // /migration boots again on the page it was opened on (/home, say); the sessionStorage notice the gate left is the
+  // reason the explanation is still owed, and the route guard brings the signed-out tab back to it from any route.
+  it('shows the explanation when a signed-out tab reloads onto another route after the gate signed it out', () => {
+    cy.visit('/home', {
+      onBeforeLoad: (win) => {
+        win.sessionStorage.setItem('social-migration:signed-out', JSON.stringify({ reason: 'missing-scopes' }));
+      },
+    });
+
+    cy.location('pathname').should('eq', '/migration');
+    cy.get('[data-testid="social-migration"]')
+      .should('contain.text', 'Your account needs an update')
+      .and('contain.text', 'did not include the new permissions');
+    cy.get('#social-migration-signed-out-navigation-continue-btn').should('be.visible').and('contain.text', 'Sign in');
+    cy.get('#social-migration-signed-out-navigation-back-btn').should('be.visible').and('contain.text', 'Homepage');
+
+    // Leaving settles the notice: the landing page shows as a guest and the tab is not sent back
+    cy.get('#social-migration-signed-out-navigation-back-btn').click();
+    cy.location('pathname').should('eq', '/');
+    checkHeaderIsVisible();
+    cy.window().then((win) => {
+      expect(win.sessionStorage.getItem('social-migration:signed-out'), 'signed-out notice').to.be.null;
+    });
+  });
+
   it('can sign up, sign out, then sign up again as a new user', () => {
     const firstProfileName = 'First User';
     const secondProfileName = 'Second User';

@@ -159,6 +159,16 @@ export const NEEDS_SOCIAL_MIGRATION_ROUTES = {
   redirectTo: AUTH_ROUTES.MIGRATION,
 };
 
+/**
+ * Where a signed-out tab may stay while the gate's sign-out explanation is still owed (its tab-scoped notice is
+ * pending, ADR-0026 amendment of 2026-11-13): the gate's own routes and sign-in, the way out of the explanation.
+ * `RouteGuardProvider` sends the tab back to `/migration` from every other route, the public ones included.
+ */
+export const SOCIAL_MIGRATION_SIGNED_OUT_ROUTES: string[] = [
+  ...NEEDS_SOCIAL_MIGRATION_ROUTES.allowedRoutes,
+  AUTH_ROUTES.SIGN_IN,
+];
+
 export const NEEDS_PROFILE_CREATION_ROUTES = {
   allowedRoutes: [ONBOARDING_ROUTES.PROFILE],
   redirectTo: ONBOARDING_ROUTES.PROFILE,

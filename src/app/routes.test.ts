@@ -35,6 +35,7 @@ import {
   PROFILE_ROUTES,
   PUBLIC_ROUTES,
   SETTINGS_ROUTES,
+  SOCIAL_MIGRATION_SIGNED_OUT_ROUTES,
   UNAUTHENTICATED_ROUTES,
 } from './routes';
 
@@ -268,6 +269,19 @@ describe('social v1 migration gate routes (ADR-0026)', () => {
   it('lets a signed-out visitor read the gate explanation', () => {
     expect(UNAUTHENTICATED_ROUTES.allowedRoutes).toContain(AUTH_ROUTES.MIGRATION);
     expect(AUTHENTICATED_ROUTES.allowedRoutes).not.toContain(AUTH_ROUTES.MIGRATION);
+  });
+
+  // FIX-FINAL-7: while the sign-out explanation is owed, a signed-out tab stays only on the gate's routes and sign-in
+  it('keeps a tab that owes the sign-out explanation on the gate routes and sign-in only', () => {
+    expect(SOCIAL_MIGRATION_SIGNED_OUT_ROUTES).toEqual([
+      '/migration',
+      '/logout',
+      '/terms-of-use',
+      '/privacy-policy',
+      '/sign-in',
+    ]);
+    for (const route of SOCIAL_MIGRATION_SIGNED_OUT_ROUTES)
+      expect(UNAUTHENTICATED_ROUTES.allowedRoutes.includes(route) || PUBLIC_ROUTES.includes(route)).toBe(true);
   });
 });
 

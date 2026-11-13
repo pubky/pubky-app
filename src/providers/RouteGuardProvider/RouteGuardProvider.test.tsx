@@ -5,6 +5,10 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
+import {
+  clearSocialMigrationSignedOutNotice,
+  writeSocialMigrationSignedOutNotice,
+} from '@/libs/social-migration/signed-out-notice';
 import { toast } from '@/molecules/Toaster/toast';
 import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
 import { RouteGuardProvider } from './RouteGuardProvider';
@@ -12,6 +16,7 @@ import { RouteGuardProvider } from './RouteGuardProvider';
 // Hoisted mocks
 const mocks = vi.hoisted(() => {
   const mockRouterPush = vi.fn();
+  const mockRouterReplace = vi.fn();
   const mockRouterRefresh = vi.fn();
   const mockResync = vi.fn();
   const resetMigrationStore = vi.fn();
@@ -19,6 +24,7 @@ const mocks = vi.hoisted(() => {
 
   return {
     mockRouterPush,
+    mockRouterReplace,
     mockRouterRefresh,
     mockResync,
     resetMigrationStore,
@@ -43,7 +49,7 @@ const mocks = vi.hoisted(() => {
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mocks.mockRouterPush, refresh: mocks.mockRouterRefresh }),
+  useRouter: () => ({ push: mocks.mockRouterPush, replace: mocks.mockRouterReplace, refresh: mocks.mockRouterRefresh }),
   usePathname: () => mocks.pathname,
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
@@ -55,7 +61,8 @@ vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
 // Mock @/app
 vi.mock('@/app/routes', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/app/routes')>()),
-  PUBLIC_ROUTES: ['/landing', '/logout'],
+  // The legal pages are public in the real list too (`PUBLIC_ROUTES` spreads `LEGAL_ROUTES`)
+  PUBLIC_ROUTES: ['/landing', '/logout', '/terms-of-use', '/privacy-policy'],
   isDynamicPublicRoute: (path: string) => {
     const segments = path.split('/').filter(Boolean);
     return (
@@ -77,8 +84,9 @@ vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
     AUTHENTICATED: { allowedRoutes: ['/feed', '/settings', '/collections'], redirectTo: '/feed' },
     UNAUTHENTICATED: {
-      // `/migration` as in the real map (`UNAUTHENTICATED_ROUTES`, pinned by routes.test): the gate's signed-out page
-      allowedRoutes: ['/login', '/landing', '/home', '/hot', '/search', '/collections', '/migration'],
+      // `/`, `/sign-in` and `/migration` as in the real map (`UNAUTHENTICATED_ROUTES`, pinned by routes.test): the
+      // landing page, sign-in and the gate's signed-out page
+      allowedRoutes: ['/', '/login', '/sign-in', '/landing', '/home', '/hot', '/search', '/collections', '/migration'],
       redirectTo: '/login',
     },
     NEEDS_PROFILE_CREATION: { allowedRoutes: ['/create-profile'], redirectTo: '/create-profile' },
@@ -809,6 +817,143 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
     // Rendered, not redirected: the gate's page is a signed-out route, and no account is pending behind the gate
     expect(screen.getByText('Explanation')).toBeInTheDocument();
     expect(screen.queryByText('Redirecting...')).not.toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+});
+
+// FIX-FINAL-7: the cut-over worker reloads a tab to its creation URL, not its current route (ADR-0021 amendment), and
+// every open after a deploy boots the new build twice, so a tab the gate signed out at /migration boots again on /home,
+// / or whatever page it was opened on. The explanation is owed while the sessionStorage notice is pending, so the guard
+// brings the signed-out tab back to it from every other route; the real notice helpers run against jsdom's storage.
+describe('RouteGuardProvider — signed-out notice of the migration gate', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const guard = (page: string) => (
+    <RouteGuardProvider>
+      <div>{page}</div>
+    </RouteGuardProvider>
+  );
+  const renderGuard = (page: string) => render(guard(page));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    mocks.hasHydrated = true;
+    mocks.session = null;
+    mocks.sessionReference = null;
+    mocks.restoreStatus = 'idle';
+    mocks.currentUserPubky = null;
+    mocks.wasDbReset = false;
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+  });
+
+  afterEach(() => sessionStorage.clear());
+
+  it.each(['/home', '/', '/landing', `/post/${pubky}/0034BBBDFK83G`, `/profile/${pubky}`, '/collections'])(
+    'brings a signed-out tab reloaded onto %s back to the explanation while the notice is pending',
+    (pathname) => {
+      writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+      mocks.pathname = pathname;
+      renderGuard('Page Content');
+      expect(screen.queryByText('Page Content')).not.toBeInTheDocument();
+      expect(screen.getByText('Redirecting...')).toBeInTheDocument();
+      // Replaced, not pushed: the user never chose the route the worker reloaded the tab onto, and Back must not
+      // return to a page that only sends them here again
+      expect(mocks.mockRouterReplace).toHaveBeenCalledExactlyOnceWith('/migration');
+      expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['/migration', '/sign-in', '/logout', '/terms-of-use', '/privacy-policy'])(
+    'leaves the tab on %s: the gate routes and the way out of the explanation',
+    (pathname) => {
+      writeSocialMigrationSignedOutNotice({ reason: 'pre-migration-grant' });
+      mocks.pathname = pathname;
+      renderGuard('Page Content');
+      expect(screen.getByText('Page Content')).toBeInTheDocument();
+      expect(mocks.mockRouterReplace).not.toHaveBeenCalled();
+      expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+    },
+  );
+
+  // The template shows the notice's reason on the failed-restore screen too ("keeps the forced sign-out reason when
+  // the restore after it fails too"), so a retained account whose restore failed is brought there as well
+  it('brings a tab whose restore failed back to the explanation while the notice is pending', () => {
+    writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
+    mocks.restoreStatus = 'reauth-required';
+    mocks.currentUserPubky = 'test-pubky-z32';
+    mocks.pathname = '/home';
+    renderGuard('Guest home');
+    expect(screen.queryByText('Guest home')).not.toBeInTheDocument();
+    expect(mocks.mockRouterReplace).toHaveBeenCalledExactlyOnceWith('/migration');
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('leaves a held account to the gate redirect, which keeps the sign-in query', () => {
+    writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+    const search = new URLSearchParams({ returnTo: '/shop/marketplace', shopReauth: 'initial' }).toString();
+    window.history.replaceState(null, '', `/sign-in?${search}`);
+    mocks.status = 'NEEDS_SOCIAL_MIGRATION';
+    mocks.restoreStatus = 'social-migration';
+    mocks.sessionReference = { kind: 'grant', sessionStoreId: 'grant' };
+    mocks.currentUserPubky = 'test-pubky-z32';
+    mocks.pathname = '/sign-in';
+    try {
+      renderGuard('Sign in');
+      expect(mocks.mockRouterPush).toHaveBeenCalledExactlyOnceWith(`/migration?${search}`);
+      expect(mocks.mockRouterReplace).not.toHaveBeenCalled();
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it('keeps the guest home for a signed-out tab without a notice', () => {
+    mocks.pathname = '/home';
+    renderGuard('Guest home');
+    expect(screen.getByText('Guest home')).toBeInTheDocument();
+    expect(mocks.mockRouterReplace).not.toHaveBeenCalled();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale notice once the account is signed in', () => {
+    writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
+    mocks.status = 'AUTHENTICATED';
+    mocks.session = {};
+    mocks.currentUserPubky = 'test-pubky-z32';
+    mocks.pathname = '/feed';
+    renderGuard('Feed');
+    expect(screen.getByText('Feed')).toBeInTheDocument();
+    expect(mocks.mockRouterReplace).not.toHaveBeenCalled();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('waits for the auth status to settle before routing the tab', () => {
+    writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+    mocks.hasHydrated = false;
+    mocks.isLoading = true;
+    mocks.pathname = '/home';
+    const { rerender } = renderGuard('Guest home');
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(mocks.mockRouterReplace).not.toHaveBeenCalled();
+
+    mocks.hasHydrated = true;
+    mocks.isLoading = false;
+    rerender(guard('Guest home'));
+    expect(mocks.mockRouterReplace).toHaveBeenCalledExactlyOnceWith('/migration');
+  });
+
+  it('lets the tab leave once the explanation cleared the notice, instead of bouncing it back', () => {
+    writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+    mocks.pathname = '/home';
+    const { rerender } = renderGuard('Guest home');
+    expect(mocks.mockRouterReplace).toHaveBeenCalledExactlyOnceWith('/migration');
+
+    // The explanation's Homepage button clears the notice before it navigates to the landing page
+    clearSocialMigrationSignedOutNotice();
+    mocks.pathname = '/';
+    rerender(guard('Landing'));
+    expect(screen.getByText('Landing')).toBeInTheDocument();
+    expect(mocks.mockRouterReplace).toHaveBeenCalledOnce();
     expect(mocks.mockRouterPush).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,8 @@
 Accepted — 2026-09-15  
 Updated — 2026-10-30 (exception for the social v1 cut-over: forced worker takeover; see _Amendment_)  
 Updated — 2026-11-10 (the revert is not tied to the following release; its timing is the team's call, see _Amendment_)  
-Updated — 2026-11-11 (the revert's scope spelled out; `WindowClient.navigate` verified in WebKit by QA-4)
+Updated — 2026-11-11 (the revert's scope spelled out; `WindowClient.navigate` verified in WebKit by QA-4)  
+Updated — 2026-11-13 (`client.navigate(client.url)` lands on the creation URL, and every open after a deploy boots twice; see _Amendment_)
 
 ## Context
 
@@ -59,6 +60,28 @@ check keeps writing 0.x until it does; no worker means no effect (dev without `S
 registration). `WindowClient.navigate` itself reloaded every open tab onto the new build in Chromium 151 (signed
 out) and the signed-in tab in Firefox 153 and WebKit 26.5, on production builds (QA-4, 2026-11-10), so the engine
 is not a residual.
+
+Two properties of the takeover, verified on a production build with Playwright (2026-11-13,
+`qa/restore-reauth-bounce/`), that the app has to tolerate while the exception holds:
+
+- **`client.navigate(client.url)` lands on the document's creation URL, not its current route.** A
+  `WindowClient.url` is the URL the document was created with (the Service Workers spec's "creation URL"): the page
+  the tab was opened or reloaded at. The SPA's later `pushState` calls do not change it, so a tab reloaded at `/home`
+  and moved to `/migration` by the gate comes back on `/home`, and a tab opened on `/` comes back on the landing page.
+  A user loses their in-app place once per deploy.
+- **Every open or reload after a deploy is a double boot.** The navigation is served while the old worker still
+  controls the page (the navigation route is `NetworkOnly`, so the document comes from the server and is the new
+  build), the new build boots and runs whatever its start does (the Dexie recreate of ADR-0019, the gate of ADR-0026
+  and its forced sign-out); 2–20 s later the browser's `sw.js` check installs the new worker, it activates, and the
+  takeover above reloads the tab to its creation URL: a second boot of the new build, on a route the first boot may
+  have left. Anything the first boot persisted has to be read by the second on any route; the gate's signed-out
+  explanation is now route-independent for that reason (ADR-0026 amendment of the same date). QA-4 triggered the
+  takeover from the old page with `registration.update()`, a single boot after the worker's navigation, which is why
+  the double boot was not seen there.
+
+An alternative that keeps the current route, not built: the worker posts a message and a page of the new build
+reloads itself with `location.reload()` (the current URL), `navigate` staying the fallback for pages of the old build,
+which carry no listener. It is the maintainer's call (ADR-0026 amendment, _Consequences_).
 
 Revert: PR-E2 removes the cut-over `install` and `activate` listeners and the `replacesActiveWorker` flag they share
 from `src/sw.ts` (the earlier `activate` listener that deletes the legacy Nexus cache stays), restores
