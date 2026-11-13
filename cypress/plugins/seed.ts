@@ -155,6 +155,9 @@ export const createSeedTasks = (config: SeedConfig) => {
         relay,
       });
       const approval = flow.awaitApproval();
+      // If the approval below fails, `approval` is never awaited and later rejects when the relay
+      // channel expires; without a handler that surfaces as a plugin error far from the cause
+      approval.catch(() => undefined);
       await pubky().signer(keypairOf(owner)).approveAuthRequest(flow.authorizationUrl);
       return approval;
     })();
