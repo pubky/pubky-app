@@ -7,16 +7,12 @@ let library: Promise<TMapLibrary> | null = null;
 
 /**
  * MapLibre GL, loaded on first use (its script, worker and stylesheet are about half a megabyte
- * compressed, so no page pays for them before a map is on screen), once per page load. The worker
- * is the package's own file, served with the app: the library finds it by its own address only
- * when it is not bundled.
+ * compressed, so no page pays for them before a map is on screen), once per page load
+ * (`maplibre.runtime`).
  */
 export function loadMapLibrary(): Promise<TMapLibrary> {
-  library ??= Promise.all([import('maplibre-gl'), import('maplibre-gl/dist/maplibre-gl.css')]).then(
-    ([maplibre]) => {
-      maplibre.setWorkerUrl(new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href);
-      return maplibre;
-    },
+  library ??= import('./maplibre.runtime').then(
+    ({ mapLibrary }) => mapLibrary,
     (error: unknown) => {
       // A failed load (a dropped connection) may be tried again by the next map
       library = null;

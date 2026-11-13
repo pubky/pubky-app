@@ -1,6 +1,7 @@
 import { ResourceFamily } from '@/molecules/ResourceCard/ResourceCard.types';
 import { getResourceFamily } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { formatAddress } from '@/molecules/ResourceCard/ResourceFacts.utils';
+import { getMapPoint } from '@/pipes/resource/resource.places';
 import type { TPinakesCard, TPinakesPoint, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 
 /** Where a place or an event is, for a map and for a maps app. */
@@ -24,19 +25,6 @@ type TMapsCard = Pick<TPinakesCard, 'type' | 'type_path' | 'name' | 'point'> &
 const COORDINATE_DECIMALS = 5;
 /** The zoom OpenStreetMap opens a point at: a street and its houses. */
 const OSM_POINT_ZOOM = 17;
-
-/**
- * `point` when it can be put on a map: both numbers finite, the latitude within ±90 and the
- * longitude within ±180. Anything else (a card without one, a value another type slipped into) is
- * `null`, so no map and no link is ever made from it.
- */
-export function getMapPoint(point: unknown): TPinakesPoint | null {
-  if (typeof point !== 'object' || point === null) return null;
-  const { lat, lon } = point as { lat?: unknown; lon?: unknown };
-  if (typeof lat !== 'number' || typeof lon !== 'number') return null;
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
-}
 
 const text = (value: string | null | undefined) => value?.trim() || null;
 
