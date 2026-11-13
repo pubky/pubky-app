@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withResourceViewerListed } from '@/pipes/tag/tag.resource';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
 import { getOtherLinks, getOwnLinkUris, MAX_OTHER_LINKS, mergeOtherLinkTags } from './ResourceOtherTags.utils';
@@ -90,6 +91,22 @@ describe('getOtherLinks', () => {
     expect(links).toEqual([{ uri: NETFLIX, name: 'Netflix' }]);
   });
 
+  it('never reads a match by metadata (a derived "maybe" link) as the same thing, and a repeated entry once', () => {
+    const links = getOtherLinks(
+      {
+        ...card,
+        also_on: [
+          { uri: NETFLIX, id: 'netflix', site: 'Netflix' },
+          { uri: TMDB, site: 'TMDB', derived: true, kind: 'maybe', via: 'tmdb' },
+          { uri: NETFLIX, id: 'netflix', site: 'Netflix' },
+        ],
+      },
+      null,
+      own,
+    );
+    expect(links).toEqual([{ uri: NETFLIX, name: 'Netflix' }]);
+  });
+
   it('names a link without a service by its host', () => {
     expect(getOtherLinks({ ...card, also_on: [{ uri: 'https://mubi.com/films/3394' }] }, undefined, own)).toEqual([
       { uri: 'https://mubi.com/films/3394', name: 'mubi.com' },
@@ -152,6 +169,7 @@ describe('mergeOtherLinkTags', () => {
         taggers: ['ann', 'bob'],
         count: 2,
         isComplete: true,
+        relationship: false,
         sources: [{ ...netflix, count: 2, taggers: ['ann', 'bob'] }],
       },
     ]);
@@ -181,6 +199,46 @@ describe('mergeOtherLinkTags', () => {
     expect(merged).toHaveLength(24);
     expect(merged[0].label).toBe('both');
     expect(merged[1].label).toBe('t00');
+  });
+
+  it('gives OK Computer’s numbers across its links, the viewer counted once where Nexus left them out', () => {
+    // Nexus on 2026-11-12 (TASK feed-card-group-tags): Spotify album 2, rock 1; Deezer rock 1; Apple Music
+    // album 1 (on its written link); Discogs album 1 (on its written link). The viewer tagged album on Spotify
+    // and Apple Music, and Nexus' Spotify sample left them out.
+    const viewer = 'viewer';
+    const read = (uri: string, name: string, tags: NexusTag[]) => ({
+      link: { uri, name },
+      tags: withResourceViewerListed(tags, viewer),
+    });
+    const merged = mergeOtherLinkTags([
+      read('https://open.spotify.com/album/6dVIqQ8qmQ5GBnJ9shOYGE', 'Spotify', [
+        { ...tag('album', ['b'], 2), relationship: true },
+        tag('rock', ['b']),
+      ]),
+      read('https://www.deezer.com/album/14879699', 'Deezer', [tag('rock', ['f'])]),
+      read('https://music.apple.com/us/album/ok-computer/1097861387', 'Apple Music', [
+        { ...tag('album', [viewer]), relationship: true },
+      ]),
+      read('https://www.discogs.com/master/21491-Radiohead-OK-Computer', 'Discogs', [tag('album', ['e'])]),
+    ]);
+
+    expect(merged.map(({ label, count, isComplete }) => [label, count, isComplete])).toEqual([
+      ['album', 3, true],
+      ['rock', 2, true],
+    ]);
+    expect(merged[0].sources.find((source) => source.name === 'Spotify')?.taggers).toEqual([viewer, 'b']);
+  });
+
+  it('marks a label the viewer holds on any of the links, by Nexus’ relationship, also where its sample left them out', () => {
+    const merged = mergeOtherLinkTags([
+      { link: netflix, tags: [tag('film', ['ann']), { ...tag('noir', ['bob'], 4), relationship: true }] },
+      { link: tmdb, tags: [tag('film', ['cy']), tag('noir', ['dee'])] },
+    ]);
+
+    expect(merged.map(({ label, relationship }) => [label, relationship])).toEqual([
+      ['noir', true],
+      ['film', false],
+    ]);
   });
 
   it('is empty when no other link has tags', () => {

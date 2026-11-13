@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NexusTag } from '@/services/nexus/nexus.types';
-import { mergeResourceTags, withResourceViewerTag } from './tag.resource';
+import { mergeResourceTags, withResourceViewerListed, withResourceViewerTag } from './tag.resource';
 
 const VIEWER = 'viewer-pubky';
 const TAG_URI = `pubky://${VIEWER}/pub/social/v1/tags/ABC.json`;
@@ -56,6 +56,31 @@ describe('withResourceViewerTag', () => {
 
   it('leaves a label the viewer does not hold when removing', () => {
     expect(withResourceViewerTag(TAGS, { label: 'berlin', viewerId: VIEWER }, false)).toEqual(TAGS);
+  });
+});
+
+describe('withResourceViewerListed', () => {
+  const tag = (label: string, taggers: string[], taggersCount: number, relationship: boolean): NexusTag => ({
+    label,
+    taggers,
+    taggers_count: taggersCount,
+    relationship,
+    tag_uri: null,
+  });
+
+  it('puts the viewer first among the taggers of a tag marked theirs that Nexus’ sample left them out of', () => {
+    const tags = [tag('rock', ['a', 'b'], 7, true), tag('jazz', ['a'], 1, false), tag('pop', [VIEWER], 1, true)];
+
+    expect(withResourceViewerListed(tags, VIEWER)).toEqual([
+      tag('rock', [VIEWER, 'a', 'b'], 7, true),
+      tag('jazz', ['a'], 1, false),
+      tag('pop', [VIEWER], 1, true),
+    ]);
+  });
+
+  it('changes nothing signed out', () => {
+    const tags = [tag('rock', ['a'], 3, true)];
+    expect(withResourceViewerListed(tags, null)).toEqual(tags);
   });
 });
 

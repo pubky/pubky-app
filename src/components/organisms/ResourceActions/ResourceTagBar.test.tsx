@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { ResourceTagBar } from './ResourceTagBar';
 import { MAX_OTHER_TAGS } from './ResourceTagBar.utils';
 
@@ -677,6 +678,95 @@ describe('ResourceTagBar', () => {
         .getAllByTestId('source-icon')
         .map((icon) => icon.dataset.uri),
     ).toEqual([LINK, 'https://wikipedia.example/x', 'https://wikidata.example/x']);
+  });
+
+  describe('the viewer’s tag across links', () => {
+    beforeEach(() => {
+      useAuthStore.setState({ currentUserPubky: 'viewer' });
+      return () => useAuthStore.setState({ currentUserPubky: null });
+    });
+    const people = (detail: HTMLElement, group: number) =>
+      within(within(detail).getByTestId(`tag-people-${group}`))
+        .queryAllByTestId('tag-person')
+        .map((person) => person.dataset.id);
+
+    it('keeps the viewer among this link’s taggers when Nexus marks the tag theirs but left them out of its sample', () => {
+      // Nexus counts 5 on this link, the viewer among them, and lists 2; the viewer also put it on Spotify.
+      mocks.tags = [{ label: 'rock', taggers: ['a', 'b'], taggers_count: 5, relationship: true, tag_uri: null }];
+      const spotify = { uri: 'https://open.spotify.com/album/1', name: 'Spotify' };
+      const rock: TMergedTag = {
+        label: 'rock',
+        taggers: ['viewer', 'c'],
+        count: 2,
+        isComplete: true,
+        sources: [{ ...spotify, count: 2, taggers: ['viewer', 'c'] }],
+      };
+      render(<TagBar otherTags={[rock]} uri={LINK} />);
+
+      const [detail] = screen.getAllByTestId('tag-detail');
+      expect(people(detail, 0)).toEqual(['viewer', 'a', 'b']);
+      expect(people(detail, 1)).toEqual(['c']);
+      // The viewer counts once: at least the 5 here, c may be one of the 3 not listed.
+      expect(screen.getByText('rock').closest('button')).toHaveAccessibleName(
+        'rock, 5 here, at least 5 across services',
+      );
+      expect(screen.getByText('rock').closest('button')).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('shows a label the viewer put only on another link as theirs, and a press adds it here, never removes it there', () => {
+      mocks.tags = TWO_TAGS;
+      const spotify = { uri: 'https://open.spotify.com/album/1', name: 'Spotify' };
+      // Nexus marks it the viewer's on Spotify (`relationship`) though its sample of taggers left them out.
+      const album: TMergedTag = {
+        label: 'album',
+        taggers: ['x', 'y'],
+        count: 5,
+        isComplete: false,
+        relationship: true,
+        sources: [{ ...spotify, count: 5, taggers: ['x', 'y'] }],
+      };
+      render(<TagBar otherTags={[album]} uri={LINK} />);
+
+      const [chip] = secondaryChips();
+      expect(chip).toHaveTextContent('album0(5)');
+      expect(chip).toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(chip);
+      // The write is this link's own: an add here, whatever the chip shows.
+      expect(mocks.addTag).toHaveBeenCalledWith('album');
+      expect(mocks.toggleTag).not.toHaveBeenCalled();
+    });
+
+    it('shows an own label as the viewer’s when they hold it on another link, and a press writes by this link’s own tag', () => {
+      // berlin is not the viewer's here; they put it on Spotify.
+      mocks.tags = TWO_TAGS;
+      const spotify = { uri: 'https://open.spotify.com/album/1', name: 'Spotify' };
+      const berlin: TMergedTag = {
+        label: 'berlin',
+        taggers: ['viewer'],
+        count: 1,
+        isComplete: true,
+        relationship: true,
+        sources: [{ ...spotify, count: 1, taggers: ['viewer'] }],
+      };
+      render(<TagBar otherTags={[berlin]} uri={LINK} />);
+
+      const chip = screen.getByText('berlin').closest('button')!;
+      expect(chip).toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(chip);
+      // This link's own tag, unselected and with no file: the press adds it here, it removes nothing.
+      expect(mocks.toggleTag).toHaveBeenCalledWith(TWO_TAGS[0]);
+      expect(mocks.addTag).not.toHaveBeenCalled();
+    });
+
+    it('removes an own tag by its own file, also when the viewer holds the label elsewhere', async () => {
+      mocks.tags = TWO_TAGS;
+      const travel: TMergedTag = { ...OTHER_TAGS[0], relationship: true };
+      render(<TagBar isExpanded otherTags={[travel]} uri={LINK} />);
+
+      const list = await screen.findByTestId('tagged-list');
+      fireEvent.click(within(list).getByRole('button', { name: 'travel2' }));
+      expect(mocks.toggleTag).toHaveBeenCalledWith(TWO_TAGS[1]);
+    });
   });
 
   it('compares labels as Nexus stores them, case-folded', () => {

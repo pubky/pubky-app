@@ -87,6 +87,9 @@ function withUnconfirmedWrites(key: TResourceTagsKey, tags: NexusTag[]): NexusTa
   return result;
 }
 
+/** The batch-only reads under way (`fetchBatchedTags`), per link and viewer. */
+const batchedReads = new Map<string, Promise<NexusTag[] | undefined>>();
+
 /** The link's counts do not depend on the viewer: one entry per link. */
 function countsKey(uri: string) {
   return ['nexus', 'resource', 'counts', uri] as const;
@@ -126,6 +129,10 @@ export class NexusResourceService {
       queryKey: queryKey({ uri, viewerId }),
       ...(fresh ? { staleTime: 0 } : {}),
       queryFn: async () => {
+        // A batch-only read of the link under way (`fetchBatchedTags`) answers it too, when it can.
+        const sharing = batchedReads.get(unconfirmedKey({ uri, viewerId }));
+        const shared = sharing && (await sharing);
+        if (shared) return shared;
         // One `by_ids` request for every link read at the same moment; `by-uri` where it cannot answer.
         const batched = readResourceBatched(uri, viewerId);
         const answer = batched && (await batched);
@@ -136,6 +143,38 @@ export class NexusResourceService {
         return withUnconfirmedWrites({ uri, viewerId }, body?.tags ?? []);
       },
     });
+  }
+
+  /**
+   * The tags on a link read only in a `by_ids` batch, with the other links asked at the same moment
+   * (another link of a card in a feed: no request of its own). An answer already read, or a read of the
+   * link under way, is shared. `undefined` when the batch cannot answer the link (a Nexus without
+   * `by_ids`, a failed batch, a link it did not match): no `by-uri` is asked and nothing is cached, so
+   * a later read of the link (`fetchTagsByUri`) asks Nexus as usual.
+   */
+  static async fetchBatchedTags({ uri, viewerId }: TResourceTagsKey): Promise<NexusTag[] | undefined> {
+    const key = queryKey({ uri, viewerId });
+    const state = nexusQueryClient.getQueryState<NexusTag[]>(key);
+    if (state?.fetchStatus === 'fetching') return this.fetchTagsByUri({ uri, viewerId });
+    if (state?.data !== undefined) return state.data;
+    const mapKey = unconfirmedKey({ uri, viewerId });
+    const running = batchedReads.get(mapKey);
+    if (running) return running;
+    const batched = readResourceBatched(uri, viewerId);
+    if (!batched) return undefined;
+    const read = batched
+      .then((answer) => {
+        if (answer === undefined) return undefined;
+        // The answer `fetchTagsByUri` would have cached: every reader of the link shares it.
+        nexusQueryClient.setQueryData(countsKey(uri), answer ? toCounts(answer) : null);
+        return nexusQueryClient.setQueryData<NexusTag[]>(
+          key,
+          withUnconfirmedWrites({ uri, viewerId }, answer?.tags ?? []),
+        );
+      })
+      .finally(() => batchedReads.delete(mapKey));
+    batchedReads.set(mapKey, read);
+    return read;
   }
 
   /** The link's tags already read for the viewer, without asking Nexus; `undefined` when none was read. */
@@ -162,6 +201,7 @@ export class NexusResourceService {
     flushTimer = null;
     pending.forEach((links) => links.forEach((waiters) => waiters.forEach((resolve) => resolve(undefined))));
     pending.clear();
+    batchedReads.clear();
     isByIdsMissing = byIdsMissing;
     isByIdsServed = false;
     byIdsProbe = null;

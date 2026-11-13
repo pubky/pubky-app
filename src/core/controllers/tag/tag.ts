@@ -65,8 +65,16 @@ export class TagController {
     fresh,
     spellings,
     spellingsByUri,
+    byIdsOnly,
   }: TFetchResourceTagsParams & { fresh?: boolean }) {
-    return TagApplication.fetchResourceTags({ uri, viewerId, spellings, spellingsByUri, ...(fresh ? { fresh } : {}) });
+    return TagApplication.fetchResourceTags({
+      uri,
+      viewerId,
+      spellings,
+      spellingsByUri,
+      ...(fresh ? { fresh } : {}),
+      ...(byIdsOnly ? { byIdsOnly } : {}),
+    });
   }
 
   /** Whether a tag write of the viewer's on the link (or its spellings) is still missing from Nexus' answers. */

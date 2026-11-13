@@ -47,4 +47,10 @@ export interface TFetchResourceTagsParams {
    * are read only in a `by_ids` batch, so a feed card sends no request per spelling.
    */
   spellingsByUri?: boolean;
+  /**
+   * Read the link only in the `by_ids` batch, with the links asked at the same moment (another link of
+   * a card in a feed): where the batch cannot answer it nothing else is asked and it has no tags, so a
+   * feed card sends no request per link.
+   */
+  byIdsOnly?: boolean;
 }

@@ -13,6 +13,7 @@ vi.mock('@/services/pinakes/pinakes', () => ({
     fetchCardByUri: vi.fn(),
     fetchRelated: vi.fn(),
     fetchGroup: vi.fn(),
+    getCachedGroup: vi.fn(),
     resolveCard: vi.fn(),
     fetchCardById: vi.fn(),
     seedCardByUri: vi.fn(),
@@ -88,6 +89,27 @@ describe('PinakesApplication', () => {
     vi.mocked(PinakesService.fetchGroup).mockResolvedValue(null);
 
     await expect(PinakesApplication.fetchGroup(groupFixture.id)).resolves.toBeNull();
+  });
+
+  it('gives a group already read without asking Pinakes, its members’ credits validated as read', () => {
+    vi.mocked(PinakesService.getCachedGroup).mockReturnValue({
+      ...groupFixture,
+      members: [...groupFixture.members, { ...kindOfBlueEnrichedFixture, credits: MALFORMED_CREDITS }],
+    });
+
+    const group = PinakesApplication.getCachedGroup(groupFixture.id);
+
+    expect(group?.members.slice(0, -1)).toEqual(groupFixture.members);
+    expect(group?.members.at(-1)?.credits).toEqual(kindOfBlueEnrichedFixture.credits);
+    expect(PinakesService.getCachedGroup).toHaveBeenCalledWith(groupFixture.id);
+    expect(PinakesService.fetchGroup).not.toHaveBeenCalled();
+  });
+
+  it('gives no group when none was read, and null for a gone one', () => {
+    vi.mocked(PinakesService.getCachedGroup).mockReturnValueOnce(undefined).mockReturnValueOnce(null);
+
+    expect(PinakesApplication.getCachedGroup(groupFixture.id)).toBeUndefined();
+    expect(PinakesApplication.getCachedGroup(groupFixture.id)).toBeNull();
   });
 
   describe('resolveCard', () => {

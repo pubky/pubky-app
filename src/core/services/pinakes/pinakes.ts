@@ -182,9 +182,17 @@ export class PinakesService {
 
     const endpoint = `${base}${GROUPS_PATH}/${encodeURIComponent(id)}`;
     return pinakesQueryClient.fetchQuery({
-      queryKey: ['pinakes', 'group', id],
+      queryKey: groupKey(id),
       queryFn: () => fetchPinakesOrNull<TPinakesGroupDetail>({ url: endpoint, endpoint, operation: 'fetchGroup' }),
     });
+  }
+
+  /**
+   * A group another reader already read (`fetchGroup`, the resource page), without asking Pinakes:
+   * `undefined` when it was not read, `null` when Pinakes answered that it no longer exists.
+   */
+  static getCachedGroup(id: string): TPinakesGroupDetail | null | undefined {
+    return pinakesQueryClient.getQueryData<TPinakesGroupDetail | null>(groupKey(id));
   }
 }
 
@@ -202,6 +210,11 @@ function isResolvableLink(uri: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** The cache key of a group's read. */
+function groupKey(id: string): readonly unknown[] {
+  return ['pinakes', 'group', id];
 }
 
 /** The cache key of a link's card read. */

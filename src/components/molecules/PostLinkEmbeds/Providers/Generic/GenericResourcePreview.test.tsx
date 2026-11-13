@@ -50,8 +50,10 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     isOnScreen,
     playOn,
     extraMenuContent,
+    card,
   }: {
     uri: string;
+    card?: { id: string } | null;
     spellings?: readonly string[];
     postUri?: string | null;
     collectionsCount?: number | null;
@@ -74,6 +76,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-title={title ?? 'none'}
       data-on-screen={String(isOnScreen)}
       data-has-extra-menu={String(Boolean(extraMenuContent))}
+      data-card-id={card?.id ?? 'none'}
     >
       {playOn}
       {extraMenuContent && (
@@ -102,6 +105,25 @@ describe('GenericResourcePreview', () => {
       isLoading: false,
       error: null,
     });
+  });
+
+  it('gives the footer the card it shows, whose other links’ tags join its own as on the resource page', () => {
+    mockUsePinakesCard.mockReturnValue({ data: mbGroupEnrichedFixture, isLoading: false, isError: false });
+    const { unmount } = render(<GenericResourcePreview url={mbGroupEnrichedFixture.uri} />);
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', mbGroupEnrichedFixture.id);
+    unmount();
+
+    // In the service's own embed up front too (a card with no Also on: its group may still be known).
+    mockUsePinakesCard.mockReturnValue({ data: { ...musicFixture, also_on: [] }, isLoading: false, isError: false });
+    const embedded = render(<GenericResourcePreview url={musicFixture.uri} />);
+    expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', musicFixture.id);
+    embedded.unmount();
+
+    // No card for the link (its own preview): nothing but its own tags.
+    mockUsePinakesCard.mockReturnValue({ data: null, isLoading: false, isError: false });
+    render(<GenericResourcePreview url={URL} />);
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'none');
   });
 
   it('reads the Pinakes card for the link', () => {
