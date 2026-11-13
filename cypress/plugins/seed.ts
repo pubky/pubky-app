@@ -85,18 +85,6 @@ const lockServerPath = (path: string): Path => {
   return path as Path;
 };
 
-// Pubky Ring approves a sign-up request as the sign-in grant it carries (pubky-ring `createSignupAuthData`)
-const SIGNIN_GRANT_PARAMS = ['relay', 'secret', 'caps', 'cid', 'cpk', 'af', 'epk'];
-const signinGrantUrlOf = (signupUrl: string) => {
-  const signup = new URL(signupUrl).searchParams;
-  const query = new URLSearchParams();
-  for (const param of SIGNIN_GRANT_PARAMS) {
-    const value = signup.get(param);
-    if (value !== null) query.set(param, value);
-  }
-  return `pubkyauth://signin_grant?${query.toString()}`;
-};
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const preview = (text: string) => (text.length > 48 ? `${text.slice(0, 45)}...` : text);
@@ -254,7 +242,8 @@ export const createSeedTasks = (config: SeedConfig) => {
       }),
 
     // Mock Pubky Ring handling the app's sign-up request (pubky-ring `signupAction`): a new key signs up
-    // on the request's homeserver (`hs`) with its signup token (`st`), then approves the request's grant
+    // on the request's homeserver (`hs`) with its signup token (`st`), then approves the request's grant.
+    // The SDK approves a `signup_grant` link with the same grant as the `signin_grant` Ring rebuilds from it.
     seedSignUpAndApprovePubkyAuth: ({ name, authUrl }: SeedApprovePubkyAuthArgs): Promise<SeededSignUp> =>
       step(`sign up and approve as '${name}' in mock Pubky Ring`, async () => {
         const { homeserver, signupToken } = SignupGrantDeepLink.parse(authUrl);
@@ -262,7 +251,7 @@ export const createSeedTasks = (config: SeedConfig) => {
           throw new Error('the sign-up request carries no signup token');
         }
         const keypair = await signUpKey(name, homeserver, signupToken);
-        await approvePubkyAuth(name, signinGrantUrlOf(authUrl));
+        await approvePubkyAuth(name, authUrl);
         const id = keypair.publicKey.z32();
         return { id, pubky: `pubky${id}`, inviteCode: signupToken };
       }),
