@@ -82,10 +82,11 @@ describe('NativeEmbedResource', () => {
     expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'with-also-on');
     unmount();
 
-    mockCard(VIDEO_ALONE);
-    render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+    // An X post Pinakes knows nowhere else: the platform's own embed, and still the card for the footer.
+    mockCard({ ...POST_CARD, id: 'post-alone' });
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
     expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
-    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', VIDEO_ALONE.id);
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'post-alone');
   });
 
   it('reads the card for the link as written and re-reads it while on screen', () => {
