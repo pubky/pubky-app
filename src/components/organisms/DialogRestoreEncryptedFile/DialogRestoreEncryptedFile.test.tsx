@@ -459,8 +459,11 @@ describe('DialogRestoreEncryptedFile', () => {
     expect(restoreButton).toBeDisabled();
     expect(passwordInput).toBeDisabled();
 
-    // Resolve the promise to complete restore
+    // Settle the pending login inside the test: a successful restore reaches onRestore before the tree unmounts
     resolveRestore!(true);
+    await waitFor(() => {
+      expect(mockOnRestore).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('handles typed recovery file decryption errors', async () => {
@@ -754,8 +757,13 @@ describe('DialogRestoreEncryptedFile', () => {
   });
 
   it('guards against double-submit when Enter is pressed twice', async () => {
-    // Mock a slow async operation
-    mockLoginWithEncryptedFile.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    let resolveRestore: (value: boolean) => void;
+    mockLoginWithEncryptedFile.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveRestore = resolve;
+        }),
+    );
 
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
 
@@ -773,6 +781,12 @@ describe('DialogRestoreEncryptedFile', () => {
     await waitFor(() => {
       // Should only be called once, not twice
       expect(mockLoginWithEncryptedFile).toHaveBeenCalledTimes(1);
+    });
+
+    // Settle the pending login inside the test: a successful restore reaches onRestore before the tree unmounts
+    resolveRestore!(true);
+    await waitFor(() => {
+      expect(mockOnRestore).toHaveBeenCalledTimes(1);
     });
   });
 
