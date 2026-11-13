@@ -37,13 +37,14 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
       JSON.stringify('user_ids' in body ? { ...body, user_ids: requestedIds } : { ...body, post_ids: requestedIds });
     const queryKeyFor = (requestedIds: string[]) =>
       buildNexusQueryKey({ url, method: HttpMethod.POST, body: bodyFor(requestedIds) });
+    const cache = nexusQueryClient.getQueryCache();
     const getFreshResponse = (requestedIds: string[]): T[] | undefined => {
       const queryKey = queryKeyFor(requestedIds);
-      const query = nexusQueryClient.getQueryCache().find<T[]>({ queryKey, exact: true });
+      const { queryHash, staleTime } = nexusQueryClient.defaultQueryOptions<T[]>({ queryKey });
+      const query = cache.get<T[]>(queryHash);
       if (!query || query.state.data === undefined) return undefined;
       // Use the same resolved ordinary-query defaults and freshness decision as
       // TanStack's fetchQuery, even when a forced refresh is fetching or paused.
-      const { staleTime } = nexusQueryClient.defaultQueryOptions<T[]>({ queryKey });
       const resolvedStaleTime = typeof staleTime === 'function' ? staleTime(query) : staleTime;
       return query.isStaleByTime(resolvedStaleTime) ? undefined : query.state.data;
     };
@@ -85,9 +86,8 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
       const cached = getFreshResponse(missing);
       const promise = cached === undefined ? execute(missing) : Promise.resolve(cached);
       const queryKey = queryKeyFor(missing);
-      const query = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
-      const isCurrent = () =>
-        query !== undefined && nexusQueryClient.getQueryCache().find({ queryKey, exact: true }) === query;
+      const query = cache.get(nexusQueryClient.defaultQueryOptions({ queryKey }).queryHash);
+      const isCurrent = () => query !== undefined && cache.get(query.queryHash) === query;
       const batch: PendingBatch<T> = {
         ids: missing,
         promise,

@@ -1,4 +1,4 @@
-import { onlineManager } from '@tanstack/react-query';
+import { hashKey, onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNexusUrl } from '@/config/nexus';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -62,6 +62,61 @@ describe('nexus.by-ids', () => {
         ).toEqual([ids.slice(0, 2), ids.slice(2), [ids[1]]]);
       } finally {
         now.mockRestore();
+      }
+    },
+  );
+
+  it.each(['users', 'posts'] as const)(
+    'keeps key hashing bounded for %s reads in a populated cache with a custom hash function',
+    async (kind) => {
+      const previousDefaults = nexusQueryClient.getDefaultOptions();
+      const hash = vi.fn((key: readonly unknown[]) => `custom:${hashKey(key)}`);
+      nexusQueryClient.setDefaultOptions({
+        ...previousDefaults,
+        queries: { ...previousDefaults.queries, queryKeyHashFn: hash },
+      });
+      const running = Promise.withResolvers<Response>();
+      const ids = Array.from({ length: 21 }, (_, index) =>
+        kind === 'users' ? `user${index}` : `user${index}:post`,
+      ).sort();
+      const records = ids.map((id) =>
+        kind === 'users' ? { details: { id } } : { details: { author: id.split(':')[0], id: id.split(':')[1] } },
+      );
+      const fetchIds = (requested: string[]) =>
+        kind === 'users'
+          ? NexusUserStreamService.fetchByIds({ user_ids: requested })
+          : NexusPostStreamService.fetchByIds({ post_ids: requested });
+      let original: ReturnType<typeof fetchIds> | undefined;
+      let joined: ReturnType<typeof fetchIds> | undefined;
+      try {
+        for (let index = 0; index < 128; index++) {
+          nexusQueryClient.setQueryData(['unrelated', index], []);
+        }
+        mockFetch.mockReturnValueOnce(running.promise);
+        hash.mockClear();
+        original = fetchIds(ids);
+        const registrationHashes = hash.mock.calls.length;
+        hash.mockClear();
+        joined = fetchIds(ids.slice(1));
+        const joiningHashes = hash.mock.calls.length;
+        running.resolve(nexusResponse(records));
+        const [originalResult, joinedResult] = await Promise.all([original, joined]);
+        expect(originalResult).toEqual(records);
+        expect(joinedResult).toEqual(records.slice(1));
+        hash.mockClear();
+        expect(await fetchIds(ids)).toBe(originalResult);
+        const cachedHashes = hash.mock.calls.length;
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        // Count public key hashing work instead of timing the machine. Unrelated
+        // cache entries must not multiply the work for registering, joining or reading.
+        expect(registrationHashes).toBeLessThanOrEqual(12);
+        expect(joiningHashes).toBeLessThanOrEqual(12);
+        expect(cachedHashes).toBeLessThanOrEqual(12);
+      } finally {
+        running.resolve(nexusResponse(records));
+        await Promise.allSettled([original, joined]);
+        nexusQueryClient.clear();
+        nexusQueryClient.setDefaultOptions(previousDefaults);
       }
     },
   );
