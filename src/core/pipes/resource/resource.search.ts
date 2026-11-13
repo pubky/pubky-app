@@ -155,7 +155,8 @@ const LINK_START = /[a-z][a-z\d+.-]*:\/\/|https?:[/\\]*/i;
  * may still become its username and password (`https://user:password` before the `@`).
  */
 export function hasLinkStart(text: string): boolean {
-  return LINK_START.test(text);
+  // A browser drops tabs and line breaks inside a link, as in `hasCredentialLink`
+  return LINK_START.test(text.replace(/[\t\n\r]/g, ''));
 }
 
 /**
@@ -172,8 +173,9 @@ export function hasCredentialLink(text: string): boolean {
       token
         .split(LINK_START)
         .slice(1)
-        // A username or password ends in `@` before the link's path, query or fragment
-        .some((rest) => rest.split(/[/?#\\]/, 1)[0].includes('@')),
+        // A username or password ends in `@` before the link's path, query or fragment; in a link held by
+        // another, `&` ends it too (the outer link's next parameter: `?url=https://a.org&text=@me`)
+        .some((rest, index) => rest.split(index > 0 ? /[/?#\\&]/ : /[/?#\\]/, 1)[0].includes('@')),
     );
 }
 
