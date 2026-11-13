@@ -504,14 +504,21 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
   are no occurrence, and `ResourceInstanceCard` renders a row from its own card. A list of links (`uris`) cannot carry
   them, so the agenda (`SearchEventAgenda`) and the results map (`SearchResourceMap`) read `cards`.
 - `GET /v1/resources/{id}/occurrences` takes RFC 3339 times only (`getOccurrencesWindowStart`; the search's `now` is a
-  400 there), and every page of one list is asked with the first page's `from` (`useResourceOccurrences`).
+  400 there), and every page of one list is asked with the first page's `from` (`useResourceOccurrences`). A next
+  page Pinakes refuses (an expired cursor, a 400) starts the list over from a fresh first page, once.
 - Times show in the event's own `tz`, else in UTC, always with the zone's name; days are grouped the same way
-  (`getEventDayKey`), never in the viewer's zone. A search row says no `all_day`: a span from one UTC midnight to a
-  later one shows as its day (`isWholeDaySpan`). Pinakes sends no recurrence rule, so none is worded; "Repeats" shows
+  (`getEventDayKey`), never in the viewer's zone. Only a card that says `all_day` shows as its day: a search row and a
+  calendar occurrence say neither `tz` nor `all_day`, and nothing is inferred from their times (a span from one UTC
+  midnight to the next can be a timed event). Pinakes sends no recurrence rule, so none is worded; "Repeats" shows
   only for an occurrence with a `recurrence_id`. Search has no status parameter: an event's lifecycle is shown from
   its `occurrence.status` or `event_status`, never filtered.
-- The results map groups pins in the browser over the rows read so far (`clusterMapPoints`) and says how many rows it
-  shows and how many have no location; it never searches the area in view.
+- The results map groups pins in the browser over the rows read so far (`clusterMapPoints`), at most
+  `MAP_RESULTS_MAX` of them, and says how many rows it shows and how many have no location; it never searches the
+  area in view. Boxes and nearness take the short way round the world (`getPointsBounds`), so results either side of
+  the antimeridian are fitted and grouped as the neighbours they are.
+- Events or Places alone are a search (`isResourceFiltersSearch`): `/search?kind=event` lists the coming events as an
+  agenda and `/search?kind=place` the places, either on a map with `view=map`, without a text or a tag. Any other
+  kind alone still lists nothing.
 
 ## Quick Checklist
 
