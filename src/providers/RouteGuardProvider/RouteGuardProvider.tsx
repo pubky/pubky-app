@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AUTH_ROUTES,
@@ -9,6 +9,7 @@ import {
   matchesAllowedRoute,
   ONBOARDING_ROUTES,
   PUBLIC_ROUTES,
+  SOCIAL_MIGRATION_SIGNED_OUT_ROUTES,
 } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { MigrationController } from '@/controllers/migration/migration';
@@ -23,6 +24,10 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isShopReauthorization, shopSignInReturn } from '@/libs/shop-embed/bridge';
+import {
+  clearSocialMigrationSignedOutNotice,
+  readSocialMigrationSignedOutNotice,
+} from '@/libs/social-migration/signed-out-notice';
 import { toast } from '@/molecules/Toaster/toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -31,6 +36,15 @@ import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigratio
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
+
+// The gate's signed-out notice is tab-scoped `sessionStorage` that this tab's own code writes and clears, each time
+// followed by a navigation or a status change that renders the guard again, so there is nothing to subscribe to. Read
+// through `useSyncExternalStore` (`useIsHydrated`'s pattern): React runs the read on every render, where the React
+// Compiler would memoize a plain call and an effect-backed state is one render stale, and the server snapshot keeps
+// the hydrating render equal to the server's.
+const subscribeToSignedOutNotice = () => () => undefined;
+const hasSignedOutNotice = () => readSocialMigrationSignedOutNotice() !== null;
+const hasSignedOutNoticeOnServer = () => false;
 
 interface RouteGuardProviderProps {
   children: ReactNode;
@@ -51,6 +65,10 @@ interface RouteGuardProviderProps {
  * - AUTHENTICATED users → app routes (feed, profile, etc.)
  * - NEEDS_PROFILE_CREATION users → profile creation route
  * - NEEDS_SOCIAL_MIGRATION users → the migration gate, the public routes included (ADR-0026)
+ *
+ * Outside that map, a signed-out tab whose gate sign-out explanation is still owed (`signed-out-notice.ts`) is sent
+ * to `/migration` from every route but `SOCIAL_MIGRATION_SIGNED_OUT_ROUTES`, and a signed-in tab drops a notice it
+ * still holds (ADR-0026 amendment of 2026-11-13).
  */
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const router = useRouter();
@@ -105,6 +123,20 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     !preserveMountedPage &&
     retryingPubky !== currentUserPubky &&
     !SocialMigrationController.hasPassedLocally(currentUserPubky);
+  // The gate's forced sign-out leaves its reason in tab storage; while that notice is pending the explanation is owed
+  // on every route but the gate's own and sign-in, whatever page the tab booted on: the cut-over worker reloads a tab
+  // to its creation URL (ADR-0026 amendment). A settled signed-out status only: a signed-in account owes nothing, and
+  // the gate itself handles a held one.
+  const signedOutNoticePending = useSyncExternalStore(
+    subscribeToSignedOutNotice,
+    hasSignedOutNotice,
+    hasSignedOutNoticeOnServer,
+  );
+  const owesSignedOutExplanation =
+    status === AuthStatus.UNAUTHENTICATED &&
+    !isLoading &&
+    signedOutNoticePending &&
+    !SOCIAL_MIGRATION_SIGNED_OUT_ROUTES.some((route) => matchesAllowedRoute(pathname, route));
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -182,6 +214,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
         matchesAllowedRoute(pathname, route),
       );
 
+    // An owed sign-out explanation renders nothing else, the public pages included
+    if (owesSignedOutExplanation) return false;
+
     // Static public routes are ALWAYS accessible, even during loading
     if (PUBLIC_ROUTES.includes(pathname)) return true;
 
@@ -216,6 +251,13 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
   // Handle automatic redirects when user tries to access unauthorized routes
   useEffect(() => {
+    // Before the public early returns. Replaced, not pushed: the user never chose the route the worker reloaded the
+    // tab onto, and Back must not return to a page that only sends them here again.
+    if (owesSignedOutExplanation) {
+      router.replace(AUTH_ROUTES.MIGRATION);
+      return;
+    }
+
     // Static public routes never redirect, except away from an account held behind the gate
     if (!isGated && PUBLIC_ROUTES.includes(pathname)) return;
 
@@ -260,7 +302,15 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       const keepsQuery = pathname === AUTH_ROUTES.SIGN_IN && redirectTo === AUTH_ROUTES.MIGRATION && search !== '';
       router.push(keepsQuery ? `${redirectTo}?${search}` : redirectTo);
     }
-  }, [status, pathname, search, router, isLoading, isRouteAccessible, isGated]);
+  }, [status, pathname, search, router, isLoading, isRouteAccessible, isGated, owesSignedOutExplanation]);
+
+  // A signed-in account owes no explanation. A notice survives when another tab of the profile signs in: the session
+  // syncs across and the gate passes on the local record or the flag, with no engine run to clear it; left alone it
+  // would send a later voluntary logout to the explanation with the wrong reason. The status is never AUTHENTICATED
+  // between the notice's write and the forced sign-out, so the gate's own notice is never dropped here.
+  useEffect(() => {
+    if (status === AuthStatus.AUTHENTICATED && signedOutNoticePending) clearSocialMigrationSignedOutNotice();
+  }, [status, signedOutNoticePending]);
 
   // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
   useRestoreLocksAuth();

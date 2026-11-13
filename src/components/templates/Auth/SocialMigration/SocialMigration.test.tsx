@@ -174,6 +174,43 @@ describe('SocialMigration', () => {
     expect(mocks.push).toHaveBeenCalledWith('/');
   });
 
+  // FIX-FINAL-7: the route guard brings a signed-out tab back here while the notice is pending, so every way out of the
+  // explanation has to settle it, or the tab would bounce straight back
+  it.each([
+    ['Homepage', '/'],
+    ['Sign in', '/sign-in'],
+  ])('clears the notice when the user leaves through %s', (button, destination) => {
+    signedOut();
+    writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+    render(<SocialMigration />);
+    expect(screen.getByText(/did not include the new permissions/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: button }));
+    expect(sessionStorage.getItem('social-migration:signed-out')).toBeNull();
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith(destination);
+  });
+
+  it('clears the notice when a failed restore leaves through Homepage', () => {
+    mocks.authState.restoreStatus = 'temporary-error';
+    writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
+    render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: "We couldn't reach your homeserver" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
+    expect(sessionStorage.getItem('social-migration:signed-out')).toBeNull();
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith('/');
+  });
+
+  it('keeps the notice when a held account leaves the failed sign-out through Homepage', async () => {
+    setStore({ stage: 'reauth-required', reason: 'missing-scopes' });
+    writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+    mocks.logout.mockRejectedValue(new Error('offline'));
+    render(<SocialMigration />);
+    expect(await screen.findByRole('heading', { name: "We couldn't sign you out yet" })).toBeInTheDocument();
+    // The guard sends the held account straight back; the sign-out that follows the retry still owes its reason
+    fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith('/');
+    expect(sessionStorage.getItem('social-migration:signed-out')).toBe(JSON.stringify({ reason: 'missing-scopes' }));
+  });
+
   it.each([
     ['missing-scopes', /did not include the new permissions/],
     ['session-expired', /Your session ended during the update/],

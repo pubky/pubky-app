@@ -200,7 +200,13 @@ export function SocialMigration() {
     });
   }, [isHydrated, isReauth, hasAccount, isLoggingOut, needsBackup, logoutAttempt]);
 
-  const onHome = () => router.push(ROOT_ROUTES);
+  // The route guard brings a signed-out tab back here while the notice is pending: leaving settles it, as Sign in does.
+  // A held account's screen keeps it: the guard sends that tab back here anyway, and its sign-out still owes the reason.
+  const onHome = () => {
+    clearSocialMigrationSignedOutNotice();
+    router.push(ROOT_ROUTES);
+  };
+  const onHomeHeld = () => router.push(ROOT_ROUTES);
   const onSignOut = () => router.push(AUTH_ROUTES.LOGOUT);
   const onSignIn = () => {
     clearSocialMigrationSignedOutNotice();
@@ -256,7 +262,7 @@ export function SocialMigration() {
           id="social-migration-logout-error-navigation"
           backText="Homepage"
           continueText="Retry"
-          onHandleBackButton={onHome}
+          onHandleBackButton={onHomeHeld}
           onHandleContinueButton={onRetryLogout}
         />
       </>

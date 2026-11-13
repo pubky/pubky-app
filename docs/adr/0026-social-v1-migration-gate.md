@@ -4,7 +4,8 @@
 
 Accepted — 2026-10-30, for the `pubky-social-specs` 1.x port (`docs/migrations/social-v1.md`).  
 Updated — 2026-11-11 (outcome policy and telemetry brought in line with the controller and `report-telemetry.ts`)  
-Updated — 2026-11-12 (the restore's flag read bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; a timeout ends in `temporary-error`)
+Updated — 2026-11-12 (the restore's flag read bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; a timeout ends in `temporary-error`)  
+Updated — 2026-11-13 (the signed-out explanation is route-independent while its notice is pending; the cut-over worker reloads a tab to its creation URL, see _Amendment_)
 
 ## Context
 
@@ -89,7 +90,8 @@ and not the homeserver (the flag there is the authority; the record exists to av
 migrator chunk). `SOCIAL_MIGRATION_TRANSFORM_REV` mirrors the engine's `transformRev` under a contract test, because
 the revision is only reachable through the 790 KB chunk. `lastRun` shows "Continuing from an earlier run"; `notice`
 holds the counts of what a run left behind for the profile edit page to show once. A tab-scoped `sessionStorage` notice
-explains the forced sign-out after the stores were reset. The migrator is loaded by a dynamic `import()` only when a
+explains the forced sign-out after the stores were reset; while it is pending, the explanation is owed on every route
+(see _Amendment — the explanation is route-independent_). The migrator is loaded by a dynamic `import()` only when a
 run starts, which keeps its chunk out of the main bundle and out of the service-worker precache.
 
 **Screen.** `/migration` → `templates/Auth/SocialMigration` → `organisms/SocialMigrationProgress` over the ephemeral
@@ -111,6 +113,51 @@ for the GET, which the SDK cannot cancel, then rejects with `Err.timeout(REQUEST
 `readMigrationFlag`, context the pubky and the bound only), and `AuthController` ends the restore in `temporary-error`
 (`/migration` shows Retry; the focus and network-return retries apply); the engine run, its Web Lock wait and the flag
 write are not bounded.
+
+## Amendment — the explanation is route-independent while its notice is pending (2026-11-13)
+
+The forced sign-out (D2) writes its reason to the tab-scoped `sessionStorage` notice and `/migration` reads it after
+the logout reset every store. Until this amendment only that page read it: a signed-out tab on any other route was an
+ordinary guest, and `UNAUTHENTICATED_ROUTES` lets a guest sit on `/home` (explore mode) and `/` (the landing page).
+That lost the explanation on the cut-over itself. Every open or reload after the deploy boots the new build twice:
+the navigation is served while the old worker still controls the page, so the new build boots, runs the gate and signs
+the account out on `/migration`; seconds later the new worker installs, activates and runs the takeover of the
+ADR-0021 amendment, `client.navigate(client.url)`, and a `WindowClient.url` is the document's **creation URL**
+(the URL the tab was opened or reloaded at, `/home` for a user reloading their feed), not the route the gate's
+`pushState` moved it to. The second boot has no session and nothing routed it back to the explanation, so the user
+saw the guest home or the landing page instead (the maintainer's manual pass, 2026-11-13; reproduced with Playwright
+on a production build, `qa/restore-reauth-bounce/`). QA-4 Part C had triggered the takeover from the old page with
+`registration.update()`, a single boot after the worker's navigation, which is why it passed.
+
+**Decision.** While the notice is pending, a signed-out tab owes the explanation on every route: `RouteGuardProvider`
+sends a settled `UNAUTHENTICATED` tab whose notice is set to `/migration` from every route but
+`SOCIAL_MIGRATION_SIGNED_OUT_ROUTES` (`src/app/routes.ts`: the gate's own routes `/migration`, `/logout` and the legal
+pages, plus `/sign-in`, the way out; the legal pages are listed to mirror the gate's set, since they and `/copyright`
+render outside the guard, `AppShell`), the public and dynamic public routes included (the check runs before their early
+returns, like the gate redirect). A retained account whose restore failed (`reauth-required`, `temporary-error`) counts
+as signed out here too: `/migration` shows the notice's reason on its failed-restore screen already. The redirect is
+`router.replace`: the user never chose the route the worker reloaded the tab onto, and a `push` would leave a Back
+entry that only redirects again. The notice is read with `useSyncExternalStore` on every render (`false` on the server
+and while React hydrates, the `useIsHydrated` pattern), so the decision is never a render stale: an effect-backed state
+was one render behind and sent the Homepage click straight back, and a plain render-time read is a call the React
+Compiler memoizes. Every way out of the explanation settles the notice: Sign in cleared it already; Homepage clears it
+now before it navigates to `/`, on the signed-out and the failed-restore screens; and the header logo, which links to
+`/` from `/migration`, clears it for a signed-out tab (`Header`, keyed on the auth status). The held account's
+failed-sign-out screen and its logo keep it: the guard sends that tab back to the gate anyway, and the sign-out that
+follows its Retry still owes the reason. A signed-in account owes nothing: the guard clears a notice it still finds
+while the status is `AUTHENTICATED`, because the notice survives when another tab of the profile signs in (the session
+syncs across and the gate passes on the local record or the flag, with no engine run to clear it) and would otherwise
+send a later voluntary logout to the explanation with the wrong reason; the status is never `AUTHENTICATED` between the
+notice's write and the forced sign-out, so the gate's own notice is never dropped by it. A held account is the gate's
+own business. The notice stays in `sessionStorage` (tab-scoped), `src/sw.ts` and the controller's reauth path are
+unchanged.
+
+**Consequences.** The explanation survives the takeover reload and a user reload at any route. A tab that was opened on
+`/home` and reloaded by the worker loses its in-app place once per deploy while the ADR-0021 exception holds (the
+known item recorded in `docs/migrations/social-v1.md`). Not done, surfaced for the maintainer: (i) the worker asking the
+page to `location.reload()` via `postMessage`, which keeps the current route for every tab the new build already
+controls, `navigate` staying the fallback for the old build's pages; (ii) the notice in `localStorage`, so every tab of
+the profile explains the sign-out (today other tabs are signed out by the shared auth store without an explanation).
 
 ## Consequences
 
