@@ -23,7 +23,7 @@ describe('concurrent picker regression', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it.each([true, false])(
-    'does not leave the first picker busy after a later membership write supersedes it (initially saved: %s)',
+    'does not leave the first picker busy after a later membership write lands behind it (initially saved: %s)',
     async (initiallySaved) => {
       const postId = await PostController.commitCreate({ authorId: AUTHOR, content: 'Shared post' });
       const { pubky, id } = parseCompositeId(postId);
@@ -46,17 +46,19 @@ describe('concurrent picker regression', () => {
       });
       await waitFor(() => expect(target(second)?.isSaved).toBe(!initiallySaved));
       expect(target(first)?.isUpdating).toBe(true);
+      const putsBeforeSecond = vi.mocked(HomeserverService.putBlob).mock.calls.length;
 
       // A second mounted picker (e.g. another browser tab) toggles the collection back while the
       // first request is still waiting for its response. Writes to one post hold its write lock
       // (ADR-0027), so the second waits for the first instead of racing it: the row keeps showing
-      // the first toggle until the first PUT lands.
+      // the first toggle, and nothing more is PUT, until the first PUT lands.
       let secondUpdate!: Promise<boolean>;
       act(() => {
         secondUpdate = second.result.current.toggleCollection(collectionId);
       });
       await waitFor(() => expect(target(second)?.isUpdating).toBe(true));
       expect(target(first)?.isSaved).toBe(!initiallySaved);
+      expect(HomeserverService.putBlob).toHaveBeenCalledTimes(putsBeforeSecond);
       await act(async () => {
         pendingFirstRequest.resolve(undefined);
         await Promise.all([firstUpdate, secondUpdate]);

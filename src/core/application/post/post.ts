@@ -48,14 +48,16 @@ import { awaitBounded } from '@/utils/bounded-read';
 import { withSyncLock } from '@/utils/sync-lock';
 
 /**
- * One post's write lock (`withSyncLock`), held `exclusive` by `commitEdit` and `commitDelete` and shared by
- * every tab of the app (a queue in the tab where Web Locks are unavailable): an edit checks the tombstone,
+ * One post's write lock (`withSyncLock`), held `exclusive` by `commitCreate` (from the local row through the
+ * first PUT), `commitEdit` and `commitDelete`, and shared by every tab of the app (a queue in the tab where
+ * Web Locks are unavailable), so writes to one post run one after another: an edit checks the tombstone,
  * uploads, projects, reads the head and PUTs under it, and a delete tombstones, lists and DELETEs under it,
  * so an edit that starts after a delete finds the tombstone and writes nothing, and a delete that starts
- * after an edit lists the post's directory after the edit's PUT and deletes that version too. Keyed by the
- * raw post id, which both URI spellings share. Nothing under it takes another lock, and the media collection
- * a delete ends with runs after it is released. Edits from another device are not ordered: Nexus follows
- * event order (ADR-0027).
+ * during a create's or an edit's PUT lists the post's directory after that PUT and deletes the version too.
+ * Keyed by the raw post id, which both URI spellings share. Nothing under it takes another lock or calls back
+ * into `PostApplication` (an exclusive Web Lock does not re-enter): the media collection a delete ends with,
+ * `onPostSynced` and the tag writes run after it is released. Writes from another device are not ordered:
+ * Nexus follows event order (ADR-0027).
  */
 const postWriteLock = (owner: Pubky, postId: string) => `pubky-post-write:${owner}:${postId}`;
 
@@ -260,10 +262,15 @@ export class PostApplication {
   }
 
   /**
-   * Creates a post: uploads first (the post references them), then the local row, then the
-   * first version PUT at the URL `buildPost` named. The local row holds the versionless v1
-   * reference as its `uri`; a failed PUT tombstones the row again and sweeps the uploads.
-   * `onPostSynced` runs once the post is on the homeserver, before its tags are written.
+   * Creates a post: uploads first (the post references them), then, under the post's write lock
+   * (`postWriteLock`), the local row and the first version PUT at the URL `buildPost` named. The
+   * local row holds the versionless v1 reference as its `uri`; a failed PUT tombstones the row
+   * again and sweeps the uploads. The lock keeps a delete that starts during the PUT (a 429
+   * back-off can hold it for 30 s) from tombstoning the row, listing an empty directory and
+   * reporting the post deleted before the version lands: it waits, then lists and deletes it. The
+   * uploads stay outside the lock, since no delete can target a post that has no row yet;
+   * `onPostSynced` runs once the post is on the homeserver, before its tags are written, both
+   * after the lock is released.
    */
   static async commitCreate({
     compositePostId,
@@ -293,27 +300,30 @@ export class PostApplication {
       }
     }
 
-    try {
-      await LocalPostService.create({ compositePostId, post });
-    } catch (error) {
-      await rollbackUploadedFiles();
-      throw error;
-    }
-
-    try {
-      await HomeserverService.putBlob({ url: post.url, blob: post.body });
-    } catch (error) {
+    const { pubky: owner, id: postId } = parseCompositeId(compositePostId);
+    await withSyncLock(postWriteLock(owner, postId), 'exclusive', async () => {
       try {
-        await LocalPostService.delete({ compositePostId });
-      } catch (rollbackError) {
-        Logger.error('[PostApplication.commitCreate] Failed to rollback local post create', {
-          compositePostId,
-          rollbackError,
-        });
+        await LocalPostService.create({ compositePostId, post });
+      } catch (error) {
+        await rollbackUploadedFiles();
+        throw error;
       }
-      await rollbackUploadedFiles();
-      throw error;
-    }
+
+      try {
+        await HomeserverService.putBlob({ url: post.url, blob: post.body });
+      } catch (error) {
+        try {
+          await LocalPostService.delete({ compositePostId });
+        } catch (rollbackError) {
+          Logger.error('[PostApplication.commitCreate] Failed to rollback local post create', {
+            compositePostId,
+            rollbackError,
+          });
+        }
+        await rollbackUploadedFiles();
+        throw error;
+      }
+    });
     onPostSynced?.();
 
     if (tags && tags.length > 0) {
@@ -338,7 +348,10 @@ export class PostApplication {
    * an edit queued behind the delete finds the tombstone. The listings are bounded by
    * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`): a LIST that never answers rejects with
    * `REQUEST_TIMEOUT` before any DELETE, like a failed LIST (the row stays tombstoned locally and
-   * the delete reports its failure), and releases the lock.
+   * the delete reports its failure), and releases the lock. A fence taken before the wait for the
+   * lock guards its first pass, checked once the lock is held: a delete that waited across a
+   * logout, an account change or a session replacement tombstones nothing and sends nothing
+   * (`SESSION_EXPIRED`). `deleteIdempotent` takes no fence, so that check is the guard.
    *
    * Media: after the homeserver DELETEs succeed, and after the lock is released, the post's
    * attachments (only when the row did not keep its connections, `!hadConnections`) and its
@@ -350,8 +363,9 @@ export class PostApplication {
    */
   static async commitDelete({ compositePostId, canWriteLegacy }: TDeletePostInput) {
     const { pubky: owner, id: postId } = parseCompositeId(compositePostId);
+    const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
     const mediaUris = await withSyncLock(postWriteLock(owner, postId), 'exclusive', () =>
-      this.commitDeleteUnderLock({ compositePostId, canWriteLegacy }, { owner, postId }),
+      this.commitDeleteUnderLock({ compositePostId, canWriteLegacy }, { owner, postId, fence }),
     );
 
     // Best-effort, in one pass so the reference checks run once: the post delete already
@@ -373,8 +387,10 @@ export class PostApplication {
    */
   private static async commitDeleteUnderLock(
     { compositePostId, canWriteLegacy }: TDeletePostInput,
-    { owner, postId }: { owner: Pubky; postId: string },
+    { owner, postId, fence }: { owner: Pubky; postId: string; fence: THomeserverWriteFence },
   ): Promise<string[]> {
+    // The session this delete was asked under may have ended while it waited for the lock.
+    fence.assertCurrent();
     const post = await PostDetailsModel.findById(compositePostId);
 
     if (!post) {
@@ -458,7 +474,9 @@ export class PostApplication {
    * the lock and guards its first pass, which is checked once the lock is held and again before
    * the PUT: an edit that waited across a logout, an account change or a session replacement
    * writes nothing, not an upload or the projection (`SESSION_EXPIRED`), and one whose session
-   * changes during its uploads PUTs nothing, rolls back and sweeps them. The head read is bounded
+   * changes during its uploads PUTs nothing and rolls back (the sweep of its uploads is
+   * best-effort: after a logout or an account switch it cannot reach the old account's files). The
+   * head read is bounded
    * by `HOMESERVER_SYNC_READ_TIMEOUT_MS`: past it the edit fails like a failed read (rollback, the
    * uploads swept) and releases the lock.
    *

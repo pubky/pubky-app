@@ -25,10 +25,11 @@ const OWNER = fakeOwner(1) as Pubky;
 const FRIEND = fakeOwner(2) as Pubky;
 
 /**
- * An edit and a delete of one post through the real `PostApplication`, `LocalPostService` and Dexie against the
- * in-memory homeserver, with the Web Locks a browser shares between tabs: the two hold the post's write lock
- * `pubky-post-write:<owner>:<postId>` exclusive, so whichever started second waits, an edit queued behind a
- * delete finds the tombstone and writes nothing, and a delete queued behind an edit lists the version it PUT.
+ * A create, an edit and a delete of one post through the real `PostApplication`, `LocalPostService` and Dexie
+ * against the in-memory homeserver, with the Web Locks a browser shares between tabs: the three hold the post's
+ * write lock `pubky-post-write:<owner>:<postId>` exclusive, so whichever started second waits, an edit queued
+ * behind a delete finds the tombstone and writes nothing, and a delete queued behind a create or an edit lists
+ * the version it PUT.
  */
 describe('PostApplication post write lock', () => {
   let homeserver: ReturnType<typeof stubMemoryHomeserver>;
@@ -142,6 +143,17 @@ describe('PostApplication post write lock', () => {
     });
     return handle;
   };
+  /** Holds this tab's next PUT (a create's first version) once reached, until `release`. */
+  const holdNextPut = () => {
+    const { taken, released, handle } = gate();
+    const put = homeserver.spies.putBlob.getMockImplementation()!;
+    homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
+      taken.resolve();
+      await released.promise;
+      await put(params);
+    });
+    return handle;
+  };
   /** Holds this tab's next listing once it is taken, until `release`; `taken` resolves meanwhile. */
   const holdListing = () => {
     const { taken, released, handle } = gate();
@@ -186,6 +198,35 @@ describe('PostApplication post write lock', () => {
     otherTab?.close();
     otherTab = null;
     vi.restoreAllMocks();
+  });
+
+  describe('a create, then a delete of the same post', () => {
+    it('waits for the first version PUT in flight, then lists and deletes it; the row stays a tombstone', async () => {
+      const post = buildPost(OWNER, { content: 'new' });
+      const compositePostId = `${OWNER}:${post.id}`;
+      const settled: string[] = [];
+      const put = holdNextPut();
+
+      const creating = run(PostApplication.commitCreate({ compositePostId, post }).then(() => settled.push('create')));
+      await put.taken;
+      const deleting = run(
+        PostApplication.commitDelete({ compositePostId, canWriteLegacy: true }).then(() => settled.push('delete')),
+      );
+      await tick();
+      // The delete waits for the create: the row is live and nothing was listed yet.
+      const live = await row(compositePostId);
+      expect(live?.content).toBe('new');
+      expect(isPostDeleted(live)).toBe(false);
+      expect(homeserver.spies.listAll).not.toHaveBeenCalled();
+      put.release();
+      await Promise.all([creating, deleting]);
+
+      expect(settled).toEqual(['create', 'delete']);
+      // The listing taken after the PUT named the version, so it was deleted instead of landing after "Post deleted".
+      expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(post.url);
+      expect(await versions(post.id)).toEqual([]);
+      expect(isPostDeleted(await row(compositePostId))).toBe(true);
+    });
   });
 
   describe('an edit, then a delete of the same post', () => {
@@ -487,8 +528,27 @@ describe('PostApplication post write lock', () => {
     });
   });
 
-  describe('the edit’s session fence', () => {
+  describe('the session fences', () => {
     const sessionExpired = { code: AuthErrorCode.SESSION_EXPIRED };
+
+    it('a delete that waited on the lock across a session replacement tombstones nothing and sends nothing', async () => {
+      const { compositePostId, postId, firstUrl } = await publish('original');
+      const put = holdPut(firstUrl);
+
+      const editing = run(PostApplication.commitEdit({ compositePostId, edit: { content: 'edited' } }));
+      await put.taken;
+      const deleting = run(PostApplication.commitDelete({ compositePostId, canWriteLegacy: true }));
+      await tick();
+      useAuthStore.setState({ generation: 'g2' }); // the account changed while the delete waited
+      put.release();
+      await editing;
+
+      await expect(deleting).rejects.toMatchObject(sessionExpired);
+      expect(homeserver.spies.listAll).toHaveBeenCalledTimes(1); // the edit's head read only
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+      expect(await row(compositePostId)).toMatchObject({ content: 'edited', deleted: false });
+      expect(await versions(postId)).toHaveLength(2);
+    });
 
     it('an edit with new files that waited on the lock across a session replacement writes nothing', async () => {
       const { compositePostId, firstUrl } = await publish('original');
@@ -543,7 +603,7 @@ describe('PostApplication post write lock', () => {
   });
 
   describe('the lock', () => {
-    it('is pubky-post-write:<owner>:<postId>, held exclusive by an edit and by a delete', async () => {
+    it('is pubky-post-write:<owner>:<postId>, held exclusive by a create, an edit and a delete', async () => {
       const request = vi.spyOn(locks, 'request');
       const { compositePostId, postId } = await publish('original');
 
@@ -551,6 +611,7 @@ describe('PostApplication post write lock', () => {
       await PostApplication.commitDelete({ compositePostId, canWriteLegacy: true });
 
       expect(request.mock.calls.map(([name, options]) => [name, (options as LockOptions).mode])).toEqual([
+        [lockOf(postId), 'exclusive'],
         [lockOf(postId), 'exclusive'],
         [lockOf(postId), 'exclusive'],
       ]);
@@ -565,13 +626,13 @@ describe('PostApplication post write lock', () => {
         PostApplication.commitEdit({ compositePostId: first.compositePostId, edit: { content: 'edited' } }),
       );
       await put.taken;
-      // Both PUTs are held (`holdPut` holds every version PUT), so the other post's edit is observed before its PUT.
+      // Both PUTs are held (`holdPut` holds every version PUT), so the other post's edit is observed before its
+      // PUT: its projection lands and its head read runs while this post's lock is held.
       const otherEditing = run(
         PostApplication.commitEdit({ compositePostId: second.compositePostId, edit: { content: 'edited too' } }),
       );
-      await tick();
-      expect(await row(second.compositePostId)).toMatchObject({ content: 'edited too' });
-      expect(homeserver.spies.listAll).toHaveBeenCalledTimes(2); // both head reads ran, neither waited
+      await vi.waitFor(async () => expect(await row(second.compositePostId)).toMatchObject({ content: 'edited too' }));
+      await vi.waitFor(() => expect(homeserver.spies.listAll).toHaveBeenCalledTimes(2));
 
       put.release();
       await Promise.all([editing, otherEditing]);
@@ -584,15 +645,12 @@ describe('PostApplication post write lock', () => {
 
       const deleting = run(PostApplication.commitDelete({ compositePostId, canWriteLegacy: true }));
       await collection.taken;
-      const outcome = await Promise.race([
-        PostApplication.commitEdit({ compositePostId, edit: { content: 'edited' } }).then(
-          () => 'resolved',
-          (error: unknown) => error,
-        ),
-        tick().then(() => 'still waiting for the lock'),
-      ]);
+      // The collection is still running and the lock is already free: a queued edit is refused at once.
+      expect((await locks.query()).held).toEqual([]);
+      await expect(PostApplication.commitEdit({ compositePostId, edit: { content: 'edited' } })).rejects.toMatchObject(
+        notFound,
+      );
 
-      expect(outcome).toMatchObject(notFound);
       collection.release();
       await deleting;
       expect(FileApplication.commitDelete).toHaveBeenCalledExactlyOnceWith([kept.media.url], compositePostId);
