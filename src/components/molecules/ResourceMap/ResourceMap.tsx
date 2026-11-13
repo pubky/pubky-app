@@ -106,7 +106,8 @@ export function ResourceMap({
   corner,
   className,
 }: ResourceMapProps) {
-  const { ref, isVisible } = useViewportObserver();
+  // The viewport itself, with no margin: a map still below the fold asks the tile host for nothing
+  const { ref, isVisible } = useViewportObserver({ rootMargin: '0px' });
   const { isLightApplied } = useThemePreference();
   const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   const [optedIn, setOptedIn] = useState(false);
