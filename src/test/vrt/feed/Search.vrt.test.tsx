@@ -682,6 +682,7 @@ vi.mock('@/hooks/useResourceSearch/useResourceSearch', async (importOriginal) =>
   const actual = await importOriginal<typeof import('@/hooks/useResourceSearch/useResourceSearch')>();
   const settled: ReturnType<typeof actual.useResourceSearch> = {
     uris: [],
+    cards: [],
     typeFacets: null,
     relatedTags: [],
     hostFacets: null,

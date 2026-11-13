@@ -1,5 +1,6 @@
 import { withNormalizedCredits } from '@/pipes/pinakes/pinakes.credits';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
+import { type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
 import { buildResourceSearchParams, type TResourceQuery } from '@/pipes/resource/resource.search';
 import { PinakesService } from '@/services/pinakes/pinakes';
 import type {
@@ -60,6 +61,39 @@ export class PinakesApplication {
   /** The facets of a search's first page already read with `facets`, without a request; `undefined` when none was read. */
   static getCachedSearchFacets(query: TResourceQuery, limit: number): TPinakesSearchResponse['facets'] | undefined {
     return PinakesService.getCachedSearch(buildResourceSearchParams(query, { limit, facets: true }))?.facets;
+  }
+
+  /**
+   * One page of a calendar's dates from `from` on (RFC 3339), by start: one card per instance and
+   * the next page's cursor (`null` at the end). No dates for a resource that is no calendar, one
+   * Pinakes does not know, or without Pinakes.
+   *
+   * @throws AppError when Pinakes fails or refuses the page (an expired cursor is a 400)
+   */
+  static async fetchOccurrences(
+    id: string,
+    { from, limit, cursor }: { from: string; limit: number; cursor?: string | null },
+  ): Promise<{ cards: TPinakesCard[]; cursor: string | null }> {
+    const page = await PinakesService.fetchOccurrences(id, { from, limit, cursor: cursor ?? undefined });
+    return { cards: (page?.items ?? []).map(withNormalizedCredits), cursor: page?.cursor ?? null };
+  }
+
+  /**
+   * The rows of an event search as a list of events shows them (`toEventInstance`), one per row in
+   * the rows' order. Each event that is no calendar occurrence is read by its own link for its
+   * details (time zone, venue, status), from the cache when a card of it was read before; a read
+   * that fails leaves the row as the search gave it. An occurrence is never read: a read by its
+   * link answers its calendar, not the instance.
+   */
+  static async fetchEventInstances(cards: readonly TPinakesCard[]): Promise<TEventInstance[]> {
+    return Promise.all(
+      cards.map(async (card) => {
+        if (card.occurrence) return toEventInstance(card, null);
+        // The error is reported by its factory; the row stays
+        const details = await this.fetchCardByUri(card.uri).catch(() => null);
+        return toEventInstance(card, details);
+      }),
+    );
   }
 
   /** What the people who tagged the resource also referenced. */

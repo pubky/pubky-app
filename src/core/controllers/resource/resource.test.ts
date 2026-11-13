@@ -73,6 +73,21 @@ describe('ResourceController.fetchSearchPage', () => {
     expect(mocks.stream).not.toHaveBeenCalled();
   });
 
+  it('gives the rows’ own cards when asked, every one of a page: a calendar’s occurrences share one link', async () => {
+    const occurrence = (uid: string) => ({
+      ...card('https://example.com/feed.ics'),
+      start: `2026-11-${uid}T00:00:00Z`,
+      occurrence: { feed_id: 'feed', feed_uri: 'https://example.com/feed.ics', uid, status: 'scheduled' },
+    });
+    const items = [occurrence('15'), card('https://example.com/concert'), occurrence('18')];
+    mocks.search.mockResolvedValue({ items, cursor: null, reach_truncated: false });
+
+    const page = await ResourceController.fetchSearchPage({ query: recentTags(), limit: 10, withCards: true });
+
+    expect(page.cards).toEqual(items);
+    expect(page.uris).toHaveLength(3);
+  });
+
   it('falls back to the resource stream for a first page the stream can answer as asked', async () => {
     mocks.search.mockRejectedValue(failure());
     mocks.stream.mockResolvedValue({ uris: ['https://example.com/a'], reachedEnd: false });
@@ -162,5 +177,45 @@ describe('ResourceController.getCachedHostFacets', () => {
     expect(ResourceController.getCachedHostFacets(query, 1)).toBeUndefined();
     mocks.cachedFacets.mockReturnValue(undefined);
     expect(ResourceController.getCachedHostFacets(query, 1)).toBeUndefined();
+  });
+});
+
+describe('ResourceController.fetchNearbyPlaces', () => {
+  const point = { lat: 47.3708689, lon: 8.5418241 };
+  const place = (id: string, extra: object = {}) => ({
+    ...card(`https://www.openstreetmap.org/node/${id}`),
+    id,
+    point: { lat: 47.37, lon: 8.54 },
+    ...extra,
+  });
+
+  beforeEach(() => mocks.search.mockReset());
+
+  it('asks for the 7 nearest places around the point and gives the links of 6, without the place itself', async () => {
+    mocks.search.mockResolvedValue({
+      items: ['self', 'a', 'b', 'c', 'd', 'e', 'f'].map((id) => place(id)),
+      cursor: 'more',
+      reach_truncated: false,
+    });
+
+    const uris = await ResourceController.fetchNearbyPlaces({ point, self: { id: 'self' } });
+
+    const [query, options] = mocks.search.mock.calls[0];
+    expect(query).toMatchObject({ types: ['Place'], sort: 'distance', near: point, radiusKm: 2, viewer: null });
+    expect(options).toEqual({ limit: 7 });
+    expect(uris).toEqual(['a', 'b', 'c', 'd', 'e', 'f'].map((id) => `https://www.openstreetmap.org/node/${id}`));
+  });
+
+  it('gives each place by the link people wrote for it, and none without Pinakes', async () => {
+    mocks.search.mockResolvedValue({
+      items: [place('a', { uri: 'osm:node/1', refs: ['https://www.openstreetmap.org/node/1'] })],
+      reach_truncated: false,
+    });
+    await expect(ResourceController.fetchNearbyPlaces({ point, self: { id: 'self' } })).resolves.toEqual([
+      'https://www.openstreetmap.org/node/1',
+    ]);
+
+    mocks.search.mockResolvedValue(null);
+    await expect(ResourceController.fetchNearbyPlaces({ point, self: { id: 'self' } })).resolves.toEqual([]);
   });
 });

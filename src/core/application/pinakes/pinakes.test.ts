@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getResourceServicesQuery } from '@/pipes/resource/resource.search';
+import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
 import kindOfBlueEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-release-group.enriched.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
+import occurrencesFixture from '@/services/pinakes/fixtures/occurrences.holidays.json';
+import eventsFixture from '@/services/pinakes/fixtures/search.events.json';
 import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import { PinakesService } from '@/services/pinakes/pinakes';
-import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { PinakesApplication } from './pinakes';
 
@@ -20,6 +23,7 @@ vi.mock('@/services/pinakes/pinakes', () => ({
     seedCardByUri: vi.fn(),
     search: vi.fn(),
     getCachedSearch: vi.fn(),
+    fetchOccurrences: vi.fn(),
   },
 }));
 
@@ -182,5 +186,64 @@ describe('PinakesApplication', () => {
       await expect(PinakesApplication.resolveCard(URI)).resolves.toBeNull();
       expect(PinakesService.seedCardByUri).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('PinakesApplication.fetchOccurrences', () => {
+  afterEach(() => vi.mocked(PinakesService.fetchOccurrences).mockReset());
+
+  it('reads a page of a calendar’s dates and gives its rows with the next page’s cursor', async () => {
+    vi.mocked(PinakesService.fetchOccurrences).mockResolvedValue(occurrencesFixture);
+
+    const page = await PinakesApplication.fetchOccurrences('feed', { from: '2026-11-13T00:00:00Z', limit: 3 });
+
+    expect(PinakesService.fetchOccurrences).toHaveBeenCalledWith('feed', {
+      from: '2026-11-13T00:00:00Z',
+      limit: 3,
+      cursor: undefined,
+    });
+    expect(page.cards).toEqual(occurrencesFixture.items);
+    expect(page.cursor).toBe(occurrencesFixture.cursor);
+  });
+
+  it('answers a resource Pinakes does not know, or no Pinakes, as no dates', async () => {
+    vi.mocked(PinakesService.fetchOccurrences).mockResolvedValue(null);
+
+    await expect(
+      PinakesApplication.fetchOccurrences('gone', { from: '2026-11-13T00:00:00Z', limit: 3 }),
+    ).resolves.toEqual({ cards: [], cursor: null });
+  });
+});
+
+describe('PinakesApplication.fetchEventInstances', () => {
+  const ROWS: TPinakesCard[] = eventsFixture.items;
+  const CONCERT = ROWS.find((card) => card.name === 'Annett Louisan @ Volkshaus')!;
+  const concertDetails: TPinakesResourceDetail = { ...eventFixture, id: CONCERT.id, uri: CONCERT.uri };
+
+  afterEach(() => vi.mocked(PinakesService.fetchCardByUri).mockReset());
+
+  it('reads the details of each event that is no calendar occurrence, and never an occurrence’s feed', async () => {
+    vi.mocked(PinakesService.fetchCardByUri).mockImplementation(async (uri) =>
+      uri === CONCERT.uri ? concertDetails : null,
+    );
+
+    const instances = await PinakesApplication.fetchEventInstances(ROWS);
+
+    const read = vi.mocked(PinakesService.fetchCardByUri).mock.calls.map(([uri]) => uri);
+    expect(read).toEqual(ROWS.filter((card) => !card.occurrence).map((card) => card.uri));
+    expect(read).not.toContain(ROWS[0].uri);
+    // One instance per row, in the rows' order: the three holidays stay three rows
+    expect(instances.map((instance) => instance.name)).toEqual(ROWS.map((card) => card.name));
+    expect(instances.find((instance) => instance.id === CONCERT.id)?.tz).toBe('America/Chicago');
+    expect(instances[0].occurrence?.uid).toBe(ROWS[0].occurrence?.uid);
+    expect(instances[0].tz).toBeUndefined();
+  });
+
+  it('keeps a row as the search gave it when its details cannot be read', async () => {
+    vi.mocked(PinakesService.fetchCardByUri).mockRejectedValue(new Error('down'));
+
+    const instances = await PinakesApplication.fetchEventInstances([CONCERT]);
+
+    expect(instances).toEqual([CONCERT]);
   });
 });

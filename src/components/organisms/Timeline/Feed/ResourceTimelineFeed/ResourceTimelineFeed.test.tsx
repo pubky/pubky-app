@@ -25,6 +25,7 @@ const BOOK = 'isbn:9780262033848';
 
 const searchResult = (overrides: Partial<UseResourceSearchResult> = {}): UseResourceSearchResult => ({
   uris: [WEB, BOOK],
+  cards: [],
   typeFacets: null,
   relatedTags: [],
   hostFacets: null,
