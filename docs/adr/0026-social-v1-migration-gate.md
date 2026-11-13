@@ -5,7 +5,8 @@
 Accepted — 2026-10-30, for the `pubky-social-specs` 1.x port (`docs/migrations/social-v1.md`).  
 Updated — 2026-11-11 (outcome policy and telemetry brought in line with the controller and `report-telemetry.ts`)  
 Updated — 2026-11-12 (the restore's flag read bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; a timeout ends in `temporary-error`)  
-Updated — 2026-11-13 (the signed-out explanation is route-independent while its notice is pending; the cut-over worker reloads a tab to its creation URL, see _Amendment_)
+Updated — 2026-11-13 (the signed-out explanation is route-independent while its notice is pending; the cut-over worker reloads a tab to its creation URL, see _Amendment_)  
+Updated — 2026-11-13 (the worker no longer reloads the new build's own pages, ADR-0021 amendment; the double boot and option (i) re-scoped, see _Consequences_ of the _Amendment_)
 
 ## Context
 
@@ -153,11 +154,14 @@ own business. The notice stays in `sessionStorage` (tab-scoped), `src/sw.ts` and
 unchanged.
 
 **Consequences.** The explanation survives the takeover reload and a user reload at any route. A tab that was opened on
-`/home` and reloaded by the worker loses its in-app place once per deploy while the ADR-0021 exception holds (the
-known item recorded in `docs/migrations/social-v1.md`). Not done, surfaced for the maintainer: (i) the worker asking the
-page to `location.reload()` via `postMessage`, which keeps the current route for every tab the new build already
-controls, `navigate` staying the fallback for the old build's pages; (ii) the notice in `localStorage`, so every tab of
-the profile explains the sign-out (today other tabs are signed out by the shared auth store without an explanation).
+`/home` and reloaded by the worker loses its in-app place (the known item recorded in `docs/migrations/social-v1.md`).
+Since 2026-11-13 (FIX-FINAL-8, ADR-0021 amendment) the worker leaves a page that announced itself in place, so the
+double boot above and the lost place apply to a 0.x tab and to an announce that lost the race to `matchAll`; the
+route-independent explanation stays for those. Of the two options
+surfaced for the maintainer, (i) the worker asking the page to `location.reload()` via `postMessage` is superseded by
+that handshake for the new build's pages (they are not reloaded at all); (ii) the notice in `localStorage`, so every
+tab of the profile explains the sign-out (today other tabs are signed out by the shared auth store without an
+explanation), is not done.
 
 ## Consequences
 

@@ -35,9 +35,11 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
 - **Bookmarks (D7):** locally owned; the two Nexus-generated notifications that needed public bookmarks are removed.
 - **Rollout guards (D8, D9):** `DB_VERSION` 3 → 4 with a loop-breaker (its unexpected-close probe reworked by FIX-9
   after QA-4 found it never fired; ADR-0019 amendment), and a forced service-worker reload on activation
-  (`skipWaiting` plus claim-and-navigate). Its revert (PR-E2) is not tied to the next release: nobody can
-  tell when the last 0.x tab is gone, so the forced policy stays until Nexus shows migrated users' 0.x writes at about
-  zero or for a period the team picks; keeping it costs only the consented-update toast (ADR-0021 amendment).
+  (`skipWaiting` plus claim-and-navigate of the windows that did not announce themselves; a page of a build with the
+  update hook announces itself and is left in place, FIX-FINAL-8). Its revert (PR-E2) is not tied to the next release:
+  nobody can tell when the last 0.x tab is gone, so the forced policy stays until Nexus shows migrated users' 0.x
+  writes at about zero or for a period the team picks; keeping it costs the consent click (a v1 tab is claimed as soon
+  as the new worker installs and gets the "Update installed" toast; only 0.x tabs are reloaded; ADR-0021 amendment).
 - **Write path (D12):** `HomeserverService` is the only homeserver write path; `pubky-social-specs/client` is never
   imported outside `src/test-utils` (gate-tested). Reads are `list` + `getBytes` + `decodeObject`; writes
   `putBlob(built.body)` / `deleteIdempotent`.
@@ -124,6 +126,7 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3148                             | dev-sync 8 (`dev` @ `75243da08`: #3142 removed browser-key sign-up, so `AuthController.signUp` left the gate's files and the inline-signup gate test drives the Ring signup; the D2 backup prompt for legacy browser keys kept as is, its building blocks are still on `dev`; #2926 Paykit reconnect, #3127 truncate)                                                                                                                                                                                                                                                                                                    |
 | #3151                             | FIX-FINAL-6 (Greptile P1 on #3140): the restore's migration-flag read (`SocialMigrationApplication.readFlag`) waits at most `HOMESERVER_SYNC_READ_TIMEOUT_MS` via `awaitBounded`; a GET that never answers rejects with `REQUEST_TIMEOUT` and the restore ends in `temporary-error` (`/migration` Retry, focus and network-return retries) instead of staying at `restoring`; the engine run, its Web Lock wait and the flag write stay unbounded; ADR-0026 amended                                                                                                                                                      |
 | #3154                             | FIX-FINAL-7: the gate's signed-out explanation survives the worker takeover; `RouteGuardProvider` sends a signed-out tab whose notice is pending to `/migration` from every route but the gate's and sign-in (`router.replace`, `useSyncExternalStore` read) and drops a stale notice once signed in; Homepage and the header logo clear it as Sign in does; the takeover's `client.navigate(client.url)` lands on the creation URL and every post-deploy open boots twice, so the second boot had shown the guest home; guard, header, template and Cypress tests; ADR-0026 and ADR-0021 amended, `docs/pwa.md`         |
+| #3155                             | FIX-FINAL-8: the cut-over worker leaves pages of the new build in place: a page announces itself (`SW_CLIENT_ANNOUNCE`, its `APP_VERSION`) to each worker found installing or waiting, the worker skips announced windows in its navigate loop and answers `SW_TAKEOVER_SKIPPED` with its own `NEXT_PUBLIC_APP_VERSION`, and the hook shows no "Update installed" toast for a same-build takeover; 0.x pages are reloaded as before, so the double boot and the lost in-app place are theirs; worker and hook tests, mutation-checked; ADR-0021 and ADR-0026 amended, `docs/pwa.md`, `docs/environment.md`               |
 
 The branch also carries CI-owned VRT baseline commits from the `VRT Update Baselines` dispatches after the QA-1 fixes
 (two dispatches, 2026-10-31 and 2026-11-02), after dev-sync 2, 3 and 4, and after #3113 (`495ddbca3`): the new
@@ -456,8 +459,10 @@ After dev-sync 3 (2026-11-09):
   re-derives every id when it copies a 0.x feed) and again on every filter edit, which is the data model's design.
 - Forced sign-out, a new grant with the longer scope list, and a forced reload of open tabs at the cut-over; a stale
   tab reloaded by the cut-over worker loses an unsaved composer draft (the composer persists no draft; deferring the
-  reload for a dirty composer was declined on 2026-11-04). The cut-over worker reloads a tab to its creation URL, not
-  its current route; a user loses their in-app place once per deploy while the ADR-0021 exception holds (FIX-FINAL-7).
+  reload for a dirty composer was declined on 2026-11-04). The cut-over worker reloads a 0.x tab to its creation URL,
+  not its current route, so its user loses their in-app place at the cut-over (FIX-FINAL-7); a tab of a build with the
+  update hook announces itself and is left in place since FIX-FINAL-8, unless its announce lost the race to the worker's
+  `matchAll`.
 - Migrated articles with the rc.1 off-by-one render through the migrated-article reader rule (A′), and keep doing so
   after the migrator fix, since the fixed migrator rewrites nothing an earlier run wrote (ADR-0023 amendment).
 - Mute changes and the notification read boundary (`last_read`) changed on another device appear within the poll
@@ -705,7 +710,12 @@ build ran under the old worker (gate → `missing-scopes` → sign-out at `/migr
 its takeover `client.navigate(client.url)` reloaded the tab to its creation URL `/home`, where the signed-out second boot
 was an ordinary guest. The same repro driven from the old page with `registration.update()` (QA-4 Part C's path) boots
 once and keeps the explanation, which is why QA-4 passed. The fix routes the signed-out tab back to the explanation from
-any route while its notice is pending; the coordinator re-runs `repro.mjs` on a production build of the fix.
+any route while its notice is pending; the coordinator re-ran `repro.mjs` on a production build of the fix (MODE=reload:
+second boot at `/home`, guard `replaceState('/migration')`, explanation kept; MODE=migrated: a migrated user keeps the
+session across the deploy). FIX-FINAL-8 then removed the second boot itself for pages of the new build: the worker
+leaves a window that announced itself in place and answers with its build identity, and the hook shows no toast for
+its own build (ADR-0021 amendment); the coordinator re-runs `repro.mjs` MODE=reload (one boot, no toast text) and
+MODE=migrated (session kept, no reload) on a production build of that branch.
 
 Browser QA matrix for a later pass (sign-in paths: Ring simulator scoped grant, recovery phrase, encrypted file, fresh
 signup; pass = the stated outcome, no unexpected `AppError` toast, homeserver and Nexus agree): un-migrated persisted
@@ -786,8 +796,9 @@ where they changed the app.
   nine scopes and adoption works; HPKE approvals with the current SDK are to be verified on staging with a real Ring
   before the release (QA used the simulator).
 - **Ops:** the production homeserver reports the same features as staging and the local 0.16.2 stack; old `_next/static`
-  chunks after a deploy are moot under the forced reload; storage allowances and the moderation service are release
-  gates (above).
+  chunks after a deploy are moot for 0.x tabs under the forced reload, while a v1 tab that a later deploy claims is left
+  in place since FIX-FINAL-8 and relies on the #2548 stale-chunk recovery, as under the consent policy; storage
+  allowances and the moderation service are release gates (above).
 - **SDK (pubky/pubky-homeserver#798):** filed 2026-11-04 as "a session-bound event stream deadlocks the bearer refresh";
   the 2026-11-09 probe in a plain browser refuted the deadlock (the stream's lease is released as soon as its response
   headers arrive; only a proxy that buffers event streams, as Cypress's does, makes it unbounded), and the issue was
