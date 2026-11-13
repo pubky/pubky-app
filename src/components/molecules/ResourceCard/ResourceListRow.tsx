@@ -50,6 +50,11 @@ interface ResourceListRowProps {
   name: string;
   /** A second line under the name, or `null` for none. */
   note: string | null;
+  /**
+   * A note in the row's accessible name and tooltip only, never shown (a match by metadata's
+   * `MAYBE_ALSO_ON_NOTE`); `null` or left out for none.
+   */
+  hint?: string | null;
   /** Where the row's link came from, in its tooltip only ("Found via musicbrainz"). */
   source?: string | null;
   /**
@@ -77,6 +82,7 @@ export function ResourceListRow({
   externalHref,
   name,
   note,
+  hint,
   source,
   counts,
   trailing,
@@ -103,8 +109,8 @@ export function ResourceListRow({
         <span className="sr-only">{countsText}</span>
       </>
     ) : null;
-  const content = <ResourceRowContent uri={uri} name={name} note={note} counts={countsLine} />;
-  const tooltip = [name, note, countsText, source].filter(Boolean).join(' · ');
+  const content = <ResourceRowContent uri={uri} name={name} note={note} hint={hint} counts={countsLine} />;
+  const tooltip = [name, note, hint, countsText, source].filter(Boolean).join(' · ');
   // Beside a link out, the row takes the room the ↗ leaves; a long name is cut short before it.
   const width = externalHref ? 'flex-1' : trailing && 'w-full';
   const row = href ? (

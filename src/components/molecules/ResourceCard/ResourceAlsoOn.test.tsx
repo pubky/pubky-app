@@ -59,33 +59,60 @@ describe('ResourceAlsoOn', () => {
     );
   });
 
-  it('lists a match by metadata after the exact links with a short "maybe", its note in its name', () => {
-    const alsoOn: TPinakesAlsoOn[] = [
-      {
-        uri: 'https://www.deezer.com/track/67238735',
-        site: 'Deezer',
-        derived: true,
-        via: 'youtube_match',
-        kind: 'maybe',
-      },
+  describe('a match by metadata', () => {
+    const DEEZER_MAYBE: TPinakesAlsoOn = {
+      uri: 'https://www.deezer.com/track/67238735',
+      site: 'Deezer',
+      derived: true,
+      via: 'youtube_match',
+      kind: 'maybe',
+    };
+    const ALSO_ON: TPinakesAlsoOn[] = [
+      DEEZER_MAYBE,
       { uri: 'https://open.spotify.com/track/1', site: 'Spotify', derived: true, via: 'musicbrainz' },
       { id: 't', uri: 'https://tidal.com/track/1', site: 'TIDAL' },
     ];
-    const menu = renderAlsoOn(pickAlsoOn(alsoOn, { site: 'YouTube', uris: [] }));
+    const picked = () => pickAlsoOn(ALSO_ON, { site: 'YouTube', uris: [] });
 
-    expect(rows().map((row) => row.textContent)).toEqual(['Spotify', 'TIDAL', 'Deezer maybe']);
-    expect(within(menu).getAllByTestId('resource-maybe-label')).toHaveLength(1);
-    expect(within(rows()[2]).getByTestId('resource-maybe-label')).toHaveTextContent('maybe');
-    expect(screen.getByRole('menuitem', { name: 'Deezer, Maybe · found via youtube_match' })).toHaveAttribute(
-      'href',
-      getResourceRoute('https://www.deezer.com/track/67238735'),
-    );
+    it('is listed after the exact links with no label, its note in its hover text and name only', () => {
+      const menu = renderAlsoOn(picked());
+
+      expect(rows().map((row) => row.textContent)).toEqual(['Spotify', 'TIDAL', 'Deezer']);
+      expect(within(menu).getByRole('group', { name: 'Also on' }).textContent).not.toMatch(/maybe|matched/i);
+      const deezer = screen.getByRole('menuitem', {
+        name: 'Deezer, Matched by title and length · found via youtube_match',
+      });
+      expect(deezer).toBe(rows()[2]);
+      expect(deezer).toHaveAttribute('title', 'Matched by title and length');
+      expect(deezer).toHaveAttribute('href', getResourceRoute(DEEZER_MAYBE.uri));
+    });
+
+    it('leaves the exact links’ rows as they were: no hover text, named by their own note', () => {
+      renderAlsoOn(picked());
+
+      const [spotify, tidal] = rows();
+      expect(spotify).toHaveAccessibleName('Spotify, Found via musicbrainz');
+      expect(tidal).toHaveAccessibleName('TIDAL');
+      expect(spotify).not.toHaveAttribute('title');
+      expect(tidal).not.toHaveAttribute('title');
+    });
+
+    it('shows no label in the bottom sheet either, its note in its hover text and name', () => {
+      renderSheet(picked());
+
+      expect(rows().map((row) => row.textContent)).toEqual(['Spotify', 'TIDAL', 'Deezer']);
+      expect(screen.getByTestId('resource-also-on').textContent).not.toMatch(/maybe|matched/i);
+      const deezer = rows()[2];
+      expect(deezer).toHaveAccessibleName('Deezer, Matched by title and length · found via youtube_match');
+      expect(deezer).toHaveAttribute('title', 'Matched by title and length');
+      expect(deezer).toHaveAttribute('href', getResourceRoute(DEEZER_MAYBE.uri));
+    });
   });
 
-  it('marks no row of a card with exact links only', () => {
+  it('gives no row of a card with exact links only a hover text', () => {
     renderAlsoOn(VIDEO.also_on);
 
-    expect(screen.queryByTestId('resource-maybe-label')).not.toBeInTheDocument();
+    for (const row of rows()) expect(row).not.toHaveAttribute('title');
   });
 
   it('opens every entry’s page on Pubky in the same tab, with its site’s favicon', () => {

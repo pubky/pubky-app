@@ -191,6 +191,41 @@ describe('ResourceSidebar', () => {
       expect(within(doi).getByRole('link')).toHaveAttribute('href', getResourceRoute('doi:10.1038/nature12373'));
     });
 
+    it('lists a match by metadata last with no label, its note in its tooltip and name only', () => {
+      const appleMusic = {
+        uri: 'https://music.apple.com/us/song/1',
+        site: 'Apple Music',
+        derived: true,
+        via: 'itunes_song',
+        kind: 'maybe',
+      };
+      // Outside a group: no member shared on Pubky stands for Apple Music instead.
+      card = {
+        ...VIDEO,
+        group: null,
+        also_on: [appleMusic, ...VIDEO.also_on.filter((entry) => entry.site !== 'Apple Music')],
+      };
+      render(<ResourceSidebar card={card} />);
+
+      const section = screen.getByTestId('resource-also-on-list');
+      const rows = within(section).getAllByTestId('resource-also-on-list-row');
+      expect(rows.map((row) => row.textContent)).toEqual([
+        'TIDAL',
+        'MusicBrainz',
+        'Deezer',
+        'Spotify',
+        'Apple Music Matched by title and length',
+      ]);
+      const [link] = within(rows[4]).getAllByRole('link');
+      expect(within(link).getByText('Matched by title and length')).toHaveClass('sr-only');
+      expect(section.textContent).not.toMatch(/maybe/i);
+      expect(link).toHaveAccessibleName('Apple Music Matched by title and length');
+      expect(link).toHaveAttribute('title', 'Apple Music · Matched by title and length · Found via itunes_song');
+      expect(link).toHaveAttribute('href', getResourceRoute(appleMusic.uri));
+      // An exact link's row is as before.
+      expect(within(rows[0]).getAllByRole('link')[0]).toHaveAccessibleName('TIDAL');
+    });
+
     it('shows no Also on section for a resource on no other service', () => {
       card = eventFixture;
       render(<ResourceSidebar card={card} />);
@@ -303,6 +338,17 @@ describe('ResourceSidebar', () => {
         expect(within(wikipedia()).queryByTestId('resource-also-on-list-row-counts-replies')).not.toBeInTheDocument();
         expect(within(wikipedia()).getByTestId('resource-also-on-list-row-counts-posts')).toHaveTextContent('1');
         expect(within(section()).getAllByTestId('resource-also-on-list-row-counts')).toHaveLength(1);
+      });
+
+      it('shows no label on a match by metadata in another language, its note in its tooltip and name only', () => {
+        const maybe = (lang: string) => ({ ...voyage(lang), derived: true, via: 'x', kind: 'maybe' });
+        card = { ...PLACE, group: null, also_on: [maybe('en'), maybe('fr')] };
+        render(<ResourceSidebar card={card} />);
+
+        const row = within(section()).getByRole('link', { name: /^Wikivoyage / });
+        expect(section().textContent).not.toMatch(/maybe/i);
+        expect(row).toHaveAccessibleName('Wikivoyage English (en) Matched by title and length');
+        expect(row).toHaveAttribute('title', 'Wikivoyage · English (en) · Matched by title and length · Found via x');
       });
 
       it('gives each service its own row and select, and leaves a service in one language a plain row', () => {
