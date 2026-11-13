@@ -56,8 +56,8 @@ export class PinakesService {
    *
    * @param uri - The link as referenced; Pinakes normalises it and answers an alias with its root
    * @param options.fresh - Ask Pinakes again whatever the cache holds
-   * @param options.maxAge - Answer from the cache only a card read within this many milliseconds
-   * (instead of the cache's own five minutes)
+   * @param options.maxAge - Answer from the cache only a card read within this many milliseconds,
+   * when that is less than the cache's own time (five minutes; 30 s for a link not known yet)
    * @returns The card, or `null` when Pinakes does not know the link (404, nothing is fetched there),
    * the link is too long to be known, or Pinakes is not configured. A link that carries credentials
    * (`user:password@`) or does not parse is never sent, as in `resolveCard`.
@@ -75,8 +75,13 @@ export class PinakesService {
     return pinakesQueryClient.fetchQuery({
       queryKey: byUriKey(uri),
       // `fresh`: a re-read of a link Pinakes did not know yet asks again, whatever the cache holds.
-      // `maxAge`: a card read longer ago than that (milliseconds) is asked again.
-      staleTime: fresh ? 0 : (maxAge ?? pinakesCardStaleTime),
+      // `maxAge`: a card read longer ago than that (milliseconds) is asked again; it only ever
+      // shortens the time the cache keeps a card.
+      staleTime: fresh
+        ? 0
+        : maxAge === undefined
+          ? pinakesCardStaleTime
+          : (query) => Math.min(maxAge, pinakesCardStaleTime(query)),
       queryFn: () =>
         fetchPinakesOrNull<TPinakesResourceDetail>({
           url: `${base}${BY_URI_PATH}?${new URLSearchParams({ uri })}`,
