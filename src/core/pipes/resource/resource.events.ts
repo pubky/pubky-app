@@ -10,8 +10,6 @@ type TEventDetailField =
  */
 export type TEventInstance = TPinakesCard & Partial<Pick<TPinakesResourceDetail, TEventDetailField>>;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /** The `event_status` of an event going ahead as planned. */
 const SCHEDULED = 'scheduled';
 
@@ -53,19 +51,11 @@ export function mergeResourceInstances(read: readonly TPinakesCard[], page: read
 }
 
 /**
- * Whether `start` to `end` runs from one UTC midnight to a later one: how Pinakes writes a
- * calendar's all-day dates (`00:00Z` to the next day's `00:00Z`). A search row says no `all_day`,
- * so such a span is shown as its day rather than as "12:00 AM".
- */
-export function isWholeDaySpan(start: string | null | undefined, end: string | null | undefined): boolean {
-  const [from, to] = [parseTime(start), parseTime(end)];
-  return from !== null && to !== null && to > from && from % DAY_MS === 0 && to % DAY_MS === 0;
-}
-
-/**
  * A search row as a list of events shows it. A calendar occurrence stays its own row: its name and
  * dates are the instance's, its status the instance's lifecycle, and nothing is taken from
- * `details` (a read by its id or link answers the calendar itself, not the instance). Any other
+ * `details` (a read by its id or link answers the calendar itself, not the instance). Nothing is
+ * added that the row does not say: an occurrence names no time zone and no `all_day`, so its times
+ * show as they are, in UTC (a span from one UTC midnight to the next can be a timed event too). Any other
  * event takes its own read's details (time zone, venue, status, attendance) once they are read; a
  * read of another resource is ignored.
  */
@@ -74,11 +64,7 @@ export function toEventInstance(
   details: TPinakesResourceDetail | null | undefined,
 ): TEventInstance {
   if (card.occurrence) {
-    return {
-      ...card,
-      event_status: card.occurrence.status,
-      ...(isWholeDaySpan(card.start, card.end) ? { all_day: true } : {}),
-    };
+    return { ...card, event_status: card.occurrence.status };
   }
   if (!details || details.id !== card.id) return card;
   const { tz, all_day, venue, event_status, organizer, attendance, address, category, facts } = details;

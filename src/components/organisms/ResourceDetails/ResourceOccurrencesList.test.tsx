@@ -39,14 +39,14 @@ describe('ResourceOccurrencesList', () => {
     mocks.asked.length = 0;
   });
 
-  it('lists a calendar’s coming dates, each with its own name and day, though all share the calendar’s id', () => {
+  it('lists a calendar’s coming dates, each with its own name and time, though all share the calendar’s id', () => {
     render(<ResourceOccurrencesList card={CALENDAR} locale="en-US" />);
 
     expect(mocks.asked).toEqual([CALENDAR.id]);
-    expect(rows().map((row) => row.textContent)).toEqual([
-      'National Day of MourningNov 15, 2026',
-      'Repentance Day (Saxony)Nov 18, 2026',
-      'Sunday of the DeadNov 22, 2026',
+    expect(rows().map((row) => row.textContent?.replace(/\s/g, ' '))).toEqual([
+      'National Day of MourningNov 15, 2026, 12:00 AM UTC – Nov 16, 2026, 12:00 AM UTC',
+      'Repentance Day (Saxony)Nov 18, 2026, 12:00 AM UTC – Nov 19, 2026, 12:00 AM UTC',
+      'Sunday of the DeadNov 22, 2026, 12:00 AM UTC – Nov 23, 2026, 12:00 AM UTC',
     ]);
   });
 
@@ -57,6 +57,30 @@ describe('ResourceOccurrencesList', () => {
 
     // Intl separates the parts with narrow spaces
     expect(rows()[0].textContent?.replace(/\s/g, ' ')).toContain('Nov 17, 2026, 6:00 – 8:00 PM UTC');
+  });
+
+  it('never calls a date all-day on its times alone: a timed event from midnight to midnight UTC keeps its times', () => {
+    // A 24-hour event that starts at 9:00 in Tokyo has these very timestamps
+    const allNight = { ...DATES[0], name: 'Hackathon', start: '2026-11-21T00:00:00Z', end: '2026-11-22T00:00:00Z' };
+    mocks.read = read({ cards: [allNight] });
+    render(<ResourceOccurrencesList card={CALENDAR} locale="en-US" />);
+
+    expect(rows()[0].textContent?.replace(/\s/g, ' ')).toBe(
+      'HackathonNov 21, 2026, 12:00 AM UTC – Nov 22, 2026, 12:00 AM UTC',
+    );
+  });
+
+  it('ends a date that has a place with Open in Maps, and gives one without a place none', () => {
+    const placed = { ...DATES[1], point: { lat: 47.37546, lon: 8.52722 } };
+    mocks.read = read({ cards: [DATES[0], placed] });
+    render(<ResourceOccurrencesList card={CALENDAR} locale="en-US" />);
+
+    const [first, second] = rows();
+    expect(within(first).queryByRole('button', { name: 'Open in Maps' })).toBeNull();
+    expect(within(second).getByRole('button', { name: 'Open in Maps' })).toBeInTheDocument();
+    // Its name and time stay as they are
+    expect(second).toHaveTextContent('Repentance Day (Saxony)');
+    expect(second.textContent?.replace(/\s/g, ' ')).toContain('Nov 18, 2026, 12:00 AM UTC');
   });
 
   it('says when a date is cancelled or moved, and nothing for one going ahead', () => {

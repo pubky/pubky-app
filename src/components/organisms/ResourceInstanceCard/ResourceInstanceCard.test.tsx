@@ -55,12 +55,13 @@ describe('ResourceInstanceCard', () => {
     expect(actions).toHaveAttribute('data-tags-label', 'Tags on this music event');
   });
 
-  it('shows a calendar occurrence as itself (its own name and day), its tags and actions those of the calendar people tagged', () => {
+  it('shows a calendar occurrence as itself (its own name and times), its tags and actions those of the calendar people tagged', () => {
     render(<ResourceInstanceCard card={toEventInstance(HOLIDAY, null)} />);
 
     expect(screen.getByTestId('resource-card-title')).toHaveTextContent('National Day of Mourning');
-    // Its day alone: no time, and no time zone to get wrong
-    expect(screen.getByTestId('resource-card-dates').textContent).toMatch(/^\D*15\D+2026$|^\D+15, 2026$/);
+    // Its own start and end, in UTC and saying so: an occurrence names no time zone, and nothing
+    // says it lasts all day
+    expect(screen.getByTestId('resource-card-dates').textContent).toMatch(/15, 2026.*UTC.*16, 2026.*UTC/);
     const actions = screen.getByTestId('resource-actions');
     // The card's link, and the spelling people wrote for it read along
     expect(actions).toHaveAttribute('data-uri', HOLIDAY.uri);
