@@ -23,6 +23,8 @@ describe('useOgMetadata', () => {
     'https://alice:secret@example.invalid/og-b',
     'https://alice%40home:s%3Acret@example.invalid/og-c',
     '<https://alice@example.invalid/og-d>',
+    'https://ali\tce:secret@example.invalid/og-f',
+    'https://example.invalid/og-g?u=https://alice:secret@other.invalid/',
   ])('never sends %s, a link with a username or password', (url) => {
     const { result } = renderHook(() => useOgMetadata(url));
 

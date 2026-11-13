@@ -80,6 +80,8 @@ describe('isResolvableLink', () => {
     ['https://x.com/@user', true],
     ['https://mastodon.social/@name', true],
     ['not a link', false],
+    ['https://example.invalid/?u=https://alice:secret@other.invalid/', false],
+    ['https://ali\tce:secret@example.invalid/a', false],
   ])('%s may be sent: %s', (uri, expected) => {
     expect(isResolvableLink(uri)).toBe(expected);
   });
@@ -102,6 +104,10 @@ describe('hasCredentialLink', () => {
     ['https:/user:secret@host', true],
     ['https:\\\\user:secret@host', true],
     ['https://example.com/?u=https://bank.com/@me', false],
+    // A browser drops tabs and line breaks inside a link, which brings its username back together
+    ['https://ali\tce:secret@example.invalid/a', true],
+    ['https://alice:sec\nret@example.invalid/a', true],
+    ['https://alice:secret\r@example.invalid/a', true],
   ])('%s: %s', (text, expected) => {
     expect(hasCredentialLink(text)).toBe(expected);
   });
