@@ -1,7 +1,7 @@
 import type { Interception } from 'cypress/types/net-stubbing';
 import { slowCypressDown } from 'cypress-slow-down';
 import { SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS } from '../../src/config/social-migration';
-import { backupDownloadFilePath, extendedTimeout, verifyNotificationCounter } from '../support/common';
+import { extendedTimeout, verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
 import {
   holdMigrationFlag,
@@ -31,6 +31,7 @@ import {
 import { createQuickPost, deletePost, editPost, waitForFeedToLoad } from '../support/posts';
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
 import { addProfileTags, openProfileTab, showProfileHeader, unfollowUserByUsername } from '../support/profile';
+import { itMobile } from '../support/mobile';
 import {
   bookmarkViaApi,
   createArticleViaApi,
@@ -42,10 +43,11 @@ import {
   markNotificationsReadViaApi,
   muteViaApi,
   seedUserViaApi,
+  signUpViaApi,
   tagPostViaApi,
   writeSettingsViaApi,
 } from '../support/seed';
-import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 import type { SeededPost, SeededUser } from '../support/types/seed';
 
 // Records every route the tab visits from here on into the test's own list, which an assertion reads later. Kept as
@@ -83,6 +85,27 @@ const expectOneVersionPerPost = (user: SeededUser, posts: SeededPost[]) =>
     return cy.wrap(urls, { log: false });
   });
 
+// A fresh signup token from the homeserver admin API, as the suite hands them out to testers
+const fetchInviteCode = () =>
+  cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(({ homeserverAdminUrl, homeserverAdminPassword }) =>
+    cy
+      .request({
+        method: 'GET',
+        url: homeserverAdminUrl,
+        headers: {
+          'X-Admin-Password': homeserverAdminPassword,
+        },
+      })
+      .then((response) => response.body as string),
+  );
+
+// The Install step only offers Pubky Ring now that the browser no longer creates keys
+const expectInstallStepOffersPubkyRingOnly = () => {
+  cy.location('pathname').should('eq', '/onboarding/install');
+  cy.get('#continue-with-pubky-ring-btn').should('be.visible');
+  cy.get('#create-keys-in-browser-btn').should('not.exist');
+};
+
 const waitUntilStarterPackHasUsers = (tag: string) => {
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
     // The deadline starts when the poll runs: this wait is queued behind a full onboarding,
@@ -113,7 +136,6 @@ describe('Onboarding', () => {
   });
 
   beforeEach(() => {
-    cy.deleteDownloadsFolder();
     cy.visit('/');
     checkHeaderIsVisible();
   });
@@ -135,55 +157,33 @@ describe('Onboarding', () => {
     cy.get('[data-cy="header-sign-in-btn"]').should('exist').should('be.visible');
   };
 
-  it('can onboard as a new user backing up with encrypted file and recovery phrase, sign out, then sign in with both methods', () => {
-    // profile name is also used for the backup file name
-    const profileName = 'Test User';
-    const profileBio = 'Test Bio';
-    const backupWithFileAndPhrase = [BackupType.EncryptedFile, BackupType.RecoveryPhraseWithConfirmation];
+  itMobile(
+    'can onboard a new Pubky Ring key from the profile step, sign out, then sign back in with Pubky Ring',
+    () => {
+      const profileName = 'Test User';
+      const profileBio = 'Test Bio';
 
-    // A signup has nothing to move: it records that inline, and never passes through the gate's route
-    const visitedUrls: string[] = [];
-    recordRoutes(visitedUrls);
-    cy.intercept('PUT', MIGRATION_FLAG_GLOB).as('signupFlag');
+      // A new key has nothing to move: its first sign-in records that once, on its empty tree
+      cy.intercept('PUT', MIGRATION_FLAG_GLOB).as('firstSignInFlag');
 
-    cy.onboardAsNewUser(profileName, profileBio, backupWithFileAndPhrase);
+      cy.onboardAsNewUser(profileName, profileBio);
 
-    cy.get('@signupFlag.all').should('have.length', 1);
-    cy.then(() => {
-      expect(
-        visitedUrls.filter((url) => url.includes('/migration')),
-        'visits to the gate during signup',
-      ).to.deep.eq([]);
-      expect(visitedUrls, 'routes during signup').to.not.deep.eq([]);
-    });
+      cy.get('@firstSignInFlag.all').should('have.length', 1);
 
-    // confirm backup reminder is shown
-    cy.get('#backup-btn').should('exist').click();
-    // confirm backup dialog can be shown and closed
-    cy.get('#backup-dialog-title').should('exist');
-    cy.get('[data-testid="dialog-close"]').click();
-    // confirm backup done button can be clicked
-    cy.get('#backup-done-btn').click();
-    // confirm backup confirmation dialog can be shown and dismissed
-    cy.get('#backup-done-warning-text').should('exist');
-    cy.get('#backup-done-confirm-btn').click();
-    // confirm backup reminder is not shown
-    cy.get('#backup-btn').should('not.exist');
+      // a key held in Pubky Ring is not reminded to back up on the home feed
+      cy.location('pathname').should('eq', '/home');
+      cy.get('[data-cy="timeline-container"]').should('be.visible');
+      cy.get('#backup-btn').should('not.exist');
+      checkOwnProfile(profileName, profileBio);
 
-    cy.signOut(HasBackedUp.Yes);
+      cy.signOut(HasBackedUp.Yes);
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
-    checkOwnProfile(profileName, profileBio);
+      cy.signInWithPubkyRing(profileName);
+      checkOwnProfile(profileName, profileBio);
 
-    cy.signOut(HasBackedUp.Yes);
-
-    cy.get(`@recoveryPhrase-${profileName}`).then((recoveryPhrase) => {
-      cy.signInWithRecoveryPhrase(recoveryPhrase.toString());
-    });
-    checkOwnProfile(profileName, profileBio);
-
-    cy.signOut(HasBackedUp.Yes);
-  });
+      cy.signOut(HasBackedUp.Yes);
+    },
+  );
 
   it('migrates a 0.x account on sign-in and lands on home with its content', () => {
     const profileName = `Unmigrated ${Cypress._.random(100_000)}`;
@@ -206,7 +206,7 @@ describe('Onboarding', () => {
     let collection: SeededPost;
     let lastRead: number;
 
-    seedUserViaApi(profileName, { bio: profileBio, legacy: true, withRecoveryFile: true }).then((seeded) => {
+    seedUserViaApi(profileName, { bio: profileBio, legacy: true }).then((seeded) => {
       user = seeded;
     });
     seedUserViaApi('Followed Before Migrating', { legacy: true }).then((seeded) => {
@@ -263,7 +263,7 @@ describe('Onboarding', () => {
     cy.intercept('PUT', '**/priv/app.pubky/v1/last_read*').as('lastReadCopied');
     holdMigrationFlag();
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, { migrates: true });
+    cy.signInWithPubkyRing(profileName, '/home', { migrates: true });
 
     migrationFlag().then((flag) => {
       // The app's own files are the only thing a clean run leaves behind: it imports those itself
@@ -351,7 +351,7 @@ describe('Onboarding', () => {
     // A second sign-in goes through the gate's route while it checks, finds the done flag and writes no
     // second one: the flag is the last write of a run, so a repeated migration would show here.
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+    cy.signInWithPubkyRing(profileName);
     cy.get('@migrationDone.all').should('have.length', 1);
     cy.signOut(HasBackedUp.Yes);
   });
@@ -375,7 +375,7 @@ describe('Onboarding', () => {
     let deletable: SeededPost;
     let tagged: SeededPost;
 
-    seedUserViaApi(profileName, { legacy: true, withRecoveryFile: true }).then((seeded) => {
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
       user = seeded;
     });
     seedUserViaApi(followeeName, { legacy: true }).then((seeded) => {
@@ -404,7 +404,7 @@ describe('Onboarding', () => {
     });
 
     holdMigrationFlag();
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, { migrates: true });
+    cy.signInWithPubkyRing(profileName, '/home', { migrates: true });
     migrationFlag();
 
     // A new post has no 0.x copy for Nexus to answer from
@@ -490,7 +490,7 @@ describe('Onboarding', () => {
     const visited: string[] = [];
     let copiesAtReload = 0;
 
-    seedUserViaApi(profileName, { legacy: true, withRecoveryFile: true }).then((seeded) => {
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
       user = seeded;
     });
     cy.then(() => {
@@ -512,7 +512,7 @@ describe('Onboarding', () => {
     }).as('postCopied');
     holdMigrationFlag();
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, {
+    cy.signInWithPubkyRing(profileName, '/home', {
       migrates: true,
       whileMigrating: () => {
         recordRoutes(visited);
@@ -578,7 +578,7 @@ describe('Onboarding', () => {
     const runsStartedAt: number[] = [];
     const visited: string[] = [];
 
-    seedUserViaApi(profileName, { legacy: true, withRecoveryFile: true }).then((seeded) => {
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
       user = seeded;
     });
     cy.then(() => {
@@ -606,7 +606,7 @@ describe('Onboarding', () => {
     });
     holdMigrationFlag();
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, {
+    cy.signInWithPubkyRing(profileName, '/home', {
       migrates: true,
       whileMigrating: () => {
         recordRoutes(visited);
@@ -677,7 +677,7 @@ describe('Onboarding', () => {
     let note: SeededPost;
     let untitled: SeededPost;
 
-    seedUserViaApi(profileName, { bio: profileBio, legacy: true, withRecoveryFile: true }).then((seeded) => {
+    seedUserViaApi(profileName, { bio: profileBio, legacy: true }).then((seeded) => {
       user = seeded;
     });
     cy.then(() => {
@@ -694,7 +694,7 @@ describe('Onboarding', () => {
     });
 
     holdMigrationFlag();
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName), undefined, {
+    cy.signInWithPubkyRing(profileName, '/home', {
       migrates: true,
       acknowledgesSummary: true,
     });
@@ -768,7 +768,7 @@ describe('Onboarding', () => {
     waitUntilStarterPackHasUsers(interestTag);
     cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser('Interested User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+    cy.onboardAsNewUser('Interested User', '', undefined, OnboardingExperience.StopAtTags);
 
     cy.get('[data-testid="tags-of-interest-form"]').within(() => {
       cy.get('[data-testid="popular-interests-empty"], [data-testid^="popular-tag-"]', extendedTimeout()).should(
@@ -806,7 +806,7 @@ describe('Onboarding', () => {
   });
 
   it('shows most active people without interests and lands on the All feed after finishing', () => {
-    cy.onboardAsNewUser('Undecided User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+    cy.onboardAsNewUser('Undecided User', '', undefined, OnboardingExperience.StopAtTags);
 
     // Continue with zero tags
     cy.get('[data-testid="tags-of-interest-form"]').within(() => {
@@ -832,7 +832,14 @@ describe('Onboarding', () => {
       .should('not.exist');
   });
 
-  it('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {
+  itMobile('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {
+    // A fresh stack has no posts until a test makes one, and phones skip the tests that do
+    seedUserViaApi('Explore Poster').then((poster) => {
+      createPostViaApi(poster, 'A post to explore before joining').then((post) => {
+        waitForNexus(postIndexed(post));
+      });
+    });
+
     // Explore lives in the navbar on desktop and in the hero action row below `md`
     const exploreBtn = Cypress.expose('isMobile') ? '[data-cy="explore-btn"]' : '#header-explore-btn';
     cy.get(exploreBtn).should('be.visible').click();
@@ -870,33 +877,60 @@ describe('Onboarding', () => {
     cy.location('pathname').should('eq', '/onboarding/human');
   });
 
-  it('cannot proceed with a reused invite code', () => {
-    const profileName = 'Reused Invite User';
-    const signupTokensPath = '/signup_tokens/';
-    let capturedInviteCode = '';
+  itMobile('signs up a new Pubky Ring key with an invite code through the scan QR and completes onboarding', () => {
+    const profileName = 'Ring Signup User';
+    const visitedUrls: string[] = [];
 
-    // Pass verification through to the homeserver and capture the invite code from the request URL.
-    cy.intercept('GET', '**/signup_tokens/*', (req) => {
-      const tokenStart = req.url.indexOf(signupTokensPath);
-      if (tokenStart !== -1) {
-        const encodedToken = req.url.slice(tokenStart + signupTokensPath.length).split('?')[0];
-        capturedInviteCode = decodeURIComponent(encodedToken);
-      }
-      req.continue();
-    }).as('verifyInviteCode');
-
-    // First signup: homeserver verifies the fresh code as valid
-    cy.onboardAsNewUser(profileName);
-    cy.signOut(HasBackedUp.Yes);
-
-    // Second signup: reuse the captured invite code; homeserver should report it as used
     cy.get('#create-account-btn').click();
     cy.location('pathname').should('eq', '/onboarding/human');
-    cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
 
+    // Click 'enter invite code' button
+    cy.get('[data-cy="invite-code-link"]').should('exist').click();
+
+    fetchInviteCode().then((inviteCode) => {
+      cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
+    });
+    cy.get('[data-cy="human-invite-code-continue-btn"]').should('not.be.disabled').click();
+
+    expectInstallStepOffersPubkyRingOnly();
+    cy.get('#continue-with-pubky-ring-btn').click();
+
+    // A signup has nothing to move: it records that inline, and never passes through the gate's route
+    recordRoutes(visitedUrls);
+    cy.intercept('PUT', MIGRATION_FLAG_GLOB).as('signupFlag');
+
+    // Pubky Ring creates the key and signs it up with the invite code carried by the scan request
+    cy.completeSignUpWithPubkyRing(profileName);
+
+    cy.get('@signupFlag.all').should('have.length', 1);
     cy.then(() => {
-      expect(capturedInviteCode, 'invite code captured from first verification').to.be.a('string').and.not.be.empty;
-      cy.get('[data-cy="human-invite-code-input"]').type(capturedInviteCode);
+      expect(
+        visitedUrls.filter((url) => url.includes('/migration')),
+        'visits to the gate during signup',
+      ).to.deep.eq([]);
+      expect(visitedUrls, 'routes during signup').to.not.deep.eq([]);
+    });
+
+    goToProfilePageFromHeader();
+    showProfileHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+
+    // the key Ring signed up is the account: signing back in with it lands on the home feed
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithPubkyRing(profileName);
+  });
+
+  it('cannot proceed with a reused invite code', () => {
+    cy.intercept('GET', '**/signup_tokens/*').as('verifyInviteCode');
+
+    // A sign-up consumes its invite code (here through the homeserver API, as Pubky Ring would)
+    signUpViaApi('Reused Invite User').then(({ inviteCode }) => {
+      // Reuse that invite code; homeserver should report it as used
+      cy.get('#create-account-btn').click();
+      cy.location('pathname').should('eq', '/onboarding/human');
+      cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
+
+      cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
       cy.wait('@verifyInviteCode');
       cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code already used');
       cy.get('[data-cy="human-invite-code-continue-btn"]').should('be.disabled');
@@ -904,29 +938,13 @@ describe('Onboarding', () => {
     });
   });
 
-  it('can sign up via /invite/<code> URL', () => {
-    const profileName = 'Invite URL User';
+  itMobile('applies the invite code from an /invite/<code> URL and continues to the Pubky Ring install step', () => {
+    fetchInviteCode().then((inviteCode) => {
+      cy.visit(`/invite/${inviteCode}`);
+    });
 
-    cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(
-      ({ homeserverAdminUrl, homeserverAdminPassword }) => {
-        cy.request({
-          method: 'GET',
-          url: homeserverAdminUrl,
-          headers: {
-            'X-Admin-Password': homeserverAdminPassword,
-          },
-        }).then((response) => {
-          const inviteCode = response.body as string;
-
-          cy.visit(`/invite/${inviteCode}`);
-          cy.location('pathname').should('eq', '/onboarding/install');
-          cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code applied');
-          cy.get('#create-keys-in-browser-btn').should('be.visible');
-
-          cy.completeOnboardingFromInstall(profileName);
-        });
-      },
-    );
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code applied');
+    expectInstallStepOffersPubkyRingOnly();
   });
 
   it('redirects home when /invite/<code> verification returns 404', () => {

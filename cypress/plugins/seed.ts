@@ -1,6 +1,13 @@
-import { mkdirSync, writeFileSync } from 'fs';
-import { dirname } from 'path';
-import { Keypair, Pubky, PublicKey, type Session } from '@synonymdev/pubky';
+import {
+  AuthFlowKind,
+  Keypair,
+  Pubky,
+  PublicKey,
+  SignupGrantDeepLink,
+  type Capabilities,
+  type Path,
+  type Session,
+} from '@synonymdev/pubky';
 import { decodeObject, encodeObject } from 'pubky-social-specs';
 import { LOCKS_GUARDED_CONTENT_PATH } from '../../src/config/locks';
 import type {
@@ -14,13 +21,17 @@ import type {
   SeedEditPostArgs,
   SeededLockPost,
   SeededPost,
+  SeededSignUp,
   SeededUser,
+  SeedApprovePubkyAuthArgs,
   SeedFollowArgs,
   SeedLegacyLockArgs,
   SeedListPathsArgs,
+  SeedLockServerWriteArgs,
   SeedMarkNotificationsReadArgs,
   SeedMuteArgs,
   SeedSettingsArgs,
+  SeedSignUpArgs,
   SeedTagArgs,
 } from '../support/types/seed';
 import { legacyWriter, v1Writer, type SeedWriter } from './seed.writers';
@@ -44,9 +55,11 @@ export type SeedConfig = {
   nexusUrl: string;
 };
 
-// The passcode `cy.signInWithEncryptedFile` types by default
-const RECOVERY_FILE_PASSCODE = '123456';
 const SEED_CLIENT_ID = 'e2e-seed.pubky.app';
+// What a real Lock Server asks the creator to grant it, and the only scopes it writes with
+// (pubky/locks `locks_connect_capabilities`)
+const LOCK_SERVER_CAPABILITIES: Capabilities = '/priv/app.locks/:rw,/pub/app.locks/:rw';
+const LOCK_SERVER_CLIENT_ID = 'lock-server.e2e.test';
 // Consecutive seed writes start at least this far apart, so records a test orders by time
 // (timelines, threads, notifications) never share a timestamp
 const SEED_WRITE_SPACING_MS = 5;
@@ -54,6 +67,13 @@ const SEED_WRITE_SPACING_MS = 5;
 const LIST_PAGE_SIZE = 1000;
 
 type SeededSession = { name: string; session: Session; writer: SeedWriter; legacy: boolean };
+
+const lockServerPath = (path: string): Path => {
+  if (!path.startsWith('/pub/app.locks/') && !path.startsWith('/priv/app.locks/')) {
+    throw new Error(`the Lock Server only writes under /pub/app.locks/ and /priv/app.locks/, got ${path}`);
+  }
+  return path as Path;
+};
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -69,6 +89,9 @@ export const createSeedTasks = (config: SeedConfig) => {
   // earlier. They are not persisted: re-running one test in `cypress open` without the hook that
   // seeded its users fails with "was not seeded in this Cypress run", so re-run the whole spec.
   const sessions = new Map<string, SeededSession>();
+  // The key behind each signed-up name, for the mock Pubky Ring to approve sign-ins with. A name
+  // signed up again maps to its newest key, as a spec re-creating a user expects.
+  const keypairs = new Map<string, Keypair>();
   let sdk: Pubky | undefined;
   const pubky = () => (sdk ??= Pubky.testnet('localhost'));
 
@@ -80,6 +103,46 @@ export const createSeedTasks = (config: SeedConfig) => {
     return seeded;
   };
   const nameOf = (userId: string) => sessions.get(userId)?.name ?? userId;
+  const keypairFor = (name: string): Keypair => {
+    const keypair = keypairs.get(name);
+    if (!keypair) {
+      throw new Error(`no key was signed up for '${name}' in this Cypress run`);
+    }
+    return keypair;
+  };
+  const keypairOf = (userId: string): Keypair => {
+    const keypair = [...keypairs.values()].find((candidate) => candidate.publicKey.z32() === userId);
+    if (!keypair) {
+      throw new Error(`no key was signed up for ${userId} in this Cypress run`);
+    }
+    return keypair;
+  };
+  // The relay of the app's own Pubky Ring requests, which the stand-in Lock Server's grant uses too
+  let relay: string | undefined;
+  // One creator-granted session per creator, reused across that creator's locks as the Lock Server does
+  const lockServerSessions = new Map<string, Promise<Session>>();
+  const lockServerSessionFor = (owner: string): Promise<Session> => {
+    const existing = lockServerSessions.get(owner);
+    if (existing) return existing;
+    const granted = (async () => {
+      if (!relay) {
+        throw new Error('no sign-in has gone through the mock Pubky Ring yet, so the relay is unknown');
+      }
+      const flow = await pubky().startGrantAuthFlow(LOCK_SERVER_CAPABILITIES, AuthFlowKind.signin(), {
+        clientId: LOCK_SERVER_CLIENT_ID,
+        relay,
+      });
+      const approval = flow.awaitApproval();
+      // If the approval below fails, `approval` is never awaited and later rejects when the relay
+      // channel expires; without a handler that surfaces as a plugin error far from the cause
+      approval.catch(() => undefined);
+      await pubky().signer(keypairOf(owner)).approveAuthRequest(flow.authorizationUrl);
+      return approval;
+    })();
+    granted.catch(() => lockServerSessions.delete(owner));
+    lockServerSessions.set(owner, granted);
+    return granted;
+  };
   let lastStepAt = 0;
 
   // Runs one seed step, timing it and naming it in any failure so a broken seed points at its step
@@ -107,20 +170,80 @@ export const createSeedTasks = (config: SeedConfig) => {
     return (await response.text()).trim();
   };
 
+  // Creates a new key and signs it up on `homeserver` with `signupToken`, as Pubky Ring does
+  const signUpKey = async (name: string, homeserver: PublicKey, signupToken: string) => {
+    const keypair = Keypair.random();
+    await pubky().signer(keypair).signup(homeserver, signupToken);
+    keypairs.set(name, keypair);
+    return keypair;
+  };
+
+  // Signs a new key up on the test homeserver with a fresh signup token
+  const signUp = async (name: string) => {
+    const inviteCode = await fetchSignupToken();
+    const keypair = await signUpKey(name, PublicKey.from(config.homeserverPublicKey), inviteCode);
+    return { keypair, inviteCode };
+  };
+
+  // Sends the grant for the app's request through its relay, as Ring does when the user taps Authorize
+  const approvePubkyAuth = async (name: string, authUrl: string) => {
+    relay = new URL(authUrl).searchParams.get('relay') ?? relay;
+    await pubky().signer(keypairFor(name)).approveAuthRequest(authUrl);
+  };
+
   return {
-    seedCreateUser: ({ name, bio, recoveryFilePath, legacy = false }: SeedCreateUserArgs): Promise<SeededUser> =>
+    // The key Pubky Ring would create and sign up, without a profile: signing the app in with it
+    // lands on the Profile step
+    seedSignUp: ({ name }: SeedSignUpArgs): Promise<SeededSignUp> =>
+      step(`sign up key for '${name}'`, async () => {
+        const { keypair, inviteCode } = await signUp(name);
+        const id = keypair.publicKey.z32();
+        return { id, pubky: `pubky${id}`, inviteCode };
+      }),
+
+    // Mock Pubky Ring: approves the app's `pubkyauth://` request as the key signed up for `name`
+    seedApprovePubkyAuth: ({ name, authUrl }: SeedApprovePubkyAuthArgs) =>
+      step(`approve sign-in as '${name}' in mock Pubky Ring`, async () => {
+        await approvePubkyAuth(name, authUrl);
+        return null;
+      }),
+
+    // Mock Pubky Ring handling the app's sign-up request (pubky-ring `signupAction`): a new key signs up
+    // on the request's homeserver (`hs`) with its signup token (`st`), then approves the request's grant.
+    // The SDK approves a `signup_grant` link with the same grant as the `signin_grant` Ring rebuilds from it.
+    seedSignUpAndApprovePubkyAuth: ({ name, authUrl }: SeedApprovePubkyAuthArgs): Promise<SeededSignUp> =>
+      step(`sign up and approve as '${name}' in mock Pubky Ring`, async () => {
+        const { homeserver, signupToken } = SignupGrantDeepLink.parse(authUrl);
+        if (!signupToken) {
+          throw new Error('the sign-up request carries no signup token');
+        }
+        const keypair = await signUpKey(name, homeserver, signupToken);
+        await approvePubkyAuth(name, authUrl);
+        const id = keypair.publicKey.z32();
+        return { id, pubky: `pubky${id}`, inviteCode: signupToken };
+      }),
+
+    // Stand-in Lock Server: the homeserver writes the real one makes for a creator before it answers
+    // (guarded bytes, lock.json), with the session the creator granted it in Pubky Ring, not the app's
+    seedLockServerWrite: ({ owner, path, bytes }: SeedLockServerWriteArgs) =>
+      step(`Lock Server ${bytes === undefined ? 'deletes' : 'writes'} ${path} for '${nameOf(owner)}'`, async () => {
+        const { storage } = await lockServerSessionFor(owner);
+        if (bytes === undefined) {
+          await storage.delete(lockServerPath(path));
+        } else {
+          await storage.putBytes(lockServerPath(path), Buffer.from(bytes, 'base64'));
+        }
+        return null;
+      }),
+
+    seedCreateUser: ({ name, bio, legacy = false }: SeedCreateUserArgs): Promise<SeededUser> =>
       step(`create ${legacy ? 'un-migrated ' : ''}user '${name}'`, async () => {
-        const keypair = Keypair.random();
-        const signer = pubky().signer(keypair);
-        await signer.signup(PublicKey.from(config.homeserverPublicKey), await fetchSignupToken());
-        const session = await signer.signin(SEED_CLIENT_ID);
+        // Signed up like any other key, so the mock Pubky Ring can sign the app in as them
+        const { keypair } = await signUp(name);
+        const session = await pubky().signer(keypair).signin(SEED_CLIENT_ID);
         const id = keypair.publicKey.z32();
         const writer = legacy ? legacyWriter(id, session) : v1Writer(id, session);
         const uri = await writer.writeProfile(name, bio);
-        if (recoveryFilePath) {
-          mkdirSync(dirname(recoveryFilePath), { recursive: true });
-          writeFileSync(recoveryFilePath, keypair.createRecoveryFile(RECOVERY_FILE_PASSCODE));
-        }
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
         await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v1/ingest/${id}`, { method: 'PUT' }).catch(() => null);
         sessions.set(id, { name, session, writer, legacy });

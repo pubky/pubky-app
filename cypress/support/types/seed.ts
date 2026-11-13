@@ -20,7 +20,24 @@ export type SeededPost = {
   kind: SeededPostKind;
 };
 
-export type SeedCreateUserArgs = { name: string; bio: string; recoveryFilePath?: string; legacy?: boolean };
+export type SeedCreateUserArgs = { name: string; bio: string; legacy?: boolean };
+
+export type SeedSignUpArgs = { name: string };
+
+// A key signed up on the homeserver with no profile yet, the state a Pubky Ring sign-up leaves
+// the app in before the Profile step
+export type SeededSignUp = {
+  id: string;
+  pubky: string;
+  // The signup token the sign-up consumed
+  inviteCode: string;
+};
+
+// `authUrl` is the `pubkyauth://` request the app shows as its sign-in QR code or Ring deeplink
+export type SeedApprovePubkyAuthArgs = { name: string; authUrl: string };
+
+/** A homeserver write the stand-in Lock Server makes for `owner`: a PUT of `bytes` (base64), or a DELETE without. */
+export type SeedLockServerWriteArgs = { owner: string; path: string; bytes?: string };
 
 export type SeedCreatePostArgs = {
   authorId: string;

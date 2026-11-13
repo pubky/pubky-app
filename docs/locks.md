@@ -707,8 +707,10 @@ Never commit either.
   and homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
-  answers with `cy.intercept`, and writes the guarded bytes and `lock.json` to the creator's homeserver
-  itself. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
+  answers with `cy.intercept`. The stub never writes to the homeserver: as the real Lock Server does,
+  the intercept makes the guarded-bytes and `lock.json` writes before it answers, through
+  `cypress/plugins/lock-server.ts` and the `seedLockServerWrite` task in Cypress's Node process, with a
+  session the creator's key granted for `/priv/app.locks/:rw,/pub/app.locks/:rw`. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
   creator or code-exchange `... failed with HTTP <status>` message), so a stubbed 401, 404 or 451
   takes the same path as the real Lock Server's. A lock a 0.x client published before the social v1
   migration is seeded instead (its guarded 0.x post, `lock.json` and announcement, by the `seedLegacyLock`
