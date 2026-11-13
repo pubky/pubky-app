@@ -17,6 +17,8 @@ type TFakeMapOptions = {
 const mocks = vi.hoisted(() => {
   const state = {
     isVisible: false,
+    /** What the map asked the viewport observer for. */
+    observed: undefined as { rootMargin?: string } | undefined,
     embedsUpFront: true,
     isLight: false,
     /** Every map made, in order. */
@@ -84,7 +86,10 @@ vi.mock('maplibre-gl', () => {
 });
 vi.mock('maplibre-gl/dist/maplibre-gl.css', () => ({}));
 vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
-  useViewportObserver: () => ({ ref: vi.fn(), isVisible: mocks.state.isVisible }),
+  useViewportObserver: (options?: { rootMargin?: string }) => {
+    mocks.state.observed = options;
+    return { ref: vi.fn(), isVisible: mocks.state.isVisible };
+  },
 }));
 vi.mock('@/hooks/useThemePreference/useThemePreference', () => ({
   useThemePreference: () => ({ isLightApplied: mocks.state.isLight }),
@@ -125,6 +130,12 @@ describe('ResourceMap', () => {
       expect(mocks.state.maps).toHaveLength(0);
       expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'idle');
       expect(screen.queryByTestId('resource-map-attribution')).toBeNull();
+    });
+
+    it('counts as on screen only what is in the viewport itself, with no margin around it', () => {
+      renderMap();
+
+      expect(mocks.state.observed).toEqual({ rootMargin: '0px' });
     });
 
     it('makes the map once it is on screen, centred on its point', async () => {
