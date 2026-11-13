@@ -21,6 +21,7 @@ import { useThemePreference } from '@/hooks/useThemePreference/useThemePreferenc
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import { loadMapLibrary, toPrivateMapRequest } from '@/libs/maps/maplibre';
 import { cn } from '@/libs/utils/utils';
+import { getPointsBounds } from '@/pipes/resource/resource.cluster';
 import type { TPinakesPoint } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { formatCoordinates } from './ResourceMap.utils';
@@ -68,14 +69,6 @@ export interface ResourceMapProps {
 }
 
 type TMapStatus = 'idle' | 'loading' | 'ready' | 'failed';
-
-/** The box of some points; `null` for none. */
-function getBounds(points: readonly TPinakesPoint[]): TResourceMapBounds | null {
-  if (points.length === 0) return null;
-  const lats = points.map((point) => point.lat);
-  const lons = points.map((point) => point.lon);
-  return [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
-}
 
 const SIZE_CLASSES: Record<NonNullable<ResourceMapProps['size']>, string> = {
   small: 'h-36',
@@ -175,7 +168,7 @@ export function ResourceMap({
     };
     loadMapLibrary().then((maplibre) => {
       if (cancelled) return;
-      const bounds = getBounds(fitPoints);
+      const bounds = getPointsBounds(fitPoints);
       if (!bounds) return;
       const isOnePoint = bounds[0] === bounds[2] && bounds[1] === bounds[3];
       try {
@@ -255,7 +248,7 @@ export function ResourceMap({
 
   // What the map shows changed (another page of results): fit it again
   useEffect(() => {
-    const bounds = getBounds(fitPoints);
+    const bounds = getPointsBounds(fitPoints);
     if (!isReady || !live.current || !bounds || fitted.current === fitKey) return;
     fitted.current = fitKey;
     live.current.map.fitBounds(bounds, FIT_OPTIONS);

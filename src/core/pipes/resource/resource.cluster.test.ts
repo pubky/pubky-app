@@ -1,11 +1,49 @@
 import { describe, expect, it } from 'vitest';
-import { clusterMapPoints } from './resource.cluster';
+import { clusterMapPoints, getPointsBounds } from './resource.cluster';
 
 const ZURICH_CAFE = { id: 'cafe', point: { lat: 47.3708689, lon: 8.5418241 } };
 const ZURICH_CHURCH = { id: 'church', point: { lat: 47.3701214, lon: 8.5439115 } };
 const BERLIN = { id: 'berlin', point: { lat: 52.5173885, lon: 13.3951309 } };
 
+const FIJI_EAST = { id: 'taveuni', point: { lat: -16.85, lon: 179.95 } };
+const FIJI_WEST = { id: 'across', point: { lat: -16.8, lon: -179.95 } };
+
+describe('getPointsBounds', () => {
+  it('is the box of the points: west, south, east, north', () => {
+    expect(getPointsBounds([ZURICH_CAFE.point, ZURICH_CHURCH.point])).toEqual([
+      8.5418241, 47.3701214, 8.5439115, 47.3708689,
+    ]);
+    expect(getPointsBounds([BERLIN.point])).toEqual([13.3951309, 52.5173885, 13.3951309, 52.5173885]);
+    expect(getPointsBounds([])).toBeNull();
+  });
+
+  it('takes the short way round for points either side of the antimeridian: east runs on past 180°', () => {
+    const [west, south, east, north] = getPointsBounds([FIJI_EAST.point, FIJI_WEST.point])!;
+
+    expect(west).toBeCloseTo(179.95, 6);
+    expect(east).toBeCloseTo(180.05, 6);
+    expect([south, north]).toEqual([-16.85, -16.8]);
+    // The same two the other way round
+    expect(getPointsBounds([FIJI_WEST.point, FIJI_EAST.point])![0]).toBeCloseTo(179.95, 6);
+  });
+
+  it('keeps the plain box for points that are simply far apart', () => {
+    expect(getPointsBounds([ZURICH_CAFE.point, { lat: 40.7, lon: -74 }])).toEqual([-74, 40.7, 8.5418241, 47.3708689]);
+  });
+});
+
 describe('clusterMapPoints', () => {
+  it('groups points that are neighbours across the antimeridian, though their longitudes are far apart as numbers', () => {
+    const [cluster, ...rest] = clusterMapPoints([FIJI_EAST, FIJI_WEST], 6);
+
+    expect(rest).toEqual([]);
+    expect(cluster.ids).toEqual(['taveuni', 'across']);
+    // The pin stands between them, on the antimeridian, not on the other side of the world
+    expect(Math.abs(cluster.point.lon)).toBeCloseTo(180, 6);
+    expect(cluster.bounds?.[0]).toBeCloseTo(179.95, 6);
+    expect(cluster.bounds?.[2]).toBeCloseTo(180.05, 6);
+  });
+
   it('shows points that are far apart on the map as pins of their own', () => {
     const clusters = clusterMapPoints([ZURICH_CAFE, BERLIN], 5);
 
