@@ -123,7 +123,7 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3146                             | FIX-FINAL-5 (Greptile P1 on #3140): every homeserver read held under a per-user sync lock (each LIST, bookmark GET batch, feed GET, the feed write's fenced re-read) is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` (30 s, new constant) via `awaitBounded`: past the bound the run rejects with `REQUEST_TIMEOUT` before its reconcile or PUT (a feed write rolls back, a feed GET skips its feed), nothing applied late; PUTs and DELETEs under the locks stay unbounded (`HomeserverService` retries, browser timeout); ADR-0014 and ADR-0028 amended, a sentence each in `local-first.md` and `environment.md`      |
 | #3148                             | dev-sync 8 (`dev` @ `75243da08`: #3142 removed browser-key sign-up, so `AuthController.signUp` left the gate's files and the inline-signup gate test drives the Ring signup; the D2 backup prompt for legacy browser keys kept as is, its building blocks are still on `dev`; #2926 Paykit reconnect, #3127 truncate)                                                                                                                                                                                                                                                                                                    |
 | #3151                             | FIX-FINAL-6 (Greptile P1 on #3140): the restore's migration-flag read (`SocialMigrationApplication.readFlag`) waits at most `HOMESERVER_SYNC_READ_TIMEOUT_MS` via `awaitBounded`; a GET that never answers rejects with `REQUEST_TIMEOUT` and the restore ends in `temporary-error` (`/migration` Retry, focus and network-return retries) instead of staying at `restoring`; the engine run, its Web Lock wait and the flag write stay unbounded; ADR-0026 amended                                                                                                                                                      |
-| #PR_NUMBER                        | FIX-FINAL-7 (the maintainer's manual pass): the gate's signed-out explanation survives the worker takeover; `RouteGuardProvider` sends a signed-out tab whose notice is pending to `/migration` from every route but sign-in, logout and the legal pages (`router.replace`, `useSyncExternalStore` read), and Homepage clears the notice as Sign in does; the takeover's `client.navigate(client.url)` lands on the creation URL and every post-deploy open boots twice, so the signed-out second boot had shown the guest home; guard, template and Cypress tests; ADR-0026 and ADR-0021 amended, `docs/pwa.md`         |
+| #3154                             | FIX-FINAL-7 (the maintainer's manual pass): the gate's signed-out explanation survives the worker takeover; `RouteGuardProvider` sends a signed-out tab whose notice is pending to `/migration` from every route but sign-in, logout and the legal pages (`router.replace`, `useSyncExternalStore` read), and Homepage clears the notice as Sign in does; the takeover's `client.navigate(client.url)` lands on the creation URL and every post-deploy open boots twice, so the signed-out second boot had shown the guest home; guard, template and Cypress tests; ADR-0026 and ADR-0021 amended, `docs/pwa.md`         |
 
 The branch also carries CI-owned VRT baseline commits from the `VRT Update Baselines` dispatches after the QA-1 fixes
 (two dispatches, 2026-10-31 and 2026-11-02), after dev-sync 2, 3 and 4, and after #3113 (`495ddbca3`): the new
@@ -351,7 +351,7 @@ lands, and runs it on the branch meanwhile; everyone else flags an invalidated s
 `docs/commit-message.md`). The edits so far: the port in #3055, FIX-7's `/v1` intercepts (#3090), the e2e follow-ups
 #3094 (v1 media bytes, collection items), #3111 (interrupted runs, the delete race window; `cypress/support/migration.ts`)
 and #3114 (a 0.x lock through the migration), the conflict resolutions of dev-syncs 3, 4 and 5 (#3084, #3091,
-#3115), and #PR_NUMBER (FIX-FINAL-7: a signed-out tab that reloads onto `/home` with the gate's notice pending shows the
+#3115), and #3154 (FIX-FINAL-7: a signed-out tab that reloads onto `/home` with the gate's notice pending shows the
 explanation, and Homepage leaves it as a guest): 28 files against `dev`. What the specs now assume:
 
 - Paths: posts, files, tags, follows and the profile under `/pub/social/v1/` (a post write is one version,
@@ -699,7 +699,7 @@ dropped while Dexie held every row; a reload fixed it (the live queries stopped 
 
 **Restore-path reauth bounce (2026-11-13, the maintainer's manual pass on production builds in Chrome, then a Playwright
 repro `qa/restore-reauth-bounce/repro.mjs` against `feat/social-v1` @ `3f3c9fe79` with a user re-seeded as 0.x): one
-finding, fixed in #PR_NUMBER.** A reload at `/home` of an old-build signed-in tab after the server swapped to the branch
+finding, fixed in #3154.** A reload at `/home` of an old-build signed-in tab after the server swapped to the branch
 showed the D2 sign-out explanation and then, 4 s later and without a click, the guest home: the first boot of the new
 build ran under the old worker (gate → `missing-scopes` → sign-out at `/migration`), the new worker then activated and
 its takeover `client.navigate(client.url)` reloaded the tab to its creation URL `/home`, where the signed-out second boot
