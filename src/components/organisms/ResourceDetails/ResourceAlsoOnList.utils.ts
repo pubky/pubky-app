@@ -33,8 +33,8 @@ export function getLinkKey(uri: string): string {
 /**
  * The resource page's Also on, one row per service (`pickAlsoOn`, `groupAlsoOn`): Pinakes' entries
  * first, then the group members shared on Pubky for a service Pinakes has no link for, then Pinakes'
- * matches by metadata (a row whose note reads "Maybe") for a service no exact link is on. Never the
- * card's own link (`getLinkKey`) or the service its header opens.
+ * matches by metadata (no label; `MAYBE_ALSO_ON_NOTE` in the row's tooltip and name) for a service no
+ * exact link is on. Never the card's own link (`getLinkKey`) or the service its header opens.
  *
  * @param members - The group's members (`GET /v1/groups/{id}`), the card among them; absent while
  *   read, when the read failed, or for a card outside a group (then Also on alone)

@@ -308,9 +308,15 @@ const KIND_LABELS: Readonly<Record<string, string>> = { pdf: 'PDF' };
 const MAYBE_KIND = 'maybe';
 
 /**
+ * What a match by metadata (`isMaybeAlsoOn`) says, everywhere it is listed: in its hover text and its
+ * accessible name only, never shown as a label.
+ */
+export const MAYBE_ALSO_ON_NOTE = 'Matched by title and length';
+
+/**
  * Whether an Also on entry is a match by metadata (`kind: "maybe"`: the same title, artist and length),
- * not an exact link: it is listed after the exact links, marked "maybe", and is never a card's default
- * player while an exact link has one (the viewer can still pick it).
+ * not an exact link: it is listed after the exact links with `MAYBE_ALSO_ON_NOTE` in its hover text and
+ * name, and is never a card's default player while an exact link has one (the viewer can still pick it).
  */
 export function isMaybeAlsoOn(entry: Pick<TPinakesAlsoOn, 'kind'>): boolean {
   return entry.kind?.trim().toLowerCase() === MAYBE_KIND;
@@ -340,9 +346,10 @@ export function getAlsoOnIdentifier(entry: Pick<TPinakesAlsoOn, 'uri' | 'site'>)
  * What an Also on entry says under its name: its identifier (`getAlsoOnIdentifier`), an archived
  * copy with its capture date (in UTC, as archives date them), another qualifier (`kind`), and for a
  * derived link the source it was found through. `null` for a tagged web link without a qualifier.
+ * A match by metadata says how it was found (`MAYBE_ALSO_ON_NOTE`) with its source only.
  *
  * @param locale - For tests; the viewer's locale when omitted
- * @param options.withSource - `false` leaves out where a derived link was found
+ * @param options.withSource - `false` leaves out where and how a derived link was found
  */
 export function getAlsoOnNote(
   entry: Pick<TPinakesAlsoOn, 'uri' | 'site' | 'derived' | 'kind' | 'via' | 'at'>,
@@ -351,7 +358,9 @@ export function getAlsoOnNote(
 ): string | null {
   const parts: string[] = [];
   const kind = entry.kind?.trim();
-  if (kind?.toLowerCase() === ARCHIVED_KIND) {
+  if (isMaybeAlsoOn(entry)) {
+    if (withSource) parts.push(MAYBE_ALSO_ON_NOTE);
+  } else if (kind?.toLowerCase() === ARCHIVED_KIND) {
     const at = parseDate(entry.at);
     parts.push(
       at ? `Archived ${createDateFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(at)}` : 'Archived',

@@ -161,7 +161,8 @@ export interface PlayerTarget {
   start?: PlayerStart;
   /**
    * From an Also on link Pinakes matched by metadata (`isMaybeAlsoOn`), possibly not the same thing:
-   * it comes after every exact link's player (`getPlayerTargets`) and says "maybe" in the switch.
+   * it comes after every exact link's player (`getPlayerTargets`), its note in the switch's hover text
+   * and name.
    */
   maybe?: boolean;
   /**
