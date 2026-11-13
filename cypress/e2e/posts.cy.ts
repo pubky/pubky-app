@@ -320,8 +320,11 @@ describe('posts', () => {
         .should('be.visible')
         .should('have.attr', 'src')
         .and('include', `youtube-nocookie.com/embed/${embedId}`);
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
       cy.get('[data-cy="post-input-action-bar-post"]').click();
     });
+    // The feed shows the post once it is written, which can take longer than the feed lookup waits.
+    cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
 
     cy.findFirstPostInFeedFiltered(marker, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', marker);
@@ -489,8 +492,14 @@ describe('posts', () => {
         cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
         cy.contains(tag).should('be.visible');
       });
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       cy.get('[data-cy="post-input-action-bar-post"]').click();
     });
+    // The feed shows the post once it and its tags are written, which can take longer than the
+    // feed lookup waits.
+    cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+    tags.forEach(() => cy.wait('@putTag').its('response.statusCode').should('eq', 201));
 
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', postContent);
