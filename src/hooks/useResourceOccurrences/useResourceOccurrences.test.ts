@@ -108,6 +108,8 @@ describe('useResourceOccurrences', () => {
     expect(result.current.isLoading).toBe(true);
     await waitFor(() => expect(result.current.cards).toEqual(DATES));
     expect(result.current.isError).toBe(false);
+    // Asked again, never answered from the cache
+    expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith({ id: FEED, limit: 5, from: NOW, fresh: true });
   });
 
   it('drops a next page that comes back after the same calendar was opened anew: its cursor is another window’s', async () => {
@@ -157,9 +159,14 @@ describe('useResourceOccurrences', () => {
       vi.setSystemTime(new Date('2026-11-13T18:30:10Z'));
       await act(() => result.current.loadMore());
 
-      // A new window from now, with no cursor
+      // A new window from now, with no cursor, asked past the cache
       await waitFor(() => expect(mocks.fetchOccurrences).toHaveBeenCalledTimes(3));
-      expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith({ id: FEED, limit: 5, from: '2026-11-13T18:30:00Z' });
+      expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith({
+        id: FEED,
+        limit: 5,
+        from: '2026-11-13T18:30:00Z',
+        fresh: true,
+      });
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current).toMatchObject({ isError: false, isMoreError: false, hasMore: true });
       expect(result.current.cards).toEqual(DATES.slice(0, 2));
@@ -167,6 +174,50 @@ describe('useResourceOccurrences', () => {
       await act(() => result.current.loadMore());
       expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'fresh' }));
       expect(result.current.cards).toEqual(DATES);
+    });
+
+    it('starts over past the cache within the same minute, where the window (and so the cached page) is the same', async () => {
+      mocks.fetchOccurrences
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'expired' })
+        .mockRejectedValueOnce(refused())
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'fresh' })
+        .mockResolvedValueOnce({ cards: DATES.slice(2), cursor: null });
+      const { result } = renderHook(() => useResourceOccurrences(FEED));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      // No time passes: the list starts over in the minute it was first read in
+      await act(() => result.current.loadMore());
+      await waitFor(() => expect(mocks.fetchOccurrences).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await act(() => result.current.loadMore());
+
+      const asked = mocks.fetchOccurrences.mock.calls.map(([params]) => params);
+      expect(asked).toEqual([
+        { id: FEED, limit: 5, from: NOW },
+        { id: FEED, limit: 5, from: NOW, cursor: 'expired' },
+        // Only the first page read again skips the cache: it is the one the cache holds
+        { id: FEED, limit: 5, from: NOW, fresh: true },
+        { id: FEED, limit: 5, from: NOW, cursor: 'fresh' },
+      ]);
+      expect(result.current.cards).toEqual(DATES);
+    });
+
+    it('reads another resource from the cache as ever, after a list started over', async () => {
+      mocks.fetchOccurrences
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'expired' })
+        .mockRejectedValueOnce(refused())
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'fresh' })
+        .mockResolvedValueOnce({ cards: [], cursor: null });
+      const { result, rerender } = renderHook(({ id }) => useResourceOccurrences(id), { initialProps: { id: FEED } });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await act(() => result.current.loadMore());
+      await waitFor(() => expect(mocks.fetchOccurrences).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      rerender({ id: 'other' });
+      await waitFor(() => expect(mocks.fetchOccurrences).toHaveBeenCalledTimes(4));
+
+      expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith({ id: 'other', limit: 5, from: NOW });
     });
 
     it('says so when the fresh list’s cursor is refused too, instead of starting over again and again', async () => {

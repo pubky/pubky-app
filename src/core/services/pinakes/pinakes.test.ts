@@ -246,6 +246,42 @@ describe('PinakesService.fetchOccurrences', () => {
     expect(error).toMatchObject({ context: expect.objectContaining({ statusCode: 400 }) });
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
+
+  describe('a first page read again in the same window (a list started over)', () => {
+    const FEED = '2950248974677c9ca34f1f67b8a2da80';
+    // The same minute: the same `from`, so the same request as the page the cache holds
+    const window = { from: '2026-11-13T17:05:00Z', limit: 5 };
+    const page = (cursor: string) =>
+      new Response(JSON.stringify({ ...OCCURRENCES_FIXTURE, cursor }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    it('answers a plain read from the cache: the page with the cursor it had', async () => {
+      mockFetch.mockResolvedValueOnce(page('expired')).mockResolvedValueOnce(page('new'));
+
+      await expect(PinakesService.fetchOccurrences(FEED, window)).resolves.toMatchObject({ cursor: 'expired' });
+      await expect(PinakesService.fetchOccurrences(FEED, window)).resolves.toMatchObject({ cursor: 'expired' });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks Pinakes again when fresh, for a new cursor, and keeps that page for the next plain read', async () => {
+      mockFetch.mockResolvedValueOnce(page('expired')).mockResolvedValueOnce(page('new'));
+      await expect(PinakesService.fetchOccurrences(FEED, window)).resolves.toMatchObject({ cursor: 'expired' });
+
+      await expect(PinakesService.fetchOccurrences(FEED, window, { fresh: true })).resolves.toMatchObject({
+        cursor: 'new',
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // The same request both times: `fresh` is the app's own, never a parameter Pinakes is sent
+      expect(String(mockFetch.mock.calls[1][0])).toBe(String(mockFetch.mock.calls[0][0]));
+      expect(Object.fromEntries(requestedUrl(1).searchParams)).toEqual({ from: window.from, limit: '5' });
+      await expect(PinakesService.fetchOccurrences(FEED, window)).resolves.toMatchObject({ cursor: 'new' });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
 });
 
 describe('PinakesService.fetchCardByUri', () => {

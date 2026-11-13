@@ -108,6 +108,18 @@ describe('PinakesController', () => {
     });
   });
 
+  it('fetchOccurrences asks past the cache for a list started over, and not otherwise', async () => {
+    vi.mocked(PinakesApplication.fetchOccurrences).mockResolvedValue({ cards: [], cursor: null });
+    const from = '2026-11-13T17:05:00Z';
+
+    await PinakesController.fetchOccurrences({ id: 'feed', limit: 5, from, fresh: true });
+    await PinakesController.fetchOccurrences({ id: 'feed', limit: 5, from });
+
+    const [started, plain] = vi.mocked(PinakesApplication.fetchOccurrences).mock.calls;
+    expect(started[1].fresh).toBe(true);
+    expect(plain[1].fresh).toBeFalsy();
+  });
+
   it('fetchEventInstances passes the search rows through', async () => {
     vi.mocked(PinakesApplication.fetchEventInstances).mockResolvedValue([]);
 

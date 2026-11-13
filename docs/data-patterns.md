@@ -505,7 +505,9 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
   them, so the agenda (`SearchEventAgenda`) and the results map (`SearchResourceMap`) read `cards`.
 - `GET /v1/resources/{id}/occurrences` takes RFC 3339 times only (`getOccurrencesWindowStart`; the search's `now` is a
   400 there), and every page of one list is asked with the first page's `from` (`useResourceOccurrences`). A next
-  page Pinakes refuses (an expired cursor, a 400) starts the list over from a fresh first page, once.
+  page Pinakes refuses (an expired cursor, a 400) starts the list over from a fresh first page, once. That page is
+  asked past the cache (`fresh`, the app's own flag and never a request parameter): within the minute the window is
+  the same, and the five-minute cache would answer the page whose cursor was refused.
 - Times show in the event's own `tz`, else in UTC, always with the zone's name; days are grouped the same way
   (`getEventDayKey`), never in the viewer's zone. Only a card that says `all_day` shows as its day: a search row and a
   calendar occurrence say neither `tz` nor `all_day`, and nothing is inferred from their times (a span from one UTC

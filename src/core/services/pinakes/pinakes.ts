@@ -266,6 +266,8 @@ export class PinakesService {
    * @param options.from - Inclusive start of the window, RFC 3339 (never `now`: this route refuses it)
    * @param options.limit - Instances to ask for (1-500)
    * @param options.cursor - The next page's cursor, from the page before
+   * @param cache.fresh - Ask Pinakes again whatever the cache holds (a list started over). The
+   * app's own: never a parameter of the request
    * @returns The page, or `null` when Pinakes does not know the resource (404) or is not configured
    * @throws AppError when `from` is not RFC 3339 (nothing is sent), when Pinakes fails, or when it
    * refuses the page (an expired cursor is a 400)
@@ -273,6 +275,7 @@ export class PinakesService {
   static async fetchOccurrences(
     id: string,
     { from, limit, cursor }: { from: string; limit: number; cursor?: string | null },
+    { fresh = false }: { fresh?: boolean } = {},
   ): Promise<TPinakesOccurrencePage | null> {
     if (!RFC_3339.test(from)) {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'The start of the dates to list is not an RFC 3339 time', {
@@ -287,6 +290,9 @@ export class PinakesService {
     const query = new URLSearchParams({ from, limit: String(limit), ...(cursor ? { cursor } : {}) }).toString();
     return pinakesQueryClient.fetchQuery({
       queryKey: ['pinakes', 'occurrences', id, query],
+      // `fresh`: a list started over (its cursor was refused) asks again within the same window,
+      // where the cache holds the first page with the cursor that was refused
+      ...(fresh ? { staleTime: 0 } : {}),
       // A refused cursor is answered the same way again: the caller starts over
       retry: false,
       queryFn: () =>

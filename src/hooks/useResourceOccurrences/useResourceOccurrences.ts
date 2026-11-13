@@ -45,7 +45,9 @@ const isRefused = (error: unknown) => isAppError(error) && error.context?.status
  * from now on, by start. Every page is asked in the window the first one opened (the same start),
  * since a cursor fits only the window it came from. A next page Pinakes refuses (its cursor
  * expired) starts the list over from a fresh first page, once per resource; refused again, the
- * error stands. A resource that is no calendar has no dates.
+ * error stands. A first page read again (the list started over, or `retry`) is asked past the
+ * cache: within the minute the window is the same, and the cache would answer the page whose
+ * cursor was refused. A resource that is no calendar has no dates.
  * The service reports a failed read; nothing is logged again here.
  *
  * @param id - Pinakes resource ID (`card.id`); `null` reads nothing
@@ -62,8 +64,12 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
   // The resource whose list already started over after a refused cursor
   const restartedFor = useRef<string | null>(null);
   const lastId = useRef(id);
+  // The attempt the last read was for: a read a new attempt starts is the first page read again
+  const lastAttempt = useRef(attempt);
 
   useEffect(() => {
+    const isReadAgain = lastAttempt.current !== attempt;
+    lastAttempt.current = attempt;
     // Another resource may start over once again
     if (lastId.current !== id) {
       lastId.current = id;
@@ -80,7 +86,13 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
       if (current.current !== window) return;
       setRead({ id, key: window.key, ...page, isLoading: false, isLoadingMore: false, isMoreError: false });
     };
-    PinakesController.fetchOccurrences({ id, limit: EVENT_DATES_PAGE_SIZE, from }).then(
+    PinakesController.fetchOccurrences({
+      id,
+      limit: EVENT_DATES_PAGE_SIZE,
+      from,
+      // Past the cache, which may hold this window's first page with the cursor that was refused
+      ...(isReadAgain ? { fresh: true } : {}),
+    }).then(
       (page) => settle({ cards: mergeResourceInstances([], page.cards), cursor: page.cursor, isError: false }),
       () => settle({ cards: [], cursor: null, isError: true }),
     );
