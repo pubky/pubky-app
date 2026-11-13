@@ -1,5 +1,4 @@
 import type { Interception } from 'cypress/types/net-stubbing';
-import { backupDownloadFilePath } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
@@ -29,7 +28,7 @@ import { postIdFromWriteUrl, streamIndexed, waitForNexus } from '../support/nexu
 import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
 import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
-import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
 const MY_SECTION = '[data-cy="my-collections-section"]';
 const FOLLOWED_SECTION = '[data-cy="followed-collections-section"]';
@@ -54,17 +53,16 @@ const follower = {
 describe('collections', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
     // create the curator profile and a few posts to curate
-    cy.onboardAsNewUser(curator.username, curator.bio, [BackupType.EncryptedFile], curator.pubkyAlias);
+    cy.onboardAsNewUser(curator.username, curator.bio, curator.pubkyAlias);
     createQuickPost(curator.postText1);
     createQuickPost(curator.postText2);
     createQuickPost(curator.postText3);
     cy.signOut(HasBackedUp.Yes);
 
     // create the follower profile
-    cy.onboardAsNewUser(follower.username, follower.bio, [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(follower.username, follower.bio);
     cy.signOut(HasBackedUp.Yes);
   });
 
@@ -78,7 +76,7 @@ describe('collections', () => {
     // sign in as the curator if not already signed in
     cy.location('pathname').then((currentPath) => {
       if (currentPath !== '/home') {
-        cy.signInWithEncryptedFile(backupDownloadFilePath(curator.username));
+        cy.signInWithPubkyRing(curator.username);
       }
     });
   });
@@ -238,7 +236,7 @@ describe('collections', () => {
     cy.signOut(HasBackedUp.Yes);
 
     // * as the follower, the collection appears in Discover Collections
-    cy.signInWithEncryptedFile(backupDownloadFilePath(follower.username));
+    cy.signInWithPubkyRing(follower.username);
     goToCollectionsPage();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
@@ -295,7 +293,7 @@ describe('collections', () => {
     cy.signOut(HasBackedUp.Yes);
 
     // clean up the curator's collection so it does not linger in Discover for later runs/retries
-    cy.signInWithEncryptedFile(backupDownloadFilePath(curator.username));
+    cy.signInWithPubkyRing(curator.username);
     openCollectionFromMyCollections(collectionName);
     deleteCollectionFromHero();
     cy.signOut(HasBackedUp.Yes);
@@ -306,7 +304,7 @@ describe('collections', () => {
 
     // beforeEach signs in as the curator, who may already have collections — use a fresh user
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser('Intro Newbie', 'I have never made a collection.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser('Intro Newbie', 'I have never made a collection.');
 
     goToCollectionsPage();
     createCollection(collectionName, 'Seen the welcome intro.', { expectIntro: true });
@@ -372,7 +370,7 @@ describe('collections', () => {
 
     // * a non-owner can switch to Grid for this visit (temporary viewer override)
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(follower.username));
+    cy.signInWithPubkyRing(follower.username);
     goToCollectionsPage();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible').click();
     selectCollectionViewerLayout('grid');
@@ -385,7 +383,7 @@ describe('collections', () => {
 
     // clean up so the collection does not linger in other users' Discover section
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(curator.username));
+    cy.signInWithPubkyRing(curator.username);
     openCollectionFromMyCollections(collectionName);
     deleteCollectionFromHero();
     goToHomePage();

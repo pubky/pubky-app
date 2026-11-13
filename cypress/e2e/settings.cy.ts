@@ -1,4 +1,4 @@
-import { latestPostInFeedContentEq, createQuickPost, waitForFeedToLoad } from '../support/posts';
+import { latestPostInFeedContentEq, createQuickPost } from '../support/posts';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToHomePage, goToSettingsPage, goToProfilePageFromHeader, openSettingsSection } from '../support/header';
 import { showProfileHeader } from '../support/profile';
@@ -6,8 +6,8 @@ import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
 import { itMobile } from '../support/mobile';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
-import { backupDownloadFilePath, extendedTimeout } from '../support/common';
+import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
+import { extendedTimeout } from '../support/common';
 import { getNotificationSwitch, leaveEditProfileForSettings, toggleNotificationSwitch } from '../support/settings';
 
 describe('settings', () => {
@@ -15,40 +15,25 @@ describe('settings', () => {
     slowCypressDown();
   });
 
-  beforeEach(() => {
-    cy.deleteDownloadsFolder();
-  });
-
   itMobile('Account settings function correctly', () => {
-    // Create a new user with recovery phrase backup
     const profileName = 'MrAccountSettings';
 
-    const signInFromLogoutWithRecoveryPhrase = () => {
-      // Sign back in stays hidden while this browser still holds the onboarding key.
+    const signInFromLogout = (landingPath?: string) => {
       confirmLogoutBackupBeforeNavigation(HasBackedUp.Yes, '#logout-navigation-continue-btn');
       cy.get('#logout-navigation-continue-btn').should('be.visible').click();
       cy.location('pathname').should('eq', '/sign-in');
-      cy.get('#restore-recovery-phrase-btn').click();
-      cy.get(`@recoveryPhrase-${profileName}`).then((rp) => {
-        const words = `${rp}`.split(' ');
-        words.forEach((word, idx) => {
-          cy.get(`#word-slot-input-${idx + 1}`).type(`${word}`);
-        });
-      });
-      cy.get('#recovery-phrase-restore-btn').click();
+      cy.signInWithPubkyRing(profileName, landingPath);
     };
 
-    cy.onboardAsNewUser(profileName, 'I like to test account settings', [BackupType.RecoveryPhraseWithConfirmation]);
+    cy.onboardAsNewUser(profileName, 'I like to test account settings');
     goToSettingsPage();
 
     // Check sign out button
     cy.get('#sign-out-btn').click();
     cy.location('pathname').should('eq', '/logout');
 
-    // Sign in with recovery phrase saved from onboarding
-    signInFromLogoutWithRecoveryPhrase();
-    cy.location('pathname').should('eq', '/home');
-    waitForFeedToLoad();
+    // Sign back in from the logout page with Pubky Ring
+    signInFromLogout();
     goToSettingsPage();
 
     // Check edit profile button shows edit page
@@ -69,8 +54,7 @@ describe('settings', () => {
     cy.location('pathname').should('eq', '/logout');
 
     // Sign back in and confirm we are presented with profile creation page
-    signInFromLogoutWithRecoveryPhrase();
-    cy.location('pathname').should('eq', '/onboarding/profile');
+    signInFromLogout('/onboarding/profile');
 
     // Recreating the deleted profile must show Experience again for the same pubky.
     cy.get('#profile-name-input').clear().type(profileName);
@@ -97,7 +81,7 @@ describe('settings', () => {
     });
 
     // Sign out
-    cy.signOut(HasBackedUp.No);
+    cy.signOut(HasBackedUp.Yes);
 
     // Create user 2
     cy.onboardAsNewUser('Mr Mute', 'I like to mute people');
@@ -143,8 +127,8 @@ describe('settings', () => {
   });
 
   itMobile('can save changes to notification settings', () => {
-    // Create a new user with encrypted file backup (profile name used for backup filename)
-    cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings', [BackupType.EncryptedFile]);
+    // Create a new user; the seed tasks keep its key in memory under the profile name for this Cypress run
+    cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings');
 
     const navigateToNotificationsPage = () => {
       goToSettingsPage();
@@ -169,7 +153,7 @@ describe('settings', () => {
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath('MrNotifications'));
+    cy.signInWithPubkyRing('MrNotifications');
     navigateToNotificationsPage();
 
     const checkNotificationIsEnabled = ($toggle: JQuery<HTMLElement>) => {
@@ -202,7 +186,7 @@ describe('settings', () => {
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath('MrNotifications'));
+    cy.signInWithPubkyRing('MrNotifications');
     navigateToNotificationsPage();
 
     // Check all notifications are disabled
@@ -223,7 +207,7 @@ describe('settings', () => {
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath('MrNotifications'));
+    cy.signInWithPubkyRing('MrNotifications');
     navigateToNotificationsPage();
 
     // Check some notifications remain enabled

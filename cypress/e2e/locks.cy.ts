@@ -23,10 +23,11 @@
  * terminal, after each `[locks-step]` marker. User A is the creator and user B the reader; both are
  * seeded through the homeserver API (onboarding is covered by onboarding.cy.ts) and sign in through
  * the UI.
- * Everything else is real: Nexus, the homeserver and Homegate. The stub client writes the bytes and
- * the public `lock.json` to the creator's real homeserver with the creator's own session, exactly
- * where the Lock Server would, so the owner view, the reader's purchase file and the reader's
- * replica all go through the homeserver; the announcement is indexed by the real Nexus.
+ * Everything else is real: Nexus, the homeserver and Homegate. The stand-in Lock Server writes the
+ * bytes and the public `lock.json` to the creator's real homeserver before it answers, from Node with
+ * the session the creator granted it (`seedLockServerWrite`), exactly where the Lock Server would, so
+ * the owner view, the reader's purchase file and the reader's replica all go through the homeserver;
+ * the announcement is indexed by the real Nexus.
  *
  * A LOCK FROM BEFORE THE SOCIAL V1 MIGRATION
  * The last test starts from what a 0.x client left on an account that has not migrated yet, seeded
@@ -40,7 +41,6 @@
  * Paykit and Bitkit; this spec covers the app's own flow until then.
  */
 import type { CyHttpMessages, Interception } from 'cypress/types/net-stubbing';
-import { backupDownloadFilePath } from '../support/common';
 import {
   answerLockServerOnce,
   applyLockPrice,
@@ -135,7 +135,7 @@ let paidPost: SeededLockPost;
 let refusedPost: SeededLockPost;
 
 const signInAs = (user: SeededUser, options?: { migrates?: boolean }) => {
-  cy.signInWithEncryptedFile(backupDownloadFilePath(user.name), undefined, options);
+  cy.signInWithPubkyRing(user.name, '/home', options);
 };
 
 /** The content lock asks for the edited price, paid to the creator. */
@@ -225,12 +225,10 @@ const expectUnlockedImage = (text: string) => {
 
 describe('locks', () => {
   before(() => {
-    cy.deleteDownloadsFolder();
-
-    seedUserViaApi(creatorName, { withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(creatorName).then((user) => {
       creator = user;
     });
-    seedUserViaApi(readerName, { withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(readerName).then((user) => {
       reader = user;
     });
     cy.then(() => {
@@ -583,11 +581,11 @@ describe('locks published before the migration', () => {
   let legacyReader: SeededUser;
 
   before(() => {
-    seedUserViaApi(legacyCreatorName, { legacy: true, withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(legacyCreatorName, { legacy: true }).then((user) => {
       legacyCreator = user;
       legacyLockServer.creatorPubky = user.id;
     });
-    seedUserViaApi(legacyReaderName, { withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(legacyReaderName).then((user) => {
       legacyReader = user;
     });
   });
@@ -738,16 +736,16 @@ describe('locks published before the migration', () => {
           'legacyCopyDeleted',
         );
         cy.intercept('DELETE', `**/pub/social/v1/posts/${lock.post.id}/*`, expectLockDeletedFirst).as('versionDeleted');
-        // The stand-in takes the lock file down once it has accepted the deletion. It is A's only lock, so its
-        // directory is gone afterwards and a LIST of it answers 404: the file is checked before, and its DELETE after.
+        // The stand-in takes the lock file down once it has accepted the deletion, from Node with the session A
+        // granted the Lock Server, and answers only after that DELETE landed (a 500 when it did not), so the
+        // browser never sends it. It is A's only lock, so its directory is gone afterwards and a LIST of it
+        // answers 404: the file is checked before, and the stand-in's answer after.
         listHomeserverPathsViaApi(legacyCreator, '/pub/app.locks/').then((urls) => {
           expect(urls.filter((url) => url.endsWith(`/pub/app.locks/${lock.lockId}.json`))).to.have.length(1);
         });
-        cy.intercept('DELETE', `**/pub/app.locks/${lock.lockId}.json`).as('lockFileDeleted');
         deletePost({ filterText: editedTeaser });
-        cy.wait('@deleteContentLock');
+        cy.wait('@deleteContentLock').its('response.statusCode').should('eq', 200);
         cy.wrap(legacyLockServer).its('deletedLocks').should('deep.eq', [lock.lockId]);
-        cy.wait('@lockFileDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
         cy.wait('@legacyCopyDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
         // A v1 post is a directory of versions, one DELETE each: the migrated copy and the edit.
         cy.wait(['@versionDeleted', '@versionDeleted']).then((deletions) => {

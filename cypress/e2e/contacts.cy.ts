@@ -1,8 +1,7 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
-import { backupDownloadFilePath } from '../support/auth';
 import { followIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import {
@@ -19,7 +18,6 @@ import {
 describe('contacts', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
   });
 
   it('can follow and unfollow', () => {
@@ -27,15 +25,10 @@ describe('contacts', () => {
     const actorName = 'Unfollow Actor';
     const targetAlias = 'unfollowTarget';
 
-    cy.onboardAsNewUser(
-      targetName,
-      'Follow me, then stop',
-      [BackupType.RecoveryPhraseWithoutConfirmation],
-      targetAlias,
-    );
+    cy.onboardAsNewUser(targetName, 'Follow me, then stop', targetAlias);
     cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser(actorName, 'I follow and then unfollow', [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(actorName, 'I follow and then unfollow');
 
     cy.get(`@${targetAlias}`).then((pubky) => {
       searchAndFollowProfile(`${pubky}`, targetName);
@@ -86,22 +79,20 @@ describe('contacts', () => {
     // both profiles are seeded through the API: this test is about the post menu, onboarding is covered elsewhere
     seedUserViaApi(`Menu Author ${stamp}`, { bio: 'Follow me from my post' }).then((author) => {
       createPostViaApi(author, postContent).then((post) => {
-        seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus', withRecoveryFile: true }).then(
-          (follower) => {
-            waitForNexus(postIndexed(post), userIndexed(follower));
-            cy.signInWithEncryptedFile(backupDownloadFilePath(follower.name));
-            followFromPostMenu(postContent);
-            waitForNexus(followIndexed(follower, author));
+        seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus' }).then((follower) => {
+          waitForNexus(postIndexed(post), userIndexed(follower));
+          cy.signInWithPubkyRing(follower.name);
+          followFromPostMenu(postContent);
+          waitForNexus(followIndexed(follower, author));
 
-            // the author is listed under the follower's following
-            goToProfilePageFromHeader();
-            expectProfileTabCount('following', 1);
-            openProfileTab('following');
-            cy.get('[data-cy="profile-connections-list"]').within(() => {
-              cy.get('[data-cy="profile-follower-item-name"]').should('have.text', author.name);
-            });
-          },
-        );
+          // the author is listed under the follower's following
+          goToProfilePageFromHeader();
+          expectProfileTabCount('following', 1);
+          openProfileTab('following');
+          cy.get('[data-cy="profile-connections-list"]').within(() => {
+            cy.get('[data-cy="profile-follower-item-name"]').should('have.text', author.name);
+          });
+        });
       });
     });
   });
@@ -114,13 +105,13 @@ describe('contacts', () => {
     // * create two profiles
 
     // Create profile 1
-    cy.onboardAsNewUser(profileName1, "Man's best friend", [BackupType.RecoveryPhraseWithoutConfirmation], pubkyAlias1);
+    cy.onboardAsNewUser(profileName1, "Man's best friend", pubkyAlias1);
 
     // Sign out of profile 1
     cy.signOut(HasBackedUp.Yes);
 
     // Create profile 2
-    cy.onboardAsNewUser(profileName2, "Man's second best friend", [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(profileName2, "Man's second best friend");
 
     // * search for profile and follow
 
@@ -210,9 +201,7 @@ describe('contacts', () => {
     // * As profile 1, follow profile 2 back and make a friend
 
     // Sign in profile 1
-    cy.get(`@recoveryPhrase-${profileName1}`).then((recoveryPhrase) => {
-      cy.signInWithRecoveryPhrase(recoveryPhrase.toString());
-    });
+    cy.signInWithPubkyRing(profileName1);
     goToProfilePageFromHeader();
 
     // Check profile 1 (own) profile for follower
