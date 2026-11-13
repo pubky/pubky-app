@@ -117,6 +117,8 @@ describe('hasCredentialLink', () => {
     ['https://outer.invalid/https://a&b:secret@example.invalid', true],
     ['https://outer.invalid/#https://a&b:secret@example.invalid', true],
     ['https://outer.invalid/?x=1#https://a&b:secret@example.invalid', true],
+    ['https://outer.invalid/#/share?u=https://a&b:secret@example.invalid', true],
+    ['https://outer.invalid/#note?x/https://a&b:secret@example.invalid', true],
   ])('%s: %s', (text, expected) => {
     expect(hasCredentialLink(text)).toBe(expected);
   });

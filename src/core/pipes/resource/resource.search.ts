@@ -174,7 +174,7 @@ export function hasCredentialLink(text: string): boolean {
       return links.some((rest, index) => {
         // A username or password ends in `@` before the link's path, query or fragment; in a link held in
         // another link's query, `&` ends it too (the outer link's next parameter: `?url=https://a.org&text=@me`)
-        const inQuery = /\?[^#]*$/.test(links.slice(0, index).join(''));
+        const inQuery = /^[^#]*\?[^#]*$/.test(links.slice(0, index).join(''));
         return rest.split(inQuery ? /[/?#\\&]/ : /[/?#\\]/, 1)[0].includes('@');
       });
     });
