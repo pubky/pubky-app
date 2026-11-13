@@ -158,6 +158,14 @@ export class ResourceController {
     };
   }
 
+  /**
+   * The services a search's first page with `facets` already counted (`hostFacets` of
+   * `fetchSearchPage`), without a request; `undefined` when Pinakes has not answered that page.
+   */
+  static getCachedHostFacets(query: TResourceQuery, limit: number): TPinakesHostFacet[] | undefined {
+    return PinakesApplication.getCachedSearchFacets(query, limit)?.host ?? undefined;
+  }
+
   private static async fetchStreamPage(
     query: TResourceQuery,
     skip: number,

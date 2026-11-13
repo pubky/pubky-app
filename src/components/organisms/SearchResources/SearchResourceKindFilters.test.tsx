@@ -221,6 +221,28 @@ describe('SearchResourceKindFilters: Service', () => {
     expect(screen.queryByTestId('resource-service-count-skeleton')).not.toBeInTheDocument();
   });
 
+  it('keeps a picked service’s name, with no links, after a read that does not list it', () => {
+    const { rerender } = renderService({
+      hostFacets: [
+        { host: 'open.spotify.com', site: 'Spotify', count: 12 },
+        { host: 'music.amazon.com', site: 'Amazon Music', count: 3 },
+      ],
+    });
+    const read = (props: { hostFacets: TPinakesHostFacet[] | null; hostFacetsLoading?: boolean }) =>
+      rerender(<SearchResourceKindFilters sections={['service']} categoryFacets={null} {...props} />);
+
+    read({ hostFacets: null, hostFacetsLoading: true });
+    read({ hostFacets: [{ host: 'open.spotify.com', site: 'Spotify', count: 5 }] });
+    expect(screen.getByRole('button', { name: 'Amazon Music, 0 links' })).toHaveTextContent('Amazon Music0');
+    expect(screen.queryByText('music.amazon.com')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Spotify, 5 links' })).toBeInTheDocument();
+
+    // And after the next read too, which also does not list it
+    read({ hostFacets: [{ host: 'open.spotify.com', site: 'Spotify', count: 4 }] });
+    expect(screen.getByRole('button', { name: 'Amazon Music, 0 links' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Spotify, 4 links' })).toBeInTheDocument();
+  });
+
   it('names them once the read answers, and reads a host as itself once it failed', () => {
     const { rerender } = renderService({ hostFacets: null, hostFacetsLoading: true });
 
@@ -263,5 +285,18 @@ describe('RemovableRow', () => {
     expect(screen.getByTestId('row')).not.toHaveAttribute('aria-busy');
     expect(screen.getByTestId('row')).toHaveAccessibleName('Remove Service: Spotify');
     expect(screen.queryByTestId('removable-row-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('shows a comma before the skeleton after a value, which its name leaves out', () => {
+    const { rerender } = render(
+      <RemovableRow icon={Tag} label="Service: Amazon Music" isLoading onRemove={vi.fn()} testId="row" />,
+    );
+
+    expect(screen.getByTestId('row').textContent).toBe('Service: Amazon Music,');
+    expect(screen.getByTestId('row')).toHaveAccessibleName('Remove Service: Amazon Music (loading)');
+
+    // Its value read: no comma
+    rerender(<RemovableRow icon={Tag} label="Service: Amazon Music" onRemove={vi.fn()} testId="row" />);
+    expect(screen.getByTestId('row').textContent).toBe('Service: Amazon Music');
   });
 });

@@ -29,6 +29,7 @@ import {
   toResourceSearchReach,
   toResourceSearchSort,
   type TResourceQuery,
+  withKnownHostNames,
 } from './resource.search';
 
 const VIEWER = 'hkdrfoddu3rmeucj1mazu4aeg11nxj7uaxybnmots5o9s5hd3t6y' as Pubky;
@@ -687,5 +688,25 @@ describe('getResourceServicesQuery', () => {
     expect(params).toMatchObject({ host: 'open.spotify.com,www.deezer.com', facet: 'type,tags,host' });
     expect(params).not.toHaveProperty('viewer');
     expect(params).not.toHaveProperty('reach');
+  });
+});
+
+describe('withKnownHostNames', () => {
+  const SPOTIFY = { host: 'open.spotify.com', site: 'Spotify', count: 5 };
+  const AMAZON = { host: 'music.amazon.com', site: 'Amazon Music', count: 3 };
+  const TIDAL = { host: 'tidal.com', site: 'TIDAL', count: 2 };
+
+  it('adds the earlier name of each host the read does not list, with no links', () => {
+    expect(withKnownHostNames([SPOTIFY], [AMAZON, TIDAL], ['open.spotify.com', 'music.amazon.com'])).toEqual([
+      SPOTIFY,
+      { ...AMAZON, count: 0 },
+    ]);
+  });
+
+  it('keeps the read’s own facet and count for a host it lists', () => {
+    expect(withKnownHostNames([{ ...AMAZON, count: 9 }], [AMAZON], ['music.amazon.com'])).toEqual([
+      { ...AMAZON, count: 9 },
+    ]);
+    expect(withKnownHostNames([SPOTIFY], [], ['music.amazon.com'])).toEqual([SPOTIFY]);
   });
 });

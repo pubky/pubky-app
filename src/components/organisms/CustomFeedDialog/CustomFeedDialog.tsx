@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
+import { ResourceController } from '@/controllers/resource/resource';
 import { useControlledState } from '@/hooks/useControlledState/useControlledState';
 import { useCustomFeedForm } from '@/hooks/useCustomFeedForm/useCustomFeedForm';
 import {
@@ -66,6 +67,7 @@ import {
   getResourceFeedTypeOptions,
   getResourceServicesQuery,
   getResourceTypesLabel,
+  withKnownHostNames,
 } from '@/pipes/resource/resource.search';
 import { type ReachFilterValue } from '@/stores/home/home.types';
 import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
@@ -132,14 +134,26 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const isResources = content === CUSTOM_FEED_CONTENT_RESOURCES;
   // The saved services' names, as the Service filter shows them: Pinakes names each host's service
   const savedHosts = resourceFilters?.host ? resourceFilters.host.split(',') : [];
-  const { hostFacets, loading: isNamingHosts } = useResourceSearch(
-    open && isResources && savedHosts.length > 0 ? getResourceServicesQuery(savedHosts) : null,
-    { limit: 1, facets: true },
-  );
-  // The last read's names: a service named once stays named while the names are read again
-  const [lastHostFacets, setLastHostFacets] = useState(hostFacets);
-  if (hostFacets && hostFacets !== lastHostFacets) setLastHostFacets(hostFacets);
-  const namingFacets = hostFacets ?? (isNamingHosts ? lastHostFacets : null);
+  const servicesQuery = open && isResources && savedHosts.length > 0 ? getResourceServicesQuery(savedHosts) : null;
+  const { hostFacets: readFacets, loading: isNamingHosts } = useResourceSearch(servicesQuery, {
+    limit: 1,
+    facets: true,
+  });
+  // While they are read, the names an earlier read of them left in the cache: the Edit dialog opens anew each time
+  const hostFacets =
+    readFacets ??
+    (isNamingHosts && servicesQuery ? (ResourceController.getCachedHostFacets(servicesQuery, 1) ?? null) : null);
+  // The names read so far: a service named once stays named while the names are read again, and after a
+  // read that does not list it
+  const [knownHosts, setKnownHosts] = useState({ facets: hostFacets, names: hostFacets ?? [] });
+  if (hostFacets && hostFacets !== knownHosts.facets) {
+    setKnownHosts({ facets: hostFacets, names: withKnownHostNames(hostFacets, knownHosts.names, savedHosts) });
+  }
+  const namingFacets = hostFacets
+    ? withKnownHostNames(hostFacets, knownHosts.names, savedHosts)
+    : isNamingHosts
+      ? knownHosts.names
+      : null;
   const isAtProfileTagLimit = domainTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED;
 
   // Reach options derive from the shared REACH_FILTER_META so every surface

@@ -6,9 +6,11 @@ import type { TResourceQuery } from '@/pipes/resource/resource.search';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { ResourceController } from './resource';
 
-const mocks = vi.hoisted(() => ({ search: vi.fn(), stream: vi.fn() }));
+const mocks = vi.hoisted(() => ({ search: vi.fn(), stream: vi.fn(), cachedFacets: vi.fn() }));
 
-vi.mock('@/application/pinakes/pinakes', () => ({ PinakesApplication: { searchResources: mocks.search } }));
+vi.mock('@/application/pinakes/pinakes', () => ({
+  PinakesApplication: { searchResources: mocks.search, getCachedSearchFacets: mocks.cachedFacets },
+}));
 vi.mock('@/application/resource/resource', () => ({ ResourceApplication: { fetchStream: mocks.stream } }));
 
 const card = (uri: string, refs: string[] = [uri]) => ({
@@ -145,5 +147,20 @@ describe('ResourceController.fetchSearchPage', () => {
     await expect(
       ResourceController.fetchSearchPage({ query: recentTags({ sort: 'trending' }), limit: 10 }),
     ).resolves.toEqual({ source: 'unavailable', uris: [], next: null });
+  });
+});
+
+describe('ResourceController.getCachedHostFacets', () => {
+  it('gives the services a first page already read counted, and nothing for one not read', () => {
+    const query = recentTags({ hosts: ['open.spotify.com'], extraFacets: ['host'] });
+    const host = [{ host: 'open.spotify.com', site: 'Spotify', count: 3 }];
+    mocks.cachedFacets.mockReturnValue({ host });
+    expect(ResourceController.getCachedHostFacets(query, 1)).toBe(host);
+    expect(mocks.cachedFacets).toHaveBeenCalledWith(query, 1);
+
+    mocks.cachedFacets.mockReturnValue({ type: [] });
+    expect(ResourceController.getCachedHostFacets(query, 1)).toBeUndefined();
+    mocks.cachedFacets.mockReturnValue(undefined);
+    expect(ResourceController.getCachedHostFacets(query, 1)).toBeUndefined();
   });
 });

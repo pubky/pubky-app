@@ -57,6 +57,11 @@ export class PinakesApplication {
     return page ? { ...page, items: page.items.map(withNormalizedCredits) } : null;
   }
 
+  /** The facets of a search's first page already read with `facets`, without a request; `undefined` when none was read. */
+  static getCachedSearchFacets(query: TResourceQuery, limit: number): TPinakesSearchResponse['facets'] | undefined {
+    return PinakesService.getCachedSearch(buildResourceSearchParams(query, { limit, facets: true }))?.facets;
+  }
+
   /** What the people who tagged the resource also referenced. */
   static async fetchRelated(id: string, limit: number): Promise<TPinakesCard[]> {
     const cards = await PinakesService.fetchRelated(id, limit);

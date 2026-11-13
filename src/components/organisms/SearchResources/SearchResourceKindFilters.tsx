@@ -56,6 +56,7 @@ import {
   parseResourceIngredient,
   RESOURCE_SEARCH_MAX_HOSTS,
   type TResourceEventWhen,
+  withKnownHostNames,
 } from '@/pipes/resource/resource.search';
 import type { TPinakesCategoryFacet, TPinakesHostFacet } from '@/services/pinakes/pinakes.types';
 
@@ -124,7 +125,7 @@ export function RemovableRow({
 }: {
   icon: FilterListItem['icon'];
   label: string;
-  /** Its value is being read: a skeleton follows the label. */
+  /** Its value is being read: a skeleton follows the label (after a comma when the label holds a value). */
   isLoading?: boolean;
   onRemove: () => void;
   testId?: string;
@@ -142,6 +143,8 @@ export function RemovableRow({
       <FilterItemIcon icon={icon} />
       <FilterItemLabel className="truncate" title={label}>
         {label}
+        {/* More of the list follows: shown, not read (the row is named loading) */}
+        {isLoading && !label.endsWith(':') && <span aria-hidden>{','}</span>}
       </FilterItemLabel>
       {isLoading && <Skeleton className="h-4 w-24" data-testid="removable-row-skeleton" />}
       <FilterItemIcon icon={X} className="ml-auto shrink-0" />
@@ -411,17 +414,23 @@ function FacetSection({
  * the service's icon as its cards show it. Picked ones stay listed. Not shown before the services are
  * read, unless one is picked: while they are read (`loading`), a picked one keeps the name the last
  * read gave it (a skeleton for its links), else shows its icon and a skeleton for its name, never its
- * host; one the read did not name reads as its host.
+ * host. A read that does not list a picked one counts no links for it, under the name an earlier read
+ * gave it, else its host; after a failed read a host reads as itself.
  */
 function ServiceSection({ facets, loading }: { facets: TPinakesHostFacet[] | null; loading: boolean }) {
   const { filters, setFilters } = useResourceSearchFilters();
   const headerId = useId();
   const picked = filters.hosts;
   const isOn = (hosts: readonly string[]) => hosts.some((host) => picked.includes(host));
-  // The last read's services: a name on screen stays while another search's are read
-  const [lastFacets, setLastFacets] = useState(facets);
-  if (facets && facets !== lastFacets) setLastFacets(facets);
-  const named = facets ?? (loading ? (lastFacets?.filter((facet) => picked.includes(facet.host)) ?? null) : null);
+  // The services the reads named: a name on screen stays while another search's are read, and after a
+  // read that does not list a picked one
+  const [known, setKnown] = useState({ facets, names: facets ?? [] });
+  if (facets && facets !== known.facets) setKnown({ facets, names: withKnownHostNames(facets, known.names, picked) });
+  const named = facets
+    ? withKnownHostNames(facets, known.names, picked)
+    : loading
+      ? known.names.filter((facet) => picked.includes(facet.host))
+      : null;
   // The most common ones, and every picked one
   const shown = getResourceServices(named, picked).filter(
     (service, index) => index < RESOURCE_SEARCH_FACETS_SHOWN || isOn(service.hosts),
