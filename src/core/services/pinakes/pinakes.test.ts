@@ -184,7 +184,8 @@ describe('PinakesService.fetchCardByUri', () => {
       new Response('{"error":"invalid uri"}', { status: 400, headers: { 'Content-Type': 'application/json' } }),
     );
 
-    await expect(PinakesService.fetchCardByUri('not a uri')).rejects.toMatchObject({
+    // A link that does not parse is never sent (see 'with credentials'); one Pinakes refuses is.
+    await expect(PinakesService.fetchCardByUri('urn:x-test:refused')).rejects.toMatchObject({
       code: ClientErrorCode.BAD_REQUEST,
       service: ErrorService.Pinakes,
       context: { endpoint: 'https://pinakes.example/v1/resources/by-uri', statusCode: 400 },
@@ -360,6 +361,32 @@ describe('PinakesService.resolveCard', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('PinakesService.fetchCardByUri with credentials', () => {
+  it.each([
+    'https://alice@example.invalid/a',
+    'https://alice:secret@example.invalid/a',
+    'https://:secret@example.invalid/a',
+    'https://alice%40home:s%3Acret@example.invalid/a',
+    'not a link',
+  ])('never sends %s, a link with a username or password or one that does not parse', async (uri) => {
+    await expect(PinakesService.fetchCardByUri(uri)).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'https://example.invalid/@alice',
+    'https://example.invalid/a?by=alice@example.invalid',
+    'isbn:9780140328721',
+    'geo:52.5,13.4',
+    'doi:10.1038/nature12373',
+  ])('still reads %s', async (uri) => {
+    mockFetch.mockResolvedValue(capturedResponse('by-uri.video'));
+
+    await PinakesService.fetchCardByUri(uri);
+    expect(requestedUrl().searchParams.get('uri')).toBe(uri);
+  });
 });
 
 describe('PinakesService.seedCardByUri', () => {

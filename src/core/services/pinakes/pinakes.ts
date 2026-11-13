@@ -41,7 +41,8 @@ export class PinakesService {
    *
    * @param uri - The link as referenced; Pinakes normalises it and answers an alias with its root
    * @returns The card, or `null` when Pinakes does not know the link (404, nothing is fetched there),
-   * the link is too long to be known, or Pinakes is not configured
+   * the link is too long to be known, or Pinakes is not configured. A link that carries credentials
+   * (`user:password@`) or does not parse is never sent, as in `resolveCard`.
    * @throws AppError when Pinakes fails or answers with anything else
    */
   static async fetchCardByUri(
@@ -49,7 +50,9 @@ export class PinakesService {
     { fresh = false }: { fresh?: boolean } = {},
   ): Promise<TPinakesResourceDetail | null> {
     const base = getPinakesBaseUrl();
-    if (!base || new TextEncoder().encode(uri).length > PINAKES_URI_MAX_BYTES) return null;
+    if (!base || new TextEncoder().encode(uri).length > PINAKES_URI_MAX_BYTES || !isResolvableLink(uri)) {
+      return null;
+    }
 
     return pinakesQueryClient.fetchQuery({
       queryKey: byUriKey(uri),
