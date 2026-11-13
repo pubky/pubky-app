@@ -40,6 +40,7 @@ import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.sche
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import type { TCollectionEdit } from '@/pipes/pipes.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import {
   inferAnnouncementKind,
@@ -426,17 +427,15 @@ export class PostController {
     }
 
     try {
-      const nextContent = CollectionPostContent.normalize({
-        name,
-        description,
-        items: currentContent.items ?? [],
-        coverImage: coverImageUrl,
-        layout: layout ?? currentContent.layout,
-      });
+      // The change carries no items: under the lock it is applied to the stored head's own items, so
+      // a rename queued behind an add keeps the add. Applied to the local row here only to refuse a
+      // value a collection rule refuses before anything is written.
+      const change: TCollectionEdit = { op: 'details', name, description, coverImage: coverImageUrl, layout };
+      CollectionPostContent.apply(currentContent, change);
 
       await PostApplication.commitEdit({
         compositePostId: compositeCollectionId,
-        edit: { collection: nextContent },
+        edit: { collection: change },
       });
     } catch (error) {
       // Roll back the newly uploaded cover so a failed edit does not orphan it: media is content
@@ -488,14 +487,15 @@ export class PostController {
     // A stored item may spell the post either way (a reference to an author who has not migrated
     // keeps its 0.x spelling), so the item is matched by any spelling and a new one gets the v1 one.
     const spellings = postReferenceSpellings(postAuthorId, rawPostId);
-    const nextContent = shouldAdd
-      ? CollectionPostContent.addItem(currentContent, spellings)
-      : CollectionPostContent.removeItem(currentContent, spellings);
+    // The change, not the next item list: under the lock it is applied to the stored head and to the
+    // row read there, so an add queued behind another edit of this collection keeps that edit. The
+    // row read above only says whether there is anything to do.
+    const change: TCollectionEdit = { op: shouldAdd ? 'add' : 'remove', spellings };
 
-    if (nextContent.items === currentContent.items) return;
+    if (CollectionPostContent.apply(currentContent, change) === currentContent) return;
 
     this.assertAuthor(collectionId, currentUserPubky, 'commitUpdateCollectionItem');
-    await PostApplication.commitEdit({ compositePostId: collectionId, edit: { collection: nextContent } });
+    await PostApplication.commitEdit({ compositePostId: collectionId, edit: { collection: change } });
   }
 
   static async commitReorderCollectionItems({ collectionId, items }: TReorderCollectionItemsParams): Promise<void> {
@@ -521,12 +521,14 @@ export class PostController {
       });
     }
 
-    const nextContent = CollectionPostContent.reorderItems(currentContent, items);
+    // The drafted order is merged against the stored head under the lock (`reorderItems`), so an item
+    // added by an edit this one queued behind leads the result instead of being dropped.
+    const change: TCollectionEdit = { op: 'reorder', order: items };
 
-    if (nextContent.items === currentContent.items) return;
+    if (CollectionPostContent.apply(currentContent, change) === currentContent) return;
 
     this.assertAuthor(collectionId, currentUserPubky, 'commitReorderCollectionItems');
-    await PostApplication.commitEdit({ compositePostId: collectionId, edit: { collection: nextContent } });
+    await PostApplication.commitEdit({ compositePostId: collectionId, edit: { collection: change } });
   }
 
   /**

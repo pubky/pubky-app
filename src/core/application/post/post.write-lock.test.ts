@@ -12,7 +12,6 @@ import { isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
-import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -403,17 +402,13 @@ describe('PostApplication post write lock', () => {
 
     it('refuses a collection item add queued behind the collection’s delete, writing nothing', async () => {
       const { compositePostId, postId } = await publishCollection('reading list');
-      const stored = CollectionPostContent.parse((await row(compositePostId))!.content)!;
       const item = postReferenceSpellings(FRIEND, '00360AGX9THG2');
       const listing = holdListing();
 
       const deleting = run(PostApplication.commitDelete({ compositePostId, canWriteLegacy: true }));
       await listing.taken;
       const adding = run(
-        PostApplication.commitEdit({
-          compositePostId,
-          edit: { collection: CollectionPostContent.addItem(stored, item) },
-        }),
+        PostApplication.commitEdit({ compositePostId, edit: { collection: { op: 'add', spellings: item } } }),
       );
       await tick();
       listing.release();

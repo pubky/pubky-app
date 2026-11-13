@@ -1,4 +1,4 @@
-import { buildUri, decodeObject, deletionPaths, listPrefix, toPath, toUrl } from 'pubky-social-specs';
+import { buildUri, decodeObject, deletionPaths, listPrefix, type Post, toPath, toUrl } from 'pubky-social-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type {
@@ -535,7 +535,8 @@ export class PostApplication {
       throw error;
     }
 
-    let built: Awaited<ReturnType<typeof PostNormalizer.toEdit>>;
+    /** The version the row converges to: the one PUT, or the head when it already held the edit. */
+    let built: { object: Post };
     try {
       built = await retryHomeserverWriteAfterReread(fence, async () => {
         // One bound over the LIST and the GET: a `REQUEST_TIMEOUT` carries no status, so the pass is
@@ -545,6 +546,9 @@ export class PostApplication {
           context: { compositePostId },
         });
         const next = PostNormalizer.toEdit({ owner, head, edit });
+        // The head already holds the change (a collection item another tab or device added or
+        // removed): no PUT, no new version; the row converges to the head below.
+        if (!next) return { object: head.post };
         await HomeserverService.putBlob({ url: next.url, blob: next.body, fence });
         return next;
       });

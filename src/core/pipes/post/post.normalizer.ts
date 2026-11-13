@@ -135,9 +135,13 @@ export class PostNormalizer {
   /**
    * The next version of a post: its newest stored version with `edit` applied. Everything the
    * edit leaves out is carried over as stored: the lock, the alt text of kept attachments, an
-   * article's cover, a collection's item notes and the members another client added.
+   * article's cover, a collection's item notes and the members another client added. A collection
+   * edit is a change applied to the head's own items (`CollectionPostContent.apply`), never a list
+   * read elsewhere; `null` when the head already holds it and nothing else in the edit changes the
+   * head, so nothing is written. A stored collection this client cannot normalize fails with its own
+   * validation message.
    */
-  static toEdit({ owner, head, edit }: TToEditParams): BuiltPost {
+  static toEdit({ owner, head, edit }: TToEditParams): BuiltPost | null {
     return this.build(
       () => {
         const post: Post = { ...head.post };
@@ -152,7 +156,11 @@ export class PostNormalizer {
         const envelope = decodeContent(head.post);
         if (edit.collection !== undefined) {
           if (envelope?.kind !== 'collection') throw this.notKind('collection');
-          post.content = encodeContent(CollectionPostContent.toStored(envelope.content, edit.collection));
+          const current = CollectionPostContent.parse(head.post.content);
+          if (!current) throw this.invalidStoredCollection();
+          const next = CollectionPostContent.apply(current, edit.collection);
+          if (next === current && edit.kind === undefined && edit.attachmentUris === undefined) return null;
+          post.content = encodeContent(CollectionPostContent.toStored(envelope.content, next));
         } else if (envelope?.kind === 'article') {
           const article = edit.content === undefined ? envelope.content : this.parseArticle(edit.content);
           post.content = encodeContent({
@@ -175,6 +183,9 @@ export class PostNormalizer {
   /**
    * The edit projected onto the cached row, for the optimistic local write that lands before the
    * head is read (ADR-0027). Pure and best-effort: the row converges to the version that is PUT.
+   * A collection change is applied to the row's own items, as `toEdit` applies it to the head's;
+   * a row that does not hold a collection this client can read, or that already holds the change,
+   * keeps its content.
    */
   static toLocalEdit({ row, edit }: TToLocalEditParams): TLocalPostEdit {
     const local: TLocalPostEdit = { content: row.content };
@@ -183,10 +194,16 @@ export class PostNormalizer {
       local.attachments = edit.attachmentUris && edit.attachmentUris.length > 0 ? edit.attachmentUris : null;
     }
     if (edit.collection !== undefined) {
-      const stored = tryDecodeContent({ kind: 'collection', content: row.content });
-      const envelope =
-        stored.ok && stored.value?.kind === 'collection' ? stored.value.content : EMPTY_STORED_COLLECTION;
-      local.content = encodeContent(CollectionPostContent.toStored(envelope, edit.collection));
+      const current = CollectionPostContent.parse(row.content);
+      if (current) {
+        const next = CollectionPostContent.apply(current, edit.collection);
+        if (next !== current) {
+          const stored = tryDecodeContent({ kind: 'collection', content: row.content });
+          const envelope =
+            stored.ok && stored.value?.kind === 'collection' ? stored.value.content : EMPTY_STORED_COLLECTION;
+          local.content = encodeContent(CollectionPostContent.toStored(envelope, next));
+        }
+      }
     } else if (row.kind === 'long' && (edit.content !== undefined || edit.coverImage !== undefined)) {
       const stored = parseArticleContent(row.content);
       const article = edit.content === undefined ? stored : this.parseArticle(edit.content);
@@ -229,11 +246,19 @@ export class PostNormalizer {
     });
   }
 
+  /** A stored collection the package decodes but this client's collection rules refuse. */
+  private static invalidStoredCollection(): AppError {
+    return Err.validation(ValidationErrorCode.INVALID_INPUT, 'The stored collection content is invalid', {
+      service: ErrorService.Local,
+      operation: 'toEdit',
+    });
+  }
+
   /**
    * Runs a package call, turning its refusal into a validation error carrying the package's words
    * and, for a rule of the data model, its structured `code`, `field` and `limit`.
    */
-  private static build(run: () => BuiltPost, operation: string, context: Record<string, unknown>): BuiltPost {
+  private static build<T>(run: () => T, operation: string, context: Record<string, unknown>): T {
     try {
       return run();
     } catch (error) {

@@ -23,6 +23,11 @@ PUT and deletes it, and an edit queued behind a delete finds the tombstone and w
 delete's listings are bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; the edit's and the delete's fences guard their
 first pass; the media collection runs after the lock. See the _Create_, _Edit_ and _Delete_ bullets below.
 
+Amended — 2026-11-13 (FIX-FINAL-10, the Greptile P1 on #3140, round 7): a collection edit is a change
+(`TCollectionEdit`: add, remove, reorder, details) applied to the stored head under the post lock and to the row read
+there, never the item list the controller read before the lock, so an edit queued behind another edit of the same
+collection keeps that edit, and one the head already holds writes no version. See the _Edit_ bullet below.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`). Amends ADR-0023 (article covers)
 and the Locks reader described in ADR-0022.
 
@@ -70,8 +75,13 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   logout or an account switch it cannot reach the old account's files); the head read (LIST and GET as one)
   is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`
   (`awaitBounded`), a timeout failing the edit like a failed read and releasing the lock. Two tabs editing at once
-  write their versions one after the other, the second above the first's; the higher edit id is the head. Edits from
-  another device or origin are not ordered: Nexus follows event order.
+  write their versions one after the other, the second above the first's; the higher edit id is the head. A
+  collection edit is a change (`TCollectionEdit`: add, remove, reorder, details) applied to the head under the post
+  lock (`CollectionPostContent.apply` inside `toEdit`) and to the row read there (`toLocalEdit`), never the item list
+  the controller read before the lock, so an edit queued behind another edit of the same collection keeps that edit
+  (a details edit never carries items; a reorder merges the draft against the head's items); one the head already
+  holds writes no version and the row converges to the head. Edits from another device or origin are not ordered:
+  Nexus follows event order.
 - **Delete** tombstones the row, then runs `deletionPaths({ kind: 'post', id, listings })` over a LIST of both roots
   plus the 0.x copy when the grant covers `/pub/pubky.app/:rw` and a GET finds it, one sequential
   `deleteIdempotent` per path (0.x first, oldest version first, public before private). A 0.x copy the grant cannot
@@ -94,7 +104,9 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   FIX-5, Nexus N5); 0.x files and every avatar stay on `/static` (D6: no app-side homeserver fallback).
 - **Articles** write the cover in `cover_image`; `attachments` hold inline media only and `attachment:{n}` indexes
   them directly. One reader, `resolveArticleCover`, serves the three stored shapes (ADR-0023 amendment).
-- **Collections** write `{ uri, note }` items through `toNewInput` / `toStored` + `encodeContent`; notes are kept.
+- **Collections** write `{ uri, note }` items through `toNewInput` / `toStored` + `encodeContent`; notes are kept. An
+  edit is a `TCollectionEdit` change applied to the stored head (see _Edit_), so any edit rewrites a stored `layout`
+  this client does not know to the default through `parse` (pre-existing).
 - **Locks** write the guarded primary as a v1 `Post` from a pipe (`GuardedPostBuilder`, `encodeObject` by kind) and
   read both the v1 and the 0.x shape; a locked article keeps its cover in slot 0 with `cover_image: null`.
 - **Media lifetime** (amended 2026-10-31). A content-addressed file is shared: the migrator dedupes identical blobs
@@ -180,9 +192,10 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
 - The post write lock orders the tabs of one origin only. What it leaves: another device's or origin's edit can
   still land after this device's delete listing (Nexus follows event order); on an insecure origin the queue covers
   one tab; a collection edit uploads its new cover in the controller (`PostController.commitEditCollection`) before
-  the lock, so one queued behind a delete still uploads and then sweeps that cover; two tabs' collection item writes
-  each compute the item list from a pre-lock local read, so they serialize but the second writes its stale list
-  (pre-existing); the edit's generic error toast says "Try again" for an edit a delete refused.
+  the lock, so one queued behind a delete still uploads and then sweeps that cover; a collection change applied to a
+  head another device's version replaces between this device's LIST and its PUT is still last-writer-wins (no
+  compare-and-swap; `pickHeadVersion` picks one), and the controller's local no-op (an item the row already shows)
+  trusts the row; the edit's generic error toast says "Try again" for an edit a delete refused.
 
 ## Alternatives Considered
 
