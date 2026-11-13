@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { EVENT_DATES_PAGE_SIZE } from '@/config/events';
 import { isPinakesConfigured } from '@/config/pinakes';
 import { PinakesController } from '@/controllers/pinakes/pinakes';
+import { isAppError } from '@/libs/error/error.utils';
+import { HttpStatusCode } from '@/libs/http/http.types';
 import { getOccurrencesWindowStart, mergeResourceInstances } from '@/pipes/resource/resource.events';
 import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
 
@@ -35,10 +37,15 @@ type TRead = {
   isMoreError: boolean;
 };
 
+/** Pinakes refused the page (an expired cursor): the list starts over once. */
+const isRefused = (error: unknown) => isAppError(error) && error.context?.statusCode === HttpStatusCode.BAD_REQUEST;
+
 /**
  * A calendar's coming dates, page by page (`PinakesController.fetchOccurrences`): its instances
  * from now on, by start. Every page is asked in the window the first one opened (the same start),
- * since a cursor fits only the window it came from. A resource that is no calendar has no dates.
+ * since a cursor fits only the window it came from. A next page Pinakes refuses (its cursor
+ * expired) starts the list over from a fresh first page, once per resource; refused again, the
+ * error stands. A resource that is no calendar has no dates.
  * The service reports a failed read; nothing is logged again here.
  *
  * @param id - Pinakes resource ID (`card.id`); `null` reads nothing
@@ -52,8 +59,16 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
   const current = useRef<{ id: string; from: string; key: string } | null>(null);
   const isLoadingMore = useRef(false);
   const reads = useRef(0);
+  // The resource whose list already started over after a refused cursor
+  const restartedFor = useRef<string | null>(null);
+  const lastId = useRef(id);
 
   useEffect(() => {
+    // Another resource may start over once again
+    if (lastId.current !== id) {
+      lastId.current = id;
+      restartedFor.current = null;
+    }
     if (!isEnabled || !id) return;
     const from = getOccurrencesWindowStart(new Date());
     reads.current += 1;
@@ -99,7 +114,12 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
         cursor: page.cursor,
         isLoadingMore: false,
       }));
-    } catch {
+    } catch (error) {
+      if (isRefused(error) && restartedFor.current !== readId && current.current === window) {
+        restartedFor.current = readId;
+        setAttempt((count) => count + 1);
+        return;
+      }
       patch((prev) => ({ ...prev, isLoadingMore: false, isMoreError: true }));
     } finally {
       if (current.current === window) isLoadingMore.current = false;
@@ -114,6 +134,9 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     isLoadingMore: shown?.isLoadingMore ?? false,
     isMoreError: shown?.isMoreError ?? false,
     loadMore,
-    retry: () => setAttempt((count) => count + 1),
+    retry: () => {
+      restartedFor.current = null;
+      setAttempt((count) => count + 1);
+    },
   };
 }

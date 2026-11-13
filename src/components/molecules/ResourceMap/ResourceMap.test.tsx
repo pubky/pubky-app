@@ -548,6 +548,19 @@ describe('ResourceMap', () => {
       expect(screen.queryByRole('button', { name: 'Interact with the map' })).toBeNull();
     });
 
+    it('fits points either side of the antimeridian the short way round, not around the world', async () => {
+      mocks.state.isVisible = true;
+      const east = { id: 'east', point: { lat: -16.85, lon: 179.95 }, label: 'Taveuni' };
+      const west = { id: 'west', point: { lat: -16.8, lon: -179.95 }, label: 'Across the line' };
+      renderMap({ markers: [east, west], mode: 'explore' });
+      const map = await madeMap();
+
+      const [w, s, e, n] = map.options.bounds ?? [];
+      expect(w).toBeCloseTo(179.95, 6);
+      expect(e).toBeCloseTo(180.05, 6);
+      expect([s, n]).toEqual([-16.85, -16.8]);
+    });
+
     it('has one button per pin, named by what it is, that selects it', async () => {
       mocks.state.isVisible = true;
       const onSelect = vi.fn();

@@ -31,6 +31,12 @@ export const MAP_FIT_PADDING_PX = 48;
  */
 export const MAP_CONTEXT_RESTORE_MS = 2000;
 
+/**
+ * Results a map of a search shows at most: past that it loads no more and says so. A map of more
+ * pins than this says little, and its pins are grouped again on every zoom.
+ */
+export const MAP_RESULTS_MAX = 200;
+
 /** Places a place's page lists under Nearby. */
 export const RESOURCE_NEARBY_SHOWN = 6;
 /** How far around a place its Nearby looks (km). */

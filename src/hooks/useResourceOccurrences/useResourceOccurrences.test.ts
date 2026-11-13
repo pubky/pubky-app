@@ -1,5 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '@/libs/error/error';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import occurrencesFixture from '@/services/pinakes/fixtures/occurrences.holidays.json';
 import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
 import { useResourceOccurrences } from './useResourceOccurrences';
@@ -129,6 +132,61 @@ describe('useResourceOccurrences', () => {
     expect(result.current.cards).toEqual(DATES.slice(0, 2));
     await act(() => result.current.loadMore());
     expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'new-c2' }));
+  });
+
+  describe('a cursor Pinakes refuses (expired: a 400)', () => {
+    const refused = () =>
+      new AppError({
+        category: ErrorCategory.Client,
+        code: ClientErrorCode.BAD_REQUEST,
+        message: 'Pinakes answered 400',
+        service: ErrorService.Pinakes,
+        operation: 'fetchOccurrences',
+        context: { statusCode: 400 },
+      });
+
+    it('starts the dates over from a fresh first page, once, each date listed once', async () => {
+      mocks.fetchOccurrences
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'expired' })
+        .mockRejectedValueOnce(refused())
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'fresh' })
+        .mockResolvedValueOnce({ cards: DATES.slice(2), cursor: null });
+      const { result } = renderHook(() => useResourceOccurrences(FEED));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      vi.setSystemTime(new Date('2026-11-13T18:30:10Z'));
+      await act(() => result.current.loadMore());
+
+      // A new window from now, with no cursor
+      await waitFor(() => expect(mocks.fetchOccurrences).toHaveBeenCalledTimes(3));
+      expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith({ id: FEED, limit: 5, from: '2026-11-13T18:30:00Z' });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current).toMatchObject({ isError: false, isMoreError: false, hasMore: true });
+      expect(result.current.cards).toEqual(DATES.slice(0, 2));
+
+      await act(() => result.current.loadMore());
+      expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'fresh' }));
+      expect(result.current.cards).toEqual(DATES);
+    });
+
+    it('says so when the fresh list’s cursor is refused too, instead of starting over again and again', async () => {
+      mocks.fetchOccurrences
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'expired' })
+        .mockRejectedValueOnce(refused())
+        .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'also-refused' })
+        .mockRejectedValueOnce(refused());
+      const { result } = renderHook(() => useResourceOccurrences(FEED));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await act(() => result.current.loadMore());
+      await waitFor(() => expect(mocks.fetchOccurrences).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(() => result.current.loadMore());
+
+      expect(mocks.fetchOccurrences).toHaveBeenCalledTimes(4);
+      expect(result.current).toMatchObject({ isMoreError: true, hasMore: true });
+      expect(result.current.cards).toEqual(DATES.slice(0, 2));
+    });
   });
 
   it('asks for one next page at a time', async () => {

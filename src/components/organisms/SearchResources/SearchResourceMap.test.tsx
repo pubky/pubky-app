@@ -286,6 +286,24 @@ describe('SearchResourceMap', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
+  it('maps at most 200 results: past that it loads no more and says so', () => {
+    const many = Array.from({ length: 205 }, (_, index) => ({
+      ...PLACES[0],
+      id: `place-${index}`,
+      name: `Place ${index}`,
+      point: { lat: 47 + index / 1000, lon: 8 + index / 1000 },
+    }));
+    const loadMore = vi.fn(async () => {});
+    render(<SearchResourceMap kind="place" search={search({ cards: many, hasMore: true, loadMore })} />);
+
+    expect(map().fit).toHaveLength(200);
+    expect(screen.getByTestId('search-map-scope')).toHaveTextContent(
+      'Showing the first 200 places. Narrow the search to see others on the map.',
+    );
+    expect(screen.queryByRole('button', { name: 'Load more results' })).toBeNull();
+    expect(loadMore).not.toHaveBeenCalled();
+  });
+
   it('says quietly what is coming for the kind it shows, with nothing to press', () => {
     const { rerender } = render(<SearchResourceMap kind="place" search={search()} />);
     expect(screen.getByTestId('search-map-hint')).toHaveTextContent('Pubky Maps is coming');

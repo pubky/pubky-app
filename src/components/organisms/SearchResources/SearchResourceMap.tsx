@@ -6,7 +6,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { CONTENT_AREA_STACK_CLASS } from '@/config/layoutClasses';
-import { MAP_FIT_MAX_ZOOM } from '@/config/maps';
+import { MAP_FIT_MAX_ZOOM, MAP_RESULTS_MAX } from '@/config/maps';
 import { useEventInstances } from '@/hooks/useEventInstances/useEventInstances';
 import type { UseResourceSearchResult } from '@/hooks/useResourceSearch/useResourceSearch';
 import { getDisplayLink } from '@/molecules/ResourceCard/ResourceCard.utils';
@@ -47,15 +47,18 @@ interface SearchResourceMapProps {
  * map asks Pinakes for nothing as it moves, and searches no area). A press on a group zooms into
  * it; on a pin, or on a group of results at one spot, it opens their real cards under the map, each
  * with its tag bar and saying where it is on a line with "Open in Maps" (the map above already
- * shows it). Under the map: how much it shows, and how many results have no location and so no
- * pin. Every event is its own result, a calendar's occurrences too (`useEventInstances`).
+ * shows it). Under the map: how much it shows (at most `MAP_RESULTS_MAX` results), and how many
+ * results have no location and so no pin. Every event is its own result, a calendar's occurrences too (`useEventInstances`).
  */
 export function SearchResourceMap({ kind, search, children }: SearchResourceMapProps) {
   const { cards, loading, loadingMore, error, hasMore, loadMore, retry, unavailable } = search;
   const isEvents = kind === 'event';
   // An event's card shows its details (time zone, venue): read for the rows as the agenda reads them
   const events = useEventInstances(isEvents ? cards : []);
-  const rows: readonly (TPinakesCard | TEventInstance)[] = isEvents ? events.instances : cards;
+  const read: readonly (TPinakesCard | TEventInstance)[] = isEvents ? events.instances : cards;
+  // The map shows so many results at most: past that it loads no more and says so
+  const rows = read.slice(0, MAP_RESULTS_MAX);
+  const isCapped = read.length >= MAP_RESULTS_MAX && (hasMore || read.length > MAP_RESULTS_MAX);
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [selected, setSelected] = useState<string[]>([]);
   const words = KINDS[kind];
@@ -83,7 +86,7 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
   const unplaced = rows.length - located.length;
   const isFirstRead = loading || (isEvents && cards.length > 0 && rows.length === 0 && events.isLoading);
 
-  const loadMoreButton = hasMore && (
+  const loadMoreButton = hasMore && !isCapped && (
     <Button
       type="button"
       variant={ButtonVariant.SECONDARY}
@@ -150,7 +153,11 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
         />
         <Container overrideDefaults className="flex flex-col gap-2">
           <Typography size="sm" data-testid="search-map-scope" className="font-normal text-muted-foreground">
-            {isComplete ? `Showing all ${count(rows.length)}.` : `Showing the ${count(rows.length)} loaded so far.`}
+            {isCapped
+              ? `Showing the first ${count(rows.length)}. Narrow the search to see others on the map.`
+              : isComplete
+                ? `Showing all ${count(rows.length)}.`
+                : `Showing the ${count(rows.length)} loaded so far.`}
             {unplaced > 0 &&
               ` ${unplaced} ${unplaced === 1 ? 'has' : 'have'} no location and ${unplaced === 1 ? 'is' : 'are'} not on the map.`}
           </Typography>
