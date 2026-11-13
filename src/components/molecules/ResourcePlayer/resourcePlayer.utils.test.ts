@@ -855,7 +855,7 @@ describe('from Pinakes’ embed', () => {
     expect(getPlayerTargets(place)).toMatchObject([{ provider: 'openstreetmap', frame: 'map', name: 'OpenStreetMap' }]);
   });
 
-  it('puts an article’s document frame after its card, a post’s first', () => {
+  it('shows an article’s document frame up front, as a post’s', () => {
     const rich: TPinakesEmbed = {
       ...toot,
       provider: 'blog.example',
@@ -863,7 +863,8 @@ describe('from Pinakes’ embed', () => {
       src: 'https://blog.example/post/embed/',
     };
     const article = { ...card('https://blog.example/post/'), embed: rich, site: 'A Blog' };
-    expect(getOwnPlayer(article)).toBeNull();
+    expect(getOwnPlayer(article)).toMatchObject({ provider: 'blog.example', frame: 'rich' });
+    expect(isPlayable(article)).toBe(true);
     expect(getPlayerTargets(article)).toMatchObject([{ provider: 'blog.example', frame: 'rich' }]);
   });
 

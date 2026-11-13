@@ -681,17 +681,17 @@ export function isPlayable(card: TOwnLinks, href?: string | null): boolean {
 
 /**
  * The player of a card's own link: its `embed` from Pinakes, else (an older Pinakes) built from its
- * links (`getOwnLink`); `null` when its link is on no service with a player. A place's map and a
- * page's document frame (an article's oEmbed) are no player of their own: a generic link's card
- * comes first, the frame in its switch (`getPlayerTargets`). A post's frame is its own.
+ * links (`getOwnLink`); `null` when its link is on no service with a player. A place's map is no
+ * player of its own: its card comes first, the map in its switch (`getPlayerTargets`). A post's
+ * frame and a page's document frame (slides, an article's oEmbed) are their own.
  */
 export function getOwnPlayer(card: TOwnLinks, href?: string | null): PlayerTarget | null {
   const target = getOwnTarget(card, href);
-  return target?.frame === 'map' || target?.frame === 'rich' ? null : target;
+  return target?.frame === 'map' ? null : target;
 }
 
 /**
- * The frame of a card's own link, maps and documents included (`getOwnPlayer`). With Pinakes'
+ * The frame of a card's own link, maps included (`getOwnPlayer`). With Pinakes'
  * `embed`, "Open in" opens the link as written when it is a web link, else the card's first.
  */
 function getOwnTarget(card: TOwnLinks, href?: string | null): PlayerTarget | null {
