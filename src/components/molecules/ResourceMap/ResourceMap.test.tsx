@@ -36,7 +36,14 @@ const mocks = vi.hoisted(() => {
     removed = false;
     fitted: unknown[] = [];
     canvas = document.createElement('canvas');
+    /** Each time the canvas was focused: whether its container was still inert, and the options. */
+    focused: { inert: boolean; options?: FocusOptions }[] = [];
     constructor(public options: TFakeMapOptions) {
+      const focus = this.canvas.focus.bind(this.canvas);
+      this.canvas.focus = (focusOptions?: FocusOptions) => {
+        this.focused.push({ inert: options.container.hasAttribute('inert'), options: focusOptions });
+        focus(focusOptions);
+      };
       // As the library does: it marks the container and draws into it before WebGL may fail
       options.container.classList.add('maplibregl-map');
       this.canvas.tabIndex = 0;
@@ -273,8 +280,10 @@ describe('ResourceMap', () => {
 
       expect(canvas).not.toHaveAttribute('inert');
       expect(screen.queryByRole('button', { name: 'Interact with the map' })).toBeNull();
-      // The keyboard goes on to the map itself, not back to the top of the page
+      // The keyboard goes on to the map itself, not back to the top of the page: once the map is no
+      // longer inert (a browser focuses nothing inside an inert part), and without scrolling to it
       expect(map.getCanvas()).toHaveFocus();
+      expect(map.focused).toEqual([{ inert: false, options: { preventScroll: true } }]);
     });
 
     it('asks for two fingers or a modifier key to move the map, so a tapped map does not trap the page’s scroll either', async () => {
@@ -387,6 +396,50 @@ describe('ResourceMap', () => {
       expect(map.removed).toBe(false);
     });
 
+    it('waits for the context again once the page is back in view: a page left in the background is not given up on', async () => {
+      mocks.state.isVisible = true;
+      renderMap();
+      const map = await madeMap();
+      act(() => map.fire('load'));
+      vi.useFakeTimers();
+      const visibility = vi.spyOn(document, 'visibilityState', 'get');
+
+      // Lost while the page goes to the background; its timers run late or all at once on return
+      visibility.mockReturnValue('hidden');
+      act(() => map.fire('webglcontextlost'));
+      await act(async () => vi.advanceTimersByTime(5000));
+      expect(screen.queryByTestId('resource-map-fallback')).toBeNull();
+
+      visibility.mockReturnValue('visible');
+      act(() => void document.dispatchEvent(new Event('visibilitychange')));
+      await act(async () => vi.advanceTimersByTime(1000));
+      act(() => map.fire('webglcontextrestored'));
+      await act(async () => vi.advanceTimersByTime(10_000));
+
+      expect(screen.queryByTestId('resource-map-fallback')).toBeNull();
+      expect(map.removed).toBe(false);
+    });
+
+    it('fails a map once, however many failures the library tells of', async () => {
+      mocks.state.isVisible = true;
+      renderMap();
+      const map = await madeMap();
+      let removals = 0;
+      const remove = map.remove.bind(map);
+      map.remove = () => {
+        removals += 1;
+        remove();
+      };
+
+      await act(async () => {
+        map.fire('error', { error: new Error('tile 1') });
+        map.fire('error', { error: new Error('tile 2') });
+      });
+
+      expect(removals).toBe(1);
+      expect(screen.getByTestId('resource-map-fallback')).toBeInTheDocument();
+    });
+
     it('removes a failed map only after the library has finished telling of the failure', async () => {
       mocks.state.isVisible = true;
       renderMap();
@@ -495,8 +548,10 @@ describe('ResourceMap', () => {
       expect(map.fitted).toHaveLength(1);
       expect(map.fitted[0]).toEqual([[8.53, 47.36, 8.55, 47.38], expect.objectContaining({ maxZoom: 16 })]);
       expect(onSelect).not.toHaveBeenCalled();
-      // The pin pressed is about to be replaced by the ones it stood for: the keyboard stays on the map
+      // The pin pressed is about to be replaced by the ones it stood for: the keyboard stays on the map,
+      // which is not scrolled to
       expect(map.getCanvas()).toHaveFocus();
+      expect(map.focused).toEqual([{ inert: false, options: { preventScroll: true } }]);
 
       fireEvent.click(screen.getByRole('button', { name: '2 results here' }));
       expect(onSelect).toHaveBeenCalledWith('stacked');

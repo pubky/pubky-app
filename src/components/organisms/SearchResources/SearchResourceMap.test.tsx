@@ -268,6 +268,24 @@ describe('SearchResourceMap', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
+  it('says so too when more results could not be read and none read so far has a location', () => {
+    const retry = vi.fn();
+    const unplaced = EVENTS.filter((card) => !card.point);
+    render(
+      <SearchResourceMap
+        kind="event"
+        search={search({ cards: unplaced, hasMore: false, error: 'Pinakes is down', retry })}
+      />,
+    );
+
+    expect(screen.getByTestId('search-map-empty')).toHaveTextContent(
+      'None of the 3 events loaded so far has a location',
+    );
+    expect(screen.getByTestId('search-map-more-error')).toHaveTextContent('Pinakes is down');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
   it('says quietly what is coming for the kind it shows, with nothing to press', () => {
     const { rerender } = render(<SearchResourceMap kind="place" search={search()} />);
     expect(screen.getByTestId('search-map-hint')).toHaveTextContent('Pubky Maps is coming');

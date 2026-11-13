@@ -142,11 +142,16 @@ export function ResourceMap({
     let cancelled = false;
     let map: MapLibreMap | null = null;
     let contextLost: ReturnType<typeof setTimeout> | undefined;
+    let hasFailed = false;
     const fail = () => {
+      // Once: the library may tell of several failures before the map is removed
+      if (hasFailed) return;
+      hasFailed = true;
       clearTimeout(contextLost);
+      contextLost = undefined;
       const failed = map;
       map = null;
-      live.current = null;
+      if (!cancelled) live.current = null;
       if (failed) {
         // After the library has finished telling of the failure: it goes on using the map meanwhile
         queueMicrotask(() => failed.remove());
@@ -156,6 +161,17 @@ export function ResourceMap({
         container.classList.remove('maplibregl-map');
       }
       if (!cancelled) setLoaded({ key: styleUrl, status: 'failed' });
+    };
+    // A lost context is waited for only while the page is in view: in the background the browser
+    // gives none back, and its timers run late, so the wait starts over when the page returns
+    const awaitContext = () => {
+      clearTimeout(contextLost);
+      contextLost = setTimeout(() => {
+        if (document.visibilityState === 'visible') fail();
+      }, MAP_CONTEXT_RESTORE_MS);
+    };
+    const onVisibility = () => {
+      if (contextLost !== undefined && document.visibilityState === 'visible') awaitContext();
     };
     loadMapLibrary().then((maplibre) => {
       if (cancelled) return;
@@ -199,14 +215,16 @@ export function ResourceMap({
       });
       // The library loses and restores the context itself when it restarts its workers (a phone back
       // from the background): only a context that stays lost leaves no map
-      made.on('webglcontextlost', () => {
+      made.on('webglcontextlost', awaitContext);
+      made.on('webglcontextrestored', () => {
         clearTimeout(contextLost);
-        contextLost = setTimeout(fail, MAP_CONTEXT_RESTORE_MS);
+        contextLost = undefined;
       });
-      made.on('webglcontextrestored', () => clearTimeout(contextLost));
     }, fail);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibility);
       clearTimeout(contextLost);
       map?.remove();
       live.current = null;
@@ -244,21 +262,21 @@ export function ResourceMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady, fitKey]);
 
+  // A tapped preview: its button goes away, so the keyboard moves on to the map it opened. After
+  // the render that ends `inert`: a browser focuses nothing inside an inert part
+  useEffect(() => {
+    if (isTapped && isReady) live.current?.map.getCanvas().focus({ preventScroll: true });
+  }, [isTapped, isReady]);
+
   if (!hasPoints) return null;
 
   const pressPin = (marker: TResourceMapMarker) => {
     if (marker.bounds && live.current) {
       // The pin pressed is replaced by the ones it stood for: the keyboard stays on the map
-      live.current.map.getCanvas().focus();
+      live.current.map.getCanvas().focus({ preventScroll: true });
       live.current.map.fitBounds(marker.bounds, FIT_OPTIONS);
     } else onSelect?.(marker.id);
   };
-  const tap = () => {
-    setIsTapped(true);
-    // The button goes away: the keyboard moves on to the map it opened
-    live.current?.map.getCanvas().focus();
-  };
-
   return (
     <Container overrideDefaults className={cn('flex min-w-0 flex-col gap-1', className)}>
       <Container
@@ -316,7 +334,7 @@ export function ResourceMap({
             overrideDefaults
             aria-label="Interact with the map"
             title="Interact with the map"
-            onClick={tap}
+            onClick={() => setIsTapped(true)}
             className="absolute inset-0 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           />
         )}
