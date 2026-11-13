@@ -220,6 +220,23 @@ describe('useResourceOccurrences', () => {
       expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith({ id: 'other', limit: 5, from: NOW });
     });
 
+    it('asks past the cache for the resource read again only, not for another one opened in the same go', async () => {
+      mocks.fetchOccurrences.mockRejectedValueOnce(new Error('down')).mockResolvedValue({ cards: [], cursor: null });
+      const { result, rerender } = renderHook(({ id }) => useResourceOccurrences(id), { initialProps: { id: FEED } });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Try again and, before it is read, another resource: that one's first page is a plain read
+      act(() => {
+        result.current.retry();
+        rerender({ id: 'other' });
+      });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      const asked = mocks.fetchOccurrences.mock.calls.slice(1).map(([params]) => params);
+      expect(asked.length).toBeGreaterThan(0);
+      expect(asked).toEqual(asked.map(() => ({ id: 'other', limit: 5, from: NOW })));
+    });
+
     it('says so when the fresh list’s cursor is refused too, instead of starting over again and again', async () => {
       mocks.fetchOccurrences
         .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'expired' })

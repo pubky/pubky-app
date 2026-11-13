@@ -64,12 +64,13 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
   // The resource whose list already started over after a refused cursor
   const restartedFor = useRef<string | null>(null);
   const lastId = useRef(id);
-  // The attempt the last read was for: a read a new attempt starts is the first page read again
-  const lastAttempt = useRef(attempt);
+  // The resource whose first page is to be read again (its list started over, or `retry`): the
+  // next read of that resource only
+  const readAgainFor = useRef<string | null>(null);
 
   useEffect(() => {
-    const isReadAgain = lastAttempt.current !== attempt;
-    lastAttempt.current = attempt;
+    const isReadAgain = Boolean(id) && readAgainFor.current === id;
+    readAgainFor.current = null;
     // Another resource may start over once again
     if (lastId.current !== id) {
       lastId.current = id;
@@ -129,6 +130,7 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     } catch (error) {
       if (isRefused(error) && restartedFor.current !== readId && current.current === window) {
         restartedFor.current = readId;
+        readAgainFor.current = readId;
         setAttempt((count) => count + 1);
         return;
       }
@@ -148,6 +150,7 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     loadMore,
     retry: () => {
       restartedFor.current = null;
+      readAgainFor.current = id ?? null;
       setAttempt((count) => count + 1);
     },
   };
