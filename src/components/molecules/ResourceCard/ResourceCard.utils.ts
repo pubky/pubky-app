@@ -76,13 +76,15 @@ export function getResourceStatus(status: string): PinakesStatus {
 /**
  * `value` when it is an `http:` or `https:` URL, else `null`. Only these may become an `href` or an
  * image `src`: Pinakes URIs can be `isbn:`, `doi:`, `pubky://`, and a stored value could be anything.
+ * A link that carries a username or password (`user:password@`) is `null` too: the card never opens
+ * or reads it (the link stays in the post's text as written).
  */
 export function getHttpUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   const url = getSafeExternalUrl(value);
   if (!url) return null;
-  const { protocol } = new URL(url);
-  return protocol === 'http:' || protocol === 'https:' ? url : null;
+  const { protocol, username, password } = new URL(url);
+  return (protocol === 'http:' || protocol === 'https:') && !username && !password ? url : null;
 }
 
 /** A link without its scheme and `www.`, for a card that has no name: `https://www.x.com/a` → `x.com/a`. */

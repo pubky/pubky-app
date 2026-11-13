@@ -121,7 +121,12 @@ describe('getResourceStatus', () => {
 });
 
 describe('getHttpUrl', () => {
-  it.each(['https://example.com/a', 'http://www.dancarlin.com/graphics/DC_HH_iTunes.jpg'])('keeps %s', (url) => {
+  it.each([
+    'https://example.com/a',
+    'http://www.dancarlin.com/graphics/DC_HH_iTunes.jpg',
+    'https://example.invalid/@alice',
+    'https://example.invalid/a?by=alice@example.invalid',
+  ])('keeps %s', (url) => {
     expect(getHttpUrl(url)).toBe(url);
   });
 
@@ -133,6 +138,10 @@ describe('getHttpUrl', () => {
     'javascript:alert(1)',
     'data:text/html,<b>x</b>',
     'mailto:someone@example.com',
+    'https://alice@example.invalid/a',
+    'https://alice:secret@example.invalid/a',
+    'https://:secret@example.invalid/a',
+    'https://alice%40home:s%3Acret@example.invalid/a',
     'not a url',
     '',
     null,
