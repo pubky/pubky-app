@@ -810,6 +810,48 @@ describe('NexusResourceService batched tag reads (POST /v0/stream/resources/by_i
       expect(NexusResourceService.getCachedTags({ uri: YOUTUBE, viewerId: VIEWER })).toBeUndefined();
     });
 
+    it.each([
+      ['answered with a 500', () => new Response('boom', { status: 500 })],
+      [
+        'that fails to connect',
+        () => {
+          throw new TypeError('Failed to fetch');
+        },
+      ],
+    ] as const)(
+      'leaves a link unread after a `by_ids` request %s: no `by-uri`, nothing cached, a card of it still reads it',
+      async (_, fail) => {
+        fetchSpy.mockImplementation(async (url) =>
+          String(url) === BY_IDS_URL ? fail() : jsonResponse(BY_URI_RESPONSE),
+        );
+
+        await expect(inBatch(YOUTUBE)).resolves.toBeUndefined();
+        expect(byIdsCalls()).toHaveLength(1);
+        expect(byUriCalls()).toHaveLength(0);
+        expect(NexusResourceService.getCachedTags({ uri: YOUTUBE, viewerId: VIEWER })).toBeUndefined();
+        // No made-up empty answer: the card of the link reads it (by `by-uri`, `by_ids` being left out now).
+        expect(await read(YOUTUBE)).toEqual(BY_URI_RESPONSE.tags);
+        expect(byUriCalls()).toHaveLength(1);
+        expect(NexusResourceService.getCachedTags({ uri: YOUTUBE, viewerId: VIEWER })).toEqual(BY_URI_RESPONSE.tags);
+      },
+    );
+
+    it('leaves a link unread when a batch fails once Nexus served `by_ids`, and a card of it still reads it', async () => {
+      fetchSpy
+        .mockResolvedValueOnce(jsonResponse([OSM_VIEW]))
+        .mockResolvedValueOnce(new Response('boom', { status: 500 }))
+        .mockResolvedValue(jsonResponse([YOUTUBE_VIEW]));
+      await read(OSM);
+
+      await expect(inBatch(YOUTUBE)).resolves.toBeUndefined();
+      expect(byUriCalls()).toHaveLength(0);
+      expect(NexusResourceService.getCachedTags({ uri: YOUTUBE, viewerId: VIEWER })).toBeUndefined();
+      // `by_ids` stays in use: the card's own read asks it again.
+      expect(await read(YOUTUBE)).toEqual(YOUTUBE_VIEW.tags);
+      expect(byIdsCalls()).toHaveLength(3);
+      expect(byUriCalls()).toHaveLength(0);
+    });
+
     it('shares a read of the link already made or under way, asking nothing more', async () => {
       let answer: (response: Response) => void = () => {};
       fetchSpy.mockImplementation(() => new Promise<Response>((resolve) => (answer = resolve)));

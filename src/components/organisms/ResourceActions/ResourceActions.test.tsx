@@ -402,7 +402,7 @@ describe('ResourceActions', () => {
       tag_uri: null,
     });
 
-    it('reads its tagged Also on links once its own tags are read, only in the `by_ids` batch, and merges them in', () => {
+    it('reads its tagged Also on links with its own tags, only in their `by_ids` batch window, and merges them in', () => {
       mocks.tags.tags = [userTag('radiohead', ['a'])];
       mocks.otherReads = [
         { link: { uri: SPOTIFY, name: 'Spotify' }, tags: [userTag('album', ['b', 'c']), userTag('rock', ['b'])] },
