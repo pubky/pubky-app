@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useModerationDecisions } from '@/hooks/useModerationDecisions/useModerationDecisions';
 import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
 import { NotificationsContainer } from './NotificationsContainer';
@@ -11,6 +12,8 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector?: (state: { session: unknown | null }) => unknown) =>
     selector ? selector(authStoreState) : authStoreState,
 }));
+
+vi.mock('@/hooks/useModerationDecisions/useModerationDecisions', () => ({ useModerationDecisions: vi.fn(() => []) }));
 
 // Mock useNotifications hook
 vi.mock('@/hooks/useNotifications/useNotifications', () => ({
@@ -133,6 +136,52 @@ describe('NotificationsContainer', () => {
     expect(screen.getByTestId('notifications-list')).toBeInTheDocument();
   });
 
+  it('shows the statements of reasons above the notifications', () => {
+    vi.mocked(useModerationDecisions).mockReturnValueOnce([null]);
+
+    render(<NotificationsContainer />);
+
+    const notice = screen.getByTestId('moderation-decision-card');
+    expect(notice.compareDocumentPosition(screen.getByTestId('notifications-list'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('shows no statements card for a user moderation did not restrict', () => {
+    render(<NotificationsContainer />);
+    expect(screen.queryByTestId('moderation-decision-card')).not.toBeInTheDocument();
+  });
+
+  it('shows the statements of reasons while notifications load and when they fail with nothing loaded', () => {
+    const base = {
+      notifications: [],
+      unreadNotifications: [],
+      count: 0,
+      unreadCount: 0,
+      isLoadingMore: false,
+      hasMore: false,
+      loadMore: vi.fn(),
+      refresh: vi.fn(),
+      markAllAsRead: vi.fn(),
+      isNotificationUnread: vi.fn(() => false),
+    };
+    vi.mocked(useModerationDecisions).mockReturnValue([null]);
+    vi.mocked(useNotifications).mockReturnValueOnce({ ...base, isLoading: true, error: null });
+    const { unmount } = render(<NotificationsContainer />);
+    expect(screen.getByTestId('moderation-decision-card')).toBeInTheDocument();
+    unmount();
+
+    vi.mocked(useNotifications).mockReturnValueOnce({
+      ...base,
+      isLoading: false,
+      error: 'Failed to load notifications',
+    });
+    render(<NotificationsContainer />);
+    expect(screen.getByTestId('moderation-decision-card')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load notifications')).toBeInTheDocument();
+    vi.mocked(useModerationDecisions).mockReturnValue([]);
+  });
+
   it('shows loading state', () => {
     vi.mocked(useNotifications).mockReturnValueOnce({
       notifications: [],
@@ -168,6 +217,29 @@ describe('NotificationsContainer', () => {
       isNotificationUnread: vi.fn(() => false),
     });
     render(<NotificationsContainer />);
+    expect(screen.getByText(/No notifications yet/i)).toBeInTheDocument();
+  });
+
+  it('shows the statements of reasons even when there are no notifications', () => {
+    vi.mocked(useModerationDecisions).mockReturnValueOnce([null]);
+    vi.mocked(useNotifications).mockReturnValueOnce({
+      notifications: [],
+      unreadNotifications: [],
+      count: 0,
+      unreadCount: 0,
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refresh: vi.fn(),
+      markAllAsRead: vi.fn(),
+      isNotificationUnread: vi.fn(() => false),
+    });
+
+    render(<NotificationsContainer />);
+
+    expect(screen.getByTestId('moderation-decision-card')).toBeInTheDocument();
     expect(screen.getByText(/No notifications yet/i)).toBeInTheDocument();
   });
 

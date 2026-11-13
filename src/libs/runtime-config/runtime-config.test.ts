@@ -280,6 +280,17 @@ describe('runtime-config resolver', () => {
       );
     });
 
+    it('reads the moderation statements origin from its environment variable, and leaves it unset otherwise', () => {
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      expect(PUBKY_RUNTIME_ENV_NAMES.moderationDecisionsUrl).toBe('PUBKY_RUNTIME_MODERATION_DECISIONS_URL');
+      expect(readServerConfig().moderationDecisionsUrl).toBeUndefined();
+
+      process.env[PUBKY_RUNTIME_ENV_NAMES.moderationDecisionsUrl] = 'https://moderation.example.com';
+
+      expect(readServerConfig().moderationDecisionsUrl).toBe('https://moderation.example.com');
+    });
+
     it('does not warn for a configured deployed moderation identity', () => {
       simulateDeployedEnv();
       setNetworkRuntimeEnv();

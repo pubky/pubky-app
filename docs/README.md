@@ -37,6 +37,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `z-index.md`                        | Z-index layering conventions                                                                                       |
 | `sentry.md`                         | What Sentry and Pulse capture, capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps    |
 | `environment.md`                    | Build-time `Env` and runtime `PUBKY_RUNTIME_*` configuration                                                       |
+| `moderation-decisions.md`           | Statements of reasons for moderated users (DSA Art. 17): the notifications card, signed read, appeal link          |
 | `pwa.md`                            | Service worker scope, update flow, offline fallback, precache allow-list, manifest, install banner, local testing  |
 | `commit-message.md`                 | Conventional commit format, branch naming, pull request conventions                                                |
 | `release.md`                        | Cutting a production release from `dev` onto `master`                                                              |

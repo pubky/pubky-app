@@ -8,6 +8,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { NotificationsEmpty } from '@/molecules/NotificationsEmpty/NotificationsEmpty';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { ModerationDecisionNotices } from '../ModerationDecisionNotices/ModerationDecisionNotices';
 import { NotificationsList } from '../NotificationsList/NotificationsList';
 import { groupNotifications } from '../NotificationsList/NotificationsList.utils';
 import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from './NotificationsContainer.skeleton';
@@ -61,29 +62,43 @@ export function NotificationsContainer() {
   }, [markAllAsRead, isAuthenticated]);
 
   if (isLoading) {
-    return <NotificationsContainerSkeleton />;
+    return (
+      <>
+        <ModerationDecisionNotices />
+        <NotificationsContainerSkeleton />
+      </>
+    );
   }
 
   // A failure with nothing loaded yet is a dead end, so it owns the page. A failure
   // with rows on screen must not throw them away — it renders inline below the list.
   if (error && notifications.length === 0) {
     return (
-      <Container overrideDefaults={true} className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">{error}</p>
-        <Button variant={ButtonVariant.SECONDARY} type="button" onClick={refresh} data-cy="notifications-retry">
-          {'Try again'}
-        </Button>
-      </Container>
+      <>
+        <ModerationDecisionNotices />
+        <Container overrideDefaults={true} className="flex flex-col items-center justify-center gap-4 py-12">
+          <p className="text-muted-foreground">{error}</p>
+          <Button variant={ButtonVariant.SECONDARY} type="button" onClick={refresh} data-cy="notifications-retry">
+            {'Try again'}
+          </Button>
+        </Container>
+      </>
     );
   }
 
   // Empty state
   if (notifications.length === 0) {
-    return <NotificationsEmpty />;
+    return (
+      <>
+        <ModerationDecisionNotices />
+        <NotificationsEmpty />
+      </>
+    );
   }
 
   return (
     <>
+      <ModerationDecisionNotices />
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Notifications {unreadNotifications.length > 0 && `(${unreadNotifications.length})`}
       </Heading>

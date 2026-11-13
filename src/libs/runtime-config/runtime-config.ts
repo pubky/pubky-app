@@ -205,6 +205,8 @@ export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelay
 /** Indexing protection after a local profile write, independent of the normal refresh TTL. */
 export const getProfileLocalEditTtlMs = (): number => getRuntimeConfig().profileLocalEditTtlMs;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
+/** Moderation service origin that serves statements of reasons; `undefined` means none are requested. */
+export const getModerationDecisionsUrl = (): string | undefined => getRuntimeConfig().moderationDecisionsUrl;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;
 export const getPreludeSdkKey = (): string | undefined => getRuntimeConfig().preludeSdkKey;
