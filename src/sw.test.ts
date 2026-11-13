@@ -210,8 +210,7 @@ describe('src/sw.ts', () => {
       await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
     };
 
-    // No page announced itself: every window runs a build without the handshake (0.x), or this worker
-    // instance was restarted between install and activate and lost the announcements.
+    // No page announced itself: every window runs a build without the handshake (0.x).
     it('claims then navigates every window client without waiting for the navigations', async () => {
       await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
 
@@ -251,18 +250,30 @@ describe('src/sw.ts', () => {
       expect(announced.postMessage).toHaveBeenCalledWith({ type: SW_TAKEOVER_SKIPPED, appVersion: APP_VERSION });
     });
 
-    // The announcements live in the worker instance (ADR-0021 amendment): a worker the browser
-    // restarted between install and activate starts from an empty set and reloads every window.
-    it('forgets the announcements when the worker instance restarts before activation', async () => {
+    // The announcements live in the worker instance, like `replacesActiveWorker` (ADR-0021 amendment): a
+    // worker the browser restarts between install and activate loses both and takes the first-install
+    // path, so it claims and navigates nothing; 0.x tabs then wait for their own next load or update check.
+    it('takes the first-install path when the worker instance restarts before activation', async () => {
       receiveMessage(windows[0]);
       listeners.clear();
       vi.resetModules();
       await import('./sw');
+      Object.defineProperty(globalThis, 'registration', {
+        configurable: true,
+        value: { active: { scriptURL: 'https://pubky.app/sw.js' } },
+      });
 
-      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+      // `install` fired once, on the instance that is gone; only `activate` reaches the restarted one.
+      const [, onTakeover] = listeners.get('activate') ?? [];
+      expect(onTakeover).toBeDefined();
+      const waitUntil = vi.fn();
+      onTakeover({ waitUntil });
+      await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
 
+      expect(claim).not.toHaveBeenCalled();
+      expect(matchAll).not.toHaveBeenCalled();
       for (const client of windows) {
-        expect(client.navigate).toHaveBeenCalledWith(client.url);
+        expect(client.navigate).not.toHaveBeenCalled();
       }
     });
 

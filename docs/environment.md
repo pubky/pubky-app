@@ -59,14 +59,14 @@ function parseEnv(): z.infer<typeof envSchema> {
 
 Import the validated environment instead of using `process.env` directly:
 
-The one exception is the four build-intrinsic `NEXT_PUBLIC_*` values (`DB_NAME`, `DB_VERSION`, `DEBUG_MODE`, `APP_VERSION`), which ESLint lets a file read as a literal `process.env.X` where importing `Env` is unsuitable: `src/sw.ts` (the service worker is a child compilation of the client bundle, and `Env` would pull zod and the error factories into `public/sw.js`; webpack's DefinePlugin inlines the literal there too) and `src/libs/logger/logger.ts`. Every other direct read is blocked.
-
 ```typescript
 import { Env } from '@/libs/env/env';
 
 const dbVersion = Env.NEXT_PUBLIC_DB_VERSION; // number
 const debugMode = Env.NEXT_PUBLIC_DEBUG_MODE; // boolean
 ```
+
+ESLint allows a literal `process.env.X` read of the four build-intrinsic values (`DB_NAME`, `DB_VERSION`, `DEBUG_MODE`, `APP_VERSION`) in any file and blocks every other direct read. By convention only two files use that allowance, where importing `Env` is unsuitable: `src/sw.ts` (the service worker is a child compilation of the client bundle, `Env` would pull zod and the error factories into `public/sw.js`, and webpack's DefinePlugin inlines the literal there) and `src/libs/logger/logger.ts`.
 
 ## Runtime configuration (`PUBKY_RUNTIME_*`)
 

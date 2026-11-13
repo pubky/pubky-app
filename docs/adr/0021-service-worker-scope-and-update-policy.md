@@ -55,8 +55,10 @@ From that release until the revert below, `src/sw.ts` ships with:
   code, so it never announces and is reloaded as before: the forced reload is the rule for pages that do not
   announce, and the new build's own first boot under the previous worker (the double boot below) is left in
   place. The set of announced windows lives in the worker instance, like `replacesActiveWorker`: a worker
-  restarted between install and activate forgets it and navigates every window, the behaviour before the
-  handshake; a page whose announce loses the race to `matchAll` is reloaded the same way. A forged announce (any
+  restarted between install and activate loses both and takes the first-install path, so it claims and navigates
+  nothing, 0.x tabs included, and those wait for their own next load or update check (the pre-existing D9 residual
+  of the takeover itself; the handshake does not change it). A page whose announce loses the race to `matchAll` is
+  reloaded as a 0.x page would be. A forged announce (any
   same-origin page can message the worker) exempts only the sender's own window from one navigation and learns
   the public build identity; nothing else reads the message.
 
@@ -100,8 +102,8 @@ Two properties of the takeover, verified on a production build with Playwright (
   takeover from the old page with `registration.update()`, a single boot after the worker's navigation, which is why
   the double boot was not seen there. Since the same date (FIX-FINAL-8) the takeover leaves announced pages in
   place, so a page of the new build boots once; the second boot remains for a 0.x page (the point of the
-  exception), for a worker that lost its set and for an announce that lost the race, which is why the
-  route-independent explanation stays.
+  exception) and for an announce that lost the race to `matchAll`, which is why the route-independent
+  explanation stays.
 
 An alternative that keeps the current route, not built: the worker posts a message and a page of the new build
 reloads itself with `location.reload()` (the current URL), `navigate` staying the fallback for pages of the old build,
@@ -111,8 +113,8 @@ amendment, _Consequences_).
 
 Revert: PR-E2 removes the cut-over `install`, `message` and `activate` listeners with the `replacesActiveWorker` flag
 and the announced-window set from `src/sw.ts` (the earlier `activate` listener that deletes the legacy Nexus cache
-stays), restores `skipWaiting: false`, drops the six cut-over tests in `src/sw.test.ts` ("activates as soon as it
-installs" and the five under "social v1 cut-over takeover"), the announce in `useServiceWorkerUpdate` with its
+stays), restores `skipWaiting: false`, drops the cut-over tests in `src/sw.test.ts` ("activates as soon as it
+installs" and the whole "social v1 cut-over takeover" suite), the announce in `useServiceWorkerUpdate` with its
 "cut-over announce" tests and the two message constants in `src/config/pwa.ts`, and drops the rollout note from
 `docs/pwa.md`. It is **not** tied to the release after the cut-over (D9): nobody can tell when the last 0.x tab is
 gone, so the forced policy stays until Nexus shows migrated users' 0.x writes at about zero, or for a period the

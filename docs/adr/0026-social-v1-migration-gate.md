@@ -156,8 +156,8 @@ unchanged.
 **Consequences.** The explanation survives the takeover reload and a user reload at any route. A tab that was opened on
 `/home` and reloaded by the worker loses its in-app place (the known item recorded in `docs/migrations/social-v1.md`).
 Since 2026-11-13 (FIX-FINAL-8, ADR-0021 amendment) the worker leaves a page that announced itself in place, so the
-double boot above and the lost place apply to a 0.x tab, to a worker restarted between install and activate and to an
-announce that lost the race to `matchAll`; the route-independent explanation stays for those. Of the two options
+double boot above and the lost place apply to a 0.x tab and to an announce that lost the race to `matchAll`; the
+route-independent explanation stays for those. Of the two options
 surfaced for the maintainer, (i) the worker asking the page to `location.reload()` via `postMessage` is superseded by
 that handshake for the new build's pages (they are not reloaded at all); (ii) the notice in `localStorage`, so every
 tab of the profile explains the sign-out (today other tabs are signed out by the shared auth store without an

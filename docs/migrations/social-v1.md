@@ -461,8 +461,8 @@ After dev-sync 3 (2026-11-09):
   tab reloaded by the cut-over worker loses an unsaved composer draft (the composer persists no draft; deferring the
   reload for a dirty composer was declined on 2026-11-04). The cut-over worker reloads a 0.x tab to its creation URL,
   not its current route, so its user loses their in-app place at the cut-over (FIX-FINAL-7); a tab of a build with the
-  update hook announces itself and is left in place since FIX-FINAL-8, unless the worker was restarted between install
-  and activate and forgot the announcements.
+  update hook announces itself and is left in place since FIX-FINAL-8, unless its announce lost the race to the worker's
+  `matchAll`.
 - Migrated articles with the rc.1 off-by-one render through the migrated-article reader rule (A′), and keep doing so
   after the migrator fix, since the fixed migrator rewrites nothing an earlier run wrote (ADR-0023 amendment).
 - Mute changes and the notification read boundary (`last_read`) changed on another device appear within the poll
@@ -796,8 +796,9 @@ where they changed the app.
   nine scopes and adoption works; HPKE approvals with the current SDK are to be verified on staging with a real Ring
   before the release (QA used the simulator).
 - **Ops:** the production homeserver reports the same features as staging and the local 0.16.2 stack; old `_next/static`
-  chunks after a deploy are moot under the forced reload; storage allowances and the moderation service are release
-  gates (above).
+  chunks after a deploy are moot for 0.x tabs under the forced reload, while a v1 tab that a later deploy claims is left
+  in place since FIX-FINAL-8 and relies on the #2548 stale-chunk recovery, as under the consent policy; storage
+  allowances and the moderation service are release gates (above).
 - **SDK (pubky/pubky-homeserver#798):** filed 2026-11-04 as "a session-bound event stream deadlocks the bearer refresh";
   the 2026-11-09 probe in a plain browser refuted the deadlock (the stream's lease is released as soon as its response
   headers arrive; only a proxy that buffers event streams, as Cypress's does, makes it unbounded), and the issue was
