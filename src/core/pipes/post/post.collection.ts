@@ -1,3 +1,4 @@
+import { isEqual } from 'lodash-es';
 import type { CollectionContent as StoredCollectionContent, NewCollection } from 'pubky-social-specs';
 import { DEFAULT_COLLECTION_LAYOUT, isCollectionLayout } from '@/config/collections';
 import {
@@ -16,6 +17,7 @@ import { collectionItemUris } from '@/libs/post/collectionContent';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import type { CollectionContent, CollectionContentInput } from '@/models/post/collection/collectionPost.types';
+import type { TCollectionEdit } from '@/pipes/pipes.types';
 
 const ALLOWED_COLLECTION_URL_PROTOCOLS = new Set(
   COLLECTION_COVER_IMAGE_ALLOWED_PROTOCOLS.map((scheme) => `${scheme}:`),
@@ -196,6 +198,42 @@ export class CollectionPostContent {
       });
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * `change` applied to `collection` (a `parse` or `normalize` result) as it is where the edit lands:
+   * the stored head under the post lock, the cached row read there. An `add`, a `remove` and a
+   * `reorder` go to the item helpers below; `details` normalizes the new name, description, cover and
+   * layout (absent, the current one) with the CURRENT items, never with a list read before the lock.
+   * Returns the same reference when nothing changes, so a caller can skip a write. Pure; a value a
+   * collection rule refuses throws the validation error `normalize` throws.
+   */
+  static apply(collection: CollectionContent, change: TCollectionEdit): CollectionContent {
+    switch (change.op) {
+      case 'add':
+        return this.addItem(collection, change.spellings);
+      case 'remove':
+        return this.removeItem(collection, change.spellings);
+      case 'reorder':
+        return this.reorderItems(collection, change.order);
+      case 'details': {
+        const next = this.normalize({
+          name: change.name,
+          description: change.description,
+          items: collection.items,
+          coverImage: change.coverImage,
+          layout: change.layout ?? collection.layout,
+        });
+        return isEqual(collection, next) ? collection : next;
+      }
+      default: {
+        // Exhaustiveness guard: a change never leaves the process (the controller builds it and passes it
+        // by reference), so this is reached only by a member added to the union and not handled above.
+        // The context names the op alone: a details change carries user-entered text.
+        const unknown: never = change;
+        return throwCollectionValidation('Collection change is unknown', { op: (unknown as { op?: unknown }).op });
+      }
     }
   }
 

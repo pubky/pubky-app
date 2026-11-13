@@ -1,6 +1,6 @@
 import { buildFile, buildPost, buildUri, decodeContent, decodeObject, toPath } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
 import { TagKind } from '@/application/tag/tag.types';
@@ -20,6 +20,8 @@ import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.s
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import type { TCollectionEdit } from '@/pipes/pipes.types';
+import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
@@ -143,6 +145,34 @@ const setupAuthUser = (pubky: Pubky) => {
 const cleanupAuthUser = () => {
   useAuthStore.getState().reset();
 };
+
+/**
+ * The collection change the controller passed to `PostApplication.commitEdit`, and what it does to the
+ * collection the controller read: the controller sends the change, not the next item list, and the
+ * application applies it to the stored head under the post lock.
+ */
+const passedCollectionEdit = (
+  commitEditSpy: MockInstance<typeof PostApplication.commitEdit>,
+  details: Awaited<ReturnType<typeof PostApplication.getDetails>>,
+) => {
+  expect(commitEditSpy).toHaveBeenCalledTimes(1);
+  const [{ compositePostId, edit }] = commitEditSpy.mock.calls[0];
+  const change = edit.collection;
+  if (!change) throw new Error('no collection change was passed');
+  if (!details) throw new Error('no collection was read');
+  const current = CollectionPostContent.parse(details.content);
+  if (!current) throw new Error('the collection read is not a collection');
+  return { compositePostId, change, applied: CollectionPostContent.apply(current, change) };
+};
+
+/** What an item change does to the "Saved posts" collection the tests read: the same envelope with `items`. */
+const appliedItems = (items: string[]) => ({
+  name: 'Saved posts',
+  description: '',
+  items,
+  cover_image: undefined,
+  layout: COLLECTION_LAYOUT.CARDS,
+});
 
 // TODO: Refactor the dynamic `await import('./post')` / application-module import.
 // pattern in these tests to static top-level imports in a follow-up PR.
@@ -1383,22 +1413,16 @@ describe('PostController', () => {
         ...overrides,
       }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
 
-    const expectedEdit = (items: string[]) => ({
-      compositePostId: collectionPostId,
-      edit: {
-        collection: {
-          name: 'Saved posts',
-          description: '',
-          items,
-          cover_image: undefined,
-          layout: COLLECTION_LAYOUT.CARDS,
-        },
-      },
+    /** The change the controller passes: the post under both spellings, so the head matches a 0.x item too. */
+    const expectedChange = (op: 'add' | 'remove'): TCollectionEdit => ({
+      op,
+      spellings: [targetPostUri, legacyTargetPostUri],
     });
 
     it('adds a post by its v1 reference to a collection', async () => {
       setupAuthUser(testData.authorPubky);
-      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const details = createCollectionDetails();
+      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
 
       try {
@@ -1410,7 +1434,11 @@ describe('PostController', () => {
         });
 
         expect(getDetailsSpy).toHaveBeenCalledWith({ compositeId: collectionPostId });
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit([targetPostUri]));
+        expect(passedCollectionEdit(commitEditSpy, details)).toEqual({
+          compositePostId: collectionPostId,
+          change: expectedChange('add'),
+          applied: appliedItems([targetPostUri]),
+        });
       } finally {
         cleanupAuthUser();
       }
@@ -1419,7 +1447,8 @@ describe('PostController', () => {
     it('prepends a new post URI before existing collection items', async () => {
       setupAuthUser(testData.authorPubky);
       const existingItemUri = 'https://example.com/existing';
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([existingItemUri]));
+      const details = createCollectionDetails([existingItemUri]);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
 
       try {
@@ -1430,7 +1459,10 @@ describe('PostController', () => {
           shouldAdd: true,
         });
 
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit([targetPostUri, existingItemUri]));
+        expect(passedCollectionEdit(commitEditSpy, details)).toMatchObject({
+          change: expectedChange('add'),
+          applied: appliedItems([targetPostUri, existingItemUri]),
+        });
       } finally {
         cleanupAuthUser();
       }
@@ -1438,7 +1470,8 @@ describe('PostController', () => {
 
     it('removes a post whichever way the collection spells it (a 0.x item of an author who had not migrated)', async () => {
       setupAuthUser(testData.authorPubky);
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([legacyTargetPostUri]));
+      const details = createCollectionDetails([legacyTargetPostUri]);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
 
       try {
@@ -1449,7 +1482,10 @@ describe('PostController', () => {
           shouldAdd: false,
         });
 
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit([]));
+        expect(passedCollectionEdit(commitEditSpy, details)).toMatchObject({
+          change: expectedChange('remove'),
+          applied: appliedItems([]),
+        });
       } finally {
         cleanupAuthUser();
       }
@@ -1576,24 +1612,10 @@ describe('PostController', () => {
         ...overrides,
       }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
 
-    const expectedEdit = (items: string[]) => ({
-      compositePostId: collectionPostId,
-      edit: {
-        collection: {
-          name: 'Saved posts',
-          description: '',
-          items,
-          cover_image: undefined,
-          layout: COLLECTION_LAYOUT.CARDS,
-        },
-      },
-    });
-
-    it('commits the reordered items', async () => {
+    it('commits the drafted order as a reorder change', async () => {
       setupAuthUser(testData.authorPubky);
-      const getDetailsSpy = vi
-        .spyOn(PostApplication, 'getDetails')
-        .mockResolvedValue(createCollectionDetails([uriA, uriB, uriC]));
+      const details = createCollectionDetails([uriA, uriB, uriC]);
+      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
 
       try {
@@ -1604,18 +1626,23 @@ describe('PostController', () => {
         });
 
         expect(getDetailsSpy).toHaveBeenCalledWith({ compositeId: collectionPostId });
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit([uriC, uriA, uriB]));
+        expect(passedCollectionEdit(commitEditSpy, details)).toEqual({
+          compositePostId: collectionPostId,
+          change: { op: 'reorder', order: [uriC, uriA, uriB] },
+          applied: appliedItems([uriC, uriA, uriB]),
+        });
       } finally {
         cleanupAuthUser();
       }
     });
 
-    it('merges stale drafts against the live envelope: since-added items lead, since-removed items are dropped', async () => {
+    it('passes a stale draft as drafted: merged against the envelope, since-added items lead, since-removed items are dropped', async () => {
       setupAuthUser(testData.authorPubky);
       // Draft was taken from [uriB, uriA]; since then uriC was added (prepended)
       // and the draft also still references a URI that was removed (uriD).
       const removedUri = 'https://example.com/ddd';
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([uriC, uriA, uriB]));
+      const details = createCollectionDetails([uriC, uriA, uriB]);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
 
       try {
@@ -1625,7 +1652,10 @@ describe('PostController', () => {
           items: [uriB, removedUri, uriA],
         });
 
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit([uriC, uriB, uriA]));
+        expect(passedCollectionEdit(commitEditSpy, details)).toMatchObject({
+          change: { op: 'reorder', order: [uriB, removedUri, uriA] },
+          applied: appliedItems([uriC, uriB, uriA]),
+        });
       } finally {
         cleanupAuthUser();
       }
@@ -1922,22 +1952,27 @@ describe('PostController', () => {
         ...overrides,
       }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
 
-    const expectedEdit = (cover: string | undefined) => ({
-      compositePostId: collectionPostId,
-      edit: {
-        collection: {
-          name: 'Renamed',
-          description: 'Updated description',
-          items: [existingItemUri],
-          cover_image: cover,
-          layout: COLLECTION_LAYOUT.CARDS,
-        },
-      },
+    /** The details change the controller passes: no items, so the head's own items survive the edit. */
+    const expectedChange = (coverImage: string | null): TCollectionEdit => ({
+      op: 'details',
+      name: 'Renamed',
+      description: 'Updated description',
+      coverImage,
+      layout: undefined,
+    });
+    /** What the change passed does to the collection read: the existing items, the new details. */
+    const appliedDetails = (cover: string | undefined) => ({
+      name: 'Renamed',
+      description: 'Updated description',
+      items: [existingItemUri],
+      cover_image: cover,
+      layout: COLLECTION_LAYOUT.CARDS,
     });
 
-    it('preserves the existing items array, name/description updates, and passes through a string cover URL', async () => {
+    it('passes the name and description with a string cover URL and no items, which the existing items survive', async () => {
       setupAuthUser(testData.authorPubky);
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const details = createCollectionDetails();
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
       const toFileAttachmentSpy = vi.spyOn(FileApplication, 'toFileAttachment');
 
@@ -1951,7 +1986,11 @@ describe('PostController', () => {
         });
 
         expect(toFileAttachmentSpy).not.toHaveBeenCalled();
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit(oldCover));
+        expect(passedCollectionEdit(commitEditSpy, details)).toEqual({
+          compositePostId: collectionPostId,
+          change: expectedChange(oldCover),
+          applied: appliedDetails(oldCover),
+        });
       } finally {
         cleanupAuthUser();
       }
@@ -1959,7 +1998,8 @@ describe('PostController', () => {
 
     it('uploads a new cover File and replaces cover_image with the resulting URL, never deleting the old one', async () => {
       setupAuthUser(testData.authorPubky);
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const details = createCollectionDetails();
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
 
       const file = new File(['new-cover-bytes'], 'cover.png', { type: 'image/png' });
@@ -1978,7 +2018,10 @@ describe('PostController', () => {
 
         expect(toFileAttachmentSpy).toHaveBeenCalledWith({ file, pubky: testData.authorPubky });
         expect(commitFileCreateSpy).toHaveBeenCalled();
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit(newCover));
+        expect(passedCollectionEdit(commitEditSpy, details)).toMatchObject({
+          change: expectedChange(newCover),
+          applied: appliedDetails(newCover),
+        });
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
@@ -1987,7 +2030,8 @@ describe('PostController', () => {
 
     it('clears the cover when coverImage is null, leaving the file: earlier versions and other objects may use it', async () => {
       setupAuthUser(testData.authorPubky);
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const details = createCollectionDetails();
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(details);
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
       const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
 
@@ -2000,7 +2044,10 @@ describe('PostController', () => {
           coverImage: null,
         });
 
-        expect(commitEditSpy).toHaveBeenCalledWith(expectedEdit(undefined));
+        expect(passedCollectionEdit(commitEditSpy, details)).toMatchObject({
+          change: expectedChange(null),
+          applied: appliedDetails(undefined),
+        });
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();

@@ -1,5 +1,5 @@
 import type { KnownPostKind } from 'pubky-social-specs';
-import type { CollectionContent } from '@/models/post/collection/collectionPost.types';
+import type { CollectionLayout } from '@/config/collections';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
@@ -18,6 +18,30 @@ export type PostValidatorData = {
 };
 
 /**
+ * The change a collection edit makes, applied to the collection as it is where the edit lands: the
+ * stored head under the post lock, and the cached row read there (`CollectionPostContent.apply`).
+ * Never the item list the controller read before the lock, so an edit queued behind another edit
+ * of the same collection keeps that edit (ADR-0027).
+ */
+export type TCollectionEdit =
+  /** The name, description, cover and layout; the items stay what the collection holds. */
+  | {
+      op: 'details';
+      name: string;
+      description?: string | null;
+      /** The cover URL, or `null` for none. */
+      coverImage: string | null;
+      /** Absent keeps the collection's layout. */
+      layout?: CollectionLayout;
+    }
+  /** Adds the post `spellings[0]` names unless one of its spellings is already an item. */
+  | { op: 'add'; spellings: readonly string[] }
+  /** Removes the item any of `spellings` names. */
+  | { op: 'remove'; spellings: readonly string[] }
+  /** The item URIs in the drafted order, merged against the collection's items (`reorderItems`). */
+  | { op: 'reorder'; order: string[] };
+
+/**
  * The change an edit makes to a post's newest stored version. Members left out keep the stored
  * value, so a member this client does not know (or does not show, like an attachment's alt text)
  * survives the edit.
@@ -25,8 +49,8 @@ export type PostValidatorData = {
 export type TPostEdit = {
   /** A note's text, or an article's `{ title, body }` JSON as the composer builds it. */
   content?: string;
-  /** A collection's envelope as this client shows it; item notes and unknown members are kept. */
-  collection?: CollectionContent;
+  /** A collection's change, applied to the stored envelope; item notes and unknown members are kept. */
+  collection?: TCollectionEdit;
   /** The full ordered attachment URI list; `null` or `[]` clears it. */
   attachmentUris?: string[] | null;
   /** Names of freshly uploaded attachments, by URI. */

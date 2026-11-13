@@ -8,6 +8,7 @@ import {
   COLLECTION_ITEM_URI_MAX_LENGTH,
   COLLECTION_ITEMS_MAX_COUNT,
 } from '@/config/posts';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { CollectionPostContent } from './post.collection';
 
 const ITEM_AUTHOR = fakeOwner(3);
@@ -233,6 +234,101 @@ describe('CollectionPostContent', () => {
       expect(
         CollectionPostContent.parse(JSON.stringify({ name: 'Bad URI', items: ['ftp://example.com/post'] })),
       ).toBeNull();
+    });
+  });
+
+  describe('apply', () => {
+    const spellings = [VALID_ITEM_URI, LEGACY_ITEM_URI];
+    const other = 'https://example.com/post';
+    const cover = 'https://cdn.example.com/cover.png';
+    const collection = () =>
+      CollectionPostContent.normalize({
+        name: 'Saved',
+        description: 'Mine',
+        items: [other, LEGACY_ITEM_URI],
+        coverImage: cover,
+        layout: COLLECTION_LAYOUT.LIST,
+      });
+
+    it('dispatches an add, a remove and a reorder to the item helpers, with the envelope kept', () => {
+      const current = collection();
+      const added = `pubky://${fakeOwner(4)}/pub/social/v1/posts/0034A0X7NJ52B`;
+
+      expect(CollectionPostContent.apply(current, { op: 'add', spellings: [added] })).toEqual({
+        ...current,
+        items: [added, other, LEGACY_ITEM_URI],
+      });
+      expect(CollectionPostContent.apply(current, { op: 'remove', spellings })).toEqual({
+        ...current,
+        items: [other],
+      });
+      expect(CollectionPostContent.apply(current, { op: 'reorder', order: [VALID_ITEM_URI, other] })).toEqual({
+        ...current,
+        items: [LEGACY_ITEM_URI, other],
+      });
+    });
+
+    it('a details change rewrites the name, description, cover and layout and keeps the current items', () => {
+      const current = collection();
+
+      expect(
+        CollectionPostContent.apply(current, {
+          op: 'details',
+          name: ' Renamed ',
+          description: null,
+          coverImage: null,
+          layout: COLLECTION_LAYOUT.VISUAL,
+        }),
+      ).toEqual({
+        name: 'Renamed',
+        description: '',
+        items: [other, LEGACY_ITEM_URI],
+        cover_image: undefined,
+        layout: COLLECTION_LAYOUT.VISUAL,
+      });
+    });
+
+    it('a details change without a layout keeps the current one', () => {
+      const current = collection();
+
+      expect(CollectionPostContent.apply(current, { op: 'details', name: 'Renamed', coverImage: cover })).toEqual({
+        ...current,
+        name: 'Renamed',
+        description: '',
+      });
+    });
+
+    it('returns the same reference when the change is already there', () => {
+      const current = collection();
+
+      expect(CollectionPostContent.apply(current, { op: 'add', spellings })).toBe(current);
+      expect(CollectionPostContent.apply(current, { op: 'remove', spellings: ['https://example.com/missing'] })).toBe(
+        current,
+      );
+      expect(CollectionPostContent.apply(current, { op: 'reorder', order: [other, VALID_ITEM_URI] })).toBe(current);
+      expect(
+        CollectionPostContent.apply(current, {
+          op: 'details',
+          name: 'Saved ',
+          description: ' Mine',
+          coverImage: cover,
+        }),
+      ).toBe(current);
+    });
+
+    it('refuses a change whose op this build does not know instead of applying nothing', () => {
+      expect(() => CollectionPostContent.apply(collection(), asInvalid({ op: 'replace', items: [] }))).toThrow(
+        'Collection change is unknown',
+      );
+    });
+
+    it('a details change a collection rule refuses throws the validation error', () => {
+      expect(() => CollectionPostContent.apply(collection(), { op: 'details', name: '   ', coverImage: null })).toThrow(
+        'Collection name is required',
+      );
+      expect(() =>
+        CollectionPostContent.apply(collection(), { op: 'details', name: 'Saved', coverImage: 'ftp://x/y' }),
+      ).toThrow('Collection cover image URL is invalid');
     });
   });
 
