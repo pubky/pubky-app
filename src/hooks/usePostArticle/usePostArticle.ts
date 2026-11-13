@@ -134,11 +134,11 @@ export function usePostArticle({
   // counts only while it matches the attachment list: right after an edit it already holds the new
   // order while this render still shows the old post, and a non-image in the new slot 0 must not
   // veto the cover the old post still has.
-  const slotZeroEntry = !attachments?.length
-    ? (localSlotZero ?? pendingSlotZero)
-    : localAttachments?.length === attachments.length
-      ? localSlotZero
-      : undefined;
+  const slotZeroEntry = (() => {
+    if (!attachments?.length) return localSlotZero ?? pendingSlotZero;
+    if (localAttachments?.length !== attachments.length) return undefined;
+    return localSlotZero;
+  })();
 
   // Where the cover is, computed synchronously from the envelope and the published body so the
   // cover never flashes for articles whose slot 0 is an inline image (ADR-0023 as amended by
@@ -185,8 +185,11 @@ export function usePostArticle({
 
   // The local entry that is the cover: the session's own cover entry, else slot 0 where the slot-0
   // rule leaves it to a cover (unlocked content, a 0.x article), never when the envelope has a
-  // cover or the body references `attachment:0`.
-  const localCoverEntry = hasCover ? (localCover ?? (resolved.legacyCoverSlot ? localSlotZero : undefined)) : undefined;
+  // cover or the body references `attachment:0`. A local slot 0 counts only while it describes
+  // `attachments[0]` (the index-aligned guard above): a stale list's slot 0 never paints in place of
+  // a 0.x slot 0 its row has not settled.
+  const slotZeroCover = resolved.legacyCoverSlot && slotZeroEntry === localSlotZero ? localSlotZero : undefined;
+  const localCoverEntry = hasCover ? (localCover ?? slotZeroCover) : undefined;
   // An envelope cover paints before its row lands and is provisional until then: a local entry
   // already knows its type; otherwise only the row can say it is not an image, or that Nexus no
   // longer serves it (the lookup settles with no row). A 0.x slot 0 never gets here before its row
@@ -244,8 +247,7 @@ export function usePostArticle({
     body,
     coverImage,
     // Only a slot-0 cover downloads; a video there never becomes a cover, so nothing holds a box for it.
-    isCoverPending:
-      hasCover && !coverImage && resolved.legacyCoverSlot && Boolean(pendingSlotZero?.type.startsWith('image')),
+    isCoverPending: !coverImage && resolved.legacyCoverSlot && Boolean(pendingSlotZero?.type.startsWith('image')),
     isCoverLoading: isCoverLoading && !localCoverImage,
   };
 }
