@@ -511,6 +511,71 @@ describe('useServiceWorkerUpdate', () => {
       expect(vi.mocked(toast)).toHaveBeenCalledTimes(2);
     });
 
+    // With `skipWaiting: true` the worker still passes through `installed` (about 50 ms in Chrome), so
+    // `registration.waiting` briefly points at a worker that already answered with this page's build.
+    it("does not prompt for a waiting worker that answered with this page's build", async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const installing = createWorker('installing');
+      registration.installing = installing;
+      registration.emit('updatefound');
+      receiveTakeoverReply(container, installing);
+
+      installing.state = 'installed';
+      registration.waiting = installing;
+      registration.installing = null;
+      installing.emit('statechange');
+      setVisibility('visible');
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+
+      takeOver(container, installing);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    });
+
+    it('dismisses an "Update available" prompt that the same build then takes over', async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const installing = createWorker('installing');
+      registration.installing = installing;
+      registration.emit('updatefound');
+      // The reply loses the race to `installed`: the prompt shows first.
+      installing.state = 'installed';
+      registration.waiting = installing;
+      registration.installing = null;
+      installing.emit('statechange');
+      expect(lastToastOptions().title).toBe('Update available');
+
+      receiveTakeoverReply(container, installing);
+      takeOver(container, installing);
+
+      expect(toastHandle(0).dismiss).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(reload).not.toHaveBeenCalled();
+    });
+
+    it('keeps the "Update available" prompt for a waiting worker of another build', async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const installing = createWorker('installing');
+      registration.installing = installing;
+      registration.emit('updatefound');
+      receiveTakeoverReply(container, installing, `${APP_VERSION}-next`);
+
+      installing.state = 'installed';
+      registration.waiting = installing;
+      registration.installing = null;
+      installing.emit('statechange');
+
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(lastToastOptions().title).toBe('Update available');
+    });
+
     it('still reloads the tab that accepted an update after a same-build reply', async () => {
       const registration = createRegistration();
       const waiting = createWorker('installed');

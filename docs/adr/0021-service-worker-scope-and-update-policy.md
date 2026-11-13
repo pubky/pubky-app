@@ -60,8 +60,10 @@ From that release until the revert below, `src/sw.ts` ships with:
   same-origin page can message the worker) exempts only the sender's own window from one navigation and learns
   the public build identity; nothing else reads the message.
 
-`useServiceWorkerUpdate` shows nothing for a takeover whose reply carried this page's own build identity (the page
-already runs it) and keeps the "Update installed" consent toast for any other takeover: a v1 tab that a later
+`useServiceWorkerUpdate` shows nothing for a worker whose reply carried this page's own build identity (the page
+already runs it): no "Update available" while that worker passes through `installed` (`skipWaiting` still waits
+about 50 ms there), no "Update installed" when it takes over, and a prompt that beat the reply is dismissed at the
+takeover. It keeps the "Update installed" consent toast for any other takeover: a v1 tab that a later
 deploy's worker claims is told, not reloaded, which is D9's rule for v1 tabs; only pages without the handshake are
 forced. Until 2026-11-13 the toast flashed on the new build's own page an instant before its forced reload. The
 guards that benefit from this reload (the Dexie recreate loop-breaker of ADR-0019, the sign-out of un-migrated

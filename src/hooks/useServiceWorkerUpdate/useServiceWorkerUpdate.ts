@@ -28,8 +28,9 @@ import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/
  *
  * Social v1 cut-over (ADR-0021 amendment, docs/pwa.md "Rollout note", removed by PR-E2): the
  * worker activates as soon as it installs and reloads every window that did not announce itself.
- * This page announces itself to each worker found installing or waiting; a takeover by a worker
- * whose reply carried this page's own build shows no toast, any other keeps the prompt above.
+ * This page announces itself to each worker found installing or waiting. A worker whose reply
+ * carried this page's own build is not prompted for while it waits and shows no toast when it
+ * takes over (a prompt that beat the reply is dismissed); any other keeps the prompts above.
  *
  * No-op when Serwist is disabled (dev without `SERWIST_DEV`) or the browser has no service
  * worker support: `window.serwist` is undefined in both cases.
@@ -91,7 +92,9 @@ export function useServiceWorkerUpdate() {
       if (disposed) return;
       const waiting = registration?.waiting ?? null;
       announce(waiting);
-      if (!waiting || waiting === promptedWorker) return;
+      // A waiting worker that answered with this page's build is about to take over a page that
+      // already runs it (`skipWaiting` still passes through `installed`): nothing to offer.
+      if (!waiting || waiting === promptedWorker || sameBuildReplies.get(waiting) === true) return;
       promptedWorker = waiting;
       showPrompt({
         variant: 'info',
@@ -133,7 +136,12 @@ export function useServiceWorkerUpdate() {
       // Same-build takeover (cut-over announce): this page already runs the build, nothing to reload into.
       const sameBuild = container.controller !== null && sameBuildReplies.get(container.controller) === true;
       sameBuildReplies.clear();
-      if (!isUpdate || sameBuild) return;
+      if (sameBuild) {
+        // A prompt that beat the reply would offer a Reload with no waiting worker behind it.
+        prompt?.dismiss();
+        return;
+      }
+      if (!isUpdate) return;
       showPrompt({
         variant: 'info',
         title: 'Update installed',
