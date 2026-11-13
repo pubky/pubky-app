@@ -39,6 +39,29 @@ describe('useSearchCriteria', () => {
     });
   });
 
+  describe('a link with a username or password', () => {
+    it.each(['https://alice@example.invalid', 'https://alice:secret@x.invalid', 'https://a%40b:c@x.invalid'])(
+      'searches %s as a link (external resources only), never as posts',
+      (query) => {
+        mockQueryParam.value = query;
+        const { result } = renderHook(() => useSearchCriteria());
+        expect(result.current).toEqual({ mode: 'resource', query, input: { kind: 'url', url: query } });
+      },
+    );
+
+    it('does not search a text that holds one', () => {
+      mockQueryParam.value = 'see https://a:b@x.invalid';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toMatchObject({ mode: 'invalid', query: 'see https://a:b@x.invalid' });
+    });
+
+    it('keeps a link with @ in its path a post search', () => {
+      mockQueryParam.value = 'https://x.invalid/@alice';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'content', query: 'https://x.invalid/@alice' });
+    });
+  });
+
   describe('resource mode', () => {
     it('takes a link no post search takes as a search of external resources', () => {
       mockQueryParam.value = 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq';
