@@ -1,12 +1,12 @@
 /**
  * Pinakes API shapes, hand-written from `GET <pinakes>/v1/openapi.json` (components `Card`,
  * `ResourceDetail` = `Card` + `Details`, `AlsoOn`, `OpenIn`, `GroupRef`, `GroupDetail`,
- * `SearchResponse`, `Facets`, `TypeFacet`, `Point`, `VenueRef`).
+ * `SearchResponse`, `Facets`, `TypeFacet`, `Point`, `VenueRef`, `OccurrenceKey`, `OccurrencePage`).
  *
  * `Card.credits` (`Credit`) is optional: not every Pinakes deployment sends it yet.
  *
  * Only the fields the app reads are typed; the API carries more (`bbox`, `from`, `maybe_same`,
- * `occurrence`, ...). Fields the schema lists as required are required here; every other field is
+ * `embed`, ...). Fields the schema lists as required are required here; every other field is
  * optional and nullable, as the schema declares it ("Absent values are null").
  * The captured responses in `./fixtures` are checked against these types in `pinakes.test.ts`.
  */
@@ -219,7 +219,26 @@ export interface TPinakesBecause {
   taggers: string[];
 }
 
-/** `Card`: the one card every route returns for a resource. */
+/**
+ * `OccurrenceKey`: which instance of a calendar feed an occurrence's card is. Every occurrence of a
+ * feed carries the feed's `id`, `uri` and `refs`: `uid` (with `recurrence_id` for one date of a
+ * repeating event) and the card's `start` tell the instances apart.
+ */
+export interface TPinakesOccurrenceKey {
+  feed_id: string;
+  /** The feed's link: the one people tagged. */
+  feed_uri: string;
+  uid: string;
+  /** The date of a repeating event this instance is; `null` for a one-off one. */
+  recurrence_id?: string | null;
+  /**
+   * The instance's lifecycle: `scheduled`, `cancelled`, `postponed`, `rescheduled` or
+   * `moved_online`. The card's own `status` is the feed's read health.
+   */
+  status: string;
+}
+
+/** `Card`: the one card every route returns for a resource or a calendar occurrence. */
 export interface TPinakesCard {
   /** Pinakes's own resource ID (32 lowercase hex). Join with Nexus by URI, never by this ID. */
   id: string;
@@ -255,6 +274,8 @@ export interface TPinakesCard {
    */
   embed?: TPinakesEmbed | null;
   open_in: TPinakesOpenIn[];
+  /** On a calendar occurrence only: which feed instance the card is. */
+  occurrence?: TPinakesOccurrenceKey | null;
   /** On a `related` search row only (absent elsewhere and on older instances): why it is listed. */
   because?: TPinakesBecause | null;
   /** The referenced links that resolve to this card, most referenced first (at most 5). */
@@ -337,6 +358,12 @@ export interface TPinakesGroupDetail {
   members: TPinakesCard[];
   /** The type most members have. */
   type?: string | null;
+}
+
+/** `OccurrencePage`: `GET /v1/resources/{id}/occurrences`, one card per calendar instance, by start. */
+export interface TPinakesOccurrencePage {
+  items: TPinakesCard[];
+  cursor?: string | null;
 }
 
 /** `TypeFacet`: one card type and where it sits in schema.org. */

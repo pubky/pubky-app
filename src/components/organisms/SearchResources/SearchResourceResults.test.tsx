@@ -76,6 +76,7 @@ const FACETS = [
 
 const searchResult = (overrides: Partial<UseResourceSearchResult> = {}): UseResourceSearchResult => ({
   uris: [],
+  cards: [],
   typeFacets: null,
   relatedTags: ['track', 'artist'],
   hostFacets: null,

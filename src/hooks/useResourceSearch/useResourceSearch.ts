@@ -6,19 +6,33 @@ import { ResourceController, type TResourceSearchCursor } from '@/controllers/re
 import { isAppError } from '@/libs/error/error.utils';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { mergeResourceInstances } from '@/pipes/resource/resource.events';
 import type { TResourceQuery } from '@/pipes/resource/resource.search';
-import type { TPinakesCategoryFacet, TPinakesHostFacet, TPinakesTypeFacet } from '@/services/pinakes/pinakes.types';
+import type {
+  TPinakesCard,
+  TPinakesCategoryFacet,
+  TPinakesHostFacet,
+  TPinakesTypeFacet,
+} from '@/services/pinakes/pinakes.types';
 
 export interface UseResourceSearchOptions {
   /** Rows one page asks for. */
   limit?: number;
   /** Also read the type counts and related tags of the whole result (the External resources tab). */
   facets?: boolean;
+  /** Also keep the rows' own cards (`cards`): for a list of events, a map of places. */
+  cards?: boolean;
 }
 
 export interface UseResourceSearchResult {
   /** The rows' links read so far, in order, each once. */
   uris: string[];
+  /**
+   * With `cards`: the rows' own cards read so far, in order, every instance once
+   * (`mergeResourceInstances`): a calendar's occurrences share one link and stay rows of their own.
+   * None from the stream standing in for Pinakes.
+   */
+  cards: TPinakesCard[];
   /** The types of the whole result with their paths and counts, with `facets`, once the first page is read. */
   typeFacets: TPinakesTypeFacet[] | null;
   /** Tags the results also carry, with `facets`. */
@@ -48,6 +62,7 @@ export const RESOURCE_SEARCH_UNAVAILABLE = 'Searching external resources is not 
 type TLoaded = {
   key: string;
   uris: string[];
+  cards: TPinakesCard[];
   typeFacets: TPinakesTypeFacet[] | null;
   relatedTags: string[];
   hostFacets: TPinakesHostFacet[] | null;
@@ -64,6 +79,7 @@ type TLoaded = {
 const initialState = (key: string, isEnabled: boolean): TLoaded => ({
   key,
   uris: [],
+  cards: [],
   typeFacets: null,
   relatedTags: [],
   hostFacets: null,
@@ -99,11 +115,12 @@ const isRefused = (error: unknown) => isAppError(error) && error.context?.status
  */
 export function useResourceSearch(
   query: TResourceQuery | null,
-  { limit = PINAKES_SEARCH_PAGE_SIZE, facets = false }: UseResourceSearchOptions = {},
+  { limit = PINAKES_SEARCH_PAGE_SIZE, facets = false, cards = false }: UseResourceSearchOptions = {},
 ): UseResourceSearchResult {
   const [attempt, setAttempt] = useState(0);
   const isEnabled = query !== null;
-  const queryKey = JSON.stringify([query, limit, facets]);
+  const queryKey = JSON.stringify([query, limit, facets, cards]);
+  const withCards = cards ? { withCards: true } : {};
   const key = JSON.stringify([queryKey, attempt]);
   const [state, setState] = useState<TLoaded>(() => initialState(key, isEnabled));
   // The query being read now, whether a next page is on its way, where it starts, and whether
@@ -127,13 +144,14 @@ export function useResourceSearch(
     const timer = setTimeout(() => {
       // A search started over (after a refused cursor, or Try again) reads past the cache
       const fresh = attempt > 0;
-      ResourceController.fetchSearchPage({ query, limit, facets, ...(fresh ? { fresh } : {}) }).then(
+      ResourceController.fetchSearchPage({ query, limit, facets, ...withCards, ...(fresh ? { fresh } : {}) }).then(
         (page) => {
           if (currentKey.current !== key) return;
           next.current = page.next;
           setState({
             ...initialState(key, true),
             uris: [...new Set(page.uris)],
+            cards: mergeResourceInstances([], page.cards ?? []),
             typeFacets: page.typeFacets ?? null,
             relatedTags: page.relatedTags ?? [],
             hostFacets: page.hostFacets ?? null,
@@ -153,7 +171,7 @@ export function useResourceSearch(
       );
     }, PINAKES_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-    // `key` spells the query, `limit`, `facets` and the attempt: an equal query object reads nothing again.
+    // `key` spells the query, `limit`, `facets`, `cards` and the attempt: an equal query object reads nothing again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
@@ -166,7 +184,7 @@ export function useResourceSearch(
     isLoadingMore.current = true;
     setState((prev) => (prev.key === readKey ? { ...prev, loadingMore: true } : prev));
     try {
-      const page = await ResourceController.fetchSearchPage({ query, cursor, limit });
+      const page = await ResourceController.fetchSearchPage({ query, cursor, limit, ...withCards });
       if (currentKey.current !== readKey) return;
       next.current = page.next;
       setState((prev) =>
@@ -174,6 +192,7 @@ export function useResourceSearch(
           ? {
               ...prev,
               uris: [...new Set([...prev.uris, ...page.uris])],
+              cards: mergeResourceInstances(prev.cards, page.cards ?? []),
               hasMore: page.next !== null,
               error: null,
               loadingMore: false,
@@ -203,6 +222,7 @@ export function useResourceSearch(
 
   return {
     uris: current.uris,
+    cards: current.cards,
     typeFacets: current.typeFacets,
     relatedTags: current.relatedTags,
     hostFacets: current.hostFacets,

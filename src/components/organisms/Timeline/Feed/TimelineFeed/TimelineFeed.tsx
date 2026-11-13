@@ -408,6 +408,7 @@ function CustomResourceTimelineFeed({
 /** What the list shows while a custom feed's saved filters are put in the URL: loading. */
 const SEEDING_SEARCH: UseResourceSearchResult = {
   uris: [],
+  cards: [],
   typeFacets: null,
   relatedTags: [],
   hostFacets: null,

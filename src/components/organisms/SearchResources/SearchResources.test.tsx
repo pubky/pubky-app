@@ -35,6 +35,7 @@ vi.mock('@/molecules/PostLinkEmbeds/Providers/Generic/GenericResourcePreview', (
 const links = (count: number) => Array.from({ length: count }, (_, i) => `https://example.com/${i}`);
 const searchResult = (overrides: Partial<UseResourceSearchResult> = {}): UseResourceSearchResult => ({
   uris: links(SEARCH_RESOURCES_PREVIEW_COUNT),
+  cards: [],
   typeFacets: null,
   relatedTags: [],
   hostFacets: null,

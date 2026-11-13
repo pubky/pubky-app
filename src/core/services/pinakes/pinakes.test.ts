@@ -23,12 +23,16 @@ import movieFixture from './fixtures/by-uri.movie.json';
 import musicRecordingFixture from './fixtures/by-uri.music-recording.json';
 import natureArticleFixture from './fixtures/by-uri.nature-article.json';
 import placeFixture from './fixtures/by-uri.place.json';
+import placeCafeFixture from './fixtures/by-uri.place-cafe.json';
 import podcastFixture from './fixtures/by-uri.podcast.json';
 import pubkyFixture from './fixtures/by-uri.pubky.json';
 import scholarlyArticleFixture from './fixtures/by-uri.scholarly-article.json';
 import unreachableFixture from './fixtures/by-uri.unreachable.json';
 import videoFixture from './fixtures/by-uri.video.json';
 import groupFixture from './fixtures/group.video.json';
+import occurrencesFixture from './fixtures/occurrences.holidays.json';
+import eventsFixture from './fixtures/search.events.json';
+import nearbyFixture from './fixtures/search.places-nearby.json';
 import relatedBecauseFixture from './fixtures/search.related.because.json';
 import relatedFixture from './fixtures/search.related.json';
 import typeFacetFixture from './fixtures/search.type-facet.json';
@@ -37,6 +41,7 @@ import { PINAKES_UNSETTLED_CARD_STALE_TIME_MS, pinakesQueryClient } from './pina
 import {
   PinakesStatus,
   type TPinakesGroupDetail,
+  type TPinakesOccurrencePage,
   type TPinakesResourceDetail,
   type TPinakesSearchResponse,
 } from './pinakes.types';
@@ -58,6 +63,7 @@ const RESOURCE_FIXTURES: Record<string, TPinakesResourceDetail> = {
   video: videoFixture,
   article: articleFixture,
   place: placeFixture,
+  'place-cafe': placeCafeFixture,
   event: eventFixture,
   book: bookFixture,
   'scholarly-article': scholarlyArticleFixture,
@@ -84,6 +90,9 @@ const GROUP_FIXTURE: TPinakesGroupDetail = groupFixture;
 const RELATED_FIXTURE: TPinakesSearchResponse = relatedFixture;
 const RELATED_BECAUSE_FIXTURE: TPinakesSearchResponse = relatedBecauseFixture;
 const TYPE_FACET_FIXTURE: TPinakesSearchResponse = typeFacetFixture;
+const EVENTS_FIXTURE: TPinakesSearchResponse = eventsFixture;
+const NEARBY_FIXTURE: TPinakesSearchResponse = nearbyFixture;
+const OCCURRENCES_FIXTURE: TPinakesOccurrencePage = occurrencesFixture;
 
 /** The captured body as served, byte for byte. */
 function capturedBody(name: string): string {
@@ -145,6 +154,97 @@ describe('captured fixtures', () => {
     for (const facet of TYPE_FACET_FIXTURE.facets?.type ?? []) {
       expect(facet.type_path.at(-1)).toBe(facet.type);
     }
+  });
+});
+
+describe('captured place and event fixtures', () => {
+  it('list a calendar’s occurrences as rows with the feed’s id and link, told apart by their instance', () => {
+    const occurrences = EVENTS_FIXTURE.items.filter((card) => card.occurrence);
+    expect(occurrences.length).toBeGreaterThan(1);
+    expect(new Set(occurrences.map((card) => card.id)).size).toBe(1);
+    expect(new Set(occurrences.map((card) => card.uri)).size).toBe(1);
+    expect(new Set(occurrences.map((card) => card.occurrence?.uid)).size).toBe(occurrences.length);
+    expect(occurrences.every((card) => card.occurrence?.feed_id === card.id)).toBe(true);
+  });
+
+  it('give an occurrence its own lifecycle status, apart from the card’s read status', () => {
+    for (const card of OCCURRENCES_FIXTURE.items) {
+      expect(card.status).toBe(PinakesStatus.OK);
+      expect(card.occurrence?.status).toBe('scheduled');
+    }
+    expect(OCCURRENCES_FIXTURE.cursor).toEqual(expect.any(String));
+  });
+
+  it('list the places around a point with their points, the place itself among them', () => {
+    expect(NEARBY_FIXTURE.items).toHaveLength(7);
+    expect(NEARBY_FIXTURE.items.every((card) => card.point)).toBe(true);
+    expect(NEARBY_FIXTURE.items.map((card) => card.id)).toContain(placeCafeFixture.id);
+  });
+});
+
+describe('PinakesService.fetchOccurrences', () => {
+  it('asks the resource’s occurrences from an RFC 3339 time on, with the limit and the cursor', async () => {
+    mockFetch.mockResolvedValue(capturedResponse('occurrences.holidays'));
+
+    await expect(
+      PinakesService.fetchOccurrences('2950248974677c9ca34f1f67b8a2da80', {
+        from: '2026-11-13T00:00:00Z',
+        limit: 3,
+        cursor: 'next page',
+      }),
+    ).resolves.toEqual(occurrencesFixture);
+
+    const url = requestedUrl();
+    expect(url.pathname).toBe('/v1/resources/2950248974677c9ca34f1f67b8a2da80/occurrences');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      from: '2026-11-13T00:00:00Z',
+      limit: '3',
+      cursor: 'next page',
+    });
+  });
+
+  it('encodes the ID as one path segment and sends no cursor without one', async () => {
+    mockFetch.mockResolvedValue(capturedResponse('occurrences.holidays'));
+
+    await PinakesService.fetchOccurrences('a/b', { from: '2026-11-13T00:00:00Z', limit: 3 });
+
+    expect(requestedUrl().pathname).toBe('/v1/resources/a%2Fb/occurrences');
+    expect(requestedUrl().searchParams.has('cursor')).toBe(false);
+  });
+
+  it.each(['now', 'now+7d', '2026-11-13', '1794528000000', ''])(
+    'never sends a start Pinakes refuses on this route (%s): it fails before any request',
+    async (from) => {
+      const error = await PinakesService.fetchOccurrences('id', { from, limit: 3 }).catch((e: unknown) => e);
+
+      expect(error).toMatchObject({ category: ErrorCategory.Validation });
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('answers an unknown resource (404) as nothing, and nothing without Pinakes', async () => {
+    mockFetch.mockResolvedValue(new Response(null, { status: 404 }));
+    await expect(
+      PinakesService.fetchOccurrences('gone', { from: '2026-11-13T00:00:00Z', limit: 3 }),
+    ).resolves.toBeNull();
+
+    mocks.pinakesUrl = undefined;
+    mockFetch.mockClear();
+    await expect(PinakesService.fetchOccurrences('id', { from: '2026-11-13T00:00:00Z', limit: 3 })).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('fails with the status when Pinakes refuses the page (an expired cursor), without asking again', async () => {
+    mockFetch.mockResolvedValue(new Response('{"error":"invalid cursor"}', { status: 400 }));
+
+    const error = await PinakesService.fetchOccurrences('id', {
+      from: '2026-11-13T00:00:00Z',
+      limit: 3,
+      cursor: 'stale',
+    }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ context: expect.objectContaining({ statusCode: 400 }) });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
 

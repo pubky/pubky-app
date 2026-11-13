@@ -2,6 +2,7 @@ import { PinakesApplication } from '@/application/pinakes/pinakes';
 import { ResourceApplication, type TResourceStreamPage } from '@/application/resource/resource';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
+import { getNearbyPlacesQuery, pickNearbyPlaces, RESOURCE_NEARBY_LIMIT } from '@/pipes/resource/resource.places';
 import {
   getRelatedResourceTags,
   getResourceSearchRowUri,
@@ -10,6 +11,7 @@ import {
 } from '@/pipes/resource/resource.search';
 import type { TResourceCounts } from '@/services/nexus/resource/resource.types';
 import type {
+  TPinakesCard,
   TPinakesCategoryFacet,
   TPinakesHostFacet,
   TPinakesPoint,
@@ -39,6 +41,12 @@ export type TResourceSearchPage = {
   categoryFacets?: TPinakesCategoryFacet[];
   /** Pinakes searched part of a large network only (Following or Friends). */
   reachTruncated?: boolean;
+  /**
+   * The rows' own cards, on a Pinakes page asked `withCards`: every row of the page, in order. A
+   * calendar's occurrences are rows that share one id and one link, so `uris` cannot tell them
+   * apart; a list of events or a map of places reads the rows here.
+   */
+  cards?: TPinakesCard[];
 };
 
 /** A place Pinakes knows, with its point: what a search's Where can be around. */
@@ -117,11 +125,14 @@ export class ResourceController {
     limit,
     facets = false,
     fresh = false,
+    withCards = false,
   }: {
     query: TResourceQuery;
     cursor?: TResourceSearchCursor | null;
     limit: number;
     facets?: boolean;
+    /** Also give the rows' own cards (`cards`): for a list of events, a map of places. */
+    withCards?: boolean;
     /** Ask Pinakes again whatever its cache holds (a search started over). */
     fresh?: boolean;
   }): Promise<TResourceSearchPage> {
@@ -147,6 +158,7 @@ export class ResourceController {
       uris: page.items.map(getResourceSearchRowUri),
       next: page.cursor ? { source: 'pinakes', cursor: page.cursor } : null,
       reachTruncated: page.reach_truncated,
+      ...(withCards ? { cards: page.items } : {}),
       ...(facets
         ? {
             typeFacets: page.facets?.type ?? [],
@@ -178,6 +190,29 @@ export class ResourceController {
       uris: page.uris,
       next: page.reachedEnd ? null : { source: 'nexus', skip: skip + page.uris.length },
     };
+  }
+
+  /**
+   * The places around a place, nearest first, as links to show as cards (each the first web link
+   * people wrote for it, as a search row's): at most `RESOURCE_NEARBY_SHOWN`, never the place
+   * itself (`pickNearbyPlaces`). One more row is asked than is shown, since the place itself is the
+   * nearest. `[]` when Pinakes is not configured.
+   *
+   * @param params.point - The place's point
+   * @param params.self - The place's own card: its id, and its group (the same place elsewhere)
+   * @throws AppError when Pinakes fails
+   */
+  static async fetchNearbyPlaces({
+    point,
+    self,
+  }: {
+    point: TPinakesPoint;
+    self: Pick<TPinakesCard, 'id'> & Partial<Pick<TPinakesCard, 'group'>>;
+  }): Promise<string[]> {
+    const page = await PinakesApplication.searchResources(getNearbyPlacesQuery(point), {
+      limit: RESOURCE_NEARBY_LIMIT,
+    });
+    return pickNearbyPlaces(page?.items ?? [], self).map(getResourceSearchRowUri);
   }
 
   /**

@@ -4,6 +4,8 @@ import {
   PINAKES_SEARCH_STALE_MS,
   PINAKES_URI_MAX_BYTES,
 } from '@/config/pinakes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
@@ -14,6 +16,7 @@ import type {
   TPinakesCard,
   TPinakesEpisodePage,
   TPinakesGroupDetail,
+  TPinakesOccurrencePage,
   TPinakesResourceDetail,
   TPinakesSearchResponse,
 } from './pinakes.types';
@@ -23,6 +26,11 @@ const SEARCH_PATH = '/v1/search';
 const GROUPS_PATH = '/v1/groups';
 const RESOLVE_PATH = '/v1/resolve';
 const RESOURCES_PATH = '/v1/resources';
+/**
+ * A time as RFC 3339 (`2026-11-13T00:00:00Z`): the only spelling the occurrences route reads for
+ * its window. Search's relative `now` and Unix milliseconds are a 400 there.
+ */
+const RFC_3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 /** `POST /v1/resolve` answers 202 with a `pending` card while the link is still read. */
 const ACCEPTED = 202;
 /**
@@ -247,6 +255,47 @@ export class PinakesService {
         }),
     });
     return response?.items ?? [];
+  }
+
+  /**
+   * One page of a calendar's dates (`GET /v1/resources/{id}/occurrences`): one card per instance
+   * from `from` on, by start, each with its `occurrence` key and lifecycle status. A resource that
+   * is no calendar has none (`items: []`).
+   *
+   * @param id - Pinakes resource ID of the feed (`card.id`, an occurrence's `feed_id`)
+   * @param options.from - Inclusive start of the window, RFC 3339 (never `now`: this route refuses it)
+   * @param options.limit - Instances to ask for (1-500)
+   * @param options.cursor - The next page's cursor, from the page before
+   * @returns The page, or `null` when Pinakes does not know the resource (404) or is not configured
+   * @throws AppError when `from` is not RFC 3339 (nothing is sent), when Pinakes fails, or when it
+   * refuses the page (an expired cursor is a 400)
+   */
+  static async fetchOccurrences(
+    id: string,
+    { from, limit, cursor }: { from: string; limit: number; cursor?: string | null },
+  ): Promise<TPinakesOccurrencePage | null> {
+    if (!RFC_3339.test(from)) {
+      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'The start of the dates to list is not an RFC 3339 time', {
+        service: ErrorService.Pinakes,
+        operation: 'fetchOccurrences',
+      });
+    }
+    const base = getPinakesBaseUrl();
+    if (!base) return null;
+
+    const endpoint = `${base}${RESOURCES_PATH}/${encodeURIComponent(id)}/occurrences`;
+    const query = new URLSearchParams({ from, limit: String(limit), ...(cursor ? { cursor } : {}) }).toString();
+    return pinakesQueryClient.fetchQuery({
+      queryKey: ['pinakes', 'occurrences', id, query],
+      // A refused cursor is answered the same way again: the caller starts over
+      retry: false,
+      queryFn: () =>
+        fetchPinakesOrNull<TPinakesOccurrencePage>({
+          url: `${endpoint}?${query}`,
+          endpoint: `${base}${RESOURCES_PATH}/{id}/occurrences`,
+          operation: 'fetchOccurrences',
+        }),
+    });
   }
 
   /**
