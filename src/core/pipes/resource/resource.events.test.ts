@@ -135,6 +135,14 @@ describe('getEventLifecycleLabel', () => {
   it('says a status it does not know as the source wrote it', () => {
     expect(getEventLifecycleLabel('sold out')).toBe('sold out');
   });
+
+  it.each(['__proto__', 'constructor', 'toString', 'hasOwnProperty'])(
+    'reads a status spelled as a built-in name (%s) as any other unknown one: text, never an object',
+    (status) => {
+      expect(getEventLifecycleLabel(status)).toBe(status);
+      expect(getEventLifecycleLabel(status, (value) => `Event status: ${value}`)).toBe(`Event status: ${status}`);
+    },
+  );
 });
 
 describe('getEventDayKey', () => {
