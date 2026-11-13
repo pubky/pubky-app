@@ -2,11 +2,12 @@
 
 import { useEffect } from 'react';
 import type {} from '@serwist/next/typings';
-import { SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
+import { APP_VERSION } from '@/config/app';
+import { SW_CLIENT_ANNOUNCE, SW_TAKEOVER_SKIPPED, SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
 import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/toast';
 
 /**
- * Runs the user-consented service worker update flow.
+ * Runs the page side of the service worker update flow.
  *
  * Registration belongs to ServiceWorkerRegistrationProvider (root layout). This hook works
  * off the browser's own registration (`navigator.serviceWorker.ready`, `updatefound`,
@@ -14,7 +15,7 @@ import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/
  * stops reporting updates found more than a minute after registration and latches its
  * `isUpdate` flag at register time.
  *
- * The worker is built with `skipWaiting: false`, so a new version installs and waits.
+ * The consented flow (ADR-0021: `skipWaiting: false`, a new version installs and waits):
  * - At most one update toast is shown at a time; a newer state replaces it. A waiting
  *   worker gets a persistent "Update available" prompt once; Reload posts `SKIP_WAITING`
  *   to whichever worker is waiting at that moment, and only the tab that accepted reloads
@@ -24,6 +25,11 @@ import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/
  *   of being reloaded underneath the user.
  * - On every return to the tab the registration is re-checked for a newer waiting worker,
  *   and `registration.update()` is requested at most once per `SW_UPDATE_CHECK_MIN_INTERVAL_MS`.
+ *
+ * Social v1 cut-over (ADR-0021 amendment, docs/pwa.md "Rollout note", removed by PR-E2): the
+ * worker activates as soon as it installs and reloads every window that did not announce itself.
+ * This page announces itself to each worker found installing or waiting; a takeover by a worker
+ * whose reply carried this page's own build shows no toast, any other keeps the prompt above.
  *
  * No-op when Serwist is disabled (dev without `SERWIST_DEV`) or the browser has no service
  * worker support: `window.serwist` is undefined in both cases.
@@ -46,11 +52,30 @@ export function useServiceWorkerUpdate() {
     let hadController = Boolean(container.controller);
     let lastUpdateCheckAt = Date.now();
     const workerListeners = new Map<ServiceWorker, () => void>();
+    const announcedWorkers = new Set<ServiceWorker>();
+    // Per replying worker: whether its `SW_TAKEOVER_SKIPPED` reply carried this page's build.
+    const sameBuildReplies = new Map<MessageEventSource, boolean>();
 
     // One update toast at a time: the newest state replaces whatever was showing.
     const showPrompt = (options: ToastOptions) => {
       prompt?.dismiss();
       prompt = toast(options);
+    };
+
+    const announce = (worker: ServiceWorker | null) => {
+      if (!worker || worker.state === 'redundant' || announcedWorkers.has(worker)) return;
+      try {
+        worker.postMessage({ type: SW_CLIENT_ANNOUNCE, appVersion: APP_VERSION });
+      } catch {
+        // The worker went redundant between the registration read and the post: nothing to announce to.
+        return;
+      }
+      announcedWorkers.add(worker);
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== SW_TAKEOVER_SKIPPED || !event.source) return;
+      sameBuildReplies.set(event.source, event.data.appVersion === APP_VERSION);
     };
 
     const acceptUpdate = () => {
@@ -64,7 +89,8 @@ export function useServiceWorkerUpdate() {
 
     const promptForWaitingWorker = () => {
       if (disposed) return;
-      const waiting = registration?.waiting;
+      const waiting = registration?.waiting ?? null;
+      announce(waiting);
       if (!waiting || waiting === promptedWorker) return;
       promptedWorker = waiting;
       showPrompt({
@@ -83,7 +109,9 @@ export function useServiceWorkerUpdate() {
     };
 
     const trackInstalling = (worker: ServiceWorker | null) => {
-      if (!worker || workerListeners.has(worker)) return;
+      if (!worker) return;
+      announce(worker);
+      if (workerListeners.has(worker)) return;
       const onStateChange = () => {
         if (worker.state === 'installed') promptForWaitingWorker();
         if (worker.state === 'activated' || worker.state === 'redundant') untrack(worker);
@@ -102,7 +130,10 @@ export function useServiceWorkerUpdate() {
       }
       const isUpdate = hadController || promptedWorker !== null;
       hadController = true;
-      if (!isUpdate) return;
+      // Same-build takeover (cut-over announce): this page already runs the build, nothing to reload into.
+      const sameBuild = container.controller !== null && sameBuildReplies.get(container.controller) === true;
+      sameBuildReplies.clear();
+      if (!isUpdate || sameBuild) return;
       showPrompt({
         variant: 'info',
         title: 'Update installed',
@@ -124,9 +155,11 @@ export function useServiceWorkerUpdate() {
     };
 
     container.addEventListener('controllerchange', onControllerChange);
+    container.addEventListener('message', onMessage);
     document.addEventListener('visibilitychange', onVisibilityChange);
     // Resolves once a registration has an active worker (after ServiceWorkerRegistrationProvider
-    // registers on a first visit). A worker already waiting at that point is prompted immediately.
+    // registers on a first visit). A worker already installing or waiting at that point is
+    // announced to at once; a waiting one is prompted immediately.
     container.ready.then((ready) => {
       if (disposed) return;
       registration = ready;
@@ -138,6 +171,7 @@ export function useServiceWorkerUpdate() {
     return () => {
       disposed = true;
       container.removeEventListener('controllerchange', onControllerChange);
+      container.removeEventListener('message', onMessage);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       registration?.removeEventListener('updatefound', onUpdateFound);
       workerListeners.forEach((remove) => remove());

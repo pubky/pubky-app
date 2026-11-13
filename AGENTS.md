@@ -107,7 +107,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Generated files are hands-off: `public/sw.js`, `src/libs/lucide/lucideIcons.{aliases,nodes,tags}.ts`, `package-lock.json`.
   CI workflows change only in a CI task.
 - Env: only `src/libs/env/env.ts` and `src/libs/runtime-config/**` read `process.env.NEXT_PUBLIC_*` / `PUBKY_RUNTIME_*`
-  (ESLint-enforced); deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
+  (ESLint-enforced), except the four build-intrinsic values where `Env` cannot be imported (`src/sw.ts`, the logger);
+  deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
 - Observability: throw via `Err.*`; they capture to Sentry and, in a consenting browser, Pulse. No other direct
   `captureException` except `app/error.tsx` / `app/global-error.tsx`, for non-`AppError` values; no raw user data. `docs/sentry.md`
 - Tests: colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT; no

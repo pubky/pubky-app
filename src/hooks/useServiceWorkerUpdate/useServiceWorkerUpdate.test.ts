@@ -1,7 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
+import { APP_VERSION } from '@/config/app';
+import { SW_CLIENT_ANNOUNCE, SW_TAKEOVER_SKIPPED, SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
 import { toast } from '@/molecules/Toaster/toast';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { useServiceWorkerUpdate } from './useServiceWorkerUpdate';
 
 vi.mock('@/molecules/Toaster/toast');
@@ -18,9 +20,9 @@ function createTarget() {
     removeEventListener: vi.fn((type: string, listener: Listener) => {
       listeners.get(type)?.delete(listener);
     }),
-    emit(type: string) {
+    emit(type: string, event: Event = new Event(type)) {
       act(() => {
-        listeners.get(type)?.forEach((listener) => listener(new Event(type)));
+        listeners.get(type)?.forEach((listener) => listener(event));
       });
     },
     listenerCount(type: string) {
@@ -69,6 +71,27 @@ function setVisibility(state: DocumentVisibilityState) {
     document.dispatchEvent(new Event('visibilitychange'));
   });
 }
+
+type FakeContainer = ReturnType<typeof installServiceWorker>;
+
+// A worker's message as `navigator.serviceWorker` delivers it: `source` is the sending worker. jsdom's
+// MessageEvent refuses a fake source, so the event is shaped by hand.
+function receiveWorkerMessage(container: FakeContainer, source: FakeWorker, data: unknown) {
+  container.emit('message', asOpaque<MessageEvent>({ type: 'message', data, source }));
+}
+
+/** The worker's answer to this page's announce, carrying that worker's build. */
+function receiveTakeoverReply(container: FakeContainer, source: FakeWorker, appVersion: string = APP_VERSION) {
+  receiveWorkerMessage(container, source, { type: SW_TAKEOVER_SKIPPED, appVersion });
+}
+
+/** The browser makes `worker` the page's controller and fires `controllerchange`. */
+function takeOver(container: FakeContainer, worker: FakeWorker) {
+  container.controller = worker;
+  container.emit('controllerchange');
+}
+
+const announcement = { type: SW_CLIENT_ANNOUNCE, appVersion: APP_VERSION };
 
 function lastToastOptions() {
   const calls = vi.mocked(toast).mock.calls;
@@ -178,7 +201,8 @@ describe('useServiceWorkerUpdate', () => {
     first.state = 'redundant';
 
     staleAction?.onClick();
-    expect(first.postMessage).not.toHaveBeenCalled();
+    // `first` was announced to while it waited (cut-over handshake); it must not get the consent.
+    expect(first.postMessage).not.toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
     expect(newer.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
 
     // Nothing waiting any more: accepting is a no-op and must not arm a later forced reload.
@@ -298,6 +322,7 @@ describe('useServiceWorkerUpdate', () => {
     unmount();
 
     expect(container.listenerCount('controllerchange')).toBe(0);
+    expect(container.listenerCount('message')).toBe(0);
     expect(registration.listenerCount('updatefound')).toBe(0);
     expect(installing.listenerCount('statechange')).toBe(0);
     installing.state = 'installed';
@@ -319,5 +344,187 @@ describe('useServiceWorkerUpdate', () => {
     installing.emit('statechange');
 
     expect(installing.listenerCount('statechange')).toBe(0);
+  });
+
+  // Social v1 cut-over (ADR-0021 amendment, until PR-E2): the worker activates as soon as it installs
+  // and reloads every window that did not announce itself. A page of this build announces, is left in
+  // place, and learns the taking-over worker's build from the reply.
+  describe('cut-over announce', () => {
+    it('announces this page once to a worker found installing', async () => {
+      const registration = createRegistration();
+      installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+
+      const installing = createWorker('installing');
+      registration.installing = installing;
+      registration.emit('updatefound');
+      registration.emit('updatefound');
+      installing.state = 'installed';
+      registration.waiting = installing;
+      registration.installing = null;
+      installing.emit('statechange');
+      setVisibility('visible');
+
+      expect(installing.postMessage).toHaveBeenCalledTimes(1);
+      expect(installing.postMessage).toHaveBeenCalledWith(announcement);
+    });
+
+    it('announces this page to a worker already installing when the registration is ready', async () => {
+      const registration = createRegistration();
+      const installing = createWorker('installing');
+      registration.installing = installing;
+      installServiceWorker({ controlled: true, registration });
+
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+
+      expect(installing.postMessage).toHaveBeenCalledWith(announcement);
+    });
+
+    it('announces this page to a worker already waiting when the registration is ready', async () => {
+      const registration = createRegistration();
+      const waiting = createWorker('installed');
+      registration.waiting = waiting;
+      installServiceWorker({ controlled: true, registration });
+
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+
+      expect(waiting.postMessage).toHaveBeenCalledWith(announcement);
+      // The announce is not the consent: the waiting worker is still prompted, never skipped.
+      expect(waiting.postMessage).not.toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+      expect(lastToastOptions().title).toBe('Update available');
+    });
+
+    it('skips a redundant worker and survives an announce the worker no longer accepts', async () => {
+      const registration = createRegistration();
+      // `registration.installing` still points at a worker that just went redundant, and one whose
+      // `redundant` state is a task behind: `postMessage` throws for it.
+      const redundant = createWorker('redundant');
+      const vanishing = createWorker('installing');
+      vanishing.postMessage.mockImplementation(() => {
+        throw new DOMException('The worker is redundant', 'InvalidStateError');
+      });
+      registration.installing = redundant;
+      const waiting = createWorker('installed');
+      registration.waiting = waiting;
+      installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      registration.installing = vanishing;
+      registration.emit('updatefound');
+
+      expect(redundant.postMessage).not.toHaveBeenCalled();
+      expect(vanishing.postMessage).toHaveBeenCalledTimes(1);
+      // Neither stopped the flow: the waiting worker was announced to and prompted.
+      expect(waiting.postMessage).toHaveBeenCalledWith(announcement);
+      expect(lastToastOptions().title).toBe('Update available');
+    });
+
+    it("shows no toast when the worker that took over answered with this page's build", async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const installing = createWorker('installing');
+      registration.installing = installing;
+      registration.emit('updatefound');
+
+      receiveTakeoverReply(container, installing);
+      takeOver(container, installing);
+
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      expect(reload).not.toHaveBeenCalled();
+    });
+
+    it('keeps the "Update installed" toast when the worker that took over is another build', async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const installing = createWorker('installing');
+      registration.installing = installing;
+      registration.emit('updatefound');
+
+      receiveTakeoverReply(container, installing, `${APP_VERSION}-next`);
+      takeOver(container, installing);
+
+      expect(reload).not.toHaveBeenCalled();
+      expect(lastToastOptions()).toMatchObject({ title: 'Update installed', persistent: true, dismissButton: true });
+    });
+
+    it('reads only the takeover reply, not other worker messages', async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const installing = createWorker('installing');
+
+      receiveWorkerMessage(container, installing, APP_VERSION);
+      receiveWorkerMessage(container, installing, { type: 'CACHE_UPDATED', appVersion: APP_VERSION });
+      takeOver(container, installing);
+
+      expect(lastToastOptions().title).toBe('Update installed');
+    });
+
+    it('prompts a later takeover once a same-build one was skipped', async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const installing = createWorker('installing');
+
+      receiveTakeoverReply(container, installing);
+      takeOver(container, installing);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+
+      container.emit('controllerchange');
+      expect(lastToastOptions().title).toBe('Update installed');
+    });
+
+    it('ignores a reply from a worker other than the one that took over', async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const replied = createWorker('installing');
+      receiveTakeoverReply(container, replied);
+
+      takeOver(container, createWorker('activating'));
+
+      expect(lastToastOptions().title).toBe('Update installed');
+    });
+
+    it('prompts a takeover whose reply arrives late, and does not hold the reply against the next', async () => {
+      const registration = createRegistration();
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+      const late = createWorker('activating');
+
+      takeOver(container, late);
+      expect(lastToastOptions().title).toBe('Update installed');
+      receiveTakeoverReply(container, late);
+
+      takeOver(container, createWorker('activating'));
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(2);
+    });
+
+    it('still reloads the tab that accepted an update after a same-build reply', async () => {
+      const registration = createRegistration();
+      const waiting = createWorker('installed');
+      registration.waiting = waiting;
+      const container = installServiceWorker({ controlled: true, registration });
+      renderHook(() => useServiceWorkerUpdate());
+      await flushReady();
+
+      lastToastOptions().action?.onClick();
+      expect(waiting.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+      receiveTakeoverReply(container, waiting);
+      takeOver(container, waiting);
+
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
   });
 });
