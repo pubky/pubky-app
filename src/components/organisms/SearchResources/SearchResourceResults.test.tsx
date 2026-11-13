@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   criteria: vi.fn((): SearchCriteria => ({ mode: 'tags', tags: ['music'] })),
   addTagToSearch: vi.fn(),
   user: { name: undefined as string | undefined },
+  view: 'list' as 'list' | 'map',
+  setView: vi.fn(),
 }));
 
 vi.mock('@/hooks/useResourceSearch/useResourceSearch', async (importOriginal) => ({
@@ -60,6 +62,25 @@ vi.mock('@/organisms/Timeline/Feed/ResourceTimelineFeed/ResourceTimelineFeed', (
       </div>
     );
   },
+}));
+
+// The agenda and the map have their own tests: here, which of them a search shows
+vi.mock('./SearchEventAgenda', () => ({
+  SearchEventAgenda: ({ children, search }: { children?: React.ReactNode; search: UseResourceSearchResult }) => (
+    <div data-testid="event-agenda" data-loading={String(search.loading)}>
+      {children}
+    </div>
+  ),
+}));
+vi.mock('./SearchResourceMap', () => ({
+  SearchResourceMap: ({ children, kind }: { children?: React.ReactNode; kind: string }) => (
+    <div data-testid="results-map" data-kind={kind}>
+      {children}
+    </div>
+  ),
+}));
+vi.mock('@/hooks/useResourceResultsView/useResourceResultsView', () => ({
+  useResourceResultsView: () => ({ view: mocks.view, setView: mocks.setView }),
 }));
 
 const facet = (type: string, path: string[], count: number): TPinakesTypeFacet => ({
@@ -120,6 +141,7 @@ describe('SearchResourceResults', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.user.name = undefined;
+    mocks.view = 'list';
     mocks.criteria.mockReturnValue({ mode: 'tags', tags: ['music'] });
     mocks.query.mockReturnValue(queryResult());
     mocks.search.mockReturnValue(searchResult());
@@ -263,5 +285,104 @@ describe('SearchResourceResults', () => {
     expect(screen.queryByTestId('search-resource-controls')).not.toBeInTheDocument();
     expect(screen.queryByText('track')).not.toBeInTheDocument();
     expect(mocks.feed).toHaveBeenLastCalledWith(expect.objectContaining({ emptyState: undefined }));
+  });
+
+  describe('places and events', () => {
+    const view = () => screen.getByRole('group', { name: 'View' });
+
+    it('shows an event search as an agenda, read with every row’s own card, with Agenda and Map to choose from', () => {
+      mocks.query.mockReturnValue(queryResult('kind=event'));
+      render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+
+      expect(screen.getByTestId('event-agenda')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-feed')).toBeNull();
+      expect(mocks.search).toHaveBeenLastCalledWith(null, { facets: true, cards: true });
+      expect(within(view()).getByRole('button', { name: 'Agenda' })).toHaveAttribute('aria-pressed', 'true');
+      expect(within(view()).getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'false');
+      // The choice sits with the search's own controls, above the agenda
+      expect(screen.getByTestId('event-agenda')).toContainElement(view());
+    });
+
+    it('shows the events on the map once Map is picked, and goes back on Agenda', () => {
+      mocks.query.mockReturnValue(queryResult('kind=event'));
+      const { rerender } = render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+
+      fireEvent.click(within(view()).getByRole('button', { name: 'Map' }));
+      expect(mocks.setView).toHaveBeenLastCalledWith('map');
+
+      mocks.view = 'map';
+      rerender(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+      expect(screen.getByTestId('results-map')).toHaveAttribute('data-kind', 'event');
+      expect(screen.queryByTestId('event-agenda')).toBeNull();
+
+      fireEvent.click(within(view()).getByRole('button', { name: 'Agenda' }));
+      expect(mocks.setView).toHaveBeenLastCalledWith('list');
+    });
+
+    it('keeps a place search as the list it was, with List and Map to choose from, and maps it on Map', () => {
+      mocks.query.mockReturnValue(queryResult('kind=place'));
+      const { rerender } = render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+
+      expect(screen.getByTestId('resource-feed')).toBeInTheDocument();
+      expect(within(view()).getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+      expect(mocks.search).toHaveBeenLastCalledWith(null, { facets: true, cards: true });
+
+      mocks.view = 'map';
+      rerender(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+      expect(screen.getByTestId('results-map')).toHaveAttribute('data-kind', 'place');
+      expect(screen.queryByTestId('resource-feed')).toBeNull();
+    });
+
+    it('moves between the two views with the keyboard: both are buttons in the tab order', () => {
+      mocks.query.mockReturnValue(queryResult('kind=place'));
+      render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+
+      const buttons = within(view()).getAllByRole('button');
+      expect(buttons.map((button) => button.textContent)).toEqual(['List', 'Map']);
+      for (const button of buttons) {
+        expect(button).not.toHaveAttribute('tabindex', '-1');
+        expect(button).not.toBeDisabled();
+      }
+    });
+
+    it('leaves every other search as it is: no view to choose, the list read as before, whatever the address says', () => {
+      mocks.view = 'map';
+      mocks.query.mockReturnValue(queryResult('kind=music'));
+      const { rerender } = render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+
+      expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
+      expect(screen.getByTestId('resource-feed')).toBeInTheDocument();
+      expect(mocks.search).toHaveBeenLastCalledWith(null, { facets: true });
+
+      mocks.query.mockReturnValue(queryResult());
+      rerender(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+      expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
+      expect(screen.getByTestId('resource-feed')).toBeInTheDocument();
+    });
+
+    it('keeps a searched link’s card and what is related to it a list, though Events is picked', () => {
+      mocks.query.mockReturnValue(queryResult('kind=event', { url: 'https://luma.com/376whqyw' }));
+      render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+
+      expect(screen.getByTestId('resource-feed')).toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
+    });
+
+    it('keeps a feed’s events the list a feed shows: the agenda and the map are Search’s', () => {
+      mocks.view = 'map';
+      mocks.query.mockReturnValue(queryResult('kind=event'));
+      render(<SearchResourceResults layout={LAYOUT.COLUMNS} feed={{ tags: [], reach: 'all', sort: 'recent' }} />);
+
+      expect(screen.getByTestId('resource-feed')).toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
+      expect(mocks.search).toHaveBeenLastCalledWith(null, { facets: true });
+    });
+
+    it('shows the agenda as loading while the picked kind waits for the index’s types', () => {
+      mocks.query.mockReturnValue(queryResult('kind=event', { isPending: true }));
+      render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+
+      expect(screen.getByTestId('event-agenda')).toHaveAttribute('data-loading', 'true');
+    });
   });
 });
