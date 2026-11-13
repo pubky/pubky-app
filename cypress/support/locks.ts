@@ -670,14 +670,25 @@ export const singlePostCard = () => cy.get('[data-cy="single-post-card"]').filte
 /**
  * Opens the post from the home feed by navigating inside the app. A full page load would make the
  * app restore the session from storage rather than keep the one the sign-in has just created.
+ *
+ * `requirePostCard` waits for the post card. An unlocked article has none: the page may paint the
+ * card until the article is read, then swaps it for the article layout, so that scenario passes
+ * false and asserts the article itself.
  */
-export const openPostFromHomeFeed = (authorPubky: string, postId: string, teaser: string) => {
+export const openPostFromHomeFeed = (
+  authorPubky: string,
+  postId: string,
+  teaser: string,
+  options?: { requirePostCard?: boolean },
+) => {
   cy.location('pathname').should('eq', '/home');
   cy.findFirstPostInFeedFiltered(teaser, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
     cy.get('[data-cy="post-text"]').filter(':visible').first().click();
   });
   cy.location('pathname').should('eq', `/post/${userIdFromPubky(authorPubky)}/${postId}`);
-  singlePostCard().should('have.length', 1);
+  if (options?.requirePostCard !== false) {
+    singlePostCard().should('have.length', 1);
+  }
 };
 
 /** The header shows the profile button only while the app treats the account as signed in. */
