@@ -1,6 +1,7 @@
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { sanitizeTagInput } from '@/libs/utils/utils';
 import { TAG_FROZEN_WHITESPACE } from '@/libs/utils/utils.constants';
+import { hasLinkStart } from '@/pipes/resource/resource.search';
 import {
   COMPACT_USER_ID_PREFIX,
   DELIMITED_USER_ID_PREFIXES,
@@ -46,7 +47,8 @@ function getValidUserIdPrefix(candidate: string): string | null {
  * keep the raw query while only the ID endpoint receives the stripped suffix.
  */
 export function resolveSearchAutocompletePlan(searchQuery: string): SearchAutocompletePlan {
-  if (!searchQuery) {
+  // No tag or name holds a link, and a link being typed may still get its username and password.
+  if (!searchQuery || hasLinkStart(searchQuery)) {
     return { tagPrefix: null, userNamePrefix: null, userIdPrefix: null };
   }
 

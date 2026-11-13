@@ -117,6 +117,17 @@ describe('resolveSearchAutocompletePlan', () => {
     },
   );
 
+  it.each([
+    'https://alice:secret@example.invalid',
+    'https://alice:secret',
+    'https://alice',
+    'https:',
+    'see http://alice:se',
+    'ftp://alice@example.invalid',
+  ])('looks nothing up for "%s", a link being typed (its username and password may follow)', (query) => {
+    expect(resolveSearchAutocompletePlan(query)).toEqual({ tagPrefix: null, userNamePrefix: null, userIdPrefix: null });
+  });
+
   it('preserves tag searches with an interior U+FEFF accepted by the tag SDK', () => {
     const query = 'near\ufeffme';
 

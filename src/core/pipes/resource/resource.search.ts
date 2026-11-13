@@ -148,6 +148,14 @@ export function isResolvableLink(uri: string): boolean {
 const LINK_START = /[a-z][a-z\d+.-]*:\/\/|https?:[/\\]*/i;
 
 /**
+ * Whether a text holds the start of a link (`https:`, `scheme://`): while one is typed, what follows
+ * may still become its username and password (`https://user:password` before the `@`).
+ */
+export function hasLinkStart(text: string): boolean {
+  return LINK_START.test(text);
+}
+
+/**
  * Whether a text holds a link that carries a username or password (`https://user:password@…`), also
  * where the rest of it does not parse (`<https://user@host>`) or it sits inside another link
  * (`https://host/?u=https://user@…`): such a text is never sent.
