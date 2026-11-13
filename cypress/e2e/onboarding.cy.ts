@@ -4,7 +4,9 @@ import { goToProfilePageFromHeader } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
 import { addProfileTags, openProfileTab, showProfileHeader } from '../support/profile';
-import { signUpViaApi } from '../support/seed';
+import { itMobile } from '../support/mobile';
+import { postIndexed, waitForNexus } from '../support/nexus';
+import { createPostViaApi, seedUserViaApi, signUpViaApi } from '../support/seed';
 import { CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 
 // A fresh signup token from the homeserver admin API, as the suite hands them out to testers
@@ -79,25 +81,28 @@ describe('Onboarding', () => {
     cy.get('[data-cy="header-sign-in-btn"]').should('exist').should('be.visible');
   };
 
-  it('can onboard a new Pubky Ring key from the profile step, sign out, then sign back in with Pubky Ring', () => {
-    const profileName = 'Test User';
-    const profileBio = 'Test Bio';
+  itMobile(
+    'can onboard a new Pubky Ring key from the profile step, sign out, then sign back in with Pubky Ring',
+    () => {
+      const profileName = 'Test User';
+      const profileBio = 'Test Bio';
 
-    cy.onboardAsNewUser(profileName, profileBio);
+      cy.onboardAsNewUser(profileName, profileBio);
 
-    // a key held in Pubky Ring is not reminded to back up on the home feed
-    cy.location('pathname').should('eq', '/home');
-    cy.get('[data-cy="timeline-container"]').should('be.visible');
-    cy.get('#backup-btn').should('not.exist');
-    checkOwnProfile(profileName, profileBio);
+      // a key held in Pubky Ring is not reminded to back up on the home feed
+      cy.location('pathname').should('eq', '/home');
+      cy.get('[data-cy="timeline-container"]').should('be.visible');
+      cy.get('#backup-btn').should('not.exist');
+      checkOwnProfile(profileName, profileBio);
 
-    cy.signOut(HasBackedUp.Yes);
+      cy.signOut(HasBackedUp.Yes);
 
-    cy.signInWithPubkyRing(profileName);
-    checkOwnProfile(profileName, profileBio);
+      cy.signInWithPubkyRing(profileName);
+      checkOwnProfile(profileName, profileBio);
 
-    cy.signOut(HasBackedUp.Yes);
-  });
+      cy.signOut(HasBackedUp.Yes);
+    },
+  );
 
   it('can sign up, sign out, then sign up again as a new user', () => {
     const firstProfileName = 'First User';
@@ -195,7 +200,14 @@ describe('Onboarding', () => {
       .should('not.exist');
   });
 
-  it('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {
+  itMobile('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {
+    // A fresh stack has no posts until a test makes one, and phones skip the tests that do
+    seedUserViaApi('Explore Poster').then((poster) => {
+      createPostViaApi(poster, 'A post to explore before joining').then((post) => {
+        waitForNexus(postIndexed(post));
+      });
+    });
+
     // Explore lives in the navbar on desktop and in the hero action row below `md`
     const exploreBtn = Cypress.expose('isMobile') ? '[data-cy="explore-btn"]' : '#header-explore-btn';
     cy.get(exploreBtn).should('be.visible').click();
@@ -233,7 +245,7 @@ describe('Onboarding', () => {
     cy.location('pathname').should('eq', '/onboarding/human');
   });
 
-  it('signs up a new Pubky Ring key with an invite code through the scan QR and completes onboarding', () => {
+  itMobile('signs up a new Pubky Ring key with an invite code through the scan QR and completes onboarding', () => {
     const profileName = 'Ring Signup User';
 
     cy.get('#create-account-btn').click();
@@ -280,7 +292,7 @@ describe('Onboarding', () => {
     });
   });
 
-  it('applies the invite code from an /invite/<code> URL and continues to the Pubky Ring install step', () => {
+  itMobile('applies the invite code from an /invite/<code> URL and continues to the Pubky Ring install step', () => {
     fetchInviteCode().then((inviteCode) => {
       cy.visit(`/invite/${inviteCode}`);
     });
