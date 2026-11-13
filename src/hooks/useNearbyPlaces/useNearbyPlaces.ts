@@ -22,14 +22,15 @@ export function getNearbyPoint(card: TNearbyPlaceCard | null | undefined) {
  * The places around a place, nearest first, as links to show as cards
  * (`ResourceController.fetchNearbyPlaces`): at most six, never the place itself. `data` is `[]`
  * when nothing else is near. A card that is no place, or has no point on the map, reads nothing
- * (settled `null`), as does a page without Pinakes.
+ * (settled `null`), as does a page without Pinakes. Read again when the card's group changes: the
+ * group's other cards are the place itself, so the list depends on it.
  *
  * @param card - The page's card, or `null` while it is read
  */
 export function useNearbyPlaces(card: TNearbyPlaceCard | null | undefined): UsePinakesQueryResult<string[]> {
   const point = getNearbyPoint(card);
   return usePinakesQuery({
-    key: card && point ? `${card.id}:${point.lat},${point.lon}` : '',
+    key: card && point ? JSON.stringify([card.id, point.lat, point.lon, card.group?.id ?? null]) : '',
     fetchFn: () => ResourceController.fetchNearbyPlaces({ point: point!, self: { id: card!.id, group: card!.group } }),
     enabled: point !== null && isPinakesConfigured(),
   });
