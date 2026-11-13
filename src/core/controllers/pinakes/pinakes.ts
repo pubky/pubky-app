@@ -103,6 +103,8 @@ export class PinakesController {
    * @param params.cursor - The next page's cursor, from the page before
    * @param params.from - The start of the list, RFC 3339: a later page passes the first page's, so
    * the cursor stays in its window. Now, without one.
+   * @param params.fresh - Ask Pinakes again whatever the cache holds: the first page of a list
+   * started over, which the cache may still hold with the cursor that was refused
    * @throws AppError when Pinakes fails or refuses the page
    */
   static fetchOccurrences({
@@ -110,13 +112,15 @@ export class PinakesController {
     limit,
     cursor,
     from = getOccurrencesWindowStart(new Date()),
+    fresh,
   }: {
     id: string;
     limit: number;
     cursor?: string | null;
     from?: string;
+    fresh?: boolean;
   }): Promise<{ cards: TPinakesCard[]; cursor: string | null }> {
-    return PinakesApplication.fetchOccurrences(id, { from, limit, cursor });
+    return PinakesApplication.fetchOccurrences(id, { from, limit, cursor, fresh });
   }
 
   /**

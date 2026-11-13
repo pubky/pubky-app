@@ -197,13 +197,26 @@ describe('PinakesApplication.fetchOccurrences', () => {
 
     const page = await PinakesApplication.fetchOccurrences('feed', { from: '2026-11-13T00:00:00Z', limit: 3 });
 
-    expect(PinakesService.fetchOccurrences).toHaveBeenCalledWith('feed', {
-      from: '2026-11-13T00:00:00Z',
-      limit: 3,
-      cursor: undefined,
-    });
+    expect(PinakesService.fetchOccurrences).toHaveBeenCalledWith(
+      'feed',
+      { from: '2026-11-13T00:00:00Z', limit: 3, cursor: undefined },
+      { fresh: undefined },
+    );
     expect(page.cards).toEqual(occurrencesFixture.items);
     expect(page.cursor).toBe(occurrencesFixture.cursor);
+  });
+
+  it('asks past the cache only for a list started over, as the service’s own option and no part of the window', async () => {
+    vi.mocked(PinakesService.fetchOccurrences).mockResolvedValue(occurrencesFixture);
+    const window = { from: '2026-11-13T00:00:00Z', limit: 3 };
+
+    await PinakesApplication.fetchOccurrences('feed', { ...window, fresh: true });
+    await PinakesApplication.fetchOccurrences('feed', window);
+
+    const [started, plain] = vi.mocked(PinakesService.fetchOccurrences).mock.calls;
+    expect(started).toEqual(['feed', { ...window, cursor: undefined }, { fresh: true }]);
+    expect(started[1]).not.toHaveProperty('fresh');
+    expect(plain[2]?.fresh).toBeFalsy();
   });
 
   it('answers a resource Pinakes does not know, or no Pinakes, as no dates', async () => {
