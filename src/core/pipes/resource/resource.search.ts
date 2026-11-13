@@ -614,6 +614,20 @@ export function getResourceServices(
 }
 
 /**
+ * A read's host facets, plus the facet an earlier read (`known`) gave each of `hosts` this one does not
+ * list, with no links: a service's name is its host's site, the same in every read, so a picked one
+ * keeps its name; its links are this read's.
+ */
+export function withKnownHostNames(
+  facets: readonly TPinakesHostFacet[],
+  known: readonly TPinakesHostFacet[],
+  hosts: readonly string[],
+): TPinakesHostFacet[] {
+  const missing = known.filter(({ host }) => hosts.includes(host) && !facets.some((facet) => facet.host === host));
+  return [...facets, ...missing.map((facet) => ({ ...facet, count: 0 }))];
+}
+
+/**
  * The links on `hosts`, counted per host: Pinakes names each host's service in that facet, which is
  * where a saved feed's services get their names (one small read).
  */

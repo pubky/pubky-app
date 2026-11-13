@@ -96,7 +96,7 @@ export function getFeedResourceFilterRows(
     if (isNamingHosts && !hosts.every(isNamed)) {
       // The names known, then a skeleton for the others: a host is never shown as a name meanwhile
       const names = [...new Set(hosts.filter(isNamed).map(nameOf))];
-      const label = names.length > 0 ? `Service: ${names.join(', ')},` : 'Service:';
+      const label = names.length > 0 ? `Service: ${names.join(', ')}` : 'Service:';
       rows.push({ name: 'host', label, icon: AppWindow, isLoading: true });
     } else {
       row('host', 'Service', { label: [...new Set(hosts.map(nameOf))].join(', '), icon: AppWindow });

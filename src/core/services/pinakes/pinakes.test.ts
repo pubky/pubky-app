@@ -496,6 +496,17 @@ describe('PinakesService.search', () => {
     });
   });
 
+  it('gives a page already read from the cache without a request, and nothing for one not read', async () => {
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify(PAGE), { status: 200 }));
+    expect(PinakesService.getCachedSearch({ tags: 'jazz', limit: '10' })).toBeUndefined();
+
+    await PinakesService.search({ tags: 'jazz', limit: '10' });
+    mockFetch.mockClear();
+    expect(PinakesService.getCachedSearch({ tags: 'jazz', limit: '10' })).toEqual(PAGE);
+    expect(PinakesService.getCachedSearch({ tags: 'jazz', limit: '20' })).toBeUndefined();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it('answers a page asked again from the cache, and nothing without Pinakes or its search', async () => {
     mockFetch.mockImplementation(async () => new Response(JSON.stringify(PAGE), { status: 200 }));
     await PinakesService.search({ tags: 'jazz', limit: '10' });

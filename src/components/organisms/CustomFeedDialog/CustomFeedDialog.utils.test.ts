@@ -109,7 +109,7 @@ describe('getFeedResourceFilterRows', () => {
       { host: 'music.amazon.co.uk', site: 'Amazon Music', count: 1 },
     ];
     expect(getFeedResourceFilterRows(filters, facets, true)).toEqual([
-      { name: 'host', label: 'Service: Amazon Music,', icon: expect.anything(), isLoading: true },
+      { name: 'host', label: 'Service: Amazon Music', icon: expect.anything(), isLoading: true },
     ]);
   });
 

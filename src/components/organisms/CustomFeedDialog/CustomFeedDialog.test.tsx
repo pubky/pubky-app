@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
+import { ResourceController } from '@/controllers/resource/resource';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -1517,6 +1518,64 @@ describe('CustomFeedDialog', () => {
       const row = screen.getByTestId('resource-filter-row-host');
       expect(row).toHaveTextContent('Service: Amazon Music, Spotify');
       expect(within(row).queryByTestId('removable-row-skeleton')).not.toBeInTheDocument();
+    });
+
+    it('names the saved services at once when the Edit dialog opens again, from the last read’s cache', () => {
+      const FACETS = [
+        { host: 'music.amazon.com', site: 'Amazon Music', count: 1 },
+        { host: 'open.spotify.com', site: 'Spotify', count: 27 },
+      ];
+      resourceSearch.hostFacets = FACETS;
+      const feed = createMockFeed({
+        target: 'resources',
+        resource_types: ['MusicGroup', 'MusicPlaylist', 'MusicRecording'],
+        resource_filters: { host: 'music.amazon.com,open.spotify.com' },
+        content: null,
+      });
+      const { unmount } = render(<CustomFeedDialog mode="edit" open feed={feed} />);
+      expect(screen.getByTestId('resource-filter-row-host')).toHaveTextContent('Service: Amazon Music, Spotify');
+      unmount();
+
+      // Opened again: a new dialog whose read is on its way, while Pinakes' answer is still cached
+      resourceSearch.hostFacets = null;
+      resourceSearch.loading = true;
+      const cached = vi.spyOn(ResourceController, 'getCachedHostFacets').mockReturnValue(FACETS);
+      try {
+        render(<CustomFeedDialog mode="edit" open feed={feed} />);
+        const row = screen.getByTestId('resource-filter-row-host');
+        expect(row).toHaveTextContent('Service: Amazon Music, Spotify');
+        expect(row).not.toHaveAttribute('aria-busy');
+        expect(within(row).queryByTestId('removable-row-skeleton')).not.toBeInTheDocument();
+        expect(cached).toHaveBeenCalledWith(
+          expect.objectContaining({ hosts: ['music.amazon.com', 'open.spotify.com'], extraFacets: ['host'] }),
+          1,
+        );
+      } finally {
+        cached.mockRestore();
+      }
+    });
+
+    it('names the services the cache knows and loads the others, without a comma in its name', () => {
+      resourceSearch.loading = true;
+      const cached = vi
+        .spyOn(ResourceController, 'getCachedHostFacets')
+        .mockReturnValue([{ host: 'music.amazon.com', site: 'Amazon Music', count: 1 }]);
+      try {
+        const feed = createMockFeed({
+          target: 'resources',
+          resource_types: ['MusicRecording'],
+          resource_filters: { host: 'music.amazon.com,open.spotify.com' },
+          content: null,
+        });
+        render(<CustomFeedDialog mode="edit" open feed={feed} />);
+
+        const row = screen.getByTestId('resource-filter-row-host');
+        expect(row.textContent).toBe('Service: Amazon Music,');
+        expect(row).toHaveAccessibleName('Remove Service: Amazon Music (loading)');
+        expect(within(row).getByTestId('removable-row-skeleton')).toBeInTheDocument();
+      } finally {
+        cached.mockRestore();
+      }
     });
 
     it('reads no service names while closed, or for a feed without saved services', () => {

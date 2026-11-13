@@ -204,7 +204,7 @@ export class PinakesService {
 
     const query = new URLSearchParams(params).toString();
     return pinakesQueryClient.fetchQuery({
-      queryKey: ['pinakes', 'search', query],
+      queryKey: searchKey(params),
       // `fresh`: a search started over (its cursor was refused) asks again, whatever the cache holds
       staleTime: fresh ? 0 : PINAKES_SEARCH_STALE_MS,
       // A refused query is answered the same way again: the caller decides (restart, error state)
@@ -216,6 +216,11 @@ export class PinakesService {
           operation: 'search',
         }),
     });
+  }
+
+  /** The search page `search` read for `params`, without a request; `undefined` when none was read. */
+  static getCachedSearch(params: Record<string, string>): TPinakesSearchResponse | null | undefined {
+    return pinakesQueryClient.getQueryData<TPinakesSearchResponse | null>(searchKey(params));
   }
 
   /**
@@ -280,6 +285,11 @@ function getPinakesBaseUrl(): string | null {
 /** The cache key of a group's read. */
 function groupKey(id: string): readonly unknown[] {
   return ['pinakes', 'group', id];
+}
+
+/** The cache key of a search page read. */
+function searchKey(params: Record<string, string>): readonly unknown[] {
+  return ['pinakes', 'search', new URLSearchParams(params).toString()];
 }
 
 /** The cache key of a link's card read. */
