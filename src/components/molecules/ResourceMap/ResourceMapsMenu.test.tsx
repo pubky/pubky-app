@@ -5,13 +5,13 @@ import { ResourceMapsMenu } from './ResourceMapsMenu';
 const mocks = vi.hoisted(() => ({
   isMobile: false,
   isTouch: false,
-  isIos: false,
+  isAndroid: false,
   copy: vi.fn<(text: string) => Promise<boolean>>(),
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({ useIsMobile: () => mocks.isMobile }));
 vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({ useIsTouchDevice: () => mocks.isTouch }));
-vi.mock('@/libs/pwa/platform', () => ({ isIosDevice: () => mocks.isIos }));
+vi.mock('@/libs/pwa/platform', () => ({ isAndroidDevice: () => mocks.isAndroid }));
 vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: () => ({ copyToClipboard: mocks.copy }),
 }));
@@ -38,7 +38,7 @@ describe('ResourceMapsMenu', () => {
   beforeEach(() => {
     mocks.isMobile = false;
     mocks.isTouch = false;
-    mocks.isIos = false;
+    mocks.isAndroid = false;
     mocks.copy.mockReset().mockResolvedValue(true);
     open = vi.spyOn(window, 'open').mockReturnValue(null);
   });
@@ -93,8 +93,9 @@ describe('ResourceMapsMenu', () => {
     expect(screen.queryByRole('menuitem', { name: 'Copy address' })).toBeNull();
   });
 
-  it('offers the default maps app first on a phone, through a geo link in this tab', async () => {
+  it('offers the default maps app first on an Android phone, through a geo link in this tab', async () => {
     mocks.isTouch = true;
+    mocks.isAndroid = true;
     render(<ResourceMapsMenu destination={CAFE} />);
     openMenu();
 
@@ -107,14 +108,20 @@ describe('ResourceMapsMenu', () => {
     );
   });
 
-  it('leaves the geo link out where nothing opens it: a desktop, and an iPhone (Apple Maps opens the app there)', () => {
+  it('leaves the geo link out where nothing is sure to open it: a desktop, a touch laptop, an iPhone (Apple Maps opens the app there)', () => {
+    // Touch alone is not a phone with a maps app behind `geo:`
     mocks.isTouch = true;
-    mocks.isIos = true;
-    render(<ResourceMapsMenu destination={CAFE} />);
+    const { unmount } = render(<ResourceMapsMenu destination={CAFE} />);
     openMenu();
-
     expect(screen.queryByText('Default maps app')).toBeNull();
     expect(screen.getByRole('menuitem', { name: 'Apple Maps' })).toBeInTheDocument();
+    unmount();
+
+    mocks.isTouch = false;
+    mocks.isAndroid = true;
+    render(<ResourceMapsMenu destination={CAFE} />);
+    openMenu();
+    expect(screen.queryByText('Default maps app')).toBeNull();
   });
 
   it('opens from the keyboard and closes on Escape, back on its button', async () => {

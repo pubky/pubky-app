@@ -38,18 +38,22 @@ export function getNearbyPlacesQuery(point: TPinakesPoint): TResourceQuery {
 /**
  * The rows a place's Nearby shows, in Pinakes' order (nearest first), at most
  * `RESOURCE_NEARBY_SHOWN`: without the place itself (its own card, or another member of its group:
- * the same place on another service), without a row that has no point on the map, each row once.
+ * the same place on another service), without a row that has no point on the map, each row and
+ * each thing once (two rows of one group are one place on two services: the first is kept).
  */
 export function pickNearbyPlaces(
   cards: readonly TPinakesCard[],
   self: Pick<TPinakesCard, 'id'> & Partial<Pick<TPinakesCard, 'group'>>,
 ): TPinakesCard[] {
   const seen = new Set<string>([self.id]);
+  // The page's own group first: a row of it is the place itself
+  const seenGroups = new Set<string>(self.group?.id != null ? [self.group.id] : []);
   const picked: TPinakesCard[] = [];
   for (const card of cards) {
-    const isSelf = self.group?.id != null && card.group?.id === self.group.id;
-    if (seen.has(card.id) || isSelf || !getMapPoint(card.point)) continue;
+    const group = card.group?.id ?? null;
+    if (seen.has(card.id) || (group !== null && seenGroups.has(group)) || !getMapPoint(card.point)) continue;
     seen.add(card.id);
+    if (group !== null) seenGroups.add(group);
     picked.push(card);
   }
   return picked.slice(0, RESOURCE_NEARBY_SHOWN);

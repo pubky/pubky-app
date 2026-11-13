@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PWA_STANDALONE_MEDIA_QUERY } from '@/config/pwa';
-import { isAndroidIntentDevice, isAppBadgeSupported, isIosDevice, isStandaloneDisplayMode } from './platform';
+import {
+  isAndroidDevice,
+  isAndroidIntentDevice,
+  isAppBadgeSupported,
+  isIosDevice,
+  isStandaloneDisplayMode,
+} from './platform';
 
 const definedNavigatorKeys = new Set<string>();
 
@@ -64,6 +70,22 @@ describe('platform', () => {
         maxTouchPoints: 0,
       });
       expect(isIosDevice()).toBe(false);
+    });
+  });
+
+  describe('isAndroidDevice', () => {
+    it('is any Android browser, Firefox too', () => {
+      defineNavigator({ userAgent: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/140.0 Mobile' });
+      expect(isAndroidDevice()).toBe(true);
+      defineNavigator({ userAgent: 'Mozilla/5.0 (Android 15; Mobile; rv:136.0) Gecko/136.0 Firefox/136.0' });
+      expect(isAndroidDevice()).toBe(true);
+    });
+
+    it('is no iPhone and no desktop, with or without a touch screen', () => {
+      defineNavigator({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15' });
+      expect(isAndroidDevice()).toBe(false);
+      defineNavigator({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0' });
+      expect(isAndroidDevice()).toBe(false);
     });
   });
 

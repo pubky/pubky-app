@@ -17,8 +17,11 @@ interface ResourceSectionProps {
   message?: string | null;
   /** Rows to show as skeletons while the list is read; nothing is loading when `0` or absent. */
   loadingRows?: number;
-  /** A toggle under the rows, in the sidebar card's footer button (`SidebarSection`): "Show N more". */
-  footer?: { icon: LucideIcon; text: string; onClick: () => void; expanded: boolean };
+  /**
+   * A button under the rows, in the sidebar card's footer (`SidebarSection`): a toggle of rows held
+   * back ("Show N more", with `expanded`), or an action that is none (reading more, trying again).
+   */
+  footer?: { icon: LucideIcon; text: string; onClick: () => void; expanded?: boolean };
   testId: string;
 }
 
@@ -51,7 +54,7 @@ export function ResourceSection({
         onFooterClick={footer?.onClick}
         footerTestId={footer ? `${testId}-toggle` : undefined}
         footerExpanded={footer?.expanded}
-        footerControls={footer ? listId : undefined}
+        footerControls={footer?.expanded !== undefined ? listId : undefined}
       >
         {description && (
           <Typography size="sm" className="font-normal text-muted-foreground">
