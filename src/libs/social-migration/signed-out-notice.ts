@@ -6,8 +6,8 @@ import { z } from 'zod';
  * `RouteGuardProvider` routes the signed-out tab to the explanation from every page but sign-in,
  * logout and the legal ones: the cut-over worker's takeover reloads a tab to its creation URL
  * (`/home`, say), not to the route the gate had moved it to (ADR-0021 amendment). Tab-scoped like
- * the mute sync cursors; cleared when the user leaves for sign-in or the homepage and when a gate
- * passes.
+ * the mute sync cursors; cleared when the user leaves the explanation (Sign in, Homepage, the header
+ * logo), when a gate's engine run passes, and by the guard once the tab is signed in.
  */
 const SIGNED_OUT_NOTICE_KEY = 'social-migration:signed-out';
 

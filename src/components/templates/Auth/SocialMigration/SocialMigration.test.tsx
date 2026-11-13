@@ -193,6 +193,7 @@ describe('SocialMigration', () => {
     mocks.authState.restoreStatus = 'temporary-error';
     writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
     render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: "We couldn't reach your homeserver" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
     expect(sessionStorage.getItem('social-migration:signed-out')).toBeNull();
     expect(mocks.push).toHaveBeenCalledExactlyOnceWith('/');

@@ -24,7 +24,10 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isShopReauthorization, shopSignInReturn } from '@/libs/shop-embed/bridge';
-import { readSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
+import {
+  clearSocialMigrationSignedOutNotice,
+  readSocialMigrationSignedOutNotice,
+} from '@/libs/social-migration/signed-out-notice';
 import { toast } from '@/molecules/Toaster/toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -62,8 +65,10 @@ interface RouteGuardProviderProps {
  * - AUTHENTICATED users → app routes (feed, profile, etc.)
  * - NEEDS_PROFILE_CREATION users → profile creation route
  * - NEEDS_SOCIAL_MIGRATION users → the migration gate, the public routes included (ADR-0026)
- * - a signed-out tab whose gate sign-out explanation is still owed → `/migration` from every route but
- *   `SOCIAL_MIGRATION_SIGNED_OUT_ROUTES` (ADR-0026 amendment of 2026-11-13)
+ *
+ * Outside that map, a signed-out tab whose gate sign-out explanation is still owed (`signed-out-notice.ts`) is sent
+ * to `/migration` from every route but `SOCIAL_MIGRATION_SIGNED_OUT_ROUTES`, and a signed-in tab drops a notice it
+ * still holds (ADR-0026 amendment of 2026-11-13).
  */
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const router = useRouter();
@@ -298,6 +303,14 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       router.push(keepsQuery ? `${redirectTo}?${search}` : redirectTo);
     }
   }, [status, pathname, search, router, isLoading, isRouteAccessible, isGated, owesSignedOutExplanation]);
+
+  // A signed-in account owes no explanation. A notice survives when another tab of the profile signs in: the session
+  // syncs across and the gate passes on the local record or the flag, with no engine run to clear it; left alone it
+  // would send a later voluntary logout to the explanation with the wrong reason. The status is never AUTHENTICATED
+  // between the notice's write and the forced sign-out, so the gate's own notice is never dropped here.
+  useEffect(() => {
+    if (status === AuthStatus.AUTHENTICATED && signedOutNoticePending) clearSocialMigrationSignedOutNotice();
+  }, [status, signedOutNoticePending]);
 
   // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
   useRestoreLocksAuth();

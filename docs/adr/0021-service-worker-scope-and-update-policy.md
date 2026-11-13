@@ -53,7 +53,8 @@ depend on it.
 Accepted costs while the exception holds: in-progress composition in an old tab is lost (the composer persists no
 draft; deferring the reload for a dirty composer was declined on 2026-11-04); every later deploy also reloads open
 tabs without the consent toast; the new-build tab that
-triggered the install reloads too (it sits at the sign-in or migration gate, so nothing is lost); discovery
+triggered the install reloads too (it sits at the sign-in or migration gate, which the second boot reaches again on
+any route, so nothing is lost); discovery
 still depends on the browser's `sw.js` check (immediate on any navigation, within
 `SW_UPDATE_CHECK_MIN_INTERVAL_MS` of a tab becoming visible, at most 24 h), so a tab that never triggers a
 check keeps writing 0.x until it does; no worker means no effect (dev without `SERWIST_DEV`, a rejected

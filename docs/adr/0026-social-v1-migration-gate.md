@@ -132,20 +132,25 @@ on a production build, `qa/restore-reauth-bounce/`). QA-4 Part C had triggered t
 **Decision.** While the notice is pending, a signed-out tab owes the explanation on every route: `RouteGuardProvider`
 sends a settled `UNAUTHENTICATED` tab whose notice is set to `/migration` from every route but
 `SOCIAL_MIGRATION_SIGNED_OUT_ROUTES` (`src/app/routes.ts`: the gate's own routes `/migration`, `/logout` and the legal
-pages, plus `/sign-in`, the way out; `/copyright` is not among them, as it is not among the gate's), the public and
-dynamic public routes included (the check runs before their early returns, like the gate redirect). A retained account
-whose restore failed (`reauth-required`, `temporary-error`) counts as signed out here too: `/migration` shows the
-notice's reason on its failed-restore screen already. The redirect is `router.replace`: the user never chose the route
-the worker reloaded the tab onto, and a `push` would leave a Back entry that only redirects again. The notice is read
-with `useSyncExternalStore` on every render (`false` on the server and while React hydrates, the `useIsHydrated`
-pattern), so the decision is never a render stale: an effect-backed state was one render behind and sent the Homepage
-click straight back, and a plain render-time read is a call the React Compiler memoizes. Every way out of the
-explanation settles the notice: Sign in cleared it already, Homepage clears it now before it navigates to `/`, on the
-signed-out and the failed-restore screens. The held account's failed-sign-out screen keeps it: the guard sends that tab
-back to the gate anyway, and the sign-out that follows its Retry still owes the reason. Any other auth status ignores
-the notice: a signed-in account owes nothing (an engine run's pass clears it; a restore that passes on the trusted local
-record leaves it, see _Neutral_), and the gate itself handles a held one. The notice stays in `sessionStorage`
-(tab-scoped), `src/sw.ts` and the controller's reauth path are unchanged.
+pages, plus `/sign-in`, the way out; the legal pages are listed to mirror the gate's set, since they and `/copyright`
+render outside the guard, `AppShell`), the public and dynamic public routes included (the check runs before their early
+returns, like the gate redirect). A retained account whose restore failed (`reauth-required`, `temporary-error`) counts
+as signed out here too: `/migration` shows the notice's reason on its failed-restore screen already. The redirect is
+`router.replace`: the user never chose the route the worker reloaded the tab onto, and a `push` would leave a Back
+entry that only redirects again. The notice is read with `useSyncExternalStore` on every render (`false` on the server
+and while React hydrates, the `useIsHydrated` pattern), so the decision is never a render stale: an effect-backed state
+was one render behind and sent the Homepage click straight back, and a plain render-time read is a call the React
+Compiler memoizes. Every way out of the explanation settles the notice: Sign in cleared it already; Homepage clears it
+now before it navigates to `/`, on the signed-out and the failed-restore screens; and the header logo, which links to
+`/` from `/migration`, clears it for a signed-out tab (`Header`, keyed on the auth status). The held account's
+failed-sign-out screen and its logo keep it: the guard sends that tab back to the gate anyway, and the sign-out that
+follows its Retry still owes the reason. A signed-in account owes nothing: the guard clears a notice it still finds
+while the status is `AUTHENTICATED`, because the notice survives when another tab of the profile signs in (the session
+syncs across and the gate passes on the local record or the flag, with no engine run to clear it) and would otherwise
+send a later voluntary logout to the explanation with the wrong reason; the status is never `AUTHENTICATED` between the
+notice's write and the forced sign-out, so the gate's own notice is never dropped by it. A held account is the gate's
+own business. The notice stays in `sessionStorage` (tab-scoped), `src/sw.ts` and the controller's reauth path are
+unchanged.
 
 **Consequences.** The explanation survives the takeover reload and a user reload at any route. A tab that was opened on
 `/home` and reloaded by the worker loses its in-app place once per deploy while the ADR-0021 exception holds (the
@@ -181,12 +186,6 @@ the profile explains the sign-out (today other tabs are signed out by the shared
 - A restore whose SDK exchange settles after the 12 s UI deadline (`temporary-error`, pubky/pubky-app#3126) re-enters
   `restorePersistedSession` on its own, so the late session still passes `ensureMigrated` before `init` and a gate
   sign-out still ends as `social-migration`; nothing places a late session directly.
-- A restore that passes on the trusted local record does not clear a pending notice (only an engine run's pass and the
-  explanation's own buttons do). A tab holding a notice becomes signed in without visiting the explanation only when
-  another tab of the profile signs in and the shared auth store syncs the session across; a later voluntary logout in
-  that tab would then land on the explanation once, until Homepage or Sign in clears it. Left as is: rare, one click,
-  and the alternative (clearing on every `AUTHENTICATED` render, or on every trusted-record pass) is the maintainer's
-  call.
 
 ## Alternatives Considered
 

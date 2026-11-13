@@ -162,7 +162,8 @@ export const NEEDS_SOCIAL_MIGRATION_ROUTES = {
 /**
  * Where a signed-out tab may stay while the gate's sign-out explanation is still owed (its tab-scoped notice is
  * pending, ADR-0026 amendment of 2026-11-13): the gate's own routes and sign-in, the way out of the explanation.
- * `RouteGuardProvider` sends the tab back to `/migration` from every other route, the public ones included.
+ * `RouteGuardProvider` sends the tab back to `/migration` from every other route, the public ones included. The
+ * legal pages are listed to mirror the gate's set; like `/copyright`, they render outside the guard (`AppShell`).
  */
 export const SOCIAL_MIGRATION_SIGNED_OUT_ROUTES: string[] = [
   ...NEEDS_SOCIAL_MIGRATION_ROUTES.allowedRoutes,

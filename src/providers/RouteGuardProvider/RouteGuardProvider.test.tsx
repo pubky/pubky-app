@@ -864,6 +864,7 @@ describe('RouteGuardProvider — signed-out notice of the migration gate', () =>
     },
   );
 
+  // The route set is pinned as a whole: in production the legal pages render outside the guard (`AppShell`)
   it.each(['/migration', '/sign-in', '/logout', '/terms-of-use', '/privacy-policy'])(
     'leaves the tab on %s: the gate routes and the way out of the explanation',
     (pathname) => {
@@ -915,7 +916,9 @@ describe('RouteGuardProvider — signed-out notice of the migration gate', () =>
     expect(mocks.mockRouterPush).not.toHaveBeenCalled();
   });
 
-  it('ignores a stale notice once the account is signed in', () => {
+  // A notice another tab's sign-in left behind (the session synced across and the gate passed on the record or the
+  // flag, so no engine run cleared it) would otherwise hijack a later logout with the wrong explanation
+  it('clears a stale notice once the account is signed in', () => {
     writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
     mocks.status = 'AUTHENTICATED';
     mocks.session = {};
@@ -925,6 +928,7 @@ describe('RouteGuardProvider — signed-out notice of the migration gate', () =>
     expect(screen.getByText('Feed')).toBeInTheDocument();
     expect(mocks.mockRouterReplace).not.toHaveBeenCalled();
     expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem('social-migration:signed-out')).toBeNull();
   });
 
   it('waits for the auth status to settle before routing the tab', () => {
