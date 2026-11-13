@@ -72,6 +72,23 @@ export function toEventInstance(
 }
 
 /**
+ * Whether a resource read says an event's times and place as its search row does: the same start
+ * and end (as moments, however spelled) and the same point. A read kept from before the event
+ * changed does not: its details (time zone, venue, status) are of the event as it was.
+ */
+export function hasSameTimesAndPlace(
+  card: Pick<TPinakesCard, 'start' | 'end' | 'point'>,
+  details: Pick<TPinakesCard, 'start' | 'end' | 'point'>,
+): boolean {
+  return (
+    parseTime(card.start) === parseTime(details.start) &&
+    parseTime(card.end) === parseTime(details.end) &&
+    (card.point?.lat ?? null) === (details.point?.lat ?? null) &&
+    (card.point?.lon ?? null) === (details.point?.lon ?? null)
+  );
+}
+
+/**
  * What to say about an event that is not going ahead as planned: Pinakes' lifecycle values in
  * words, any other status as the source wrote it (through `formatOther`, for a surface that says
  * what such a value is). `null` for `scheduled` or no status.

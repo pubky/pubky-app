@@ -1,6 +1,6 @@
 import { withNormalizedCredits } from '@/pipes/pinakes/pinakes.credits';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
-import { type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
+import { hasSameTimesAndPlace, type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
 import { buildResourceSearchParams, type TResourceQuery } from '@/pipes/resource/resource.search';
 import { PinakesService } from '@/services/pinakes/pinakes';
 import type {
@@ -85,14 +85,21 @@ export class PinakesApplication {
    * details (time zone, venue, status), from the cache when a card of it was read before; a read
    * that fails leaves the row as the search gave it. An occurrence is never read: a read by its
    * link answers its calendar, not the instance.
+   *
+   * The row is what the search says now; the cache may hold the event's read from before it
+   * changed. Details that say another time or place than the row (`hasSameTimesAndPlace`) are read
+   * again past the cache, once, so the row never shows the venue, zone or status of the event as
+   * it was. What the row itself says (name, times, point) is always the row's.
    */
   static async fetchEventInstances(cards: readonly TPinakesCard[]): Promise<TEventInstance[]> {
     return Promise.all(
       cards.map(async (card) => {
         if (card.occurrence) return toEventInstance(card, null);
         // The error is reported by its factory; the row stays
-        const details = await this.fetchCardByUri(card.uri).catch(() => null);
-        return toEventInstance(card, details);
+        const read = (options?: { fresh: boolean }) => this.fetchCardByUri(card.uri, options).catch(() => null);
+        const details = await read();
+        const isEarlier = details?.id === card.id && !hasSameTimesAndPlace(card, details);
+        return toEventInstance(card, isEarlier ? await read({ fresh: true }) : details);
       }),
     );
   }

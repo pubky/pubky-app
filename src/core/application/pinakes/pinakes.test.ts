@@ -231,7 +231,8 @@ describe('PinakesApplication.fetchOccurrences', () => {
 describe('PinakesApplication.fetchEventInstances', () => {
   const ROWS: TPinakesCard[] = eventsFixture.items;
   const CONCERT = ROWS.find((card) => card.name === 'Annett Louisan @ Volkshaus')!;
-  const concertDetails: TPinakesResourceDetail = { ...eventFixture, id: CONCERT.id, uri: CONCERT.uri };
+  // The concert's own read: what its row says, with the details only a read has
+  const concertDetails: TPinakesResourceDetail = { ...eventFixture, ...CONCERT };
 
   afterEach(() => vi.mocked(PinakesService.fetchCardByUri).mockReset());
 
@@ -258,5 +259,83 @@ describe('PinakesApplication.fetchEventInstances', () => {
     const instances = await PinakesApplication.fetchEventInstances([CONCERT]);
 
     expect(instances).toEqual([CONCERT]);
+  });
+
+  describe('details kept from before the event changed (the cache holds a card five minutes)', () => {
+    // The row as the search gives it now: the concert moved to another day and hall
+    const MOVED: TPinakesCard = {
+      ...CONCERT,
+      start: '2026-11-17T19:00:00Z',
+      end: '2026-11-17T23:00:00Z',
+      point: { lat: 47.3712, lon: 8.5363 },
+    };
+    const before: TPinakesResourceDetail = {
+      ...concertDetails,
+      venue: { name: 'Volkshaus' },
+      event_status: 'scheduled',
+    };
+    const now: TPinakesResourceDetail = {
+      ...concertDetails,
+      ...MOVED,
+      tz: 'Europe/Zurich',
+      venue: { name: 'Kaufleuten' },
+      event_status: 'rescheduled',
+    };
+    const readsOf = () => vi.mocked(PinakesService.fetchCardByUri).mock.calls;
+
+    it('reads them again past the cache when they say another time or place than the row, and takes those', async () => {
+      vi.mocked(PinakesService.fetchCardByUri).mockImplementation(async (_uri, options) =>
+        options?.fresh ? now : before,
+      );
+
+      const [instance] = await PinakesApplication.fetchEventInstances([MOVED]);
+
+      expect(readsOf()).toEqual([
+        [MOVED.uri, undefined],
+        [MOVED.uri, { fresh: true }],
+      ]);
+      expect(instance).toMatchObject({
+        start: MOVED.start,
+        end: MOVED.end,
+        point: MOVED.point,
+        tz: 'Europe/Zurich',
+        venue: { name: 'Kaufleuten' },
+        event_status: 'rescheduled',
+      });
+    });
+
+    it('keeps the row as the search gave it when they cannot be read again: never the earlier venue or status', async () => {
+      vi.mocked(PinakesService.fetchCardByUri).mockImplementation(async (_uri, options) => {
+        if (options?.fresh) throw new Error('down');
+        return before;
+      });
+
+      await expect(PinakesApplication.fetchEventInstances([MOVED])).resolves.toEqual([MOVED]);
+    });
+
+    it('reads once more only: a read that still differs (the row is the earlier one) gives its details to the row’s own times', async () => {
+      vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue(now);
+
+      const [instance] = await PinakesApplication.fetchEventInstances([CONCERT]);
+
+      expect(readsOf()).toHaveLength(2);
+      expect(instance).toMatchObject({ start: CONCERT.start, point: CONCERT.point, event_status: 'rescheduled' });
+    });
+
+    it('reads details that say what the row says once, from the cache', async () => {
+      vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue(now);
+
+      const [instance] = await PinakesApplication.fetchEventInstances([MOVED]);
+
+      expect(readsOf()).toEqual([[MOVED.uri, undefined]]);
+      expect(instance.venue?.name).toBe('Kaufleuten');
+    });
+
+    it('never reads again for a link that answers another resource: its details are not the row’s', async () => {
+      vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue({ ...before, id: 'another' });
+
+      await expect(PinakesApplication.fetchEventInstances([MOVED])).resolves.toEqual([MOVED]);
+      expect(readsOf()).toHaveLength(1);
+    });
   });
 });
