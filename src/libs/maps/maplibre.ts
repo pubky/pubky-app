@@ -24,8 +24,9 @@ export function loadMapLibrary(): Promise<TMapLibrary> {
 
 /**
  * How every request of a map (style, tiles, fonts, sprites) is sent: without cookies or any other
- * credential, and without a referrer, so the tile host learns neither who looks nor from which
- * page. The address is sent as the style gives it: nothing is added to it.
+ * credential, and without a referrer, so the tile host is told neither an account nor the page the
+ * map is on. It still sees what any web request shows (the IP address, the browser). The address
+ * is sent as the style gives it: nothing is added to it.
  *
  * MapLibre hands `credentials` to `Request` as it is, but its type names only `same-origin` and
  * `include`: `omit` is set past it (`Object.assign` keeps the type's own two values).

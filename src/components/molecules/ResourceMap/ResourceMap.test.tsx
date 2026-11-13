@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResourceMap } from './ResourceMap';
 
 type TFakeMapOptions = {
@@ -35,9 +35,17 @@ const mocks = vi.hoisted(() => {
     listeners = new Map<string, ((event?: unknown) => void)[]>();
     removed = false;
     fitted: unknown[] = [];
+    canvas = document.createElement('canvas');
     constructor(public options: TFakeMapOptions) {
+      // As the library does: it marks the container and draws into it before WebGL may fail
+      options.container.classList.add('maplibregl-map');
+      this.canvas.tabIndex = 0;
+      options.container.appendChild(this.canvas);
       if (state.constructorError) throw state.constructorError;
       state.maps.push(this);
+    }
+    getCanvas() {
+      return this.canvas;
     }
     on(type: string, listener: (event?: unknown) => void) {
       this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
@@ -120,6 +128,10 @@ describe('ResourceMap', () => {
     mocks.state.importError = null;
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('visibility gate', () => {
     it('loads nothing while the map is off screen: no library, no map, no credit', async () => {
       const importsBefore = mocks.state.imports;
@@ -149,6 +161,27 @@ describe('ResourceMap', () => {
       // The library is told where its worker file is, once
       expect(mocks.state.setWorkerUrl).toHaveBeenCalledTimes(1);
       expect(mocks.state.setWorkerUrl).toHaveBeenCalledWith(expect.stringContaining('maplibre-gl-worker.mjs'));
+    });
+  });
+
+  describe('layout', () => {
+    it('sizes the container the library draws into by its box, not by positioning the library’s stylesheet overrides', async () => {
+      mocks.state.isVisible = true;
+      renderMap();
+      await madeMap();
+
+      // `.maplibregl-map` sets `position: relative` outside any layer, which beats Tailwind's layered
+      // `absolute`: an `absolute inset-0` container collapses to no height and the map is not seen
+      const canvas = screen.getByTestId('resource-map-canvas');
+      expect(canvas).toHaveClass('size-full');
+      expect(canvas).not.toHaveClass('absolute');
+    });
+
+    it('keeps the library’s own overlays inside the map’s box, under the app’s menus and bars', () => {
+      renderMap();
+
+      // The library's gesture hint has a z-index far above the app's scale
+      expect(screen.getByTestId('resource-map')).toHaveClass('isolate');
     });
   });
 
@@ -240,6 +273,8 @@ describe('ResourceMap', () => {
 
       expect(canvas).not.toHaveAttribute('inert');
       expect(screen.queryByRole('button', { name: 'Interact with the map' })).toBeNull();
+      // The keyboard goes on to the map itself, not back to the top of the page
+      expect(map.getCanvas()).toHaveFocus();
     });
 
     it('asks for two fingers or a modifier key to move the map, so a tapped map does not trap the page’s scroll either', async () => {
@@ -293,6 +328,9 @@ describe('ResourceMap', () => {
       expect(screen.getByRole('button', { name: 'Open in Maps' })).toBeInTheDocument();
       expect(screen.queryByTestId('resource-map-attribution')).toBeNull();
       expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'failed');
+      // What the library left in the container before it failed is gone
+      expect(screen.getByTestId('resource-map-canvas')).toBeEmptyDOMElement();
+      expect(screen.getByTestId('resource-map-canvas')).not.toHaveClass('maplibregl-map');
     });
 
     it('falls back when the style or a tile fails before the map is drawn, and removes the map', async () => {
@@ -303,6 +341,7 @@ describe('ResourceMap', () => {
       act(() => map.fire('error', { error: new Error('Failed to fetch') }));
 
       expect(screen.getByTestId('resource-map-fallback')).toBeInTheDocument();
+      await act(async () => {});
       expect(map.removed).toBe(true);
     });
 
@@ -318,15 +357,48 @@ describe('ResourceMap', () => {
       expect(map.removed).toBe(false);
     });
 
-    it('falls back when the browser loses the map’s WebGL context', async () => {
+    it('falls back when the browser loses the map’s WebGL context and does not give it back', async () => {
       mocks.state.isVisible = true;
       renderMap();
       const map = await madeMap();
       act(() => map.fire('load'));
+      vi.useFakeTimers();
 
       act(() => map.fire('webglcontextlost'));
+      expect(screen.queryByTestId('resource-map-fallback')).toBeNull();
+      await act(async () => vi.advanceTimersByTime(3000));
 
       expect(screen.getByTestId('resource-map-fallback')).toBeInTheDocument();
+      expect(map.removed).toBe(true);
+    });
+
+    it('keeps the map when the context comes back, as it does when the library restarts its workers', async () => {
+      mocks.state.isVisible = true;
+      renderMap();
+      const map = await madeMap();
+      act(() => map.fire('load'));
+      vi.useFakeTimers();
+
+      act(() => map.fire('webglcontextlost'));
+      act(() => map.fire('webglcontextrestored'));
+      await act(async () => vi.advanceTimersByTime(10_000));
+
+      expect(screen.queryByTestId('resource-map-fallback')).toBeNull();
+      expect(map.removed).toBe(false);
+    });
+
+    it('removes a failed map only after the library has finished telling of the failure', async () => {
+      mocks.state.isVisible = true;
+      renderMap();
+      const map = await madeMap();
+      let removedWhileTelling: boolean | null = null;
+      map.on('error', () => {
+        removedWhileTelling = map.removed;
+      });
+
+      await act(async () => map.fire('error', { error: new Error('Failed to fetch') }));
+
+      expect(removedWhileTelling).toBe(false);
       expect(map.removed).toBe(true);
     });
 
@@ -423,6 +495,8 @@ describe('ResourceMap', () => {
       expect(map.fitted).toHaveLength(1);
       expect(map.fitted[0]).toEqual([[8.53, 47.36, 8.55, 47.38], expect.objectContaining({ maxZoom: 16 })]);
       expect(onSelect).not.toHaveBeenCalled();
+      // The pin pressed is about to be replaced by the ones it stood for: the keyboard stays on the map
+      expect(map.getCanvas()).toHaveFocus();
 
       fireEvent.click(screen.getByRole('button', { name: '2 results here' }));
       expect(onSelect).toHaveBeenCalledWith('stacked');
