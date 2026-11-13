@@ -113,6 +113,17 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
   });
 
+  it('drops the placeholder over a plain audio file mounted anew whose file fails to load', () => {
+    const file = getPlayerTarget('https://example.com/episode.mp3')!;
+    const onLoaded = vi.fn();
+    render(<ResourcePlayerFrame target={file} title="Episode 1" load="ready" onLoaded={onLoaded} />);
+    expect(screen.getByTestId('resource-player-placeholder')).toBeInTheDocument();
+
+    act(() => screen.getByTestId('resource-player-audio').dispatchEvent(new Event('error')));
+    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+    expect(onLoaded).not.toHaveBeenCalled();
+  });
+
   it('rounds its corners as the services do, and shows its own background only until the player has loaded', () => {
     const { rerender } = render(
       <ResourcePlayerFrame target={TIDAL} title="Kind of Blue" load="loading" onLoaded={() => {}} />,

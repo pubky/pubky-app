@@ -211,6 +211,8 @@ export function ResourcePlayerFrame({
               onLoaded();
               setLoadedRound(round);
             }}
+            // A file that fails shows the browser's own controls, not a placeholder that never ends.
+            onError={() => setLoadedRound(round)}
             className="absolute inset-0 size-full"
             data-testid="resource-player-audio"
           />
