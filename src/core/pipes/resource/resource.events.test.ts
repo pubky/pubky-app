@@ -8,7 +8,6 @@ import {
   getOccurrencesWindowStart,
   getResourceInstanceKey,
   groupEventsByDay,
-  isWholeDaySpan,
   mergeResourceInstances,
   toEventInstance,
 } from './resource.events';
@@ -57,23 +56,6 @@ describe('mergeResourceInstances', () => {
   });
 });
 
-describe('isWholeDaySpan', () => {
-  it('is a span from one UTC midnight to a later one, as Pinakes writes a calendar’s all-day dates', () => {
-    expect(isWholeDaySpan('2026-11-15T00:00:00Z', '2026-11-16T00:00:00Z')).toBe(true);
-    expect(isWholeDaySpan('2026-12-24T00:00:00Z', '2026-12-27T00:00:00Z')).toBe(true);
-  });
-
-  it.each([
-    ['a timed event', '2026-11-16T19:00:00Z', '2026-11-16T23:00:00Z'],
-    ['a start at midnight that ends within the day', '2026-11-16T00:00:00Z', '2026-11-16T02:00:00Z'],
-    ['no end', '2026-11-16T00:00:00Z', null],
-    ['an end that is not after the start', '2026-11-16T00:00:00Z', '2026-11-16T00:00:00Z'],
-    ['a start that is no time', 'soon', '2026-11-16T00:00:00Z'],
-  ])('is not %s', (_name, start, end) => {
-    expect(isWholeDaySpan(start, end)).toBe(false);
-  });
-});
-
 describe('toEventInstance', () => {
   it('keeps an occurrence as its own row: its name, dates and lifecycle, never its feed’s details', () => {
     const [holiday] = HOLIDAYS;
@@ -93,8 +75,9 @@ describe('toEventInstance', () => {
     expect(instance.start).toBe('2026-11-15T00:00:00Z');
     expect(instance.event_status).toBe('cancelled');
     expect(instance.tz).toBeUndefined();
-    // Midnight to midnight in UTC: shown as its day, not as a time
-    expect(instance.all_day).toBe(true);
+    // Midnight to midnight in UTC is what a timed event of a day can be too: nothing says all-day,
+    // so nothing is made of it
+    expect(instance).not.toHaveProperty('all_day');
     expect(instance.occurrence?.uid).toBe('20261115_4a5h1g1v51192choc0393644vc@google.com');
   });
 

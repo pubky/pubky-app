@@ -292,8 +292,8 @@ function createDateFormat(locale: string | undefined, options: Intl.DateTimeForm
 /**
  * When an event happens, in the viewer's locale: in the event's time zone when the card has `tz`,
  * else in UTC (a search row and a calendar occurrence say no zone), always with the zone's name.
- * Never in the viewer's own zone, which would show another time without saying whose. All-day
- * events show dates only, read in UTC with `end`
+ * Never in the viewer's own zone, which would show another time without saying whose. Events the
+ * card says are `all_day` (never inferred from their times) show dates only, read in UTC with `end`
  * exclusive, as Pinakes encodes calendar occurrences (`00:00Z` → next day's `00:00Z`), so a
  * one-day event shows its date alone. `null` without a valid `start`.
  *
