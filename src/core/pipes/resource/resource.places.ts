@@ -1,4 +1,4 @@
-import { RESOURCE_NEARBY_RADIUS_KM, RESOURCE_NEARBY_SHOWN } from '@/config/pinakes';
+import { RESOURCE_NEARBY_RADIUS_KM, RESOURCE_NEARBY_SHOWN } from '@/config/maps';
 import type { TPinakesCard, TPinakesPoint } from '@/services/pinakes/pinakes.types';
 import type { TResourceQuery } from './resource.search';
 

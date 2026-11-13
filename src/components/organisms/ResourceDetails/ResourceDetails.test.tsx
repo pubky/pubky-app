@@ -170,6 +170,11 @@ vi.mock('./ResourceReplies', () => ({
   ),
 }));
 
+// Nearby reads the places around a place (its own test covers it): here, that the page asks for it
+vi.mock('./ResourceNearby', () => ({
+  ResourceNearby: ({ card }: { card: { id: string } }) => <div data-testid="resource-nearby-stub" data-id={card.id} />,
+}));
+
 const VIDEO: TPinakesResourceDetail = videoFixture;
 /** The same video without its tracks on Spotify, Deezer and TIDAL. */
 const ORDINARY_VIDEO: TPinakesResourceDetail = {
@@ -536,6 +541,17 @@ describe('ResourceDetails', () => {
         'href',
         'https://www.openstreetmap.org/copyright',
       );
+    });
+
+    it('puts Nearby for the page’s card between the card and the thread', () => {
+      read = settled(placeFixture);
+      renderDetails(placeFixture.uri);
+
+      const nearby = screen.getByTestId('resource-nearby-stub');
+      expect(nearby).toHaveAttribute('data-id', placeFixture.id);
+      const order = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+      expect(order(screen.getByTestId('resource-card'), nearby)).toBeTruthy();
+      expect(order(nearby, screen.getByTestId('resource-replies-stub'))).toBeTruthy();
     });
 
     it('lists no map data on the page of a resource OpenStreetMap does not credit', () => {
@@ -1011,6 +1027,13 @@ describe('ResourceDetails', () => {
       renderDetails(NOT_KNOWN);
 
       expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
+    });
+
+    it('has no Nearby: nothing says where an unknown link is', () => {
+      read = settled(null);
+      renderDetails(NOT_KNOWN);
+
+      expect(screen.queryByTestId('resource-nearby-stub')).toBeNull();
     });
 
     it('shows the posts replying to it under the link', () => {
