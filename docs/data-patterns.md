@@ -478,6 +478,38 @@ collection item) goes to every spelling holding it.
   `src/libs/post/externalParent.ts`) and is disabled otherwise. Locally `replied` stays `null`; like Nexus, it is
   listed only in `author_replies` and counted as a reply (no timeline, author stream or post thread).
 
+**Places and events (maps, agenda, dates).** A place's or an event's card shows where it is with `ResourceLocation`
+(`src/components/molecules/ResourceMap/`): a map of its `point` when that is on the map (`getMapPoint`), else, with
+only an address, one line; an event that names neither (an online one, a venue known by name alone) gets no map and
+no destination. "Open in Maps" (`ResourceMapsMenu`) is on every one of these surfaces: the map's corner, the line's
+end, a selected pin's card. Maps are MapLibre GL on OpenFreeMap's tiles (`@/config/maps`), with these rules:
+
+- Nothing loads before a map is on screen (`ResourceMap`: no library, no tile), and the map is removed when it leaves
+  the screen or its card goes away, so a feed never holds one WebGL context per card. A viewer with platform embeds up
+  front off gets "Show map" first. Every request goes out without credentials or a referrer (`toPrivateMapRequest`),
+  and nothing of the resource or the viewer is put into a tile address or an "Open in Maps" link.
+- The library, its stylesheet and its worker file are one lazily imported unit (`src/libs/maps/maplibre.runtime.ts`),
+  kept out of the service worker's precache (`docs/pwa.md`, _Precache diet_).
+- A card's map is inert until tapped; any map asks for two fingers or a modifier key, so the page's scroll never stops
+  on it. Without WebGL, or when the style or first tiles fail, the map says so and keeps "Open in Maps".
+- The resource page of a place lists Nearby (`ResourceController.fetchNearbyPlaces`: `near` + `radius`, nearest
+  first, one more row asked than shown, never the place itself) as real cards; those cards and a selected pin's say
+  where they are on a line (`ResourceLocationProvider` `row`) instead of drawing one more map each.
+- A calendar's occurrences are search rows that share the calendar's `id`, `uri` and `refs`. They are told apart by
+  `getResourceInstanceKey` (`uid`, `recurrence_id`, `start`) and never merged or read by their link (that read answers
+  the calendar): the search hook keeps them with `cards: true`, `useEventInstances` reads details only for events that
+  are no occurrence, and `ResourceInstanceCard` renders a row from its own card. A list of links (`uris`) cannot carry
+  them, so the agenda (`SearchEventAgenda`) and the results map (`SearchResourceMap`) read `cards`.
+- `GET /v1/resources/{id}/occurrences` takes RFC 3339 times only (`getOccurrencesWindowStart`; the search's `now` is a
+  400 there), and every page of one list is asked with the first page's `from` (`useResourceOccurrences`).
+- Times show in the event's own `tz`, else in UTC, always with the zone's name; days are grouped the same way
+  (`getEventDayKey`), never in the viewer's zone. A search row says no `all_day`: a span from one UTC midnight to a
+  later one shows as its day (`isWholeDaySpan`). Pinakes sends no recurrence rule, so none is worded; "Repeats" shows
+  only for an occurrence with a `recurrence_id`. Search has no status parameter: an event's lifecycle is shown from
+  its `occurrence.status` or `event_status`, never filtered.
+- The results map groups pins in the browser over the rows read so far (`clusterMapPoints`) and says how many rows it
+  shows and how many have no location; it never searches the area in view.
+
 ## Quick Checklist
 
 When working with data:
