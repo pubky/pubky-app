@@ -286,17 +286,16 @@ function createDateFormat(locale: string | undefined, options: Intl.DateTimeForm
   try {
     return new Intl.DateTimeFormat(locale, options);
   } catch {
-    // An unknown IANA zone is a RangeError: show the time in the viewer's own zone instead.
-    const inViewerZone = { ...options };
-    delete inViewerZone.timeZone;
-    delete inViewerZone.timeZoneName;
-    return new Intl.DateTimeFormat(locale, inViewerZone);
+    // An unknown IANA zone is a RangeError: show the time in UTC instead, named as any zone is.
+    return new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' });
   }
 }
 
 /**
- * When an event happens, in the viewer's locale: in the event's time zone with its name when the
- * card has `tz`, else in the viewer's zone. All-day events show dates only, read in UTC with `end`
+ * When an event happens, in the viewer's locale: in the event's time zone when the card has `tz`,
+ * else in UTC (a search row and a calendar occurrence say no zone), always with the zone's name.
+ * Never in the viewer's own zone, which would show another time without saying whose. All-day
+ * events show dates only, read in UTC with `end`
  * exclusive, as Pinakes encodes calendar occurrences (`00:00Z` → next day's `00:00Z`), so a
  * one-day event shows its date alone. `null` without a valid `start`.
  *
@@ -323,7 +322,8 @@ export function formatResourceDates(
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-    ...(card.tz ? { timeZone: card.tz, timeZoneName: 'short' } : {}),
+    timeZone: card.tz || 'UTC',
+    timeZoneName: 'short',
   });
   if (!end || end.getTime() <= start.getTime()) return format.format(start);
   return format.formatRange(start, end);

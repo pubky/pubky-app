@@ -11,6 +11,7 @@ import natureFixture from '@/services/pinakes/fixtures/by-uri.nature-article.jso
 import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
+import occurrencesFixture from '@/services/pinakes/fixtures/occurrences.holidays.json';
 import becauseFixture from '@/services/pinakes/fixtures/search.related.because.json';
 import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import type { TPinakesCard, TPinakesGroupDetail, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -18,6 +19,19 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { SHARED_ON_PUBKY_NOTE } from './ResourceAlsoOnList.utils';
 import { ResourceSidebar } from './ResourceSidebar';
+
+const mocks = vi.hoisted(() => {
+  const none = {
+    cards: [] as TPinakesCard[],
+    isLoading: false,
+    isError: false,
+    hasMore: false,
+    isLoadingMore: false,
+    isMoreError: false,
+    loadMore: async () => {},
+  };
+  return { none, occurrences: none };
+});
 
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => true, PINAKES_RELATED_LIMIT: 5 }));
 vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({ usePinakesGroup: vi.fn() }));
@@ -30,6 +44,10 @@ vi.mock('./ResourceParticipants', () => ({
   ResourceParticipants: ({ uri, replyIds }: { uri: string; replyIds: string[] }) => (
     <div data-testid="participants-stub" data-uri={uri} data-replies={replyIds.join(' ')} />
   ),
+}));
+// A calendar's dates (their list has its own test): none unless a test gives some
+vi.mock('@/hooks/useResourceOccurrences/useResourceOccurrences', () => ({
+  useResourceOccurrences: () => mocks.occurrences,
 }));
 vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => ({ FeedbackCard: () => <div data-testid="feedback-stub" /> }));
 
@@ -49,12 +67,27 @@ describe('ResourceSidebar', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.occurrences = mocks.none;
     card = VIDEO;
     // The video's group; any other card has none here, and a hook asked without an ID reads nothing.
     mockGroup.mockImplementation((id) => (id === VIDEO.group!.id ? settled(GROUP) : settled(null)));
     mockRelated.mockReturnValue(settled(RELATED));
     // No link read: no row shows counts.
     mockRowCounts.mockReturnValue(null);
+  });
+
+  it('lists a calendar’s upcoming dates between Also on and Similar', () => {
+    mocks.occurrences = { ...mocks.none, cards: occurrencesFixture.items };
+    // A calendar feed's card, on other services and with similar links as the video is
+    render(<ResourceSidebar card={{ ...card, type: 'DataFeed' }} />);
+
+    const sidebar = screen.getByTestId('resource-sidebar');
+    expect([...sidebar.children].map((child) => child.getAttribute('data-testid'))).toEqual([
+      'resource-also-on-list',
+      'resource-occurrences',
+      'resource-similar-list',
+    ]);
+    expect(within(screen.getByTestId('resource-occurrences')).getAllByTestId('resource-occurrence')).toHaveLength(3);
   });
 
   it.each([undefined, null])('shows nothing without a card (%s)', (none) => {

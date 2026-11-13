@@ -24,3 +24,8 @@ export const MAP_DETAIL_ZOOM = 15;
 export const MAP_FIT_MAX_ZOOM = 16;
 /** The space kept around the points a map fits (px). */
 export const MAP_FIT_PADDING_PX = 48;
+
+/** Places a place's page lists under Nearby. */
+export const RESOURCE_NEARBY_SHOWN = 6;
+/** How far around a place its Nearby looks (km). */
+export const RESOURCE_NEARBY_RADIUS_KM = 2;
