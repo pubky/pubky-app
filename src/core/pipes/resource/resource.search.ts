@@ -169,14 +169,15 @@ export function hasCredentialLink(text: string): boolean {
   return text
     .replace(/[\t\n\r]/g, '')
     .split(/\s+/)
-    .some((token) =>
-      token
-        .split(LINK_START)
-        .slice(1)
-        // A username or password ends in `@` before the link's path, query or fragment; in a link held by
-        // another, `&` ends it too (the outer link's next parameter: `?url=https://a.org&text=@me`)
-        .some((rest, index) => rest.split(index > 0 ? /[/?#\\&]/ : /[/?#\\]/, 1)[0].includes('@')),
-    );
+    .some((token) => {
+      const [, ...links] = token.split(LINK_START);
+      return links.some((rest, index) => {
+        // A username or password ends in `@` before the link's path, query or fragment; in a link held in
+        // another link's query, `&` ends it too (the outer link's next parameter: `?url=https://a.org&text=@me`)
+        const inQuery = /\?[^#]*$/.test(links.slice(0, index).join(''));
+        return rest.split(inQuery ? /[/?#\\&]/ : /[/?#\\]/, 1)[0].includes('@');
+      });
+    });
 }
 
 /**
