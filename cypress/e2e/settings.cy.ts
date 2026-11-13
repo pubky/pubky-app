@@ -122,7 +122,7 @@ describe('settings', () => {
   });
 
   itMobile('can save changes to notification settings', () => {
-    // Create a new user; onboarding saves the recovery file under the profile name
+    // Create a new user; the seed tasks keep its key in memory under the profile name for this Cypress run
     cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings');
 
     const navigateToNotificationsPage = () => {
