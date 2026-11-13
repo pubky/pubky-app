@@ -1,10 +1,14 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { CalendarDays, List, type LucideIcon, Map as MapIcon, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import {
+  type TResourceResultsView,
+  useResourceResultsView,
+} from '@/hooks/useResourceResultsView/useResourceResultsView';
 import { RESOURCE_SEARCH_UNAVAILABLE, useResourceSearch } from '@/hooks/useResourceSearch/useResourceSearch';
 import { useResourceSearchFilters } from '@/hooks/useResourceSearchFilters/useResourceSearchFilters';
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
@@ -21,6 +25,8 @@ import { ResourceItem } from '@/molecules/ResourceCard/ResourceItem';
 import { SearchResultsEmpty } from '@/molecules/SearchResultsEmpty/SearchResultsEmpty';
 import { ResourceTimelineFeed } from '@/organisms/Timeline/Feed/ResourceTimelineFeed/ResourceTimelineFeed';
 import type { LayoutType } from '@/stores/home/home.types';
+import { SearchEventAgenda } from './SearchEventAgenda';
+import { SearchResourceMap } from './SearchResourceMap';
 
 /** Related tags offered at once. */
 const RELATED_TAGS_SHOWN = 8;
@@ -28,6 +34,12 @@ const RELATED_TAGS_SHOWN = 8;
 /** The app's secondary pill (`variant="outline"` on the page): a filter that is on, pressed to remove it. */
 const ACTIVE_FILTER_CLASS =
   'max-w-full min-w-0 border-foreground/30 bg-background text-foreground hover:border-foreground/50 hover:bg-background/60';
+
+/** The kinds whose results have a place: their search can be seen on a map; events list as an agenda. */
+const MAPPED_KINDS: Readonly<Record<string, { kind: 'event' | 'place'; list: string; icon: LucideIcon }>> = {
+  event: { kind: 'event', list: 'Agenda', icon: CalendarDays },
+  place: { kind: 'place', list: 'List', icon: List },
+};
 
 /**
  * SearchResourceResults
@@ -37,6 +49,11 @@ const ACTIVE_FILTER_CLASS =
  * `SearchResourceFilters`). Above the results: the person and the collection the search is narrowed
  * to (each removable), and the related tags, which narrow a tag search (every tag must match) or, on
  * a text search, start a tag search. A searched link's card goes on top.
+ *
+ * A search of Events lists as an agenda (`SearchEventAgenda`: by day, each calendar occurrence an
+ * event of its own), and a search of Events or Places can be seen on a map instead
+ * (`SearchResourceMap`), picked above the results and kept in the URL (`useResourceResultsView`).
+ * Every other search, a searched link and a feed keep the list.
  *
  * With `feed`, the same list for a feed's External resources (Home): the panel's filters on the
  * feed's search, under the feed's own `children` (the composer), with no related tags.
@@ -55,7 +72,10 @@ export function SearchResourceResults({
   const { setFilters } = useResourceSearchFilters();
   const { query, isPending, kindsFailed, retryKinds, kindsUnavailable, url, filters, searchedTags, narrowTags } =
     useSearchResourceQuery({ withKinds: true, feed });
-  const read = useResourceSearch(query, { facets: true });
+  const { view, setView } = useResourceResultsView();
+  // Events and Places of Search have an agenda and a map, which read the rows' own cards
+  const mapped = !feed && !url ? (MAPPED_KINDS[filters.kind ?? ''] ?? null) : null;
+  const read = useResourceSearch(query, { facets: true, ...(mapped ? { cards: true } : {}) });
   // Picked sub-kinds wait for the index's types: the list is loading, not empty; when those cannot be
   // read, they have nothing to search: the read's failure, with its retry
   const search = isPending
@@ -78,8 +98,34 @@ export function SearchResourceResults({
     filters.author && !url ? author?.name || formatPublicKey({ key: filters.author, length: 8 }) : null;
   const inCollection = url ? null : filters.inCollection;
 
+  const viewButton = (value: TResourceResultsView, label: string, Icon: LucideIcon) => (
+    <Button
+      type="button"
+      variant={view === value ? 'secondary' : 'ghost'}
+      size="sm"
+      aria-pressed={view === value}
+      onClick={() => setView(value)}
+      data-testid={`search-resource-view-${value}`}
+    >
+      <Icon aria-hidden="true" />
+      {label}
+    </Button>
+  );
+
   const controls = (
     <Container overrideDefaults className="flex flex-col gap-3" data-testid="search-resource-controls">
+      {mapped && (
+        <Container
+          overrideDefaults
+          role="group"
+          aria-label="View"
+          className="flex items-center gap-1"
+          data-testid="search-resource-view"
+        >
+          {viewButton('list', mapped.list, mapped.icon)}
+          {viewButton('map', 'Map', MapIcon)}
+        </Container>
+      )}
       {(authorName || inCollection) && (
         <Container
           overrideDefaults
@@ -152,6 +198,23 @@ export function SearchResourceResults({
       )}
     </Container>
   );
+
+  if (mapped && view === 'map') {
+    return (
+      <SearchResourceMap kind={mapped.kind} search={search}>
+        {children}
+        {controls}
+      </SearchResourceMap>
+    );
+  }
+  if (mapped?.kind === 'event') {
+    return (
+      <SearchEventAgenda search={search}>
+        {children}
+        {controls}
+      </SearchEventAgenda>
+    );
+  }
 
   return (
     <ResourceTimelineFeed
