@@ -85,6 +85,11 @@ export interface TPinakesAlsoOn {
   id?: string | null;
   /** The service name. */
   site?: string | null;
+  /**
+   * For a tagged member, the links people wrote for it, as its own card's `refs` (at most 5); absent
+   * when only `uri` was referenced, and never on a derived link.
+   */
+  refs?: string[] | null;
   /** A link nobody tagged, found by a source. */
   derived?: boolean;
   /** For a derived link, a qualifier (`archived`, `work`, `source`, `submitted`, `published`, `pdf`). */

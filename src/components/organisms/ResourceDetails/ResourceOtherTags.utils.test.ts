@@ -107,6 +107,84 @@ describe('getOtherLinks', () => {
     expect(links).toEqual([{ uri: NETFLIX, name: 'Netflix' }]);
   });
 
+  describe('a cold card: the refs Pinakes gives with each exact Also on member', () => {
+    // OK Computer (Pinakes #153, :8094 2026-11-13): Apple Music and Discogs are tagged on spellings other
+    // than their canonical links, and only `also_on[].refs` names them; no group was read.
+    const APPLE = 'https://music.apple.com/album/1097861387';
+    const APPLE_REF = 'https://music.apple.com/us/album/ok-computer/1097861387';
+    const DISCOGS = 'https://www.discogs.com/master/21491';
+    const DISCOGS_REF = 'https://www.discogs.com/master/21491-Radiohead-OK-Computer';
+    const DEEZER = 'https://www.deezer.com/album/14879699';
+    const MB = 'https://musicbrainz.org/release-group/b1392450-e666-3926-a536-22c65f834433';
+    const okComputer = {
+      id: 'e5cb1c655abb4b858e143a38c30ae2ab',
+      also_on: [
+        { id: '321bb0ee3d61e16e01debddca7b7f456', uri: DEEZER, site: 'Deezer' },
+        { id: '97f542123570f8046812993d331df40f', uri: APPLE, site: 'Apple Music', refs: [APPLE_REF] },
+        { id: 'c500ea663c6d7733f63ee92676cdd1a6', uri: DISCOGS, site: 'Discogs', refs: [DISCOGS_REF] },
+      ] as TPinakesAlsoOn[],
+    };
+
+    it('reads each member’s written links first, then its canonical link, with no group', () => {
+      expect(getOtherLinks(okComputer, undefined, new Set([MB]))).toEqual([
+        { uri: DEEZER, name: 'Deezer' },
+        { uri: APPLE_REF, name: 'Apple Music' },
+        { uri: APPLE, name: 'Apple Music' },
+        { uri: DISCOGS_REF, name: 'Discogs' },
+        { uri: DISCOGS, name: 'Discogs' },
+      ]);
+    });
+
+    it('never reads the refs of a derived link or a match by metadata ("maybe")', () => {
+      const links = getOtherLinks(
+        {
+          ...okComputer,
+          also_on: [
+            { uri: 'https://tidal.com/album/58990510', site: 'TIDAL', derived: true, refs: ['https://tidal.com/x'] },
+            {
+              uri: 'https://music.apple.com/us/song/1',
+              site: 'Apple Music',
+              derived: true,
+              kind: 'maybe',
+              refs: ['https://music.apple.com/us/song/airbag/1'],
+            },
+          ] as TPinakesAlsoOn[],
+        },
+        undefined,
+        new Set([MB]),
+      );
+      expect(links).toEqual([]);
+    });
+
+    it('reads a ref once: never one of the card’s own URIs, nor one a member or another entry already gave', () => {
+      const links = getOtherLinks(
+        {
+          ...okComputer,
+          also_on: [
+            // A ref that is the card's own written link, one repeated, and one that is another entry's canonical link.
+            { id: 'apple', uri: APPLE, site: 'Apple Music', refs: [MB, APPLE_REF, APPLE_REF, DEEZER] },
+            { id: 'deezer', uri: DEEZER, site: 'Deezer', refs: [DEEZER] },
+          ] as TPinakesAlsoOn[],
+        },
+        [{ id: 'apple', uri: APPLE, refs: [APPLE_REF], site: 'Apple Music' }],
+        new Set([MB]),
+      );
+      expect(links.map((link) => link.uri)).toEqual([APPLE_REF, APPLE, DEEZER]);
+    });
+
+    it('reads at most MAX_OTHER_LINKS links, refs included', () => {
+      const also_on = Array.from({ length: 10 }, (_, index) => ({
+        id: `m${index}`,
+        uri: `https://e.com/${index}`,
+        refs: Array.from({ length: 5 }, (__, ref) => `https://e.com/${index}/r${ref}`),
+      }));
+      const links = getOtherLinks({ ...card, also_on }, null, own);
+      expect(links).toHaveLength(MAX_OTHER_LINKS);
+      // Whole members first: the first ones keep their refs and canonical links.
+      expect(links.slice(0, 6).map((link) => link.uri)).toEqual([...also_on[0].refs, also_on[0].uri]);
+    });
+  });
+
   it('names a link without a service by its host', () => {
     expect(getOtherLinks({ ...card, also_on: [{ uri: 'https://mubi.com/films/3394' }] }, undefined, own)).toEqual([
       { uri: 'https://mubi.com/films/3394', name: 'mubi.com' },

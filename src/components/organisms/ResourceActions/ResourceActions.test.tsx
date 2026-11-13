@@ -422,6 +422,34 @@ describe('ResourceActions', () => {
       expect(mocks.groupArgs.at(-1)).toEqual([OK_COMPUTER.group!.id, { cachedOnly: true }]);
     });
 
+    it('reads the refs Pinakes gives with each Also on member on a cold card: no group read, no request of its own', () => {
+      const DISCOGS = 'https://www.discogs.com/master/21491';
+      const DISCOGS_REF = 'https://www.discogs.com/master/21491-Radiohead-OK-Computer';
+      const cold: TPinakesResourceDetail = {
+        ...OK_COMPUTER,
+        also_on: [
+          ...OK_COMPUTER.also_on.map((entry) => (entry.uri === APPLE ? { ...entry, refs: [APPLE_REF] } : entry)),
+          { id: 'discogs-id', uri: DISCOGS, site: 'Discogs', refs: [DISCOGS_REF] },
+        ],
+      };
+      mocks.group = { data: null, isLoading: false };
+      renderCard({ card: cold });
+
+      // In the first render its own read is enabled in, with the `by_ids`-only read: one batch window.
+      expect(mocks.otherLinkReads[0].links.map((link) => link.uri)).toEqual([
+        DEEZER,
+        APPLE_REF,
+        APPLE,
+        SPOTIFY,
+        DISCOGS_REF,
+        DISCOGS,
+      ]);
+      expect(lastOtherRead().options).toEqual({ byIdsOnly: true });
+      // Its own tags are still read and written on its own link and spellings alone.
+      expect(mocks.tagsUri).toBe(MB);
+      expect(mocks.tagsOptions.at(-1)).toMatchObject({ spellings: [WRITTEN] });
+    });
+
     it('reads the members’ own refs too when the group was already read (the resource page’s), in the page’s order', () => {
       mocks.group = {
         data: {

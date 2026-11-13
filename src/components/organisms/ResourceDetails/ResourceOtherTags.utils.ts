@@ -27,8 +27,9 @@ export function getOwnLinkUris(
 /**
  * The other links of the same thing whose tags are read, by URI: every other member of the card's
  * group (the links people wrote for it first, then its canonical link), then the card's Also on
- * entries. A derived Also on entry is left out: Pinakes found it through a source and nobody has
- * tagged it. Own URIs and repeats are skipped; at most `MAX_OTHER_LINKS`.
+ * entries, the same way (an entry's `refs`, then its link), so a card needs no group read. A derived
+ * Also on entry is left out, refs and all: Pinakes found it through a source and nobody has tagged
+ * it. Own URIs and repeats are skipped; at most `MAX_OTHER_LINKS`.
  *
  * @param members - The group's members (`GET /v1/groups/{id}`), the card itself among them; absent
  *   while read or for a card outside a group
@@ -49,7 +50,9 @@ export function getOtherLinks(
     add(member.uri, member.site);
   }
   for (const entry of card.also_on) {
-    if (!entry.derived) add(entry.uri, entry.site);
+    if (entry.derived) continue;
+    for (const ref of entry.refs ?? []) add(ref, entry.site);
+    add(entry.uri, entry.site);
   }
   return [...links.values()];
 }
