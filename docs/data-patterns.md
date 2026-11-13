@@ -482,7 +482,7 @@ collection item) goes to every spelling holding it.
 (`src/components/molecules/ResourceMap/`): a map of its `point` when that is on the map (`getMapPoint`), else, with
 only an address, one line; an event that names neither (an online one, a venue known by name alone) gets no map and
 no destination. "Open in Maps" (`ResourceMapsMenu`) is on every one of these surfaces: the map's corner, the line's
-end, a selected pin's card. Maps are MapLibre GL on OpenFreeMap's tiles (`@/config/maps`), with these rules:
+end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Android only, where something opens it. Maps are MapLibre GL on OpenFreeMap's tiles (`@/config/maps`), with these rules:
 
 - Nothing loads before a map is on screen (`ResourceMap`: no library, no tile), and the map is removed when it leaves
   the screen or its card goes away, so a feed never holds one WebGL context per card. A viewer with platform embeds up
@@ -491,7 +491,10 @@ end, a selected pin's card. Maps are MapLibre GL on OpenFreeMap's tiles (`@/conf
 - The library, its stylesheet and its worker file are one lazily imported unit (`src/libs/maps/maplibre.runtime.ts`),
   kept out of the service worker's precache (`docs/pwa.md`, _Precache diet_).
 - A card's map is inert until tapped; any map asks for two fingers or a modifier key, so the page's scroll never stops
-  on it. Without WebGL, or when the style or first tiles fail, the map says so and keeps "Open in Maps".
+  on it. Without WebGL, when the style or first tiles fail, or when a lost WebGL context does not come back
+  (`MAP_CONTEXT_RESTORE_MS`; MapLibre restores one itself when it restarts its workers), the map says so and keeps
+  "Open in Maps". The element MapLibre draws into is sized by its box (`size-full`), never by `absolute`: the
+  library's stylesheet sets its `position` outside any layer and would leave it without a height.
 - The resource page of a place lists Nearby (`ResourceController.fetchNearbyPlaces`: `near` + `radius`, nearest
   first, one more row asked than shown, never the place itself) as real cards; those cards and a selected pin's say
   where they are on a line (`ResourceLocationProvider` `row`) instead of drawing one more map each.
