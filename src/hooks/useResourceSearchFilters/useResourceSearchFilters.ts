@@ -316,13 +316,17 @@ export const hasResourceFeedFilters = (params: Pick<URLSearchParams, 'get'> | nu
   JSON.stringify(toResourceFeedFilters(parseResourceSearchFilters(params))) !==
   JSON.stringify(parseResourceSearchFilters(null));
 
+/** The kinds listed without a text or a tag: their agenda and map are places to browse. */
+const BROWSED_KINDS: readonly string[] = ['event', 'place'];
+
 /**
- * Whether the filters alone, with no text or tags, are a search: the links one user shared, or the
- * ones a collection holds (the entry points from a profile and a collection). Any other filter
- * narrows a search; alone it would list the whole index.
+ * Whether the filters alone, with no text or tags, are a search: the links one user shared, the
+ * ones a collection holds (the entry points from a profile and a collection), or the Events or
+ * Places kind on its own (the coming events as an agenda, the places as a list, either on a map).
+ * Any other filter narrows a search; alone it would list the whole index.
  */
 export const isResourceFiltersSearch = (filters: TResourceSearchFilters) =>
-  filters.author !== null || filters.inCollection !== null;
+  filters.author !== null || filters.inCollection !== null || BROWSED_KINDS.includes(filters.kind ?? '');
 
 /** How the filters are written: `keepEmpty`, the parameters kept as empty (`when=`) at their default. */
 type TResourceSearchWriteOptions = { keepEmpty?: readonly string[] };
