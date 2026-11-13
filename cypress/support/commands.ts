@@ -183,8 +183,9 @@ Cypress.Commands.add(
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Your account is up to date');
       cy.get('#social-migration-summary-navigation-continue-btn').click();
     }
-    // A run copies the whole tree before the landing route, and its specs hold some of its answers back
-    cy.location('pathname', migrates ? extendedTimeout() : {}).should('eq', landingPath);
+    // Every sign-in passes the gate and then prepares the account before the landing route, a first one
+    // about 15 s on a local stack; a run copies the whole tree first, and its specs hold some of its answers back
+    cy.location('pathname', extendedTimeout()).should('eq', landingPath);
     if (landingPath === '/home') waitForFeedToLoad();
   },
 );
