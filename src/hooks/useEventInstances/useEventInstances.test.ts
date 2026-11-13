@@ -124,6 +124,47 @@ describe('useEventInstances', () => {
       expect(result.current.instances).toEqual(withDetails([MOVED]));
     });
 
+    it('reads a row again each time its contents change, back to the first too', async () => {
+      const { result, rerender } = renderHook(({ cards }) => useEventInstances(cards), {
+        initialProps: { cards: [CONCERT] },
+      });
+      await waitFor(() => expect(result.current.instances).toHaveLength(1));
+
+      rerender({ cards: [MOVED] });
+      await waitFor(() => expect(result.current.instances[0]?.start).toBe(MOVED.start));
+      rerender({ cards: [CONCERT] });
+
+      // Not the answer it had for these contents two lists ago
+      expect(result.current).toEqual({ instances: [], isLoading: true });
+      await waitFor(() => expect(result.current.instances[0]?.start).toBe(CONCERT.start));
+      expect(mocks.fetchEventInstances.mock.calls.map(([params]) => params.cards)).toEqual([
+        [CONCERT],
+        [MOVED],
+        [CONCERT],
+      ]);
+    });
+
+    it('keeps a read in flight for the rows that stay, and drops its answer for the row that changed', async () => {
+      const finish: ((value: TEventInstance[]) => void)[] = [];
+      mocks.fetchEventInstances.mockImplementation(() => new Promise((resolve) => finish.push(resolve)));
+      const { result, rerender } = renderHook(({ cards }) => useEventInstances(cards), {
+        initialProps: { cards: [UNCHANGED, CONCERT] },
+      });
+
+      rerender({ cards: [UNCHANGED, MOVED] });
+
+      // Only the changed row is asked again
+      expect(mocks.fetchEventInstances.mock.calls.map(([params]) => params.cards)).toEqual([
+        [UNCHANGED, CONCERT],
+        [MOVED],
+      ]);
+      await act(async () => finish[0](withDetails([UNCHANGED, CONCERT])));
+      expect(result.current.instances).toEqual(withDetails([UNCHANGED]));
+      expect(result.current.isLoading).toBe(true);
+      await act(async () => finish[1](withDetails([MOVED])));
+      expect(result.current).toEqual({ instances: withDetails([UNCHANGED, MOVED]), isLoading: false });
+    });
+
     it.each([
       ['the old answer last', [1, 0]],
       ['the old answer first', [0, 1]],
@@ -147,6 +188,52 @@ describe('useEventInstances', () => {
       await act(async () => finish[order[1]](answers[order[1]]));
 
       expect(result.current).toEqual({ instances: answers[1], isLoading: false });
+    });
+  });
+
+  it('drops a read that fails after the search replaced its list: the rows are read anew, with their details', async () => {
+    const fail: ((reason: Error) => void)[] = [];
+    mocks.fetchEventInstances.mockImplementationOnce(() => new Promise((_resolve, reject) => fail.push(reject)));
+    const { result, rerender } = renderHook(({ cards }) => useEventInstances(cards), {
+      initialProps: { cards: ROWS.slice(1, 2) },
+    });
+    rerender({ cards: [] as TPinakesCard[] });
+    rerender({ cards: ROWS.slice(1, 2) });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => fail[0](new Error('down')));
+
+    expect(result.current.instances).toEqual(withDetails(ROWS.slice(1, 2)));
+  });
+
+  describe('rows the list does not tell apart, or an answer that is not the rows’', () => {
+    const CONCERT = ROWS[1];
+    const TWICE: TPinakesCard = { ...CONCERT, start: '2026-11-17T19:00:00Z' };
+
+    it('shows two rows of one id and other contents each as itself, instead of waiting for ever', async () => {
+      const { result } = renderHook(() => useEventInstances([CONCERT, TWICE, ROWS[3]]));
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.instances.map((instance) => instance.start)).toEqual([
+        CONCERT.start,
+        TWICE.start,
+        ROWS[3].start,
+      ]);
+      expect(mocks.fetchEventInstances).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a row as the search gave it when the answer has none for it, or another row’s in its place', async () => {
+      // One answer short, and the second row's answer is the fourth row's
+      mocks.fetchEventInstances.mockResolvedValue([
+        { ...ROWS[1], tz: 'Europe/Zurich' },
+        { ...ROWS[5], tz: 'Europe/Zurich' },
+      ]);
+
+      const { result } = renderHook(() => useEventInstances([ROWS[1], ROWS[3], ROWS[5]]));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.instances).toEqual([{ ...ROWS[1], tz: 'Europe/Zurich' }, ROWS[3], ROWS[5]]);
     });
   });
 
