@@ -10,7 +10,7 @@ import { MENU_VARIANT, type MenuVariant } from '@/config/ui';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
-import { isIosDevice } from '@/libs/pwa/platform';
+import { isAndroidDevice } from '@/libs/pwa/platform';
 import { cn } from '@/libs/utils/utils';
 import {
   PostMenuActionList,
@@ -29,10 +29,11 @@ interface ResourceMapsMenuProps {
 /**
  * "Open in Maps": one round button on every place and event that says where it is (a map's corner,
  * the end of an address line, a selected pin's card), opening the app's own menu (a dropdown, a
- * bottom sheet on a phone-sized screen): the maps apps, then what can be copied. On a phone the
- * device's default maps app comes first, through a `geo:` link; not on an iPhone, where nothing
- * opens `geo:` and Apple Maps opens the app. A maps app opens in a new tab that cannot reach this
- * one. Only coordinates the destination has are copied, and only an address it has.
+ * bottom sheet on a phone-sized screen): the maps apps, then what can be copied. On an Android
+ * phone or tablet the device's default maps app comes first, through a `geo:` link; nowhere else,
+ * since nothing is sure to open `geo:` there (on an iPhone, Apple Maps opens the app; on a touch
+ * laptop the link could replace the page with an error). A maps app opens in a new tab that cannot
+ * reach this one. Only coordinates the destination has are copied, and only an address it has.
  */
 export function ResourceMapsMenu({ destination, className }: ResourceMapsMenuProps) {
   const isMobile = useIsMobile();
@@ -47,7 +48,7 @@ export function ResourceMapsMenu({ destination, className }: ResourceMapsMenuPro
   };
 
   const items: PostMenuActionListItem[] = [
-    ...(isTouch && !isIosDevice()
+    ...(isTouch && isAndroidDevice()
       ? [
           {
             id: 'default',

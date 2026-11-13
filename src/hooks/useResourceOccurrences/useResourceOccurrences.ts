@@ -19,10 +19,14 @@ export interface UseResourceOccurrencesResult {
   /** The next dates could not be read: the ones read stay, and `loadMore` asks again. */
   isMoreError: boolean;
   loadMore: () => Promise<void>;
+  /** Reads the first dates again, after `isError`. */
+  retry: () => void;
 }
 
 type TRead = {
   id: string;
+  /** The read it belongs to: one per time the resource is opened or read again. */
+  key: string;
   cards: TPinakesCard[];
   cursor: string | null;
   isLoading: boolean;
@@ -42,35 +46,44 @@ type TRead = {
 export function useResourceOccurrences(id: string | null | undefined): UseResourceOccurrencesResult {
   const isEnabled = Boolean(id) && isPinakesConfigured();
   const [read, setRead] = useState<TRead | null>(null);
-  // The resource being read now, where its window starts, and whether a next page is on its way
-  const current = useRef<{ id: string; from: string } | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  // The read going on now (one object per read: a page of an earlier read of the same resource is
+  // told apart by it), where its window starts, and whether a next page is on its way
+  const current = useRef<{ id: string; from: string; key: string } | null>(null);
   const isLoadingMore = useRef(false);
+  const reads = useRef(0);
 
   useEffect(() => {
     if (!isEnabled || !id) return;
     const from = getOccurrencesWindowStart(new Date());
-    current.current = { id, from };
+    reads.current += 1;
+    const window = { id, from, key: `${id}:${reads.current}` };
+    current.current = window;
     isLoadingMore.current = false;
+    setRead(null);
     const settle = (page: Pick<TRead, 'cards' | 'cursor' | 'isError'>) => {
-      if (current.current?.id !== id) return;
-      setRead({ id, ...page, isLoading: false, isLoadingMore: false, isMoreError: false });
+      if (current.current !== window) return;
+      setRead({ id, key: window.key, ...page, isLoading: false, isLoadingMore: false, isMoreError: false });
     };
     PinakesController.fetchOccurrences({ id, limit: EVENT_DATES_PAGE_SIZE, from }).then(
       (page) => settle({ cards: mergeResourceInstances([], page.cards), cursor: page.cursor, isError: false }),
       () => settle({ cards: [], cursor: null, isError: true }),
     );
     return () => {
-      current.current = null;
+      if (current.current === window) current.current = null;
     };
-  }, [id, isEnabled]);
+  }, [id, isEnabled, attempt]);
 
+  // Each new read starts from nothing (`setRead(null)` above), so what is held for this resource is
+  // this read's
   const shown = isEnabled && read?.id === id ? read : null;
 
   async function loadMore() {
     const window = current.current;
     if (!shown?.cursor || !window || isLoadingMore.current) return;
-    const { id: readId, from } = window;
-    const patch = (next: (prev: TRead) => TRead) => setRead((prev) => (prev?.id === readId ? next(prev) : prev));
+    const { id: readId, from, key } = window;
+    // Only the read this page was asked in: its cursor fits no other window
+    const patch = (next: (prev: TRead) => TRead) => setRead((prev) => (prev?.key === key ? next(prev) : prev));
     isLoadingMore.current = true;
     patch((prev) => ({ ...prev, isLoadingMore: true, isMoreError: false }));
     try {
@@ -89,7 +102,7 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     } catch {
       patch((prev) => ({ ...prev, isLoadingMore: false, isMoreError: true }));
     } finally {
-      if (current.current?.id === readId) isLoadingMore.current = false;
+      if (current.current === window) isLoadingMore.current = false;
     }
   }
 
@@ -101,5 +114,6 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     isLoadingMore: shown?.isLoadingMore ?? false,
     isMoreError: shown?.isMoreError ?? false,
     loadMore,
+    retry: () => setAttempt((count) => count + 1),
   };
 }

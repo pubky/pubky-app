@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, RotateCw } from 'lucide-react';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Typography } from '@/atoms/Typography/Typography';
 import { EVENT_DATES_PAGE_SIZE } from '@/config/events';
@@ -26,13 +26,13 @@ interface ResourceOccurrencesListProps {
  * when it is (in UTC and saying so: an instance names no time zone; a whole-day span as its day)
  * and its lifecycle when it is not going ahead as planned (Cancelled, Rescheduled…). "Show more
  * dates" reads the next ones. A calendar shows the section while its dates are read, without any
- * and when the read failed; an event that is no calendar is asked too and shows it only once it
+ * and when the read failed (with "Try again"); an event that is no calendar is asked too and shows it only once it
  * has dates. Nothing is said about how often a date repeats: Pinakes sends no rule.
  */
 export function ResourceOccurrencesList({ card, locale }: ResourceOccurrencesListProps) {
   const isCalendar = card.type === CALENDAR_TYPE;
   const applies = isCalendar || getResourceFamily(card) === ResourceFamily.EVENT;
-  const { cards, isLoading, isError, hasMore, isLoadingMore, isMoreError, loadMore } = useResourceOccurrences(
+  const { cards, isLoading, isError, hasMore, isLoadingMore, isMoreError, loadMore, retry } = useResourceOccurrences(
     applies ? card.id : null,
   );
   if (!applies) return null;
@@ -48,7 +48,11 @@ export function ResourceOccurrencesList({ card, locale }: ResourceOccurrencesLis
       message={isLoading ? null : message}
       loadingRows={isLoading ? EVENT_DATES_PAGE_SIZE : 0}
       footer={
-        hasMore ? { icon: ChevronDown, text: moreLabel, onClick: () => void loadMore(), expanded: false } : undefined
+        isError && !isLoading
+          ? { icon: RotateCw, text: 'Try again', onClick: retry }
+          : hasMore
+            ? { icon: ChevronDown, text: moreLabel, onClick: () => void loadMore() }
+            : undefined
       }
       testId="resource-occurrences"
     >

@@ -44,18 +44,34 @@ describe('getNearbyPlacesQuery', () => {
 });
 
 describe('pickNearbyPlaces', () => {
+  /** Seven places and the page's own, no two the same thing (the capture lists one church on two services). */
+  const DISTINCT = [...NEARBY.map((card) => ({ ...card, group: null })), { ...NEARBY[1], id: 'eighth', group: null }];
+
   it('leaves the place itself out and keeps the six nearest, in Pinakes’ order', () => {
-    const picked = pickNearbyPlaces(NEARBY, { id: CAFE_ID });
+    const picked = pickNearbyPlaces(DISTINCT, { id: CAFE_ID });
 
     expect(picked).toHaveLength(6);
     expect(picked.map((card) => card.id)).not.toContain(CAFE_ID);
-    expect(picked.map((card) => card.name)).toEqual(
-      NEARBY.filter((card) => card.id !== CAFE_ID).map((card) => card.name),
+    expect(picked.map((card) => card.id)).toEqual(
+      DISTINCT.filter((card) => card.id !== CAFE_ID)
+        .slice(0, 6)
+        .map((card) => card.id),
     );
   });
 
   it('keeps six when the place itself is not in the list', () => {
-    expect(pickNearbyPlaces(NEARBY, { id: 'another-place' })).toHaveLength(6);
+    expect(pickNearbyPlaces(DISTINCT, { id: 'another-place' })).toHaveLength(6);
+  });
+
+  it('lists one place once though two rows are it on two services (one group)', () => {
+    const churches = NEARBY.filter((card) => card.name === 'Grossmünster');
+    expect(churches).toHaveLength(2);
+    expect(new Set(churches.map((card) => card.group?.id)).size).toBe(1);
+
+    const picked = pickNearbyPlaces(NEARBY, { id: CAFE_ID });
+
+    expect(picked.filter((card) => card.name === 'Grossmünster')).toEqual([churches[0]]);
+    expect(picked).toHaveLength(5);
   });
 
   it('leaves out the same place on another service: a member of the place’s own group', () => {

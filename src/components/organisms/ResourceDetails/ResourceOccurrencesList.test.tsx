@@ -27,6 +27,7 @@ const read = (overrides: Partial<UseResourceOccurrencesResult> = {}): UseResourc
   isLoadingMore: false,
   isMoreError: false,
   loadMore: vi.fn(async () => {}),
+  retry: vi.fn(),
   ...overrides,
 });
 
@@ -75,7 +76,10 @@ describe('ResourceOccurrencesList', () => {
     mocks.read = read({ hasMore: true, loadMore });
     const { rerender } = render(<ResourceOccurrencesList card={CALENDAR} locale="en-US" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show more dates' }));
+    const more = screen.getByRole('button', { name: 'Show more dates' });
+    // It reads more: it is no toggle of a hidden part
+    expect(more).not.toHaveAttribute('aria-expanded');
+    fireEvent.click(more);
     expect(loadMore).toHaveBeenCalledTimes(1);
 
     mocks.read = read({ hasMore: false });
@@ -108,9 +112,12 @@ describe('ResourceOccurrencesList', () => {
     const { rerender } = render(<ResourceOccurrencesList card={CALENDAR} locale="en-US" />);
     expect(screen.getByTestId('resource-occurrences-message')).toHaveTextContent('No upcoming dates');
 
-    mocks.read = read({ cards: [], isError: true });
+    const retry = vi.fn();
+    mocks.read = read({ cards: [], isError: true, retry });
     rerender(<ResourceOccurrencesList card={CALENDAR} locale="en-US" />);
     expect(screen.getByTestId('resource-occurrences-message')).toHaveTextContent('Dates could not be loaded');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   it('asks an event for other dates too, and is not there while they are read or when it has none', () => {

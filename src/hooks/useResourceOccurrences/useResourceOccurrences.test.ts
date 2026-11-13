@@ -93,6 +93,44 @@ describe('useResourceOccurrences', () => {
     expect(result.current.cards).toEqual(DATES);
   });
 
+  it('reads the first dates again on retry, after they could not be read', async () => {
+    mocks.fetchOccurrences
+      .mockRejectedValueOnce(new Error('down'))
+      .mockResolvedValueOnce({ cards: DATES, cursor: null });
+    const { result } = renderHook(() => useResourceOccurrences(FEED));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    act(() => result.current.retry());
+
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.cards).toEqual(DATES));
+    expect(result.current.isError).toBe(false);
+  });
+
+  it('drops a next page that comes back after the same calendar was opened anew: its cursor is another window’s', async () => {
+    let finish: (page: { cards: TPinakesCard[]; cursor: string | null }) => void = () => {};
+    mocks.fetchOccurrences
+      .mockResolvedValueOnce({ cards: DATES.slice(0, 1), cursor: 'old-c2' })
+      .mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)))
+      .mockResolvedValueOnce({ cards: [], cursor: null })
+      .mockResolvedValueOnce({ cards: DATES.slice(0, 2), cursor: 'new-c2' })
+      .mockResolvedValueOnce({ cards: DATES.slice(2), cursor: null });
+    const { result, rerender } = renderHook(({ id }) => useResourceOccurrences(id), { initialProps: { id: FEED } });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    act(() => void result.current.loadMore());
+
+    // Away to another resource and back: the calendar is read anew, in a new window
+    rerender({ id: 'other' });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    rerender({ id: FEED });
+    await waitFor(() => expect(result.current.cards).toHaveLength(2));
+    await act(async () => finish({ cards: DATES.slice(1), cursor: 'old-c3' }));
+
+    expect(result.current.cards).toEqual(DATES.slice(0, 2));
+    await act(() => result.current.loadMore());
+    expect(mocks.fetchOccurrences).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'new-c2' }));
+  });
+
   it('asks for one next page at a time', async () => {
     let finish: (page: { cards: TPinakesCard[]; cursor: string | null }) => void = () => {};
     mocks.fetchOccurrences
