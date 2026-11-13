@@ -211,7 +211,7 @@ function AgendaEvent({ event }: { event: TEventInstance }) {
             overrideDefaults
             className="text-xs font-medium text-muted-foreground hover:text-brand hover:underline"
           >
-            More from this calendar
+            More from this feed
           </Link>
         </Container>
       )}

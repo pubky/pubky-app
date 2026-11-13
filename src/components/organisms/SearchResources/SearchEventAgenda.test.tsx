@@ -131,7 +131,7 @@ describe('SearchEventAgenda', () => {
     render(<SearchEventAgenda search={search()} />);
 
     const holiday = within(days()[0]);
-    expect(holiday.getByRole('link', { name: 'More from this calendar' })).toHaveAttribute(
+    expect(holiday.getByRole('link', { name: 'More from this feed' })).toHaveAttribute(
       'href',
       getResourceRoute(ROWS[0].occurrence!.feed_uri),
     );
@@ -139,7 +139,7 @@ describe('SearchEventAgenda', () => {
     expect(holiday.queryByText(/other dates/i)).toBeNull();
     expect(holiday.queryByText('Repeats')).toBeNull();
     // An event that is no calendar occurrence has no calendar to lead to
-    expect(within(days()[1]).queryByRole('link', { name: 'More from this calendar' })).toBeNull();
+    expect(within(days()[1]).queryByRole('link', { name: 'More from this feed' })).toBeNull();
   });
 
   it('says an occurrence repeats only when Pinakes names the date of a repeating event it is', () => {
