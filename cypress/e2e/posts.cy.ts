@@ -913,6 +913,9 @@ describe('posts', () => {
     cy.findFirstPostInFeedFiltered(editedReplyContent).should('be.visible');
     cy.reload();
     waitForFeedToLoad();
+    // After a reload the reply renders a beat after its parent (reply stream, then reply details),
+    // and waitForFeedToLoad can return in between; findPostInFeed filters by text only once.
+    cy.get('[data-cy="timeline-posts"]').should('contain.text', editedReplyContent);
     cy.findFirstPostInFeedFiltered(editedReplyContent).should('be.visible');
   });
 
