@@ -6,6 +6,7 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { useCardPlayer } from './useCardPlayer';
 
 // A generic link (an artist's MusicBrainz page) Pinakes knows on a service with a player (Spotify,
@@ -1308,6 +1309,120 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
       autoplay_param: null,
     },
   };
+
+  const SLIDES: TPinakesResourceDetail = {
+    ...musicFixture,
+    uri: 'https://speakerdeck.com/jlugia/what-is-pubky',
+    name: 'What is Pubky',
+    site: 'Speaker Deck',
+    type: 'PresentationDigitalDocument',
+    type_path: ['Thing', 'CreativeWork', 'DigitalDocument', 'PresentationDigitalDocument'],
+    aliases: [],
+    also_on: [],
+    embed: {
+      provider: 'speaker-deck',
+      kind: 'rich',
+      src: 'https://speakerdeck.com/player/0123456789abcdef',
+      height: null,
+      aspect: 1.7778,
+      allow: [],
+      autoplay_param: null,
+    },
+  };
+
+  it('shows a rich frame up front like any embed, while a place keeps its card first', () => {
+    render(
+      <>
+        <Card card={SLIDES} testId="slides" />
+        <Card card={PLACE} testId="place" />
+      </>,
+    );
+
+    expect(screen.getByTestId('slides')).toHaveAttribute('data-card', 'false');
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+    expect(screen.getByRole('region', { name: /^Speaker Deck embed:/ })).toBeInTheDocument();
+    expect(within(screen.getByTestId('slides')).queryByTestId('player-switch')).not.toBeInTheDocument();
+    expect(screen.getByTestId('place')).toHaveAttribute('data-card', 'true');
+    expect(within(screen.getByTestId('place')).queryByTestId('resource-player-frame')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('place-header')).getByTestId('player-switch')).toHaveTextContent('Card');
+  });
+
+  it('keeps a rich link’s card with platform embeds up front off: its frame in the switch, then Show on', () => {
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    onTestFinished(() => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+    });
+    render(
+      <>
+        <Card card={SLIDES} testId="slides" />
+        <Card card={PLACE} testId="place" />
+      </>,
+    );
+
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('slides')).toHaveAttribute('data-card', 'true');
+    expect(screen.getByTestId('place')).toHaveAttribute('data-card', 'true');
+    const menu = openSwitchOf('slides');
+    expect(rowsOf(menu)).toEqual(['Speaker Deck']);
+    fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
+    expect(document.querySelector('iframe')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show on Speaker Deck' }));
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+    expect(document.querySelectorAll('iframe')).toHaveLength(1);
+    expect(screen.queryByTestId('player-dock-close')).not.toBeInTheDocument();
+  });
+
+  it('lets a frame go while its card is hidden (a feed behind an open post), and loads it again when shown', () => {
+    // Cards inside `[data-hidden]` are laid out nowhere; any other far below the viewport.
+    vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function (this: Element) {
+      return asOpaque<DOMRectList>(this.closest('[data-hidden]') ? [] : [{}]);
+    });
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      () => ({ top: 5000, bottom: 5080, left: 0, right: 400, width: 400, height: 80, x: 0, y: 5000 }) as DOMRect,
+    );
+    let resizes: Array<() => void> = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        private readonly report: () => void;
+        constructor(report: () => void) {
+          this.report = report;
+        }
+        observe() {
+          resizes.push(this.report);
+        }
+        unobserve() {}
+        disconnect() {
+          resizes = resizes.filter((report) => report !== this.report);
+        }
+      },
+    );
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+    const Feed = ({ hidden }: { hidden: boolean }) => (
+      <div data-hidden={hidden || undefined}>
+        <Card card={SLIDES} testId="slides" />
+      </div>
+    );
+    const resize = () => act(() => resizes.forEach((report) => report()));
+    const { rerender } = render(<Feed hidden={false} />);
+
+    // Off screen but laid out: it stays.
+    resize();
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+
+    rerender(<Feed hidden />);
+    resize();
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('embed-player')).toBeInTheDocument();
+
+    rerender(<Feed hidden={false} />);
+    resize();
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+    expect(document.querySelectorAll('iframe')).toHaveLength(1);
+  });
 
   it('shows a post’s own frame up front, its only source: no switch, no Card', () => {
     render(<Card card={POST} testId="post" />);
