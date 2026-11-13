@@ -410,6 +410,8 @@ describe('PinakesService.fetchCardByUri with credentials', () => {
     'isbn:9780140328721',
     'geo:52.5,13.4',
     'doi:10.1038/nature12373',
+    'btc:block/00000000000000000000a1b2c3d4e5f60718293a4b5c6d7e8f9012345678ab',
+    'pubky://yjn8k7ww4sc4hskkmbcsep6b1xje8g4f8j3azpdqnwhhqckt7kso/pub/example/a',
   ])('still reads %s', async (uri) => {
     mockFetch.mockResolvedValue(capturedResponse('by-uri.video'));
 

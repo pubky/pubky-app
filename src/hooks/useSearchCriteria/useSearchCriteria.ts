@@ -6,8 +6,6 @@ import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { classifyResourceSearchInput, hasCredentialLink } from '@/pipes/resource/resource.search';
 
-const CREDENTIAL_LINK_MESSAGE = 'Search cannot hold a link with a username or password';
-
 /**
  * Parses tags from a comma-separated string parameter.
  * Trims whitespace, lowercases (tags are case-insensitive everywhere else:
@@ -59,15 +57,15 @@ export function useSearchCriteria(): SearchCriteria {
 
   // A blank q carries no intended search; fall through to tags.
   if (query !== null && query.trim() !== '') {
+    // A link that carries credentials (`user:password@`) is never sent, to posts or external resources
+    if (hasCredentialLink(query)) {
+      return { mode: 'invalid', message: 'Search cannot hold a link with a username or password', query: query.trim() };
+    }
     const validation = validateContentSearchQuery(query);
-    // A link that carries credentials (`user:password@`) is never sent as a post search: as a link it
-    // goes to the external resources search, which does not send it either; a text holding one is refused
-    const holdsCredentialLink = hasCredentialLink(query);
-    if (validation.isValid && !holdsCredentialLink) return { mode: 'content', query: validation.query };
+    if (validation.isValid) return { mode: 'content', query: validation.query };
     const input = classifyResourceSearchInput(query);
     if (input.kind !== 'text') return { mode: 'resource', query: query.trim(), input };
-    const message = validation.isValid ? CREDENTIAL_LINK_MESSAGE : validation.message;
-    return { mode: 'invalid', message, query: query.trim() };
+    return { mode: 'invalid', message: validation.message, query: query.trim() };
   }
 
   const tags = parseTags(searchParams.get('tags'));
