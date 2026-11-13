@@ -241,6 +241,12 @@ describe('SearchResourceKindFilters: Service', () => {
     read({ hostFacets: [{ host: 'open.spotify.com', site: 'Spotify', count: 4 }] });
     expect(screen.getByRole('button', { name: 'Amazon Music, 0 links' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Spotify, 4 links' })).toBeInTheDocument();
+
+    // Not picked any more: a service the read does not list leaves the list
+    mocks.search = 'kind=music&service=open.spotify.com';
+    read({ hostFacets: [{ host: 'open.spotify.com', site: 'Spotify', count: 4 }] });
+    expect(screen.queryByTestId('resource-service-music.amazon.com')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Spotify, 4 links' })).toBeInTheDocument();
   });
 
   it('names them once the read answers, and reads a host as itself once it failed', () => {
