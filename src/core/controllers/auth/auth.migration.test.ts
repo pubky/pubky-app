@@ -10,13 +10,12 @@ import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES } from '@/config/
 import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES } from '@/config/network';
 import { THEME_STORAGE_KEY } from '@/config/theme';
 import { LocksController } from '@/controllers/locks/locks';
-import { ProfileController } from '@/controllers/profile/profile';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { pendingRetirements, type SessionReference } from '@/libs/auth/session.types';
 import { resetSavedSessionLossReports } from '@/libs/auth/session-loss';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
-import { AuthErrorCode, ClientErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Identity } from '@/libs/identity/identity';
@@ -799,66 +798,6 @@ describe('grant-only session lifecycle', () => {
     expect(useAuthStore.getState().generation).toBe('new-login');
     expect(clearDatabase).not.toHaveBeenCalled();
   });
-});
-
-describe('signup recovery', () => {
-  beforeEach(() => {
-    seed(null, null);
-    vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(asOpaque({ publicKey: { z32: () => PUBKY } }));
-    vi.spyOn(AuthApplication, 'createAccount').mockResolvedValue(undefined);
-    vi.spyOn(AuthApplication, 'signInCreatedAccount').mockResolvedValue({ session: grantSession(['/:rw']) });
-  });
-  it('does not consume an invite again after grant exchange fails', async () => {
-    vi.mocked(AuthApplication.signInCreatedAccount).mockRejectedValueOnce(offline());
-    await expect(AuthController.signUp({ secretKey: 'key', signupToken: 'invite' })).rejects.toThrow();
-    expect(useOnboardingStore.getState().signupAttempt?.phase).toBe('created');
-    await AuthController.signUp({ secretKey: 'key', signupToken: 'invite' });
-    expect(AuthApplication.createAccount).toHaveBeenCalledOnce();
-    expect(useAuthStore.getState().sessionReference?.kind).toBe('grant');
-  });
-  it('tries signin first after an uncertain creation response', async () => {
-    vi.mocked(AuthApplication.createAccount).mockRejectedValueOnce(offline());
-    await expect(AuthController.signUp({ secretKey: 'key', signupToken: 'invite' })).rejects.toThrow();
-    await AuthController.signUp({ secretKey: 'key', signupToken: 'invite' });
-    expect(AuthApplication.createAccount).toHaveBeenCalledOnce();
-  });
-  it('creates again only when the uncertain account is proven absent', async () => {
-    vi.mocked(AuthApplication.createAccount).mockRejectedValueOnce(offline());
-    await expect(AuthController.signUp({ secretKey: 'key', signupToken: 'invite' })).rejects.toThrow();
-    vi.mocked(AuthApplication.signInCreatedAccount).mockRejectedValueOnce(
-      Err.client(ClientErrorCode.NOT_FOUND, 'Absent', { service: ErrorService.Homeserver, operation: 'signin' }),
-    );
-    await AuthController.signUp({ secretKey: 'key', signupToken: 'invite' });
-    expect(AuthApplication.createAccount).toHaveBeenCalledTimes(2);
-  });
-  it.each(['logout', 'new login'])(
-    'does not resume uncertain signup after %s while the account lookup is pending',
-    async (replacement) => {
-      vi.mocked(AuthApplication.createAccount).mockRejectedValueOnce(offline());
-      await expect(AuthController.signUp({ secretKey: 'key', signupToken: 'invite' })).rejects.toThrow();
-      const lookup = deferred<Awaited<ReturnType<typeof AuthApplication.signInCreatedAccount>>>();
-      vi.mocked(AuthApplication.signInCreatedAccount).mockReturnValueOnce(lookup.promise);
-      const signup = AuthController.signUp({ secretKey: 'key', signupToken: 'invite' });
-
-      if (replacement === 'logout') await AuthController.logout();
-      else {
-        const flow = startFlow();
-        const login = await AuthController.getAuthUrl();
-        flow.approval.resolve(grantSession(['/:rw'], OTHER_PUBKY));
-        await login.awaitApproval;
-      }
-      const nextAttempt = useOnboardingStore.getState().signupAttempt;
-      const nextAccount = useAuthStore.getState().currentUserPubky;
-      lookup.reject(
-        Err.client(ClientErrorCode.NOT_FOUND, 'Absent', { service: ErrorService.Homeserver, operation: 'signin' }),
-      );
-
-      await expect(signup).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
-      expect(AuthApplication.createAccount).toHaveBeenCalledOnce();
-      expect(useOnboardingStore.getState().signupAttempt).toEqual(nextAttempt);
-      expect(useAuthStore.getState().currentUserPubky).toBe(nextAccount);
-    },
-  );
 });
 
 describe('grant-only migration and SDK removal events', () => {
@@ -1909,30 +1848,6 @@ describe('review regression coverage', () => {
     await useAuthStore.persist.rehydrate();
     expect(useAuthStore.getState()).toMatchObject({ restoreStatus: 'temporary-error', isRestoringSession: false });
   });
-
-  it('clears a definitively rejected invite attempt while retaining the original signup keys', async () => {
-    seed(null, null);
-    const secrets = Identity.generateSecrets();
-    useOnboardingStore.getState().setSecrets(secrets);
-    vi.spyOn(AuthApplication, 'createAccount').mockRejectedValue(expired());
-    await expect(AuthController.signUp({ secretKey: secrets.secretKey, signupToken: 'invalid' })).rejects.toBeDefined();
-    expect(useOnboardingStore.getState()).toMatchObject({ ...secrets, signupAttempt: null });
-  });
-
-  it('prepares account data after the real browser signup key generator preselects the identity', async () => {
-    seed(null, null);
-    useSettingsStore.setState({ privacy: { ...settingsInitialState.privacy, moderationBot: OTHER_PUBKY } });
-    ProfileController.generateSecrets();
-    const secretKey = useOnboardingStore.getState().secretKey!;
-    const pubky = Identity.z32FromSecret(secretKey);
-    expect(useAuthStore.getState().currentUserPubky).toBe(pubky);
-    vi.spyOn(AuthApplication, 'createAccount').mockResolvedValue(undefined);
-    vi.spyOn(AuthApplication, 'signInCreatedAccount').mockResolvedValue({ session: grantSession(['/:rw'], pubky) });
-    await AuthController.signUp({ secretKey, signupToken: 'invite' });
-    expect(clearDatabase).toHaveBeenCalledOnce();
-    expect(useSettingsStore.getState().privacy.moderationBot).toBe(settingsInitialState.privacy.moderationBot);
-    expect(useOnboardingStore.getState().secretKey).toBe(secretKey);
-  });
 });
 
 it('regression: next login retains revocations after failed durable logout', async () => {
@@ -2056,6 +1971,114 @@ it('shares a single deadline for concurrent and late legacy cleanup callers', as
 });
 
 describe('final review session ownership regressions', () => {
+  it('adopts a restored session that arrives after the UI deadline without another lifecycle event', async () => {
+    vi.useFakeTimers();
+    seed(null, grantReference('late-completion'));
+    const exchange = deferred<{ status: 'restored'; session: Session }>();
+    const restore = vi.spyOn(AuthApplication, 'restorePersistedSession').mockReturnValue(exchange.promise);
+    const initial = AuthController.restorePersistedSession();
+    await vi.advanceTimersByTimeAsync(12_001);
+    expect(await initial).toBe(false);
+    expect(useAuthStore.getState().restoreStatus).toBe('temporary-error');
+
+    exchange.resolve({ status: 'restored', session: narrowGrant });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(useAuthStore.getState()).toMatchObject({ session: narrowGrant, restoreStatus: 'ready' });
+    expect(restore).toHaveBeenCalledOnce();
+    expect(clearDatabase).not.toHaveBeenCalled();
+  });
+
+  it('settles a late terminal restore result without another lifecycle event', async () => {
+    vi.useFakeTimers();
+    const reference = grantReference('late-terminal');
+    seed(null, reference);
+    const exchange = deferred<{ status: 'reauth-required' }>();
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockReturnValue(exchange.promise);
+    const initial = AuthController.restorePersistedSession();
+    await vi.advanceTimersByTimeAsync(12_001);
+    expect(await initial).toBe(false);
+
+    exchange.resolve({ status: 'reauth-required' });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(useAuthStore.getState()).toMatchObject({
+      session: null,
+      sessionReference: reference,
+      currentUserPubky: PUBKY,
+      restoreStatus: 'reauth-required',
+    });
+    expect(clearDatabase).not.toHaveBeenCalled();
+  });
+
+  it.each(
+    (['restored', 'reauth-required'] as const).flatMap((status) =>
+      (['logout', 'new-sign-in', 'remote-account'] as const).map((change) => ({ status, change })),
+    ),
+  )('does not apply a late $status result after $change', async ({ status, change }) => {
+    vi.useFakeTimers();
+    seed(null, grantReference(`late-${status}-${change}`));
+    const exchange = deferred<{ status: 'restored'; session: Session } | { status: 'reauth-required' }>();
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockReturnValue(exchange.promise);
+    const initial = AuthController.restorePersistedSession();
+    await vi.advanceTimersByTimeAsync(12_001);
+    expect(await initial).toBe(false);
+
+    if (change === 'logout') await AuthController.logout();
+    else if (change === 'new-sign-in') {
+      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
+      const replacement = grantSession(undefined, OTHER_PUBKY);
+      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
+      vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: replacement });
+      await AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' });
+    } else {
+      // Another tab changed only durable metadata; the storage listener has not run yet.
+      const stored = JSON.parse(localStorage.getItem(AUTH_PERSIST_KEY)!);
+      stored.state.generation = 'remote-replacement';
+      stored.state.currentUserPubky = OTHER_PUBKY;
+      localStorage.setItem(AUTH_PERSIST_KEY, JSON.stringify(stored));
+    }
+    const before = useAuthStore.getState();
+    exchange.resolve(status === 'restored' ? { status, session: narrowGrant } : { status });
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(useAuthStore.getState()).toBe(before);
+    expect(useAuthStore.getState().session).not.toBe(narrowGrant);
+  });
+
+  it.each([true, false])(
+    'settles transient application retries after the UI timeout (recovers: %s)',
+    async (recovers) => {
+      vi.useFakeTimers();
+      const reference = grantReference(`late-network-${recovers}`);
+      const session = grantSession([APP_CAPABILITIES], PUBKY, reference.grantId);
+      seed(null, reference);
+      const firstAttempt = deferred<Session>();
+      const restore = vi.spyOn(HomeserverService, 'restoreReference');
+      if (recovers) restore.mockResolvedValue(session);
+      else restore.mockRejectedValue(offline());
+      restore.mockReturnValueOnce(firstAttempt.promise);
+      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
+      const initial = AuthController.restorePersistedSession();
+      await vi.advanceTimersByTimeAsync(12_001);
+      expect(await initial).toBe(false);
+
+      firstAttempt.reject(offline());
+      await vi.advanceTimersByTimeAsync(801);
+
+      expect(useAuthStore.getState()).toMatchObject({
+        session: recovers ? session : null,
+        sessionReference: reference,
+        currentUserPubky: PUBKY,
+        restoreStatus: recovers ? 'ready' : 'temporary-error',
+      });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(restore).toHaveBeenCalledTimes(recovers ? 2 : 3);
+      expect(AuthApplication.readPersistedAuth()?.sessionReference).toEqual(reference);
+      expect(clearDatabase).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([false, true])('shares an exchange across UI timeouts (settled before retry: %s)', async (settled) => {
     vi.useFakeTimers();
     seed(null);

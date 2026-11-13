@@ -59,7 +59,7 @@ describe('useCurrentUserProfile', () => {
 
   describe('Guest with a generated pubky (#2955)', () => {
     beforeEach(() => {
-      // The onboarding key step stores the generated pubky with no session and nothing to restore.
+      // A stored pubky without an account: no session and nothing to restore.
       mockState.currentUserPubky = 'generated-key';
       mockState.session = null;
       mockState.sessionReference = null;

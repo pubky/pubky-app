@@ -94,7 +94,7 @@ describe('RouteGuardProvider recovery with real route and auth rules', () => {
         expect(useAuthStore.getState().currentUserPubky).toBe('retained-account');
       });
 
-      it.each([ROOT_ROUTES, AUTH_ROUTES.SIGN_IN, ONBOARDING_ROUTES.HUMAN, ONBOARDING_ROUTES.BACKUP])(
+      it.each([ROOT_ROUTES, AUTH_ROUTES.SIGN_IN, ONBOARDING_ROUTES.HUMAN])(
         'allows the existing sign-in/onboarding flow on %s',
         (pathname) => {
           mocks.pathname = pathname;

@@ -1,11 +1,6 @@
 import type { Session } from '@synonymdev/pubky';
 import { userUriBuilder } from 'pubky-app-specs';
-import type {
-  TKeypairParams,
-  TRestoreSessionParams,
-  TRestoreSessionResult,
-  TSignInParams,
-} from '@/application/auth/auth.types';
+import type { TRestoreSessionParams, TRestoreSessionResult, TSignInParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import type { ActiveSessionFailure, PersistedAuth, SessionReference } from '@/libs/auth/session.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -26,11 +21,7 @@ import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import type {
-  THomeserverPublicKeyParams,
-  THomeserverSessionResult,
-  THomeserverSignUpParams,
-} from '@/services/homeserver/homeserver.types';
+import type { THomeserverPublicKeyParams, THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 import { LocalAuthService } from '@/services/local/auth/auth';
 import { ShopEmbedService } from '@/services/shop-embed/shop-embed';
 
@@ -131,12 +122,6 @@ export class AuthApplication {
   }
   static finishRetirement(sessionStoreId: string) {
     return LocalAuthService.finishRetirement(sessionStoreId);
-  }
-  static createAccount(params: THomeserverSignUpParams) {
-    return HomeserverService.createAccount(params);
-  }
-  static signInCreatedAccount(params: TKeypairParams) {
-    return HomeserverService.signInCreatedAccount(params);
   }
 
   /**
