@@ -815,11 +815,11 @@ describe('DialogRestoreRecoveryPhrase', () => {
     });
 
     it('prevents rapid clicking on restore button when loading', async () => {
-      let resolveRestore: () => void;
+      let resolveRestore: (value: boolean) => void;
       mockLoginWithMnemonic.mockImplementation(
         () =>
-          new Promise((resolve) => {
-            resolveRestore = resolve as () => void;
+          new Promise<boolean>((resolve) => {
+            resolveRestore = resolve;
           }),
       );
 
@@ -847,16 +847,19 @@ describe('DialogRestoreRecoveryPhrase', () => {
       // Should only be called once because button was disabled
       expect(mockLoginWithMnemonic).toHaveBeenCalledTimes(1);
 
-      // Resolve the promise
-      resolveRestore!();
+      // Settle the pending login inside the test: a successful restore reaches onRestore before the tree unmounts
+      resolveRestore!(true);
+      await waitFor(() => {
+        expect(mockOnRestore).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('shows loading state during restore', async () => {
-      let resolveRestore: () => void;
+      let resolveRestore: (value: boolean) => void;
       mockLoginWithMnemonic.mockImplementation(
         () =>
-          new Promise((resolve) => {
-            resolveRestore = resolve as () => void;
+          new Promise<boolean>((resolve) => {
+            resolveRestore = resolve;
           }),
       );
 
@@ -883,16 +886,19 @@ describe('DialogRestoreRecoveryPhrase', () => {
         expect(input).toBeDisabled();
       });
 
-      // Resolve the promise
-      resolveRestore!();
+      // Settle the pending login inside the test: a successful restore reaches onRestore before the tree unmounts
+      resolveRestore!(true);
+      await waitFor(() => {
+        expect(mockOnRestore).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('disables inputs during restore process', async () => {
-      let resolveRestore: () => void;
+      let resolveRestore: (value: boolean) => void;
       mockLoginWithMnemonic.mockImplementation(
         () =>
-          new Promise((resolve) => {
-            resolveRestore = resolve as () => void;
+          new Promise<boolean>((resolve) => {
+            resolveRestore = resolve;
           }),
       );
 
@@ -920,8 +926,11 @@ describe('DialogRestoreRecoveryPhrase', () => {
         expect(input).toBeDisabled();
       });
 
-      // Resolve the promise
-      resolveRestore!();
+      // Settle the pending login inside the test: a successful restore reaches onRestore before the tree unmounts
+      resolveRestore!(true);
+      await waitFor(() => {
+        expect(mockOnRestore).toHaveBeenCalledTimes(1);
+      });
     });
   });
   it('keeps the Shop reauthorization identity when using a recovery phrase', async () => {
