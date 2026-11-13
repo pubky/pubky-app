@@ -132,7 +132,7 @@ describe('homeserver write call sites', () => {
       'FeedApplication.deleteStoredFeed': 'feed deletion: a DELETE has no body to go stale',
       'LocksApplication.replicateUnlockedContent': 'the replica bytes are fixed by the unlocked content',
       'PostApplication.commitCreate': 'the first version of a post, built from the composer, not a read',
-      'PostApplication.commitDelete': 'a DELETE has no body to go stale',
+      'PostApplication.commitDeleteUnderLock': 'a DELETE has no body to go stale',
     };
     const offenders = files
       .filter(({ path, code }) => path !== HOMESERVER_SERVICE && /\bretryHomeserverWriteAfterReread\s*\(/.test(code))

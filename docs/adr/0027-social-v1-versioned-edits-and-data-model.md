@@ -16,6 +16,13 @@ Amended — 2026-11-09 (FIX-7): every Nexus call is built under the `/v1` API, w
 drops the bookmark, file-details and tag `relationship` fields; the local vocabulary stays `short`/`long` and the
 Nexus services fold every response once. One call stays on the frozen `/v0`. See _Nexus API version_ below.
 
+Amended — 2026-11-13 (FIX-FINAL-9, the Greptile P1 on #3140, round 6): a post's create (from the local row through
+the first PUT), edit and delete hold the post's Web Lock `pubky-post-write:<owner>:<postId>` exclusive, in every tab
+of the origin, so writes to one post run one after another: a delete lists the version an in-flight create or edit
+PUT and deletes it, and an edit queued behind a delete finds the tombstone and writes nothing; the head read and the
+delete's listings are bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; the edit's and the delete's fences guard their
+first pass; the media collection runs after the lock. See the _Create_, _Edit_ and _Delete_ bullets below.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`). Amends ADR-0023 (article covers)
 and the Locks reader described in ADR-0022.
 
@@ -41,19 +48,43 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
 - **Create** builds the first version with `PostNormalizer.to` → `buildPost` and PUTs `built.body` at `built.url`
   through `HomeserverService.putBlob`. The Dexie row holds the versionless reference (`buildUri(author, 'post', id)`)
   as its `uri`; a parent or embed is rebuilt from its composite id, never copied from a cached row's `uri`, which
-  Nexus may still spell the 0.x way.
+  Nexus may still spell the 0.x way. The local row and the first PUT run under the post's write lock (the _Edit_
+  bullet), the uploads before it (no delete can target a post that has no row yet), `onPostSynced` and the tags
+  after it, so a delete during the first PUT (a 429 back-off can hold it for 30 s) waits, lists the version and
+  deletes it, instead of listing an empty directory and reporting the post deleted before the version lands.
 - **Edit stays local-first with a fenced head re-read.** `PostApplication.commitEdit` projects the edit onto the
   cached row (`PostNormalizer.toLocalEdit`, pure), then inside `HomeserverService.createWriteFence()` +
   `retryHomeserverWriteAfterReread` it LISTs `posts/{id}/`, picks the head (`pickHeadVersion`), GETs and decodes it,
   applies the edit (`PostNormalizer.toEdit`: spreads the head, so the lock, kept attachments' alt text, the article
   cover, item notes and `$unknown` survive), `editPost`s the next version and PUTs it. A refusal the policy retries
   runs the read again; the row converges to what was PUT; a failure restores the row and sweeps the uploads. An
-  empty LIST (a post the migration skipped) is `NOT_FOUND`. Two tabs editing at once each write a version; the
-  higher edit id is the head and Nexus follows event order.
+  empty LIST (a post the migration skipped) is `NOT_FOUND`. An edit and a delete of one post hold the post's Web
+  Lock `pubky-post-write:<owner>:<postId>` exclusive (`withSyncLock`, every tab of the origin; a per-tab queue
+  where Web Locks are unavailable): the edit checks the tombstone, uploads, projects, reads the head and PUTs under
+  it, so an edit that starts after a delete finds the tombstone and writes nothing (`NOT_FOUND`: no upload, nothing
+  to sweep, the tombstone intact, since `LocalPostService.edit` clears the tombstone flag by design and must never
+  run over a delete); the fence is taken before the wait for the lock and guards its first pass (`guardFirstPass`),
+  checked once the lock is held and again before the PUT, so an edit that waited across a logout, an account change
+  or a session replacement writes nothing, not an upload or the projection (`SESSION_EXPIRED`), and one whose
+  session changes during its uploads PUTs nothing and rolls back (the sweep of its uploads is best-effort: after a
+  logout or an account switch it cannot reach the old account's files); the head read (LIST and GET as one)
+  is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`
+  (`awaitBounded`), a timeout failing the edit like a failed read and releasing the lock. Two tabs editing at once
+  write their versions one after the other, the second above the first's; the higher edit id is the head. Edits from
+  another device or origin are not ordered: Nexus follows event order.
 - **Delete** tombstones the row, then runs `deletionPaths({ kind: 'post', id, listings })` over a LIST of both roots
   plus the 0.x copy when the grant covers `/pub/pubky.app/:rw` and a GET finds it, one sequential
   `deleteIdempotent` per path (0.x first, oldest version first, public before private). A 0.x copy the grant cannot
-  delete is logged (`legacyRefused`). Media is collected afterwards under the rule in _Media lifetime_.
+  delete is logged (`legacyRefused`). It holds the post's write lock from the local tombstone through the last
+  DELETE, so it lists the post's directory only after an earlier edit's PUT in any tab and deletes that version too,
+  and an edit queued behind it is refused; its listings (both LISTs and the 0.x `exists`) share one
+  `HOMESERVER_SYNC_READ_TIMEOUT_MS` bound, past which it fails before any DELETE with the row tombstoned locally, as
+  after a failed LIST. Its fence, taken before the wait for the lock, guards its first pass, checked once the lock
+  is held, so a delete that waited across a logout, an account change or a session replacement tombstones nothing
+  and sends nothing (`SESSION_EXPIRED`; `deleteIdempotent` takes no fence, so that check is the guard). The writes
+  under the lock (the first PUT, uploads, the PUT and its back-off, the DELETEs) stay unbounded, as under the
+  bookmark, feed and mute locks. Media is collected afterwards, once the lock is released, under the rule
+  in _Media lifetime_.
 - **Dual spellings.** A post URI is never compared against one spelling: lookups reduce it to a composite id or match
   both `postReferenceSpellings` (replies, collection membership and counts, validators, the Locks announcement).
 - **Media** is hashed (`hashMedia` + `buildFile`), PUT once, and rowed as `owner:hash` with the upload's
@@ -146,6 +177,12 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
 
 - `post_details.content` holds the envelope the package spells; readers stay tolerant of the 0.x spelling.
 - No `DB_VERSION` bump from this slice: value shapes change inside existing columns, no index does.
+- The post write lock orders the tabs of one origin only. What it leaves: another device's or origin's edit can
+  still land after this device's delete listing (Nexus follows event order); on an insecure origin the queue covers
+  one tab; a collection edit uploads its new cover in the controller (`PostController.commitEditCollection`) before
+  the lock, so one queued behind a delete still uploads and then sweeps that cover; two tabs' collection item writes
+  each compute the item list from a pre-lock local read, so they serialize but the second writes its stale list
+  (pre-existing); the edit's generic error toast says "Try again" for an edit a delete refused.
 
 ## Alternatives Considered
 
