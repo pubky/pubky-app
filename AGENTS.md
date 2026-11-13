@@ -182,8 +182,8 @@ to people. See [People and names](docs/development-workflow.md#people-and-names)
 
 - Nothing external needs to be started: the app uses IndexedDB and the Next.js dev server, with staging defaults for Nexus,
   Homeserver, CDN, relays and Homegate baked into `src/libs/runtime-config/runtime-config.schema.ts`.
-- Sign in with the staging account: `npm run dev`, open `http://localhost:3000`, **Sign In** → **Use recovery phrase**,
-  enter the 12 words from the `STAGING_RECOVERY_PHRASE` secret, **Restore**.
+- Signed-in VM flows cannot be verified with `STAGING_RECOVERY_PHRASE` alone; report them as unverified unless a supported
+  sign-in is completed. See [Cursor Cloud sign-in](docs/development-workflow.md#cursor-cloud-sign-in).
 - Account creation needs SMS verification or a Bitcoin payment against staging infrastructure; do not try it in the VM.
 - Unit tests need no browser (`fake-indexeddb` + jsdom); `npm run test:e2e` needs external staging services, skip it.
 
