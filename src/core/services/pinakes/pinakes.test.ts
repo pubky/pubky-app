@@ -485,6 +485,19 @@ describe('PinakesService.fetchCardByUri with a longest age', () => {
   });
 });
 
+describe('PinakesService.fetchCardByUri with a longest age above the cache’s own', () => {
+  it('never keeps a link Pinakes did not know longer than its 30 s', async () => {
+    vi.useFakeTimers();
+    mockFetch.mockImplementation(() => Promise.resolve(capturedResponse('by-uri.not-found', 404)));
+    await PinakesService.fetchCardByUri('https://example.com/new');
+
+    await vi.advanceTimersByTimeAsync(PINAKES_UNSETTLED_CARD_STALE_TIME_MS + 1);
+    await PinakesService.fetchCardByUri('https://example.com/new', { maxAge: 10 * 60 * 1000 });
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('PinakesService.resolveCard', () => {
   const URI = 'https://www.fedlex.admin.ch/eli/cc/2022/151/de';
   const json = (body: unknown, status: number) =>
