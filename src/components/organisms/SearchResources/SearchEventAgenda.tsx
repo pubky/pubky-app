@@ -3,7 +3,6 @@
 import { CalendarOff, Repeat } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { getResourceRoute } from '@/app/routes';
-import { Badge } from '@/atoms/Badge/Badge';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
@@ -22,12 +21,7 @@ import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ResourceInstanceCard } from '@/organisms/ResourceInstanceCard/ResourceInstanceCard';
-import {
-  getEventLifecycleLabel,
-  getResourceInstanceKey,
-  groupEventsByDay,
-  type TEventInstance,
-} from '@/pipes/resource/resource.events';
+import { getResourceInstanceKey, groupEventsByDay, type TEventInstance } from '@/pipes/resource/resource.events';
 import { formatEventDay } from './SearchEventAgenda.utils';
 
 const SKELETON_COUNT = 3;
@@ -46,10 +40,11 @@ interface SearchEventAgendaProps {
  * search row is an event of its own: a calendar's occurrences share one link and are not merged
  * into their calendar (`useEventInstances`).
  *
- * Above a card: what the source says of an event not going ahead as planned (Cancelled,
- * Rescheduled…), and for a calendar occurrence a way to the calendar's other dates (its page lists
- * them). "Repeats" shows only for an occurrence Pinakes marks as one date of a repeating event; how
- * often it repeats is never guessed. The list has the feeds' loading, empty, error and
+ * Each card says what the source says of an event not going ahead as planned (an occurrence's
+ * lifecycle, else the event's status). Above a calendar occurrence's card: a way to its calendar,
+ * whose page lists its dates (they are the calendar's, not other dates of this event, so they are
+ * not called that). "Repeats" shows only for an occurrence Pinakes marks as one date of a repeating
+ * event; how often it repeats is never guessed. The list has the feeds' loading, empty, error and
  * infinite-scroll states, and one quiet line that events on Pubky are coming: nothing to press.
  */
 export function SearchEventAgenda({ search, children }: SearchEventAgendaProps) {
@@ -58,7 +53,9 @@ export function SearchEventAgenda({ search, children }: SearchEventAgendaProps) 
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
-    isLoading: loadingMore,
+    // Also while the events' details are read: the list does not grow meanwhile, and asking again
+    // would pile page upon page
+    isLoading: loadingMore || isReadingDetails,
     threshold: 3000,
     debounceMs: 20,
     itemCount: instances.length,
@@ -191,20 +188,14 @@ function AgendaDay({ day, events }: { day: string | null; events: TEventInstance
   );
 }
 
-/** One event of a day: what the source says of its lifecycle and other dates, then its card. */
+/** One event of a day: for a calendar occurrence a way to its calendar, then its card. */
 function AgendaEvent({ event }: { event: TEventInstance }) {
-  const status = getEventLifecycleLabel(event.event_status);
   const { occurrence } = event;
   return (
     <Container as="article" overrideDefaults className="flex min-w-0 flex-col gap-2">
-      {(status || occurrence) && (
+      {occurrence && (
         <Container overrideDefaults className="flex min-w-0 flex-wrap items-center gap-2">
-          {status && (
-            <Badge variant="secondary" data-testid="agenda-status">
-              {status}
-            </Badge>
-          )}
-          {occurrence?.recurrence_id && (
+          {occurrence.recurrence_id && (
             <Typography
               as="span"
               size="xs"
@@ -215,15 +206,13 @@ function AgendaEvent({ event }: { event: TEventInstance }) {
               Repeats
             </Typography>
           )}
-          {occurrence && (
-            <Link
-              href={getResourceRoute(occurrence.feed_uri)}
-              overrideDefaults
-              className="text-xs font-medium text-muted-foreground hover:text-brand hover:underline"
-            >
-              Other dates
-            </Link>
-          )}
+          <Link
+            href={getResourceRoute(occurrence.feed_uri)}
+            overrideDefaults
+            className="text-xs font-medium text-muted-foreground hover:text-brand hover:underline"
+          >
+            More from this calendar
+          </Link>
         </Container>
       )}
       <ResourceInstanceCard card={event} data-testid="agenda-event" />

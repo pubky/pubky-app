@@ -11,6 +11,7 @@ import { formatEventDay } from './SearchEventAgenda.utils';
 const mocks = vi.hoisted(() => ({
   instances: null as TEventInstance[] | null,
   isLoading: false,
+  scroll: null as { isLoading: boolean; itemCount: number } | null,
   asked: [] as unknown[],
 }));
 
@@ -25,11 +26,19 @@ vi.mock('@/hooks/useEventInstances/useEventInstances', () => ({
   },
 }));
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
-  useInfiniteScroll: () => ({ sentinelRef: vi.fn(), isStalled: false, resumeAutoLoad: vi.fn() }),
+  useInfiniteScroll: (options: { isLoading: boolean; itemCount: number }) => {
+    mocks.scroll = options;
+    return { sentinelRef: vi.fn(), isStalled: false, resumeAutoLoad: vi.fn() };
+  },
 }));
 vi.mock('@/organisms/ResourceInstanceCard/ResourceInstanceCard', () => ({
   ResourceInstanceCard: ({ card }: { card: TEventInstance }) => (
-    <div data-testid="event-card" data-id={card.id} data-uid={card.occurrence?.uid ?? ''}>
+    <div
+      data-testid="event-card"
+      data-id={card.id}
+      data-uid={card.occurrence?.uid ?? ''}
+      data-status={card.event_status ?? ''}
+    >
       {card.name}
     </div>
   ),
@@ -118,17 +127,19 @@ describe('SearchEventAgenda', () => {
     expect(within(days()[0]).getAllByTestId('event-card')).toHaveLength(2);
   });
 
-  it('offers a calendar occurrence’s other dates on the calendar’s page, and says nothing of repeating without a sign of it', () => {
+  it('leads from a calendar occurrence to its calendar’s page (which lists its dates), and says nothing of repeating without a sign of it', () => {
     render(<SearchEventAgenda search={search()} />);
 
     const holiday = within(days()[0]);
-    expect(holiday.getByRole('link', { name: 'Other dates' })).toHaveAttribute(
+    expect(holiday.getByRole('link', { name: 'More from this calendar' })).toHaveAttribute(
       'href',
       getResourceRoute(ROWS[0].occurrence!.feed_uri),
     );
+    // The calendar's other dates are other events: they are not called this event's other dates
+    expect(holiday.queryByText(/other dates/i)).toBeNull();
     expect(holiday.queryByText('Repeats')).toBeNull();
-    // An event that is no calendar occurrence has no other dates to offer
-    expect(within(days()[1]).queryByRole('link', { name: 'Other dates' })).toBeNull();
+    // An event that is no calendar occurrence has no calendar to lead to
+    expect(within(days()[1]).queryByRole('link', { name: 'More from this calendar' })).toBeNull();
   });
 
   it('says an occurrence repeats only when Pinakes names the date of a repeating event it is', () => {
@@ -138,14 +149,24 @@ describe('SearchEventAgenda', () => {
     expect(within(days()[0]).getByTestId('agenda-repeats')).toHaveTextContent('Repeats');
   });
 
-  it('says when an event is cancelled or moved, from the occurrence’s lifecycle or the event’s own status', () => {
+  it('hands each card its event’s lifecycle (an occurrence’s own, or the event’s status), which the card says once', () => {
     const cancelled = { ...ROWS[0], occurrence: { ...ROWS[0].occurrence!, status: 'cancelled' } };
     mocks.instances = [toEventInstance(cancelled, null), { ...ROWS[1], event_status: 'rescheduled' }, ROWS[3]];
     render(<SearchEventAgenda search={search({ cards: [cancelled, ROWS[1], ROWS[3]] })} />);
 
-    expect(within(days()[0]).getByTestId('agenda-status')).toHaveTextContent('Cancelled');
-    expect(within(days()[1]).getByTestId('agenda-status')).toHaveTextContent('Rescheduled');
-    expect(within(days()[2]).queryByTestId('agenda-status')).toBeNull();
+    const statuses = screen.getAllByTestId('event-card').map((card) => card.getAttribute('data-status'));
+    expect(statuses).toEqual(['cancelled', 'rescheduled', '']);
+    // No second statement of it beside the card
+    expect(screen.queryByText('Cancelled')).toBeNull();
+    expect(screen.queryByText('Rescheduled')).toBeNull();
+  });
+
+  it('asks for no further page while the events’ details are still read, so pages do not pile up', () => {
+    mocks.instances = ROWS.slice(0, 2).map((card) => toEventInstance(card, null));
+    mocks.isLoading = true;
+    render(<SearchEventAgenda search={search({ hasMore: true })} />);
+
+    expect(mocks.scroll).toMatchObject({ isLoading: true, itemCount: 2 });
   });
 
   it('lists an event without a date last, under its own heading', () => {

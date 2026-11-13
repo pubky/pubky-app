@@ -51,6 +51,24 @@ describe('useEventInstances', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('keeps a read in flight when more rows come: its rows are not read a second time', async () => {
+    const finish: ((value: TEventInstance[]) => void)[] = [];
+    mocks.fetchEventInstances.mockImplementation(() => new Promise((resolve) => finish.push(resolve)));
+    const { result, rerender } = renderHook(({ cards }) => useEventInstances(cards), {
+      initialProps: { cards: ROWS.slice(0, 2) },
+    });
+
+    rerender({ cards: ROWS.slice(0, 4) });
+
+    expect(mocks.fetchEventInstances).toHaveBeenCalledTimes(2);
+    expect(mocks.fetchEventInstances.mock.calls[1][0].cards).toEqual(ROWS.slice(2, 4));
+    // The first read still counts when it answers
+    await act(async () => finish[0](withDetails(ROWS.slice(0, 2))));
+    expect(result.current.instances).toHaveLength(2);
+    await act(async () => finish[1](withDetails(ROWS.slice(2, 4))));
+    expect(result.current.instances).toHaveLength(4);
+  });
+
   it('shows the rows as the search gave them when their details cannot be read', async () => {
     mocks.fetchEventInstances.mockRejectedValue(new Error('down'));
 
