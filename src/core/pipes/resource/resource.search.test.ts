@@ -82,6 +82,8 @@ describe('isResolvableLink', () => {
     ['not a link', false],
     ['https://example.invalid/?u=https://alice:secret@other.invalid/', false],
     ['https://ali\tce:secret@example.invalid/a', false],
+    ['https://example.invalid/?u=https://other.invalid/a', true],
+    ['https://twitter.com/intent/tweet?url=https://example.invalid&text=hi%20@bob', true],
   ])('%s may be sent: %s', (uri, expected) => {
     expect(isResolvableLink(uri)).toBe(expected);
   });
@@ -108,6 +110,9 @@ describe('hasCredentialLink', () => {
     ['https://ali\tce:secret@example.invalid/a', true],
     ['https://alice:sec\nret@example.invalid/a', true],
     ['https://alice:secret\r@example.invalid/a', true],
+    // In a link held by another, `&` ends it (the outer link's next parameter)
+    ['https://twitter.com/intent/tweet?url=https://example.invalid&text=hi%20@bob', false],
+    ['https://a&b:secret@example.invalid', true],
   ])('%s: %s', (text, expected) => {
     expect(hasCredentialLink(text)).toBe(expected);
   });
