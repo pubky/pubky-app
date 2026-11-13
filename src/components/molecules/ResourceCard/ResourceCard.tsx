@@ -22,6 +22,9 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { getLocationRowText, isLocationRow, ResourceLocation } from '@/molecules/ResourceMap/ResourceLocation';
+import { useResourceLocationVariant } from '@/molecules/ResourceMap/ResourceLocationContext';
+import { getMapsDestination } from '@/molecules/ResourceMap/ResourceMap.utils';
 import { ResourceAudioPlayer } from '@/molecules/ResourcePlayer/ResourceAudioPlayer';
 import { PinakesStatus, type TPinakesCredit } from '@/services/pinakes/pinakes.types';
 import { ResourceArrowText } from './ResourceArrowText';
@@ -153,7 +156,14 @@ export function ResourceCard({
 
   // A Bitcoin or Lightning card shows its lines, with links to what it names, instead of a summary.
   const chain = getChainView(card);
-  const summary = chain ? null : getResourceSummary(card);
+  // Where a place or an event is: a map of its point, or a line ending in "Open in Maps"
+  const destination = getMapsDestination(card);
+  const locationVariant = useResourceLocationVariant();
+  const locationRowText =
+    destination && isLocationRow(destination, locationVariant) ? getLocationRowText(destination) : null;
+  const cardSummary = chain ? null : getResourceSummary(card);
+  // The location line says the address: the summary does not say it a second time
+  const summary = cardSummary !== null && cardSummary === locationRowText ? null : cardSummary;
   // A transaction's ID in its title is shortened; the copy button and the title's tooltip have it whole.
   const shownTitle = chain?.title ?? title;
   const dates = isEvent ? formatResourceDates(card) : null;
@@ -162,7 +172,9 @@ export function ResourceCard({
   const attendance = isEvent ? (ATTENDANCE_LABELS[card.attendance?.trim().toLowerCase() ?? ''] ?? null) : null;
   // Coordinates only for a place or event that has nothing better to say where it is.
   const point =
-    family !== ResourceFamily.WEB && !venue && !summary && card.point ? formatResourcePoint(card.point) : null;
+    family !== ResourceFamily.WEB && !venue && !cardSummary && !locationRowText && card.point
+      ? formatResourcePoint(card.point)
+      : null;
   const eventStatusNote = isEvent ? getEventStatusNote(card.event_status) : null;
   const statusNote = status === PinakesStatus.OK ? null : STATUS_NOTES[status];
   // OpenStreetMap is credited once, under the resource page's Sources ("Map data"), not on every
@@ -396,6 +408,8 @@ export function ResourceCard({
             </Container>
           </Container>,
         )}
+
+        {destination && <ResourceLocation id={card.id} destination={destination} size={size} />}
 
         {/* An episode's whole audio plays in the app's player, Play beside its date and length. */}
         {streamUrl && !card.stream?.preview && (

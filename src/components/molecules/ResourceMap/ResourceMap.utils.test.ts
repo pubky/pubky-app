@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
 import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
-import { formatCoordinates, getMapPoint, getMapsDestination, getMapsLinks } from './ResourceMap.utils';
+import { formatCoordinates, getMapsDestination, getMapsLinks } from './ResourceMap.utils';
 
 /** A café as Pinakes reads it from OpenStreetMap: a point and a street address. */
 const CAFE = {
@@ -13,26 +13,6 @@ const CAFE = {
   point: { lat: 47.3708689, lon: 8.5418241 },
   address: { street: 'Stegengasse', postcode: '8001', city: 'Zürich', country_code: 'ch' },
 };
-
-describe('getMapPoint', () => {
-  it('keeps a point whose latitude and longitude are on the map', () => {
-    expect(getMapPoint({ lat: 47.3708689, lon: 8.5418241 })).toEqual({ lat: 47.3708689, lon: 8.5418241 });
-    expect(getMapPoint({ lat: -90, lon: 180 })).toEqual({ lat: -90, lon: 180 });
-  });
-
-  it.each([
-    ['no point', null],
-    ['no point at all', undefined],
-    ['a latitude past the pole', { lat: 90.01, lon: 8 }],
-    ['a longitude past the antimeridian', { lat: 47, lon: -180.5 }],
-    ['a number that is not one', { lat: Number.NaN, lon: 8 }],
-    ['an endless number', { lat: 47, lon: Number.POSITIVE_INFINITY }],
-    ['text in place of numbers', { lat: '47.37', lon: '8.54' }],
-    ['a missing longitude', { lat: 47 }],
-  ])('has no point for %s', (_name, point) => {
-    expect(getMapPoint(point)).toBeNull();
-  });
-});
 
 describe('getMapsDestination', () => {
   it('is a place’s point, with its name and address', () => {

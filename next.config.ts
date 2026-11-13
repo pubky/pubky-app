@@ -110,7 +110,16 @@ const withSerwist = withSerwistInit({
   // is loaded once per account by the migration gate and never again, so its chunk is left to the
   // network. It is matched by the module it carries, not by file name: Next names a chunk holding
   // a >160 KB node_modules module by a hash of the module path (docs/pwa.md, "Precache diet").
-  exclude: [/\.map$/, /^manifest.*\.js$/, excludeChunksCarrying('pubky-social-migrator')],
+  // MapLibre GL (~1.1 MB with its stylesheet, plus a ~500 KB worker file) is loaded only once a map
+  // of a place or an event is on screen (`src/libs/maps/maplibre.ts`), so it is left to the network
+  // too; the worker is an emitted file, matched by its name.
+  exclude: [
+    /\.map$/,
+    /^manifest.*\.js$/,
+    excludeChunksCarrying('pubky-social-migrator'),
+    excludeChunksCarrying('maplibre-gl'),
+    /maplibre-gl-worker\.[0-9a-f]+\.mjs$/,
+  ],
 });
 
 const composedConfig = withSerwist(nextConfig);

@@ -113,7 +113,6 @@ describe('ResourceMap', () => {
     mocks.state.maps.length = 0;
     mocks.state.constructorError = null;
     mocks.state.importError = null;
-    mocks.state.setWorkerUrl.mockClear();
   });
 
   describe('visibility gate', () => {
@@ -136,7 +135,9 @@ describe('ResourceMap', () => {
       expect(map.options.container).toBe(screen.getByTestId('resource-map-canvas'));
       expect(map.options.center).toEqual([8.5418241, 47.3708689]);
       expect(map.options.style).toBe('https://tiles.openfreemap.org/styles/dark');
+      // The library is told where its worker file is, once
       expect(mocks.state.setWorkerUrl).toHaveBeenCalledTimes(1);
+      expect(mocks.state.setWorkerUrl).toHaveBeenCalledWith(expect.stringContaining('maplibre-gl-worker.mjs'));
     });
   });
 

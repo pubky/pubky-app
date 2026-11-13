@@ -157,6 +157,11 @@ export const RESOURCE_SEARCH_MAX_INGREDIENTS = 3;
 /** Services and categories the panel lists at once (most links first; a picked one stays listed). */
 export const RESOURCE_SEARCH_FACETS_SHOWN = 12;
 
+/** Places a place's page lists under Nearby. */
+export const RESOURCE_NEARBY_SHOWN = 6;
+/** How far around a place its Nearby looks (km). */
+export const RESOURCE_NEARBY_RADIUS_KM = 2;
+
 /** The windows the Trending order offers (Pinakes takes `1h`–`90d`). */
 export const RESOURCE_TRENDING_WINDOWS = ['24h', '7d', '30d'] as const;
 
