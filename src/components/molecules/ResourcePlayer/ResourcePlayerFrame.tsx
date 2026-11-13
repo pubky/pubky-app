@@ -139,9 +139,10 @@ export function ResourcePlayerFrame({
     setStartedSrc(target.src);
     setStarted(false);
   }
-  // A frame loaded anew (`round`) shows its placeholder again until it has loaded.
+  // A frame loaded anew (`round`) shows its placeholder again until it has loaded. So does one mounted
+  // anew while its card says loaded (the player host unloads a hidden frame, `HostedFrame`).
   const [round, setRound] = useState(0);
-  const [loadedRound, setLoadedRound] = useState(0);
+  const [loadedRound, setLoadedRound] = useState<number | null>(() => (givenLoad === 'ready' ? null : 0));
   const load: PlayerLoadState = round === loadedRound ? givenLoad : 'loading';
   useFramePress(
     regionRef,
@@ -206,7 +207,10 @@ export function ResourcePlayerFrame({
             autoPlay={target.autoplay}
             preload="metadata"
             aria-label={label}
-            onLoadedMetadata={onLoaded}
+            onLoadedMetadata={() => {
+              onLoaded();
+              setLoadedRound(round);
+            }}
             className="absolute inset-0 size-full"
             data-testid="resource-player-audio"
           />

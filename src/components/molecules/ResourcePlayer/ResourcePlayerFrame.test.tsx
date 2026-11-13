@@ -86,6 +86,33 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByRole('region', { name: 'Spotify player: Get Lucky' })).toHaveAttribute('aria-busy', 'true');
   });
 
+  it('shows its placeholder again when mounted anew over a player its card has loaded, until this frame has loaded', () => {
+    // The player host unloads a frame hidden with its card and mounts it again when the card shows:
+    // the card still says loaded, but the new frame has to load anew.
+    render(<ResourcePlayerFrame target={SPOTIFY} title="Get Lucky" load="ready" onLoaded={() => {}} quiet />);
+    const frame = screen.getByTestId('resource-player-frame');
+    const region = screen.getByRole('region', { name: 'Spotify player: Get Lucky' });
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(region).toHaveClass('bg-card');
+    expect(frame).toHaveClass('opacity-0');
+    expect(screen.getByTestId('resource-player-placeholder')).toHaveAttribute('aria-hidden', 'true');
+
+    act(() => frame.dispatchEvent(new Event('load')));
+    expect(region).toHaveAttribute('aria-busy', 'false');
+    expect(region).not.toHaveClass('bg-card');
+    expect(frame).toHaveClass('opacity-100');
+    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+  });
+
+  it('shows its placeholder again over a plain audio file mounted anew, until its metadata has loaded', () => {
+    const file = getPlayerTarget('https://example.com/episode.mp3')!;
+    render(<ResourcePlayerFrame target={file} title="Episode 1" load="ready" onLoaded={() => {}} />);
+    expect(screen.getByTestId('resource-player-placeholder')).toBeInTheDocument();
+
+    act(() => screen.getByTestId('resource-player-audio').dispatchEvent(new Event('loadedmetadata')));
+    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+  });
+
   it('rounds its corners as the services do, and shows its own background only until the player has loaded', () => {
     const { rerender } = render(
       <ResourcePlayerFrame target={TIDAL} title="Kind of Blue" load="loading" onLoaded={() => {}} />,
@@ -103,6 +130,7 @@ describe('ResourcePlayerFrame', () => {
     ['Deezer', DEEZER],
   ])('tells only screen readers that a press inside the %s player is needed', (name, target) => {
     render(<ResourcePlayerFrame target={target} title="Party Time" load="ready" onLoaded={() => {}} />);
+    act(() => screen.getByTestId('resource-player-frame').dispatchEvent(new Event('load')));
 
     const status = screen.getByTestId('resource-player-status');
     expect(status).toHaveTextContent(`Press play in the ${name} player to start.`);
@@ -121,6 +149,7 @@ describe('ResourcePlayerFrame', () => {
     postFromFrame(frame, { type: 'ready' });
     expect(post).toHaveBeenCalledTimes(1);
     expect(post).toHaveBeenCalledWith({ command: 'play' }, 'https://open.spotify.com');
+    act(() => frame.dispatchEvent(new Event('load')));
     expect(screen.getByTestId('resource-player-status')).toBeEmptyDOMElement();
   });
 
@@ -228,6 +257,7 @@ describe('ResourcePlayerFrame', () => {
 
   it('says nothing more once a player that starts on load has loaded', () => {
     render(<ResourcePlayerFrame target={YOUTUBE} title="Video" load="ready" onLoaded={() => {}} />);
+    act(() => screen.getByTestId('resource-player-frame').dispatchEvent(new Event('load')));
 
     expect(screen.getByTestId('resource-player-status')).toBeEmptyDOMElement();
   });
@@ -264,6 +294,9 @@ describe('ResourcePlayerFrame', () => {
       </>,
     );
     const album = screen.getByLabelText('Deezer player: Discovery', { selector: 'iframe' });
+    // Loaded: the placeholder below comes from the reload, not from the first load.
+    act(() => album.dispatchEvent(new Event('load')));
+    expect(screen.getByRole('region', { name: 'Deezer player: Discovery' })).toHaveAttribute('aria-busy', 'false');
     const press = () =>
       act(() => {
         fireEvent.mouseOver(album);

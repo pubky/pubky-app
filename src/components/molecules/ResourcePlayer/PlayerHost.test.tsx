@@ -335,6 +335,8 @@ describe('PlayerHost', () => {
     const [frame] = frames();
     const box = frame.closest('[data-testid="hosted-player"]')!;
     expect(box).not.toHaveClass('hidden');
+    act(() => frame.dispatchEvent(new Event('load')));
+    expect(within(box as HTMLElement).queryByTestId('resource-player-placeholder')).toBeNull();
 
     rerender(page(true));
     act(() => {
@@ -353,6 +355,17 @@ describe('PlayerHost', () => {
     });
     expect(frames()).toHaveLength(1);
     expect(box).not.toHaveClass('hidden');
+    // A new frame, loading anew: its placeholder covers it until it has loaded, as on the first load.
+    const [reloaded] = frames();
+    expect(reloaded).not.toBe(frame);
+    const region = reloaded.closest('[data-player-region]')!;
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(reloaded).toHaveClass('opacity-0');
+    expect(within(box as HTMLElement).getByTestId('resource-player-placeholder')).toBeInTheDocument();
+    act(() => reloaded.dispatchEvent(new Event('load')));
+    expect(region).toHaveAttribute('aria-busy', 'false');
+    expect(reloaded).toHaveClass('opacity-100');
+    expect(within(box as HTMLElement).queryByTestId('resource-player-placeholder')).toBeNull();
   });
 
   it('lets a quiet player go with its card, and never docks one', () => {
