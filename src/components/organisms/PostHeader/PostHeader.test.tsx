@@ -94,6 +94,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
         characterLimitPlacement,
         characterLimit,
         navigable = true,
+        metadataSlot,
       }: {
         userId: string;
         userName: string;
@@ -105,6 +106,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
         characterLimitPlacement?: string;
         characterLimit?: { count: number; max: number };
         navigable?: boolean;
+        metadataSlot?: React.ReactNode;
       }) => (
         <div
           data-testid="post-header-user-info"
@@ -128,6 +130,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
             </div>
           )}
           {timeAgo && <div data-testid="bottom-left-time">{timeAgo}</div>}
+          {metadataSlot}
         </div>
       ),
     ),
@@ -408,6 +411,30 @@ describe('PostHeader', () => {
 
     renderPostHeader(<PostHeader postId="userpubkykey:post456" navigable={false} />);
     expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-navigable', 'false');
+  });
+
+  it('passes the metadata slot to PostHeaderUserInfo', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" metadataSlot={<span>Unlocked</span>} />);
+
+    expect(screen.getByTestId('post-header-user-info')).toHaveTextContent('Unlocked');
   });
 
   it('passes showUserInfo to PostHeaderUserInfo', () => {

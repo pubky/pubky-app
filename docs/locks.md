@@ -248,43 +248,57 @@ feed card   ─┐
 detail page ─┴─→ PostContentBase ──(isLock)──→ LockedPostContent
                                   ├─(isArticle)─→ PostArticle
                                   └─ default ───→ PostBody
+
+detail page, lock post (not blurred or deleted)
+  └─ SinglePostContent: useLockFile + useUnlockedContent → FocusedLockProvider
+       ├─(unlocked article)─→ PostArticleDetail (unlocked) + FocusedLockRecovery
+       └─ otherwise ─────────→ PostMain → … → LockedPostContent (uses the page's state)
 ```
 
 `LockedPostContent` renders the teaser body (via the shared `PostBody`) + a lock card,
 and swaps in the guarded post once it becomes readable.
 
-The one route-dependent bit lives there too: an unlocked **article** is a three-line preview
-everywhere except the post page of that same post, where it renders in full (`PostArticle full`).
-A lock post's own content is the lock envelope, not article JSON, so `SinglePostContent` never
-routes it to the article page — the route is the only thing that says the reader opened this post
-to read it. The match is on the route's own ids, because that page also renders embeds and thread
-parents through this component and those stay previews (#2401, absorbed into #2432).
+The post page reads its own post's lock itself: `SinglePostContent` runs `useLockFile` and
+`useUnlockedContent` and shares the result through `FocusedLockProvider`, and the post card's
+`LockedPostContent` uses that state instead of reading its own. Once the content is an unlocked
+**article**, the page swaps the card for the article layout, `PostArticleDetail` with its `unlocked`
+source: the same title, header, actions and tags column as any article, the access label
+(`LockAccessLabel`) in the header's pubky and time row, and no teaser or lock card (#2659). The state
+lives above both layouts so a just-paid unlock survives the swap, and `FocusedLockRecovery` takes over
+the card's purchase recovery while the article shows, for a listed purchase whose bytes were unreadable. Other lock kinds keep the card.
 
-In full, the body images render from the reader's local copies: `PostArticle` hands its
-`localAttachments` to `PostText`, and `ArticleInlineImage` resolves `attachment:{n}` to the object
-URL of slot `n`. A slot whose file is missing shows the placeholder. The preview shows no body
-image, like any article card, and reads none: it loads the cover's bytes alone, and the body media
-is read once the article opens in full (#2686).
+Every other lock post (the feed, embeds, thread parents, the feed kept mounted under the post modal)
+reads its own lock as a preview, and an unlocked article there is the three-line `PostArticle` card.
+The preview shows no body image, like any article card, and reads none: it loads the cover's bytes
+alone, and the body media is read only for the full read (#2686).
 
-| File                                                           | Role                                                                                                                                                     |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `components/organisms/PostContentBase/PostContentBase.tsx`     | detect lock by `!!postDetails.lock`                                                                                                                      |
-| `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked                                                                                    |
-| `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser)                                                                      |
-| `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control; in the composer the title is editable (pencil) and the price is a button that reopens the price dialog |
-| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                                                                                          |
-| `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume                                                                              |
-| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                                                                                         |
-| `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction                                                                                 |
-| `components/organisms/DialogEditPost/DialogEditPost.tsx`       | routes an announcement into teaser mode, or falls back to a plain post edit                                                                              |
-| `libs/post/lockTeaser.ts`                                      | the envelope: builder and length guard                                                                                                                   |
+In full (`ArticleReader`), the body images render from the reader's local copies: the reader hands
+the local attachments to `PostText`, and `ArticleInlineImage` resolves `attachment:{n}` to the object
+URL of slot `n`. A slot whose file is missing shows the placeholder.
+
+| File                                                             | Role                                                                                                                                                     |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/organisms/PostContentBase/PostContentBase.tsx`       | detect lock by `!!postDetails.lock`                                                                                                                      |
+| `components/organisms/LockedPostContent/LockedPostContent.tsx`   | teaser + lock card + unlock dialog; renders the content once unlocked                                                                                    |
+| `components/organisms/LockedPostContent/FocusedLockContext.tsx`  | the post page's lock state, read once by the page and shared with its post card                                                                          |
+| `components/organisms/LockedPostContent/FocusedLockRecovery.tsx` | purchase recovery while the post page shows the unlocked article and the card is unmounted                                                               |
+| `components/organisms/ArticleReader/ArticleReader.tsx`           | an article's cover and full body, for the article page and the profile's full read                                                                       |
+| `components/molecules/LockAccessLabel/LockAccessLabel.tsx`       | "My locked content" / "Unlocked" label, in the card and in the article page header                                                                       |
+| `components/organisms/PostBody/PostBody.tsx`                     | shared text + link-embed + attachment renderer (feed post body **and** lock teaser)                                                                      |
+| `components/molecules/LockedPostCard/LockedPostCard.tsx`         | lock card: title, shield graphic, Unlock control; in the composer the title is editable (pencil) and the price is a button that reopens the price dialog |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx`   | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                                                                                          |
+| `hooks/usePayToUnlock/usePayToUnlock.ts`                         | the payment state machine: bundle-id routing, submit, polling, stall/resume                                                                              |
+| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                   | one listing of the reader's purchases, shared by every lock post                                                                                         |
+| `hooks/usePurchaseResume/usePurchaseResume.ts`                   | finishes a paid purchase whose content never landed, without interaction                                                                                 |
+| `components/organisms/DialogEditPost/DialogEditPost.tsx`         | routes an announcement into teaser mode, or falls back to a plain post edit                                                                              |
+| `libs/post/lockTeaser.ts`                                        | the envelope: builder and length guard                                                                                                                   |
 
 ## Reading a lock post
 
 Three ways the content becomes readable, resolved on mount by `useUnlockedContent`:
 
 ```
-LockedPostContent
+LockedPostContent  (on its post page, SinglePostContent runs the two hooks below and shares them)
   ├─ LocksController.getLockContent(content) → { lock_title, teaser_description }
   ├─ useLockFile(lock)                       → local descriptor, then lock.json on a miss
   │    └─ LocksController.getOrFetchLockFile
@@ -302,7 +316,7 @@ cannot be unlocked; a separate unsupported-lock experience is outside the paymen
 
 Paths 1) and 2) load in two steps. The cached row's text renders at once and the attachment
 bytes follow, with one skeleton per attachment (`pendingAttachments`, typed by slot, down through
-`PostArticle` / `PostBody`), so a large image never holds the text back. An own lock shows its
+`PostArticle` / `ArticleReader` / `PostBody`), so a large image never holds the text back. An own lock shows its
 layout — the inert lock card and "My locked content" — from the first render in which `lock.json`
 proves the lock is mine (`isResolvingOwn`), with a text skeleton until the original is read. The
 Unlock button is never live on an own lock, even when that read fails.
@@ -522,7 +536,7 @@ profile/(own)/layout.tsx → ProfilePageContainer
   └─ UnlockedListProvider → ProfileUnlocked (the page)
        └─ ProfileUnlockedItem
             ├─ PostMain (announcement post, when its id resolves)
-            └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle | PostBody
+            └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle (full read: ArticleReader) | PostBody
 ```
 
 - **One read, two consumers.** The layout survives profile tab navigation, so the hook lives
@@ -545,8 +559,8 @@ profile/(own)/layout.tsx → ProfilePageContainer
   more than the fallback card: `LockedPostContent` reads the marker and the lock file for each row,
   both from IndexedDB once cached.
 - **An unlocked article's cover comes from the reader's own copy.** It has no Nexus attachments at
-  all, so `usePostArticle` counts the caller's local attachments when deciding whether slot 0 is a
-  cover; the slot-0 rule (a body that references `attachment:0` has no cover) still applies.
+  all, so `usePostArticle` takes the caller's local attachments and picks the cover from their slot 0;
+  the slot-0 rule (a body that references `attachment:0` has no cover) and the image-only rule still apply.
 - **Cached locally.** The list and count render from IndexedDB first. One background homeserver
   listing per profile visit finds unlocks made on other devices and refreshes their timestamps.
 
