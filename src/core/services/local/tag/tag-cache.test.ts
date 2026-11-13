@@ -14,7 +14,7 @@ const { tagTable, countsTable, findByIds, transaction } = vi.hoisted(() => ({
     },
   ),
 }));
-vi.mock('@/database/franky/franky', () => ({ db: { transaction } }));
+vi.mock('@/database/franky/franky', () => ({ db: { transaction, isOpen: () => false } }));
 vi.mock('@/models/post/tags/postTags', () => ({
   PostTagsModel: { table: tagTable, findByIdsPreserveOrder: findByIds, findById: tagTable.get },
 }));

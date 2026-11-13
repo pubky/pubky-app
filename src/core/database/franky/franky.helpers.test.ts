@@ -1,10 +1,35 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { db } from './franky';
 import { clearDatabase } from './franky.helpers';
+import { withIndexedDbRecovery } from './franky.recovery';
 
-const mocks = vi.hoisted(() => ({ isOpen: vi.fn(), open: vi.fn(), clear: vi.fn(), otherClear: vi.fn() }));
-vi.mock('@/database/franky/franky', () => ({
-  db: { isOpen: mocks.isOpen, open: mocks.open, tables: [{ clear: mocks.clear }, { clear: mocks.otherClear }] },
+const mocks = vi.hoisted(() => ({
+  isOpen: vi.fn(),
+  open: vi.fn(),
+  close: vi.fn(),
+  on: vi.fn(() => ({ unsubscribe: vi.fn() })),
+  backendDB: vi.fn(),
+  clear: vi.fn(),
+  otherClear: vi.fn(),
 }));
+vi.mock('@/database/franky/franky', () => ({
+  db: {
+    isOpen: mocks.isOpen,
+    open: mocks.open,
+    close: mocks.close,
+    on: mocks.on,
+    backendDB: mocks.backendDB,
+    tables: [{ clear: mocks.clear }, { clear: mocks.otherClear }],
+  },
+}));
+
+async function expectRecoveryResumed() {
+  mocks.isOpen.mockReturnValue(true);
+  const failure = new DOMException('Connection lost', 'UnknownError');
+  const operation = vi.fn().mockRejectedValueOnce(failure).mockResolvedValue('recovered');
+  await expect(withIndexedDbRecovery(db, operation)).resolves.toBe('recovered');
+  expect(operation).toHaveBeenCalledTimes(2);
+}
 
 describe('account database cleanup ownership', () => {
   beforeEach(() => {
@@ -13,6 +38,7 @@ describe('account database cleanup ownership', () => {
     mocks.open.mockResolvedValue(undefined);
     mocks.clear.mockResolvedValue(undefined);
     mocks.otherClear.mockResolvedValue(undefined);
+    mocks.backendDB.mockReturnValue({});
   });
 
   it('does not start cleanup for a superseded account', async () => {
@@ -30,6 +56,7 @@ describe('account database cleanup ownership', () => {
     opened.resolve();
     await cleanup;
     expect(mocks.clear).not.toHaveBeenCalled();
+    await expectRecoveryResumed();
   });
 
   it('clears tables when the initiating account still owns cleanup', async () => {
@@ -55,4 +82,5 @@ it('waits for every started clear before rejecting a partial cleanup', async () 
   remaining.resolve();
   expect(await cleanup).toBe(failure);
   expect(finishedBeforeRemainingClear).toBe(false);
+  await expectRecoveryResumed();
 });

@@ -1,5 +1,6 @@
 import { DB_NAME } from '@/config/database';
 import { db } from '@/database/franky/franky';
+import { suspendIndexedDbRecovery } from '@/database/franky/franky.recovery';
 
 let cacheGeneration = 0;
 
@@ -15,16 +16,22 @@ export function getCacheGeneration(): number {
 
 export async function clearDatabase(isCurrent: () => boolean = () => true): Promise<void> {
   if (!isCurrent()) return;
-  if (!db.isOpen()) {
-    await db.open();
-  }
+  const resumeRecovery = suspendIndexedDbRecovery(db);
+  try {
+    if (!db.isOpen()) {
+      await db.open();
+    }
 
-  if (!isCurrent()) return;
-  // A failed table must not release account preparation while other clears can still erase data.
-  const results = await Promise.allSettled(db.tables.map(async (table) => table.clear()));
-  const failure = results.find((result) => result.status === 'rejected');
-  if (failure?.status === 'rejected') throw failure.reason;
-  cacheGeneration += 1;
+    if (!isCurrent()) return;
+    // A failed table must not release account preparation while other clears can still erase data.
+    const results = await Promise.allSettled(db.tables.map(async (table) => table.clear()));
+    const failure = results.find((result) => result.status === 'rejected');
+    if (failure?.status === 'rejected') throw failure.reason;
+    cacheGeneration += 1;
+  } finally {
+    // Work started during cleanup bypasses recovery; release only this cleanup's suspension.
+    resumeRecovery();
+  }
 }
 
 export async function resetDatabase(): Promise<void> {
