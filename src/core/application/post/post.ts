@@ -22,6 +22,7 @@ import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { isPostDeleted } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
@@ -37,12 +38,26 @@ import { PostNormalizer, type TPostHead } from '@/pipes/post/post.normalizer';
 import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { toSpecsValidationError } from '@/pipes/specs.errors';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
+import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
 import { LocalPostService } from '@/services/local/post/post';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
+import { awaitBounded } from '@/utils/bounded-read';
+import { withSyncLock } from '@/utils/sync-lock';
+
+/**
+ * One post's write lock (`withSyncLock`), held `exclusive` by `commitEdit` and `commitDelete` and shared by
+ * every tab of the app (a queue in the tab where Web Locks are unavailable): an edit checks the tombstone,
+ * uploads, projects, reads the head and PUTs under it, and a delete tombstones, lists and DELETEs under it,
+ * so an edit that starts after a delete finds the tombstone and writes nothing, and a delete that starts
+ * after an edit lists the post's directory after the edit's PUT and deletes that version too. Keyed by the
+ * raw post id, which both URI spellings share. Nothing under it takes another lock, and the media collection
+ * a delete ends with runs after it is released. Edits from another device are not ordered: Nexus follows
+ * event order (ADR-0027).
+ */
+const postWriteLock = (owner: Pubky, postId: string) => `pubky-post-write:${owner}:${postId}`;
 
 export class PostApplication {
   /**
@@ -318,15 +333,48 @@ export class PostApplication {
    * entry that is no post version (a foreign file in the directory) is left alone, as every reader
    * of the directory skips it: `deletionPaths` would refuse it after the row is tombstoned.
    *
-   * Media: after the homeserver DELETEs succeed, the post's attachments (only when the row did
-   * not keep its connections, `!hadConnections`) and its homeserver file cover (`cover_image`
-   * lives in the content envelope; collected either way, the envelope is tombstoned) go to
-   * `FileApplication.commitDelete`, which deletes a file only once the local cache, the published
-   * profile and Nexus all say nothing else of the owner references it (content-addressed media is
-   * shared). Best-effort: a failure is logged and swallowed so it does not fail an
-   * already-successful post delete. External http(s) covers are never deleted.
+   * The post's write lock (`postWriteLock`) is held from the local read through the last DELETE,
+   * so the listing runs after an earlier edit's PUT in any tab and names the version it wrote, and
+   * an edit queued behind the delete finds the tombstone. The listings are bounded by
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`): a LIST that never answers rejects with
+   * `REQUEST_TIMEOUT` before any DELETE, like a failed LIST (the row stays tombstoned locally and
+   * the delete reports its failure), and releases the lock.
+   *
+   * Media: after the homeserver DELETEs succeed, and after the lock is released, the post's
+   * attachments (only when the row did not keep its connections, `!hadConnections`) and its
+   * homeserver file cover (`cover_image` lives in the content envelope; collected either way, the
+   * envelope is tombstoned) go to `FileApplication.commitDelete`, which deletes a file only once
+   * the local cache, the published profile and Nexus all say nothing else of the owner references
+   * it (content-addressed media is shared). Best-effort: a failure is logged and swallowed so it
+   * does not fail an already-successful post delete. External http(s) covers are never deleted.
    */
   static async commitDelete({ compositePostId, canWriteLegacy }: TDeletePostInput) {
+    const { pubky: owner, id: postId } = parseCompositeId(compositePostId);
+    const mediaUris = await withSyncLock(postWriteLock(owner, postId), 'exclusive', () =>
+      this.commitDeleteUnderLock({ compositePostId, canWriteLegacy }, { owner, postId }),
+    );
+
+    // Best-effort, in one pass so the reference checks run once: the post delete already
+    // succeeded on the homeserver, so a file-cleanup failure must not surface as a delete failure.
+    if (mediaUris.length > 0) {
+      await FileApplication.commitDelete(mediaUris, compositePostId).catch((cleanupError) => {
+        Logger.warn('[PostApplication.commitDelete] Failed to cleanup post media', {
+          compositePostId,
+          mediaUris,
+          cleanupError,
+        });
+      });
+    }
+  }
+
+  /**
+   * The tombstone, the listings and the DELETEs of `commitDelete`, under the post's write lock.
+   * Returns the media URIs the post held, for the collection that runs once the lock is released.
+   */
+  private static async commitDeleteUnderLock(
+    { compositePostId, canWriteLegacy }: TDeletePostInput,
+    { owner, postId }: { owner: Pubky; postId: string },
+  ): Promise<string[]> {
     const post = await PostDetailsModel.findById(compositePostId);
 
     if (!post) {
@@ -349,13 +397,16 @@ export class PostApplication {
 
     // Always delete from homeserver, even if the post had connections (soft delete).
     // Nexus will determine the definitive state based on graph state.
-    const { pubky: owner, id: postId } = parseCompositeId(compositePostId);
     const legacyUrl = `${listPrefix(owner, 'legacy')}posts/${postId}`;
-    const [publicCopies, privateCopies, legacyExists] = await Promise.all([
-      HomeserverService.listAll({ baseDirectory: `${buildUri(owner, 'post', postId)}/` }),
-      HomeserverService.listAll({ baseDirectory: `${listPrefix(owner, 'private')}posts/${postId}/` }),
-      HomeserverService.exists(legacyUrl),
-    ]);
+    // One bound over the three reads: past it the delete fails before any DELETE and releases the lock.
+    const [publicCopies, privateCopies, legacyExists] = await awaitBounded(
+      Promise.all([
+        HomeserverService.listAll({ baseDirectory: `${buildUri(owner, 'post', postId)}/` }),
+        HomeserverService.listAll({ baseDirectory: `${listPrefix(owner, 'private')}posts/${postId}/` }),
+        HomeserverService.exists(legacyUrl),
+      ]),
+      { operation: 'commitDelete', context: { compositePostId } },
+    );
     if (legacyExists && !canWriteLegacy) {
       Logger.warn('[PostApplication.commitDelete] The 0.x copy stays: the grant cannot write the 0.x tree', {
         compositePostId,
@@ -369,21 +420,10 @@ export class PostApplication {
       await HomeserverService.deleteIdempotent(toUrl(owner, path));
     }
 
-    // Best-effort, in one pass so the reference checks run once: the post delete already
-    // succeeded on the homeserver, so a file-cleanup failure must not surface as a delete failure.
-    const mediaUris = [
+    return [
       ...(!hadConnections && post.attachments ? post.attachments : []),
       ...(isHomeserverFileUri(coverUri) ? [coverUri] : []),
     ];
-    if (mediaUris.length > 0) {
-      await FileApplication.commitDelete(mediaUris, compositePostId).catch((cleanupError) => {
-        Logger.warn('[PostApplication.commitDelete] Failed to cleanup post media', {
-          compositePostId,
-          mediaUris,
-          cleanupError,
-        });
-      });
-    }
   }
 
   /** The paths `deletionPaths` gives, its refusal of a listing wrapped as a validation error. */
@@ -412,13 +452,36 @@ export class PostApplication {
    *    collection's cover) is never deleted: the earlier versions still reference it, and content
    *    addressing lets other objects share it.
    *
+   * All of it runs under the post's write lock (`postWriteLock`), the uploads included, so an edit
+   * queued behind a delete of the post in any tab finds the tombstone and writes nothing, and a
+   * delete queued behind the edit lists the version it PUT. The fence is taken before the wait for
+   * the lock and guards its first pass, which is checked once the lock is held and again before
+   * the PUT: an edit that waited across a logout, an account change or a session replacement
+   * writes nothing, not an upload or the projection (`SESSION_EXPIRED`), and one whose session
+   * changes during its uploads PUTs nothing, rolls back and sweeps them. The head read is bounded
+   * by `HOMESERVER_SYNC_READ_TIMEOUT_MS`: past it the edit fails like a failed read (rollback, the
+   * uploads swept) and releases the lock.
+   *
    * A post with no v1 version (one the migration skipped) cannot be edited: `NOT_FOUND`.
    */
-  static async commitEdit({ compositePostId, edit, fileAttachments }: TEditPostInput) {
-    const { pubky: owner, id: postId } = parseCompositeId(compositePostId);
+  static async commitEdit(input: TEditPostInput) {
+    const { pubky: owner, id: postId } = parseCompositeId(input.compositePostId);
+    const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
+    return withSyncLock(postWriteLock(owner, postId), 'exclusive', () =>
+      this.commitEditUnderLock(input, { owner, postId, fence }),
+    );
+  }
+
+  private static async commitEditUnderLock(
+    { compositePostId, edit, fileAttachments }: TEditPostInput,
+    { owner, postId, fence }: { owner: Pubky; postId: string; fence: THomeserverWriteFence },
+  ) {
+    // The session this edit was asked under may have ended while it waited for the lock.
+    fence.assertCurrent();
     const originalPost = await LocalPostService.readDetails({ postId: compositePostId });
     // A tombstone (the Nexus `deleted` flag, or the legacy `[DELETED]` content) is not-found: a
-    // projection onto it would build the next version from the tombstone's content.
+    // projection onto it would build the next version from the tombstone's content. Checked under
+    // the lock, so a delete that ran while this edit waited is seen.
     if (!originalPost || isPostDeleted(originalPost)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
@@ -456,9 +519,13 @@ export class PostApplication {
 
     let built: Awaited<ReturnType<typeof PostNormalizer.toEdit>>;
     try {
-      const fence = HomeserverService.createWriteFence();
       built = await retryHomeserverWriteAfterReread(fence, async () => {
-        const head = await this.readHead(owner, postId);
+        // One bound over the LIST and the GET: a `REQUEST_TIMEOUT` carries no status, so the pass is
+        // not retried, the rollback below runs, and nothing the abandoned read answers late is built.
+        const head = await awaitBounded(this.readHead(owner, postId), {
+          operation: 'commitEdit',
+          context: { compositePostId },
+        });
         const next = PostNormalizer.toEdit({ owner, head, edit });
         await HomeserverService.putBlob({ url: next.url, blob: next.body, fence });
         return next;
@@ -522,7 +589,8 @@ export class PostApplication {
    * The newest public version of the author's post, read and decoded: a LIST of the post's
    * directory, the version with the highest edit id, its bytes. A post with no v1 version (an
    * account's post the migration skipped) cannot be edited here. A version file is immutable,
-   * so a cached GET is as good as a fresh one.
+   * so a cached GET is as good as a fresh one. The caller bounds it (`awaitBounded`): it runs
+   * under the post's write lock.
    */
   private static async readHead(owner: string, postId: string): Promise<TPostHead> {
     const urls = await HomeserverService.listAll({ baseDirectory: `${buildUri(owner, 'post', postId)}/` });

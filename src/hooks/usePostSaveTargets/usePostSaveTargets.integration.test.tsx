@@ -47,20 +47,27 @@ describe('concurrent picker regression', () => {
       await waitFor(() => expect(target(second)?.isSaved).toBe(!initiallySaved));
       expect(target(first)?.isUpdating).toBe(true);
 
-      // A second mounted picker (e.g. another browser tab) can add the locally
-      // removed post while the first request is still waiting for its response.
-      await act(async () => {
-        await second.result.current.toggleCollection(collectionId);
+      // A second mounted picker (e.g. another browser tab) toggles the collection back while the
+      // first request is still waiting for its response. Writes to one post hold its write lock
+      // (ADR-0027), so the second waits for the first instead of racing it: the row keeps showing
+      // the first toggle until the first PUT lands.
+      let secondUpdate!: Promise<boolean>;
+      act(() => {
+        secondUpdate = second.result.current.toggleCollection(collectionId);
       });
-      await waitFor(() => expect(target(first)?.isSaved).toBe(initiallySaved));
-      await waitFor(() => expect(target(second)?.isUpdating).toBe(false));
+      await waitFor(() => expect(target(second)?.isUpdating).toBe(true));
+      expect(target(first)?.isSaved).toBe(!initiallySaved);
       await act(async () => {
         pendingFirstRequest.resolve(undefined);
-        await firstUpdate;
+        await Promise.all([firstUpdate, secondUpdate]);
       });
 
-      // No write remains in flight; the current Dexie state should be actionable.
+      // Both writes landed in order, the row shows the later one, and no picker is left busy: the
+      // current Dexie state should be actionable from either.
+      await waitFor(() => expect(target(first)?.isSaved).toBe(initiallySaved));
+      await waitFor(() => expect(target(second)?.isSaved).toBe(initiallySaved));
       await waitFor(() => expect(target(first)?.isUpdating).toBe(false));
+      await waitFor(() => expect(target(second)?.isUpdating).toBe(false));
     },
   );
 });

@@ -196,7 +196,9 @@ export class LocalPostService {
       // `deleted: false` clears the tombstone flag on any write that restores
       // live content: `commitEdit` (and its rollback after a failed PUT) reuse
       // this method, and a row left flagged deleted would keep rendering as a
-      // tombstone even though its content is back.
+      // tombstone even though its content is back. By design, so it never runs
+      // over a delete: `PostApplication` holds the post's write lock around every
+      // caller and refuses an edit of a tombstoned row under it.
       const changes: Partial<PostDetailsModelSchema> = { content, deleted: false };
       if (attachments !== undefined) {
         changes.attachments = attachments;
