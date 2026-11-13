@@ -420,11 +420,30 @@ describe('the kind-only filters', () => {
 });
 
 describe('isResourceFiltersSearch', () => {
-  it('takes who shared or which collection as a search of their own, nothing else', () => {
-    const read = (search: string) => isResourceFiltersSearch(parseResourceSearchFilters(new URLSearchParams(search)));
+  const read = (search: string) => isResourceFiltersSearch(parseResourceSearchFilters(new URLSearchParams(search)));
+
+  it('takes who shared or which collection as a search of their own', () => {
     expect(read(`by=${PK}`)).toBe(true);
     expect(read(`in=${encodeURIComponent(COLLECTION)}`)).toBe(true);
-    for (const search of ['', 'kind=event', 'when=past', 'sort=recent', 'rows=links', 'closed=1']) {
+  });
+
+  it('takes Events or Places alone as a search too: the agenda and the map are browsed without a text or a tag', () => {
+    expect(read('kind=event')).toBe(true);
+    expect(read('kind=place')).toBe(true);
+    expect(read('kind=event&when=week&view=map')).toBe(true);
+  });
+
+  it('takes nothing else as one: another kind, or a filter without what it narrows, would list the whole index', () => {
+    for (const search of [
+      '',
+      'kind=music',
+      'kind=book',
+      'kind=more',
+      'when=past',
+      'sort=recent',
+      'rows=links',
+      'closed=1',
+    ]) {
       expect(read(search)).toBe(false);
     }
   });

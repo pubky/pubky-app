@@ -477,9 +477,10 @@ describe('useSearchResourceQuery', () => {
 
       withFilters('');
       expect(run()).toMatchObject({ isFiltersOnly: false, query: null });
-      // An order, or a kind's own filter without its kind, narrows nothing on its own
+      // An order, a kind without a view of its own, or a kind's own filter without its kind, narrows
+      // nothing on its own
       for (const search of [
-        'kind=event',
+        'kind=music',
         'when=past',
         'closed=1',
         'match=all',
@@ -492,6 +493,25 @@ describe('useSearchResourceQuery', () => {
       // The All tab's section searches the box only
       withFilters('kind=event');
       expect(run({ withFilters: false })).toMatchObject({ isFiltersOnly: false, query: null });
+    });
+
+    it('lists Events alone as the coming events, soonest first, and Places alone as places', () => {
+      mocks.criteria.mockReturnValue({ mode: 'none' });
+      withFilters('kind=event');
+      expect(run()).toMatchObject({
+        isFiltersOnly: true,
+        query: { input: { kind: 'all' }, types: ['Event'], sort: 'upcoming', from: 'now' },
+      });
+      expect(run().query).not.toHaveProperty('to');
+
+      withFilters('kind=event&when=past');
+      expect(run().query).toMatchObject({ input: { kind: 'all' }, types: ['Event'], to: 'now' });
+
+      withFilters('kind=place');
+      expect(run()).toMatchObject({
+        isFiltersOnly: true,
+        query: { input: { kind: 'all' }, types: ['Place'], sort: 'activity' },
+      });
     });
   });
 });
