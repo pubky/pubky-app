@@ -133,8 +133,10 @@ Cypress.Commands.add(
 // would from the Profile step. `cy.signInWithPubkyRing(profileName)` signs back in as the account.
 Cypress.Commands.add('completeSignUpWithPubkyRing', (profileName: string) => {
   cy.location('pathname').should('eq', '/onboarding/scan');
+  // The Install step's "Continue with Pubky Ring" shares the phone button's label; wait for the Scan page
+  cy.get('[data-testid="scan-qr-card"]').should('exist');
   readPubkyRingAuthUrl().then((authUrl) => {
-    expect(authUrl).to.match(/^pubkyauth:\/\//);
+    expect(authUrl).to.match(/^pubkyauth:\/\/signup_grant\?/);
     signUpWithPubkyAuthViaApi(profileName, authUrl);
   });
 
