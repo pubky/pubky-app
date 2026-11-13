@@ -8,7 +8,7 @@ import {
   getOccurrencesWindowStart,
   getResourceInstanceKey,
   groupEventsByDay,
-  hasSameTimesAndPlace,
+  hasSameSummary,
   mergeResourceInstances,
   toEventInstance,
 } from './resource.events';
@@ -99,22 +99,22 @@ describe('toEventInstance', () => {
   });
 });
 
-describe('hasSameTimesAndPlace', () => {
+describe('hasSameSummary', () => {
   const details: TPinakesResourceDetail = { ...DETAILS, ...CONCERT };
 
-  it('holds for a read that says the row’s start, end and point, however the times are spelled', () => {
-    expect(hasSameTimesAndPlace(CONCERT, details)).toBe(true);
+  it('holds for a read that says the row’s name, status, start, end and point, however the times are spelled', () => {
+    expect(hasSameSummary(CONCERT, details)).toBe(true);
     expect(
-      hasSameTimesAndPlace(CONCERT, {
+      hasSameSummary(CONCERT, {
         ...details,
         start: '2026-11-16T20:00:00+01:00',
         end: '2026-11-16T23:00:00.000Z',
       }),
     ).toBe(true);
-    expect(hasSameTimesAndPlace(CONCERT, { ...details, point: { ...CONCERT.point! } })).toBe(true);
+    expect(hasSameSummary(CONCERT, { ...details, point: { ...CONCERT.point! } })).toBe(true);
     // Neither says a time or a place: nothing differs
-    const bare = { start: null, end: undefined, point: null };
-    expect(hasSameTimesAndPlace(bare, { start: undefined, end: null, point: undefined })).toBe(true);
+    const bare = { name: null, status: 'ok', start: null, end: undefined, point: null };
+    expect(hasSameSummary(bare, { status: 'ok', start: undefined, end: null, point: undefined })).toBe(true);
   });
 
   it.each([
@@ -123,8 +123,10 @@ describe('hasSameTimesAndPlace', () => {
     ['no end', { end: null }],
     ['another point', { point: { lat: 47.3712, lon: 8.5363 } }],
     ['no point', { point: null }],
+    ['another name', { name: 'CANCELLED: Annett Louisan @ Volkshaus' }],
+    ['another read status', { status: 'missing' }],
   ])('does not hold for a read that says %s: it is of the event as it was', (_name, other) => {
-    expect(hasSameTimesAndPlace(CONCERT, { ...details, ...other })).toBe(false);
+    expect(hasSameSummary(CONCERT, { ...details, ...other })).toBe(false);
   });
 });
 

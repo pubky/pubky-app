@@ -464,6 +464,27 @@ describe('PinakesService.fetchCardByUri recheck', () => {
   });
 });
 
+describe('PinakesService.fetchCardByUri with a longest age', () => {
+  it('answers a read no older than that from the cache, and asks again for an older one', async () => {
+    vi.useFakeTimers();
+    mockFetch.mockImplementation(() => Promise.resolve(capturedResponse('by-uri.video')));
+    await PinakesService.fetchCardByUri(videoFixture.uri);
+
+    // Just read: nothing newer to ask for
+    await PinakesService.fetchCardByUri(videoFixture.uri, { maxAge: 30_000 });
+    await vi.advanceTimersByTimeAsync(29_000);
+    await PinakesService.fetchCardByUri(videoFixture.uri, { maxAge: 30_000 });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await PinakesService.fetchCardByUri(videoFixture.uri, { maxAge: 30_000 });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    // The card it read is the link's card for every other read, for its five minutes
+    await PinakesService.fetchCardByUri(videoFixture.uri);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('PinakesService.resolveCard', () => {
   const URI = 'https://www.fedlex.admin.ch/eli/cc/2022/151/de';
   const json = (body: unknown, status: number) =>
