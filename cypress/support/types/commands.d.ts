@@ -22,7 +22,7 @@ declare global {
       saveStringToAlias(text: string, alias: string): Chainable<void>;
       saveElementValueToAlias(selector: string, alias: string): Chainable<void>;
       saveCopiedPubkyToAlias(alias: string): Chainable<void>;
-      saveCopiedTextToAlias(alias: string): Chainable<void>;
+      copyAuthLinkFromQr(): Chainable<string>;
       assertElementDoesNotExist(selector: string): Chainable<void>;
       waitReload(time?: number): Chainable<void>;
       waitReloadWhileElementDoesNotExist(selector: string, attempts?: number): Chainable<void>;

@@ -54,10 +54,7 @@ function readPubkyRingAuthUrl(): Cypress.Chainable<string> {
     return cy.wrap(deeplink).its('url');
   }
 
-  cy.get('button[aria-label="Copy authentication link"]:visible').should('not.be.disabled').click();
-  cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Authentication link copied');
-  cy.saveCopiedTextToAlias('pubkyAuthUrl');
-  return cy.get<string>('@pubkyAuthUrl');
+  return cy.copyAuthLinkFromQr();
 }
 
 // Complete onboarding from the Profile step, where a signed-in key without a profile lands
@@ -261,23 +258,25 @@ Cypress.Commands.add('saveCopiedPubkyToAlias', (alias: string) => {
     });
 });
 
-// Stores the clipboard contents to an alias for later use
-// see https://docs.cypress.io/guides/core-concepts/variables-and-aliases#Sharing-Context
-// note: aliases work in the context of as test and only the first test after before
-Cypress.Commands.add('saveCopiedTextToAlias', (alias: string) => {
-  cy.window()
-    .then((win) => {
-      // ensure focus is on the window before attempting to read clipboard
-      win.focus();
-      // requires browser to be in focus
-      return win.navigator.clipboard.readText();
-      // previous 'then' is callback of a promise which doesn't guarantee synchronous execution
-      // so an additional 'then' is needed to guarantee the alias is stored before the next test step
-    })
-    .then((text) => {
-      // store pubky as alias
-      cy.wrap(text).as(alias);
-    });
+// Clicks the visible auth QR code ("Copy authentication link") and yields the link the app copied.
+// The link is taken from the app's own `navigator.clipboard.writeText` call rather than read back:
+// Cypress cannot grant clipboard-read on WebKit. The write still goes to the real clipboard; if the
+// browser refuses it, the call resolves anyway so the app's copy handler runs to its toast.
+Cypress.Commands.add('copyAuthLinkFromQr', () => {
+  cy.window().then((win) => {
+    const { clipboard } = win.navigator;
+    // A window that already copied in this test (signing in twice without a reload) still has the stub
+    const previousStub: unknown = Reflect.get(clipboard.writeText, 'restore');
+    if (typeof previousStub === 'function') previousStub.call(clipboard.writeText);
+    const writeText = clipboard.writeText.bind(clipboard);
+    cy.stub(clipboard, 'writeText')
+      .callsFake((text: string) => writeText(text).catch(() => undefined))
+      .as('clipboardWriteText');
+  });
+
+  cy.get('button[aria-label="Copy authentication link"]:visible').should('not.be.disabled').click();
+  cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Authentication link copied');
+  return cy.get('@clipboardWriteText').should('have.been.calledOnce').its('firstCall.args.0');
 });
 
 Cypress.Commands.add('assertElementDoesNotExist', (selector) => {
