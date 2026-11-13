@@ -263,9 +263,15 @@ describe('getEventStatusNote', () => {
     expect(getEventStatusNote(' ')).toBeNull();
   });
 
+  it('says a lifecycle Pinakes names in words, as a calendar’s list of dates does', () => {
+    expect(getEventStatusNote('cancelled')).toBe('Cancelled');
+    expect(getEventStatusNote('moved_online')).toBe('Moved online');
+    expect(getEventStatusNote('Rescheduled')).toBe('Rescheduled');
+  });
+
   it('shows any other status as written', () => {
-    expect(getEventStatusNote('cancelled')).toBe('Event status: cancelled');
     expect(getEventStatusNote('EventPostponed')).toBe('Event status: EventPostponed');
+    expect(getEventStatusNote('sold out')).toBe('Event status: sold out');
   });
 });
 

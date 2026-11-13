@@ -105,6 +105,14 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
   // A next page that failed leaves the rows read and nothing more to ask for: that is not "all"
   const isComplete = !hasMore && !error;
 
+  // More results could not be read: the ones read stay, with a way to try again
+  const moreError = error && rows.length > 0 && (
+    <Container overrideDefaults className="flex flex-col items-start gap-2" data-testid="search-map-more-error">
+      <TimelineError message={error} />
+      {retryButton}
+    </Container>
+  );
+
   let body: ReactNode;
   if (isFirstRead) {
     body = <Skeleton className="h-80 w-full sm:h-96" data-testid="search-map-loading" />;
@@ -124,6 +132,7 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
             : `None of the ${count(rows.length)} loaded so far has a location.`}
         </Typography>
         {loadMoreButton}
+        {moreError}
       </Container>
     );
   } else {
@@ -146,12 +155,7 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
               ` ${unplaced} ${unplaced === 1 ? 'has' : 'have'} no location and ${unplaced === 1 ? 'is' : 'are'} not on the map.`}
           </Typography>
           {loadMoreButton}
-          {error && (
-            <Container overrideDefaults className="flex flex-col items-start gap-2" data-testid="search-map-more-error">
-              <TimelineError message={error} />
-              {retryButton}
-            </Container>
-          )}
+          {moreError}
         </Container>
         <Container
           as="section"

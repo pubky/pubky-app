@@ -458,7 +458,7 @@ describe('ResourceCard', () => {
     it('says when an event is not going ahead as scheduled', () => {
       render(<ResourceCard card={{ ...eventFixture, event_status: 'cancelled' }} href={eventFixture.uri} />);
 
-      expect(screen.getByTestId('resource-card-event-status')).toHaveTextContent('Event status: cancelled');
+      expect(screen.getByTestId('resource-card-event-status')).toHaveTextContent('Cancelled');
     });
 
     it('shows where a place is, without OpenStreetMap’s credit: its page names it under Sources', () => {

@@ -3,6 +3,7 @@ import { isExternalParentUri } from '@/libs/post/externalParent';
 import { getPubkyAppTarget } from '@/libs/pubkyApp/pubkyAppTarget';
 import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
+import { getEventLifecycleLabel } from '@/pipes/resource/resource.events';
 import {
   PinakesStatus,
   type TPinakesAlsoOn,
@@ -273,9 +274,6 @@ export function getResourceTarget(
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The `event_status` of an event going ahead as planned, as Pinakes sends it. */
-const SCHEDULED_EVENT_STATUS = 'scheduled';
-
 function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null;
   const date = new Date(value);
@@ -330,13 +328,12 @@ export function formatResourceDates(
 }
 
 /**
- * The note for an event that is not going ahead as planned: its `event_status` as written. `null`
- * for `scheduled` or no status.
+ * The note for an event that is not going ahead as planned: a lifecycle Pinakes names in words
+ * (`Cancelled`, `Moved online`: `getEventLifecycleLabel`, as a calendar's list of dates says it),
+ * any other `event_status` as written. `null` for `scheduled` or no status.
  */
 export function getEventStatusNote(eventStatus: string | null | undefined): string | null {
-  const value = eventStatus?.trim();
-  if (!value || value.toLowerCase() === SCHEDULED_EVENT_STATUS) return null;
-  return `Event status: ${value}`;
+  return getEventLifecycleLabel(eventStatus, (value) => `Event status: ${value}`);
 }
 
 /** A point as `lat, lon` in degrees, four decimals (about 10 m). */

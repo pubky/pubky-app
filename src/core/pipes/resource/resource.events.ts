@@ -87,12 +87,16 @@ export function toEventInstance(
 
 /**
  * What to say about an event that is not going ahead as planned: Pinakes' lifecycle values in
- * words, any other status as the source wrote it. `null` for `scheduled` or no status.
+ * words, any other status as the source wrote it (through `formatOther`, for a surface that says
+ * what such a value is). `null` for `scheduled` or no status.
  */
-export function getEventLifecycleLabel(status: string | null | undefined): string | null {
+export function getEventLifecycleLabel(
+  status: string | null | undefined,
+  formatOther: (value: string) => string = (value) => value,
+): string | null {
   const value = status?.trim();
   if (!value || value.toLowerCase() === SCHEDULED) return null;
-  return LIFECYCLE_LABELS[value.toLowerCase()] ?? value;
+  return LIFECYCLE_LABELS[value.toLowerCase()] ?? formatOther(value);
 }
 
 /** A time's calendar day (`YYYY-MM-DD`) in a time zone; in UTC for a zone the browser does not know. */
