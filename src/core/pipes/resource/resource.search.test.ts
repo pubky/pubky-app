@@ -113,6 +113,10 @@ describe('hasCredentialLink', () => {
     // In a link held by another, `&` ends it (the outer link's next parameter)
     ['https://twitter.com/intent/tweet?url=https://example.invalid&text=hi%20@bob', false],
     ['https://a&b:secret@example.invalid', true],
+    // Only there: in a path or fragment `&` splits nothing
+    ['https://outer.invalid/https://a&b:secret@example.invalid', true],
+    ['https://outer.invalid/#https://a&b:secret@example.invalid', true],
+    ['https://outer.invalid/?x=1#https://a&b:secret@example.invalid', true],
   ])('%s: %s', (text, expected) => {
     expect(hasCredentialLink(text)).toBe(expected);
   });

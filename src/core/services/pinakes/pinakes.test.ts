@@ -400,6 +400,7 @@ describe('PinakesService.fetchCardByUri with credentials', () => {
     'https://alice%40home:s%3Acret@example.invalid/a',
     'not a link',
     'https://example.invalid/?u=https://alice:secret@other.invalid/',
+    'https://outer.invalid/https://a&b:secret@example.invalid',
   ])('never sends %s, a link with a username or password or one that does not parse', async (uri) => {
     await expect(PinakesService.fetchCardByUri(uri)).resolves.toBeNull();
     await expect(PinakesService.resolveCard(uri)).resolves.toBeNull();
