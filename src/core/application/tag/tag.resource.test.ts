@@ -11,6 +11,7 @@ vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { reques
 vi.mock('@/services/nexus/resource/resource', () => ({
   NexusResourceService: {
     fetchTagsByUri: vi.fn(),
+    fetchBatchedTags: vi.fn(),
     applyViewerTag: vi.fn(),
     getCachedTags: vi.fn(),
     subscribeTags: vi.fn(),
@@ -37,6 +38,29 @@ describe('TagApplication, external resources', () => {
 
     await expect(TagApplication.fetchResourceTags({ uri: URI, viewerId: VIEWER })).resolves.toEqual([]);
     expect(NexusResourceService.fetchTagsByUri).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER });
+  });
+
+  describe('another link of a card in a feed (`byIdsOnly`)', () => {
+    it('reads it only in the batch, with the links asked at the same moment, even before `by_ids` is known', async () => {
+      const tags = [{ label: 'rock', taggers: ['a'], taggers_count: 1, relationship: false, tag_uri: null }];
+      vi.mocked(NexusResourceService.isByIdsServed).mockReturnValue(false);
+      vi.mocked(NexusResourceService.fetchBatchedTags).mockResolvedValue(tags);
+
+      await expect(TagApplication.fetchResourceTags({ uri: URI, viewerId: VIEWER, byIdsOnly: true })).resolves.toEqual(
+        tags,
+      );
+      expect(NexusResourceService.fetchBatchedTags).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER });
+      expect(NexusResourceService.fetchTagsByUri).not.toHaveBeenCalled();
+    });
+
+    it('has no tags when the batch could not answer it (no `by_ids`): nothing else is asked', async () => {
+      vi.mocked(NexusResourceService.fetchBatchedTags).mockResolvedValue(undefined);
+
+      await expect(TagApplication.fetchResourceTags({ uri: URI, viewerId: VIEWER, byIdsOnly: true })).resolves.toEqual(
+        [],
+      );
+      expect(NexusResourceService.fetchTagsByUri).not.toHaveBeenCalled();
+    });
   });
 
   describe('a link read with its other spellings', () => {

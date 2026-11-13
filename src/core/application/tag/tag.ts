@@ -124,6 +124,10 @@ export class TagApplication {
    * `by-uri` each) only with `spellingsByUri`, else the link is read alone. A spelling whose read
    * failed (the service reported it) counts with its last answer, or is left out without one, and
    * the read fails only when every read did.
+   *
+   * With `byIdsOnly` (another link of a card in a feed), the link is read only in the `by_ids` batch,
+   * with the links asked at the same moment (`NexusResourceService.fetchBatchedTags`); where the batch
+   * cannot answer it (a Nexus without `by_ids`), nothing else is asked and it has no tags.
    */
   static async fetchResourceTags({
     uri,
@@ -131,7 +135,9 @@ export class TagApplication {
     fresh,
     spellings = [],
     spellingsByUri = false,
-  }: TResourceTagsRead & { fresh?: boolean; spellingsByUri?: boolean }): Promise<NexusTag[]> {
+    byIdsOnly = false,
+  }: TResourceTagsRead & { fresh?: boolean; spellingsByUri?: boolean; byIdsOnly?: boolean }): Promise<NexusTag[]> {
+    if (byIdsOnly) return (await NexusResourceService.fetchBatchedTags({ uri, viewerId })) ?? [];
     const read = (link: string) =>
       NexusResourceService.fetchTagsByUri({ uri: link, viewerId, ...(fresh ? { fresh } : {}) });
     const own = read(uri);

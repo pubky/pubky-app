@@ -27,12 +27,19 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     uri,
     playOn,
     extraMenuContent,
+    card,
   }: {
     uri: string;
     playOn?: React.ReactNode;
     extraMenuContent?: unknown;
+    card?: { id: string } | null;
   }) => (
-    <div data-testid="resource-actions" data-uri={uri} data-has-also-on={String(Boolean(extraMenuContent))}>
+    <div
+      data-testid="resource-actions"
+      data-uri={uri}
+      data-has-also-on={String(Boolean(extraMenuContent))}
+      data-card-id={card?.id ?? 'none'}
+    >
       {playOn}
     </div>
   ),
@@ -66,6 +73,19 @@ describe('NativeEmbedResource', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     viewport.isVisible = true;
+  });
+
+  it('gives the footer the card, on our card and under the platform’s embed, for its other links’ tags', () => {
+    const withAlsoOn = { ...videoFixture, id: 'with-also-on' };
+    mockCard(withAlsoOn);
+    const { unmount } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'with-also-on');
+    unmount();
+
+    mockCard(VIDEO_ALONE);
+    render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+    expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', VIDEO_ALONE.id);
   });
 
   it('reads the card for the link as written and re-reads it while on screen', () => {

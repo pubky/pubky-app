@@ -493,3 +493,16 @@ describe('PinakesService.fetchGroup', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
+
+describe('PinakesService.getCachedGroup', () => {
+  it('gives a group another reader already read, without asking Pinakes', async () => {
+    expect(PinakesService.getCachedGroup(groupFixture.id)).toBeUndefined();
+    mockFetch.mockResolvedValue(capturedResponse('group.video'));
+    await PinakesService.fetchGroup(groupFixture.id);
+    mockFetch.mockClear();
+
+    expect(PinakesService.getCachedGroup(groupFixture.id)).toEqual(GROUP_FIXTURE);
+    expect(PinakesService.getCachedGroup('00000000000000000000000000000000')).toBeUndefined();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});

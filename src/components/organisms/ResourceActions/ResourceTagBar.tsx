@@ -18,6 +18,9 @@ import { TaggedList } from '@/molecules/TaggedList/TaggedList';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
 import { WhoTaggedExpandedList } from '@/molecules/WhoTaggedExpandedList/WhoTaggedExpandedList';
+import { withResourceViewerListed } from '@/pipes/tag/tag.resource';
+import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { getTagPeople, MAX_OTHER_TAGS, type TTagPeople, type TTagPerson } from './ResourceTagBar.utils';
 
 /** The two groups of a tag's detail, for screen readers only. */
@@ -72,6 +75,7 @@ export function ResourceTagBar({
   otherTags = [],
 }: ResourceTagBarProps) {
   const { isAuthenticated, requireAuth } = useRequireAuth();
+  const viewerId = useAuthStore((state) => state.currentUserPubky);
   // As on the post: expanding must not pop the phone's keyboard, only "+" focuses the input there.
   const isMobile = useIsMobile();
   const { tags, addTag, toggleTag } = resourceTags;
@@ -80,15 +84,26 @@ export function ResourceTagBar({
   const peopleOf = (tag: Pick<TagWithAvatars, 'label' | 'isSecondary'>): TTagPeople | undefined => {
     const other = elsewhere.get(canonicalizeTagLabel(tag.label));
     if (!other) return undefined;
-    return getTagPeople(tag.isSecondary ? undefined : tags.find((own) => own.label === tag.label), other);
+    const own = tag.isSecondary ? undefined : tags.find((tagHere) => tagHere.label === tag.label);
+    // The viewer is here when Nexus marks the tag theirs, also when its sample of taggers left them out.
+    return getTagPeople(own && withResourceViewerListed([own], viewerId)[0], other);
   };
+  // Shown as the viewer's when they hold it here or on another link; a write goes by the link's own tag.
+  const isViewers = (tag: Pick<NexusTag, 'label' | 'relationship'>) =>
+    tag.relationship || Boolean(elsewhere.get(canonicalizeTagLabel(tag.label))?.relationship);
   const { enrichedTags } = useEnrichedTags([
     ...tags.map((tag): TagWithAvatars => {
       const people = peopleOf(tag);
-      if (!people) return { ...tag, taggers: tag.taggers.map((tagger) => ({ id: tagger })) };
+      const relationship = isViewers(tag);
+      if (!people) return { ...tag, taggers: tag.taggers.map((tagger) => ({ id: tagger })), relationship };
       // The total shows only when it adds people (one person on two services is counted once).
       const total = people.total > tag.taggers_count ? people.total : undefined;
-      return { ...tag, taggers: [...people.here, ...people.elsewhere].map(({ id }) => ({ id })), total };
+      return {
+        ...tag,
+        taggers: [...people.here, ...people.elsewhere].map(({ id }) => ({ id })),
+        total,
+        relationship,
+      };
     }),
     ...otherTags
       .filter((tag) => !ownLabels.has(tag.label))
@@ -99,15 +114,19 @@ export function ResourceTagBar({
         // Nobody here yet: "0 (n)", n counted like an own chip's total (each person once).
         taggers_count: 0,
         total: getTagPeople(undefined, tag).total,
-        relationship: false,
+        relationship: Boolean(tag.relationship),
         tag_uri: null,
         isSecondary: true,
       })),
   ]);
   const viewerTags = tags.filter((tag) => tag.relationship);
-  // An own chip toggles the viewer's tag; a secondary one adds it to this link (it then is an own chip).
+  // An own chip toggles the viewer's tag on this link by its own tag (its own relationship and file, never
+  // another link's); a secondary one adds it to this link (it then is an own chip).
   const pressTag = (tag: TagWithAvatars) =>
-    requireAuth(() => void (tag.isSecondary ? addTag(tag.label) : toggleTag(tag)));
+    requireAuth(() => {
+      const own = tag.isSecondary ? undefined : tags.find((tagHere) => tagHere.label === tag.label);
+      void (own ? toggleTag(own) : addTag(tag.label));
+    });
   const renderPeople = (tag: TagWithAvatars) => {
     const people = peopleOf(tag);
     return people && <TagPeople people={people} uri={uri} taggers={tag.taggers} />;

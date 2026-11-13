@@ -56,6 +56,18 @@ export function withResourceViewerTag(
 }
 
 /**
+ * The tags with the viewer first among the taggers of every tag Nexus marks theirs (`relationship`,
+ * read with `viewer_id`) whose sample of taggers left them out, so the viewer counts once across
+ * links merged by tagger. `taggers_count` already counts them; signed out nothing changes.
+ */
+export function withResourceViewerListed(tags: readonly NexusTag[], viewerId: Pubky | null | undefined): NexusTag[] {
+  if (!viewerId) return [...tags];
+  return tags.map((tag) =>
+    tag.relationship && !tag.taggers.includes(viewerId) ? { ...tag, taggers: [viewerId, ...tag.taggers] } : tag,
+  );
+}
+
+/**
  * One link's tags read on several of its spellings (Nexus keeps each spelling apart; Pinakes folds
  * them into one card): one tag per label, labels compared as stored (case-folded). Taggers are
  * joined, so a person who put the label on two spellings counts once; the count is at least the

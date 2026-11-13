@@ -166,6 +166,7 @@ function ResourcePreview({
       tagsLabel={getResourceTagsLabel(card)}
       linkUrl={linkUrl}
       title={shownCard?.name}
+      card={shownCard}
       isOnScreen={isOnScreen}
       playOn={shownCard && !embedTarget ? playOn : undefined}
       extraMenuContent={

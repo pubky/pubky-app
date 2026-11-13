@@ -53,4 +53,14 @@ export class PinakesController {
   static fetchGroup({ id }: { id: string }): Promise<TPinakesGroupDetail | null> {
     return PinakesApplication.fetchGroup(id);
   }
+
+  /**
+   * The cards of a group another reader already read (the resource page), without asking Pinakes.
+   *
+   * @param params.id - Group ID (`card.group.id`)
+   * @returns The group; `undefined` when it was not read, `null` when it no longer exists
+   */
+  static getCachedGroup({ id }: { id: string }): TPinakesGroupDetail | null | undefined {
+    return PinakesApplication.getCachedGroup(id);
+  }
 }

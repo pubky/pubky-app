@@ -49,4 +49,13 @@ export class PinakesApplication {
     const group = await PinakesService.fetchGroup(id);
     return group ? { ...group, members: group.members.map(withNormalizedCredits) } : null;
   }
+
+  /**
+   * A group already read (the resource page's), as `fetchGroup` gives it, without asking Pinakes:
+   * `undefined` when it was not read, `null` when it is gone.
+   */
+  static getCachedGroup(id: string): TPinakesGroupDetail | null | undefined {
+    const group = PinakesService.getCachedGroup(id);
+    return group ? { ...group, members: group.members.map(withNormalizedCredits) } : group;
+  }
 }

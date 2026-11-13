@@ -151,6 +151,7 @@ function NativeEmbedChoice({
       tagsLabel={getResourceTagsLabel(card)}
       linkUrl={card ? getResourceLinks(card, url).linkUrl : getHttpUrl(url)}
       title={card?.name}
+      card={card}
       playOn={showsCard ? (isVideo ? player.playOn : showPost) : undefined}
       extraMenuContent={
         alsoOn

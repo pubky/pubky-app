@@ -767,6 +767,70 @@ describe('NexusResourceService batched tag reads (POST /v0/stream/resources/by_i
     expect(await Promise.all([read(OSM), read(other)])).toEqual([OSM_VIEW.tags, BY_URI_RESPONSE.tags]);
   });
 
+  describe('a read only in the batch (another link of a card in a feed, `fetchBatchedTags`)', () => {
+    const inBatch = (uri: string) => NexusResourceService.fetchBatchedTags({ uri, viewerId: VIEWER });
+
+    it('goes in the same `by_ids` request as the links read with it, and fills the shared answer', async () => {
+      fetchSpy.mockResolvedValue(jsonResponse([OSM_VIEW, YOUTUBE_VIEW]));
+
+      const [osm, youtube, unknown] = await Promise.all([read(OSM), inBatch(YOUTUBE), inBatch(UNKNOWN)]);
+
+      expect(byIdsCalls().map(bodyOf)).toEqual([{ uris: [OSM, YOUTUBE, UNKNOWN], viewer_id: VIEWER }]);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect([osm, youtube, unknown]).toEqual([OSM_VIEW.tags, YOUTUBE_VIEW.tags, []]);
+      // Every reader of the link shares it: a card of that link asks nothing.
+      expect(NexusResourceService.getCachedTags({ uri: YOUTUBE, viewerId: VIEWER })).toEqual(YOUTUBE_VIEW.tags);
+      expect(NexusResourceService.getCachedCounts(YOUTUBE)).toMatchObject({ collections: 2 });
+      await read(YOUTUBE);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks no `by-uri` on a Nexus without `by_ids`, and caches no answer it did not get', async () => {
+      fetchSpy.mockImplementation(async (url) =>
+        String(url) === BY_IDS_URL ? new Response('', { status: 404 }) : jsonResponse(BY_URI_RESPONSE),
+      );
+
+      await expect(inBatch(YOUTUBE)).resolves.toBeUndefined();
+      expect(byUriCalls()).toHaveLength(0);
+      expect(NexusResourceService.getCachedTags({ uri: YOUTUBE, viewerId: VIEWER })).toBeUndefined();
+      // Once known, nothing is asked at all.
+      await expect(inBatch(OSM)).resolves.toBeUndefined();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      // A card of the link still reads it.
+      expect(await read(YOUTUBE)).toEqual(BY_URI_RESPONSE.tags);
+      expect(byUriCalls()).toHaveLength(1);
+    });
+
+    it('leaves a link the batch could not answer unread, with no `by-uri` and nothing cached', async () => {
+      // A view naming no asked link: the unmatched links are not known to be untagged.
+      fetchSpy.mockResolvedValue(jsonResponse([view('https://elsewhere.example/x', [tag('x', ['a'])])]));
+
+      await expect(inBatch(YOUTUBE)).resolves.toBeUndefined();
+      expect(byUriCalls()).toHaveLength(0);
+      expect(NexusResourceService.getCachedTags({ uri: YOUTUBE, viewerId: VIEWER })).toBeUndefined();
+    });
+
+    it('shares a read of the link already made or under way, asking nothing more', async () => {
+      let answer: (response: Response) => void = () => {};
+      fetchSpy.mockImplementation(() => new Promise<Response>((resolve) => (answer = resolve)));
+
+      const first = inBatch(YOUTUBE);
+      await vi.waitFor(() => expect(byIdsCalls()).toHaveLength(1));
+      // Another card's read of the same link while the first is under way, in a later batch window.
+      const second = inBatch(YOUTUBE);
+      const own = read(YOUTUBE);
+      answer(jsonResponse([YOUTUBE_VIEW]));
+
+      expect(await Promise.all([first, second, own])).toEqual([
+        YOUTUBE_VIEW.tags,
+        YOUTUBE_VIEW.tags,
+        YOUTUBE_VIEW.tags,
+      ]);
+      await expect(inBatch(YOUTUBE)).resolves.toEqual(YOUTUBE_VIEW.tags);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('asks 100 links per request', async () => {
     fetchSpy.mockImplementation(async () => jsonResponse([]));
     const uris = Array.from({ length: 150 }, (_, index) => `https://e.com/${index}`);

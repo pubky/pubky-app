@@ -34,6 +34,14 @@ describe('TagController, external resources', () => {
     expect(TagApplication.fetchResourceTags).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER });
   });
 
+  it('reads another link of a card in a feed only in a `by_ids` batch', async () => {
+    vi.mocked(TagApplication.fetchResourceTags).mockResolvedValue([]);
+
+    await TagController.fetchResourceTags({ uri: URI, viewerId: VIEWER, byIdsOnly: true });
+
+    expect(TagApplication.fetchResourceTags).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER, byIdsOnly: true });
+  });
+
   it('writes a social v1 tag whose uri is the link, with the stored label', async () => {
     const result = await TagController.commitCreateResource({ taggerId: VIEWER, uri: URI, label: '  Berlin ' });
 
