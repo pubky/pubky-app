@@ -1,4 +1,3 @@
-import { backupDownloadFilePath } from '../support/common';
 import {
   addCustomFeedTag,
   chooseCustomFeedOption,
@@ -100,18 +99,17 @@ describe('feed and filters', () => {
   // Onboarding, posting, reposting, following and tagging in the UI are covered by their own specs.
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
-    seedUserViaApi(profile1.username, { bio: profile1.bio, withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(profile1.username, { bio: profile1.bio }).then((user) => {
       user1 = user;
     });
-    seedUserViaApi(profile2.username, { bio: profile2.bio, withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(profile2.username, { bio: profile2.bio }).then((user) => {
       user2 = user;
     });
-    seedUserViaApi(profile3.username, { bio: profile3.bio, withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(profile3.username, { bio: profile3.bio }).then((user) => {
       user3 = user;
     });
-    seedUserViaApi(profile4.username, { bio: profile4.bio, withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(profile4.username, { bio: profile4.bio }).then((user) => {
       user4 = user;
     });
 
@@ -186,7 +184,7 @@ describe('feed and filters', () => {
 
   it('can filter to view all posts in the recent sorting order (default view)', () => {
     // * sign in as profile 2 and view Reach All posts, all can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.signInWithPubkyRing(profile2.username);
     // Reach All is the default view so no need to click
     // Recent is the default sort so no need to click
 
@@ -215,7 +213,7 @@ describe('feed and filters', () => {
     cy.signOut(HasBackedUp.Yes);
 
     // * sign in as profile 4 and view Reach All posts, all can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile4.username));
+    cy.signInWithPubkyRing(profile4.username);
     // Reach All is the default view so no need to click
 
     // check all posts are visible
@@ -241,7 +239,7 @@ describe('feed and filters', () => {
 
   itMobile('can filter to view only posts and reposts of following', () => {
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.signInWithPubkyRing(profile2.username);
     // click the Following filter
     selectFeedFilter('reach', 'following-reach-toggle');
     waitForFeedToLoad();
@@ -258,7 +256,7 @@ describe('feed and filters', () => {
     cy.signOut(HasBackedUp.Yes);
 
     // * sign in as profile 3 and view Reach Following, only profile 2's post can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.signInWithPubkyRing(profile3.username);
     selectFeedFilter('reach', 'following-reach-toggle');
     waitForFeedToLoad();
 
@@ -274,7 +272,7 @@ describe('feed and filters', () => {
     cy.signOut(HasBackedUp.Yes);
 
     // * sign in as profile 4 and view Reach Following, no posts can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile4.username));
+    cy.signInWithPubkyRing(profile4.username);
     selectFeedFilter('reach', 'following-reach-toggle');
     waitForFeedToLoad();
 
@@ -290,7 +288,7 @@ describe('feed and filters', () => {
 
   it('can filter to view only posts and reposts of friends', () => {
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    cy.signInWithPubkyRing(profile1.username);
     selectFeedFilter('reach', 'friends-reach-toggle');
     waitForFeedToLoad();
 
@@ -307,7 +305,7 @@ describe('feed and filters', () => {
     cy.signOut(HasBackedUp.Yes);
 
     // * sign in as profile 2 and view Reach Friends, only profile 1's posts can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.signInWithPubkyRing(profile2.username);
     selectFeedFilter('reach', 'friends-reach-toggle');
     waitForFeedToLoad();
 
@@ -323,7 +321,7 @@ describe('feed and filters', () => {
     cy.signOut(HasBackedUp.Yes);
 
     // * sign in as profile 3 and view Reach Friends, no posts can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.signInWithPubkyRing(profile3.username);
     selectFeedFilter('reach', 'friends-reach-toggle');
     waitForFeedToLoad();
 
@@ -338,7 +336,7 @@ describe('feed and filters', () => {
 
   it('can filter to view only own posts', () => {
     // * sign in as profile 2 and view Reach Me, only own post and repost can be seen
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.signInWithPubkyRing(profile2.username);
     selectFeedFilter('reach', 'me-reach-toggle');
     waitForFeedToLoad();
 
@@ -356,7 +354,7 @@ describe('feed and filters', () => {
 
   it('can filter to view posts from your web of trust', () => {
     // * sign in as profile 3 and view Reach My network
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.signInWithPubkyRing(profile3.username);
     selectFeedFilter('reach', 'network-reach-toggle');
     waitForFeedToLoad();
 
@@ -377,7 +375,7 @@ describe('feed and filters', () => {
 
   it('can filter to view posts by users tagged as chosen profile tags', () => {
     // * sign in as profile 3 and view Reach Tagged as
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.signInWithPubkyRing(profile3.username);
     // * select the tag applied by profile 4, who is outside profile 3's 2-hop network - not honored
     inSidebar('left', () => {
       cy.get('[data-cy="filter-reach-radiogroup"]')
@@ -407,7 +405,7 @@ describe('feed and filters', () => {
   });
 
   it('"who to follow" does not suggest users you are already following', () => {
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.signInWithPubkyRing(profile2.username);
 
     inSidebar('right', () => {
       cy.get('[data-cy="who-to-follow"]').within(() => {
@@ -420,7 +418,7 @@ describe('feed and filters', () => {
   });
 
   itMobile('who to follow sidebar and who-to-follow page suggested other profiles', () => {
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.signInWithPubkyRing(profile3.username);
 
     inSidebar(
       'right',
@@ -450,7 +448,7 @@ describe('feed and filters', () => {
 
   it('can sort by popularity', () => {
     // * sign in as profile 1 and sort by Popularity with Reach Following posts
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    cy.signInWithPubkyRing(profile1.username);
     selectFeedFilter('reach', 'following-reach-toggle');
     waitForFeedToLoad();
     selectFeedFilter('sort', 'popularity-sort-toggle');
@@ -477,7 +475,7 @@ describe('feed and filters', () => {
 
     createPostViaApi(user1, postContent, { tags: [tag] }).then((post) => waitForNexus(postTagsIndexed(post, [tag])));
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    cy.signInWithPubkyRing(profile1.username);
     resetHomeFeedToAllRecent();
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
 
@@ -561,7 +559,7 @@ describe('feed and filters', () => {
       });
     });
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.signInWithPubkyRing(profile3.username);
     resetHomeFeedToAllRecent();
     cy.findFirstPostInFeedFiltered(older).within(() => {
       cy.get('[data-cy="post-tag"][data-tag-label="sortc"]').filter(':visible').should('have.length.at.least', 1);
@@ -686,7 +684,6 @@ describe('feed and filters', () => {
 describe('visual layout', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
   });
 
   // Phones do not offer the visual layout.
@@ -698,7 +695,7 @@ describe('visual layout', () => {
 
     const photographer = 'Pete the Photographer';
 
-    seedUserViaApi(photographer, { bio: 'I post photos', withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(photographer, { bio: 'I post photos' }).then((user) => {
       const posts: SeededPost[] = [];
       // create 2 posts with images
       [imagePostContent1, imagePostContent2].forEach((postContent) => {
@@ -721,7 +718,7 @@ describe('visual layout', () => {
       cy.then(() => waitForNexus(...posts.map(postIndexed)));
     });
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(photographer));
+    cy.signInWithPubkyRing(photographer);
 
     // switch to visual layout
     selectFeedFilter('layout', 'visual-layout-toggle');
@@ -745,7 +742,6 @@ describe('visual layout', () => {
 describe('custom feed write failures', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
   });
 
   it('rolls back the new feed tab when homeserver fails to save the feed', () => {

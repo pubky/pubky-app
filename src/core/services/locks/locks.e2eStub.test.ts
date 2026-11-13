@@ -101,7 +101,7 @@ describe('locks.e2eStub', () => {
     expect(() => createE2eLocksClient(STUB_URL).restoreSession('real-sdk-secret')).toThrow();
   });
 
-  it('writes guarded bytes to the creator homeserver before registering them', async () => {
+  it('registers guarded bytes with the stub and leaves the homeserver write to it', async () => {
     const session = await signIn();
     replyWith({ creator: `pubky${OWNER}`, guarded_resource: { path: '/priv/app.locks/content/file-1' } });
 
@@ -113,17 +113,14 @@ describe('locks.e2eStub', () => {
       }),
     );
 
-    expect(mocks.putBlob).toHaveBeenCalledWith({
-      url: `pubky://${OWNER}/priv/app.locks/content/file-1`,
-      blob: new Uint8Array([1, 2, 3]),
-    });
     expect(sentTo()).toEqual({
       url: `${STUB_URL}/e2e/creator/guarded-resources`,
       body: { owner: OWNER, path: 'file-1', content_type: 'image/png', bytes: 'AQID' },
     });
+    expect(mocks.putBlob).not.toHaveBeenCalled();
   });
 
-  it('publishes the returned lock file at its content lock path', async () => {
+  it('creates the lock on the stub, which publishes its lock file', async () => {
     const session = await signIn();
     const contentLock = { version: 1, creator: `pubky${OWNER}` };
     replyWith({ lock_id: 'lock-1', content_lock_path: '/pub/app.locks/lock-1.json', content_lock: contentLock });
@@ -132,13 +129,10 @@ describe('locks.e2eStub', () => {
 
     expect(result).toEqual(expect.objectContaining({ lock_id: 'lock-1' }));
     expect(sentTo().body).toEqual({ owner: OWNER, body: { criteria: [] } });
-    expect(mocks.putBlob).toHaveBeenCalledWith({
-      url: `pubky://${OWNER}/pub/app.locks/lock-1.json`,
-      blob: new TextEncoder().encode(JSON.stringify(contentLock)),
-    });
+    expect(mocks.putBlob).not.toHaveBeenCalled();
   });
 
-  it('deletes the lock on the stub, then removes its lock file from the homeserver', async () => {
+  it('deletes the lock on the stub, which removes its lock file', async () => {
     const session = await signIn();
     replyWith({});
 
@@ -148,17 +142,16 @@ describe('locks.e2eStub', () => {
       url: `${STUB_URL}/e2e/creator/content-locks/delete`,
       body: { owner: OWNER, lock_id: 'lock-1' },
     });
-    expect(mocks.delete).toHaveBeenCalledWith(`pubky://${OWNER}/pub/app.locks/lock-1.json`);
+    expect(mocks.delete).not.toHaveBeenCalled();
   });
 
-  it('keeps the lock file when the stub refuses the deletion', async () => {
+  it('rejects a deletion the stub refuses', async () => {
     const session = await signIn();
     replyWith({}, 500);
 
     await expect(session.creator.deleteContentLock('lock-1')).rejects.toThrow(
       'Lock Server request failed with HTTP 500',
     );
-    expect(mocks.delete).not.toHaveBeenCalled();
   });
 
   it('sends the creator with the pointer and setup-status calls', async () => {
