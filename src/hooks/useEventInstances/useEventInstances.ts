@@ -47,15 +47,17 @@ export function useEventInstances(cards: readonly TPinakesCard[]): { instances: 
     const pending = cards.filter((_, index) => !asked.current.has(versions[index]));
     if (pending.length === 0) return;
     const ask = {};
-    // An answer is its row's by the row's key, and kept under the version that was asked for
-    const versionByKey = new Map(pending.map((card) => [getResourceInstanceKey(card), getRowVersion(card)]));
-    for (const version of versionByKey.values()) asked.current.set(version, ask);
+    for (const card of pending) asked.current.set(getRowVersion(card), ask);
     // No cleanup: a next page leaves this read on its way. Its answer counts for the rows still
-    // asked in it, and is shown only for the rows the list has now
+    // asked in it, and is shown only for the rows the list has now. The answer has one event per
+    // row, in the rows' order; a row it has none for, or another row's, shows as the search gave it
     const keep = (instances: readonly TEventInstance[]) => {
-      const own = instances.flatMap((one) => {
-        const version = versionByKey.get(getResourceInstanceKey(one));
-        return version !== undefined && asked.current.get(version) === ask ? [[version, one] as const] : [];
+      const own = pending.flatMap((card, index) => {
+        const version = getRowVersion(card);
+        if (asked.current.get(version) !== ask) return [];
+        const answer = instances.at(index);
+        const isOwn = answer !== undefined && getResourceInstanceKey(answer) === getResourceInstanceKey(card);
+        return [[version, isOwn ? answer : toEventInstance(card, null)] as const];
       });
       if (own.length > 0) setRead((prev) => new Map([...prev, ...own]));
     };
