@@ -431,8 +431,8 @@ describe('PostArticleDetail', () => {
       expect.objectContaining({ localAttachments: inline, localCover: cover }),
     );
 
-    // Inline entries alone say nothing about the cover: the hook's slot-0 rule never makes slot 0
-    // of an envelope-cover article its cover
+    // Inline entries are handed to the hook as the slots and say nothing about the cover entry: without
+    // one, the hook alone decides (this article has no envelope cover and a video at slot 0, so none)
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(createMockLocalFilesStore({ [defaultProps.postId]: inline })),
     );
