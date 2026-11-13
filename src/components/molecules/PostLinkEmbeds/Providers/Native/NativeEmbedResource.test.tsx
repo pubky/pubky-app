@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, onTestFinished, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
@@ -9,6 +9,7 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { NativeEmbedResource, type RenderNativeEmbed } from './NativeEmbedResource';
 
 const mockPush = vi.fn();
@@ -752,6 +753,120 @@ describe('NativeEmbedResource', () => {
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
     expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
     expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+  });
+
+  describe('in a box hidden from the page (a feed kept behind an open post)', () => {
+    /** The page's size observers and what each watches: the box tells its size through one. */
+    let observers: { callback: ResizeObserverCallback; observer: ResizeObserver; targets: Element[] }[] = [];
+    let hidden = false;
+    let rects: MockInstance<Element['getClientRects']> | undefined;
+
+    beforeEach(() => {
+      observers = [];
+      hidden = false;
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          constructor(callback: ResizeObserverCallback) {
+            observers.push({ callback, observer: asOpaque<ResizeObserver>(this), targets: [] });
+          }
+          observe(target: Element) {
+            observers.find(({ observer }) => observer === asOpaque<ResizeObserver>(this))?.targets.push(target);
+          }
+          unobserve() {}
+          disconnect() {
+            const entry = observers.find(({ observer }) => observer === asOpaque<ResizeObserver>(this));
+            if (entry) entry.targets = [];
+          }
+        },
+      );
+      // Laid out nowhere while hidden (`display: none` above it), as `PlayerHost` reads it.
+      rects = vi.spyOn(Element.prototype, 'getClientRects');
+      rects.mockImplementation(() => asOpaque<DOMRectList>(hidden ? [] : [{}]));
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      rects?.mockRestore();
+    });
+
+    /** The box is hidden or shown again: its size goes to or from nothing, and its observer says so. */
+    const setHidden = (value: boolean) =>
+      act(() => {
+        hidden = value;
+        const box = screen.getByTestId('native-embed-resource');
+        for (const { callback, observer, targets } of observers) {
+          if (targets.includes(box)) callback([], observer);
+        }
+      });
+
+    it('unloads the platform’s video while its box is hidden, and loads it again once shown', () => {
+      mockCard(null);
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+
+      setHidden(true);
+      expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+      // The resource stays: its frame and footer, ready to load the video again.
+      expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
+
+      setHidden(false);
+      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    });
+
+    it('unloads a video opened from Play on in our card while hidden, still open once shown', () => {
+      // Platform embeds up front off: a video the card player cannot play is our card, its embed from Play on.
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
+      mockCard({ ...VIDEO_ALONE, status: 'missing' });
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      fireEvent.click(screen.getByTestId('show-embed'));
+      expect(within(screen.getByTestId('resource-card')).getByTestId('platform-embed')).toBeInTheDocument();
+
+      setHidden(true);
+      expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+      expect(screen.getByTestId('show-embed')).toHaveAccessibleName('Close the YouTube video');
+
+      setHidden(false);
+      expect(within(screen.getByTestId('resource-card')).getByTestId('platform-embed')).toBeInTheDocument();
+    });
+
+    it('keeps the video while only scrolled away: laid out, out of the viewport', () => {
+      mockCard(null);
+      const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      viewport.isVisible = false;
+      rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      setHidden(false);
+
+      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    });
+
+    it('keeps the video until the box’s size is first told (no observer word yet)', () => {
+      hidden = true;
+      mockCard(null);
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    });
+
+    it('leaves the card player’s hosted frame to its host (`PlayerHost`)', () => {
+      mockCard(VIDEO_ALONE);
+      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+      setHidden(true);
+      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(embed).not.toHaveBeenCalled();
+    });
+
+    it('keeps an X post, which has no frame of its own to unload', () => {
+      mockCard(null);
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      setHidden(true);
+      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    });
   });
 
   it('waits for Pinakes to read a link in the composer before loading any platform embed', () => {

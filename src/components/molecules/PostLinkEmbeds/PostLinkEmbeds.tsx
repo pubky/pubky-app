@@ -11,6 +11,7 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { parseUrlForLinkEmbed } from './PostLinkEmbeds.utils';
 import { NativeEmbedResource } from './Providers/Native/NativeEmbedResource';
+import type { EmbedData, EmbedProvider, EmbedResourceKind } from './Providers/Provider.types';
 
 /**
  * Embeds `url` when given, else the first link of `content`. Only `url`, the link the post embeds, is
@@ -43,13 +44,14 @@ export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostL
   return (
     <Container ref={mediaContainerRef} className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
       {url && resourceKind ? (
-        <NativeEmbedResource
+        <PlatformEmbedResource
           // A new link starts over (a failed or played embed belongs to the old one).
           key={url}
           url={url}
+          embed={embed}
+          provider={provider}
           kind={resourceKind}
           isComposing={isComposing}
-          renderEmbed={({ onError }) => provider.renderEmbed(embed, { isPostEmbed, onEmbedError: onError, fill: true })}
         />
       ) : (
         provider.renderEmbed(embed, { isComposing, isPostEmbed })
@@ -57,3 +59,33 @@ export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostL
     </Container>
   );
 };
+
+/**
+ * A link with a platform embed (`resourceKind`) as that resource (`NativeEmbedResource`), the
+ * platform's embed filling its frame: a post's embed, and an external resource's item in a list of
+ * resources (`ResourceItem`), so both choose embed or card the same way.
+ */
+export function PlatformEmbedResource({
+  url,
+  embed,
+  provider,
+  kind,
+  isComposing,
+}: {
+  url: string;
+  embed: EmbedData;
+  provider: EmbedProvider;
+  kind: EmbedResourceKind;
+  isComposing?: boolean;
+}) {
+  return (
+    <NativeEmbedResource
+      url={url}
+      kind={kind}
+      isComposing={isComposing}
+      renderEmbed={({ onError }) =>
+        provider.renderEmbed(embed, { isPostEmbed: true, onEmbedError: onError, fill: true })
+      }
+    />
+  );
+}
