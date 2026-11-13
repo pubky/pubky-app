@@ -134,11 +134,14 @@ export function classifyResourceSearchInput(
   return { kind: 'text', text: value };
 }
 
-/** Whether a link may be sent to Pinakes: it parses and carries no username or password. */
+/**
+ * Whether a link may be sent to Pinakes: it parses and carries no username or password, nor holds
+ * another link that does (`hasCredentialLink`).
+ */
 export function isResolvableLink(uri: string): boolean {
   try {
     const url = new URL(uri);
-    return !url.username && !url.password;
+    return !url.username && !url.password && !hasCredentialLink(uri);
   } catch {
     return false;
   }
@@ -161,13 +164,17 @@ export function hasLinkStart(text: string): boolean {
  * (`https://host/?u=https://user@…`): such a text is never sent.
  */
 export function hasCredentialLink(text: string): boolean {
-  return text.split(/\s+/).some((token) =>
-    token
-      .split(LINK_START)
-      .slice(1)
-      // A username or password ends in `@` before the link's path, query or fragment
-      .some((rest) => rest.split(/[/?#\\]/, 1)[0].includes('@')),
-  );
+  // A browser drops tabs and line breaks inside a link (`https://ali<tab>ce:pw@…` is `alice:pw@…`)
+  return text
+    .replace(/[\t\n\r]/g, '')
+    .split(/\s+/)
+    .some((token) =>
+      token
+        .split(LINK_START)
+        .slice(1)
+        // A username or password ends in `@` before the link's path, query or fragment
+        .some((rest) => rest.split(/[/?#\\]/, 1)[0].includes('@')),
+    );
 }
 
 /**
