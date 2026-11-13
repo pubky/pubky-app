@@ -503,6 +503,12 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
   the calendar): the search hook keeps them with `cards: true`, `useEventInstances` reads details only for events that
   are no occurrence, and `ResourceInstanceCard` renders a row from its own card. A list of links (`uris`) cannot carry
   them, so the agenda (`SearchEventAgenda`) and the results map (`SearchResourceMap`) read `cards`.
+- What `useEventInstances` reads is kept for the row as it was read (its whole contents, not its id alone) and only
+  while the list has that row: a row that comes again with another start, point, name or status, or a list that comes
+  again after another, is read again through the cards' cache, and an answer asked for an earlier row or list is
+  dropped. What a row says itself is always the row's; details the cache holds from before the event changed (another
+  start, end or point than the row: `hasSameTimesAndPlace`) are read again past the cache, once
+  (`PinakesApplication.fetchEventInstances`).
 - `GET /v1/resources/{id}/occurrences` takes RFC 3339 times only (`getOccurrencesWindowStart`; the search's `now` is a
   400 there), and every page of one list is asked with the first page's `from` (`useResourceOccurrences`). A next
   page Pinakes refuses (an expired cursor, a 400) starts the list over from a fresh first page, once. That page is
