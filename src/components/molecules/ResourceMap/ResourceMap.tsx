@@ -9,7 +9,14 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
-import { MAP_ATTRIBUTION, MAP_FIT_MAX_ZOOM, MAP_FIT_PADDING_PX, MAP_PREVIEW_ZOOM, MAP_STYLE_URLS } from '@/config/maps';
+import {
+  MAP_ATTRIBUTION,
+  MAP_CONTEXT_RESTORE_MS,
+  MAP_FIT_MAX_ZOOM,
+  MAP_FIT_PADDING_PX,
+  MAP_PREVIEW_ZOOM,
+  MAP_STYLE_URLS,
+} from '@/config/maps';
 import { useThemePreference } from '@/hooks/useThemePreference/useThemePreference';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import { loadMapLibrary, toPrivateMapRequest } from '@/libs/maps/maplibre';
@@ -134,10 +141,20 @@ export function ResourceMap({
     if (!shouldLoad || !container) return;
     let cancelled = false;
     let map: MapLibreMap | null = null;
+    let contextLost: ReturnType<typeof setTimeout> | undefined;
     const fail = () => {
-      map?.remove();
+      clearTimeout(contextLost);
+      const failed = map;
       map = null;
       live.current = null;
+      if (failed) {
+        // After the library has finished telling of the failure: it goes on using the map meanwhile
+        queueMicrotask(() => failed.remove());
+      } else {
+        // The constructor threw (no WebGL) after marking the container and adding to it
+        container.replaceChildren();
+        container.classList.remove('maplibregl-map');
+      }
       if (!cancelled) setLoaded({ key: styleUrl, status: 'failed' });
     };
     loadMapLibrary().then((maplibre) => {
@@ -180,10 +197,17 @@ export function ResourceMap({
       made.on('error', () => {
         if (!isDrawn) fail();
       });
-      made.on('webglcontextlost', fail);
+      // The library loses and restores the context itself when it restarts its workers (a phone back
+      // from the background): only a context that stays lost leaves no map
+      made.on('webglcontextlost', () => {
+        clearTimeout(contextLost);
+        contextLost = setTimeout(fail, MAP_CONTEXT_RESTORE_MS);
+      });
+      made.on('webglcontextrestored', () => clearTimeout(contextLost));
     }, fail);
     return () => {
       cancelled = true;
+      clearTimeout(contextLost);
       map?.remove();
       live.current = null;
       setLoaded(null);
@@ -223,8 +247,16 @@ export function ResourceMap({
   if (!hasPoints) return null;
 
   const pressPin = (marker: TResourceMapMarker) => {
-    if (marker.bounds && live.current) live.current.map.fitBounds(marker.bounds, FIT_OPTIONS);
-    else onSelect?.(marker.id);
+    if (marker.bounds && live.current) {
+      // The pin pressed is replaced by the ones it stood for: the keyboard stays on the map
+      live.current.map.getCanvas().focus();
+      live.current.map.fitBounds(marker.bounds, FIT_OPTIONS);
+    } else onSelect?.(marker.id);
+  };
+  const tap = () => {
+    setIsTapped(true);
+    // The button goes away: the keyboard moves on to the map it opened
+    live.current?.map.getCanvas().focus();
   };
 
   return (
@@ -237,14 +269,18 @@ export function ResourceMap({
         data-resource-controls
         data-testid="resource-map"
         data-status={status}
-        className={cn('relative w-full cursor-auto overflow-hidden rounded-md bg-muted', SIZE_CLASSES[size])}
+        // `isolate`: the library's own overlays (its gesture hint has a z-index far above the app's
+        // scale) stay inside the map's box, under the app's menus and bars
+        className={cn('relative isolate w-full cursor-auto overflow-hidden rounded-md bg-muted', SIZE_CLASSES[size])}
       >
         <Container
           overrideDefaults
           ref={canvasRef}
           inert={!isInteractive || !isReady}
           data-testid="resource-map-canvas"
-          className={cn('absolute inset-0', status === 'failed' && 'hidden')}
+          // Sized by its box: the library's stylesheet sets `position: relative` on this element outside
+          // any layer, which beats a layered `absolute` and would leave it without a height
+          className={cn('size-full', status === 'failed' && 'hidden')}
         />
         {status === 'loading' && (
           <Skeleton className="absolute inset-0 rounded-none" data-testid="resource-map-loading" />
@@ -280,7 +316,7 @@ export function ResourceMap({
             overrideDefaults
             aria-label="Interact with the map"
             title="Interact with the map"
-            onClick={() => setIsTapped(true)}
+            onClick={tap}
             className="absolute inset-0 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           />
         )}

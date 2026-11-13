@@ -25,6 +25,12 @@ export const MAP_FIT_MAX_ZOOM = 16;
 /** The space kept around the points a map fits (px). */
 export const MAP_FIT_PADDING_PX = 48;
 
+/**
+ * How long a map waits for a lost WebGL context to come back before it says it is unavailable: the
+ * library restores one itself within moments when it restarts its workers.
+ */
+export const MAP_CONTEXT_RESTORE_MS = 2000;
+
 /** Places a place's page lists under Nearby. */
 export const RESOURCE_NEARBY_SHOWN = 6;
 /** How far around a place its Nearby looks (km). */
