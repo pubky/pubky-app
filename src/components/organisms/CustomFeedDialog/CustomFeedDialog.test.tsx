@@ -1555,6 +1555,40 @@ describe('CustomFeedDialog', () => {
       }
     });
 
+    it('keeps a name the cache gave once the read answers without that service', () => {
+      resourceSearch.loading = true;
+      const cached = vi.spyOn(ResourceController, 'getCachedHostFacets').mockReturnValue([
+        { host: 'music.amazon.com', site: 'Amazon Music', count: 1 },
+        { host: 'open.spotify.com', site: 'Spotify', count: 27 },
+      ]);
+      try {
+        const feed = createMockFeed({
+          target: 'resources',
+          resource_types: ['MusicRecording'],
+          resource_filters: { host: 'music.amazon.com,open.spotify.com' },
+          content: null,
+        });
+        const dialog = (
+          <TooltipProvider delayDuration={0}>
+            <CustomFeedDialog mode="edit" open feed={feed} />
+          </TooltipProvider>
+        );
+        // `render` adds the TooltipProvider `dialog` carries for `rerender`: one tree, no remount
+        const { rerender } = render(<CustomFeedDialog mode="edit" open feed={feed} />);
+        expect(screen.getByTestId('resource-filter-row-host')).toHaveTextContent('Service: Amazon Music, Spotify');
+
+        // The read answers, without Amazon Music
+        resourceSearch.hostFacets = [{ host: 'open.spotify.com', site: 'Spotify', count: 27 }];
+        resourceSearch.loading = false;
+        rerender(dialog);
+        const row = screen.getByTestId('resource-filter-row-host');
+        expect(row).toHaveTextContent('Service: Amazon Music, Spotify');
+        expect(row).not.toHaveTextContent('music.amazon.com');
+      } finally {
+        cached.mockRestore();
+      }
+    });
+
     it('names the services the cache knows and loads the others, without a comma in its name', () => {
       resourceSearch.loading = true;
       const cached = vi
