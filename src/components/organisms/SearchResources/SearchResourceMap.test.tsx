@@ -250,6 +250,24 @@ describe('SearchResourceMap', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
+  it('says so when more results could not be read: it keeps the map, claims no "all", and offers to try again', () => {
+    const retry = vi.fn();
+    // As the search hook leaves it after a failed next page: the rows read, no more to ask for, the error
+    render(
+      <SearchResourceMap
+        kind="place"
+        search={search({ cards: PLACES.slice(0, 3), hasMore: false, error: 'Pinakes is down', retry })}
+      />,
+    );
+
+    expect(screen.getByTestId('resource-map')).toBeInTheDocument();
+    expect(screen.getByTestId('search-map-scope')).toHaveTextContent('Showing the 3 places loaded so far');
+    expect(screen.getByTestId('search-map-scope')).not.toHaveTextContent('all');
+    expect(screen.getByTestId('search-map-more-error')).toHaveTextContent('Pinakes is down');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
   it('says quietly what is coming for the kind it shows, with nothing to press', () => {
     const { rerender } = render(<SearchResourceMap kind="place" search={search()} />);
     expect(screen.getByTestId('search-map-hint')).toHaveTextContent('Pubky Maps is coming');

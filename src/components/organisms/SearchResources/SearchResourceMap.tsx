@@ -13,6 +13,7 @@ import { getDisplayLink } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceItem } from '@/molecules/ResourceCard/ResourceItem';
 import { ResourceLocationProvider } from '@/molecules/ResourceMap/ResourceLocationContext';
 import { ResourceMap, type TResourceMapMarker } from '@/molecules/ResourceMap/ResourceMap';
+import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineErrorState } from '@/molecules/Timeline/TimelineErrorState';
 import { ResourceInstanceCard } from '@/organisms/ResourceInstanceCard/ResourceInstanceCard';
 import { clusterMapPoints } from '@/pipes/resource/resource.cluster';
@@ -95,6 +96,15 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
     </Button>
   );
 
+  // No retry helps a search no source can answer
+  const retryButton = !unavailable && (
+    <Button variant={ButtonVariant.SECONDARY} type="button" onClick={retry}>
+      Try again
+    </Button>
+  );
+  // A next page that failed leaves the rows read and nothing more to ask for: that is not "all"
+  const isComplete = !hasMore && !error;
+
   let body: ReactNode;
   if (isFirstRead) {
     body = <Skeleton className="h-80 w-full sm:h-96" data-testid="search-map-loading" />;
@@ -102,12 +112,7 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
     body = (
       <Container overrideDefaults className="flex flex-col items-center gap-2" data-testid="search-map-error">
         <TimelineErrorState message={error} />
-        {/* No retry helps a search no source can answer */}
-        {!unavailable && (
-          <Button variant={ButtonVariant.SECONDARY} type="button" onClick={retry}>
-            Try again
-          </Button>
-        )}
+        {retryButton}
       </Container>
     );
   } else if (located.length === 0) {
@@ -136,11 +141,17 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
         />
         <Container overrideDefaults className="flex flex-col gap-2">
           <Typography size="sm" data-testid="search-map-scope" className="font-normal text-muted-foreground">
-            {hasMore ? `Showing the ${count(rows.length)} loaded so far.` : `Showing all ${count(rows.length)}.`}
+            {isComplete ? `Showing all ${count(rows.length)}.` : `Showing the ${count(rows.length)} loaded so far.`}
             {unplaced > 0 &&
               ` ${unplaced} ${unplaced === 1 ? 'has' : 'have'} no location and ${unplaced === 1 ? 'is' : 'are'} not on the map.`}
           </Typography>
           {loadMoreButton}
+          {error && (
+            <Container overrideDefaults className="flex flex-col items-start gap-2" data-testid="search-map-more-error">
+              <TimelineError message={error} />
+              {retryButton}
+            </Container>
+          )}
         </Container>
         <Container
           as="section"
