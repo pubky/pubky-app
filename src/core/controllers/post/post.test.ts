@@ -159,7 +159,8 @@ const passedCollectionEdit = (
   const [{ compositePostId, edit }] = commitEditSpy.mock.calls[0];
   const change = edit.collection;
   if (!change) throw new Error('no collection change was passed');
-  const current = CollectionPostContent.parse(details!.content);
+  if (!details) throw new Error('no collection was read');
+  const current = CollectionPostContent.parse(details.content);
   if (!current) throw new Error('the collection read is not a collection');
   return { compositePostId, change, applied: CollectionPostContent.apply(current, change) };
 };

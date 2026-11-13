@@ -463,8 +463,10 @@ export class PostApplication {
    *    alt text, an article's cover, item notes and unknown members are carried over), and the
    *    next version is PUT at its own URL. A refusal the write policy retries runs the read
    *    again; the body is never replayed from a stale read.
-   * 4. The local row converges to the version that was PUT; on failure it goes back to what it
-   *    was and the uploads are swept. Media the edit removed (an attachment, an article's or a
+   *    again; the body is never replayed from a stale read. A collection change the head already
+   *    holds (`toEdit` returns `null`) PUTs nothing and writes no version.
+   * 4. The local row converges to the version that was PUT, or to the head when nothing was; on
+   *    failure it goes back to what it was and the uploads are swept. Media the edit removed (an attachment, an article's or a
    *    collection's cover) is never deleted: the earlier versions still reference it, and content
    *    addressing lets other objects share it.
    *
@@ -546,8 +548,8 @@ export class PostApplication {
           context: { compositePostId },
         });
         const next = PostNormalizer.toEdit({ owner, head, edit });
-        // The head already holds the change (a collection item another tab or device added or
-        // removed): no PUT, no new version; the row converges to the head below.
+        // The head already holds the collection change (an item, an order or details another tab
+        // or device wrote): no PUT, no new version; the row converges to the head below.
         if (!next) return { object: head.post };
         await HomeserverService.putBlob({ url: next.url, blob: next.body, fence });
         return next;
@@ -572,8 +574,9 @@ export class PostApplication {
       throw error;
     }
 
-    // Converge the row to the version that was PUT: the head may have carried members the
-    // projection could not know (another device's edit), and the envelope is spelled by the package.
+    // Converge the row to the version that was PUT, or to the head when it already held the edit: the
+    // head may have carried members the projection could not know (another device's edit), and the
+    // envelope is spelled by the package.
     const nextKind = toLocalPostKind(built.object.kind);
     try {
       await LocalPostService.edit({

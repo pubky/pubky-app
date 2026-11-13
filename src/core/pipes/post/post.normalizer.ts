@@ -182,10 +182,11 @@ export class PostNormalizer {
 
   /**
    * The edit projected onto the cached row, for the optimistic local write that lands before the
-   * head is read (ADR-0027). Pure and best-effort: the row converges to the version that is PUT.
-   * A collection change is applied to the row's own items, as `toEdit` applies it to the head's;
-   * a row that does not hold a collection this client can read, or that already holds the change,
-   * keeps its content.
+   * head is read (ADR-0027). Pure, and a projection only: the row converges to the version that is
+   * PUT. A collection change is applied to the row's own items, as `toEdit` applies it to the
+   * head's; a row that does not hold a collection this client can read, or that already holds the
+   * change, keeps its content; a change a collection rule refuses on the row throws the validation
+   * error, before anything is written.
    */
   static toLocalEdit({ row, edit }: TToLocalEditParams): TLocalPostEdit {
     const local: TLocalPostEdit = { content: row.content };

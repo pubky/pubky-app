@@ -12,10 +12,18 @@ import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { stubMemoryHomeserver } from '@/test-utils/homeserver';
+import { freezeSpecClock, restoreSpecClock } from '@/test-utils/spec-clock';
+import { VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 
 const OWNER = fakeOwner(1) as Pubky;
 const CURATED = fakeOwner(2) as Pubky;
+/**
+ * The other tab's data-model clock, a second ahead of this tab's: pinning a clock restarts the package's mint guard,
+ * so the same instant could mint an edit id this tab already used, and the other tab writes after this tab in every
+ * test here, so its versions must sort above.
+ */
+const OTHER_TAB_NOW_MS = VRT_FROZEN_NOW_MS + 1_000;
 
 /** A post of `CURATED` as a collection references it: the composite id the pickers pass, and both spellings. */
 const curated = (id: string) => ({
@@ -156,7 +164,8 @@ describe('PostController collection edits under the post lock', () => {
   /**
    * Another tab of the app: a second instance of every module, sharing only what tabs share (the one IndexedDB
    * behind both Dexie instances, `navigator.locks`, the homeserver). Its homeserver calls go to this tab's
-   * in-memory homeserver.
+   * in-memory homeserver. Its data-model clock is frozen too, through its own module instance, a second ahead
+   * (`OTHER_TAB_NOW_MS`); `close` restores it.
    */
   async function openOtherTab() {
     vi.resetModules();
@@ -164,15 +173,24 @@ describe('PostController collection edits under the post lock', () => {
     const { HomeserverService: service } = await import('@/services/homeserver/homeserver');
     const { db: database } = await import('@/database/franky/franky');
     const { useAuthStore: authStore } = await import('@/stores/auth/auth.store');
+    const clock = await import('@/test-utils/spec-clock');
+    clock.freezeSpecClock(OTHER_TAB_NOW_MS);
     authStore.setState({ currentUserPubky: OWNER, generation: 'g1' });
     vi.spyOn(service, 'putBlob').mockImplementation((params) => HomeserverService.putBlob(params));
     vi.spyOn(service, 'listAll').mockImplementation((params) => HomeserverService.listAll(params));
     vi.spyOn(service, 'getBytes').mockImplementation((url) => HomeserverService.getBytes(url));
     vi.spyOn(service, 'exists').mockImplementation((url) => HomeserverService.exists(url));
-    return { controller, close: () => database.close() };
+    return {
+      controller,
+      close: () => {
+        clock.restoreSpecClock();
+        database.close();
+      },
+    };
   }
 
   beforeEach(async () => {
+    freezeSpecClock();
     homeserver = stubMemoryHomeserver(OWNER);
     useAuthStore.setState({ currentUserPubky: OWNER, generation: 'g1' });
     vi.spyOn(Logger, 'debug').mockImplementation(() => {});
@@ -191,9 +209,31 @@ describe('PostController collection edits under the post lock', () => {
     otherTab = null;
     vi.restoreAllMocks();
     useAuthStore.getState().reset();
+    restoreSpecClock();
   });
 
   describe('operations queued behind an edit in flight, one tab', () => {
+    it('projects a queued add onto the row as it is once the lock is free, before its own PUT lands', async () => {
+      const { compositeId, postId } = await createCollection('reading');
+      const first = holdNextPut();
+
+      const adding = run(add(compositeId, P0));
+      await first.taken;
+      const second = holdNextPut();
+      const queuedAdd = run(add(compositeId, P1));
+      await queued(postId, 1);
+      first.release();
+      await second.taken;
+      // The queued add holds the lock with its PUT held: its projection has landed on the row the first add
+      // converged, as the delta applied to that row, not as the list it read before the lock.
+      expect(await rowItems(compositeId)).toEqual([P1.uri, P0.uri]);
+      expect(await headItems(postId)).toEqual([P0.uri]);
+
+      second.release();
+      await Promise.all([adding, queuedAdd]);
+      expect(await headItems(postId)).toEqual([P1.uri, P0.uri]);
+    });
+
     it('three quick adds, the first PUT held: the head and the row hold all three', async () => {
       const { compositeId, postId } = await createCollection('reading');
       const put = holdNextPut();

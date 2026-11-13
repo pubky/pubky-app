@@ -228,9 +228,11 @@ export class CollectionPostContent {
         return isEqual(collection, next) ? collection : next;
       }
       default: {
-        // A change this build does not know (one another tab serialized, say) is refused, not applied as nothing.
+        // Exhaustiveness guard: a change never leaves the process (the controller builds it and passes it
+        // by reference), so this is reached only by a member added to the union and not handled above.
+        // The context names the op alone: a details change carries user-entered text.
         const unknown: never = change;
-        return throwCollectionValidation('Collection change is unknown', { change: unknown });
+        return throwCollectionValidation('Collection change is unknown', { op: (unknown as { op?: unknown }).op });
       }
     }
   }

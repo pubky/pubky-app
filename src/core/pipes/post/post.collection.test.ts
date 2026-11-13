@@ -240,12 +240,13 @@ describe('CollectionPostContent', () => {
   describe('apply', () => {
     const spellings = [VALID_ITEM_URI, LEGACY_ITEM_URI];
     const other = 'https://example.com/post';
+    const cover = 'https://cdn.example.com/cover.png';
     const collection = () =>
       CollectionPostContent.normalize({
         name: 'Saved',
         description: 'Mine',
         items: [other, LEGACY_ITEM_URI],
-        coverImage: 'https://cdn.example.com/cover.png',
+        coverImage: cover,
         layout: COLLECTION_LAYOUT.LIST,
       });
 
@@ -290,9 +291,11 @@ describe('CollectionPostContent', () => {
     it('a details change without a layout keeps the current one', () => {
       const current = collection();
 
-      expect(
-        CollectionPostContent.apply(current, { op: 'details', name: 'Renamed', coverImage: current.cover_image! }),
-      ).toEqual({ ...current, name: 'Renamed', description: '' });
+      expect(CollectionPostContent.apply(current, { op: 'details', name: 'Renamed', coverImage: cover })).toEqual({
+        ...current,
+        name: 'Renamed',
+        description: '',
+      });
     });
 
     it('returns the same reference when the change is already there', () => {
@@ -308,7 +311,7 @@ describe('CollectionPostContent', () => {
           op: 'details',
           name: 'Saved ',
           description: ' Mine',
-          coverImage: current.cover_image!,
+          coverImage: cover,
         }),
       ).toBe(current);
     });

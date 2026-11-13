@@ -194,8 +194,9 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   one tab; a collection edit uploads its new cover in the controller (`PostController.commitEditCollection`) before
   the lock, so one queued behind a delete still uploads and then sweeps that cover; a collection change applied to a
   head another device's version replaces between this device's LIST and its PUT is still last-writer-wins (no
-  compare-and-swap; `pickHeadVersion` picks one), and the controller's local no-op (an item the row already shows)
-  trusts the row; the edit's generic error toast says "Try again" for an edit a delete refused.
+  compare-and-swap; `pickHeadVersion` picks one), and the controller's local no-op (the row already shows an add, or
+  does not yet show an item a remove names) trusts the row read before the lock; the edit's generic error toast says
+  "Try again" for an edit a delete refused.
 
 ## Alternatives Considered
 

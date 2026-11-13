@@ -18,10 +18,17 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { stubMemoryHomeserver } from '@/test-utils/homeserver';
+import { freezeSpecClock, restoreSpecClock } from '@/test-utils/spec-clock';
+import { VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 
 const OWNER = fakeOwner(1) as Pubky;
 const FRIEND = fakeOwner(2) as Pubky;
+/**
+ * The other tab's data-model clock, a second ahead of this tab's: pinning a clock restarts the package's mint guard,
+ * so the same instant could mint an id this tab already used.
+ */
+const OTHER_TAB_NOW_MS = VRT_FROZEN_NOW_MS + 1_000;
 
 /**
  * A create, an edit and a delete of one post through the real `PostApplication`, `LocalPostService` and Dexie
@@ -100,13 +107,16 @@ describe('PostApplication post write lock', () => {
   /**
    * Another tab of the app: a second instance of every module, sharing only what tabs share (the one IndexedDB
    * behind both Dexie instances, `navigator.locks`, the homeserver). Its homeserver calls go to this tab's
-   * in-memory homeserver; `events` records its listings.
+   * in-memory homeserver; `events` records its listings. Its data-model clock is frozen too, through its own module
+   * instance, a second ahead (`OTHER_TAB_NOW_MS`); `close` restores it.
    */
   async function openOtherTab(events: string[] = []) {
     vi.resetModules();
     const { PostApplication: application } = await import('@/application/post/post');
     const { HomeserverService: service } = await import('@/services/homeserver/homeserver');
     const { db: database } = await import('@/database/franky/franky');
+    const clock = await import('@/test-utils/spec-clock');
+    clock.freezeSpecClock(OTHER_TAB_NOW_MS);
     vi.spyOn(service, 'putBlob').mockImplementation((params) => HomeserverService.putBlob(params));
     vi.spyOn(service, 'deleteIdempotent').mockImplementation((url) => HomeserverService.deleteIdempotent(url));
     vi.spyOn(service, 'listAll').mockImplementation((params) => {
@@ -115,7 +125,13 @@ describe('PostApplication post write lock', () => {
     });
     vi.spyOn(service, 'exists').mockImplementation((url) => HomeserverService.exists(url));
     vi.spyOn(service, 'getBytes').mockImplementation((url) => HomeserverService.getBytes(url));
-    return { application, close: () => database.close() };
+    return {
+      application,
+      close: () => {
+        clock.restoreSpecClock();
+        database.close();
+      },
+    };
   }
 
   /** A hold a test releases, or the `afterEach` does: `taken` resolves once the held call is reached. */
@@ -177,6 +193,7 @@ describe('PostApplication post write lock', () => {
   const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
   beforeEach(async () => {
+    freezeSpecClock();
     homeserver = stubMemoryHomeserver(OWNER);
     useAuthStore.setState({ currentUserPubky: OWNER, generation: 'g1' });
     vi.spyOn(Logger, 'debug').mockImplementation(() => {});
@@ -197,6 +214,7 @@ describe('PostApplication post write lock', () => {
     otherTab?.close();
     otherTab = null;
     vi.restoreAllMocks();
+    restoreSpecClock();
   });
 
   describe('a create, then a delete of the same post', () => {
