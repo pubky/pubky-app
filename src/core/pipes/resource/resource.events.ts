@@ -96,7 +96,9 @@ export function getEventLifecycleLabel(
 ): string | null {
   const value = status?.trim();
   if (!value || value.toLowerCase() === SCHEDULED) return null;
-  return LIFECYCLE_LABELS[value.toLowerCase()] ?? formatOther(value);
+  const key = value.toLowerCase();
+  // Own keys only: a status such as `constructor` must not read a built-in property of the object
+  return Object.hasOwn(LIFECYCLE_LABELS, key) ? LIFECYCLE_LABELS[key] : formatOther(value);
 }
 
 /** A time's calendar day (`YYYY-MM-DD`) in a time zone; in UTC for a zone the browser does not know. */

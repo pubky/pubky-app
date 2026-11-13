@@ -420,6 +420,28 @@ describe('ResourceMap', () => {
       expect(map.removed).toBe(false);
     });
 
+    it('gives up on a context that is still lost once the page has been back in view for a while', async () => {
+      mocks.state.isVisible = true;
+      renderMap();
+      const map = await madeMap();
+      act(() => map.fire('load'));
+      vi.useFakeTimers();
+      const visibility = vi.spyOn(document, 'visibilityState', 'get');
+      visibility.mockReturnValue('hidden');
+      act(() => map.fire('webglcontextlost'));
+      // The wait ran out in the background, where it decides nothing
+      await act(async () => vi.advanceTimersByTime(5000));
+
+      visibility.mockReturnValue('visible');
+      act(() => void document.dispatchEvent(new Event('visibilitychange')));
+      await act(async () => vi.advanceTimersByTime(1999));
+      expect(screen.queryByTestId('resource-map-fallback')).toBeNull();
+      await act(async () => vi.advanceTimersByTime(1));
+
+      expect(screen.getByTestId('resource-map-fallback')).toBeInTheDocument();
+      expect(map.removed).toBe(true);
+    });
+
     it('fails a map once, however many failures the library tells of', async () => {
       mocks.state.isVisible = true;
       renderMap();
@@ -431,11 +453,17 @@ describe('ResourceMap', () => {
         remove();
       };
 
+      const container = map.options.container;
+      let stillWhole: boolean | null = null;
       await act(async () => {
         map.fire('error', { error: new Error('tile 1') });
         map.fire('error', { error: new Error('tile 2') });
+        // The second failure leaves the map alone until the library is done with it: it is not
+        // taken for a map that was never made, whose container is emptied at once
+        stillWhole = container.contains(map.getCanvas()) && container.classList.contains('maplibregl-map');
       });
 
+      expect(stillWhole).toBe(true);
       expect(removals).toBe(1);
       expect(screen.getByTestId('resource-map-fallback')).toBeInTheDocument();
     });
