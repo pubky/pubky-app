@@ -283,17 +283,20 @@ describe('PinakesApplication.fetchEventInstances', () => {
     };
     const readsOf = () => vi.mocked(PinakesService.fetchCardByUri).mock.calls;
 
-    it('reads them again past the cache when they say another time or place than the row, and takes those', async () => {
+    it('reads them again when they say another time or place than the row, unless just read, and takes those', async () => {
       vi.mocked(PinakesService.fetchCardByUri).mockImplementation(async (_uri, options) =>
-        options?.fresh ? now : before,
+        options?.maxAge === undefined ? before : now,
       );
 
       const [instance] = await PinakesApplication.fetchEventInstances([MOVED]);
 
       expect(readsOf()).toEqual([
         [MOVED.uri, undefined],
-        [MOVED.uri, { fresh: true }],
+        [MOVED.uri, { maxAge: expect.any(Number) }],
       ]);
+      // Only a card read this very moment (the read above, when it was no cache hit) is not asked again
+      expect(readsOf()[1][1]?.maxAge).toBeGreaterThan(0);
+      expect(readsOf()[1][1]?.maxAge).toBeLessThanOrEqual(1_000);
       expect(instance).toMatchObject({
         start: MOVED.start,
         end: MOVED.end,
@@ -306,7 +309,7 @@ describe('PinakesApplication.fetchEventInstances', () => {
 
     it('keeps the row as the search gave it when they cannot be read again: never the earlier venue or status', async () => {
       vi.mocked(PinakesService.fetchCardByUri).mockImplementation(async (_uri, options) => {
-        if (options?.fresh) throw new Error('down');
+        if (options?.maxAge !== undefined) throw new Error('down');
         return before;
       });
 
@@ -329,6 +332,18 @@ describe('PinakesApplication.fetchEventInstances', () => {
 
       expect(readsOf()).toEqual([[MOVED.uri, undefined]]);
       expect(instance.venue?.name).toBe('Kaufleuten');
+    });
+
+    it.each([
+      ['nothing', null],
+      ['another resource', { ...now, id: 'another' }],
+    ])('keeps the row as the search gave it when the read again answers %s', async (_name, again) => {
+      vi.mocked(PinakesService.fetchCardByUri).mockImplementation(async (_uri, options) =>
+        options?.maxAge === undefined ? before : again,
+      );
+
+      await expect(PinakesApplication.fetchEventInstances([MOVED])).resolves.toEqual([MOVED]);
+      expect(readsOf()).toHaveLength(2);
     });
 
     it('never reads again for a link that answers another resource: its details are not the row’s', async () => {

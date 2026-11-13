@@ -72,15 +72,19 @@ export function toEventInstance(
 }
 
 /**
- * Whether a resource read says an event's times and place as its search row does: the same start
- * and end (as moments, however spelled) and the same point. A read kept from before the event
- * changed does not: its details (time zone, venue, status) are of the event as it was.
+ * Whether a resource read says of an event what its search row says: the same name and read
+ * status, the same start and end (as moments, however spelled) and the same point. A read kept
+ * from before the event changed does not: its details (time zone, venue, status) are of the event
+ * as it was. Only what both always carry alike is compared, never the counts that move on their
+ * own (`collections`, `refs`).
  */
-export function hasSameTimesAndPlace(
-  card: Pick<TPinakesCard, 'start' | 'end' | 'point'>,
-  details: Pick<TPinakesCard, 'start' | 'end' | 'point'>,
+export function hasSameSummary(
+  card: Pick<TPinakesCard, 'name' | 'status' | 'start' | 'end' | 'point'>,
+  details: Pick<TPinakesCard, 'name' | 'status' | 'start' | 'end' | 'point'>,
 ): boolean {
   return (
+    (card.name ?? null) === (details.name ?? null) &&
+    card.status === details.status &&
     parseTime(card.start) === parseTime(details.start) &&
     parseTime(card.end) === parseTime(details.end) &&
     (card.point?.lat ?? null) === (details.point?.lat ?? null) &&

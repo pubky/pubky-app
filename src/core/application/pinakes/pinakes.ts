@@ -1,6 +1,6 @@
 import { withNormalizedCredits } from '@/pipes/pinakes/pinakes.credits';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
-import { hasSameTimesAndPlace, type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
+import { hasSameSummary, type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
 import { buildResourceSearchParams, type TResourceQuery } from '@/pipes/resource/resource.search';
 import { PinakesService } from '@/services/pinakes/pinakes';
 import type {
@@ -12,6 +12,12 @@ import type {
 } from '@/services/pinakes/pinakes.types';
 
 /**
+ * How new a card read must be to stand for "read now" (milliseconds): the read an ask just made
+ * itself. Asking Pinakes again right after it would say the same.
+ */
+const JUST_READ_MS = 1_000;
+
+/**
  * External resource cards from Pinakes. Network only: a card enriches a link the way its Open
  * Graph preview does, so nothing is written to IndexedDB. Every card leaves here with its
  * `credits` validated (`withNormalizedCredits`).
@@ -20,7 +26,10 @@ export class PinakesApplication {
   private constructor() {}
 
   /** One link's card, or `null` when Pinakes has none (or is not configured). */
-  static async fetchCardByUri(uri: string, options?: { fresh?: boolean }): Promise<TPinakesResourceDetail | null> {
+  static async fetchCardByUri(
+    uri: string,
+    options?: { fresh?: boolean; maxAge?: number },
+  ): Promise<TPinakesResourceDetail | null> {
     const card = await PinakesService.fetchCardByUri(uri, options);
     return card ? withNormalizedCredits(card) : null;
   }
@@ -87,19 +96,20 @@ export class PinakesApplication {
    * link answers its calendar, not the instance.
    *
    * The row is what the search says now; the cache may hold the event's read from before it
-   * changed. Details that say another time or place than the row (`hasSameTimesAndPlace`) are read
-   * again past the cache, once, so the row never shows the venue, zone or status of the event as
-   * it was. What the row itself says (name, times, point) is always the row's.
+   * changed. Details that say another name, time or place than the row (`hasSameSummary`) are read
+   * again, once, unless they were read this very moment (`JUST_READ_MS`: the read was no cache
+   * hit, and asking again would say the same), so the row never shows the venue, zone or status
+   * of the event as it was. What the row itself says (name, times, point) is always the row's.
    */
   static async fetchEventInstances(cards: readonly TPinakesCard[]): Promise<TEventInstance[]> {
     return Promise.all(
       cards.map(async (card) => {
         if (card.occurrence) return toEventInstance(card, null);
         // The error is reported by its factory; the row stays
-        const read = (options?: { fresh: boolean }) => this.fetchCardByUri(card.uri, options).catch(() => null);
+        const read = (options?: { maxAge: number }) => this.fetchCardByUri(card.uri, options).catch(() => null);
         const details = await read();
-        const isEarlier = details?.id === card.id && !hasSameTimesAndPlace(card, details);
-        return toEventInstance(card, isEarlier ? await read({ fresh: true }) : details);
+        const isEarlier = details?.id === card.id && !hasSameSummary(card, details);
+        return toEventInstance(card, isEarlier ? await read({ maxAge: JUST_READ_MS }) : details);
       }),
     );
   }
