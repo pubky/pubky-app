@@ -21,6 +21,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     tagsLabel: string;
     linkUrl?: string | null;
     title?: string | null;
+    card?: TPinakesCard | null;
   }) => (
     <div
       data-testid="resource-actions"
@@ -31,6 +32,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-tags-label={props.tagsLabel}
       data-link-url={props.linkUrl ?? 'none'}
       data-title={props.title ?? 'none'}
+      data-card={props.card?.id ?? 'none'}
     />
   ),
 }));
@@ -53,6 +55,12 @@ describe('ResourceInstanceCard', () => {
     expect(actions).toHaveAttribute('data-title', 'Annett Louisan @ Volkshaus');
     expect(actions).toHaveAttribute('data-collections', '1');
     expect(actions).toHaveAttribute('data-tags-label', 'Tags on this music event');
+  });
+
+  it('hands the footer the row’s card, so its other links’ tags show as on a feed’s card', () => {
+    render(<ResourceInstanceCard card={CONCERT} />);
+
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card', CONCERT.id);
   });
 
   it('shows a calendar occurrence as itself (its own name and times), its tags and actions those of the calendar people tagged', () => {

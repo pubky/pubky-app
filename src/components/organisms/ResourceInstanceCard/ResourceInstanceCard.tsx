@@ -29,7 +29,8 @@ interface ResourceInstanceCardProps {
  * The card is the item itself, on the post card's surface, closed by a post's footer as every
  * resource card is (`ResourceActions`): its tags, actions and counts are on the card's link with
  * the links people wrote for it read along (`getResourceTarget`), which for an occurrence is the
- * calendar people tagged. Its title opens the resource's page.
+ * calendar people tagged. The tags on the row's other links join its own, as on a feed's card (`card`);
+ * its title opens the resource's page.
  */
 export function ResourceInstanceCard({ card, 'data-testid': testId }: ResourceInstanceCardProps) {
   const { ref, isVisible } = useViewportObserver({ rootMargin: '0px' });
@@ -52,6 +53,8 @@ export function ResourceInstanceCard({ card, 'data-testid': testId }: ResourceIn
               tagsLabel={getResourceTagsLabel(card)}
               linkUrl={getResourceLinks(card, written).linkUrl}
               title={card.name}
+              // The row's other links' tags join its own, read with them, as on a feed's card
+              card={card}
               isOnScreen={isVisible}
             />
           }
