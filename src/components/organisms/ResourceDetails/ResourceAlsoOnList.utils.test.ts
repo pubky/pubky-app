@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
+import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
+import meetupGroupFixture from '@/services/pinakes/fixtures/group.meetup-date.json';
+import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { getAlsoOnSource, getLinkKey, mergeAlsoOn, SHARED_ON_PUBKY_NOTE } from './ResourceAlsoOnList.utils';
 
 const NETFLIX = { id: 'n', uri: 'https://www.netflix.com/title/20557937', site: 'www.netflix.com' };
@@ -199,5 +203,29 @@ describe('getAlsoOnSource', () => {
     expect(getAlsoOnSource(IMDB)).toBe('Found via wikidata');
     expect(getAlsoOnSource({ uri: 'https://example.com', derived: true })).toBe('Found automatically');
     expect(getAlsoOnSource({ uri: 'https://example.com' })).toBeNull();
+  });
+});
+
+describe('Also on of a series’ date page', () => {
+  const DATE: TPinakesResourceDetail = meetupDateFixture;
+
+  it('lists neither the feed’s date of it (the page’s number link) nor its group’s feed member', () => {
+    expect(DATE.also_on.map((entry) => entry.uri)).toEqual(DATE.aliases);
+
+    expect(mergeAlsoOn(DATE, meetupGroupFixture.members)).toEqual([]);
+    expect(mergeAlsoOn(DATE, undefined)).toEqual([]);
+    // The card's menu, from a post's link to either spelling
+    expect(getMenuAlsoOn(DATE, DATE.aliases[0])).toBeNull();
+    expect(getMenuAlsoOn(DATE, DATE.uri)).toBeNull();
+  });
+
+  it('lists no feed’s date of its group on another host either: it is this date, not another service', () => {
+    const [feedDate, page] = meetupGroupFixture.members;
+    const elsewhere = 'https://calendar.example.org/bitcoin-zurich/2026-12-09';
+    const card = { ...DATE, also_on: [{ ...DATE.also_on[0], uri: elsewhere }, NETFLIX] };
+
+    const rows = mergeAlsoOn(card, [{ ...feedDate, uri: elsewhere }, page]);
+
+    expect(describeRows(rows)).toEqual([`entry:${NETFLIX.uri}`]);
   });
 });
