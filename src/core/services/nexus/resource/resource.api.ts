@@ -7,7 +7,7 @@ import type { TResourceByUriParams } from '@/services/nexus/resource/resource.ty
  * External resources (web links and other non-Pubky URIs) people tagged.
  */
 
-const PREFIX = 'v0/resource';
+const PREFIX = 'resource';
 
 export const resourceApi = {
   byUri: (params: TResourceByUriParams) => buildUrlWithQuery({ baseRoute: `${PREFIX}/by-uri`, params }),

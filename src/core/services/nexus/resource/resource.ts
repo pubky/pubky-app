@@ -5,12 +5,13 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { NEXUS_RESOURCE_TAGS_OPERATION } from '@/libs/observability/sentry.constants';
 import type { Pubky } from '@/models/models.types';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import { type TResourceViewerTag, withResourceViewerTag } from '@/pipes/tag/tag.resource';
 import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { resourceApi } from '@/services/nexus/resource/resource.api';
 import { RESOURCE_TAGS_LIMIT } from '@/services/nexus/resource/resource.constants';
-import type { NexusResourceTags } from '@/services/nexus/resource/resource.types';
+import type { NexusResourceTagsWire } from '@/services/nexus/resource/resource.types';
 
 const OPERATION = NEXUS_RESOURCE_TAGS_OPERATION;
 
@@ -32,7 +33,7 @@ export class NexusResourceService {
   private constructor() {}
 
   /**
-   * The tags on a link (`GET /v0/resource/by-uri`).
+   * The tags on a link (`GET /v1/resource/by-uri`).
    *
    * A 404 is an answer, not a failure: nobody tagged the link yet, so the read returns `[]`
    * without creating an AppError (an untagged link is the common case, and its link would
@@ -94,6 +95,7 @@ async function fetchResourceTagsOrEmpty(url: string): Promise<NexusTag[]> {
   if (!response.ok) {
     throw httpResponseToError(response, ErrorService.Nexus, OPERATION, endpoint);
   }
-  const body = await parseResponseOrThrow<NexusResourceTags>(response, ErrorService.Nexus, OPERATION, endpoint);
-  return body.tags ?? [];
+  const body = await parseResponseOrThrow<NexusResourceTagsWire>(response, ErrorService.Nexus, OPERATION, endpoint);
+  // `/v1` marks the viewer's tags by `tag_uri` only: `relationship` is derived from it.
+  return (body.tags ?? []).map((tag) => TagNormalizer.fromNexus(tag));
 }

@@ -166,7 +166,7 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'nexus-resource-tags-transport',
     reason:
-      'The tag bar of an external resource card reads its tags from Nexus by the link (GET /v0/resource/by-uri); ' +
+      'The tag bar of an external resource card reads its tags from Nexus by the link (GET /v1/resource/by-uri); ' +
       'on a failure the bar shows no tags and its add button. safeFetch builds connection and timeout errors with the ' +
       "full request in context.url, whose query carries the link from someone's post and the viewer, one event per " +
       'distinct link on every feed view, and they come mostly from the viewer (offline, a stalled connection). Nexus ' +

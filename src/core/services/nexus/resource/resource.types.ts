@@ -1,10 +1,10 @@
 import type { Pubky } from '@/models/models.types';
-import type { NexusTag } from '@/services/nexus/nexus.types';
+import type { NexusTag, NexusTagWire } from '@/services/nexus/nexus.types';
 
 export type TResourceByUriParams = {
   /** The link exactly as written: Nexus matches the raw URI. */
   uri: string;
-  /** Marks the viewer's own tags (`relationship`, `tag_uri`); omitted for a signed-out viewer. */
+  /** Marks the viewer's own tags (`tag_uri`); omitted for a signed-out viewer. */
   viewer_id?: Pubky;
   limit_tags?: number;
 };
@@ -18,8 +18,11 @@ export type NexusResourceDetails = {
   indexed_at: number;
 };
 
-/** `ResourceTagsResponse` in the Nexus openapi (`GET /v0/resource/by-uri`). */
+/** `ResourceTagsResponse` in the Nexus openapi (`GET /v1/resource/by-uri`). */
 export type NexusResourceTags = {
   resource: NexusResourceDetails;
   tags: NexusTag[];
 };
+
+/** The same answer as Nexus serves it: `/v1` tags carry no `relationship` (`TagNormalizer.fromNexus`). */
+export type NexusResourceTagsWire = Omit<NexusResourceTags, 'tags'> & { tags: NexusTagWire[] };

@@ -454,7 +454,7 @@ holds web links):
 
 - Tag: `TagController.commitCreateResource` / `commitDeleteResource` → `buildTag(viewer, link, label)` →
   `putBlob`, or one DELETE of the viewer's own Nexus `tag_uri` (else the built file, whose id hashes link and
-  label). Read once the card is first on screen: `GET /v0/resource/by-uri` (`NexusResourceService`, a 404 is
+  label). Read once the card is first on screen: `GET /v1/resource/by-uri` (`NexusResourceService`, a 404 is
   "nobody tagged it"); an accepted write is applied to that shared Nexus answer, since Nexus indexes it with a
   delay, and every card of the link follows that answer (`subscribeResourceTags`).
 - Bookmark: `BookmarkController.commitCreateResource` / `commitDeleteResource` → `buildBookmark(viewer, link)`;

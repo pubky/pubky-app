@@ -9,7 +9,7 @@ import { RESOURCE_TAGS_LIMIT } from './resource.constants';
 
 const URI = 'https://www.openstreetmap.org/node/240109189';
 const VIEWER = 'hkdrfoddu3rmeucj1mazu4aeg11nxj7uaxybnmots5o9s5hd3t6y';
-// The shape of a Nexus `GET /v0/resource/by-uri?uri=<URI>` answer (taggers shortened).
+// The shape of a Nexus `GET /v1/resource/by-uri?uri=<URI>` answer (taggers shortened).
 const BY_URI_RESPONSE = {
   resource: { id: '81cefcae5a6a468cfc27ff1c1b420fce', uri: URI, scheme: 'https', indexed_at: 1792421637616 },
   tags: [
@@ -30,9 +30,9 @@ const jsonResponse = (body: unknown, status = 200) =>
 describe('resourceApi', () => {
   it('builds the by-uri read with the link encoded', () => {
     expect(resourceApi.byUri({ uri: URI, viewer_id: VIEWER, limit_tags: 20 })).toBe(
-      `${getNexusUrl()}/v0/resource/by-uri?uri=${encodeURIComponent(URI)}&viewer_id=${VIEWER}&limit_tags=20`,
+      `${getNexusUrl()}/v1/resource/by-uri?uri=${encodeURIComponent(URI)}&viewer_id=${VIEWER}&limit_tags=20`,
     );
-    expect(resourceApi.byUriEndpoint()).toBe(`${getNexusUrl()}/v0/resource/by-uri`);
+    expect(resourceApi.byUriEndpoint()).toBe(`${getNexusUrl()}/v1/resource/by-uri`);
   });
 });
 
@@ -58,6 +58,29 @@ describe('NexusResourceService', () => {
       resourceApi.byUri({ uri: URI, viewer_id: VIEWER, limit_tags: RESOURCE_TAGS_LIMIT }),
       expect.objectContaining({ method: 'GET' }),
     );
+  });
+
+  it('marks the viewer’s tags from `tag_uri` on a /v1 answer, which carries no `relationship`', async () => {
+    const v1Answer = {
+      ...BY_URI_RESPONSE,
+      tags: [
+        {
+          label: 'berlin',
+          taggers: ['7ehtbiryqz1pkncn7jgrxnzcrzxz8po79dwczgswfeuu3zbh1kwy'],
+          taggers_count: 3,
+          tag_uri: null,
+        },
+        { label: 'travel', taggers: [VIEWER], taggers_count: 2, tag_uri: `pubky://${VIEWER}/pub/social/v1/tags/T1` },
+      ],
+    };
+    fetchSpy.mockResolvedValue(jsonResponse(v1Answer));
+
+    const tags = await NexusResourceService.fetchTagsByUri({ uri: URI, viewerId: VIEWER });
+
+    expect(tags.map((tag) => [tag.label, tag.relationship])).toEqual([
+      ['berlin', false],
+      ['travel', true],
+    ]);
   });
 
   it('reads without a viewer when signed out', async () => {

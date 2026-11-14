@@ -4,7 +4,7 @@ import { withResourceViewerTag } from './tag.resource';
 
 const VIEWER = 'viewer-pubky';
 const TAG_URI = `pubky://${VIEWER}/pub/social/v1/tags/ABC.json`;
-// The tags of a Nexus `GET /v0/resource/by-uri` answer (OSM node 240109189).
+// The tags of a Nexus `GET /v1/resource/by-uri` answer (OSM node 240109189).
 const TAGS: NexusTag[] = [
   { label: 'berlin', taggers: ['a', 'b', 'c'], taggers_count: 3, relationship: false, tag_uri: null },
   { label: 'city', taggers: [VIEWER], taggers_count: 1, relationship: true, tag_uri: TAG_URI },

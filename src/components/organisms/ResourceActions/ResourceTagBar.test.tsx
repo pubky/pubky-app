@@ -73,7 +73,7 @@ vi.mock('@/molecules/TagInput/TagInput', () => ({
   },
 }));
 
-// The tags of a Nexus `GET /v0/resource/by-uri` answer for an OSM node (taggers shortened).
+// The tags of a Nexus `GET /v1/resource/by-uri` answer for an OSM node (taggers shortened).
 const NEXUS_TAGS: NexusTag[] = [
   { label: 'berlin', taggers: ['a', 'b', 'c'], taggers_count: 3, relationship: false, tag_uri: null },
   { label: 'travel', taggers: ['viewer', 'b'], taggers_count: 2, relationship: true, tag_uri: 'pubky://viewer/x' },
