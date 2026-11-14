@@ -28,6 +28,7 @@ import type {
   NexusResourceTags,
   NexusResourceTagsWire,
   NexusResourceView,
+  NexusResourceViewWire,
   TResourceCounts,
   TResourceRepliesParams,
 } from '@/services/nexus/resource/resource.types';
@@ -392,7 +393,7 @@ let isByIdsServed = false;
 let byIdsProbe: Promise<void> | null = null;
 
 /**
- * Reads a link through `POST /v0/stream/resources/by_ids`, together with the other links asked
+ * Reads a link through `POST /v1/stream/resources/by_ids`, together with the other links asked
  * around the same moment (`RESOURCE_BY_IDS_BATCH_MS` apart, `RESOURCE_BY_IDS_BATCH_MAX_MS` at most):
  * the cards of a feed and the other links of a resource page share one request (up to
  * `RESOURCE_BY_IDS_MAX` links each) instead of one `by-uri` per link.
@@ -517,7 +518,7 @@ function matchViews(uris: string[], views: unknown[] | null): TBatchedResource[]
       isEveryViewMatched = false;
       continue;
     }
-    answers[index] = toByUriAnswer(view);
+    answers[index] = toByUriAnswer(fromNexusView(view));
     isAnswered[index] = true;
     next = index + 1;
   }
@@ -529,8 +530,8 @@ function matchViews(uris: string[], views: unknown[] | null): TBatchedResource[]
 }
 
 /** Whether a `by_ids` item has the fields read here (else its link is read by `by-uri`). */
-function isView(view: unknown): view is NexusResourceView {
-  const { details, tags } = (view ?? {}) as Partial<NexusResourceView>;
+function isView(view: unknown): view is NexusResourceViewWire {
+  const { details, tags } = (view ?? {}) as Partial<NexusResourceViewWire>;
   return (
     typeof details?.uri === 'string' &&
     Array.isArray(tags) &&
@@ -557,6 +558,11 @@ function uriKey(uri: string): string {
   } catch {
     return uri;
   }
+}
+
+/** A view as the app holds it: `/v1` marks the viewer's tags by `tag_uri` only, `relationship` is derived. */
+function fromNexusView(view: NexusResourceViewWire): NexusResourceView {
+  return { ...view, tags: view.tags.map((tag) => TagNormalizer.fromNexus(tag)) };
 }
 
 /** A `by_ids` view in the shape of a `by-uri` answer. */

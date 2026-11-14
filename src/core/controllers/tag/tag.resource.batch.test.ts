@@ -67,7 +67,7 @@ const jsonResponse = (body: unknown, status = 200) =>
 
 const fetchSpy = vi.spyOn(globalThis, 'fetch');
 const posts = () => fetchSpy.mock.calls.filter(([url]) => String(url) === BY_IDS_URL);
-const gets = () => fetchSpy.mock.calls.filter(([url]) => String(url).includes('/v0/resource/by-uri'));
+const gets = () => fetchSpy.mock.calls.filter(([url]) => String(url).includes('/v1/resource/by-uri'));
 const bodyOf = (call: unknown[]) =>
   JSON.parse(String((call[1] as RequestInit).body)) as { uris: string[]; viewer_id?: string };
 

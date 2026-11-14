@@ -716,7 +716,7 @@ describe('Nexus resource tags transport expected-error policy', () => {
         expect(error).toMatchObject({ service: ErrorService.Nexus, operation: 'fetchResourceTagsByUri' });
         // What the rule keeps out of telemetry: the post's link and the viewer in the request.
         expect(String(error.context?.url)).toContain(encodeURIComponent(LINK));
-        const isBatched = fetchSpy.mock.calls.some(([url]) => String(url).includes('/v0/stream/resources/by_ids'));
+        const isBatched = fetchSpy.mock.calls.some(([url]) => String(url).includes('/v1/stream/resources/by_ids'));
         expect(isBatched).toBe(read === 'by_ids');
         expect(fetchSpy.mock.calls.length).toBeGreaterThan(1);
         expect(captureException).not.toHaveBeenCalled();

@@ -401,7 +401,7 @@ describe('NexusResourceService counts and replies (our Nexus fork)', () => {
   });
 });
 
-describe('NexusResourceService batched tag reads (POST /v0/stream/resources/by_ids)', () => {
+describe('NexusResourceService batched tag reads (POST /v1/stream/resources/by_ids)', () => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
   const OSM = 'https://www.openstreetmap.org/node/270803095';
   const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -421,12 +421,12 @@ describe('NexusResourceService batched tag reads (POST /v0/stream/resources/by_i
     embeds_count: 0,
     collections_count: 2,
   });
-  // The shape of a `POST /v0/stream/resources/by_ids` answer.
+  // The shape of a `POST /v1/stream/resources/by_ids` answer.
   const OSM_VIEW = view(OSM, [tag('coffee', ['a', 'b', 'c']), tag('zurich', ['a'])]);
   const YOUTUBE_VIEW = view(YOUTUBE, [tag('video', ['k'])], '0f3820de1c3532e8805674cc996978f9');
   const BY_IDS_URL = resourceApi.byIds({ uris: [], limit_tags: RESOURCE_TAGS_LIMIT }).url;
   const byIdsCalls = () => fetchSpy.mock.calls.filter(([url]) => String(url) === BY_IDS_URL);
-  const byUriCalls = () => fetchSpy.mock.calls.filter(([url]) => String(url).includes('/v0/resource/by-uri'));
+  const byUriCalls = () => fetchSpy.mock.calls.filter(([url]) => String(url).includes('/v1/resource/by-uri'));
   const bodyOf = (call: unknown[]) => JSON.parse(String((call[1] as RequestInit).body));
   const read = (uri: string, viewerId: string | null = VIEWER) =>
     NexusResourceService.fetchTagsByUri({ uri, viewerId });
@@ -452,6 +452,25 @@ describe('NexusResourceService batched tag reads (POST /v0/stream/resources/by_i
     expect(youtube).toEqual(YOUTUBE_VIEW.tags);
     // Skipped by Nexus: nobody tagged it, as `by-uri`'s 404.
     expect(unknown).toEqual([]);
+  });
+
+  it('marks the viewer’s tags from `tag_uri` in a /v1 view, which carries no `relationship`', async () => {
+    const v1View = {
+      ...OSM_VIEW,
+      tags: [
+        { label: 'coffee', taggers: ['a', 'b', 'c'], taggers_count: 3, tag_uri: null },
+        { label: 'zurich', taggers: [VIEWER], taggers_count: 1, tag_uri: `pubky://${VIEWER}/pub/social/v1/tags/T1` },
+      ],
+    };
+    fetchSpy.mockResolvedValue(jsonResponse([v1View]));
+
+    const tags = await read(OSM);
+
+    expect(byIdsCalls()).toHaveLength(1);
+    expect(tags.map((tag) => [tag.label, tag.relationship])).toEqual([
+      ['coffee', false],
+      ['zurich', true],
+    ]);
   });
 
   it('fills each link’s shared answer and counts, so a later card of the link asks nothing', async () => {
