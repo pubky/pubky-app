@@ -115,6 +115,9 @@ describe('homeserver write call sites', () => {
       'ProfileApplication.commitCreate': 'the first profile.json, built from the form, not a read',
       'ProfileApplication.deleteFile': 'account deletion: a DELETE has no body to go stale',
       'LocksApplication.replicateUnlockedContent': 'the replica bytes are fixed by the unlocked content',
+      'TagApplication.writeFixedTag': 'ordinary tag actions have fixed bodies; assisted read-derived writes use fences',
+      'src/libs/pubchi/feed-provenance.ts:deletePubchiFeedProvenance':
+        'an idempotent DELETE has no read-derived body and owns its retry loop',
     };
     const offenders = files
       .filter(({ path, code }) => path !== HOMESERVER_SERVICE && /\bretryHomeserverWriteAfterReread\s*\(/.test(code))
@@ -124,8 +127,11 @@ describe('homeserver write call sites', () => {
           .filter(([open, close]) => {
             const args = code.slice(open, close);
             if (/HttpMethod\.GET\b/.test(args) || /\bfence\b/.test(args)) return false;
-            const method = [...code.slice(0, open).matchAll(/\bstatic\s+(?:async\s+)?(\w+)\s*[<(]/g)].pop()?.[1];
-            return !(`${owner}.${method}` in unfenced);
+            const prefix = code.slice(0, open);
+            const method = [...prefix.matchAll(/\bstatic\s+(?:async\s+)?(\w+)\s*[<(]/g)].pop()?.[1];
+            const fn = [...prefix.matchAll(/\bexport\s+(?:async\s+)?function\s+(\w+)\s*[<(]/g)].pop()?.[1];
+            const callSite = owner ? `${owner}.${method}` : `${path}:${fn}`;
+            return !(callSite in unfenced);
           })
           .map(([open]) => `${path}:${lineOf(code, open)}`);
       });

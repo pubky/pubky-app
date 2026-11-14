@@ -25,6 +25,8 @@ export enum APP_ROUTES {
   HOT = '/hot',
   COLLECTIONS = '/collections',
   SETTINGS = '/settings',
+  PUBCHI = '/pubchi',
+  PUBCHI_BRAIN = '/pubchi/brain',
   PROFILE = '/profile',
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
@@ -69,6 +71,7 @@ export enum SETTINGS_ROUTES {
   APPEARANCE = '/settings/appearance',
   PRIVACY_SAFETY = '/settings/privacy-safety',
   MUTED_USERS = '/settings/muted-users',
+  PUBCHI = '/settings/pubchi',
   HELP = '/settings/help',
 }
 
@@ -123,6 +126,7 @@ export const ALLOWED_ROUTES = [
   APP_ROUTES.HOT,
   APP_ROUTES.COLLECTIONS,
   APP_ROUTES.SETTINGS,
+  APP_ROUTES.PUBCHI,
   APP_ROUTES.PROFILE,
   APP_ROUTES.WHO_TO_FOLLOW,
   APP_ROUTES.SHARE,

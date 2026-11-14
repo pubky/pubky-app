@@ -1,0 +1,47 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "owner": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "generated_at": 1760000000,
+  "run_id": "answer-section-fixture",
+  "purpose": "ask",
+  "question": "what did I miss?",
+  "summary": "Three sections of evidence.",
+  "evidence": [
+    {
+      "kind": "post",
+      "label": "Followed post",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/followed",
+      "claimants": [],
+      "claimant_count": 0,
+      "in_your_graph": true,
+      "section": "followed_posts"
+    },
+    {
+      "kind": "post",
+      "label": "Reply to you",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/reply",
+      "claimants": [],
+      "claimant_count": 0,
+      "in_your_graph": true,
+      "section": "replies_to_you"
+    },
+    {
+      "kind": "tag",
+      "label": "bitcoin",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json",
+      "claimants": [],
+      "claimant_count": 0,
+      "in_your_graph": true,
+      "section": "tags_on_you"
+    }
+  ],
+  "sources": [],
+  "tool_trace_summary": {
+    "tools": ["what_did_i_miss"],
+    "call_count": 1,
+    "truncated": false
+  },
+  "policy_version": 1
+}

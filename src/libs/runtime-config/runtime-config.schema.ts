@@ -29,6 +29,33 @@ import { parseRegionModes } from '@/libs/region/regionModes';
 // ---------------------------------------------------------------------------
 
 const urlValue = z.url();
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isLoopbackHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+  } catch {
+    return false;
+  }
+}
+
+/** Deployed env configuration: HTTPS only, or empty (panel hidden). */
+const pubchiApiUrlHttps = z.string().refine(isHttpsUrl, { message: 'PUBCHI_API_URL must use https' });
+/** Dev/test only: http://localhost or http://127.0.0.1, any port. */
+const pubchiApiUrlLoopbackHttp = z.string().refine(isLoopbackHttpUrl, {
+  message: 'PUBCHI_API_URL http is only allowed for localhost or 127.0.0.1',
+});
+const pubchiApiUrlStrict = z.union([pubchiApiUrlHttps, z.literal('')]);
+const pubchiApiUrlLenient = z.union([pubchiApiUrlHttps, pubchiApiUrlLoopbackHttp, z.literal('')]);
+
 const homeserverValue = z.string().min(1);
 /**
  * Declared deploy identity. Drives environment-gated behavior (e.g. the staging
@@ -317,6 +344,15 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   email: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.email),
   appStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.appStoreUrl),
   playStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.playStoreUrl),
+  /** Feature flag. Default false: no Pubchi UI or network. */
+  pubchiEnabled: z.boolean().default(false),
+  /**
+   * Pubchi HTTP API base URL. Empty/absent hides the chat panel even when
+   * `pubchiEnabled` is true. https required; http://localhost and
+   * http://127.0.0.1 are accepted here so a lenient-parsed local config can
+   * revalidate after window injection. The strict env parse rejects those.
+   */
+  pubchiApiUrl: pubchiApiUrlLenient.default(''),
   /** Lock Server pubky the composer's lock flow signs into. Absent = Locks disabled. */
   lockServer: nonEmptyStringValue.optional(),
   /** Paykit Server address, where a creator connects the account that receives payments. Absent = Locks disabled. */
@@ -414,6 +450,8 @@ export const runtimeEnvInputSchema = z
     email: optionalTrimmedString,
     appStoreUrl: optionalUrlFromString,
     playStoreUrl: optionalUrlFromString,
+    pubchiEnabled: optionalBooleanFromString,
+    pubchiApiUrl: optionalTrimmedString.pipe(pubchiApiUrlStrict.optional()),
   })
   .pipe(runtimeConfigValueSchema)
   .superRefine((config, ctx) => {
@@ -522,6 +560,8 @@ export const runtimeEnvInputSchemaWithDefaults = z
     email: optionalTrimmedString,
     appStoreUrl: optionalUrlFromString,
     playStoreUrl: optionalUrlFromString,
+    pubchiEnabled: optionalBooleanFromString,
+    pubchiApiUrl: optionalTrimmedString.pipe(pubchiApiUrlLenient.optional()),
   })
   .pipe(lenientRuntimeConfigValueSchema);
 
@@ -603,4 +643,6 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   email: 'PUBKY_RUNTIME_EMAIL',
   appStoreUrl: 'PUBKY_RUNTIME_APP_STORE_URL',
   playStoreUrl: 'PUBKY_RUNTIME_PLAY_STORE_URL',
+  pubchiEnabled: 'PUBKY_RUNTIME_PUBCHI_ENABLED',
+  pubchiApiUrl: 'PUBKY_RUNTIME_PUBCHI_API_URL',
 };

@@ -115,8 +115,9 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 
 ### Database (`src/core/database/`)
 
-- Single Dexie schema version (`DB_VERSION`), safe initialization and recovery
-- A version mismatch deletes and recreates the database; there is no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_)
+- The main App cache has a single Dexie schema version (`DB_VERSION`), safe initialization and recovery.
+- A main-cache version mismatch deletes and recreates that database; it has no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_).
+- Proposed with the Pubchi draft integration: the isolated `pubchi` database holds durable device keys and pending write records, preserves its version history, and survives main-cache recreation. Owner-scoped logout cleanup is separate; see [ADR 0026](adr/0026-pubchi-assisted-integration.md). This does not change the main `DB_VERSION` policy.
 
 ## Allowed Dependencies
 
@@ -293,7 +294,7 @@ src/core/
 ├── pipes/[domain]/        # Data transformation
 ├── models/[domain]/       # Dexie tables
 ├── stores/[domain]/       # UI state (Zustand)
-├── database/              # Dexie schema (single version, recreated on mismatch)
+├── database/              # Main-cache schema; isolated durable Pubchi state (proposed ADR-0026)
 └── utils/                 # Utility functions
 ```
 
@@ -341,6 +342,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0023 | Article inline media as attachment slots                                  |
 | 0024 | Grant-only authentication                                                 |
 | 0025 | App-owned grant for same-origin Shop                                      |
+| 0026 | Pubchi assisted integration and durable local state (proposed)            |
 
 ## Quick Checklist
 

@@ -6,12 +6,14 @@ import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-even
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
+import { PubchiCoordinator } from '@/coordinators/pubchi/pubchi';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 
 function getAppCoordinators() {
   return {
     notification: NotificationCoordinator.getInstance(),
+    pubchi: PubchiCoordinator.getInstance(),
     stream: StreamCoordinator.getInstance(),
     ttl: TtlCoordinator.getInstance(),
     homeserverEventStream: HomeserverEventStreamCoordinator.getInstance(),
@@ -30,6 +32,7 @@ function applyRouteToCoordinators(pathname: string): void {
 function startAppCoordinators(): void {
   const coordinators = getAppCoordinators();
   void coordinators.notification.start();
+  coordinators.pubchi.start();
   void coordinators.stream.start();
   coordinators.ttl.start();
   // Channels register first, so the shared stream's first connection already carries every ready path.
@@ -41,6 +44,7 @@ function startAppCoordinators(): void {
 function stopAppCoordinators(): void {
   const coordinators = getAppCoordinators();
   coordinators.notification.stop();
+  coordinators.pubchi.stop();
   coordinators.stream.stop();
   coordinators.ttl.stop();
   coordinators.homeserverEventStream.stop();
@@ -55,7 +59,7 @@ function stopAppCoordinators(): void {
  * This component has no UI - it only manages coordinator lifecycles.
  *
  * Responsibilities:
- * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator, TtlCoordinator,
+ * - Initialize coordinators on mount (NotificationCoordinator, PubchiCoordinator, StreamCoordinator, TtlCoordinator,
  *   HomeserverEventStreamCoordinator and its channels MuteListSyncCoordinator, NotificationLastReadSyncCoordinator)
  * - Start coordination when the component is mounted
  * - Track route changes and inform coordinators

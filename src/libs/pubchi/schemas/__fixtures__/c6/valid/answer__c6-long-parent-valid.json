@@ -1,0 +1,36 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay",
+  "owner": "4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o",
+  "generated_at": 1788600000,
+  "run_id": "c6-long",
+  "purpose": "ask",
+  "question": "Reply with a longer draft",
+  "summary": "A long reply you can publish as yourself.",
+  "evidence": [
+    {
+      "kind": "post",
+      "label": "Parent post",
+      "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/posts/0032W6CBGDBP0",
+      "claimants": [],
+      "claimant_count": 0,
+      "in_your_graph": true
+    }
+  ],
+  "sources": [],
+  "tool_trace_summary": {
+    "tools": [],
+    "call_count": 0,
+    "truncated": false
+  },
+  "policy_version": 1,
+  "section": "draft_post",
+  "draft_post": {
+    "content": "This longer draft replies to the parent post with the same public evidence.",
+    "kind": "long",
+    "parent_uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/posts/0032W6CBGDBP0",
+    "rationale": "Reply uses the parent as evidence.",
+    "evidence": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/posts/0032W6CBGDBP0"]
+  }
+}

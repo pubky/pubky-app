@@ -1,15 +1,24 @@
-import { TagKind, type TCreateTagListInput, type TDeleteTagInput } from '@/application/tag/tag.types';
+import {
+  TagKind,
+  type TCreateTagListInput,
+  type TCreateTagResult,
+  type TDeleteTagInput,
+} from '@/application/tag/tag.types';
 import { createTagMutationId } from '@/application/tag/tag.utils';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { hasHttpStatus } from '@/libs/error/error.utils';
 import { isAppError } from '@/libs/error/error.utils';
+import { HttpStatusCode } from '@/libs/http/http.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { canonicalJson, sha256Hex } from '@/libs/pubchi/schemas/canonical';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { TLocalTagParams, TViewerTagMutationsParams } from '@/services/local/tag/tag.types';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
@@ -26,7 +35,8 @@ export class TagApplication {
     return LocalTagCacheService.getViewerMutations({ kind: taggedKind, id: taggedId }, taggerId);
   }
 
-  static async commitCreate({ tagList, isCurrent }: TCreateTagListInput) {
+  static async commitCreate({ tagList, isCurrent, preserveExisting = false }: TCreateTagListInput) {
+    const results: TCreateTagResult[] = [];
     // Sequential: a failed entry leaves no hidden in-flight writes for later tags.
     for (const { taggerId, taggedId, label, tagUrl, tagJson, taggedKind } of tagList) {
       if (isCurrent && !isCurrent()) return;
@@ -39,7 +49,69 @@ export class TagApplication {
         return;
       }
       try {
-        await HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
+        const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
+        const result = await this.enqueueWrite(tagUrl, async () => {
+          fence.assertCurrent();
+          if (isCurrent && !isCurrent()) return undefined;
+          if (!preserveExisting) {
+            await this.writeFixedTag(HttpMethod.PUT, tagUrl, tagJson);
+            return { tagUrl, alreadyExisted: false };
+          }
+          return retryHomeserverWriteAfterReread(fence, async () => {
+            if (isCurrent && !isCurrent()) return undefined;
+            let bodyJson = tagJson;
+            let existed = false;
+            if (preserveExisting) {
+              try {
+                const raw = await HomeserverService.requestRawText(tagUrl);
+                if (new TextEncoder().encode(raw).byteLength > 64 * 1024) {
+                  throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag document is too large', {
+                    service: ErrorService.Homeserver,
+                    operation: 'commitCreate',
+                  });
+                }
+                let remote: unknown;
+                try {
+                  remote = JSON.parse(raw);
+                } catch (cause) {
+                  throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Tag document is invalid', {
+                    service: ErrorService.Homeserver,
+                    operation: 'commitCreate',
+                    cause,
+                  });
+                }
+                if (
+                  !remote ||
+                  typeof remote !== 'object' ||
+                  Array.isArray(remote) ||
+                  !('uri' in remote) ||
+                  !('label' in remote) ||
+                  !('created_at' in remote) ||
+                  remote.uri !== tagJson.uri ||
+                  remote.label !== tagJson.label
+                ) {
+                  throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag identity mismatch', {
+                    service: ErrorService.Homeserver,
+                    operation: 'commitCreate',
+                  });
+                }
+                bodyJson = { ...tagJson, ...remote };
+                existed = true;
+              } catch (error) {
+                if (!hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) throw error;
+              }
+            }
+            if (isCurrent && !isCurrent()) return undefined;
+            const tagDocumentSha256 = preserveExisting ? await sha256Hex(canonicalJson(bodyJson)) : undefined;
+            await HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson, fence });
+            return { tagUrl, alreadyExisted: existed, ...(tagDocumentSha256 && { tagDocumentSha256 }) };
+          });
+        });
+        if (result === undefined) {
+          if (changed) await this.undo(local, 'create', write);
+          return undefined;
+        }
+        results.push(result);
       } catch (error) {
         if (changed) await this.undo(local, 'create', write);
         throw error;
@@ -50,17 +122,57 @@ export class TagApplication {
           { mutationId: write.mutationId, isCurrent },
         );
     }
+    return results.length === 1 ? results[0] : results;
   }
 
-  static async commitDelete({ taggerId, taggedId, label, taggedKind, isCurrent, canWrite }: TDeleteTagInput) {
+  static async materializeForDelete({
+    taggerId,
+    taggedId,
+    label,
+    taggedKind,
+    isCurrent,
+  }: Omit<TDeleteTagInput, 'canWrite'>): Promise<void> {
+    if (isCurrent && !isCurrent()) return;
+    const local = taggedKind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
+    await local.create({ taggerId, taggedId, label, mutationId: createTagMutationId(), synced: true, isCurrent });
+  }
+
+  static async commitDelete(params: TDeleteTagInput) {
+    return this.deleteTag(params);
+  }
+
+  /** Assisted undo checks the exact file written by the suggestion, never a replacement app's file. */
+  static async commitDeleteIfUnchanged(
+    params: TDeleteTagInput & { tagUrl: string },
+    expectedHash: string,
+  ): Promise<void> {
+    if (!/^[a-f0-9]{64}$/.test(expectedHash)) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag application has no verifiable document proof', {
+        service: ErrorService.Pubchi,
+        operation: 'revertTagSuggestion',
+      });
+    }
+    return this.deleteTag(params, { tagUrl: params.tagUrl, expectedHash });
+  }
+
+  private static async deleteTag(
+    { taggerId, taggedId, label, taggedKind, isCurrent, canWrite }: TDeleteTagInput,
+    proof?: { tagUrl: string; expectedHash: string },
+  ): Promise<void> {
     if (isCurrent && !isCurrent()) return;
     const local = taggedKind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
     const entity = { kind: taggedKind, id: taggedId };
     // Read the address before the optimistic delete clears the viewer's local tag.
     let tagUri = TagNormalizer.toOwnTagUri(
-      await LocalTagCacheService.getViewerTagUri(entity, label, taggerId),
+      proof?.tagUrl ?? (await LocalTagCacheService.getViewerTagUri(entity, label, taggerId)),
       taggerId,
     );
+    if (proof && !tagUri) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag undo address does not belong to the owner', {
+        service: ErrorService.Pubchi,
+        operation: 'revertTagSuggestion',
+      });
+    }
     const write = { taggerId, taggedId, label, mutationId: createTagMutationId() };
     const changed = await local.delete({ ...write, isCurrent });
     if (!changed) return;
@@ -93,9 +205,51 @@ export class TagApplication {
             context: { taggedKind, taggedId, taggerId },
           });
         }
-        await HomeserverService.request({ method: HttpMethod.DELETE, url: tagUri }).catch((error: unknown) => {
+        const resolvedUri = tagUri;
+        const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
+        const completed = await this.enqueueWrite(resolvedUri, async () => {
+          fence.assertCurrent();
+          if (isCurrent && !isCurrent()) return false;
+          if (!proof) {
+            await this.writeFixedTag(HttpMethod.DELETE, resolvedUri);
+            return true;
+          }
+          return retryHomeserverWriteAfterReread(fence, async () => {
+            if (isCurrent && !isCurrent()) return false;
+            const raw = await HomeserverService.requestRawText(resolvedUri);
+            if (new TextEncoder().encode(raw).byteLength > 64 * 1024) {
+              throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag document exceeds the verification limit', {
+                service: ErrorService.Pubchi,
+                operation: 'revertTagSuggestion',
+              });
+            }
+            let remote: unknown;
+            try {
+              remote = JSON.parse(raw);
+            } catch (cause) {
+              throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Tag document cannot be verified for undo', {
+                service: ErrorService.Pubchi,
+                operation: 'revertTagSuggestion',
+                cause,
+              });
+            }
+            if ((await sha256Hex(canonicalJson(remote))) !== proof.expectedHash) {
+              throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag changed since this suggestion was applied', {
+                service: ErrorService.Pubchi,
+                operation: 'revertTagSuggestion',
+              });
+            }
+            await HomeserverService.request({ method: HttpMethod.DELETE, url: resolvedUri, fence });
+            return true;
+          });
+        }).catch((error: unknown) => {
           if (!(error instanceof AppError && error.code === ClientErrorCode.NOT_FOUND)) throw error;
+          return true;
         });
+        if (!completed) {
+          await this.undo(local, 'delete', { ...write, tagUri });
+          return;
+        }
       }
     } catch (error) {
       // The restored tag keeps the address that failed, so the next attempt needs no Nexus round trip.
@@ -103,6 +257,29 @@ export class TagApplication {
       throw error;
     }
     await LocalTagCacheService.completeMutation(entity, { mutationId: write.mutationId, isCurrent });
+  }
+
+  private static readonly pendingWrites = new Map<string, Promise<unknown>>();
+
+  /** Hold ordering across the whole read/check/retry, while optimistic UI updates stay immediate. */
+  private static async enqueueWrite<T>(tagUrl: string, write: () => Promise<T>): Promise<T> {
+    const previous = this.pendingWrites.get(tagUrl);
+    const pending = previous ? previous.catch(() => {}).then(write) : write();
+    this.pendingWrites.set(tagUrl, pending);
+    try {
+      return await pending;
+    } finally {
+      if (this.pendingWrites.get(tagUrl) === pending) this.pendingWrites.delete(tagUrl);
+    }
+  }
+
+  /** Ordinary actions have a fixed body; HomeserverService owns their retries. */
+  private static async writeFixedTag(
+    method: HttpMethod.PUT | HttpMethod.DELETE,
+    url: string,
+    bodyJson?: Record<string, unknown>,
+  ): Promise<void> {
+    await HomeserverService.request({ method, url, ...(bodyJson && { bodyJson }) });
   }
 
   /**

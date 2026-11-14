@@ -22,5 +22,6 @@ describe('SettingsMenu', () => {
     expect(screen.getByText('Privacy & Safety')).toBeInTheDocument();
     expect(screen.getByText('Muted Users')).toBeInTheDocument();
     expect(screen.getByText('Help')).toBeInTheDocument();
+    expect(screen.queryByText('Pubchi')).not.toBeInTheDocument();
   });
 });

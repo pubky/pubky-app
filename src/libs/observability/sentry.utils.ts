@@ -1,5 +1,6 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
+import * as bip39 from 'bip39';
 import { AppError, hasAppErrorInCauseChain } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -33,13 +34,51 @@ function isSensitiveContextKey(key: string): boolean {
 }
 
 function scrubSensitiveString(value: string): string {
-  return value
+  return scrubMnemonicPhrases(value)
     .replace(PUBKY_URI_PATTERN, PUBKY_REDACTED)
     .replace(PUBKY_HTTP_HOST_PATTERN, PUBKY_REDACTED)
     .replace(PUBKY_COMPACT_URI_PATTERN, PUBKY_REDACTED)
     .replace(RAW_PUBKY_PATTERN, PUBKY_REDACTED)
     .replace(EMAIL_PATTERN, EMAIL_REDACTED)
     .replace(PHONE_PATTERN, PHONE_REDACTED);
+}
+
+function scrubMnemonicPhrases(value: string): string {
+  const words = [...value.matchAll(/[a-z]+/gi)];
+  const ranges: Array<{ start: number; end: number }> = [];
+  for (const wordCount of [24, 12]) {
+    for (let index = 0; index + wordCount <= words.length; index++) {
+      const window = words.slice(index, index + wordCount);
+      if (
+        window.slice(1).some((word, offset) => {
+          const previous = window[offset]!;
+          return !/^\s+$/.test(value.slice(previous.index! + previous[0].length, word.index!));
+        })
+      ) {
+        continue;
+      }
+      const candidate = window.map((word) => word[0].toLowerCase()).join(' ');
+      if (bip39.validateMnemonic(candidate, bip39.wordlists.english)) {
+        ranges.push({ start: window[0]!.index!, end: window.at(-1)!.index! + window.at(-1)![0].length });
+        index += wordCount - 1;
+      }
+    }
+  }
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const range of ranges.sort((a, b) => a.start - b.start)) {
+    const previous = merged.at(-1);
+    if (previous && range.start <= previous.end) {
+      previous.end = Math.max(previous.end, range.end);
+    } else {
+      merged.push({ ...range });
+    }
+  }
+  return merged
+    .reverse()
+    .reduce(
+      (scrubbed, range) => `${scrubbed.slice(0, range.start)}${SENSITIVE_VALUE_REDACTED}${scrubbed.slice(range.end)}`,
+      value,
+    );
 }
 
 function getEndpointPath(endpoint: unknown): string | null {

@@ -25,6 +25,9 @@ export function ControlledInputField<T extends FieldValues>({
   loading = false,
   loadingText,
   onPaste,
+  autoComplete,
+  autoCorrect,
+  spellCheck,
   className,
   inputClassName,
   dataCy,
@@ -53,6 +56,9 @@ export function ControlledInputField<T extends FieldValues>({
           loading={loading}
           loadingText={loadingText}
           onPaste={onPaste}
+          autoComplete={autoComplete}
+          autoCorrect={autoCorrect}
+          spellCheck={spellCheck}
           className={className ?? 'mb-0'}
           inputClassName={inputClassName}
           dataCy={dataCy}

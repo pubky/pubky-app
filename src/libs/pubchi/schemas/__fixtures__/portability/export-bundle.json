@@ -1,0 +1,52 @@
+{
+  "schema": "pubchi-export-bundle",
+  "version": 1,
+  "bot": "3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy",
+  "owner": "i74f35annbd8osxw1quu79xwpbcjz31adic3f67npha35owwtfoy",
+  "exported_at": 1800000000,
+  "include_history": false,
+  "manifest": {
+    "bot": "3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy",
+    "objects": [
+      {
+        "bytes": 279,
+        "path": "/pub/app.pubchi/v1/bot.json",
+        "schema": "pubchi-bot",
+        "sha256": "b2c8b68d9ea5a5084ae0f26f855f5fec35591c54470ff30e5418394dbd7a09e2",
+        "version": 1
+      },
+      {
+        "bytes": 254,
+        "path": "/pub/app.pubchi/v1/bots/3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy.json",
+        "schema": "pubchi-owner-binding",
+        "sha256": "819c84c18c3e140e4354586bc0d615cbc5853560d4fb4f78c19226da5331fdcf",
+        "version": 1
+      },
+      {
+        "bytes": 689,
+        "path": "/pub/app.pubchi/v1/config.json",
+        "schema": "pubchi-config",
+        "sha256": "64660583d49a8e00048e232827effa640102d821716026e21b71148f5489fa53",
+        "version": 1
+      },
+      {
+        "bytes": 373,
+        "path": "/pub/app.pubchi/v1/feeds/builders.json",
+        "schema": "pubchi-feed-proposal",
+        "sha256": "b0d8e1b9cbd64a6adf58dcbf08dcf7d093e3dffcb7c078c613a6e5ad3d2b3376",
+        "version": 1
+      }
+    ],
+    "owner": "i74f35annbd8osxw1quu79xwpbcjz31adic3f67npha35owwtfoy",
+    "schema": "pubchi-manifest",
+    "updated_at": 1800000000,
+    "version": 1
+  },
+  "objects": {
+    "/pub/app.pubchi/v1/bot.json": "{\"backup_confirmed_at\":null,\"bot\":\"3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy\",\"created_at\":1800000000,\"display_name\":\"Pubchi\",\"homeserver_account\":null,\"key_generation\":1,\"owner\":\"i74f35annbd8osxw1quu79xwpbcjz31adic3f67npha35owwtfoy\",\"schema\":\"pubchi-bot\",\"version\":1}",
+    "/pub/app.pubchi/v1/bots/3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy.json": "{\"bot\":\"3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy\",\"created_at\":1800000000,\"key_generation\":1,\"owner\":\"i74f35annbd8osxw1quu79xwpbcjz31adic3f67npha35owwtfoy\",\"schema\":\"pubchi-owner-binding\",\"status\":\"active\",\"updated_at\":1800000000,\"version\":1}",
+    "/pub/app.pubchi/v1/config.json": "{\"bot\":\"3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy\",\"brain\":{\"adapter\":\"vercel-ai\",\"endpoint\":null,\"execution\":\"synonym-hosted\",\"model_id\":\"kimi-k3\",\"provider_id\":\"moonshot\",\"send_public_graph_context\":true,\"send_public_web_context\":false},\"display_name\":\"Pubchi\",\"follower_history_opt_in\":false,\"interests\":{\"excluded_topics\":[],\"topics\":[]},\"language\":\"en\",\"owner\":\"i74f35annbd8osxw1quu79xwpbcjz31adic3f67npha35owwtfoy\",\"proactive\":{\"enabled\":false,\"max_suggestions_per_day\":1,\"quiet_hours_utc\":{\"end\":7,\"start\":22}},\"schema\":\"pubchi-config\",\"summary\":{\"include_disagreement\":true,\"include_sources\":true,\"length\":\"short\"},\"tier\":\"read-only\",\"updated_at\":1800000000,\"version\":1}",
+    "/pub/app.pubchi/v1/feeds/builders.json": "{\"bot\":\"3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy\",\"feed\":{\"created_at\":1800000000,\"feed\":{\"layout\":\"columns\",\"reach\":\"following\",\"sort\":\"recent\",\"tags\":[\"builder\"]},\"name\":\"Builders\"},\"generated_at\":1800000000,\"installed_user_feed_id\":null,\"owner\":\"i74f35annbd8osxw1quu79xwpbcjz31adic3f67npha35owwtfoy\",\"schema\":\"pubchi-feed-proposal\",\"version\":1,\"warnings\":[]}",
+    "/pub/app.pubchi/v1/manifest.json": "{\"bot\":\"3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy\",\"objects\":[{\"bytes\":279,\"path\":\"/pub/app.pubchi/v1/bot.json\",\"schema\":\"pubchi-bot\",\"sha256\":\"b2c8b68d9ea5a5084ae0f26f855f5fec35591c54470ff30e5418394dbd7a09e2\",\"version\":1},{\"bytes\":254,\"path\":\"/pub/app.pubchi/v1/bots/3oq8tubg5f5r155sm75jyh7yf8qm9fixjsnqfd8w77z6atpr8mmy.json\",\"schema\":\"pubchi-owner-binding\",\"sha256\":\"819c84c18c3e140e4354586bc0d615cbc5853560d4fb4f78c19226da5331fdcf\",\"version\":1},{\"bytes\":689,\"path\":\"/pub/app.pubchi/v1/config.json\",\"schema\":\"pubchi-config\",\"sha256\":\"64660583d49a8e00048e232827effa640102d821716026e21b71148f5489fa53\",\"version\":1},{\"bytes\":373,\"path\":\"/pub/app.pubchi/v1/feeds/builders.json\",\"schema\":\"pubchi-feed-proposal\",\"sha256\":\"b0d8e1b9cbd64a6adf58dcbf08dcf7d093e3dffcb7c078c613a6e5ad3d2b3376\",\"version\":1}],\"owner\":\"i74f35annbd8osxw1quu79xwpbcjz31adic3f67npha35owwtfoy\",\"schema\":\"pubchi-manifest\",\"updated_at\":1800000000,\"version\":1}"
+  }
+}

@@ -97,7 +97,13 @@ type UseCustomFeedFormBaseParams = {
    * shows current values without discarding in-progress edits.
    */
   open: boolean;
+  onSubmitOverride?: (data: CustomFeedFormData) => Promise<boolean>;
 };
 
 export type UseCustomFeedFormParams = UseCustomFeedFormBaseParams &
-  ({ mode: 'create'; feed?: never } | { mode: 'edit'; feed: FeedModelSchema });
+  (
+    | { mode: 'create'; feed?: never; initialValues?: CustomFeedFormData }
+    | { mode: 'edit'; feed: FeedModelSchema; initialValues?: CustomFeedFormData }
+  );
+
+export type CustomFeedSubmitOverride = (data: CustomFeedFormData) => Promise<boolean>;

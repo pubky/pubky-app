@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { MobileTabBar } from '../../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../../MobileTabBar/MobileTabBar.types';
-import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
+import { getSettingsMobileItems } from './SettingsMobileMenu.constants';
 
 /**
  * Mobile settings navigation menu.
@@ -24,7 +24,7 @@ export function SettingsMobileMenu() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const items: MobileTabBarItem[] = SETTINGS_MOBILE_ITEMS.map((item) => ({
+  const items: MobileTabBarItem[] = getSettingsMobileItems().map((item) => ({
     key: item.path,
     icon: item.icon,
     label: item.label,

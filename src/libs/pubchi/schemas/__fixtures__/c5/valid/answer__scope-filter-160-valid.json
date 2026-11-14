@@ -1,0 +1,37 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay",
+  "owner": "4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o",
+  "generated_at": 1788600000,
+  "run_id": "c5-fixture",
+  "purpose": "ask",
+  "question": "Suggest tags for this user",
+  "summary": "No safe tag suggestions were found.",
+  "evidence": [],
+  "sources": [],
+  "tool_trace_summary": {
+    "tools": [],
+    "call_count": 0,
+    "truncated": false
+  },
+  "policy_version": 1,
+  "section": "tag_suggestions",
+  "target": {
+    "kind": "user",
+    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json",
+    "snapshot_sha256": null
+  },
+  "tag_suggestions": [],
+  "scope": {
+    "time": null,
+    "graph": {
+      "kind": "whole_graph"
+    },
+    "filters": [
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ],
+    "complete": true
+  },
+  "basis": "graph"
+}

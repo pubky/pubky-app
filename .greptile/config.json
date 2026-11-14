@@ -116,7 +116,7 @@
     },
     {
       "id": "dexie-schema-change",
-      "rule": "There is one Dexie schema version and no migration chain: a DB_VERSION mismatch deletes and recreates the local database (ADR-0019, docs/data-patterns.md). Any change to DB_VERSION, a table's index map or the stores() definition must be called out in the PR as a deliberate data-loss decision; flag it when it arrives as a side effect of a feature.",
+      "rule": "The main App cache has one Dexie schema version and no migration chain: a DB_VERSION mismatch deletes and recreates it (ADR-0019, docs/data-patterns.md). Any change to DB_VERSION, a cache table's index map or its stores() definition must be called out as a deliberate data-loss decision. Proposed with the Pubchi draft integration, docs/adr/0026-pubchi-assisted-integration.md scopes one exception to the isolated pubchi database: preserve its durable device keys and pending write records across main-cache resets, retain its version history, and use outgoing-owner cleanup for logout/account replacement. This is not an accepted general migration policy; flag broader exceptions or destructive Pubchi schema changes without explicit review.",
       "scope": ["src/core/database/**", "src/config/database.ts", ".env.example"],
       "severity": "high"
     },
