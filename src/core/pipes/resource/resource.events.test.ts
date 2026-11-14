@@ -10,6 +10,7 @@ import {
   getEventDayKey,
   getEventFeed,
   getEventLifecycleLabel,
+  getGroupPage,
   getOccurrencesWindowStart,
   getResourceInstanceKey,
   groupEventsByDay,
@@ -129,6 +130,17 @@ describe('getEventFeed', () => {
 
   it('is the row’s own feed for a feed’s date (a search row), with no group read', () => {
     expect(getEventFeed(MEETUP_DATES[0], undefined)).toEqual(FEED);
+  });
+});
+
+describe('getGroupPage', () => {
+  it('is the group’s member that is a page, not a feed’s date', () => {
+    expect(getGroupPage(MEETUP_MEMBERS)?.id).toBe(MEETUP_DATE.id);
+  });
+
+  it('is none for a group of feed’s dates only, and for no group read', () => {
+    expect(getGroupPage(MEETUP_MEMBERS.filter((member) => member.occurrence))).toBeNull();
+    expect(getGroupPage(undefined)).toBeNull();
   });
 });
 

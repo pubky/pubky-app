@@ -1,6 +1,6 @@
 import { withNormalizedCredits } from '@/pipes/pinakes/pinakes.credits';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
-import { hasSameSummary, type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
+import { getGroupPage, hasSameSummary, type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
 import { buildResourceSearchParams, type TResourceQuery } from '@/pipes/resource/resource.search';
 import { PinakesService } from '@/services/pinakes/pinakes';
 import type {
@@ -95,6 +95,12 @@ export class PinakesApplication {
    * that fails leaves the row as the search gave it. An occurrence is never read: a read by its
    * link answers its calendar, not the instance.
    *
+   * A feed's date in a group (`group.size` 2 or more: a date page joined with it; a search that keeps
+   * one row per group keeps the feed's) stands for its page: the group's member that is no feed's date
+   * (`getGroupPage`), read and shown as a page row is, in the row's place. The group is the shared
+   * group read (`fetchGroup`, one per group, cached for every row and card of it); without a page, or
+   * when it cannot be read, the feed's date stays.
+   *
    * The row is what the search says now; the cache may hold the event's read from before it
    * changed. Details that say another name, time or place than the row (`hasSameSummary`) are read
    * again, once, unless they were read this very moment (`JUST_READ_MS`: the read was no cache
@@ -103,7 +109,8 @@ export class PinakesApplication {
    */
   static async fetchEventInstances(cards: readonly TPinakesCard[]): Promise<TEventInstance[]> {
     return Promise.all(
-      cards.map(async (card) => {
+      cards.map(async (row) => {
+        const card = row.occurrence ? await this.getDatePage(row) : row;
         if (card.occurrence) return toEventInstance(card, null);
         // The error is reported by its factory; the row stays
         const read = (options?: { maxAge: number }) => this.fetchCardByUri(card.uri, options).catch(() => null);
@@ -112,6 +119,14 @@ export class PinakesApplication {
         return toEventInstance(card, isEarlier ? await read({ maxAge: JUST_READ_MS }) : details);
       }),
     );
+  }
+
+  /** A feed's date's page, from its group (`fetchEventInstances`), else the date itself. */
+  private static async getDatePage(card: TPinakesCard): Promise<TPinakesCard> {
+    if (!card.group || card.group.size < 2) return card;
+    // The error is reported by its factory; the feed's date stays
+    const group = await this.fetchGroup(card.group.id).catch(() => null);
+    return getGroupPage(group?.members) ?? card;
   }
 
   /** What the people who tagged the resource also referenced. */
