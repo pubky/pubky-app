@@ -76,8 +76,11 @@ const answerProbe = (answer: 'held' | 'not-held' | 'unavailable') =>
   );
 
 /** The iframe Paykit's page posts its outcome from: `error` is what its setup script reports. */
-const postPaykitCallback = (iframe: HTMLIFrameElement, error?: string) =>
-  act(() => {
+const postPaykitCallback = async (iframe: HTMLIFrameElement, error?: string) => {
+  // The iframe can reach the DOM before the passive effect installs its listener.
+  // Flush that work before sending the one-shot callback, including after reconnects.
+  await act(async () => {});
+  await act(() => {
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: 'https://paykit.server',
@@ -90,6 +93,7 @@ const postPaykitCallback = (iframe: HTMLIFrameElement, error?: string) =>
       }),
     );
   });
+};
 
 describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
   beforeEach(() => {
