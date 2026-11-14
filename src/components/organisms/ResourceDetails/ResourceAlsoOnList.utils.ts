@@ -2,7 +2,7 @@ import { groupAlsoOn, pickAlsoOn, type TAlsoOnRow } from '@/molecules/ResourceCa
 import { getHttpUrl, getLinkHost, getResourceLinks } from '@/molecules/ResourceCard/ResourceCard.utils';
 import type { TPinakesAlsoOn, TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 
-type TGroupMember = Pick<TPinakesCard, 'id' | 'uri' | 'site'>;
+type TGroupMember = Pick<TPinakesCard, 'id' | 'uri' | 'site' | 'occurrence'>;
 
 /** Where a link people shared on Pubky came from, in its row's tooltip. */
 export const SHARED_ON_PUBKY_NOTE = 'Shared on Pubky';
@@ -34,7 +34,8 @@ export function getLinkKey(uri: string): string {
  * The resource page's Also on, one row per service (`pickAlsoOn`, `groupAlsoOn`): Pinakes' entries
  * first, then the group members shared on Pubky for a service Pinakes has no link for, then Pinakes'
  * matches by metadata (no label; `MAYBE_ALSO_ON_NOTE` in the row's tooltip and name) for a service no
- * exact link is on. Never the card's own link (`getLinkKey`) or the service its header opens.
+ * exact link is on. Never the card's own link (`getLinkKey`), the service its header opens, or a feed's
+ * date of its group.
  *
  * @param members - The group's members (`GET /v1/groups/{id}`), the card among them; absent while
  *   read, when the read failed, or for a card outside a group (then Also on alone)
@@ -44,12 +45,20 @@ export function mergeAlsoOn(
   members: TGroupMember[] | null | undefined,
 ): TAlsoOnRow[] {
   const own = getLinkKey(card.uri);
+  // A feed's date in the group is this date as its calendar lists it (a date page joined with the
+  // feed's date of it), not the thing on another service: neither it nor the card's entry for it shows.
+  const feedDates = new Set(
+    (members ?? []).filter((member) => member.occurrence).map((member) => getLinkKey(member.uri)),
+  );
   const shared = (members ?? []).map((member): TPinakesAlsoOn => ({
     uri: member.uri,
     id: member.id,
     site: member.site,
   }));
-  const entries = [...card.also_on, ...shared].filter((entry) => getLinkKey(entry.uri) !== own);
+  const entries = [...card.also_on, ...shared].filter((entry) => {
+    const key = getLinkKey(entry.uri);
+    return key !== own && !feedDates.has(key);
+  });
   // The service left out is the one the card's header opens, by name or host (any spelling on it).
   // Other services stay, also when their link is the card's: the links people wrote (`refs`: an
   // ISBN reached through Goodreads and Open Library) and the ones Pinakes resolved to it (`aliases`:
