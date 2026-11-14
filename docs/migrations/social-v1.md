@@ -159,7 +159,8 @@ History: between PR-A and PR-D the branch had a known limitation (the first boot
 
 Behavior. Every restore and every sign-in passes `SocialMigrationController.ensureMigrated` before the session enters
 the auth store (`restoreStatus` `social-migration`, session `null`, committed identity visible meanwhile). A session
-without `MIGRATION_CAPS` or a saved grant from before the gate whose flag is absent is signed out on `/migration`
+without `MIGRATION_CAPS`, or a saved grant from before the gate whose flag is absent in a browser whose record never saw
+the flag, is signed out on `/migration`
 (backup prompt first for a never-backed-up browser key), told why, and offered Sign in; the new grant is admitted, runs
 `pubky-social-migrator` on the blocking screen (steps, "{done} of {total}", "Do not close this tab"), and bootstraps as
 usual once it passes. A reload or a closed tab mid-run resumes on the next restore (the grant is admitted); a second

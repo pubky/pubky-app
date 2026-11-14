@@ -108,7 +108,8 @@ export function isSocialMigrationGrantAdmitted(record: SocialMigrationRecord | n
 
 /**
  * The flag was seen at `rev`; the record only moves forward. The gate is over: where its runs stopped and what they
- * dropped go with it (a gate that passes on the flag of another device's run never shows them).
+ * dropped go with it. A gate that finishes through the engine reads the dropped counts first and shows them; a restore
+ * that passes on a flag another run wrote forgets them.
  */
 export function markSocialMigrated(pubky: string, rev: number): void {
   updateSocialMigrationRecord(pubky, (record) => ({
