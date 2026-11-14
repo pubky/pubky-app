@@ -52,8 +52,11 @@ const EMPTY_IDS: string[] = [];
  *
  * The walk hydrates every bookmark, posts included, so a slice can surface
  * no collection at all: it keeps walking on its own while the window is not
- * full and the stream has more, and "Show more" stays while either the walk
- * or the live query (more collections than the window) has more to show.
+ * full and the stream has more. "Show more" renders when the live query holds
+ * more collections than the window, or the stream has more and either the
+ * window is full or the user widened it. No button while the automatic
+ * initial walk fills a window that is not full; the button stays, disabled,
+ * while a walk the user started fills the widened window.
  *
  * Live-reactive: a Follow / Unfollow performed anywhere in the app
  * pushes a card into / out of this section without a reload.
@@ -191,7 +194,12 @@ export function FollowedCollections() {
 
   const headerPubkys = uniqueAuthors(visibleIds);
 
-  const showShowMore = visibleIds.length > 0 && !seedLoading && (hasMoreCollections || !reachedEnd);
+  // The initial window walks on by itself (above) while it is not full, so a button there would only
+  // flash in and out; a window the user widened keeps its button, disabled, through its walk.
+  const isWindowFull = visibleIds.length >= visibleLimit;
+  const userWidened = pagesShown > 1;
+  const showShowMore =
+    visibleIds.length > 0 && !seedLoading && (hasMoreCollections || (!reachedEnd && (isWindowFull || userWidened)));
   // Skeletons while nothing is shown yet and the walk goes on — warm-cache visits paint the
   // live-query result immediately.
   const showSkeletons = visibleIds.length === 0 && (seedLoading || !reachedEnd);

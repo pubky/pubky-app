@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
@@ -7,6 +8,8 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
 import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
+import type { Pubky } from '@/models/models.types';
+import { buildCompositeId } from '@/models/models.utils';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -85,13 +88,21 @@ function makeSlice({
   reachedEnd = true,
   nextCursor = 0,
   lastRawPostId,
+  rawScannedCount,
 }: {
   nextPageIds?: string[];
   reachedEnd?: boolean;
   nextCursor?: number;
   lastRawPostId?: string;
+  rawScannedCount?: number;
 } = {}) {
-  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor, lastRawPostId });
+  return asOpaque<TReadPostStreamChunkResponse>({
+    nextPageIds,
+    reachedEnd,
+    nextCursor,
+    lastRawPostId,
+    rawScannedCount,
+  });
 }
 
 beforeEach(() => {
@@ -369,6 +380,155 @@ describe('FollowedCollections', () => {
     expect(mockGetOrFetchStreamSlice.mock.calls[1][0]).toMatchObject({
       lastPostId: 'a:deleted-9',
       streamTail: 42,
+    });
+  });
+
+  describe('Show more', () => {
+    const author = fakeOwner(2) as Pubky;
+    /** `count` composite ids by one author, with distinct thirteen-character Crockford post ids. */
+    const idsOf = (count: number) =>
+      Array.from({ length: count }, (_, i) =>
+        buildCompositeId({ pubky: author, id: `0035V9A20W${String(i).padStart(2, '0')}0` }),
+      );
+    /** Bookmarks, newest first: one slice and three more, two of them followed collections in the first slice. */
+    const BOOKMARKS = idsOf(COLLECTIONS_SECTION_PAGE_SIZE + 3);
+    const COLLECTIONS = [BOOKMARKS[3], BOOKMARKS[11]];
+    /** The bookmarks feed drops collections on read: a slice reports only the posts it scanned. */
+    const sliceOf = (start: number, end: number) => {
+      const scanned = BOOKMARKS.slice(start, end);
+      return makeSlice({
+        nextPageIds: scanned.filter((id) => !COLLECTIONS.includes(id)),
+        reachedEnd: end >= BOOKMARKS.length,
+        lastRawPostId: scanned[scanned.length - 1],
+        rawScannedCount: scanned.length,
+      });
+    };
+
+    it('is not rendered while the walk fills a window that is not full, nor after it ends', async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      // The first slice hydrated both collections; the live query shows them.
+      mockUseLiveQuery.mockReturnValue(COLLECTIONS);
+      let resolveSecondSlice: (slice: TReadPostStreamChunkResponse) => void = () => {};
+      mockGetOrFetchStreamSlice.mockResolvedValueOnce(sliceOf(0, COLLECTIONS_SECTION_PAGE_SIZE)).mockReturnValueOnce(
+        new Promise<TReadPostStreamChunkResponse>((resolve) => {
+          resolveSecondSlice = resolve;
+        }),
+      );
+
+      await act(async () => {
+        render(<FollowedCollections />);
+      });
+
+      // Slice 1 rendered its two cards and the walk is on slice 2: no button to flash.
+      await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(COLLECTIONS.length);
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+
+      await act(async () => {
+        resolveSecondSlice(sliceOf(COLLECTIONS_SECTION_PAGE_SIZE, BOOKMARKS.length));
+      });
+
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(COLLECTIONS.length);
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+    });
+
+    it('is rendered when the window is full and the bookmarks stream has more', async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      // Exactly a full window: the live query holds no more than it shows.
+      const fullWindow = idsOf(COLLECTIONS_SECTION_PAGE_SIZE);
+      mockUseLiveQuery.mockReturnValue(fullWindow);
+      mockGetOrFetchStreamSlice.mockResolvedValue(
+        makeSlice({ nextPageIds: [], reachedEnd: false, lastRawPostId: fullWindow[fullWindow.length - 1] }),
+      );
+
+      await act(async () => {
+        render(<FollowedCollections />);
+      });
+
+      expect(await screen.findByRole('button', { name: 'Show more' })).toBeEnabled();
+      // A full window does not walk on by itself.
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+    });
+
+    // The live query holding more collections than the window, the stream ended: the earlier test
+    // "keeps Show more while the live query holds more collections than the window, after the walk ended".
+
+    it('widens the window by one page on click', async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      mockUseLiveQuery.mockReturnValue(idsOf(2 * COLLECTIONS_SECTION_PAGE_SIZE + 1));
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true }));
+
+      await act(async () => {
+        render(<FollowedCollections />);
+      });
+
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(COLLECTIONS_SECTION_PAGE_SIZE);
+      const button = await screen.findByRole('button', { name: 'Show more' });
+      await act(async () => {
+        button.click();
+      });
+
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(2 * COLLECTIONS_SECTION_PAGE_SIZE);
+      expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
+    });
+
+    it('stays mounted and disabled while the walk fills a window the user widened', async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      const all = idsOf(3 * COLLECTIONS_SECTION_PAGE_SIZE);
+      // What the live query has cached so far: a full first window.
+      let cached = all.slice(0, COLLECTIONS_SECTION_PAGE_SIZE);
+      mockUseLiveQuery.mockImplementation(() => cached);
+      // The first slice settles at once; every later one waits for the test to settle it. An
+      // implementation, not queued once-values, so nothing leaks into the next test if this one fails.
+      const pending: Array<(slice: TReadPostStreamChunkResponse) => void> = [];
+      mockGetOrFetchStreamSlice.mockImplementation(async () =>
+        mockGetOrFetchStreamSlice.mock.calls.length === 1
+          ? makeSlice({ reachedEnd: false, lastRawPostId: all[COLLECTIONS_SECTION_PAGE_SIZE - 1] })
+          : new Promise<TReadPostStreamChunkResponse>((resolve) => {
+              pending.push(resolve);
+            }),
+      );
+      const showMore = () => screen.getByRole('button', { name: 'Show more' });
+
+      await act(async () => {
+        render(<FollowedCollections />);
+      });
+      await waitFor(() => expect(showMore()).toBeEnabled());
+
+      // The click widens the window past the cache: the walk the user started keeps the button, disabled.
+      await act(async () => {
+        showMore().click();
+      });
+      await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+      expect(showMore()).toBeDisabled();
+      expect(showMore().querySelector('.animate-spin')).toBeInTheDocument();
+
+      // The slice fills the widened window and the stream has more: enabled again.
+      cached = all.slice(0, 2 * COLLECTIONS_SECTION_PAGE_SIZE);
+      await act(async () => {
+        pending[0](
+          makeSlice({
+            reachedEnd: false,
+            lastRawPostId: cached[cached.length - 1],
+            rawScannedCount: COLLECTIONS_SECTION_PAGE_SIZE,
+          }),
+        );
+      });
+      expect(showMore()).toBeEnabled();
+
+      // A second widening whose walk reaches the end with the window not full: no button left.
+      await act(async () => {
+        showMore().click();
+      });
+      await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(3));
+      expect(showMore()).toBeDisabled();
+      cached = all.slice(0, 2 * COLLECTIONS_SECTION_PAGE_SIZE + 5);
+      await act(async () => {
+        pending[1](makeSlice({ reachedEnd: true, lastRawPostId: cached[cached.length - 1], rawScannedCount: 5 }));
+      });
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(2 * COLLECTIONS_SECTION_PAGE_SIZE + 5);
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
     });
   });
 
