@@ -31,7 +31,7 @@ const mocks = vi.hoisted(() => {
     loadMore: async () => {},
     retry: () => {},
   };
-  return { none, occurrences: none };
+  return { none, occurrences: none, hasOtherDates: false };
 });
 
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => true, PINAKES_RELATED_LIMIT: 5 }));
@@ -51,6 +51,11 @@ vi.mock('@/hooks/useResourceOccurrences/useResourceOccurrences', () => ({
   useResourceOccurrences: () => mocks.occurrences,
 }));
 vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => ({ FeedbackCard: () => <div data-testid="feedback-stub" /> }));
+// A series' other dates (their list has its own test)
+vi.mock('./ResourceOtherDatesList', () => ({
+  ResourceOtherDatesList: ({ card }: { card: TPinakesResourceDetail }) =>
+    mocks.hasOtherDates ? <div data-testid="resource-other-dates-stub" data-id={card.id} /> : null,
+}));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
 const GROUP: TPinakesGroupDetail = groupFixture;
@@ -69,6 +74,7 @@ describe('ResourceSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.occurrences = mocks.none;
+    mocks.hasOtherDates = false;
     card = VIDEO;
     // The video's group; any other card has none here, and a hook asked without an ID reads nothing.
     mockGroup.mockImplementation((id) => (id === VIDEO.group!.id ? settled(GROUP) : settled(null)));
@@ -89,6 +95,19 @@ describe('ResourceSidebar', () => {
       'resource-similar-list',
     ]);
     expect(within(screen.getByTestId('resource-occurrences')).getAllByTestId('resource-occurrence')).toHaveLength(3);
+  });
+
+  it('lists a date’s other dates in its series after Also on, before Similar', () => {
+    mocks.hasOtherDates = true;
+    render(<ResourceSidebar card={card} />);
+
+    const sidebar = screen.getByTestId('resource-sidebar');
+    expect([...sidebar.children].map((child) => child.getAttribute('data-testid'))).toEqual([
+      'resource-also-on-list',
+      'resource-other-dates-stub',
+      'resource-similar-list',
+    ]);
+    expect(screen.getByTestId('resource-other-dates-stub')).toHaveAttribute('data-id', card.id);
   });
 
   it.each([undefined, null])('shows nothing without a card (%s)', (none) => {

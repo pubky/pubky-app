@@ -7,8 +7,8 @@ import { CompactUserListItemSkeleton } from '@/organisms/CompactUserListItemSkel
 
 interface ResourceSectionProps {
   title: string;
-  /** Shown after the title (`· N`), when known. */
-  count?: number;
+  /** Shown after the title (`· N`, `· 50+`), when known. */
+  count?: number | string;
   /** A line under the title saying what the list is. */
   description?: string;
   /** Rows (`ResourceListRow`), shown when there is no `message` and the section is not loading. */
@@ -23,6 +23,8 @@ interface ResourceSectionProps {
    */
   footer?: { icon: LucideIcon; text: string; onClick: () => void; expanded?: boolean };
   testId: string;
+  /** The section's id, for a link to it (`#other-dates`). */
+  id?: string;
 }
 
 /**
@@ -39,13 +41,14 @@ export function ResourceSection({
   loadingRows = 0,
   footer,
   testId,
+  id,
 }: ResourceSectionProps) {
   const isLoading = loadingRows > 0;
   const listId = useId();
 
   return (
     // A named region (`SidebarSection` is a plain block), busy while its list is read.
-    <Container as="section" overrideDefaults aria-label={title} aria-busy={isLoading} data-testid={testId}>
+    <Container as="section" overrideDefaults id={id} aria-label={title} aria-busy={isLoading} data-testid={testId}>
       {/* The count never wraps alone onto a line of its own in the narrow column. */}
       <SidebarSection
         title={count === undefined ? title : `${title}\u00a0·\u00a0${count}`}

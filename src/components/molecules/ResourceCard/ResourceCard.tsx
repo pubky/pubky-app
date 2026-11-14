@@ -10,6 +10,7 @@ import {
   Globe,
   type LucideProps,
   MapPin,
+  Repeat,
   Users,
 } from 'lucide-react';
 import { getResourceRoute } from '@/app/routes';
@@ -19,6 +20,7 @@ import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useEventDates } from '@/hooks/useEventDates/useEventDates';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
@@ -30,6 +32,7 @@ import { PinakesStatus, type TPinakesCredit } from '@/services/pinakes/pinakes.t
 import { ResourceArrowText } from './ResourceArrowText';
 import { type ResourceCardProps, ResourceFamily } from './ResourceCard.types';
 import {
+  formatOtherDates,
   formatResourceDates,
   formatResourcePoint,
   getDisplayLink,
@@ -42,6 +45,7 @@ import {
   getResourceStatus,
   getResourceTypeLabel,
   hasWideImage,
+  OTHER_DATES_ANCHOR,
 } from './ResourceCard.utils';
 import { CARD_MUTED_TEXT, ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
 import { ResourceCardMedia } from './ResourceCardMedia';
@@ -170,6 +174,13 @@ export function ResourceCard({
   const venue = isEvent ? card.venue?.name?.trim() || null : null;
   const organizer = isEvent ? getOrganizer(card, venue) : null;
   const attendance = isEvent ? (ATTENDANCE_LABELS[card.attendance?.trim().toLowerCase() ?? ''] ?? null) : null;
+  // A date of a series says how many other dates it has, once the card has been on screen; its page lists
+  // them. Nothing shows while they are read or when they could not be: the line comes in once known.
+  const series = useEventDates(card, { enabled: isEvent && !isLarge && wasOnScreen });
+  const otherDates =
+    isEvent && !isLarge && !series.isLoading && !series.isError
+      ? formatOtherDates(series.sameName, series.hasMore)
+      : null;
   // Coordinates only for a place or event that has nothing better to say where it is.
   const point =
     family !== ResourceFamily.WEB && !venue && !cardSummary && !locationRowText && card.point
@@ -202,7 +213,7 @@ export function ResourceCard({
   const isLongDescription = isLarge && (shownDescription?.length ?? 0) > LONG_DESCRIPTION_CHARS;
   const clampOnPhone = isLongDescription && !expanded;
 
-  const eventDetails = (dates || venue || organizer || attendance) && (
+  const eventDetails = (dates || venue || organizer || attendance || otherDates) && (
     <>
       {dates && <ResourceDetail icon={CalendarDays} text={dates} testId="resource-card-dates" />}
       {venue && <ResourceDetail icon={MapPin} text={venue} testId="resource-card-venue" />}
@@ -223,6 +234,19 @@ export function ResourceCard({
           <Globe aria-hidden="true" />
           {attendance}
         </Badge>
+      )}
+      {otherDates && (
+        <ResourceDetail icon={Repeat} testId="resource-card-other-dates">
+          <Link
+            href={`${smallTitleUrl}#${OTHER_DATES_ANCHOR}`}
+            target={titleTarget}
+            rel={titleTarget ? 'noopener noreferrer' : undefined}
+            overrideDefaults
+            className="hover:text-brand hover:underline"
+          >
+            {otherDates}
+          </Link>
+        </ResourceDetail>
       )}
     </>
   );
