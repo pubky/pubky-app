@@ -921,7 +921,7 @@ describe('NexusResourceService batched tag reads (POST /v1/stream/resources/by_i
   });
 });
 
-describe('NexusResourceService resource stream (GET /v0/stream/resources)', () => {
+describe('NexusResourceService resource stream (GET /v1/stream/resources)', () => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
   const VIEW = { details: BY_URI_RESPONSE.resource, tags: BY_URI_RESPONSE.tags, taggers_count: 2 };
 
@@ -942,7 +942,7 @@ describe('NexusResourceService resource stream (GET /v0/stream/resources)', () =
     ).resolves.toEqual([VIEW]);
 
     const url = new URL(String(fetchSpy.mock.calls[0][0]));
-    expect(url.pathname).toBe('/v0/stream/resources');
+    expect(url.pathname).toBe('/v1/stream/resources');
     expect(Object.fromEntries(url.searchParams)).toEqual({
       tags: 'music,video',
       sorting: 'timeline',
@@ -956,13 +956,27 @@ describe('NexusResourceService resource stream (GET /v0/stream/resources)', () =
     }
   });
 
+  it('marks the viewer’s tags from `tag_uri` in /v1 stream views, which carry no `relationship`', async () => {
+    const v1View = {
+      ...VIEW,
+      tags: [
+        { label: 'travel', taggers: [VIEWER], taggers_count: 2, tag_uri: `pubky://${VIEWER}/pub/social/v1/tags/T1` },
+      ],
+    };
+    fetchSpy.mockResolvedValue(jsonResponse([v1View]));
+
+    const [view] = await NexusResourceService.fetchStream({ tags: [], viewerId: VIEWER, skip: 0, limit: 10 });
+
+    expect(view.tags[0]).toMatchObject({ label: 'travel', relationship: true });
+  });
+
   it('reads every resource without tags, and no viewer signed out', async () => {
     fetchSpy.mockResolvedValue(jsonResponse([]));
 
     await expect(NexusResourceService.fetchStream({ tags: [], viewerId: null, skip: 0, limit: 10 })).resolves.toEqual(
       [],
     );
-    expect(fetchSpy.mock.calls[0][0]).toBe(`${getNexusUrl()}/v0/stream/resources?sorting=timeline&skip=0&limit=10`);
+    expect(fetchSpy.mock.calls[0][0]).toBe(`${getNexusUrl()}/v1/stream/resources?sorting=timeline&skip=0&limit=10`);
   });
 
   it('reads each page again rather than from the cache', async () => {

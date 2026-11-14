@@ -29,7 +29,7 @@ export const resourceApi = {
     body: viewer_id ? { uris, viewer_id } : { uris },
   }),
   /** A page of the external resources people tagged, the latest tagged first. */
-  stream: (params: TResourceStreamQuery) => buildUrlWithQuery({ baseRoute: 'v0/stream/resources', params }),
+  stream: (params: TResourceStreamQuery) => buildUrlWithQuery({ baseRoute: 'stream/resources', params }),
   /**
    * The live posts whose `parent` is the resource, newest first (`/v1`, a Nexus with external
    * references; others answer 404). No attachment metadata: `/v1` serves none.
