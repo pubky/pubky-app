@@ -1,3 +1,4 @@
+import type { Query } from '@tanstack/react-query';
 import {
   getPinakesUrl,
   PINAKES_REQUEST_TIMEOUT_MS,
@@ -305,7 +306,7 @@ export class PinakesService {
       // where the cache holds the first page with the cursor that was refused
       ...(fresh ? { staleTime: 0 } : {}),
       // `keepUntil`: kept, and not collected, until the list's window ends
-      ...(!fresh && keepUntil !== undefined ? keptUntil(keepUntil) : {}),
+      ...(!fresh && keepUntil !== undefined ? keptUntil<TPinakesOccurrencePage | null>(keepUntil) : {}),
       // A refused cursor is answered the same way again: the caller starts over
       retry: false,
       queryFn: () =>
@@ -351,12 +352,15 @@ function getPinakesBaseUrl(): string | null {
 }
 
 /**
- * The cache times of a read kept until `until` (epoch milliseconds): fresh until then, collected then
- * (a later window has a key of its own).
+ * The cache times of a read kept until `until` (epoch milliseconds): fresh until then, measured from
+ * when the read was made (as the by-uri read's `staleTime`), collected then (a later window has a key
+ * of its own).
  */
-function keptUntil(until: number): { staleTime: number; gcTime: number } {
-  const left = Math.max(0, until - Date.now());
-  return { staleTime: left, gcTime: left };
+function keptUntil<T>(until: number): { staleTime: (query: Query<T>) => number; gcTime: number } {
+  return {
+    staleTime: (query) => Math.max(0, until - query.state.dataUpdatedAt),
+    gcTime: Math.max(0, until - Date.now()),
+  };
 }
 
 /** The cache key of a group's read. */

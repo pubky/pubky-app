@@ -92,4 +92,19 @@ describe('useEventDates over the cached Pinakes reads', () => {
       '2026-11-14T07:00:00Z',
     ]);
   });
+
+  it('keeps the read fresh to the hour’s end from when it was made: a card 39 minutes later reads nothing', async () => {
+    const first = renderHook(() => useEventDates(DATE));
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+
+    vi.setSystemTime(new Date('2026-11-14T06:40:00Z'));
+    const later = renderHook(() => useEventDates(DATE));
+    await waitFor(() => expect(later.result.current.isLoading).toBe(false));
+    expect(occurrenceReads()).toHaveLength(1);
+
+    vi.setSystemTime(new Date('2026-11-14T07:01:00Z'));
+    const nextHour = renderHook(() => useEventDates(DATE));
+    await waitFor(() => expect(nextHour.result.current.isLoading).toBe(false));
+    expect(occurrenceReads()).toHaveLength(2);
+  });
 });
