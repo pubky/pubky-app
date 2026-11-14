@@ -5,6 +5,7 @@ import type { UseEventDatesResult } from '@/hooks/useEventDates/useEventDates';
 import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import meetupDatesFixture from '@/services/pinakes/fixtures/occurrences.meetup.json';
+import meetupCollapsedFixture from '@/services/pinakes/fixtures/search.meetup-collapsed.json';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceCard } from './ResourceCard';
 
@@ -59,6 +60,35 @@ describe('ResourceCard other dates', () => {
       'href',
       `${getResourceRoute(DATE.uri)}#other-dates`,
     );
+  });
+
+  it('names as next the first other date after the card’s own, not an earlier one still to come', () => {
+    // Nov 25 is the series' soonest date, but before this Dec 9 card
+    mocks.dates = dates({ sameName: OTHER_DATES });
+    render(<ResourceCard card={DATE} href={DATE.uri} />);
+
+    expect(screen.getByTestId('resource-card-other-dates')).toHaveTextContent('Other dates · 9 · next Wed, Dec 23');
+  });
+
+  it('counts the other dates alone when none comes after the card’s own', () => {
+    mocks.dates = dates({ sameName: OTHER_DATES.filter((card) => card.start! < DATE.start!) });
+    render(<ResourceCard card={DATE} href={DATE.uri} />);
+
+    const line = screen.getByTestId('resource-card-other-dates');
+    expect(line.textContent?.replace(/\s/g, ' ')).toBe('Other dates · 1');
+  });
+
+  it('does the same on an agenda or map row (a feed’s date, `ResourceInstanceCard`’s card)', () => {
+    const [nov25, , dec23]: TPinakesCard[] = meetupCollapsedFixture.items;
+    const others = DATES.filter((card) => card.start !== dec23.start);
+    mocks.dates = dates({ sameName: others });
+    const { unmount } = render(<ResourceCard card={dec23} href={dec23.uri} />);
+    expect(screen.getByTestId('resource-card-other-dates')).toHaveTextContent('Other dates · 9 · next Wed, Jan 6');
+    unmount();
+
+    mocks.dates = dates({ sameName: [nov25] });
+    render(<ResourceCard card={dec23} href={dec23.uri} />);
+    expect(screen.getByTestId('resource-card-other-dates').textContent?.replace(/\s/g, ' ')).toBe('Other dates · 1');
   });
 
   it('reads the dates only once the card has been on screen', () => {

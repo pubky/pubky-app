@@ -139,6 +139,26 @@ describe('ResourceOtherDatesList', () => {
     window.history.replaceState(null, '', '#');
   });
 
+  it('shows each other date by its day alone: the name is the page’s own, kept in the row’s name', () => {
+    render(<ResourceOtherDatesList card={DATE} locale="en-US" />);
+
+    const [row] = within(section('Other dates')).getAllByTestId('resource-occurrence');
+    expect(row).not.toHaveTextContent('Bitcoin Meetup Zürich');
+    expect(row.textContent?.replace(/\s/g, ' ')).toBe('Nov 25, 2026, 6:00 – 9:00 PM UTC');
+    expect(within(row).getByRole('link').getAttribute('aria-label')?.replace(/\s/g, ' ')).toBe(
+      'Bitcoin Meetup Zürich, Nov 25, 2026, 6:00 – 9:00 PM UTC',
+    );
+  });
+
+  it('names each of the feed’s other events in “More from”: they are other events', () => {
+    mocks.dates = dates({ others: [WORKSHOP] });
+    render(<ResourceOtherDatesList card={DATE} locale="en-US" />);
+
+    const [row] = within(section('More from Bitcoin Switzerland 🇨🇭')).getAllByTestId('resource-occurrence');
+    expect(row).toHaveTextContent('Lightning workshop');
+    expect(within(row).getByRole('link')).not.toHaveAttribute('aria-label');
+  });
+
   it('keeps the Maps menu of a row apart from its link', () => {
     const located = OTHER_DATES.map((card) => ({ ...card, point: { lat: 47.37, lon: 8.53 } }));
     mocks.dates = dates({ sameName: located });

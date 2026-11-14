@@ -332,19 +332,22 @@ export const OTHER_DATES_ANCHOR = 'other-dates';
 
 /**
  * What an event card says of its series' other coming dates (`useEventDates`, by start): how many,
- * `N+` when the feed has more than one read (`hasMore`), and the next one's day in its own time zone
- * (`Other dates · 9 · next Wed, Dec 23`). `null` with no other date.
+ * `N+` when the feed has more than one read (`hasMore`), and the day of the next one after the card's
+ * own date (`after`, its start), in that date's time zone (`Other dates · 9 · next Wed, Dec 23`); the
+ * count alone when none comes after it. `null` with no other date.
  */
 export function formatOtherDates(
   dates: readonly Pick<TPinakesResourceDetail, 'start' | 'tz' | 'all_day'>[],
   hasMore: boolean,
+  after?: string | null,
   locale?: string,
 ): string | null {
   if (dates.length === 0) return null;
   const count = `Other dates\u00a0·\u00a0${dates.length}${hasMore ? '+' : ''}`;
-  const [next] = dates;
-  const start = parseDate(next.start);
-  if (!start) return count;
+  const own = parseDate(after)?.getTime() ?? -Infinity;
+  const next = dates.find((date) => (parseDate(date.start)?.getTime() ?? -Infinity) > own);
+  const start = parseDate(next?.start);
+  if (!next || !start) return count;
   const day = createDateFormat(locale, {
     weekday: 'short',
     month: 'short',

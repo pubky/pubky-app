@@ -179,7 +179,7 @@ export function ResourceCard({
   const series = useEventDates(card, { enabled: isEvent && !isLarge && wasOnScreen });
   const otherDates =
     isEvent && !isLarge && !series.isLoading && !series.isError
-      ? formatOtherDates(series.sameName, series.hasMore)
+      ? formatOtherDates(series.sameName, series.hasMore, card.start)
       : null;
   // Coordinates only for a place or event that has nothing better to say where it is.
   const point =

@@ -59,6 +59,8 @@ export function ResourceOtherDatesList({ card, isAnchor = false, locale }: Resou
           locale={locale}
           testId={OTHER_DATES_TEST_ID}
           message={isError ? 'Other dates could not be loaded' : null}
+          // The page's own event: each row is its day
+          hideNames
           onRetry={retry}
         />
       )}
@@ -88,6 +90,7 @@ function DatesSection({
   testId,
   message = null,
   onRetry,
+  hideNames = false,
 }: {
   id?: string;
   title: string;
@@ -97,6 +100,8 @@ function DatesSection({
   testId: string;
   message?: string | null;
   onRetry?: () => void;
+  /** The rows are dates of the page's own event: by day alone (`ResourceOccurrenceRow` `hideName`). */
+  hideNames?: boolean;
 }) {
   const [shown, setShown] = useState(EVENT_DATES_PAGE_SIZE);
   const { isLoading, hasMore, isLoadingMore, isMoreError, loadMore } = dates;
@@ -128,6 +133,7 @@ function DatesSection({
           key={getResourceInstanceKey(occurrence)}
           occurrence={occurrence}
           href={getResourceRoute(occurrence.uri)}
+          hideName={hideNames}
           locale={locale}
         />
       ))}
