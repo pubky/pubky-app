@@ -20,8 +20,8 @@ export const resourceApi = {
   /** The endpoint without its query string, for error context: the query carries a link from someone's post. */
   byUriEndpoint: () => buildNexusUrl(`${PREFIX}/by-uri`),
   /**
-   * The live posts whose `parent` is the resource, newest first. Our Nexus fork only: it also refuses
-   * `include_attachment_metadata` here.
+   * The live posts whose `parent` is the resource, newest first (`/v1`, a Nexus with external
+   * references; others answer 404). No attachment metadata: `/v1` serves none.
    */
   replies: (resourceId: string, params: TResourceRepliesQuery) =>
     buildUrlWithQuery({ baseRoute: `${PREFIX}/${encodeURIComponent(resourceId)}/replies`, params }),

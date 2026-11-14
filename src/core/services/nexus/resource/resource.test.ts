@@ -3,6 +3,7 @@ import { getNexusUrl } from '@/config/nexus';
 import type { AppError as TAppError } from '@/libs/error/error';
 import type { nexusQueryClient as TNexusQueryClient } from '@/services/nexus/nexus.query-client';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { mockNexusPostWire } from '@/test-utils/nexus';
 import type { NexusResourceService as TNexusResourceService } from './resource';
 import { resourceApi } from './resource.api';
 import { RESOURCE_TAG_UNCONFIRMED_MS, RESOURCE_TAGS_LIMIT } from './resource.constants';
@@ -369,6 +370,16 @@ describe('NexusResourceService counts and replies (our Nexus fork)', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('folds the /v1 post kinds of the replies to the local names', async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse([mockNexusPostWire({ id: '0035ZWRE0B45E', kind: 'article' }), mockNexusPostWire({ kind: 'note' })]),
+    );
+
+    const replies = await NexusResourceService.fetchReplies({ resourceId: RESOURCE_ID, viewerId: VIEWER });
+
+    expect(replies.map((reply) => reply.details.kind)).toEqual(['long', 'short']);
+  });
+
   it('reads the replies by the resource’s id', async () => {
     fetchSpy.mockResolvedValue(jsonResponse([]));
 
@@ -376,7 +387,7 @@ describe('NexusResourceService counts and replies (our Nexus fork)', () => {
       NexusResourceService.fetchReplies({ resourceId: RESOURCE_ID, viewerId: VIEWER, skip: 3, limit: 20 }),
     ).resolves.toEqual([]);
     expect(fetchSpy.mock.calls[0][0]).toBe(
-      `${getNexusUrl()}/v0/resource/${RESOURCE_ID}/replies?viewer_id=${VIEWER}&skip=3&limit=20`,
+      `${getNexusUrl()}/v1/resource/${RESOURCE_ID}/replies?viewer_id=${VIEWER}&skip=3&limit=20`,
     );
   });
 });
