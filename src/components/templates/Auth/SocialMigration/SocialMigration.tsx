@@ -154,11 +154,10 @@ export function SocialMigration() {
   const secretKey = useOnboardingStore((state) => state.secretKey);
   const hasBackupAccount = useHasBackupAccount();
   const [notice, setNotice] = useState<SocialMigrationSignedOutNotice | null>(null);
+  // Held here, not read from the gate: logout resets the gate store before it can fail.
   const [logoutFailed, setLogoutFailed] = useState(false);
-  // Retry bumps the attempt; the ref remembers the attempt already started, so Strict Mode's second effect run
-  // and every re-render in between leave the one logout alone.
-  const [logoutAttempt, setLogoutAttempt] = useState(1);
-  const logoutStarted = useRef(0);
+  // The first sign-out starts once, so Strict Mode's second effect run leaves it alone; Retry signs out directly.
+  const logoutStarted = useRef(false);
 
   const isHydrated = authHydrated && onboardingHydrated;
   const isReauth = stage === 'reauth-required';
@@ -189,16 +188,20 @@ export function SocialMigration() {
     setNotice(readSocialMigrationSignedOutNotice());
   }, [stage, hasAccount]);
 
-  useEffect(() => {
-    if (!isHydrated || !isReauth || !hasAccount || isLoggingOut || needsBackup) return;
-    if (logoutStarted.current === logoutAttempt) return;
-    logoutStarted.current = logoutAttempt;
+  const signOutOfGate = () => {
     void AuthController.logout().catch((error: unknown) => {
       if (isAuthFlowCanceledError(error)) return;
       Logger.error('Failed to sign out from the migration gate', { error });
       setLogoutFailed(true);
     });
-  }, [isHydrated, isReauth, hasAccount, isLoggingOut, needsBackup, logoutAttempt]);
+  };
+
+  useEffect(() => {
+    if (!isHydrated || !isReauth || !hasAccount || isLoggingOut || needsBackup) return;
+    if (logoutStarted.current) return;
+    logoutStarted.current = true;
+    signOutOfGate();
+  }, [isHydrated, isReauth, hasAccount, isLoggingOut, needsBackup]);
 
   // The route guard brings a signed-out tab back here while the notice is pending: leaving settles it, as Sign in does.
   // A held account's screen keeps it: the guard sends that tab back here anyway, and its sign-out still owes the reason.
@@ -216,9 +219,10 @@ export function SocialMigration() {
       shopReturn ? `${AUTH_ROUTES.SIGN_IN}?${new URLSearchParams({ returnTo: shopReturn })}` : AUTH_ROUTES.SIGN_IN,
     );
   };
+  // The gate is idle by now, so the effect above would not run again: the click signs out itself.
   const onRetryLogout = () => {
     setLogoutFailed(false);
-    setLogoutAttempt((attempt) => attempt + 1);
+    signOutOfGate();
   };
   // The same retry the auth coordinator runs on reconnect. The status is the feedback: `restoring` shows the
   // guard's spinner, a second failure brings this screen back, and the one rejection it can end in (a key linked to
@@ -254,7 +258,8 @@ export function SocialMigration() {
         <AlertBackup />
       </Container>
     );
-  } else if (isReauth && hasAccount && logoutFailed && !isLoggingOut) {
+  } else if (hasAccount && logoutFailed && !isLoggingOut && (stage === 'idle' || isReauth)) {
+    // The failed logout reset the gate to idle; a run the gate starts after it shows its own screen instead.
     content = (
       <>
         <Screen title="We couldn't sign you out yet" subtitle="Please try again to finish signing out securely." />

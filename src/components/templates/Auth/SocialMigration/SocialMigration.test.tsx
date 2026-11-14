@@ -84,7 +84,8 @@ describe('SocialMigration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
-    mocks.logout.mockResolvedValue(undefined);
+    // A test that fails before its queued `*Once` logouts run would hand them to the next test
+    mocks.logout.mockReset().mockResolvedValue(undefined);
     mocks.restore.mockResolvedValue(false);
     mocks.onboardingState.secretKey = '';
     heldAccount();
@@ -381,6 +382,67 @@ describe('SocialMigration', () => {
     setStore({ stage: 'reauth-required', reason: 'pre-migration-grant' });
     render(<SocialMigration />);
     await waitFor(() => expect(mocks.logout).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: "We couldn't sign you out yet" })).not.toBeInTheDocument();
+  });
+
+  // The real logout cancels the gate first, which resets its store to idle before anything can reject
+  const resetGateThen = (settle: () => Promise<void>) => () => {
+    useSocialMigrationStore.getState().reset();
+    return settle();
+  };
+
+  it('shows the sign-out error after logout resets the gate and then fails', async () => {
+    setStore({ stage: 'reauth-required', reason: 'pre-migration-grant' });
+    mocks.logout.mockImplementation(resetGateThen(() => Promise.reject(new Error('storage gone'))));
+    render(
+      <React.StrictMode>
+        <SocialMigration />
+      </React.StrictMode>,
+    );
+    expect(await screen.findByRole('heading', { name: "We couldn't sign you out yet" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Homepage' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Updating your account' })).not.toBeInTheDocument();
+    expect(mocks.logout).toHaveBeenCalledOnce();
+  });
+
+  it('Retry signs out again after the gate was reset', async () => {
+    setStore({ stage: 'reauth-required', reason: 'pre-migration-grant' });
+    writeSocialMigrationSignedOutNotice({ reason: 'pre-migration-grant' });
+    mocks.logout
+      .mockImplementationOnce(resetGateThen(() => Promise.reject(new Error('storage gone'))))
+      .mockImplementationOnce(
+        resetGateThen(async () => {
+          signedOut();
+        }),
+      );
+    const { rerender } = render(<SocialMigration />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalledTimes(2));
+    rerender(<SocialMigration />);
+    expect(screen.queryByRole('heading', { name: "We couldn't sign you out yet" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Sign in again to grant the new permissions/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('lets a gate run that starts after the failed sign-out show its own screen', async () => {
+    setStore({ stage: 'reauth-required', reason: 'pre-migration-grant' });
+    mocks.logout.mockImplementation(resetGateThen(() => Promise.reject(new Error('storage gone'))));
+    render(<SocialMigration />);
+    expect(await screen.findByRole('heading', { name: "We couldn't sign you out yet" })).toBeInTheDocument();
+    act(() => setStore({ stage: 'blocked', reason: 'incomplete' }));
+    expect(screen.queryByRole('heading', { name: "We couldn't sign you out yet" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'We could not reach your homeserver for some of your data' }),
+    ).toBeInTheDocument();
+  });
+
+  it('stays without the sign-out error when a newer flow canceled the logout after it reset the gate', async () => {
+    setStore({ stage: 'reauth-required', reason: 'pre-migration-grant' });
+    mocks.logout.mockImplementation(resetGateThen(() => Promise.reject(createCanceledError())));
+    render(<SocialMigration />);
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalledOnce());
+    await act(async () => {});
     expect(screen.queryByRole('heading', { name: "We couldn't sign you out yet" })).not.toBeInTheDocument();
   });
 
