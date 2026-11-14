@@ -68,7 +68,7 @@ other tab's delete→reopen window, found no database, and created it at this bu
 consulting the flag. `Dexie.exists()` is not passive either: for a missing database it opens a v1 stub,
 aborts and deletes it, and that delete closes the other tab's connection, which re-initializes it in turn.
 Browser QA on production builds of `dev` and `feat/social-v1` (QA-4 finding F-2: Chromium 151 and Firefox 153,
-8 of 8 runs) saw the two tabs close each other with 3 to 50 deletes in 0.03 to 0.85 s and never a
+every run; the QA matrix counts 7, Chromium ×4 and Firefox ×3) saw the two tabs close each other with 3 to 50 deletes in 0.03 to 0.85 s and never a
 `VERSION_CONFLICT`. Every run ended when the old tab's `open()` lost a race to the new version and Dexie 4
 answered the `VersionError` by reopening without a version, which left the old build running on the new
 database.
