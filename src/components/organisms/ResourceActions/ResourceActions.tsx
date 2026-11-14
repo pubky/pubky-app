@@ -93,8 +93,9 @@ interface ResourceActionsProps {
   /**
    * The Pinakes card a post's (or a collection's) card is closed by: the tags on its other links join
    * the tag list as on the resource page (`getOtherLinks`: its tagged Also on entries, and the members'
-   * refs when the page already read its group, never asked here), read with its own tags, only in their
-   * `by_ids` batch. Its tags are still read and written on `uri` and `spellings` alone.
+   * refs when the page already read its group, never asked here for them), read with its own tags, only
+   * in their `by_ids` batch. Its tags are still read and written on `uri` and `spellings` alone. An
+   * event's group is read (shared with its card's "Other dates", `useEventFeed`) to find its feed.
    */
   card?: (TPinakesCard & Partial<Pick<TPinakesResourceDetail, 'aliases'>>) | null;
   /**

@@ -1175,7 +1175,7 @@ describe('ResourceActions', () => {
     const lastOtherLinks = () => mocks.otherLinkReads.at(-1)!;
     const pickScope = (name: string) => {
       openMenu(SCOPE_LABEL);
-      fireEvent.click(screen.getByRole('menuitem', { name }));
+      fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(name, 'i') }));
     };
 
     beforeEach(() => {
@@ -1216,6 +1216,11 @@ describe('ResourceActions', () => {
 
       const items = screen.getAllByRole('menuitem');
       expect(items.map((item) => item.textContent)).toEqual(['This date', 'All dates']);
+      // The choice shown is named so, as the composer's embedded link switch names it
+      expect(items.map((item) => item.getAttribute('aria-label'))).toEqual([
+        'This date (shown)',
+        'Show tags for all dates',
+      ]);
       expect(items[0].querySelector('.lucide-check')).not.toBeNull();
       expect(items[1].querySelector('.lucide-check')).toBeNull();
     });

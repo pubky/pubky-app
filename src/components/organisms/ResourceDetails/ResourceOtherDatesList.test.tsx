@@ -6,6 +6,7 @@ import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.js
 import meetupFeedFixture from '@/services/pinakes/fixtures/by-uri.meetup-feed.json';
 import meetupDatesFixture from '@/services/pinakes/fixtures/occurrences.meetup.json';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { ResourceOtherDatesList } from './ResourceOtherDatesList';
 
 const mocks = vi.hoisted(() => ({
@@ -68,7 +69,7 @@ describe('ResourceOtherDatesList', () => {
   });
 
   it('lists the series’ other dates under “Other dates · N”, at the page’s anchor, each a link to its page', () => {
-    render(<ResourceOtherDatesList card={DATE} locale="en-US" />);
+    render(<ResourceOtherDatesList card={DATE} locale="en-US" isAnchor />);
 
     const list = section('Other dates');
     expect(list).toHaveAttribute('id', 'other-dates');
@@ -81,6 +82,38 @@ describe('ResourceOtherDatesList', () => {
     expect(link).not.toHaveAttribute('target');
     expect(rows[0].textContent?.replace(/\s/g, ' ')).toContain('Nov 25, 2026, 6:00 – 9:00 PM UTC');
     expect(mocks.asked).toEqual([[DATE, { enabled: true }]]);
+  });
+
+  it('has the anchor’s id only on the copy that holds it: the page lays its sidebar out more than once', () => {
+    render(<ResourceOtherDatesList card={DATE} locale="en-US" />);
+
+    expect(section('Other dates')).not.toHaveAttribute('id');
+  });
+
+  it('brings the section into view when the page was opened at it, on the copy that is on screen', () => {
+    window.history.replaceState(null, '', '#other-dates');
+    const scrolled: Element[] = [];
+    // jsdom lays nothing out and has no scrolling
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function (this: Element) {
+      // Only the copy without the id is laid out (the phone's)
+      return asOpaque<DOMRectList>(this.id ? [] : [new DOMRect()]);
+    });
+    render(
+      <>
+        <ResourceOtherDatesList card={DATE} isAnchor />
+        <ResourceOtherDatesList card={DATE} />
+      </>,
+    );
+
+    const [, phone] = screen.getAllByRole('region', { name: 'Other dates' });
+    expect(scrolled).toContain(phone);
+    expect(new Set(scrolled)).toEqual(new Set([phone]));
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    vi.restoreAllMocks();
+    window.history.replaceState(null, '', '#');
   });
 
   it('keeps the Maps menu of a row apart from its link', () => {

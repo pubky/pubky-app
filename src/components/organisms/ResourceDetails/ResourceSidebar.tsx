@@ -18,6 +18,8 @@ interface ResourceSidebarProps {
   replyIds?: string[];
   /** The post page's Feedback card at the bottom (its right column, not its drawer). */
   showFeedback?: boolean;
+  /** This copy of the sidebar holds the `#other-dates` anchor (the page has it once: its right column). */
+  hasDatesAnchor?: boolean;
 }
 
 /**
@@ -27,13 +29,20 @@ interface ResourceSidebarProps {
  * (Similar also while read, or when it failed); then, as on a post's page, Participants and the
  * Feedback card.
  */
-export function ResourceSidebar({ card, uri, spellings, replyIds = [], showFeedback = false }: ResourceSidebarProps) {
+export function ResourceSidebar({
+  card,
+  uri,
+  spellings,
+  replyIds = [],
+  showFeedback = false,
+  hasDatesAnchor = false,
+}: ResourceSidebarProps) {
   if (!card && !uri) return null;
   return (
     <Container overrideDefaults data-testid="resource-sidebar" className="flex w-full min-w-0 flex-col gap-6">
       {card && <ResourceAlsoOnList card={card} />}
       {card && <ResourceOccurrencesList card={card} />}
-      {card && <ResourceOtherDatesList card={card} />}
+      {card && <ResourceOtherDatesList card={card} isAnchor={hasDatesAnchor} />}
       {card && <ResourceSimilarList id={card.id} />}
       {uri && <ResourceParticipants uri={uri} spellings={spellings} replyIds={replyIds} />}
       {uri && showFeedback && <FeedbackCard />}
