@@ -277,6 +277,8 @@ export class PinakesService {
    * @param options.cursor - The next page's cursor, from the page before
    * @param cache.fresh - Ask Pinakes again whatever the cache holds (a list started over). The
    * app's own: never a parameter of the request
+   * @param cache.keepUntil - Keep the page until this time (epoch milliseconds) instead of the cache's
+   * own five minutes: a list whose window ends then (a series' dates, read per hour). The app's own too
    * @returns The page, or `null` when Pinakes does not know the resource (404) or is not configured
    * @throws AppError when `from` is not RFC 3339 (nothing is sent), when Pinakes fails, or when it
    * refuses the page (an expired cursor is a 400)
@@ -284,7 +286,7 @@ export class PinakesService {
   static async fetchOccurrences(
     id: string,
     { from, limit, cursor }: { from: string; limit: number; cursor?: string | null },
-    { fresh = false }: { fresh?: boolean } = {},
+    { fresh = false, keepUntil }: { fresh?: boolean; keepUntil?: number } = {},
   ): Promise<TPinakesOccurrencePage | null> {
     if (!RFC_3339.test(from)) {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'The start of the dates to list is not an RFC 3339 time', {
@@ -302,6 +304,8 @@ export class PinakesService {
       // `fresh`: a list started over (its cursor was refused) asks again within the same window,
       // where the cache holds the first page with the cursor that was refused
       ...(fresh ? { staleTime: 0 } : {}),
+      // `keepUntil`: kept, and not collected, until the list's window ends
+      ...(!fresh && keepUntil !== undefined ? keptUntil(keepUntil) : {}),
       // A refused cursor is answered the same way again: the caller starts over
       retry: false,
       queryFn: () =>
@@ -344,6 +348,15 @@ export class PinakesService {
 function getPinakesBaseUrl(): string | null {
   const base = getPinakesUrl();
   return base ? base.replace(/\/+$/, '') : null;
+}
+
+/**
+ * The cache times of a read kept until `until` (epoch milliseconds): fresh until then, collected then
+ * (a later window has a key of its own).
+ */
+function keptUntil(until: number): { staleTime: number; gcTime: number } {
+  const left = Math.max(0, until - Date.now());
+  return { staleTime: left, gcTime: left };
 }
 
 /** The cache key of a group's read. */

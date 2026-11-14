@@ -14,6 +14,7 @@ import {
   getGroupPage,
   getOccurrencesWindowStart,
   getResourceInstanceKey,
+  getSeriesWindowEnd,
   getSeriesWindowStart,
   groupEventsByDay,
   hasEventStarted,
@@ -151,6 +152,24 @@ describe('getEventDateLinks', () => {
     const [nov25] = MEETUP_DATES;
     // The row's links as its card's footer has them: its page link, the feed's link it was written by
     expect(getEventDateLinks([nov25.uri, ...nov25.refs], FEED, nov25)).toEqual([nov25.uri]);
+  });
+
+  it('keeps a date link that differs from the feed’s only by a reserved escape: `%2F` is not `/`', () => {
+    const feed = { id: 'f', uri: 'https://cal.example/a%2Fb' };
+    const row = { refs: [feed.uri], occurrence: { ...HOLIDAY.occurrence!, feed_uri: feed.uri } };
+
+    expect(getEventDateLinks(['https://cal.example/a/b', feed.uri], feed, row)).toEqual(['https://cal.example/a/b']);
+    for (const escape of ['%3F', '%23', '%25', '%2f']) {
+      const other = { id: 'f', uri: `https://cal.example/a${escape}b` };
+      expect(getEventDateLinks([`https://cal.example/a${decodeURIComponent(escape)}b`], other)).toHaveLength(1);
+    }
+  });
+
+  it('matches a link however an unreserved character or `@` is escaped, the escape’s case aside', () => {
+    const feed = { id: 'f', uri: 'https://cal.example/%7Euser%40group/basic.ics' };
+
+    expect(getEventDateLinks(['https://cal.example/~user@group/basic.ics'], feed)).toEqual([]);
+    expect(getEventDateLinks(['https://cal.example/%7euser%40group/basic.ics'], feed)).toEqual([]);
   });
 
   it('has no date link for a feed’s date whose link is the calendar’s, however it is spelled', () => {
@@ -364,6 +383,12 @@ describe('groupEventsByDay', () => {
 describe('getSeriesWindowStart', () => {
   it('is the start of the hour, so a series’ cards share a read for an hour', () => {
     expect(getSeriesWindowStart(new Date('2026-11-14T06:59:59.900Z'))).toBe('2026-11-14T06:00:00Z');
+  });
+});
+
+describe('getSeriesWindowEnd', () => {
+  it('is an hour after the window’s start', () => {
+    expect(new Date(getSeriesWindowEnd('2026-11-14T06:00:00Z')).toISOString()).toBe('2026-11-14T07:00:00.000Z');
   });
 });
 

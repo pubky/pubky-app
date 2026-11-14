@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EVENT_SERIES_DATES_LIMIT } from '@/config/events';
 import type { UseResourceOccurrencesResult } from '@/hooks/useResourceOccurrences/useResourceOccurrences';
-import { getSeriesWindowStart } from '@/pipes/resource/resource.events';
+import { getSeriesWindowEnd, getSeriesWindowStart } from '@/pipes/resource/resource.events';
 import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
 import meetupDatesFixture from '@/services/pinakes/fixtures/occurrences.meetup.json';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -65,7 +65,7 @@ describe('useEventDates', () => {
 
     expect(mocks.asked.at(-1)).toEqual([
       FEED.id,
-      { limit: EVENT_SERIES_DATES_LIMIT, windowStart: getSeriesWindowStart },
+      { limit: EVENT_SERIES_DATES_LIMIT, windowStart: getSeriesWindowStart, windowEnd: getSeriesWindowEnd },
     ]);
     expect(result.current.feed).toEqual(FEED);
     expect(result.current.sameName).toHaveLength(9);

@@ -8,6 +8,7 @@ import {
   type UseResourceOccurrencesResult,
 } from '@/hooks/useResourceOccurrences/useResourceOccurrences';
 import {
+  getSeriesWindowEnd,
   getSeriesWindowStart,
   hasEventStarted,
   isSameEventDate,
@@ -45,6 +46,8 @@ export function useEventDates(
   const { cards, isLoading, ...read } = useResourceOccurrences(enabled ? (feed?.id ?? null) : null, {
     limit: EVENT_SERIES_DATES_LIMIT,
     windowStart: getSeriesWindowStart,
+    // Kept for the hour, past the cache's own five minutes
+    windowEnd: getSeriesWindowEnd,
   });
   const coming = cards.filter((date) => !hasEventStarted(date, openedAt));
   const { sameName, others } = splitFeedDates(card, coming);
