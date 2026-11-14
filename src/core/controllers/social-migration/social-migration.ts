@@ -83,10 +83,11 @@ export class SocialMigrationController {
   private static gate: Gate | null = null;
 
   /**
-   * Restore: scopes, then the local record (no network), then the flag, then resume for a grant
-   * this build admitted or sign out for one it did not (D2). Fresh sign-in: admit the grant and
-   * run the engine, whose own HEAD finds a finished migration. Upgrade: the local record only;
-   * without one, like a sign-in. Never hand-writes the flag.
+   * Restore: scopes, then the local record (no network), then the flag, then resume when this
+   * browser's record saw the flag at an earlier revision or admitted the grant, and sign out
+   * otherwise (D2). Fresh sign-in: admit the grant and run the engine, whose own HEAD finds a
+   * finished migration. Upgrade: the local record only; without one, like a sign-in. Never
+   * hand-writes the flag.
    */
   static async ensureMigrated({
     session,
@@ -111,7 +112,8 @@ export class SocialMigrationController {
         markSocialMigrated(pubky, rev);
         return 'passed';
       }
-      if (!isSocialMigrationGrantAdmitted(record, this.activeGrantId()))
+      // A record that saw the flag means this browser saw the account pass; an outdated flag is then a revision bump
+      if (record?.migratedRev === undefined && !isSocialMigrationGrantAdmitted(record, this.activeGrantId()))
         return this.requireReauth({ generation, isCurrent }, 'pre-migration-grant');
     } else {
       const grantId = this.activeGrantId();
@@ -123,6 +125,11 @@ export class SocialMigrationController {
   /** Whether this browser saw the done flag at this build's revision for `pubky`: no network, no chunk. */
   static hasPassedLocally(pubky: string): boolean {
     return isSocialMigrationRecordTrusted(readSocialMigrationRecord(pubky));
+  }
+
+  /** An upgrade adopted on a trusted record passes without the gate; its grant is admitted all the same. */
+  static admitGrant(pubky: string, grantId: string): void {
+    admitSocialMigrationGrant(pubky, grantId);
   }
 
   /** Retry from the blocked screen. */

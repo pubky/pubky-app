@@ -57,11 +57,12 @@ a trusted local record passes with no store change and no request.
 (`missing-scopes`). On restore: the local record, trusted when it saw the flag at this build's transform revision or a
 later one, passes without network; otherwise the flag is read with the explicit session (a 404 is absent; 401, 403 and
 transport failures throw, so a refused flag never reads as a missing one), a current flag writes the record and passes,
-and an absent or outdated flag either resumes the run for a grant this build admitted or signs the account out
-(`pre-migration-grant`, D2). On a fresh sign-in the grant's session-store id is recorded as admitted and the engine
-runs; its own HEAD finds a finished migration (`already_migrated`). A signup runs the engine inline on its empty tree
-with no screen (the engine writes the flag; the app never hand-writes `_migrated.json`). An upgrade adoption
-(`preserveContext`) consults the local record only and keeps its context when it passes.
+and an absent or outdated flag resumes the run when this browser's record saw the flag at an earlier revision or
+admitted the grant, and otherwise signs the account out (`pre-migration-grant`, D2). On a fresh sign-in the grant's
+session-store id is recorded as admitted and the engine runs; its own HEAD finds a finished migration
+(`already_migrated`). A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the
+app never hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
+keeps its context when it passes and admits its grant.
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen
 (Continue) only when the run skipped or dropped something. `incomplete` and `IO_ERROR` retry on their own
@@ -187,6 +188,10 @@ explanation), is not done.
   owns the outcome from there.
 - The local record trusts a revision it saw; a bumped `transformRev` walks the tree again through the flag read.
 - A second device still migrating while this one signs in passes on its own flag read once the first finishes.
+- A homeserver that does not serve `/priv/` is not reachable with grant-only auth (grant sign-in shipped with `/priv/`),
+  so the gate does not classify its 403 by message (that would be a third boundary exception): a restore's flag read
+  treats that 403 as an error and settles on `temporary-error`, and the engine's `homeserver-unsupported` block shows
+  only on the run that hit it.
 - A restore whose SDK exchange settles after the 12 s UI deadline (`temporary-error`, pubky/pubky-app#3126) re-enters
   `restorePersistedSession` on its own, so the late session still passes `ensureMigrated` before `init` and a gate
   sign-out still ends as `social-migration`; nothing places a late session directly.

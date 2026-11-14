@@ -165,14 +165,38 @@ describe('SocialMigrationController', () => {
     expect(status()).toBe('restoring');
   });
 
-  it('does not trust a record from an older transform revision: the flag is read again and an unadmitted grant signed out', async () => {
+  it('resumes a restore whose record saw an older revision, whatever its grant: the flag is read again and the tree re-walked', async () => {
+    await seedLegacyTree();
+    await homeserver.session.storage.putJson(SOCIAL_MIGRATION_FLAG_PATH, {
+      migrated_at: 1,
+      transform_rev: SOCIAL_MIGRATION_TRANSFORM_REV - 1,
+      skipped: {},
+      migrated: [],
+    });
     writeSocialMigrationRecord(owner, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV - 1, admittedGrantIds: [] });
     const read = vi.spyOn(HomeserverService, 'getBytesIfExists');
+    const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+
+    expect(await ensure('restore')).toBe('passed');
+
+    expect(read).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledOnce();
+    expect(stage().stage).toBe('idle');
+    const flag = JSON.parse(
+      new TextDecoder().decode(await homeserver.session.storage.getBytes(SOCIAL_MIGRATION_FLAG_PATH)),
+    );
+    expect(flag.transform_rev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+  });
+
+  it('signs out a restore whose record never saw the flag and did not admit its grant (D2)', async () => {
+    await seedLegacyTree();
+    writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: ['another-grant'] });
+    const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
 
     expect(await ensure('restore')).toBe('reauth-required');
 
-    expect(read).toHaveBeenCalledOnce();
-    expect(status()).toBe('social-migration');
+    expect(run).not.toHaveBeenCalled();
     expect(stage()).toMatchObject({ stage: 'reauth-required', reason: 'pre-migration-grant' });
   });
 
