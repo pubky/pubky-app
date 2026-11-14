@@ -3,6 +3,7 @@ import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceAlsoOnList } from './ResourceAlsoOnList';
 import { ResourceOccurrencesList } from './ResourceOccurrencesList';
+import { ResourceOtherDatesList } from './ResourceOtherDatesList';
 import { ResourceParticipants } from './ResourceParticipants';
 import { ResourceSimilarList } from './ResourceSimilarList';
 
@@ -21,7 +22,8 @@ interface ResourceSidebarProps {
 
 /**
  * The resource page's sidebar cards: Also on (the card's other links and its group's other members,
- * in one list), then a calendar's Upcoming dates, then Similar, each shown only when it has entries
+ * in one list), then a calendar's Upcoming dates, or a series date's Other dates and More from its
+ * feed (`ResourceOtherDatesList`), then Similar, each shown only when it has entries
  * (Similar also while read, or when it failed); then, as on a post's page, Participants and the
  * Feedback card.
  */
@@ -31,6 +33,7 @@ export function ResourceSidebar({ card, uri, spellings, replyIds = [], showFeedb
     <Container overrideDefaults data-testid="resource-sidebar" className="flex w-full min-w-0 flex-col gap-6">
       {card && <ResourceAlsoOnList card={card} />}
       {card && <ResourceOccurrencesList card={card} />}
+      {card && <ResourceOtherDatesList card={card} />}
       {card && <ResourceSimilarList id={card.id} />}
       {uri && <ResourceParticipants uri={uri} spellings={spellings} replyIds={replyIds} />}
       {uri && showFeedback && <FeedbackCard />}

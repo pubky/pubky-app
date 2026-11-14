@@ -51,8 +51,12 @@ const isRefused = (error: unknown) => isAppError(error) && error.context?.status
  * The service reports a failed read; nothing is logged again here.
  *
  * @param id - Pinakes resource ID (`card.id`); `null` reads nothing
+ * @param options.limit - Dates a page asks for (`EVENT_DATES_PAGE_SIZE`, a calendar's page)
  */
-export function useResourceOccurrences(id: string | null | undefined): UseResourceOccurrencesResult {
+export function useResourceOccurrences(
+  id: string | null | undefined,
+  { limit = EVENT_DATES_PAGE_SIZE }: { limit?: number } = {},
+): UseResourceOccurrencesResult {
   const isEnabled = Boolean(id) && isPinakesConfigured();
   const [read, setRead] = useState<TRead | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -89,7 +93,7 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     };
     PinakesController.fetchOccurrences({
       id,
-      limit: EVENT_DATES_PAGE_SIZE,
+      limit,
       from,
       // Past the cache, which may hold this window's first page with the cursor that was refused
       ...(isReadAgain ? { fresh: true } : {}),
@@ -100,7 +104,7 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     return () => {
       if (current.current === window) current.current = null;
     };
-  }, [id, isEnabled, attempt]);
+  }, [id, isEnabled, attempt, limit]);
 
   // Each new read starts from nothing (`setRead(null)` above), so what is held for this resource is
   // this read's
@@ -117,7 +121,7 @@ export function useResourceOccurrences(id: string | null | undefined): UseResour
     try {
       const page = await PinakesController.fetchOccurrences({
         id: readId,
-        limit: EVENT_DATES_PAGE_SIZE,
+        limit,
         from,
         cursor: shown.cursor,
       });

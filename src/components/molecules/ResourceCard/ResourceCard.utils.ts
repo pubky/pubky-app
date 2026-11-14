@@ -327,6 +327,33 @@ export function formatResourceDates(
   return format.formatRange(start, end);
 }
 
+/** The id of a date page's Other dates section: an event card's "Other dates · N" opens the page there. */
+export const OTHER_DATES_ANCHOR = 'other-dates';
+
+/**
+ * What an event card says of its series' other coming dates (`useEventDates`, by start): how many,
+ * `N+` when the feed has more than one read (`hasMore`), and the next one's day in its own time zone
+ * (`Other dates · 9 · next Wed, Dec 23`). `null` with no other date.
+ */
+export function formatOtherDates(
+  dates: readonly Pick<TPinakesResourceDetail, 'start' | 'tz' | 'all_day'>[],
+  hasMore: boolean,
+  locale?: string,
+): string | null {
+  if (dates.length === 0) return null;
+  const count = `Other dates\u00a0·\u00a0${dates.length}${hasMore ? '+' : ''}`;
+  const [next] = dates;
+  const start = parseDate(next.start);
+  if (!start) return count;
+  const day = createDateFormat(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: next.all_day ? 'UTC' : next.tz || 'UTC',
+  }).format(start);
+  return `${count} · next ${day}`;
+}
+
 /**
  * The note for an event that is not going ahead as planned: a lifecycle Pinakes names in words
  * (`Cancelled`, `Moved online`: `getEventLifecycleLabel`, as a calendar's list of dates says it),

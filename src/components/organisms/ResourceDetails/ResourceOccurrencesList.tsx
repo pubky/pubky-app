@@ -1,17 +1,14 @@
 'use client';
 
 import { ChevronDown, RotateCw } from 'lucide-react';
-import { Badge } from '@/atoms/Badge/Badge';
-import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { EVENT_DATES_PAGE_SIZE } from '@/config/events';
 import { useResourceOccurrences } from '@/hooks/useResourceOccurrences/useResourceOccurrences';
 import { ResourceFamily } from '@/molecules/ResourceCard/ResourceCard.types';
-import { formatResourceDates, getDisplayLink, getResourceFamily } from '@/molecules/ResourceCard/ResourceCard.utils';
-import { getMapsDestination } from '@/molecules/ResourceMap/ResourceMap.utils';
-import { ResourceMapsMenu } from '@/molecules/ResourceMap/ResourceMapsMenu';
-import { getEventLifecycleLabel, getResourceInstanceKey, toEventInstance } from '@/pipes/resource/resource.events';
+import { getResourceFamily } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { getResourceInstanceKey } from '@/pipes/resource/resource.events';
 import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
+import { ResourceOccurrenceRow } from './ResourceOccurrenceRow';
 import { ResourceSection } from './ResourceSection';
 
 /** The card type of a calendar feed, whose page is its list of dates. */
@@ -60,34 +57,9 @@ export function ResourceOccurrencesList({ card, locale }: ResourceOccurrencesLis
       }
       testId="resource-occurrences"
     >
-      {cards.map((occurrence) => {
-        const instance = toEventInstance(occurrence, null);
-        const status = getEventLifecycleLabel(instance.event_status);
-        // A date that has a place ends in "Open in Maps", as every located event does
-        const destination = getMapsDestination(instance, locale);
-        return (
-          <li
-            key={getResourceInstanceKey(occurrence)}
-            data-testid="resource-occurrence"
-            className="flex min-w-0 items-start justify-between gap-2"
-          >
-            <Container overrideDefaults className="flex min-w-0 flex-col gap-0.5">
-              <Typography size="sm" dir="auto" className="font-medium wrap-anywhere">
-                {occurrence.name?.trim() || getDisplayLink(occurrence.uri)}
-              </Typography>
-              <Typography size="xs" className="font-normal text-muted-foreground">
-                {formatResourceDates(instance, locale)}
-              </Typography>
-              {status && (
-                <Badge variant="secondary" data-testid="resource-occurrence-status" className="w-fit">
-                  {status}
-                </Badge>
-              )}
-            </Container>
-            {destination && <ResourceMapsMenu destination={destination} />}
-          </li>
-        );
-      })}
+      {cards.map((occurrence) => (
+        <ResourceOccurrenceRow key={getResourceInstanceKey(occurrence)} occurrence={occurrence} locale={locale} />
+      ))}
       {isMoreError && (
         <li>
           <Typography
