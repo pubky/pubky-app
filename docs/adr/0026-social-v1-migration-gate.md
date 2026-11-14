@@ -101,9 +101,10 @@ is owed on every route (see _Amendment — the explanation is route-independent_
 
 **Screen.** `/migration` → `templates/Auth/SocialMigration` → `organisms/SocialMigrationProgress` over the ephemeral
 `useSocialMigrationStore` (written by `SocialMigrationController` only, progress coalesced to phase changes plus one
-write per `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS`). The reauth state reuses the `/logout` backup rule
-(`useHasBackupAccount`, `AlertBackup`) and then calls `AuthController.logout()` once (Strict Mode included); after the
-logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
+write per `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS`; a run's terminal `incomplete`/`paused`/`aborted` event is not
+written, so the screen keeps the step that stopped while the gate waits to retry). The reauth state reuses the `/logout`
+backup rule (`useHasBackupAccount`, `AlertBackup`) and then calls `AuthController.logout()` once (Strict Mode included);
+after the logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
 
 **Telemetry.** One capture per (account, code) per page, operation `socialMigration`
 (`src/libs/social-migration/report-telemetry.ts`): a blocked run is `Err.server` with `SERVICE_UNAVAILABLE` for

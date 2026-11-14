@@ -529,6 +529,79 @@ describe('SocialMigrationController', () => {
     });
   });
 
+  describe('while it waits to retry', () => {
+    /** The session with every `method` call under `match` failing as the browser's fetch does offline. */
+    const sessionOffline = (method: 'get' | 'exists', match: string) => {
+      const { storage } = homeserver.session;
+      const original = storage[method].bind(storage) as (path: string) => Promise<unknown>;
+      return asOpaque<Session>({
+        ...homeserver.session,
+        info: { ...homeserver.session.info, capabilities: ['/:rw'] },
+        storage: {
+          ...storage,
+          [method]: async (path: string) => {
+            if (path.includes(match)) throw new TypeError('Failed to fetch');
+            return original(path);
+          },
+        },
+      });
+    };
+    const phases = () => {
+      const seen: Array<string | undefined> = [];
+      const unsubscribe = useSocialMigrationStore.subscribe((state) => {
+        if (seen.at(-1) !== state.phase) seen.push(state.phase);
+      });
+      return { seen, unsubscribe };
+    };
+    /** Advances the engine's own transport retries until the run reports, then stays inside the gate's first wait. */
+    const untilFirstReport = async () => {
+      const reported = () => !['running', undefined].includes(readSocialMigrationRecord(owner)?.lastRun?.status);
+      for (let elapsed = 0; !reported(); elapsed += 100) {
+        if (elapsed > 120_000) throw new Error('the run never reported');
+        await vi.advanceTimersByTimeAsync(100);
+      }
+    };
+
+    it('keeps the stopped step in the store while it waits to retry an incomplete run', async () => {
+      vi.useFakeTimers();
+      await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', { name: 'Alice', bio: 'hi' });
+      await homeserver.session.storage.putJson(`/pub/pubky.app/follows/${homeserver.friend}`, { created_at: 1 });
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const { seen, unsubscribe } = phases();
+      const migrating = ensure('signin', sessionOffline('get', '/follows/'));
+
+      await untilFirstReport();
+      unsubscribe();
+
+      expect(readSocialMigrationRecord(owner)?.lastRun?.status).toBe('incomplete');
+      expect(run).toHaveBeenCalledOnce();
+      expect(stage()).toMatchObject({ stage: 'running', phase: 'migrating', attempt: 1, total: 2 });
+      expect(stage().done).toBeGreaterThan(0);
+      expect(seen).not.toContain('incomplete');
+      SocialMigrationController.cancel();
+      expect(await migrating).toBe('canceled');
+    });
+
+    it('keeps the probe step while it waits to retry an unreachable homeserver', async () => {
+      vi.useFakeTimers();
+      await seedLegacyTree();
+      const { seen, unsubscribe } = phases();
+      const migrating = ensure('signin', sessionOffline('exists', '/'));
+
+      await untilFirstReport();
+      unsubscribe();
+
+      expect(readSocialMigrationRecord(owner)?.lastRun).toMatchObject({
+        status: 'aborted',
+        error: { code: 'IO_ERROR' },
+      });
+      expect(stage()).toMatchObject({ stage: 'running', phase: 'probe', attempt: 1 });
+      expect(seen).not.toContain('aborted');
+      SocialMigrationController.cancel();
+      expect(await migrating).toBe('canceled');
+    });
+  });
+
   describe('outcome policy', () => {
     const runs = (...reports: Array<MigrationReport | Error>) => {
       const spy = vi.spyOn(HomeserverService, 'migrateToSocialV1');

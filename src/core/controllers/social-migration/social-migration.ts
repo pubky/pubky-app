@@ -59,6 +59,12 @@ type Gate = {
   unsubscribe: () => void;
 };
 
+/**
+ * A run's last event when it stopped short of the flag: the engine overwrites the phase it stopped in. Never written,
+ * so the screen keeps that step while the gate waits to retry; `done` still flows.
+ */
+const STOPPED_PHASES: ReadonlySet<ProgressEvent['phase']> = new Set(['incomplete', 'paused', 'aborted']);
+
 /** A timer that ends early when `signal` fires. */
 const abortableSleep = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
@@ -350,7 +356,7 @@ export class SocialMigrationController {
     let lastPhase: ProgressEvent['phase'] | undefined;
     let lastPass: ProgressEvent['pass'];
     return (event) => {
-      if (gate.abort.signal.aborted) return;
+      if (gate.abort.signal.aborted || STOPPED_PHASES.has(event.phase)) return;
       const now = Date.now();
       const changed = event.phase !== lastPhase || event.pass !== lastPass;
       if (!changed && now - lastWrite < SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS) return;
