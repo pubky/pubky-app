@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { PinakesController } from '@/controllers/pinakes/pinakes';
-import { getResourceInstanceKey, type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
+import {
+  getResourceInstanceKey,
+  isSameEventDate,
+  type TEventInstance,
+  toEventInstance,
+} from '@/pipes/resource/resource.events';
 import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
 
 /**
@@ -56,7 +61,10 @@ export function useEventInstances(cards: readonly TPinakesCard[]): { instances: 
         const version = getRowVersion(card);
         if (asked.current.get(version) !== ask) return [];
         const answer = instances.at(index);
-        const isOwn = answer !== undefined && getResourceInstanceKey(answer) === getResourceInstanceKey(card);
+        // The row's own event, or the page of a feed's date (`fetchEventInstances`), the same date
+        const isOwn =
+          answer !== undefined &&
+          (getResourceInstanceKey(answer) === getResourceInstanceKey(card) || isSameEventDate(answer, card));
         return [[version, isOwn ? answer : toEventInstance(card, null)] as const];
       });
       if (own.length > 0) setRead((prev) => new Map([...prev, ...own]));

@@ -106,6 +106,16 @@ export function getEventFeed(
   return occurrence ? { id: occurrence.feed_id, uri: occurrence.feed_uri } : null;
 }
 
+/**
+ * The page of a group of one date (a date page joined with the feed's date of it): its member that
+ * is no feed's date. `null` for no group read, or a group of feed's dates only.
+ */
+export function getGroupPage<T extends Pick<TPinakesCard, 'occurrence'>>(
+  members: readonly T[] | null | undefined,
+): T | null {
+  return members?.find((member) => !member.occurrence) ?? null;
+}
+
 /** A name as two dates of one series are compared: trimmed and case-folded. */
 const toSeriesName = (name: string | null | undefined) => name?.trim().toLocaleLowerCase() ?? '';
 

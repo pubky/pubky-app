@@ -1,7 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
+import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
 import eventsFixture from '@/services/pinakes/fixtures/search.events.json';
+import meetupCollapsedFixture from '@/services/pinakes/fixtures/search.meetup-collapsed.json';
 import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
 import { useEventInstances } from './useEventInstances';
 
@@ -33,6 +35,31 @@ describe('useEventInstances', () => {
     // The three holidays of one calendar are three events
     expect(result.current.instances.filter((instance) => instance.occurrence)).toHaveLength(3);
     expect(result.current.instances.find((instance) => !instance.occurrence)?.tz).toBe('Europe/Zurich');
+  });
+
+  it('shows a feed’s date as its page when the read answers the page for it, in the row’s place', async () => {
+    const rows: TPinakesCard[] = meetupCollapsedFixture.items;
+    const page: TEventInstance = { ...meetupDateFixture, tz: 'Europe/Zurich' };
+    mocks.fetchEventInstances.mockImplementation(async ({ cards }: { cards: TPinakesCard[] }) =>
+      cards.map((card) => (card.group?.id === page.group?.id ? page : toEventInstance(card, null))),
+    );
+
+    const { result } = renderHook(() => useEventInstances(rows));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.instances).toHaveLength(rows.length);
+    expect(result.current.instances[1]).toBe(page);
+    expect(result.current.instances.filter((instance) => instance.start === page.start)).toEqual([page]);
+  });
+
+  it('keeps a row as the search gave it when the read answers another event for it', async () => {
+    const [nov25]: TPinakesCard[] = meetupCollapsedFixture.items;
+    mocks.fetchEventInstances.mockResolvedValue([meetupDateFixture]);
+
+    const { result } = renderHook(() => useEventInstances([nov25]));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.instances).toEqual([toEventInstance(nov25, null)]);
   });
 
   it('reads only the next page’s rows when more come, and keeps showing the ones it has', async () => {

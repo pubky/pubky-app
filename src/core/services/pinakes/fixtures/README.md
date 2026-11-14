@@ -70,3 +70,7 @@ the Dec 9 page, its token link the `uri`, its number link an alias), `by-uri.mee
 `group.meetup-date.json` (`/v1/groups/73214ce6c99037f938ec3f80773de156`: the page and the feed's
 date of it) and `occurrences.meetup.json` (`/v1/resources/51ee469240e25fe6a378dc8d317e3f89/occurrences`)
 are trimmed: each card's `description` (the same long text on every date) is left out, nothing else.
+So are `group.meetup-date-jan6.json` (the Jan 6 page's group), `search.meetup.json`
+(`/v1/search?q=Bitcoin Meetup&type=Event&sort=start&from=now`: the Dec 9 and Jan 6 dates twice, page and
+feed's date) and `search.meetup-collapsed.json` (the same with `collapse=group`, as the agenda asks: those
+two dates only as the feed's rows, each with its group), captured once posts referenced the dates.
