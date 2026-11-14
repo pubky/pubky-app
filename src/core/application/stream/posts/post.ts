@@ -53,6 +53,7 @@ import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
+import { carryNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import { NexusResourceService } from '@/services/nexus/resource/resource';
 import type { TResourceRepliesParams } from '@/services/nexus/resource/resource.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
@@ -790,7 +791,11 @@ export class PostStreamApplication {
     const isStale = () => isCurrent !== undefined && !isCurrent();
     if (isStale()) return null;
     const withFiles = posts.filter((post) => (post.details.attachments?.length ?? 0) > 0);
-    const plain = posts.filter((post) => !withFiles.includes(post));
+    // The page's Nexus stamp goes with it, so the tag cache rows it writes carry it (`persistPosts`).
+    const plain = carryNexusResponseStartedAt(
+      posts,
+      posts.filter((post) => !withFiles.includes(post)),
+    );
     if (plain.length > 0) {
       const revisions = await LocalTagCacheService.captureRevisions('post', plain.map(idOf));
       if (isStale()) return null;

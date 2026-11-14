@@ -197,7 +197,12 @@ export class BookmarkApplication {
    * @returns The bookmarked links as written, each once, in the listing's order
    */
   static async fetchResourceBookmarks(pubky: Pubky): Promise<string[]> {
-    const urls = await HomeserverService.listAll({ baseDirectory: `${listPrefix(pubky, 'private')}bookmarks/` });
+    const baseDirectory = `${listPrefix(pubky, 'private')}bookmarks/`;
+    // Bounded like `fetchBookmarks`: a homeserver read that never answers fails the read, not the surface waiting.
+    const urls = await awaitBounded(HomeserverService.listAll({ baseDirectory }), {
+      operation: 'fetchResourceBookmarks',
+      context: { baseDirectory },
+    });
     const targets: (string | null)[] = [];
     const overflow: string[] = [];
     for (const url of urls) {
@@ -209,8 +214,17 @@ export class BookmarkApplication {
     const stored = new Map<string, string | undefined>();
     for (let index = 0; index < overflow.length; index += this.FETCH_BOOKMARKS_BATCH_SIZE) {
       const batch = overflow.slice(index, index + this.FETCH_BOOKMARKS_BATCH_SIZE);
+      // Each GET bounded on its own: a file whose read stalls is left out like one whose read fails.
       const results = await Promise.allSettled(
-        batch.map(async (url) => BookmarkNormalizer.resourceOfStored(url, await HomeserverService.getBytes(url))),
+        batch.map(async (url) =>
+          BookmarkNormalizer.resourceOfStored(
+            url,
+            await awaitBounded(HomeserverService.getBytes(url), {
+              operation: 'fetchResourceBookmarks',
+              context: { url },
+            }),
+          ),
+        ),
       );
       results.forEach((result, batchIndex) => {
         if (result.status === 'fulfilled') stored.set(batch[batchIndex], result.value);
