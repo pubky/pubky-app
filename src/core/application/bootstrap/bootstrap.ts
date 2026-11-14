@@ -5,7 +5,6 @@ import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { HttpMethod } from '@/libs/http/http.types';
 import { parseJsonBytesOrUndefined } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
@@ -16,7 +15,6 @@ import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalHotService } from '@/services/local/hot/hot';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamTagsService } from '@/services/local/stream/tags/tags';
@@ -140,6 +138,12 @@ export class BootstrapApplication {
    * missing it is created with the value returned, so the first bootstrap after the migration
    * gate carries the 0.x cursor over; the 0.x file is left in place.
    *
+   * The copy runs in the background through the forward-only `last_read` writer
+   * (`NotificationApplication.markAllAsRead`): it re-reads the v1 file right before every write,
+   * the first included, and keeps a value another device wrote meanwhile when it is not older, so
+   * a mark-all-read that lands between this read and the copy is never moved back. It never
+   * rejects: a refused write is logged and the next bootstrap finds the file missing again.
+   *
    * @private
    * @param params, Bootstrap parameters
    * @param params.pubky, The user's public key identifier
@@ -153,14 +157,21 @@ export class BootstrapApplication {
     const legacy = await this.fetchLastReadAt(LastReadNormalizer.buildLegacyUrl(pubky));
     if (legacy !== null) {
       Logger.info('Last read file found at its 0.x path only, copying it...', { pubky });
-      void this.createMissingLastRead(lastReadUrl, { timestamp: legacy });
+      this.publishMissingLastRead(lastReadUrl, legacy);
       return legacy;
     }
 
     Logger.info('Last read file not found, creating new one...', { pubky });
     const { lastRead } = LastReadNormalizer.to(pubky);
-    void this.createMissingLastRead(lastReadUrl, lastRead);
+    this.publishMissingLastRead(lastReadUrl, lastRead.timestamp);
     return lastRead.timestamp;
+  }
+
+  /** Writes the cursor a read just found missing through the forward-only writer, in the background. */
+  private static publishMissingLastRead(url: string, timestamp: number): void {
+    void NotificationApplication.markAllAsRead({ url, lastRead: { timestamp } }).catch((error: unknown) =>
+      Logger.warn('Failed to create the missing last read file', { url, error }),
+    );
   }
 
   /** The cursor stored at `url`, or null when the file is absent. Any other failure rejects. */
@@ -174,26 +185,5 @@ export class BootstrapApplication {
     if (typeof lastRead?.timestamp === 'number') return lastRead.timestamp;
     Logger.warn('Last read file holds no timestamp', { url });
     return null;
-  }
-
-  /**
-   * Creates the last-read file a read just found missing, from the 0.x cursor or a fresh one.
-   * Before a retry (429, 500, 503 or the publish conflict) it is checked again, and a file
-   * another client created meanwhile is kept rather than overwritten. Callers run it in the
-   * background and it never rejects: a refused write is logged here (the request already reported
-   * it) and the next bootstrap finds the file missing again.
-   */
-  private static async createMissingLastRead(url: string, bodyJson: Record<string, unknown>): Promise<void> {
-    const fence = HomeserverService.createWriteFence();
-    let seenMissing = true;
-    try {
-      await retryHomeserverWriteAfterReread(fence, async () => {
-        if (!seenMissing && (await HomeserverService.exists(url))) return;
-        seenMissing = false;
-        await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson, fence });
-      });
-    } catch (error) {
-      Logger.warn('Failed to create the missing last read file', { url, error });
-    }
   }
 }

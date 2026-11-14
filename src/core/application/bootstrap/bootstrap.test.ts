@@ -6,8 +6,9 @@ import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
+import { NotificationApplication } from '@/application/notification/notification';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -38,6 +39,7 @@ import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
 import { NexusFileService } from '@/services/nexus/file/file';
 import { type NexusNotification, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { BootstrapApplication } from './bootstrap';
 
@@ -137,6 +139,32 @@ const storedJson = (doc: unknown): THomeserverBytesResult => ({
 /** A homeserver holding only the 0.x lastRead `legacy` (when given): every other read is absent (404). */
 const legacyOnly = (legacy?: number) => async (url: string) =>
   url === LEGACY_LAST_READ_URL && legacy !== undefined ? storedJson({ timestamp: legacy }) : null;
+
+/**
+ * The v1 lastRead as the forward-only writer's re-read (a GET request) finds it: `published(n)` answers the
+ * n-th re-read (0-based), null while the file is absent. A PUT passes the write fence first, as
+ * `HomeserverService.request` does on its first attempt, then `put(n)` answers the n-th PUT (stored by default).
+ */
+const lastReadServer = ({
+  published,
+  put = async () => undefined,
+}: {
+  published: (reread: number) => number | null | Promise<number | null>;
+  put?: (attempt: number) => Promise<undefined>;
+}) => {
+  const puts: unknown[] = [];
+  let rereads = 0;
+  const spy = vi.spyOn(HomeserverService, 'request').mockImplementation(async ({ method, bodyJson, fence }) => {
+    if (method === HttpMethod.GET) {
+      const timestamp = await published(rereads++);
+      return timestamp === null ? null : { timestamp };
+    }
+    fence?.assertCurrent();
+    puts.push(bodyJson);
+    return await put(puts.length - 1);
+  });
+  return { spy, puts, rereads: () => rereads };
+};
 
 /** The read and request calls in order: `['read', url]` for a read, `[method, url]` for a request. */
 const homeserverCalls = (
@@ -422,15 +450,17 @@ describe('BootstrapApplication', () => {
           MOCK_LAST_READ_URL,
         );
 
-      const run = async (existsAfterConflict: boolean, legacy?: number) => {
+      /** The copy's first PUT is refused; the retry's re-read then finds `publishedAfterConflict`. */
+      const run = async (publishedAfterConflict: number | null, legacy?: number) => {
         setupMocks({ bootstrapData: emptyBootstrap() });
         vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(legacyOnly(legacy));
-        let puts = 0;
-        const requestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(() => {
-          puts += 1;
-          return puts === 1 ? Promise.reject(publishConflict()) : Promise.resolve(undefined);
+        const server = lastReadServer({
+          published: (reread) => (reread === 0 ? null : publishedAfterConflict),
+          put: async (attempt) => {
+            if (attempt === 0) throw publishConflict();
+            return undefined;
+          },
         });
-        const existsSpy = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(existsAfterConflict);
         vi.spyOn(LastReadNormalizer, 'to').mockReturnValue({
           url: MOCK_LAST_READ_URL,
           lastRead: { timestamp: MOCK_NORMALIZED_TIMESTAMP },
@@ -438,9 +468,12 @@ describe('BootstrapApplication', () => {
         vi.spyOn(Logger, 'info').mockImplementation(() => {});
 
         const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
-        await vi.waitFor(() => expect(existsSpy).toHaveBeenCalledWith(MOCK_LAST_READ_URL));
+        await vi.waitFor(() => expect(server.rereads()).toBe(2));
         await new Promise((resolve) => setTimeout(resolve, 0));
-        return { result, puts: requestSpy.mock.calls.filter(([params]) => params.method === HttpMethod.PUT) };
+        return {
+          result,
+          puts: server.spy.mock.calls.filter(([params]) => params.method === HttpMethod.PUT),
+        };
       };
 
       beforeEach(() => {
@@ -451,26 +484,108 @@ describe('BootstrapApplication', () => {
         installHomeserverWriteRetryDependenciesForTests(null);
       });
 
-      it('keeps a lastRead another client created meanwhile instead of overwriting it', async () => {
-        const { puts } = await run(true);
+      it('keeps a newer lastRead another client wrote meanwhile instead of overwriting it', async () => {
+        const { puts } = await run(MOCK_NORMALIZED_TIMESTAMP + 1);
 
         expect(puts).toHaveLength(1);
         expect(puts[0][0]).toMatchObject({ url: MOCK_LAST_READ_URL, fence: expect.anything() });
       });
 
       it('writes again when the lastRead is still missing', async () => {
-        const { puts } = await run(false);
+        const { puts } = await run(null);
 
         expect(puts).toHaveLength(2);
         expect(puts[1][0]).toEqual(puts[0][0]);
       });
 
-      it('keeps a v1 lastRead another client created before the retried copy of the 0.x one', async () => {
-        const { result, puts } = await run(true, LEGACY_TIMESTAMP);
+      it('keeps a v1 lastRead another client wrote before the retried copy of the 0.x one', async () => {
+        const { result, puts } = await run(5000, LEGACY_TIMESTAMP);
 
         expect(result.lastRead).toBe(LEGACY_TIMESTAMP);
         expect(puts).toHaveLength(1);
         expect(puts[0][0]).toMatchObject({ url: MOCK_LAST_READ_URL, bodyJson: { timestamp: LEGACY_TIMESTAMP } });
+      });
+    });
+
+    describe('when the copy of the 0.x lastRead re-reads the v1 file before it writes', () => {
+      const LEGACY_TIMESTAMP = 1234;
+
+      const run = async (publishedAtCopy: number | null) => {
+        setupMocks({ bootstrapData: emptyBootstrap() });
+        vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(legacyOnly(LEGACY_TIMESTAMP));
+        const server = lastReadServer({ published: () => publishedAtCopy });
+        const copy = vi.spyOn(NotificationApplication, 'markAllAsRead');
+        vi.spyOn(Logger, 'info').mockImplementation(() => {});
+
+        const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+        // The background copy resolves with the timestamp now published
+        const published = await copy.mock.results[0].value;
+        return { result, puts: server.puts, published };
+      };
+
+      it('keeps a newer v1 lastRead written between the 0.x read and the copy', async () => {
+        // Another device marked everything read after this bootstrap found the v1 file missing
+        const { result, puts, published } = await run(5000);
+
+        expect(puts).toEqual([]);
+        expect(published).toBe(5000);
+        expect(result.lastRead).toBe(LEGACY_TIMESTAMP);
+      });
+
+      it('writes the 0.x cursor when the re-read finds v1 still absent', async () => {
+        const { puts } = await run(null);
+
+        expect(puts).toEqual([{ timestamp: LEGACY_TIMESTAMP }]);
+      });
+
+      it('writes the 0.x cursor over an older v1 lastRead the re-read finds', async () => {
+        const { puts } = await run(1000);
+
+        expect(puts).toEqual([{ timestamp: LEGACY_TIMESTAMP }]);
+      });
+
+      it('writes nothing when the re-read finds the same v1 lastRead', async () => {
+        const { puts, published } = await run(LEGACY_TIMESTAMP);
+
+        expect(puts).toEqual([]);
+        expect(published).toBe(LEGACY_TIMESTAMP);
+      });
+
+      it('sends nothing once the session ends before the copy writes: the first pass is guarded', async () => {
+        setupMocks({ bootstrapData: emptyBootstrap() });
+        vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(legacyOnly(LEGACY_TIMESTAMP));
+        let releaseReread!: () => void;
+        const reread = new Promise<void>((resolve) => {
+          releaseReread = resolve;
+        });
+        const server = lastReadServer({
+          published: async () => {
+            await reread;
+            return null;
+          },
+        });
+        vi.spyOn(Logger, 'info').mockImplementation(() => {});
+        vi.spyOn(Logger, 'error').mockImplementation(() => {});
+        const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+        try {
+          const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+          await vi.waitFor(() => expect(server.rereads()).toBe(1));
+          // Logout begins while the copy is still reading the v1 file
+          useAuthStore.setState({ isLoggingOut: true });
+          releaseReread();
+
+          await vi.waitFor(() =>
+            expect(loggerWarnSpy).toHaveBeenCalledWith('Failed to create the missing last read file', {
+              url: MOCK_LAST_READ_URL,
+              error: expect.objectContaining({ code: AuthErrorCode.SESSION_EXPIRED }),
+            }),
+          );
+          expect(server.puts).toEqual([]);
+          expect(result.lastRead).toBe(LEGACY_TIMESTAMP);
+        } finally {
+          useAuthStore.setState({ isLoggingOut: false });
+        }
       });
     });
 
@@ -485,7 +600,12 @@ describe('BootstrapApplication', () => {
         setupMocks({ bootstrapData: emptyBootstrap() });
         vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(legacyOnly(legacy));
         const failure = new Error('put-refused');
-        vi.spyOn(HomeserverService, 'request').mockRejectedValue(failure);
+        const server = lastReadServer({
+          published: () => null,
+          put: async () => {
+            throw failure;
+          },
+        });
         vi.spyOn(LastReadNormalizer, 'to').mockReturnValue({
           url: MOCK_LAST_READ_URL,
           lastRead: { timestamp: MOCK_NORMALIZED_TIMESTAMP },
@@ -502,6 +622,7 @@ describe('BootstrapApplication', () => {
             error: failure,
           }),
         );
+        expect(server.puts).toHaveLength(1);
       });
     });
 
@@ -523,9 +644,11 @@ describe('BootstrapApplication', () => {
         pubky: TEST_PUBKY,
       });
       expect(lastReadNormalizerSpy).not.toHaveBeenCalled();
+      // The copy re-reads the v1 file right before it writes (the forward-only last_read writer)
       expect(homeserverCalls(homeserverReadSpy, homeserverRequestSpy)).toEqual([
         ['read', MOCK_LAST_READ_URL],
         ['read', LEGACY_LAST_READ_URL],
+        [HttpMethod.GET, MOCK_LAST_READ_URL],
         [HttpMethod.PUT, MOCK_LAST_READ_URL],
       ]);
       expect(homeserverRequestSpy).toHaveBeenLastCalledWith({
