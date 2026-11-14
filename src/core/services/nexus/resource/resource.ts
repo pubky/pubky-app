@@ -303,7 +303,8 @@ export class NexusResourceService {
       viewer_id: viewerId ?? undefined,
     });
     // Always a fresh page, as the replies: a feed is read page by page as it scrolls.
-    return queryNexus<NexusResourceView[]>({ url, force: true });
+    const views = await queryNexus<NexusResourceViewWire[]>({ url, force: true });
+    return mapNexusResponse(views, fromNexusView);
   }
 
   /**
