@@ -3,11 +3,15 @@
 import { useState } from 'react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { useUnlockedMedia } from '@/hooks/useUnlockedMedia/useUnlockedMedia';
 import { isArticleContent } from '@/libs/post/articleContent';
-import { PostArticle } from '@/organisms/PostArticle/PostArticle';
+import { ArticleReader } from '@/organisms/ArticleReader/ArticleReader';
+import { PostArticle, PostArticleTitle } from '@/organisms/PostArticle/PostArticle';
+import type { AttachmentConstructed, PendingAttachment } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostBody } from '@/organisms/PostBody/PostBody';
 import type { TUnlockedListItem } from '@/services/locks/locks.types';
+import { FileVariant } from '@/services/nexus/file/file.types';
 
 /** One unlocked post, rendered from the reader's own replica. */
 export function ProfileUnlockedCard({ post }: Pick<TUnlockedListItem, 'post'>) {
@@ -25,13 +29,16 @@ export function ProfileUnlockedCard({ post }: Pick<TUnlockedListItem, 'post'>) {
     <Container data-cy="profile-unlocked-card" className="gap-3 rounded-lg bg-card p-4">
       {isArticle ? (
         <>
-          <PostArticle
-            content={post.content}
-            attachments={null}
-            localAttachments={media}
-            variant={isReadingArticle ? 'full' : 'preview'}
-            pendingAttachments={pendingAttachments}
-          />
+          {isReadingArticle ? (
+            <UnlockedArticleRead content={post.content} media={media} pendingAttachments={pendingAttachments} />
+          ) : (
+            <PostArticle
+              content={post.content}
+              attachments={null}
+              localAttachments={media}
+              pendingAttachments={pendingAttachments}
+            />
+          )}
           {!isReadingArticle && (
             <Button
               type="button"
@@ -48,5 +55,37 @@ export function ProfileUnlockedCard({ post }: Pick<TUnlockedListItem, 'post'>) {
         <PostBody content={post.content} attachments={null} localAttachments={media} />
       )}
     </Container>
+  );
+}
+
+function UnlockedArticleRead({
+  content,
+  media,
+  pendingAttachments,
+}: {
+  content: string;
+  media: AttachmentConstructed[];
+  pendingAttachments: PendingAttachment[];
+}) {
+  const { title, body, coverImage, isCoverPending } = usePostArticle({
+    content,
+    attachments: null,
+    localAttachments: media,
+    pendingAttachments,
+    coverImageVariant: FileVariant.FEED,
+  });
+
+  return (
+    <>
+      <PostArticleTitle title={title} />
+      <Container>
+        <ArticleReader
+          body={body}
+          coverImage={coverImage}
+          isCoverPending={isCoverPending}
+          articleMedia={{ localAttachments: media, pendingAttachments }}
+        />
+      </Container>
+    </>
   );
 }

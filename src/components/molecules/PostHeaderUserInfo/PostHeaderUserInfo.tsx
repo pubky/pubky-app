@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
@@ -42,6 +42,7 @@ interface PostHeaderUserInfoProps {
    * change the route behind the open modal. Defaults to `true`.
    */
   navigable?: boolean;
+  metadataSlot?: ReactNode;
 }
 
 export function PostHeaderUserInfo({
@@ -58,6 +59,7 @@ export function PostHeaderUserInfo({
   characterLimit,
   characterLimitPlacement = 'metadata',
   navigable = true,
+  metadataSlot,
 }: PostHeaderUserInfoProps) {
   const [isStatusTooltipOpen, setIsStatusTooltipOpen] = useState(false);
   const formattedPublicKey = formatPublicKey({ key: userId });
@@ -210,6 +212,7 @@ export function PostHeaderUserInfo({
           </Typography>
           {characterLimitPlacement === 'metadata' && characterLimitContent}
           {timeAgo && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
+          {metadataSlot}
         </Container>
       </Container>
     </Container>

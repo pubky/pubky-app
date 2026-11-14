@@ -371,6 +371,25 @@ describe('PostHeaderUserInfo', () => {
     expect(characterCount.parentElement).toHaveTextContent(formattedPublicKey);
   });
 
+  it('ends the public-key metadata row with the metadata slot', () => {
+    const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
+
+    render(
+      <PostHeaderUserInfo
+        userId="userpubkykey"
+        userName="Test User"
+        showPopover={false}
+        timeAgo="15m"
+        indexedAt={new Date()}
+        metadataSlot={<span>Unlocked</span>}
+      />,
+    );
+
+    const slot = screen.getByText('Unlocked');
+    expect(slot.parentElement).toHaveTextContent(formattedPublicKey);
+    expect(slot.parentElement?.lastElementChild).toBe(slot);
+  });
+
   it('turns the character count destructive at the limit (issue #1761)', () => {
     const { rerender } = render(
       <PostHeaderUserInfo

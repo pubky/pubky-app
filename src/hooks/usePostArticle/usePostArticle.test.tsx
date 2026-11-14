@@ -1,8 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { POST_COVER_DESKTOP_VARIANT, POST_COVER_MOBILE_VARIANT } from '@/libs/post/postCoverVariant';
 import { toast } from '@/molecules/Toaster/toast';
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { usePostArticle } from './usePostArticle';
@@ -87,6 +91,19 @@ describe('usePostArticle', () => {
 
       expect(result.current.title).toBe('My Article Title');
       expect(result.current.body).toBe('This is the article body content.');
+    });
+
+    it('returns the title and body on the first render', () => {
+      const content = JSON.stringify({ title: 'My Article Title', body: 'The body.' });
+      const renders: string[] = [];
+
+      renderHook(() => {
+        const result = usePostArticle({ content, attachments: null, coverImageVariant: FileVariant.FEED });
+        renders.push(result.title);
+        return result;
+      });
+
+      expect(renders[0]).toBe('My Article Title');
     });
 
     it('handles empty title and body', () => {
@@ -354,13 +371,13 @@ describe('usePostArticle', () => {
       // Only the row can say what slot 0 is, so nothing paints until it does: no PDF flashes as a
       // cover and then vanishes.
       expect(result.current.coverImage).toBeNull();
-      expect(result.current.hasCover).toBe(true);
+      expect(result.current.isCoverLoading).toBe(true);
 
       await waitFor(() => {
         expect(result.current.isCoverLoading).toBe(false);
       });
       expect(result.current.coverImage).toBeNull();
-      expect(result.current.hasCover).toBe(false);
+      expect(result.current.isCoverPending).toBe(false);
     });
 
     it('drops an envelope cover whose row says it is not an image', async () => {
@@ -411,7 +428,7 @@ describe('usePostArticle', () => {
         expect(result.current.isCoverLoading).toBe(false);
       });
       expect(result.current.coverImage).toBeNull();
-      expect(result.current.hasCover).toBe(false);
+      expect(result.current.isCoverPending).toBe(false);
     });
 
     it('drops an envelope cover once its lookup settles with no file row', async () => {
@@ -495,8 +512,8 @@ describe('usePostArticle', () => {
         }),
       );
 
-      // The candidate counts as a cover slot while its row is out; nothing paints
-      expect(result.current.hasCover).toBe(true);
+      // The candidate's row is requested while nothing paints
+      expect(result.current.isCoverLoading).toBe(true);
       expect(result.current.coverImage).toBeNull();
 
       await waitFor(() => {
@@ -512,7 +529,7 @@ describe('usePostArticle', () => {
         expect(result.current.isCoverLoading).toBe(false);
       });
       expect(result.current.coverImage).toBeNull();
-      expect(result.current.hasCover).toBe(false);
+      expect(result.current.isCoverPending).toBe(false);
     });
 
     it('never shows the previous cover for a replaced attachment whose lookup fails', async () => {
@@ -669,12 +686,34 @@ describe('cover first paint (envelope cover)', () => {
         attachments,
         coverImageVariant: FileVariant.FEED,
         coverImageDesktopVariant: FileVariant.MAIN,
-        localCoverType: 'video/mp4',
+        localCover: { type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } },
       }),
     );
 
-    expect(result.current.hasCover).toBe(true);
     expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverPending).toBe(false);
+  });
+
+  it('never takes its type, or its file, from slot 0, which is a body image', () => {
+    // The row is never going to land: only the envelope says there is a cover
+    mockGetMetadata.mockReturnValue(new Promise(() => {}));
+    const clip = { type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } };
+    const shot = { type: 'image/png', name: 'shot.png', urls: { main: 'blob:shot' } };
+
+    const { result, rerender } = renderHook(
+      ({ localAttachments }) =>
+        usePostArticle({
+          content,
+          attachments: ['pubky://user123/pub/pubky.app/files/inline'],
+          coverImageVariant: FileVariant.FEED,
+          localAttachments,
+        }),
+      { initialProps: { localAttachments: [clip] } },
+    );
+    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
+
+    rerender({ localAttachments: [shot] });
+    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
   });
 
   it('fills the alt text from the file row once it lands, keeping the URL', async () => {
@@ -756,10 +795,8 @@ describe('0.x cover (rule B): slot 0 is the cover only once its row says image',
       }),
     );
 
-    // The slot's kind is the row's to say, so there is no provisional paint; the candidate still
-    // counts as a cover slot, and its row is requested.
+    // The slot's kind is the row's to say, so there is no provisional paint; its row is requested.
     expect(result.current.coverImage).toBeNull();
-    expect(result.current.hasCover).toBe(true);
     expect(result.current.isCoverLoading).toBe(true);
 
     await waitFor(() => {
@@ -769,7 +806,6 @@ describe('0.x cover (rule B): slot 0 is the cover only once its row says image',
     // The same variants the server preload resolved for the candidate, so the bytes are already in flight
     expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
     expect(result.current.coverImage?.desktopSrc).toBe('https://cdn.example.com/user123:file456/large');
-    expect(result.current.hasCover).toBe(true);
   });
 
   it('never paints a video at slot 0, and reports no cover once the row says so', async () => {
@@ -791,11 +827,11 @@ describe('0.x cover (rule B): slot 0 is the cover only once its row says image',
       expect(result.current.isCoverLoading).toBe(false);
     });
     expect(result.current.coverImage).toBeNull();
-    expect(result.current.hasCover).toBe(false);
+    expect(result.current.isCoverPending).toBe(false);
   });
 
   it('reports no cover at once when the local slot-0 entry is not an image, and reads no row', () => {
-    // Unlocked (Locks) content: the entry's type is the slot's metadata
+    // The entry, index-aligned with the attachments, already knows its type: the slot's metadata
     mockGetMetadata.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() =>
@@ -803,12 +839,12 @@ describe('0.x cover (rule B): slot 0 is the cover only once its row says image',
         content,
         attachments,
         coverImageVariant: FileVariant.FEED,
-        localCoverType: 'video/mp4',
+        localAttachments: [{ type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } }],
       }),
     );
 
-    expect(result.current.hasCover).toBe(false);
     expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverPending).toBe(false);
     expect(result.current.isCoverLoading).toBe(false);
     expect(mockGetMetadata).not.toHaveBeenCalled();
   });
@@ -821,12 +857,56 @@ describe('0.x cover (rule B): slot 0 is the cover only once its row says image',
         content,
         attachments,
         coverImageVariant: FileVariant.FEED,
-        localCoverType: 'image/png',
+        localAttachments: [{ type: 'image/png', name: 'shot.png', urls: { main: 'blob:shot' } }],
       }),
     );
 
-    expect(result.current.hasCover).toBe(true);
-    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
+    // The entry is the cover and already says image: no row stands in front of it
+    expect(result.current.coverImage?.src).toBe('blob:shot');
+    expect(result.current.isCoverLoading).toBe(false);
+  });
+
+  it("never paints a stale list's slot 0 in place of a slot 0 its row has not settled", async () => {
+    // The lists differ in length, so the local slot 0 says nothing about `attachments[0]` (see the
+    // guard below): the row alone settles rule B, and the cover it settles on is the remote file
+    const row = Promise.withResolvers<NexusFileDetails[]>();
+    mockGetMetadata.mockReturnValue(row.promise);
+    const shot = { type: 'image/png', name: 'shot.png', urls: { main: 'blob:shot' } };
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: [...attachments, 'pubky://user123/pub/pubky.app/files/file789'],
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [shot],
+      }),
+    );
+    expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverLoading).toBe(true);
+
+    row.resolve([createMockImageMetadata('user123:file456')]);
+    await waitFor(() => expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed'));
+  });
+
+  it('takes the type from slot 0 only while the local list matches the attachment list', async () => {
+    // dev's index-aligned guard, told for rule B: right after an edit the store already holds the
+    // new order while this render still shows the old post
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456', 'cover.jpg')]);
+    const clip = { type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } };
+    const twoAttachments = [...attachments, 'pubky://user123/pub/pubky.app/files/file789'];
+
+    const { result, rerender } = renderHook(
+      ({ localAttachments }) =>
+        usePostArticle({ content, attachments: twoAttachments, coverImageVariant: FileVariant.FEED, localAttachments }),
+      { initialProps: { localAttachments: [clip, clip] } },
+    );
+    // Aligned: a video in slot 0 settles rule B at once, with no row read
+    expect(result.current.coverImage).toBeNull();
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+
+    // Not aligned: slot 0 is the row's to say again, and the row says image
+    rerender({ localAttachments: [clip] });
+    await waitFor(() => expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed'));
   });
 
   it('keeps no cover when slot 0 is not a homeserver file uri', async () => {
@@ -870,10 +950,12 @@ describe('slot-0 cover rule (inline images)', () => {
       }),
     );
 
-    expect(result.current.hasCover).toBe(true);
+    // Rule B: a 0.x slot 0 waits for its row (dev's synchronous paint is the envelope cover's alone)
+    expect(result.current.coverImage).toBeNull();
     await waitFor(() => {
       expect(result.current.coverImage?.alt).toBe('cover.jpg');
     });
+    expect(result.current.coverImage?.src).toBe('https://cdn.example/slot0/main');
     // Only the cover slot is resolved, never the inline attachments
     expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [attachments[0]] });
   });
@@ -887,38 +969,11 @@ describe('slot-0 cover rule (inline images)', () => {
       }),
     );
 
-    expect(result.current.hasCover).toBe(false);
     await waitFor(() => {
       expect(result.current.body).toContain('attachment:0');
     });
     expect(result.current.coverImage).toBeNull();
     expect(mockGetMetadata).not.toHaveBeenCalled();
-  });
-
-  it('reports no cover when there are no attachments', () => {
-    const { result } = renderHook(() =>
-      usePostArticle({
-        content: articleContent('Plain body'),
-        attachments: null,
-        coverImageVariant: FileVariant.MAIN,
-      }),
-    );
-
-    expect(result.current.hasCover).toBe(false);
-  });
-
-  it('reports a cover from local attachments alone, as unlocked content has no Nexus ones', () => {
-    const { result } = renderHook(() =>
-      usePostArticle({
-        content: articleContent('Plain body'),
-        attachments: null,
-        coverImageVariant: FileVariant.MAIN,
-        localAttachmentCount: 1,
-      }),
-    );
-
-    expect(result.current.hasCover).toBe(true);
-    expect(result.current.coverImage).toBeNull(); // the URL is the caller's local blob, not a Nexus file
   });
 
   it('keeps the slot-0 rule for local attachments', () => {
@@ -927,11 +982,13 @@ describe('slot-0 cover rule (inline images)', () => {
         content: articleContent('![inline slot zero](attachment:0)'),
         attachments: null,
         coverImageVariant: FileVariant.MAIN,
-        localAttachmentCount: 1,
+        localAttachments: [{ type: 'image/png', name: 'inline.png', urls: { main: 'blob:inline' }, slot: 0 }],
+        pendingAttachments: [{ slot: 0, type: 'image/png' }],
       }),
     );
 
-    expect(result.current.hasCover).toBe(false);
+    expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverPending).toBe(false);
   });
 
   it('reports no cover for local attachments whose slot 0 is not an image', () => {
@@ -940,13 +997,483 @@ describe('slot-0 cover rule (inline images)', () => {
         content: articleContent('Plain body'),
         attachments: null,
         coverImageVariant: FileVariant.MAIN,
-        localAttachmentCount: 1,
-        localCoverType: 'application/pdf',
+        localAttachments: [{ type: 'application/pdf', name: 'doc.pdf', urls: { main: 'blob:doc' }, slot: 0 }],
+        pendingAttachments: [{ slot: 0, type: 'application/pdf' }],
       }),
     );
 
-    // The rule is image-only, and the local entry's type is the slot's metadata: `hasCover` and the
-    // caller's image check can no longer disagree.
-    expect(result.current.hasCover).toBe(false);
+    // The rule is image-only, and the local entry's type is the slot's metadata
+    expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverPending).toBe(false);
+  });
+
+  it('reports no cover when there are no attachments, remote or local', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Plain body'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+        localAttachments: [],
+        pendingAttachments: [],
+      }),
+    );
+
+    expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverPending).toBe(false);
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+});
+
+// ADR-0023 as amended by ADR-0027 (D14): an article this app writes keeps its cover in the envelope's
+// `cover_image` and its inline media in the slots, so slot 0 is a body image. Only unlocked (Locks)
+// content and a 0.x article keep the cover in slot 0 (rule B), and only an image there is one. Moved
+// here from `PostArticle.test.tsx`, which mocked this hook: the hook is now the one place that decides.
+describe('Envelope cover and the slot-0 rule', () => {
+  const OWNER = fakeOwner(1);
+  const mediaUri = (byte: number, type: string) => buildFile(OWNER, { bytes: new Uint8Array([byte]), type }).url;
+  const COVER_URI = mediaUri(1, 'image/png');
+  const INLINE_URI = mediaUri(2, 'image/png');
+  const coverSrc = () => pubkyUriToCdnUrl(COVER_URI, FileVariant.FEED);
+  const envelope = (body: string, coverImage?: string) =>
+    JSON.stringify({ title: 'Essay', body, ...(coverImage && { cover_image: coverImage }) });
+
+  /** The session's own copies: the cover (`articleCovers`) and the media at slot 0 (`posts`). */
+  const sessionCover: AttachmentConstructed = {
+    type: 'image/png',
+    name: 'cover.png',
+    urls: { main: 'blob:http://localhost/session-cover' },
+  };
+  const slotZeroImage: AttachmentConstructed = { type: 'image/png', name: 'shot.png', urls: { main: 'blob:shot' } };
+  const slotZeroVideo: AttachmentConstructed = { type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } };
+  /** Unlocked (Locks) content: the reader's copy of the locked post's slot 0, named as `toUnlockedMedia` names it. */
+  const unlockedCover: AttachmentConstructed = {
+    type: 'image/png',
+    name: 'attachment-0',
+    urls: { main: 'blob:unlocked-cover', feed: 'blob:unlocked-cover' },
+    slot: 0,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
+    mockGetMetadata.mockResolvedValue([{ ...createMockImageMetadata(`${OWNER}:cover`), uri: COVER_URI }]);
+  });
+
+  it('paints the envelope cover and never slot 0, which is a body image', async () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: envelope('Intro\n\n![shot](attachment:0)', COVER_URI),
+        attachments: [INLINE_URI],
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [slotZeroImage],
+      }),
+    );
+
+    expect(coverSrc()).not.toBeNull();
+    expect(result.current.coverImage?.src).toBe(coverSrc());
+    await waitFor(() => expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [COVER_URI] }));
+  });
+
+  it('paints the envelope cover over a slot 0 the body leaves alone, which is still no cover', () => {
+    // An rc.1-migrated article (A'): refs exist but never name slot 0; slot 0 is still no cover
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: envelope('Intro\n\n![shot](attachment:1)', COVER_URI),
+        attachments: [INLINE_URI],
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [slotZeroImage],
+      }),
+    );
+
+    expect(coverSrc()).not.toBeNull();
+    expect(result.current.coverImage?.src).toBe(coverSrc());
+  });
+
+  it('lets the cover this session published win over the envelope cover', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: envelope('Intro\n\n![clip](attachment:0)', COVER_URI),
+        attachments: [INLINE_URI],
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [slotZeroVideo],
+        localCover: sessionCover,
+      }),
+    );
+
+    // The slot-0 video vetoes nothing: the entry's type stands in for the cover's row, never the slot's
+    expect(result.current.coverImage?.src).toBe('blob:http://localhost/session-cover');
+    expect(result.current.isCoverLoading).toBe(false);
+  });
+
+  it('holds no cover box for an envelope cover, whatever slot 0 is still downloading', () => {
+    mockGetMetadata.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: envelope('Intro', COVER_URI),
+        attachments: null,
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [],
+        pendingAttachments: [{ slot: 0, type: 'image/png' }],
+      }),
+    );
+
+    expect(result.current.isCoverPending).toBe(false);
+  });
+
+  it('takes slot 0 of unlocked content as its cover when the body leaves the slot alone', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: envelope('Intro\n\n![shot](attachment:1)'),
+        attachments: null,
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [unlockedCover, { ...slotZeroImage, slot: 1 }],
+      }),
+    );
+
+    expect(result.current.coverImage?.src).toBe('blob:unlocked-cover');
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+
+  it('never paints a non-image slot 0 of unlocked content as the cover', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: envelope('Intro\n\n![shot](attachment:1)'),
+        attachments: null,
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [
+          { ...slotZeroVideo, slot: 0 },
+          { ...slotZeroImage, slot: 1 },
+        ],
+      }),
+    );
+
+    expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverPending).toBe(false);
+  });
+
+  it('leaves slot 0 to the body when the body references it', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: envelope('Intro\n\n![first](attachment:0)'),
+        attachments: null,
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [{ ...slotZeroImage, slot: 0 }],
+      }),
+    );
+
+    expect(result.current.coverImage).toBeNull();
+  });
+});
+
+describe('local attachments', () => {
+  const content = JSON.stringify({ title: 'T', body: 'Plain body' });
+  const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+  const image = (urls: AttachmentConstructed['urls'], slot?: number): AttachmentConstructed => ({
+    type: 'image/png',
+    name: 'cover.png',
+    urls,
+    width: 1600,
+    height: 900,
+    ...(slot === undefined ? {} : { slot }),
+  });
+  const remoteCover = {
+    src: 'https://cdn.example.com/user123:file456/feed',
+    desktopSrc: 'https://cdn.example.com/user123:file456/large',
+    desktopFallbackSrc: 'https://cdn.example.com/user123:file456/main',
+  };
+  const heroVariants = {
+    coverImageVariant: FileVariant.FEED,
+    coverImageDesktopVariant: FileVariant.LARGE,
+    coverImageDesktopFallbackVariant: FileVariant.MAIN,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456')]);
+  });
+
+  it('draws an unlocked cover from its slot-0 bytes, as unlocked content has no Nexus attachments', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: null,
+        coverImageVariant: FileVariant.FEED,
+        // Slot 1 comes first: a lost or reordered file must not shift the cover
+        localAttachments: [image({ main: 'blob:inline' }, 1), image({ main: 'blob:cover', feed: 'blob:cover' }, 0)],
+      }),
+    );
+
+    expect(result.current.coverImage).toEqual({ src: 'blob:cover', alt: 'cover.png', width: 1600, height: 900 });
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+
+  it('reports no cover for a video in slot 0, so nothing holds a box for it (#2660)', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: null,
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [{ type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' }, slot: 0 }],
+        pendingAttachments: [{ slot: 1, type: 'image/png' }],
+      }),
+    );
+
+    expect(result.current.coverImage).toBeNull();
+    expect(result.current.isCoverPending).toBe(false);
+  });
+
+  it('holds the cover box while an image in slot 0 downloads, and never for a video there', () => {
+    const { result, rerender } = renderHook(
+      ({ type }) =>
+        usePostArticle({
+          content,
+          attachments: null,
+          coverImageVariant: FileVariant.FEED,
+          localAttachments: [],
+          pendingAttachments: [{ slot: 0, type }],
+        }),
+      { initialProps: { type: 'image/png' } },
+    );
+    expect(result.current.isCoverPending).toBe(true);
+
+    rerender({ type: 'video/mp4' });
+    expect(result.current.isCoverPending).toBe(false);
+  });
+
+  it('prefers the local cover over the remote one, and no longer waits on the remote row', () => {
+    mockGetMetadata.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [image({ main: 'blob:local' })],
+      }),
+    );
+
+    expect(result.current.coverImage?.src).toBe('blob:local');
+    expect(result.current.isCoverLoading).toBe(false);
+  });
+
+  it('keeps a same-session blob cover in the desktop slot, with nothing to degrade to', async () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        ...heroVariants,
+        localAttachments: [image({ main: 'blob:new-cover', feed: 'blob:new-cover' })],
+      }),
+    );
+
+    // Served from memory, and Nexus has no variant for it, so it owns the desktop slot even once
+    // the remote cover resolves.
+    await waitFor(() => expect(mockGetMetadata).toHaveBeenCalled());
+    expect(result.current.coverImage).toMatchObject({ src: 'blob:new-cover', desktopSrc: 'blob:new-cover' });
+    expect(result.current.coverImage?.desktopFallbackSrc).toBeUndefined();
+  });
+
+  it('renders a kept CDN cover from its seeded large variant on desktop', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        ...heroVariants,
+        localAttachments: [
+          image({ main: 'cdn://cover?v=main', feed: 'cdn://cover?v=feed', large: 'cdn://cover?v=large' }),
+        ],
+      }),
+    );
+
+    expect(result.current.coverImage).toMatchObject({
+      src: 'cdn://cover?v=feed',
+      desktopSrc: 'cdn://cover?v=large',
+      desktopFallbackSrc: 'cdn://cover?v=main',
+    });
+  });
+
+  it('holds the desktop slot while a kept CDN cover resolves, then takes the preloaded variant', async () => {
+    const row = Promise.withResolvers<NexusFileDetails[]>();
+    mockGetMetadata.mockReturnValue(row.promise);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        ...heroVariants,
+        localAttachments: [
+          image({ main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' }),
+        ],
+      }),
+    );
+
+    // The local `main` is the original upload: with no desktop source a wide screen takes the local
+    // `feed`, so the original never starts downloading on the author's own session.
+    expect(result.current.coverImage?.src).toBe('https://cdn.example/cover-feed.webp');
+    expect(result.current.coverImage?.desktopSrc).toBeUndefined();
+
+    row.resolve([createMockImageMetadata('user123:file456')]);
+    await waitFor(() => expect(result.current.coverImage?.desktopSrc).toBe(remoteCover.desktopSrc));
+  });
+
+  it('renders a kept CDN cover in both slots when there is no remote cover to prefer', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: null,
+        ...heroVariants,
+        localAttachments: [
+          image({ main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' }),
+        ],
+      }),
+    );
+
+    expect(result.current.coverImage).toMatchObject({
+      src: 'https://cdn.example/cover-feed.webp',
+      desktopSrc: 'https://cdn.example/cover-main.png',
+      alt: 'cover.png',
+    });
+  });
+
+  it('draws no cover, local or remote, when the local slot 0 is not an image', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        ...heroVariants,
+        localAttachments: [{ type: 'application/pdf', name: 'document.pdf', urls: { main: 'blob:document' } }],
+      }),
+    );
+
+    // The local list matches the attachment list, so its type vetoes the remote file too.
+    expect(result.current.coverImage).toBeNull();
+  });
+
+  it('asks for no desktop source on a feed-sized surface', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+        localAttachments: [
+          image({ main: 'cdn://cover?v=main', feed: 'cdn://cover?v=feed', large: 'cdn://cover?v=large' }),
+        ],
+      }),
+    );
+
+    expect(result.current.coverImage).toEqual({
+      src: 'cdn://cover?v=feed',
+      alt: 'cover.png',
+      width: 1600,
+      height: 900,
+    });
+  });
+});
+
+// The same desktop-source rule for the cover entry this session published or edited (its own entry,
+// `articleCovers`), which is how an article this app writes holds its local cover. Moved here from
+// `PostArticleDetail.test.tsx`, which mocks this hook: the desktop sources are decided here now.
+describe('own cover entry (envelope cover)', () => {
+  const COVER_URI = 'pubky://user123/pub/pubky.app/files/file456';
+  const content = JSON.stringify({ title: 'T', body: 'Plain body', cover_image: COVER_URI });
+  const ownCover = (urls: AttachmentConstructed['urls'], type = 'image/png'): AttachmentConstructed => ({
+    type,
+    name: 'kept-cover.png',
+    urls,
+  });
+  const heroVariants = {
+    coverImageVariant: FileVariant.FEED,
+    coverImageDesktopVariant: FileVariant.LARGE,
+    coverImageDesktopFallbackVariant: FileVariant.MAIN,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456')]);
+  });
+
+  it('renders a kept cover entry from its large variant on desktop, a fresh upload from its object URL', () => {
+    const desktopOf = (urls: AttachmentConstructed['urls']) => {
+      const { result, unmount } = renderHook(() =>
+        usePostArticle({ content, attachments: [], ...heroVariants, localCover: ownCover(urls) }),
+      );
+      const desktopSrc = result.current.coverImage?.desktopSrc;
+      unmount();
+      return desktopSrc;
+    };
+
+    expect(desktopOf({ main: 'cdn://cover?v=main', feed: 'cdn://cover?v=feed', large: 'cdn://cover?v=large' })).toBe(
+      'cdn://cover?v=large',
+    );
+    expect(desktopOf({ main: 'blob:cover', feed: 'blob:cover' })).toBe('blob:cover');
+  });
+
+  it('holds the desktop slot while the envelope cover behind a kept entry resolves', async () => {
+    const row = Promise.withResolvers<NexusFileDetails[]>();
+    mockGetMetadata.mockReturnValue(row.promise);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: [],
+        ...heroVariants,
+        localCover: ownCover({
+          main: 'https://cdn.example/cover-main.png',
+          feed: 'https://cdn.example/cover-feed.webp',
+        }),
+      }),
+    );
+
+    expect(result.current.coverImage?.src).toBe('https://cdn.example/cover-feed.webp');
+    expect(result.current.coverImage?.desktopSrc).toBeUndefined();
+
+    // A kept entry resolves to the same file as the envelope cover: the server preloaded `large`, and
+    // rendering the local `main` there would pull the original upload the preload exists to replace.
+    row.resolve([createMockImageMetadata('user123:file456')]);
+    await waitFor(() =>
+      expect(result.current.coverImage?.desktopSrc).toBe('https://cdn.example.com/user123:file456/large'),
+    );
+    expect(result.current.coverImage?.desktopFallbackSrc).toBe('https://cdn.example/cover-main.png');
+  });
+
+  it('renders a kept cover entry in both slots when there is no remote cover to prefer', async () => {
+    mockGetMetadata.mockResolvedValue([]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        // Not a homeserver file uri: the CDN has no copy, so once the lookup settles the entry is
+        // the only source
+        content: JSON.stringify({ title: 'T', body: 'Plain body', cover_image: 'https://elsewhere.example/c.png' }),
+        attachments: [],
+        ...heroVariants,
+        localCover: ownCover({
+          main: 'https://cdn.example/cover-main.png',
+          feed: 'https://cdn.example/cover-feed.webp',
+        }),
+      }),
+    );
+
+    await waitFor(() => expect(result.current.coverImage?.desktopSrc).toBeDefined());
+    expect(result.current.coverImage).toMatchObject({
+      src: 'https://cdn.example/cover-feed.webp',
+      desktopSrc: 'https://cdn.example/cover-main.png',
+      alt: 'kept-cover.png',
+    });
+  });
+
+  it('never draws a cover entry that is not an image, nor the envelope cover it stands in for', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: [],
+        ...heroVariants,
+        localCover: ownCover({ main: 'blob:document' }, 'application/pdf'),
+      }),
+    );
+
+    expect(result.current.coverImage).toBeNull();
   });
 });
