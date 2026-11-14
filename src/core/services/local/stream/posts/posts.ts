@@ -21,6 +21,7 @@ import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import {
   buildPostReplyStreamId,
+  isBookmarkStream,
   type PostStreamId,
   type ReplyStreamCompositeId,
 } from '@/models/stream/post/postStream.types';
@@ -40,7 +41,6 @@ import type {
 import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
 import type { NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
 import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
-import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 
 /**
@@ -541,7 +541,7 @@ export class LocalStreamPostsService {
     // Only a cursor-less chunk landing on a row without a Nexus position of its own is
     // ordered by post timestamp (an emptied row's stale cursor does not count).
     const normalizesByTimestamp =
-      tailCursor === undefined && !this.isBookmarkStream(streamId) && postStream?.tailCursor === undefined;
+      tailCursor === undefined && !isBookmarkStream(streamId) && postStream?.tailCursor === undefined;
 
     if (postStream === null) {
       // No cached ids to extend (e.g., database was deleted): the chunk is the stream and
@@ -630,10 +630,6 @@ export class LocalStreamPostsService {
   /** Extra row fields for `PostStreamModel.upsert`; omitted entirely when there is no cursor. */
   private static tailCursorFields(tailCursor: number | undefined): { tailCursor: number } | undefined {
     return tailCursor === undefined ? undefined : { tailCursor };
-  }
-
-  private static isBookmarkStream(streamId: PostStreamId): boolean {
-    return streamId.includes(`:${StreamSource.BOOKMARKS}:`);
   }
 
   /**

@@ -276,6 +276,19 @@ describe('post-stream id builders', () => {
       expect(isBookmarkStream('timeline:all:collection')).toBe(false);
       expect(isDeletedRetainingStream('timeline:all:collection')).toBe(false);
     });
+
+    it('is matched by its exact id, so a Tagged-as feed whose only domain tag is "bookmarks" is not it', () => {
+      const singlePostTag = buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bookmarks'], ['rust']);
+      const twoPostTags = buildWotDomainStreamId(StreamSorting.TIMELINE, 0, 'all', ['bookmarks'], ['a', 'b']);
+      expect(singlePostTag).toBe('timeline:wot_domain:2:all:bookmarks:rust');
+      expect(twoPostTags).toBe('timeline:wot_domain:0:all:bookmarks:a,b');
+
+      for (const streamId of [singlePostTag, twoPostTags]) {
+        expect(isBookmarkStream(streamId)).toBe(false);
+        expect(isDeletedRetainingStream(streamId)).toBe(false);
+      }
+      expect(isBookmarkStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL)).toBe(true);
+    });
   });
 
   describe('buildDiscoverCollectionsStreamId (Discover Collections)', () => {
