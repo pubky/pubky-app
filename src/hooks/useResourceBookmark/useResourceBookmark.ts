@@ -57,15 +57,21 @@ export function useResourceBookmark(
 
       setToggled({ key: viewerKey, isBookmarked: !wasBookmarked, listing });
       let removed = 0;
+      // A write skipped because the account changed while it waited: flip back, announce nothing.
+      const skipped = () => {
+        if (removed > 0) invalidateResourceBookmarks();
+        setToggled({ key: viewerKey, isBookmarked: wasBookmarked, listing });
+        return false;
+      };
       try {
         if (wasBookmarked) {
           for (const link of bookmarked.length > 0 ? bookmarked : [uri]) {
-            await BookmarkController.commitDeleteResource({ uri: link, userId: viewer });
+            if (!(await BookmarkController.commitDeleteResource({ uri: link, userId: viewer }))) return skipped();
             removed++;
           }
           toast({ title: 'Removed from bookmarks' });
         } else {
-          await BookmarkController.commitCreateResource({ uri, userId: viewer });
+          if (!(await BookmarkController.commitCreateResource({ uri, userId: viewer }))) return skipped();
           toast({ title: 'Saved to bookmarks' });
         }
         invalidateResourceBookmarks();

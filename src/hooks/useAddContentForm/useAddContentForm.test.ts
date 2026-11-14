@@ -126,7 +126,7 @@ describe('useAddContentForm', () => {
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
     mocks.commitUpdateCollectionResource.mockResolvedValue(undefined);
     mocks.fetchResourceBookmarks.mockResolvedValue([]);
-    mocks.commitCreateResourceBookmark.mockResolvedValue(undefined);
+    mocks.commitCreateResourceBookmark.mockResolvedValue(true);
     mocks.fetchCardByUri.mockResolvedValue(null);
     mocks.onSuccess.mockResolvedValue(undefined);
   });
@@ -637,6 +637,17 @@ describe('useAddContentForm', () => {
 
       expect(saved).toBe(true);
       expect(mocks.commitCreateResourceBookmark).toHaveBeenCalledWith({ uri: 'isbn:9781119473862', userId: VIEWER });
+    });
+
+    it('reports nothing saved when the link bookmark was skipped for a changed account', async () => {
+      mocks.fetchCardByUri.mockResolvedValue(null);
+      mocks.commitCreateResourceBookmark.mockResolvedValue(false);
+
+      const { saved } = await submitTo({ type: 'bookmarks' }, YOUTUBE_URL);
+
+      expect(saved).toBe(false);
+      expect(mocks.commitCreateResourceBookmark).toHaveBeenCalledWith({ uri: YOUTUBE_URL, userId: VIEWER });
+      expect(mocks.onSuccess).not.toHaveBeenCalled();
     });
 
     it('adds the link as written when Pinakes fails', async () => {

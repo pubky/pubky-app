@@ -152,6 +152,20 @@ describe('useResourceBookmark', () => {
       expect(BookmarkController.fetchResourceBookmarks).toHaveBeenCalledTimes(3);
     });
 
+    it('stops at a removal skipped for a changed account and announces nothing', async () => {
+      listing = [URI, SHARE];
+      vi.mocked(BookmarkController.commitDeleteResource).mockResolvedValue(false);
+      const { result } = renderHook(() => useResourceBookmark(URI, { spellings: [SHARE] }));
+      await waitFor(() => expect(result.current.isBookmarked).toBe(true));
+
+      await act(async () => {
+        await expect(result.current.toggle()).resolves.toBe(false);
+      });
+      expect(BookmarkController.commitDeleteResource).toHaveBeenCalledTimes(1);
+      expect(result.current.isBookmarked).toBe(true);
+      expect(toast).not.toHaveBeenCalled();
+    });
+
     it('keeps showing the bookmark when removing it from one spelling fails', async () => {
       listing = [URI, SHARE];
       vi.mocked(BookmarkController.commitDeleteResource)
