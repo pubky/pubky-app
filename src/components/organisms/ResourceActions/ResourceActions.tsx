@@ -3,8 +3,9 @@
 import { type ReactNode, useId, useState } from 'react';
 import { MessageCircle, Tag } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
+import { useEventFeed } from '@/hooks/useEventFeed/useEventFeed';
 import { useOtherLinkTags } from '@/hooks/useOtherLinkTags/useOtherLinkTags';
-import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
+import type { TMergedTag, TOtherLink } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useResourceCounts } from '@/hooks/useResourceCounts/useResourceCounts';
@@ -12,19 +13,31 @@ import { useResourceTags } from '@/hooks/useResourceTags/useResourceTags';
 import { isExternalParentUri } from '@/libs/post/externalParent';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { ResourceFamily } from '@/molecules/ResourceCard/ResourceCard.types';
+import { getResourceFamily } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { PostActionButton } from '@/organisms/PostActionsBar/PostActionButton';
-import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from '@/organisms/ResourceDetails/ResourceOtherTags.utils';
+import {
+  getOtherLinks,
+  getOwnLinkUris,
+  joinMergedTags,
+  mergeOtherLinkTags,
+} from '@/organisms/ResourceDetails/ResourceOtherTags.utils';
+import type { TEventFeed } from '@/pipes/resource/resource.events';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { type ResourceExtraMenuContent, ResourceMoreMenu } from './ResourceMoreMenu';
 import { ResourcePostButton } from './ResourcePostButton';
 import { ResourceSavePicker } from './ResourceSavePicker';
 import { ResourceTagBar } from './ResourceTagBar';
+import { ResourceTagScope, type TTagScope } from './ResourceTagScope';
 
 const REPLY_LABEL = 'Reply to this external resource';
 const CANNOT_REPLY_LABEL = 'Replies to this external resource are not supported';
 const WRITING_REPLY_LABEL = `${REPLY_LABEL}: not available while writing a post`;
+/** The names of a series date's two tag scopes' links among the other links (a tag's detail). */
+const THIS_DATE = 'This date';
+const ALL_DATES = 'All dates';
 
 interface ResourceActionsProps {
   /**
@@ -85,6 +98,11 @@ interface ResourceActionsProps {
    */
   card?: (TPinakesCard & Partial<Pick<TPinakesResourceDetail, 'aliases'>>) | null;
   /**
+   * The calendar feed a series date is part of, found by the page (`useEventFeed`); a card's footer
+   * finds its `card`'s itself. With one, the tag bar switches between this date and all dates.
+   */
+  eventFeed?: TEventFeed | null;
+  /**
    * A pill that shows the platform's own embed (an X post's "Show on <site>" with platform embeds up
    * front off): on its own line above the footer, so the footer's tags and buttons are the post's,
    * never squeezed by it. A service's player is picked in the card's header switch instead.
@@ -110,6 +128,12 @@ interface ResourceActionsProps {
  * On the resource page, the tags on the same thing's other links join the tag list (`otherTagList`); on
  * a card in a feed, those of its `card`'s other links, read by the footer itself.
  *
+ * A date of a series (an event whose feed is known: `eventFeed`, or its `card`'s) starts its tag bar
+ * with "This date ▾ / All dates ▾". This date: the tags are the date link's, and the feed's (the tags
+ * on all its dates) join the other links' as secondary chips. All dates: the tags are read and written
+ * on the feed's link, and the date's own join as secondary chips. Only the tag bar switches: replies,
+ * saves, collections and counts stay on the date's link in both.
+ *
  * Inside a post being written (the composer's preview, the Reply and Repost dialogs: `navigable`
  * false), Reply and Post about this would open another composer over it: they show disabled, with
  * their counts. Tags, Save and ⋯ work as anywhere.
@@ -129,6 +153,7 @@ export function ResourceActions({
   isOnScreen = true,
   otherTagList,
   card,
+  eventFeed,
   playOn,
   size = 'default',
   replyCount,
@@ -141,7 +166,23 @@ export function ResourceActions({
   // Once read, the tags stay while the card scrolls out of view.
   const [hasBeenOnScreen, setHasBeenOnScreen] = useState(isOnScreen);
   if (isOnScreen && !hasBeenOnScreen) setHasBeenOnScreen(true);
-  const resourceTags = useResourceTags(uri, { enabled: hasBeenOnScreen, spellings, spellingsByUri });
+  // A series date's feed: the page's, else the card's own (its group, once on screen)
+  const isEventCard = Boolean(card) && eventFeed === undefined && getResourceFamily(card!) === ResourceFamily.EVENT;
+  const { feed: cardFeed } = useEventFeed(isEventCard ? card : null, { enabled: hasBeenOnScreen });
+  const feed = eventFeed ?? cardFeed;
+  const [tagScope, setTagScope] = useState<TTagScope>('date');
+  const isAllDates = feed !== null && tagScope === 'all';
+  // The tag bar's own link: the date's (with its spellings), or the feed's on all dates. Only the tags
+  // switch: everything else in the footer stays on `uri`.
+  const tagUri = isAllDates ? feed.uri : uri;
+  const tagSpellings = isAllDates ? undefined : spellings;
+  // The other scope's links, read as other links: the feed's on this date, the date's on all dates
+  const scopeLinks: TOtherLink[] = !feed
+    ? []
+    : isAllDates
+      ? [uri, ...(spellings ?? [])].map((link) => ({ uri: link, name: THIS_DATE }))
+      : [{ uri: feed.uri, name: ALL_DATES }];
+  const resourceTags = useResourceTags(tagUri, { enabled: hasBeenOnScreen, spellings: tagSpellings, spellingsByUri });
   // A card's other links, as on the resource page, read with its own tags in their `by_ids` batch; the
   // members' refs join once a group another reader already read is found.
   const { data: group } = usePinakesGroup(card?.group?.id, { cachedOnly: true });
@@ -149,8 +190,11 @@ export function ResourceActions({
     card && hasBeenOnScreen
       ? getOtherLinks(card, group?.members, new Set([...getOwnLinkUris(card, uri, uri), ...(spellings ?? [])]))
       : [];
-  const otherLinkTags = useOtherLinkTags(otherLinks, { byIdsOnly: true });
-  const otherTags = otherTagList ?? mergeOtherLinkTags(otherLinkTags.reads);
+  // The scope's links in the same `by_ids` batch as the card's other links
+  const otherLinkTags = useOtherLinkTags(hasBeenOnScreen ? [...otherLinks, ...scopeLinks] : [], { byIdsOnly: true });
+  const otherTags = otherTagList
+    ? joinMergedTags(otherTagList, mergeOtherLinkTags(otherLinkTags.reads))
+    : mergeOtherLinkTags(otherLinkTags.reads);
   // Read with the tags (one answer): no request of its own.
   const counts = useResourceCounts(uri, { spellings });
   // 0 for a link Nexus has no record of; no number while read or for a count Nexus does not serve.
@@ -205,8 +249,14 @@ export function ResourceActions({
           isExpanded={isTagsExpanded}
           isAdding={isAddingTag}
           onAddingChange={setIsAddingTag}
-          uri={uri}
+          uri={tagUri}
           otherTags={otherTags}
+          scope={
+            feed
+              ? { name: isAllDates ? 'this date' : 'all dates', uris: scopeLinks.map((link) => link.uri) }
+              : undefined
+          }
+          control={feed ? <ResourceTagScope scope={tagScope} onScopeChange={setTagScope} /> : undefined}
         />
         {/*
           The post's action row (`PostActionsBar`'s classes). Beside the tags (from md) it keeps its

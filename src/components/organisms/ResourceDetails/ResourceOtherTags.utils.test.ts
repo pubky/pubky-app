@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { withResourceViewerListed } from '@/pipes/tag/tag.resource';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
-import { getOtherLinks, getOwnLinkUris, MAX_OTHER_LINKS, mergeOtherLinkTags } from './ResourceOtherTags.utils';
+import {
+  getOtherLinks,
+  getOwnLinkUris,
+  joinMergedTags,
+  MAX_OTHER_LINKS,
+  mergeOtherLinkTags,
+} from './ResourceOtherTags.utils';
 
 const LETTERBOXD = 'https://letterboxd.com/film/the-matrix/';
 const NETFLIX = 'https://www.netflix.com/title/20557937';
@@ -322,5 +328,29 @@ describe('mergeOtherLinkTags', () => {
   it('is empty when no other link has tags', () => {
     expect(mergeOtherLinkTags([])).toEqual([]);
     expect(mergeOtherLinkTags([{ link: netflix, tags: [] }])).toEqual([]);
+  });
+});
+
+describe('joinMergedTags', () => {
+  const netflix = { uri: NETFLIX, name: 'Netflix' };
+  const tmdb = { uri: TMDB, name: 'TMDB' };
+  const feed = { uri: 'https://www.meetup.com/x/events/ical/', name: 'All dates' };
+  const reads = [
+    { link: netflix, tags: [tag('film', ['ann']), tag('netflix', ['ann'])] },
+    { link: tmdb, tags: [tag('film', ['ann', 'bob', 'cy']), { ...tag('scifi', ['bob', 'cy']), relationship: true }] },
+    { link: feed, tags: [tag('film', ['dee']), tag('weekly', ['ann', 'bob', 'cy', 'dee'], 6)] },
+  ];
+
+  it('joins lists merged apart (a page’s other links, then a feed) as one merge of every link', () => {
+    const joined = joinMergedTags(mergeOtherLinkTags(reads.slice(0, 2)), mergeOtherLinkTags(reads.slice(2)));
+
+    expect(joined).toEqual(mergeOtherLinkTags(reads));
+  });
+
+  it('keeps a list as it is when nothing is joined to it', () => {
+    const list = mergeOtherLinkTags(reads);
+
+    expect(joinMergedTags(list, [])).toBe(list);
+    expect(joinMergedTags([], list)).toEqual(list);
   });
 });

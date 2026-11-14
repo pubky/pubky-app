@@ -106,7 +106,42 @@ export function mergeOtherLinkTags(reads: TOtherLinkTags[]): TMergedTag[] {
       count: Math.max(taggers.size, most),
       isComplete,
       relationship,
-      sources: [...sources.values()].sort((a, b) => b.count - a.count),
+      sources: [...sources.values()].sort(bySourceCount),
     }))
-    .sort((a, b) => b.count - a.count || b.sources.length - a.sources.length || a.label.localeCompare(b.label));
+    .sort(byMergedTagOrder);
+}
+
+const bySourceCount = (a: TMergedTagSource, b: TMergedTagSource) => b.count - a.count;
+
+/** Most taggers first, then on most links, then by label. */
+const byMergedTagOrder = (a: TMergedTag, b: TMergedTag) =>
+  b.count - a.count || b.sources.length - a.sources.length || a.label.localeCompare(b.label);
+
+/**
+ * Two lists merged apart (`mergeOtherLinkTags`) of different links, as one merge of all of them: the
+ * resource page's other links' tags and a series feed's, read by another reader. A person on links of
+ * both counts once; `list` itself when nothing is joined to it.
+ */
+export function joinMergedTags(list: readonly TMergedTag[], more: readonly TMergedTag[]): readonly TMergedTag[] {
+  if (more.length === 0) return list;
+  const joined = new Map(list.map((tag) => [tag.label, tag]));
+  for (const tag of more) {
+    const prev = joined.get(tag.label);
+    if (!prev) {
+      joined.set(tag.label, tag);
+      continue;
+    }
+    const taggers = [...new Set([...prev.taggers, ...tag.taggers])];
+    const sources = [...prev.sources, ...tag.sources].sort(bySourceCount);
+    joined.set(tag.label, {
+      label: tag.label,
+      taggers,
+      // As one merge counts: each tagger once, at least the most any one link has
+      count: Math.max(taggers.length, ...sources.map((source) => source.count)),
+      isComplete: prev.isComplete && tag.isComplete,
+      relationship: Boolean(prev.relationship || tag.relationship),
+      sources,
+    });
+  }
+  return [...joined.values()].sort(byMergedTagOrder);
 }
