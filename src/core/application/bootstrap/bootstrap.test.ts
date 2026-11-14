@@ -544,6 +544,13 @@ describe('BootstrapApplication', () => {
         expect(puts).toEqual([{ timestamp: LEGACY_TIMESTAMP }]);
       });
 
+      it('writes nothing when the re-read finds the same v1 lastRead', async () => {
+        const { puts, published } = await run(LEGACY_TIMESTAMP);
+
+        expect(puts).toEqual([]);
+        expect(published).toBe(LEGACY_TIMESTAMP);
+      });
+
       it('sends nothing once the session ends before the copy writes: the first pass is guarded', async () => {
         setupMocks({ bootstrapData: emptyBootstrap() });
         vi.spyOn(HomeserverService, 'getBytesIfExists').mockImplementation(legacyOnly(LEGACY_TIMESTAMP));

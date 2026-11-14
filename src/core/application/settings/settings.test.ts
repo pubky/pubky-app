@@ -857,6 +857,45 @@ describe('SettingsApplication', () => {
             installHomeserverWriteRetryDependenciesForTests(null);
           }
         });
+
+        it('checks the v1 file after the queued settings write ahead of it lands, not before', async () => {
+          const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+          const files = new Map<string, unknown>([[legacySettingsUrl, jsonOf(legacyRemote)]]);
+          const spies = setupMocks();
+          homeserverWith(spies, files);
+          spies.normalizerFromSpy.mockImplementation(fromJson);
+          spies.normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+          let releaseCommit!: () => void;
+          const commitLanded = new Promise<void>((resolve) => {
+            releaseCommit = resolve;
+          });
+          let puts = 0;
+          spies.requestSpy.mockImplementation(async ({ url, bodyJson }) => {
+            // This tab's settings change is in flight when the bootstrap sync starts
+            if (++puts === 1) await commitLanded;
+            files.set(url, bodyJson);
+            return undefined;
+          });
+
+          const commit = SettingsApplication.commitUpdate(v1Remote, testPubky);
+          await vi.waitFor(() => expect(puts).toBe(1));
+          const sync = SettingsApplication.initializeSettings(testPubky, localSettings);
+          await vi.waitFor(() => expect(spies.readSpy).toHaveBeenCalledWith(legacySettingsUrl));
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          releaseCommit();
+          await commit;
+
+          await expect(sync).resolves.toEqual(v1Remote);
+          expect(puts).toBe(1);
+          expect(files.get(settingsUrl)).toMatchObject(jsonOf(v1Remote));
+          expect(homeserverCalls(spies)).toEqual([
+            [HttpMethod.PUT, settingsUrl],
+            ['read', settingsUrl],
+            ['read', legacySettingsUrl],
+            ['read', settingsUrl],
+            ['read', settingsUrl],
+          ]);
+        });
       });
 
       it('rejects with SESSION_EXPIRED and never writes when the session ends between the reads and the push', async () => {
@@ -876,6 +915,12 @@ describe('SettingsApplication', () => {
           if (url === legacySettingsUrl) useAuthStore.setState({ isLoggingOut: true });
           return files.has(url) ? storedJson(files.get(url)) : null;
         });
+        // A PUT passes the write fence first, as `HomeserverService.request` does on its first attempt
+        spies.requestSpy.mockImplementation(async ({ url, bodyJson, fence }) => {
+          fence?.assertCurrent();
+          files.set(url, bodyJson);
+          return undefined;
+        });
         spies.normalizerFromSpy.mockReturnValue(legacyRemote);
         spies.normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
 
@@ -883,7 +928,6 @@ describe('SettingsApplication', () => {
           await expect(SettingsApplication.initializeSettings(testPubky, localSettings)).rejects.toMatchObject({
             code: AuthErrorCode.SESSION_EXPIRED,
           });
-          expect(spies.requestSpy).not.toHaveBeenCalled();
           expect(files.has(settingsUrl)).toBe(false);
         } finally {
           useAuthStore.setState({ isLoggingOut: false });

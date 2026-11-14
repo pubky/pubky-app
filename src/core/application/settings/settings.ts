@@ -207,7 +207,7 @@ export class SettingsApplication {
     const pushOrReconcile = async (settings: SettingsState, ifAbsent: boolean, result: SettingsState | null) => {
       if (await this.enqueueWrite(pubky, () => this.push(settings, pubky, fence, { ifAbsent }))) return result;
       if (!recheck) return await this.reconcileWithRemote(pubky, localSettings, fence, true);
-      Logger.warn('[Settings] The settings file read as present before the write but absent after, writing nothing');
+      Logger.warn('[Settings] The settings file read as absent, then present before the write, twice; writing nothing');
       return null;
     };
 
