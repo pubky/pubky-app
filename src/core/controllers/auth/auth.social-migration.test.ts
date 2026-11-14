@@ -24,6 +24,18 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 import { AuthController } from './auth';
 
+// A later build's transform revision, read through a getter so a test can bump it after the gate passed once
+const transform = vi.hoisted(() => ({ bump: 0 }));
+vi.mock('@/config/social-migration', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/social-migration')>();
+  return {
+    ...actual,
+    get SOCIAL_MIGRATION_TRANSFORM_REV() {
+      return actual.SOCIAL_MIGRATION_TRANSFORM_REV + transform.bump;
+    },
+  };
+});
+
 const pubky = mockPubky('5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y');
 const session = mockSession({
   info: asOpaque({ publicKey: { z32: () => pubky }, capabilities: ['/:rw'] }),
@@ -39,8 +51,8 @@ const done = (): MigrationReport =>
     droppedValues: {},
     skipped: {},
   });
-const flagBytes = () => ({
-  bytes: new TextEncoder().encode(JSON.stringify({ transform_rev: SOCIAL_MIGRATION_TRANSFORM_REV })),
+const flagBytes = (rev = SOCIAL_MIGRATION_TRANSFORM_REV) => ({
+  bytes: new TextEncoder().encode(JSON.stringify({ transform_rev: rev })),
   modifiedAt: null,
 });
 
@@ -69,6 +81,28 @@ function trackStore() {
     if (seen.at(-1) !== entry) seen.push(entry);
   });
   return { seen, unsubscribe };
+}
+
+/**
+ * A reload on the next build, whose transform revision is one higher than the one this browser saw the flag at:
+ * `grant` is the saved grant, and the homeserver still holds the flag of the earlier revision.
+ */
+function reloadOnNextTransformRevision(grant: string) {
+  const seenRev = SOCIAL_MIGRATION_TRANSFORM_REV;
+  transform.bump = 1;
+  useAuthStore.setState({
+    ...authInitialState,
+    hasHydrated: true,
+    isLoggingOut: false,
+    sessionReference: mockGrantReference(grant),
+    currentUserPubky: pubky,
+    hasProfile: true,
+    generation: `reload-${grant}`,
+  });
+  persistState();
+  vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ status: 'restored', session });
+  vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(flagBytes(seenRev));
+  return vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
 }
 
 function deferred<T>() {
@@ -100,6 +134,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
   });
 
   afterEach(() => {
+    transform.bump = 0;
     AuthController.cancelActiveAuthFlow();
     AuthController.cancelModerationFollow();
     vi.restoreAllMocks();
@@ -192,6 +227,24 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
         expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
       },
     );
+
+    it('re-walks a grant whose first restore passed on the flag after a transform revision bump, instead of signing it out', async () => {
+      vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(flagBytes());
+      expect(await AuthController.restorePersistedSession()).toBe(true);
+      // Passed on the flag: the record saw it, the grant was never admitted
+      expect(readSocialMigrationRecord(pubky)).toMatchObject({
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+        admittedGrantIds: [],
+      });
+
+      const run = reloadOnNextTransformRevision('saved-grant');
+
+      expect(await AuthController.restorePersistedSession()).toBe(true);
+      expect(run).toHaveBeenCalledOnce();
+      expect(useSocialMigrationStore.getState().stage).toBe('idle');
+      expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
+      expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
 
     it('offers recovery when the flag cannot be read', async () => {
       vi.spyOn(HomeserverService, 'getBytesIfExists').mockRejectedValue(new Error('offline'));
@@ -465,6 +518,28 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       });
       expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
       await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
+    });
+    it('admits the grant of an upgrade adopted on a trusted record, which re-walks after a transform revision bump instead of signing out', async () => {
+      writeSocialMigrationRecord(pubky, {
+        v: 1,
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+        admittedGrantIds: ['narrow-grant'],
+      });
+
+      const flow = await AuthController.getUpgradeAuthUrl(true);
+      await flow?.awaitApproval;
+      await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
+
+      expect(useAuthStore.getState().sessionReference).toEqual(mockGrantReference('upgraded-grant'));
+      expect(readSocialMigrationRecord(pubky)?.admittedGrantIds).toEqual(['narrow-grant', 'upgraded-grant']);
+
+      const run = reloadOnNextTransformRevision('upgraded-grant');
+
+      expect(await AuthController.restorePersistedSession()).toBe(true);
+      expect(run).toHaveBeenCalledOnce();
+      expect(useSocialMigrationStore.getState()).toMatchObject({ stage: 'idle', reason: undefined });
+      expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
+      expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
     });
   });
 

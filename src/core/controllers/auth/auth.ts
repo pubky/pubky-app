@@ -780,8 +780,9 @@ export class AuthController {
     this.sessionRestore = null;
     // The migration gate runs before the session enters the store (ADR-0026): the committed identity
     // is visible to logout and the route guard, the session is not. An upgrade of an account that
-    // passed the gate in this browser keeps its context, as before.
+    // passed the gate in this browser keeps its context, as before, and its grant is admitted.
     const gated = !(preserveContext && SocialMigrationController.hasPassedLocally(pubky));
+    if (!gated) SocialMigrationController.admitGrant(pubky, reference.sessionStoreId);
     previous.init({
       ...committed,
       session: gated ? null : session,

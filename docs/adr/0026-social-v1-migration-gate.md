@@ -57,27 +57,28 @@ a trusted local record passes with no store change and no request.
 (`missing-scopes`). On restore: the local record, trusted when it saw the flag at this build's transform revision or a
 later one, passes without network; otherwise the flag is read with the explicit session (a 404 is absent; 401, 403 and
 transport failures throw, so a refused flag never reads as a missing one), a current flag writes the record and passes,
-and an absent or outdated flag either resumes the run for a grant this build admitted or signs the account out
-(`pre-migration-grant`, D2). On a fresh sign-in the grant's session-store id is recorded as admitted and the engine
-runs; its own HEAD finds a finished migration (`already_migrated`). A signup runs the engine inline on its empty tree
-with no screen (the engine writes the flag; the app never hand-writes `_migrated.json`). An upgrade adoption
-(`preserveContext`) consults the local record only and keeps its context when it passes.
+and an absent or outdated flag resumes the run when this browser's record saw the flag at an earlier revision or
+admitted the grant, and otherwise signs the account out (`pre-migration-grant`, D2). On a fresh sign-in the grant's
+session-store id is recorded as admitted and the engine runs; its own HEAD finds a finished migration
+(`already_migrated`). A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the
+app never hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
+keeps its context when it passes and admits its grant.
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen
-(Continue) only when the run skipped or dropped something. `incomplete` and `IO_ERROR` retry on their own
-(`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry, and the controller treats `ALREADY_RUNNING`
-the same way defensively (the engine reports it only for a lock adapter that yields when another holder exists; the
-app's adapter waits, see _Cross-tab_, so the code does not arise there); `AuthCoordinator` retries that reason on
-foreground and network return under its cooldown. `QUOTA` blocks with `needBytes`; `PRIV_UNSUPPORTED`,
-`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it, except a rejected load of the
-migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure: it blocks at once as
-`incomplete` (no automatic retries), so Retry and the reconnect retry apply, and is reported once per account and page;
-`SESSION_EXPIRED` and `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
-`AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns its transport retries
-(429 backoff, three network retries, read-back before every cleanup delete); the app retries whole runs. Those are the
-one set of homeserver retries that `retryHomeserverWrite` does not run; `HomeserverService.deleteIdempotent` and
-`ProfileApplication.deleteFile` are attempt loops over single-attempt `HomeserverService.delete` calls, not a policy of
-their own (`docs/error-handling.md`).
+(Continue) only when the last run skipped something or any run of the gate dropped a profile value. `incomplete` and
+`IO_ERROR` retry on their own (`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry, and the
+controller treats `ALREADY_RUNNING` the same way defensively (the engine reports it only for a lock adapter that yields
+when another holder exists; the app's adapter waits, see _Cross-tab_, so the code does not arise there);
+`AuthCoordinator` retries that reason on foreground and network return under its cooldown. `QUOTA` blocks with
+`needBytes`; `PRIV_UNSUPPORTED`, `UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it,
+except a rejected load of the migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure:
+it blocks at once as `incomplete` (no automatic retries), so Retry and the reconnect retry apply, and is reported once
+per account and page; `SESSION_EXPIRED` and `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new
+generation, `isLoggingOut`, `AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns
+its transport retries (429 backoff, three network retries, read-back before every cleanup delete); the app retries whole
+runs. Those are the one set of homeserver retries that `retryHomeserverWrite` does not run;
+`HomeserverService.deleteIdempotent` and `ProfileApplication.deleteFile` are attempt loops over single-attempt
+`HomeserverService.delete` calls, not a policy of their own (`docs/error-handling.md`).
 
 **Cross-tab.** The Web Lock `pubky-social-migrator:<owner>` is taken waiting (`navigator.locks.request(name,
 { signal }, fn)`, never `ifAvailable`): a second tab shows "Another tab is updating your account" and, once the first
@@ -85,21 +86,25 @@ finishes, its own run reads the flag. Without `navigator.locks` the run is unloc
 concurrently is accepted with the engine's semantics (create-only writes, read-back before delete).
 
 **Persistence.** The record is `localStorage` `social-migration:<pubky>` `{ v: 1, migratedRev?, admittedGrantIds,
-lastRun?, notice? }`, zod-validated, unreadable means untrusted, excluded from the logout sweep like
+lastRun?, droppedProfile?, notice? }`, zod-validated, unreadable means untrusted, excluded from the logout sweep like
 `auth-store-v3-migrated`. Not Dexie (account preparation, logout and a `DB_VERSION` bump clear it before the gate runs)
 and not the homeserver (the flag there is the authority; the record exists to avoid asking and to avoid loading the
-migrator chunk). `SOCIAL_MIGRATION_TRANSFORM_REV` mirrors the engine's `transformRev` under a contract test, because
-the revision is only reachable through the 790 KB chunk. `lastRun` shows "Continuing from an earlier run"; `notice`
-holds the counts of what a run left behind for the profile edit page to show once. A tab-scoped `sessionStorage` notice
-explains the forced sign-out after the stores were reset; while it is pending, the explanation is owed on every route
-(see _Amendment — the explanation is route-independent_). The migrator is loaded by a dynamic `import()` only when a
-run starts, which keeps its chunk out of the main bundle and out of the service-worker precache.
+migrator chunk). `SOCIAL_MIGRATION_TRANSFORM_REV` mirrors the engine's `transformRev` under a contract test, because the
+revision is only reachable through the 790 KB chunk. `lastRun` shows "Continuing from an earlier run"; `notice` holds
+the counts of what a run left behind for the profile edit page to show once. `droppedProfile` keeps the counts of the
+profile values a run dropped across the runs of a gate, reloads and re-sign-ins included, until the run that records the
+flag merges them into `notice`: a resumed walk finds the 1.x profile present and does not report them again. Recording
+the flag clears them, also when a restore passes on the flag of a run that finished elsewhere. A tab-scoped
+`sessionStorage` notice explains the forced sign-out after the stores were reset; while it is pending, the explanation
+is owed on every route (see _Amendment — the explanation is route-independent_). The migrator is loaded by a dynamic
+`import()` only when a run starts, which keeps its chunk out of the main bundle and out of the service-worker precache.
 
 **Screen.** `/migration` → `templates/Auth/SocialMigration` → `organisms/SocialMigrationProgress` over the ephemeral
 `useSocialMigrationStore` (written by `SocialMigrationController` only, progress coalesced to phase changes plus one
-write per `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS`). The reauth state reuses the `/logout` backup rule
-(`useHasBackupAccount`, `AlertBackup`) and then calls `AuthController.logout()` once (Strict Mode included); after the
-logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
+write per `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS`; a run's terminal `incomplete`/`paused`/`aborted` event is not
+written, so the screen keeps the step that stopped while the gate waits to retry). The reauth state reuses the `/logout`
+backup rule (`useHasBackupAccount`, `AlertBackup`) and then calls `AuthController.logout()` once (Strict Mode included);
+after the logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
 
 **Telemetry.** One capture per (account, code) per page, operation `socialMigration`
 (`src/libs/social-migration/report-telemetry.ts`): a blocked run is `Err.server` with `SERVICE_UNAVAILABLE` for
@@ -187,6 +192,10 @@ explanation), is not done.
   owns the outcome from there.
 - The local record trusts a revision it saw; a bumped `transformRev` walks the tree again through the flag read.
 - A second device still migrating while this one signs in passes on its own flag read once the first finishes.
+- A homeserver that does not serve `/priv/` is not reachable with grant-only auth (grant sign-in shipped with `/priv/`),
+  so the gate does not classify its 403 by message (that would be a third boundary exception): a restore's flag read
+  treats that 403 as an error and settles on `temporary-error`, and the engine's `homeserver-unsupported` block shows
+  only on the run that hit it.
 - A restore whose SDK exchange settles after the 12 s UI deadline (`temporary-error`, pubky/pubky-app#3126) re-enters
   `restorePersistedSession` on its own, so the late session still passes `ensureMigrated` before `init` and a gate
   sign-out still ends as `social-migration`; nothing places a late session directly.

@@ -8,7 +8,11 @@ import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
+import {
+  readSocialMigrationRecord,
+  socialMigrationRecordKey,
+  writeSocialMigrationRecord,
+} from '@/libs/social-migration/record';
 import { resetSocialMigrationReports } from '@/libs/social-migration/report-telemetry';
 import { readSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -20,6 +24,18 @@ import { mockGrantReference } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 import { SocialMigrationController } from './social-migration';
+
+// The automatic retries without their waits, for the runs that need them over the real engine
+const retry = vi.hoisted(() => ({ immediate: false }));
+vi.mock('@/config/social-migration', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/social-migration')>();
+  return {
+    ...actual,
+    get SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS() {
+      return retry.immediate ? [0, 0, 0] : actual.SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS;
+    },
+  };
+});
 
 const GENERATION = 'gate-generation';
 const GRANT = 'grant-1';
@@ -115,6 +131,7 @@ describe('SocialMigrationController', () => {
   });
 
   afterEach(() => {
+    retry.immediate = false;
     SocialMigrationController.cancel();
     vi.restoreAllMocks();
     vi.useRealTimers();
@@ -165,14 +182,38 @@ describe('SocialMigrationController', () => {
     expect(status()).toBe('restoring');
   });
 
-  it('does not trust a record from an older transform revision: the flag is read again and an unadmitted grant signed out', async () => {
+  it('resumes a restore whose record saw an older revision, whatever its grant: the flag is read again and the tree re-walked', async () => {
+    await seedLegacyTree();
+    await homeserver.session.storage.putJson(SOCIAL_MIGRATION_FLAG_PATH, {
+      migrated_at: 1,
+      transform_rev: SOCIAL_MIGRATION_TRANSFORM_REV - 1,
+      skipped: {},
+      migrated: [],
+    });
     writeSocialMigrationRecord(owner, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV - 1, admittedGrantIds: [] });
     const read = vi.spyOn(HomeserverService, 'getBytesIfExists');
+    const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+
+    expect(await ensure('restore')).toBe('passed');
+
+    expect(read).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledOnce();
+    expect(stage().stage).toBe('idle');
+    const flag = JSON.parse(
+      new TextDecoder().decode(await homeserver.session.storage.getBytes(SOCIAL_MIGRATION_FLAG_PATH)),
+    );
+    expect(flag.transform_rev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+  });
+
+  it('signs out a restore whose record never saw the flag and did not admit its grant (D2)', async () => {
+    await seedLegacyTree();
+    writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: ['another-grant'] });
+    const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
 
     expect(await ensure('restore')).toBe('reauth-required');
 
-    expect(read).toHaveBeenCalledOnce();
-    expect(status()).toBe('social-migration');
+    expect(run).not.toHaveBeenCalled();
     expect(stage()).toMatchObject({ stage: 'reauth-required', reason: 'pre-migration-grant' });
   });
 
@@ -317,6 +358,248 @@ describe('SocialMigrationController', () => {
 
     expect(await migrating).toBe('canceled');
     expect(stage().stage).toBe('idle');
+  });
+
+  describe('profile values a run dropped', () => {
+    // `mailto:` has no 1.x counterpart: the engine writes the profile without it and reports `profile_link[1]`
+    const seedProfileWithDroppedLink = async () => {
+      await seedLegacyTree();
+      await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', {
+        name: 'Alice',
+        bio: 'hi',
+        links: [
+          { title: 'site', url: 'https://example.com' },
+          { title: 'mail', url: 'mailto:alice@example.com' },
+        ],
+      });
+    };
+    /** The session with the first object read under `match` failing as `error`, once. */
+    const sessionFailingOnce = (match: string, error: () => Error) => {
+      const { storage } = homeserver.session;
+      let failed = false;
+      const guard = (path: string) => {
+        if (failed || !path.includes(match)) return;
+        failed = true;
+        throw error();
+      };
+      return asOpaque<Session>({
+        ...homeserver.session,
+        info: { ...homeserver.session.info, capabilities: ['/:rw'] },
+        storage: {
+          ...storage,
+          get: async (path: string) => {
+            guard(path);
+            return storage.get(path);
+          },
+          getBytes: async (path: string) => {
+            guard(path);
+            return storage.getBytes(path);
+          },
+        },
+      });
+    };
+    // The SDK error the port counts as one `io_error` for the object, which the engine does not retry
+    const internalError = () => Object.assign(new Error('read failed'), { name: 'InternalError' });
+    const recordWrites = () => {
+      const key = socialMigrationRecordKey(owner);
+      const setItem = vi.spyOn(Storage.prototype, 'setItem');
+      return () =>
+        setItem.mock.calls
+          .filter(([written]) => written === key)
+          .map(([, value]) => JSON.parse(value) as NonNullable<ReturnType<typeof readSocialMigrationRecord>>);
+    };
+
+    it('keeps the profile values an incomplete run dropped through the automatic retry', async () => {
+      retry.immediate = true;
+      await seedProfileWithDroppedLink();
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const writes = recordWrites();
+      const migrating = ensure('signin', sessionFailingOnce('/follows/', internalError));
+
+      await vi.waitFor(() => expect(stage().stage).toBe('summary'));
+      expect(run).toHaveBeenCalledTimes(2);
+      expect(stage().summary).toEqual({ skipped: {}, dropped: { profileImage: 0, profileLinks: 1 } });
+      expect(readSocialMigrationRecord(owner)?.notice).toEqual({
+        skipped: {},
+        profileImage: 0,
+        profileLinks: 1,
+        pending: true,
+      });
+      // The run that writes the notice clears what the gate remembered, in the same write
+      expect(readSocialMigrationRecord(owner)?.droppedProfile).toBeUndefined();
+      const notices = writes().filter(
+        (record, index, all) => JSON.stringify(record.notice) !== JSON.stringify(all[index - 1]?.notice),
+      );
+      expect(notices).toHaveLength(1);
+      SocialMigrationController.acknowledge();
+
+      expect(await migrating).toBe('passed');
+      expect(SocialMigrationController.getPendingProfileNotice(owner)).toEqual({ profileImage: 0, profileLinks: 1 });
+    });
+
+    it('raises the note when a later gate resumes after a reload', async () => {
+      await seedProfileWithDroppedLink();
+      const first = ensure('signin', sessionFailingOnce('/follows/', internalError));
+      // The tab closes during the back-off after the incomplete run
+      await vi.waitFor(() => expect(readSocialMigrationRecord(owner)?.lastRun?.status).toBe('incomplete'));
+      SocialMigrationController.cancel();
+      expect(await first).toBe('canceled');
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBeUndefined();
+
+      const restore = ensure('restore');
+
+      await vi.waitFor(() => expect(stage().stage).toBe('summary'));
+      expect(stage().summary?.dropped).toEqual({ profileImage: 0, profileLinks: 1 });
+      SocialMigrationController.acknowledge();
+      expect(await restore).toBe('passed');
+      expect(SocialMigrationController.getPendingProfileNotice(owner)).toEqual({ profileImage: 0, profileLinks: 1 });
+    });
+
+    it('keeps them across a session expiry after the profile pass', async () => {
+      await seedProfileWithDroppedLink();
+      // Mutes are walked after the profile
+      await homeserver.session.storage.putJson(`/pub/pubky.app/mutes/${fakeOwner(9)}`, { created_at: 4 });
+      const expired = () => Object.assign(new Error('session expired'), { name: 'AuthenticationError' });
+
+      expect(await ensure('signin', sessionFailingOnce('/mutes/', expired))).toBe('reauth-required');
+      expect(stage()).toMatchObject({ stage: 'reauth-required', reason: 'session-expired' });
+      expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(true);
+      SocialMigrationController.cancel();
+
+      const signin = ensure('signin');
+
+      await vi.waitFor(() => expect(stage().stage).toBe('summary'));
+      expect(stage().summary?.dropped).toEqual({ profileImage: 0, profileLinks: 1 });
+      SocialMigrationController.acknowledge();
+      expect(await signin).toBe('passed');
+      expect(SocialMigrationController.getPendingProfileNotice(owner)).toEqual({ profileImage: 0, profileLinks: 1 });
+    });
+
+    it('forgets them when a restore passes on the flag of a run elsewhere, so a later re-walk does not show them', async () => {
+      await homeserver.session.storage.putJson(SOCIAL_MIGRATION_FLAG_PATH, {
+        migrated_at: 1,
+        transform_rev: SOCIAL_MIGRATION_TRANSFORM_REV,
+        skipped: {},
+        migrated: [],
+      });
+      writeSocialMigrationRecord(owner, {
+        v: 1,
+        admittedGrantIds: [GRANT],
+        droppedProfile: { profileImage: 0, profileLinks: 1 },
+      });
+
+      expect(await ensure('restore')).toBe('passed');
+
+      expect(readSocialMigrationRecord(owner)).toEqual({
+        v: 1,
+        admittedGrantIds: [GRANT],
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+      });
+    });
+
+    it('merges the remembered profile values by the larger count and takes the skipped items from the last run only', async () => {
+      const spy = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      spy.mockResolvedValueOnce(
+        report({
+          status: 'incomplete',
+          counts: { ...emptyCounts(), invalid: 2, io_error: 1 },
+          droppedValues: { 'pub/pubky.app/profile.json': ['profile_image', 'profile_link[0]', 'profile_link[1]'] },
+          dropped: 3,
+        }),
+      );
+      spy.mockResolvedValueOnce(
+        report({
+          counts: { ...emptyCounts(), invalid: 1 },
+          droppedValues: { 'pub/pubky.app/profile.json': ['profile_link[2]'] },
+          dropped: 1,
+        }),
+      );
+      vi.useFakeTimers();
+      const migrating = ensure('signin');
+      await vi.advanceTimersByTimeAsync(2000);
+
+      await vi.waitFor(() => expect(stage().stage).toBe('summary'));
+      expect(stage().summary).toEqual({ skipped: { invalid: 1 }, dropped: { profileImage: 1, profileLinks: 2 } });
+      expect(readSocialMigrationRecord(owner)).toMatchObject({
+        notice: { skipped: { invalid: 1 }, profileImage: 1, profileLinks: 2, pending: true },
+      });
+      expect(readSocialMigrationRecord(owner)?.droppedProfile).toBeUndefined();
+      SocialMigrationController.acknowledge();
+      expect(await migrating).toBe('passed');
+    });
+  });
+
+  describe('while it waits to retry', () => {
+    /** The session with every `method` call under `match` failing as the browser's fetch does offline. */
+    const sessionOffline = (method: 'get' | 'exists', match: string) => {
+      const { storage } = homeserver.session;
+      const original = storage[method].bind(storage) as (path: string) => Promise<unknown>;
+      return asOpaque<Session>({
+        ...homeserver.session,
+        info: { ...homeserver.session.info, capabilities: ['/:rw'] },
+        storage: {
+          ...storage,
+          [method]: async (path: string) => {
+            if (path.includes(match)) throw new TypeError('Failed to fetch');
+            return original(path);
+          },
+        },
+      });
+    };
+    const phases = () => {
+      const seen: Array<string | undefined> = [];
+      const unsubscribe = useSocialMigrationStore.subscribe((state) => {
+        if (seen.at(-1) !== state.phase) seen.push(state.phase);
+      });
+      return { seen, unsubscribe };
+    };
+    /** Advances the engine's own transport retries until the run reports, then stays inside the gate's first wait. */
+    const untilFirstReport = async () => {
+      const reported = () => !['running', undefined].includes(readSocialMigrationRecord(owner)?.lastRun?.status);
+      for (let elapsed = 0; !reported(); elapsed += 100) {
+        if (elapsed > 120_000) throw new Error('the run never reported');
+        await vi.advanceTimersByTimeAsync(100);
+      }
+    };
+
+    it('keeps the stopped step in the store while it waits to retry an incomplete run', async () => {
+      vi.useFakeTimers();
+      await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', { name: 'Alice', bio: 'hi' });
+      await homeserver.session.storage.putJson(`/pub/pubky.app/follows/${homeserver.friend}`, { created_at: 1 });
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const { seen, unsubscribe } = phases();
+      const migrating = ensure('signin', sessionOffline('get', '/follows/'));
+
+      await untilFirstReport();
+      unsubscribe();
+
+      expect(readSocialMigrationRecord(owner)?.lastRun?.status).toBe('incomplete');
+      expect(run).toHaveBeenCalledOnce();
+      expect(stage()).toMatchObject({ stage: 'running', phase: 'migrating', attempt: 1, total: 2 });
+      expect(stage().done).toBeGreaterThan(0);
+      expect(seen).not.toContain('incomplete');
+      SocialMigrationController.cancel();
+      expect(await migrating).toBe('canceled');
+    });
+
+    it('keeps the probe step while it waits to retry an unreachable homeserver', async () => {
+      vi.useFakeTimers();
+      await seedLegacyTree();
+      const { seen, unsubscribe } = phases();
+      const migrating = ensure('signin', sessionOffline('exists', '/'));
+
+      await untilFirstReport();
+      unsubscribe();
+
+      expect(readSocialMigrationRecord(owner)?.lastRun).toMatchObject({
+        status: 'aborted',
+        error: { code: 'IO_ERROR' },
+      });
+      expect(stage()).toMatchObject({ stage: 'running', phase: 'probe', attempt: 1 });
+      expect(seen).not.toContain('aborted');
+      SocialMigrationController.cancel();
+      expect(await migrating).toBe('canceled');
+    });
   });
 
   describe('outcome policy', () => {

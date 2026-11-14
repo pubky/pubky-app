@@ -15,8 +15,10 @@ import {
   isSocialMigrationGrantAdmitted,
   isSocialMigrationRecordTrusted,
   markSocialMigrated,
+  mergeSocialMigrationDroppedProfile,
   readPendingSocialMigrationProfileNotice,
   readSocialMigrationRecord,
+  rememberSocialMigrationDroppedProfile,
   type SocialMigrationProfileNotice,
   type SocialMigrationRecord,
   updateSocialMigrationRecord,
@@ -57,6 +59,12 @@ type Gate = {
   unsubscribe: () => void;
 };
 
+/**
+ * A run's last event when it stopped short of the flag: the engine overwrites the phase it stopped in. Never written,
+ * so the screen keeps that step while the gate waits to retry; `done` still flows.
+ */
+const STOPPED_PHASES: ReadonlySet<ProgressEvent['phase']> = new Set(['incomplete', 'paused', 'aborted']);
+
 /** A timer that ends early when `signal` fires. */
 const abortableSleep = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
@@ -83,10 +91,11 @@ export class SocialMigrationController {
   private static gate: Gate | null = null;
 
   /**
-   * Restore: scopes, then the local record (no network), then the flag, then resume for a grant
-   * this build admitted or sign out for one it did not (D2). Fresh sign-in: admit the grant and
-   * run the engine, whose own HEAD finds a finished migration. Upgrade: the local record only;
-   * without one, like a sign-in. Never hand-writes the flag.
+   * Restore: scopes, then the local record (no network), then the flag, then resume when this
+   * browser's record saw the flag at an earlier revision or admitted the grant, and sign out
+   * otherwise (D2). Fresh sign-in: admit the grant and run the engine, whose own HEAD finds a
+   * finished migration. Upgrade: the local record only; without one, like a sign-in. Never
+   * hand-writes the flag.
    */
   static async ensureMigrated({
     session,
@@ -111,7 +120,8 @@ export class SocialMigrationController {
         markSocialMigrated(pubky, rev);
         return 'passed';
       }
-      if (!isSocialMigrationGrantAdmitted(record, this.activeGrantId()))
+      // A record that saw the flag means this browser saw the account pass; an outdated flag is then a revision bump
+      if (record?.migratedRev === undefined && !isSocialMigrationGrantAdmitted(record, this.activeGrantId()))
         return this.requireReauth({ generation, isCurrent }, 'pre-migration-grant');
     } else {
       const grantId = this.activeGrantId();
@@ -123,6 +133,11 @@ export class SocialMigrationController {
   /** Whether this browser saw the done flag at this build's revision for `pubky`: no network, no chunk. */
   static hasPassedLocally(pubky: string): boolean {
     return isSocialMigrationRecordTrusted(readSocialMigrationRecord(pubky));
+  }
+
+  /** An upgrade adopted on a trusted record passes without the gate; its grant is admitted all the same. */
+  static admitGrant(pubky: string, grantId: string): void {
+    admitSocialMigrationGrant(pubky, grantId);
   }
 
   /** Retry from the blocked screen. */
@@ -254,6 +269,8 @@ export class SocialMigrationController {
         }
         if (signal.aborted || !isCurrent()) return 'canceled';
         this.saveLastRun(pubky, report);
+        // Every report: a later run of this gate finds the 1.x profile present and does not report its drops again
+        rememberSocialMigrationDroppedProfile(pubky, summarizeSocialMigrationReport(report).dropped);
         const code = report.error?.code;
         if (report.status === 'done' || report.status === 'already_migrated') return await this.finish(gate, report);
         if (report.status === 'incomplete' || code === 'IO_ERROR' || code === 'ALREADY_RUNNING') {
@@ -306,9 +323,16 @@ export class SocialMigrationController {
 
   private static async finish(gate: Gate, report: MigrationReport): Promise<SocialMigrationOutcome> {
     const { pubky } = gate;
+    // Skipped items are read again by every run, so the last report's are current; dropped profile values are
+    // reported only by the run that wrote the profile, so the gate's earlier runs count too. Read before the flag
+    // is recorded, which clears them.
+    const lastReport = summarizeSocialMigrationReport(report);
+    const summary = {
+      ...lastReport,
+      dropped: mergeSocialMigrationDroppedProfile(readSocialMigrationRecord(pubky)?.droppedProfile, lastReport.dropped),
+    };
     markSocialMigrated(pubky, SOCIAL_MIGRATION_TRANSFORM_REV);
     logSocialMigrationFinished({ pubky, report });
-    const summary = summarizeSocialMigrationReport(report);
     if (!socialMigrationSummaryIsEmpty(summary)) {
       // The profile edit page shows the dropped values once (PR-D2); the screen shows the counts now.
       updateSocialMigrationRecord(pubky, (current) => ({
@@ -332,7 +356,7 @@ export class SocialMigrationController {
     let lastPhase: ProgressEvent['phase'] | undefined;
     let lastPass: ProgressEvent['pass'];
     return (event) => {
-      if (gate.abort.signal.aborted) return;
+      if (gate.abort.signal.aborted || STOPPED_PHASES.has(event.phase)) return;
       const now = Date.now();
       const changed = event.phase !== lastPhase || event.pass !== lastPass;
       if (!changed && now - lastWrite < SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS) return;
