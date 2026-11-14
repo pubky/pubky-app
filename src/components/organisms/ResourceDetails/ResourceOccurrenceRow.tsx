@@ -16,6 +16,11 @@ interface ResourceOccurrenceRowProps {
   occurrence: TPinakesCard;
   /** Where the row opens (the date's own page), in the same tab; a row of text without one. */
   href?: string;
+  /**
+   * The list is of the page's own event (its other dates): the date is the row's main line, its name
+   * only in the row link's name.
+   */
+  hideName?: boolean;
   /** For tests; the viewer's locale when omitted. */
   locale?: string;
 }
@@ -24,21 +29,33 @@ interface ResourceOccurrenceRowProps {
  * One date of a calendar in a resource page's list of dates: its name, when it is (its start and end
  * in UTC, saying so: an instance names no time zone and no all-day), its lifecycle when it is not
  * going ahead as planned (Cancelled, Rescheduled…), and, when it has a place, "Open in Maps" at the
- * row's end, beside the row's link (`href`) and never in it.
+ * row's end, beside the row's link (`href`) and never in it. In a list of one event's dates
+ * (`hideName`), the date leads and the name is said only in the link's name.
  */
-export function ResourceOccurrenceRow({ occurrence, href, locale }: ResourceOccurrenceRowProps) {
+export function ResourceOccurrenceRow({ occurrence, href, hideName = false, locale }: ResourceOccurrenceRowProps) {
   const instance = toEventInstance(occurrence, null);
   const status = getEventLifecycleLabel(instance.event_status);
   // A date that has a place ends in "Open in Maps", as every located event does
   const destination = getMapsDestination(instance, locale);
+  const name = occurrence.name?.trim() || getDisplayLink(occurrence.uri);
+  const dates = formatResourceDates(instance, locale);
   const content = (
     <>
-      <Typography size="sm" dir="auto" className="font-medium wrap-anywhere">
-        {occurrence.name?.trim() || getDisplayLink(occurrence.uri)}
-      </Typography>
-      <Typography size="xs" className="font-normal text-muted-foreground">
-        {formatResourceDates(instance, locale)}
-      </Typography>
+      {hideName ? (
+        // The date as the name's line
+        <Typography size="sm" className="font-medium wrap-anywhere">
+          {dates}
+        </Typography>
+      ) : (
+        <>
+          <Typography size="sm" dir="auto" className="font-medium wrap-anywhere">
+            {name}
+          </Typography>
+          <Typography size="xs" className="font-normal text-muted-foreground">
+            {dates}
+          </Typography>
+        </>
+      )}
       {status && (
         <Badge variant="secondary" data-testid="resource-occurrence-status" className="w-fit">
           {status}
@@ -53,6 +70,7 @@ export function ResourceOccurrenceRow({ occurrence, href, locale }: ResourceOccu
         // As an Also on row opens its link's page (`ResourceListRow`)
         <Link
           href={href}
+          aria-label={hideName ? [name, dates, status].filter(Boolean).join(', ') : undefined}
           overrideDefaults
           className={cn(
             contentClassName,
