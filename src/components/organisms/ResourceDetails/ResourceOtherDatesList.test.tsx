@@ -116,6 +116,29 @@ describe('ResourceOtherDatesList', () => {
     window.history.replaceState(null, '', '#');
   });
 
+  it('brings the section into view when it arrives late: after the page’s card, group and dates are read', () => {
+    window.history.replaceState(null, '', '#other-dates');
+    const scrolled: Element[] = [];
+    // jsdom lays nothing out and has no scrolling
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(() => asOpaque<DOMRectList>([new DOMRect()]));
+    mocks.dates = dates({ feed: null, sameName: [], isLoading: true });
+    const { rerender } = render(<ResourceOtherDatesList card={DATE} isAnchor />);
+    mocks.dates = dates({ sameName: [], isLoading: true });
+    rerender(<ResourceOtherDatesList card={DATE} isAnchor />);
+    expect(scrolled).toEqual([]);
+
+    mocks.dates = dates();
+    rerender(<ResourceOtherDatesList card={DATE} isAnchor />);
+
+    expect(scrolled).toEqual([section('Other dates')]);
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    vi.restoreAllMocks();
+    window.history.replaceState(null, '', '#');
+  });
+
   it('keeps the Maps menu of a row apart from its link', () => {
     const located = OTHER_DATES.map((card) => ({ ...card, point: { lat: 47.37, lon: 8.53 } }));
     mocks.dates = dates({ sameName: located });

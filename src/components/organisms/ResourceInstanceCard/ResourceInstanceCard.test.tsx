@@ -4,6 +4,7 @@ import { getResourceRoute } from '@/app/routes';
 import { toEventInstance } from '@/pipes/resource/resource.events';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
 import eventsFixture from '@/services/pinakes/fixtures/search.events.json';
+import meetupCollapsedFixture from '@/services/pinakes/fixtures/search.meetup-collapsed.json';
 import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
 import { ResourceInstanceCard } from './ResourceInstanceCard';
 
@@ -55,6 +56,17 @@ describe('ResourceInstanceCard', () => {
     expect(actions).toHaveAttribute('data-title', 'Annett Louisan @ Volkshaus');
     expect(actions).toHaveAttribute('data-collections', '1');
     expect(actions).toHaveAttribute('data-tags-label', 'Tags on this music event');
+  });
+
+  it('closes a Meetup date with no page of its own on its date page, the feed’s link only a spelling', () => {
+    // The footer leaves the feed's link out of this date's tags (ResourceActions' scope tests)
+    const [nov25]: TPinakesCard[] = meetupCollapsedFixture.items;
+    render(<ResourceInstanceCard card={toEventInstance(nov25, null)} />);
+
+    const actions = screen.getByTestId('resource-actions');
+    expect(actions).toHaveAttribute('data-uri', nov25.uri);
+    expect(actions).toHaveAttribute('data-spellings', nov25.occurrence!.feed_uri);
+    expect(actions).toHaveAttribute('data-card', nov25.id);
   });
 
   it('hands the footer the row’s card, so its other links’ tags show as on a feed’s card', () => {

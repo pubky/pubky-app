@@ -5,11 +5,16 @@ import { PostController } from '@/controllers/post/post';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
 import { dedupeAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
+import { getResourceTarget } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
+import { getEventFeed } from '@/pipes/resource/resource.events';
+import { getResourceSearchRowUri } from '@/pipes/resource/resource.search';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
-import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import holidaysFixture from '@/services/pinakes/fixtures/occurrences.holidays.json';
+import meetupCollapsedFixture from '@/services/pinakes/fixtures/search.meetup-collapsed.json';
+import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceActions } from './ResourceActions';
 
 const URI = 'https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ';
@@ -1161,7 +1166,7 @@ describe('ResourceActions', () => {
       id: '51ee469240e25fe6a378dc8d317e3f89',
       uri: 'https://www.meetup.com/bitcoin-meetup-switzerland/events/ical/',
     };
-    const SCOPE_LABEL = 'Tags for this date or for all dates';
+    const SCOPE_LABEL = /^Tags for this date or for all dates/;
     const renderDate = (props: Partial<React.ComponentProps<typeof ResourceActions>> = {}) =>
       render(
         <ResourceActions
@@ -1200,6 +1205,7 @@ describe('ResourceActions', () => {
 
       const trigger = screen.getByRole('button', { name: SCOPE_LABEL });
       expect(trigger).toHaveTextContent('This date');
+      expect(trigger).toHaveAccessibleName('Tags for this date or for all dates: This date');
       expect(mocks.feedArgs.at(-1)).toEqual([DATE, { enabled: true }]);
       expect(mocks.tagsUri).toBe(DATE.uri);
       expect(mocks.tagsOptions.at(-1)).toMatchObject({ spellings: DATE.aliases });
@@ -1230,6 +1236,10 @@ describe('ResourceActions', () => {
       pickScope('All dates');
 
       expect(screen.getByRole('button', { name: SCOPE_LABEL })).toHaveTextContent('All dates');
+      // The trigger's name says which one applies now
+      expect(screen.getByRole('button', { name: SCOPE_LABEL })).toHaveAccessibleName(
+        'Tags for this date or for all dates: All dates',
+      );
       expect(mocks.tagsUri).toBe(FEED.uri);
       expect(mocks.tagsOptions.at(-1)?.spellings ?? []).toEqual([]);
       expect(lastOtherLinks().links).toEqual([
@@ -1266,6 +1276,56 @@ describe('ResourceActions', () => {
       expect(screen.getByRole('button', { name: SCOPE_LABEL })).toBeInTheDocument();
       expect(mocks.feedArgs.at(-1)?.[0]).toBeNull();
       expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-other-tags', 'weekly,rock');
+    });
+  });
+
+  describe('a feed’s date in the agenda (its footer as `ResourceInstanceCard` closes it)', () => {
+    const SCOPE_LABEL = /^Tags for this date or for all dates/;
+    /** The footer of a search row, with the links `ResourceInstanceCard` gives it. */
+    const renderRow = (row: TPinakesCard) => {
+      const target = getResourceTarget(row, getResourceSearchRowUri(row));
+      mocks.feed = { feed: getEventFeed(row, null), isLoading: false };
+      return render(
+        <ResourceActions uri={target.uri} spellings={target.spellings} tagsLabel="Tags on this event" card={row} />,
+      );
+    };
+    const pickScope = (name: string) => {
+      openMenu(SCOPE_LABEL);
+      fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(name, 'i') }));
+    };
+    const readLinks = () => mocks.otherLinkReads.at(-1)!.links.map((link) => `${link.name}: ${link.uri}`);
+
+    it('tags a Meetup date with no page card of its own on its date page, the feed on all dates, never both', () => {
+      const [nov25]: TPinakesCard[] = meetupCollapsedFixture.items;
+      const feed = nov25.occurrence!.feed_uri;
+      renderRow(nov25);
+
+      // This date: the date page's link alone, read, written and removed there
+      expect(mocks.tagsUri).toBe(nov25.uri);
+      expect(mocks.tagsOptions.at(-1)?.spellings ?? []).toEqual([]);
+      // The feed's tags once, as all dates'
+      expect(readLinks()).toEqual([`All dates: ${feed}`]);
+      fireEvent.click(screen.getByTestId('tag-bar-write'));
+
+      pickScope('All dates');
+      expect(mocks.tagsUri).toBe(feed);
+      expect(mocks.tagsOptions.at(-1)?.spellings ?? []).toEqual([]);
+      expect(readLinks()).toEqual([`This date: ${nov25.uri}`]);
+      fireEvent.click(screen.getByTestId('tag-bar-write'));
+
+      expect(mocks.writes).toEqual([nov25.uri, feed]);
+    });
+
+    it('shows no switch for a calendar’s date whose link is the calendar, and tags the calendar as before', () => {
+      const [holiday]: TPinakesCard[] = holidaysFixture.items;
+      const target = getResourceTarget(holiday, getResourceSearchRowUri(holiday));
+      renderRow(holiday);
+
+      expect(screen.queryByRole('button', { name: SCOPE_LABEL })).toBeNull();
+      expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-scope', 'none');
+      expect(mocks.tagsUri).toBe(target.uri);
+      expect(mocks.tagsOptions.at(-1)?.spellings).toEqual(target.spellings);
+      expect(mocks.otherLinkReads.at(-1)?.links ?? []).toEqual([]);
     });
   });
 });
