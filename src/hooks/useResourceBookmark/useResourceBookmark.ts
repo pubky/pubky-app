@@ -64,13 +64,13 @@ export function useResourceBookmark(
 
       setSettled({ key: viewerKey, isBookmarked: !wasBookmarked });
       try {
-        if (wasBookmarked) {
-          await BookmarkController.commitDeleteResource({ uri, userId: viewer });
-          toast({ title: 'Removed from bookmarks' });
-        } else {
-          await BookmarkController.commitCreateResource({ uri, userId: viewer });
-          toast({ title: 'Saved to bookmarks' });
+        const write = wasBookmarked ? BookmarkController.commitDeleteResource : BookmarkController.commitCreateResource;
+        if (!(await write({ uri, userId: viewer }))) {
+          // Skipped: the account changed while it waited; nothing to announce.
+          setSettled({ key: viewerKey, isBookmarked: wasBookmarked });
+          return false;
         }
+        toast({ title: wasBookmarked ? 'Removed from bookmarks' : 'Saved to bookmarks' });
         return true;
       } catch {
         setSettled({ key: viewerKey, isBookmarked: wasBookmarked });

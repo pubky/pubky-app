@@ -104,17 +104,32 @@ export class BookmarkController {
     return BookmarkApplication.fetchResourceBookmarked(url);
   }
 
-  /** Bookmark an external resource: `/priv/social/v1/bookmarks/`, targeting the link. */
-  static async commitCreateResource({ uri, userId }: TResourceBookmarkParams) {
+  /**
+   * Bookmark an external resource: `/priv/social/v1/bookmarks/`, targeting the link.
+   * @returns Whether the write ran: false when the account changed while it waited (`persistResource`)
+   */
+  static async commitCreateResource({ uri, userId }: TResourceBookmarkParams): Promise<boolean> {
     const { url, body } = BookmarkNormalizer.toResource(uri, userId);
 
-    await BookmarkApplication.persistResource(HttpMethod.PUT, { bookmarkUrl: url, bookmarkBody: body });
+    return BookmarkApplication.persistResource(HttpMethod.PUT, {
+      userId,
+      bookmarkUrl: url,
+      bookmarkBody: body,
+      isCurrent: captureViewerSession(),
+    });
   }
 
-  /** Remove the bookmark of an external resource; its path spells the link, so it is built again. */
-  static async commitDeleteResource({ uri, userId }: TResourceBookmarkParams) {
+  /**
+   * Remove the bookmark of an external resource; its path spells the link, so it is built again.
+   * @returns Whether the delete ran: false when the account changed while it waited (`persistResource`)
+   */
+  static async commitDeleteResource({ uri, userId }: TResourceBookmarkParams): Promise<boolean> {
     const { url } = BookmarkNormalizer.toResource(uri, userId);
 
-    await BookmarkApplication.persistResource(HttpMethod.DELETE, { bookmarkUrl: url });
+    return BookmarkApplication.persistResource(HttpMethod.DELETE, {
+      userId,
+      bookmarkUrl: url,
+      isCurrent: captureViewerSession(),
+    });
   }
 }

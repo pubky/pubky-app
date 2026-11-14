@@ -12,7 +12,7 @@ const URI = 'https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ';
 describe('BookmarkController, external resources', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(BookmarkApplication, 'persistResource').mockResolvedValue(undefined);
+    vi.spyOn(BookmarkApplication, 'persistResource').mockResolvedValue(true);
     vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(true);
   });
 
@@ -36,7 +36,7 @@ describe('BookmarkController, external resources', () => {
 
     const [[, created], [method, deleted]] = vi.mocked(BookmarkApplication.persistResource).mock.calls;
     expect(method).toBe(HttpMethod.DELETE);
-    expect(deleted).toEqual({ bookmarkUrl: created.bookmarkUrl });
+    expect(deleted).toEqual({ userId: USER, bookmarkUrl: created.bookmarkUrl, isCurrent: expect.any(Function) });
   });
 
   it('reads the viewer’s own state from the built file', async () => {

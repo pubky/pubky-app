@@ -17,9 +17,13 @@ export type TBookmarkPersistInput = {
 
 /** A bookmark of an external resource: the built file only, no local row. */
 export type TResourceBookmarkPersistInput = {
+  /** The user bookmarking, whose sync lock the write holds. */
+  userId: Pubky;
   bookmarkUrl: string;
   /** The bytes to PUT; absent on a delete. */
   bookmarkBody?: Uint8Array;
+  /** Whether the account the write started for is still the current one; checked once the locks are held. */
+  isCurrent?: () => boolean;
 };
 
 export interface TBookmarkFetchOptions {

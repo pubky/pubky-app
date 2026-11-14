@@ -29,8 +29,8 @@ describe('useResourceBookmark', () => {
     mocks.waitForAuth.mockResolvedValue(true);
     useAuthStore.setState({ currentUserPubky: USER });
     vi.mocked(BookmarkController.fetchResourceBookmarked).mockResolvedValue(false);
-    vi.mocked(BookmarkController.commitCreateResource).mockResolvedValue(undefined);
-    vi.mocked(BookmarkController.commitDeleteResource).mockResolvedValue(undefined);
+    vi.mocked(BookmarkController.commitCreateResource).mockResolvedValue(true);
+    vi.mocked(BookmarkController.commitDeleteResource).mockResolvedValue(true);
   });
 
   it('reads the viewer’s own bookmark state', async () => {
@@ -81,6 +81,19 @@ describe('useResourceBookmark', () => {
     });
     expect(BookmarkController.commitDeleteResource).toHaveBeenCalledWith({ uri: URI, userId: USER });
     expect(result.current.isBookmarked).toBe(false);
+  });
+
+  it('flips back and announces nothing when the write was skipped for a changed account', async () => {
+    vi.mocked(BookmarkController.commitCreateResource).mockResolvedValue(false);
+    const { result } = renderHook(() => useResourceBookmark(URI));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await expect(result.current.toggle()).resolves.toBe(false);
+    });
+
+    expect(result.current.isBookmarked).toBe(false);
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('flips back with an error toast when the write fails', async () => {
