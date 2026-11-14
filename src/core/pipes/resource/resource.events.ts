@@ -39,15 +39,93 @@ export function getResourceInstanceKey(card: Pick<TPinakesCard, 'id' | 'start' |
   return JSON.stringify([card.id, occurrence.uid, occurrence.recurrence_id ?? null, card.start ?? null]);
 }
 
-/** The rows read so far with the next page's after them, each instance once (`getResourceInstanceKey`). */
+/** A card's own links: its canonical one, the links people wrote for it and its other spellings. */
+function getOwnLinks(card: Pick<TPinakesCard, 'uri' | 'refs'> & { aliases?: readonly string[] | null }): Set<string> {
+  return new Set([card.uri, ...(card.refs ?? []), ...(card.aliases ?? [])]);
+}
+
+/**
+ * Whether a row is the same date as an event's card: one of the card's links (`uri`, `refs`,
+ * `aliases`; a date page has a number and a token link), the card's group (a date page and the
+ * feed's date of it are one group), or, for a feed's date, the same instance.
+ */
+export function isSameEventDate(
+  card: Pick<TPinakesCard, 'id' | 'uri' | 'refs' | 'start' | 'group' | 'occurrence'> & {
+    aliases?: readonly string[] | null;
+  },
+  row: Pick<TPinakesCard, 'id' | 'uri' | 'start' | 'group' | 'occurrence'>,
+): boolean {
+  if (getOwnLinks(card).has(row.uri)) return true;
+  if (card.group?.id && row.group?.id === card.group.id) return true;
+  return Boolean(card.occurrence && row.occurrence) && getResourceInstanceKey(card) === getResourceInstanceKey(row);
+}
+
+/**
+ * The rows read so far with the next page's after them, each instance once (`getResourceInstanceKey`).
+ * A date page and the feed's date of it (`isSameEventDate`) are one row: the page's, where the first
+ * of the two stood, so the list keeps its order by start.
+ */
 export function mergeResourceInstances(read: readonly TPinakesCard[], page: readonly TPinakesCard[]): TPinakesCard[] {
   const seen = new Set<string>();
-  return [...read, ...page].filter((card) => {
+  const rows = [...read, ...page].filter((card) => {
     const key = getResourceInstanceKey(card);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+  const pages = rows.filter((card) => !card.occurrence);
+  const placed = new Set<TPinakesCard>();
+  return rows.flatMap((card) => {
+    const shown = card.occurrence ? (pages.find((other) => isSameEventDate(other, card)) ?? card) : card;
+    if (placed.has(shown)) return [];
+    placed.add(shown);
+    return [shown];
+  });
+}
+
+/** The calendar feed an event's date is part of: the one people tag for all its dates. */
+export interface TEventFeed {
+  /** Pinakes resource ID of the feed (`occurrence.feed_id`), whose dates are its occurrences. */
+  id: string;
+  /** The feed's link (`occurrence.feed_uri`). */
+  uri: string;
+}
+
+/**
+ * The feed an event's date is part of: a feed's date (a search row) names its own; a date page's
+ * group (`GET /v1/groups/{id}`) has the feed's date of it as a member. `null` for an event outside a
+ * group, a group read not yet or no longer there, or a group with no feed's date.
+ *
+ * @param members - The card's group members; absent while read, or for a card outside a group
+ */
+export function getEventFeed(
+  card: Pick<TPinakesCard, 'occurrence'>,
+  members: readonly Pick<TPinakesCard, 'occurrence'>[] | null | undefined,
+): TEventFeed | null {
+  const occurrence = card.occurrence ?? members?.find((member) => member.occurrence)?.occurrence;
+  return occurrence ? { id: occurrence.feed_id, uri: occurrence.feed_uri } : null;
+}
+
+/** A name as two dates of one series are compared: trimmed and case-folded. */
+const toSeriesName = (name: string | null | undefined) => name?.trim().toLocaleLowerCase() ?? '';
+
+/**
+ * A feed's coming dates as an event's page lists them, this date left out (`isSameEventDate`):
+ * `sameName`, the dates of this event (the same name, trimmed and case-folded), and `others`, the
+ * feed's other events, each in the feed's order.
+ */
+export function splitFeedDates<T extends Pick<TPinakesCard, 'id' | 'uri' | 'name' | 'start' | 'group' | 'occurrence'>>(
+  card: Parameters<typeof isSameEventDate>[0] & Pick<TPinakesCard, 'name'>,
+  dates: readonly T[],
+): { sameName: T[]; others: T[] } {
+  const name = toSeriesName(card.name);
+  const sameName: T[] = [];
+  const others: T[] = [];
+  for (const date of dates) {
+    if (isSameEventDate(card, date)) continue;
+    (name && toSeriesName(date.name) === name ? sameName : others).push(date);
+  }
+  return { sameName, others };
 }
 
 /**
