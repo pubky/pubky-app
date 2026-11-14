@@ -65,20 +65,20 @@ app never hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`)
 keeps its context when it passes and admits its grant.
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen
-(Continue) only when the run skipped or dropped something. `incomplete` and `IO_ERROR` retry on their own
-(`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry, and the controller treats `ALREADY_RUNNING`
-the same way defensively (the engine reports it only for a lock adapter that yields when another holder exists; the
-app's adapter waits, see _Cross-tab_, so the code does not arise there); `AuthCoordinator` retries that reason on
-foreground and network return under its cooldown. `QUOTA` blocks with `needBytes`; `PRIV_UNSUPPORTED`,
-`UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it, except a rejected load of the
-migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure: it blocks at once as
-`incomplete` (no automatic retries), so Retry and the reconnect retry apply, and is reported once per account and page;
-`SESSION_EXPIRED` and `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new generation, `isLoggingOut`,
-`AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns its transport retries
-(429 backoff, three network retries, read-back before every cleanup delete); the app retries whole runs. Those are the
-one set of homeserver retries that `retryHomeserverWrite` does not run; `HomeserverService.deleteIdempotent` and
-`ProfileApplication.deleteFile` are attempt loops over single-attempt `HomeserverService.delete` calls, not a policy of
-their own (`docs/error-handling.md`).
+(Continue) only when the last run skipped something or any run of the gate dropped a profile value. `incomplete` and
+`IO_ERROR` retry on their own (`SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS`, three times), then block on Retry, and the
+controller treats `ALREADY_RUNNING` the same way defensively (the engine reports it only for a lock adapter that yields
+when another holder exists; the app's adapter waits, see _Cross-tab_, so the code does not arise there);
+`AuthCoordinator` retries that reason on foreground and network return under its cooldown. `QUOTA` blocks with
+`needBytes`; `PRIV_UNSUPPORTED`, `UNSUPPORTED_EPOCH` and a thrown engine error block on Retry with Sign out beside it,
+except a rejected load of the migrator's chunk, which `HomeserverService.migrateToSocialV1` throws as a network failure:
+it blocks at once as `incomplete` (no automatic retries), so Retry and the reconnect retry apply, and is reported once
+per account and page; `SESSION_EXPIRED` and `CAPS_MISSING` sign the account out; `ABORTED` is our own cancel. A new
+generation, `isLoggingOut`, `AuthController.logout` and `requireSessionReauthentication` cancel the run. The engine owns
+its transport retries (429 backoff, three network retries, read-back before every cleanup delete); the app retries whole
+runs. Those are the one set of homeserver retries that `retryHomeserverWrite` does not run;
+`HomeserverService.deleteIdempotent` and `ProfileApplication.deleteFile` are attempt loops over single-attempt
+`HomeserverService.delete` calls, not a policy of their own (`docs/error-handling.md`).
 
 **Cross-tab.** The Web Lock `pubky-social-migrator:<owner>` is taken waiting (`navigator.locks.request(name,
 { signal }, fn)`, never `ifAvailable`): a second tab shows "Another tab is updating your account" and, once the first
@@ -86,15 +86,18 @@ finishes, its own run reads the flag. Without `navigator.locks` the run is unloc
 concurrently is accepted with the engine's semantics (create-only writes, read-back before delete).
 
 **Persistence.** The record is `localStorage` `social-migration:<pubky>` `{ v: 1, migratedRev?, admittedGrantIds,
-lastRun?, notice? }`, zod-validated, unreadable means untrusted, excluded from the logout sweep like
+lastRun?, droppedProfile?, notice? }`, zod-validated, unreadable means untrusted, excluded from the logout sweep like
 `auth-store-v3-migrated`. Not Dexie (account preparation, logout and a `DB_VERSION` bump clear it before the gate runs)
 and not the homeserver (the flag there is the authority; the record exists to avoid asking and to avoid loading the
-migrator chunk). `SOCIAL_MIGRATION_TRANSFORM_REV` mirrors the engine's `transformRev` under a contract test, because
-the revision is only reachable through the 790 KB chunk. `lastRun` shows "Continuing from an earlier run"; `notice`
-holds the counts of what a run left behind for the profile edit page to show once. A tab-scoped `sessionStorage` notice
-explains the forced sign-out after the stores were reset; while it is pending, the explanation is owed on every route
-(see _Amendment — the explanation is route-independent_). The migrator is loaded by a dynamic `import()` only when a
-run starts, which keeps its chunk out of the main bundle and out of the service-worker precache.
+migrator chunk). `SOCIAL_MIGRATION_TRANSFORM_REV` mirrors the engine's `transformRev` under a contract test, because the
+revision is only reachable through the 790 KB chunk. `lastRun` shows "Continuing from an earlier run"; `notice` holds
+the counts of what a run left behind for the profile edit page to show once. `droppedProfile` keeps the counts of the
+profile values a run dropped across the runs of a gate, reloads and re-sign-ins included, until the run that records the
+flag merges them into `notice`: a resumed walk finds the 1.x profile present and does not report them again. Recording
+the flag clears them, also when a restore passes on the flag of a run that finished elsewhere. A tab-scoped
+`sessionStorage` notice explains the forced sign-out after the stores were reset; while it is pending, the explanation
+is owed on every route (see _Amendment — the explanation is route-independent_). The migrator is loaded by a dynamic
+`import()` only when a run starts, which keeps its chunk out of the main bundle and out of the service-worker precache.
 
 **Screen.** `/migration` → `templates/Auth/SocialMigration` → `organisms/SocialMigrationProgress` over the ephemeral
 `useSocialMigrationStore` (written by `SocialMigrationController` only, progress coalesced to phase changes plus one

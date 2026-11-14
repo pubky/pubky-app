@@ -7,8 +7,10 @@ import {
   isSocialMigrationGrantAdmitted,
   isSocialMigrationRecordTrusted,
   markSocialMigrated,
+  mergeSocialMigrationDroppedProfile,
   readPendingSocialMigrationProfileNotice,
   readSocialMigrationRecord,
+  rememberSocialMigrationDroppedProfile,
   SOCIAL_MIGRATION_RECORD_KEY_PREFIX,
   socialMigrationRecordKey,
   updateSocialMigrationRecord,
@@ -91,6 +93,48 @@ describe('social migration record', () => {
     const next = updateSocialMigrationRecord(PUBKY, (record) => ({ ...record, migratedRev: 1 }));
     expect(next).toEqual({ v: 1, admittedGrantIds: [], migratedRev: 1 });
     expect(readSocialMigrationRecord(PUBKY)).toEqual(next);
+  });
+
+  describe('dropped profile values', () => {
+    it('remembers the larger count per field across the runs of a gate, and nothing for a run that dropped none', () => {
+      rememberSocialMigrationDroppedProfile(PUBKY, { profileImage: 0, profileLinks: 0 });
+      expect(readSocialMigrationRecord(PUBKY)).toBeNull();
+
+      rememberSocialMigrationDroppedProfile(PUBKY, { profileImage: 0, profileLinks: 2 });
+      rememberSocialMigrationDroppedProfile(PUBKY, { profileImage: 1, profileLinks: 1 });
+      rememberSocialMigrationDroppedProfile(PUBKY, { profileImage: 0, profileLinks: 0 });
+
+      expect(readSocialMigrationRecord(PUBKY)).toEqual({
+        v: 1,
+        admittedGrantIds: [],
+        droppedProfile: { profileImage: 1, profileLinks: 2 },
+      });
+    });
+
+    it('is cleared with the last run when the flag is recorded', () => {
+      writeSocialMigrationRecord(PUBKY, {
+        v: 1,
+        admittedGrantIds: ['a'],
+        lastRun: { at: 1, status: 'incomplete', done: 1, total: 2, counts: {}, dropped: 1 },
+        droppedProfile: { profileImage: 0, profileLinks: 1 },
+      });
+      markSocialMigrated(PUBKY, SOCIAL_MIGRATION_TRANSFORM_REV);
+      expect(readSocialMigrationRecord(PUBKY)).toEqual({
+        v: 1,
+        admittedGrantIds: ['a'],
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+      });
+    });
+
+    it('merges by the larger count per field, from nothing as well', () => {
+      expect(mergeSocialMigrationDroppedProfile(undefined, { profileImage: 0, profileLinks: 1 })).toEqual({
+        profileImage: 0,
+        profileLinks: 1,
+      });
+      expect(
+        mergeSocialMigrationDroppedProfile({ profileImage: 1, profileLinks: 0 }, { profileImage: 0, profileLinks: 3 }),
+      ).toEqual({ profileImage: 1, profileLinks: 3 });
+    });
   });
 
   describe('profile notice', () => {

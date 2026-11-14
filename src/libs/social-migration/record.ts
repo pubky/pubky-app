@@ -5,7 +5,8 @@ import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
  * The gate's per-account localStorage record (ADR-0026): the transform revision this browser saw
  * the done flag at (so a restore passes with no network and no migrator chunk), the grants this
  * build admitted (so a reload mid-run resumes instead of being signed out again), where the last
- * run stopped, and the counts of what it left behind. Never Dexie (cleared by account preparation,
+ * run stopped, the profile values the gate's runs dropped so far, and the counts of what it left
+ * behind. Never Dexie (cleared by account preparation,
  * logout and a `DB_VERSION` bump, before the gate runs) and never the homeserver (the flag there
  * is the authority; this record exists to avoid asking). Excluded from the logout sweep like
  * `auth-store-v3-migrated`. An unreadable record is `null` and never trusted.
@@ -32,6 +33,13 @@ const socialMigrationRecordSchema = z.object({
       counts: countsSchema,
       dropped: z.number().int().nonnegative(),
       error: z.object({ code: z.string(), needBytes: z.number().nonnegative().optional() }).optional(),
+    })
+    .optional(),
+  // Kept across the runs of a gate (a resumed walk finds the 1.x profile present and does not report them again)
+  droppedProfile: z
+    .object({
+      profileImage: z.number().int().nonnegative(),
+      profileLinks: z.number().int().nonnegative(),
     })
     .optional(),
   notice: z
@@ -98,13 +106,43 @@ export function isSocialMigrationGrantAdmitted(record: SocialMigrationRecord | n
   return grantId !== null && (record?.admittedGrantIds.includes(grantId) ?? false);
 }
 
-/** The flag was seen at `rev`; the record only moves forward. */
+/**
+ * The flag was seen at `rev`; the record only moves forward. The gate is over: where its runs stopped and what they
+ * dropped go with it (a gate that passes on the flag of another device's run never shows them).
+ */
 export function markSocialMigrated(pubky: string, rev: number): void {
   updateSocialMigrationRecord(pubky, (record) => ({
     ...record,
     migratedRev: Math.max(record.migratedRev ?? 0, rev),
     lastRun: undefined,
+    droppedProfile: undefined,
   }));
+}
+
+type SocialMigrationDroppedProfile = NonNullable<SocialMigrationRecord['droppedProfile']>;
+
+/**
+ * Remembers the profile values a run dropped until the gate records the flag: only the run that wrote the
+ * 1.x profile reports them. Counts only, the larger of the stored and the new one per field; a run
+ * that dropped nothing writes nothing.
+ */
+export function rememberSocialMigrationDroppedProfile(pubky: string, dropped: SocialMigrationDroppedProfile): void {
+  if (dropped.profileImage === 0 && dropped.profileLinks === 0) return;
+  updateSocialMigrationRecord(pubky, (record) => ({
+    ...record,
+    droppedProfile: mergeSocialMigrationDroppedProfile(record.droppedProfile, dropped),
+  }));
+}
+
+/** The larger count per field: one gate's runs report the same profile at most once each. */
+export function mergeSocialMigrationDroppedProfile(
+  remembered: SocialMigrationDroppedProfile | undefined,
+  dropped: SocialMigrationDroppedProfile,
+): SocialMigrationDroppedProfile {
+  return {
+    profileImage: Math.max(remembered?.profileImage ?? 0, dropped.profileImage),
+    profileLinks: Math.max(remembered?.profileLinks ?? 0, dropped.profileLinks),
+  };
 }
 
 /** The profile values a finished run dropped, for the one-shot note on the profile edit page (D17). */
