@@ -472,6 +472,64 @@ describe('FollowedCollections', () => {
       expect(screen.getAllByTestId('collection-card')).toHaveLength(2 * COLLECTIONS_SECTION_PAGE_SIZE);
       expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
     });
+
+    it('stays mounted and disabled while the walk fills a window the user widened', async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      const all = idsOf(3 * COLLECTIONS_SECTION_PAGE_SIZE);
+      // What the live query has cached so far: a full first window.
+      let cached = all.slice(0, COLLECTIONS_SECTION_PAGE_SIZE);
+      mockUseLiveQuery.mockImplementation(() => cached);
+      // The first slice settles at once; every later one waits for the test to settle it. An
+      // implementation, not queued once-values, so nothing leaks into the next test if this one fails.
+      const pending: Array<(slice: TReadPostStreamChunkResponse) => void> = [];
+      mockGetOrFetchStreamSlice.mockImplementation(async () =>
+        mockGetOrFetchStreamSlice.mock.calls.length === 1
+          ? makeSlice({ reachedEnd: false, lastRawPostId: all[COLLECTIONS_SECTION_PAGE_SIZE - 1] })
+          : new Promise<TReadPostStreamChunkResponse>((resolve) => {
+              pending.push(resolve);
+            }),
+      );
+      const showMore = () => screen.getByRole('button', { name: 'Show more' });
+
+      await act(async () => {
+        render(<FollowedCollections />);
+      });
+      await waitFor(() => expect(showMore()).toBeEnabled());
+
+      // The click widens the window past the cache: the walk the user started keeps the button, disabled.
+      await act(async () => {
+        showMore().click();
+      });
+      await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+      expect(showMore()).toBeDisabled();
+      expect(showMore().querySelector('.animate-spin')).toBeInTheDocument();
+
+      // The slice fills the widened window and the stream has more: enabled again.
+      cached = all.slice(0, 2 * COLLECTIONS_SECTION_PAGE_SIZE);
+      await act(async () => {
+        pending[0](
+          makeSlice({
+            reachedEnd: false,
+            lastRawPostId: cached[cached.length - 1],
+            rawScannedCount: COLLECTIONS_SECTION_PAGE_SIZE,
+          }),
+        );
+      });
+      expect(showMore()).toBeEnabled();
+
+      // A second widening whose walk reaches the end with the window not full: no button left.
+      await act(async () => {
+        showMore().click();
+      });
+      await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(3));
+      expect(showMore()).toBeDisabled();
+      cached = all.slice(0, 2 * COLLECTIONS_SECTION_PAGE_SIZE + 5);
+      await act(async () => {
+        pending[1](makeSlice({ reachedEnd: true, lastRawPostId: cached[cached.length - 1], rawScannedCount: 5 }));
+      });
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(2 * COLLECTIONS_SECTION_PAGE_SIZE + 5);
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    });
   });
 
   it('on seed-fetch failure: logs an error, fires the load-failed toast, and hides Show More (reachedEnd flips true)', async () => {
