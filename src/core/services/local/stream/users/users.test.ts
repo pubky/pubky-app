@@ -15,6 +15,7 @@ import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusSocialGraphStatus, type NexusTag, type NexusUser } from '@/services/nexus/nexus.types';
+import { markNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import { asInvalid } from '@/test-utils/type-assertions';
 
 describe('LocalStreamUsersService', () => {
@@ -423,6 +424,33 @@ describe('LocalStreamUsersService', () => {
           [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })],
           { viewerId: VIEWER_ID, fetchStartedAt },
         );
+
+        expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
+      });
+
+      it.each([true, false])('keeps a local following=%s write newer than a shared response', async (following) => {
+        const userId = 'user-1' as Pubky;
+        await UserRelationshipsModel.create({ id: userId, following, followed_by: false });
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: 1_500 });
+        const users = [createMockNexusUser(userId, { relationship: { following: !following, followed_by: false } })];
+        markNexusResponseStartedAt(users, 1_000);
+
+        await LocalStreamUsersService.persistUsers(users, { viewerId: VIEWER_ID, fetchStartedAt: 2_000 });
+
+        expect((await UserRelationshipsModel.findById(userId))?.following).toBe(following);
+      });
+
+      it.each([
+        { callerStartedAt: undefined, responseStartedAt: 1_000 },
+        { callerStartedAt: 1_000, responseStartedAt: 2_000 },
+      ])('keeps a local follow with request evidence %j', async ({ callerStartedAt, responseStartedAt }) => {
+        const userId = 'user-1' as Pubky;
+        await UserRelationshipsModel.create({ id: userId, following: true, followed_by: false });
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: 1_500 });
+        const users = [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })];
+        markNexusResponseStartedAt(users, responseStartedAt);
+
+        await LocalStreamUsersService.persistUsers(users, { viewerId: VIEWER_ID, fetchStartedAt: callerStartedAt });
 
         expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
       });

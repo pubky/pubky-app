@@ -2,8 +2,8 @@ import { NEXUS_USERS_BY_IDS_MAX_IDS } from '@/config/nexus';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
+import { createInFlightByIdsQuery } from '@/services/nexus/nexus.by-ids';
 import type { NexusUser, NexusUserIdsStream } from '@/services/nexus/nexus.types';
 import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
@@ -16,6 +16,8 @@ import type {
   TUserStreamWithUserIdParams,
 } from '@/services/nexus/stream/users/userStream.types';
 import { createUserStreamParams } from '@/services/nexus/stream/users/userStream.utils';
+
+const queryUsersByIds = createInFlightByIdsQuery<NexusUser>((user) => user.details.id);
 
 /**
  * Nexus User Stream Service
@@ -87,9 +89,9 @@ export class NexusUserStreamService {
     const sortedIds = [...params.user_ids].sort();
     const fetchSlice = async (user_ids: Pubky[]) => {
       const { url, body } = userStreamApi.usersByIds({ ...params, user_ids });
-      return await queryNexus<NexusUser[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body), force });
+      return await queryUsersByIds({ url, body, force });
     };
-    // One request returns the response as queryNexus stamped it (see getNexusResponseStartedAt)
+    // Preserve the slice's start evidence, including when it combines overlapping batches.
     if (sortedIds.length <= NEXUS_USERS_BY_IDS_MAX_IDS) {
       return await fetchSlice(sortedIds);
     }
