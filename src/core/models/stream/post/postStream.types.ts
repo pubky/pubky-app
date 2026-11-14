@@ -485,10 +485,11 @@ export function advanceCursor(
 }
 
 /**
- * The bookmarks stream (`…:bookmarks:…`, i.e. `timeline:bookmarks:all`): local only, written
+ * The bookmarks stream, matched by its exact id `timeline:bookmarks:all`: local only, written
  * from the homeserver listing and this tab's bookmark writes in bookmark order, never fetched
- * from Nexus (ADR-0028).
+ * from Nexus (ADR-0028). Never a substring match: a Tagged-as feed whose only domain tag is
+ * `bookmarks` (`timeline:wot_domain:2:all:bookmarks:rust`) is a Nexus stream.
  */
 export function isBookmarkStream(streamId: string): boolean {
-  return streamId.includes(`:${StreamSource.BOOKMARKS}:`);
+  return streamId === PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 }

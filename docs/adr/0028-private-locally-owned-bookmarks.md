@@ -103,8 +103,8 @@ field is ignored.**
   **cache only**: a page is a slice of the row, `cacheMissPostIds` are the posts without cached details (the
   controller hydrates them through `by_ids`), the stream ends with the row, there is no Nexus page and no head poll,
   and `prepareStreamForInitialLoad` never drops it as stale or dirty (it is the only copy). The bookmark-time cursor
-  and staleness branches are removed; `isBookmarkStream` still skips the mute filter (#1804) and keeps deleted posts
-  for their placeholders. The posts feed drops collections on read, as before.
+  and staleness branches are removed; `isBookmarkStream` (exact id `timeline:bookmarks:all`) still skips the mute
+  filter (#1804) and keeps deleted posts for their placeholders. The posts feed drops collections on read, as before.
 - **Count**: `BookmarkController.getCount()` counts the rows whose cached post is not a collection (a post not
   cached yet counts); `useBookmarksCollectionSummary` reads it with `useLiveQuery`, so it is local and live.
   `LocalBookmarkService.persist` no longer touches `user_counts`.
