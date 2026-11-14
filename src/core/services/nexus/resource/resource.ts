@@ -7,11 +7,12 @@ import { Logger } from '@/libs/logger/logger';
 import { NEXUS_RESOURCE_TAGS_OPERATION } from '@/libs/observability/sentry.constants';
 import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import { type TResourceViewerTag, withResourceViewerTag } from '@/pipes/tag/tag.resource';
 import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
-import type { NexusPost, NexusTag } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import type { NexusPost, NexusPostWire, NexusTag } from '@/services/nexus/nexus.types';
+import { mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
 import { resourceApi } from '@/services/nexus/resource/resource.api';
 import { RESOURCE_TAG_UNCONFIRMED_MS, RESOURCE_TAGS_LIMIT } from '@/services/nexus/resource/resource.constants';
 import type {
@@ -133,7 +134,7 @@ export class NexusResourceService {
   }
 
   /**
-   * What Nexus counts on a link (`GET /v0/resource/by-uri`): replies, embeds and collections, with
+   * What Nexus counts on a link (`GET /v1/resource/by-uri`): replies, embeds and collections, with
    * the resource's id. `null` when nobody referenced or tagged the link yet (404). Shares the cache
    * entry `fetchTagsByUri` fills: a tag read of the link in flight is waited for, and a card that
    * read its tags asks nothing more.
@@ -185,7 +186,7 @@ export class NexusResourceService {
   }
 
   /**
-   * The live posts replying to a resource (`GET /v0/resource/{id}/replies`), newest first, without
+   * The live posts replying to a resource (`GET /v1/resource/{id}/replies`), newest first, without
    * their attachments' metadata: a reply with files is read again by id.
    *
    * @throws AppError when Nexus fails or does not serve the route
@@ -193,7 +194,8 @@ export class NexusResourceService {
   static async fetchReplies({ resourceId, viewerId, skip, limit }: TResourceRepliesParams): Promise<NexusPost[]> {
     const url = resourceApi.replies(resourceId, { viewer_id: viewerId ?? undefined, skip, limit });
     // Always a fresh page: the list is read once per page view and on "show all".
-    return queryNexus<NexusPost[]>({ url, force: true, notFoundRetries: 0 });
+    const posts = await queryNexus<NexusPostWire[]>({ url, force: true, notFoundRetries: 0 });
+    return mapNexusResponse(posts, (post) => PostNormalizer.fromNexus(post));
   }
 
   /**
