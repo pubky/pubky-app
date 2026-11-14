@@ -296,10 +296,17 @@ the id of every 0.x feed it copies the same way, so a migrated feed's id changes
 
 **App files.** Settings and `last_read` are read v1 → 0.x → create: the v1 file when it exists, else the 0.x file,
 else defaults (settings) or a cursor at the current time (`last_read`). The first `SettingsApplication.initializeSettings`
-and the first `BootstrapApplication.initialize` after the gate write the v1 file from the 0.x one (fenced; the
-absent check runs again on every retry pass, so a v1 file another client wrote meanwhile is kept). The copy is
-forward only: once the v1 file exists the 0.x one is never read again, and it is never deleted (D15). Every write
-goes to the v1 URL (`SettingsNormalizer.buildUrl`, `LastReadNormalizer.buildUrl`).
+and the first `BootstrapApplication.initialize` after the gate write the v1 file from the 0.x one, and neither copy
+replaces a newer v1 file another client wrote after this tab's read. The `last_read` copy (and a fresh cursor when neither
+file exists) goes through the forward-only writer, `NotificationApplication.markAllAsRead`: it re-reads the v1 file on
+every pass, the first included (`guardFirstPass`), and never writes a timestamp at or below the stored one. The
+settings copy, and the first write when no file exists, reads the v1 file again right before its PUT and writes only
+while it holds no settings;
+when it is not, the local settings are compared with that file instead (one more reconcile at most). The homeserver
+has no conditional PUT, so one round trip between that re-read and the PUT remains open, the window mark-all-read
+already accepts (ADR-0029); the `last_read` poll re-adopts the newest value. The copy is forward only: once the v1
+file exists the 0.x one is never read again, and it is never deleted (D15). Every write goes to the v1 URL
+(`SettingsNormalizer.buildUrl`, `LastReadNormalizer.buildUrl`).
 
 **Media lifetime** (ADR-0027 as amended). A media file is content addressed and therefore shared: the avatar, posts
 and covers of one owner can name the same `files/{hash}.{ext}`, and earlier post versions keep referencing what an

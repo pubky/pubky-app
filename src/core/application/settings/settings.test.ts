@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
@@ -13,6 +13,7 @@ import {
   HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
   installHomeserverWriteRetryDependenciesForTests,
 } from '@/services/homeserver/write-retry';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import {
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
@@ -23,7 +24,7 @@ import { SettingsApplication } from './settings';
 // Mock the HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
-    createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
+    createWriteFence: vi.fn(() => ({ enter: () => {}, assertCurrent: () => {} })),
     request: vi.fn(),
     getBytesIfExists: vi.fn(),
   },
@@ -629,9 +630,11 @@ describe('SettingsApplication', () => {
 
         expect(result).toEqual(remoteSettings);
         expect(normalizerToSpy).toHaveBeenCalledExactlyOnceWith(remoteSettings, testPubky);
+        // The v1 file is read again right before the copy is written
         expect(homeserverCalls(spies)).toEqual([
           ['read', settingsUrl],
           ['read', legacySettingsUrl],
+          ['read', settingsUrl],
           [HttpMethod.PUT, settingsUrl],
         ]);
         expect(files.get(settingsUrl)).toMatchObject({ version: 2, updatedAt: 1800000000000 });
@@ -688,11 +691,202 @@ describe('SettingsApplication', () => {
           expect(homeserverCalls(spies)).toEqual([
             ['read', settingsUrl],
             ['read', legacySettingsUrl],
+            ['read', settingsUrl],
             [HttpMethod.PUT, settingsUrl],
             ['read', settingsUrl],
           ]);
         } finally {
           installHomeserverWriteRetryDependenciesForTests(null);
+        }
+      });
+
+      describe('when another client writes the v1 file before this copy is pushed', () => {
+        const legacyRemote = createMockSettingsState({ version: 2, updatedAt: 1800000000000 });
+        const v1Remote = createMockSettingsState({ version: 4, updatedAt: 1950000000000 });
+        const olderV1Remote = createMockSettingsState({ version: 2, updatedAt: 1850000000000 });
+        /** The stored document of `state`; the normalizer maps it back to `state`. */
+        const jsonOf = ({ version, updatedAt }: SettingsState) => ({ version, updatedAt });
+        const fromJson = (json: unknown) =>
+          [legacyRemote, v1Remote, olderV1Remote].find(
+            (state) => state.updatedAt === (json as { updatedAt?: number }).updatedAt,
+          ) ?? legacyRemote;
+
+        /**
+         * The homeserver holds `files`. `written` lands on the v1 path right before the n-th read of it
+         * (`writtenBeforeV1Read`, 1-based; the 2nd is the absent check before the push).
+         */
+        const run = async (
+          localSettings: SettingsState,
+          files: Map<string, unknown>,
+          written: unknown,
+          writtenBeforeV1Read = 2,
+        ) => {
+          const spies = setupMocks();
+          const { readSpy, normalizerFromSpy, normalizerToSpy } = spies;
+          homeserverWith(spies, files);
+          let v1Reads = 0;
+          readSpy.mockImplementation(async (url) => {
+            if (url === settingsUrl && ++v1Reads === writtenBeforeV1Read) files.set(settingsUrl, written);
+            return files.has(url) ? storedJson(files.get(url)) : null;
+          });
+          normalizerFromSpy.mockImplementation(fromJson);
+          normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+          const result = await SettingsApplication.initializeSettings(testPubky, localSettings);
+          return { result, spies };
+        };
+
+        it('adopts the v1 file instead of pushing the newer 0.x settings over it', async () => {
+          const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+          const legacyJson = jsonOf(legacyRemote);
+          const files = new Map<string, unknown>([[legacySettingsUrl, legacyJson]]);
+
+          const { result, spies } = await run(localSettings, files, jsonOf(v1Remote));
+
+          expect(result).toEqual(v1Remote);
+          expect(spies.requestSpy).not.toHaveBeenCalled();
+          expect(files.get(settingsUrl)).toEqual(jsonOf(v1Remote));
+          expect(files.get(legacySettingsUrl)).toBe(legacyJson);
+          expect(homeserverCalls(spies)).toEqual([
+            ['read', settingsUrl],
+            ['read', legacySettingsUrl],
+            ['read', settingsUrl],
+            ['read', settingsUrl],
+          ]);
+        });
+
+        it('adopts the v1 file instead of pushing the local settings when no file existed', async () => {
+          const localSettings = createMockSettingsState({ updatedAt: 0 });
+
+          const { result, spies } = await run(localSettings, new Map(), jsonOf(v1Remote));
+
+          expect(result).toEqual(v1Remote);
+          expect(spies.requestSpy).not.toHaveBeenCalled();
+          expect(homeserverCalls(spies)).toEqual([
+            ['read', settingsUrl],
+            ['read', legacySettingsUrl],
+            ['read', settingsUrl],
+            ['read', settingsUrl],
+          ]);
+        });
+
+        it('compares the newer local settings with the v1 file, not the 0.x one, before it writes', async () => {
+          const localSettings = createMockSettingsState({ version: 3, updatedAt: 1900000000000 });
+          const files = new Map<string, unknown>([[legacySettingsUrl, jsonOf(legacyRemote)]]);
+
+          const { result, spies } = await run(localSettings, files, jsonOf(olderV1Remote));
+
+          expect(result).toBeNull();
+          expect(spies.requestSpy).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ method: HttpMethod.PUT }));
+          expect(files.get(settingsUrl)).toMatchObject({ version: 3 });
+          expect(homeserverCalls(spies)).toEqual([
+            ['read', settingsUrl],
+            ['read', legacySettingsUrl],
+            ['read', settingsUrl],
+            ['read', settingsUrl],
+            [HttpMethod.PUT, settingsUrl],
+          ]);
+        });
+
+        it('replaces a v1 file that holds no JSON document, as the read treats it as absent', async () => {
+          const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+          const spies = setupMocks();
+          spies.readSpy.mockImplementation(async (url) =>
+            url === settingsUrl ? storedText('{"vers') : storedJson(jsonOf(legacyRemote)),
+          );
+          spies.requestSpy.mockResolvedValue(undefined);
+          spies.normalizerFromSpy.mockImplementation(fromJson);
+          spies.normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+
+          const result = await SettingsApplication.initializeSettings(testPubky, localSettings);
+
+          expect(result).toEqual(legacyRemote);
+          expect(spies.requestSpy).toHaveBeenCalledExactlyOnceWith(
+            expect.objectContaining({ method: HttpMethod.PUT, url: settingsUrl }),
+          );
+        });
+
+        it('stops after one more reconcile and writes nothing when the v1 file keeps reading present, then absent', async () => {
+          const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+          const spies = setupMocks();
+          let v1Reads = 0;
+          // Every reconcile reads v1 as absent, then the check before the push finds it
+          spies.readSpy.mockImplementation(async (url) => {
+            if (url !== settingsUrl) return storedJson(jsonOf(legacyRemote));
+            return ++v1Reads % 2 === 0 ? storedJson(jsonOf(v1Remote)) : null;
+          });
+          spies.normalizerFromSpy.mockImplementation(fromJson);
+          spies.normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+
+          const result = await SettingsApplication.initializeSettings(testPubky, localSettings);
+
+          expect(result).toBeNull();
+          expect(spies.requestSpy).not.toHaveBeenCalled();
+          expect(v1Reads).toBe(4);
+        });
+
+        it('starts the pass over from the read when the check before the push is refused with a retried status', async () => {
+          installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+          const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+          const files = new Map<string, unknown>([[legacySettingsUrl, jsonOf(legacyRemote)]]);
+          const spies = setupMocks();
+          homeserverWith(spies, files);
+          let v1Reads = 0;
+          spies.readSpy.mockImplementation(async (url) => {
+            if (url === settingsUrl && ++v1Reads === 2) {
+              throw httpStatusCodeToError(503, 'Service unavailable', ErrorService.Homeserver, 'getBytesIfExists', url);
+            }
+            return files.has(url) ? storedJson(files.get(url)) : null;
+          });
+          spies.normalizerFromSpy.mockImplementation(fromJson);
+          spies.normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+
+          try {
+            const result = await SettingsApplication.initializeSettings(testPubky, localSettings);
+
+            expect(result).toEqual(legacyRemote);
+            expect(homeserverCalls(spies)).toEqual([
+              ['read', settingsUrl],
+              ['read', legacySettingsUrl],
+              ['read', settingsUrl],
+              ['read', settingsUrl],
+              ['read', legacySettingsUrl],
+              ['read', settingsUrl],
+              [HttpMethod.PUT, settingsUrl],
+            ]);
+          } finally {
+            installHomeserverWriteRetryDependenciesForTests(null);
+          }
+        });
+      });
+
+      it('rejects with SESSION_EXPIRED and never writes when the session ends between the reads and the push', async () => {
+        const { HomeserverService: actual } = await vi.importActual<typeof import('@/services/homeserver/homeserver')>(
+          '@/services/homeserver/homeserver',
+        );
+        vi.mocked(HomeserverService.createWriteFence).mockImplementationOnce((options) =>
+          actual.createWriteFence(options),
+        );
+        const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+        const legacyRemote = createMockSettingsState({ version: 2, updatedAt: 1800000000000 });
+        const files = new Map<string, unknown>([[legacySettingsUrl, { version: 2 }]]);
+        const spies = setupMocks();
+        homeserverWith(spies, files);
+        spies.readSpy.mockImplementation(async (url) => {
+          // Logout begins while the 0.x file is being read
+          if (url === legacySettingsUrl) useAuthStore.setState({ isLoggingOut: true });
+          return files.has(url) ? storedJson(files.get(url)) : null;
+        });
+        spies.normalizerFromSpy.mockReturnValue(legacyRemote);
+        spies.normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+
+        try {
+          await expect(SettingsApplication.initializeSettings(testPubky, localSettings)).rejects.toMatchObject({
+            code: AuthErrorCode.SESSION_EXPIRED,
+          });
+          expect(spies.requestSpy).not.toHaveBeenCalled();
+          expect(files.has(settingsUrl)).toBe(false);
+        } finally {
+          useAuthStore.setState({ isLoggingOut: false });
         }
       });
     });
