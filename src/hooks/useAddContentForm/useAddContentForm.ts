@@ -199,7 +199,8 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
     if (!mountedRef.current || !(await waitForAuth())) return false;
 
     if (target.type === 'bookmarks') {
-      await BookmarkController.commitCreateResource({ uri, userId });
+      // false: skipped, the account changed while the write waited; nothing was added.
+      if (!(await BookmarkController.commitCreateResource({ uri, userId }))) return false;
       invalidateResourceBookmarks();
     } else {
       await PostController.commitUpdateCollectionResource({
