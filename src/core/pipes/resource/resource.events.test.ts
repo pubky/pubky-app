@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
+import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
+import meetupDateJan6Fixture from '@/services/pinakes/fixtures/by-uri.meetup-date-jan6.json';
+import meetupGroupFixture from '@/services/pinakes/fixtures/group.meetup-date.json';
+import meetupDatesFixture from '@/services/pinakes/fixtures/occurrences.meetup.json';
 import eventsFixture from '@/services/pinakes/fixtures/search.events.json';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import {
   getEventDayKey,
+  getEventFeed,
   getEventLifecycleLabel,
   getOccurrencesWindowStart,
   getResourceInstanceKey,
   groupEventsByDay,
   hasSameSummary,
   mergeResourceInstances,
+  splitFeedDates,
   toEventInstance,
 } from './resource.events';
 
@@ -17,6 +23,16 @@ const ROWS: TPinakesCard[] = eventsFixture.items;
 const HOLIDAYS = ROWS.filter((card) => card.occurrence);
 const CONCERT = ROWS.find((card) => card.name === 'Annett Louisan @ Volkshaus')!;
 const DETAILS: TPinakesResourceDetail = eventFixture;
+/** A Meetup date's page (token link, its number link an alias) and its group with the feed's same date. */
+const MEETUP_DATE: TPinakesResourceDetail = meetupDateFixture;
+const MEETUP_DATE_JAN6: TPinakesResourceDetail = meetupDateJan6Fixture;
+const MEETUP_MEMBERS: TPinakesCard[] = meetupGroupFixture.members;
+/** The organiser's feed: every coming date, by start, Dec 9 and Jan 6 with a page of their own. */
+const MEETUP_DATES: TPinakesCard[] = meetupDatesFixture.items;
+const FEED = {
+  id: '51ee469240e25fe6a378dc8d317e3f89',
+  uri: 'https://www.meetup.com/bitcoin-meetup-switzerland/events/ical/',
+};
 
 describe('getResourceInstanceKey', () => {
   it('tells a calendar’s occurrences apart though they share the feed’s id and link', () => {
@@ -54,6 +70,101 @@ describe('mergeResourceInstances', () => {
     const merged = mergeResourceInstances(ROWS.slice(0, 4), ROWS.slice(3));
 
     expect(merged).toEqual(ROWS);
+  });
+
+  it('shows a date page and the feed’s same date once: the page wins, the other dates stay, by start', () => {
+    const [nov25, dec9, dec23, jan6] = MEETUP_DATES;
+
+    const merged = mergeResourceInstances([], [nov25, dec9, MEETUP_DATE, dec23, jan6]);
+
+    expect(merged.map((card) => [card.uri, card.start])).toEqual([
+      [nov25.uri, '2026-11-25T18:00:00Z'],
+      [MEETUP_DATE.uri, '2026-12-09T18:00:00Z'],
+      [dec23.uri, '2026-12-23T18:00:00Z'],
+      [jan6.uri, '2027-01-06T18:00:00Z'],
+    ]);
+    expect(merged[1]).toBe(MEETUP_DATE);
+  });
+
+  it('puts the page where the feed’s date stood when the page comes on a later page', () => {
+    const [nov25, dec9, dec23] = MEETUP_DATES;
+
+    const merged = mergeResourceInstances([nov25, dec9, dec23], [MEETUP_DATE]);
+
+    expect(merged).toEqual([nov25, MEETUP_DATE, dec23]);
+  });
+
+  it('tells the same date by the page’s links too, when a row has no group', () => {
+    const [, dec9] = MEETUP_DATES;
+    const page = { ...MEETUP_DATE, group: null };
+
+    expect(mergeResourceInstances([], [{ ...dec9, group: null }, page])).toEqual([page]);
+    // A search row has no aliases: the link people wrote for the page counts as its link
+    const row = { ...page, aliases: undefined, refs: [dec9.uri] };
+    expect(mergeResourceInstances([], [row, { ...dec9, group: null }])).toEqual([row]);
+  });
+
+  it('keeps a feed’s date whose page is not listed, and a page that has no date in the list', () => {
+    const [, , , jan6] = MEETUP_DATES;
+
+    expect(mergeResourceInstances([], [MEETUP_DATE, jan6])).toEqual([MEETUP_DATE, jan6]);
+    expect(mergeResourceInstances([], [MEETUP_DATE, MEETUP_DATE_JAN6])).toEqual([MEETUP_DATE, MEETUP_DATE_JAN6]);
+  });
+});
+
+describe('getEventFeed', () => {
+  it('is the feed of the group’s member that is a feed’s date', () => {
+    expect(getEventFeed(MEETUP_DATE, MEETUP_MEMBERS)).toEqual(FEED);
+  });
+
+  it('is none for a group without a feed’s date, and for a card outside a group', () => {
+    const pages = MEETUP_MEMBERS.map((member) => ({ ...member, occurrence: null }));
+
+    const lone: TPinakesResourceDetail = { ...MEETUP_DATE, group: null };
+
+    expect(getEventFeed(MEETUP_DATE, pages)).toBeNull();
+    expect(getEventFeed(lone, undefined)).toBeNull();
+    expect(getEventFeed(DETAILS, null)).toBeNull();
+  });
+
+  it('is the row’s own feed for a feed’s date (a search row), with no group read', () => {
+    expect(getEventFeed(MEETUP_DATES[0], undefined)).toEqual(FEED);
+  });
+});
+
+describe('splitFeedDates', () => {
+  it('lists the feed’s other dates of the same name, this date left out by its number link', () => {
+    const { sameName, others } = splitFeedDates(MEETUP_DATE, MEETUP_DATES);
+
+    expect(sameName).toHaveLength(9);
+    expect(sameName.map((card) => card.start)).not.toContain(MEETUP_DATE.start);
+    expect(sameName[0].start).toBe('2026-11-25T18:00:00Z');
+    expect(others).toEqual([]);
+  });
+
+  it('leaves this date out by its token link and by its group too', () => {
+    const [, dec9] = MEETUP_DATES;
+    const byToken = { ...dec9, uri: MEETUP_DATE.uri, group: null };
+    const byGroup = { ...dec9, uri: 'https://www.meetup.com/bitcoin-meetup-switzerland/events/other/' };
+
+    expect(splitFeedDates(MEETUP_DATE, [byToken, byGroup]).sameName).toEqual([]);
+  });
+
+  it('leaves a feed’s date out of its own list (a search row is that date)', () => {
+    const [nov25] = MEETUP_DATES;
+
+    expect(splitFeedDates(nov25, MEETUP_DATES).sameName.map((card) => card.start)).not.toContain(nov25.start);
+  });
+
+  it('puts the feed’s events of another name apart, names compared trimmed and case-folded', () => {
+    const [nov25, , dec23, jan6] = MEETUP_DATES;
+    const workshop = { ...dec23, name: 'Lightning workshop' };
+    const shouting = { ...jan6, name: '  BITCOIN MEETUP ZÜRICH ' };
+
+    const { sameName, others } = splitFeedDates(MEETUP_DATE, [nov25, workshop, shouting]);
+
+    expect(sameName).toEqual([nov25, shouting]);
+    expect(others).toEqual([workshop]);
   });
 });
 
