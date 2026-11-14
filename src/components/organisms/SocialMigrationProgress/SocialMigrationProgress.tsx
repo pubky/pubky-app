@@ -31,7 +31,10 @@ const PASS_LABELS: Record<Bucket, string> = {
   mutes: 'Muted users',
 };
 
-/** Every phase after `flag` means the walk is over; the screen only shows this organism while a run is in flight. */
+/**
+ * The store never carries a terminal phase other than `done`, which counts as past `flag`; the screen only shows this
+ * organism while a run is in flight.
+ */
 const stepIndex = (phase: Phase | undefined): number => {
   const index = STEPS.findIndex((step) => step.key === phase);
   return phase === undefined ? 0 : index === -1 ? STEPS.length : index;

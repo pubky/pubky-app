@@ -12,7 +12,7 @@ import { Header } from '@/organisms/Header/Header';
 import { SocialMigration } from '@/templates/Auth/SocialMigration/SocialMigration';
 
 // The forced logout never settles in these captures, so the sign-out screen stays on; `fails` rejects it instead,
-// which shows the retry screen.
+// which shows the retry screen. Like the real logout, a failing one resets the gate's stage first.
 const logout = vi.hoisted(() => ({ fails: false }));
 
 vi.mock('next/navigation', () => ({
@@ -58,7 +58,12 @@ vi.mock('@/stores/socialMigration/socialMigration.store', () => ({
 vi.mock('@/libs/identity/identity', () => ({ Identity: { tryZ32FromSecret: () => 'vrt-account' } }));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
-    logout: () => (logout.fails ? Promise.reject(new Error('VRT: logout failed')) : new Promise<void>(() => {})),
+    logout: () => {
+      if (!logout.fails) return new Promise<void>(() => {});
+      // The fields this screen reads; the next scenario sets both again
+      Object.assign(useSocialMigrationStore.getState(), { stage: 'idle', reason: undefined });
+      return Promise.reject(new Error('VRT: logout failed'));
+    },
     restorePersistedSession: () => new Promise<boolean>(() => {}),
   },
 }));
