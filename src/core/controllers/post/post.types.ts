@@ -8,7 +8,10 @@ export interface TCreatePostParams {
   content: string;
   isArticle?: boolean;
   tags?: string[];
+  /** The post's media; for an article, the inline files its body references, in slot order. */
   attachments?: File[];
+  /** An article's cover, written in the envelope (`cover_image`); ignored for any other post. */
+  coverImage?: File;
   parentPostId?: string;
   originalPostId?: string;
   /**
@@ -45,9 +48,9 @@ export interface TUpdateCollectionItemParams {
 export interface TReorderCollectionItemsParams {
   collectionId: string;
   /**
-   * Full item-URI order as drafted by the user. Merged against the live
-   * envelope on commit (see `CollectionPostContent.reorderItems`), so a stale
-   * draft cannot resurrect removed items or drop concurrently added ones.
+   * Full item-URI order as drafted by the user. Passed as a reorder change and merged against the
+   * stored head under the post's write lock (`CollectionPostContent.reorderItems`), so a stale draft
+   * cannot resurrect removed items or drop concurrently added ones.
    */
   items: string[];
 }
@@ -64,7 +67,7 @@ export interface TEditCollectionParams {
    * - `null` to clear the cover.
    *
    * Must be passed explicitly — omitting it is not allowed, so a metadata-only
-   * edit cannot accidentally clear/delete the existing homeserver cover.
+   * edit cannot accidentally clear the existing cover.
    */
   coverImage: File | string | null;
 }
@@ -76,34 +79,33 @@ export interface TDeletePostParams {
 export interface TEditPostAttachments {
   /**
    * The attachment URIs the edit composer was seeded from — the snapshot taken
-   * when the dialog opened. Removal is computed against THIS list, never the
-   * live post row: the row can change underneath an open dialog (another
-   * tab/device, background refresh), and diffing against it would delete files
-   * the user never saw.
+   * when the dialog opened. `kept` is validated against THIS list, never the
+   * live post row, which can change underneath an open dialog (another
+   * tab/device, background refresh).
    */
   original: string[];
   /**
    * Subset of `original` to keep, in display order (no duplicates). Attachments
-   * in `original` but not in `kept` were removed by the user and are deleted
-   * from the homeserver (best-effort) after a successful edit. When `nextOrder`
-   * is set, removal is diffed against `nextOrder` instead and `kept` only
-   * feeds the subset validation.
+   * in `original` but not in `kept` were removed by the user and leave the post;
+   * their files are never deleted, since the earlier versions still reference
+   * them (ADR-0027). When `nextOrder` is set, `kept` only feeds the subset
+   * validation.
    */
   kept: string[];
   /** New files to upload; appended after `kept` in display order. Must be empty when `nextOrder` is set. */
   added: File[];
   /**
-   * Article inline-image path: homeserver file URIs owned by the author that
+   * Article inline-media path: homeserver file URIs owned by the author that
    * the composer uploaded before the commit (the inline files staged this
-   * session, plus a replacement cover). Requires `nextOrder`.
+   * session). Requires `nextOrder`.
    */
   addedUris?: string[];
   /**
-   * Article inline-image path: the full attachment list to persist, in final
-   * slot order (`[cover?, ...inline first-appearance]`). Every entry must come
-   * from `kept` or `addedUris`. Duplicates are allowed — the same URI may
-   * legitimately occupy the cover slot and an inline slot. When set, `added`
-   * must be empty and the envelope attachments are exactly this list.
+   * Article inline-media path: the full attachment list to persist, in final
+   * slot order (`[...inline first-appearance, ...unreferenced originals]`; the
+   * cover is no slot, it goes in `coverImage`). Every entry must come from
+   * `kept` or `addedUris`. When set, `added` must be empty and the envelope
+   * attachments are exactly this list.
    */
   nextOrder?: string[];
 }
@@ -113,11 +115,15 @@ export interface TEditPostParams {
   content: string;
   /**
    * Attachment changes for the edit. `undefined` leaves attachments untouched
-   * (content-only edit); `{ kept: [], added: [] }` removes them all. Current
-   * attachments not listed in `kept` are deleted from the homeserver
-   * (best-effort) after a successful edit.
+   * (content-only edit); `{ kept: [], added: [] }` removes them all from the
+   * post. No file is deleted.
    */
   attachments?: TEditPostAttachments;
+  /**
+   * An article's cover decision: a homeserver file URI of the author's to set, `null` to clear,
+   * `undefined` to keep the stored one. The cover it replaces or clears stays on the homeserver.
+   */
+  coverImage?: string | null;
 }
 
 export interface TFileAttachmentsParams {

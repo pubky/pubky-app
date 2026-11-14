@@ -69,12 +69,6 @@ const mockState = vi.hoisted(() => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// Mock pubky-app-specs to avoid WebAssembly issues
-vi.mock('pubky-app-specs', () => ({
-  default: vi.fn(() => Promise.resolve()),
-  getValidMimeTypes: () => ['image/jpeg', 'image/png'],
-}));
-
 // Mock Logger to suppress console output during tests
 vi.mock('@/libs/logger/logger', () => ({
   Logger: {
@@ -2389,6 +2383,49 @@ describe('HomeserverService', () => {
       });
     });
 
+    describe('getFreshBytes', () => {
+      const testUrl = 'pubky://user/pub/social/v1/posts/0032PARTQP4G0/0032PARTQP4G1.json';
+
+      it('reads past the browser HTTP cache and returns the body bytes', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+
+        await expect(HomeserverService.getFreshBytes(testUrl)).resolves.toEqual(new Uint8Array([1, 2, 3]));
+
+        expect(mockState.clientFetch).toHaveBeenCalledWith(
+          'https://user/pub/social/v1/posts/0032PARTQP4G0/0032PARTQP4G1.json',
+          expect.objectContaining({ method: HttpMethod.GET, cache: 'no-store', credentials: 'omit' }),
+        );
+        expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+        expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('rejects a missing resource with an AppError carrying the HTTP status, like getBytes', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response('', { status: 404 }));
+
+        await expect(HomeserverService.getFreshBytes(testUrl)).rejects.toMatchObject({
+          context: expect.objectContaining({ statusCode: 404 }),
+        });
+      });
+
+      it('normalizes a body that breaks off mid-read into an AppError', async () => {
+        const readError = new TypeError('terminated');
+        const body = new ReadableStream({
+          start(controller) {
+            controller.error(readError);
+          },
+        });
+        mockState.clientFetch.mockResolvedValue(new Response(body, { status: 200 }));
+
+        await expect(HomeserverService.getFreshBytes(testUrl)).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.UNKNOWN_ERROR,
+          service: ErrorService.Homeserver,
+          operation: 'getFreshBytes',
+          cause: readError,
+        });
+      });
+    });
+
     describe('getBytesIfExists', () => {
       const OWNED_URL = 'pubky://user/pub/marker.json';
 
@@ -2773,6 +2810,26 @@ describe('HomeserverService', () => {
         expect(sent.searchParams.getAll('path')).toEqual([MUTES, LAST_READ]);
         expect(init).toMatchObject({ method: HttpMethod.GET, credentials: 'omit', signal: abort.signal });
       });
+
+      it.each(['/priv/social/v1/mutes/', '/priv/app.pubky/v1/last_read.json'])(
+        'refuses the private path %s before any request: a session-bound stream holds the session lock while its headers are outstanding',
+        async (privatePath) => {
+          const error = (await subscribe({ paths: [MUTES, privatePath] }).catch(
+            (caught: unknown) => caught,
+          )) as AppError;
+
+          expect(error).toMatchObject({
+            category: ErrorCategory.Client,
+            code: ClientErrorCode.BAD_REQUEST,
+            service: ErrorService.Homeserver,
+            operation: 'subscribeUserEventStreamPrivatePath',
+          });
+          expect(error.message).toContain('ADR-0014');
+          expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+          expect(mockState.getHomeserverOf).not.toHaveBeenCalled();
+          expect(mockState.clientFetch).not.toHaveBeenCalled();
+        },
+      );
 
       it('replays from the start without a cursor', async () => {
         await subscribe({ cursor: null });

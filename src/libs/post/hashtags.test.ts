@@ -15,6 +15,10 @@ describe('extractHashtagLabelsFromMarkdown', () => {
       expect(extractHashtagLabelsFromMarkdown('#Tag and #tag and #TAG')).toEqual(['tag']);
     });
 
+    it('folds ASCII letters only, like the stored tag label', () => {
+      expect(extractHashtagLabelsFromMarkdown('#xÄPFEL and #xäpfel')).toEqual(['xÄpfel', 'xäpfel']);
+    });
+
     it('finds hashtags in list items and blockquotes', () => {
       const content = '- item with #one\n- item with #two\n\n> quote with #three';
 
@@ -26,7 +30,7 @@ describe('extractHashtagLabelsFromMarkdown', () => {
     });
 
     it('keeps trailing punctuation that the rendered link keeps', () => {
-      // `remarkHashtags` links the whole match (only pubky-app-specs tagInvalidChars stop the
+      // `remarkHashtags` links the whole match (only pubky-social-specs tagInvalidChars stop the
       // body), so `/search?tags=tag!` is what a reader can click. The created tag matches it.
       expect(extractHashtagLabelsFromMarkdown('Hello #tag!')).toEqual(['tag!']);
     });

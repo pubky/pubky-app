@@ -55,7 +55,7 @@ describe('renderProfileOg', () => {
     expect(html).toContain(`<span style="white-space:pre-wrap;color:${OG_TOKENS.brand}">@Bob</span>`);
     expect(html).toContain('Building ');
     expect(html).not.toContain(MENTIONED);
-    expect(fetchSpy.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v0/user/${MENTIONED}/details`);
+    expect(fetchSpy.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v1/user/${MENTIONED}/details`);
   });
 
   it('makes no mention lookups for a bio without mentions', async () => {

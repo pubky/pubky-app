@@ -173,7 +173,7 @@ vi.mock('@/stores/localFiles/localFiles.store', async () => {
     { type: 'image/svg+xml', name: 'Portrait study', width: 400, height: 800, urls: { main: portrait } },
     { type: 'image/webp', name: 'Collections on a desk', urls: { main: landscape } },
   ];
-  const empty = { profile: null, posts: {}, collections: {} };
+  const empty = { profile: null, posts: {}, articleCovers: {}, collections: {} };
   const withMedia = {
     ...empty,
     posts: {
@@ -609,7 +609,16 @@ vi.mock('@/controllers/bookmark/bookmark', async () => {
   const f = await fixtures;
   return {
     BookmarkController: {
-      getAll: async () => [...f.followedCollectionIds],
+      // The joined read the sections wrap: every followed collection, newest first, with its details.
+      getAllWithPostDetails: async () =>
+        f.followedCollectionIds.map((id, index) => {
+          const fixture = f.collectionsByCompositeId.get(id);
+          return {
+            id,
+            created_at: f.followedCollectionIds.length - index,
+            details: fixture ? { ...fixture.details } : undefined,
+          };
+        }),
     },
   };
 });

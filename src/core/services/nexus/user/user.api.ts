@@ -15,7 +15,7 @@ import {
  * All API endpoints related to user operations
  */
 
-const PREFIX = 'v0/user';
+const PREFIX = 'user';
 
 export const userApi = {
   view: (params: TUserViewParams) => {

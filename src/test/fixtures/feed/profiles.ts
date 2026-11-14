@@ -3,15 +3,18 @@ import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { HOUR_MS, MINUTE_MS, VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 
+// `fakeOwner(1)` … `fakeOwner(8)` from `pubky-social-specs/testing`, spelled out so the fixture stays a
+// plain value (`profiles.test.ts` keeps them in step). Social v1 refuses any reference whose owner is
+// not a well-formed public key.
 export const VRT_AUTHOR_PUBKYS = {
-  alice: 'vrt000000000000000000000000000000000000000000alice01' as Pubky,
-  bran: 'vrt0000000000000000000000000000000000000000000bran02' as Pubky,
-  cleo: 'vrt0000000000000000000000000000000000000000000cleo03' as Pubky,
-  dion: 'vrt0000000000000000000000000000000000000000000dion04' as Pubky,
-  eira: 'vrt0000000000000000000000000000000000000000000eira05' as Pubky,
-  fynn: 'vrt0000000000000000000000000000000000000000000fynn06' as Pubky,
-  glen: 'vrt0000000000000000000000000000000000000000000glen07' as Pubky,
-  hana: 'vrt0000000000000000000000000000000000000000000hana08' as Pubky,
+  alice: '5kjj6uydjfsg1ojd83urbsos7omkosi5pmpa13hqec4ye5okhody' as Pubky,
+  bran: 'ajqyiyd8gkzct4ncoqzg48tye7k5mtba7aogkh8wpuct7tjk7gny' as Pubky,
+  cleo: '3emxro3id6h55wz7agg9j64x4wx9oxschoo1o63uhjxskac6od3y' as Pubky,
+  dion: '6xek5rdncwb9uk1eih4w3qjzgt5ekqd5sbxr3shw4dd4ii9eofyy' as Pubky,
+  eira: '9qpfkw3ojyke3r837wmpkznawa6ctowxzjxodwnum3y7nh4h7y5y' as Pubky,
+  fynn: 'hpkcb84wgxmn4qcskdxxtgdqbi97kzyc841q5t3jqgsczsdhhs4y' as Pubky,
+  glen: '7cxdozygd5yioy38nm6sn9ebuh43tjzag114bu8q9himy9getuby' as Pubky,
+  hana: '1dfhdxgg6w76hc3p5wmsfcg4jcyds7jkwhjz4nnmmy69qmtoewxy' as Pubky,
 } as const;
 
 // No uploaded avatar images in VRT — every profile renders the pubky/name-derived

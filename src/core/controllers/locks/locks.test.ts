@@ -739,7 +739,7 @@ describe('LocksController (content)', () => {
     mocks.createLockContent.mockResolvedValue(lock);
     const params = {
       attachments: [],
-      buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+      post: { content: 'locked body', kind: 'short' },
       lockConfig: { amount: '1000', asset: 'BTC' as const },
     };
 
@@ -759,7 +759,7 @@ describe('LocksController (content)', () => {
       await expect(
         LocksController.createLockContent({
           attachments: [],
-          buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+          post: { content: 'locked body', kind: 'short' },
           lockConfig: { amount: '1000', asset: 'BTC' as const },
         }),
       ).rejects.toBe(rejected);
@@ -907,14 +907,14 @@ describe('LocksController.replicateUnlockedContent', () => {
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      postId: 'pubkyauthor:POST1',
+      postId: `${MOCK_LOCK_AUTHOR_PUBKY}:0035V9A20WSE4`,
     });
 
     expect(mocks.replicateUnlockedContent).toHaveBeenCalledWith({
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      announcementUri: 'pubky://pubkyauthor/pub/pubky.app/posts/POST1',
+      announcementUri: `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/social/v1/posts/0035V9A20WSE4`,
       isCurrent: expect.any(Function),
     });
   });
@@ -1019,7 +1019,7 @@ describe('LocksController cache writes are scoped to the viewer (#2797)', () => 
           lockUrl: VALID_LOCK_URL,
           readerPubky: 'pubkyreader',
           content: { post: { content: 's', kind: 'short', attachments: null }, attachments: [] },
-          postId: 'pubkyauthor:POST1',
+          postId: `${MOCK_LOCK_AUTHOR_PUBKY}:0035V9A20WSE4`,
         }),
       mocks.replicateUnlockedContent,
     ],

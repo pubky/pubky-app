@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted — 2026-09-15
+Accepted — 2026-09-15  
+Updated — 2026-10-30 (`DB_VERSION` 3 → 4 for the social v1 port; mixed-build tabs and the recreate loop-breaker)  
+Updated — 2026-11-10 (the loop-breaker never fired: the unexpected-close path probes without `Dexie.exists()`; see _Amendment_)  
+Updated — 2026-11-11 (QA-4 A.5's verification of the reworked probe on production builds, run 2026-11-10, recorded; see _Amendment_)
 
 ## Context
 
@@ -45,8 +48,87 @@ Local schema evolution is destructive and explicit.
   unreadable version self-heals by recreating.
 - Callers that care that the database was emptied read `wasDbReset`. `RouteGuardProvider` uses it to
   re-run `MigrationController.resync` and to hold routing until that resync finishes.
+- `AppDatabase.initialize({ allowRecreate })` guards the recreate against a tab running another build.
+  The first mismatch in a page lifetime always recreates. A second one is refused with
+  `Err.database(DatabaseErrorCode.VERSION_CONFLICT)` unless the caller allows it: `DatabaseProvider`
+  passes `allowRecreate: true` on mount and from the user's retry, and `false` when it re-initializes
+  after an unexpected close, which is how the other tab's recreate reaches this page. That path probes
+  without `Dexie.exists()` and, once this page has recreated the database, treats a database that
+  another connection's delete left missing or unreadable like another version (see _Amendment_).
 - Local-only choices that the network cannot restore, today only the unblur flag, are accepted as
   lost by a recreate. Growing that set is a reason to revisit this ADR.
+
+## Amendment — the loop-breaker's probe (2026-11-10)
+
+**What was wrong.** The 2026-10-30 loop-breaker checked `recreatedThisPageLifetime` on the mismatch branch
+only, and `runInitialize()` reached that branch only after `Dexie.exists()` reported the database. The
+unexpected close that starts the check is the other tab's `deleteDatabase`, and the provider re-initializes
+from inside that event (Dexie's `versionchange` handler fires `close` synchronously), so the probe ran in the
+other tab's delete→reopen window, found no database, and created it at this build's version without
+consulting the flag. `Dexie.exists()` is not passive either: for a missing database it opens a v1 stub,
+aborts and deletes it, and that delete closes the other tab's connection, which re-initializes it in turn.
+Browser QA on production builds of `dev` and `feat/social-v1` (QA-4 finding F-2: Chromium 151 and Firefox 153,
+every run; the QA matrix counts 7, Chromium ×4 and Firefox ×3) saw the two tabs close each other with 3 to 50 deletes in 0.03 to 0.85 s and never a
+`VERSION_CONFLICT`. Every run ended when the old tab's `open()` lost a race to the new version and Dexie 4
+answered the `VersionError` by reopening without a version, which left the old build running on the new
+database.
+
+**Verified.** The same Playwright repro on a production build of the fix (#3112, QA-4 A.5, 2026-11-10): 7 of 7
+two-build runs (Chromium 151 ×4, Firefox 153 ×3) showed "Close other Pubky tabs, then retry." within 0.5–0.8 s of
+the old tab's recreate, with no bounce and no stub delete, and a same-build two-tab takeover showed no false
+conflict in either engine. The residual below (the old-build tab keeps running on its own database when no worker
+reloads it) was observed as described.
+
+**The rule now.** `initialize({ allowRecreate: false })` runs `runInitializeAfterClose()`:
+
+- It never calls `Dexie.exists()`. It reads the version with `getExistingDbVersion()`: a versionless
+  `indexedDB.open` that closes at once when the database exists and aborts its upgrade when it is missing,
+  so nothing is created and nothing has to be deleted. A versionless open never upgrades an existing
+  database, so it never fires `versionchange` at another connection. Start-up uses the same probe after its
+  `Dexie.exists()` check.
+- Dexie's own `versionchange` handler closes with auto-open still on, so any query on this page would reopen
+  the database at this build's version. The path turns auto-open off before it probes (after Dexie's `close()`
+  has returned, which would otherwise turn it back on); every successful branch opens explicitly.
+- A missing database is usually the other tab between its delete and its reopen, so the probe looks again
+  after each of `DB_CLOSE_RECHECK_DELAYS_MS` (`src/config/database.ts`: 150, 600, 1,500 and 3,000 ms, five
+  probes over about 5 s). That window is a bound, not a guarantee. A tab of this build that reopens the
+  database at the current version within it is opened as usual. This is the case of a still-running tab whose
+  connection a sibling's start-up recreate closed; tabs that the forced worker reload (ADR-0021 amendment)
+  reloads take the start-up path instead. A database still missing after the window is decided by the rules
+  below, which means the conflict screen once this page has recreated the database, and Retry recovers. That
+  covers a same-build sibling slower than the window and a database deleted in devtools after this page's
+  recreate (devtools deletes through `deleteDatabase`, so it fires `versionchange`). Preferring the conflict
+  over creating the database at this build's version in an old tab's gap is deliberate.
+- Once this page has recreated the database, another version is the conflict, and so is a database that is
+  still missing or unreadable when another connection's `versionchange` closed ours (an `AppDatabase`
+  subscriber records it; Dexie runs the newest subscriber first, so it is set before Dexie's own handler closes
+  the connection and the provider re-initializes). The database stays closed and `VERSION_CONFLICT` is thrown.
+  Nothing is created or recreated.
+- A forced close has no `versionchange` (storage eviction, which WebKit does under pressure, or cleared site
+  data): no other tab is at work, so a database it lost is created again, as before this amendment. The same
+  holds before this page's first recreate: a missing database is created and a mismatch is recreated once.
+- A transient probe failure goes back to the `initialize()` retry loop, as on start-up. The
+  `allowRecreate: true` paths (first load and Retry) are unchanged.
+
+**Residual: the old build.** The fix ships in the new build only. It guarantees that a new-build tab stops
+touching the database and shows "Close other Pubky tabs, then retry." while a tab of another build is active;
+it cannot change that tab. A 0.x tab still recreates the database at its own version whenever it finds another
+one, still probes with `Dexie.exists()`, and its Dexie 4.4.7 `open()` still falls back to the existing version
+on a `VersionError`. It can therefore still end up on the new database, writing 0.x-shaped rows, when the new
+build creates the database in the gap between the old tab's delete and reopen: on the new tab's first load, when
+the user presses Retry with the old tab still open, or once when a new-build tab that started on the current
+database meets the old tab's first recreate (the first mismatch in a page lifetime still recreates; refusing it on
+the unexpected-close path too would remove this case and is left open). The same holds before this page's first
+recreate for a database still missing after the re-check window: it is created at the current version, which can
+land in a slow old tab's gap (the same end state as F-2; rare, because the old build reopens right after its
+delete). Rows written there stay, because the database is at the current version and start-up does not recreate
+it. Closing the old tab, which is what the screen
+asks, or the forced worker reload ends the exposure.
+
+One opening on this page is not covered: `clearDatabase()` (`franky.helpers.ts`) opens the database explicitly when
+it is closed, and an explicit `open()` ignores the auto-open switch. It runs from sign-out and account preparation; a
+call already in flight at the moment of the conflict can still open the database at this build's version. Starting
+either flow needs the app, which the conflict screen replaces.
 
 ## Consequences
 
@@ -70,6 +152,19 @@ Local schema evolution is destructive and explicit.
 - A recreate discards local-only user choices. An explicit unblur is not synced, so after a bump the
   item is moderated again and blurred: the next nexus persistence pass upserts the record with
   `is_blurred: true` (`ModerationModel.bulkSave` in `src/core/services/local/stream/{posts,users}`).
+- Two tabs of different builds in one browser profile would otherwise take turns: each recreate closes
+  the other tab's connection (`versionchange` → Dexie `close`), whose provider re-initializes, finds the
+  wrong version, and recreates again, wiping the database and re-running the resync in both tabs each
+  round. The loop-breaker in _Decision_ stops the new build after one round; `DatabaseErrorScreen` then
+  says "Close other Pubky tabs, then retry.", and in the social v1 release the forced worker reload
+  (ADR-0021 amendment) brings the old tab onto the new build. A tab of a build without the breaker
+  keeps recreating until it reloads, and can land on the new database (_Amendment_, residual).
+- A bump that ships with a forced sign-out (the social v1 gate, ADR-0026) resyncs twice on the first
+  load: the recreate sets `wasDbReset` before auth restore, and the bootstrap after the gate runs
+  `MigrationController.resync` again. Accepted: both runs are reads of small lists.
+- The default in `src/libs/env/env.ts` does not ship on its own: the Docker workflows
+  (`release-docker.yml`, `build-docker-image.yml`) pass `NEXT_PUBLIC_DB_VERSION` as a build arg, so a
+  bump is two PRs, the app change and a CI-task PR for those two lines, merged together.
 
 ### Neutral ⚠️
 
@@ -132,7 +227,22 @@ with snapshot tests.
 - Version source: `src/config/database.ts` (`DB_VERSION = Env.NEXT_PUBLIC_DB_VERSION`).
 - `wasDbReset` consumer: `src/providers/RouteGuardProvider/RouteGuardProvider.tsx`.
 - Tests: `src/core/database/franky/franky.test.ts` covers the version mismatch, the unknown-version
-  path, and the transient-error cases that must not recreate the database.
+  path, the transient-error cases that must not recreate the database, and the refused second recreate;
+  its "Re-initialization after another tab closed the connection" suite runs the two-tab race on
+  fake-indexeddb (another build reopening, a tab of this build reopening, the database staying missing
+  while a query runs, a forced close) and asserts the absence of `Dexie.exists()`, of deletes and of
+  versioned opens from this page.
+  `src/providers/DatabaseProvider/DatabaseProvider.test.tsx` shows the conflict screen through the real
+  `db` and its `close` handler.
+- Loop-breaker: `InitializeOptions.allowRecreate`, `recreatedThisPageLifetime`, `closedByOtherConnection`,
+  `runInitializeAfterClose`, `getExistingDbVersionAfterClose` and the passive `getExistingDbVersion` in
+  `franky.ts`, `DB_CLOSE_RECHECK_DELAYS_MS` in `src/config/database.ts`,
+  `DatabaseErrorCode.VERSION_CONFLICT` in `src/libs/error/error.codes.ts`, the two `initDatabase` call
+  sites in `src/providers/DatabaseProvider/DatabaseProvider.tsx`, and the `description` prop of
+  `src/components/molecules/DatabaseErrorScreen/DatabaseErrorScreen.tsx`.
+- Version history: 3 → 4 on 2026-10-30 for the social v1 port (feed enums become strings, file ids
+  become `owner:hash`, post `uri` spellings change, bookmarks become locally owned). The index map did
+  not change, so the recreate is the only way to guarantee that every client starts clean.
 
 ## Related Decisions
 

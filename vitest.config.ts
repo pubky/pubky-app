@@ -17,13 +17,6 @@ export default defineConfig({
       reportOnFailure: true,
     },
     onConsoleLog(log) {
-      if (
-        log.includes('WebAssembly.instantiateStreaming') ||
-        log.includes('application/wasm') ||
-        log.includes('MIME type')
-      ) {
-        return false;
-      }
       if (log.includes('Not implemented: navigation')) {
         return false;
       }

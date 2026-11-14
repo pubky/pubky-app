@@ -1,5 +1,5 @@
 import type { Session } from '@synonymdev/pubky';
-import { userUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import type { TRestoreSessionParams, TRestoreSessionResult, TSignInParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import type { ActiveSessionFailure, PersistedAuth, SessionReference } from '@/libs/auth/session.types';
@@ -215,14 +215,15 @@ export class AuthApplication {
    *
    * @param params - Parameters containing the user's public key
    * @param params.pubky - The user's public key identifier
-   * @returns Promise resolving to the user profile or undefined if not found
+   * @returns Promise resolving to whether the v1 profile exists; an account still on the 0.x
+   * profile alone has not passed the migration gate and reads as not signed up
    */
   static async userIsSignedUp({ pubky }: { pubky: Pubky }): Promise<boolean> {
     try {
       // A new account has no profile.json yet: the 404 is the answer, not an error to report.
       const profile = await HomeserverService.request({
         method: HttpMethod.GET,
-        url: userUriBuilder(pubky),
+        url: buildUri(pubky, 'user'),
         notFoundAsNull: true,
       });
       return profile !== null;

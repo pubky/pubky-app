@@ -1,9 +1,19 @@
-import type { PubkyAppCollectionContent } from 'pubky-app-specs';
 import type { CollectionLayout } from '@/config/collections';
 import type { Pubky } from '@/models/models.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 
-export type CollectionContent = PubkyAppCollectionContent & { layout: CollectionLayout };
+/**
+ * A collection envelope as this client shows it: items by URI. The stored envelope also carries a
+ * note per item and members other clients added; an edit merges onto the stored one
+ * (`CollectionPostContent.toStored`) so neither is lost.
+ */
+export type CollectionContent = {
+  name: string;
+  description?: string;
+  items?: string[];
+  cover_image?: string;
+  layout: CollectionLayout;
+};
 
 export type CollectionContentInput = {
   name: string;

@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import type { Pubky } from '@/models/models.types';
@@ -22,8 +23,8 @@ global.URL.revokeObjectURL = mockRevokeObjectURL;
 
 const PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 const fileUri = (id: string) => `pubky://${PUBKY}/pub/pubky.app/files/${id}`;
-// A staged URI: the author's file path with a `draft-` id of a real id's length (13 characters)
-const STAGED_URI_PATTERN = new RegExp(`^pubky://${PUBKY}/pub/pubky\\.app/files/draft-[0-9a-f]{7}$`);
+// A staged URI: the author's v1 media URI for a random id, named for the file's type
+const STAGED_URI_PATTERN = new RegExp(`^pubky://${PUBKY}/pub/social/v1/files/[0-9A-HJKMNP-TV-Z]{26}\\.[a-z0-9]+$`);
 
 const imageFile = (name = 'pic.png', type = 'image/png', size = 1024) => {
   const file = new File(['x'], name, { type });
@@ -90,23 +91,29 @@ describe('useInlineMediaUpload', () => {
     });
 
     it('never lets a repeated random id replace a staged file', async () => {
-      const randomUUID = vi
-        .spyOn(crypto, 'randomUUID')
-        .mockReturnValueOnce('aaaaaaa0-0000-4000-8000-000000000000')
-        .mockReturnValueOnce('aaaaaaa0-0000-4000-8000-000000000000')
-        .mockReturnValueOnce('bbbbbbb0-0000-4000-8000-000000000000');
+      const fill =
+        (byte: number) =>
+        <T extends ArrayBufferView | null>(array: T): T => {
+          if (array instanceof Uint8Array) array.fill(byte);
+          return array;
+        };
+      const getRandomValues = vi
+        .spyOn(crypto, 'getRandomValues')
+        .mockImplementationOnce(fill(1))
+        .mockImplementationOnce(fill(1))
+        .mockImplementationOnce(fill(2));
       const { result } = setup();
 
       try {
         const first = await stage(result, imageFile('a.png'));
         const second = await stage(result, imageFile('b.png'));
 
-        expect(first).toBe(fileUri('draft-aaaaaaa'));
-        expect(second).toBe(fileUri('draft-bbbbbbb'));
+        expect(first).toBe(buildFile(PUBKY, { bytes: new Uint8Array(32).fill(1), type: 'image/png' }).url);
+        expect(second).toBe(buildFile(PUBKY, { bytes: new Uint8Array(32).fill(2), type: 'image/png' }).url);
         expect(result.current.getMediaName(first)).toBe('a.png');
         expect(result.current.getMediaName(second)).toBe('b.png');
       } finally {
-        randomUUID.mockRestore();
+        getRandomValues.mockRestore();
       }
     });
 

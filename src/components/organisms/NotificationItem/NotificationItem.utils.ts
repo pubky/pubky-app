@@ -98,7 +98,7 @@ export function getUserIdFromNotification(notification: FlatNotification): strin
  * Convert a pubky URI or composite ID to collection/post route parameters.
  * Uses shared composite ID utilities.
  * Supports:
- * - pubky:// URI format: pubky://userId/pub/pubky.app/posts/postId
+ * - pubky:// URI format, in either spelling (`pub/social/v1/posts/postId`, or the 0.x `pub/pubky.app/posts/postId`)
  * - Composite ID format: userId:postId
  */
 function uriToRouteParams(uri: string | undefined): { authorPubky: string; postId: string } | null {
@@ -264,7 +264,7 @@ export function getPostUriFromNotification(notification: FlatNotification): stri
 /**
  * Convert a pubky URI to a composite ID format.
  * Uses the shared buildCompositeIdFromPubkyUri utility.
- * URI format: pubky://userId/pub/pubky.app/posts/postId
+ * URI format: pubky://userId/pub/social/v1/posts/postId (or the 0.x spelling Nexus still serves)
  * Composite format: userId:postId
  */
 export function pubkyUriToCompositeId(uri: string): string | null {

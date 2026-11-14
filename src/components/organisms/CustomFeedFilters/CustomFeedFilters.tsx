@@ -1,5 +1,4 @@
 'use client';
-import { PubkyAppFeedReach } from 'pubky-app-specs';
 import { Container } from '@/atoms/Container/Container';
 import { Label } from '@/atoms/Label/Label';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
@@ -25,7 +24,7 @@ interface CustomFeedFiltersProps {
 export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
   const customFeed = useCustomFeed();
   const reach: ReachFilterValue | undefined =
-    customFeed?.reach === PubkyAppFeedReach.Wot && customFeed.domain_tags.length > 0
+    customFeed?.reach === 'wot' && customFeed.domain_tags.length > 0
       ? TAGGED_AS_FILTER_KEY
       : customFeed?.reach !== undefined
         ? pubkyReachToHomeReach(customFeed.reach)

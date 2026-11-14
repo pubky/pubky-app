@@ -1,5 +1,3 @@
-import { readFileSync } from 'fs';
-import { basename, extname } from 'path';
 import {
   AuthFlowKind,
   Keypair,
@@ -10,36 +8,44 @@ import {
   type Path,
   type Session,
 } from '@synonymdev/pubky';
-import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind, PubkySpecsBuilder } from 'pubky-app-specs';
+import { decodeObject, encodeObject } from 'pubky-social-specs';
+import { LOCKS_GUARDED_CONTENT_PATH } from '../../src/config/locks';
 import type {
-  SeedAddToCollectionArgs,
   SeedBookmarkArgs,
   SeedCreateCollectionArgs,
   SeedCreateLockPostArgs,
   SeedCreatePostArgs,
   SeedCreateUserArgs,
   SeedDeletePostArgs,
+  SeededLegacyLock,
   SeedEditPostArgs,
   SeededLockPost,
   SeededPost,
-  SeededPostKind,
   SeededSignUp,
   SeededUser,
   SeedApprovePubkyAuthArgs,
   SeedFollowArgs,
+  SeedLegacyLockArgs,
+  SeedListPathsArgs,
   SeedLockServerWriteArgs,
   SeedMarkNotificationsReadArgs,
+  SeedMuteArgs,
+  SeedSettingsArgs,
   SeedSignUpArgs,
   SeedTagArgs,
 } from '../support/types/seed';
+import { legacyWriter, v1Writer, type SeedWriter } from './seed.writers';
 
 /**
  * Node side of the spec seeding helpers in `cypress/support/seed.ts`.
  *
  * Specs set up the users and activity a test only observes through the same Pubky libraries the
- * app writes with (`@synonymdev/pubky` + `pubky-app-specs`), straight against the test stack's
+ * app writes with (`@synonymdev/pubky` + `pubky-social-specs`), straight against the test stack's
  * homeserver. Nexus indexes those writes exactly as it indexes the app's, so feeds, notifications
  * and pagination are still exercised end to end; only the setup clicks are skipped.
+ *
+ * A user is on one data epoch for the whole run, picked when they are created: v1, or `legacy` for
+ * an un-migrated 0.x account (see `seed.writers.ts`).
  */
 
 export type SeedConfig = {
@@ -57,26 +63,10 @@ const LOCK_SERVER_CLIENT_ID = 'lock-server.e2e.test';
 // Consecutive seed writes start at least this far apart, so records a test orders by time
 // (timelines, threads, notifications) never share a timestamp
 const SEED_WRITE_SPACING_MS = 5;
-// Matches the `mustache-*.png` fixtures; extend when a spec seeds another image type
-const IMAGE_CONTENT_TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg' };
+// More than any spec seeds under one prefix, so one page lists it all
+const LIST_PAGE_SIZE = 1000;
 
-const POST_KINDS: Record<SeededPostKind, PubkyAppPostKind> = {
-  short: PubkyAppPostKind.Short,
-  long: PubkyAppPostKind.Long,
-  image: PubkyAppPostKind.Image,
-  collection: PubkyAppPostKind.Collection,
-};
-
-type SeededSession = { name: string; session: Session; builder: PubkySpecsBuilder };
-
-const toPath = (path: string): Path => {
-  if (!path.startsWith('/pub/')) {
-    throw new Error(`expected a /pub/ homeserver path, got ${path}`);
-  }
-  return path as Path;
-};
-
-const postPath = (postId: string) => toPath(`/pub/pubky.app/posts/${postId}`);
+type SeededSession = { name: string; session: Session; writer: SeedWriter; legacy: boolean };
 
 const lockServerPath = (path: string): Path => {
   if (!path.startsWith('/pub/app.locks/') && !path.startsWith('/priv/app.locks/')) {
@@ -201,29 +191,6 @@ export const createSeedTasks = (config: SeedConfig) => {
     await pubky().signer(keypairFor(name)).approveAuthRequest(authUrl);
   };
 
-  const putTag = async (tagger: SeededSession, uri: string, label: string) => {
-    const tag = tagger.builder.createTag(uri, label);
-    await tagger.session.storage.putJson(toPath(tag.meta.path), tag.tag.toJson());
-    return tag.meta.id;
-  };
-
-  // Same three writes as the app's image upload: the blob, its file record, then the post points at the file
-  const uploadImage = async (author: SeededSession, imagePath: string) => {
-    const contentType = IMAGE_CONTENT_TYPES[extname(imagePath).toLowerCase()];
-    if (!contentType) {
-      throw new Error(`no content type for ${imagePath}`);
-    }
-    const bytes = new Uint8Array(readFileSync(imagePath));
-    const blob = author.builder.createBlob(bytes);
-    await author.session.storage.putBytes(toPath(blob.meta.path), blob.blob.data);
-    const file = author.builder.createFile(basename(imagePath), blob.meta.url, contentType, bytes.length);
-    await author.session.storage.putJson(toPath(file.meta.path), file.file.toJson());
-    return file.meta.url;
-  };
-
-  const readPost = async (author: SeededSession, postId: string) =>
-    PubkyAppPost.fromJson(await author.session.storage.getJson(postPath(postId)));
-
   return {
     // The key Pubky Ring would create and sign up, without a profile: signing the app in with it
     // lands on the Profile step
@@ -269,113 +236,105 @@ export const createSeedTasks = (config: SeedConfig) => {
         return null;
       }),
 
-    seedCreateUser: ({ name, bio }: SeedCreateUserArgs): Promise<SeededUser> =>
-      step(`create user '${name}'`, async () => {
+    seedCreateUser: ({ name, bio, legacy = false }: SeedCreateUserArgs): Promise<SeededUser> =>
+      step(`create ${legacy ? 'un-migrated ' : ''}user '${name}'`, async () => {
+        // Signed up like any other key, so the mock Pubky Ring can sign the app in as them
         const { keypair } = await signUp(name);
         const session = await pubky().signer(keypair).signin(SEED_CLIENT_ID);
         const id = keypair.publicKey.z32();
-        const builder = new PubkySpecsBuilder(id);
-        // profile.json is what makes the app treat the key as signed up
-        const profile = builder.createUser(name, bio, null, null, null);
-        await session.storage.putJson(toPath(profile.meta.path), profile.user.toJson());
+        const writer = legacy ? legacyWriter(id, session) : v1Writer(id, session);
+        const uri = await writer.writeProfile(name, bio);
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
-        await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v0/ingest/${id}`, { method: 'PUT' }).catch(() => null);
-        sessions.set(id, { name, session, builder });
-        return { id, pubky: `pubky${id}`, uri: profile.meta.url, name };
+        await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v1/ingest/${id}`, { method: 'PUT' }).catch(() => null);
+        sessions.set(id, { name, session, writer, legacy });
+        return { id, pubky: `pubky${id}`, uri, name };
       }),
 
     seedCreatePost: (args: SeedCreatePostArgs): Promise<SeededPost> =>
       step(`create ${args.kind} post by '${nameOf(args.authorId)}': "${preview(args.content)}"`, async () => {
-        const author = sessionFor(args.authorId);
-        const attachments = args.imageFixturePath ? [await uploadImage(author, args.imageFixturePath)] : null;
-        const embed = args.embed ? new PubkyAppPostEmbed(args.embed.uri, POST_KINDS[args.embed.kind]) : null;
-        const post = author.builder.createPost(
-          args.content,
-          POST_KINDS[args.kind],
-          args.parentUri ?? null,
-          embed,
-          attachments,
-        );
-        await author.session.storage.putJson(toPath(post.meta.path), post.post.toJson());
+        const { writer } = sessionFor(args.authorId);
+        const post = await writer.writePost(args);
         // The app tags a post created with tags as its author, after the post itself
         for (const label of args.tags ?? []) {
-          await putTag(author, post.meta.url, label);
+          await writer.writeTag(post.uri, label);
         }
-        return { id: post.meta.id, authorId: args.authorId, uri: post.meta.url, kind: args.kind };
+        return { ...post, authorId: args.authorId, kind: args.kind };
       }),
 
     seedEditPost: ({ authorId, postId, content }: SeedEditPostArgs) =>
       step(`edit post ${postId} by '${nameOf(authorId)}'`, async () => {
-        const author = sessionFor(authorId);
-        const edited = author.builder.editPost(await readPost(author, postId), postId, content);
-        await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
+        await sessionFor(authorId).writer.editPost(postId, content);
         return { id: postId };
       }),
 
     seedDeletePost: ({ authorId, postId }: SeedDeletePostArgs) =>
       step(`delete post ${postId} by '${nameOf(authorId)}'`, async () => {
-        await sessionFor(authorId).session.storage.delete(postPath(postId));
+        await sessionFor(authorId).writer.deletePost(postId);
         return { id: postId };
       }),
 
     seedTag: ({ taggerId, uri, label }: SeedTagArgs) =>
       step(`tag ${uri} as '${label}' by '${nameOf(taggerId)}'`, async () => ({
-        id: await putTag(sessionFor(taggerId), uri, label),
+        id: await sessionFor(taggerId).writer.writeTag(uri, label),
       })),
 
     seedFollow: ({ followerId, followeeId }: SeedFollowArgs) =>
       step(`'${nameOf(followerId)}' follows '${nameOf(followeeId)}'`, async () => {
-        const follower = sessionFor(followerId);
-        const follow = follower.builder.createFollow(followeeId);
-        await follower.session.storage.putJson(toPath(follow.meta.path), follow.follow.toJson());
+        await sessionFor(followerId).writer.writeFollow(followeeId);
         return { id: followeeId };
       }),
 
     seedBookmark: ({ userId, uri }: SeedBookmarkArgs) =>
       step(`bookmark ${uri} by '${nameOf(userId)}'`, async () => {
-        const user = sessionFor(userId);
-        const bookmark = user.builder.createBookmark(uri);
-        await user.session.storage.putJson(toPath(bookmark.meta.path), bookmark.bookmark.toJson());
-        return { id: bookmark.meta.id };
+        await sessionFor(userId).writer.writeBookmark(uri);
+        return { uri };
+      }),
+
+    seedMute: ({ userId, muteeId }: SeedMuteArgs) =>
+      step(`'${nameOf(userId)}' mutes '${nameOf(muteeId)}'`, async () => {
+        await sessionFor(userId).writer.writeMute(muteeId);
+        return { id: muteeId };
       }),
 
     seedMarkNotificationsRead: ({ userId }: SeedMarkNotificationsReadArgs) =>
       step(`mark notifications read for '${nameOf(userId)}'`, async () => {
-        const user = sessionFor(userId);
-        const lastRead = user.builder.createLastRead();
-        await user.session.storage.putJson(toPath(lastRead.meta.path), lastRead.last_read.toJson());
-        return { timestamp: Number(lastRead.last_read.timestamp) };
+        const timestamp = Date.now();
+        await sessionFor(userId).writer.writeLastRead(timestamp);
+        return { timestamp };
       }),
 
-    seedCreateCollection: ({
-      authorId,
-      name,
-      description,
-      items,
-      layout,
-    }: SeedCreateCollectionArgs): Promise<SeededPost> =>
-      step(`create collection '${name}' by '${nameOf(authorId)}'`, async () => {
-        const author = sessionFor(authorId);
-        const collection = author.builder.createCollectionPost(name, description, items, null, layout);
-        await author.session.storage.putJson(toPath(collection.meta.path), collection.post.toJson());
-        return { id: collection.meta.id, authorId, uri: collection.meta.url, kind: 'collection' };
+    seedSettings: ({ userId, settings }: SeedSettingsArgs) =>
+      step(`write settings of '${nameOf(userId)}'`, async () => {
+        await sessionFor(userId).writer.writeSettings(settings);
+        return settings;
       }),
 
-    // Rewrites the collection post with the item first, as saving a post into a collection does in the app
-    seedAddToCollection: ({ authorId, collectionId, itemUri }: SeedAddToCollectionArgs) =>
-      step(`add ${itemUri} to collection ${collectionId} by '${nameOf(authorId)}'`, async () => {
-        const author = sessionFor(authorId);
-        const current = await readPost(author, collectionId);
-        const content = JSON.parse(current.content);
-        const nextContent = JSON.stringify({ ...content, items: [itemUri, ...(content.items ?? [])] });
-        const edited = author.builder.editPost(current, collectionId, nextContent);
-        await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
-        return { id: collectionId };
-      }),
+    seedLegacyLock: ({ authorId, ...lock }: SeedLegacyLockArgs): Promise<SeededLegacyLock> =>
+      step(`publish a lock by '${nameOf(authorId)}': "${preview(lock.teaser.teaser_description)}"`, () =>
+        sessionFor(authorId).writer.writeLock(lock),
+      ),
+
+    // Not a seed: reads a post an intercepted write carried with the library the seeds build posts with, which
+    // stays on this side so the specs do not bundle it. Rejects a body that is not a stored v1 post.
+    decodeStoredPost: ({ body }: { body: string }) => decodeObject({ kind: 'post' }, new TextEncoder().encode(body)),
+
+    // Not a seed: every URL under `prefix` in a seeded user's tree, read back with their session, so a spec can
+    // count what a run left on the homeserver. Deep and ascending, like the migrator's own LIST.
+    listHomeserverPaths: ({ userId, prefix }: SeedListPathsArgs): Promise<string[]> =>
+      sessionFor(userId).session.storage.list(prefix, null, false, LIST_PAGE_SIZE, false),
+
+    seedCreateCollection: ({ authorId, ...collection }: SeedCreateCollectionArgs): Promise<SeededPost> =>
+      step(`create collection '${collection.name}' by '${nameOf(authorId)}'`, async () => ({
+        ...(await sessionFor(authorId).writer.writeCollection(collection)),
+        authorId,
+        kind: 'collection',
+      })),
 
     // A paid lock as the Lock Server leaves it (the public lock.json), then its announcement as the
-    // composer posts it. The locked post itself is only ever read through the Lock Server, so it is
-    // returned for the spec's stub to serve rather than written under /priv.
+    // composer posts it: a note whose `content` is the teaser envelope and whose `lock` names the lock
+    // file. The locked post itself is only ever read through the Lock Server, so it is returned, encoded
+    // as the app encodes a guarded primary (`GuardedPostBuilder.toPrimary`), for the spec's stub to
+    // serve rather than written under /priv.
     seedCreateLockPost: ({
       authorId,
       title,
@@ -385,17 +344,24 @@ export const createSeedTasks = (config: SeedConfig) => {
     }: SeedCreateLockPostArgs): Promise<SeededLockPost> =>
       step(`create lock post by '${nameOf(authorId)}': "${preview(teaser)}"`, async () => {
         const author = sessionFor(authorId);
+        // The guarded post below is the v1 encoding, which a 0.x client never wrote
+        if (author.legacy) {
+          throw new Error('a lock post is seeded for a v1 account only');
+        }
         const lockId = `e2eseed${Date.now()}`;
         const guardedPath = `post-${lockId}`;
-        const guardedPost = Buffer.from(JSON.stringify({ content: lockedContent, kind: 'short', attachments: null }));
-        const lockPath = `/pub/app.locks/${lockId}.json`;
-        await author.session.storage.putJson(toPath(lockPath), {
+        const guardedPost = encodeObject(
+          { kind: 'post', root: 'private' },
+          { content: lockedContent, kind: 'note', parent: null, embed: null, attachments: [], lock: null },
+        );
+        const lockPath = `/pub/app.locks/${lockId}.json` as const;
+        await author.session.storage.putJson(lockPath, {
           version: 1,
           creator: `pubky${authorId}`,
           primary_resource: {
-            path: `/priv/app.locks/content/${guardedPath}`,
+            path: `${LOCKS_GUARDED_CONTENT_PATH}${guardedPath}`,
             hash: `e2e-${guardedPath}`,
-            content_type: 'application/json',
+            content_type: 'application/octet-stream',
             size: guardedPost.length,
           },
           secondary_resources: {},
@@ -410,24 +376,18 @@ export const createSeedTasks = (config: SeedConfig) => {
           access_policy: { requested_credential_ttl_seconds: 900 },
           lock_server: { override: null },
         });
-        const content = JSON.stringify({ lock_title: title, teaser_description: teaser, content_kind: 'note' });
-        const post = author.builder.createPost(
-          content,
-          PubkyAppPostKind.Short,
-          null,
-          null,
-          null,
-          `pubky://${authorId}${lockPath}`,
-        );
-        await author.session.storage.putJson(toPath(post.meta.path), post.post.toJson());
+        const post = await author.writer.writePost({
+          content: JSON.stringify({ lock_title: title, teaser_description: teaser, content_kind: 'note' }),
+          kind: 'note',
+          lock: `pubky://${authorId}${lockPath}`,
+        });
         return {
-          id: post.meta.id,
+          ...post,
           authorId,
-          uri: post.meta.url,
-          kind: 'short',
+          kind: 'note',
           lockId,
           guardedPath,
-          guardedBytes: guardedPost.toString('base64'),
+          guardedBytes: Buffer.from(guardedPost).toString('base64'),
         };
       }),
   };

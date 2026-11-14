@@ -3,6 +3,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { toMarkdown } from 'mdast-util-to-markdown';
 import { gfm } from 'micromark-extension-gfm';
+import { parseUri } from 'pubky-social-specs';
 import { visit } from 'unist-util-visit';
 import { parsePubkyUri } from '@/models/models.utils';
 import { parseArticleContent } from './articleContent';
@@ -12,13 +13,15 @@ import { parseArticleContent } from './articleContent';
  *
  * Images, videos, audio files and PDFs all share markdown image syntax; the
  * media type is never in the body. Composer bodies reference uploaded files by
- * their canonical homeserver file URI (`pubky://{author}/pub/pubky.app/files/{fileId}`).
+ * their canonical homeserver media URI (`pubky://{author}/pub/social/v1/files/{hash}.{ext}`).
  * Published bodies reference slots of `post.attachments` instead
  * (`![alt](attachment:{n})`), so the body never persists a host-specific CDN
- * URL, and readers resolve each slot's type from its file metadata.
- * `serializeArticleBody` converts composer → published form on create/save;
- * `deserializeArticleBody` converts published → composer form when opening an
- * article for edit.
+ * URL, and readers resolve each slot's type from its file metadata. The cover
+ * is no slot: it lives in the envelope's `cover_image` (ADR-0023 as amended by
+ * ADR-0027), and `resolveArticleCover` says what each slot names for every
+ * stored shape. `serializeArticleBody` converts composer → published form on
+ * create/save; `deserializeArticleBody` converts published → composer form
+ * when opening an article for edit.
  *
  * All body inspection is AST-based (never regex over the whole document) so
  * image syntax inside code fences or inline code is never misinterpreted, and
@@ -30,7 +33,8 @@ import { parseArticleContent } from './articleContent';
 
 const ATTACHMENT_REF_PATTERN = /^attachment:(0|[1-9][0-9]*)$/;
 const ATTACHMENT_SCHEME_PATTERN = /^attachment:/i;
-const FILE_PATH_PREFIX = '/pub/pubky.app/files/';
+/** 0.x File objects, which articles published before the social v1 port still reference. */
+const LEGACY_FILE_PATH_PREFIX = '/pub/pubky.app/files/';
 const BLOB_PATH_PREFIX = '/pub/pubky.app/blobs/';
 const PUBKY_URI_PATTERN = /pubky:\/\/[^\s"'<>)]+/gi;
 
@@ -96,19 +100,28 @@ export function isAttachmentRefScheme(src: string | null | undefined): boolean {
 }
 
 /**
- * Returns the owner pubky of a strict homeserver file URI
+ * Returns the owner pubky of a strict homeserver media URI, v1
+ * (`pubky://{owner}/pub/social/v1/files/{hash}.{ext}`) or 0.x
  * (`pubky://{owner}/pub/pubky.app/files/{fileId}`), or null for anything else.
  */
 export function parseFileUriOwner(uri: string | null | undefined): string | null {
   if (!uri) return null;
+  const trimmed = uri.trim();
 
-  const parsed = parsePubkyUri(uri.trim());
-  if (!parsed || !parsed.path.startsWith(FILE_PATH_PREFIX)) return null;
+  try {
+    const parsed = parseUri(trimmed);
+    if (parsed.kind === 'file') return parsed.root === 'public' ? parsed.owner : null;
+  } catch {
+    // Not a canonical URI: only the 0.x prefix check below can still accept it
+  }
 
-  const fileId = parsed.path.slice(FILE_PATH_PREFIX.length);
+  const legacy = parsePubkyUri(trimmed);
+  if (!legacy || !legacy.path.startsWith(LEGACY_FILE_PATH_PREFIX)) return null;
+
+  const fileId = legacy.path.slice(LEGACY_FILE_PATH_PREFIX.length);
   if (!fileId || fileId.includes('/')) return null;
 
-  return parsed.authority;
+  return legacy.authority;
 }
 
 /** Returns true when `uri` is a homeserver file URI owned by `authorPubky`. */
@@ -206,8 +219,10 @@ function collectNodes(tree: Root): CollectedNodes {
 /**
  * Converts a composer-form body to published form: collects unique
  * author-owned inline file URIs in first-appearance order and rewrites each
- * of their destinations to `attachment:{n}`, where slots start after the
- * cover (`n = index + 1` when `coverPresent`). Images, videos, audio and PDFs
+ * of their destinations to `attachment:{n}`, where `n = index + slotOffset`.
+ * A published article indexes its attachments directly (offset 0: the cover
+ * is in the envelope); a locked article keeps its cover in slot 0 inside the
+ * lock, so it passes offset 1 when it has one. Images, videos, audio and PDFs
  * all use image syntax, so one pass covers every media type.
  *
  * Returns the input body unchanged (with `errors`) when the body contains
@@ -220,11 +235,12 @@ function collectNodes(tree: Root): CollectedNodes {
  */
 export function serializeArticleBody(params: {
   body: string;
-  coverPresent: boolean;
+  /** The slot the first inline file takes: 0, or 1 for a locked article with a cover in slot 0. */
+  slotOffset: 0 | 1;
   authorPubky: string;
   maxInlineMedia: number;
 }): SerializeArticleBodyResult {
-  const { body, coverPresent, authorPubky, maxInlineMedia } = params;
+  const { body, slotOffset, authorPubky, maxInlineMedia } = params;
   const { images, definitions, htmlNodes } = collectNodes(parseBody(body));
 
   const errors: SerializeArticleBodyError[] = [];
@@ -258,7 +274,7 @@ export function serializeArticleBody(params: {
       index = inlineUris.length;
       inlineUris.push(uri);
     }
-    managed.push({ node, span, slot: index + (coverPresent ? 1 : 0) });
+    managed.push({ node, span, slot: index + slotOffset });
   }
 
   for (const definition of definitions) {
@@ -294,17 +310,19 @@ export function serializeArticleBody(params: {
 /**
  * Converts a published-form body back to composer form: every media node
  * whose destination is a strict `attachment:{n}` reference is resolved to
- * `attachments[n]`. References that cannot be resolved — index out
- * of range, target not an author-owned file URI, or a malformed
- * `attachment:`-scheme destination — are removed with a warning instead of
- * failing, so a damaged article always remains editable.
+ * `slot(n)`, the accessor `resolveArticleCover` gives for the post's stored
+ * shape. References that cannot be resolved — index out of range, target not
+ * an author-owned file URI, or a malformed `attachment:`-scheme destination —
+ * are removed with a warning instead of failing, so a damaged article always
+ * remains editable.
  */
 export function deserializeArticleBody(params: {
   body: string;
-  attachments: string[];
+  /** The attachment a slot names; undefined for one nothing names. */
+  slot: (index: number) => string | undefined;
   authorPubky: string;
 }): DeserializeArticleBodyResult {
-  const { body, attachments, authorPubky } = params;
+  const { body, slot, authorPubky } = params;
   const { images } = collectNodes(parseBody(body));
 
   const warnings: string[] = [];
@@ -319,7 +337,7 @@ export function deserializeArticleBody(params: {
 
   for (const { node, span } of refImages) {
     const index = parseAttachmentRef(node.url);
-    const uri = index !== null ? attachments[index] : undefined;
+    const uri = index !== null ? slot(index) : undefined;
 
     if (uri && isAuthorFileUri(uri, authorPubky)) {
       result = replaceImageDestination(result, node, span, uri.trim());
@@ -370,8 +388,10 @@ export function collectAttachmentRefIndexes(body: string): Set<number> {
 }
 
 /**
- * Slot-0 cover rule: when the published body references `attachment:0`,
- * slot 0 is an inline media file and the article has no cover.
+ * Slot-0 cover rule of a 0.x article: when the published body references
+ * `attachment:0`, slot 0 is an inline media file and the article has no cover.
+ * Readers go through `resolveArticleCover`, which applies it only to an
+ * article whose envelope carries no cover.
  */
 export function articleHasInlineSlotZero(body: string): boolean {
   // Delegates so cover detection can never disagree with ref collection —
@@ -381,11 +401,13 @@ export function articleHasInlineSlotZero(body: string): boolean {
 }
 
 /**
- * Slots an article preview renders: the cover alone, or none when slot 0 is inline media. Null for a
- * post that is not an article, whose preview renders all of its media.
+ * Slots a locked article's preview renders: the cover alone, or none when slot 0 is inline media.
+ * Locked content keeps the slot-0 convention (`GuardedPostBuilder`), so this is the slot-0 rule
+ * `resolveArticleCover` applies to an envelope without a cover. Null for a post that is not an
+ * article, whose preview renders all of its media.
  */
 export function getArticlePreviewSlots({ kind, content }: { kind: string; content: string }): number[] | null {
   const article = kind === 'long' ? parseArticleContent(content) : null;
   if (!article) return null;
-  return articleHasInlineSlotZero(article.body) ? [] : [0];
+  return !article.cover_image && !articleHasInlineSlotZero(article.body) ? [0] : [];
 }

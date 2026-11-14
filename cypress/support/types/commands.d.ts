@@ -4,7 +4,17 @@ declare global {
   namespace Cypress {
     interface Chainable<Subject = any> {
       signOut(hasBackedUp: HasBackedUp): Chainable<void>;
-      signInWithPubkyRing(name: string, landingPath?: string): Chainable<void>;
+      signInWithPubkyRing(
+        name: string,
+        landingPath?: string,
+        options?: {
+          /** The account has a 0.x tree: wait on the gate's progress screen, then up to an extended timeout for the landing route. */
+          migrates?: boolean;
+          /** Runs on the gate's progress screen, before the command waits for the landing route; with `migrates` only. */
+          whileMigrating?: () => void;
+          acknowledgesSummary?: boolean;
+        },
+      ): Chainable<void>;
       onboardAsNewUser(
         profileName: string,
         profileBio?: string,

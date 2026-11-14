@@ -1,7 +1,6 @@
 import type {
   LockFile,
   ReplicatedPost,
-  TGuardedResource,
   TLockPrice,
   TSubmitProofResult,
   TUnlockedContent,
@@ -106,11 +105,19 @@ export type TLockConfig = TLockPrice;
 
 /**
  * One file to guard. The storage path is minted per upload, so the original filename is not part of
- * it — carry that name as metadata inside the post JSON, like a normal post's `PubkyAppFile.name`.
+ * it — carry that name as metadata inside the post JSON, like a normal post's attachment `name`.
  */
 export type TLockContentFile = {
   contentType: string;
   bytes: Uint8Array;
+};
+
+/** The content being locked, as the composer captured it: the post the guarded primary holds. */
+export type TLockedPostInput = {
+  /** A note's text, or an article's `{ title, body }` JSON as the composer builds it. */
+  content: string;
+  /** The local (Nexus-vocabulary) kind the composer inferred; any kind is allowed here. */
+  kind: string;
 };
 
 /**
@@ -118,23 +125,18 @@ export type TLockContentFile = {
  * application maps them onto the Lock Server's primary/secondary resource vocabulary.
  *
  * The Lock Server is not passed in — it is read off the session, which is the only server holding the
- * uploaded bytes. The post is not passed either: an attachment's path only exists once its bytes are
- * uploaded, and the post has to reference them, so the caller supplies a builder that runs after the
- * attachments land.
+ * uploaded bytes. The primary's bytes are not passed either: an attachment's path only exists once
+ * its bytes are uploaded, and the post has to reference them, so the application builds the primary
+ * (`GuardedPostBuilder`) after the attachments land.
  */
 export type TCreateLockContentParams = {
   /**
    * Attachments (images, video, …) as the author picked them. Cleaned like a normal upload, then
-   * uploaded first, so `buildPost` can reference their paths.
+   * uploaded first, so the guarded post can reference their paths, in this order (slot order).
    */
   attachments?: File[];
-  /**
-   * Builds the JSON file holding the `PubkyAppPost` object from the uploaded attachment descriptors.
-   * Called with an empty array when there are no attachments. `ownerPubky` is the account the guarded
-   * bytes landed on (from the upload response); the post references its attachments by that host.
-   * It is undefined only when there are no attachments (and so no URIs to build).
-   */
-  buildPost: (attachmentResources: TGuardedResource[], ownerPubky?: string) => TLockContentFile;
+  /** The post to guard. Its attachments are the uploaded resources, by the host they landed on. */
+  post: TLockedPostInput;
   /** How the content is gated. The criterion is assembled from it at publish time. */
   lockConfig: TLockConfig;
 };

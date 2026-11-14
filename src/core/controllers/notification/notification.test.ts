@@ -359,7 +359,7 @@ describe('NotificationController', () => {
 
   describe('markAllAsRead', () => {
     const mockTimestamp = 1234567890;
-    const mockLastReadUrl = 'pubky://test-user/pub/pubky.app/last-read';
+    const mockLastReadUrl = 'pubky://test-user/priv/app.pubky/v1/last_read.json';
 
     const setupStores = (pubky: Pubky | null, unreadCount = 5, session: Session | null = {} as Session) => {
       const setLastRead = vi.fn();
@@ -389,14 +389,10 @@ describe('NotificationController', () => {
       return { setLastRead, setUnread };
     };
 
-    const buildLastReadResult = () =>
-      asOpaque<ReturnType<typeof LastReadNormalizer.to>>({
-        last_read: {
-          timestamp: BigInt(mockTimestamp),
-          toJson: vi.fn().mockReturnValue({ timestamp: mockTimestamp }),
-        },
-        meta: { url: mockLastReadUrl },
-      });
+    const buildLastReadResult = (): ReturnType<typeof LastReadNormalizer.to> => ({
+      url: mockLastReadUrl,
+      lastRead: { timestamp: mockTimestamp },
+    });
 
     it('should call application and update local store once the write succeeds', async () => {
       const { setLastRead, setUnread } = setupStores(mockUserId);
@@ -560,7 +556,7 @@ describe('NotificationController', () => {
   });
 
   describe('fetchLastReadFromHomeserver', () => {
-    const lastReadUrl = 'pubky://pubky-user-123/pub/pubky.app/last_read';
+    const lastReadUrl = 'pubky://pubky-user-123/priv/app.pubky/v1/last_read.json';
 
     const setup = ({ localLastRead, remoteLastRead }: { localLastRead: number; remoteLastRead: number | null }) => {
       let lastRead = localLastRead;

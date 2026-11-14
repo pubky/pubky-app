@@ -1,4 +1,7 @@
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri, listPrefix, parseOwner, parsePostId, ValidationError } from 'pubky-social-specs';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { isValidPostCompositeId } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
@@ -18,13 +21,22 @@ export function parsePostReference(value: string): ParsedPostReference | null {
   }
 
   const { pubky, id } = parseCompositeId(compositeId);
+  const postUri = buildPostUriOrNull(pubky, id);
 
-  return {
-    compositeId,
-    pubky,
-    postId: id,
-    postUri: postUriBuilder(pubky, id),
-  };
+  return postUri ? { compositeId, pubky, postId: id, postUri } : null;
+}
+
+/**
+ * The v1 reference of the post, or null when the key or the id is not one the data model spells
+ * (a URL still being typed or pasted). Runs on every keystroke, so nothing it refuses may throw.
+ */
+function buildPostUriOrNull(pubky: Pubky, id: string): string | null {
+  try {
+    return buildUri(parseOwner(pubky), 'post', parsePostId(id));
+  } catch (error) {
+    if (error instanceof ValidationError) return null;
+    throw error;
+  }
 }
 
 function resolveAppPostUrl(value: string): string | null {
@@ -47,5 +59,24 @@ function resolveAppPostUrl(value: string): string | null {
     return buildCompositeId({ pubky: segments[1] as Pubky, id: segments[2] });
   } catch {
     return null;
+  }
+}
+
+/**
+ * Both spellings of a reference to one post, the v1 one first. Nexus serves the 0.x spelling
+ * (`/pub/pubky.app/posts/{id}`) for posts of an account that has not migrated, and a v1 write
+ * references the post as `buildUri` spells it, so a lookup by URI has to match either.
+ */
+export function postReferenceSpellings(pubky: Pubky, postId: string): [v1: string, legacy: string] {
+  try {
+    return [buildUri(pubky, 'post', postId), `${listPrefix(pubky, 'legacy')}posts/${postId}`];
+  } catch (error) {
+    if (!(error instanceof ValidationError)) throw error;
+    throw Err.validation(ValidationErrorCode.INVALID_INPUT, error.message, {
+      service: ErrorService.SocialSpecs,
+      operation: 'postReferenceSpellings',
+      context: { pubky, postId, code: error.code, field: error.field },
+      cause: error,
+    });
   }
 }

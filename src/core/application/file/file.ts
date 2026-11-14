@@ -1,50 +1,49 @@
-import type { FilesListParams } from '@/application/file/file.types';
+import { buildUri, decodeObject, hashMedia, listPrefix } from 'pubky-social-specs';
+import type { FilesListParams, TMediaFile } from '@/application/file/file.types';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { TGetFileUrlParams, TGetMetadataParams, TUploadFileParams } from '@/controllers/file/file.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import {
   getImageUploadSizeLimitKind,
   IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
 } from '@/libs/image/imageUploadSizeLimit';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { Logger } from '@/libs/logger/logger';
-import { sleep } from '@/libs/utils/utils';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import {
+  buildCompositeId,
+  buildCompositeIdFromPubkyUri,
+  isV1Address,
+  isV1MediaUri,
+  mediaFilenameFromUri,
+  parseCompositeId,
+} from '@/models/models.utils';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { pickListedPostIds } from '@/pipes/post/post.head';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { NexusFileService } from '@/services/nexus/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
-import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.types';
-
-/**
- * File ids are millisecond timestamps (pubky-app-specs `createFile`), so two
- * attachments normalized within the same millisecond would share an id: both
- * records would PUT to one homeserver path (the second overwriting the first)
- * and the local insert would then throw on the duplicate key. Every id this
- * tab has issued is remembered and an attachment minted with one of them is
- * normalized again once the clock has moved on. Remembering all of them, not
- * only the last, keeps a clock that stepped back into earlier ids from
- * re-issuing one.
- */
-const FILE_ID_RETRY_DELAY_MS = 1;
+import type { NexusFileDetails, NexusFileUrls, NexusPost } from '@/services/nexus/nexus.types';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 
 /**
  * File Application
  *
- * Orchestrates file operations including upload and read workflows.
- * Coordinates between homeserver (writes) and nexus (reads) services.
+ * Orchestrates media uploads and reads. Media is content addressed (`files/{hash}.{ext}`, the id
+ * being the BLAKE3 hash of the bytes): two uploads of the same bytes name one file, so no
+ * per-upload id has to be minted or guarded, and a re-PUT is idempotent.
  */
 export class FileApplication {
   private constructor() {} // Prevent instantiation
 
-  private static readonly issuedFileIds = new Set<string>();
-
+  /**
+   * Cleans the picked file (image metadata stripped), hashes it a chunk at a time so a large file
+   * does not freeze the page, and names where it goes. No IO beyond reading the file.
+   */
   static async toFileAttachment({ file, pubky }: TUploadFileParams): Promise<TFileAttachmentResult> {
     let sanitizedFile: File;
     try {
@@ -61,8 +60,12 @@ export class FileApplication {
       });
     }
     let blobData: Uint8Array;
+    let mediaId: string;
     try {
-      blobData = new Uint8Array(await sanitizedFile.arrayBuffer());
+      [blobData, mediaId] = await Promise.all([
+        sanitizedFile.arrayBuffer().then((buffer) => new Uint8Array(buffer)),
+        hashMedia(sanitizedFile),
+      ]);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to read file content', {
         service: ErrorService.Local,
@@ -70,46 +73,26 @@ export class FileApplication {
         cause: error,
       });
     }
-    // Normalizing, checking and remembering run with no await in between, so
-    // concurrent callers can never both claim the same id.
-    for (;;) {
-      const fileAttachment = FileNormalizer.toFileAttachment({ file: sanitizedFile, blobData, pubky });
-      const fileId = fileAttachment.fileResult.meta.id;
-      if (!this.issuedFileIds.has(fileId)) {
-        this.issuedFileIds.add(fileId);
-        return fileAttachment;
-      }
-      await sleep(FILE_ID_RETRY_DELAY_MS);
-    }
+    return FileNormalizer.toFileAttachment({ file: sanitizedFile, mediaId, blobData, pubky });
   }
 
   /**
-   * Uploads a file to the homeserver and persists it locally and persist it locally.
-   * First uploads the blob data, then creates the file record.
-   *
-   * @param params - Parameters for file upload
-   * @param params.blobResult - Normalized blob result
-   * @param params.fileResult - Normalized file result
+   * Uploads media to the homeserver and persists its metadata locally. v1 media is one
+   * content-addressed file: there is no metadata record to write. A file the homeserver already
+   * holds (the same bytes referenced by another post) is marked `preexisting` before the PUT, so
+   * a rollback of this upload leaves it in place.
    */
   static async commitCreate({ fileAttachments }: FilesListParams) {
     // allSettled, not all: on a partial failure the callers roll back the whole
     // batch (`commitDeleteUploaded`) — rejecting early would start that sweep
     // while sibling uploads are still in flight, letting a late PUT recreate a
-    // record/blob the sweep already deleted, or finish after it and orphan.
+    // file the sweep already deleted, or finish after it and orphan.
     // Waiting for every upload to settle before throwing keeps rollback safe.
     const results = await Promise.allSettled(
       fileAttachments.map(async (fileAttachment) => {
-        const { blobResult, fileResult } = fileAttachment;
-        // Upload Blob
-        await HomeserverService.putBlob({ url: blobResult.meta.url, blob: blobResult.blob.data });
-        // Create File Record
-        await HomeserverService.request({
-          method: HttpMethod.PUT,
-          url: fileResult.meta.url,
-          bodyJson: fileResult.file.toJson(),
-        });
-        // Persist Files locally
-        await LocalFileService.create({ blobResult, fileResult });
+        fileAttachment.preexisting = await HomeserverService.exists(fileAttachment.media.url);
+        await HomeserverService.putBlob({ url: fileAttachment.media.url, blob: fileAttachment.bytes });
+        await LocalFileService.create(fileAttachment);
       }),
     );
 
@@ -120,133 +103,172 @@ export class FileApplication {
   }
 
   /**
-   * Deletes a blob unless a cached file record outside the batch being deleted
-   * still references it — blob ids are content hashes, so byte-identical
-   * uploads share one blob (e.g. removing an attachment while an identical one
-   * is kept, or exists on another post). The check is local-only knowledge;
-   * uncached sibling records are not seen (homeserver-side ref-counting is the
-   * complete fix, tracked as a follow-up).
+   * Deletes media a deleted post gave up (or a discarded composer session uploaded), but only a
+   * file nothing else of its owner references. Media is content addressed: identical bytes name
+   * one file, so an avatar, several posts and a collection cover can share it (the migrator
+   * dedupes blobs, and two identical uploads collapse to one URI). A file goes only when every
+   * check says it is unreferenced:
+   *
+   * 1. the local cache: another cached post's attachments or content (an article's or a
+   *    collection's `cover_image`), or the owner's cached profile image;
+   * 2. the owner's published `profile.json`, read fresh: its `image`;
+   * 3. every public post of the owner, as a fresh Nexus view (`by_ids`) of the posts a LIST of
+   *    the owner's `posts/` directory names: their attachments and content.
+   *
+   * A check that fails, or a Nexus view that misses a listed post (indexing lag, an author Nexus
+   * has not indexed), keeps the file and logs a warning: an orphan is the safe failure, a deleted
+   * shared file breaks every object that still points at it. The skip itself is no error; a read
+   * that fails (a homeserver or Nexus outage) is reported by its service like any other read
+   * (`docs/error-handling.md`), while Nexus lag answers 200 and reports nothing. Private trees are not checked: this
+   * app writes no private object that references public media. A 0.x file URI (`files/{tsid}`, a File object
+   * naming a blob) is left alone: its blob is named by the object this client no longer reads,
+   * and the 0.x tree's sunset is a separate task. Every homeserver delete is idempotent (404 =
+   * already gone = success).
+   *
+   * Edits never call this: an earlier version of the post still references what an edit removed.
+   *
+   * @param fileUris - The media URIs to delete
+   * @param excludePostId - The post giving them up, whose own references do not count
    */
-  private static async deleteBlobUnlessShared({
-    blobSrc,
-    excludeFileIds,
-  }: {
-    blobSrc: string;
-    excludeFileIds: Set<string>;
-  }) {
-    const shared = await LocalFileService.hasOtherBlobReference({ blobSrc, excludeFileIds });
-    if (shared) {
-      Logger.debug('[FileApplication] Skipping deletion of shared blob', { blobSrc });
-      return;
+  static async commitDelete(fileUris: string[], excludePostId?: string) {
+    const locallyUnreferenced = await this.filterLocallyUnreferenced(fileUris, excludePostId);
+    if (locallyUnreferenced.length === 0) return;
+
+    const byOwner = new Map<Pubky, TMediaFile[]>();
+    for (const file of locallyUnreferenced) {
+      const { pubky: owner } = parseCompositeId(file.fileId);
+      byOwner.set(owner, [...(byOwner.get(owner) ?? []), file]);
     }
-    await HomeserverService.deleteIdempotent(blobSrc);
+    const unreferenced = await Promise.all(
+      [...byOwner].map(([owner, files]) => this.filterRemotelyUnreferenced(owner, files, excludePostId)),
+    );
+    await this.deleteMedia(unreferenced.flat());
   }
 
   /**
-   * Commit the delete file operation, this will delete the file from the local database and sync to the homeserver.
+   * Deletes freshly uploaded media during a rollback: the files this batch put on the homeserver,
+   * never one it found there already (`preexisting`), which another post may reference. Identical
+   * bytes within the batch share one URI. Only the local reference check applies: a file that was
+   * not on the homeserver before this upload can have no other referencer there. A file whose
+   * probe never answered (`preexisting` unset: `exists` failed before the PUT) was never put there
+   * by this batch and is left alone. The post the batch was for, `excludePostId`, is no referencer
+   * either: a failed create leaves its row behind as a tombstone whose `attachments` still name
+   * these very files, and a restored row names nothing this batch put on the homeserver.
    *
-   * Per file: the blob src is resolved (local row, or homeserver GET as
-   * fallback), the blob is deleted FIRST, then the record — if the blob delete
-   * fails the record still points at it, so a retry can find it again
-   * (record-first would orphan the blob on partial failure). Shared blobs
-   * (referenced by cached records outside this batch) are skipped, and all
-   * homeserver deletes are idempotent (404 = already gone = success) with
-   * transient-failure retry.
-   *
-   * @param fileAttachments - The file attachment URIs to delete
+   * @param fileAttachments - The batch that was uploaded, `preexisting` set by `commitCreate`
+   * @param excludePostId - The post the batch was for, whose own references do not count
    */
-  static async commitDelete(fileAttachments: string[]) {
-    const batchFileIds = new Set(
-      fileAttachments
-        .map((uri) => buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES }))
-        .filter((id): id is string => id !== null),
+  static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[], excludePostId?: string) {
+    await this.deleteMedia(
+      await this.filterLocallyUnreferenced(
+        fileAttachments
+          .filter((attachment) => attachment.preexisting === false)
+          .map((attachment) => attachment.media.url),
+        excludePostId,
+      ),
     );
+  }
 
+  /** The v1 media files among `fileUris`, once each, that no cached object other than `excludePostId` references. */
+  private static async filterLocallyUnreferenced(fileUris: string[], excludePostId?: string): Promise<TMediaFile[]> {
+    const candidates = [...new Set(fileUris)].flatMap((uri) => {
+      const fileId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
+      return fileId && isV1MediaUri(uri) ? [{ uri, fileId }] : [];
+    });
+    const referenced = await Promise.all(
+      candidates.map(({ uri }) => LocalFileService.isReferencedElsewhere({ uri, excludePostId })),
+    );
+    return candidates.filter(({ uri }, index) => {
+      if (referenced[index]) Logger.debug('[FileApplication] Skipping deletion of shared media', { fileUri: uri });
+      return !referenced[index];
+    });
+  }
+
+  /**
+   * The files among `files` (all `owner`'s) that neither the owner's published profile nor any of
+   * the owner's public posts references, read fresh from the homeserver and Nexus. Empty when a
+   * check fails or Nexus has not indexed every listed post: the files stay, with a warning.
+   */
+  private static async filterRemotelyUnreferenced(
+    owner: Pubky,
+    files: TMediaFile[],
+    excludePostId?: string,
+  ): Promise<TMediaFile[]> {
+    const fileUris = files.map(({ uri }) => uri);
+    try {
+      const profileUrl = buildUri(owner, 'user');
+      const profile = decodeObject(profileUrl, await HomeserverService.getFreshBytes(profileUrl), 'user');
+      let remaining = files.filter(({ uri }) => uri !== profile.image);
+      if (remaining.length === 0) return [];
+
+      const listing = await HomeserverService.listAll({ baseDirectory: `${listPrefix(owner, 'public')}posts/` });
+      const postIds = pickListedPostIds(listing)
+        .map((id) => buildCompositeId({ pubky: owner, id }))
+        .filter((postId) => postId !== excludePostId);
+      // One batch at a time: `by_ids` is rate limited, and a reference found early ends the scan.
+      for (let start = 0; start < postIds.length && remaining.length > 0; start += NEXUS_STREAM_MAX_LIMIT) {
+        const batch = postIds.slice(start, start + NEXUS_STREAM_MAX_LIMIT);
+        const posts = await NexusPostStreamService.fetchByIds({ post_ids: batch, force: true });
+        const served = new Set(posts.map(({ details }) => buildCompositeId({ pubky: details.author, id: details.id })));
+        const unindexed = batch.filter((postId) => !served.has(postId));
+        if (unindexed.length > 0) {
+          Logger.warn('[FileApplication] Kept media: Nexus has not indexed every post of the owner', {
+            owner,
+            fileUris,
+            unindexed,
+          });
+          return [];
+        }
+        remaining = remaining.filter(
+          ({ uri }) =>
+            !posts.some(({ details }) => details.attachments?.includes(uri) || details.content.includes(uri)),
+        );
+      }
+      return remaining;
+    } catch (error) {
+      Logger.warn('[FileApplication] Kept media whose references could not be checked', { owner, fileUris, error });
+      return [];
+    }
+  }
+
+  /** Deletes each media file on the homeserver, then its local row. */
+  private static async deleteMedia(files: TMediaFile[]) {
     await Promise.all(
-      fileAttachments.map(async (fileUri) => {
-        const fileCompositeId = buildCompositeIdFromPubkyUri({
-          uri: fileUri,
-          domain: CompositeIdDomain.FILES,
-        });
-
-        if (!fileCompositeId) {
-          // Can't resolve the blob without a composite id; delete the record only
-          await HomeserverService.deleteIdempotent(fileUri);
-          return;
-        }
-
-        const localFile = await LocalFileService.read(fileCompositeId);
-        let blobSrc = localFile?.src;
-        if (!blobSrc) {
-          try {
-            const remoteFile = (await HomeserverService.request({ method: HttpMethod.GET, url: fileUri })) as {
-              src: string;
-            };
-            blobSrc = remoteFile.src;
-          } catch (error) {
-            // Record already gone with no local row: the blob is unknowable and
-            // there is nothing left to clean up — the end state is reached
-            if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-              return;
-            }
-            throw error;
-          }
-        }
-
-        // Delete the file blob (unless shared), then the file metadata
-        await this.deleteBlobUnlessShared({ blobSrc, excludeFileIds: batchFileIds });
-        await HomeserverService.deleteIdempotent(fileUri);
-        if (localFile) {
-          await LocalFileService.deleteById(fileCompositeId);
-        }
+      files.map(async ({ uri, fileId }) => {
+        await HomeserverService.deleteIdempotent(uri);
+        await LocalFileService.deleteById(fileId);
       }),
     );
   }
 
   /**
-   * Deletes freshly uploaded attachments during a rollback, using their known
-   * record and blob URLs from the normalized results. Unlike `commitDelete`,
-   * this never needs the record to discover the blob — so it also cleans up
-   * when the record PUT itself failed (blob uploaded, record missing), which
-   * `commitDelete`'s record-GET fallback cannot reach.
-   */
-  static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[]) {
-    const batchFileIds = new Set(
-      fileAttachments
-        .map((attachment) =>
-          buildCompositeIdFromPubkyUri({ uri: attachment.fileResult.meta.url, domain: CompositeIdDomain.FILES }),
-        )
-        .filter((id): id is string => id !== null),
-    );
-
-    await Promise.all(
-      fileAttachments.map(async ({ blobResult, fileResult }) => {
-        await this.deleteBlobUnlessShared({ blobSrc: blobResult.meta.url, excludeFileIds: batchFileIds });
-        await HomeserverService.deleteIdempotent(fileResult.meta.url);
-
-        const fileCompositeId = buildCompositeIdFromPubkyUri({
-          uri: fileResult.meta.url,
-          domain: CompositeIdDomain.FILES,
-        });
-        if (fileCompositeId) {
-          await LocalFileService.deleteById(fileCompositeId);
-        }
-      }),
-    );
-  }
-
-  /**
-   * Gets the metadata for a list of file attachments.
+   * Gets the metadata for a list of file attachments: the local rows, and for v1 media without one
+   * what its URI says. Nexus keeps no metadata for v1 files, so only a file this device uploaded has
+   * a row, and that row wins for the URI it describes. The row's key drops the extension, so the
+   * same bytes uploaded under two types leave one row, the later upload's: it answers its own URI
+   * only, and the other URI gets what it says (the filename as its name, no size). A 0.x file
+   * without a row stays missing, for `fetchFiles` to complete.
    * @param fileAttachments - The file attachments to get the metadata for
-   * @returns The metadata for the file attachments
+   * @returns The metadata for the file attachments, one per distinct URI, in the order asked for
    */
   static async getMetadata({ fileAttachments }: TGetMetadataParams) {
-    const compositeFileIds = fileAttachments.flatMap((uri) => {
+    const fileIdByUri = new Map<string, string>();
+    for (const uri of fileAttachments) {
+      if (fileIdByUri.has(uri)) continue;
       const compositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
-      return compositeId ? [compositeId] : [];
+      if (compositeId) fileIdByUri.set(uri, compositeId);
+    }
+    const rows = await LocalFileService.findByIds([...new Set(fileIdByUri.values())]);
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    // In the order asked for, which rows and URIs share: a post mixes both after an edit on another device.
+    return [...fileIdByUri].flatMap(([uri, id]) => {
+      const row = rowById.get(id);
+      if (row?.uri === uri) return row;
+      // A v1 row describes one `{hash}.{ext}`, so another URI of the hash is answered from the URI
+      // alone (nothing when the data model refuses its name). A 0.x row is Nexus's own, and its URI
+      // says nothing a row could be checked against: it stands.
+      return isV1Address(uri) ? (FileNormalizer.toV1FileDetails(uri) ?? []) : (row ?? []);
     });
-    const files = await LocalFileService.findByIds(compositeFileIds);
-    return files;
   }
 
   /**
@@ -260,14 +282,16 @@ export class FileApplication {
   }
 
   /**
-   * Gets the file URL for a file.
-   * @param fileId - The file ID
+   * Gets the Nexus URL for a file: `v1/static/files/{owner}/{hash}.{ext}/{variant}` for v1 media,
+   * `static/files/{owner}/{id}/{variant}` for a 0.x file.
+   * @param fileId - The composite file id, `owner:id`
+   * @param uri - The file's URI, whose filename a v1 route takes
    * @param variant - The variant of the file
    * @returns The file URL
    */
-  static getFileUrl({ fileId, variant }: TGetFileUrlParams): string {
+  static getFileUrl({ fileId, uri, variant }: TGetFileUrlParams): string {
     const { pubky, id } = parseCompositeId(fileId);
-    return filesApi.getFileUrl({ pubky, file_id: id, variant });
+    return filesApi.getFileUrl({ pubky, file_id: mediaFilenameFromUri(uri) ?? id, variant });
   }
 
   /**
@@ -312,16 +336,41 @@ export class FileApplication {
 
   /**
    * Fetches file metadata from nexus by URIs and persists them locally.
-   * Used by bootstrap where file metadata is not available inline.
+   * Used where file metadata is not available inline. Nexus keeps no metadata for v1 files and skips
+   * a v1 address with a server-side warning, so only 0.x files are ever asked for (the one `/v0` call,
+   * see `filesApi.getFiles`).
    *
    * @param fileUris - Array of file URIs to fetch and persist
    */
   static async fetchFiles(fileUris: string[]) {
-    if (fileUris.length === 0) {
+    const legacyFileUris = fileUris.filter((uri) => !isV1Address(uri));
+    if (legacyFileUris.length === 0) {
       return;
     }
 
-    const nexusFiles = await NexusFileService.fetchFiles(fileUris);
+    const nexusFiles = await NexusFileService.fetchFiles(legacyFileUris);
     await this.persistFiles(nexusFiles);
+  }
+
+  /**
+   * Fetches and persists the metadata of a batch's 0.x attachments in one request, before the posts
+   * are persisted: a page of un-migrated authors' media then costs one `files/by_ids` call instead of
+   * one per card (`useAttachmentsMetadata` asks for every row still missing). `/v0` served this inline
+   * as `attachments_metadata`; `/v1` serves no file details, and v1 addresses need none. A Nexus
+   * failure is left to the cards, which fetch their own rows (the service already reported it); a
+   * failed local write still rejects, so the posts stay retryable until their metadata is durable.
+   *
+   * @param posts - The Nexus posts about to be persisted
+   */
+  static async fetchFilesForPosts(posts: NexusPost[]) {
+    const legacyFileUris = [...new Set(posts.flatMap((post) => post.details.attachments ?? []))].filter(
+      (uri) => !isV1Address(uri),
+    );
+    if (legacyFileUris.length === 0) {
+      return;
+    }
+
+    const nexusFiles = await NexusFileService.fetchFiles(legacyFileUris).catch(() => null);
+    if (nexusFiles) await this.persistFiles(nexusFiles);
   }
 }

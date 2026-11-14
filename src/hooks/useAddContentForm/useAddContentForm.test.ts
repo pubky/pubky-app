@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import type { ClipboardEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from '@/molecules/Toaster/toast';
@@ -9,7 +10,7 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import { useAddContentForm } from './useAddContentForm';
 import { ADD_CONTENT_FORM_FIELDS } from './useAddContentForm.types';
 
-const AUTHOR = 'a'.repeat(52);
+const AUTHOR = fakeOwner(1);
 const VIEWER = 'v'.repeat(52);
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
@@ -99,7 +100,7 @@ describe('useAddContentForm', () => {
     mocks.currentUserPubky = VIEWER;
     mocks.restoreStatus = 'ready';
     mocks.bookmarkExists.mockResolvedValue(false);
-    mocks.commitCreateBookmark.mockResolvedValue(undefined);
+    mocks.commitCreateBookmark.mockResolvedValue(true);
     mocks.getOrFetchPost.mockResolvedValue(livePost());
     mocks.getCollectionDetails.mockResolvedValue(collectionDetails([]));
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
@@ -141,6 +142,27 @@ describe('useAddContentForm', () => {
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
       'Enter a valid post URL.',
     );
+  });
+
+  it('keeps showing the invalid URL message while a post URL is typed character by character', async () => {
+    const { result } = renderHook(() =>
+      useAddContentForm({ target: { type: 'collection', collectionId: COLLECTION_ID } }),
+    );
+    const typeValue = async (value: string) => {
+      await act(async () => {
+        result.current.form.setValue(ADD_CONTENT_FORM_FIELDS.POST_URL, value, { shouldValidate: true });
+      });
+    };
+
+    for (let length = 1; length < POST_ID.length; length++) {
+      await typeValue(`https://pubky.app/post/${AUTHOR}/${POST_ID.slice(0, length)}`);
+      expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
+        'Enter a valid post URL.',
+      );
+    }
+
+    await typeValue(POST_URL);
+    expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error).toBeUndefined();
   });
 
   it('rejects missing and deleted posts', async () => {
@@ -226,6 +248,23 @@ describe('useAddContentForm', () => {
     expect(mocks.commitCreateBookmark).toHaveBeenCalledWith({ postId: COMPOSITE_ID, userId: VIEWER });
     expect(mocks.onSuccess).toHaveBeenCalledWith(COMPOSITE_ID);
     expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
+  });
+
+  it('reports nothing saved when the controller skipped the bookmark for a signed-out viewer', async () => {
+    mocks.commitCreateBookmark.mockResolvedValue(false);
+    const { result } = renderHook(() =>
+      useAddContentForm({ target: { type: 'bookmarks' }, onSuccess: mocks.onSuccess }),
+    );
+
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.submit(POST_URL);
+    });
+
+    expect(saved).toBe(false);
+    expect(mocks.commitCreateBookmark).toHaveBeenCalledTimes(1);
+    expect(mocks.onSuccess).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('rejects collection posts when adding to a collection', async () => {

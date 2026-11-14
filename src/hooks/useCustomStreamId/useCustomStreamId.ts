@@ -1,6 +1,6 @@
 'use client';
 
-import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { feedReaches, feedSorts, postKinds } from 'pubky-social-specs';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { buildFeedStreamId } from '@/models/feed/feed.helpers';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
@@ -15,9 +15,9 @@ export function useCustomStreamId(): PostStreamId | undefined {
   // cannot author (e.g. Followers). Feeds are homeserver-stored and portable, so
   // foreign-authored feeds must render even without a create/edit path here.
   // See https://github.com/pubky/pubky-app/pull/2191#pullrequestreview-4719154230
-  if (!Object.values(PubkyAppFeedReach).includes(customFeed.reach)) return;
-  if (!Object.values(PubkyAppFeedSort).includes(customFeed.sort)) return;
-  if (customFeed.content !== null && !Object.values(PubkyAppPostKind).includes(customFeed.content)) return;
+  if (!feedReaches.includes(customFeed.reach)) return;
+  if (!feedSorts.includes(customFeed.sort)) return;
+  if (customFeed.content !== null && !postKinds.includes(customFeed.content)) return;
   if (customFeed.tags.length === 0 && customFeed.domain_tags.length === 0) return;
 
   try {

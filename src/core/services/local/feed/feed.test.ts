@@ -1,6 +1,7 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
+import { AppError } from '@/libs/error/error';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { FeedModel } from '@/models/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { LocalFeedService } from '@/services/local/feed/feed';
@@ -12,10 +13,10 @@ describe('LocalFeedService', () => {
     icon: 'activity',
     tags: ['bitcoin', 'lightning'],
     domain_tags: [],
-    reach: PubkyAppFeedReach.All,
-    sort: PubkyAppFeedSort.Recent,
+    reach: 'all',
+    sort: 'recent',
     content: null,
-    layout: PubkyAppFeedLayout.Columns,
+    layout: 'columns',
     created_at: Date.now(),
     updated_at: Date.now(),
     ...overrides,
@@ -222,47 +223,6 @@ describe('LocalFeedService', () => {
     });
   });
 
-  describe('createOrUpdateMany', () => {
-    it('should persist multiple feeds in a single transaction', async () => {
-      const feeds = [
-        createFeedSchema({ id: 'feed-batch-1', name: 'Feed 1' }),
-        createFeedSchema({ id: 'feed-batch-2', name: 'Feed 2' }),
-        createFeedSchema({ id: 'feed-batch-3', name: 'Feed 3' }),
-      ];
-
-      const result = await LocalFeedService.createOrUpdateMany(feeds);
-
-      expect(result).toHaveLength(3);
-      expect(result[0].id).toBe('feed-batch-1');
-      expect(result[1].id).toBe('feed-batch-2');
-      expect(result[2].id).toBe('feed-batch-3');
-
-      const saved = await LocalFeedService.readAll();
-      expect(saved).toHaveLength(3);
-    });
-
-    it('should upsert existing feeds by ID', async () => {
-      await LocalFeedService.createOrUpdate(createFeedSchema({ id: 'feed-upsert', name: 'Original' }));
-
-      await LocalFeedService.createOrUpdateMany([
-        createFeedSchema({ id: 'feed-upsert', name: 'Updated' }),
-        createFeedSchema({ id: 'feed-new', name: 'New' }),
-      ]);
-
-      const upserted = await LocalFeedService.read({ feedId: 'feed-upsert' });
-      expect(upserted!.name).toBe('Updated');
-
-      const all = await LocalFeedService.readAll();
-      expect(all).toHaveLength(2);
-    });
-
-    it('should return empty array when given empty input', async () => {
-      const result = await LocalFeedService.createOrUpdateMany([]);
-
-      expect(result).toEqual([]);
-    });
-  });
-
   describe('transaction safety', () => {
     it('should handle multiple concurrent persists', async () => {
       const feeds = Array.from({ length: 5 }, (_, i) =>
@@ -278,5 +238,80 @@ describe('LocalFeedService', () => {
       const saved = await LocalFeedService.readAll();
       expect(saved).toHaveLength(5);
     });
+  });
+});
+
+describe('LocalFeedService.reconcile', () => {
+  const createFeedSchema = (id: string, overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
+    id,
+    name: id,
+    icon: 'activity',
+    tags: ['bitcoin'],
+    domain_tags: [],
+    reach: 'all',
+    sort: 'recent',
+    content: null,
+    layout: 'columns',
+    created_at: 1,
+    updated_at: 1,
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    await db.initialize();
+    await FeedModel.table.clear();
+  });
+
+  it('upserts the listed feeds, deletes every row outside the kept ids and returns both', async () => {
+    await FeedModel.bulkSave([createFeedSchema('keep-1'), createFeedSchema('drop-1'), createFeedSchema('keep-2')]);
+    const renamed = createFeedSchema('keep-1', { name: 'Renamed' });
+    const added = createFeedSchema('new-1');
+
+    const result = await LocalFeedService.reconcile({
+      feeds: [renamed, added],
+      keepIds: new Set(['keep-1', 'keep-2', 'new-1', 'never-stored']),
+    });
+
+    expect(result).toEqual({ applied: true, persisted: [renamed, added], removed: [createFeedSchema('drop-1')] });
+    expect((await FeedModel.table.toArray()).map((feed) => feed.id).sort()).toEqual(['keep-1', 'keep-2', 'new-1']);
+    expect((await FeedModel.table.get('keep-1'))!.name).toBe('Renamed');
+  });
+
+  it('removes nothing when every row is kept, and everything for an empty listing', async () => {
+    await FeedModel.bulkSave([createFeedSchema('a'), createFeedSchema('b')]);
+
+    await expect(LocalFeedService.reconcile({ feeds: [], keepIds: new Set(['a', 'b']) })).resolves.toEqual({
+      applied: true,
+      persisted: [],
+      removed: [],
+    });
+    expect(await FeedModel.table.count()).toBe(2);
+
+    const { removed } = await LocalFeedService.reconcile({ feeds: [], keepIds: new Set() });
+    expect(removed.map((feed) => feed.id).sort()).toEqual(['a', 'b']);
+    expect(await FeedModel.table.count()).toBe(0);
+  });
+
+  it('writes nothing once the account is no longer current', async () => {
+    await FeedModel.bulkSave([createFeedSchema('next-account')]);
+
+    const result = await LocalFeedService.reconcile({
+      feeds: [createFeedSchema('previous-account')],
+      keepIds: new Set(['previous-account']),
+      isCurrent: () => false,
+    });
+
+    expect(result).toEqual({ applied: false, persisted: [], removed: [] });
+    expect((await FeedModel.table.toArray()).map((feed) => feed.id)).toEqual(['next-account']);
+  });
+
+  it('reports a failed transaction as a database AppError', async () => {
+    vi.spyOn(FeedModel.table, 'toArray').mockRejectedValue(new Error('IndexedDB unavailable'));
+
+    const thrown = await LocalFeedService.reconcile({ feeds: [], keepIds: new Set() }).catch((e: unknown) => e);
+
+    expect(thrown).toBeInstanceOf(AppError);
+    expect(thrown).toMatchObject({ code: DatabaseErrorCode.TRANSACTION_FAILED, operation: 'reconcile' });
+    expect((thrown as AppError).cause).toBeInstanceOf(Error);
   });
 });

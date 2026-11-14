@@ -7,6 +7,7 @@ import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttach
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import { collectAttachmentRefIndexes, isAuthorFileUri } from '@/libs/post/articleInlineMedia';
 import {
   POST_COVER_DESKTOP_FALLBACK_VARIANT,
@@ -74,12 +75,16 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred, unl
 
   const storeAttachments = useLocalFilesStore((s) => s.posts[postId]);
   const localAttachments = unlocked ? unlocked.media : storeAttachments;
+  // The cover this session published or edited, if any: its own store entry, since the cover is no
+  // attachment slot (ADR-0023 as amended by ADR-0027). Unlocked content keeps its cover in slot 0.
+  const storeCover = useLocalFilesStore((s) => s.articleCovers[postId]);
 
   const { title, body, coverImage, isCoverPending } = usePostArticle({
     content,
     attachments,
     localAttachments,
     pendingAttachments: unlocked?.pendingAttachments,
+    localCover: unlocked ? undefined : storeCover,
     // Both variants come from the same constants the server-side preload reads, so the
     // preloaded URL is the one this image asks for and the cover downloads once.
     coverImageVariant: POST_COVER_MOBILE_VARIANT,
@@ -87,10 +92,15 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred, unl
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
   });
 
+  // What each `attachment:{n}` of the body names depends on the stored shape (the envelope's cover,
+  // a migrated article's shifted slots, or a 0.x article's slot 0): the resolved slots stand in
+  // for the raw attachments wherever a slot is read.
+  const { slots } = resolveArticleCover({ content, attachments });
+
   // Inline slots are typed from their file rows (the markdown never says video or image). Only the
   // slots the body references and the author owns are read: anything else never renders, and a row
-  // request for it would only add a fetch and hold the loading state. The cover slot is
-  // `usePostArticle`'s; a body that references slot 0 has no cover, so it is included exactly then.
+  // request for it would only add a fetch and hold the loading state. The cover is
+  // `usePostArticle`'s.
   const articleAuthorId = (() => {
     try {
       return parseCompositeId(postId).pubky;
@@ -99,15 +109,16 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred, unl
     }
   })();
   const inlineSlotIndexes = collectAttachmentRefIndexes(body);
-  const inlineSlotUris = (attachments ?? []).filter(
+  const inlineSlotUris = slots.filter(
     (uri, index) => inlineSlotIndexes.has(index) && isAuthorFileUri(uri, articleAuthorId),
   );
   const { files: inlineFiles, isLoading: inlineFilesLoading } = useAttachmentsMetadata({ fileUris: inlineSlotUris });
 
+  // Unlocked content's refs index the reader's own entries directly (the slot-0 convention).
   const articleMedia: ArticleMediaSource = unlocked
     ? { localAttachments: unlocked.media, pendingAttachments: unlocked.pendingAttachments }
     : {
-        attachments: attachments ?? [],
+        attachments: [...slots],
         authorId: articleAuthorId,
         postId,
         files: inlineFiles,

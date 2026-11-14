@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { getAuthClientId } from '@/config/auth';
 import { getHomeserverCapabilities } from '@/config/network';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -105,6 +106,9 @@ function failReferenceReads() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // These suites cover the auth lifecycle of a migrated account; the gate has its own suite.
+  vi.spyOn(SocialMigrationController, 'ensureMigrated').mockResolvedValue('passed');
+  vi.spyOn(SocialMigrationController, 'hasPassedLocally').mockReturnValue(true);
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('indexedDB', new IDBFactory());
   Object.defineProperty(navigator, 'locks', {

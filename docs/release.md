@@ -238,6 +238,33 @@ The `release-<version>` branch can be deleted after this PR is merged.
 
 `next.config.ts` sets `NEXT_PUBLIC_APP_VERSION` from `package.json` `version` unless the env var is already set. Docker CI currently still passes the commit SHA as that build arg, so the published image's Sentry release is the SHA; the SemVer lives in `package.json` and in any build that does not override the env var.
 
+## The social v1 release (one-time additions)
+
+The release that merges `feat/social-v1` into `dev` moves the app to `pubky-social-specs` 1.x and force-migrates every
+account (`docs/migrations/social-v1.md`, _Rollout order and release checklist_ has the full list). What changes about the
+process above, for that release only:
+
+- **Release gate and order.** The app ships with, never before, the Nexus deploy that carries the social v1 steps
+  (pubky/pubky-nexus#1129): a `/v1` app against today's Nexus gets 404s, so the final PR merges to `dev` only near
+  that deploy and `dev` stays deployable meanwhile. The order (Nexus, then the pubky-stack re-pin, then the final app
+  PR with its workflow changes) and the infrastructure gates (the proxy forwarding `/v1/*`, storage allowances,
+  moderation service readiness) are kept in one place: `docs/migrations/social-v1.md`, _Rollout order and release
+  checklist_. `NEXT_PUBLIC_DB_VERSION=4` is already in both Docker workflows on the branch.
+- **No rollback after the first migrated user.** Before anyone migrates, redeploying the previous tag is safe (the
+  database version mismatch recreates symmetrically). After, v1 writes are invisible to a 0.x client and Nexus has
+  flipped epochs, so a defect goes through [hotfix.md](./hotfix.md); a hotfix that skips or disables the migration
+  gate is never acceptable.
+- **Release notes** (the GitHub Release of step 7) say, in user terms: everyone is signed out once and signs in again
+  (Ring users approve a longer permission list), then a one-time migration screen copies the account to the new
+  format and must finish before the app opens; open tabs reload on their own at the cut-over, and an unsaved draft in
+  a tab left open is lost; feed deep links change once; the two bookmark-derived notifications stop; a bookmark, mute
+  or read-state change made on another device shows at the next sign-in (bookmarks) or within about 30 seconds
+  (mutes, read state); profile links that are not plain web addresses (`mailto:`, `tel:`) are dropped by the migration,
+  shown once on the profile edit page, and can no longer be saved.
+- **After the deploy.** A team account migrates on production and its v1 post appears in Nexus; Sentry filtered on
+  `operation: socialMigration` shows no terminal codes; PR-E2 (the service-worker policy revert) is opened when the
+  team decides (ADR-0021, D9), not automatically with the next release.
+
 ## Release checklist
 
 - [ ] `dev` has the promised work (or remaining work will land on `dev` and be rebased or cherry-picked in)

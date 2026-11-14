@@ -6,6 +6,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { mergeTaggerIds, useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
 import type { TaggedListProps } from './TaggedList.types';
@@ -33,7 +34,7 @@ export function TaggedList({
     loadMoreTaggers: loadMoreMergeTaggers,
   } = useEntityTaggers(mergeTarget, mergeTarget ? taggedKind : null);
   const taggerStateFor = (label: string) => {
-    const key = label.toLowerCase();
+    const key = canonicalizeTagLabel(label);
     const primary = taggerStates.get(key);
     const secondary = mergeTarget ? mergeTaggerStates.get(key) : undefined;
     if (!primary || !secondary) return primary ?? secondary;

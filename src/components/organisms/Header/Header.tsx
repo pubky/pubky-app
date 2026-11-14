@@ -2,9 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
-import { isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
+import { AUTH_ROUTES, isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
+import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
+import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { clearSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
 import { cn } from '@/libs/utils/utils';
 import {
   HeaderContainer,
@@ -23,11 +26,14 @@ export function Header() {
   const pathname = usePathname();
   const isHydrated = useIsHydrated();
   const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
+  const { status } = useAuthStatus();
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
   const isLandingPage = pathname === '/';
   const isCopyrightPage = pathname === '/copyright';
+  // The migration gate holds the account out of the store: no account chrome, no own-profile query.
+  const isMigrationPage = pathname === AUTH_ROUTES.MIGRATION;
   const isLegalPage = isLegalRoute(pathname);
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
@@ -71,14 +77,21 @@ export function Header() {
     return <HeaderHome />;
   };
 
-  // Copyright page shows only logo (minimal header), and so do the legal pages for members: the public documents
-  // render outside the database and session restore (`AppShell`) that the member header reads. They are also
-  // server-rendered while the auth store only exists in the browser, so the legal pages keep the logo until hydration
-  // and only then offer guests their sign-in header.
-  if (isCopyrightPage || (isLegalPage && (isAuthenticated || !isHydrated))) {
+  // On the gate's signed-out explanation the logo is a way out of it, to the landing page: leaving settles the notice
+  // the route guard brings the signed-out tab back for, as the explanation's own Homepage does. A held account keeps
+  // its notice: the gate sends that tab back here anyway, and its sign-out still owes the reason.
+  const handleMigrationLogoClick = () => {
+    if (status === AuthStatus.UNAUTHENTICATED) clearSocialMigrationSignedOutNotice();
+  };
+
+  // Copyright and the migration gate show only the logo (minimal header), and so do the legal pages for members:
+  // the public documents render outside the database and session restore (`AppShell`) that the member header reads.
+  // They are also server-rendered while the auth store only exists in the browser, so the legal pages keep the logo
+  // until hydration and only then offer guests their sign-in header.
+  if (isCopyrightPage || isMigrationPage || (isLegalPage && (isAuthenticated || !isHydrated))) {
     return (
       <HeaderContainer>
-        <Logo />
+        <Logo onClick={isMigrationPage ? handleMigrationLogoClick : undefined} />
       </HeaderContainer>
     );
   }

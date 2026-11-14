@@ -13,3 +13,20 @@ export type TFeedRollbackParams = {
   /** The row as it was before the write, or `null` when the write created it. */
   priorFeed: FeedModelSchema | null;
 };
+
+export type TFeedReconcileParams = {
+  /** The feeds the listing holds, decoded; upserted by id. */
+  feeds: FeedModelSchema[];
+  /** The ids the listing names; every other row goes. */
+  keepIds: ReadonlySet<string>;
+  /** Checked inside the transaction: when false, nothing is written. */
+  isCurrent?: () => boolean;
+};
+
+export type TFeedReconcileResult = {
+  /** False when `isCurrent` refused the write; then nothing changed. */
+  applied: boolean;
+  persisted: FeedModelSchema[];
+  /** The rows the listing no longer named, now deleted. */
+  removed: FeedModelSchema[];
+};

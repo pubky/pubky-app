@@ -1,4 +1,4 @@
-import { LastReadResult } from 'pubky-app-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
@@ -12,7 +12,9 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import type { TLastRead } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { installHomeserverWriteRetryDependenciesForTests } from '@/services/homeserver/write-retry';
 import { LocalNotificationService } from '@/services/local/notification/notification';
@@ -22,7 +24,7 @@ import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { NotificationApplication } from './notification';
 
 const userId = 'pubky_user' as Pubky;
@@ -537,17 +539,12 @@ describe('NotificationApplication.getOrFetchNotifications (filtered pagination)'
 
 describe('NotificationApplication.markAllAsRead', () => {
   const mockTimestamp = 1234567890;
-  const mockLastReadUrl = 'pubky://test-user/pub/pubky.app/last-read';
+  const mockLastReadUrl = 'pubky://test-user/priv/app.pubky/v1/last_read.json';
 
-  const lastReadResult = (timestamp = mockTimestamp) =>
-    asOpaque<LastReadResult>({
-      last_read: {
-        timestamp: BigInt(timestamp),
-        toJson: vi.fn().mockReturnValue({ timestamp }),
-      },
-      meta: { url: mockLastReadUrl },
-      free: vi.fn(),
-    });
+  const lastReadResult = (timestamp = mockTimestamp): TLastRead => ({
+    url: mockLastReadUrl,
+    lastRead: { timestamp },
+  });
   const homeserverError = (statusCode: number) =>
     httpStatusCodeToError(statusCode, `status ${statusCode}`, ErrorService.Homeserver, 'request', mockLastReadUrl);
   const putBodies = (spy: { mock: { calls: Array<[{ method: HttpMethod; bodyJson?: unknown }]> } }) =>
@@ -556,10 +553,6 @@ describe('NotificationApplication.markAllAsRead', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
-    // Fresh reads land in the `request` spy as GETs, so each test reads its calls as one ordered sequence.
-    vi.spyOn(HomeserverService, 'getFreshJson').mockImplementation((url) =>
-      HomeserverService.request({ method: HttpMethod.GET, url }),
-    );
   });
 
   afterEach(() => {
@@ -568,14 +561,19 @@ describe('NotificationApplication.markAllAsRead', () => {
     vi.restoreAllMocks();
   });
 
-  it('checks the published lastRead past the browser cache, so a stale cached copy cannot let an older mark through', async () => {
-    const fresh = vi.spyOn(HomeserverService, 'getFreshJson').mockResolvedValue({ timestamp: mockTimestamp + 1 });
-    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: mockTimestamp - 1 });
+  // The v1 file is private: an anonymous read (`getFreshJson`) of it answers 401, so the check reads through the session.
+  it('checks the published lastRead through the session, never anonymously', async () => {
+    const fresh = vi.spyOn(HomeserverService, 'getFreshJson');
+    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: mockTimestamp + 1 });
 
     await expect(NotificationApplication.markAllAsRead(lastReadResult())).resolves.toBe(mockTimestamp + 1);
 
-    expect(fresh).toHaveBeenCalledWith(mockLastReadUrl);
-    expect(request).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledExactlyOnceWith({
+      method: HttpMethod.GET,
+      url: mockLastReadUrl,
+      notFoundAsNull: true,
+    });
+    expect(fresh).not.toHaveBeenCalled();
   });
 
   it('reads the published lastRead, then sends this one as a single fenced attempt and returns it', async () => {
@@ -818,40 +816,107 @@ describe('NotificationApplication.fetchMissingEntities', () => {
       viewerId,
     });
   });
+
+  describe('post URIs in every spelling Nexus may serve', () => {
+    const author = fakeOwner(3) as Pubky;
+    const postId = '0033SSE3B1FQ0';
+    const [v1Reference, legacy] = postReferenceSpellings(author, postId);
+    const spellings: [string, string][] = [
+      ['0.x', legacy],
+      ['v1 reference', v1Reference],
+      ['v1 version URL', `${v1Reference}/0033SSE3B1FQ1.json`],
+      ['v1 version URL with a slug', `${v1Reference}/0033SSE3B1FQ1-hello-world.json`],
+    ];
+
+    it.each(spellings)('refetches a post edited at its %s URI under the same composite id', async (_, uri) => {
+      const notifications = [createNexus(1000)];
+      vi.spyOn(NotificationNormalizer, 'toFlatNotification').mockReturnValue({
+        id: 'post_edited:1000:author',
+        type: NotificationType.PostEdited,
+        timestamp: 1000,
+        edited_by: author,
+        edited_uri: uri,
+        linked_uri: uri,
+      } as FlatNotification);
+      vi.spyOn(LocalNotificationService, 'parseNotifications').mockReturnValue({
+        relatedPostIds: [],
+        relatedUserIds: [],
+      });
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
+      vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
+
+      await NotificationApplication.fetchMissingEntities({ notifications, viewerId });
+
+      expect(fetchPostsSpy).toHaveBeenCalledWith({ force: true, cacheMissPostIds: [`${author}:${postId}`], viewerId });
+    });
+
+    it('invalidates the tags of a post tagged at any of its spellings under one entity', async () => {
+      const invalidate = vi.spyOn(LocalTagCacheService, 'invalidate').mockResolvedValue(undefined);
+      vi.spyOn(LocalTagCacheService, 'read').mockResolvedValue(null);
+      vi.spyOn(TagCacheApplication, 'get').mockResolvedValue(null);
+      vi.spyOn(TagCacheApplication, 'forceRefresh').mockResolvedValue(undefined);
+      vi.spyOn(NotificationNormalizer, 'toFlatNotification').mockImplementation(
+        (n) =>
+          ({
+            id: `tag_post:${n.timestamp}`,
+            type: NotificationType.TagPost,
+            timestamp: n.timestamp,
+            tagged_by: 'tagger',
+            tag_label: 'rust',
+            post_uri: spellings[n.timestamp % spellings.length][1],
+          }) as FlatNotification,
+      );
+      vi.spyOn(LocalNotificationService, 'parseNotifications').mockReturnValue({
+        relatedPostIds: [],
+        relatedUserIds: [],
+      });
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
+      vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
+
+      await NotificationApplication.fetchMissingEntities({
+        notifications: spellings.map((_, index) => createNexus(index)),
+        viewerId,
+      });
+
+      expect(invalidate).toHaveBeenCalledExactlyOnceWith({ kind: 'post', id: `${author}:${postId}` }, undefined);
+    });
+  });
 });
 
 describe('NotificationApplication.fetchLastReadFromHomeserver', () => {
-  const url = 'pubky://test-user/pub/pubky.app/last_read';
+  const url = 'pubky://test-user/priv/app.pubky/v1/last_read.json';
 
   afterEach(() => vi.restoreAllMocks());
 
-  it('reads past the browser cache through getFreshJson and returns the timestamp', async () => {
-    const fresh = vi.spyOn(HomeserverService, 'getFreshJson').mockResolvedValue({ timestamp: 1_234 });
-    const request = vi.spyOn(HomeserverService, 'request');
+  it('reads the private file through the session and returns the timestamp', async () => {
+    const fresh = vi.spyOn(HomeserverService, 'getFreshJson');
+    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: 1_234 });
 
     await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBe(1_234);
 
-    expect(fresh).toHaveBeenCalledWith(url);
-    expect(request).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledExactlyOnceWith({ method: HttpMethod.GET, url, notFoundAsNull: true });
+    expect(fresh).not.toHaveBeenCalled();
   });
 
   it('returns null for a missing file', async () => {
-    vi.spyOn(HomeserverService, 'getFreshJson').mockRejectedValue(
-      httpStatusCodeToError(404, 'not found', ErrorService.Homeserver, 'getFreshJson', url),
-    );
+    vi.spyOn(HomeserverService, 'request').mockResolvedValue(null);
 
     await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBeNull();
   });
 
   it('returns null for a body without a finite timestamp', async () => {
-    vi.spyOn(HomeserverService, 'getFreshJson').mockResolvedValue({ timestamp: 'soon' });
+    vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: 'soon' });
 
     await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBeNull();
   });
 
   it('rethrows any other failure', async () => {
-    const error = httpStatusCodeToError(503, 'unavailable', ErrorService.Homeserver, 'getFreshJson', url);
-    vi.spyOn(HomeserverService, 'getFreshJson').mockRejectedValue(error);
+    const error = httpStatusCodeToError(503, 'unavailable', ErrorService.Homeserver, 'request', url);
+    vi.spyOn(HomeserverService, 'request').mockRejectedValue(error);
 
     await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).rejects.toBe(error);
   });

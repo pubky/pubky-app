@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { NetworkOnly, type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
+import { SW_CLIENT_ANNOUNCE, SW_TAKEOVER_SKIPPED } from '@/config/pwa';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -98,12 +99,73 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   );
 });
 
+// Social v1 cut-over (ADR-0021 amendment, docs/pwa.md "Rollout note"), in force until PR-E2 reverts
+// it: a page still running the previous build keeps writing the retired `/pub/pubky.app/` tree
+// until it reloads, and nothing server-side reaches it. Once this worker activates over an earlier
+// one it claims every window and navigates each one that did not announce itself (below) to its
+// own URL, the one reload the old bundle cannot decline. A first install (no earlier worker) keeps
+// the silent `clientsClaim` behaviour: reloading a first-time visitor mid-onboarding would lose
+// their input for nothing. PR-E2 removes the three listeners and restores `skipWaiting: false`
+// below; its timing is the team's call (D9: once Nexus shows migrated users' 0.x writes at about
+// zero, or after a period the team picks), not the next release.
+//
+// During `install`, `self.registration.active` is still the worker being replaced; a first
+// install has none. The flag lives in the worker instance, which `skipWaiting` activates right
+// after installing; a worker restarted in between defaults to the harmless first-install path.
+let replacesActiveWorker = false;
+self.addEventListener('install', () => {
+  replacesActiveWorker = self.registration.active !== null;
+});
+
+// Windows that announced themselves (useServiceWorkerUpdate; a 0.x page never does) are skipped by
+// the activate loop below and answered with this build's version. The set lives in the worker
+// instance like `replacesActiveWorker`. Webpack's DefinePlugin inlines the version literal into
+// `public/sw.js`; `Env` is not imported here because it would pull zod and the error factories in.
+const WORKER_APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION;
+const announcedWindowIds = new Set<string>();
+
+function isWindowClient(source: ExtendableMessageEvent['source']): source is WindowClient {
+  return source !== null && 'type' in source && source.type === 'window';
+}
+
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
+  const source = event.source;
+  if (event.data?.type !== SW_CLIENT_ANNOUNCE || !isWindowClient(source)) return;
+  announcedWindowIds.add(source.id);
+  source.postMessage({ type: SW_TAKEOVER_SKIPPED, appVersion: WORKER_APP_VERSION });
+});
+
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(
+    (async () => {
+      if (!replacesActiveWorker) return;
+      try {
+        await self.clients.claim();
+      } catch {
+        // Claiming is best effort: `navigate` below still reaches every window this worker controls.
+      }
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      // Not awaited: each navigation is a fetch this worker now serves, and the browser holds fetch
+      // events until this activation has finished, so waiting for the navigations here would deadlock
+      // until the event timeout. `navigate` rejects for a window the worker does not control or that
+      // is mid-navigation; one such window must not keep the others on the old build.
+      for (const client of windows) {
+        if (announcedWindowIds.has(client.id)) continue;
+        client.navigate(client.url).catch(() => undefined);
+      }
+    })(),
+  );
+});
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  // Never activate over live clients on its own: the app shows an "Update available"
-  // toast and posts SKIP_WAITING once the user opts in (useServiceWorkerUpdate).
-  skipWaiting: false,
-  // The first install claims open tabs immediately; updates still wait for consent.
+  // Social v1 cut-over (ADR-0021 amendment), until PR-E2 reverts it: the worker activates as soon
+  // as it installs instead of waiting for the "Update available" consent (useServiceWorkerUpdate),
+  // and the activate listener above reloads every open window of a build without the handshake
+  // when it replaces an earlier worker. PR-E2 restores `false`, when the team decides (D9), not in
+  // the next release.
+  skipWaiting: true,
+  // The first install claims open tabs immediately.
   clientsClaim: true,
   // Consumed by the NetworkOnly navigation route below.
   navigationPreload: true,

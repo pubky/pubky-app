@@ -1,3 +1,4 @@
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostController } from '@/controllers/post/post';
@@ -13,18 +14,19 @@ vi.mock('@/controllers/post/post', () => ({
 }));
 
 describe('PostValidators.validatePostId', () => {
-  const POST_ID = 'author:post-123';
+  const AUTHOR = fakeOwner(1);
+  const POST_ID = `${AUTHOR}:0035QZPT4QG00`;
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('returns the post uri when the parent exists with live content', async () => {
+  it('returns the v1 reference of a live parent, never the cached row uri (which Nexus may spell the 0.x way)', async () => {
     vi.mocked(PostController.getDetails).mockResolvedValue(
       asOpaque<EnrichedPostDetails>({
         id: POST_ID,
         content: 'Hello',
-        uri: 'pubky://author/pub/pubky.app/posts/post-123',
+        uri: `pubky://${AUTHOR}/pub/pubky.app/posts/0035QZPT4QG00`,
         kind: 'short',
         indexed_at: 0,
         attachments: null,
@@ -33,7 +35,7 @@ describe('PostValidators.validatePostId', () => {
 
     const uri = await PostValidators.validatePostId({ postId: POST_ID, message: 'Parent post' });
 
-    expect(uri).toBe('pubky://author/pub/pubky.app/posts/post-123');
+    expect(uri).toBe(`pubky://${AUTHOR}/pub/social/v1/posts/0035QZPT4QG00`);
   });
 
   it('throws NOT_FOUND when the parent post is missing from the local DB', async () => {
@@ -54,7 +56,7 @@ describe('PostValidators.validatePostId', () => {
       asOpaque<EnrichedPostDetails>({
         id: POST_ID,
         content: '[DELETED]',
-        uri: 'pubky://author/pub/pubky.app/posts/post-123',
+        uri: `pubky://${AUTHOR}/pub/social/v1/posts/0035QZPT4QG00`,
         kind: 'short',
         indexed_at: 0,
         attachments: null,
@@ -78,7 +80,7 @@ describe('PostValidators.validatePostId', () => {
         id: POST_ID,
         content: '',
         deleted: true,
-        uri: 'pubky://author/pub/pubky.app/posts/post-123',
+        uri: `pubky://${AUTHOR}/pub/social/v1/posts/0035QZPT4QG00`,
         kind: 'short',
         indexed_at: 0,
         attachments: null,

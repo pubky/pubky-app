@@ -1,5 +1,11 @@
 import Dexie from 'dexie';
-import { DB_INIT_MAX_ATTEMPTS, DB_INIT_RETRY_BASE_DELAY_MS, DB_NAME, DB_VERSION } from '@/config/database';
+import {
+  DB_CLOSE_RECHECK_DELAYS_MS,
+  DB_INIT_MAX_ATTEMPTS,
+  DB_INIT_RETRY_BASE_DELAY_MS,
+  DB_NAME,
+  DB_VERSION,
+} from '@/config/database';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -79,8 +85,29 @@ export function isTransientIndexedDbError(error: unknown): boolean {
   return false;
 }
 
+interface InitializeOptions {
+  /**
+   * Whether a stored-version mismatch may delete and recreate the database once this page has
+   * already done so. `true` for the page's own start-up and the user's retry (default); `false`
+   * when re-initializing after an unexpected close, so a tab running another build cannot take
+   * turns with this one recreating the database (ADR-0019). The `false` path also probes without
+   * `Dexie.exists()`; see `runInitializeAfterClose`.
+   */
+  allowRecreate?: boolean;
+}
+
 export class AppDatabase extends Dexie {
   private static readonly DEXIE_VERSION_MULTIPLIER = 10;
+
+  /** Set once this page has deleted and recreated the database (`recreateDatabase`) in its lifetime. */
+  private recreatedThisPageLifetime = false;
+
+  /**
+   * Set when another connection's delete or upgrade closed ours (`versionchange`); read and cleared by `initialize()`,
+   * and cleared again when that run settles.
+   * A forced close (storage eviction, cleared site data) closes the connection without it.
+   */
+  private closedByOtherConnection = false;
 
   // User
   user_counts!: Dexie.Table<UserCountsModelSchema>;
@@ -156,8 +183,20 @@ export class AppDatabase extends Dexie {
         cause: error,
       });
     }
+
+    // Dexie runs the newest `versionchange` subscriber first, so this one runs before Dexie's own listener closes
+    // the connection, which is where DatabaseProvider's close handler starts the re-initialization.
+    this.on('versionchange', () => {
+      this.closedByOtherConnection = true;
+    });
   }
 
+  /**
+   * Reads the stored native version, or `null` when the database does not exist. A versionless open never
+   * upgrades an existing database, so it never fires `versionchange` at another connection; when the database is
+   * missing, the upgrade it would start is aborted, so nothing is created and nothing has to be deleted again
+   * (unlike `Dexie.exists()`, whose stub delete closes another tab's connection, ADR-0019).
+   */
   private async getExistingDbVersion(): Promise<number | null> {
     return new Promise((resolve, reject) => {
       try {
@@ -166,9 +205,23 @@ export class AppDatabase extends Dexie {
           return;
         }
 
+        let isMissing = false;
         const request = indexedDB.open(this.name);
 
-        request.onerror = () => {
+        request.onupgradeneeded = () => {
+          isMissing = true;
+          request.transaction?.abort();
+          request.result.close();
+        };
+
+        request.onerror = (event) => {
+          if (isMissing) {
+            // Our own abort above, not a failure: the database does not exist.
+            event.preventDefault();
+            resolve(null);
+            return;
+          }
+
           if (request.error) {
             reject(request.error);
             return;
@@ -260,7 +313,30 @@ export class AppDatabase extends Dexie {
     }
   }
 
-  async initialize(): Promise<{ wasDbReset: boolean }> {
+  /** Every recreate goes through here, so the loop-breaker's flag cannot be missed on any path. */
+  private async recreateForThisPage(currentVersion: number | null, rawVersion: number | null) {
+    await this.recreateDatabase(currentVersion, rawVersion);
+    this.recreatedThisPageLifetime = true;
+    return { wasDbReset: true };
+  }
+
+  async initialize({ allowRecreate = true }: InitializeOptions = {}): Promise<{ wasDbReset: boolean }> {
+    const wasClosedByOtherConnection = this.closedByOtherConnection;
+    this.closedByOtherConnection = false;
+
+    try {
+      return await this.initializeWithRetries(allowRecreate, wasClosedByOtherConnection);
+    } finally {
+      // A `versionchange` during this run closes the connection without a re-initialization of its own
+      // (DatabaseProvider ignores closes while initializing), so it must not carry over to the next run.
+      this.closedByOtherConnection = false;
+    }
+  }
+
+  private async initializeWithRetries(
+    allowRecreate: boolean,
+    wasClosedByOtherConnection: boolean,
+  ): Promise<{ wasDbReset: boolean }> {
     if (typeof indexedDB === 'undefined') {
       Logger.warn('IndexedDB is not available in this environment. Skipping database initialization.');
       return { wasDbReset: false };
@@ -268,10 +344,12 @@ export class AppDatabase extends Dexie {
 
     for (let attempt = 1; ; attempt++) {
       try {
-        const result = await this.runInitialize();
+        const result = allowRecreate
+          ? await this.runInitialize()
+          : await this.runInitializeAfterClose(wasClosedByOtherConnection);
 
         // A prior retry may have called this.close(), which disables Dexie's auto-open.
-        // runInitialize()'s version-match path returns without opening, so guarantee the
+        // The version-match paths of both run* methods return without opening, so guarantee the
         // connection is open before reporting success — otherwise queries would throw
         // DatabaseClosedError even though initialization "succeeded". A transient failure
         // here is caught below and retried like any other.
@@ -338,8 +416,7 @@ export class AppDatabase extends Dexie {
 
     if (currentVersion === null) {
       Logger.warn('Unable to determine current database version. Recreating database...');
-      await this.recreateDatabase(currentVersion, rawVersion);
-      return { wasDbReset: true };
+      return this.recreateForThisPage(currentVersion, rawVersion);
     }
 
     if (currentVersion !== DB_VERSION) {
@@ -349,12 +426,97 @@ export class AppDatabase extends Dexie {
         expectedVersion: DB_VERSION,
         expectedInternalVersion: DB_VERSION * AppDatabase.DEXIE_VERSION_MULTIPLIER,
       });
-      await this.recreateDatabase(currentVersion, rawVersion);
-      return { wasDbReset: true };
+      return this.recreateForThisPage(currentVersion, rawVersion);
     }
 
     Logger.debug('Database version is current');
     return { wasDbReset: false };
+  }
+
+  /**
+   * The `allowRecreate: false` path: our connection was closed, usually by another tab deleting or upgrading the
+   * database. That tab may be between its delete and its reopen, so this path never calls `Dexie.exists()` (its probe
+   * of a missing database creates a stub and deletes it again, and that delete closes the other tab's connection in
+   * turn). It reads the version with the passive `getExistingDbVersion()` and looks again while the database is
+   * missing (ADR-0019). Dexie's auto-open stays off meanwhile, so no query on this page creates the database at our
+   * version in the other tab's gap.
+   *
+   * Once this page has recreated the database, another version is another build at work, and so is a missing or
+   * unreadable database when another connection's `versionchange` closed ours: a second recreate would hand the turn
+   * back to that tab, and creating the missing database at our version would let an old build's open fall back to it.
+   * The database stays closed and `VERSION_CONFLICT` is thrown. Otherwise (no recreate yet, or a forced close that lost
+   * the database) the path behaves like start-up.
+   */
+  private async runInitializeAfterClose(wasClosedByOtherConnection: boolean): Promise<{ wasDbReset: boolean }> {
+    // Dexie fires `close` before its own `close()` re-enables auto-open, so disable it once that call has returned.
+    // Every successful branch below opens explicitly (initialize() reopens on the version-match path).
+    await Promise.resolve();
+    this.close();
+
+    let rawVersion: number | null = null;
+    let probeError: unknown;
+    let isUnreadable = false;
+
+    try {
+      rawVersion = await this.getExistingDbVersionAfterClose();
+    } catch (error) {
+      // Transient WebKit/iOS aborts go back to initialize()'s retry loop, as on the start-up path.
+      if (isTransientIndexedDbError(error)) throw error;
+
+      probeError = error;
+      isUnreadable = true;
+    }
+
+    const currentVersion = this.normalizeStoredVersion(rawVersion);
+
+    if (currentVersion === DB_VERSION) {
+      Logger.debug('Database version is current');
+      return { wasDbReset: false };
+    }
+
+    if (this.recreatedThisPageLifetime && (currentVersion !== null || wasClosedByOtherConnection)) {
+      this.close();
+      throw Err.database(DatabaseErrorCode.VERSION_CONFLICT, 'Another tab is running a different app version', {
+        service: ErrorService.Local,
+        operation: 'initialize',
+        context: { currentVersion, expectedVersion: DB_VERSION },
+        cause: probeError,
+      });
+    }
+
+    if (isUnreadable) {
+      Logger.warn('Failed to determine current database version. Recreating database...', { error: probeError });
+      return this.recreateForThisPage(currentVersion, rawVersion);
+    }
+
+    if (currentVersion === null) {
+      Logger.info('Creating new database...');
+      await this.open();
+      return { wasDbReset: true };
+    }
+
+    Logger.info(`Database version mismatch. Current: ${currentVersion}, Expected: ${DB_VERSION}`, {
+      rawVersion,
+      normalizedVersion: currentVersion,
+      expectedVersion: DB_VERSION,
+      expectedInternalVersion: DB_VERSION * AppDatabase.DEXIE_VERSION_MULTIPLIER,
+    });
+    return this.recreateForThisPage(currentVersion, rawVersion);
+  }
+
+  /**
+   * `getExistingDbVersion()` for the unexpected-close path. A missing database there is usually another tab between
+   * deleting it and opening it again (a tab of this build reopens it at our version, a tab of another build at its
+   * own), so look again after each of `DB_CLOSE_RECHECK_DELAYS_MS` before reporting it missing.
+   */
+  private async getExistingDbVersionAfterClose(): Promise<number | null> {
+    let rawVersion = await this.getExistingDbVersion();
+    for (const waitMs of DB_CLOSE_RECHECK_DELAYS_MS) {
+      if (rawVersion !== null) break;
+      await delay(waitMs);
+      rawVersion = await this.getExistingDbVersion();
+    }
+    return rawVersion;
   }
 }
 

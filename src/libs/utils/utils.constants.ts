@@ -1,4 +1,4 @@
-import validationLimits from 'pubky-app-specs/validationLimits.json';
+import { limits } from 'pubky-social-specs';
 
 /**
  * Regex pattern for parsing H:M:S timestamp format.
@@ -18,7 +18,7 @@ import validationLimits from 'pubky-app-specs/validationLimits.json';
 export const HMS_TIMESTAMP_REGEX = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/;
 
 /**
- * Banned characters for tags per pubky-app-specs.
+ * Banned characters for tags per pubky-social-specs.
  * Colons, commas, spaces, tabs, and newlines are not allowed in tags.
  */
 const escapeTagCharForRegex = (char: string) => {
@@ -34,13 +34,41 @@ const escapeTagCharForRegex = (char: string) => {
   }
 };
 
-const TAG_INVALID_CHARS_FOR_REGEX = validationLimits.tagInvalidChars.map(escapeTagCharForRegex).join('');
+const TAG_INVALID_CHARS_FOR_REGEX = limits.tagInvalidChars.map(escapeTagCharForRegex).join('');
 
 export const TAG_BANNED_CHARS = new RegExp(`[${TAG_INVALID_CHARS_FOR_REGEX}]`, 'g');
 
 /**
+ * The 25 code points `pubky-social-specs` trims off a tag label and refuses inside one: the White_Space
+ * set of Unicode 15.1, frozen because a tag id hashes the trimmed label, so the set cannot follow the
+ * engine's Unicode version like `\s` and `String.prototype.trim` do (U+0085 is in it and not in the
+ * engine's trim; U+FEFF and U+200B the other way round). Nexus `/v1` folds labels by the same table, so a
+ * label the app accepts is one Nexus accepts. The package does not export the table; a contract test
+ * pins this copy against `buildTag`. It is the package's one whitespace table, so `profileLinkUrlSchema`
+ * (`src/core/pipes/user/user.validator.ts`) refuses a profile link URL carrying one of these as `buildUser`
+ * does, pinned against `buildUser` by that validator's contract test.
+ */
+export const TAG_FROZEN_WHITESPACE_CODE_POINTS: readonly number[] = [
+  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0x85, 0xa0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006,
+  0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000,
+];
+
+const TAG_FROZEN_WHITESPACE_CLASS = TAG_FROZEN_WHITESPACE_CODE_POINTS.map(
+  (codePoint) => `\\u${codePoint.toString(16).padStart(4, '0')}`,
+).join('');
+
+/** One frozen whitespace code point anywhere. No /g flag: `.test()` must not keep state between labels. */
+export const TAG_FROZEN_WHITESPACE = new RegExp(`[${TAG_FROZEN_WHITESPACE_CLASS}]`);
+
+/** Frozen whitespace at either end of a label, for the trim the data model applies. */
+export const TAG_FROZEN_WHITESPACE_EDGES = new RegExp(
+  `^[${TAG_FROZEN_WHITESPACE_CLASS}]+|[${TAG_FROZEN_WHITESPACE_CLASS}]+$`,
+  'g',
+);
+
+/**
  * Matches standalone hashtags in plain paragraph text (capture groups: leading whitespace, full hashtag).
- * Body allows any character except pubky-app-specs tagInvalidChars; first body char must be alphanumeric.
+ * Body allows any character except pubky-social-specs tagInvalidChars; first body char must be alphanumeric.
  * Use with isValidTagLabel before converting to a link.
  */
 export const HASHTAG_IN_TEXT_REGEX = new RegExp(`(^|\\s)(#[a-zA-Z0-9][^${TAG_INVALID_CHARS_FOR_REGEX}]*)`, 'g');

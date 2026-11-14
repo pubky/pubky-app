@@ -1,50 +1,24 @@
-import type { PubkyAppUser } from 'pubky-app-specs';
+import { decodeObject } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ProfileApplication } from '@/application/profile/profile';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
-import { HomeserverService } from '@/services/homeserver/homeserver';
+import { UserNormalizer } from '@/pipes/user/user.normalizer';
+import {
+  HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
+  installHomeserverWriteRetryDependenciesForTests,
+} from '@/services/homeserver/write-retry';
+import { LocalProfileService } from '@/services/local/profile/profile';
+import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { asOpaque } from '@/test-utils/type-assertions';
-
-// Avoid pulling WASM-heavy deps from type-only modules
-vi.mock('pubky-app-specs', () => ({
-  PubkySpecsBuilder: class {
-    createUser(name: string, bio?: string, image?: string | null, links?: unknown, status?: string) {
-      return {
-        user: {
-          name,
-          bio,
-          image,
-          links,
-          status,
-          toJson: () => ({ name, bio, image, links, status }),
-        },
-        meta: {
-          url: 'pubky://test-pubky/pub/pubky.app/profile.json',
-        },
-      };
-    }
-  },
-  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
-  userUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/profile.json`,
-  getValidMimeTypes: () => ['image/jpeg', 'image/png'],
-}));
-
-// Mock HomeserverService methods
-vi.mock('@/services/homeserver/homeserver', () => ({
-  HomeserverService: {
-    createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
-    putBlob: vi.fn(),
-    request: vi.fn(),
-    getFreshJson: vi.fn(),
-    listAll: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
 
 // Mock Nexus bootstrap service (fire-and-forget ingest call in commitCreate)
 vi.mock('@/services/nexus/bootstrap/bootstrap', () => ({
@@ -53,327 +27,339 @@ vi.mock('@/services/nexus/bootstrap/bootstrap', () => ({
   },
 }));
 
-// Mock auth store used by application layer
-let mockAuthState: { setCurrentUserPubky: ReturnType<typeof vi.fn>; setHasProfile: ReturnType<typeof vi.fn> };
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: {
-    getState: vi.fn(() => mockAuthState),
-  },
-}));
+const owner = fakeOwner(1) as Pubky;
+const PROFILE_PATH = '/pub/social/v1/profile.json';
+const LEGACY_PROFILE_PATH = '/pub/pubky.app/profile.json';
+const profileUrl = `pubky://${owner}${PROFILE_PATH}`;
+const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 
-let ProfileApplication: typeof import('./profile').ProfileApplication;
-let NexusBootstrapService: typeof import('@/services/nexus/bootstrap/bootstrap').NexusBootstrapService;
-
-beforeEach(async () => {
-  vi.clearAllMocks();
-  vi.resetModules();
-
-  mockAuthState = {
-    setCurrentUserPubky: vi.fn(),
-    setHasProfile: vi.fn(),
-  };
-
-  // Re-import after resetModules
-  ({ ProfileApplication } = await import('./profile'));
-  ({ NexusBootstrapService } = await import('@/services/nexus/bootstrap/bootstrap'));
-
-  await UserDetailsModel.table.clear();
-
-  // Mock Logger to prevent AppError from logging during tests
-  vi.spyOn(Logger, 'error').mockImplementation(() => {});
-  vi.spyOn(Logger, 'warn').mockImplementation(() => {});
-  vi.spyOn(Logger, 'info').mockImplementation(() => {});
-  vi.spyOn(Logger, 'debug').mockImplementation(() => {});
-});
+/** The stored v1 profile, with a member and a link member this client does not know. */
+const published = {
+  name: 'Test User',
+  bio: 'Test bio',
+  image: `pubky://${owner}/pub/social/v1/files/AKSZ57W2RFKHV1EHK007FQQ8TW.png`,
+  links: [{ title: 'WEBSITE', url: 'https://example.com/', icon: 'globe' }],
+  status: 'working',
+  theme: 'dark',
+};
+/** The same profile as the data model hands it to local state. */
+const publishedFields = {
+  name: published.name,
+  bio: published.bio,
+  image: published.image,
+  links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
+  status: published.status,
+};
+// A cached row that predates the last avatar change
+const staleRow = {
+  id: owner,
+  ...publishedFields,
+  image: `pubky://${owner}/pub/social/v1/files/OLD.png`,
+  status: 'available',
+  indexed_at: 1_000,
+  nexusIndexedAt: 1_000,
+};
 
 describe('ProfileApplication', () => {
+  let homeserver: ReturnType<typeof stubMemoryHomeserver>;
+  const stored = async () =>
+    JSON.parse(new TextDecoder().decode(await homeserver.session.storage.getBytes(PROFILE_PATH)));
+  const putBodies = () =>
+    homeserver.spies.putBlob.mock.calls.map(([params]) => JSON.parse(new TextDecoder().decode(params.blob)));
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    homeserver = stubMemoryHomeserver(owner);
+    vi.spyOn(Logger, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+    vi.spyOn(Logger, 'info').mockImplementation(() => {});
+    vi.spyOn(Logger, 'debug').mockImplementation(() => {});
+    await UserDetailsModel.table.clear();
+    await UserTtlModel.table.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('commitCreate', () => {
-    it('creates profile and sets auth state on success', async () => {
-      const profileJson = {
+    const authState = { setCurrentUserPubky: vi.fn(), setHasProfile: vi.fn() };
+
+    beforeEach(() => {
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(asOpaque<ReturnType<typeof useAuthStore.getState>>(authState));
+    });
+
+    it('writes the built profile bytes to the v1 path, stores it locally and sets auth state', async () => {
+      const profile = UserNormalizer.to(
+        {
+          name: 'Alice',
+          bio: 'Alice bio',
+          image: null,
+          links: [{ title: 'Website', url: 'https://example.com' }],
+          status: '',
+        },
+        owner,
+      );
+
+      await ProfileApplication.commitCreate({ profile, pubky: owner });
+
+      expect(homeserver.spies.putBlob).toHaveBeenCalledExactlyOnceWith({ url: profileUrl, blob: profile.body });
+      expect(await stored()).toEqual(profile.object);
+      expect(NexusBootstrapService.ingest).toHaveBeenCalledWith(owner);
+      expect(authState.setCurrentUserPubky).toHaveBeenCalledWith(owner);
+      expect(authState.setHasProfile).toHaveBeenCalledWith(true);
+
+      const localProfile = await UserDetailsModel.findById(owner);
+      expect(localProfile).toMatchObject({
+        id: owner,
         name: 'Alice',
         bio: 'Alice bio',
         image: null,
         links: [{ title: 'Website', url: 'https://example.com' }],
-        status: '',
-      };
-      const profile = asOpaque<PubkyAppUser>({ ...profileJson, toJson: vi.fn(() => profileJson) });
-      const url = 'pubky://user/pub/pubky.app/user';
-      const pubky = 'test-pubky' as Pubky;
-
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-
-      await ProfileApplication.commitCreate({ profile, url, pubky });
-
-      expect(profile.toJson).toHaveBeenCalledTimes(1);
-      expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url, bodyJson: profileJson });
-      expect(NexusBootstrapService.ingest).toHaveBeenCalledWith(pubky);
-      expect(mockAuthState.setCurrentUserPubky).toHaveBeenCalledWith(pubky);
-      expect(mockAuthState.setHasProfile).toHaveBeenCalledWith(true);
-
-      const localProfile = await UserDetailsModel.findById(pubky);
-      expect(localProfile).toMatchObject({
-        id: pubky,
-        name: profileJson.name,
-        bio: profileJson.bio,
-        image: profileJson.image,
-        links: profileJson.links,
         status: null,
         localUpdatedAt: expect.any(Number),
       });
       expect(localProfile?.nexusIndexedAt).toBeUndefined();
-      expect(await UserTtlModel.findById(pubky)).toMatchObject({ lastUpdatedAt: localProfile?.localUpdatedAt });
+      expect(await UserTtlModel.findById(owner)).toMatchObject({ lastUpdatedAt: localProfile?.localUpdatedAt });
     });
 
     it('does not persist the local profile when the homeserver write fails', async () => {
-      const profileJson = { name: 'Bob', bio: '', image: null, links: [], status: '' };
-      const profile = asOpaque<PubkyAppUser>({ ...profileJson, toJson: vi.fn(() => profileJson) });
-      const url = 'pubky://user/pub/pubky.app/user';
-      const pubky = 'test-pubky' as Pubky;
+      const profile = UserNormalizer.to({ name: 'Bob', bio: '', image: null, links: [], status: '' }, owner);
+      homeserver.spies.putBlob.mockRejectedValueOnce(new Error('create failed'));
 
-      vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('create failed'));
-
-      await expect(ProfileApplication.commitCreate({ profile, url, pubky })).rejects.toThrow('create failed');
+      await expect(ProfileApplication.commitCreate({ profile, pubky: owner })).rejects.toThrow('create failed');
 
       // Auth state should not be modified on error (see TODO in profile.ts)
-      expect(mockAuthState.setHasProfile).not.toHaveBeenCalled();
-      expect(mockAuthState.setCurrentUserPubky).not.toHaveBeenCalled();
+      expect(authState.setHasProfile).not.toHaveBeenCalled();
+      expect(authState.setCurrentUserPubky).not.toHaveBeenCalled();
       // Ingest only fires after profile.json is actually saved
       expect(NexusBootstrapService.ingest).not.toHaveBeenCalled();
-
-      const localProfile = await UserDetailsModel.findById(pubky);
-      expect(localProfile).toBeNull();
+      expect(await UserDetailsModel.findById(owner)).toBeNull();
     });
   });
 
-  describe('writes on top of the published profile', () => {
-    const testPubky = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
-    const profileUrl = `pubky://${testPubky}/pub/pubky.app/profile.json`;
-    const published = {
-      name: 'Test User',
-      bio: 'Test bio',
-      image: `pubky://${testPubky}/pub/pubky.app/files/NEW`,
-      links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
-      status: 'working',
-    };
-    // A cached row that predates the last avatar change
-    const staleRow = {
-      id: testPubky,
-      ...published,
-      image: `pubky://${testPubky}/pub/pubky.app/files/OLD`,
-      status: 'available',
-      indexed_at: 1_000,
-      nexusIndexedAt: 1_000,
-    };
-
-    const putCalls = () => vi.mocked(HomeserverService.request).mock.calls;
-
-    const notFound = async () => {
-      // Built via dynamic import so the AppError comes from the same module graph as the
-      // re-imported ProfileApplication (`vi.resetModules()` would otherwise break `instanceof`).
-      const { Err } = await import('@/libs/error/error.factories');
-      return Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
-        service: ErrorService.Homeserver,
-        operation: 'getFreshJson',
-        context: { statusCode: HttpStatusCode.NOT_FOUND },
-      });
-    };
-
+  describe('writes on top of the stored profile', () => {
     beforeEach(async () => {
-      await UserDetailsModel.table.clear();
-      await UserTtlModel.table.clear();
-      vi.mocked(HomeserverService.getFreshJson).mockResolvedValue(published);
-      vi.mocked(HomeserverService.request).mockResolvedValue(undefined);
+      await homeserver.session.storage.putBytes(PROFILE_PATH, encode(published));
+      homeserver.spies.putBlob.mockClear();
     });
 
     describe('commitUpdateStatus', () => {
-      it('publishes the homeserver profile with only the new status, even when the cached row is stale', async () => {
+      it('publishes the stored profile with only the new status, even when the cached row is stale', async () => {
         await UserDetailsModel.create(staleRow);
 
-        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
+        await ProfileApplication.commitUpdateStatus({ pubky: owner, status: '🪚building' });
 
-        expect(HomeserverService.getFreshJson).toHaveBeenCalledWith(profileUrl);
-        expect(putCalls()).toEqual([
-          [
-            {
-              method: HttpMethod.PUT,
-              url: 'pubky://test-pubky/pub/pubky.app/profile.json',
-              bodyJson: { ...published, status: '🪚building' },
-              fence: expect.anything(),
-            },
-          ],
-        ]);
+        expect(homeserver.spies.getFreshBytes).toHaveBeenCalledWith(profileUrl);
+        expect(homeserver.spies.putBlob).toHaveBeenCalledOnce();
+        expect(homeserver.spies.putBlob.mock.calls[0][0]).toMatchObject({ url: profileUrl, fence: expect.anything() });
+        expect(await stored()).toEqual({ ...published, status: '🪚building' });
+      });
+
+      it('keeps the members a newer writer added, on the profile and on its links', async () => {
+        await ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' });
+
+        const bytes = await homeserver.session.storage.getBytes(PROFILE_PATH);
+        expect(decodeObject(profileUrl, bytes, 'user')).toMatchObject({
+          status: 'back',
+          $unknown: JSON.stringify({ theme: 'dark' }),
+          links: [{ title: 'WEBSITE', url: 'https://example.com/', $unknown: JSON.stringify({ icon: 'globe' }) }],
+        });
       });
 
       it('stores exactly the published profile as a pending local edit', async () => {
         await UserDetailsModel.create(staleRow);
 
-        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
+        await ProfileApplication.commitUpdateStatus({ pubky: owner, status: '🪚building' });
 
-        const row = await UserDetailsModel.findById(testPubky);
-        expect(row).toMatchObject({ ...published, status: '🪚building', nexusIndexedAt: 1_000, deleted: false });
+        const row = await UserDetailsModel.findById(owner);
+        expect(row).toMatchObject({ ...publishedFields, status: '🪚building', nexusIndexedAt: 1_000, deleted: false });
         expect(row?.localUpdatedAt).toEqual(expect.any(Number));
-        expect(await UserTtlModel.findById(testPubky)).toMatchObject({ lastUpdatedAt: row?.localUpdatedAt });
+        expect(await UserTtlModel.findById(owner)).toMatchObject({ lastUpdatedAt: row?.localUpdatedAt });
       });
 
       it('creates the local row when it is missing', async () => {
-        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
+        await ProfileApplication.commitUpdateStatus({ pubky: owner, status: '🪚building' });
 
-        const row = await UserDetailsModel.findById(testPubky);
-        expect(row).toMatchObject({ id: testPubky, ...published, status: '🪚building' });
+        const row = await UserDetailsModel.findById(owner);
+        expect(row).toMatchObject({ id: owner, ...publishedFields, status: '🪚building' });
         expect(row?.localUpdatedAt).toEqual(expect.any(Number));
-        expect(await UserTtlModel.findById(testPubky)).toMatchObject({ lastUpdatedAt: row?.localUpdatedAt });
+        expect(await UserTtlModel.findById(owner)).toMatchObject({ lastUpdatedAt: row?.localUpdatedAt });
       });
 
       it('clears the status', async () => {
-        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '' });
+        await ProfileApplication.commitUpdateStatus({ pubky: owner, status: '' });
 
-        expect(putCalls()[0]?.[0].bodyJson).toEqual({ ...published, status: undefined });
-        expect((await UserDetailsModel.findById(testPubky))?.status).toBeNull();
+        expect(await stored()).toEqual({ ...published, status: null });
+        expect((await UserDetailsModel.findById(owner))?.status).toBeNull();
       });
 
       it('clears a cached tombstone after the status is written', async () => {
         await UserDetailsModel.create({ ...staleRow, deleted: true });
 
-        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+        await ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' });
 
-        expect((await UserDetailsModel.findById(testPubky))?.deleted).toBe(false);
+        expect((await UserDetailsModel.findById(owner))?.deleted).toBe(false);
+      });
+
+      it('refuses a status outside the profile rules before writing anything', async () => {
+        await UserDetailsModel.create(staleRow);
+
+        await expect(
+          ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'x'.repeat(51) }),
+        ).rejects.toMatchObject({
+          code: ValidationErrorCode.INVALID_INPUT,
+          service: ErrorService.SocialSpecs,
+          operation: 'commitUpdateStatus',
+          context: { pubky: owner, field: 'status' },
+        });
+
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+        expect(await stored()).toEqual(published);
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ status: 'available' });
       });
 
       describe('when the homeserver refuses the PUT', () => {
-        const homeserverError = async (statusCode: number, body: string) => {
-          const { httpStatusCodeToError } = await import('@/libs/error/error.http');
-          return httpStatusCodeToError(
+        const homeserverError = (statusCode: number, body: string) =>
+          httpStatusCodeToError(
             statusCode,
             `Request failed: Server responded with an error: ${statusCode} Conflict - ${body}`,
             ErrorService.Homeserver,
-            'request',
+            'putBlob',
             profileUrl,
           );
-        };
 
-        beforeEach(async () => {
-          const { installHomeserverWriteRetryDependenciesForTests } = await import('@/services/homeserver/write-retry');
+        beforeEach(() => {
           installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
         });
 
         afterEach(() => {
-          // Drop any queued one-shot answers so a failure here cannot leak into later tests.
-          vi.mocked(HomeserverService.getFreshJson).mockReset();
-          vi.mocked(HomeserverService.request).mockReset();
+          installHomeserverWriteRetryDependenciesForTests(null);
         });
 
         it('re-reads profile.json after the publish conflict and writes on top of the newer copy', async () => {
-          const { HOMESERVER_PUBLISH_CONFLICT_MESSAGE } = await import('@/services/homeserver/write-retry');
-          const edited = { ...published, bio: 'edited on another device' };
-          vi.mocked(HomeserverService.getFreshJson).mockResolvedValueOnce(published).mockResolvedValueOnce(edited);
-          vi.mocked(HomeserverService.request)
-            .mockRejectedValueOnce(await homeserverError(409, HOMESERVER_PUBLISH_CONFLICT_MESSAGE))
-            .mockResolvedValueOnce(undefined);
+          homeserver.spies.putBlob.mockImplementationOnce(async () => {
+            // Another device saves a bio while this write is refused
+            await homeserver.session.storage.putBytes(PROFILE_PATH, encode({ ...published, bio: 'edited elsewhere' }));
+            throw homeserverError(409, HOMESERVER_PUBLISH_CONFLICT_MESSAGE);
+          });
 
-          await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+          await ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' });
 
-          expect(HomeserverService.getFreshJson).toHaveBeenCalledTimes(2);
-          expect(putCalls().map(([params]) => params.bodyJson)).toEqual([
+          expect(homeserver.spies.getFreshBytes).toHaveBeenCalledTimes(2);
+          expect(putBodies()).toEqual([
             { ...published, status: 'back' },
-            { ...edited, status: 'back' },
+            { ...published, bio: 'edited elsewhere', status: 'back' },
           ]);
-          expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ bio: 'edited on another device' });
+          expect(await stored()).toEqual({ ...published, bio: 'edited elsewhere', status: 'back' });
+          expect(await UserDetailsModel.findById(owner)).toMatchObject({ bio: 'edited elsewhere', status: 'back' });
         });
 
         it('does not re-read or retry a path collision', async () => {
-          vi.mocked(HomeserverService.request).mockRejectedValueOnce(
-            await homeserverError(409, 'File/folder path collision'),
-          );
+          homeserver.spies.putBlob.mockRejectedValueOnce(homeserverError(409, 'File/folder path collision'));
 
-          await expect(
-            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
-          ).rejects.toMatchObject({ context: { statusCode: 409 } });
-          expect(HomeserverService.getFreshJson).toHaveBeenCalledOnce();
-          expect(putCalls()).toHaveLength(1);
+          await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toMatchObject({
+            context: { statusCode: 409 },
+          });
+          expect(homeserver.spies.getFreshBytes).toHaveBeenCalledOnce();
+          expect(homeserver.spies.putBlob).toHaveBeenCalledOnce();
+          expect(await stored()).toEqual(published);
         });
       });
 
       it('refuses a deleted profile without writing anything', async () => {
         await UserDetailsModel.create(staleRow);
-        vi.mocked(HomeserverService.getFreshJson).mockRejectedValue(await notFound());
+        await homeserver.session.storage.delete(PROFILE_PATH);
 
-        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toMatchObject(
-          {
-            code: ClientErrorCode.GONE,
-            message: 'Cannot update the status of a deleted profile',
-          },
-        );
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toMatchObject({
+          code: ClientErrorCode.GONE,
+          message: 'Cannot update the status of a deleted profile',
+        });
 
-        expect(putCalls()).toHaveLength(0);
-        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: 'available' });
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ status: 'available' });
+      });
+
+      it('never falls back to a 0.x profile: an account with only that one reads as deleted', async () => {
+        await homeserver.session.storage.delete(PROFILE_PATH);
+        await homeserver.session.storage.putBytes(LEGACY_PROFILE_PATH, encode(publishedFields));
+
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toMatchObject({
+          code: ClientErrorCode.GONE,
+        });
+
+        expect(homeserver.spies.getFreshBytes).toHaveBeenCalledExactlyOnceWith(profileUrl);
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
       });
 
       it('writes nothing when the homeserver read fails', async () => {
         await UserDetailsModel.create(staleRow);
-        vi.mocked(HomeserverService.getFreshJson).mockRejectedValue(new Error('Network error'));
+        homeserver.spies.getFreshBytes.mockRejectedValue(new Error('Network error'));
 
-        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toThrow(
           'Network error',
         );
 
-        expect(putCalls()).toHaveLength(0);
-        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: 'available' });
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ status: 'available' });
       });
 
-      it('writes nothing when the published profile is unreadable', async () => {
-        vi.mocked(HomeserverService.getFreshJson).mockResolvedValue(undefined);
+      it('writes nothing when the stored profile does not decode', async () => {
+        await homeserver.session.storage.putBytes(PROFILE_PATH, encode({ name: 42 }));
 
-        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toMatchObject(
-          {
-            code: ValidationErrorCode.INVALID_INPUT,
-          },
-        );
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toMatchObject({
+          code: ValidationErrorCode.INVALID_INPUT,
+          service: ErrorService.SocialSpecs,
+        });
 
-        expect(putCalls()).toHaveLength(0);
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+        expect(await UserDetailsModel.findById(owner)).toBeNull();
       });
 
       it('keeps the local row when the homeserver write fails', async () => {
         await UserDetailsModel.create(staleRow);
-        vi.mocked(HomeserverService.request).mockRejectedValue(new Error('Network error'));
+        homeserver.spies.putBlob.mockRejectedValue(new Error('Network error'));
 
-        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toThrow(
           'Network error',
         );
 
-        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: 'available' });
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ status: 'available' });
       });
 
       it('runs overlapping writes one at a time, so the later action lands last', async () => {
         let releaseFirstRead!: () => void;
-        vi.mocked(HomeserverService.getFreshJson).mockReturnValueOnce(
+        const current = await homeserver.session.storage.getBytes(PROFILE_PATH);
+        homeserver.spies.getFreshBytes.mockReturnValueOnce(
           new Promise((resolve) => {
-            releaseFirstRead = () => resolve(published);
+            releaseFirstRead = () => resolve(current);
           }),
         );
 
-        const first = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'away' });
-        const second = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
-        await vi.waitFor(() => expect(HomeserverService.getFreshJson).toHaveBeenCalledTimes(1));
+        const first = ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'away' });
+        const second = ProfileApplication.commitUpdateStatus({ pubky: owner, status: '🪚building' });
+        await vi.waitFor(() => expect(homeserver.spies.getFreshBytes).toHaveBeenCalledTimes(1));
         await Promise.resolve();
         // The second write waits for the first one instead of reading the same copy
-        expect(HomeserverService.getFreshJson).toHaveBeenCalledTimes(1);
+        expect(homeserver.spies.getFreshBytes).toHaveBeenCalledTimes(1);
 
         releaseFirstRead();
         await Promise.all([first, second]);
 
-        expect(putCalls().map(([params]) => params.bodyJson?.status)).toEqual(['away', '🪚building']);
-        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: '🪚building' });
+        expect(putBodies().map((body) => body.status)).toEqual(['away', '🪚building']);
+        expect(await stored()).toMatchObject({ status: '🪚building' });
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ status: '🪚building' });
       });
 
       it('still runs the next write after an earlier one fails', async () => {
-        vi.mocked(HomeserverService.getFreshJson).mockRejectedValueOnce(new Error('Network error'));
+        homeserver.spies.getFreshBytes.mockRejectedValueOnce(new Error('Network error'));
 
-        const first = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'away' });
-        const second = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
+        const first = ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'away' });
+        const second = ProfileApplication.commitUpdateStatus({ pubky: owner, status: '🪚building' });
 
         await expect(first).rejects.toThrow('Network error');
         await second;
-        expect(putCalls().map(([params]) => params.bodyJson?.status)).toEqual(['🪚building']);
+        expect(putBodies().map((body) => body.status)).toEqual(['🪚building']);
       });
     });
 
@@ -381,105 +367,122 @@ describe('ProfileApplication', () => {
       it('keeps every field the user did not change as published', async () => {
         await UserDetailsModel.create(staleRow);
 
-        await ProfileApplication.commitUpdate({ pubky: testPubky, changes: { bio: 'New bio' } });
+        await ProfileApplication.commitUpdate({ pubky: owner, changes: { bio: 'New bio' } });
 
-        expect(putCalls()[0]?.[0].bodyJson).toEqual({ ...published, bio: 'New bio' });
-        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ ...published, bio: 'New bio' });
+        expect(await stored()).toEqual({ ...published, bio: 'New bio' });
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ ...publishedFields, bio: 'New bio' });
       });
 
       it('applies deliberate clears', async () => {
-        await ProfileApplication.commitUpdate({ pubky: testPubky, changes: { image: null, bio: '', links: [] } });
+        await ProfileApplication.commitUpdate({ pubky: owner, changes: { image: null, bio: '', links: [] } });
 
-        expect(putCalls()[0]?.[0].bodyJson).toEqual({ ...published, image: null, bio: '', links: [] });
+        expect(await stored()).toEqual({ ...published, image: null, bio: null, links: null });
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ image: null, bio: '', links: [] });
+      });
+
+      it('replaces the links with the edited list', async () => {
+        const links = [{ title: 'GITHUB', url: 'https://github.com/example' }];
+
+        await ProfileApplication.commitUpdate({ pubky: owner, changes: { links } });
+
+        expect(await stored()).toEqual({ ...published, links });
+      });
+
+      it('keeps what another client stored on a link when the user adds a second one', async () => {
+        const added = { title: 'X (TWITTER)', url: 'https://x.com/alice' };
+
+        await ProfileApplication.commitUpdate({
+          pubky: owner,
+          changes: { links: [{ title: 'WEBSITE', url: 'https://example.com/' }, added] },
+        });
+
+        expect(await stored()).toEqual({ ...published, links: [...published.links, added] });
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ links: [...publishedFields.links, added] });
+      });
+
+      it('refuses an edit outside the profile rules and names the member', async () => {
+        await expect(
+          ProfileApplication.commitUpdate({ pubky: owner, changes: { links: [{ title: 'FTP', url: 'ftp://x.y' }] } }),
+        ).rejects.toMatchObject({
+          code: ValidationErrorCode.INVALID_INPUT,
+          operation: 'commitUpdate',
+          context: { field: 'links[0].url' },
+        });
+
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
       });
 
       it('refuses a deleted profile without writing anything', async () => {
-        vi.mocked(HomeserverService.getFreshJson).mockRejectedValue(await notFound());
+        await homeserver.session.storage.delete(PROFILE_PATH);
 
         await expect(
-          ProfileApplication.commitUpdate({ pubky: testPubky, changes: { bio: 'New bio' } }),
+          ProfileApplication.commitUpdate({ pubky: owner, changes: { bio: 'New bio' } }),
         ).rejects.toMatchObject({ code: ClientErrorCode.GONE, message: 'Cannot update a deleted profile' });
 
-        expect(putCalls()).toHaveLength(0);
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
       });
     });
 
     describe('with account deletion', () => {
-      const otherFile = `pubky://${testPubky}/pub/pubky.app/posts/0001`;
+      const otherFile = `pubky://${owner}/pub/social/v1/posts/0001/0001.json`;
       const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-      let profileExists: boolean;
 
       beforeEach(async () => {
-        // A homeserver that serves profile.json until the deletion removes it; a PUT recreates it
-        const notFoundError = await notFound();
-        profileExists = true;
-        vi.mocked(HomeserverService.getFreshJson).mockImplementation(async () => {
-          if (!profileExists) throw notFoundError;
-          return published;
-        });
-        vi.mocked(HomeserverService.request).mockImplementation(async () => {
-          profileExists = true;
-        });
-        vi.mocked(HomeserverService.listAll).mockResolvedValue([otherFile, profileUrl]);
-        vi.mocked(HomeserverService.delete).mockImplementation(async (url) => {
-          if (url === profileUrl) profileExists = false;
-        });
+        await homeserver.session.storage.putJson('/pub/social/v1/posts/0001/0001.json', { content: 'hi' });
+        vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
       });
 
       it('refuses a write requested during the deletion instead of recreating profile.json', async () => {
         let finishDeletingFile!: () => void;
-        vi.mocked(HomeserverService.delete).mockImplementationOnce(
+        homeserver.spies.delete.mockImplementationOnce(
           () =>
             new Promise<void>((resolve) => {
               finishDeletingFile = resolve;
             }),
         );
 
-        const deletion = ProfileApplication.commitDelete({ pubky: testPubky });
+        const deletion = ProfileApplication.commitDelete({ pubky: owner });
         await vi.waitFor(() =>
-          expect(HomeserverService.delete).toHaveBeenCalledWith(otherFile, { singleAttempt: true }),
+          expect(homeserver.spies.delete).toHaveBeenCalledWith(otherFile, { singleAttempt: true }),
         );
-        const write = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+        const write = ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' });
         await settle();
         // The write waits for the deletion instead of reading profile.json while it still exists
-        expect(HomeserverService.getFreshJson).not.toHaveBeenCalled();
+        expect(homeserver.spies.getFreshBytes).not.toHaveBeenCalled();
 
         finishDeletingFile();
         await deletion;
 
         await expect(write).rejects.toMatchObject({ code: ClientErrorCode.GONE });
-        expect(putCalls()).toHaveLength(0);
-        expect(profileExists).toBe(false);
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
+        expect(await homeserver.session.storage.exists(PROFILE_PATH)).toBe(false);
       });
 
       it('waits for a write already in flight before deleting anything', async () => {
-        const { LocalProfileService } = await import('@/services/local/profile/profile');
-        const deleteAll = vi.spyOn(LocalProfileService, 'deleteAll');
         let finishPut!: () => void;
-        vi.mocked(HomeserverService.request).mockImplementationOnce(
-          () =>
+        const putBlob = homeserver.spies.putBlob.getMockImplementation()!;
+        homeserver.spies.putBlob.mockImplementationOnce(
+          (params) =>
             new Promise<undefined>((resolve) => {
               finishPut = () => {
-                profileExists = true;
-                resolve(undefined);
+                void putBlob(params).then(() => resolve(undefined));
               };
             }),
         );
 
-        const write = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
-        await vi.waitFor(() => expect(putCalls()).toHaveLength(1));
-        const deletion = ProfileApplication.commitDelete({ pubky: testPubky });
+        const write = ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' });
+        await vi.waitFor(() => expect(homeserver.spies.putBlob).toHaveBeenCalledOnce());
+        const deletion = ProfileApplication.commitDelete({ pubky: owner });
         await settle();
         // Deleting now would let the pending PUT recreate profile.json afterwards
-        expect(deleteAll).not.toHaveBeenCalled();
-        expect(HomeserverService.listAll).not.toHaveBeenCalled();
+        expect(LocalProfileService.deleteAll).not.toHaveBeenCalled();
+        expect(homeserver.spies.listAll).not.toHaveBeenCalled();
 
         finishPut();
         await Promise.all([write, deletion]);
 
-        expect(profileExists).toBe(false);
-        // The deletion also cleared the row the write stored
-        expect(await UserDetailsModel.findById(testPubky)).toBeNull();
+        expect(await homeserver.session.storage.exists(PROFILE_PATH)).toBe(false);
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ status: 'back' });
       });
 
       it('takes the same Web Lock for profile writes and deletion', async () => {
@@ -487,27 +490,27 @@ describe('ProfileApplication', () => {
         Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
 
         try {
-          await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
-          await ProfileApplication.commitDelete({ pubky: testPubky });
+          await ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' });
+          await ProfileApplication.commitDelete({ pubky: owner });
         } finally {
           Reflect.deleteProperty(navigator, 'locks');
         }
 
         expect(request.mock.calls.map(([name]) => name)).toEqual([
-          `pubky-app:profile:${testPubky}`,
-          `pubky-app:profile:${testPubky}`,
+          `pubky-app:profile:${owner}`,
+          `pubky-app:profile:${owner}`,
         ]);
       });
 
       it('passes a write error through the Web Lock unchanged', async () => {
         const request = vi.fn((_name: string, task: () => Promise<void>) => task());
         Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
-        profileExists = false;
+        await homeserver.session.storage.delete(PROFILE_PATH);
 
         try {
-          await expect(
-            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
-          ).rejects.toMatchObject({ code: ClientErrorCode.GONE });
+          await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toMatchObject({
+            code: ClientErrorCode.GONE,
+          });
         } finally {
           Reflect.deleteProperty(navigator, 'locks');
         }
@@ -519,15 +522,17 @@ describe('ProfileApplication', () => {
         Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
 
         try {
-          await expect(
-            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
-          ).rejects.toMatchObject({ service: ErrorService.Local, operation: 'withProfileLock', cause: lockError });
+          await expect(ProfileApplication.commitUpdateStatus({ pubky: owner, status: 'back' })).rejects.toMatchObject({
+            service: ErrorService.Local,
+            operation: 'withProfileLock',
+            cause: lockError,
+          });
         } finally {
           Reflect.deleteProperty(navigator, 'locks');
         }
 
-        expect(HomeserverService.getFreshJson).not.toHaveBeenCalled();
-        expect(putCalls()).toHaveLength(0);
+        expect(homeserver.spies.getFreshBytes).not.toHaveBeenCalled();
+        expect(homeserver.spies.putBlob).not.toHaveBeenCalled();
       });
     });
   });

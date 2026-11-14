@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
@@ -39,8 +40,9 @@ vi.mock('@/molecules/Toaster/toast');
 
 describe('useRemoveDeletedPost', () => {
   const currentUserPubky = 'current-user' as Pubky;
-  const postId = 'post-author:deleted-post';
-  const postUri = 'pubky://post-author/pub/pubky.app/posts/deleted-post';
+  const postAuthor = fakeOwner(5);
+  const postId = `${postAuthor}:0035QZPT4QG00`;
+  const postUri = `pubky://${postAuthor}/pub/pubky.app/posts/0035QZPT4QG00`;
   const collectionId = `${currentUserPubky}:collection-id`;
   const commitRemoval = vi.fn();
   const rollbackRemoval = vi.fn();
@@ -103,8 +105,8 @@ describe('useRemoveDeletedPost', () => {
   });
 
   it('optimistically removes a bookmark before persistence resolves', async () => {
-    let resolveDelete: (() => void) | undefined;
-    const deletePromise = new Promise<void>((resolve) => {
+    let resolveDelete: ((ran: boolean) => void) | undefined;
+    const deletePromise = new Promise<boolean>((resolve) => {
       resolveDelete = resolve;
     });
     vi.mocked(BookmarkController.commitDelete).mockReturnValue(deletePromise);
@@ -124,13 +126,30 @@ describe('useRemoveDeletedPost', () => {
     await waitFor(() => expect(result.current.isRemoving).toBe(true));
 
     await act(async () => {
-      resolveDelete?.();
+      resolveDelete?.(true);
       await removePromise;
     });
 
     expect(rollbackRemoval).not.toHaveBeenCalled();
     expect(commitRemoval).toHaveBeenCalledTimes(1);
     expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post removed from bookmarks' });
+  });
+
+  it('rolls the optimistic removal back without a toast when the controller skipped the delete', async () => {
+    vi.mocked(BookmarkController.commitDelete).mockResolvedValue(false);
+
+    const { result } = renderHook(() => useRemoveDeletedPost(postId));
+    let removed: boolean | undefined;
+    await act(async () => {
+      removed = await result.current.remove();
+    });
+
+    // The account changed while the delete waited for the sync lock: nothing was removed anywhere.
+    expect(removed).toBe(false);
+    expect(commitRemoval).not.toHaveBeenCalled();
+    expect(rollbackRemoval).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    expect(result.current.isRemoving).toBe(false);
   });
 
   it('removes a deleted post from an owned collection', async () => {
@@ -272,8 +291,8 @@ describe('useRemoveDeletedPost', () => {
   });
 
   it('prevents duplicate removal requests while one is pending', async () => {
-    let resolveDelete: (() => void) | undefined;
-    const deletePromise = new Promise<void>((resolve) => {
+    let resolveDelete: ((ran: boolean) => void) | undefined;
+    const deletePromise = new Promise<boolean>((resolve) => {
       resolveDelete = resolve;
     });
     vi.mocked(BookmarkController.commitDelete).mockReturnValue(deletePromise);
@@ -289,7 +308,7 @@ describe('useRemoveDeletedPost', () => {
     expect(BookmarkController.commitDelete).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      resolveDelete?.();
+      resolveDelete?.(true);
       await deletePromise;
     });
   });

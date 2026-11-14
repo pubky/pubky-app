@@ -27,7 +27,7 @@ describe('getLockContentDisplay', () => {
 });
 
 describe('isLockContentKind', () => {
-  it('accepts the pubky-app-specs v1.0.0-rc.1 kind names, and nothing else', () => {
+  it('accepts the pubky-social-specs 1.0.0-rc.1 kind names, and nothing else', () => {
     expect(LOCK_CONTENT_KINDS).toEqual(['note', 'article', 'image', 'video', 'link', 'file']);
     for (const kind of LOCK_CONTENT_KINDS) expect(isLockContentKind(kind)).toBe(true);
     for (const kind of ['collection', 'unknown', 'short', 'long', 'podcast', '']) {

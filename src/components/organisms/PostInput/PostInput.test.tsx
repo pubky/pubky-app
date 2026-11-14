@@ -1638,6 +1638,36 @@ describe('PostInput', () => {
     expect(postButton).not.toBeDisabled();
   });
 
+  it('disables Save while an edited article still resolves its rows, and enables it once they land', () => {
+    // A 0.x article's slot 0 is the cover only once its row says so; the strip seeds after that row, so
+    // a save before it would diff the attachments against nothing (the composer refuses it, and the
+    // button must say so instead of staying enabled for a no-op)
+    mockUsePostReturn.articleTitle = 'Essay';
+    mockUsePostReturn.content = 'Body';
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: true }),
+    );
+    // A fresh element each time: React skips a component handed the identical element object
+    const editArticle = () => (
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent='{"title":"Essay","body":"Body"}'
+        editIsArticle={true}
+        editAttachments={['pubky://u/pub/pubky.app/files/cover']}
+      />
+    );
+
+    const { rerender } = render(editArticle());
+    expect(screen.getByTestId('post-input-action-bar')).toHaveAttribute('data-post-disabled', 'true');
+
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: false }),
+    );
+    rerender(editArticle());
+    expect(screen.getByTestId('post-input-action-bar')).toHaveAttribute('data-post-disabled', 'false');
+  });
+
   it('enables post button when content is present without attachments', () => {
     mockUsePostReturn.content = 'Test content';
     mockUsePostReturn.attachments = [];

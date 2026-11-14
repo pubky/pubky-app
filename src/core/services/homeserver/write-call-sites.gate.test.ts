@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 const ROOT = join(__dirname, '../../../..');
 const SRC = join(ROOT, 'src');
 const HOMESERVER_SERVICE = 'src/core/services/homeserver/homeserver.ts';
+/** Test helpers fake the homeserver like test files do, and ship in no build. */
+const TEST_UTILS = join(SRC, 'test-utils');
 
 const SDK_STORAGE_WRITE = /\bstorage\.(?:putJson|putBytes|putText|delete)\w*\s*\(/g;
 const RETRY_CALL = /\bretryHomeserverWrite\s*\(/g;
@@ -13,7 +15,7 @@ const RETRY_CALL = /\bretryHomeserverWrite\s*\(/g;
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const path = join(dir, entry);
-    if (statSync(path).isDirectory()) return entry === 'node_modules' ? [] : sourceFiles(path);
+    if (statSync(path).isDirectory()) return entry === 'node_modules' || path === TEST_UTILS ? [] : sourceFiles(path);
     if (!/\.(ts|tsx)$/.test(entry) || /\.test\.(ts|tsx)$/.test(entry)) return [];
     return [path];
   });
@@ -70,11 +72,24 @@ function lineOf(code: string, index: number): number {
 }
 
 describe('homeserver write call sites', () => {
-  const files = sourceFiles(SRC).map((path) => ({
-    path: relative(ROOT, path),
-    code: codeOnly(readFileSync(path, 'utf8')),
-  }));
+  const files = sourceFiles(SRC).map((path) => {
+    const source = readFileSync(path, 'utf8');
+    return { path: relative(ROOT, path), source, code: codeOnly(source) };
+  });
   const service = files.find(({ path }) => path === HOMESERVER_SERVICE)!;
+
+  it('imports the data model client nowhere outside src/test-utils', () => {
+    // `pubky-social-specs/client` writes through the SDK session directly, past the retry policy and
+    // the write fences above. Reads are `list` + `getBytes` + `decodeObject`; writes `putBlob` of a
+    // built body or `deleteIdempotent` (ADR-0004 write path, social v1 decision D12).
+    const offenders = files
+      .filter(({ source }) =>
+        /\bfrom\s+['"]pubky-social-specs\/client['"]|\bimport\s*\(\s*['"]pubky-social-specs\/client['"]/.test(source),
+      )
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
 
   it('writes to homeserver storage only through HomeserverService', () => {
     const offenders = files
@@ -114,7 +129,10 @@ describe('homeserver write call sites', () => {
     const unfenced: Record<string, string> = {
       'ProfileApplication.commitCreate': 'the first profile.json, built from the form, not a read',
       'ProfileApplication.deleteFile': 'account deletion: a DELETE has no body to go stale',
+      'FeedApplication.deleteStoredFeed': 'feed deletion: a DELETE has no body to go stale',
       'LocksApplication.replicateUnlockedContent': 'the replica bytes are fixed by the unlocked content',
+      'PostApplication.commitCreate': 'the first version of a post, built from the composer, not a read',
+      'PostApplication.commitDeleteUnderLock': 'a DELETE has no body to go stale',
     };
     const offenders = files
       .filter(({ path, code }) => path !== HOMESERVER_SERVICE && /\bretryHomeserverWriteAfterReread\s*\(/.test(code))

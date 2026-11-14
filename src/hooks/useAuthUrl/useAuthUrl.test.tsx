@@ -2,6 +2,7 @@ import type { Session } from '@synonymdev/pubky';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from '@/controllers/auth/auth';
+import { createAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode, NetworkErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -137,6 +138,29 @@ describe('useAuthUrl', () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ description: expect.stringContaining('different homeserver') }),
     );
+  });
+  it.each([
+    ['capabilities', 'Authorization failed. Approve every requested permission and try again.'],
+    ['identity', 'Authorization failed. Approve with the key you are signed in with.'],
+  ] as const)('names the cause of a %s refusal', async (reason, description) => {
+    const pending = flow();
+    vi.mocked(AuthController.getAuthUrl).mockResolvedValue(pending.value);
+    const { result } = renderHook(() => useAuthUrl());
+    await waitFor(() => expect(result.current.url).not.toBe(''));
+    await act(async () => pending.reject(createAuthApprovalMismatchError(reason)));
+    expect(result.current.isExpired).toBe(true);
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description });
+  });
+  it('names a missing permission over the signed-in key during an upgrade', async () => {
+    const pending = flow();
+    vi.mocked(AuthController.getUpgradeAuthUrl).mockResolvedValue(pending.value);
+    const { result } = renderHook(() => useAuthUrl({ type: 'upgrade' }));
+    await waitFor(() => expect(result.current.url).not.toBe(''));
+    await act(async () => pending.reject(createAuthApprovalMismatchError('capabilities')));
+    expect(toast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Authorization failed. Approve every requested permission and try again.',
+    });
   });
   it('copies only a current nonempty link', async () => {
     vi.mocked(AuthController.getAuthUrl).mockResolvedValue(flow().value);

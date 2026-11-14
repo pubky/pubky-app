@@ -1,0 +1,89 @@
+import { buildPost, editPost, listPrefix } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
+import { describe, expect, it } from 'vitest';
+import { pickHeadVersion, pickListedPostIds, pickPostVersions } from './post.head';
+
+const OWNER = fakeOwner(1);
+
+describe('pickHeadVersion', () => {
+  it('picks the version with the highest edit id, whatever order the listing has', () => {
+    const first = buildPost(OWNER, { content: 'v1' });
+    const second = editPost(OWNER, first.url, { ...first.object, content: 'v2' });
+    const third = editPost(OWNER, second.url, { ...second.object, content: 'v3' });
+
+    expect(pickHeadVersion([third.url, first.url, second.url])).toBe(third.url);
+    expect(pickHeadVersion([first.url])).toBe(first.url);
+  });
+
+  it('returns null for an empty listing, the post the migration skipped', () => {
+    expect(pickHeadVersion([])).toBeNull();
+  });
+
+  it('skips entries that are no post version: a foreign file, a directory, a reference', () => {
+    const post = buildPost(OWNER, { content: 'v1' });
+
+    expect(
+      pickHeadVersion([
+        `${listPrefix(OWNER, 'public')}posts/${post.id}/`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}/notes.txt`,
+        'not a uri',
+        post.url,
+      ]),
+    ).toBe(post.url);
+  });
+
+  it('keeps a slugged version in the running', () => {
+    const post = buildPost(OWNER, { content: 'v1' });
+    const slugged = editPost(OWNER, post.url, { ...post.object, content: 'v2' }, { slug: 'renamed' });
+
+    expect(pickHeadVersion([post.url, slugged.url])).toBe(slugged.url);
+  });
+});
+
+describe('pickPostVersions', () => {
+  it('keeps every public and private version, slugged or not, in listing order', () => {
+    const post = buildPost(OWNER, { content: 'v1' });
+    const slugged = editPost(OWNER, post.url, { ...post.object, content: 'v2' }, { slug: 'renamed' });
+    const draft = `pubky://${OWNER}/priv/social/v1/posts/${post.id}/${post.id}.json`;
+
+    expect(pickPostVersions([slugged.url, draft, post.url])).toEqual([slugged.url, draft, post.url]);
+  });
+
+  it('skips entries that are no post version: a foreign file, a directory, a reference', () => {
+    const post = buildPost(OWNER, { content: 'v1' });
+
+    expect(
+      pickPostVersions([
+        `${listPrefix(OWNER, 'public')}posts/${post.id}/`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}/notes.txt`,
+        'not a uri',
+        post.url,
+      ]),
+    ).toEqual([post.url]);
+  });
+});
+
+describe('pickListedPostIds', () => {
+  it('names every post with a version once, whatever its version count', () => {
+    const first = buildPost(OWNER, { content: 'a' });
+    const edited = editPost(OWNER, first.url, { ...first.object, content: 'a2' });
+    const second = buildPost(OWNER, { content: 'b' });
+
+    expect(pickListedPostIds([first.url, edited.url, second.url])).toEqual([first.id, second.id]);
+  });
+
+  it('skips entries that are no post version', () => {
+    const post = buildPost(OWNER, { content: 'v1' });
+
+    expect(
+      pickListedPostIds([
+        `${listPrefix(OWNER, 'public')}posts/${post.id}/`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}`,
+        `pubky://${OWNER}/pub/social/v1/posts/${post.id}/notes.txt`,
+        'not a uri',
+      ]),
+    ).toEqual([]);
+  });
+});

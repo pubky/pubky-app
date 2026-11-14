@@ -41,6 +41,19 @@ describe('useCreateInterestsFeed', () => {
     expect(result.current.isCreating).toBe(false);
   });
 
+  it('resolves false when the account changed while the write waited, so nothing was created', async () => {
+    mocks.commitCreate.mockResolvedValue(null);
+    const { result } = renderHook(() => useCreateInterestsFeed());
+
+    let created: boolean | undefined;
+    await act(async () => {
+      created = await result.current.createInterestsFeed(['bitcoin']);
+    });
+
+    expect(created).toBe(false);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   it('creates without looking up existing feeds, so a retry after a failed write creates again', async () => {
     // A failed homeserver write rolls the local row back, so the retry starts from a clean
     // slate: no lookup by name, no update of a leftover row, just a plain create.

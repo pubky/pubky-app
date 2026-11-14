@@ -121,7 +121,7 @@ describe('ArticleComposerPreview', () => {
     ]);
   });
 
-  it('puts a cover picked this session in slot 0 and numbers inline media after it', () => {
+  it('shows a cover picked this session on its own and numbers inline media from 0', () => {
     const coverFile = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' });
 
     render(
@@ -138,9 +138,9 @@ describe('ArticleComposerPreview', () => {
     const cover = screen.getByTestId('article-composer-preview-cover');
     expect(cover).toHaveAttribute('src', 'blob:cover');
     expect(cover).toHaveAttribute('alt', 'cover.jpg');
-    expect(screen.getByTestId('post-text')).toHaveAttribute('data-content', '![](attachment:1)');
+    // The cover is no attachment slot: the inline entries alone align with the body's slots
+    expect(screen.getByTestId('post-text')).toHaveAttribute('data-content', '![](attachment:0)');
     expect(readLocalAttachments()).toEqual([
-      { type: 'image/jpeg', name: 'cover.jpg', urls: { main: 'blob:cover' } },
       { type: 'image/png', name: 'diagram.png', urls: { main: 'blob:preview-image' } },
     ]);
   });
@@ -161,14 +161,12 @@ describe('ArticleComposerPreview', () => {
       />,
     );
 
-    // The same variant the cover strip shows for it
+    // The same variant the cover strip shows for it; it takes no inline slot
     expect(screen.getByTestId('article-composer-preview-cover')).toHaveAttribute(
       'src',
       'https://cdn.example/feed/cover',
     );
-    expect(readLocalAttachments()).toEqual([
-      { type: 'image/webp', name: 'Old cover', urls: { main: 'https://cdn.example/feed/cover' } },
-    ]);
+    expect(readLocalAttachments()).toEqual([]);
   });
 
   it('renders no cover while a kept cover is still resolving', () => {

@@ -1,4 +1,4 @@
-import { FeedResult } from 'pubky-app-specs';
+import type { Built, Feed, KnownPostKind } from 'pubky-social-specs';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -7,6 +7,8 @@ import type { Pubky } from '@/models/models.types';
 export interface FeedDeleteParams {
   userId: string;
   params: TFeedPersistParams;
+  /** See `FeedPutParams.isCurrent`. */
+  isCurrent?: () => boolean;
 }
 
 export interface FeedUpdateParams {
@@ -17,12 +19,50 @@ export interface FeedUpdateParams {
 export interface FeedPutParams {
   userId: string;
   params: TFeedPersistParams;
+  /**
+   * Whether the account the write started for is still the current one; checked once the sync lock is
+   * held, before every local write and before every homeserver write. A write that waited on the lock
+   * may start after a logout cleared the database, which then belongs to the next account.
+   */
+  isCurrent?: () => boolean;
 }
 
-export interface PersistAndSyncParams {
-  userId: string;
+/** One stored-feed write: the object to store at `feedUrl`, merged over what `storedUrl` holds. */
+export interface StoredFeedWriteParams {
+  /** Where the copy the write starts from lives: the feed being edited, or the new id itself on a create. */
+  storedUrl: string;
+  /** The private path of the feed being written. */
+  feedUrl: string;
+  /** The built feed, every known member from this client's input. */
+  feed: Feed;
+}
+
+export interface PersistAndSyncParams extends StoredFeedWriteParams {
   feedSchema: FeedModelSchema;
-  normalizedFeed: FeedResult;
+  /** See `FeedPutParams.isCurrent`. */
+  isCurrent?: () => boolean;
+}
+
+export interface LocalFeedRowParams {
+  id: string;
+  feed: Feed;
+  /** The content filter as a kind this client knows, already checked by the caller. */
+  content: KnownPostKind | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface FeedFetchOptions {
+  /** Whether the account the fetch started for is still the current one; checked before the local write. */
+  isCurrent?: () => boolean;
+}
+
+export interface LocalFeedReconcileParams extends FeedFetchOptions {
+  userId: Pubky;
+  /** The feeds the listing holds, decoded. */
+  feeds: FeedModelSchema[];
+  /** The feed ids the homeserver listing names. */
+  listedIds: ReadonlySet<string>;
 }
 
 export interface LocalFeedMigrationParams {
@@ -33,7 +73,7 @@ export interface LocalFeedMigrationParams {
 }
 
 export type TFeedPersistCreateParams = {
-  feed: FeedResult;
+  feed: Built<Feed>;
   existingId?: string;
 };
 
@@ -53,25 +93,6 @@ export type TFeedPersistInput = {
   userId: Pubky;
   params: TFeedPersistParams;
 };
-
-export interface RemoteFeedParams {
-  userId: Pubky;
-  remoteFeed: HomeserverFeedJson;
-}
-
-export interface HomeserverFeedJson {
-  name: string;
-  icon?: string | null;
-  feed: {
-    tags?: string[] | null;
-    domain_tags?: string[] | null;
-    reach: string;
-    layout: string;
-    sort: string;
-    content?: string | null;
-  };
-  created_at: number;
-}
 
 export function isFeedDeleteParams(params: TFeedPersistParams): params is TFeedPersistDeleteParams {
   return 'feedId' in params && !('changes' in params) && !('feed' in params);

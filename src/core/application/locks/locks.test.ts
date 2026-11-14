@@ -10,6 +10,7 @@ import {
   IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
 } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
+import { GuardedPostBuilder } from '@/pipes/locks/guardedPost.builder';
 import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import {
   HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
@@ -106,13 +107,17 @@ beforeEach(() => {
   mocks.cachePost.mockReset().mockResolvedValue(undefined);
 });
 
-const file = (contentType = 'application/json') => ({ contentType, bytes: new Uint8Array([1]) });
 /** A picked attachment, as the composer hands it over. */
 const picked = (type: string, body = 'x') => new File([body], 'picked', { type });
 const resourceMetadata = { hash: '07'.repeat(32), content_type: 'application/json', size: 1 };
 const descriptor = (path: string) => ({ path: `/priv/app.locks/content/${path}`, ...resourceMetadata });
-/** Default builder: ignores the attachment paths and returns a fixed post JSON. */
-const buildPost = () => file();
+/** The post to guard, as the composer captured it; the application builds the primary over the uploads. */
+const lockedPost = { content: 'my secret', kind: 'short' };
+/** The guarded primary the application uploaded last, read back as the reader does. */
+const uploadedPrimary = () => {
+  const calls = mocks.registerGuardedResource.mock.calls;
+  return GuardedContentParser.parsePost(calls[calls.length - 1][0].bytes);
+};
 const paymentConfig = { amount: '1000', asset: 'BTC' as const };
 const CREATOR_PUBKY = `pubky${MOCK_LOCK_AUTHOR_PUBKY}`;
 const LOCK_SERVER_PUBKY = 'pubky7ir1ttte48bcp4zjychjyscicrwi1j34mtt91ptsafdbjmr8g9eo';
@@ -236,24 +241,25 @@ describe('LocksApplication (content)', () => {
   });
 
   it('uploads the attachments first, then the post built from their paths', async () => {
-    const seen: TGuardedResource[][] = [];
-    let seenOwner: string | undefined;
     const result = await LocksApplication.createLockContent({
       attachments: [picked('image/png'), picked('video/mp4')],
-      buildPost: (attachmentResources, ownerPubky) => {
-        seen.push(attachmentResources);
-        seenOwner = ownerPubky;
-        return file();
-      },
+      post: lockedPost,
       lockConfig: paymentConfig,
     });
 
     // Attachments upload first (id-1, id-2); the post is uploaded last (id-3).
     expect(mocks.registerGuardedResource.mock.calls.map(([params]) => params.path)).toEqual(['id-1', 'id-2', 'id-3']);
-    // The builder sees the attachment descriptors, so the post can reference their paths.
-    expect(seen).toEqual([[descriptor('id-1'), descriptor('id-2')]]);
-    // ...and the owner the bytes landed on, so those references point at the right account.
-    expect(seenOwner).toBe(CREATOR_PUBKY);
+    // The primary is a v1 post over the attachment paths, on the account the bytes landed on
+    // (never the pubky.app account), declared octet-stream for the homeserver.
+    expect(mocks.registerGuardedResource.mock.calls[2][0].contentType).toBe('application/octet-stream');
+    expect(uploadedPrimary()).toEqual({
+      content: 'my secret',
+      kind: 'short',
+      attachments: [
+        `pubky://${MOCK_LOCK_AUTHOR_PUBKY}${descriptor('id-1').path}`,
+        `pubky://${MOCK_LOCK_AUTHOR_PUBKY}${descriptor('id-2').path}`,
+      ],
+    });
 
     expect(mocks.creatorCreateContentLock).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
@@ -273,11 +279,10 @@ describe('LocksApplication (content)', () => {
 
   it('uploads at most three attachments at once, keeps their order, and uploads the post only after all of them (#2316)', async () => {
     const uploads = deferUploads();
-    const builder = vi.fn(() => file());
 
     const publish = LocksApplication.createLockContent({
       attachments: [picked('image/png'), picked('video/mp4'), picked('image/jpeg'), picked('image/webp')],
-      buildPost: builder,
+      post: lockedPost,
       lockConfig: paymentConfig,
     });
     await vi.waitFor(() => expect(uploads.pending.size).toBe(3));
@@ -285,28 +290,24 @@ describe('LocksApplication (content)', () => {
 
     // Three are in flight together; the fourth waits for a free slot, and there is no post yet.
     expect([...uploads.pending.keys()]).toEqual(['id-1', 'id-2', 'id-3']);
-    expect(builder).not.toHaveBeenCalled();
 
     // A slot freed out of order goes to the next attachment, and only to it.
     uploads.settle('id-3');
     await vi.waitFor(() => expect(uploads.pending.has('id-4')).toBe(true));
     await drainTasks();
     expect(uploads.pending.size).toBe(4);
-    expect(builder).not.toHaveBeenCalled();
 
     // Everything but `id-2` done: the post still waits for it.
     uploads.settle('id-4');
     uploads.settle('id-1');
     await drainTasks();
-    expect(builder).not.toHaveBeenCalled();
     expect(uploads.pending.has('id-5')).toBe(false);
     uploads.settle('id-2');
 
     await vi.waitFor(() => expect(uploads.pending.has('id-5')).toBe(true));
-    // The builder sees the attachments in the creator's order, not the order they finished in.
-    expect(builder).toHaveBeenCalledExactlyOnceWith(
-      [descriptor('id-1'), descriptor('id-2'), descriptor('id-3'), descriptor('id-4')],
-      CREATOR_PUBKY,
+    // The post references the attachments in the creator's order, not the order they finished in.
+    expect(uploadedPrimary()?.attachments).toEqual(
+      ['id-1', 'id-2', 'id-3', 'id-4'].map((id) => `pubky://${MOCK_LOCK_AUTHOR_PUBKY}${descriptor(id).path}`),
     );
     expect(mocks.creatorCreateContentLock).not.toHaveBeenCalled();
     uploads.settle('id-5');
@@ -320,12 +321,11 @@ describe('LocksApplication (content)', () => {
 
   it('starts no further attachment after one fails, and rejects once the in-flight ones settle', async () => {
     const uploads = deferUploads();
-    const builder = vi.fn(() => file());
     let settled = false;
 
     const publish = LocksApplication.createLockContent({
       attachments: [picked('image/png'), picked('video/mp4'), picked('image/jpeg'), picked('image/webp')],
-      buildPost: builder,
+      post: lockedPost,
       lockConfig: paymentConfig,
     }).finally(() => {
       settled = true;
@@ -342,15 +342,15 @@ describe('LocksApplication (content)', () => {
     uploads.settle('id-2');
     uploads.settle('id-3');
     await expect(publish).rejects.toThrow('upload failed');
+    // The three attachments only: no post was built or uploaded
     expect(mocks.registerGuardedResource).toHaveBeenCalledTimes(3);
-    expect(builder).not.toHaveBeenCalled();
     expect(mocks.creatorCreateContentLock).not.toHaveBeenCalled();
   });
 
   it('gives identical files distinct paths, so neither overwrites the other', async () => {
     await LocksApplication.createLockContent({
       attachments: [picked('image/png'), picked('image/png')],
-      buildPost,
+      post: lockedPost,
       lockConfig: paymentConfig,
     });
 
@@ -358,20 +358,18 @@ describe('LocksApplication (content)', () => {
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it('builds the post with an empty list when there are no attachments', async () => {
-    const builder = vi.fn(() => file());
+  it('builds the post with no attachments when there are none', async () => {
+    await LocksApplication.createLockContent({ post: lockedPost, lockConfig: paymentConfig });
 
-    await LocksApplication.createLockContent({ buildPost: builder, lockConfig: paymentConfig });
-
-    expect(builder).toHaveBeenCalledWith([], undefined);
     expect(mocks.registerGuardedResource).toHaveBeenCalledTimes(1);
+    expect(uploadedPrimary()).toEqual({ content: 'my secret', kind: 'short', attachments: null });
     expect(mocks.creatorCreateContentLock).toHaveBeenCalledOnce();
     // The SDK omits secondary_resources when there are no attachments.
     expect(mocks.creatorCreateContentLock.mock.calls[0][0]).not.toHaveProperty('secondary_resources');
   });
 
   it.each(['BTC', 'USD'] as const)('sends a %s payment criterion for the lock owner', async (asset) => {
-    await LocksApplication.createLockContent({ buildPost, lockConfig: { amount: '1234', asset } });
+    await LocksApplication.createLockContent({ post: lockedPost, lockConfig: { amount: '1234', asset } });
 
     expect(mocks.creatorCreateContentLock).toHaveBeenCalledOnce();
     const [params] = mocks.creatorCreateContentLock.mock.calls[0];
@@ -389,19 +387,18 @@ describe('LocksApplication (content)', () => {
     expect(params.lock_server).toEqual({ override: LOCK_SERVER_PUBKY });
   });
 
-  it('does not build the post or create the lock when an attachment upload fails', async () => {
+  it('does not upload the post or create the lock when an attachment upload fails', async () => {
     mocks.registerGuardedResource.mockRejectedValueOnce(new Error('upload failed'));
-    const builder = vi.fn(() => file());
 
     await expect(
       LocksApplication.createLockContent({
         attachments: [picked('image/png')],
-        buildPost: builder,
+        post: lockedPost,
         lockConfig: paymentConfig,
       }),
     ).rejects.toThrow('upload failed');
 
-    expect(builder).not.toHaveBeenCalled();
+    expect(mocks.registerGuardedResource).toHaveBeenCalledTimes(1);
     expect(mocks.creatorCreateContentLock).not.toHaveBeenCalled();
   });
 
@@ -411,7 +408,7 @@ describe('LocksApplication (content)', () => {
     it('deletes no upload when the publish succeeds', async () => {
       await LocksApplication.createLockContent({
         attachments: [picked('image/png')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       });
 
@@ -422,7 +419,7 @@ describe('LocksApplication (content)', () => {
       const uploads = deferUploads();
       const publish = LocksApplication.createLockContent({
         attachments: [picked('image/png'), picked('video/mp4'), picked('image/jpeg'), picked('image/webp')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       });
       await vi.waitFor(() => expect(uploads.pending.size).toBe(3));
@@ -438,13 +435,14 @@ describe('LocksApplication (content)', () => {
 
     it('deletes the attachments when the post cannot be built from them', async () => {
       const refused = new Error('no owner');
+      vi.spyOn(GuardedPostBuilder, 'toPrimary').mockImplementationOnce(() => {
+        throw refused;
+      });
 
       await expect(
         LocksApplication.createLockContent({
           attachments: [picked('image/png'), picked('video/mp4')],
-          buildPost: () => {
-            throw refused;
-          },
+          post: lockedPost,
           lockConfig: paymentConfig,
         }),
       ).rejects.toBe(refused);
@@ -458,7 +456,7 @@ describe('LocksApplication (content)', () => {
       await expect(
         LocksApplication.createLockContent({
           attachments: [picked('image/png'), picked('video/mp4')],
-          buildPost,
+          post: lockedPost,
           lockConfig: paymentConfig,
         }),
       ).rejects.toThrow('HTTP 413');
@@ -475,7 +473,7 @@ describe('LocksApplication (content)', () => {
       await expect(
         LocksApplication.createLockContent({
           attachments: [picked('image/png'), picked('video/mp4')],
-          buildPost,
+          post: lockedPost,
           lockConfig: paymentConfig,
         }),
       ).rejects.toThrow('post upload failed');
@@ -492,7 +490,7 @@ describe('LocksApplication (content)', () => {
       await expect(
         LocksApplication.createLockContent({
           attachments: [picked('image/png')],
-          buildPost,
+          post: lockedPost,
           lockConfig: paymentConfig,
         }),
       ).rejects.toThrow('parse failed');
@@ -505,7 +503,7 @@ describe('LocksApplication (content)', () => {
 
       const error = await LocksApplication.createLockContent({
         attachments: [picked('image/png')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       }).catch((caught: unknown) => caught);
 
@@ -520,7 +518,7 @@ describe('LocksApplication (content)', () => {
 
       const error = await LocksApplication.createLockContent({
         attachments: [picked('image/png')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       }).catch((caught: unknown) => caught);
 
@@ -539,12 +537,8 @@ describe('LocksApplication (content)', () => {
       content_lock_path: '/pub/locks.app/LOCK1.json',
       content_lock: { creator },
     });
-    const buildPost = () => ({
-      contentType: 'application/json',
-      bytes: new TextEncoder().encode(JSON.stringify({ content: 'my secret', kind: 'short', attachments: null })),
-    });
 
-    await LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig });
+    await LocksApplication.createLockContent({ post: lockedPost, lockConfig: paymentConfig });
 
     expect(mocks.readContentLock).not.toHaveBeenCalled();
     expect(mocks.cacheDescriptor).not.toHaveBeenCalled();
@@ -570,7 +564,11 @@ describe('LocksApplication (content)', () => {
       const cleaned = new File(['clean'], 'a1b2c3.webp', { type: 'image/webp' });
       mocks.strip.mockImplementation(async (f) => (f === photo ? cleaned : f));
 
-      await LocksApplication.createLockContent({ attachments: [photo, doc], buildPost, lockConfig: paymentConfig });
+      await LocksApplication.createLockContent({
+        attachments: [photo, doc],
+        post: lockedPost,
+        lockConfig: paymentConfig,
+      });
 
       expect(mocks.strip.mock.calls.map(([f]) => f)).toEqual([photo, doc]);
       // Two attachments, then the post.
@@ -592,7 +590,7 @@ describe('LocksApplication (content)', () => {
 
       await LocksApplication.createLockContent({
         attachments: [picked('image/png'), picked('image/png'), picked('image/png')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       });
 
@@ -606,7 +604,7 @@ describe('LocksApplication (content)', () => {
 
       const error = await LocksApplication.createLockContent({
         attachments: [picked('image/gif')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       }).catch((caught: unknown) => caught);
 
@@ -627,7 +625,7 @@ describe('LocksApplication (content)', () => {
 
       const error = await LocksApplication.createLockContent({
         attachments: [picked('image/png')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       }).catch((caught: unknown) => caught);
 
@@ -642,7 +640,7 @@ describe('LocksApplication (content)', () => {
       await expect(
         LocksApplication.createLockContent({
           attachments: [picked('image/png'), picked('image/png')],
-          buildPost,
+          post: lockedPost,
           lockConfig: paymentConfig,
         }),
       ).rejects.toMatchObject({ category: ErrorCategory.Validation });

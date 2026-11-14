@@ -1,5 +1,4 @@
 import { renderHook } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isCollectionLayout } from '@/config/collections';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -220,10 +219,10 @@ describe('saved custom feed layout', () => {
       name: 'Cards feed',
       tags: [],
       domain_tags: [],
-      reach: PubkyAppFeedReach.All,
-      sort: PubkyAppFeedSort.Recent,
+      reach: 'all',
+      sort: 'recent',
       content: null,
-      layout: PubkyAppFeedLayout.Cards,
+      layout: 'cards',
       created_at: 0,
       updated_at: 0,
     });

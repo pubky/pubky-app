@@ -58,6 +58,11 @@ remain available for retry; generic auth errors do not prove revocation succeede
 - Cross-tab account changes bootstrap the incoming account and isolate account-specific memory. Same-account upgrades
   preserve the profile and mounted public/explore composer; protected settings remain mounted during healthy same-account restoration but redirect to the landing page after a failure. Accounts, published content and the Dexie version are unchanged.
 - SDK/HS ambient-cookie fallback is an accepted transport limitation, separate from app cookie authentication support.
+- Amended by [ADR-0026](0026-social-v1-migration-gate.md): a restored or adopted session is placed in the store only
+  after the social v1 migration gate passes (`restoreStatus` `social-migration` meanwhile, with the committed identity
+  and no session); the migrator and the flag read take the session explicitly instead of reading the store. A grant from
+  before the gate is retired through the ordinary logout unless this browser's record already saw the migration flag; a
+  grant this build admitted, or one in a browser whose record saw the flag at an earlier revision, resumes the run.
   Strict isolation is not a release blocker for #2600. App-owned raw public requests omit cookies.
 - SDK removal still lacks delegated-key ownership checks for duplicated pending approvals. Completed candidates rejected after approval (including scope/account mismatches and losing races)
   remain saved but inactive until safe cleanup can be established. Permission upgrades stay bound to the current account; normal sign-in may select another account.
@@ -67,7 +72,9 @@ remain available for retry; generic auth errors do not prove revocation succeede
   a retry consumes its pending or completed result. A late restored session or reauthentication result updates the still-owning
   generation automatically; logout or replacement prevents that result from changing the new account's state.
   Restore attempts retry only transient network/server failures with a fixed bound.
-  Automatic foreground recovery is throttled; the UI has no manual session-retry control.
+  Automatic foreground recovery is throttled. Three callers share that one exchange and its single migration-gate run
+  (ADR-0026): the late-result continuation, the `AuthCoordinator` focus/online retry and the `/migration` screen's Retry
+  on `temporary-error` (#3121), the one manual session-retry control; the first to consume the result clears it.
 - Terminal failures of active, owned HS storage requests notify AuthCoordinator through a controller/application
   subscription. The controller drops only the matching live session and requires ordinary sign-in, retaining saved
   credentials and account data. A same-origin BroadcastChannel shares only the failed app generation with other tabs;

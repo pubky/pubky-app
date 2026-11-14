@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AUTH_ROUTES,
@@ -9,9 +9,11 @@ import {
   matchesAllowedRoute,
   ONBOARDING_ROUTES,
   PUBLIC_ROUTES,
+  SOCIAL_MIGRATION_SIGNED_OUT_ROUTES,
 } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { MigrationController } from '@/controllers/migration/migration';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { AuthCoordinator } from '@/coordinators/auth/auth';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
@@ -22,13 +24,27 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isShopReauthorization, shopSignInReturn } from '@/libs/shop-embed/bridge';
+import {
+  clearSocialMigrationSignedOutNotice,
+  readSocialMigrationSignedOutNotice,
+} from '@/libs/social-migration/signed-out-notice';
 import { toast } from '@/molecules/Toaster/toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
+import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
+
+// The gate's signed-out notice is tab-scoped `sessionStorage` that this tab's own code writes and clears, each time
+// followed by a navigation or a status change that renders the guard again, so there is nothing to subscribe to. Read
+// through `useSyncExternalStore` (`useIsHydrated`'s pattern): React runs the read on every render, where the React
+// Compiler would memoize a plain call and an effect-backed state is one render stale, and the server snapshot keeps
+// the hydrating render equal to the server's.
+const subscribeToSignedOutNotice = () => () => undefined;
+const hasSignedOutNotice = () => readSocialMigrationSignedOutNotice() !== null;
+const hasSignedOutNoticeOnServer = () => false;
 
 interface RouteGuardProviderProps {
   children: ReactNode;
@@ -48,6 +64,11 @@ interface RouteGuardProviderProps {
  * - UNAUTHENTICATED users → onboarding/auth routes
  * - AUTHENTICATED users → app routes (feed, profile, etc.)
  * - NEEDS_PROFILE_CREATION users → profile creation route
+ * - NEEDS_SOCIAL_MIGRATION users → the migration gate, the public routes included (ADR-0026)
+ *
+ * Outside that map, a signed-out tab whose gate sign-out explanation is still owed (`signed-out-notice.ts`) is sent
+ * to `/migration` from every route but `SOCIAL_MIGRATION_SIGNED_OUT_ROUTES`, and a signed-in tab drops a notice it
+ * still holds (ADR-0026 amendment of 2026-11-13).
  */
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const router = useRouter();
@@ -63,6 +84,8 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const wasDbReset = useMigrationStore((state) => state.wasDbReset);
   const isPublic = PUBLIC_ROUTES.includes(pathname) || isDynamicPublicRoute(pathname);
+  // The migration gate holds the account; a public page could act as it through a mounted hook.
+  const isGated = status === AuthStatus.NEEDS_SOCIAL_MIGRATION;
   const [lastReadyPage, setLastReadyPage] = useState<{ pubky: string; pathname: string } | null>(null);
   useEffect(() => {
     if (!currentUserPubky) setLastReadyPage(null);
@@ -71,14 +94,49 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   }, [currentUserPubky, pathname, restoreStatus, session, wasDbReset, isLoading]);
   const preserveMountedPage =
     currentUserPubky !== null && lastReadyPage?.pubky === currentUserPubky && lastReadyPage.pathname === pathname;
+  // A signup's migration run is inline (ADR-0026): the session is not in the store yet, the onboarding page stays.
+  const inlineGateRun = useSocialMigrationStore((state) => state.stage === 'running');
   const interactiveAuth = Boolean(
-    session &&
+    (session || inlineGateRun) &&
     restoreStatus === 'restoring' &&
     (pathname === AUTH_ROUTES.SIGN_IN ||
       Object.values(ONBOARDING_ROUTES).some((route) => matchesAllowedRoute(pathname, route))),
   );
   const canBrowseWithoutSession =
     hasHydrated && (needsSignIn || restoreStatus === 'restoring') && (isPublic || isCoreExploreRoute(pathname));
+  // The account whose failed restore this tab shows without a session; its retries keep the pages it already rendered.
+  const [retryingPubky, setRetryingPubky] = useState<string | null>(null);
+  useEffect(() => {
+    if (restoreStatus === 'temporary-error') setRetryingPubky(currentUserPubky);
+    else if (restoreStatus !== 'restoring') setRetryingPubky(null);
+  }, [currentUserPubky, restoreStatus]);
+  // Until the gate decides (session exchange, account preparation, flag read, another tab's lock), an account this
+  // browser never saw pass it may still be held: only the gate's own routes render meanwhile, never a page (D11).
+  // A page this tab showed the account ready on has passed it already; a retry after a failed restore shows nothing
+  // the failure did not already show.
+  const isGatePending =
+    !isGated &&
+    isLoading &&
+    session === null &&
+    currentUserPubky !== null &&
+    !interactiveAuth &&
+    !preserveMountedPage &&
+    retryingPubky !== currentUserPubky &&
+    !SocialMigrationController.hasPassedLocally(currentUserPubky);
+  // The gate's forced sign-out leaves its reason in tab storage; while that notice is pending the explanation is owed
+  // on every route but the gate's own and sign-in, whatever page the tab booted on: the cut-over worker reloads a tab
+  // to its creation URL (ADR-0026 amendment). A settled signed-out status only: a signed-in account owes nothing, and
+  // the gate itself handles a held one.
+  const signedOutNoticePending = useSyncExternalStore(
+    subscribeToSignedOutNotice,
+    hasSignedOutNotice,
+    hasSignedOutNoticeOnServer,
+  );
+  const owesSignedOutExplanation =
+    status === AuthStatus.UNAUTHENTICATED &&
+    !isLoading &&
+    signedOutNoticePending &&
+    !SOCIAL_MIGRATION_SIGNED_OUT_ROUTES.some((route) => matchesAllowedRoute(pathname, route));
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -150,6 +208,15 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = (() => {
+    // Behind the gate, or before it decides, only its own page, logout and the legal pages render (public or not)
+    if (isGated || isGatePending)
+      return ROUTE_ACCESS_MAP[AuthStatus.NEEDS_SOCIAL_MIGRATION].allowedRoutes.some((route) =>
+        matchesAllowedRoute(pathname, route),
+      );
+
+    // An owed sign-out explanation renders nothing else, the public pages included
+    if (owesSignedOutExplanation) return false;
+
     // Static public routes are ALWAYS accessible, even during loading
     if (PUBLIC_ROUTES.includes(pathname)) return true;
 
@@ -184,11 +251,18 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
   // Handle automatic redirects when user tries to access unauthorized routes
   useEffect(() => {
-    // Static public routes never redirect
-    if (PUBLIC_ROUTES.includes(pathname)) return;
+    // Before the public early returns. Replaced, not pushed: the user never chose the route the worker reloaded the
+    // tab onto, and Back must not return to a page that only sends them here again.
+    if (owesSignedOutExplanation) {
+      router.replace(AUTH_ROUTES.MIGRATION);
+      return;
+    }
 
-    // Dynamic public routes never redirect
-    if (isDynamicPublicRoute(pathname)) return;
+    // Static public routes never redirect, except away from an account held behind the gate
+    if (!isGated && PUBLIC_ROUTES.includes(pathname)) return;
+
+    // Dynamic public routes never redirect, with the same exception
+    if (!isGated && isDynamicPublicRoute(pathname)) return;
 
     // Wait for authentication status to be determined for protected routes
     if (isLoading) return;
@@ -196,9 +270,13 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     // No redirect needed if user has access to current route
     if (isRouteAccessible) return;
 
-    // An explicit Shop login returns to its validated wrapper URL after App authentication.
-    // This branch is restricted to sign-in; ordinary route protection keeps its existing target.
-    if (pathname === AUTH_ROUTES.SIGN_IN && status === AuthStatus.AUTHENTICATED) {
+    // An explicit Shop login returns to its validated wrapper URL after App authentication, from sign-in or from
+    // the migration gate the sign-in detoured through (its query travels along, below). Ordinary route protection
+    // keeps its existing target.
+    if (
+      (pathname === AUTH_ROUTES.SIGN_IN || pathname === AUTH_ROUTES.MIGRATION) &&
+      status === AuthStatus.AUTHENTICATED
+    ) {
       const shopReturn = shopSignInReturn(search);
       if (shopReturn) {
         router.push(shopReturn);
@@ -218,11 +296,21 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       return;
     }
 
-    // Only redirect if we have a target and we're not already there
+    // Only redirect if we have a target and we're not already there. A gated sign-in keeps its query through the
+    // detour: the Shop return in it is honoured from /migration once the account is ready (ADR-0026).
     if (redirectTo && pathname !== redirectTo) {
-      router.push(redirectTo);
+      const keepsQuery = pathname === AUTH_ROUTES.SIGN_IN && redirectTo === AUTH_ROUTES.MIGRATION && search !== '';
+      router.push(keepsQuery ? `${redirectTo}?${search}` : redirectTo);
     }
-  }, [status, pathname, search, router, isLoading, isRouteAccessible]);
+  }, [status, pathname, search, router, isLoading, isRouteAccessible, isGated, owesSignedOutExplanation]);
+
+  // A signed-in account owes no explanation. A notice survives when another tab of the profile signs in: the session
+  // syncs across and the gate passes on the local record or the flag, with no engine run to clear it; left alone it
+  // would send a later voluntary logout to the explanation with the wrong reason. The status is never AUTHENTICATED
+  // between the notice's write and the forced sign-out, so the gate's own notice is never dropped here.
+  useEffect(() => {
+    if (status === AuthStatus.AUTHENTICATED && signedOutNoticePending) clearSocialMigrationSignedOutNotice();
+  }, [status, signedOutNoticePending]);
 
   // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
   useRestoreLocksAuth();
@@ -230,10 +318,17 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Show loading spinner while:
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
-  // 3. Migration re-sync is in progress (wasDbReset = true)
+  // 3. Migration re-sync is in progress (wasDbReset = true), unless the account is held behind the social
+  //    migration gate or may be: the resync waits for a ready session, which the gate's screen has to produce first
   if (
     !isRouteAccessible ||
-    (wasDbReset && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
+    (wasDbReset &&
+      !isGated &&
+      !isGatePending &&
+      !needsSignIn &&
+      !canBrowseWithoutSession &&
+      !preserveMountedPage &&
+      !interactiveAuth)
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">

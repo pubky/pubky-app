@@ -2,20 +2,20 @@
  * Pubky App Spec Feed Mappers
  *
  * This utility provides bidirectional mapping between:
- * - Source 1: pubky-app-specs enums (node_modules/pubky-app-specs/pubky_app_specs.d.ts)
- *   - PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind
+ * - Source 1: pubky-social-specs string unions
+ *   - KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind
  * - Source 2: Home store types (src/core/stores/home/home.types.ts)
  *   - LAYOUT, REACH, SORT, CONTENT
  *
- * Purpose: Enable conversion between the external pubky-app-specs format and
+ * Purpose: Enable conversion between the external pubky-social-specs format and
  * the internal home store representation used throughout the application.
  *
  * Note: Some values don't have direct mappings and will return undefined:
- * - PubkyAppFeedReach.Followers has no home type equivalent
- * - CONTENT.ALL has no PubkyAppPostKind equivalent
+ * - 'followers' has no home type equivalent
+ * - CONTENT.ALL has no KnownPostKind equivalent
  */
 
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 import {
   CONTENT,
   type ContentType,
@@ -32,19 +32,19 @@ import {
 // ============================================================================
 
 /**
- * Maps PubkyAppFeedLayout enum to home LayoutType
+ * Maps KnownFeedLayout to home LayoutType
  */
-export function pubkyLayoutToHomeLayout(layout: PubkyAppFeedLayout): LayoutType | undefined {
+export function pubkyLayoutToHomeLayout(layout: KnownFeedLayout): LayoutType | undefined {
   switch (layout) {
-    case PubkyAppFeedLayout.Columns:
+    case 'columns':
       return LAYOUT.COLUMNS;
-    case PubkyAppFeedLayout.Wide:
+    case 'wide':
       return LAYOUT.WIDE;
-    case PubkyAppFeedLayout.List:
+    case 'list':
       return LAYOUT.LIST;
-    case PubkyAppFeedLayout.Visual:
+    case 'visual':
       return LAYOUT.VISUAL;
-    case PubkyAppFeedLayout.Cards:
+    case 'cards':
       return LAYOUT.CARDS;
     default:
       return undefined;
@@ -52,20 +52,20 @@ export function pubkyLayoutToHomeLayout(layout: PubkyAppFeedLayout): LayoutType 
 }
 
 /**
- * Maps home LayoutType to PubkyAppFeedLayout enum
+ * Maps home LayoutType to KnownFeedLayout
  */
-export function homeLayoutToPubkyLayout(layout: LayoutType): PubkyAppFeedLayout | undefined {
+export function homeLayoutToPubkyLayout(layout: LayoutType): KnownFeedLayout | undefined {
   switch (layout) {
     case LAYOUT.COLUMNS:
-      return PubkyAppFeedLayout.Columns;
+      return 'columns';
     case LAYOUT.WIDE:
-      return PubkyAppFeedLayout.Wide;
+      return 'wide';
     case LAYOUT.LIST:
-      return PubkyAppFeedLayout.List;
+      return 'list';
     case LAYOUT.VISUAL:
-      return PubkyAppFeedLayout.Visual;
+      return 'visual';
     case LAYOUT.CARDS:
-      return PubkyAppFeedLayout.Cards;
+      return 'cards';
     default:
       return undefined;
   }
@@ -76,22 +76,22 @@ export function homeLayoutToPubkyLayout(layout: LayoutType): PubkyAppFeedLayout 
 // ============================================================================
 
 /**
- * Maps PubkyAppFeedReach enum to home ReachType
- * Note: PubkyAppFeedReach.Followers has no home equivalent and returns undefined
+ * Maps KnownFeedReach to home ReachType
+ * Note: 'followers' has no home equivalent and returns undefined
  */
-export function pubkyReachToHomeReach(reach: PubkyAppFeedReach): ReachType | undefined {
+export function pubkyReachToHomeReach(reach: KnownFeedReach): ReachType | undefined {
   switch (reach) {
-    case PubkyAppFeedReach.Following:
+    case 'following':
       return REACH.FOLLOWING;
-    case PubkyAppFeedReach.Friends:
+    case 'friends':
       return REACH.FRIENDS;
-    case PubkyAppFeedReach.All:
+    case 'all':
       return REACH.ALL;
-    case PubkyAppFeedReach.Wot:
+    case 'wot':
       return REACH.NETWORK;
-    case PubkyAppFeedReach.Me:
+    case 'me':
       return REACH.ME;
-    case PubkyAppFeedReach.Followers:
+    case 'followers':
       // No home type equivalent for Followers
       return undefined;
     default:
@@ -100,20 +100,20 @@ export function pubkyReachToHomeReach(reach: PubkyAppFeedReach): ReachType | und
 }
 
 /**
- * Maps home ReachType to PubkyAppFeedReach enum
+ * Maps home ReachType to KnownFeedReach
  */
-export function homeReachToPubkyReach(reach: ReachType): PubkyAppFeedReach | undefined {
+export function homeReachToPubkyReach(reach: ReachType): KnownFeedReach | undefined {
   switch (reach) {
     case REACH.FOLLOWING:
-      return PubkyAppFeedReach.Following;
+      return 'following';
     case REACH.FRIENDS:
-      return PubkyAppFeedReach.Friends;
+      return 'friends';
     case REACH.ALL:
-      return PubkyAppFeedReach.All;
+      return 'all';
     case REACH.NETWORK:
-      return PubkyAppFeedReach.Wot;
+      return 'wot';
     case REACH.ME:
-      return PubkyAppFeedReach.Me;
+      return 'me';
     default:
       return undefined;
   }
@@ -124,13 +124,13 @@ export function homeReachToPubkyReach(reach: ReachType): PubkyAppFeedReach | und
 // ============================================================================
 
 /**
- * Maps PubkyAppFeedSort enum to home SortType
+ * Maps KnownFeedSort to home SortType
  */
-export function pubkySortToHomeSort(sort: PubkyAppFeedSort): SortType | undefined {
+export function pubkySortToHomeSort(sort: KnownFeedSort): SortType | undefined {
   switch (sort) {
-    case PubkyAppFeedSort.Recent:
+    case 'recent':
       return SORT.TIMELINE;
-    case PubkyAppFeedSort.Popularity:
+    case 'popularity':
       return SORT.ENGAGEMENT;
     default:
       return undefined;
@@ -138,14 +138,14 @@ export function pubkySortToHomeSort(sort: PubkyAppFeedSort): SortType | undefine
 }
 
 /**
- * Maps home SortType to PubkyAppFeedSort enum
+ * Maps home SortType to KnownFeedSort
  */
-export function homeSortToPubkySort(sort: SortType): PubkyAppFeedSort | undefined {
+export function homeSortToPubkySort(sort: SortType): KnownFeedSort | undefined {
   switch (sort) {
     case SORT.TIMELINE:
-      return PubkyAppFeedSort.Recent;
+      return 'recent';
     case SORT.ENGAGEMENT:
-      return PubkyAppFeedSort.Popularity;
+      return 'popularity';
     default:
       return undefined;
   }
@@ -156,23 +156,23 @@ export function homeSortToPubkySort(sort: SortType): PubkyAppFeedSort | undefine
 // ============================================================================
 
 /**
- * Maps PubkyAppPostKind enum to home ContentType
+ * Maps KnownPostKind to home ContentType
  */
-export function pubkyPostKindToHomeContent(postKind: PubkyAppPostKind): ContentType | undefined {
+export function pubkyPostKindToHomeContent(postKind: KnownPostKind): ContentType | undefined {
   switch (postKind) {
-    case PubkyAppPostKind.Short:
+    case 'note':
       return CONTENT.SHORT;
-    case PubkyAppPostKind.Long:
+    case 'article':
       return CONTENT.LONG;
-    case PubkyAppPostKind.Image:
+    case 'image':
       return CONTENT.IMAGES;
-    case PubkyAppPostKind.Video:
+    case 'video':
       return CONTENT.VIDEOS;
-    case PubkyAppPostKind.Link:
+    case 'link':
       return CONTENT.LINKS;
-    case PubkyAppPostKind.File:
+    case 'file':
       return CONTENT.FILES;
-    case PubkyAppPostKind.Collection:
+    case 'collection':
       return CONTENT.COLLECTIONS;
     default:
       return undefined;
@@ -180,27 +180,27 @@ export function pubkyPostKindToHomeContent(postKind: PubkyAppPostKind): ContentT
 }
 
 /**
- * Maps home ContentType to PubkyAppPostKind enum
- * Note: CONTENT.ALL has no PubkyAppPostKind equivalent and returns undefined
+ * Maps home ContentType to KnownPostKind
+ * Note: CONTENT.ALL has no KnownPostKind equivalent and returns undefined
  */
-export function homeContentToPubkyPostKind(content: ContentType): PubkyAppPostKind | undefined {
+export function homeContentToPubkyPostKind(content: ContentType): KnownPostKind | undefined {
   switch (content) {
     case CONTENT.SHORT:
-      return PubkyAppPostKind.Short;
+      return 'note';
     case CONTENT.LONG:
-      return PubkyAppPostKind.Long;
+      return 'article';
     case CONTENT.IMAGES:
-      return PubkyAppPostKind.Image;
+      return 'image';
     case CONTENT.VIDEOS:
-      return PubkyAppPostKind.Video;
+      return 'video';
     case CONTENT.LINKS:
-      return PubkyAppPostKind.Link;
+      return 'link';
     case CONTENT.FILES:
-      return PubkyAppPostKind.File;
+      return 'file';
     case CONTENT.COLLECTIONS:
-      return PubkyAppPostKind.Collection;
+      return 'collection';
     case CONTENT.ALL:
-      // No PubkyAppPostKind equivalent for ALL
+      // No KnownPostKind equivalent for ALL
       return undefined;
     default:
       return undefined;

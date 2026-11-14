@@ -17,7 +17,12 @@ export type SessionReference = z.infer<typeof sessionReferenceSchema>;
 /** Identity of the active session that made a request; never persisted or sent across tabs. */
 export type ActiveSessionFailure = { session: Session; generation: string };
 
-export type SessionRestoreStatus = 'idle' | 'restoring' | 'ready' | 'temporary-error' | 'reauth-required';
+/**
+ * `social-migration`: the account must pass the social v1 migration gate before its session may
+ * enter the store (ADR-0026); the session stays `null` and nothing acts as the account meanwhile.
+ */
+export type SessionRestoreStatus =
+  'idle' | 'restoring' | 'ready' | 'temporary-error' | 'reauth-required' | 'social-migration';
 
 export const persistedAuthSchema = z.object({
   currentUserPubky: z.string().nullable(),

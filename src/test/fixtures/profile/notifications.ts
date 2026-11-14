@@ -50,7 +50,7 @@ export const VRT_NOTIFICATIONS: readonly FlatNotification[] = [
     timestamp: VRT_FROZEN_NOW_MS - 2 * HOUR_MS,
     reposted_by: VRT_AUTHOR_PUBKYS.fynn,
     embed_uri: FYNN_POST.details.uri,
-    repost_uri: `pubky://${VRT_AUTHOR_PUBKYS.fynn}/pub/pubky.app/posts/0VRTNOTIFREPOST001`,
+    repost_uri: `pubky://${VRT_AUTHOR_PUBKYS.fynn}/pub/pubky.app/posts/0034EMJHPNS00`,
     post_kind: 'short',
   },
   {

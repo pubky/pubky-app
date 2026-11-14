@@ -1,3 +1,5 @@
+import { encodeContent, encodeObject } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it } from 'vitest';
 import type { GuardedPost } from '@/services/locks/locks.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
@@ -452,7 +454,45 @@ describe('GuardedContentParser', () => {
   describe('parsePost', () => {
     const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 
-    it('parses guarded PubkyAppPost bytes into the reader post shape', () => {
+    it('parses a v1 guarded post into the reader post shape, in the local vocabulary', () => {
+      const bytes = encodeObject(
+        { kind: 'post', root: 'private' },
+        {
+          content: 'secret body',
+          kind: 'note',
+          parent: null,
+          embed: null,
+          attachments: [{ uri: `pubky://${fakeOwner(2)}/priv/app.locks/content/a`, name: 'a.png', alt: null }],
+          lock: null,
+        },
+      );
+      expect(GuardedContentParser.parsePost(bytes)).toEqual({
+        content: 'secret body',
+        kind: 'short',
+        attachments: [`pubky://${fakeOwner(2)}/priv/app.locks/content/a`],
+      });
+    });
+
+    it('reads a v1 guarded post without attachments as having none', () => {
+      const bytes = encodeObject(
+        { kind: 'post', root: 'private' },
+        {
+          content: encodeContent({ title: 'T', body: 'x', cover_image: null }),
+          kind: 'article',
+          parent: null,
+          embed: null,
+          attachments: [],
+          lock: null,
+        },
+      );
+      expect(GuardedContentParser.parsePost(bytes)).toEqual({
+        content: encodeContent({ title: 'T', body: 'x', cover_image: null }),
+        kind: 'long',
+        attachments: null,
+      });
+    });
+
+    it('parses guarded 0.x post bytes, written before the social v1 port, into the reader post shape', () => {
       const bytes = encode({
         content: 'secret body',
         kind: 'short',

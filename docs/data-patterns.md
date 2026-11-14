@@ -10,11 +10,15 @@ Posts use composite key format: `author:postId`
 
 ```typescript
 // Composite IDs are plain strings — no branded type
-const id = 'pk1abc123xyz:0000000123';
-//           ^author^   :^postId^
+const id = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035QZPT4QG00';
+//           ^author (z-base32 key)^                             :^postId (13 Crockford chars)^
 
 const COMPOSITE_ID_DELIMITER = ':' as const;
 ```
+
+A post's composite id is form-agnostic: a v1 post is a directory of versions (`/pub/social/v1/posts/{id}/{editId}.json`, ADR-0027), and `buildCompositeIdFromPubkyUri` takes the segment after `posts` from a versionless reference, a version path and the 0.x spelling (`/pub/pubky.app/posts/{id}`) alike, so one post has one key whichever form a Nexus response or a 0.x reference spells. The reverse direction is `postReferenceSpellings(pubky, id)` (`src/core/pipes/post/post.reference.ts`): every lookup by URI matches both spellings, and every new reference is written in the v1 one (`docs/local-first.md`).
+
+A file's composite id is `owner:hash`: v1 media lives at `files/{hash}.{ext}`, and `buildCompositeIdFromPubkyUri` strips the extension for the `files` domain (a 0.x file id has no dot). Every file-keyed table (`file_details`, the local files store) is keyed that way, so a v1 upload and a 0.x row never share a key.
 
 ### Utilities
 
@@ -153,7 +157,7 @@ Post and user subscriptions are both reference counted, so nested surfaces that 
 | `ProfilePageHeader`, `UserListItem` | the user pubky                                       | Profile header and user lists                                                                                       |
 | `useIsFollowing`                    | the follow target                                    | Not viewport-gated: data hook without a DOM node; relationship rows are viewer-relative and only TTL refreshes them |
 
-The collection envelope (`name`, `description`, `cover_image`, `items`, `layout`) is one cached post row, so a single refresh updates the title, cover, and item count everywhere at once. For every viewer, including the owner and guests, the single-collection feed renders the complete local `items` membership in envelope order. `TimelineFeed` reads it and `TimelineFeedContent` projects it over the collection's pagination with `useCollectionStreamMembership`; `useStreamPagination` stays a plain Nexus paginator, and the projection is separate from the raw Nexus page IDs and offsets. An unresolved local read is distinct from a resolved empty collection. A lagging or refreshed Nexus stream cannot erase locally saved items or reintroduce removed members; the trade-off is that an item Nexus indexed before this device's envelope learned of it (added on another device) appears once the envelope refreshes, through the TTL coordinator or a pull-to-refresh, which refetches the envelope with the stream. For the owner, that refetch is skipped during the indexing retry window (`ttlRetryDelayMs`) after a local collection write: Nexus can still serve the pre-save envelope with a newer `indexed_at`, and persisting it would undo the save. Collection creates, edits and compensating rollbacks stamp the optional `post_details.localUpdatedAt` alongside TTL; Nexus persistence retains this timestamp without extending it. Ordinary cache reads only freshen TTL and never suppress an explicit refresh. Here `localUpdatedAt` records the last local write, not an unacknowledged edit: the window is a heuristic, not a guarantee, and a save Nexus indexes later remains exposed to refresh. A skipped request does not schedule a delayed retry; a later pull or the TTL coordinator refreshes the envelope. When the envelope drops an item whose row the stream already served, that row also leaves the raw page so the next skip offset follows Nexus's shorter list.
+The collection envelope (`name`, `description`, `cover_image`, `items`, `layout`) is one cached post row, so a single refresh updates the title, cover, and item count everywhere at once. A collection write is a change (`TCollectionEdit`: add, remove, reorder, details) applied to the stored head under the post's write lock, never the item list the controller read before it, so an edit queued behind another edit of the same collection keeps that edit, a details edit never carries items, and a change the head already holds writes no version (ADR-0027). For every viewer, including the owner and guests, the single-collection feed renders the complete local `items` membership in envelope order. `TimelineFeed` reads it and `TimelineFeedContent` projects it over the collection's pagination with `useCollectionStreamMembership`; `useStreamPagination` stays a plain Nexus paginator, and the projection is separate from the raw Nexus page IDs and offsets. An unresolved local read is distinct from a resolved empty collection. A lagging or refreshed Nexus stream cannot erase locally saved items or reintroduce removed members; the trade-off is that an item Nexus indexed before this device's envelope learned of it (added on another device) appears once the envelope refreshes, through the TTL coordinator or a pull-to-refresh, which refetches the envelope with the stream. For the owner, that refetch is skipped during the indexing retry window (`ttlRetryDelayMs`) after a local collection write: Nexus can still serve the pre-save envelope with a newer `indexed_at`, and persisting it would undo the save. Collection creates, edits and compensating rollbacks stamp the optional `post_details.localUpdatedAt` alongside TTL; Nexus persistence retains this timestamp without extending it. Ordinary cache reads only freshen TTL and never suppress an explicit refresh. Here `localUpdatedAt` records the last local write, not an unacknowledged edit: the window is a heuristic, not a guarantee, and a save Nexus indexes later remains exposed to refresh. A skipped request does not schedule a delayed retry; a later pull or the TTL coordinator refreshes the envelope. When the envelope drops an item whose row the stream already served, that row also leaves the raw page so the next skip offset follows Nexus's shorter list.
 
 Cached members render immediately. Uncached members wait for the existing stream's batch hydration before mounting their cards. Until the stream settles, the feed stays in its loading-more state (the list and card layouts show the loading row below the visible cards) and scroll-to-load stays disarmed, so no page request races the initial or eager loads; a pure local read checks member details, relationships, author details and repost originals before exposing a cached card. Once the stream settles, or the eager-load cap stops it, remaining unindexed or unavailable members use the normal card fallback. A failed hydration does not release the members it could not load: a stream page whose batch hydration fails (post details, their attachment metadata or authors) is reported as a failed page, like author-scoped search, with its cursor not consumed, and the feed shows its error instead of a column of unavailable placeholders for posts that may exist, including beside the owner's Add Content cell, where the error takes the empty state's place (the shared timeline renderers do the same for Bookmarks). A hydration cut short by a viewer session change is no outage: that page is discarded and requested again. Already displayed cards stay mounted during refresh or membership reads, subject to current membership and removal suppression.
 
@@ -169,7 +173,7 @@ Pipes normalize external data to domain shapes.
 // Pipes DO:
 // - Transform external shapes → domain shapes
 // - Validate input data
-// - Enforce pubky-app-specs
+// - Enforce pubky-social-specs (the package is the only validator)
 // - Return normalized objects
 
 // Pipes DON'T:
@@ -183,27 +187,25 @@ Pipes normalize external data to domain shapes.
 ```typescript
 // Real: src/core/pipes/post/post.normalizer.ts
 export class PostNormalizer {
-  // Create a new post via pubky-app-specs builder
-  static async to(post: PostValidatorData, specsPubky: Pubky): Promise<PostResult> {
-    try {
-      const builder = PubkySpecsSingleton.get(specsPubky);
-      return builder.createPost(post.content, post.kind, post.parentUri ?? null, embedObject, attachments);
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
-        operation: 'createPost',
-        context: { post, specsPubky },
-      });
-    }
+  // Create a new post: `buildPost` validates, encodes and names the object (`url`, `body`, `object`).
+  // The kind is the data model's (`note`, `image`, …, `article`); the local row keeps `short`/`long`.
+  static to(post: PostValidatorData, specsPubky: Pubky): BuiltPost {
+    return this.build(() => buildPost(specsPubky, { kind: post.kind, content: post.content, ... }), 'buildPost');
   }
 
-  // Edit an existing post. `builder.editPost` swaps content only, so optional
-  // attachment/kind changes ride on the reconstructed original post.
-  static async toEdit({ compositePostId, content, currentUserPubky, attachments, kind }): Promise<PostResult> {
-    const builder = PubkySpecsSingleton.get(authorId);
-    return builder.editPost(originalPost, postId, content);
+  // Edit an existing post: spread the decoded head version, apply the change, and let `editPost`
+  // name the next version. The application reads the head (`listAll` → `pickHeadVersion` →
+  // `getBytes` → `decodeObject`) inside a write fence; the pipe only transforms it.
+  static toEdit({ owner, head, edit }: TToEditParams): BuiltPost {
+    return this.build(() => editPost(owner, head.url, { ...head.post, ...changes }), 'editPost');
   }
+
+  // The Dexie projection of the same edit, written before the homeserver round trip
+  static toLocalEdit({ row, edit }: TToLocalEditParams): TLocalPostEdit { ... }
+
+  // `ValidationError` / `ArgumentError` become `Err.validation(INVALID_INPUT, …)` with the
+  // package's `code`, `field` and `limit` in the context, and nothing else is caught.
+  private static build<T>(builder: () => T, operation: string): T { ... }
 }
 ```
 
@@ -213,22 +215,31 @@ export class PostNormalizer {
 // Controllers call pipes before delegating to application
 // Real: src/core/controllers/post/post.ts
 class PostController {
-  static async commitCreate({ authorId, content, isArticle, tags, attachments }: TCreatePostParams) {
-    const fileAttachments = attachments ? await FileNormalizer.toFileAttachment({ file, pubky: authorId }) : [];
-    const { post, meta } = await PostNormalizer.to({ content, kind: postKind, ... }, authorId);
+  static async commitCreate({ authorId, content, isArticle, tags, attachments, coverImage }: TCreatePostParams) {
+    // Each file is hashed (`hashMedia`) and named by `buildFile`: the same bytes name one file
+    const fileAttachments = await Promise.all(attachments.map((file) => FileApplication.toFileAttachment({ file, pubky: authorId })));
+    const post = PostNormalizer.to({ content, kind: postKind, attachments: fileAttachments, coverImage: coverAttachment }, authorId);
     const tagList = tags?.map((tag) => TagNormalizer.from({ taggerId: authorId, ... }));
-    await PostApplication.commitCreate({ compositePostId, post, postUrl: meta.url, fileAttachments, tags: tagList });
+    await PostApplication.commitCreate({ compositePostId, post, fileAttachments, tags: tagList });
   }
 }
 
-// Application also normalizes data before persisting
+// Application also normalizes data before persisting: a stored-object edit is a fenced
+// read-modify-write of the published bytes, never a rebuild from the local row
 // Real: src/core/application/profile/profile.ts
 class ProfileApplication {
   private static async commitChanges({ pubky, changes }) {
-    const published = UserNormalizer.fromPublished(await HomeserverService.getFreshJson(userUriBuilder(pubky)));
-    const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
-    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
-    await LocalProfileService.updateDetails(user, pubky);
+    await this.withProfileLock(pubky, async () => {
+      const url = buildUri(pubky, 'user');
+      const fence = HomeserverService.createWriteFence();
+      const user = await retryHomeserverWriteAfterReread(fence, async () => {
+        const stored = await HomeserverService.getFreshBytes(url); // every retry pass reads again
+        const next = this.applyToStored({ url, stored, changes }); // decodeObject → applyChanges (a spread: `$unknown` survives) → encodeObject
+        await HomeserverService.putBlob({ url, blob: next.body, fence });
+        return next.user;
+      });
+      await LocalProfileService.updateDetails(user, pubky); // once, after the write landed
+    });
   }
 }
 ```
@@ -249,12 +260,83 @@ return SettingsNormalizer.from(settingsJson);
 
 Article bodies (`kind: long`) embed images, videos, audio and PDFs with one markdown form. The media type is never in the body.
 
-- **Composer form** references an author-owned file URI: `![alt](pubky://{author}/pub/pubky.app/files/{id})`. A file inserted this session is staged, not uploaded: `useInlineMediaUpload` keeps it in memory under a placeholder id (`draft-` plus 7 hex chars, the length of a real id) so nothing reaches public storage before the publish (#2687, #2684). A create hands the staged files to `PostController.commitCreate` with the cover (one upload batch, rolled back on failure); an edit uploads them through `uploadStaged` right before `commitEdit`, which takes URIs only, so a save that fails after that upload leaves them for the session's discard sweep (a composer closed during the save keeps them instead, since the client cannot tell a refused write from an unacknowledged one; a page closed in between loses the sweep; making the edit batch controller-owned like the create is the follow-up, #2878). A file kept from the published article keeps its real URI.
-- **Published form** references a slot: `![alt](attachment:{n})`, where `n` indexes `post.attachments = [cover?, ...inline first-appearance, ...unreferenced originals]` (spec cap 10). `serializeArticleBody` / `deserializeArticleBody` in `src/libs/post/articleInlineMedia.ts` convert between the two and block publishing hand-typed refs, blob URIs, author file URIs in raw HTML or reference-style definitions, and over-cap bodies.
-- **Slot-0 cover rule**: `attachments[0]` is the cover unless the body references `attachment:0` (`articleHasInlineSlotZero`), consumed by `usePostArticle`, `usePostAttachmentsMedia`, `useVisualFeedTiles` and `postCoverPreload`. The cover stays image-only.
+- **Composer form** references an author-owned file URI: `![alt](pubky://{author}/pub/social/v1/files/{hash}.{ext})`. A file inserted this session is staged, not uploaded: `useInlineMediaUpload` keeps it in memory under a placeholder media URI built from random bytes (`buildFile`), so nothing reaches public storage before the publish (#2687, #2684). A create hands the staged files to `PostController.commitCreate` with the cover as its own `coverImage` (one upload batch, rolled back on failure); an edit uploads them through `uploadStaged` right before `commitEdit`, which takes URIs only, so a save that fails after that upload leaves them for the session's discard sweep (a composer closed during the save keeps them instead, since the client cannot tell a refused write from an unacknowledged one; a page closed in between loses the sweep; making the edit batch controller-owned like the create is the follow-up, #2878). A file kept from the published article keeps its real URI, v1 or 0.x.
+- **Published form** references a slot: `![alt](attachment:{n})`, where `n` indexes `post.attachments = [...inline first-appearance, ...unreferenced originals]` (spec cap 10) and the cover rides in the envelope as `cover_image` (a media URI or `null`). `serializeArticleBody` / `deserializeArticleBody` in `src/libs/post/articleInlineMedia.ts` convert between the two (`slotOffset` 0 for a published article, 1 for a locked one whose cover keeps slot 0) and block publishing hand-typed refs, blob URIs, author file URIs in raw HTML or reference-style definitions, and over-cap bodies. The envelope's `title` and `body` are the composer's; `ARTICLE_MAX_CHARACTER_LENGTH` is the data model's body cap, counted in code points.
+- **Cover resolution** (`resolveArticleCover`, `src/libs/post/articleCover.ts`, ADR-0023 as amended): rule A, an envelope cover is the cover and the slots are `attachments`; rule A′, a migrated 0.x article (envelope cover, body references none at 0) reads its slots as `['', ...attachments]` so `attachment:1` still finds the first inline file; rule B, no envelope cover means the 0.x slot-0 rule: `attachments[0]` is the cover unless the body references `attachment:0`, and only when its file is an image, which its file row says (`slotZeroContentType`, never the markdown; a v1 row is synthesized from the URI's extension). Until the row is read the slot is the `coverCandidate` and nothing paints as a cover, so a PDF or video there never flashes as one (`settleArticleSlotZero` turns the candidate into the cover or nothing once the row is known); the edit composer keeps slot 0 as the cover unless the row says otherwise, so a slow row never costs the article its cover. Nexus serves every migrated article in this shape. Every consumer goes through it (`usePostArticle`, `usePostAttachmentsMedia`, `useVisualFeedTiles`, `postCoverPreload`, `PostArticleDetail`, the edit composer, the OG text); a first edit of a 0.x article moves its slot-0 cover into the envelope. The cover stays image-only. The local files store keeps a same-session cover apart from the inline entries (`articleCovers[postId]`, `setArticleCover`), so `posts[postId]` stays index-aligned with the slots.
 - **Type from metadata**: the reader resolves each inline slot through `useAttachmentsMetadata` and matches rows by `uri` (Dexie returns key order, never request order); a same-session publish uses the local files store entry's `type`; unlocked content uses the bytes the reader holds; an external `https:` URL is typed by its extension (`inferMediaKindFromUrl`). Unknown is rendered as an image.
 - **Ownership invariant**: a ref resolves only when `attachments[n]` is a file URI owned by the author (`isAuthorFileUri`); otherwise an unavailable placeholder renders with no request.
 - Inline slots never leak into post-media surfaces (lightbox, list thumbnails, Visual feed, OG text): those read the cover slot only.
+
+## Homeserver Trees and App Files
+
+The app reads and writes five trees of the signed-in account on its homeserver. Objects of the social data model
+(`pubky-social-specs`) are built, decoded and encoded by the package; the two files the app owns outside that model
+are plain JSON under the app's private namespace (`src/config/app-files.ts`).
+
+| Tree                    | Holds                                                                                  | After the migration gate                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `/pub/social/v1/`       | `profile.json`, posts, follows, tags, files                                            | the public tree; `listPrefix(pubky, 'public')`                                                   |
+| `/priv/social/v1/`      | bookmarks, mutes, feeds, private post versions, the migration flag `_migrated.json`    | the private tree; `listPrefix(pubky, 'private')`                                                 |
+| `/priv/social/` (rest)  | the Locks reader directories `unlocked/` and `purchases/` (`docs/locks.md`)            | not social objects; covered by the same `/priv/social/:rw` grant                                 |
+| `/priv/app.pubky/v1/`   | `settings.json` and the notification read cursor `last_read.json` (`APP_PRIVATE_PATH`) | app-private files, read by this app only                                                         |
+| `/pub/pubky.app/` (0.x) | what a 0.x client wrote; the migrator copies the social objects, not the app files     | read only as a fallback (`listPrefix(pubky, 'legacy')`); never written; deleted with the account |
+
+**Profile.** `ProfileController.commitCreate` builds the profile with `UserNormalizer.to` (`buildUser`) and PUTs
+`built.body` with `putBlob`. An edit (`ProfileApplication.commitUpdate` / `commitUpdateStatus`) is a fenced
+read-modify-write of the stored object: `getFreshBytes(buildUri(pubky, 'user'))` → `decodeObject` →
+`UserNormalizer.applyChanges` (a spread, so `$unknown`, the members a newer client added, survive on the profile and, matched by URL, on every link the edit keeps) → `encodeObject`
+(every profile rule re-checked) → `putBlob({ fence })`. A missing v1 profile is a deleted account (`GONE`); there is
+no fallback to the 0.x profile, which only an un-migrated account has, and `AuthApplication.userIsSignedUp` probes
+the v1 profile alone.
+
+**Feeds.** A feed's id is the hash of its filter (`buildFeed` derives it from the filter alone, `FeedNormalizer`), so it
+changes on every filter edit: a save writes the new file, swaps the local row and deletes the old file through
+`deletionPaths`, and `/feed/<id>` deep links to the old id stop resolving (an accepted reduction). The migrator derives
+the id of every 0.x feed it copies the same way, so a migrated feed's id changes once.
+
+**App files.** Settings and `last_read` are read v1 → 0.x → create: the v1 file when it exists, else the 0.x file,
+else defaults (settings) or a cursor at the current time (`last_read`). The first `SettingsApplication.initializeSettings`
+and the first `BootstrapApplication.initialize` after the gate write the v1 file from the 0.x one, and neither copy
+replaces a newer v1 file it finds on its re-read right before the PUT. The `last_read` copy (and a fresh cursor when
+neither file exists) goes through the forward-only writer, `NotificationApplication.markAllAsRead`: it re-reads the v1
+file on every pass, the first included (`guardFirstPass`), and never writes a timestamp at or below the stored one. The
+settings copy, and the first write when no file exists, reads the v1 file again right before its PUT and writes only
+while that file holds no settings; when it does, the local settings are compared with it instead (one more reconcile at
+most). The homeserver has no conditional PUT, so one round trip between that re-read and the PUT remains open, the
+same window mark-all-read's forward-only write has (ADR-0029); the `last_read` poll re-adopts the newest value. The copy is forward only: once the v1
+file exists the 0.x one is never read again, and it is never deleted (D15). Every write goes to the v1 URL
+(`SettingsNormalizer.buildUrl`, `LastReadNormalizer.buildUrl`).
+
+**Media lifetime** (ADR-0027 as amended). A media file is content addressed and therefore shared: the avatar, posts
+and covers of one owner can name the same `files/{hash}.{ext}`, and earlier post versions keep referencing what an
+edit removed. Edits (attachments, an article's `cover_image`, a collection's cover) and avatar changes never delete
+a file. A post delete passes its attachments and cover to `FileApplication.commitDelete`, which deletes a file only
+when the local cache (other posts' attachments and content, the cached profile image), a fresh `profile.json` and a
+fresh Nexus `by_ids` view of every post a LIST of the owner's public `posts/` names all leave it unreferenced; a
+failed check, or a listed post Nexus does not serve, keeps it with a `Logger.warn`. A rollback deletes only what
+the failed write created (`preexisting` stays). Orphans accumulate until server-side media GC (follow-up).
+
+**Media reads.** A file row's key is `owner:id`, the id being a v1 hash or a 0.x id, and the URL builder takes the row's
+`uri` as well: a v1 route needs the whole name (`{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}`, a bare hash is a
+400), a 0.x route the id (`{nexus}/static/files/{owner}/{id}/{variant}`). Nexus keeps no metadata for v1 files, so only
+a file this device uploaded has a row; `FileApplication.getMetadata` answers any other v1 file with what its URI says
+(`FileNormalizer.toV1FileDetails`: the type from the extension, the filename as its name, no size or dimensions), a real
+row winning for the URI it describes, and `FileApplication.fetchFiles` never sends Nexus a v1 address. Because the key
+drops the extension, the same bytes uploaded under two types leave one row (the later upload's), which answers only its
+own URI; the other URI is answered from the URI, and consumers match a v1 attachment to its row by `uri`, a 0.x one
+by id (its row stands however Nexus spelled the row's `uri`).
+
+**Signup order (Nexus "A7").** Nexus ignores a new user's file uploads until their first v1 `profile.json` is indexed, and
+for good: `useProfileForm`'s create path hashes the avatar first, PUTs the profile naming it, then uploads the bytes. An
+upload that fails leaves a profile naming a file that is not there yet; the avatar falls back until the retry (the form's
+"Try again!", which writes both again) or a later change. An existing user's avatar change uploads first, as before.
+
+**Account delete and export** (`ProfileApplication.commitDelete` / `downloadData`) walk all five trees:
+`listPrefix(pubky, 'legacy')`, `listPrefix(pubky, 'public')`, the whole `/priv/social/` (the v1 tree, the flag and
+the Locks reader directories) and `/priv/app.pubky/v1/`. The export names every file by its path under the account.
+The deletion removes every other file first, deepest first, then the profiles in the order `deletionPaths({ kind:
+'user' })` gives: the 0.x `profile.json`, then the v1 one. `/pub/app.locks/` and `/priv/app.locks/content/` are
+Lock Server contracts under a read-only grant and are left alone.
 
 ## Dexie event dispatch patch
 
@@ -299,6 +381,8 @@ All tables defined in `src/core/database/franky/franky.ts`.
 
 `franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
 
+Version history: 3 → 4 on 2026-10-30 for the social v1 port (`docs/migrations/social-v1.md`): the index map did not change, but value shapes inside existing columns did (feed enums became the data model's strings, file ids became `owner:hash`, post `uri` spellings changed, bookmarks became locally owned), and a recreate is the only way to prove that every client starts clean. The default lives in `src/libs/env/env.ts` and `.env.example`, and the Docker workflows pass the same value as a build arg, so a bump is the app change plus a CI-task PR. A second mismatch in one page lifetime (a tab of another build recreating the database underneath) is refused with `DatabaseErrorCode.VERSION_CONFLICT` and the recovery screen says "Close other Pubky tabs, then retry." (the loop-breaker, ADR-0019). The re-initialization after an unexpected close never calls `Dexie.exists()`, whose probe of a missing database creates and deletes a stub and so closes the other tab's connection; it keeps Dexie's auto-open off, reads the version with a versionless open, looks again while the database is missing, and once this page has recreated the database treats one that another tab's delete left missing or unreadable like another version; after a forced close (storage eviction), a missing database is created and an unreadable one recreated (ADR-0019 amendment). The re-check window (`DB_CLOSE_RECHECK_DELAYS_MS`, about 5 s) is a bound: a database still missing after it shows the conflict screen, and Retry recovers.
+
 ### User Tables
 
 ```
@@ -333,13 +417,25 @@ tag_streams        — Hot tags in streams
 ### Other Tables
 
 ```
-file_details       — File attachment metadata
-bookmarks          — Bookmarked post references
+file_details       — File attachment metadata, keyed `owner:hash` for v1 media (`owner:id` for 0.x rows)
+bookmarks          — The owner's bookmarks (composite post id, `created_at` in ms): the source of truth for the private `/priv/social/v1/bookmarks/{base64url(target)}.json` objects Nexus never sees; hydrated by a LIST at bootstrap (one GET per new filename for its time), which also deletes rows the listing no longer names and rewrites the one local stream `timeline:bookmarks:all` (ADR-0028)
 hot_tags           — Trending tag snapshots
-feeds              — Custom feed definitions
+feeds              — Custom feed definitions: the owner's private `/priv/social/v1/feeds/{id}.json` objects, id = hash of the filter (reach, layout, sort, content, tags, domain_tags), kinds as the data model spells them (`note`/`article`); hydrated by a LIST at bootstrap, which also deletes rows the listing no longer names
 moderation         — Content moderation state
 locks              — Cached lock descriptors and readable post metadata
 ```
+
+## Tags, Follows and Mutes on the Homeserver
+
+The three relationship objects are built by `pubky-social-specs` and written only through `HomeserverService`
+(`putBlob` of `built.body`); the 0.x copy of each is never written again. Deletion differs per object because of
+where the copies can be found (ADR-0014, ADR-0020):
+
+| Object | Path (`pubky-social-specs`)                                                                                                                                                                                   | Write                                                                                                                                                     | Delete                                                                                                                                                                                                                                                       | Read                                                                                                                                                                                                                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tag    | `/pub/social/v1/tags/{hash}.json`; the hash covers the target and the stored label. Target: the post reference `buildUri(author, 'post', id)` or the profile URL `buildUri(user, 'user')`, never the bare key | `TagNormalizer.from` → `buildTag`; the stored label is trimmed and ASCII-lowercased (`canonicalizeTagLabel`, also the fold hashtags and the composer use) | The viewer's file is resolved, never rebuilt: the local `TagMutation.uri`, else Nexus `tag_uri`, both through `TagNormalizer.toOwnTagUri` and the session `canWrite` preflight, then one DELETE (#2832). No `deletionPaths`: the 0.x copy has a different id | Nexus (tags are public and indexed)                                                                                                                                                                                                                                                                    |
+| Follow | `/pub/social/v1/follows/{followee}.json`                                                                                                                                                                      | `FollowNormalizer.to` → `buildFollow`                                                                                                                     | `FollowNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'follow' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent` (a 404 is an already absent copy)                                                                                | Nexus; `UserApplication.ensureModerationFollow` probes `exists(buildUri(follower, 'follow', bot))` on the v1 path only (`privacy.moderationBot` in settings is the idempotency guard)                                                                                                                  |
+| Mute   | `/priv/social/v1/mutes/{mutee}.json`, **private**: only the owner's session reads it, no indexer sees it                                                                                                      | `MuteNormalizer.to` → `buildMute`                                                                                                                         | `MuteNormalizer.toDeleteUrls` → `deletionPaths({ kind: 'mute' })`: the 0.x copy first, then the v1 one, each through `deleteIdempotent`                                                                                                                      | `MuteApplication.fetchMutedUsers` LISTs `/priv/social/v1/mutes/` only (`parseUri(url).kind === 'mute'`, no union with the 0.x directory); another session's changes arrive by the `MuteListSyncCoordinator` poll (start, visible, `online`, every 30 s), never a session-bound event stream (ADR-0014) |
 
 ## Quick Checklist
 
@@ -351,3 +447,5 @@ When working with data:
 - [ ] External data normalized through pipes?
 - [ ] Pipes are pure (no IO)?
 - [ ] Article body media referenced by `attachment:{n}` slot, type from file metadata?
+- [ ] Homeserver paths from the data model (`buildUri`, `listPrefix`, `deletionPaths`) or `src/config/app-files.ts`, never spelled by hand?
+- [ ] A stored-object edit spreads the decoded object so `$unknown` survives?

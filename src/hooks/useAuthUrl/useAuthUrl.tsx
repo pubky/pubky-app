@@ -2,7 +2,11 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { AuthController } from '@/controllers/auth/auth';
-import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import {
+  isAuthApprovalCapabilityError,
+  isAuthApprovalMismatchError,
+  isAuthFlowCanceledError,
+} from '@/libs/error/auth-flow-canceled';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
@@ -57,9 +61,11 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           variant: 'error',
           description: isWrongEnvironmentHomeserverError(error)
             ? 'This key is linked to a different homeserver. Use a staging account on this site.'
-            : type === 'upgrade' || isAuthApprovalMismatchError(error)
-              ? 'Authorization failed. Approve with the key you are signed in with.'
-              : 'Authorization failed. Try again.',
+            : isAuthApprovalCapabilityError(error)
+              ? 'Authorization failed. Approve every requested permission and try again.'
+              : type === 'upgrade' || isAuthApprovalMismatchError(error)
+                ? 'Authorization failed. Approve with the key you are signed in with.'
+                : 'Authorization failed. Try again.',
         });
       });
       if (current()) setUrl(flow.authorizationUrl);

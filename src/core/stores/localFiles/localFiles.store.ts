@@ -52,6 +52,28 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
         }
       },
 
+      setArticleCover: (postId, cover) => {
+        const prev = get().articleCovers[postId];
+        if (prev && prev.urls.main !== cover?.urls.main) revokeBlobUrl(prev.urls.main);
+
+        if (cover === null) {
+          set(
+            (state) => {
+              const { [postId]: _, ...rest } = state.articleCovers;
+              return { articleCovers: rest };
+            },
+            false,
+            LocalFilesActionTypes.SET_ARTICLE_COVER,
+          );
+        } else {
+          set(
+            (state) => ({ articleCovers: { ...state.articleCovers, [postId]: cover } }),
+            false,
+            LocalFilesActionTypes.SET_ARTICLE_COVER,
+          );
+        }
+      },
+
       setCollectionCover: (collectionId, blobUrl) => {
         const prev = get().collections[collectionId];
         revokeBlobUrl(prev);
@@ -80,6 +102,7 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
         Object.values(state.posts)
           .flat()
           .forEach((a) => revokeBlobUrl(a?.urls.main));
+        Object.values(state.articleCovers).forEach((cover) => revokeBlobUrl(cover?.urls.main));
         Object.values(state.collections).forEach((url) => revokeBlobUrl(url));
         set(localFilesInitialState, false, LocalFilesActionTypes.RESET);
       },

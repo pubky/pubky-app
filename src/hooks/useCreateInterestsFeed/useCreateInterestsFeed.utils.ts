@@ -1,4 +1,3 @@
-import { PubkyAppFeedReach } from 'pubky-app-specs';
 import { INTERESTS_FEED_ICON, INTERESTS_FEED_NAME } from '@/config/feed';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { customFeedFormDefaults } from '@/hooks/useCustomFeedForm/useCustomFeedForm.types';
@@ -15,7 +14,7 @@ export function buildInterestsFeedParams(tags: string[]): TFeedCreateParams {
     icon: INTERESTS_FEED_ICON,
     tags,
     domain_tags: [],
-    reach: PubkyAppFeedReach.All,
+    reach: 'all',
     sort: customFeedFormDefaults.sort,
     content: null,
     layout: customFeedFormDefaults.layout,

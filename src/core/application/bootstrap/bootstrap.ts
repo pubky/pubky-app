@@ -1,22 +1,20 @@
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { hasHttpStatus } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { parseJsonBytesOrUndefined } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
-import type { Pubky } from '@/models/models.types';
 import type { NotificationType } from '@/models/notification/notification.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalHotService } from '@/services/local/hot/hot';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamTagsService } from '@/services/local/stream/tags/tags';
@@ -53,8 +51,11 @@ export class BootstrapApplication {
     const [bootstrapData, userLastRead] = await Promise.all([
       NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
-      MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
-      FeedApplication.fetchFeeds(pubky),
+      // The three private trees, which Nexus never sees; each fetch persists its own rows and skips the
+      // write once the account it started for is gone.
+      MuteApplication.fetchMutedUsers(pubky, { isCurrent: params.isCurrent }),
+      FeedApplication.fetchFeeds(pubky, { isCurrent: params.isCurrent }),
+      BookmarkApplication.fetchBookmarks(pubky, { isCurrent: params.isCurrent }),
     ]);
     if (params.isCurrent && !params.isCurrent())
       return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };
@@ -76,6 +77,12 @@ export class BootstrapApplication {
       // Subscribe to TTL coordinator for periodic staleness checks
       TtlCoordinator.getInstance().retryUserIndexing({ pubky });
     }
+
+    // One file-details request for the page's 0.x attachments before the posts land: a timeline card
+    // then finds its rows instead of asking for its own on every sign-in (`/v1` serves no `files`).
+    await FileApplication.fetchFilesForPosts(bootstrapData.posts);
+    if (params.isCurrent && !params.isCurrent())
+      return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };
 
     const [{ unread, nextPollCursor }] = await Promise.all([
       NotificationApplication.persistAndSummarize({
@@ -114,7 +121,6 @@ export class BootstrapApplication {
         streamId: UserStreamTypes.RECOMMENDED,
         stream: bootstrapData.ids.recommended,
       }),
-      FileApplication.persistFiles(bootstrapData.files),
       // Both features: hot tags and tag streams
       LocalHotService.upsert(buildHotTagsId(UserStreamTimeframe.TODAY, 'all'), bootstrapData.ids.hot_tags),
       LocalStreamTagsService.upsert(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),
@@ -127,58 +133,57 @@ export class BootstrapApplication {
   }
 
   /**
-   * Retrieves user's last read timestamp from homeserver, fetches notification data from Nexus
-   * and persists the notifications to the cache.
+   * Retrieves the user's last read timestamp from the homeserver: the v1 file, else the 0.x one
+   * (which the migrator does not copy), else a cursor at the current time. When the v1 file is
+   * missing it is created with the value returned, so the first bootstrap after the migration
+   * gate carries the 0.x cursor over; the 0.x file is left in place.
+   *
+   * The copy runs in the background through the forward-only `last_read` writer
+   * (`NotificationApplication.markAllAsRead`): it re-reads the v1 file right before every write,
+   * the first included, and keeps a value another device wrote meanwhile when it is not older, so
+   * a mark-all-read that lands between this read and the copy is never moved back. It never
+   * rejects: a refused write is logged and the next bootstrap finds the file missing again.
    *
    * @private
    * @param params, Bootstrap parameters
    * @param params.pubky, The user's public key identifier
-   * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
-   * @returns Promise resolving to notification list and last read timestamp
+   * @param params.lastReadUrl, URL of the user's v1 last read file on the homeserver
+   * @returns Promise resolving to the last read timestamp
    */
   private static async fetchOrPutLastRead({ pubky, lastReadUrl }: TBootstrapParams): Promise<number> {
-    try {
-      // A new account has no last_read yet: the 404 resolves to null instead of an error.
-      const lastReadJson = await HomeserverService.request<{ timestamp: number } | null>({
-        method: HttpMethod.GET,
-        url: lastReadUrl,
-        notFoundAsNull: true,
-      });
-      if (lastReadJson !== null) return lastReadJson.timestamp;
-      return this.createLastRead(pubky);
-    } catch (error) {
-      // A 404 from a path the null option does not cover, rethrow everything else
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-        return this.createLastRead(pubky);
-      } else {
-        // Network errors, timeouts, server errors, etc. should bubble up
-        Logger.error('Failed to fetch last read timestamp', error);
-        // TODO: TO harsh, we should handle this error better
-        throw error;
-      }
+    const stored = await this.fetchLastReadAt(lastReadUrl);
+    if (stored !== null) return stored;
+
+    const legacy = await this.fetchLastReadAt(LastReadNormalizer.buildLegacyUrl(pubky));
+    if (legacy !== null) {
+      Logger.info('Last read file found at its 0.x path only, copying it...', { pubky });
+      this.publishMissingLastRead(lastReadUrl, legacy);
+      return legacy;
     }
-  }
 
-  /** Starts creating a missing last-read file and returns its initial timestamp. */
-  private static createLastRead(pubky: Pubky): number {
     Logger.info('Last read file not found, creating new one...', { pubky });
-    const lastRead = LastReadNormalizer.to(pubky);
-    void this.createMissingLastRead(lastRead.meta.url, lastRead.last_read.toJson());
-    return Number(lastRead.last_read.timestamp);
+    const { lastRead } = LastReadNormalizer.to(pubky);
+    this.publishMissingLastRead(lastReadUrl, lastRead.timestamp);
+    return lastRead.timestamp;
   }
 
-  /**
-   * Creates the last-read file a read just found missing. Before a retry (429, 500, 503 or the
-   * publish conflict) it is checked again, and a file another client created meanwhile is kept
-   * rather than overwritten.
-   */
-  private static async createMissingLastRead(url: string, bodyJson: Record<string, unknown>): Promise<void> {
-    const fence = HomeserverService.createWriteFence();
-    let seenMissing = true;
-    await retryHomeserverWriteAfterReread(fence, async () => {
-      if (!seenMissing && (await HomeserverService.exists(url))) return;
-      seenMissing = false;
-      await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson, fence });
-    });
+  /** Writes the cursor a read just found missing through the forward-only writer, in the background. */
+  private static publishMissingLastRead(url: string, timestamp: number): void {
+    void NotificationApplication.markAllAsRead({ url, lastRead: { timestamp } }).catch((error: unknown) =>
+      Logger.warn('Failed to create the missing last read file', { url, error }),
+    );
+  }
+
+  /** The cursor stored at `url`, or null when the file is absent. Any other failure rejects. */
+  private static async fetchLastReadAt(url: string): Promise<number | null> {
+    // A 404 is the usual answer until the first write (a new or just-migrated account), so it is
+    // read as absent without reporting an error; network errors, timeouts, server errors, etc.
+    // bubble up (already reported by the homeserver service)
+    const stored = await HomeserverService.getBytesIfExists(url);
+    if (!stored) return null;
+    const lastRead = parseJsonBytesOrUndefined<{ timestamp?: unknown } | null>(stored.bytes);
+    if (typeof lastRead?.timestamp === 'number') return lastRead.timestamp;
+    Logger.warn('Last read file holds no timestamp', { url });
+    return null;
   }
 }

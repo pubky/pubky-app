@@ -1,4 +1,4 @@
-import { postUriBuilder, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownPostKind } from 'pubky-social-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
@@ -8,6 +8,7 @@ import type {
   TGetRelationshipsByIdsParams,
 } from '@/application/post/post.types';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
+import { APP_CAPABILITIES } from '@/config/auth';
 import { POST_MAX_TAGS } from '@/config/posts';
 import type {
   TCreateCollectionParams,
@@ -23,11 +24,11 @@ import type {
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
+import { hasRequiredCapabilities } from '@/libs/capabilities/capabilities';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils';
-import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { isAuthorFileUri } from '@/libs/post/articleInlineMedia';
@@ -39,14 +40,17 @@ import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.sche
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import type { TCollectionEdit } from '@/pipes/pipes.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import {
   inferAnnouncementKind,
   inferPostKindForCreate,
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
+  toStoredPostKind,
 } from '@/pipes/post/post.kind';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { PostValidators } from '@/pipes/post/post.validators';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
@@ -176,7 +180,8 @@ export class PostController {
    * @param params.content - Post content (can be empty for simple reposts)
    * @param params.isArticle - Whether the post is a long-form article
    * @param params.tags - Tags to add (optional). For a simple repost, tags target the embedded original post.
-   * @param params.attachments - Attachments to add to the post (optional)
+   * @param params.attachments - Attachments to add to the post (optional); an article's inline media in slot order
+   * @param params.coverImage - An article's cover (optional), written in the envelope, never as a slot
    * @param params.parentPostId - ID of the post being replied to (optional for root posts)
    * @param params.originalPostId - ID of the post being reposted (optional for reposts)
    * @returns The composite post ID of the created post
@@ -187,6 +192,7 @@ export class PostController {
     isArticle,
     tags,
     attachments,
+    coverImage,
     parentPostId,
     originalPostId,
     lock,
@@ -213,20 +219,25 @@ export class PostController {
 
     // TODO: In the future, we could decouple that action and do it asyncronously in the moment that we add a file to the post
     const fileAttachments = attachments ? await this.normalizeFileAttachments({ attachments, pubky: authorId }) : [];
+    const [coverAttachment] =
+      isArticle && coverImage
+        ? await this.normalizeFileAttachments({ attachments: [coverImage], pubky: authorId })
+        : [];
 
-    const { post, meta } = await PostNormalizer.to(
+    const post = PostNormalizer.to(
       {
         content: content.trim(),
         kind: postKind,
         parentUri,
         embed: repostedUri,
         attachments: fileAttachments,
+        coverImage: coverAttachment,
         lock,
       },
       authorId,
     );
 
-    const { id: postId } = meta;
+    const { id: postId } = post;
 
     // Hashtags in the content become tags of the created post (#1882). Articles store
     // their title (plain text, never rendered as a hashtag) and body (markdown) as JSON.
@@ -260,8 +271,8 @@ export class PostController {
     await PostApplication.commitCreate({
       compositePostId,
       post,
-      postUrl: meta.url,
-      fileAttachments,
+      // The cover goes up with the body files, in one batch rolled back as one.
+      fileAttachments: coverAttachment ? [coverAttachment, ...fileAttachments] : fileAttachments,
       tags: tagList,
       isCurrent,
       onPostSynced,
@@ -282,11 +293,13 @@ export class PostController {
     // before normalization so the resulting `pubky://` URL participates in the
     // envelope's max-length and protocol validation.
     let coverImageUrl: string | null = null;
+    let uploadedCover: TFileAttachmentResult | null = null;
     if (coverImage instanceof File) {
       try {
         const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
-        coverImageUrl = fileAttachment.fileResult.meta.url;
+        coverImageUrl = fileAttachment.media.url;
+        uploadedCover = fileAttachment;
       } catch (error) {
         // Keep an expired-session failure classified instead of wrapping it as
         // validation, so the caller can ask for a sign-in rather than reporting a
@@ -303,27 +316,40 @@ export class PostController {
       coverImageUrl = coverImage;
     }
 
-    const { post, meta } = await PostNormalizer.toCollection(
-      {
-        name,
-        description,
-        items,
-        coverImage: coverImageUrl,
-        layout,
-      },
-      authorId,
-    );
+    let compositePostId: string | undefined;
+    try {
+      const post = PostNormalizer.toCollection(
+        {
+          name,
+          description,
+          items,
+          coverImage: coverImageUrl,
+          layout,
+        },
+        authorId,
+      );
 
-    const { id: postId } = meta;
-    const compositePostId = buildCompositeId({ pubky: authorId, id: postId });
+      compositePostId = buildCompositeId({ pubky: authorId, id: post.id });
 
-    await PostApplication.commitCreate({
-      compositePostId,
-      post,
-      postUrl: meta.url,
-    });
+      await PostApplication.commitCreate({ compositePostId, post });
 
-    return compositePostId;
+      return compositePostId;
+    } catch (error) {
+      // Roll back the newly uploaded cover so a failed create does not orphan it, as
+      // `commitEditCollection` does: the sweep leaves a file the upload found on the homeserver
+      // (`preexisting`) in place, and a row of this post that survived its own rollback does not
+      // keep the cover. If the rollback itself fails, log and still rethrow the original error.
+      if (uploadedCover) {
+        await FileApplication.commitDeleteUploaded([uploadedCover], compositePostId).catch((cleanupError) => {
+          Logger.warn('[PostController.commitCreateCollection] Failed to rollback newly uploaded cover', {
+            compositePostId,
+            uploadedCoverUri: uploadedCover.media.url,
+            cleanupError,
+          });
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -332,16 +358,13 @@ export class PostController {
    * `coverImage` is required: pass a `File` to replace, the current cover URL
    * string to keep it, or `null` to clear. Callers must not omit it.
    *
-   * Cover cleanup: after the envelope is persisted, if the previous `cover_image`
-   * was a homeserver file URI and is no longer referenced (replaced or cleared),
-   * that file is deleted from the homeserver. Failures during that delete are
-   * logged and swallowed — the edit already succeeded, so a cleanup failure must
-   * not surface as an edit failure (the old file may remain orphaned). External
-   * http(s) covers are never deleted.
+   * A replaced or cleared cover is never deleted: the collection's earlier versions
+   * still reference it, and content-addressed media may be shared with other posts
+   * or the profile (ADR-0027).
    *
    * If a new cover File was uploaded and then edit normalization or `commitEdit`
    * fails, the new file is deleted before rethrowing so the failed edit does not
-   * leave an unreferenced upload.
+   * leave an unreferenced upload (never a file the homeserver held before).
    */
   static async commitEditCollection({
     compositeCollectionId,
@@ -351,18 +374,10 @@ export class PostController {
     layout,
   }: TEditCollectionParams): Promise<void> {
     // Reject non-authors up front, before any side effects: the cover File
-    // upload below would otherwise hit the homeserver (and `PostNormalizer.toEdit`
-    // only enforces the author check later). Mirrors the explicit guard in
+    // upload below would otherwise hit the homeserver. Mirrors the explicit guard in
     // `commitDelete`.
-    const { pubky: authorId } = parseCompositeId(compositeCollectionId);
     const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
-    if (authorId !== currentUserPubky) {
-      throw Err.client(ClientErrorCode.NOT_FOUND, 'Current user is not the author of this post', {
-        service: ErrorService.Local,
-        operation: 'commitEditCollection',
-        context: { compositeCollectionId, currentUserPubky },
-      });
-    }
+    const authorId = this.assertAuthor(compositeCollectionId, currentUserPubky, 'commitEditCollection');
 
     const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
 
@@ -388,15 +403,14 @@ export class PostController {
       });
     }
 
-    const previousCover = currentContent.cover_image;
     let coverImageUrl: string | null = null;
-    let uploadedCoverUri: string | null = null;
+    let uploadedCover: TFileAttachmentResult | null = null;
     if (coverImage instanceof File) {
       try {
         const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
-        coverImageUrl = fileAttachment.fileResult.meta.url;
-        uploadedCoverUri = coverImageUrl;
+        coverImageUrl = fileAttachment.media.url;
+        uploadedCover = fileAttachment;
       } catch (error) {
         // Same as `commitCreateCollection`: an expired session keeps its auth
         // classification so the caller can prompt for sign-in (issue #2555).
@@ -413,50 +427,32 @@ export class PostController {
     }
 
     try {
-      const nextContent = CollectionPostContent.toJson({
-        name,
-        description,
-        items: currentContent.items ?? [],
-        coverImage: coverImageUrl,
-        layout: layout ?? currentContent.layout,
-      });
-
-      const { post, meta } = await PostNormalizer.toEdit({
-        compositePostId: compositeCollectionId,
-        content: nextContent,
-        currentUserPubky,
-      });
+      // The change carries no items: under the lock it is applied to the stored head's own items, so
+      // a rename queued behind an add keeps the add. Applied to the local row here only to refuse a
+      // value a collection rule refuses before anything is written.
+      const change: TCollectionEdit = { op: 'details', name, description, coverImage: coverImageUrl, layout };
+      CollectionPostContent.apply(currentContent, change);
 
       await PostApplication.commitEdit({
         compositePostId: compositeCollectionId,
-        post,
-        postUrl: meta.url,
+        edit: { collection: change },
       });
     } catch (error) {
-      // Roll back the newly uploaded cover so a failed edit does not orphan it.
-      // If rollback itself fails, log and still rethrow the original edit error.
-      if (uploadedCoverUri) {
-        await FileApplication.commitDelete([uploadedCoverUri]).catch((cleanupError) => {
+      // Roll back the newly uploaded cover so a failed edit does not orphan it: media is content
+      // addressed, so a cover picked again names the file the restored row still uses, which the
+      // upload found there (`preexisting`) and the sweep leaves in place; the collection's own row
+      // is no referencer of what the batch put there. If the rollback itself fails, log and still
+      // rethrow the original edit error.
+      if (uploadedCover) {
+        await FileApplication.commitDeleteUploaded([uploadedCover], compositeCollectionId).catch((cleanupError) => {
           Logger.warn('[PostController.commitEditCollection] Failed to rollback newly uploaded cover', {
             compositeCollectionId,
-            uploadedCoverUri,
+            uploadedCoverUri: uploadedCover.media.url,
             cleanupError,
           });
         });
       }
       throw toAppError(error, ErrorService.Local, 'commitEditCollection');
-    }
-
-    // Previous cover is no longer referenced by the envelope (replaced or cleared).
-    // Delete it after a successful persist; if delete fails, the edit still stands.
-    if (isHomeserverFileUri(previousCover) && previousCover !== coverImageUrl) {
-      await FileApplication.commitDelete([previousCover]).catch((cleanupError) => {
-        Logger.warn('[PostController.commitEditCollection] Failed to cleanup previous collection cover', {
-          compositeCollectionId,
-          previousCover,
-          cleanupError,
-        });
-      });
     }
   }
 
@@ -488,24 +484,18 @@ export class PostController {
     }
 
     const { pubky: postAuthorId, id: rawPostId } = parseCompositeId(postId);
-    const itemUri = postUriBuilder(postAuthorId, rawPostId);
-    const nextContent = shouldAdd
-      ? CollectionPostContent.addItem(currentContent, itemUri)
-      : CollectionPostContent.removeItem(currentContent, itemUri);
+    // A stored item may spell the post either way (a reference to an author who has not migrated
+    // keeps its 0.x spelling), so the item is matched by any spelling and a new one gets the v1 one.
+    const spellings = postReferenceSpellings(postAuthorId, rawPostId);
+    // The change, not the next item list: under the lock it is applied to the stored head and to the
+    // row read there, so an add queued behind another edit of this collection keeps that edit. The
+    // row read above only says whether there is anything to do.
+    const change: TCollectionEdit = { op: shouldAdd ? 'add' : 'remove', spellings };
 
-    if (nextContent.items === currentContent.items) return;
+    if (CollectionPostContent.apply(currentContent, change) === currentContent) return;
 
-    const { post, meta } = await PostNormalizer.toEdit({
-      compositePostId: collectionId,
-      content: JSON.stringify(nextContent),
-      currentUserPubky,
-    });
-
-    await PostApplication.commitEdit({
-      compositePostId: collectionId,
-      post,
-      postUrl: meta.url,
-    });
+    this.assertAuthor(collectionId, currentUserPubky, 'commitUpdateCollectionItem');
+    await PostApplication.commitEdit({ compositePostId: collectionId, edit: { collection: change } });
   }
 
   static async commitReorderCollectionItems({ collectionId, items }: TReorderCollectionItemsParams): Promise<void> {
@@ -531,21 +521,14 @@ export class PostController {
       });
     }
 
-    const nextContent = CollectionPostContent.reorderItems(currentContent, items);
+    // The drafted order is merged against the stored head under the lock (`reorderItems`), so an item
+    // added by an edit this one queued behind leads the result instead of being dropped.
+    const change: TCollectionEdit = { op: 'reorder', order: items };
 
-    if (nextContent.items === currentContent.items) return;
+    if (CollectionPostContent.apply(currentContent, change) === currentContent) return;
 
-    const { post, meta } = await PostNormalizer.toEdit({
-      compositePostId: collectionId,
-      content: JSON.stringify(nextContent),
-      currentUserPubky,
-    });
-
-    await PostApplication.commitEdit({
-      compositePostId: collectionId,
-      post,
-      postUrl: meta.url,
-    });
+    this.assertAuthor(collectionId, currentUserPubky, 'commitReorderCollectionItems');
+    await PostApplication.commitEdit({ compositePostId: collectionId, edit: { collection: change } });
   }
 
   /**
@@ -565,40 +548,31 @@ export class PostController {
       });
     }
 
-    await PostApplication.commitDelete({ compositePostId });
+    // The post's 0.x copy is deleted only by a grant that covers the 0.x tree; a Ring session
+    // minted without it leaves the copy, which the application logs.
+    const session = useAuthStore.getState().selectSession();
+    const canWriteLegacy = session !== null && hasRequiredCapabilities(session.info.capabilities, APP_CAPABILITIES);
+
+    await PostApplication.commitDelete({ compositePostId, canWriteLegacy });
   }
 
   /**
-   * Edit a post's content and, optionally, its attachments.
+   * Edit a post's content and, optionally, its attachments and (for an article) its cover.
    *
    * Without `attachments` this is a content-only edit. With `attachments`,
    * `kept` URIs are validated against the post's current attachments, `added`
    * files are normalized here (no IO) and uploaded by the application layer,
-   * current attachments not in `kept` are deleted best-effort after a
-   * successful edit, and the post kind is recomputed to match the resulting
-   * attachment set (articles and collections keep their kind).
+   * current attachments not in `kept` leave the post, and the post kind is
+   * recomputed to match the resulting attachment set (articles and collections
+   * keep their kind). An article's `coverImage` replaces (a string) or clears
+   * (`null`) the envelope's cover. Nothing an edit removes is deleted: the
+   * earlier versions still reference it (ADR-0027).
    */
-  static async commitEdit({ compositePostId, content, attachments }: TEditPostParams) {
+  static async commitEdit({ compositePostId, content, attachments, coverImage }: TEditPostParams) {
     const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
 
-    if (!attachments) {
-      const { post, meta } = await PostNormalizer.toEdit({ compositePostId, content, currentUserPubky });
-
-      await PostApplication.commitEdit({ compositePostId, post, postUrl: meta.url });
-      return;
-    }
-
-    // Reject non-authors up front, before the CPU-heavy file sanitization below
-    // (`PostNormalizer.toEdit` only enforces the author check later). Mirrors
-    // the explicit guard in `commitEditCollection`.
-    const { pubky: authorId } = parseCompositeId(compositePostId);
-    if (authorId !== currentUserPubky) {
-      throw Err.client(ClientErrorCode.NOT_FOUND, 'Current user is not the author of this post', {
-        service: ErrorService.Local,
-        operation: 'commitEdit',
-        context: { compositePostId, currentUserPubky },
-      });
-    }
+    // Reject non-authors up front, before the CPU-heavy file sanitization below.
+    const authorId = this.assertAuthor(compositePostId, currentUserPubky, 'commitEdit');
 
     const current = await PostApplication.getDetails({ compositeId: compositePostId });
     if (!current || isPostDeleted(current)) {
@@ -607,6 +581,15 @@ export class PostController {
         operation: 'commitEdit',
         context: { compositePostId },
       });
+    }
+
+    // An article's cover, as asked for.
+    const coverEdit =
+      coverImage === undefined ? {} : { coverImage: this.articleCover({ current, coverImage, authorId }) };
+
+    if (!attachments) {
+      await PostApplication.commitEdit({ compositePostId, edit: { content, ...coverEdit } });
+      return;
     }
 
     const { original, kept, added, addedUris, nextOrder } = attachments;
@@ -619,7 +602,7 @@ export class PostController {
       });
     }
 
-    // Article inline-image path: every attachment is an already-uploaded URI
+    // Article inline-media path: every attachment is an already-uploaded URI
     // and `nextOrder` is the exact slot-ordered list to persist.
     if (nextOrder) {
       if (added.length > 0) {
@@ -649,57 +632,62 @@ export class PostController {
         });
       }
 
-      // Removals are diffed against the seeded snapshot (`original`), never
-      // the live row — only files the user actually saw and removed get
-      // deleted. Session uploads dropped before saving are not our concern
-      // here; the composer session cleans those up itself.
-      const nextOrderSet = new Set(nextOrder);
-      const orderRemovedUris = original.filter((uri) => !nextOrderSet.has(uri));
-
       const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added: [] });
-
-      const { post, meta } = await PostNormalizer.toEdit({
-        compositePostId,
-        content,
-        currentUserPubky,
-        attachments: nextOrder.length > 0 ? nextOrder : null,
-        kind,
-      });
 
       await PostApplication.commitEdit({
         compositePostId,
-        post,
-        postUrl: meta.url,
-        removedUris: orderRemovedUris.length > 0 ? orderRemovedUris : undefined,
+        edit: { content, attachmentUris: nextOrder, kind, ...coverEdit },
       });
       return;
     }
 
-    // Removals are diffed against the seeded snapshot (`original`), never the
-    // live row — only files the user actually saw and removed get deleted.
-    const removedUris = original.filter((uri) => !keptSet.has(uri));
-
     const fileAttachments =
       added.length > 0 ? await this.normalizeFileAttachments({ attachments: added, pubky: authorId }) : [];
-    const nextUris = [...kept, ...fileAttachments.map((f) => f.fileResult.meta.url)];
+    const nextUris = [...kept, ...fileAttachments.map((f) => f.media.url)];
+    const attachmentNames = Object.fromEntries(fileAttachments.map((f) => [f.media.url, f.name]));
 
     const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added });
 
-    const { post, meta } = await PostNormalizer.toEdit({
-      compositePostId,
-      content,
-      currentUserPubky,
-      attachments: nextUris.length > 0 ? nextUris : null,
-      kind,
-    });
-
     await PostApplication.commitEdit({
       compositePostId,
-      post,
-      postUrl: meta.url,
+      edit: { content, attachmentUris: nextUris, attachmentNames, kind, ...coverEdit },
       fileAttachments: fileAttachments.length > 0 ? fileAttachments : undefined,
-      removedUris: removedUris.length > 0 ? removedUris : undefined,
     });
+  }
+
+  /**
+   * An article's next cover: a file URI of the author's, or null to clear it. A cover that is not a
+   * homeserver file of the author's is refused: readers resolve only the author's own files, and a
+   * delete of the article collects its cover.
+   */
+  private static articleCover({
+    current,
+    coverImage,
+    authorId,
+  }: {
+    current: PostDetailsModelSchema;
+    coverImage: string | null;
+    authorId: string;
+  }): string | null {
+    if (current.kind !== 'long') {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Only an article has a cover image', {
+        service: ErrorService.Local,
+        operation: 'commitEdit',
+        context: { compositePostId: current.id, kind: current.kind },
+      });
+    }
+    if (coverImage !== null && !isAuthorFileUri(coverImage, authorId)) {
+      throw Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
+        'The cover must be a homeserver file owned by the author',
+        {
+          service: ErrorService.Local,
+          operation: 'commitEdit',
+          context: { compositePostId: current.id },
+        },
+      );
+    }
+    return coverImage;
   }
 
   /**
@@ -718,9 +706,9 @@ export class PostController {
     currentKind: string;
     kept: string[];
     added: File[];
-  }): Promise<PubkyAppPostKind> {
+  }): Promise<KnownPostKind> {
     if (currentKind === 'long' || currentKind === 'collection') {
-      return PostNormalizer.mapKindToEnum(currentKind);
+      return this.storedKind(currentKind);
     }
 
     let keptContentTypes: string[] = [];
@@ -729,7 +717,7 @@ export class PostController {
       const typeByUri = new Map(metadata.map((file) => [file.uri, file.content_type]));
       const resolvedTypes = kept.map((uri) => typeByUri.get(uri));
       if (resolvedTypes.some((type) => !type)) {
-        return PostNormalizer.mapKindToEnum(currentKind);
+        return this.storedKind(currentKind);
       }
       keptContentTypes = resolvedTypes as string[];
     }
@@ -739,6 +727,36 @@ export class PostController {
       attachmentContentTypes: [...keptContentTypes, ...added.map((file) => file.type)],
       currentKind,
     });
+  }
+
+  /**
+   * The stored kind of a local post kind. Fails closed on a kind this client does not know: Nexus
+   * running a newer data model can serve kinds this client cannot write back, and a fallback would
+   * make an edit of such a post silently rewrite its kind.
+   */
+  private static storedKind(kind: string): KnownPostKind {
+    const stored = toStoredPostKind(kind);
+    if (!stored) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Unsupported post kind', {
+        service: ErrorService.Local,
+        operation: 'storedKind',
+        context: { kind },
+      });
+    }
+    return stored;
+  }
+
+  /** The author of the post, refusing a write by anyone else before any side effect. */
+  private static assertAuthor(compositePostId: string, currentUserPubky: string, operation: string): string {
+    const { pubky: authorId } = parseCompositeId(compositePostId);
+    if (authorId !== currentUserPubky) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Current user is not the author of this post', {
+        service: ErrorService.Local,
+        operation,
+        context: { compositePostId, currentUserPubky },
+      });
+    }
+    return authorId;
   }
 
   /**

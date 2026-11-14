@@ -180,7 +180,7 @@ export const expectPostOrder = (first: string, second: string) => {
 // Popularity order is computed by Nexus and can lag the tag write. Popularity streams are never
 // cached, so every reload fetches a fresh page from Nexus: reload until the order settles.
 export const waitForPopularityOrder = (first: string, second: string, reloads = 8) => {
-  cy.intercept({ method: 'GET', pathname: '/v0/stream/posts/keys', query: { sorting: 'total_engagement' } }).as(
+  cy.intercept({ method: 'GET', pathname: '/v1/stream/posts/keys', query: { sorting: 'total_engagement' } }).as(
     'popularityStream',
   );
   const check = (remaining: number) => {

@@ -112,8 +112,22 @@ export const addLinks = (links: { label: string; url: string }[]) => {
   });
 };
 
+// use on edit profile page: picks an avatar from the fixtures and accepts the crop dialog's default square
+export const chooseAvatar = (fixture = 'mustache-you.png') => {
+  cy.get('[data-testid="edit-profile-form"] input[type="file"]').selectFile(
+    `${Cypress.config('fixturesFolder')}/${fixture}`,
+    { force: true },
+  );
+  cy.get('[role="dialog"]')
+    .should('be.visible')
+    .within(() => {
+      cy.contains('button', 'Done').should('be.enabled').click();
+    });
+  cy.get('[role="dialog"]').should('not.exist');
+  cy.get('[data-testid="edit-profile-form"]').find('img[alt^="Selected avatar preview"]').should('exist');
+};
+
 // use on edit profile page
-// todo: add support for profile picture upload
 export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof profileFields, string>>) => {
   // Perform the edit on each field in profileData
   Object.entries(profileData).forEach(([field, value]) => {
@@ -289,7 +303,7 @@ export const unfollowUserByUsername = (username: string) => {
 // reload straight after an unfollow can still list the user. Run on /profile/following: reloads
 // until Nexus returns an empty following stream.
 export const reloadUntilOwnFollowingIsEmpty = (attempts = 10) => {
-  cy.intercept({ method: 'GET', pathname: '/v0/stream/users/ids', query: { source: 'following' } }).as(
+  cy.intercept({ method: 'GET', pathname: '/v1/stream/users/ids', query: { source: 'following' } }).as(
     'followingStream',
   );
   const reloadUntilEmpty = (remaining: number) => {
@@ -306,7 +320,7 @@ export const reloadUntilOwnFollowingIsEmpty = (attempts = 10) => {
 };
 
 export const waitForPutLastRead = () => {
-  cy.intercept('PUT', '**/pub/pubky.app/last_read*').as('putLastRead');
+  cy.intercept('PUT', '**/priv/app.pubky/v1/last_read*').as('putLastRead');
   cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
 };
 

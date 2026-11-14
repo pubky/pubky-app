@@ -3,16 +3,18 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import type { TagCollectionModelSchema, TagMutation } from '@/models/shared/tag/tag.schema';
 import { findTagMutation, getTagCursor, getTagMutationEntries, getViewerTagUri } from '@/models/shared/tag/tag.utils';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { reconcileTagCounts, reconcileTagWindow } from '@/pipes/tag/tag-cache';
 import type { ViewerTagMutation } from '@/services/local/tag/tag.types';
-import type { NexusPostCounts, NexusTag, NexusUserCounts } from '@/services/nexus/nexus.types';
+import type { NexusPostCounts, NexusTag } from '@/services/nexus/nexus.types';
 
 export type TagPreviewGuard = {
   validatedAt?: number;
@@ -45,7 +47,7 @@ export class LocalTagCacheService {
             id: mutation.id,
             relationship: mutation.relationship,
             expiresAt: mutation.expiresAt,
-            taggersCount: record?.tags.find((tag) => tag.label.toLowerCase() === label)?.taggers_count ?? 0,
+            taggersCount: record?.tags.find((tag) => canonicalizeTagLabel(tag.label) === label)?.taggers_count ?? 0,
           },
         ]),
     );
@@ -153,15 +155,19 @@ export class LocalTagCacheService {
     );
   }
 
+  /**
+   * `counts` are rows minus their id: a user's Nexus counts go through `UserCountsModel.toRowCounts` first, so a
+   * `/v1` response, which serves no `bookmarks`, still writes the field.
+   */
   static async savePreviews(
     kind: TagEntity['kind'],
     entries: NexusModelTuple<NexusTag[]>[],
     guard: TagPreviewGuard = {},
-    counts: NexusModelTuple<NexusPostCounts | NexusUserCounts>[] = [],
+    counts: NexusModelTuple<NexusPostCounts | Omit<UserCountsModelSchema, 'id'>>[] = [],
   ) {
     if (entries.length === 0) return;
     const table = this.table({ kind, id: '' });
-    const countsTable: Table<(NexusPostCounts | NexusUserCounts) & { id: string }> =
+    const countsTable: Table<(NexusPostCounts | Omit<UserCountsModelSchema, 'id'>) & { id: string }> =
       kind === 'post' ? PostCountsModel.table : UserCountsModel.table;
     const incomingCounts = new Map(counts);
     const ids = entries.map(([id]) => id);
@@ -173,7 +179,7 @@ export class LocalTagCacheService {
         if (guard.isCurrent && !guard.isCurrent()) return;
         const now = Date.now();
         const tagRows = new Map<string, TagCollectionModelSchema<string>>();
-        const countRows: ((NexusPostCounts | NexusUserCounts) & { id: string })[] = [];
+        const countRows: ((NexusPostCounts | Omit<UserCountsModelSchema, 'id'>) & { id: string })[] = [];
         entries.forEach(([id, tags], index) => {
           const existing = existingRows[index];
           const revision = existing ? (existing.cache?.revision ?? 0) : null;

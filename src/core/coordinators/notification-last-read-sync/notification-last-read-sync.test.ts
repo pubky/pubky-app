@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES } from '@/app/routes';
-import { MUTE_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/mute-sync';
 import {
   NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
   NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX,
@@ -97,7 +96,8 @@ describe('NotificationLastReadSyncCoordinator', () => {
     expect(sessionStorage.getItem(`${NOTIFICATION_LAST_READ_SYNC_CURSOR_STORAGE_PREFIX}${pubky}`)).toBe('1');
   });
 
-  it('shares one homeserver subscription with the mute list instead of opening its own', async () => {
+  // Social v1: the mute directory is private and polled (ADR-0014), so the mute list never joins the shared stream.
+  it('subscribes to its own path only, with the polling mute list running beside it', async () => {
     vi.spyOn(MuteController, 'fetchMutedUsers').mockResolvedValue([]);
     signIn();
     MuteListSyncCoordinator.getInstance().start();
@@ -105,13 +105,7 @@ describe('NotificationLastReadSyncCoordinator', () => {
     await flushPromises();
 
     expect(subscribe()).toHaveBeenCalledOnce();
-    expect(subscribe().mock.calls[0][0].paths).toEqual([
-      MUTE_HOMESERVER_EVENTS_PATH_PREFIX,
-      NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
-    ]);
-    await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS);
-    expect(NotificationController.fetchLastReadFromHomeserver).toHaveBeenCalledTimes(2);
-    expect(MuteController.fetchMutedUsers).not.toHaveBeenCalled();
+    expect(subscribe().mock.calls[0][0].paths).toEqual([NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX]);
   });
 
   it('re-reads last_read when it resumes from a stored cursor, before any event arrives', async () => {

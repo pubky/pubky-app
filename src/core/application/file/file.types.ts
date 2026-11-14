@@ -8,3 +8,9 @@ export interface FilesListParams {
 export interface ReadFilesInput {
   fileUris: Pubky[];
 }
+
+/** A v1 media file a delete considers: its URI and its composite id (`owner:hash`). */
+export interface TMediaFile {
+  uri: string;
+  fileId: string;
+}

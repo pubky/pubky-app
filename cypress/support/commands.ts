@@ -159,17 +159,36 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
 
 // Signs the app in as `name` (signed up by `cy.onboardAsNewUser`, `seedUserViaApi` or `signUpViaApi`)
 // through its Pubky Ring flow, with the seed tasks approving in Ring's place. A key with a profile
-// lands on /home; one without lands on /onboarding/profile.
-Cypress.Commands.add('signInWithPubkyRing', (name: string, landingPath = '/home') => {
-  openSignInPage();
-  readPubkyRingAuthUrl().then((authUrl) => {
-    expect(authUrl).to.match(/^pubkyauth:\/\//);
-    approvePubkyAuthViaApi(name, authUrl);
-  });
+// lands on /home; one without lands on /onboarding/profile. Every fresh grant passes the social v1
+// migration gate (`/migration`) first: a key with no 0.x tree only checks there and moves on, while
+// one seeded `legacy` copies its tree there before the landing route (`migrates`).
+Cypress.Commands.add(
+  'signInWithPubkyRing',
+  (name: string, landingPath = '/home', { migrates = false, whileMigrating, acknowledgesSummary = false } = {}) => {
+    openSignInPage();
+    readPubkyRingAuthUrl().then((authUrl) => {
+      expect(authUrl).to.match(/^pubkyauth:\/\//);
+      approvePubkyAuthViaApi(name, authUrl);
+    });
 
-  cy.location('pathname').should('eq', landingPath);
-  if (landingPath === '/home') waitForFeedToLoad();
-});
+    // An account with a 0.x tree stops on the gate's progress screen; any other only checks and moves on
+    if (migrates) {
+      cy.location('pathname').should('eq', '/migration');
+      cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+      // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here
+      whileMigrating?.();
+    }
+    // A run that left something behind waits on its summary for a click
+    if (acknowledgesSummary) {
+      cy.get('[data-testid="social-migration"]').should('contain.text', 'Your account is up to date');
+      cy.get('#social-migration-summary-navigation-continue-btn').click();
+    }
+    // Every sign-in passes the gate and then prepares the account before the landing route, a first one
+    // about 15 s on a local stack; a run copies the whole tree first, and its specs hold some of its answers back
+    cy.location('pathname', extendedTimeout()).should('eq', landingPath);
+    if (landingPath === '/home') waitForFeedToLoad();
+  },
+);
 
 // Useful when 'should.be' doesn't work due to additional space inserted before final word.
 Cypress.Commands.add('innerTextShouldEq', { prevSubject: 'element' }, (subject, text) => {

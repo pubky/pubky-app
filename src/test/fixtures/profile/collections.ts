@@ -86,7 +86,7 @@ const COVER_IDS = {
 /** Alice's authored collections — feeds the Profile Collections tab. */
 export const VRT_PROFILE_COLLECTIONS: readonly VRTProfileCollectionFixture[] = [
   collection(
-    '0VRTPROFILECOLL001',
+    '0034EMJK0MHR0',
     'Field notes',
     'Observations from the local-first migration, kept in one place.',
     9,
@@ -95,7 +95,7 @@ export const VRT_PROFILE_COLLECTIONS: readonly VRTProfileCollectionFixture[] = [
     COVER_IDS.fieldNotes,
   ),
   collection(
-    '0VRTPROFILECOLL002',
+    '0034EMJK2HJW0',
     'Weeknotes',
     'A running log of what shipped, what broke, and what\u2019s next.',
     6,
@@ -103,10 +103,10 @@ export const VRT_PROFILE_COLLECTIONS: readonly VRTProfileCollectionFixture[] = [
     [{ label: 'weeknotes', taggers: [VRT_AUTHOR_PUBKYS.eira], taggers_count: 2, relationship: false }],
     COVER_IDS.weeknotes,
   ),
-  collection('0VRTPROFILECOLL003', 'Reading queue', 'Papers and long-form pieces queued for later.', 4, 60, [
+  collection('0034EMJK4EM00', 'Reading queue', 'Papers and long-form pieces queued for later.', 4, 60, [
     { label: 'reading', taggers: [VRT_AUTHOR_PUBKYS.dion], taggers_count: 1, relationship: false },
   ]),
-  collection('0VRTPROFILECOLL004', 'Design scraps', 'Unused type and colour experiments worth revisiting.', 3, 90),
+  collection('0034EMJK6BN40', 'Design scraps', 'Unused type and colour experiments worth revisiting.', 3, 90),
 ];
 
 export const VRT_PROFILE_COLLECTION_COVER_URLS: Readonly<Record<string, string>> = {

@@ -48,21 +48,21 @@ function post(input: {
 export const VRT_SINGLE_POST_THREAD_REPLIES: readonly VRTSinglePostReplyFixture[] = [
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTSINGLEREPLY001',
+    postId: '0034EMJMAKAG0',
     content: 'Corner timestamps win on desktop. On a phone they fight the avatar.',
     agoMs: 90 * MINUTE_MS,
     replied: VRT_SINGLE_POST.details.uri,
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.cleo,
-    postId: '0VRTSINGLEREPLY002',
+    postId: '0034EMJMCGBM0',
     content: 'I want the time next to the name. Scanning a grid of photos, I never look at the corner.',
     agoMs: 70 * MINUTE_MS,
     replied: VRT_SINGLE_POST.details.uri,
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.dion,
-    postId: '0VRTSINGLEREPLY003',
+    postId: '0034EMJMEDCR0',
     content: 'Hierarchy is a reading-order problem. If the timestamp is content, put it in the content column.',
     agoMs: 50 * MINUTE_MS,
     replied: VRT_SINGLE_POST.details.uri,

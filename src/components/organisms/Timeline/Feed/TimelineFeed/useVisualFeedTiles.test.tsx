@@ -1,9 +1,12 @@
 import * as React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import { getVisualYouTubeThumbnailUrl, resolvePreferredVisualTileSize } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
 import { getVisualTileProbeCacheEntry, resetVisualTileCaches } from './TimelineFeedVisualMedia.utils';
@@ -24,7 +27,10 @@ const {
   mockGetMetadata: vi.fn(),
   mockFindByIdsPreserveOrder: vi.fn(),
   mockEnrichPosts: vi.fn(),
-  mockLocalFilesState: { posts: {} as Record<string, AttachmentConstructed[]> },
+  mockLocalFilesState: {
+    posts: {} as Record<string, AttachmentConstructed[]>,
+    articleCovers: {} as Record<string, AttachmentConstructed>,
+  },
 }));
 
 type VisualFeedSnapshot = {
@@ -74,6 +80,10 @@ function useExecutedLiveQuery(
   return snapshot;
 }
 
+/** Thirteen-character Crockford post ids, distinct per index, under a real key (the older cases predate this). */
+const postIdAt = (index: number) => `0035V9A20W${String(index).padStart(2, '0')}0`;
+const compositeAt = (author: string, index: number) => `${author}:${postIdAt(index)}`;
+
 function createPostDetails({
   id,
   content = 'hello world',
@@ -98,28 +108,34 @@ function createPostDetails({
   };
 }
 
+/** A row as the local table holds it: keyed `owner:id`, its `uri` the one the posts name (a 0.x file unless given). */
 function createFileDetails({
   id,
   contentType,
   width,
   height,
+  uri,
+  name = `${id}.bin`,
 }: {
   id: string;
   contentType: string;
   width?: number;
   height?: number;
+  uri?: string;
+  name?: string;
 }): FileDetailsModelSchema {
+  const [owner, fileId] = id.split(':');
   return {
     id,
-    name: `${id}.bin`,
+    name,
     src: `/src/${id}`,
     content_type: contentType,
     size: 1024,
     created_at: 1,
     indexed_at: 1,
     metadata: width && height ? { width: String(width), height: String(height) } : {},
-    owner_id: 'user-1',
-    uri: `pubky://user-1/pub/pubky.app/files/${id}`,
+    owner_id: owner,
+    uri: uri ?? `pubky://${owner}/pub/pubky.app/files/${fileId}`,
     urls: { feed: `/feed/${id}`, main: `/main/${id}`, small: `/small/${id}` },
   };
 }
@@ -178,8 +194,12 @@ vi.mock('dexie-react-hooks', () => ({
 }));
 
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
-  useLocalFilesStore: (selector: (state: { posts: Record<string, AttachmentConstructed[]> }) => unknown) =>
-    selector(mockLocalFilesState),
+  useLocalFilesStore: (
+    selector: (state: {
+      posts: Record<string, AttachmentConstructed[]>;
+      articleCovers: Record<string, AttachmentConstructed>;
+    }) => unknown,
+  ) => selector(mockLocalFilesState),
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -220,6 +240,7 @@ describe('useVisualFeedTiles', () => {
     vi.clearAllMocks();
     resetVisualTileCaches();
     mockLocalFilesState.posts = {};
+    mockLocalFilesState.articleCovers = {};
     mockUseLiveQuery.mockReturnValue({
       tiles: [],
       missingFileUris: [],
@@ -250,6 +271,124 @@ describe('useVisualFeedTiles', () => {
         fileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
       });
     });
+  });
+
+  it('builds tiles for v1 media without a row from what the URI says, and asks Nexus for nothing', async () => {
+    const owner = fakeOwner(2);
+    const image = buildFile(owner, { bytes: new Uint8Array([1]), type: 'image/webp' });
+    const pdf = buildFile(owner, { bytes: new Uint8Array([2]), type: 'application/pdf' });
+    mockFindByIdsPreserveOrder.mockResolvedValue([
+      createPostDetails({ id: 'author:post-image', attachments: [image.url] }),
+      createPostDetails({ id: 'author:post-pdf', attachments: [pdf.url] }),
+    ]);
+    // What `FileController.getMetadata` answers when no row exists.
+    mockGetMetadata.mockImplementation(async ({ fileAttachments }: { fileAttachments: string[] }) =>
+      fileAttachments.flatMap((uri) => FileNormalizer.toV1FileDetails(uri) ?? []),
+    );
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: ['author:post-image', 'author:post-pdf'], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(snapshot.tiles).toEqual([
+      expect.objectContaining({
+        postId: 'author:post-image',
+        attachmentName: `${image.id}.webp`,
+        contentType: 'image/webp',
+        mediaKind: 'image',
+        // No dimensions to read: the renderer probes the image.
+        probeState: 'pending',
+      }),
+    ]);
+    expect(snapshot.missingFileUris).toEqual([]);
+    // A file type the visual layout does not show hides the post, as a real row of that type does.
+    expect(snapshot.hiddenPostCount).toBe(1);
+    expect(mockFetchFiles).not.toHaveBeenCalled();
+  });
+
+  it('matches rows to attachments by URI, so two files of one hash each get their own tile', async () => {
+    // The same bytes uploaded under two types share one `owner:hash` key; `getMetadata` answers the
+    // cached row for its own URI and the other URI from what it says. Video bytes are not normalized.
+    const owner = fakeOwner(3);
+    const postMp4 = compositeAt(owner, 1);
+    const postMpeg = compositeAt(owner, 2);
+    const mp4 = buildFile(owner, { bytes: new Uint8Array([3]), type: 'video/mp4' });
+    const mpeg = buildFile(owner, { bytes: new Uint8Array([3]), type: 'video/mpeg' });
+    const mpegRow = createFileDetails({
+      id: `${owner}:${mpeg.id}`,
+      contentType: 'video/mpeg',
+      uri: mpeg.url,
+      name: 'clip.mpeg',
+    });
+    mockFindByIdsPreserveOrder.mockResolvedValue([
+      createPostDetails({ id: postMp4, attachments: [mp4.url] }),
+      createPostDetails({ id: postMpeg, attachments: [mpeg.url] }),
+    ]);
+    mockGetMetadata.mockImplementation(async ({ fileAttachments }: { fileAttachments: string[] }) =>
+      fileAttachments.flatMap((uri) => (uri === mpeg.url ? [mpegRow] : (FileNormalizer.toV1FileDetails(uri) ?? []))),
+    );
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: [postMp4, postMpeg], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(mp4.id).toBe(mpeg.id);
+    expect(
+      snapshot.tiles.map(({ postId, attachmentName, contentType }: VisualTile) => ({
+        postId,
+        attachmentName,
+        contentType,
+      })),
+    ).toEqual([
+      { postId: postMp4, attachmentName: `${mp4.id}.mp4`, contentType: 'video/mp4' },
+      { postId: postMpeg, attachmentName: 'clip.mpeg', contentType: 'video/mpeg' },
+    ]);
+    expect(snapshot.missingFileUris).toEqual([]);
+    expect(snapshot.hiddenPostCount).toBe(0);
+  });
+
+  it('skips an attachment URI the key builder refuses instead of waiting on a fetch for it', async () => {
+    const owner = fakeOwner(4);
+    const post = compositeAt(owner, 3);
+    const fileId = `${owner}:0034A0X7NJ52C`;
+    mockFindByIdsPreserveOrder.mockResolvedValue([
+      createPostDetails({
+        id: post,
+        attachments: ['not-a-pubky-uri', `pubky://${owner}/pub/pubky.app/files/0034A0X7NJ52C`],
+      }),
+    ]);
+    mockGetMetadata.mockResolvedValue([
+      createFileDetails({ id: fileId, contentType: 'image/jpeg', width: 1000, height: 800 }),
+    ]);
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: [post], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(snapshot.tiles.map(({ attachmentId }: VisualTile) => attachmentId)).toEqual([fileId]);
+    expect(snapshot.missingFileUris).toEqual([]);
+    expect(mockFetchFiles).not.toHaveBeenCalled();
+  });
+
+  it('renders the tile of a 0.x row returned under another spelling of its URI, matched by id', async () => {
+    // `getMetadata` answers a 0.x attachment with its row whatever the row says its URI is; only a v1
+    // attachment is matched by URI, since only v1 rows can share an id across extensions.
+    const owner = fakeOwner(5);
+    const post = compositeAt(owner, 4);
+    const attachment = `pubky://${owner}/pub/pubky.app/files/0034A0X7NJ52C`;
+    const fileId = `${owner}:0034A0X7NJ52C`;
+    mockFindByIdsPreserveOrder.mockResolvedValue([createPostDetails({ id: post, attachments: [attachment] })]);
+    mockGetMetadata.mockResolvedValue([
+      createFileDetails({ id: fileId, contentType: 'image/jpeg', width: 1000, height: 800, uri: `${attachment}/` }),
+    ]);
+    mockUseLiveQuery.mockReturnValue({ tiles: [], missingFileUris: [] });
+    renderHook(() => useVisualFeedTiles({ postIds: [post], hasMore: false }));
+
+    const snapshot = await mockUseLiveQuery.mock.calls[0][0]();
+
+    expect(snapshot.tiles.map(({ attachmentId }: VisualTile) => attachmentId)).toEqual([fileId]);
+    expect(snapshot.missingFileUris).toEqual([]);
+    expect(mockFetchFiles).not.toHaveBeenCalled();
   });
 
   it('fetches post details for each requested post id', async () => {
@@ -792,6 +931,37 @@ describe('useVisualFeedTiles', () => {
       // Inline attachments are never fetched for tiles
       expect(mockGetMetadata).toHaveBeenCalledWith({
         fileAttachments: ['pubky://user-1/pub/pubky.app/files/cover-1'],
+      });
+    });
+
+    it('renders no tile for a 0.x article whose slot 0 is a video or a PDF: the cover is image-only', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        articlePost('author:article-video', 'Text ![a](attachment:1)', [
+          'pubky://user-1/pub/pubky.app/files/clip-1',
+          'pubky://user-1/pub/pubky.app/files/inline-1',
+        ]),
+        articlePost('author:article-pdf', 'Text ![a](attachment:1)', [
+          'pubky://user-1/pub/pubky.app/files/doc-1',
+          'pubky://user-1/pub/pubky.app/files/inline-2',
+        ]),
+      ]);
+      // Only the rows can say what slot 0 is, so both are read; neither is an image
+      mockGetMetadata.mockResolvedValue([
+        createFileDetails({ id: 'user-1:clip-1', contentType: 'video/mp4', width: 1280, height: 720 }),
+        createFileDetails({ id: 'user-1:doc-1', contentType: 'application/pdf' }),
+      ]);
+
+      const { result } = renderHook(() =>
+        useVisualFeedTiles({ postIds: ['author:article-video', 'author:article-pdf'], hasMore: false }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.hiddenPostCount).toBe(2);
+      });
+      expect(result.current.tiles).toEqual([]);
+      expect(result.current.hasPendingFiles).toBe(false);
+      expect(mockGetMetadata).toHaveBeenCalledWith({
+        fileAttachments: ['pubky://user-1/pub/pubky.app/files/clip-1', 'pubky://user-1/pub/pubky.app/files/doc-1'],
       });
     });
   });

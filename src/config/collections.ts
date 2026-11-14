@@ -1,4 +1,4 @@
-import type { PubkyAppCollectionLayout } from 'pubky-app-specs';
+import type { KnownCollectionLayout } from 'pubky-social-specs';
 
 /**
  * Collections feature configuration.
@@ -9,7 +9,7 @@ import type { PubkyAppCollectionLayout } from 'pubky-app-specs';
 
 // Intentionally whitelist layouts implemented by this UI so future specs
 // layouts remain unsupported until their rendering and controls are added.
-export type CollectionLayout = Extract<PubkyAppCollectionLayout, 'grid' | 'list' | 'visual'>;
+export type CollectionLayout = Extract<KnownCollectionLayout, 'grid' | 'list' | 'visual'>;
 
 export const COLLECTION_LAYOUT: Record<'CARDS' | 'LIST' | 'VISUAL', CollectionLayout> = {
   // Keep the v0 wire value; Cards replaces the former Grid presentation.

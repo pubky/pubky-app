@@ -93,6 +93,8 @@ export enum DatabaseErrorCode {
   INIT_FAILED = 'INIT_FAILED',
   /** Invariant violation - data integrity issue (e.g., record not found after successful creation) */
   INTEGRITY_ERROR = 'INTEGRITY_ERROR',
+  /** The stored schema version changed again after this page already recreated the database: another tab runs a different build (ADR-0019) */
+  VERSION_CONFLICT = 'VERSION_CONFLICT',
 }
 
 /**

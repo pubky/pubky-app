@@ -148,7 +148,7 @@ describe('inlineMediaPlugin', () => {
 
     const serialized = serializeArticleBody({
       body: getMarkdown(ref),
-      coverPresent: true,
+      slotOffset: 1,
       authorPubky: AUTHOR,
       maxInlineMedia: 9,
     });

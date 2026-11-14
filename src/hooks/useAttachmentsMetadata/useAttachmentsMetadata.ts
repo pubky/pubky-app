@@ -6,7 +6,7 @@ import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFi
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 
 interface UseAttachmentsMetadataParams {
-  /** Attachment file URIs (`pubky://<author>/pub/pubky.app/files/<id>`) to resolve. */
+  /** Attachment file URIs (v1 `pubky://<author>/pub/social/v1/files/<hash>.<ext>`, or a 0.x file URI) to resolve. */
   fileUris: readonly string[];
   /**
    * Caller gate. `false` while local optimistic attachments win, or while the
@@ -32,8 +32,8 @@ interface UseAttachmentsMetadataResult {
 /**
  * Resolves the local file rows behind a set of attachment URIs: live, local-first.
  *
- * A card can paint from post details before its file rows exist: Nexus can return
- * attachment URIs while `attachments_metadata` is still missing or partially indexed. A one-shot
+ * A card can paint from post details before its file rows exist: the page's batched metadata
+ * fetch (`FileApplication.fetchFilesForPosts`) may still be missing rows or have failed. A one-shot
  * `getMetadata` right after the post row arrives reads an empty table and never
  * looks again, so the attachments stay missing until something remounts the card.
  * This hook instead:
@@ -42,6 +42,9 @@ interface UseAttachmentsMetadataResult {
  *    (persistFiles, bootstrap, TTL refresh) re-renders the caller, and
  * 2. asks Nexus for the URIs the local table does not have yet, so a post whose
  *    file metadata was never persisted still resolves without navigation.
+ *
+ * v1 media always resolves: Nexus keeps no metadata for it, so `getMetadata` answers a file without
+ * a row with what its URI says, and only 0.x files are ever requested.
  *
  * Partial arrival renders: rows that already exist are returned while the rest
  * are still being fetched. A URI whose request settled with no row is not

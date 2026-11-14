@@ -36,8 +36,9 @@ export function useCreateInterestsFeed(): UseCreateInterestsFeedResult {
     setIsCreating(true);
 
     try {
-      await FeedController.commitCreate(buildInterestsFeedParams(tags));
-      return true;
+      const created = await FeedController.commitCreate(buildInterestsFeedParams(tags));
+      // null: the account changed while the write waited for the sync lock, so no feed was created.
+      return created !== null;
     } catch {
       // Controller errors are already logged by the Err factories, and the local row is rolled
       // back when the homeserver PUT fails, so a retry creates the feed afresh.

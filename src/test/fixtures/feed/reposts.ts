@@ -3,8 +3,8 @@ import { VRT_SINGLE_POST } from './posts';
 import { VRT_AUTHOR_PUBKYS } from './profiles';
 
 const author = VRT_AUTHOR_PUBKYS.alice;
-const repostId = '0VRTREPOSTALICE001';
-const quoteId = '0VRTQUOTE0ALICE001';
+const repostId = '0034EMJM2Z600';
+const quoteId = '0034EMJKVB1G0';
 
 /** Same original, distinct repost counts/tags so body-target regressions are visible. */
 export const VRT_PLAIN_REPOST = {

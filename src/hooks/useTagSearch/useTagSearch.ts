@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { useSearchStore } from '@/stores/search/search.store';
 import { buildSearchUrl, calculateNewTags } from './useTagSearch.utils';
 
@@ -29,7 +30,7 @@ export function useTagSearch(): UseTagSearchResult {
   const { activeTags, setActiveTags, removeActiveTag, addTag } = useSearchStore();
 
   const addTagToSearch = (tag: string, options?: TagSearchOptions) => {
-    const normalizedTag = tag.trim().toLowerCase();
+    const normalizedTag = canonicalizeTagLabel(tag);
     if (normalizedTag.length === 0) return;
 
     if (options?.addToRecent) {
@@ -47,7 +48,7 @@ export function useTagSearch(): UseTagSearchResult {
   };
 
   const removeTagFromSearch = (tag: string) => {
-    const normalizedTag = tag.trim().toLowerCase();
+    const normalizedTag = canonicalizeTagLabel(tag);
     const newTags = activeTags.filter((t) => t !== normalizedTag);
 
     removeActiveTag(normalizedTag);

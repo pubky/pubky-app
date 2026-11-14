@@ -7,11 +7,6 @@ import { getDefaultHttpRelay } from '@/config/network';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 import { type GrantFlowRequest, GrantFlowService } from './grant-flow';
 
-vi.mock('pubky-app-specs', () => ({
-  default: vi.fn(),
-  userUriBuilder: (key: string) => `pubky://${key}/pub/pubky.app/profile.json`,
-}));
-
 // Public signed routing fixtures: zero-seed user -> one-seed homeserver -> legacy-cookie.test.
 // These are the same synthetic identities used in session-store.contract.test.ts, not live accounts.
 const USER = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';

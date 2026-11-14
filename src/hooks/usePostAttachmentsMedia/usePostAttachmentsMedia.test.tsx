@@ -68,12 +68,13 @@ const createFileMetadata = (overrides: Partial<NexusFileDetails>): NexusFileDeta
   ...overrides,
 });
 
-const selectLocalFiles = (posts: LocalFilesStore['posts']) => {
+const selectLocalFiles = (posts: LocalFilesStore['posts'], articleCovers: LocalFilesStore['articleCovers'] = {}) => {
   mockUseLocalFilesStore.mockImplementation((selector) =>
     selector(
       mockLocalFilesStore({
         profile: null,
         posts,
+        articleCovers,
         collections: {},
       }),
     ),
@@ -184,9 +185,15 @@ describe('usePostAttachmentsMedia', () => {
       main: 'https://cdn.example.com/pk:test:video/main',
       feed: undefined,
     });
-    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'pk:test:photo', variant: FileVariant.MAIN });
-    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'pk:test:photo', variant: FileVariant.FEED });
-    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'pk:test:video', variant: FileVariant.MAIN });
+    expect(mockGetFileUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:photo', variant: FileVariant.MAIN }),
+    );
+    expect(mockGetFileUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:photo', variant: FileVariant.FEED }),
+    );
+    expect(mockGetFileUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:video', variant: FileVariant.MAIN }),
+    );
   });
 
   it('falls back to an empty list when remote metadata fails', async () => {
@@ -210,10 +217,10 @@ describe('article (kind long) attachments', () => {
   const coverUri = `pubky://${AUTHOR}/pub/pubky.app/files/cover`;
   const inlineUri = `pubky://${AUTHOR}/pub/pubky.app/files/inline`;
 
-  const articleDetails = (body: string, attachments: string[]): EnrichedPostDetails => ({
+  const articleDetails = (body: string, attachments: string[], cover_image?: string): EnrichedPostDetails => ({
     ...createPostDetails(attachments),
     kind: 'long',
-    content: JSON.stringify({ title: 'T', body }),
+    content: JSON.stringify(cover_image ? { title: 'T', body, cover_image } : { title: 'T', body }),
   });
 
   it('resolves only the cover for articles with a cover', async () => {
@@ -233,6 +240,42 @@ describe('article (kind long) attachments', () => {
     expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
   });
 
+  it('resolves no media for a 0.x article whose slot 0 is a video: the cover is image-only', async () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      isLoading: false,
+    });
+    mockGetMetadata.mockResolvedValue([
+      createFileMetadata({ uri: coverUri, id: `${AUTHOR}:cover`, content_type: 'video/mp4', name: 'clip.mp4' }),
+    ]);
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    // Only the row can say what slot 0 is, so it is read; a video there is no cover and no thumbnail,
+    // where a video attachment of any other post would be one
+    await waitFor(() => {
+      expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
+    });
+    expect(result.current.mediaItems).toEqual([]);
+  });
+
+  it('resolves no media for a 0.x article whose slot 0 is a PDF', async () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      isLoading: false,
+    });
+    mockGetMetadata.mockResolvedValue([
+      createFileMetadata({ uri: coverUri, id: `${AUTHOR}:cover`, content_type: 'application/pdf', name: 'doc.pdf' }),
+    ]);
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    await waitFor(() => {
+      expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
+    });
+    expect(result.current.mediaItems).toEqual([]);
+  });
+
   it('resolves no media for coverless (slot-0) articles', async () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: articleDetails('![a](attachment:0)', [inlineUri]),
@@ -249,15 +292,15 @@ describe('article (kind long) attachments', () => {
 
   it('limits local store entries to the cover for articles', async () => {
     mockUsePostDetails.mockReturnValue({
-      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      postDetails: articleDetails('Text ![a](attachment:0)', [inlineUri], coverUri),
       isLoading: false,
     });
-    selectLocalFiles({
-      'pk:test:post': [
-        { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover', feed: 'blob:cover' } },
-        { type: 'image/png', name: 'inline.png', urls: { main: 'blob:inline', feed: 'blob:inline' } },
-      ],
-    });
+    selectLocalFiles(
+      {
+        'pk:test:post': [{ type: 'image/png', name: 'inline.png', urls: { main: 'blob:inline', feed: 'blob:inline' } }],
+      },
+      { 'pk:test:post': { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover', feed: 'blob:cover' } } },
+    );
 
     const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
 

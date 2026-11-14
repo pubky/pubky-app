@@ -13,6 +13,7 @@ import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
 import { isMobile } from './mobile';
+import { postIdFromWriteUrl } from './nexus';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 import type { SeedLockServerWriteArgs } from './types/seed';
 
@@ -406,7 +407,7 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
   cy.then(() => expect(lockServerCalls, 'payment or guarded reads after the reload').to.be.empty);
 };
 
-export type TGuardedPost = { content: string; kind: string; attachments: string[] | null };
+export type TGuardedPost = { content: string; kind: string; attachments: { uri: string; name?: string }[] };
 
 /** Every guarded post (a lock's primary resource) registered so far; attachment bytes are skipped. */
 export const registeredGuardedPosts = (state: TLockServerState): TGuardedPost[] =>
@@ -576,29 +577,34 @@ export const expectToast = (description: string) => {
   cy.contains('[data-cy="toast"]', description).should('be.visible');
 };
 
+/** Slow homeserver PUTs can delay the lock create past Cypress's 5 s default `requestTimeout`. */
+const LOCK_PUBLISH_REQUEST_TIMEOUT_MS = 30_000;
+
 /**
  * Publishes the configured lock from the home composer and yields the announcement's post id, read
  * from its homeserver PUT.
  */
 export const publishLock = (): Cypress.Chainable<string> => {
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('announcementCreated');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('announcementCreated');
   homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
-  cy.wait('@createContentLock');
-  return cy.wait('@announcementCreated').then((interception) => {
+  cy.wait('@createContentLock', { requestTimeout: LOCK_PUBLISH_REQUEST_TIMEOUT_MS });
+  return cy.wait('@announcementCreated', { requestTimeout: LOCK_PUBLISH_REQUEST_TIMEOUT_MS }).then((interception) => {
     expect(interception.response?.statusCode).to.eq(201);
-    const postId = new URL(interception.request.url).pathname.split('/').pop() ?? '';
-    expect(postId, 'announcement post id').to.not.eq('');
-    return postId;
+    return postIdFromWriteUrl(interception.request.url);
   });
 };
 
 const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
 
-const nexusDetailsHaveLock = (body: unknown): boolean =>
-  typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
+/** The announcement as Nexus serves it carries a `lock` URL: that one, when given. */
+const nexusDetailsHaveLock = (body: unknown, lockUrl?: string): boolean =>
+  typeof body === 'object' &&
+  body !== null &&
+  'lock' in body &&
+  (lockUrl === undefined ? Boolean(body.lock) : body.lock === lockUrl);
 
 /**
- * Polls GET /v0/post/<author>/<id>/details until `settled` is true.
+ * Polls GET /v1/post/<author>/<id>/details until `settled` is true.
  *
  * The 90s deadline is taken when this command runs. locks.cy.ts calls both waiters from one
  * post-id callback that also queues the later steps, so a Date.now() at the call has already
@@ -612,7 +618,7 @@ const pollNexusPostDetails = (
 ) => {
   const authorId = userIdFromPubky(authorPubky);
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
-    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
+    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v1/post/${authorId}/${postId}/details`;
     const deadline = Date.now() + NEXUS_POST_POLL_TIMEOUT_MS;
     const poll = () => {
       cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
@@ -630,18 +636,26 @@ const pollNexusPostDetails = (
 
 /**
  * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ * thing that tells a reader the post is locked), and that exact URL when `lockUrl` is given. The one
+ * fixed wait is the poll interval.
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+export const waitForNexusLockPost = (authorPubky: string, postId: string, lockUrl?: string) => {
   pollNexusPostDetails(
     authorPubky,
     postId,
-    (status, body) => status === 200 && nexusDetailsHaveLock(body),
-    (authorId, status) => `Nexus did not index lock post ${authorId}/${postId} (last status ${status})`,
+    (status, body) => status === 200 && nexusDetailsHaveLock(body, lockUrl),
+    (authorId, status) =>
+      `Nexus did not index lock post ${authorId}/${postId}${lockUrl ? ` with lock ${lockUrl}` : ''} (last status ${status})`,
   );
 };
 
-/** Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there. */
+/**
+ * Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there.
+ *
+ * Known Nexus race: a read of a post while Nexus processes its delete can put it back in the cache, where it answers
+ * 200 for good. Call this with nothing else reading the post since its DELETE, so these polls are the only reads; a
+ * timeout on a 200 is then that bug, not a slow index. It stays at 404: the stale copy also says `deleted: false`.
+ */
 export const waitForNexusPostDeleted = (authorPubky: string, postId: string) => {
   pollNexusPostDetails(
     authorPubky,
@@ -656,14 +670,25 @@ export const singlePostCard = () => cy.get('[data-cy="single-post-card"]').filte
 /**
  * Opens the post from the home feed by navigating inside the app. A full page load would make the
  * app restore the session from storage rather than keep the one the sign-in has just created.
+ *
+ * `requirePostCard` waits for the post card. An unlocked article has none: the page may paint the
+ * card until the article is read, then swaps it for the article layout, so that scenario passes
+ * false and asserts the article itself.
  */
-export const openPostFromHomeFeed = (authorPubky: string, postId: string, teaser: string) => {
+export const openPostFromHomeFeed = (
+  authorPubky: string,
+  postId: string,
+  teaser: string,
+  options?: { requirePostCard?: boolean },
+) => {
   cy.location('pathname').should('eq', '/home');
   cy.findFirstPostInFeedFiltered(teaser, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
     cy.get('[data-cy="post-text"]').filter(':visible').first().click();
   });
   cy.location('pathname').should('eq', `/post/${userIdFromPubky(authorPubky)}/${postId}`);
-  singlePostCard().should('have.length', 1);
+  if (options?.requirePostCard !== false) {
+    singlePostCard().should('have.length', 1);
+  }
 };
 
 /** The header shows the profile button only while the app treats the account as signed in. */

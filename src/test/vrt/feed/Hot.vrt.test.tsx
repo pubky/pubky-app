@@ -137,6 +137,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: createZustandLikeHook({
     profile: null,
     posts: {} as Record<string, never>,
+    articleCovers: {} as Record<string, never>,
   }),
 }));
 

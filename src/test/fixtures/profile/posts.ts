@@ -79,7 +79,7 @@ function threadReplies(
 export const VRT_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEPOST001',
+    postId: '0034EMJK88P80',
     content:
       'Six months of daily notes later: the local-first rewrite finally feels faster than the old server round-trip.',
     kind: 'short',
@@ -92,7 +92,7 @@ export const VRT_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEPOST002',
+    postId: '0034EMJKA5QC0',
     content:
       'Sketching the new profile tabs. Notifications, posts, replies, followers, following, friends, tagged, collections.',
     kind: 'image',
@@ -103,7 +103,7 @@ export const VRT_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEPOST003',
+    postId: '0034EMJKC2RG0',
     content: 'Worth a re-read before the migration: https://example.com/papers/local-first-tradeoffs',
     kind: 'link',
     agoMs: 7 * HOUR_MS,
@@ -112,7 +112,7 @@ export const VRT_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEPOST004',
+    postId: '0034EMJKDZSM0',
     content: '10-second clip from today\u2019s standup demo — the composer motion still needs polish.',
     kind: 'video',
     agoMs: 30 * HOUR_MS,
@@ -121,7 +121,7 @@ export const VRT_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEPOST005',
+    postId: '0034EMJKFWTR0',
     content:
       'Long-form retro on the profile rebuild: eight tabs, one shared shell, and a lot of decisions about what counts as a stat versus what counts as a feed.',
     kind: 'long',
@@ -131,7 +131,7 @@ export const VRT_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEPOST006',
+    postId: '0034EMJKHSVW0',
     content: 'Coffee first, then the rest of the backlog.',
     kind: 'short',
     agoMs: 4 * 24 * HOUR_MS,
@@ -144,7 +144,7 @@ export const VRT_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
 export const VRT_PROFILE_REPLY_PARENTS: readonly VRTProfilePostFixture[] = [
   post({
     author: VRT_AUTHOR_PUBKYS.bran,
-    postId: '0VRTREPLYPARENT001',
+    postId: '0034EMJKX82M0',
     content: 'Unpopular opinion: composite IDs should always be author-first, never post-first.',
     kind: 'short',
     agoMs: 5 * HOUR_MS,
@@ -152,7 +152,7 @@ export const VRT_PROFILE_REPLY_PARENTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.cleo,
-    postId: '0VRTREPLYPARENT002',
+    postId: '0034EMJKZ53R0',
     content: 'Rooftop light again tonight — worth the tripod hike.',
     kind: 'image',
     agoMs: 9 * HOUR_MS,
@@ -161,7 +161,7 @@ export const VRT_PROFILE_REPLY_PARENTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.dion,
-    postId: '0VRTREPLYPARENT003',
+    postId: '0034EMJM124W0',
     content: 'Does anyone have a good primer on quorum-shift failures under network partition?',
     kind: 'short',
     agoMs: 14 * HOUR_MS,
@@ -173,7 +173,7 @@ export const VRT_PROFILE_REPLY_PARENTS: readonly VRTProfilePostFixture[] = [
 export const VRT_PROFILE_REPLIES: readonly VRTProfilePostFixture[] = [
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEREPLY01',
+    postId: '0034EMJKKPX00',
     content: 'Agreed — and it makes the reply stream trivial to key, too.',
     kind: 'short',
     agoMs: 4 * HOUR_MS,
@@ -181,7 +181,7 @@ export const VRT_PROFILE_REPLIES: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEREPLY02',
+    postId: '0034EMJKNKY40',
     content: 'The wind noise is barely audible, honestly. Ship it.',
     kind: 'short',
     agoMs: 8 * HOUR_MS,
@@ -189,7 +189,7 @@ export const VRT_PROFILE_REPLIES: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEREPLY03',
+    postId: '0034EMJKQGZ80',
     content: 'Sending you the paper I mentioned last week — same failure mode, different vector clock.',
     kind: 'short',
     agoMs: 13 * HOUR_MS,
@@ -197,7 +197,7 @@ export const VRT_PROFILE_REPLIES: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.alice,
-    postId: '0VRTPROFILEREPLY04',
+    postId: '0034EMJKSE0C0',
     content: 'Replying here since the original thread got locked, but still relevant.',
     kind: 'short',
     agoMs: 20 * HOUR_MS,
@@ -211,19 +211,19 @@ export const VRT_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] = [
   ...threadReplies(VRT_PROFILE_POSTS[0], [
     {
       author: VRT_AUTHOR_PUBKYS.bran,
-      postId: '0VRTTHREADREPLY001',
+      postId: '0034EMJMGADW0',
       content: 'The round-trip used to be the whole conversation.',
       agoMs: 35 * MINUTE_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.cleo,
-      postId: '0VRTTHREADREPLY002',
+      postId: '0034EMJMJ7F00',
       content: 'Daily notes paying off in public. Love to see it.',
       agoMs: 32 * MINUTE_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.eira,
-      postId: '0VRTTHREADREPLY003',
+      postId: '0034EMJMM4G40',
       content: 'Local-first and still faster. That is the pitch.',
       agoMs: 28 * MINUTE_MS,
     },
@@ -231,13 +231,13 @@ export const VRT_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] = [
   ...threadReplies(VRT_PROFILE_POSTS[1], [
     {
       author: VRT_AUTHOR_PUBKYS.hana,
-      postId: '0VRTTHREADREPLY004',
+      postId: '0034EMJMP1H80',
       content: 'Eight tabs is a lot until the shell is shared.',
       agoMs: 150 * MINUTE_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.dion,
-      postId: '0VRTTHREADREPLY005',
+      postId: '0034EMJMQYJC0',
       content: 'Stat versus feed is the distinction I keep forgetting.',
       agoMs: 2 * HOUR_MS,
     },
@@ -245,7 +245,7 @@ export const VRT_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] = [
   ...threadReplies(VRT_PROFILE_POSTS[3], [
     {
       author: VRT_AUTHOR_PUBKYS.fynn,
-      postId: '0VRTTHREADREPLY006',
+      postId: '0034EMJMSVKG0',
       content: 'Composer motion is the only bit that still feels like a demo.',
       agoMs: 28 * HOUR_MS,
     },
@@ -253,19 +253,19 @@ export const VRT_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] = [
   ...threadReplies(VRT_PROFILE_POSTS[4], [
     {
       author: VRT_AUTHOR_PUBKYS.glen,
-      postId: '0VRTTHREADREPLY007',
+      postId: '0034EMJMVRMM0',
       content: 'Eight tabs, one shell — that is the architecture slide.',
       agoMs: 46 * HOUR_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.bran,
-      postId: '0VRTTHREADREPLY008',
+      postId: '0034EMJMXNNR0',
       content: 'Counts as a feed if I can scroll it. Otherwise it is a stat.',
       agoMs: 44 * HOUR_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.cleo,
-      postId: '0VRTTHREADREPLY009',
+      postId: '0034EMJMZJPW0',
       content: 'The rebuild write-up is going on the reading list.',
       agoMs: 40 * HOUR_MS,
     },
@@ -276,7 +276,7 @@ export const VRT_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] = [
 export const VRT_OTHER_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   post({
     author: VRT_AUTHOR_PUBKYS.bran,
-    postId: '0VRTOTHERPOST00001',
+    postId: '0034EMJHRJT40',
     content: 'Consensus is a social protocol that happens to have a machine-checkable appendix. Cold brew helps both.',
     kind: 'short',
     agoMs: 25 * MINUTE_MS,
@@ -288,7 +288,7 @@ export const VRT_OTHER_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.bran,
-    postId: '0VRTOTHERPOST00002',
+    postId: '0034EMJHTFV80',
     content: 'Still the best primer I have on quorum-shift failures: https://example.com/papers/quorum-shift',
     kind: 'link',
     agoMs: 14 * HOUR_MS,
@@ -297,7 +297,7 @@ export const VRT_OTHER_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.bran,
-    postId: '0VRTOTHERPOST00003',
+    postId: '0034EMJHWCWC0',
     content:
       'Notes from last night’s partition drill: the replica that “won” had the stale clock, the one that lagged had the truth, and the clients split the difference until we forced a view change. Write-up incoming.',
     kind: 'long',
@@ -307,7 +307,7 @@ export const VRT_OTHER_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.bran,
-    postId: '0VRTOTHERPOST00004',
+    postId: '0034EMJHY9XG0',
     content: 'If your mempool is a mood, mine is currently “retry with backoff”.',
     kind: 'short',
     agoMs: 4 * 24 * HOUR_MS,
@@ -321,19 +321,19 @@ export const VRT_OTHER_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] 
   ...threadReplies(VRT_OTHER_PROFILE_POSTS[0], [
     {
       author: VRT_AUTHOR_PUBKYS.cleo,
-      postId: '0VRTOTHERREPLY0001',
+      postId: '0034EMJJ06YM0',
       content: 'The social layer is the hard part. Machines just keep the minutes.',
       agoMs: 22 * MINUTE_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.alice,
-      postId: '0VRTOTHERREPLY0002',
+      postId: '0034EMJJ23ZR0',
       content: 'Cold brew as a consensus primitive. I will steal that.',
       agoMs: 18 * MINUTE_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.dion,
-      postId: '0VRTOTHERREPLY0003',
+      postId: '0034EMJJ410W0',
       content: 'Filing this under send-to-the-next-intern.',
       agoMs: 10 * MINUTE_MS,
     },
@@ -341,7 +341,7 @@ export const VRT_OTHER_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] 
   ...threadReplies(VRT_OTHER_PROFILE_POSTS[1], [
     {
       author: VRT_AUTHOR_PUBKYS.eira,
-      postId: '0VRTOTHERREPLY0004',
+      postId: '0034EMJJ5Y200',
       content: 'Still the one I send people. The diagrams finally clicked.',
       agoMs: 13 * HOUR_MS,
     },
@@ -349,19 +349,19 @@ export const VRT_OTHER_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] 
   ...threadReplies(VRT_OTHER_PROFILE_POSTS[2], [
     {
       author: VRT_AUTHOR_PUBKYS.glen,
-      postId: '0VRTOTHERREPLY0005',
+      postId: '0034EMJJ7V340',
       content: 'Stale clock, true replica — that split is going in the runbook.',
       agoMs: 46 * HOUR_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.alice,
-      postId: '0VRTOTHERREPLY0006',
+      postId: '0034EMJJ9R480',
       content: 'Write-up please. I want the client-split bit in particular.',
       agoMs: 44 * HOUR_MS,
     },
     {
       author: VRT_AUTHOR_PUBKYS.hana,
-      postId: '0VRTOTHERREPLY0007',
+      postId: '0034EMJJBN5C0',
       content: 'Same failure mode we hit last quarter, different names.',
       agoMs: 40 * HOUR_MS,
     },
@@ -372,7 +372,7 @@ export const VRT_OTHER_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] 
 export const VRT_NOTIFICATION_POSTS: readonly VRTProfilePostFixture[] = [
   post({
     author: VRT_AUTHOR_PUBKYS.fynn,
-    postId: '0VRTNOTIFPOST00001',
+    postId: '0034EMJHGYNM0',
     content: 'Dropping the remix stems this weekend for anyone who wants to mangle them.',
     kind: 'short',
     agoMs: 25 * MINUTE_MS,
@@ -380,7 +380,7 @@ export const VRT_NOTIFICATION_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.glen,
-    postId: '0VRTNOTIFPOST00002',
+    postId: '0034EMJHJVPR0',
     content: 'Cycled past the old server room today — still can\u2019t believe how loud those racks used to be.',
     kind: 'short',
     agoMs: 90 * MINUTE_MS,
@@ -388,7 +388,7 @@ export const VRT_NOTIFICATION_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.hana,
-    postId: '0VRTNOTIFCOLLECT01',
+    postId: '0034EMJHF1MG0',
     content: JSON.stringify({
       name: 'Footnote studies',
       description: 'Long-form footnote formatting experiments.',
@@ -400,7 +400,7 @@ export const VRT_NOTIFICATION_POSTS: readonly VRTProfilePostFixture[] = [
   }),
   post({
     author: VRT_AUTHOR_PUBKYS.eira,
-    postId: '0VRTNOTIFPOST00004',
+    postId: '0034EMJHMRQW0',
     content: 'The next protocol reading group starts Monday — bring questions, not slides.',
     kind: 'short',
     agoMs: 6 * HOUR_MS,

@@ -119,6 +119,90 @@
       "path": "docs/hotfix.md",
       "description": "Cutting a production patch without taking dev HEAD",
       "scope": ["package.json", ".github/workflows/**"]
+    },
+    {
+      "path": "docs/migrations/social-v1.md",
+      "description": "The pubky-social-specs 1.x port: trees and paths, the migration gate, Nexus /v1 and the one /v0 call, the compliance gate and PERMANENT list, polled private files, rollout order, reductions and follow-ups",
+      "scope": [
+        "src/core/**",
+        "src/libs/social-migration/**",
+        "src/libs/capabilities/**",
+        "src/libs/post/**",
+        "src/config/auth.ts",
+        "src/config/app-files.ts",
+        "src/config/nexus.ts",
+        "src/config/social-migration.ts",
+        "src/config/mute-sync.ts",
+        "src/config/notification-last-read-sync.ts",
+        "src/components/templates/Auth/SocialMigration/**",
+        "src/components/organisms/SocialMigrationProgress/**",
+        "src/components/organisms/CoordinatorsManager/**",
+        "src/providers/RouteGuardProvider/**",
+        "src/hooks/useAuthStatus/**",
+        "src/app/(auth)/migration/**",
+        "src/app/routes.ts",
+        "src/sw.ts",
+        "src/test-utils/homeserver.ts",
+        "src/test-utils/spec-clock.ts",
+        "cypress/**"
+      ]
+    },
+    {
+      "path": "docs/adr/0026-social-v1-migration-gate.md",
+      "description": "ADR-0026: the migration gate runs before the session enters the auth store; decision flow, outcome policy, persistence, telemetry",
+      "scope": [
+        "src/core/controllers/auth/**",
+        "src/core/controllers/social-migration/**",
+        "src/core/application/social-migration/**",
+        "src/core/stores/socialMigration/**",
+        "src/libs/social-migration/**",
+        "src/components/templates/Auth/SocialMigration/**",
+        "src/components/organisms/SocialMigrationProgress/**",
+        "src/providers/RouteGuardProvider/**",
+        "src/hooks/useAuthStatus/**",
+        "src/config/social-migration.ts"
+      ]
+    },
+    {
+      "path": "docs/adr/0027-social-v1-versioned-edits-and-data-model.md",
+      "description": "ADR-0027: versioned posts and the fenced head re-read, content-addressed media and its lifetime, article covers, dual spellings, the Nexus /v1 read boundary and the one /v0 call",
+      "scope": [
+        "src/core/pipes/**",
+        "src/core/application/post/**",
+        "src/core/application/file/**",
+        "src/core/application/locks/**",
+        "src/core/services/local/post/**",
+        "src/core/services/local/file/**",
+        "src/core/services/nexus/**",
+        "src/libs/post/**",
+        "src/libs/og/**",
+        "src/config/nexus.ts"
+      ]
+    },
+    {
+      "path": "docs/adr/0028-private-locally-owned-bookmarks.md",
+      "description": "ADR-0028: bookmarks are private objects owned by the local table, hydrated by a LIST; every Nexus bookmark field is ignored",
+      "scope": [
+        "src/core/pipes/bookmark/**",
+        "src/core/application/bookmark/**",
+        "src/core/application/bootstrap/**",
+        "src/core/application/migration/**",
+        "src/core/application/stream/posts/**",
+        "src/core/services/local/bookmark/**",
+        "src/core/services/local/stream/posts/**",
+        "src/hooks/useBookmarksCollectionSummary/**",
+        "src/components/organisms/Collections/FollowedCollections/**"
+      ]
+    },
+    {
+      "path": "docs/adr/0014-muting-system.md",
+      "description": "ADR-0014: private mutes, deletion of both copies, and why open sessions poll the private directory instead of holding a session-bound event stream",
+      "scope": [
+        "src/core/coordinators/**",
+        "src/core/application/mute/**",
+        "src/config/mute-sync.ts",
+        "src/config/notification-last-read-sync.ts"
+      ]
     }
   ]
 }

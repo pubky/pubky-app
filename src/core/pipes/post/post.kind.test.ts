@@ -1,11 +1,16 @@
-import { PubkyAppPostKind } from 'pubky-app-specs';
+import { postKinds } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
+import { POST_KINDS } from '@/models/models.types';
 import {
   inferAnnouncementKind,
   inferPostKindForCreate,
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
+  toLocalPostKind,
+  toLocalPostKindFromNexus,
   toLockContentKind,
+  toNexusPostKindFilter,
+  toStoredPostKind,
 } from '@/pipes/post/post.kind';
 
 describe('inferPostKindForCreate', () => {
@@ -18,7 +23,7 @@ describe('inferPostKindForCreate', () => {
       ],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it('returns image when attachments contain image and no video', () => {
@@ -30,7 +35,7 @@ describe('inferPostKindForCreate', () => {
       ],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Image);
+    expect(kind).toBe('image');
   });
 
   it('returns file when attachments are non-image and non-video', () => {
@@ -39,7 +44,7 @@ describe('inferPostKindForCreate', () => {
       attachments: [new File(['pdf-content'], 'doc.pdf', { type: 'application/pdf' })],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.File);
+    expect(kind).toBe('file');
   });
 
   it('returns link when content contains url and there are no attachments', () => {
@@ -47,7 +52,7 @@ describe('inferPostKindForCreate', () => {
       content: 'Read https://pubky.app',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it('returns link when content contains a protocol-less url', () => {
@@ -55,7 +60,7 @@ describe('inferPostKindForCreate', () => {
       content: 'Watch example.com/video',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it.each([
@@ -67,7 +72,7 @@ describe('inferPostKindForCreate', () => {
   ])('returns video when the content url is a video (%s)', (content) => {
     const kind = inferPostKindForCreate({ content });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it.each([
@@ -77,23 +82,23 @@ describe('inferPostKindForCreate', () => {
   ])('returns link when the content url is a video host but not a playable video (%s)', (content) => {
     const kind = inferPostKindForCreate({ content });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
-  it('returns short when there is no attachment and no url', () => {
+  it('returns note when there is no attachment and no url', () => {
     const kind = inferPostKindForCreate({
       content: 'Just plain text',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
-  it('returns short for ignored protocols like mailto and ftp', () => {
+  it('returns note for ignored protocols like mailto and ftp', () => {
     const kind = inferPostKindForCreate({
       content: 'Contact me at mailto:test@example.com or ftp://example.com/file.txt',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
   it('does not mark markdown links as link kind', () => {
@@ -101,7 +106,7 @@ describe('inferPostKindForCreate', () => {
       content: 'See [pubky](https://pubky.app) for details',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
   it('prioritizes link over attachments', () => {
@@ -110,7 +115,7 @@ describe('inferPostKindForCreate', () => {
       attachments: [new File(['video-content'], 'clip.mp4', { type: 'video/mp4' })],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it('prioritizes link over image attachments', () => {
@@ -119,37 +124,37 @@ describe('inferPostKindForCreate', () => {
       attachments: [new File(['image-content'], 'photo.png', { type: 'image/png' })],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
-  it('returns long when isArticle is true', () => {
+  it('returns article when isArticle is true', () => {
     const kind = inferPostKindForCreate({
       content: JSON.stringify({ title: 'My Article', body: 'Article body' }),
       isArticle: true,
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Long);
+    expect(kind).toBe('article');
   });
 
-  it('returns long for article even when content contains a url', () => {
+  it('returns article for article even when content contains a url', () => {
     const kind = inferPostKindForCreate({
       content: JSON.stringify({ title: 'Title', body: 'See https://pubky.app' }),
       isArticle: true,
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Long);
+    expect(kind).toBe('article');
   });
 });
 
 describe('inferPostKindForEdit', () => {
-  it('keeps the long kind for articles regardless of content and attachments', () => {
+  it('keeps the article kind for articles regardless of content and attachments', () => {
     const kind = inferPostKindForEdit({
       content: 'See https://pubky.app',
       attachmentContentTypes: ['video/mp4'],
       currentKind: 'long',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Long);
+    expect(kind).toBe('article');
   });
 
   it('keeps the collection kind for collections', () => {
@@ -159,7 +164,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'collection',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Collection);
+    expect(kind).toBe('collection');
   });
 
   it('prioritizes link over attachments when content has a URL', () => {
@@ -169,7 +174,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'short',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Link);
+    expect(kind).toBe('link');
   });
 
   it('returns video when the edited content url is a video', () => {
@@ -179,7 +184,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'link',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it('returns video when at least one content type is video', () => {
@@ -189,7 +194,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'image',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe('video');
   });
 
   it('returns image when content types contain image and no video', () => {
@@ -199,7 +204,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'file',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Image);
+    expect(kind).toBe('image');
   });
 
   it('returns file for non-image, non-video content types', () => {
@@ -209,17 +214,17 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'short',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.File);
+    expect(kind).toBe('file');
   });
 
-  it('returns short when the resulting attachment set is empty and content has no URL', () => {
+  it('returns note when the resulting attachment set is empty and content has no URL', () => {
     const kind = inferPostKindForEdit({
       content: 'Just plain text',
       attachmentContentTypes: [],
       currentKind: 'image',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 
   it('does not preserve a stale media kind once its attachments are gone', () => {
@@ -229,7 +234,7 @@ describe('inferPostKindForEdit', () => {
       currentKind: 'video',
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Short);
+    expect(kind).toBe('note');
   });
 });
 
@@ -292,26 +297,76 @@ describe('inferAnnouncementKind', () => {
   });
 
   it('allows the kinds a teaser can take', () => {
-    expect(inferAnnouncementKind({ content: 'hello' })).toBe(PubkyAppPostKind.Short);
-    expect(inferAnnouncementKind({ content: 'see https://pubky.app' })).toBe(PubkyAppPostKind.Link);
+    expect(inferAnnouncementKind({ content: 'hello' })).toBe('note');
+    expect(inferAnnouncementKind({ content: 'see https://pubky.app' })).toBe('link');
+  });
+});
+
+describe('toLocalPostKind', () => {
+  it.each([
+    ['note', 'short'],
+    ['article', 'long'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ] as const)('maps the stored kind %s to the local kind %s', (stored, local) => {
+    expect(toLocalPostKind(stored)).toBe(local);
+  });
+
+  it('lands every stored kind in the local vocabulary', () => {
+    for (const kind of postKinds) {
+      expect(POST_KINDS).toContain(toLocalPostKind(kind));
+    }
+  });
+});
+
+describe('toStoredPostKind', () => {
+  it.each([
+    ['short', 'note'],
+    ['long', 'article'],
+    ['note', 'note'],
+    ['article', 'article'],
+    ['Short', 'note'],
+    ['LONG', 'article'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ])('maps the local kind %s to the stored kind %s', (local, stored) => {
+    expect(toStoredPostKind(local)).toBe(stored);
+  });
+
+  it.each(['unknown', '', 'poll', 'notes'])('fails closed on %j, which no v1 post can carry', (kind) => {
+    expect(toStoredPostKind(kind)).toBeNull();
+  });
+
+  it('round-trips every local kind this client writes', () => {
+    for (const kind of POST_KINDS) {
+      if (kind === 'unknown') continue;
+      const stored = toStoredPostKind(kind);
+      expect(stored).not.toBeNull();
+      expect(toLocalPostKind(stored!)).toBe(kind);
+    }
   });
 });
 
 describe('toLockContentKind', () => {
   it.each([
-    [PubkyAppPostKind.Short, 'note'],
-    [PubkyAppPostKind.Long, 'article'],
-    [PubkyAppPostKind.Image, 'image'],
-    [PubkyAppPostKind.Video, 'video'],
-    [PubkyAppPostKind.Link, 'link'],
-    [PubkyAppPostKind.File, 'file'],
-  ])('saves kind %s as %s', (kind, name) => {
+    ['note', 'note'],
+    ['article', 'article'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+  ] as const)('saves kind %s as %s', (kind, name) => {
     expect(toLockContentKind(kind)).toBe(name);
   });
 
   it('saves nothing for a kind a create never infers', () => {
-    expect(toLockContentKind(PubkyAppPostKind.Collection)).toBeUndefined();
-    expect(toLockContentKind(PubkyAppPostKind.Unknown)).toBeUndefined();
+    expect(toLockContentKind('collection')).toBeUndefined();
   });
 
   // The existing order decides a mixed draft: video over image over file, and audio is a file.
@@ -322,5 +377,54 @@ describe('toLockContentKind', () => {
   ])('names %s', (_name, types, name) => {
     const attachments = types.map((type, i) => new File(['x'], `f${i}`, { type }));
     expect(toLockContentKind(inferPostKindForCreate({ content: '', attachments, isArticle: false }))).toBe(name);
+  });
+});
+
+describe('toLocalPostKindFromNexus', () => {
+  it.each([
+    ['note', 'short'],
+    ['article', 'long'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ])('folds the /v1 kind %s into the local kind %s', (wire, local) => {
+    expect(toLocalPostKindFromNexus(wire)).toBe(local);
+  });
+
+  it.each(['short', 'long'])('leaves the local kind %s, which /v0 served, in place', (kind) => {
+    expect(toLocalPostKindFromNexus(kind)).toBe(kind);
+  });
+
+  it.each(['unknown', 'poll', ''])(
+    'fails open on %j: kept as served, so the post renders and is never hidden',
+    (kind) => {
+      expect(toLocalPostKindFromNexus(kind)).toBe(kind);
+    },
+  );
+
+  it('lands every kind the data model can store in the local vocabulary', () => {
+    for (const kind of postKinds) {
+      expect(POST_KINDS).toContain(toLocalPostKindFromNexus(kind));
+    }
+  });
+});
+
+describe('toNexusPostKindFilter', () => {
+  it.each([
+    ['short', 'note'],
+    ['long', 'article'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ])('sends the local stream kind %s as the /v1 filter %s', (local, wire) => {
+    expect(toNexusPostKindFilter(local)).toBe(wire);
+  });
+
+  it('sends a kind it does not know as is, for Nexus to reject', () => {
+    expect(toNexusPostKindFilter('poll')).toBe('poll');
   });
 });

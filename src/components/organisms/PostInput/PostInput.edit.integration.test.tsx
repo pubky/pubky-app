@@ -93,22 +93,6 @@ vi.mock('@/hooks/useMentionAutocomplete/useMentionAutocomplete', () => ({
   }),
 }));
 vi.mock('@/hooks/useUndoRepost/useUndoRepost', () => ({ useUndoRepost: () => ({ undoRepost: vi.fn() }) }));
-vi.mock('pubky-app-specs', () => ({
-  PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
-  fileUriBuilder: (author: string, fileId: string) => `pubky://${author}/pub/pubky.app/files/${fileId}`,
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {}
-    toJson() {
-      return { content: this.content, kind: this.kind, attachments: this.attachments };
-    }
-  },
-}));
 // Auth wrappers: pass straight through, always authenticated to pubky.app.
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   usePostInputAuthHandlers: (params: Record<string, (...args: never[]) => unknown>) => ({
@@ -247,9 +231,10 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     global.URL.createObjectURL = vi.fn(() => 'blob:preview');
     global.URL.revokeObjectURL = vi.fn();
     mocks.editor = null;
-    // A row read for the new file would be a fresh key, which the real hook reports as loading
+    // A row read for the new file would be a fresh key, which the real hook reports as loading. The 0.x
+    // article's slot 0 is its cover only once its row says image, so that row answers at once.
     mocks.useAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
-      files: [],
+      files: fileUris.includes(COVER_URI) ? [{ uri: COVER_URI, content_type: 'image/jpeg', name: 'cover.jpg' }] : [],
       isLoading: fileUris.includes(NEW_URI),
     }));
     mocks.commitDeleteFile.mockResolvedValue(undefined);
@@ -283,24 +268,29 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     expect(mocks.editor?.markdown).toBe(EDITOR_BODY);
     expect(mocks.useAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP_URI] });
 
-    // The insert stages the file under a draft URI of the author's; nothing is uploaded yet
+    // The insert stages the file under a media URI of the author's; nothing is uploaded yet
     let stagedUri = '';
     await act(async () => {
       stagedUri = (await mocks.editor?.upload(image)) ?? '';
     });
-    expect(stagedUri).toMatch(/\/pub\/pubky\.app\/files\/draft-[0-9a-f]{7}$/);
+    expect(stagedUri).toMatch(/\/pub\/social\/v1\/files\/[0-9A-HJKMNP-TV-Z]{26}\.png$/);
     expect(mocks.commitCreateFile).not.toHaveBeenCalled();
     const editedBody = `${EDITOR_BODY}\n\n![new](${stagedUri})`;
     act(() => mocks.editor?.change(editedBody));
     settle();
 
     // The save uploads the staged file first; the refused post write leaves it in the session. Its local
-    // write carries the new slot and file, then the rollback takes them back, both while the save runs
-    const writtenArticle = JSON.stringify({ title: 'Essay', body: `${PUBLISHED_BODY}\n\n![new](attachment:2)` });
+    // write carries the new slot and file, then the rollback takes them back, both while the save runs.
+    // The 0.x slot-0 cover moves into the envelope on this first edit, so the inline slots count from 0
+    const writtenArticle = JSON.stringify({
+      title: 'Essay',
+      body: 'Intro\n\n![shot](attachment:0)\n\nOutro\n\n![new](attachment:1)',
+      cover_image: COVER_URI,
+    });
     mocks.commitCreateFile.mockResolvedValueOnce(NEW_URI);
     refuseNextSave(
       rerender,
-      editArticle(writtenArticle, [COVER_URI, CLIP_URI, NEW_URI]),
+      editArticle(writtenArticle, [CLIP_URI, NEW_URI]),
       editArticle(PUBLISHED_ARTICLE, [COVER_URI, CLIP_URI]),
     );
     await save(1);
@@ -319,8 +309,12 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     expect(mocks.commitEdit).toHaveBeenLastCalledWith(
       expect.objectContaining({
         compositePostId: POST_ID,
-        content: writtenArticle,
-        attachments: expect.objectContaining({ nextOrder: [COVER_URI, CLIP_URI, NEW_URI] }),
+        content: JSON.stringify({
+          title: 'Essay',
+          body: 'Intro\n\n![shot](attachment:0)\n\nOutro\n\n![new](attachment:1)',
+        }),
+        attachments: expect.objectContaining({ nextOrder: [CLIP_URI, NEW_URI] }),
+        coverImage: COVER_URI,
       }),
     );
     // The retry reuses the upload of the refused save instead of sending the file again

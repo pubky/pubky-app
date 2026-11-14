@@ -22,7 +22,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
 }));
 
 // `usePostMissing` rejects an author that is not a 52-char pubky, which would read as "missing".
-const POST_ID = 'abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijkl:POST1';
+const POST_ID = 'abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijkl:00353GZ1H40WG';
 const post: ReplicatedPost = { content: 'unlocked body', kind: 'short', attachments: null };
 
 describe('ProfileUnlockedItem', () => {

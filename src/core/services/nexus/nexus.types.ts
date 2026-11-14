@@ -1,5 +1,4 @@
 import type { Pubky, Timestamp } from '@/models/models.types';
-import type { TagModel } from '@/models/shared/tag/tag';
 
 /**
  * Nexus API Types
@@ -7,6 +6,11 @@ import type { TagModel } from '@/models/shared/tag/tag';
  * This file contains type definitions for the Nexus API contract:
  * - Request parameter types (pagination, filtering, sorting)
  * - Response types (users, posts, tags, files, notifications)
+ *
+ * A `*Wire` type is a response as the `/v1` API serves it; the type without the suffix is the same
+ * response once the read boundary (the Nexus services, through `PostNormalizer.fromNexus`,
+ * `UserNormalizer.fromNexus` and `TagNormalizer.fromNexus`) has folded the post kinds into the local
+ * vocabulary and derived the tag `relationship`. Everything past the services sees the folded form.
  *
  * For internal utility types (URL building, fetch options), see `nexus.utils.types.ts`
  */
@@ -85,20 +89,14 @@ export type TUserStreamReachParams = {
 // =============================================================================
 
 /**
- * Bookmark metadata from Nexus API.
+ * Bookmark metadata from the frozen `/v0` Nexus API.
  *
- * Shape mirrors the upstream OpenAPI `Bookmark` schema
- * (`/v0/post/{author_id}/{post_id}/bookmark`):
- *   - `id`: the bookmark record's id on Nexus.
- *   - `indexed_at`: epoch-ms timestamp Nexus assigned when it indexed the
- *     bookmark. We use this as the local `created_at` ordering key.
+ * Shape mirrors the `/v0` OpenAPI `Bookmark` schema (`/post/{author_id}/{post_id}/bookmark`, a route
+ * `/v1` dropped): `id` is the bookmark record's id on Nexus, `indexed_at` the epoch-ms time Nexus
+ * indexed it.
  *
- * Historical note: an earlier `{ created_at, updated_at }` shape was kept
- * here that did not match what the API actually returned. That mismatch
- * caused the bookmarks table to be written with `created_at: undefined`,
- * which is silently excluded from IndexedDB index cursors and broke the
- * `FollowedCollections` live query. See `LocalStreamPostsService.persistPosts`
- * for the write-site coercion.
+ * 0.x ghosts, never read: a v1 bookmark is private and invisible to Nexus, so this only ever
+ * describes a 0.x copy the app cannot delete (ADR-0028). `/v1` serves no bookmark field at all.
  */
 export type NexusBookmark = {
   id: string;
@@ -145,7 +143,11 @@ export type NexusUserCounts = {
   following: number;
   followers: number;
   friends: number;
-  bookmarks: number;
+  /**
+   * 0.x ghosts, never read: bookmarks are counted locally (ADR-0028). `/v0` served the count; `/v1`
+   * does not, so a row persisted from it carries `UserCountsModel`'s default of `0`.
+   */
+  bookmarks?: number;
 };
 
 /** Relationship status between the viewer and a user */
@@ -173,24 +175,34 @@ export enum NexusSocialGraphStatus {
 // Response Types - Tags
 // =============================================================================
 
-/** Tag with associated taggers information */
+/** Tag with associated taggers information, as the app and the local tables hold it */
 export type NexusTag = {
   label: string;
   taggers: Pubky[];
   taggers_count: number;
-  /** Whether the viewer has a relationship with any tagger */
+  /**
+   * Whether the request's viewer tagged the entity with this label. `/v0` served it; `/v1` does not, so
+   * the read boundary derives it from `tag_uri` (`TagNormalizer.fromNexus`): `false` without a viewer.
+   */
   relationship: boolean;
   /** The viewer's own tag file for this label; null when they have not tagged it. Absent in rows cached before Nexus returned it. */
   tag_uri?: string | null;
 };
 
-/** List of users who applied a specific tag */
+/** A tag as Nexus serves it: `relationship` only on `/v0`, `tag_uri` says the same on both. */
+export type NexusTagWire = Omit<NexusTag, 'relationship'> & Partial<Pick<NexusTag, 'relationship'>>;
+
+/** List of users who applied a specific tag, as the app holds it */
 export type NexusTaggers = {
+  /** Whether the request's viewer is one of the taggers; derived from `tag_uri` on `/v1` (see `NexusTag`). */
   relationship: boolean;
   users: Pubky[];
   /** The viewer's own tag file for this label; null when they have not tagged it. */
   tag_uri?: string | null;
 };
+
+/** Taggers as Nexus serves them: `relationship` only on `/v0`. */
+export type NexusTaggersWire = Omit<NexusTaggers, 'relationship'> & Partial<Pick<NexusTaggers, 'relationship'>>;
 
 /** Trending/hot tag with engagement metrics */
 export type NexusHotTag = {
@@ -204,7 +216,7 @@ export type NexusHotTag = {
 // Response Types - User (Composite)
 // =============================================================================
 
-/** Complete user object from Nexus API */
+/** Complete user object from Nexus API, past the read boundary */
 export type NexusUser = {
   details: NexusUserDetails;
   counts: NexusUserCounts;
@@ -217,6 +229,9 @@ export type NexusUser = {
    */
   social_graph_status?: NexusSocialGraphStatus | null;
 };
+
+/** A user as Nexus serves it: tags without `relationship` (`UserNormalizer.fromNexus` derives it). */
+export type NexusUserWire = Omit<NexusUser, 'tags'> & { tags: NexusTagWire[] };
 
 /** Stream response containing only user identifiers */
 export type NexusUserIdsStream = Pubky[];
@@ -232,9 +247,9 @@ export type NexusPostDetails = {
   indexed_at: number;
   author: Pubky;
   /**
-   * Post kind/type as a string.
-   * Note: Using string instead of PubkyAppPostKind enum to avoid indexing issues.
-   * @see https://github.com/pubky/pubky-app-specs/issues/74
+   * Post kind as a string, in the local vocabulary (`short`, `long`, `image`, ...). Nexus `/v1` serves
+   * the stored names (`note`, `article`); the read boundary folds them (`toLocalPostKindFromNexus`,
+   * through `PostNormalizer.fromNexus`) and keeps any name it does not know, `unknown` included.
    */
   kind: string;
   uri: string;
@@ -271,13 +286,26 @@ export type NexusPostRelationships = {
   mentioned: Pubky[];
 };
 
-/** Complete post object from Nexus API */
+/** Complete post object from Nexus API, past the read boundary */
 export type NexusPost = {
   details: NexusPostDetails;
   counts: NexusPostCounts;
-  tags: TagModel[];
+  tags: NexusTag[];
   relationships: NexusPostRelationships;
-  bookmark: NexusBookmark | null;
+  /**
+   * 0.x ghosts, never read: bookmarks are hydrated from the homeserver listing (ADR-0028). `/v0`
+   * served the field; `/v1` does not.
+   */
+  bookmark?: NexusBookmark | null;
+};
+
+/** Post details as Nexus serves them: `kind` in the wire vocabulary (`note`, `article`, ...), before the fold. */
+export type NexusPostDetailsWire = NexusPostDetails;
+
+/** A post as Nexus serves it: `details.kind` in the wire vocabulary, tags without `relationship`. */
+export type NexusPostWire = Omit<NexusPost, 'details' | 'tags'> & {
+  details: NexusPostDetailsWire;
+  tags: NexusTagWire[];
 };
 
 /** Paginated post stream response with cursor for pagination */
@@ -286,11 +314,6 @@ export type NexusPostsKeyStream = {
   /** Score of the last post, used as cursor for next page. Null for skip-paginated streams
    * (engagement, single-collection), which page by offset instead. */
   last_post_score: number | null;
-};
-
-/** Post with attachment metadata */
-export type NexusPostWithAttachmentMetadata = NexusPost & {
-  attachments_metadata?: NexusFileDetails[];
 };
 
 // =============================================================================

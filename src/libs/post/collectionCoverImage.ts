@@ -8,7 +8,7 @@ import { FileVariant } from '@/services/nexus/file/file.types';
  *
  * The envelope value is a free-form string and may be:
  *   - An absolute web URL (http(s)://...) — returned as-is.
- *   - A homeserver `pubky://<user>/pub/pubky.app/files/<fileId>` URI —
+ *   - A homeserver `pubky://<user>/pub/social/v1/files/<hash>.<ext>` URI —
  *     resolved to a CDN URL via `FileController.getFileUrl`, using the
  *     `variant` the caller is sized for (e.g. `FEED` for cards, `MAIN`
  *     for the single-collection hero).

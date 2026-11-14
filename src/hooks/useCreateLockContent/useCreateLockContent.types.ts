@@ -1,13 +1,13 @@
-import type { PubkyAppPostKind } from 'pubky-app-specs';
 import type { TLockConfig } from '@/application/locks/locks.types';
 import type { AppError } from '@/libs/error/error';
 import type { TLockTeaser } from '@/libs/post/lockTeaser';
+import type { PostKind } from '@/models/models.types';
 
 /** The content being locked, captured from the composer when the lock switch went on. */
 type TLockedPost = {
   content: string;
-  /** Any kind is allowed here — only the announcement is restricted. */
-  kind: PubkyAppPostKind;
+  /** Any kind is allowed here — only the announcement is restricted. In the local vocabulary. */
+  kind: PostKind;
   attachments: File[];
 };
 

@@ -1,6 +1,6 @@
 import type { NexusPostDetails } from '@/services/nexus/nexus.types';
-import { isArticleContent, parseArticleContent } from './articleContent';
-import { articleHasInlineSlotZero } from './articleInlineMedia';
+import { isArticleContent } from './articleContent';
+import { resolveArticleCover } from './articleCover';
 import { resolvePostAttachmentUrl } from './postAttachmentUrl';
 import { POST_COVER_DESKTOP_VARIANT, POST_COVER_MOBILE_VARIANT } from './postCoverVariant';
 
@@ -12,32 +12,33 @@ export interface PostCoverPreloadUrls {
 
 /**
  * CDN URLs of the image a post page renders as its cover ("hero"), or `null` when it renders
- * none. Both are resolved from slot 0 of the post's attachments.
+ * none. Both are resolved from the article's cover as `resolveArticleCover` finds it: the
+ * envelope's `cover_image`, or slot 0 of a 0.x article under the slot-0 rule (ADR-0023). That
+ * slot 0 is a cover only when its file is an image, which the client learns from its row; the
+ * server has no row, so it preloads the candidate and the client renders it once the row agrees.
  *
  * Mirrors the client's article rendering: `PostArticleDetail` is the surface that puts the
- * first attachment above the body, and it does so only for `kind: long` posts whose content
- * parses as an article (`SinglePostContent`). The slot-0 rule (`articleHasInlineSlotZero`)
- * makes slot 0 an inline image instead of a cover when the body references `attachment:0`.
+ * cover above the body, and it does so only for `kind: long` posts whose content
+ * parses as an article (`SinglePostContent`).
  * The variants come from the same constants the hero renders from, so the preloaded URL is the
  * one the `<img>` asks for and the browser does not fetch twice.
  *
  * Server-side, so the post page can emit a `rel=preload` for the LCP image before any client
- * JavaScript runs. The attachment's content type is only known after the client resolves file
- * metadata, so a non-image slot 0 is preloaded and discarded. Pure: no IO, safe in a Server
- * Component.
+ * JavaScript runs. The cover's content type is only known after the client resolves file
+ * metadata, so a non-image cover or candidate is preloaded and discarded. Pure: no IO, safe in a
+ * Server Component.
  */
 export function resolvePostCoverPreloadUrls(
   post: Pick<NexusPostDetails, 'kind' | 'content' | 'attachments'>,
 ): PostCoverPreloadUrls | null {
   if (post.kind !== 'long' || !isArticleContent(post.content)) return null;
 
-  const attachments = post.attachments;
-  if (!attachments?.length) return null;
+  const { cover, coverCandidate } = resolveArticleCover({ content: post.content, attachments: post.attachments });
+  const coverUri = cover ?? coverCandidate;
+  if (!coverUri) return null;
 
-  if (articleHasInlineSlotZero(parseArticleContent(post.content)?.body ?? '')) return null;
-
-  const mobile = resolvePostAttachmentUrl(attachments[0], POST_COVER_MOBILE_VARIANT);
-  const desktop = resolvePostAttachmentUrl(attachments[0], POST_COVER_DESKTOP_VARIANT);
+  const mobile = resolvePostAttachmentUrl(coverUri, POST_COVER_MOBILE_VARIANT);
+  const desktop = resolvePostAttachmentUrl(coverUri, POST_COVER_DESKTOP_VARIANT);
 
   return mobile && desktop ? { mobile, desktop } : null;
 }

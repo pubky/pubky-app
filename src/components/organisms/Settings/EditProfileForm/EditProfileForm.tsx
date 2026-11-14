@@ -1,6 +1,6 @@
 'use client';
 
-import { File, Trash2 } from 'lucide-react';
+import { File, Info, Trash2, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
@@ -41,6 +41,39 @@ export const EditProfileForm = () => {
   return (
     <>
       <Container className="flex w-full flex-1 flex-col gap-6 lg:flex-none" data-testid="edit-profile-form">
+        {state.migrationNotice && (
+          <Card
+            role="status"
+            data-testid="edit-profile-migration-notice"
+            className="flex-row items-start gap-3 rounded-md bg-card p-6"
+          >
+            <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Container className="flex-1 gap-1">
+              {state.migrationNotice.profileImage > 0 && (
+                <Typography size="sm">
+                  {'Your profile picture could not be carried over by the account update. Set it again.'}
+                </Typography>
+              )}
+              {state.migrationNotice.profileLinks > 0 && (
+                <Typography size="sm">
+                  {state.migrationNotice.profileLinks === 1
+                    ? 'One of your profile links could not be carried over. Check your links.'
+                    : 'Some of your profile links could not be carried over. Check your links.'}
+                </Typography>
+              )}
+            </Container>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-muted-foreground"
+              aria-label={'Dismiss'}
+              data-testid="edit-profile-migration-notice-dismiss"
+              onClick={handlers.handleDismissMigrationNotice}
+            >
+              <X aria-hidden />
+            </Button>
+          </Card>
+        )}
         <Card className="rounded-md bg-card p-6 md:p-12 lg:flex lg:flex-row lg:gap-12">
           {/* Profile Section */}
           <Container className="w-full gap-6">

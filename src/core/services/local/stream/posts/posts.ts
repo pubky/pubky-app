@@ -8,8 +8,6 @@ import type {
 import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
-import { BookmarkModel } from '@/models/bookmark/bookmark';
-import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { ModerationModel } from '@/models/moderation/moderation';
@@ -23,12 +21,12 @@ import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import {
   buildPostReplyStreamId,
+  isBookmarkStream,
   type PostStreamId,
   type ReplyStreamCompositeId,
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
-import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import type {
   TAddReplyToStreamParams,
@@ -43,7 +41,6 @@ import type {
 import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
 import type { NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
 import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
-import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 
 /**
@@ -324,7 +321,6 @@ export class LocalStreamPostsService {
     const postRelationships: NexusModelTuple<NexusPostRelationships>[] = [];
     const postTags: NexusModelTuple<NexusTag[]>[] = [];
     const postDetails: PostDetailsModelSchema[] = [];
-    const postBookmarks: BookmarkModelSchema[] = [];
     const postModerations: ModerationModelSchema[] = [];
     const postTtl: NexusModelTuple<{ lastUpdatedAt: number }>[] = [];
 
@@ -339,28 +335,11 @@ export class LocalStreamPostsService {
 
       postRelationships.push([postId, post.relationships]);
 
-      // Collect bookmarks from Nexus response (viewer's bookmark status).
-      //
-      // Nexus returns `bookmark: { id, indexed_at }` (see
-      // `NexusBookmark`). We mirror that into our local `bookmarks` table
-      // using `indexed_at` as the `created_at` sort key.
-      //
-      // The `?? indexed_at ?? now` fallback chain exists because
-      // `created_at` is indexed on the table and IndexedDB silently drops
-      // rows with `undefined` indexed keys from index-cursor reads
-      // (e.g. `orderBy('created_at')`). A single bad write would make the
-      // row invisible to FollowedCollections — keep the chain defensive
-      // against any future Nexus shape drift.
-      if (post.bookmark) {
-        const bookmarkCreatedAt =
-          typeof post.bookmark.indexed_at === 'number' ? post.bookmark.indexed_at : (post.details.indexed_at ?? now);
-        postBookmarks.push({
-          id: postId,
-          created_at: bookmarkCreatedAt,
-        });
-      }
+      // The viewer's `bookmark` on a post view is never read: bookmarks are private v1 objects
+      // Nexus cannot see, so it only ever describes a 0.x copy (ADR-0028). The local table is
+      // hydrated from the homeserver listing instead (`BookmarkApplication.fetchBookmarks`).
 
-      // Convert TagModel[] to NexusTag[] by accessing the data property
+      // Copy the tag fields the table holds (the fold gave every tag its `relationship`)
       const nexusTags = post.tags.map((tag) => ({
         label: tag.label,
         taggers: tag.taggers,
@@ -403,7 +382,7 @@ export class LocalStreamPostsService {
     // relative to the delete index, see `LocalPostService.delete`'s
     // hard-delete branch). Tombstoned ids are dropped from every per-table
     // batch below so we don't leave behind orphan counts / tags /
-    // relationships / bookmarks pointing at a deleted post. The freshness
+    // relationships pointing at a deleted post. The freshness
     // record is the exception: a tombstone still advances its TTL (see
     // `liveTtl`), so a visible deleted placeholder is not force-refetched on
     // every refresh tick.
@@ -431,7 +410,6 @@ export class LocalStreamPostsService {
         PostTagsModel.table,
         PostRelationshipsModel.table,
         PostTtlModel.table,
-        BookmarkModel.table,
         ModerationModel.table,
       ],
       async () => {
@@ -505,11 +483,6 @@ export class LocalStreamPostsService {
         // Nexus returned, so a tombstone left without one is force-refetched
         // on every refresh tick. Content and auxiliary rows stay protected.
         const liveTtl = postTtl;
-        // A bookmark the viewer removed locally while Nexus was still indexing
-        // the removal must not come back (see `recentUnbookmarks`).
-        const liveBookmarks = postBookmarks.filter(
-          (b) => !tombstonedIds.has(b.id) && !recentUnbookmarks.isProtected(tagGuard.viewerId, b.id),
-        );
         const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
 
         if (tagGuard.isCurrent && !tagGuard.isCurrent()) return;
@@ -519,8 +492,6 @@ export class LocalStreamPostsService {
           LocalTagCacheService.savePreviews('post', liveTags, tagGuard, liveCounts),
           PostRelationshipsModel.bulkSave(liveRelationships),
           PostTtlModel.bulkSave(liveTtl),
-          // Persist bookmarks from Nexus (viewer's bookmark status for each post)
-          liveBookmarks.length > 0 ? BookmarkModel.bulkSave(liveBookmarks) : Promise.resolve(),
           // Persist moderation records for moderated posts (is_blurred defaults to true)
           liveModerations.length > 0 ? ModerationModel.bulkSave(liveModerations) : Promise.resolve(),
         ]);
@@ -570,7 +541,7 @@ export class LocalStreamPostsService {
     // Only a cursor-less chunk landing on a row without a Nexus position of its own is
     // ordered by post timestamp (an emptied row's stale cursor does not count).
     const normalizesByTimestamp =
-      tailCursor === undefined && !this.isBookmarkStream(streamId) && postStream?.tailCursor === undefined;
+      tailCursor === undefined && !isBookmarkStream(streamId) && postStream?.tailCursor === undefined;
 
     if (postStream === null) {
       // No cached ids to extend (e.g., database was deleted): the chunk is the stream and
@@ -659,10 +630,6 @@ export class LocalStreamPostsService {
   /** Extra row fields for `PostStreamModel.upsert`; omitted entirely when there is no cursor. */
   private static tailCursorFields(tailCursor: number | undefined): { tailCursor: number } | undefined {
     return tailCursor === undefined ? undefined : { tailCursor };
-  }
-
-  private static isBookmarkStream(streamId: PostStreamId): boolean {
-    return streamId.includes(`:${StreamSource.BOOKMARKS}:`);
   }
 
   /**

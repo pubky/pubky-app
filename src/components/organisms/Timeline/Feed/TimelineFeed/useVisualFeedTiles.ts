@@ -8,8 +8,7 @@ import { ModerationController } from '@/controllers/moderation/moderation';
 import { PostController } from '@/controllers/post/post';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { Logger } from '@/libs/logger/logger';
-import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
+import { isArticleCoverContentType, resolveArticleCover } from '@/libs/post/articleCover';
 import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
@@ -17,7 +16,7 @@ import { isPostDeleted } from '@/libs/utils/utils';
 import { parseVideoUrl } from '@/libs/utils/videoUrl';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import { CompositeIdDomain } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { buildCompositeIdFromPubkyUri, isV1Address } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
@@ -78,14 +77,17 @@ const EMPTY_SNAPSHOT: VisualFeedSnapshot = {
  * them wherever they fit.
  */
 /**
- * Articles carry inline body images in `attachments`, but only the cover
- * (slot-0 rule) is tile-worthy media — inline images render inside the
- * article body, never as standalone visual tiles. Non-articles pass through.
+ * Articles carry inline body media in `attachments`, but only the cover is
+ * tile-worthy media — inline media renders inside the article body, never as
+ * standalone visual tiles. `resolveArticleCover` says where the cover is (the
+ * envelope, or slot 0 of a 0.x article, whose row has to say it is an image
+ * first: the tile loop checks the row). Non-articles pass through.
  */
-function visualMediaAttachments<T>(post: EnrichedPostDetails, attachments: readonly T[]): readonly T[] {
+function visualMediaAttachments(post: EnrichedPostDetails, attachments: readonly string[]): readonly string[] {
   if (post.kind !== 'long') return attachments;
-  const hasCover = attachments.length > 0 && !articleHasInlineSlotZero(parseArticleContent(post.content)?.body ?? '');
-  return attachments.slice(0, hasCover ? 1 : 0);
+  const { cover, coverCandidate } = resolveArticleCover({ content: post.content, attachments });
+  const coverUri = cover ?? coverCandidate;
+  return coverUri ? [coverUri] : [];
 }
 
 function buildPlaceholderTile(postId: string, placeholderKind: VisualPlaceholderKind, indexedAt = 0): VisualTile {
@@ -144,11 +146,11 @@ function buildRemoteTile(post: EnrichedPostDetails, file: FileDetailsModelSchema
 
   const metadataWidth = parseMediaDimension(file.metadata?.width);
   const metadataHeight = parseMediaDimension(file.metadata?.height);
-  const mainSrc = FileController.getFileUrl({ fileId: file.id, variant: FileVariant.MAIN });
+  const mainSrc = FileController.getFileUrl({ fileId: file.id, uri: file.uri, variant: FileVariant.MAIN });
   const previewSrc =
     file.content_type === 'image/gif'
       ? mainSrc
-      : FileController.getFileUrl({ fileId: file.id, variant: FileVariant.FEED });
+      : FileController.getFileUrl({ fileId: file.id, uri: file.uri, variant: FileVariant.FEED });
 
   return {
     id: `${post.id}:${file.id}`,
@@ -319,6 +321,7 @@ export function useVisualFeedTiles({
   showUnavailablePosts?: boolean;
 }) {
   const localPostAttachments = useLocalFilesStore((state) => state.posts);
+  const localArticleCovers = useLocalFilesStore((state) => state.articleCovers);
   const postIdsKey = React.useMemo(() => postIds.join('|'), [postIds]);
   const [, forceProbeRefresh] = React.useReducer((count) => count + 1, 0);
   // Post ids whose ensure-fetch has settled (success OR failure). The batch
@@ -399,6 +402,10 @@ export function useVisualFeedTiles({
       const remoteFiles = remoteAttachmentUris.length
         ? await FileController.getMetadata({ fileAttachments: remoteAttachmentUris })
         : [];
+      // As `getMetadata` answers: a v1 attachment by URI, since one `owner:hash` key stands for every
+      // `{hash}.{ext}` of the same bytes; a 0.x attachment by id, since its row stands however Nexus
+      // spelled the row's `uri`.
+      const remoteFilesByUri = new Map(remoteFiles.map((file) => [file.uri, file]));
       const remoteFilesById = new Map(remoteFiles.map((file) => [file.id, file]));
 
       let hiddenPostCount = 0;
@@ -430,9 +437,13 @@ export function useVisualFeedTiles({
           return showUnavailablePosts ? [buildPlaceholderTile(postId, 'deleted', post.indexed_at)] : [];
         }
 
-        const localAttachments = localPostAttachments[postId];
+        // An article's local media is its cover entry alone (its inline entries are body media)
+        const localAttachments =
+          post.kind === 'long'
+            ? localArticleCovers[postId] && [localArticleCovers[postId]]
+            : localPostAttachments[postId];
         if (localAttachments?.length) {
-          const postTiles = visualMediaAttachments(post, localAttachments).flatMap((attachment, index) => {
+          const postTiles = localAttachments.flatMap((attachment, index) => {
             const tile = buildLocalTile(post, attachment, index);
             return tile ? [tile] : [];
           });
@@ -446,19 +457,24 @@ export function useVisualFeedTiles({
 
         let hasUnresolvedFile = false;
         const postTiles = attachmentUris.flatMap((attachmentUri) => {
-          const attachmentId = buildCompositeIdFromPubkyUri({
-            uri: attachmentUri,
-            domain: CompositeIdDomain.FILES,
-          });
-
+          const attachmentId = buildCompositeIdFromPubkyUri({ uri: attachmentUri, domain: CompositeIdDomain.FILES });
+          // A URI the key builder refuses is one `getMetadata` never answers: skipped, not awaited.
           if (!attachmentId) {
             return [];
           }
 
-          const file = remoteFilesById.get(attachmentId);
+          const file = isV1Address(attachmentUri)
+            ? remoteFilesByUri.get(attachmentUri)
+            : remoteFilesById.get(attachmentId);
           if (!file) {
             missingFileUris.add(attachmentUri);
             hasUnresolvedFile = true;
+            return [];
+          }
+
+          // An article's one URI here is its cover, image-only (ADR-0023): a 0.x slot 0 whose row
+          // says video is no cover, so no tile, where a video attachment of any other post is one.
+          if (post.kind === 'long' && !isArticleCoverContentType(file.content_type)) {
             return [];
           }
 
@@ -481,7 +497,7 @@ export function useVisualFeedTiles({
     // consumers must treat as loading — a fully-paged feed (hasMore false) would
     // otherwise flash its empty state for the frame(s) before the first
     // liveQuery emission, e.g. when a collection viewer switches to Visual.
-    [postIdsKey, localPostAttachments, settledDetailPostIds, showUnavailablePosts],
+    [postIdsKey, localPostAttachments, localArticleCovers, settledDetailPostIds, showUnavailablePosts],
   );
   const hasPendingSnapshot = snapshot === undefined;
   const missingFileUris = React.useMemo(() => snapshot?.missingFileUris ?? [], [snapshot?.missingFileUris]);

@@ -351,6 +351,27 @@ describe('DialogRestoreEncryptedFile', () => {
     });
   });
 
+  // F-QA6-1: the migration gate signed the account out and the tab is on /migration; navigating home from here
+  // would hide the explanation
+  it('does not call onRestore when the sign-in did not complete', async () => {
+    mockLoginWithEncryptedFile.mockResolvedValue(false);
+
+    render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
+
+    fireEvent.change(screen.getByLabelText('Select file'), { target: { files: [mockFile('test.pkarr')] } });
+    fireEvent.change(screen.getByTestId('input'), { target: { value: 'testpassword' } });
+    fireEvent.click(screen.getByText('Restore').closest('button')!);
+
+    await waitFor(() => {
+      expect(mockLoginWithEncryptedFile).toHaveBeenCalledOnce();
+    });
+    expect(mockOnRestore).not.toHaveBeenCalled();
+    // The dialog is usable again, should it still be on screen
+    await waitFor(() => {
+      expect(screen.getByText('Restore').closest('button')).not.toBeDisabled();
+    });
+  });
+
   it('enables restore button when a file is selected', async () => {
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
 
@@ -438,8 +459,11 @@ describe('DialogRestoreEncryptedFile', () => {
     expect(restoreButton).toBeDisabled();
     expect(passwordInput).toBeDisabled();
 
-    // Resolve the promise to complete restore
+    // Settle the pending login inside the test: a successful restore reaches onRestore before the tree unmounts
     resolveRestore!(true);
+    await waitFor(() => {
+      expect(mockOnRestore).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('handles typed recovery file decryption errors', async () => {
@@ -733,8 +757,13 @@ describe('DialogRestoreEncryptedFile', () => {
   });
 
   it('guards against double-submit when Enter is pressed twice', async () => {
-    // Mock a slow async operation
-    mockLoginWithEncryptedFile.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    let resolveRestore: (value: boolean) => void;
+    mockLoginWithEncryptedFile.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveRestore = resolve;
+        }),
+    );
 
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
 
@@ -752,6 +781,12 @@ describe('DialogRestoreEncryptedFile', () => {
     await waitFor(() => {
       // Should only be called once, not twice
       expect(mockLoginWithEncryptedFile).toHaveBeenCalledTimes(1);
+    });
+
+    // Settle the pending login inside the test: a successful restore reaches onRestore before the tree unmounts
+    resolveRestore!(true);
+    await waitFor(() => {
+      expect(mockOnRestore).toHaveBeenCalledTimes(1);
     });
   });
 

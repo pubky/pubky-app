@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedApplication } from '@/application/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -16,10 +15,10 @@ const createFeedParams = (overrides: Partial<TFeedCreateParams> = {}): TFeedCrea
   icon: 'activity',
   tags: ['bitcoin', 'lightning'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'all',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   ...overrides,
 });
 
@@ -28,10 +27,10 @@ const createMockFeedSchema = (overrides: Partial<FeedModelSchema> = {}): FeedMod
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'all',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   created_at: Date.now(),
   updated_at: Date.now(),
   ...overrides,
@@ -51,7 +50,7 @@ describe('FeedController', () => {
 
     // Mock FeedApplication
     vi.spyOn(FeedApplication, 'persist').mockResolvedValue(createMockFeedSchema());
-    vi.spyOn(FeedApplication, 'commitDelete').mockResolvedValue(undefined);
+    vi.spyOn(FeedApplication, 'commitDelete').mockResolvedValue(true);
     vi.spyOn(FeedApplication, 'getList').mockResolvedValue([createMockFeedSchema()]);
     vi.spyOn(FeedApplication, 'get').mockResolvedValue(createMockFeedSchema());
     vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([createMockFeedSchema()]);
@@ -73,9 +72,10 @@ describe('FeedController', () => {
         params: {
           feed: expect.any(Object),
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
-      expect(result.id).toBe('feed-abc123');
+      expect(result?.id).toBe('feed-abc123');
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {
@@ -100,13 +100,14 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: [],
         domain_tags: ['🔥', 'bitcoiner'],
-        reach: PubkyAppFeedReach.Wot,
+        reach: 'wot',
       });
 
       await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
       expect(FeedApplication.persist).toHaveBeenCalledWith({
         userId: testData.userPubky,
         params: { feed: expect.any(Object) },
+        isCurrent: expect.any(Function),
       });
     });
 
@@ -114,7 +115,7 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: ['post1', 'post2', 'post3', 'post4', 'post5'],
         domain_tags: ['profile1', 'profile2', 'profile3', 'profile4', 'profile5', 'profile6'],
-        reach: PubkyAppFeedReach.Wot,
+        reach: 'wot',
       });
 
       await expect(FeedController.commitCreate(params)).rejects.toThrow('Maximum 5 tags allowed');
@@ -124,7 +125,7 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: ['post1', 'post2', 'post3', 'post4', 'post5'],
         domain_tags: ['profile1', 'profile2', 'profile3', 'profile4', 'profile5'],
-        reach: PubkyAppFeedReach.Wot,
+        reach: 'wot',
       });
 
       await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
@@ -134,26 +135,24 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: [],
         domain_tags: ['bitcoiner'],
-        reach: PubkyAppFeedReach.Me,
+        reach: 'me',
       });
 
       await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
       expect(FeedApplication.persist).toHaveBeenCalledWith({
         userId: testData.userPubky,
         params: { feed: expect.any(Object) },
+        isCurrent: expect.any(Function),
       });
     });
 
-    it.each([PubkyAppFeedReach.All, PubkyAppFeedReach.Followers])(
-      'should reject profile tags for unsupported reach %s',
-      async (reach) => {
-        const params = createFeedParams({ domain_tags: ['bitcoiner'], reach });
+    it.each(['all', 'followers'] as const)('should reject profile tags for unsupported reach %s', async (reach) => {
+      const params = createFeedParams({ domain_tags: ['bitcoiner'], reach });
 
-        await expect(FeedController.commitCreate(params)).rejects.toThrow(
-          'Profile tags are not supported for this feed reach',
-        );
-      },
-    );
+      await expect(FeedController.commitCreate(params)).rejects.toThrow(
+        'Profile tags are not supported for this feed reach',
+      );
+    });
   });
 
   describe('update', () => {
@@ -180,8 +179,27 @@ describe('FeedController', () => {
           feed: expect.any(Object),
           existingId: 'feed-abc123',
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
+    });
+
+    it('captures the viewer guard before the local read, so a logout during it turns the guard false', async () => {
+      const persistSpy = vi.spyOn(FeedApplication, 'persist');
+      vi.spyOn(FeedApplication, 'prepareUpdateParams').mockImplementation(async () => {
+        // Signed out while the stored feed was being read.
+        vi.spyOn(useAuthStore, 'getState').mockReturnValue({
+          selectCurrentUserPubky: () => testData.userPubky,
+          currentUserPubky: null,
+          session: null,
+        } as AuthStore);
+        return createFeedParams({ tags: ['bitcoin', 'mining'] });
+      });
+
+      await FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { tags: ['bitcoin', 'mining'] } });
+
+      const { isCurrent } = persistSpy.mock.calls[0][0];
+      expect(isCurrent!()).toBe(false);
     });
 
     it('should throw when feed not found', async () => {
@@ -218,6 +236,7 @@ describe('FeedController', () => {
           feed: expect.any(Object),
           existingId: 'feed-abc123',
         },
+        isCurrent: expect.any(Function),
       });
       expect(result).toBeTruthy();
     });
@@ -234,14 +253,14 @@ describe('FeedController', () => {
     it('should validate the fully merged feed configuration', async () => {
       vi.spyOn(FeedApplication, 'prepareUpdateParams').mockResolvedValue(
         createFeedParams({
-          reach: PubkyAppFeedReach.Followers,
+          reach: 'followers',
           tags: [],
           domain_tags: ['bitcoiner'],
         }),
       );
 
       await expect(
-        FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { reach: PubkyAppFeedReach.Followers } }),
+        FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { reach: 'followers' } }),
       ).rejects.toThrow('Profile tags are not supported for this feed reach');
       expect(FeedApplication.persist).not.toHaveBeenCalled();
     });
@@ -252,9 +271,19 @@ describe('FeedController', () => {
       const deleteSpy = vi.spyOn(FeedApplication, 'commitDelete');
       const deleteParams: TFeedIdParam = { feedId: 'feed-abc123' };
 
-      await FeedController.commitDelete(deleteParams);
+      await expect(FeedController.commitDelete(deleteParams)).resolves.toBe(true);
 
-      expect(deleteSpy).toHaveBeenCalledWith({ userId: testData.userPubky, params: { feedId: 'feed-abc123' } });
+      expect(deleteSpy).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: { feedId: 'feed-abc123' },
+        isCurrent: expect.any(Function),
+      });
+    });
+
+    it('reports a delete skipped for a signed-out viewer as not run', async () => {
+      vi.spyOn(FeedApplication, 'commitDelete').mockResolvedValue(false);
+
+      await expect(FeedController.commitDelete({ feedId: 'feed-abc123' })).resolves.toBe(false);
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {
@@ -265,12 +294,12 @@ describe('FeedController', () => {
   });
 
   describe('fetchFeeds', () => {
-    it('should pass userId from auth store to application layer', async () => {
+    it('should pass userId from auth store and the viewer guard to application layer', async () => {
       const fetchSpy = vi.spyOn(FeedApplication, 'fetchFeeds');
 
       await FeedController.fetchFeeds();
 
-      expect(fetchSpy).toHaveBeenCalledWith(testData.userPubky);
+      expect(fetchSpy).toHaveBeenCalledWith(testData.userPubky, { isCurrent: expect.any(Function) });
     });
 
     it('should return persisted feeds from application layer', async () => {

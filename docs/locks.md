@@ -125,6 +125,12 @@ everything ever unlocked. The replica also survives the creator revoking the loc
 | reader's HS `/priv/social/unlocked/<lockId>/`                 | the reader's replica, written on unlock                                                                                | that reader only                                             |
 | reader's HS `/priv/social/purchases/<lockId>/<bundleId>.json` | one file per bundle id, written BEFORE the proof is submitted (#2297, #2827); the legacy `<lockId>.json` is still read | that reader only                                             |
 
+Account deletion and export (`ProfileApplication.commitDelete` / `downloadData`, `docs/data-patterns.md`) sweep the
+whole `/priv/social/` of the signed-in account, so a reader's `unlocked/` replicas and `purchases/` files go with
+the account. The creator's `/pub/app.locks/<lockId>.json` and `/priv/app.locks/content/` are Lock Server contracts
+under a read-only grant (`/priv/app.locks/content/:r`) and are left alone: deleting a lock is the Lock Server's job
+([Deleting an announcement](#deleting-an-announcement)).
+
 ---
 
 ## Detecting a lock post
@@ -145,8 +151,9 @@ Lock announcements use the existing `DialogEditPost` composer. The dialog detect
 `lock`, parses the public envelope with the reader's parse, and exposes only the teaser
 description and editable lock title. Saving rebuilds the envelope with
 `buildLockTeaserContent`, writing back the stored `content_kind` unchanged, including one this build does not
-know (`DialogEditPost` → `EditLock.contentKind` → `usePostInput` → `usePost.edit`); `PostNormalizer.toEdit` reconstructs the original post with
-`PubkyAppPost.new_with_lock` so the stored lock URL survives content, kind, and attachment edits.
+know (`DialogEditPost` → `EditLock.contentKind` → `usePostInput` → `usePost.edit`); `PostNormalizer.toEdit`
+spreads the stored head version and changes only the content, so the stored lock URL survives content, kind,
+and attachment edits.
 The price is read-only from the existing `lock.json`; the edit composer cannot change lock criteria
 or guarded content.
 
@@ -194,20 +201,28 @@ deleted-post fallback once Nexus drops it.
 
 ## Data shape
 
-| Field                    | Owner           | Meaning                                                                                             |
-| ------------------------ | --------------- | --------------------------------------------------------------------------------------------------- |
-| top-level `kind`         | Nexus / specs   | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`)                   |
-| top-level `lock`         | Lock server     | URL of the public `lock.json` — the detection seam                                                  |
-| `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`, optional `content_kind` |
-| `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                                        |
+| Field                    | Owner           | Meaning                                                                                                                                                |
+| ------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| top-level `kind`         | Nexus / specs   | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`; local names, stored and served by Nexus `/v1` as `note` / `article`) |
+| top-level `lock`         | Lock server     | URL of the public `lock.json` — the detection seam                                                                                                     |
+| `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`, optional `content_kind`                                                    |
+| `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                                                                                           |
 
-- `content` is FE-owned (pubky-app-specs does not manage it) and validated at runtime
+- The announcement itself is an ordinary versioned v1 post (`/pub/social/v1/posts/<id>/<editId>.json`, ADR-0027):
+  `buildUri(authorId, 'post', id)` names it for the lock, a post edit spreads the stored head so the `lock` field
+  survives, and a delete removes every version. The **guarded primary** inside the lock is a v1 `Post` too, built by
+  `GuardedPostBuilder.toPrimary` (`core/pipes/locks/guardedPost.builder.ts`, `encodeObject` by kind, declared
+  `octet-stream` because the homeserver detects JSON as such); a locked article keeps the slot-0 cover convention
+  inside the lock, with `cover_image: null` in its envelope (ADR-0023). `GuardedContentParser.parsePost` reads a v1
+  primary first and falls back to the 0.x post shape a lock written before the port holds, so pre- and post-migration
+  locks both unlock.
+- `content` is FE-owned (pubky-social-specs does not manage it) and validated at runtime
   with Zod (`lockPostContentSchema`, `core/services/locks/locks.types.ts`). Bad / missing
   fields degrade to empty strings so the teaser still renders. The edit composer reads it with
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
 - `content_kind` (#2433) is the locked post's kind, from `inferPostKindForCreate` at publish time, in its
-  pubky-app-specs v1.0.0-rc.1 name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
+  pubky-social-specs 1.0.0-rc.1 name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
   the internal post kind by `toLockContentKind`). The list is its own, not derived from the app's internal
   kinds, so renaming those never changes what a lock stores.
   The order is the normal post's: video over image over file, and audio is a file. Any string is kept raw, so
@@ -222,7 +237,7 @@ deleted-post fallback once Nexus drops it.
   `LOCK_TEASER_MAX_CHARACTER_LENGTH` minus the length of the `content_kind` entry actually written, so a lock
   without one keeps the old limit.
 - The reader's replica marker (`/priv/social/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
-  not a `PubkyAppPost`: each attachment carries its `content_type` inline so the copy renders without
+  not a v1 post object: each attachment carries its `content_type` inline so the copy renders without
   the creator's lock file, and `announcement` holds the `pubky://…/posts/<id>` URI of the post the
   content was unlocked from. Nexus cannot look a post up by its lock URL, so without that URI the
   Unlocked screen has no way back to the announcement. The field is optional, and a value that is not
@@ -642,11 +657,14 @@ A grant carries the capability list approved at sign-in for its whole life, and 
 each page load. Legacy cookie users sign in again during the grant-only migration. Locks added two
 entries to that list (`HOMESERVER_CAPABILITIES` in `@/config/network`: `/priv/social/:rw` for the
 reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user
-with a valid saved Ring grant issued before those entries shipped keeps a session without them: `/pub/pubky.app/` keeps
+with a valid saved Ring grant issued before those entries shipped keeps a session without them: the social trees keep
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
 or write under the missing private scopes with **403** (insufficient permission; 401 means authentication failed).
 Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
-the local stack, and root covers every required entry with no special case.
+the local stack, and root covers every required entry with no special case. The social v1 scopes
+(`SOCIAL_V1_APP_CAPABILITIES`, `src/config/auth.ts`) are different: a grant that lacks them cannot run the app at all,
+so the migration gate signs that session out (`missing-scopes`) and the user signs in again with the full list
+(ADR-0026); only the Locks entries are upgraded in place.
 
 The app does not sign out a user merely because a valid grant lacks Locks scopes. Instead (#2373):
 
@@ -699,8 +717,8 @@ Never commit either.
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
   (testnet + Lock Server + nexus) is driven manually. How to run it, approve as Bitkit and pay from
   the terminal: [`locks/locks-local-stack/README.md`](locks/locks-local-stack/README.md).
-- `cypress/e2e/locks.cy.ts` covers publish, owner view and payment unlock against the real Nexus and
-  homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
+- `cypress/e2e/locks.cy.ts` covers publish, owner view, payment unlock and delete against the real Nexus
+  and homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
   answers with `cy.intercept`. The stub never writes to the homeserver: as the real Lock Server does,
@@ -708,10 +726,13 @@ Never commit either.
   `cypress/plugins/lock-server.ts` and the `seedLockServerWrite` task in Cypress's Node process, with a
   session the creator's key granted for `/priv/app.locks/:rw,/pub/app.locks/:rw`. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
   creator or code-exchange `... failed with HTTP <status>` message), so a stubbed 401, 404 or 451
-  takes the same path as the real Lock Server's. The pubky-e2e project will replace it with real end-to-end coverage.
-  Every stubbed answer is a `[locks-stub]` entry in the Cypress command log, with the redacted
-  request and response in its console details, and the same lines are printed in the terminal after
-  each `[locks-step]` marker (`cypress/support/locks-log.ts`).
+  takes the same path as the real Lock Server's. A lock a 0.x client published before the social v1
+  migration is seeded instead (its guarded 0.x post, `lock.json` and announcement, by the `seedLegacyLock`
+  task); the account migrates on sign-in, then the owner view, an unlock, a teaser edit and the delete run
+  on it. The pubky-e2e project will replace the stub with real end-to-end coverage. Every stubbed answer
+  is a `[locks-stub]` entry in the Cypress command log, with the redacted request and response in its
+  console details, and the same lines are printed in the terminal after each `[locks-step]` marker
+  (`cypress/support/locks-log.ts`).
 
 ## References
 

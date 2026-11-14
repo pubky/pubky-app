@@ -1,5 +1,5 @@
 import type { Capabilities } from '@synonymdev/pubky';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import {
   getDefaultHttpRelay,
   getDeployEnv,
@@ -74,12 +74,31 @@ export function isStagingHomeserverDeploy(): boolean {
 // Requested from Pubky Ring at sign-in and fixed for the life of that session; keypair sign-in mints a
 // root (`/:rw`) session instead. A session from before an entry was added lacks it until the user
 // approves a new one (`docs/locks.md`, _Sessions from before locks_).
-// - /pub/pubky.app/:rw         — the app's public data
+// - /pub/pubky.app/:rw         — the 0.x public tree: legacy reads, and deletes of migrated objects
+// - /pub/social/v1/:rw         — the app's public social data (`pubky-social-specs` 1.x)
+// - /priv/social/v1/:rw        — the private social tree: bookmarks, mutes, feeds
+// - /priv/app.pubky/v1/:rw     — the app's own files: settings, notification read cursor
 // - /priv/social/:rw           — where unlocked lock content is copied (reader replication)
 // - /priv/app.locks/content/:r — read-only: a creator reads their OWN guarded original here (Ring sessions)
-export const HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(',') as Capabilities;
+// The order is the order Ring shows the scopes in; `src/config/auth.test.ts` pins the string.
+export const HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(
+  ',',
+) as Capabilities;
 
-/** One approval requests the App, Locks and embedded Shop storage scopes. */
+/** One approval requests the App, social v1, Locks and embedded Shop storage scopes. */
 export function getHomeserverCapabilities(): Capabilities {
-  return [...new Set([APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES])].join(',') as Capabilities;
+  return [
+    ...new Set([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES]),
+  ].join(',') as Capabilities;
 }
+
+/**
+ * How long one homeserver read held under a sync lock may stay pending before `awaitBounded`
+ * (`src/core/utils/bounded-read.ts`) stops waiting for it: under a per-user lock, the whole paginated LIST of the
+ * mute, bookmark or feed fetch (every page shares the one bound), a bookmark GET batch, a feed GET; under a post's
+ * write lock, the post edit's head read (LIST and GET as one) and the post delete's listings (both LISTs and the 0.x
+ * `exists` as one). A bound on how long a read that never answers can hold the lock, and the writes of every tab
+ * behind it; not a product limit. The migration gate's flag read on a restore (`SocialMigrationApplication.readFlag`)
+ * reuses it: it holds no lock, but it holds the restore. Fixed (not configurable via env); see `docs/environment.md`.
+ */
+export const HOMESERVER_SYNC_READ_TIMEOUT_MS = 30_000;
