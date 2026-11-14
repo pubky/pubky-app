@@ -8,6 +8,7 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { Typography } from '@/atoms/Typography/Typography';
 import { isPinakesConfigured } from '@/config/pinakes';
+import { useEventFeed } from '@/hooks/useEventFeed/useEventFeed';
 import { useOtherLinkTags } from '@/hooks/useOtherLinkTags/useOtherLinkTags';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
@@ -22,8 +23,10 @@ import {
   getShowPostLabel,
 } from '@/molecules/PostLinkEmbeds/Providers/Native/nativeEmbed.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
+import { ResourceFamily } from '@/molecules/ResourceCard/ResourceCard.types';
 import {
   getHttpUrl,
+  getResourceFamily,
   getResourceLinks,
   getResourceTagsLabel,
   getResourceTarget,
@@ -222,6 +225,8 @@ function ResourceKnown({
   const otherLinks =
     card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, getOwnLinkUris(card, uri, actionUri));
   const otherTags = mergeOtherLinkTags(useOtherLinkTags(otherLinks).reads);
+  // A series date's feed (its group, read above): the footer's tags switch between this date and all dates
+  const { feed } = useEventFeed(getResourceFamily(card) === ResourceFamily.EVENT ? card : null);
   // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
   const postEmbed = usePostEmbed(card, uri);
   // Embed or card, as in a post (`useCardPlayer`): the page's own link's player up front in place of
@@ -245,6 +250,7 @@ function ResourceKnown({
       linkUrl={getResourceLinks(card, writtenUri).linkUrl}
       title={card.name || null}
       otherTagList={otherTags}
+      eventFeed={feed}
       playOn={postEmbed?.showPost}
       size="large"
       replyCount={replies.replyCount}

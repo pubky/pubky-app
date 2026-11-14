@@ -7,6 +7,7 @@ import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import mbRecordingEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-recording.enriched.json';
+import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
 import podcastFixture from '@/services/pinakes/fixtures/by-uri.podcast.json';
@@ -22,6 +23,16 @@ const mocks = vi.hoisted(() => ({
   configured: true,
   replyCount: 2 as number | undefined,
   otherLinks: null as { uri: string; name: string }[] | null,
+  // A series date's feed (`useEventFeed`), and the card it was asked for
+  feed: null as null | { id: string; uri: string },
+  feedAsked: [] as unknown[],
+}));
+
+vi.mock('@/hooks/useEventFeed/useEventFeed', () => ({
+  useEventFeed: (card: unknown) => {
+    mocks.feedAsked.push(card);
+    return { feed: card ? mocks.feed : null, isLoading: false };
+  },
 }));
 
 // The second tag group's links are read once by the page; here only which links matters.
@@ -61,6 +72,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     title,
     extraMenuContent,
     otherTagList,
+    eventFeed,
     playOn,
     size,
     replyCount,
@@ -77,6 +89,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     title?: string | null;
     extraMenuContent?: unknown;
     otherTagList?: readonly { label: string }[];
+    eventFeed?: { uri: string } | null;
     playOn?: React.ReactNode;
     size?: string;
     replyCount?: number;
@@ -96,6 +109,7 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-title={title ?? 'none'}
       data-extra-menu={extraMenuContent ? 'yes' : 'no'}
       data-size={size}
+      data-event-feed={eventFeed === undefined ? 'none' : (eventFeed?.uri ?? 'null')}
     >
       {playOn}
       <div data-testid="resource-other-tag-list" data-labels={otherTagList?.map((tag) => tag.label).join(',')} />
@@ -233,6 +247,8 @@ describe('ResourceDetails', () => {
 
   beforeEach(() => {
     mocks.otherLinks = null;
+    mocks.feed = null;
+    mocks.feedAsked = [];
     vi.clearAllMocks();
     mocks.configured = true;
     mocks.replyCount = 2;
@@ -243,6 +259,24 @@ describe('ResourceDetails', () => {
   });
 
   describe('when the link is known', () => {
+    it('hands the footer a series date’s feed, for its tags on this date or all dates', () => {
+      const date: TPinakesResourceDetail = meetupDateFixture;
+      const feed = { id: '51ee469240e25fe6a378dc8d317e3f89', uri: 'https://www.meetup.com/x/events/ical/' };
+      mocks.feed = feed;
+      read = settled(date);
+      renderDetails(date.aliases[0]);
+
+      expect(mocks.feedAsked).toContain(date);
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-event-feed', feed.uri);
+    });
+
+    it('looks for no feed for a card that is no event', () => {
+      mocks.feed = { id: 'f', uri: 'https://example.com/feed.ics' };
+      renderDetails(VIDEO.uri);
+
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-event-feed', 'null');
+    });
+
     it('reads the card for the page’s link and shows it large, under the page’s heading, opened by its header alone', () => {
       read = settled(placeFixture);
       renderDetails(placeFixture.uri);

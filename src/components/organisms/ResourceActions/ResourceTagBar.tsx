@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS, TAG_INPUT_WIDTH_DEFAULT } from '@/config/tags';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
@@ -48,11 +49,22 @@ interface ResourceTagBarProps {
    */
   otherTags?: readonly TMergedTag[];
   /**
+   * A series date's other scope among the other links (`ResourceActions`): its links (the feed's on
+   * this date, the date's on all dates) and its name ("all dates", "this date"). A chip whose label is
+   * there says so in its name and hover text ("On all dates"); nothing more shows.
+   */
+  scope?: { name: string; uris: readonly string[] };
+  /** Shown first, before the chips and before the expanded input: the scope's switch. */
+  control?: ReactNode;
+  /**
    * The tags at the end of an item's row (a show's episode list): the chips alone (the post's tag
    * budget), right-aligned from `sm` up, with no "+": the item is tagged on its own page.
    */
   inline?: boolean;
 }
+
+/** Where a merged tag is besides the link: on the scope's links only, on them too, or not on them. */
+type TScopeHit = 'only' | 'also' | null;
 
 /**
  * The tags people put on an external resource, like a post's tag list: the app's tag chips (label
@@ -81,6 +93,8 @@ export function ResourceTagBar({
   isAdding,
   onAddingChange,
   otherTags = [],
+  scope,
+  control,
   inline = false,
 }: ResourceTagBarProps) {
   const { isAuthenticated, requireAuth } = useRequireAuth();
@@ -96,6 +110,12 @@ export function ResourceTagBar({
     const own = tag.isSecondary ? undefined : tags.find((tagHere) => tagHere.label === tag.label);
     // The viewer is here when Nexus marks the tag theirs, also when its sample of taggers left them out.
     return getTagPeople(own && withResourceViewerListed([own], viewerId)[0], other);
+  };
+  const scopeUris = new Set(scope?.uris);
+  const scopeHitOf = (tag: Pick<TagWithAvatars, 'label'>): TScopeHit => {
+    const sources = elsewhere.get(canonicalizeTagLabel(tag.label))?.sources ?? [];
+    const inScope = sources.filter((source) => scopeUris.has(source.uri)).length;
+    return inScope === 0 ? null : inScope === sources.length ? 'only' : 'also';
   };
   // Shown as the viewer's when they hold it here or on another link; a write goes by the link's own tag.
   const isViewers = (tag: Pick<NexusTag, 'label' | 'relationship'>) =>
@@ -155,6 +175,7 @@ export function ResourceTagBar({
         className="min-w-0 flex-1 gap-2"
       >
         <Container overrideDefaults className="flex w-fit max-w-full flex-col gap-2">
+          {control}
           <TagInput
             onTagAdd={addTag}
             existingTags={tags}
@@ -191,27 +212,32 @@ export function ResourceTagBar({
       data-testid="resource-tag-bar"
       className={cn('flex min-w-0 flex-wrap items-center gap-2', inline && 'sm:justify-end')}
     >
-      {visibleTags.map((tag) => (
-        <PostTagPopoverWrapper
-          key={tag.label}
-          taggers={tag.taggers}
-          taggersCount={tag.total ?? tag.taggers_count}
-          postId={null}
-          tagLabel={tag.label}
-          content={renderPeople(tag)}
-        >
-          <PostTag
-            label={tag.label}
-            count={tag.taggers_count}
-            total={tag.total}
-            variant={tag.isSecondary ? 'secondary' : 'default'}
-            color={generateRandomColor(tag.label)}
-            selected={tag.relationship}
-            aria-label={getChipLabel(tag, peopleOf(tag))}
-            onClick={() => pressTag(tag)}
-          />
-        </PostTagPopoverWrapper>
-      ))}
+      {control}
+      {visibleTags.map((tag) => {
+        const scopeHit = scope ? scopeHitOf(tag) : null;
+        return (
+          <PostTagPopoverWrapper
+            key={tag.label}
+            taggers={tag.taggers}
+            taggersCount={tag.total ?? tag.taggers_count}
+            postId={null}
+            tagLabel={tag.label}
+            content={renderPeople(tag)}
+          >
+            <PostTag
+              label={tag.label}
+              count={tag.taggers_count}
+              total={tag.total}
+              variant={tag.isSecondary ? 'secondary' : 'default'}
+              color={generateRandomColor(tag.label)}
+              selected={tag.relationship}
+              aria-label={getChipLabel(tag, peopleOf(tag), scope && scopeHit ? { ...scope, hit: scopeHit } : null)}
+              title={scope && scopeHit ? `On ${scope.name}` : undefined}
+              onClick={() => pressTag(tag)}
+            />
+          </PostTagPopoverWrapper>
+        );
+      })}
       {!inline && (
         <TagInputToggle
           showInput={isAdding}
@@ -248,13 +274,29 @@ export function ResourceTagBar({
 /**
  * A chip's name when its label is on other services: how many here and across them (an own chip),
  * or none here, how many elsewhere and that a press adds it here (a secondary chip). Otherwise the
- * post tag's own name.
+ * post tag's own name. A label on a series date's other scope (`scope`, "all dates") names it.
  */
-function getChipLabel(tag: TagWithAvatars, people: TTagPeople | undefined): string | undefined {
+function getChipLabel(
+  tag: TagWithAvatars,
+  people: TTagPeople | undefined,
+  scope: { name: string; hit: Exclude<TScopeHit, null> } | null,
+): string | undefined {
   if (!people) return undefined;
   const atLeast = people.isComplete ? '' : 'at least ';
-  if (tag.isSecondary) return `${tag.label}, 0 here, ${atLeast}${people.total} on other services, add it here`;
-  return `${tag.label}, ${tag.taggers_count} here, ${atLeast}${people.total} across services`;
+  if (tag.isSecondary) {
+    const where = !scope
+      ? 'on other services'
+      : scope.hit === 'only'
+        ? `on ${scope.name}`
+        : `on ${scope.name} and other services`;
+    return `${tag.label}, 0 here, ${atLeast}${people.total} ${where}, add it here`;
+  }
+  const across = !scope
+    ? 'across services'
+    : scope.hit === 'only'
+      ? `with those on ${scope.name}`
+      : `across services and on ${scope.name}`;
+  return `${tag.label}, ${tag.taggers_count} here, ${atLeast}${people.total} ${across}`;
 }
 
 /**
