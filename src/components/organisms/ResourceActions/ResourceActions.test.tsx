@@ -1316,6 +1316,24 @@ describe('ResourceActions', () => {
       expect(mocks.writes).toEqual([nov25.uri, feed]);
     });
 
+    it('never writes or removes on a feed link from this date, also when the two differ by a reserved escape', () => {
+      const [nov25]: TPinakesCard[] = meetupCollapsedFixture.items;
+      const feed = 'https://cal.example/events%2Fical';
+      const row: TPinakesCard = {
+        ...nov25,
+        uri: 'https://cal.example/events/ical',
+        refs: [feed],
+        occurrence: { ...nov25.occurrence!, feed_uri: feed },
+      };
+      renderRow(row);
+
+      expect(screen.getByRole('button', { name: SCOPE_LABEL })).toBeInTheDocument();
+      expect(mocks.tagsUri).toBe(row.uri);
+      // The set the bar writes and removes on: the date's links only
+      expect([mocks.tagsUri, ...(mocks.tagsOptions.at(-1)?.spellings ?? [])]).not.toContain(feed);
+      expect(readLinks()).toEqual([`All dates: ${feed}`]);
+    });
+
     it('shows no switch for a calendar’s date whose link is the calendar, and tags the calendar as before', () => {
       const [holiday]: TPinakesCard[] = holidaysFixture.items;
       const target = getResourceTarget(holiday, getResourceSearchRowUri(holiday));

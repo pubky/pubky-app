@@ -171,7 +171,8 @@ export function ResourceActions({
   const isEventCard = Boolean(card) && eventFeed === undefined && getResourceFamily(card!) === ResourceFamily.EVENT;
   const { feed: cardFeed } = useEventFeed(isEventCard ? card : null, { enabled: hasBeenOnScreen });
   // The date's own links, the feed's left out (a feed's date was written by the feed's link). A date
-  // with none of its own (its link is the calendar's) has no scope: its tags stay the calendar's.
+  // with none of its own (its link is the calendar's) has no scope: its tags stay on its target as
+  // before, which then holds the feed's links alone, never a date link beside them.
   const knownFeed = eventFeed ?? cardFeed;
   const dateLinks = knownFeed ? getEventDateLinks([uri, ...(spellings ?? [])], knownFeed, card) : [];
   const feed = dateLinks.length > 0 ? knownFeed : null;

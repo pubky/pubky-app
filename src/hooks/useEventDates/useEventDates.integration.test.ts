@@ -73,4 +73,23 @@ describe('useEventDates over the cached Pinakes reads', () => {
     expect(later.result.current.sameName.map((card) => card.start)).not.toContain(SOON.start);
     expect(later.result.current.sameName).toHaveLength(first.result.current.sameName.length - 1);
   });
+
+  it('keeps the series read for its hour: no new read 7 minutes later, a new one in the next hour', async () => {
+    const first = renderHook(() => useEventDates(DATE));
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+
+    // Past the cache's own 5 minutes, within the hour
+    vi.setSystemTime(new Date('2026-11-14T06:08:00Z'));
+    const later = renderHook(() => useEventDates(DATE));
+    await waitFor(() => expect(later.result.current.isLoading).toBe(false));
+    expect(occurrenceReads()).toHaveLength(1);
+
+    vi.setSystemTime(new Date('2026-11-14T07:00:30Z'));
+    const nextHour = renderHook(() => useEventDates(DATE));
+    await waitFor(() => expect(nextHour.result.current.isLoading).toBe(false));
+    expect(occurrenceReads().map((url) => url.searchParams.get('from'))).toEqual([
+      '2026-11-14T06:00:00Z',
+      '2026-11-14T07:00:00Z',
+    ]);
+  });
 });

@@ -105,6 +105,8 @@ export class PinakesController {
    * the cursor stays in its window. Now, without one.
    * @param params.fresh - Ask Pinakes again whatever the cache holds: the first page of a list
    * started over, which the cache may still hold with the cursor that was refused
+   * @param params.keepUntil - Keep the page until then (epoch milliseconds), when its window ends,
+   * instead of the cache's own five minutes
    * @throws AppError when Pinakes fails or refuses the page
    */
   static fetchOccurrences({
@@ -113,14 +115,22 @@ export class PinakesController {
     cursor,
     from = getOccurrencesWindowStart(new Date()),
     fresh,
+    keepUntil,
   }: {
     id: string;
     limit: number;
     cursor?: string | null;
     from?: string;
     fresh?: boolean;
+    keepUntil?: number;
   }): Promise<{ cards: TPinakesCard[]; cursor: string | null }> {
-    return PinakesApplication.fetchOccurrences(id, { from, limit, cursor, fresh });
+    return PinakesApplication.fetchOccurrences(id, {
+      from,
+      limit,
+      cursor,
+      fresh,
+      ...(keepUntil !== undefined ? { keepUntil } : {}),
+    });
   }
 
   /**

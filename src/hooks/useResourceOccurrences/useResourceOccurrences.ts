@@ -54,20 +54,23 @@ const isRefused = (error: unknown) => isAppError(error) && error.context?.status
  * @param options.limit - Dates a page asks for (`EVENT_DATES_PAGE_SIZE`, a calendar's page)
  * @param options.windowStart - Where the list starts for a read made now (`getOccurrencesWindowStart`,
  * the minute); a coarser one shares a read longer, the caller leaving out dates that started since
+ * @param options.windowEnd - When the window that starts at `from` ends (epoch milliseconds): its
+ * pages are kept until then, not the cache's own five minutes
  */
 export function useResourceOccurrences(
   id: string | null | undefined,
   {
     limit = EVENT_DATES_PAGE_SIZE,
     windowStart = getOccurrencesWindowStart,
-  }: { limit?: number; windowStart?: (now: Date) => string } = {},
+    windowEnd,
+  }: { limit?: number; windowStart?: (now: Date) => string; windowEnd?: (from: string) => number } = {},
 ): UseResourceOccurrencesResult {
   const isEnabled = Boolean(id) && isPinakesConfigured();
   const [read, setRead] = useState<TRead | null>(null);
   const [attempt, setAttempt] = useState(0);
   // The read going on now (one object per read: a page of an earlier read of the same resource is
   // told apart by it), where its window starts, and whether a next page is on its way
-  const current = useRef<{ id: string; from: string; key: string } | null>(null);
+  const current = useRef<{ id: string; from: string; key: string; keepUntil?: number } | null>(null);
   const isLoadingMore = useRef(false);
   const reads = useRef(0);
   // The resource whose list already started over after a refused cursor
@@ -88,7 +91,7 @@ export function useResourceOccurrences(
     if (!isEnabled || !id) return;
     const from = windowStart(new Date());
     reads.current += 1;
-    const window = { id, from, key: `${id}:${reads.current}` };
+    const window = { id, from, key: `${id}:${reads.current}`, keepUntil: windowEnd?.(from) };
     current.current = window;
     isLoadingMore.current = false;
     setRead(null);
@@ -100,6 +103,7 @@ export function useResourceOccurrences(
       id,
       limit,
       from,
+      ...(window.keepUntil !== undefined ? { keepUntil: window.keepUntil } : {}),
       // Past the cache, which may hold this window's first page with the cursor that was refused
       ...(isReadAgain ? { fresh: true } : {}),
     }).then(
@@ -109,7 +113,7 @@ export function useResourceOccurrences(
     return () => {
       if (current.current === window) current.current = null;
     };
-  }, [id, isEnabled, attempt, limit, windowStart]);
+  }, [id, isEnabled, attempt, limit, windowStart, windowEnd]);
 
   // Each new read starts from nothing (`setRead(null)` above), so what is held for this resource is
   // this read's
@@ -118,7 +122,7 @@ export function useResourceOccurrences(
   async function loadMore() {
     const window = current.current;
     if (!shown?.cursor || !window || isLoadingMore.current) return;
-    const { id: readId, from, key } = window;
+    const { id: readId, from, key, keepUntil } = window;
     // Only the read this page was asked in: its cursor fits no other window
     const patch = (next: (prev: TRead) => TRead) => setRead((prev) => (prev?.key === key ? next(prev) : prev));
     isLoadingMore.current = true;
@@ -129,6 +133,7 @@ export function useResourceOccurrences(
         limit,
         from,
         cursor: shown.cursor,
+        ...(keepUntil !== undefined ? { keepUntil } : {}),
       });
       patch((prev) => ({
         ...prev,

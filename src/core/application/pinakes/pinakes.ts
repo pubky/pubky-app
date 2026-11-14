@@ -76,15 +76,25 @@ export class PinakesApplication {
    * One page of a calendar's dates from `from` on (RFC 3339), by start: one card per instance and
    * the next page's cursor (`null` at the end). No dates for a resource that is no calendar, one
    * Pinakes does not know, or without Pinakes. `fresh` asks Pinakes again whatever its cache holds
-   * (a list started over).
+   * (a list started over); `keepUntil` keeps the page until its window ends (epoch milliseconds).
    *
    * @throws AppError when Pinakes fails or refuses the page (an expired cursor is a 400)
    */
   static async fetchOccurrences(
     id: string,
-    { from, limit, cursor, fresh }: { from: string; limit: number; cursor?: string | null; fresh?: boolean },
+    {
+      from,
+      limit,
+      cursor,
+      fresh,
+      keepUntil,
+    }: { from: string; limit: number; cursor?: string | null; fresh?: boolean; keepUntil?: number },
   ): Promise<{ cards: TPinakesCard[]; cursor: string | null }> {
-    const page = await PinakesService.fetchOccurrences(id, { from, limit, cursor: cursor ?? undefined }, { fresh });
+    const page = await PinakesService.fetchOccurrences(
+      id,
+      { from, limit, cursor: cursor ?? undefined },
+      { fresh, ...(keepUntil !== undefined ? { keepUntil } : {}) },
+    );
     return { cards: (page?.items ?? []).map(withNormalizedCredits), cursor: page?.cursor ?? null };
   }
 
