@@ -16,7 +16,7 @@ import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceCont
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { PostActionButton } from '@/organisms/PostActionsBar/PostActionButton';
 import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from '@/organisms/ResourceDetails/ResourceOtherTags.utils';
-import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { type ResourceExtraMenuContent, ResourceMoreMenu } from './ResourceMoreMenu';
 import { ResourcePostButton } from './ResourcePostButton';
 import { ResourceSavePicker } from './ResourceSavePicker';
@@ -83,7 +83,7 @@ interface ResourceActionsProps {
    * refs when the page already read its group, never asked here), read with its own tags, only in their
    * `by_ids` batch. Its tags are still read and written on `uri` and `spellings` alone.
    */
-  card?: TPinakesResourceDetail | null;
+  card?: (TPinakesCard & Partial<Pick<TPinakesResourceDetail, 'aliases'>>) | null;
   /**
    * A pill that shows the platform's own embed (an X post's "Show on <site>" with platform embeds up
    * front off): on its own line above the footer, so the footer's tags and buttons are the post's,

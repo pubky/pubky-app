@@ -17,7 +17,7 @@ export const MAX_OTHER_LINKS = 40;
  * links people wrote for it (`refs`) and its other spellings (`aliases`).
  */
 export function getOwnLinkUris(
-  card: Pick<TPinakesResourceDetail, 'uri' | 'refs' | 'aliases'>,
+  card: Pick<TPinakesResourceDetail, 'uri' | 'refs'> & Partial<Pick<TPinakesResourceDetail, 'aliases'>>,
   pageUri: string,
   actionUri: string,
 ): Set<string> {
