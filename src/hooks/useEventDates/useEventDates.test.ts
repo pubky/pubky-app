@@ -1,7 +1,8 @@
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EVENT_SERIES_DATES_LIMIT } from '@/config/events';
 import type { UseResourceOccurrencesResult } from '@/hooks/useResourceOccurrences/useResourceOccurrences';
+import { getSeriesWindowStart } from '@/pipes/resource/resource.events';
 import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
 import meetupDatesFixture from '@/services/pinakes/fixtures/occurrences.meetup.json';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -47,7 +48,12 @@ const read = (overrides: Partial<UseResourceOccurrencesResult> = {}): UseResourc
 });
 
 describe('useEventDates', () => {
+  afterEach(() => vi.useRealTimers());
+
   beforeEach(() => {
+    // Before the series' first date: none has started
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-14T06:00:00Z'));
     mocks.feed = { feed: FEED, isLoading: false };
     mocks.dates = read();
     mocks.asked.length = 0;
@@ -57,7 +63,10 @@ describe('useEventDates', () => {
   it('reads the feed’s coming dates, one read for the series, and splits off this date', () => {
     const { result } = renderHook(() => useEventDates(DATE));
 
-    expect(mocks.asked.at(-1)).toEqual([FEED.id, { limit: EVENT_SERIES_DATES_LIMIT }]);
+    expect(mocks.asked.at(-1)).toEqual([
+      FEED.id,
+      { limit: EVENT_SERIES_DATES_LIMIT, windowStart: getSeriesWindowStart },
+    ]);
     expect(result.current.feed).toEqual(FEED);
     expect(result.current.sameName).toHaveLength(9);
     expect(result.current.others).toEqual([]);

@@ -7,13 +7,16 @@ import meetupDatesFixture from '@/services/pinakes/fixtures/occurrences.meetup.j
 import eventsFixture from '@/services/pinakes/fixtures/search.events.json';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import {
+  getEventDateLinks,
   getEventDayKey,
   getEventFeed,
   getEventLifecycleLabel,
   getGroupPage,
   getOccurrencesWindowStart,
   getResourceInstanceKey,
+  getSeriesWindowStart,
   groupEventsByDay,
+  hasEventStarted,
   hasSameSummary,
   mergeResourceInstances,
   splitFeedDates,
@@ -130,6 +133,30 @@ describe('getEventFeed', () => {
 
   it('is the row’s own feed for a feed’s date (a search row), with no group read', () => {
     expect(getEventFeed(MEETUP_DATES[0], undefined)).toEqual(FEED);
+  });
+});
+
+describe('getEventDateLinks', () => {
+  const HOLIDAY = HOLIDAYS[0];
+  const HOLIDAY_FEED = getEventFeed(HOLIDAY, null)!;
+
+  it('keeps a date page’s own links: none of them is the feed’s', () => {
+    expect(getEventDateLinks([MEETUP_DATE.uri, ...MEETUP_DATE.aliases], FEED, MEETUP_DATE)).toEqual([
+      MEETUP_DATE.uri,
+      ...MEETUP_DATE.aliases,
+    ]);
+  });
+
+  it('leaves the feed’s links out of a feed’s date that has a page link of its own', () => {
+    const [nov25] = MEETUP_DATES;
+    // The row's links as its card's footer has them: its page link, the feed's link it was written by
+    expect(getEventDateLinks([nov25.uri, ...nov25.refs], FEED, nov25)).toEqual([nov25.uri]);
+  });
+
+  it('has no date link for a feed’s date whose link is the calendar’s, however it is spelled', () => {
+    // Google writes the calendar's `@` as `%40` in the feed's link, not in the row's
+    expect(HOLIDAY.uri).not.toBe(HOLIDAY_FEED.uri);
+    expect(getEventDateLinks([HOLIDAY.uri, ...HOLIDAY.refs], HOLIDAY_FEED, HOLIDAY)).toEqual([]);
   });
 });
 
@@ -331,6 +358,23 @@ describe('groupEventsByDay', () => {
       ['2026-11-17', ['late', 'early']],
       [null, ['undated']],
     ]);
+  });
+});
+
+describe('getSeriesWindowStart', () => {
+  it('is the start of the hour, so a series’ cards share a read for an hour', () => {
+    expect(getSeriesWindowStart(new Date('2026-11-14T06:59:59.900Z'))).toBe('2026-11-14T06:00:00Z');
+  });
+});
+
+describe('hasEventStarted', () => {
+  const now = new Date('2026-11-14T06:04:00Z').getTime();
+
+  it('tells a date that started by its start, else its end', () => {
+    expect(hasEventStarted({ start: '2026-11-14T06:02:00Z', end: '2026-11-14T09:00:00Z' }, now)).toBe(true);
+    expect(hasEventStarted({ start: '2026-11-14T06:05:00Z', end: null }, now)).toBe(false);
+    expect(hasEventStarted({ start: null, end: '2026-11-14T06:00:00Z' }, now)).toBe(true);
+    expect(hasEventStarted({ start: null, end: null }, now)).toBe(false);
   });
 });
 

@@ -27,7 +27,7 @@ interface ResourceTagScopeProps {
 /**
  * The one-of-two choice at the start of a series date's tag bar: "This date ▾" or "All dates ▾",
  * opening the post menu's style of list with a check on the current one (as the composer's embedded
- * link switch). Its name says only one applies; each row's says whether it is the one shown.
+ * link switch). Its name says only one applies and which; each row's says whether it is the one shown.
  */
 export function ResourceTagScope({ scope, onScopeChange }: ResourceTagScopeProps) {
   const current = SCOPES.find((option) => option.value === scope) ?? SCOPES[0];
@@ -37,7 +37,7 @@ export function ResourceTagScope({ scope, onScopeChange }: ResourceTagScopeProps
         <Button
           variant="outline"
           size="sm"
-          aria-label="Tags for this date or for all dates"
+          aria-label={`Tags for this date or for all dates: ${current.label}`}
           data-testid="resource-tag-scope"
           className="shrink-0 border-foreground/30 bg-background text-foreground hover:border-foreground/50 hover:bg-background/60 data-[state=open]:border-foreground/50"
         >

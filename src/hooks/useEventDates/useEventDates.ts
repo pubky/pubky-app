@@ -1,12 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import { EVENT_SERIES_DATES_LIMIT } from '@/config/events';
 import { useEventFeed } from '@/hooks/useEventFeed/useEventFeed';
 import {
   useResourceOccurrences,
   type UseResourceOccurrencesResult,
 } from '@/hooks/useResourceOccurrences/useResourceOccurrences';
-import { isSameEventDate, splitFeedDates, type TEventFeed } from '@/pipes/resource/resource.events';
+import {
+  getSeriesWindowStart,
+  hasEventStarted,
+  isSameEventDate,
+  splitFeedDates,
+  type TEventFeed,
+} from '@/pipes/resource/resource.events';
 import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
 
 export interface UseEventDatesResult extends Omit<UseResourceOccurrencesResult, 'cards'> {
@@ -20,7 +27,8 @@ export interface UseEventDatesResult extends Omit<UseResourceOccurrencesResult, 
 
 /**
  * The other coming dates of an event's series: its feed (`useEventFeed`) and the feed's dates from now
- * on (`useResourceOccurrences`, `EVENT_SERIES_DATES_LIMIT` at once), this date left out
+ * on (`useResourceOccurrences`, `EVENT_SERIES_DATES_LIMIT` at once; read from the hour, so cards that
+ * come on screen within it share the read, and the dates that started by then left out), this date left out
  * (`splitFeedDates`). Every card and the page of one series ask the same read, which the Pinakes
  * cache answers once. An event with no feed reads no dates.
  *
@@ -32,9 +40,13 @@ export function useEventDates(
   { enabled = true }: { enabled?: boolean } = {},
 ): UseEventDatesResult {
   const { feed, isLoading: isFeedLoading } = useEventFeed(card, { enabled });
+  // When the dates are shown from: the series is read from the hour on, and shared for the hour
+  const [openedAt] = useState(() => Date.now());
   const { cards, isLoading, ...read } = useResourceOccurrences(enabled ? (feed?.id ?? null) : null, {
     limit: EVENT_SERIES_DATES_LIMIT,
+    windowStart: getSeriesWindowStart,
   });
-  const { sameName, others } = splitFeedDates(card, cards);
+  const coming = cards.filter((date) => !hasEventStarted(date, openedAt));
+  const { sameName, others } = splitFeedDates(card, coming);
   return { ...read, feed, sameName, others, isLoading: enabled && (isFeedLoading || (feed !== null && isLoading)) };
 }

@@ -106,6 +106,32 @@ export function getEventFeed(
   return occurrence ? { id: occurrence.feed_id, uri: occurrence.feed_uri } : null;
 }
 
+/** A link as written and as decoded (`%40` and `@` alike): one link however a source escapes it. */
+function decodeLink(link: string): string {
+  try {
+    return decodeURIComponent(link);
+  } catch {
+    return link;
+  }
+}
+
+/**
+ * The links of a series date that are the date's own, for its tags on this date: `links` (its link and
+ * spellings) without the feed's (`feed.uri`, and a feed's date's `refs`, which are the feed's: every
+ * occurrence carries them), compared as written and decoded. Empty for a feed's date whose link is the
+ * calendar itself (a holiday calendar's dates): such a date has no tags of its own to tell apart.
+ *
+ * @param card - The row the links are of, when known (a feed's date carries the feed's `refs`)
+ */
+export function getEventDateLinks(
+  links: readonly string[],
+  feed: TEventFeed,
+  card?: Pick<TPinakesCard, 'refs' | 'occurrence'> | null,
+): string[] {
+  const feedLinks = new Set([feed.uri, ...(card?.occurrence ? card.refs : [])].map(decodeLink));
+  return links.filter((link) => !feedLinks.has(decodeLink(link)));
+}
+
 /**
  * The page of a group of one date (a date page joined with the feed's date of it): its member that
  * is no feed's date. `null` for no group read, or a group of feed's dates only.
@@ -243,4 +269,19 @@ export function groupEventsByDay<T extends Pick<TEventInstance, 'start' | 'tz' |
  */
 export function getOccurrencesWindowStart(now: Date): string {
   return `${now.toISOString().slice(0, 16)}:00Z`;
+}
+
+/**
+ * From when a series' dates are read for its cards and page (`useEventDates`): the start of the hour,
+ * so every card of a series that comes on screen within the hour shares one read. The dates that
+ * started since are left out by the reader (`hasEventStarted`).
+ */
+export function getSeriesWindowStart(now: Date): string {
+  return `${now.toISOString().slice(0, 13)}:00:00Z`;
+}
+
+/** Whether a date has started by `now`: its start, else its end, is past. A date with neither has not. */
+export function hasEventStarted(card: Pick<TPinakesCard, 'start' | 'end'>, now: number): boolean {
+  const at = parseTime(card.start) ?? parseTime(card.end);
+  return at !== null && at < now;
 }

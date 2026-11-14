@@ -52,10 +52,15 @@ const isRefused = (error: unknown) => isAppError(error) && error.context?.status
  *
  * @param id - Pinakes resource ID (`card.id`); `null` reads nothing
  * @param options.limit - Dates a page asks for (`EVENT_DATES_PAGE_SIZE`, a calendar's page)
+ * @param options.windowStart - Where the list starts for a read made now (`getOccurrencesWindowStart`,
+ * the minute); a coarser one shares a read longer, the caller leaving out dates that started since
  */
 export function useResourceOccurrences(
   id: string | null | undefined,
-  { limit = EVENT_DATES_PAGE_SIZE }: { limit?: number } = {},
+  {
+    limit = EVENT_DATES_PAGE_SIZE,
+    windowStart = getOccurrencesWindowStart,
+  }: { limit?: number; windowStart?: (now: Date) => string } = {},
 ): UseResourceOccurrencesResult {
   const isEnabled = Boolean(id) && isPinakesConfigured();
   const [read, setRead] = useState<TRead | null>(null);
@@ -81,7 +86,7 @@ export function useResourceOccurrences(
       restartedFor.current = null;
     }
     if (!isEnabled || !id) return;
-    const from = getOccurrencesWindowStart(new Date());
+    const from = windowStart(new Date());
     reads.current += 1;
     const window = { id, from, key: `${id}:${reads.current}` };
     current.current = window;
@@ -104,7 +109,7 @@ export function useResourceOccurrences(
     return () => {
       if (current.current === window) current.current = null;
     };
-  }, [id, isEnabled, attempt, limit]);
+  }, [id, isEnabled, attempt, limit, windowStart]);
 
   // Each new read starts from nothing (`setRead(null)` above), so what is held for this resource is
   // this read's

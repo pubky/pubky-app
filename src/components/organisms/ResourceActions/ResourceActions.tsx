@@ -24,7 +24,7 @@ import {
   joinMergedTags,
   mergeOtherLinkTags,
 } from '@/organisms/ResourceDetails/ResourceOtherTags.utils';
-import type { TEventFeed } from '@/pipes/resource/resource.events';
+import { getEventDateLinks, type TEventFeed } from '@/pipes/resource/resource.events';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { type ResourceExtraMenuContent, ResourceMoreMenu } from './ResourceMoreMenu';
 import { ResourcePostButton } from './ResourcePostButton';
@@ -170,18 +170,21 @@ export function ResourceActions({
   // A series date's feed: the page's, else the card's own (its group, once on screen)
   const isEventCard = Boolean(card) && eventFeed === undefined && getResourceFamily(card!) === ResourceFamily.EVENT;
   const { feed: cardFeed } = useEventFeed(isEventCard ? card : null, { enabled: hasBeenOnScreen });
-  const feed = eventFeed ?? cardFeed;
+  // The date's own links, the feed's left out (a feed's date was written by the feed's link). A date
+  // with none of its own (its link is the calendar's) has no scope: its tags stay the calendar's.
+  const knownFeed = eventFeed ?? cardFeed;
+  const dateLinks = knownFeed ? getEventDateLinks([uri, ...(spellings ?? [])], knownFeed, card) : [];
+  const feed = dateLinks.length > 0 ? knownFeed : null;
   const [tagScope, setTagScope] = useState<TTagScope>('date');
   const isAllDates = feed !== null && tagScope === 'all';
-  // The tag bar's own link: the date's (with its spellings), or the feed's on all dates. Only the tags
-  // switch: everything else in the footer stays on `uri`.
-  const tagUri = isAllDates ? feed.uri : uri;
-  const tagSpellings = isAllDates ? undefined : spellings;
+  // The tag bar's own link: the date's (with its spellings), or the feed's on all dates; never a link
+  // of the other scope. Only the tags switch: everything else in the footer stays on `uri`.
+  const [tagUri, ...tagSpellings] = !feed ? [uri, ...(spellings ?? [])] : isAllDates ? [feed.uri] : dateLinks;
   // The other scope's links, read as other links: the feed's on this date, the date's on all dates
   const scopeLinks: TOtherLink[] = !feed
     ? []
     : isAllDates
-      ? [uri, ...(spellings ?? [])].map((link) => ({ uri: link, name: THIS_DATE }))
+      ? dateLinks.map((link) => ({ uri: link, name: THIS_DATE }))
       : [{ uri: feed.uri, name: ALL_DATES }];
   const resourceTags = useResourceTags(tagUri, { enabled: hasBeenOnScreen, spellings: tagSpellings, spellingsByUri });
   // A card's other links, as on the resource page, read with its own tags in their `by_ids` batch; the
