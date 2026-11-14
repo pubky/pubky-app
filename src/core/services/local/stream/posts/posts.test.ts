@@ -13,14 +13,20 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { TagModel } from '@/models/shared/tag/tag';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { buildWotDomainStreamId, type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { LocalPostService } from '@/services/local/post/post';
 import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
-import type { NexusPost, NexusPostDetails, NexusPostWire, NexusTag } from '@/services/nexus/nexus.types';
+import {
+  type NexusPost,
+  type NexusPostDetails,
+  type NexusPostWire,
+  type NexusTag,
+  StreamSorting,
+} from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 describe('LocalStreamPostsService', () => {
@@ -1300,6 +1306,26 @@ describe('LocalStreamPostsService', () => {
 
       const result = await LocalStreamPostsService.read({ streamId: bookmarkStreamId });
       expect(result?.stream).toEqual([postId('saved-newer'), postId('saved-older')]);
+    });
+
+    it("sorts a cursor-less chunk by timestamp on a Tagged-as feed whose only domain tag is 'bookmarks'", async () => {
+      // A user tag label, not the bookmarks stream: its rows are ordered like any Nexus timeline.
+      const taggedAsStreamId = buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bookmarks'], ['rust']);
+      const initialStream = [postId('tagged-older')];
+      const newChunk = [postId('tagged-newer')];
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [
+          createMockNexusPost('tagged-older', DEFAULT_AUTHOR, BASE_TIMESTAMP),
+          createMockNexusPost('tagged-newer', DEFAULT_AUTHOR, BASE_TIMESTAMP + 10),
+        ],
+      });
+
+      await LocalStreamPostsService.upsert({ streamId: taggedAsStreamId, stream: initialStream });
+      await LocalStreamPostsService.persistNewStreamChunk({ streamId: taggedAsStreamId, stream: newChunk });
+
+      const result = await LocalStreamPostsService.read({ streamId: taggedAsStreamId });
+      expect(result?.stream).toEqual([postId('tagged-newer'), postId('tagged-older')]);
     });
 
     it('should handle duplicates within new chunk itself', async () => {
