@@ -48,6 +48,9 @@ describe('PostStreamApplication', () => {
   const streamId = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
   const DEFAULT_AUTHOR = 'user-1';
   const BASE_TIMESTAMP = 1000000;
+  // A Tagged-as feed whose only domain tag is the user label `bookmarks`: a Nexus stream, not the
+  // local-only bookmarks stream `timeline:bookmarks:all` (ADR-0028).
+  const taggedAsBookmarksStreamId = buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bookmarks'], ['rust']);
 
   // ============================================================================
   // Test Helpers
@@ -789,13 +792,11 @@ describe('PostStreamApplication', () => {
     });
 
     it("a Tagged-as feed whose only domain tag is 'bookmarks' still pages Nexus", async () => {
-      // A user tag label, not the local-only bookmarks stream (`timeline:bookmarks:all`).
-      const taggedAsStreamId = buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bookmarks'], ['rust']);
       const page = createMockNexusPostsKeyStream(3);
       const fetch = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(page);
 
       const result = await PostStreamApplication.getOrFetchStreamSlice({
-        streamId: taggedAsStreamId,
+        streamId: taggedAsBookmarksStreamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
@@ -2837,14 +2838,13 @@ describe('PostStreamApplication', () => {
 
     it("filters muted authors out of a Tagged-as feed whose only domain tag is 'bookmarks'", async () => {
       await setupMutedUsers(['author-2'] as Pubky[]);
-      const taggedAsStreamId = buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bookmarks'], ['rust']);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
         post_keys: ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'],
         last_post_score: BASE_TIMESTAMP + 2,
       });
 
       const result = await PostStreamApplication.getOrFetchStreamSlice({
-        streamId: taggedAsStreamId,
+        streamId: taggedAsBookmarksStreamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
