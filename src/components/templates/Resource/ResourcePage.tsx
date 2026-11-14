@@ -53,13 +53,15 @@ function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () =>
   // The thread is on the card's canonical link; the replies to its other spellings are its own too.
   const spellings = card && uri ? getResourceTarget(card, uri).spellings : undefined;
   const replies = useResourceReplies(threadUri, { spellings });
-  const sidebar = (showFeedback: boolean) => (
+  // The right column's copy has the Feedback card and the page's one `#other-dates` anchor
+  const sidebar = (isRightColumn: boolean) => (
     <ResourceSidebar
       card={card}
       uri={threadUri}
       spellings={spellings}
       replyIds={replies.replyIds}
-      showFeedback={showFeedback}
+      showFeedback={isRightColumn}
+      hasDatesAnchor={isRightColumn}
     />
   );
 

@@ -68,6 +68,8 @@ describe('useEventFeed', () => {
     });
     expect(renderHook(() => useEventFeed(NOV25)).result.current).toEqual({ feed: FEED, isLoading: false });
     expect(renderHook(() => useEventFeed(DATE, { enabled: false })).result.current.isLoading).toBe(false);
+    // A feed's own date names its feed only once asked: a row off screen reads nothing of it yet
+    expect(renderHook(() => useEventFeed(NOV25, { enabled: false })).result.current.feed).toBeNull();
     mocks.configured = false;
     expect(renderHook(() => useEventFeed(DATE)).result.current.isLoading).toBe(false);
 

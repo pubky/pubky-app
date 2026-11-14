@@ -82,6 +82,12 @@ describe('useEventDates', () => {
 
     renderHook(() => useEventDates(DATE, { enabled: false }));
     expect(mocks.feedAsked.at(-1)).toEqual([DATE, { enabled: false }]);
+
+    // Disabled, no dates are read even with a feed known (a feed's own date names it)
+    mocks.feed = { feed: FEED, isLoading: false };
+    const disabled = renderHook(() => useEventDates(DATE, { enabled: false }));
+    expect(mocks.asked.at(-1)?.[0]).toBeNull();
+    expect(disabled.result.current.isLoading).toBe(false);
   });
 
   it('passes the read’s error, paging and retry on', () => {

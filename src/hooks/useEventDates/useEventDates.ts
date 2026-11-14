@@ -32,7 +32,9 @@ export function useEventDates(
   { enabled = true }: { enabled?: boolean } = {},
 ): UseEventDatesResult {
   const { feed, isLoading: isFeedLoading } = useEventFeed(card, { enabled });
-  const { cards, isLoading, ...read } = useResourceOccurrences(feed?.id ?? null, { limit: EVENT_SERIES_DATES_LIMIT });
+  const { cards, isLoading, ...read } = useResourceOccurrences(enabled ? (feed?.id ?? null) : null, {
+    limit: EVENT_SERIES_DATES_LIMIT,
+  });
   const { sameName, others } = splitFeedDates(card, cards);
-  return { ...read, feed, sameName, others, isLoading: isFeedLoading || (feed !== null && isLoading) };
+  return { ...read, feed, sameName, others, isLoading: enabled && (isFeedLoading || (feed !== null && isLoading)) };
 }

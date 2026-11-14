@@ -18,7 +18,7 @@ export interface UseEventFeedResult {
  * page's group has the feed's date of it as a member. The group is the one another reader already
  * read (`getCachedGroup`: the resource page, a card's footer), else the shared group read
  * (`fetchGroup`, cached for every card of the group). An event outside a group, or a feed's own date,
- * asks nothing.
+ * asks nothing. Disabled, it knows no feed, so nothing is read for it.
  *
  * @param card - The event's card
  * @param options.enabled - `false` asks nothing yet (a card not on screen yet)
@@ -27,8 +27,8 @@ export function useEventFeed(
   card: Pick<TPinakesCard, 'group' | 'occurrence'> | null | undefined,
   { enabled = true }: { enabled?: boolean } = {},
 ): UseEventFeedResult {
-  const ownFeed = card?.occurrence ? getEventFeed(card, null) : null;
-  const groupId = !ownFeed && (card?.group?.size ?? 0) > 1 ? (card?.group?.id ?? null) : null;
+  const ownFeed = enabled && card?.occurrence ? getEventFeed(card, null) : null;
+  const groupId = !card?.occurrence && (card?.group?.size ?? 0) > 1 ? (card?.group?.id ?? null) : null;
   const { data: group, isLoading } = usePinakesQuery({
     key: groupId ?? '',
     fetchFn: async () =>

@@ -53,8 +53,10 @@ vi.mock('@/hooks/useResourceOccurrences/useResourceOccurrences', () => ({
 vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => ({ FeedbackCard: () => <div data-testid="feedback-stub" /> }));
 // A series' other dates (their list has its own test)
 vi.mock('./ResourceOtherDatesList', () => ({
-  ResourceOtherDatesList: ({ card }: { card: TPinakesResourceDetail }) =>
-    mocks.hasOtherDates ? <div data-testid="resource-other-dates-stub" data-id={card.id} /> : null,
+  ResourceOtherDatesList: ({ card, isAnchor }: { card: TPinakesResourceDetail; isAnchor?: boolean }) =>
+    mocks.hasOtherDates ? (
+      <div data-testid="resource-other-dates-stub" data-id={card.id} data-anchor={String(Boolean(isAnchor))} />
+    ) : null,
 }));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
@@ -108,6 +110,14 @@ describe('ResourceSidebar', () => {
       'resource-similar-list',
     ]);
     expect(screen.getByTestId('resource-other-dates-stub')).toHaveAttribute('data-id', card.id);
+    expect(screen.getByTestId('resource-other-dates-stub')).toHaveAttribute('data-anchor', 'false');
+  });
+
+  it('gives the Other dates anchor to the copy of the sidebar that has it', () => {
+    mocks.hasOtherDates = true;
+    render(<ResourceSidebar card={card} hasDatesAnchor />);
+
+    expect(screen.getByTestId('resource-other-dates-stub')).toHaveAttribute('data-anchor', 'true');
   });
 
   it.each([undefined, null])('shows nothing without a card (%s)', (none) => {

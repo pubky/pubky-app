@@ -84,12 +84,14 @@ vi.mock('@/organisms/ResourceDetails/ResourceSidebar', () => ({
     spellings,
     replyIds,
     showFeedback,
+    hasDatesAnchor,
   }: {
     card: TPinakesResourceDetail | null | undefined;
     uri?: string | null;
     spellings?: readonly string[];
     replyIds?: string[];
     showFeedback?: boolean;
+    hasDatesAnchor?: boolean;
   }) =>
     card || uri ? (
       <div
@@ -98,6 +100,7 @@ vi.mock('@/organisms/ResourceDetails/ResourceSidebar', () => ({
         data-spellings={(spellings ?? []).join(' ')}
         data-replies={(replyIds ?? []).join(' ')}
         data-feedback={String(Boolean(showFeedback))}
+        data-dates-anchor={String(Boolean(hasDatesAnchor))}
       >
         {card?.id ?? ''}
       </div>
@@ -136,6 +139,16 @@ describe('ResourcePage', () => {
     expect(drawer).toHaveAttribute('data-people', VIDEO.uri);
     expect(drawer).toHaveAttribute('data-replies', 'replier:1');
     expect(drawer).toHaveAttribute('data-feedback', 'false');
+    // One copy of the sidebar carries the Other dates anchor's id, so the page has it once
+    expect(within(screen.getByTestId('right-sidebar')).getByTestId('resource-sidebar-stub')).toHaveAttribute(
+      'data-dates-anchor',
+      'true',
+    );
+    expect(drawer).toHaveAttribute('data-dates-anchor', 'false');
+    expect(within(screen.getByTestId('resource-sidebar-inline')).getByTestId('resource-sidebar-stub')).toHaveAttribute(
+      'data-dates-anchor',
+      'false',
+    );
   });
 
   it('shows the sidebar cards after the card below `lg`, not behind the mobile header’s button', () => {

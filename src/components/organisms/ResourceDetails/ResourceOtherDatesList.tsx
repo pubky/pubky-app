@@ -14,9 +14,17 @@ import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pi
 import { ResourceOccurrenceRow } from './ResourceOccurrenceRow';
 import { ResourceSection } from './ResourceSection';
 
+/** The Other dates section, in each copy of the sidebar. */
+const OTHER_DATES_TEST_ID = 'resource-other-dates';
+
 interface ResourceOtherDatesListProps {
   /** The page's card: a date of a series (a date page, or a feed's date). */
   card: TPinakesResourceDetail;
+  /**
+   * The section carries the page's `#other-dates` id: the page lays its sidebar out more than once
+   * (beside the card, under it on a phone), and only one copy may have it.
+   */
+  isAnchor?: boolean;
   /** For tests; the viewer's locale when omitted. */
   locale?: string;
 }
@@ -30,7 +38,7 @@ interface ResourceOtherDatesListProps {
  * nothing for an event with no feed or a series with no other coming date. Past dates are never
  * listed: the feed's dates are read from now on.
  */
-export function ResourceOtherDatesList({ card, locale }: ResourceOtherDatesListProps) {
+export function ResourceOtherDatesList({ card, isAnchor = false, locale }: ResourceOtherDatesListProps) {
   const dates = useEventDates(card, { enabled: getResourceFamily(card) === ResourceFamily.EVENT });
   const { feed, sameName, others, isLoading, isError, retry } = dates;
   // The feed's name, for its other events only
@@ -44,12 +52,12 @@ export function ResourceOtherDatesList({ card, locale }: ResourceOtherDatesListP
     <>
       {isShown && (
         <DatesSection
-          id={OTHER_DATES_ANCHOR}
+          id={isAnchor ? OTHER_DATES_ANCHOR : undefined}
           title="Other dates"
           rows={sameName}
           dates={dates}
           locale={locale}
-          testId="resource-other-dates"
+          testId={OTHER_DATES_TEST_ID}
           message={isError ? 'Other dates could not be loaded' : null}
           onRetry={retry}
         />
@@ -137,13 +145,13 @@ function DatesSection({
 /**
  * Brings the Other dates section into view once it is shown, when the page was opened at it (an event
  * card's "Other dates · N"): it shows only once its dates are read, after the browser looked for the
- * anchor. The page lays its sidebar out twice (beside the card, under it on a phone); only the one on
- * screen is scrolled to.
+ * anchor. The page lays its sidebar out twice (beside the card, under it on a phone), the anchor's id
+ * on one of them: the copy on screen is scrolled to.
  */
 function useScrollToAnchor(isReady: boolean) {
   useEffect(() => {
     if (!isReady || window.location.hash !== `#${OTHER_DATES_ANCHOR}`) return;
-    const shown = [...document.querySelectorAll(`[id="${OTHER_DATES_ANCHOR}"]`)].find(
+    const shown = [...document.querySelectorAll(`[data-testid="${OTHER_DATES_TEST_ID}"]`)].find(
       (element) => element.getClientRects().length > 0,
     );
     shown?.scrollIntoView({ block: 'start' });
