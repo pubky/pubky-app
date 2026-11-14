@@ -1091,6 +1091,7 @@ export class AuthController {
     return this.wrapAuthFlow({
       purpose: 'signin',
       expectedPubky,
+      expectedSigner: expectedPubky,
       capabilities: getHomeserverCapabilities(),
       generation: state.generation,
       fresh,
@@ -1129,6 +1130,7 @@ export class AuthController {
       fresh,
       generation: state.generation,
       expectedPubky: state.currentUserPubky,
+      expectedSigner: state.currentUserPubky,
     });
   }
 

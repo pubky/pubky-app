@@ -1,5 +1,5 @@
 import { type AuthFlow, type Session } from '@synonymdev/pubky';
-import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import { createAuthApprovalMismatchError, createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -9,7 +9,7 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { extractStatusCode, handleError } from './error.utils';
+import { extractStatusCode, handleError, isPubkyErrorLike } from './error.utils';
 import type {
   CancelableAuthApproval,
   StoragePath,
@@ -248,6 +248,17 @@ const isTransientPollError = (error: unknown): boolean => {
 };
 
 /**
+ * With `expectedSigner` (`spk`) set, the SDK refuses an approval from another key inside the poll, before the
+ * exchange, so the session-level key check never sees it. The SDK names no distinct error for it; the message is
+ * the only signal. Exact SDK 0.18.0 text, pinned by `grant-flow.recovery.contract.test.ts` (docs/error-handling.md).
+ */
+const WRONG_SIGNER_APPROVAL_MESSAGE =
+  'Authentication error: General authentication error: approved grant was issued by a different key than the request expected';
+
+const isWrongSignerApproval = (error: unknown): boolean =>
+  isPubkyErrorLike(error) && error.name === 'AuthenticationError' && error.message === WRONG_SIGNER_APPROVAL_MESSAGE;
+
+/**
  * Resolves at once when the page is visible (after a second), else on the next `visibilitychange` to visible.
  * Aborting the signal resolves it early and drops the listener.
  */
@@ -410,6 +421,7 @@ export const createCancelableAuthApproval = (
             continue;
           }
         }
+        if (isWrongSignerApproval(error)) throw createAuthApprovalMismatchError();
         // Keep transport, permission and authentication failures distinct for the grant flow.
         return handleError({ error, additionalContext: { operation: 'awaitApproval' } });
       }
