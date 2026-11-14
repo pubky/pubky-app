@@ -10,7 +10,7 @@ export const RESOURCE_TAG_REREADS_MS = [5_000, 15_000] as const;
 /** How old a write Nexus' answer still does not show is when it is dropped from the answers. */
 export const RESOURCE_TAG_UNCONFIRMED_MS = RESOURCE_TAG_REREADS_MS[RESOURCE_TAG_REREADS_MS.length - 1];
 
-/** Links one `POST /v0/stream/resources/by_ids` request carries (the route's limit). */
+/** Links one `POST /v1/stream/resources/by_ids` request carries (the route's limit). */
 export const RESOURCE_BY_IDS_MAX = 100;
 
 /**

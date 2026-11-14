@@ -21,7 +21,7 @@ export const resourceApi = {
   byUriEndpoint: () => buildNexusUrl(`${PREFIX}/by-uri`),
   /** The views of up to 100 resources by link in one POST (optional: a Nexus without it answers 404). */
   byIds: ({ uris, viewer_id, ...params }: TResourceByIdsParams) => ({
-    url: buildUrlWithQuery({ baseRoute: 'v0/stream/resources/by_ids', params }),
+    url: buildUrlWithQuery({ baseRoute: 'stream/resources/by_ids', params }),
     body: viewer_id ? { uris, viewer_id } : { uris },
   }),
   /**
