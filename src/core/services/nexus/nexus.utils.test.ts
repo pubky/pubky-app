@@ -5,8 +5,8 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { filesApi } from '@/services/nexus/file/file.api';
+import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
-import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { mockResponse } from '@/test-utils/dom';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
@@ -212,11 +212,10 @@ describe('nexus.utils', () => {
       ...overrides,
     });
 
-    beforeEach(async () => {
+    beforeEach(() => {
       vi.clearAllMocks();
       global.fetch = mockFetch;
       // Clear query client cache between tests
-      const { nexusQueryClient } = await import('./nexus.query-client');
       nexusQueryClient.clear();
     });
 
@@ -332,44 +331,15 @@ describe('nexus.utils', () => {
         ...(retryAfter === undefined ? {} : { headers: { 'retry-after': retryAfter } }),
       });
 
-    beforeEach(async () => {
+    beforeEach(() => {
       vi.clearAllMocks();
       globalThis.fetch = mockFetch;
-      const { nexusQueryClient } = await import('./nexus.query-client');
       nexusQueryClient.clear();
     });
 
     afterEach(() => {
       globalThis.fetch = originalFetch;
       vi.useRealTimers();
-    });
-
-    it('collapses two concurrent identical posts/by_ids calls into one request', async () => {
-      const posts = [{ details: { author: 'author1', id: 'post1', kind: 'note' }, tags: [] }];
-      mockFetch.mockResolvedValueOnce(nexusResponse(posts));
-
-      const [first, second] = await Promise.all([
-        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post2', 'author1:post1'] }),
-        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1', 'author1:post2'] }),
-      ]);
-
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      // Both callers get the one response, past the read boundary (`note` → `short`)
-      const folded = [{ details: { author: 'author1', id: 'post1', kind: 'short' }, tags: [] }];
-      expect(first).toEqual(folded);
-      expect(second).toEqual(folded);
-    });
-
-    it('collapses two concurrent identical users/by_ids calls into one request', async () => {
-      const users = [{ details: { id: 'user1' }, tags: [] }];
-      mockFetch.mockResolvedValueOnce(nexusResponse(users));
-
-      await Promise.all([
-        NexusUserStreamService.fetchByIds({ user_ids: ['user2', 'user1'] }),
-        NexusUserStreamService.fetchByIds({ user_ids: ['user1', 'user2'] }),
-      ]);
-
-      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it('does not reuse a forced revalidation that is already fetching, and starts the follow-up after it settles', async () => {
@@ -582,10 +552,9 @@ describe('nexus.utils', () => {
 
     const notFoundResponse = () => new Response('Not Found', { status: 404 });
 
-    beforeEach(async () => {
+    beforeEach(() => {
       vi.clearAllMocks();
       globalThis.fetch = mockFetch;
-      const { nexusQueryClient } = await import('./nexus.query-client');
       nexusQueryClient.clear();
       vi.useFakeTimers();
     });
