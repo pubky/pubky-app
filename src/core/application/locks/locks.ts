@@ -27,11 +27,13 @@ import type {
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
   TGenerateConnectUrlParams,
+  TGeneratePaykitReconnectUrlParams,
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLockPriceAsset,
   TLocksPollReport,
   TLocksSessionResult,
+  TLookupPaykitCreatorHeldParams,
   TPaykitConnectionState,
   TPaykitSetupStatus,
   TRegisterGuardedResourceResult,
@@ -84,6 +86,9 @@ const purchaseRank = (task: TVerificationTask | null): number => {
   return 1;
 };
 
+// An unparsable time sorts oldest, so it can never take over from a task with a real one.
+const endedAt = ({ completedAt }: TVerificationTask): number => Date.parse(completedAt ?? '') || 0;
+
 /**
  * Application layer for the Lock Server: auth (mirrors `AuthApplication`), publishing locked content
  * (creator), and reading a lock's public `lock.json` (reader).
@@ -107,6 +112,15 @@ export class LocksApplication {
 
   static generatePaykitSetupUrl(params: TGeneratePaykitSetupUrlParams): string {
     return LocksService.generatePaykitSetupUrl(params);
+  }
+
+  static generatePaykitReconnectUrl(params: TGeneratePaykitReconnectUrlParams): string {
+    return LocksService.generatePaykitReconnectUrl(params);
+  }
+
+  /** Whether the Paykit Server already holds this creator (so `/setup` is refused for it). */
+  static fetchPaykitCreatorHeld(params: TLookupPaykitCreatorHeldParams): Promise<boolean> {
+    return LocksService.lookupPaykitCreatorHeld(params);
   }
 
   /** Whether the Paykit payout account of the current Locks session's creator is set up. */
@@ -171,7 +185,17 @@ export class LocksApplication {
     const failed = outcomes.find((outcome) => outcome.status === 'rejected');
     if (failed?.status === 'rejected' && task?.status !== 'completed') throw failed.reason;
     if (task?.status === 'failed' || task?.status === 'expired') {
-      return { kind: 'terminal', bundleId: bundleIds[best], status: task.status };
+      // The rank picks the id, not the cause: a wallet fixed since an older attempt must not bring its screen back.
+      const lastEnded = tasks.reduce<TVerificationTask>(
+        (latest, candidate) => (candidate && endedAt(candidate) > endedAt(latest) ? candidate : latest),
+        task,
+      );
+      return {
+        kind: 'terminal',
+        bundleId: bundleIds[best],
+        status: task.status,
+        readerNotPayable: lastEnded.readerNotPayable,
+      };
     }
     return { kind: 'reusable', bundleId: bundleIds[best], task };
   }
@@ -202,7 +226,10 @@ export class LocksApplication {
     const resolveOrMint = async (fence: THomeserverWriteFence): Promise<TStartPaymentResult | string> => {
       const resolved = await this.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
       if (resolved?.kind === 'region-blocked') return { regionBlocked: true };
-      if (resolved?.kind === 'terminal' && !isRetry) return { bundleId: resolved.bundleId, status: resolved.status };
+      if (resolved?.kind === 'terminal' && !isRetry) {
+        const { bundleId, status, readerNotPayable } = resolved;
+        return { bundleId, status, readerNotPayable };
+      }
       if (resolved?.kind === 'reusable') return resolved.bundleId;
       const bundleId = await LocksService.generateBundleId();
       // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
@@ -225,7 +252,7 @@ export class LocksApplication {
       const bundle = LockProofBundler.buildPayment(lockFile, lockUrl, bundleId, readerPubky);
       const outcome = await LocksService.submitProof(bundle);
       if (outcome.regionBlocked) return { bundleId, regionBlocked: true };
-      return { bundleId, status: outcome.status };
+      return { bundleId, status: outcome.status, readerNotPayable: outcome.readerNotPayable };
     };
     // Every browser Next.js supports has Web Locks; only an insecure context (plain-http dev) lacks it.
     // TODO:[Locks] The Web Lock covers one browser, so two devices that open at once can each mint an

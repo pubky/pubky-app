@@ -1,17 +1,23 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
-import { backupDownloadFilePath } from '../support/auth';
 import { followIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
-import { clickUnfollowButton, reloadUntilOwnFollowingIsEmpty, unfollowUserByUsername } from '../support/profile';
+import {
+  clickUnfollowButton,
+  expectProfileTabCount,
+  expectProfileTabLabel,
+  openProfileTab,
+  reloadUntilOwnFollowingIsEmpty,
+  showProfileHeader,
+  unfollowUserByUsername,
+} from '../support/profile';
 
 // cy.visit(`/profile/${pubky}`);
 describe('contacts', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
   });
 
   it('can follow and unfollow', () => {
@@ -19,34 +25,33 @@ describe('contacts', () => {
     const actorName = 'Unfollow Actor';
     const targetAlias = 'unfollowTarget';
 
-    cy.onboardAsNewUser(
-      targetName,
-      'Follow me, then stop',
-      [BackupType.RecoveryPhraseWithoutConfirmation],
-      targetAlias,
-    );
+    cy.onboardAsNewUser(targetName, 'Follow me, then stop', targetAlias);
     cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser(actorName, 'I follow and then unfollow', [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(actorName, 'I follow and then unfollow');
 
     cy.get(`@${targetAlias}`).then((pubky) => {
       searchAndFollowProfile(`${pubky}`, targetName);
     });
 
     // The actor is listed as a follower, then drops out once they unfollow.
-    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', '1').click();
+    expectProfileTabCount('followers', 1);
+    openProfileTab('followers');
     cy.get('[data-cy="profile-connections-list"]').within(() => {
       cy.get('[data-cy="profile-follower-item-name"]').should('have.text', actorName);
     });
 
+    showProfileHeader();
     clickUnfollowButton();
+    openProfileTab('followers');
 
-    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', '0');
+    expectProfileTabCount('followers', 0);
     cy.get('[data-cy="profile-followers-empty"]').should('be.visible');
     cy.get('[data-cy="profile-follower-item-name"]').should('not.exist');
 
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0').click();
+    expectProfileTabCount('following', 0);
+    openProfileTab('following');
     cy.location('pathname').should('eq', '/profile/following');
     reloadUntilOwnFollowingIsEmpty();
     cy.get('[data-cy="profile-following-empty"]').should('be.visible');
@@ -58,11 +63,11 @@ describe('contacts', () => {
       searchAndFollowProfile(`${pubky}`, targetName);
     });
     unfollowUserByUsername(targetName);
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
+    expectProfileTabCount('following', 0);
 
     cy.location('pathname').should('eq', '/profile/following');
     reloadUntilOwnFollowingIsEmpty();
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
+    expectProfileTabCount('following', 0);
     cy.get('[data-cy="profile-following-empty"]').should('be.visible');
     cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
   });
@@ -74,21 +79,20 @@ describe('contacts', () => {
     // both profiles are seeded through the API: this test is about the post menu, onboarding is covered elsewhere
     seedUserViaApi(`Menu Author ${stamp}`, { bio: 'Follow me from my post' }).then((author) => {
       createPostViaApi(author, postContent).then((post) => {
-        seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus', withRecoveryFile: true }).then(
-          (follower) => {
-            waitForNexus(postIndexed(post), userIndexed(follower));
-            cy.signInWithEncryptedFile(backupDownloadFilePath(follower.name));
-            followFromPostMenu(postContent);
-            waitForNexus(followIndexed(follower, author));
+        seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus' }).then((follower) => {
+          waitForNexus(postIndexed(post), userIndexed(follower));
+          cy.signInWithPubkyRing(follower.name);
+          followFromPostMenu(postContent);
+          waitForNexus(followIndexed(follower, author));
 
-            // the author is listed under the follower's following
-            goToProfilePageFromHeader();
-            cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '1').click();
-            cy.get('[data-cy="profile-connections-list"]').within(() => {
-              cy.get('[data-cy="profile-follower-item-name"]').should('have.text', author.name);
-            });
-          },
-        );
+          // the author is listed under the follower's following
+          goToProfilePageFromHeader();
+          expectProfileTabCount('following', 1);
+          openProfileTab('following');
+          cy.get('[data-cy="profile-connections-list"]').within(() => {
+            cy.get('[data-cy="profile-follower-item-name"]').should('have.text', author.name);
+          });
+        });
       });
     });
   });
@@ -101,13 +105,13 @@ describe('contacts', () => {
     // * create two profiles
 
     // Create profile 1
-    cy.onboardAsNewUser(profileName1, "Man's best friend", [BackupType.RecoveryPhraseWithoutConfirmation], pubkyAlias1);
+    cy.onboardAsNewUser(profileName1, "Man's best friend", pubkyAlias1);
 
     // Sign out of profile 1
     cy.signOut(HasBackedUp.Yes);
 
     // Create profile 2
-    cy.onboardAsNewUser(profileName2, "Man's second best friend", [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(profileName2, "Man's second best friend");
 
     // * search for profile and follow
 
@@ -118,8 +122,9 @@ describe('contacts', () => {
     // * check profile 1 shows profile 2 as new follower
 
     // check followers tab and click it
-    cy.get('[data-cy="profile-filter-item-followers"]').should('have.text', 'Followers');
-    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', '1').click();
+    expectProfileTabLabel('followers', 'Followers');
+    expectProfileTabCount('followers', 1);
+    openProfileTab('followers');
 
     // check number of listed followers is 1
     cy.get('[data-cy="profile-connections-list"]')
@@ -134,18 +139,20 @@ describe('contacts', () => {
         // check 0 posts
         cy.get('[data-cy="profile-follower-item-posts-count"]').should('have.text', 0);
         // check follower is 'me'
-        cy.get('[data-cy="user-list-item-me-btn"]').should('be.visible');
+        cy.get('[data-cy="user-list-item-me-btn"]').filter(':visible').should('have.length', 1);
       });
 
     // check number of listed following is 0
-    cy.get('[data-cy="profile-filter-item-following"]').should('have.text', 'Following');
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 0).click();
+    expectProfileTabLabel('following', 'Following');
+    expectProfileTabCount('following', 0);
+    openProfileTab('following');
     // check message is displayed indicating no following
     cy.get('[data-cy="profile-following-empty"]').should('be.visible').and('contain.text', 'You are the algorithm');
 
     // check number of listed friends is 0
-    cy.get('[data-cy="profile-filter-item-friends"]').should('have.text', 'Friends');
-    cy.get('[data-cy="profile-filter-item-friends-count"]').should('have.text', 0).click();
+    expectProfileTabLabel('friends', 'Friends');
+    expectProfileTabCount('friends', 0);
+    openProfileTab('friends');
     // check message is displayed indicating no friends
     cy.get('[data-cy="profile-friends-empty"]').should('be.visible').and('contain.text', 'No friends yet');
 
@@ -154,8 +161,9 @@ describe('contacts', () => {
     goToProfilePageFromHeader();
 
     // check number of listed following is 1
-    cy.get('[data-cy="profile-filter-item-following"]').should('have.text', 'Following');
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 1).click();
+    expectProfileTabLabel('following', 'Following');
+    expectProfileTabCount('following', 1);
+    openProfileTab('following');
     cy.get('[data-cy="profile-connections-list"]')
       .children()
       .should('have.length', 1)
@@ -176,12 +184,14 @@ describe('contacts', () => {
       });
 
     // check number of listed followers is 0
-    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', 0).click();
+    expectProfileTabCount('followers', 0);
+    openProfileTab('followers');
     // check message is displayed indicating no followers
     cy.get('[data-cy="profile-followers-empty"]').should('be.visible').and('contain.text', 'Looking for followers?');
 
     // check number of listed friends is 0
-    cy.get('[data-cy="profile-filter-item-friends-count"]').should('have.text', 0).click();
+    expectProfileTabCount('friends', 0);
+    openProfileTab('friends');
     // check message is displayed indicating no friends
     cy.get('[data-cy="profile-friends-empty"]').should('be.visible').and('contain.text', 'No friends yet');
 
@@ -191,13 +201,12 @@ describe('contacts', () => {
     // * As profile 1, follow profile 2 back and make a friend
 
     // Sign in profile 1
-    cy.get(`@recoveryPhrase-${profileName1}`).then((recoveryPhrase) => {
-      cy.signInWithRecoveryPhrase(recoveryPhrase.toString());
-    });
+    cy.signInWithPubkyRing(profileName1);
     goToProfilePageFromHeader();
 
     // Check profile 1 (own) profile for follower
-    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', 1).click();
+    expectProfileTabCount('followers', 1);
+    openProfileTab('followers');
     cy.get('[data-cy="profile-connections-list"]')
       .children()
       .should('have.length', 1)
@@ -220,7 +229,8 @@ describe('contacts', () => {
       });
 
     // check number of listed following is 1
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 1).click();
+    expectProfileTabCount('following', 1);
+    openProfileTab('following');
     cy.get('[data-cy="profile-connections-list"]')
       .children()
       .should('have.length', 1)
@@ -231,8 +241,9 @@ describe('contacts', () => {
       });
 
     // check number of listed friends is 1
-    cy.get('[data-cy="profile-filter-item-friends"]').should('have.text', 'Friends');
-    cy.get('[data-cy="profile-filter-item-friends-count"]').should('have.text', 1).click();
+    expectProfileTabLabel('friends', 'Friends');
+    expectProfileTabCount('friends', 1);
+    openProfileTab('friends');
     cy.get('[data-cy="profile-connections-list"]')
       .children()
       .should('have.length', 1)

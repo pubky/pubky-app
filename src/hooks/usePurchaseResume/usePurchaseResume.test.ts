@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import type { LockFile, TUnlockedContent } from '@/services/locks/locks.types';
+import { mockVerificationTask } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePurchaseResume } from './usePurchaseResume';
 
@@ -56,7 +57,7 @@ describe('usePurchaseResume', () => {
     vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue({
       kind: 'reusable',
       bundleId: 'saved-bundle',
-      task: { status: 'completed', walletSetupNeeded: false, admissionDeadlineAt: null },
+      task: mockVerificationTask('completed'),
     });
     vi.mocked(LocksController.fetchPaidContent).mockResolvedValue(content);
   });
@@ -161,8 +162,8 @@ describe('usePurchaseResume', () => {
   it.each([
     null,
     { kind: 'reusable' as const, bundleId: 'saved-bundle', task: null },
-    { kind: 'terminal' as const, bundleId: 'saved-bundle', status: 'failed' as const },
-    { kind: 'terminal' as const, bundleId: 'saved-bundle', status: 'expired' as const },
+    { kind: 'terminal' as const, bundleId: 'saved-bundle', status: 'failed' as const, readerNotPayable: false },
+    { kind: 'terminal' as const, bundleId: 'saved-bundle', status: 'expired' as const, readerNotPayable: false },
     // The Lock Server refused the lookup for the region (HTTP 451): not "unknown", which keeps Unlock live.
     { kind: 'region-blocked' as const },
   ])('does not exempt a saved id without a running/completed task: %j', async (purchase) => {
@@ -176,7 +177,7 @@ describe('usePurchaseResume', () => {
     vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue({
       kind: 'reusable',
       bundleId: 'saved-bundle',
-      task: { status, walletSetupNeeded: false, admissionDeadlineAt: null },
+      task: mockVerificationTask(status),
     });
     const { result } = renderResume();
     await waitFor(() => expect(result.current).toBe('recoverable'));
@@ -200,7 +201,7 @@ describe('usePurchaseResume', () => {
     vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue({
       kind: 'reusable',
       bundleId: 'saved-bundle',
-      task: { status, walletSetupNeeded: false, admissionDeadlineAt: null },
+      task: mockVerificationTask(status),
     });
     // Recorded on every render: a status that lives between two waitFor polls must still be seen.
     const seen: string[] = [];
@@ -261,7 +262,7 @@ describe('usePurchaseResume', () => {
       resolveTask({
         kind: 'reusable',
         bundleId: 'saved-bundle',
-        task: { status: 'completed', walletSetupNeeded: false, admissionDeadlineAt: null },
+        task: mockVerificationTask('completed'),
       }),
     );
     expect(LocksController.fetchPaidContent).not.toHaveBeenCalled();

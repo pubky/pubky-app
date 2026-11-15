@@ -248,43 +248,57 @@ feed card   ─┐
 detail page ─┴─→ PostContentBase ──(isLock)──→ LockedPostContent
                                   ├─(isArticle)─→ PostArticle
                                   └─ default ───→ PostBody
+
+detail page, lock post (not blurred or deleted)
+  └─ SinglePostContent: useLockFile + useUnlockedContent → FocusedLockProvider
+       ├─(unlocked article)─→ PostArticleDetail (unlocked) + FocusedLockRecovery
+       └─ otherwise ─────────→ PostMain → … → LockedPostContent (uses the page's state)
 ```
 
 `LockedPostContent` renders the teaser body (via the shared `PostBody`) + a lock card,
 and swaps in the guarded post once it becomes readable.
 
-The one route-dependent bit lives there too: an unlocked **article** is a three-line preview
-everywhere except the post page of that same post, where it renders in full (`PostArticle full`).
-A lock post's own content is the lock envelope, not article JSON, so `SinglePostContent` never
-routes it to the article page — the route is the only thing that says the reader opened this post
-to read it. The match is on the route's own ids, because that page also renders embeds and thread
-parents through this component and those stay previews (#2401, absorbed into #2432).
+The post page reads its own post's lock itself: `SinglePostContent` runs `useLockFile` and
+`useUnlockedContent` and shares the result through `FocusedLockProvider`, and the post card's
+`LockedPostContent` uses that state instead of reading its own. Once the content is an unlocked
+**article**, the page swaps the card for the article layout, `PostArticleDetail` with its `unlocked`
+source: the same title, header, actions and tags column as any article, the access label
+(`LockAccessLabel`) in the header's pubky and time row, and no teaser or lock card (#2659). The state
+lives above both layouts so a just-paid unlock survives the swap, and `FocusedLockRecovery` takes over
+the card's purchase recovery while the article shows, for a listed purchase whose bytes were unreadable. Other lock kinds keep the card.
 
-In full, the body images render from the reader's local copies: `PostArticle` hands its
-`localAttachments` to `PostText`, and `ArticleInlineImage` resolves `attachment:{n}` to the object
-URL of slot `n`. A slot whose file is missing shows the placeholder. The preview shows no body
-image, like any article card, and reads none: it loads the cover's bytes alone, and the body media
-is read once the article opens in full (#2686).
+Every other lock post (the feed, embeds, thread parents, the feed kept mounted under the post modal)
+reads its own lock as a preview, and an unlocked article there is the three-line `PostArticle` card.
+The preview shows no body image, like any article card, and reads none: it loads the cover's bytes
+alone, and the body media is read only for the full read (#2686).
 
-| File                                                           | Role                                                                                                                                                     |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `components/organisms/PostContentBase/PostContentBase.tsx`     | detect lock by `!!postDetails.lock`                                                                                                                      |
-| `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked                                                                                    |
-| `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser)                                                                      |
-| `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control; in the composer the title is editable (pencil) and the price is a button that reopens the price dialog |
-| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                                                                                          |
-| `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume                                                                              |
-| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                                                                                         |
-| `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction                                                                                 |
-| `components/organisms/DialogEditPost/DialogEditPost.tsx`       | routes an announcement into teaser mode, or falls back to a plain post edit                                                                              |
-| `libs/post/lockTeaser.ts`                                      | the envelope: builder and length guard                                                                                                                   |
+In full (`ArticleReader`), the body images render from the reader's local copies: the reader hands
+the local attachments to `PostText`, and `ArticleInlineImage` resolves `attachment:{n}` to the object
+URL of slot `n`. A slot whose file is missing shows the placeholder.
+
+| File                                                             | Role                                                                                                                                                     |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/organisms/PostContentBase/PostContentBase.tsx`       | detect lock by `!!postDetails.lock`                                                                                                                      |
+| `components/organisms/LockedPostContent/LockedPostContent.tsx`   | teaser + lock card + unlock dialog; renders the content once unlocked                                                                                    |
+| `components/organisms/LockedPostContent/FocusedLockContext.tsx`  | the post page's lock state, read once by the page and shared with its post card                                                                          |
+| `components/organisms/LockedPostContent/FocusedLockRecovery.tsx` | purchase recovery while the post page shows the unlocked article and the card is unmounted                                                               |
+| `components/organisms/ArticleReader/ArticleReader.tsx`           | an article's cover and full body, for the article page and the profile's full read                                                                       |
+| `components/molecules/LockAccessLabel/LockAccessLabel.tsx`       | "My locked content" / "Unlocked" label, in the card and in the article page header                                                                       |
+| `components/organisms/PostBody/PostBody.tsx`                     | shared text + link-embed + attachment renderer (feed post body **and** lock teaser)                                                                      |
+| `components/molecules/LockedPostCard/LockedPostCard.tsx`         | lock card: title, shield graphic, Unlock control; in the composer the title is editable (pencil) and the price is a button that reopens the price dialog |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx`   | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                                                                                          |
+| `hooks/usePayToUnlock/usePayToUnlock.ts`                         | the payment state machine: bundle-id routing, submit, polling, stall/resume                                                                              |
+| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                   | one listing of the reader's purchases, shared by every lock post                                                                                         |
+| `hooks/usePurchaseResume/usePurchaseResume.ts`                   | finishes a paid purchase whose content never landed, without interaction                                                                                 |
+| `components/organisms/DialogEditPost/DialogEditPost.tsx`         | routes an announcement into teaser mode, or falls back to a plain post edit                                                                              |
+| `libs/post/lockTeaser.ts`                                        | the envelope: builder and length guard                                                                                                                   |
 
 ## Reading a lock post
 
 Three ways the content becomes readable, resolved on mount by `useUnlockedContent`:
 
 ```
-LockedPostContent
+LockedPostContent  (on its post page, SinglePostContent runs the two hooks below and shares them)
   ├─ LocksController.getLockContent(content) → { lock_title, teaser_description }
   ├─ useLockFile(lock)                       → local descriptor, then lock.json on a miss
   │    └─ LocksController.getOrFetchLockFile
@@ -302,7 +316,7 @@ cannot be unlocked; a separate unsupported-lock experience is outside the paymen
 
 Paths 1) and 2) load in two steps. The cached row's text renders at once and the attachment
 bytes follow, with one skeleton per attachment (`pendingAttachments`, typed by slot, down through
-`PostArticle` / `PostBody`), so a large image never holds the text back. An own lock shows its
+`PostArticle` / `ArticleReader` / `PostBody`), so a large image never holds the text back. An own lock shows its
 layout — the inert lock card and "My locked content" — from the first render in which `lock.json`
 proves the lock is mine (`isResolvingOwn`), with a text skeleton until the original is read. The
 Unlock button is never live on an own lock, even when that read fails.
@@ -347,17 +361,18 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    submitted again: that submission never reached the server.
 4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
    payload, reader pubky at the bundle's top level). Only **Try again** (or **I completed the
-   steps**) may replace an ended id: an automatic start that waited behind another submission and
-   finds every saved id ended returns that status for the modal to show, since the reader may have
-   just rejected the request in Bitkit. Replaying the same bundle is safe and creates no second
-   payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
-   afterwards, retrying for up to 10 minutes (its `admission_deadline_at`); Paykit then delivers the
-   payment request to the reader's wallet, and the app never sees an address or invoice. A reader
-   without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
-   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows
-   a setup notice in place of the handoff. A failed submission (network, rate limit) shows **Try
-   again**, which keeps the saved id. A submission the Lock Server refuses with **HTTP 451** (paid
-   unlocks are not offered in the reader's region) is not a failure: `LocksService.submitProof` returns
+   steps**, or **Check again** on the not-payable screen) may replace an ended id: an automatic
+   start that waited behind another submission and finds every saved id ended returns that status
+   for the modal to show, since the reader may have just rejected the request in Bitkit. Replaying
+   the same bundle is safe and creates no second payment request. The Lock Server answers
+   `pending` at once and creates the Paykit invoice afterwards, retrying for up to 10 minutes
+   (its `admission_deadline_at`); Paykit then delivers the payment request to the reader's
+   wallet, and the app never sees an address or invoice. A reader without a usable wallet or a
+   Paykit outage therefore ends the task `failed`, not the submission. While the server waits on
+   the reader's wallet it says so (`status_message`), and the modal shows a setup notice in
+   place of the handoff. A failed submission (network, rate limit) shows **Try again**, which
+   keeps the saved id. A submission the Lock Server refuses with **HTTP 451** (paid unlocks are
+   not offered in the reader's region) is not a failure: `LocksService.submitProof` returns
    `{ regionBlocked: true }` before any `Err.*` is built, so it is not logged and not sent to Sentry
    (the factories report on construction). `startPayment` passes it up as `regionBlocked`, and the
    modal lands on `region-blocked`: "Paid unlocks aren't available in your region yet." with an info
@@ -397,7 +412,20 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    An `expired` task stops waiting and shows "The payment was not completed. You can try again."
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
    interpreting `terminal_reason`. **Try again** starts a new payment as in step 3;
-   `failed` keeps its existing wallet-related guidance and retry handling.
+   `failed` keeps its existing wallet-related guidance and retry handling, except for the exact
+   `failure_message` `reader is not payable` (the wallet data exists but cannot receive payment
+   requests, or its key authorization fails verification). That lands on `reader-not-payable`: it
+   names the wallet as the cause, with no toast and no offer to try again. Its **Check again** works
+   like **Try again**, because the ended id stays failed even after the reader connects Bitkit to
+   this profile, so without it the lock could never be paid. Pressing it before anything is fixed
+   costs a new id and a failed task, and no charge: the attempt stops before Paykit creates an
+   invoice or address. Every path to a failed task reaches this screen, and on a reopen the attempt
+   that ended last (`completed_at`) decides it; the rank in step 1 still picks the id.
+   The string belongs to the Lock Server (its closed invoice-admission vocabulary, `docs/API.md` in
+   pubky/locks). The SDK only requires a non-empty `failure_message`, so the failed task contract
+   block in `locks.region.contract.test.ts` proves the field reaches the service, not its wording.
+   Re-check the string on each Lock Server upgrade: a rewording falls back to the generic screen,
+   and no test fails.
    A read that rejects backs its own loop off: each consecutive failure doubles that loop's
    interval up to `POLL_BACKOFF_MAX_MS` (15 s), so the link read goes 1, 2, 4, 8, 15 s and the task
    lookup 3, 6, 12, 15 s. Any answer (a null task included) and a return to the tab restore full
@@ -508,7 +536,7 @@ profile/(own)/layout.tsx → ProfilePageContainer
   └─ UnlockedListProvider → ProfileUnlocked (the page)
        └─ ProfileUnlockedItem
             ├─ PostMain (announcement post, when its id resolves)
-            └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle | PostBody
+            └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle (full read: ArticleReader) | PostBody
 ```
 
 - **One read, two consumers.** The layout survives profile tab navigation, so the hook lives
@@ -531,8 +559,8 @@ profile/(own)/layout.tsx → ProfilePageContainer
   more than the fallback card: `LockedPostContent` reads the marker and the lock file for each row,
   both from IndexedDB once cached.
 - **An unlocked article's cover comes from the reader's own copy.** It has no Nexus attachments at
-  all, so `usePostArticle` counts the caller's local attachments when deciding whether slot 0 is a
-  cover; the slot-0 rule (a body that references `attachment:0` has no cover) still applies.
+  all, so `usePostArticle` takes the caller's local attachments and picks the cover from their slot 0;
+  the slot-0 rule (a body that references `attachment:0` has no cover) and the image-only rule still apply.
 - **Cached locally.** The list and count render from IndexedDB first. One background homeserver
   listing per profile visit finds unlocks made on other devices and refreshes their timestamps.
 
@@ -561,6 +589,42 @@ Before publishing, the app asks the Lock Server whether the authenticated creato
 the selected denomination. Setup is Bitcoin-only when Paykit Server's optional `[usdt]`
 configuration is absent. USD pricing by itself does not request a USDT address. An approval
 callback is checked against the server before setup is marked ready.
+
+Paykit Server refuses the initial `/setup` for a creator it already holds (`422 setup_failed`, which its
+setup page posts as `setup-failed`), for example after an earlier approval stopped before it finished. The
+failure callback carries no reason, and the Lock Server's `setup_required` is the same answer for a held
+and an unknown creator, so the Enable Payments step asks Paykit directly through `GET /api/paykit-creator`:
+a server-side read of Paykit's `GET /setup/creator-held?creator=…`, which answers `{ "held": true | false }`
+and nothing else, needed because Paykit sends no CORS headers. It is asked before `/setup` opens and again when
+a setup or reconnect fails. Paykit can commit either flow and still post `setup-failed` when its relay acknowledgement fails,
+so after either failure the Lock Server is asked first: a ready creator finishes there, with no reconnect (which
+would rotate its Bitcoin receiving account for nothing), and a failed readiness check shows that payments are
+unavailable. Only `setup_required` goes on to the presence read:
+
+- Paykit holds the creator: the dialog offers **Reconnect Bitkit** as its main action (no **Try again**), which
+  loads `/setup/reconnect?creator=…&return_to=…&state=…` in the same iframe. A reconnect moves Bitcoin receiving
+  to a new Bitcoin account, so it only opens on that click. A failed reconnect offers another reconnect only
+  after readiness still requires setup and Paykit confirms it holds the creator. An error retry checks readiness
+  again before asking for another approval.
+- Paykit does not hold the creator, after a failed setup: the dialog says nothing was set up and offers
+  **Connect Bitkit**, which checks again and opens `/setup`.
+- Paykit cannot say: the dialog says payments are unavailable and offers **Try again**, both before setup
+  and after a failed setup. Neither setup nor reconnect opens until a later check answers held or not held.
+
+`/setup/creator-held` starts no setup flow and spends neither Paykit's setup-start budget nor its pending-flow
+capacity. It has its own per-client-IP read limit (600 a minute by default). A refused read is `429`
+(`Retry-After: 60`) and storage trouble is `503` (`Retry-After: 1`), so neither is read as "not held"; a `400`
+means Paykit rejected the query and is not an answer either. The service behind the route asks once more after a
+`503` when its `Retry-After` is at most two seconds and fits the six-second timeout; a `429` is not retried
+server-side, so the dialog's **Try again** is the retry. Every caller of the route shares the app server's
+address and so that read limit, which is why the service reuses an answer per creator (two minutes when Paykit
+holds the creator, fifteen seconds when it does not) and lets concurrent callers share one request. A failed read
+is not kept. The cache is per server instance. Presence is not payment readiness: the Lock Server still confirms
+readiness after either flow.
+
+`/setup/creator-held` first shipped in Paykit Server v0.1.1-rc2. An older Paykit Server answers it with `404`,
+which reads as "Paykit cannot say", so no creator could open setup: the Paykit Server behind an environment must
+run v0.1.1-rc2 or later before this app does.
 
 Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
 USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
@@ -639,11 +703,15 @@ Never commit either.
   homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
-  answers with `cy.intercept`, and writes the guarded bytes and `lock.json` to the creator's homeserver
-  itself. The pubky-e2e project will replace it with real end-to-end coverage. Every stubbed answer is
-  a `[locks-stub]` entry in the Cypress command log, with the redacted request and response in its
-  console details, and the same lines are printed in the terminal after each `[locks-step]` marker
-  (`cypress/support/locks-log.ts`).
+  answers with `cy.intercept`. The stub never writes to the homeserver: as the real Lock Server does,
+  the intercept makes the guarded-bytes and `lock.json` writes before it answers, through
+  `cypress/plugins/lock-server.ts` and the `seedLockServerWrite` task in Cypress's Node process, with a
+  session the creator's key granted for `/priv/app.locks/:rw,/pub/app.locks/:rw`. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
+  creator or code-exchange `... failed with HTTP <status>` message), so a stubbed 401, 404 or 451
+  takes the same path as the real Lock Server's. The pubky-e2e project will replace it with real end-to-end coverage.
+  Every stubbed answer is a `[locks-stub]` entry in the Cypress command log, with the redacted
+  request and response in its console details, and the same lines are printed in the terminal after
+  each `[locks-step]` marker (`cypress/support/locks-log.ts`).
 
 ## References
 

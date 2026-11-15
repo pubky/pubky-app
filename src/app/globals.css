@@ -986,17 +986,6 @@ body {
     -webkit-mask-size: 100% 100%;
   }
 
-  /* Same artwork in the light brand colour, as the logo swaps to `pubky-logo-on-light.svg`. */
-  .light .landing-swirl-background__graphic {
-    background-image: url('/images/bg-home-on-light.svg');
-  }
-
-  /* The posters are white line art on transparency, drawn for a dark card; outline them on a light one. */
-  .light .landing-broken-art {
-    filter: drop-shadow(1px 0 0 var(--foreground)) drop-shadow(-1px 0 0 var(--foreground))
-      drop-shadow(0 1px 0 var(--foreground)) drop-shadow(0 -1px 0 var(--foreground));
-  }
-
   :root[data-landing-swirl='broken'] .landing-swirl-background__graphic {
     --landing-swirl-size: min(164vw, 88rem);
     --landing-swirl-offset-x: 0px;

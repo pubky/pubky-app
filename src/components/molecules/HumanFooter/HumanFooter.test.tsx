@@ -70,7 +70,7 @@ describe('HumanFooter', () => {
     render(<HumanFooter />);
 
     const [legalLinks, protocolLinks] = screen.getAllByTestId('footer-links');
-    expect(legalLinks).toHaveClass('[&_a]:no-underline');
+    expect(legalLinks).toHaveClass('[&_span_a]:no-underline');
     expect(protocolLinks).not.toHaveClass('[&_a]:no-underline');
   });
 
@@ -95,5 +95,20 @@ describe('HumanFooter', () => {
 
     const footerLinks = screen.getAllByTestId('footer-links');
     expect(footerLinks).toHaveLength(2);
+  });
+
+  it('keeps the inline footer copy together', () => {
+    render(<HumanFooter variant="inline" />);
+
+    expect(screen.getAllByTestId('footer-links')).toHaveLength(1);
+    expect(screen.getByTestId('footer-links')).toHaveTextContent('By joining, continuing, or creating a Pubky account');
+    expect(screen.getByTestId('footer-links')).toHaveTextContent('over 18 years old. Pubky is powered by');
+  });
+
+  it('reuses the homepage brand links when requested', () => {
+    render(<HumanFooter variant="inline" showBranding />);
+
+    expect(screen.getByRole('link', { name: 'Synonym' })).toHaveAttribute('href', 'https://synonym.to');
+    expect(screen.getByRole('link', { name: 'a tether. company' })).toHaveAttribute('href', 'https://tether.io/');
   });
 });

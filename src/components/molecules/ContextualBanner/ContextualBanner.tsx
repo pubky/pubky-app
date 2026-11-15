@@ -5,7 +5,8 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
-import { Google } from '@/icons';
+import { isPassportAppleEnabled } from '@/config/network';
+import { Apple, Google } from '@/icons';
 import { cn } from '@/libs/utils/utils';
 import type { ContextualBannerProps } from './ContextualBanner.types';
 
@@ -33,7 +34,12 @@ export function ContextualBanner({
   isGooglePending = false,
   className,
 }: ContextualBannerProps) {
-  const googleLabel = isGooglePending ? 'Waiting for Passport...' : 'Continue with Google';
+  const showProviderIcons = isPassportAppleEnabled() && !isGooglePending;
+  const googleLabel = isGooglePending
+    ? 'Waiting for Passport...'
+    : showProviderIcons
+      ? 'Continue with Google or Apple'
+      : 'Continue with Google';
 
   return (
     <section
@@ -78,9 +84,10 @@ export function ContextualBanner({
                 <Button
                   type="button"
                   variant="dark"
-                  // Icon-only square below `sm`; the size variant's `has-[>svg]` padding must be reset too.
+                  // Icon-only below `sm`, with room for both marks when enabled; reset the SVG padding too.
                   className={cn(
-                    'size-10 px-0 font-bold has-[>svg]:px-0 sm:w-auto sm:px-4 sm:has-[>svg]:px-4',
+                    'px-0 font-bold has-[>svg]:px-0 sm:w-auto sm:px-4 sm:has-[>svg]:px-4',
+                    showProviderIcons ? 'h-10 w-16' : 'size-10',
                     FOCUS_RING_CLASS,
                   )}
                   onClick={onContinueWithGoogle}
@@ -89,12 +96,22 @@ export function ContextualBanner({
                   aria-label={googleLabel}
                   data-testid="contextual-banner-google"
                 >
-                  {isGooglePending ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  {showProviderIcons ? (
+                    <>
+                      <span className="hidden sm:inline">{'Continue with'}</span>
+                      <Google className="size-4" aria-hidden="true" />
+                      <Apple className="size-4 text-foreground" aria-hidden="true" />
+                    </>
                   ) : (
-                    <Google className="size-4" aria-hidden="true" />
+                    <>
+                      {isGooglePending ? (
+                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Google className="size-4" aria-hidden="true" />
+                      )}
+                      <span className="hidden sm:inline">{googleLabel}</span>
+                    </>
                   )}
-                  <span className="hidden sm:inline">{googleLabel}</span>
                 </Button>
               </>
             )}

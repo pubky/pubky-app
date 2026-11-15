@@ -25,6 +25,7 @@ export function PostHeader({
   size = 'normal',
   timeAgoPlacement = 'top-right',
   navigable = true,
+  metadataSlot,
 }: PostHeaderProps) {
   // Extract userId from postId (format: userId:postId or just userId if isReplyInput is true)
   const userId = isReplyInput ? postId : postId.split(':')[0];
@@ -78,6 +79,7 @@ export function PostHeader({
       characterLimit={characterLimitInUserInfo}
       characterLimitPlacement={characterLimitPlacement}
       navigable={navigable}
+      metadataSlot={metadataSlot}
     />
   );
 

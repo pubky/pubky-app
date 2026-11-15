@@ -1,6 +1,7 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { waitForServiceWorker } from '../support/common';
+import { isMobile, itMobile } from '../support/mobile';
 import { postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { seededStreamIndexed } from '../support/pagination';
 import { createCollectionViaApi, createPostViaApi, seedUserViaApi } from '../support/seed';
@@ -89,12 +90,14 @@ describe('logged-out deep links', () => {
     assertWriteAsksToSignIn('[data-cy="profile-follow-toggle-btn"]:visible');
   });
 
-  it('opens a collection and asks to sign in before following it', () => {
+  itMobile('opens a collection and asks to sign in before following it', () => {
     cy.visit(`/collections/${authorId}/${collectionId}`);
 
     cy.get('[data-cy="collection-hero"]:visible').should('have.length', 1).and('contain.text', collectionName);
-    // The list layout renders each item as a one-line snippet row, not a full post body
-    cy.get('[data-cy="post-card"]:visible [data-cy="post-list-snippet"]:visible').should(($snippets) => {
+    // The list layout renders each item as a one-line snippet row, not a full post body. Phones
+    // collapse the list layout to inline posts, so the item shows as its full post text there.
+    const itemText = isMobile() ? 'post-text' : 'post-list-snippet';
+    cy.get(`[data-cy="post-card"]:visible [data-cy="${itemText}"]:visible`).should(($snippets) => {
       const snippets = $snippets.toArray().map((snippet) => snippet.textContent?.trim());
       expect(snippets, 'collection items').to.include(collectionItemText);
     });

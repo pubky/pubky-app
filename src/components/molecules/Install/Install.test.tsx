@@ -31,13 +31,11 @@ describe('InstallNavigation', () => {
     vi.clearAllMocks();
   });
 
-  it('handles create button click', () => {
+  it('offers only Pubky Ring, with no in-browser key creation', () => {
     render(<InstallNavigation />);
 
-    const createButton = screen.getByRole('button', { name: /Create keys in browser/i });
-    fireEvent.click(createButton);
-
-    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.PUBKY);
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /Create keys in browser/i })).not.toBeInTheDocument();
   });
 
   it('handles continue button click', () => {
@@ -49,33 +47,15 @@ describe('InstallNavigation', () => {
     expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.SCAN);
   });
 
-  it('shows loading state and disables both buttons when create button is clicked', () => {
+  it('shows loading state and disables the button when continue is clicked', () => {
     render(<InstallNavigation />);
 
-    const createButton = screen.getByRole('button', { name: /Create keys in browser/i });
     const continueButton = screen.getByRole('button', { name: /Continue with Pubky Ring/i });
 
-    expect(createButton).not.toBeDisabled();
-    expect(continueButton).not.toBeDisabled();
-
-    fireEvent.click(createButton);
-
-    expect(createButton).toBeDisabled();
-    expect(continueButton).toBeDisabled();
-  });
-
-  it('shows loading state and disables both buttons when continue button is clicked', () => {
-    render(<InstallNavigation />);
-
-    const createButton = screen.getByRole('button', { name: /Create keys in browser/i });
-    const continueButton = screen.getByRole('button', { name: /Continue with Pubky Ring/i });
-
-    expect(createButton).not.toBeDisabled();
     expect(continueButton).not.toBeDisabled();
 
     fireEvent.click(continueButton);
 
-    expect(createButton).toBeDisabled();
     expect(continueButton).toBeDisabled();
   });
 });
@@ -91,5 +71,11 @@ describe('InstallFooter', () => {
     expect(pubkyLink).toHaveAttribute('target', '_blank');
     expect(ringLink.closest('p')).toHaveClass('[&_a]:underline');
     expect(pubkyLink.closest('p')).toBe(ringLink.closest('p'));
+  });
+
+  it('does not offer creating keys in the browser', () => {
+    render(<InstallFooter />);
+
+    expect(screen.queryByText(/browser/i)).not.toBeInTheDocument();
   });
 });

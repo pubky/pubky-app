@@ -5,12 +5,16 @@
  * `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` is set (the Locks CI job only). That client sends every Lock
  * Server call as a `POST <stub>/e2e/<operation>` and the routes below answer them. Nothing else is
  * intercepted: the homeserver writes (guarded bytes, `lock.json`, the announcement, the reader's
- * purchase file and replica) and every Nexus read stay real.
+ * purchase file and replica) and every Nexus read stay real. As in production, the Lock Server, not
+ * the app, writes the guarded bytes and `lock.json`: those routes have Node make the write with the
+ * session the creator granted the Lock Server (`seedLockServerWrite`), then answer.
  */
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
+import { isMobile } from './mobile';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
+import type { SeedLockServerWriteArgs } from './types/seed';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
 export const locksStubUrl = (): string => String(Cypress.expose('locksStubUrl'));
@@ -73,6 +77,34 @@ const answer = (req: TStubRequest, operation: string, summary: string, body: unk
     Response: { statusCode, body },
   });
   req.reply({ statusCode, body, headers: CORS_HEADERS });
+};
+
+/**
+ * Answers one stand-in call the way the real Lock Server does: its homeserver write first
+ * (`plugins/lock-server.ts`), then the answer, or a 500 when the write failed. The write goes out
+ * as its own request, so the alias keeps the request the app sent. Return it from the handler.
+ */
+const answerAfterWrite = (
+  req: TStubRequest,
+  write: SeedLockServerWriteArgs,
+  operation: string,
+  summary: string,
+  body: unknown,
+) => {
+  const writesUrl = Cypress.expose('lockServerWritesUrl');
+  if (!writesUrl) throw new Error('lockServerWritesUrl is not set: cypress.config.ts starts it in setupNodeEvents');
+  const action = `Lock Server ${write.bytes === undefined ? 'DELETE' : 'PUT'} ${write.path}`;
+  return fetch(String(writesUrl), {
+    method: 'POST',
+    headers: { 'content-type': 'text/plain' },
+    body: JSON.stringify(write),
+  })
+    .then(async (res) => (res.status === 204 ? '' : `HTTP ${res.status}: ${await res.text()}`), String)
+    .then((failure) => {
+      if (failure)
+        answer(req, operation, `${summary}; ${action} failed (${failure})`, { error: 'internal_error' }, 500);
+      else answer(req, operation, `${summary}; ${action} done`, body);
+    });
 };
 
 const toSecondaryRecord = (resources: TContentLockRequest['secondary_resources']) => {
@@ -161,10 +193,16 @@ export const stubLockServer = (state: TLockServerState) => {
       bytes: string;
     }>(req.body);
     state.guarded[path] = bytes;
-    answer(req, 'register guarded resource', `${path} (${content_type}, ${bytes.length} base64 chars)`, {
-      creator: `pubky${owner}`,
-      guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
-    });
+    return answerAfterWrite(
+      req,
+      { owner, path: `${GUARDED_CONTENT_PATH}${path}`, bytes },
+      'register guarded resource',
+      `${path} (${content_type}, ${bytes.length} base64 chars)`,
+      {
+        creator: `pubky${owner}`,
+        guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
+      },
+    );
   }).as('registerGuardedResource');
 
   cy.intercept(route('POST', '/e2e/creator/content-locks'), (req) => {
@@ -172,25 +210,36 @@ export const stubLockServer = (state: TLockServerState) => {
     const lockId = `e2e${Date.now()}`;
     const price = priceOf(body, owner);
     state.locks[lockId] = price;
-    answer(req, 'create content lock', `lock ${lockId} for ${describePrice(price)}`, {
-      lock_id: lockId,
-      content_lock_path: `/pub/app.locks/${lockId}.json`,
-      content_lock: {
-        version: 1,
-        creator: `pubky${owner}`,
-        primary_resource: body.primary_resource,
-        secondary_resources: toSecondaryRecord(body.secondary_resources),
-        criteria: body.criteria,
-        lock_logic: body.lock_logic,
-        access_policy: body.access_policy,
-        lock_server: body.lock_server ?? { override: null },
-      },
-    });
+    const contentLockPath = `/pub/app.locks/${lockId}.json`;
+    const contentLock = {
+      version: 1,
+      creator: `pubky${owner}`,
+      primary_resource: body.primary_resource,
+      secondary_resources: toSecondaryRecord(body.secondary_resources),
+      criteria: body.criteria,
+      lock_logic: body.lock_logic,
+      access_policy: body.access_policy,
+      lock_server: body.lock_server ?? { override: null },
+    };
+    return answerAfterWrite(
+      req,
+      { owner, path: contentLockPath, bytes: Cypress.Buffer.from(JSON.stringify(contentLock)).toString('base64') },
+      'create content lock',
+      `lock ${lockId} for ${describePrice(price)}`,
+      { lock_id: lockId, content_lock_path: contentLockPath, content_lock: contentLock },
+    );
   }).as('createContentLock');
+  // The Lock Server takes the public `lock.json` down only once it has accepted the deletion.
   cy.intercept(route('POST', '/e2e/creator/content-locks/delete'), (req) => {
-    const { lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
+    const { owner, lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
     state.deletedLocks.push(lock_id);
-    answer(req, 'delete content lock', `lock ${lock_id} (${describePrice(state.locks[lock_id])})`, {});
+    return answerAfterWrite(
+      req,
+      { owner, path: `/pub/app.locks/${lock_id}.json` },
+      'delete content lock',
+      `lock ${lock_id} (${describePrice(state.locks[lock_id])})`,
+      {},
+    );
   }).as('deleteContentLock');
 
   // The reader's Bitkit wallet: it has published Paykit data, it is linked to the creator, and the
@@ -253,6 +302,45 @@ export const stubLockServer = (state: TLockServerState) => {
     }
     answer(req, 'guarded read', `unlock key delivered: ${path} (${bytes.length} base64 chars)`, { bytes });
   }).as('proxyReadGuardedResource');
+};
+
+/** The Lock Server's error body (`locks-server/src/api/errors.rs`). */
+export const lockServerError = (code: string) => ({ error: { code, message: code.replaceAll('_', ' ') } });
+
+/**
+ * Answers the next matching stand-in call with `statusCode` and `body` instead of `stubLockServer`'s
+ * route, once: Cypress tries the latest intercept first, and `times: 1` hands every later call back.
+ * A non-2xx answer reaches the app as the Locks SDK's own error (`locks.e2eStub.ts`).
+ */
+export const answerLockServerOnce = (
+  method: 'GET' | 'POST',
+  pathname: string,
+  { statusCode, body, summary }: { statusCode: number; body: unknown; summary: string },
+) =>
+  cy.intercept({ ...route(method, pathname), times: 1 }, (req) => {
+    answer(req, 'one-off answer', `${method} ${pathname}: ${summary}`, body, statusCode);
+  });
+
+/**
+ * Records every later call to one stand-in route and leaves the answer to the routes registered
+ * before it. A one-off answer registered after this one replies first, so its call is not recorded.
+ */
+export const recordLockServerCalls = (method: 'GET' | 'POST', pathname: string): string[] => {
+  const calls: string[] = [];
+  cy.intercept(route(method, pathname), (req) => {
+    calls.push(redactLocksStubUrl(req.url));
+  });
+  return calls;
+};
+
+/** Adds a paid lock the creator published without the composer to the stand-in Lock Server. */
+export const holdSeededLock = (
+  state: TLockServerState,
+  lock: { lockId: string; guardedPath: string; guardedBytes: string },
+  price: TLockPrice,
+) => {
+  state.guarded[lock.guardedPath] = lock.guardedBytes;
+  state.locks[lock.lockId] = price;
 };
 
 /** The app's Dexie database (`NEXT_PUBLIC_DB_NAME`, unset in the e2e stack) and its unlocked-lock table. */
@@ -356,7 +444,18 @@ const waitForArticleEditorFocus = () => {
   cy.focused().closest('.mdxeditor-root-contenteditable').should('exist');
 };
 
+// Phones split the article composer into tabs: the title and the body each sit on their own tab.
+const showArticleComposerTab = (tab: 'title' | 'content') => {
+  if (isMobile()) homeComposer().find(`[data-cy="article-composer-tab-${tab}"]`).filter(':visible').click();
+};
+
+const articleTitleInput = () => {
+  showArticleComposerTab('title');
+  return homeComposer().find('[data-cy="article-title-input"]').filter(':visible');
+};
+
 const typeArticleBody = (body: string) => {
+  showArticleComposerTab('content');
   // The rich-text toolbar is sticky, so Cypress counts its buttons as hidden while the page header
   // covers them; earlier steps scroll the composer under the header.
   homeComposer().scrollIntoView({ offset: { top: -200, left: 0 } });
@@ -381,18 +480,14 @@ export const writeLockedArticle = (title: string, body: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').click();
   homeComposer().find('[data-cy="post-input-action-bar-add-article"]').filter(':visible').click();
   waitForArticleEditorFocus();
-  homeComposer()
-    .find('[data-cy="article-title-input"]')
-    .filter(':visible')
-    .type(title, { delay: 0 })
-    .should('have.value', title);
+  articleTitleInput().type(title, { delay: 0 }).should('have.value', title);
   typeArticleBody(body);
 };
 
 /** Replaces the body of an article draft the lock switch put back into the composer. */
 export const editLockedArticleBody = (title: string, body: string) => {
   waitForArticleEditorFocus();
-  homeComposer().find('[data-cy="article-title-input"]').filter(':visible').should('have.value', title);
+  articleTitleInput().should('have.value', title);
   typeArticleBody(body);
 };
 
@@ -408,6 +503,13 @@ export const turnLockOnAndSetUpLocks = () => {
   cy.wait('@locksExchange');
   cy.wait('@paykitSetupStatus');
   cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
+};
+
+/** Walks an open setup dialog through a working Lock Server: intro, approval, Paykit `ready`, done. */
+export const completeLocksSetup = () => {
+  cy.get('[data-cy="locks-auth-intro-continue"]').filter(':visible').should('not.be.disabled').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').filter(':visible').click();
+  cy.get('[data-cy="locks-auth-success-continue"]').should('not.exist');
 };
 
 /** The Lock Server refuses the next lock deletion, as a Lock Server outage would. */
@@ -454,6 +556,24 @@ export const fillLockAnnouncement = (title: string, teaser: string) => {
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', '').click();
   homeComposer().find('[data-cy="lock-title-input"]').filter(':visible').clear().type(title);
   homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').type(teaser);
+};
+
+/** Presses Post on the configured lock, for a publish that is expected to fail. */
+export const pressPost = () => {
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
+};
+
+/** A failed publish keeps the lock, its title and its teaser, and lets the creator press Post again. */
+export const expectLockKept = (title: string, teaser: string) => {
+  lockSwitch().should('have.attr', 'aria-checked', 'true');
+  homeComposer().find('[data-cy="lock-title-input"]').filter(':visible').should('have.value', title);
+  homeComposer().find('[data-cy="post-input-textarea"]').filter(':visible').should('have.value', teaser);
+  homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled');
+};
+
+/** The toast with exactly this copy. */
+export const expectToast = (description: string) => {
+  cy.contains('[data-cy="toast"]', description).should('be.visible');
 };
 
 /**

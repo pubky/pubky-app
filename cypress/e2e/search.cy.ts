@@ -1,11 +1,18 @@
-import { backupDownloadFilePath, userIdFromPubky } from '../support/common';
+import { userIdFromPubky } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { addTagsToCollectionHero, createCollection, findCollectionCardInSection } from '../support/collections';
-import { goToCollectionsPage, goToProfilePageFromHeader } from '../support/header';
+import { itMobile } from '../support/mobile';
+import {
+  closeSearchSuggestions,
+  getSearchBox,
+  getSearchInput,
+  goToCollectionsPage,
+  goToProfilePageFromHeader,
+} from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
-import { addProfileTags } from '../support/profile';
-import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
+import { addProfileTags, openProfileTab } from '../support/profile';
+import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 
 const username = 'Mr Search';
 // second author, whose posts share a word with one of Mr Search's posts
@@ -48,15 +55,14 @@ const filterProfilePosts = (query: string) => {
 describe('search', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
     // created first so they are indexed before Mr Search's posts
-    cy.onboardAsNewUser(otherPoster.username, '', undefined, otherPoster.pubkyAlias);
+    cy.onboardAsNewUser(otherPoster.username, '', otherPoster.pubkyAlias);
     createQuickPost(otherPostWithSharedWord);
     createQuickPost(otherPostWithoutSharedWord);
-    cy.signOut(HasBackedUp.No);
+    cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser(username, 'I like to search', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(username, 'I like to search');
 
     // create the posts searched for by the tests below
     createQuickPost(postTag1, [tag1]);
@@ -72,18 +78,18 @@ describe('search', () => {
     // sign in if not already
     cy.location('pathname').then((currentPath) => {
       if (currentPath !== '/home') {
-        cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+        cy.signInWithPubkyRing(username);
         waitForFeedToLoad();
       }
     });
   });
 
-  it('can search posts by tag filters', () => {
+  itMobile('can search posts by tag filters', () => {
     // open search results for a single tag
     cy.visit(`/search?tags=${tag1}`);
 
     // confirm tag remains displayed in the search bar
-    cy.get('[data-cy="header-search"]').innerTextShouldContain(tag1);
+    getSearchBox().innerTextShouldContain(tag1);
 
     // confirm one post card is seen in result with expected content and tag
     cy.get('[data-cy="post-search-results"]')
@@ -120,17 +126,17 @@ describe('search', () => {
     // add the second tag through the UI: type a prefix and click the
     // autocomplete tag suggestion (covers addTagToSearch → buildSearchUrl →
     // router.push, which a direct cy.visit would skip)
-    cy.get('[data-cy="header-search-input"]').filter(':visible').type(tag2);
+    getSearchInput().type(tag2);
     cy.get(`[data-cy="post-tag"][data-tag-label="${tag2}"]`, { timeout: 10000 }).filter(':visible').click();
 
     // the URL now carries both tags
     cy.location('search', { timeout: 10000 }).should('contain', `tags=${tag1},${tag2}`);
 
     // close the suggestions dropdown before asserting on the results below it
-    cy.get('body').click(0, 0);
+    closeSearchSuggestions();
 
     // confirm both tags remain displayed in the search bar
-    cy.get('[data-cy="header-search"]').innerTextShouldContain(tag1).innerTextShouldContain(tag2);
+    getSearchBox().innerTextShouldContain(tag1).innerTextShouldContain(tag2);
 
     // confirm three post cards are seen in result (posts matching tag1 OR tag2)
     cy.get('[data-cy="post-search-results"]').find('[data-cy="post-card"]').should('have.length', 3);
@@ -144,28 +150,26 @@ describe('search', () => {
       .innerTextShouldContain(tag3);
 
     // remove the second tag through the search-bar chip (UI-initiated tag search path)
-    cy.get('[data-cy="header-search"]')
-      .filter(':visible')
-      .within(() => {
-        cy.get(`[aria-label="Remove ${tag2} tag"]`).click();
-      });
+    getSearchBox().within(() => {
+      cy.get(`[aria-label="Remove ${tag2} tag"]`).click();
+    });
 
     // the URL, chips, and results narrow back down to the first tag only
     cy.location('search').should('contain', `tags=${tag1}`).should('not.contain', tag2);
-    cy.get('[data-cy="header-search"]').innerTextShouldContain(tag1).innerTextShouldNotContain(tag2);
+    getSearchBox().innerTextShouldContain(tag1).innerTextShouldNotContain(tag2);
     cy.get('[data-cy="post-search-results"]').find('[data-cy="post-card"]').should('have.length', 1);
   });
 
-  it('can search posts by full-text query', () => {
+  itMobile('can search posts by full-text query', () => {
     // full-text search for the unique word from the first post's text
-    cy.get('[data-cy="header-search-input"]').filter(':visible').type(uniqueWord).type('{enter}');
+    getSearchInput().type(uniqueWord).type('{enter}');
 
     // check that we are on the full-text search results page
     cy.location('pathname').should('contain', '/search');
     cy.location('search').should('contain', `q=${uniqueWord}`);
 
     // confirm the search input shows the active query (seeded from the URL)
-    cy.get('[data-cy="header-search-input"]').filter(':visible').should('have.value', uniqueWord);
+    getSearchInput().should('have.value', uniqueWord);
 
     // confirm only the matching post is seen in result with expected content
     cy.get('[data-cy="post-search-results"]')
@@ -183,7 +187,7 @@ describe('search', () => {
   // the profile filter reads the same Nexus full-text index as the test above
   it('can filter own profile posts by text', () => {
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-posts"]').filter(':visible').click();
+    openProfileTab('posts');
     cy.location('pathname').should('eq', '/profile/posts');
     profilePostCards().should('have.length', searchUserPosts.length);
 
@@ -221,7 +225,7 @@ describe('search', () => {
 
     // tag own profile from the profile 'Tagged' tab
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-tagged"]').click();
+    openProfileTab('tagged');
     addProfileTags([profileTag]);
     cy.get('[data-cy="profile-tab-content"]').contains(profileTag);
 
@@ -230,7 +234,7 @@ describe('search', () => {
 
     // open search results for the profile tag
     cy.visit(`/search?tags=${profileTag}`);
-    cy.get('[data-cy="header-search"]').innerTextShouldContain(profileTag);
+    getSearchBox().innerTextShouldContain(profileTag);
 
     // confirm the tagged profile is listed in the People section
     cy.get('[data-cy="search-people-section"]').should('be.visible').innerTextShouldContain(username);
@@ -253,7 +257,7 @@ describe('search', () => {
 
     // open search results for the collection tag
     cy.visit(`/search?tags=${collectionTag}`);
-    cy.get('[data-cy="header-search"]').innerTextShouldContain(collectionTag);
+    getSearchBox().innerTextShouldContain(collectionTag);
 
     // confirm the tagged collection is listed in the Collections section
     findCollectionCardInSection('[data-cy="search-collections-section"]', collectionName).should('be.visible');

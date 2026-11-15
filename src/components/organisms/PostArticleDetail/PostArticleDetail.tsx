@@ -1,29 +1,29 @@
 'use client';
 
-import { type SyntheticEvent, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { collectAttachmentRefIndexes, isAuthorFileUri } from '@/libs/post/articleInlineMedia';
 import {
   POST_COVER_DESKTOP_FALLBACK_VARIANT,
-  POST_COVER_DESKTOP_MEDIA,
   POST_COVER_DESKTOP_VARIANT,
   POST_COVER_MOBILE_VARIANT,
 } from '@/libs/post/postCoverVariant';
 import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
-import { PostText } from '@/molecules/PostText/PostText';
+import type { ArticleMediaSource } from '@/molecules/ArticleInlineMedia/ArticleInlineMedia.types';
+import { LockAccessLabel } from '@/molecules/LockAccessLabel/LockAccessLabel';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useHomeStore } from '@/stores/home/home.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
-import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
+import { ArticleReader } from '../ArticleReader/ArticleReader';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
+import type { AttachmentConstructed, PendingAttachment } from '../PostAttachments/PostAttachments.types';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsActions';
@@ -35,6 +35,15 @@ interface PostArticleDetailProps {
   content: string;
   attachments: PostDetailsModel['attachments'];
   isBlurred: boolean;
+  /**
+   * A lock post's article, read from the viewer's own copy: its files never reach Nexus, and the
+   * post's local files are its teaser's, so the article's media come from here alone.
+   */
+  unlocked?: {
+    media: AttachmentConstructed[];
+    pendingAttachments: PendingAttachment[];
+    isOwnLock: boolean;
+  };
 }
 
 /**
@@ -43,7 +52,7 @@ interface PostArticleDetailProps {
  * Any other layout value (visual, or a future one) renders as columns, the same rule
  * `getTagsLayoutForSurfaceLayout` applies to the rest of the single-post surface.
  */
-export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: PostArticleDetailProps) => {
+export const PostArticleDetail = ({ postId, content, attachments, isBlurred, unlocked }: PostArticleDetailProps) => {
   const layout = useHomeStore((state) => state.layout);
   const isColumnsLayout = getTagsLayoutForSurfaceLayout(layout) === 'inline';
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
@@ -63,23 +72,19 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     desktopTagsPanelRef.current?.focus();
   };
 
-  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
+  const storeAttachments = useLocalFilesStore((s) => s.posts[postId]);
+  const localAttachments = unlocked ? unlocked.media : storeAttachments;
 
-  const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
+  const { title, body, coverImage, isCoverPending } = usePostArticle({
     content,
     attachments,
+    localAttachments,
+    pendingAttachments: unlocked?.pendingAttachments,
     // Both variants come from the same constants the server-side preload reads, so the
     // preloaded URL is the one this image asks for and the cover downloads once.
     coverImageVariant: POST_COVER_MOBILE_VARIANT,
     coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
-    // Read only while the store is index-aligned with the attachments: right after an edit it already
-    // holds the new order while this render still shows the old post, and a non-image in the new
-    // slot 0 must not veto the cover the old post still has
-    localCoverType:
-      localAttachments && localAttachments.length === (attachments?.length ?? 0)
-        ? localAttachments[0]?.type
-        : undefined,
   });
 
   // Inline slots are typed from their file rows (the markdown never says video or image). Only the
@@ -99,60 +104,15 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   );
   const { files: inlineFiles, isLoading: inlineFilesLoading } = useAttachmentsMetadata({ fileUris: inlineSlotUris });
 
-  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
-
-  // Local entries are index-aligned with attachments; slot 0 is the cover
-  // only when the slot-0 rule says so (otherwise it's an inline image).
-  const localCover = hasCover && localAttachments?.[0]?.type.startsWith('image') ? localAttachments[0] : null;
-
-  // A `blob:` entry is a file this session uploaded: served from memory, with no variant Nexus
-  // derives from it, so it owns the desktop slot and has nothing to degrade to.
-  //
-  // A CDN entry is an attachment that was kept. It is seeded with its derived `large` URL, the one
-  // the server preloaded, so the desktop slot renders that and a failed `large` degrades to the
-  // entry's own `main`. An entry seeded without `large` resolves to the same file the remote cover
-  // does, so it waits for that: holding the slot (no `srcset`, so a wide screen falls back to
-  // `feed`) keeps the original upload off the wire until the preloaded variant is known. A cover
-  // that never resolves still falls back to the local `main`, the only thing left to render.
-  const localCoverOwnsDesktop = Boolean(localCover?.urls.main.startsWith('blob:'));
-  const localCoverDesktopSrc = (() => {
-    if (!localCover) return undefined;
-    if (localCoverOwnsDesktop) return localCover.urls.main;
-    if (localCover.urls.large) return localCover.urls.large;
-    if (isCoverLoading) return undefined;
-    return coverImage?.desktopSrc ?? localCover.urls.main;
-  })();
-
-  const localCoverImage = localCover
-    ? {
-        src: localCover.urls.feed ?? localCover.urls.main,
-        desktopSrc: localCoverDesktopSrc,
-        desktopFallbackSrc: localCoverOwnsDesktop ? undefined : localCover.urls.main,
-        alt: localCover.name,
-      }
-    : null;
-
-  const finalCoverImage = localCoverImage || coverImage;
-
-  // `large` is derived on request and 400s until the Nexus deploy that carries it is out, so the
-  // hero drops the desktop candidate to `main` when it fails to load. The phone candidate is
-  // `feed` and is left alone: one failed request, and no multi-megabyte upload pulled onto a
-  // phone. The failed URL (not a bare boolean) is remembered, so a later cover on the same mount
-  // starts on `large` again, and re-firing `error` for a URL already recorded is a no-op: no loop.
-  // Only a failure of the desktop candidate counts: a phone whose `feed` fails never requested
-  // `large`, so widening past the breakpoint later must still try it. An empty `currentSrc` gives
-  // no way to tell which candidate failed, so it is treated as the desktop one.
-  const [failedDesktopSrc, setFailedDesktopSrc] = useState<string | null>(null);
-  const handleCoverError = (event: SyntheticEvent<HTMLImageElement>) => {
-    const desktopSrc = finalCoverImage?.desktopSrc;
-    const failedSrc = event.currentTarget.currentSrc;
-    if (!desktopSrc || (failedSrc && failedSrc !== desktopSrc)) return;
-    setFailedDesktopSrc(desktopSrc);
-  };
-  const desktopCoverFailed = Boolean(finalCoverImage?.desktopSrc) && failedDesktopSrc === finalCoverImage?.desktopSrc;
-  const desktopCoverSrc = desktopCoverFailed
-    ? (finalCoverImage?.desktopFallbackSrc ?? finalCoverImage?.desktopSrc)
-    : finalCoverImage?.desktopSrc;
+  const articleMedia: ArticleMediaSource = unlocked
+    ? { localAttachments: unlocked.media, pendingAttachments: unlocked.pendingAttachments }
+    : {
+        attachments: attachments ?? [],
+        authorId: articleAuthorId,
+        postId,
+        files: inlineFiles,
+        metadataSettled: !inlineFilesLoading,
+      };
 
   const articleHeader = (
     <>
@@ -160,7 +120,12 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         {title}
       </Typography>
 
-      <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
+      <PostHeader
+        postId={postId}
+        size="extraLarge"
+        timeAgoPlacement="bottom-left"
+        metadataSlot={unlocked && <LockAccessLabel isOwnLock={unlocked.isOwnLock} />}
+      />
 
       {isColumnsLayout ? (
         <PostInlineTagsActions
@@ -184,45 +149,13 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const articleBody = isBlurred ? (
     <PostContentBlurred postId={postId} />
   ) : (
-    <>
-      {finalCoverImage && (
-        // A `<picture>` rather than the `Image` atom: next/image drops a custom `srcSet` when
-        // it is `unoptimized` (every external CDN URL is), and a breakpoint is the only way to
-        // keep a high-DPR phone off the original upload. See POST_COVER_MOBILE_VARIANT.
-        <picture>
-          <source media={POST_COVER_DESKTOP_MEDIA} srcSet={desktopCoverSrc} />
-          <img
-            src={finalCoverImage.src}
-            alt={finalCoverImage.alt}
-            width={800}
-            height={600}
-            // The cover is this page's largest contentful paint: eager + high priority
-            // so it is not queued behind the images below the fold.
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            // Fires for whichever candidate the browser selected. On a wide screen that is the
-            // desktop `<source>`, and this is what swaps it to `main` when `large` is not served.
-            onError={handleCoverError}
-            className="mb-6 aspect-video w-full rounded-md object-cover object-center"
-          />
-        </picture>
-      )}
-
-      <PostText
-        content={body}
-        isArticle
-        fullArticle
-        articleMedia={{
-          attachments: attachments ?? [],
-          authorId: articleAuthorId,
-          postId,
-          files: inlineFiles,
-          metadataSettled: !inlineFilesLoading,
-        }}
-        onLinkClick={handleLinkClick}
-      />
-    </>
+    <ArticleReader
+      body={body}
+      coverImage={coverImage}
+      isCoverPending={isCoverPending}
+      articleMedia={articleMedia}
+      priority
+    />
   );
 
   return (
@@ -242,7 +175,6 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
       </Container>
 
       {dialogs}
-      <DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
     </>
   );
 };

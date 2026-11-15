@@ -31,6 +31,7 @@ type RingRequest = 'ready' | 'generating' | 'expired';
 const scenario = vi.hoisted(() => ({
   ring: 'ready' as RingRequest,
   passport: 'enabled' as 'enabled' | 'disabled',
+  appleEnabled: false,
 }));
 
 // The root layout mounts <Header /> above every page. On /sign-in it is the
@@ -108,7 +109,7 @@ vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
 }));
 
 // The shared setup stubs the Passport attempt as idle. Restore the real hook so
-// a Continue with Google click runs the real attempt against the stubbed
+// a provider button click runs the real attempt against the stubbed
 // `AuthController` and the setup's inert popup.
 vi.mock('@/hooks/usePassportAuth/usePassportAuth', (importOriginal) => importOriginal());
 
@@ -148,21 +149,22 @@ async function renderSignIn(viewport: (typeof VIEWPORTS)[number][1]) {
 beforeEach(() => {
   scenario.ring = 'ready';
   scenario.passport = 'enabled';
+  scenario.appleEnabled = false;
   useSignInStore.setState(signInInitialState);
 });
 
 for (const [name, viewport] of VIEWPORTS) {
   const isDesktop = name === 'desktop';
-  const ringAction = isDesktop ? 'Copy authentication link' : 'Authorize with Pubky Ring';
+  const ringAction = isDesktop ? 'Copy authentication link' : 'Continue with Pubky Ring';
 
   describe(`Sign-in page ${name} — visual regression`, () => {
     it('renders both sign-in methods', async () => {
       await renderSignIn(viewport);
       await expect.element(page.getByRole('button', { name: ringAction })).toBeEnabled();
       if (!isDesktop) {
-        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeEnabled();
+        await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
-      await expect.element(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+      await expect.element(page.getByRole('button', { name: 'Continue with Google', exact: true })).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-${name}`);
     });
 
@@ -171,7 +173,7 @@ for (const [name, viewport] of VIEWPORTS) {
       await renderSignIn(viewport);
       await expect.element(page.getByRole('button', { name: ringAction })).toBeEnabled();
       if (!isDesktop) {
-        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeEnabled();
+        await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
       }
       await expect.element(page.getByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
       await matchVrtFrameScreenshot(`sign-in-page-ring-only-${name}`);
@@ -203,16 +205,16 @@ for (const [name, viewport] of VIEWPORTS) {
       await matchVrtFrameScreenshot(`sign-in-page-ring-expired-${name}`);
     });
 
-    it('renders the Continue with Google help', async () => {
+    it('renders the Passport sign-in help', async () => {
       await renderSignIn(viewport);
       await page.getByRole('button', { name: 'About signing in with Google' }).click();
-      await expect.element(page.getByText('Continue with Google, powered by Pubky Passport.')).toBeVisible();
+      await expect.element(page.getByRole('heading', { name: 'Sign in with Google', exact: true })).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-google-help-${name}`);
     });
 
     it('renders the page while Passport is open', async () => {
       await renderSignIn(viewport);
-      await page.getByRole('button', { name: 'Continue with Google' }).click();
+      await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
       await expect.element(page.getByRole('button', { name: 'Waiting for Passport...' })).toBeDisabled();
       if (isDesktop) {
         await expect.element(page.getByRole('button', { name: 'Reload sign-in QR code' })).toBeDisabled();
@@ -232,5 +234,31 @@ for (const [name, viewport] of VIEWPORTS) {
       await expect.element(page.getByText('Syncing settings')).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-progress-${name}`);
     });
+
+    it('renders Apple-enabled providers and their concise help', async () => {
+      scenario.appleEnabled = true;
+      await renderSignIn(viewport);
+      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await matchVrtFrameScreenshot(`sign-in-page-apple-enabled-${name}`);
+      await page.getByRole('button', { name: 'About signing in with Apple or Google' }).click();
+      for (const term of ['Your keys:', 'Recovery:']) {
+        await expect.element(page.getByText(term, { exact: true })).toBeVisible();
+      }
+      const bounds = page.getByRole('dialog').element().getBoundingClientRect();
+      expect(bounds.top).toBeGreaterThanOrEqual(0);
+      expect(bounds.bottom).toBeLessThanOrEqual(viewport.height);
+      await matchVrtFrameScreenshot(`sign-in-page-apple-help-${name}`);
+      const learnMore = page.getByRole('link', { name: 'Learn more' });
+      learnMore.element().scrollIntoView({ block: 'nearest' });
+      expect(learnMore.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        page.getByRole('dialog').element().getBoundingClientRect().bottom,
+      );
+    });
   });
 }
+
+// Match the default deployment, with explicit Apple-enabled coverage above.
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  isPassportAppleEnabled: () => scenario.appleEnabled,
+}));

@@ -1,5 +1,4 @@
 import type { Capabilities, PublicKey, Session, XCallbackParams } from '@synonymdev/pubky';
-import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { THomeserverWriteFence } from './write-retry';
@@ -8,10 +7,6 @@ export type FetchOptions = {
   method?: HttpMethod;
   body?: string | Uint8Array;
   cache?: RequestCache;
-};
-
-export type THomeserverSignUpParams = TKeypairParams & {
-  signupToken: string;
 };
 
 export type THomeserverPublicKeyParams = {

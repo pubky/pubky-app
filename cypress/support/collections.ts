@@ -1,3 +1,4 @@
+import { selectFeedFilter } from './feeds';
 import { goToCollectionsPage } from './header';
 import { fastTagPost, waitForFeedToLoad } from './posts';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
@@ -189,7 +190,7 @@ export const deleteCollectionFromHero = () => {
 
 // apply a content filter (e.g. 'All', 'Collections') from the home feed sidebar
 export const applyContentFilter = (label: string) => {
-  cy.get('[data-cy="filter-content-radiogroup"]').find(`[data-cy="${label.toLowerCase()}-content-toggle"]`).click();
+  selectFeedFilter('content', `${label.toLowerCase()}-content-toggle`);
   waitForFeedToLoad();
 };
 

@@ -271,6 +271,11 @@ the ordinary `AppError` path. Retain `locks.region.contract.test.ts` when updati
 WASM, signed PKARR resolution and service with stubbed HTTP responses, checking 451, ordinary failures and success
 as well as the observability calls. Replace the message check with a structured discriminator when the SDK provides one.
 
+The Cypress-only stand-in `src/core/services/locks/locks.e2eStub.ts` throws a raw `Error` on purpose: `sdkError` copies
+the SDK's own `InvalidInput` / `PaykitDataLookupFailed` shape so `LocksService` maps a stubbed failure (401, 451, the
+lookup 404) exactly as it maps a real one. Do not change it to `Err.*`, which `toLocksError` would pass through unmapped
+and which would report each failure twice; `locks.e2eStub.test.ts` asserts the shape.
+
 ### Grant failures during use and sign-in
 
 After SDK refresh/retry has finished, terminal failures from active, owned homeserver storage requests notify

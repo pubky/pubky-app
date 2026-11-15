@@ -13,8 +13,10 @@ import {
 } from '@synonymdev/locks-sdk';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
+import { HttpMethod } from '@/libs/http/http.types';
 import { withPubkyPrefix } from '@/libs/utils/utils';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type {
@@ -23,11 +25,13 @@ import type {
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TGenerateConnectUrlParams,
+  TGeneratePaykitReconnectUrlParams,
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLockPriceAsset,
   TLocksPollReport,
   TLocksSessionResult,
+  TLookupPaykitCreatorHeldParams,
   TPaykitConnectionState,
   TPaykitSetupStatus,
   TRegisterGuardedResourceParams,
@@ -38,6 +42,7 @@ import type {
 } from './locks.types';
 import {
   paykitConnectionStateResponseSchema,
+  paykitCreatorHeldResponseSchema,
   paykitSetupStatusResponseSchema,
   submitProofResultSchema,
   verificationTaskResponseSchema,
@@ -62,6 +67,14 @@ const DELIVERY_POSTMESSAGE = 'postmessage';
 
 /** The only `status_message` the Lock Server sends; the SDK rejects any other. */
 const READER_WALLET_SETUP_NEEDED = 'Reader wallet setup needed';
+
+/**
+ * The Lock Server's `failure_message` for Paykit's `reader_not_payable`, from its closed invoice-admission list
+ * (`docs/API.md` in pubky/locks). The SDK only requires a non-empty message, so a rewording would silently bring back
+ * the generic failure screen; `docs/locks.md` (Pay to Unlock, step 6) says when to re-check it.
+ * TODO:[Locks] locks#99 — match a typed failure reason once the Lock Server and SDK expose one.
+ */
+const READER_NOT_PAYABLE = 'reader is not payable';
 
 /**
  * IO boundary for the Lock Server via the locks-sdk. Client building, session/config reads, wasm
@@ -171,7 +184,7 @@ export class LocksService {
           cause: result.error,
         });
       }
-      return result.data;
+      return { status: result.data.status, readerNotPayable: result.data.failure_message === READER_NOT_PAYABLE };
     } catch (error) {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
       throw toAppError(error, ErrorService.Locks, 'LocksService.submitProof');
@@ -260,7 +273,9 @@ export class LocksService {
       return {
         status: response.data.status,
         walletSetupNeeded: response.data.status_message === READER_WALLET_SETUP_NEEDED,
+        readerNotPayable: response.data.failure_message === READER_NOT_PAYABLE,
         admissionDeadlineAt: response.data.admission_deadline_at,
+        completedAt: response.data.completed_at,
       };
     } catch (error) {
       if (isLockServerRegionBlocked(error)) return { regionBlocked: true };
@@ -321,6 +336,49 @@ export class LocksService {
     setupUrl.searchParams.set('return_to', returnTo);
     setupUrl.searchParams.set('state', state);
     return setupUrl.toString();
+  }
+
+  /**
+   * Builds the `/setup/reconnect` URL: the Paykit page for a creator the Paykit Server already holds,
+   * which refuses `/setup` for it. Unlike `/setup` it requires `creator`, in `pubky<z32>` form.
+   */
+  static generatePaykitReconnectUrl({ returnTo, state, creator }: TGeneratePaykitReconnectUrlParams): string {
+    const reconnectUrl = new URL('/setup/reconnect', getPaykitServerOrigin());
+    reconnectUrl.searchParams.set('creator', withPubkyPrefix(creator));
+    reconnectUrl.searchParams.set('return_to', returnTo);
+    reconnectUrl.searchParams.set('state', state);
+    return reconnectUrl.toString();
+  }
+
+  /**
+   * Whether the Paykit Server already holds this creator, read through the app's own
+   * `/api/paykit-creator` (the Paykit Server sends no CORS headers, so a browser cannot ask it).
+   * Throws when the answer is unavailable; that says nothing about the creator.
+   */
+  static async lookupPaykitCreatorHeld({ creator }: TLookupPaykitCreatorHeldParams): Promise<boolean> {
+    const operation = 'LocksService.lookupPaykitCreatorHeld';
+    const endpoint = new URL('/api/paykit-creator', window.location.origin);
+    endpoint.searchParams.set('creator', withPubkyPrefix(creator));
+    try {
+      const response = await safeFetch(
+        endpoint.href,
+        { method: HttpMethod.GET, credentials: 'omit', cache: 'no-store' },
+        ErrorService.Locks,
+        operation,
+      );
+      if (!response.ok) throw httpResponseToError(response, ErrorService.Locks, operation, endpoint.pathname);
+      const body = paykitCreatorHeldResponseSchema.safeParse(await response.json());
+      if (!body.success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit creator probe response is invalid', {
+          service: ErrorService.Locks,
+          operation,
+          cause: body.error,
+        });
+      }
+      return body.data.held;
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, operation);
+    }
   }
 
   /** Exchanges the one-time callback code for a Locks session. */

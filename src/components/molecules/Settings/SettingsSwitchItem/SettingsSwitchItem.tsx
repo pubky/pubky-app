@@ -8,7 +8,7 @@ export function SettingsSwitchItem({ id, label, description, checked, disabled, 
   return (
     <Container overrideDefaults className="flex w-full items-center justify-between gap-3">
       <Container overrideDefaults className="flex flex-1 flex-col items-start gap-2">
-        <Typography as="label" htmlFor={id} size="sm" className="leading-5 font-medium">
+        <Typography as="label" htmlFor={id} size="sm" className="leading-5 font-medium" data-cy={`${id}-label`}>
           {label}
         </Typography>
         {description && (
@@ -17,7 +17,7 @@ export function SettingsSwitchItem({ id, label, description, checked, disabled, 
           </Typography>
         )}
       </Container>
-      <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onChange} />
+      <Switch id={id} data-cy={id} checked={checked} disabled={disabled} onCheckedChange={onChange} />
     </Container>
   );
 }

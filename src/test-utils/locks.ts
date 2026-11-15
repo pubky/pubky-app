@@ -1,4 +1,4 @@
-import type { LockFile } from '@/services/locks/locks.types';
+import type { LockFile, TVerificationStatus, TVerificationTask } from '@/services/locks/locks.types';
 
 export const MOCK_LOCK_AUTHOR_PUBKY = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 
@@ -23,6 +23,19 @@ export const mockLockFile = (overrides: Partial<LockFile> = {}): LockFile => ({
   lock_logic: { type: 'all', criteria: ['criterion-1'] },
   access_policy: { requested_credential_ttl_seconds: 900 },
   lock_server: { override: 'pubkyserver123' },
+  ...overrides,
+});
+
+/** Sample task lookup answer. Pass overrides for the one field a test cares about. */
+export const mockVerificationTask = (
+  status: TVerificationStatus,
+  overrides: Partial<TVerificationTask> = {},
+): TVerificationTask => ({
+  status,
+  walletSetupNeeded: false,
+  readerNotPayable: false,
+  admissionDeadlineAt: null,
+  completedAt: null,
   ...overrides,
 });
 

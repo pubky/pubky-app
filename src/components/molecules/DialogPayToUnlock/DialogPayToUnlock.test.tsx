@@ -193,6 +193,37 @@ describe('DialogPayToUnlock', () => {
     expect(document.querySelector('[data-cy="pay-to-unlock-retry"]')).toBeDisabled();
   });
 
+  it('reader-not-payable: names the wallet as the cause and offers Check again, never Try again', () => {
+    const onRetry = vi.fn();
+    const onOpenChange = vi.fn();
+    renderDialog('reader-not-payable', { onRetry, onOpenChange });
+
+    expect(
+      screen.getByText(
+        "Your wallet can't receive payment requests on this profile. Connect Bitkit to this profile, then check again.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/try again/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+
+    // Nothing is running on this screen, so a close does not ask first.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
+  });
+
+  it('reader-not-payable: disables Check again while its submission is in flight', () => {
+    renderDialog('reader-not-payable', { isSubmitting: true });
+    expect(document.querySelector('[data-cy="pay-to-unlock-retry"]')).toBeDisabled();
+  });
+
   it('install: shows the setup steps, the store links and the I completed the steps button, and no QR', () => {
     const onRetry = vi.fn();
     renderDialog('install', { onRetry, handshakePubky: 'pubkylockcreator' });

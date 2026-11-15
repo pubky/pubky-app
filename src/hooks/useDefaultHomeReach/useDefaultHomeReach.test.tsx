@@ -141,7 +141,7 @@ describe('useDefaultHomeReach', () => {
   });
 
   it('does not load counts for a generated pubky with no session and nothing to restore (#2955)', () => {
-    // The onboarding key step stores the generated pubky before sign-up; Nexus has no counts for it.
+    // A stored pubky without an account; Nexus has no counts for it.
     mockCurrentUserPubky = 'generated-key';
     mockSessionState = null;
     mockSessionReference = null;

@@ -12,7 +12,6 @@ import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { LANDING_HERO_SECTION_ID, LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { HeaderSocialLinks } from '../Header/Header';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
-import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
 
 export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const router = useRouter();
@@ -75,7 +74,6 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
   // The social links live in the landing hero footer instead (see HomeFooter).
   const learnExploreButtons = (
     <>
-      <ThemeToggle />
       <Button
         id="header-learn-btn"
         data-testid="header-learn-btn"

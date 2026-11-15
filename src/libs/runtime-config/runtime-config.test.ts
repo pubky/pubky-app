@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   escapeForInlineScript,
   getAuthClientId,
+  getPassportApple,
   getProfileLocalEditTtlMs,
   getPulseClientKey,
   getPulseEndpoint,
@@ -133,6 +134,24 @@ describe('runtime-config resolver', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('VITEST', '');
   }
+
+  describe('Passport Apple runtime injection', () => {
+    it.each([false, true])('serializes and reads Apple flag=%s in the browser', (enabled) => {
+      process.env.PUBKY_RUNTIME_PASSPORT_APPLE = String(enabled);
+      const serverConfig = readServerConfig();
+      expect(serverConfig.passportApple).toBe(enabled);
+      expect(serializeRuntimeConfig()).toContain(`"passportApple":${enabled}`);
+      window[RUNTIME_CONFIG_WINDOW_KEY] = serverConfig;
+      resetRuntimeConfigForTests();
+      expect(getPassportApple()).toBe(enabled);
+    });
+
+    it('defaults the browser flag off when an older injected config omits it', () => {
+      const { passportApple: _omitted, ...config } = readServerConfig();
+      window[RUNTIME_CONFIG_WINDOW_KEY] = config;
+      expect(getPassportApple()).toBe(false);
+    });
+  });
 
   describe('profile indexing protection', () => {
     it('is optional in a deployed config and defaults to five minutes', () => {

@@ -1,15 +1,4 @@
-import * as path from 'path';
-
-export const defaultBackupFilename = (): string => {
-  // return `pubky_recovery_${moment().utc().format('YYYY-MM-DD')}.pkarr`
-  return 'recovery.pkarr';
-};
-
-export const backupDownloadFilePath = (filename?: string): string => {
-  const filenameWithExtension = filename ? `${filename}.pkarr` : defaultBackupFilename();
-  const downloadsFolder = Cypress.config('downloadsFolder');
-  return path.join(downloadsFolder, filenameWithExtension);
-};
+import { notificationCounterSelector } from './header';
 
 export const userIdFromPubky = (pubky: string): string => {
   if (!pubky.startsWith('pubky')) {
@@ -49,11 +38,9 @@ export const verifyNotificationCounter = (expectedCount?: number) => {
   if (expectedCount === 0) {
     cy.intercept({ method: 'GET', url: '**/v0/user/*/notifications*' }).as('getNextNotifications');
     cy.wait('@getNextNotifications', { timeout: 30_000 });
-    cy.get('[data-cy="header-notification-counter"]').should('not.exist');
+    cy.get(notificationCounterSelector()).should('not.exist');
   } else {
-    cy.get('[data-cy="header-notification-counter"]', { timeout: 30_000 })
-      .should('be.visible')
-      .should('have.text', expectedCount);
+    cy.get(notificationCounterSelector(), { timeout: 30_000 }).should('be.visible').should('have.text', expectedCount);
   }
 };
 

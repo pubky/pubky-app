@@ -6,6 +6,7 @@ import type { PaidUnlockAvailability } from '@/libs/region/paidUnlockAvailabilit
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import { LocksService } from '@/services/locks/locks';
 import type { LockFile, TAccessCredential, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
+import { mockVerificationTask } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
 
@@ -103,7 +104,7 @@ const content = asOpaque<TUnlockedContent>({
   attachments: [],
 });
 type Resolved = Awaited<ReturnType<typeof LocksController.fetchResolvedPurchase>>;
-const task = (status: TVerificationStatus) => ({ status, walletSetupNeeded: false, admissionDeadlineAt: null });
+const task = mockVerificationTask;
 const reusable = (status: TVerificationStatus | null): Resolved => ({
   kind: 'reusable',
   bundleId: 'saved-bundle',
@@ -112,8 +113,9 @@ const reusable = (status: TVerificationStatus | null): Resolved => ({
 const newPaymentCases: Resolved[] = [
   null,
   reusable(null),
-  { kind: 'terminal', bundleId: 'saved-bundle', status: 'failed' },
-  { kind: 'terminal', bundleId: 'saved-bundle', status: 'expired' },
+  { kind: 'terminal', bundleId: 'saved-bundle', status: 'failed', readerNotPayable: false },
+  { kind: 'terminal', bundleId: 'saved-bundle', status: 'failed', readerNotPayable: true },
+  { kind: 'terminal', bundleId: 'saved-bundle', status: 'expired', readerNotPayable: false },
 ];
 const renderCard = () =>
   render(
@@ -136,7 +138,11 @@ beforeEach(() => {
   vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('connected');
   vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
   vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
-  vi.mocked(LocksController.startPayment).mockResolvedValue({ bundleId: 'fresh-bundle', status: 'pending' });
+  vi.mocked(LocksController.startPayment).mockResolvedValue({
+    bundleId: 'fresh-bundle',
+    status: 'pending',
+    readerNotPayable: false,
+  });
 });
 
 describe('purchase-aware region gate', () => {

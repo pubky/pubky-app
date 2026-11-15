@@ -2,8 +2,8 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
-import { CheckCircle, Circle, Key, Loader2, RefreshCw } from 'lucide-react';
-import { Button } from '@/atoms/Button/Button';
+import { CheckCircle, Circle, Loader2, RefreshCw } from 'lucide-react';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
@@ -14,16 +14,14 @@ import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
 import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
-import { Bitkit } from '@/icons';
-import { Logger } from '@/libs/logger/logger';
+import { Bitkit, PubkyIcon } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+import { AuthQrCopyButton } from '@/molecules/AuthQrCopyButton/AuthQrCopyButton';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ContentCard } from '@/molecules/Content/Content';
 import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
-import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
-import { toast } from '@/molecules/Toaster/toast';
 import { PassportMethodCard, PassportMethodSection } from '@/organisms/PassportMethodCard/PassportMethodCard';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 import type { SignInState } from '@/stores/signIn/signIn.types';
@@ -128,40 +126,24 @@ export const SignInContent = () => {
   const { startPassportAuth, isPending: isPassportPending } = usePassportAuth({
     onAttemptSettled: handlePassportAttemptSettled,
   });
-  const handleQRClick = async () => {
-    if (!url) return;
-    try {
-      await copyAuthUrl();
-      toast({
-        variant: 'info',
-        title: 'Authentication link copied',
-      });
-    } catch (error) {
-      Logger.error('Failed to copy auth URL to clipboard:', error);
-      toast({
-        variant: 'error',
-        description: 'Could not copy to clipboard',
-      });
-    }
-  };
   const isRingLocked = isPassportPending;
   const mobileAuthorizeContent =
     isLoading || isOpeningRing ? (
       <>
-        <Loader2 className="mr-2 size-4 animate-spin" />
+        <Loader2 className="size-5 animate-spin" />
         <Typography as="span" overrideDefaults aria-live="polite">
           {isOpeningRing ? 'Opening Pubky Ring...' : 'Generating...'}
         </Typography>
       </>
     ) : isExpired ? (
       <>
-        <RefreshCw className="mr-2 size-4" />
+        <RefreshCw className="size-5" />
         {'Click to reload'}
       </>
     ) : (
       <>
-        <Key className="mr-2 size-4" />
-        {'Authorize with Pubky Ring'}
+        <PubkyIcon className="size-5 text-foreground [&_path]:fill-current" aria-hidden="true" />
+        {'Continue with Pubky Ring'}
       </>
     );
 
@@ -177,27 +159,21 @@ export const SignInContent = () => {
     );
   }
   const qrButton = (
-    <button
-      type="button"
-      className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-white p-2"
-      onClick={isExpired ? fetchUrl : handleQRClick}
-      disabled={isLoading || isRingLocked || (!url && !isExpired)}
-      aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
-    >
-      <QrCodeSlot
-        isLoading={isLoading}
-        isExpired={isExpired}
-        url={url}
-        generatingLabel={'Generating QR Code...'}
-        clickToReloadLabel={'Click to reload'}
-        activeQrHasHoverEffect
-      />
-    </button>
+    <AuthQrCopyButton
+      url={url}
+      isLoading={isLoading}
+      isExpired={isExpired}
+      onCopy={copyAuthUrl}
+      onReload={fetchUrl}
+      reloadAriaLabel={'Reload sign-in QR code'}
+      disabled={isRingLocked}
+    />
   );
 
   const mobileRingButton = (
     <Button
-      className="w-full"
+      className="w-full border-0 leading-5"
+      variant={ButtonVariant.SECONDARY}
       size="lg"
       onClick={onAuthorizeClick}
       disabled={isLoading || isOpeningRing || isRingLocked || (!url && !isExpired)}
@@ -210,7 +186,8 @@ export const SignInContent = () => {
 
   const mobileBitkitButton = (
     <Button
-      className="w-full"
+      className="w-full border-0 leading-5"
+      variant={ButtonVariant.SECONDARY}
       size="lg"
       onClick={onAuthorizeBitkitClick}
       disabled={isLoading || isOpeningBitkit || isRingLocked || (!url && !isExpired)}
@@ -218,20 +195,20 @@ export const SignInContent = () => {
     >
       {isLoading || isOpeningBitkit ? (
         <>
-          <Loader2 className="mr-2 size-4 animate-spin" />
+          <Loader2 className="size-5 animate-spin" />
           <Typography as="span" overrideDefaults aria-live="polite">
             {isOpeningBitkit ? 'Opening Bitkit...' : 'Generating...'}
           </Typography>
         </>
       ) : isExpired ? (
         <>
-          <RefreshCw className="mr-2 size-4" />
+          <RefreshCw className="size-5" />
           {'Click to reload'}
         </>
       ) : (
         <>
-          <Bitkit className="mr-2 size-4 [&_path]:fill-current" />
-          {'Authorize with Bitkit'}
+          <Bitkit className="size-5 translate-y-px" aria-hidden="true" />
+          {'Continue with Bitkit'}
         </>
       )}
     </Button>
@@ -297,8 +274,8 @@ export const SignInContent = () => {
         <SignInHeader isPassportEnabled={isPassportEnabled} />
         {isPassportEnabled ? (
           <Container className="gap-6" data-testid="sign-in-methods-mobile">
-            <Container className="gap-3">
-              <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
+            <Container className="gap-4 rounded-md bg-card p-6" data-testid="sign-in-sovereign-card-mobile">
+              <Typography as="h3" className="text-xl leading-7 font-bold">
                 {SOVEREIGN_METHOD_TITLE}
               </Typography>
               {mobileRingButton}
@@ -309,13 +286,7 @@ export const SignInContent = () => {
         ) : (
           <ContentCard layout="column">
             <Container className="flex-col items-center justify-center gap-6">
-              <Image
-                src="/images/logo-pubky-ring.svg"
-                alt="Pubky Ring"
-                width={137}
-                height={30}
-                className="light:invert"
-              />
+              <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
               {mobileRingButton}
               {mobileBitkitButton}
             </Container>
@@ -330,22 +301,22 @@ export const SignInFooter = () => {
   if (authUrlResolved) return null;
   return (
     <FooterLinks className="py-6">
-      {'Not able to sign in with '}
+      {'Have a recovery phrase or encrypted file? Import it into '}
       <Link href="https://pubkyring.app/" target="_blank" rel="noopener noreferrer">
         {'Pubky Ring'}
       </Link>
-      {' or Bitkit? Use the recovery phrase or encrypted file to restore your account.'}
+      {' to sign in securely.'}
     </FooterLinks>
   );
 };
 export const SignInHeader = ({ isPassportEnabled = false }: { isPassportEnabled?: boolean }) => {
   return (
-    <PageHeader>
+    <PageHeader className="pt-0 md:pt-2">
       <PageTitle size="large">
         {'Sign in to '}
-        <span className="text-brand">{'Pubky.'}</span>
+        <span className="block text-brand md:inline">{'Pubky.'}</span>
       </PageTitle>
-      <PageSubtitle>
+      <PageSubtitle className="hidden md:block">
         {isPassportEnabled ? (
           'Choose your preferred method to sign in.'
         ) : (

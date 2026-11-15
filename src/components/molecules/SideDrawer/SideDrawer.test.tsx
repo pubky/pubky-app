@@ -82,6 +82,20 @@ describe('SideDrawer', () => {
     }
   });
 
+  it('exposes position-scoped data-cy hooks on the overlay and the panel', () => {
+    render(
+      <SideDrawer open={true} onOpenChangeAction={mockOnOpenChangeAction} position="right">
+        <div>Test Content</div>
+      </SideDrawer>,
+    );
+
+    const overlay = document.querySelector('[data-cy="side-drawer-right-overlay"]');
+    const panel = document.querySelector('[data-cy="side-drawer-right"]');
+    expect(overlay).toBeInTheDocument();
+    expect(panel).toBeInTheDocument();
+    expect(overlay).toContainElement(panel as HTMLElement);
+  });
+
   it('applies correct classes for left position', () => {
     render(
       <SideDrawer open={true} onOpenChangeAction={mockOnOpenChangeAction} position="left">

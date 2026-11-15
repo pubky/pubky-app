@@ -12,7 +12,8 @@ function toPickerTheme(resolvedTheme: string | undefined): 'light' | 'dark' {
 }
 
 export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: EmojiPickerProps) {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme: preferredTheme, forcedTheme } = useTheme();
+  const resolvedTheme = forcedTheme ?? preferredTheme;
   const pickerRef = useRef<HTMLDivElement>(null);
   const onEmojiSelectRef = useRef(onEmojiSelect);
   const maxLengthRef = useRef(maxLength);

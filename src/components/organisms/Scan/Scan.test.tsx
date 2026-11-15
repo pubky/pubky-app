@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { getPubkyProtocolLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
 
@@ -282,7 +283,7 @@ describe('ScanContent', () => {
 
     // Wait for the component to finish loading
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeEnabled();
     });
 
     expect(screen.queryByRole('button', { name: /Bitkit/ })).not.toBeInTheDocument();
@@ -300,10 +301,10 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByRole('button', { name: 'Authorize with Pubky Ring' });
+    const authorizeButton = screen.getByRole('button', { name: 'Continue with Pubky Ring' });
 
     await act(async () => {
       fireEvent.click(authorizeButton);
@@ -316,7 +317,7 @@ describe('ScanContent', () => {
   it.each([
     { isLoading: true, isOpeningRing: false, url: '', label: 'Generating...' },
     { isLoading: false, isOpeningRing: true, url: 'mock-auth-url', label: 'Opening Pubky Ring...' },
-    { isLoading: false, isOpeningRing: false, url: '', label: 'Authorize with Pubky Ring' },
+    { isLoading: false, isOpeningRing: false, url: '', label: 'Continue with Pubky Ring' },
   ])('prevents signup handoff while $label is unavailable', ({ isLoading, isOpeningRing, url, label }) => {
     vi.mocked(useMobileAuth).mockReturnValue({
       url,
@@ -385,6 +386,48 @@ describe('ScanContent', () => {
     });
 
     expect(mockFetchUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('copies the sign-up auth link when the desktop QR is clicked', async () => {
+    render(<ScanContent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    });
+
+    expect(mockCopyAuthUrl).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith({ variant: 'info', title: 'Authentication link copied' });
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('shows an error toast when copying the sign-up auth link fails', async () => {
+    mockCopyAuthUrl.mockRejectedValueOnce(new Error('clipboard denied'));
+    render(<ScanContent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    });
+
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not copy to clipboard' });
+    expect(toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Authentication link copied' }));
+  });
+
+  it('disables the desktop QR copy while the auth link is generating', () => {
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: true,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    render(<ScanContent />);
+
+    expect(screen.getByRole('button', { name: 'Copy authentication link' })).toBeDisabled();
   });
 
   it('redirects to human onboarding when invite code is missing', async () => {

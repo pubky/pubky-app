@@ -3,6 +3,7 @@ import { Env } from '@/libs/env/env';
 import { AppError } from '@/libs/error/error';
 import { OBSERVABILITY_IGNORE_ERRORS } from '@/libs/observability/sentry.constants';
 import {
+  dropBlockedUiBreadcrumb,
   sanitizeForSentry,
   scrubSensitiveData,
   scrubSpanJson,
@@ -132,6 +133,7 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
     // `beforeSendSpan` a StreamedSpanJSON. The scrubbing contract in docs/sentry.md is built on
     // transaction events + SpanJSON, so pin the static lifecycle.
     traceLifecycle: 'static',
+    beforeBreadcrumb: dropBlockedUiBreadcrumb,
     beforeSend: filterAndScrubErrorEvent,
     beforeSendTransaction: scrubTransactionEvent,
     beforeSendSpan: Sentry.withStaticSpan(scrubSpanJson),
