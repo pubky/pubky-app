@@ -179,6 +179,24 @@ Two bug classes account for most regressions on read paths. Check them before to
 - `isLoading` is true while a cache-miss fetch is in flight, and `.finally()` clears it whether `fetchFn` resolves or rejects. A Nexus 404 therefore settles at `data === null`; it does not leave a skeleton without an exit, and the hook exposes no error value. `usePostMissing` turns that settled `null` into `postMissing`. Branch on the settled value, not on `isLoading` and `data` alone.
 - `isMissing = postDetails === null` is the established "not found" shape (#2081, #1986); keep that meaning.
 
+Ordinary Nexus `users/by_ids` and `posts/by_ids` reads share pending IDs across overlapping batches within the same
+endpoint and request options (viewer, user depth and attachment metadata). For a new query shape, only uncovered IDs
+start another request.
+Existing exact queries with data or a pending fetch go through TanStack first, so an older overlapping batch cannot replace a refreshed result
+or bypass an exact query's pending refresh or invalidation. TanStack decides whether that exact query is fresh or
+needs another request; an idle failed query without data does not block sharing. Only a currently fetching batch
+can be joined. Paused queries are not shareable until they resume; this registry does not resume them or mount the client. Fresh cache hits,
+including missing slices, never replace pending-ID ownership while another request is fetching or paused. When batches overlap,
+each requested ID keeps its selected source, so another page cannot replace a newer record or undo its omission.
+This is in-flight deduplication, not another data cache: TanStack still owns settled responses
+and retries. If a joined batch fails, the caller requests only its affected IDs once through the ordinary query policy,
+retaining its successful pages. Its own request or fallback failure still rejects the caller. Cancellation or removal of
+the failed query never starts a fallback in an ended cache lifetime. Each caller receives only its requested records, and assembled arrays carry the earliest proven response
+start time, so joining a pending read cannot turn older data into evidence newer than a local edit. Forced refreshes retain `queryNexus`'s
+revalidation ordering and never join an older overlapping batch. Cleared or replaced queries are not shareable across
+auth/cache lifetimes. User relationship persistence uses the earlier of the caller's fetch time and the actual
+response start, so a later card joining a pending stream batch cannot undo a local follow or unfollow.
+
 TTL refresh races are the second class (TTL rules: `docs/data-patterns.md`, _TTL Management_):
 
 - A background refresh that lands after a local write reverts the user's action (#1781) or flickers the tag UI (#1452, #1276). A local write must mark every affected row fresh (`*_ttl.lastUpdatedAt`) so the coordinator skips it; a stale Nexus response must never overwrite a fresher local write. `persistUsers` skips the relationship row for any user whose `user_ttl.lastUpdatedAt >= fetchStartedAt`, and `LocalFollowService.create`/`delete` stamp the followee TTL so a follow that lands mid-request wins (#1803).
