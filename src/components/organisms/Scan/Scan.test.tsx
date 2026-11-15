@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { getPubkyProtocolLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
 
@@ -385,6 +386,48 @@ describe('ScanContent', () => {
     });
 
     expect(mockFetchUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('copies the sign-up auth link when the desktop QR is clicked', async () => {
+    render(<ScanContent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    });
+
+    expect(mockCopyAuthUrl).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith({ variant: 'info', title: 'Authentication link copied' });
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('shows an error toast when copying the sign-up auth link fails', async () => {
+    mockCopyAuthUrl.mockRejectedValueOnce(new Error('clipboard denied'));
+    render(<ScanContent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    });
+
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not copy to clipboard' });
+    expect(toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Authentication link copied' }));
+  });
+
+  it('disables the desktop QR copy while the auth link is generating', () => {
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: true,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    render(<ScanContent />);
+
+    expect(screen.getByRole('button', { name: 'Copy authentication link' })).toBeDisabled();
   });
 
   it('redirects to human onboarding when invite code is missing', async () => {

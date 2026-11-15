@@ -15,11 +15,11 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { getPubkyProtocolLink, getPubkyRingLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
+import { AuthQrCopyButton } from '@/molecules/AuthQrCopyButton/AuthQrCopyButton';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
-import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export const ScanContent = () => {
@@ -32,7 +32,7 @@ export const ScanContent = () => {
       router.replace(ONBOARDING_ROUTES.HUMAN);
     }
   }, [hasInviteCode, router]);
-  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth(
+  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth(
     hasInviteCode
       ? {
           type: 'signup',
@@ -80,16 +80,14 @@ export const ScanContent = () => {
             />
           }
         >
-          <div className="relative flex size-48 items-center justify-center rounded-md bg-white p-2">
-            <QrCodeSlot
-              isLoading={isLoading}
-              isExpired={isExpired}
-              url={url}
-              generatingLabel={'Generating QR Code...'}
-              clickToReloadLabel={'Click to reload'}
-              expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
-            />
-          </div>
+          <AuthQrCopyButton
+            url={url}
+            isLoading={isLoading}
+            isExpired={isExpired}
+            onCopy={copyAuthUrl}
+            onReload={fetchUrl}
+            reloadAriaLabel={'Reload sign-up QR code'}
+          />
         </BalancedQrCard>
       </Container>
 

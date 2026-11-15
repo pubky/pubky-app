@@ -1,4 +1,3 @@
-import { backupDownloadFilePath } from '../support/auth';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import {
@@ -44,13 +43,12 @@ describe('notifications', () => {
   // The one profile signed in through the UI: it receives and checks every notification.
   let receiver: SeededUser;
 
-  const signInAsReceiver = () => cy.signInWithEncryptedFile(backupDownloadFilePath(receiver.name));
+  const signInAsReceiver = () => cy.signInWithPubkyRing(receiver.name);
 
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
-    seedUserViaApi(uniqueName('NotifReceiver'), { withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(uniqueName('NotifReceiver')).then((user) => {
       receiver = user;
     });
   });
@@ -188,11 +186,11 @@ describe('notifications', () => {
 
   it('can disable being notified for profile being mentioned in a post', () => {
     // A separate recipient, so turning mentions off leaves the receiver's settings alone for the other tests
-    seedUserViaApi(uniqueName('NotifMuted'), { withRecoveryFile: true }).then((recipient) => {
+    seedUserViaApi(uniqueName('NotifMuted')).then((recipient) => {
       waitForNexus(userIndexed(recipient));
 
       // * the recipient signs in and disables mention notifications
-      cy.signInWithEncryptedFile(backupDownloadFilePath(recipient.name));
+      cy.signInWithPubkyRing(recipient.name);
       goToSettingsPage();
       openSettingsSection('notifications');
       cy.location('pathname').should('eq', '/settings/notifications');
@@ -206,7 +204,7 @@ describe('notifications', () => {
       });
 
       // * the recipient checks for absence of notification for being mentioned
-      cy.signInWithEncryptedFile(backupDownloadFilePath(recipient.name));
+      cy.signInWithPubkyRing(recipient.name);
       verifyNotificationCounter(0);
       goToProfilePageFromHeader();
       cy.get('[data-cy="profile-tab-content"]').should('contain.text', 'No notifications yet');

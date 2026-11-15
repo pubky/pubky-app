@@ -31,7 +31,6 @@
  * The separate pubky-e2e project (in progress) will cover Locks end to end with a real Lock Server,
  * Paykit and Bitkit; this spec covers the app's own flow until then.
  */
-import { backupDownloadFilePath } from '../support/common';
 import {
   answerLockServerOnce,
   applyLockPrice,
@@ -106,7 +105,7 @@ let paidPost: SeededLockPost;
 let refusedPost: SeededLockPost;
 
 const signInAs = (user: SeededUser) => {
-  cy.signInWithEncryptedFile(backupDownloadFilePath(user.name));
+  cy.signInWithPubkyRing(user.name);
 };
 
 /** The content lock asks for the edited price, paid to the creator. */
@@ -183,12 +182,10 @@ const payToUnlock = () => {
 
 describe('locks', () => {
   before(() => {
-    cy.deleteDownloadsFolder();
-
-    seedUserViaApi(creatorName, { withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(creatorName).then((user) => {
       creator = user;
     });
-    seedUserViaApi(readerName, { withRecoveryFile: true }).then((user) => {
+    seedUserViaApi(readerName).then((user) => {
       reader = user;
     });
     cy.then(() => {

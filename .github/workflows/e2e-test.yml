@@ -153,13 +153,12 @@ jobs:
         # The nightly run is mobile only. Push runs have no inputs, so they resolve to desktop only.
         viewport: ${{ fromJSON(github.event_name == 'schedule' && '["mobile"]' || inputs.target == 'both' && '["desktop","mobile"]' || format('["{0}"]', inputs.target || 'desktop')) }}
         spec: ["contacts.cy.ts", "feed.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "profile.cy.ts", "search.cy.ts", "settings.cy.ts", "collections.cy.ts", "pagination.cy.ts", "collections-pagination.cy.ts", "deep-links.cy.ts", "locks.cy.ts"]
-        # Phones run a smoke subset: the `itMobile` tests (cypress/support/mobile.ts). These specs
-        # have none, because every phone-only path they reach is covered by the specs that remain.
+        # Phones run a smoke subset: the `itMobile` tests (cypress/support/mobile.ts). The specs
+        # excluded below have none, because every phone-only path they reach is covered by the specs
+        # that remain (onboarding.cy.ts runs the Pubky Ring deeplink sign-in and sign-up on phones).
         exclude:
           - viewport: mobile
             spec: contacts.cy.ts
-          - viewport: mobile
-            spec: onboarding.cy.ts
           - viewport: mobile
             spec: collections.cy.ts
           - viewport: mobile

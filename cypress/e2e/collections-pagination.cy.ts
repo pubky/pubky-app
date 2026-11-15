@@ -1,6 +1,5 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { backupDownloadFilePath } from '../support/common';
 import { goToCollectionsPage } from '../support/header';
 import {
   assertNoRepeatedStreamRequests,
@@ -38,11 +37,10 @@ describe('collections pagination', () => {
   // only signs in for the test, so the section below pages from Nexus.
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
     // Installs the app while the seeds index; the sign-in below waits for the install to finish
     cy.visit('/');
 
-    seedUserViaApi(username, { bio: 'I collect everything', withRecoveryFile: true }).then((author) => {
+    seedUserViaApi(username, { bio: 'I collect everything' }).then((author) => {
       authorId = author.id;
       Cypress._.times(COLLECTION_COUNT, (index) => {
         createCollectionViaApi(author, `Collection ${runId} ${String(index + 1).padStart(2, '0')}`).then(
@@ -71,7 +69,7 @@ describe('collections pagination', () => {
       (query) => query['source'] === 'author' && query['author_id'] === authorId && query['kind'] === 'collection',
     );
 
-    cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+    cy.signInWithPubkyRing(username);
     goToCollectionsPage();
 
     cy.get(SECTION_CARD).should(($cards) => {

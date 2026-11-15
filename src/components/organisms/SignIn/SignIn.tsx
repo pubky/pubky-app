@@ -15,15 +15,13 @@ import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
 import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { Bitkit, PubkyIcon } from '@/icons';
-import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
+import { AuthQrCopyButton } from '@/molecules/AuthQrCopyButton/AuthQrCopyButton';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ContentCard } from '@/molecules/Content/Content';
 import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
-import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
-import { toast } from '@/molecules/Toaster/toast';
 import { PassportMethodCard, PassportMethodSection } from '@/organisms/PassportMethodCard/PassportMethodCard';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 import type { SignInState } from '@/stores/signIn/signIn.types';
@@ -128,22 +126,6 @@ export const SignInContent = () => {
   const { startPassportAuth, isPending: isPassportPending } = usePassportAuth({
     onAttemptSettled: handlePassportAttemptSettled,
   });
-  const handleQRClick = async () => {
-    if (!url) return;
-    try {
-      await copyAuthUrl();
-      toast({
-        variant: 'info',
-        title: 'Authentication link copied',
-      });
-    } catch (error) {
-      Logger.error('Failed to copy auth URL to clipboard:', error);
-      toast({
-        variant: 'error',
-        description: 'Could not copy to clipboard',
-      });
-    }
-  };
   const isRingLocked = isPassportPending;
   const mobileAuthorizeContent =
     isLoading || isOpeningRing ? (
@@ -177,22 +159,15 @@ export const SignInContent = () => {
     );
   }
   const qrButton = (
-    <button
-      type="button"
-      className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-white p-2"
-      onClick={isExpired ? fetchUrl : handleQRClick}
-      disabled={isLoading || isRingLocked || (!url && !isExpired)}
-      aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
-    >
-      <QrCodeSlot
-        isLoading={isLoading}
-        isExpired={isExpired}
-        url={url}
-        generatingLabel={'Generating QR Code...'}
-        clickToReloadLabel={'Click to reload'}
-        activeQrHasHoverEffect
-      />
-    </button>
+    <AuthQrCopyButton
+      url={url}
+      isLoading={isLoading}
+      isExpired={isExpired}
+      onCopy={copyAuthUrl}
+      onReload={fetchUrl}
+      reloadAriaLabel={'Reload sign-in QR code'}
+      disabled={isRingLocked}
+    />
   );
 
   const mobileRingButton = (

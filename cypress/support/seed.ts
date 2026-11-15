@@ -1,10 +1,10 @@
-import { backupDownloadFilePath } from './common';
 import type {
   SeedCreateLockPostArgs,
   SeedCreatePostArgs,
   SeededCollectionLayout,
   SeededLockPost,
   SeededPost,
+  SeededSignUp,
   SeededUser,
 } from './types/seed';
 
@@ -26,17 +26,28 @@ import type {
 // that order wherever a surface orders them by time.
 
 /**
- * Signs a new user up on the test homeserver and writes their profile, the API equivalent of UI
- * onboarding (covered by onboarding.cy.ts).
- * With `withRecoveryFile`, also saves their encrypted recovery file where the UI backup would land,
- * so the spec can sign in as them with `cy.signInWithEncryptedFile(backupDownloadFilePath(name))`.
+ * Signs a new key up on the test homeserver without a profile, as Pubky Ring does before the app's
+ * Profile step (see `cy.onboardAsNewUser`). Yields the signup token the sign-up consumed.
  */
-export const seedUserViaApi = (name: string, { bio = '', withRecoveryFile = false } = {}) =>
-  cy.task<SeededUser>('seedCreateUser', {
-    name,
-    bio,
-    recoveryFilePath: withRecoveryFile ? backupDownloadFilePath(name) : undefined,
-  });
+export const signUpViaApi = (name: string) => cy.task<SeededSignUp>('seedSignUp', { name });
+
+/**
+ * Signs a new user up on the test homeserver and writes their profile, the API equivalent of UI
+ * onboarding (covered by onboarding.cy.ts). The spec can sign in as them with
+ * `cy.signInWithPubkyRing(name)`.
+ */
+export const seedUserViaApi = (name: string, { bio = '' } = {}) => cy.task<SeededUser>('seedCreateUser', { name, bio });
+
+/** Approves the app's `pubkyauth://` sign-in request as `name`, in place of the Pubky Ring app. */
+export const approvePubkyAuthViaApi = (name: string, authUrl: string) =>
+  cy.task('seedApprovePubkyAuth', { name, authUrl });
+
+/**
+ * Handles the app's `pubkyauth://` sign-up request as Pubky Ring does: a new key for `name` signs up
+ * with the request's signup token, then approves it. Leaves the app on the Profile step.
+ */
+export const signUpWithPubkyAuthViaApi = (name: string, authUrl: string) =>
+  cy.task<SeededSignUp>('seedSignUpAndApprovePubkyAuth', { name, authUrl });
 
 const createPost = (args: SeedCreatePostArgs) => cy.task<SeededPost>('seedCreatePost', args);
 

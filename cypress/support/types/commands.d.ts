@@ -1,31 +1,19 @@
-import { HasBackedUp, BackupType, CheckForNewPosts, OnboardingExperience, PostType, WaitForNewPosts } from './enums';
+import { HasBackedUp, CheckForNewPosts, OnboardingExperience, PostType, WaitForNewPosts } from './enums';
 
 declare global {
   namespace Cypress {
     interface Chainable<Subject = any> {
       signOut(hasBackedUp: HasBackedUp): Chainable<void>;
-      signInWithEncryptedFile(backupFilepath: string, passcode?: string): Chainable<void>;
-      signInWithRecoveryPhrase(recoveryPhrase: string): Chainable<void>;
-      completeOnboardingFromInstall(
-        profileName: string,
-        profileBio?: string,
-        backup?: BackupType[],
-        pubkyAlias?: string,
-        experience?: OnboardingExperience,
-      ): Chainable<void>;
+      signInWithPubkyRing(name: string, landingPath?: string): Chainable<void>;
       onboardAsNewUser(
         profileName: string,
         profileBio?: string,
-        backup?: BackupType[],
         pubkyAlias?: string,
         experience?: OnboardingExperience,
       ): Chainable<void>;
+      completeSignUpWithPubkyRing(profileName: string): Chainable<void>;
       finishFollowBestMatchesStep(): Chainable<void>;
-      backupRecoveryFile(passcode?: string): Chainable<void>;
-      deleteDownloadsFolder(): Chainable<void>;
       waitForFileExistsWithSuffix(folder: string, suffix: string): Chainable<void>;
-      deleteFile(filePath: string): Chainable<void>;
-      renameFile(fromPath: string, toPath: string): Chainable<void>;
       innerTextShouldEq(text: string): Chainable<Subject>;
       innerTextShouldContain(text: string): Chainable<Subject>;
       innerTextContains(text: string): Chainable<Subject>;
@@ -34,7 +22,7 @@ declare global {
       saveStringToAlias(text: string, alias: string): Chainable<void>;
       saveElementValueToAlias(selector: string, alias: string): Chainable<void>;
       saveCopiedPubkyToAlias(alias: string): Chainable<void>;
-      saveCopiedTextToAlias(alias: string): Chainable<void>;
+      copyAuthLinkFromQr(): Chainable<string>;
       assertElementDoesNotExist(selector: string): Chainable<void>;
       waitReload(time?: number): Chainable<void>;
       waitReloadWhileElementDoesNotExist(selector: string, attempts?: number): Chainable<void>;

@@ -130,14 +130,6 @@ describe('PostArticle', () => {
     },
   } as AttachmentConstructed;
 
-  const mockLocalVideoAttachment: AttachmentConstructed = {
-    type: 'video/mp4',
-    name: 'Local Video',
-    urls: {
-      main: 'blob:http://localhost/local-video',
-    },
-  } as AttachmentConstructed;
-
   const mockHookReturnWithImage = {
     title: 'Test Article Title',
     body: 'This is the article body content.',
@@ -145,14 +137,16 @@ describe('PostArticle', () => {
       src: 'https://example.com/cover-image.jpg',
       alt: 'Cover Image',
     },
-    hasCover: true,
+    isCoverPending: false,
+    isCoverLoading: false,
   };
 
   const mockHookReturnWithoutImage = {
     title: 'Test Article Title',
     body: 'This is the article body content.',
     coverImage: null,
-    hasCover: true,
+    isCoverPending: false,
+    isCoverLoading: false,
   };
 
   beforeEach(() => {
@@ -269,6 +263,8 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: defaultProps.attachments,
+        localAttachments: undefined,
+        pendingAttachments: [],
         coverImageVariant: FileVariant.FEED,
       });
     });
@@ -279,6 +275,8 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: [],
+        localAttachments: undefined,
+        pendingAttachments: [],
         coverImageVariant: FileVariant.FEED,
       });
     });
@@ -296,64 +294,41 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: multipleAttachments,
+        localAttachments: undefined,
+        pendingAttachments: [],
         coverImageVariant: FileVariant.FEED,
       });
     });
   });
 
   describe('Local Attachments', () => {
-    it('renders local cover image when localAttachments has an image', () => {
-      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+    it('hands its local files and pending downloads to the cover rule', () => {
+      const pendingAttachments = [{ slot: 0, type: 'image/png' }];
 
-      const image = screen.getByTestId('cover-image');
-      expect(image).toBeInTheDocument();
-      expect(image).toHaveAttribute('src', 'blob:http://localhost/local-cover-image');
-      expect(image).toHaveAttribute('alt', 'Local Cover Image');
+      render(
+        <PostArticle
+          {...defaultProps}
+          localAttachments={[mockLocalImageAttachment]}
+          pendingAttachments={pendingAttachments}
+        />,
+      );
+
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        content: defaultProps.content,
+        attachments: defaultProps.attachments,
+        localAttachments: [mockLocalImageAttachment],
+        pendingAttachments,
+        coverImageVariant: FileVariant.FEED,
+      });
     });
 
-    it('prioritizes local cover image over hook cover image', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
+    it('holds the cover box while the cover bytes download', () => {
+      mockUsePostArticle.mockReturnValue({ ...mockHookReturnWithoutImage, isCoverPending: true });
 
-      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+      const { container } = render(<PostArticle {...defaultProps} />);
 
-      const image = screen.getByTestId('cover-image');
-      expect(image).toHaveAttribute('src', 'blob:http://localhost/local-cover-image');
-      expect(image).not.toHaveAttribute('src', 'https://example.com/cover-image.jpg');
-    });
-
-    it('falls back to hook cover image when localAttachments is not an image', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
-
-      render(<PostArticle {...defaultProps} localAttachments={[mockLocalVideoAttachment]} />);
-
-      const image = screen.getByTestId('cover-image');
-      expect(image).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
-    });
-
-    it('does not render cover image when localAttachments is not an image and hook has no image', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
-
-      render(<PostArticle {...defaultProps} localAttachments={[mockLocalVideoAttachment]} />);
-
+      expect(container.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
       expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
-    });
-
-    it('renders hook cover image when localAttachments is undefined', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
-
-      render(<PostArticle {...defaultProps} localAttachments={undefined} />);
-
-      const image = screen.getByTestId('cover-image');
-      expect(image).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
-    });
-
-    it('renders hook cover image when localAttachments is empty array', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
-
-      render(<PostArticle {...defaultProps} localAttachments={[]} />);
-
-      const image = screen.getByTestId('cover-image');
-      expect(image).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
     });
   });
 
@@ -385,16 +360,8 @@ describe('PostArticle', () => {
     });
   });
 
-  describe('Full article', () => {
-    it('drops the preview clamp and renders the article typography', () => {
-      render(<PostArticle {...defaultProps} variant="full" />);
-
-      const text = screen.getByTestId('post-text');
-      expect(text).toHaveAttribute('data-full-article', 'true');
-      expect(text).not.toHaveClass('line-clamp-3');
-    });
-
-    it('keeps the three-line preview by default', () => {
+  describe('Preview', () => {
+    it('keeps the three-line preview', () => {
       render(<PostArticle {...defaultProps} />);
 
       const text = screen.getByTestId('post-text');
@@ -402,41 +369,10 @@ describe('PostArticle', () => {
       expect(text).toHaveClass('line-clamp-3');
     });
 
-    it('renders the body images of unlocked content from its local attachments', () => {
-      render(<PostArticle {...defaultProps} variant="full" localAttachments={[mockLocalImageAttachment]} />);
-
-      expect(screen.getByTestId('post-text')).toHaveAttribute(
-        'data-article-media',
-        JSON.stringify({ localAttachments: [mockLocalImageAttachment], pendingAttachments: [] }),
-      );
-    });
-
     it('keeps body images out of the preview card, like any article card', () => {
       render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
 
       expect(screen.getByTestId('post-text')).not.toHaveAttribute('data-article-media');
-    });
-
-    it('takes the cover from slot 0, not from whatever comes first in the list', () => {
-      // The cover was lost while copying: the first attachment left is a body image.
-      const bodyImage: AttachmentConstructed = { ...mockLocalImageAttachment, name: 'Body image', slot: 1 };
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
-
-      render(<PostArticle {...defaultProps} variant="full" localAttachments={[bodyImage]} />);
-
-      expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
-    });
-
-    it('counts local attachments so a cover with no Nexus copy still shows', () => {
-      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
-
-      expect(mockUsePostArticle).toHaveBeenCalledWith({
-        content: defaultProps.content,
-        attachments: defaultProps.attachments,
-        coverImageVariant: FileVariant.FEED,
-        localAttachmentCount: 1,
-        localCoverType: 'image/png',
-      });
     });
   });
 });
