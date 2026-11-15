@@ -1,8 +1,9 @@
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { buildCompositeId } from '@/models/models.utils';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { createInFlightByIdsQuery } from '@/services/nexus/nexus.by-ids';
 import type { NexusPost, NexusPostsKeyStream, NexusPostWire } from '@/services/nexus/nexus.types';
 import { mapNexusResponse, queryNexus } from '@/services/nexus/nexus.utils';
 import { searchApi } from '@/services/nexus/search/search.api';
@@ -18,6 +19,10 @@ import {
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
 } from '@/services/nexus/stream/posts/postStream.types';
+
+const queryPostsByIds = createInFlightByIdsQuery<NexusPostWire>((post) =>
+  buildCompositeId({ pubky: post.details.author, id: post.details.id }),
+);
 
 const CONTENT_SEARCH_QUERY_REQUIRED_MESSAGE = 'Search query is required for content_search stream';
 
@@ -37,12 +42,7 @@ export class NexusPostStreamService {
     // Canonicalize (sorted post_ids) so identical concurrent batches share one query key and
     // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
     const { url, body } = postStreamApi.postsByIds({ ...params, post_ids: [...params.post_ids].sort() });
-    const posts = await queryNexus<NexusPostWire[]>({
-      url,
-      method: HttpMethod.POST,
-      body: JSON.stringify(body),
-      force,
-    });
+    const posts = await queryPostsByIds({ url, body, force });
     return mapNexusResponse(posts, (post) => PostNormalizer.fromNexus(post));
   }
 
