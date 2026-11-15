@@ -49,6 +49,22 @@ const APP_ENV_INPUT = {
 };
 
 describe('runtimeEnvInputSchema', () => {
+  it('defaults Pubchi to disabled with an empty API URL', () => {
+    const parsed = runtimeEnvInputSchema.parse(VALID_ENV_INPUT);
+    expect(parsed.pubchiEnabled).toBe(false);
+    expect(parsed.pubchiApiUrl).toBe('');
+  });
+
+  it('parses Pubchi runtime flags when provided', () => {
+    const parsed = runtimeEnvInputSchema.parse({
+      ...VALID_ENV_INPUT,
+      pubchiEnabled: 'true',
+      pubchiApiUrl: 'https://pubchi.example.com',
+    });
+    expect(parsed.pubchiEnabled).toBe(true);
+    expect(parsed.pubchiApiUrl).toBe('https://pubchi.example.com');
+  });
+
   it('parses string PKARR_RELAYS and TESTNET into parsed shapes', () => {
     const parsed = runtimeEnvInputSchema.parse(VALID_ENV_INPUT);
 
@@ -336,6 +352,8 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
       ...NETWORK_RUNTIME_DEFAULTS,
       ...SENTRY_RUNTIME_DEFAULTS,
       ...APP_RUNTIME_DEFAULTS,
+      pubchiEnabled: false,
+      pubchiApiUrl: '',
       ...PASSPORT_RUNTIME_DEFAULTS,
       ...MARKETPLACE_RUNTIME_DEFAULTS,
     });
@@ -434,5 +452,35 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
         .marketplaceUrl,
     ).toBe('https://marketplace.example.com');
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, marketplaceUrl: 'not-a-url' })).toThrow();
+  });
+});
+
+describe('PUBKY_RUNTIME_PUBCHI_API_URL', () => {
+  it('accepts https in production and rejects plaintext or foreign schemes', () => {
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pubchiApiUrl: 'https://ok.example.com' }).pubchiApiUrl,
+    ).toBe('https://ok.example.com');
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pubchiApiUrl: '' }).pubchiApiUrl).toBe('');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pubchiApiUrl: 'http://localhost:8790' })).toThrow();
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pubchiApiUrl: 'http://evil' })).toThrow();
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pubchiApiUrl: 'javascript:alert(1)' })).toThrow();
+    expect(() =>
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pubchiApiUrl: 'ftp://files.example.com' }),
+    ).toThrow();
+  });
+
+  it('allows loopback http only in the lenient dev/test parse', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ pubchiApiUrl: 'http://localhost:8790' }).pubchiApiUrl).toBe(
+      'http://localhost:8790',
+    );
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ pubchiApiUrl: 'http://127.0.0.1:8790' }).pubchiApiUrl).toBe(
+      'http://127.0.0.1:8790',
+    );
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ pubchiApiUrl: 'https://ok.example.com' }).pubchiApiUrl).toBe(
+      'https://ok.example.com',
+    );
+    expect(() => runtimeEnvInputSchemaWithDefaults.parse({ pubchiApiUrl: 'http://evil' })).toThrow();
+    expect(() => runtimeEnvInputSchemaWithDefaults.parse({ pubchiApiUrl: 'javascript:alert(1)' })).toThrow();
+    expect(() => runtimeEnvInputSchemaWithDefaults.parse({ pubchiApiUrl: 'ftp://files.example.com' })).toThrow();
   });
 });

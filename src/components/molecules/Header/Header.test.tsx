@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { PubchiController } from '@/controllers/pubchi/pubchi';
+import { isPubchiPanelEnabled } from '@/libs/pubchi/flags';
 import {
   readServerConfig,
   resetRuntimeConfigForTests,
@@ -11,6 +13,7 @@ import {
 } from '@/libs/runtime-config/runtime-config';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 import { HeaderHome } from '../HeaderHome/HeaderHome';
 import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
@@ -22,6 +25,11 @@ import {
   HeaderSocialLinks,
   HeaderTitle,
 } from './Header';
+
+vi.mock('@/libs/pubchi/flags', () => ({
+  isPubchiPanelEnabled: vi.fn(() => false),
+  isPubchiEnabled: () => false,
+}));
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -170,6 +178,7 @@ describe('Header Components', () => {
   };
 
   beforeEach(() => {
+    vi.mocked(isPubchiPanelEnabled).mockReturnValue(false);
     mockCurrentUserPubky = 'test-pubky';
     resetRuntimeConfigForTests();
     delete window[RUNTIME_CONFIG_WINDOW_KEY];
@@ -467,6 +476,30 @@ describe('Header Components', () => {
   });
 
   describe('HeaderNavigationButtons', () => {
+    it('does not mount PubchiPanel or load enrollment while the Pubchi flyout is closed', () => {
+      usePubchiStore.getState().clear();
+      const loadPubchi = vi.spyOn(PubchiController, 'loadPubchi');
+      const ensureDeviceReady = vi.spyOn(PubchiController, 'ensureDeviceReady');
+
+      vi.mocked(isPubchiPanelEnabled).mockReturnValue(true);
+      render(<HeaderNavigationButtons includePubchi avatarName="TU" />);
+
+      expect(screen.queryByTestId('pubchi-panel')).not.toBeInTheDocument();
+      expect(loadPubchi).not.toHaveBeenCalled();
+      expect(ensureDeviceReady).not.toHaveBeenCalled();
+
+      loadPubchi.mockRestore();
+      ensureDeviceReady.mockRestore();
+    });
+
+    it('renders the Pubchi navigation button when enabled', () => {
+      vi.mocked(isPubchiPanelEnabled).mockReturnValue(true);
+      render(<HeaderNavigationButtons includePubchi avatarName="TU" />);
+
+      expect(screen.getByRole('button', { name: 'Pubchi' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pubchi' })).toHaveAttribute('data-cy', 'header-pubchi-btn');
+    });
+
     it('renders with default props', () => {
       render(<HeaderNavigationButtons avatarImage="/images/default-avatar.png" avatarName="U" />);
 

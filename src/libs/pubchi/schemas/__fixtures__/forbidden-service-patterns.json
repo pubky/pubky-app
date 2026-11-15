@@ -1,0 +1,5 @@
+[
+  "^(?:bearer|authtoken|signup[_-]?token)\\s+\\S+$",
+  "^(?:sk|pk|api)[_-][A-Za-z0-9_-]{16,}$",
+  "^(?:[a-z]+\\s+){11}[a-z]+$"
+]

@@ -1,0 +1,19 @@
+{
+  "input": {
+    "target": {
+      "kind": "user",
+      "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/profile.json",
+      "pubky": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "post": null,
+    "user": null
+  },
+  "projection": {
+    "kind": "user",
+    "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/profile.json",
+    "pubky": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "name": "",
+    "bio": null
+  },
+  "snapshot_sha256": "e2b2c979b23e271476c587fc1b00f3811e088e2e078ffd916f1c38871a1e5599"
+}

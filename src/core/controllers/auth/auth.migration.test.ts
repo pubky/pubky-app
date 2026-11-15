@@ -34,10 +34,18 @@ import {
   PREVIOUS_AUTH_PERSIST_KEY,
   SETTINGS_PERSIST_KEY,
 } from '@/stores/persistedKeys';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { settingsInitialState } from '@/stores/settings/settings.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { AuthController } from './auth';
+
+vi.mock('@/application/pubchi/pubchi', () => ({
+  PubchiApplication: {
+    unpublishKnownDelegations: vi.fn().mockResolvedValue({ failed: [] }),
+    clearOwnerData: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 vi.mock('@/database/franky/franky.helpers', () => ({ clearDatabase: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/coordinators/notifications/notifications', () => ({ NotificationCoordinator: { resetInstance: vi.fn() } }));
@@ -676,6 +684,8 @@ describe('grant-only session lifecycle', () => {
     expect(useOnboardingStore.getState()).toMatchObject({ secretKey: null, mnemonic: null, signupAttempt: null });
   });
   it('preserves account-local state when another tab upgrades the same account', async () => {
+    usePubchiStore.getState().setConfig(null, PUBKY);
+    usePubchiStore.getState().addConversationTurn({ role: 'user', text: 'same-account context' }, PUBKY);
     useSettingsStore.getState().setMutedUsers(['same-account-mute']);
     const locksSession = asOpaque<LocksSession>({});
     useLocksAuthStore
@@ -702,7 +712,33 @@ describe('grant-only session lifecycle', () => {
       locksSessionSecret: 'same-account-lock-secret',
     });
     expect(SettingsApplication.initializeSettings).not.toHaveBeenCalled();
+    expect(usePubchiStore.getState().conversation.turns).toEqual([{ role: 'user', text: 'same-account context' }]);
   });
+  it.each([null, OTHER_PUBKY])(
+    'clears private Pubchi UI after storage sync changes the account to %s',
+    async (owner) => {
+      usePubchiStore.getState().setConfig(null, PUBKY);
+      usePubchiStore.getState().addConversationTurn({ role: 'user', text: 'private previous account' }, PUBKY);
+      usePubchiStore.getState().openFlyout();
+      usePubchiStore.getState().openFeedBuilder();
+      await AuthApplication.commitPersistedAuth(
+        {
+          generation: 'pubchi-external-transition',
+          currentUserPubky: owner,
+          sessionReference: null,
+          hasProfile: owner ? true : null,
+          retiringSession: null,
+        },
+        '',
+      );
+
+      await AuthController.syncSessionFromStorage();
+
+      expect(usePubchiStore.getState().conversation.turns).toEqual([]);
+      expect(usePubchiStore.getState().flyout.open).toBe(false);
+      expect(usePubchiStore.getState().feedBuilder.open).toBe(false);
+    },
+  );
   it('fences a pending save when another tab commits logout', async () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();

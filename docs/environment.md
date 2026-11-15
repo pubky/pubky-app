@@ -74,6 +74,7 @@ The contract has these tiers:
 
 - **Required (9 network values)**: `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet`, `deployEnv`. (`deployEnv` — `PUBKY_RUNTIME_ENV`, `"production"` or `"staging"` — is the deploy's declared identity; it drives the staging homeserver sign-in guard (`isStagingHomeserverDeploy` in `@/config/network`) and the Bitkit Android package the sign-in buttons open (`to.bitkit.dev`, the regtest build, on staging; `to.bitkit` in production; `@/libs/deeplink/deeplink`). It is declared explicitly instead of inferred from network values so config drift can never silently disable the guard.) (`homeserverUrl` is the homeserver's HTTP base URL, used for invite-code verification — the homeserver pubkey has no resolvable HTTPS endpoint, see [pubky-homeserver#410](https://github.com/pubky/pubky-homeserver/issues/410).)
 - **Embedded Shop**: Shop navigation always opens `/shop`, which embeds the separately deployed Shop at `/shop-embed`. There is no enable flag or external fallback. See [Embedded Shop](#embedded-shop) for deployment requirements.
+- **Optional Pubchi**: `pubchiEnabled` defaults to `false` and `pubchiApiUrl` defaults to empty in every environment. Both must be configured to enable assistant requests; see [Pubchi](#pubchi).
 - **Optional (5 Sentry values)**: `sentryDsn` (absent/empty disables Sentry entirely), `sentryEnvironment` (absent falls back to `NODE_ENV`), `sentryTracesSampleRate` / `sentryReplaysSessionSampleRate` / `sentryReplaysOnErrorSampleRate` (defaults `0.1` / `0.0` / `1.0`). A malformed value (bad DSN URL, rate outside `[0,1]`) fails loudly.
 - **Optional (2 Pulse values)**: `pulseClientKey` (absent/empty disables Pulse entirely; a provided value must start with `pulse_client_`) and `pulseEndpoint` (absent uses the SDK's hosted ingest host). See the Pulse paragraph below.
 - **Optional moderation identity**: `moderationId` must be a raw 52-character z-base-32 Pubky when set. In deployed environments, leaving it unset disables moderation-tag matching and the one-time default follow.
@@ -171,6 +172,21 @@ docker run -p 3000:3000 \
 ```
 
 Omit the `PUBKY_RUNTIME_SENTRY_*` lines to run without Sentry, and the `PUBKY_RUNTIME_PULSE_*` lines to run without Pulse (no consent banner, no analytics controls). Set both Pulse values together: a client key with no endpoint sends to Pubky's hosted ingest host. Other public runtime values are optional/defaulted; set them only when you need to tune polling/TTL behavior, branding/metadata, analytics, moderation, Prelude, exchange rates, or external links. Note for Sentry users: the image ships without browser source maps (Debug IDs only) — see the source-maps section of [docs/sentry.md](sentry.md).
+
+### Pubchi
+
+`PUBKY_RUNTIME_PUBCHI_ENABLED` is an optional boolean with default `false`.
+`PUBKY_RUNTIME_PUBCHI_API_URL` defaults to an empty string; there is no production or
+staging fallback. The master flag enables feature settings and local state, while
+assistant requests additionally require a configured API URL. Setting the flag off
+does not delete existing durable local state; auth cleanup remains owner-scoped.
+
+The deployed parser requires an HTTPS API URL or an empty string. Local dev/test
+also accepts HTTP on `localhost` or `127.0.0.1`. These public values are exposed via
+`getPubchiEnabled()` and `getPubchiApiUrl()`; keep provider API keys and session
+material out of runtime config. The service must allow the App origin through CORS
+and implement the matching signed request and response contracts. See [Pubchi](pubchi.md)
+for deployment setup, explicit capability upgrades, and assisted write approvals.
 
 ### Profile indexing protection
 

@@ -12,6 +12,7 @@
  * @returns Menu items array, loading state, and report post data
  */
 import {
+  Bot,
   Edit,
   FileText,
   Flag,
@@ -23,7 +24,9 @@ import {
   UserRoundMinus,
   UserRoundPlus,
 } from 'lucide-react';
+import { postUriBuilder } from 'pubky-app-specs';
 import { POST_ROUTES } from '@/app/routes';
+import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
@@ -36,10 +39,12 @@ import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
 import { isArticleContent } from '@/libs/post/articleContent';
+import { isPubchiEnabled } from '@/libs/pubchi/flags';
 import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { toast } from '@/molecules/Toaster/toast';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
 import type {
   PostMenuActionItem,
@@ -55,6 +60,8 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const postAuthorId = stripPubkyPrefix(parsedId.pubky) as Pubky;
   const { currentUserPubky } = useCurrentUserProfile();
   const { requireAuth } = useRequireAuth();
+  const pubchi = usePubchiStore((state) => state.pubchi);
+  const pubchiOwner = usePubchiStore((state) => state.ownerPubky);
   const { postDetails, isLoading: isPostLoading } = usePostDetails(postId);
   const { profile: authorProfile, isLoading: isAuthorLoading } = useUserProfile(postAuthorId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(postAuthorId);
@@ -123,6 +130,21 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       icon: FileText,
       onClick: async () => {
         await copyText(postDetails?.content ?? '');
+      },
+      variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
+    });
+  }
+  if (isPubchiEnabled() && currentUserPubky && pubchiOwner === currentUserPubky && pubchi?.verified) {
+    menuItems.push({
+      id: POST_MENU_ACTION_IDS.SUMMARIZE_WITH_PUBCHI,
+      label: 'Summarize with Pubchi',
+      icon: Bot,
+      onClick: () => {
+        PubchiController.openFlyout({
+          question: 'Summarize this thread',
+          source: 'post-menu',
+          target: { kind: 'post', uri: postUriBuilder(postAuthorId, parsedId.id) },
+        });
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });

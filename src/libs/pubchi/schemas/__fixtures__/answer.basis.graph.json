@@ -1,0 +1,36 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "owner": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "generated_at": 1760000000,
+  "run_id": "answer-basis-graph",
+  "purpose": "ask",
+  "question": "who are the most followed users?",
+  "summary": "The strongest signals point to three users who are followed most often in your graph.",
+  "evidence": [
+    {
+      "kind": "user",
+      "label": "Alice",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json",
+      "claimants": ["o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo"],
+      "claimant_count": 12,
+      "in_your_graph": true
+    }
+  ],
+  "sources": ["pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json"],
+  "tool_trace_summary": { "tools": ["rank_users"], "call_count": 1, "truncated": false },
+  "policy_version": 1,
+  "scope": {
+    "time": {
+      "since_ms": 1788441249000,
+      "until_ms": 1789046049000,
+      "label": "last 7 days",
+      "source": "explicit"
+    },
+    "graph": { "kind": "owner_network" },
+    "filters": [],
+    "complete": true
+  },
+  "basis": "graph"
+}

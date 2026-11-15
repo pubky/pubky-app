@@ -74,7 +74,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Forms: react-hook-form + zod inside a `use{Action}Form` hook returning `{ form, submit }`; schema in a sibling `*.types.ts`;
   form components never call `commit*` controllers directly; Zod v4 (`z.url()`). `docs/components.md`
 - Dexie schema: one `DB_VERSION`; a mismatch recreates the database. Bumping it or changing an index map is a reviewed
-  decision, never a side effect. `docs/data-patterns.md`, ADR-0019
+  decision, never a side effect. `docs/data-patterns.md`, ADR-0019. Proposed Pubchi draft exception: its isolated durable
+  database preserves device keys/receipts across main-cache resets; [ADR-0026](docs/adr/0026-pubchi-assisted-integration.md).
 - Copy: inline US-English literals at the call site. i18n (`next-intl`, `messages/`, `useTranslations`) was removed in #2313
   and must not come back in any form, including a lookalike message registry.
 - `src/config/*` limits are product-wide policy: never tune one for a local fix, and never reduce visible behaviour

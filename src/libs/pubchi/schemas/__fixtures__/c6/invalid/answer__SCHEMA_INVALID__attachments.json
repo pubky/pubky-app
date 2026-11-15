@@ -1,0 +1,36 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay",
+  "owner": "4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o",
+  "generated_at": 1788600000,
+  "run_id": "c6-attachments",
+  "purpose": "ask",
+  "question": "Draft a post with an attachment",
+  "summary": "Attachments are refused.",
+  "evidence": [
+    {
+      "kind": "user",
+      "label": "Owner profile",
+      "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json",
+      "claimants": [],
+      "claimant_count": 0,
+      "in_your_graph": true
+    }
+  ],
+  "sources": [],
+  "tool_trace_summary": {
+    "tools": [],
+    "call_count": 0,
+    "truncated": false
+  },
+  "policy_version": 1,
+  "section": "draft_post",
+  "draft_post": {
+    "content": "A draft with a forbidden attachment key.",
+    "kind": "short",
+    "rationale": "Unknown keys must fail.",
+    "evidence": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json"],
+    "attachments": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/files/x"]
+  }
+}

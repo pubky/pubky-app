@@ -7,6 +7,7 @@ export const POST_MENU_ACTION_IDS = {
   COPY_PUBKY: 'copy-pubky',
   COPY_LINK: 'copy-link',
   COPY_TEXT: 'copy-text',
+  SUMMARIZE_WITH_PUBCHI: 'summarize-with-pubchi',
   MUTE: 'mute',
   REPORT: 'report',
   EDIT: 'edit',

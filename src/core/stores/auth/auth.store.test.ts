@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
+import { mockRingSession } from '@/test-utils/pubky';
 import { useAuthStore } from './auth.store';
 
 // Mock the logger
@@ -44,6 +46,33 @@ describe('AuthStore', () => {
   });
 
   describe('Authentication Management', () => {
+    it('drops private Pubchi conversation and pending UI when switching accounts', () => {
+      usePubchiStore.getState().setConfig(null, 'first-owner');
+      usePubchiStore.getState().addConversationTurn({ role: 'user', text: 'private context' }, 'first-owner');
+      usePubchiStore.getState().openFlyout();
+
+      useAuthStore.getState().setCurrentUserPubky('second-owner');
+
+      expect(usePubchiStore.getState().conversation.turns).toEqual([]);
+      expect(usePubchiStore.getState().flyout.open).toBe(false);
+      expect(usePubchiStore.getState().ownerPubky).toBeNull();
+    });
+
+    it('preserves the conversation on a same-account capability upgrade', () => {
+      usePubchiStore.getState().setConfig(null, 'first-owner');
+      usePubchiStore.getState().addConversationTurn({ role: 'user', text: 'continue this' }, 'first-owner');
+
+      useAuthStore.getState().init({
+        currentUserPubky: 'first-owner',
+        hasProfile: true,
+        session: mockRingSession(['/:rw'], 'first-owner'),
+      });
+
+      expect(usePubchiStore.getState().conversation.turns).toEqual([{ role: 'user', text: 'continue this' }]);
+      useAuthStore.getState().setSession(null);
+      expect(usePubchiStore.getState().conversation.turns).toEqual([]);
+    });
+
     it('should set currentUserPubky without affecting authentication state', () => {
       const pubky = 'test-pubky-key';
       const store = useAuthStore.getState();

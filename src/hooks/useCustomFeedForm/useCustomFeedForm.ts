@@ -45,7 +45,7 @@ type UseCustomFeedFormResult = {
  *   while reading a different one leaves you where you are
  */
 export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFeedFormResult {
-  const { mode, feed, open } = params;
+  const { mode, feed, open, initialValues, onSubmitOverride } = params;
   const { waitForAuth } = useRequireAuth(open);
   const [loading, setLoading] = useState(false);
   // Synchronous re-entrancy truth: a queued second click can run a stale
@@ -57,7 +57,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
 
   const form = useForm<CustomFeedFormData>({
     resolver: zodResolver(customFeedFormSchema),
-    defaultValues: feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults,
+    defaultValues: initialValues ?? (feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults),
     mode: 'onChange',
   });
 
@@ -71,8 +71,8 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   // `defaultValues` and this effect never runs for it.
   useEffect(() => {
     if (open) return;
-    form.reset(feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults);
-  }, [open, feed, form]);
+    form.reset(initialValues ?? (feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults));
+  }, [open, feed, form, initialValues]);
 
   const submit = async (): Promise<boolean> => {
     if (inFlightRef.current) return false;
@@ -84,6 +84,10 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
     try {
       await form.handleSubmit(async (data) => {
         if (!(await waitForAuth())) return;
+        if (onSubmitOverride) {
+          saved = await onSubmitOverride(data);
+          return;
+        }
         // `null` is the feed record's "no content filter"; the form carries a
         // sentinel instead because a Select cannot hold null as an option value.
         // Tagged as is a UI-only reach: persist as WoT + the form's domain_tags.

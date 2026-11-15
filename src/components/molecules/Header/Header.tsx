@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flame, Home, Library, Settings, Store, UserRoundPlus } from 'lucide-react';
+import { Bot, Flame, Home, Library, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -13,13 +13,17 @@ import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/
 import { Typography } from '@/atoms/Typography/Typography';
 import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
+import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
+import { isPubchiPanelEnabled } from '@/libs/pubchi/flags';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { PubchiPanel } from '@/organisms/Pubchi/PubchiPanel/PubchiPanel';
 import { SearchInput } from '@/organisms/SearchInput/SearchInput';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
 
 export interface HeaderContainerProps {
@@ -95,6 +99,7 @@ type HeaderNavigationButtonsProps = {
   avatarName?: string;
   avatarSeed?: string;
   className?: string;
+  includePubchi?: boolean;
 };
 const getNavigationItems = (): NavigationItemConfig[] => [
   {
@@ -179,8 +184,11 @@ export function HeaderNavigationButtons({
   avatarName = 'U',
   avatarSeed,
   className,
+  includePubchi = false,
 }: HeaderNavigationButtonsProps) {
   const pathname = usePathname();
+  const pubchiOpen = usePubchiStore((state) => state.flyout.open);
+  const feedBuilderOpen = usePubchiStore((state) => state.feedBuilder.open);
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
     <Container className={cn('hidden w-auto flex-row items-center justify-start gap-3 lg:flex', className)}>
@@ -195,6 +203,23 @@ export function HeaderNavigationButtons({
           isFeedRoute={item.isFeedRoute}
         />
       ))}
+      {includePubchi && isPubchiPanelEnabled() ? (
+        <>
+          <NavigationButton
+            icon={Bot}
+            label="Pubchi"
+            isActive={pubchiOpen}
+            dataCy="header-pubchi-btn"
+            onClick={() => PubchiController.openFlyout()}
+          />
+          {pubchiOpen || feedBuilderOpen ? (
+            <PubchiPanel
+              open={pubchiOpen}
+              onOpenChange={(open) => (open ? PubchiController.openFlyout() : PubchiController.closeFlyout())}
+            />
+          ) : null}
+        </>
+      ) : null}
 
       <Link data-cy="header-nav-profile-btn" className="relative" href={APP_ROUTES.PROFILE}>
         <AvatarWithFallback

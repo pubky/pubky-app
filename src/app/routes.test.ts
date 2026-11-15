@@ -43,6 +43,14 @@ describe('getContentSearchUrl', () => {
   });
 });
 
+describe('Pubchi route', () => {
+  it('is an authenticated app route', () => {
+    expect(APP_ROUTES.PUBCHI).toBe('/pubchi');
+    expect(AUTHENTICATED_ROUTES.allowedRoutes).toContain(APP_ROUTES.PUBCHI);
+    expect(UNAUTHENTICATED_ROUTES.allowedRoutes).not.toContain(APP_ROUTES.PUBCHI);
+  });
+});
+
 describe('isDynamicPublicRoute', () => {
   describe('invite routes', () => {
     it('returns true for invite code route', () => {

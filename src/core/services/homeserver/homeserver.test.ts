@@ -1587,6 +1587,35 @@ describe('HomeserverService', () => {
   // ===========================================================================
 
   describe('Data Operations', () => {
+    describe('strict document reads', () => {
+      it('preserves duplicate keys for the caller to validate in owned private storage', async () => {
+        mockState.currentSession = createMockSession();
+        const document = '{"version":1,"version":2}';
+        mockState.sessionStorageGet.mockResolvedValue(new Response(document));
+
+        await expect(HomeserverService.requestRawText('pubky://user/priv/app.pubchi/v1/context.json')).resolves.toBe(
+          document,
+        );
+        expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/priv/app.pubchi/v1/context.json');
+        expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('rejects an HTTP failure before parsing its text as a document', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response('unavailable', { status: 503 }));
+        await expect(HomeserverService.requestRawText('https://example.com/document')).rejects.toMatchObject({
+          name: 'AppError',
+        });
+      });
+
+      it('exposes public session metadata and clears it when signed out', () => {
+        const session = createMockSession();
+        mockState.currentSession = session;
+        expect(HomeserverService.getCurrentSessionInfo()).toBe(session.info);
+        mockState.currentSession = null;
+        expect(HomeserverService.getCurrentSessionInfo()).toBeNull();
+      });
+    });
+
     describe('private storage', () => {
       beforeEach(() => {
         mockState.currentSession = createMockSession();
