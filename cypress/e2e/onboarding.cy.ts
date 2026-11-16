@@ -32,6 +32,7 @@ import { createQuickPost, deletePost, editPost, waitForFeedToLoad } from '../sup
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
 import { addProfileTags, openProfileTab, showProfileHeader, unfollowUserByUsername } from '../support/profile';
 import { itMobile } from '../support/mobile';
+import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
 import {
   bookmarkViaApi,
   createArticleViaApi,
@@ -913,6 +914,163 @@ describe('Onboarding', () => {
     goToProfilePageFromHeader();
     cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
     cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A full homeserver (507) pauses a run at once: no engine retry, no automatic retry by the gate, and a screen that
+  // waits for Retry. The figure on it is the declared size of the media not yet copied, which this e2e cannot check:
+  // the screen never shows less than 1 MB, so the seeded 20 KB image and a missing figure both read "About 1 MB".
+  // The figure is pinned by the template's and the controller's unit tests.
+  it('pauses a migration on a full homeserver and finishes it on Retry', () => {
+    const profileName = `Full Homeserver ${Cypress._.random(100_000)}`;
+    const run = Date.now();
+    const imageText = `Media copied once there is space ${run}`;
+    const noteText = `Copied once there is space ${run}`;
+    // The refusal answers late, so the progress screen the sign-in waits for is up before the run pauses
+    const refusalDelayMs = 3000;
+    // Waited after the pause, past the gate's first automatic retry, to see that none comes
+    const autoRetryWindowMs = SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS[0] + 1000;
+
+    let user: SeededUser;
+    let image: SeededPost;
+    let note: SeededPost;
+    let full = true;
+    const runsStartedAt: number[] = [];
+    const visited: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      createImagePostViaApi(user, imageText).then((post) => {
+        image = post;
+      });
+      createPostViaApi(user, noteText).then((post) => {
+        note = post;
+      });
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), postIndexed(image), postIndexed(note));
+    });
+
+    // The first write of a run is the image's media, under the public v1 root
+    cy.intercept('PUT', '**/pub/social/v1/**', (req) => {
+      if (!full) {
+        req.continue();
+        return;
+      }
+      req.reply({ statusCode: 507, body: 'Insufficient Storage', delay: refusalDelayMs });
+    }).as('v1Write');
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }, () => {
+      runsStartedAt.push(Date.now());
+    });
+    holdMigrationFlag();
+
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      whileMigrating: () => {
+        recordRoutes(visited);
+        cy.get('[data-testid="social-migration"]', extendedTimeout())
+          .should('contain.text', 'Your homeserver is out of space')
+          .and('contain.text', 'About 1 MB more is needed for your media');
+        cy.get('#social-migration-blocked-navigation-back-btn').should('contain.text', 'Sign out');
+        cy.get('#social-migration-blocked-navigation-continue-btn').should('contain.text', 'Retry');
+        cy.wait(autoRetryWindowMs);
+        // One run, stopped by its first refused write, and nothing retried until Retry
+        cy.then(() => {
+          expect(runsStartedAt, 'runs before Retry').to.have.length(1);
+        });
+        cy.get('@v1Write.all').should('have.length', 1);
+        cy.get('[data-testid="social-migration"]').should('contain.text', 'Your homeserver is out of space');
+        cy.then(() => {
+          full = false;
+        });
+        cy.get('#social-migration-blocked-navigation-continue-btn').click();
+        cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+      },
+    });
+
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include.members([legacyPostPath(image), legacyPostPath(note)]);
+    });
+    cy.get('@migrationDone.all').should('have.length', 1);
+    cy.then(() => {
+      expect(runsStartedAt, 'runs in all').to.have.length(2);
+    });
+    // The retried run copied the media the first one was refused
+    cy.get<Interception[]>('@v1Write.all').then((writes) => {
+      expect(
+        writes.filter(({ response }) => response?.statusCode === 507),
+        'refused writes',
+      ).to.have.length(1);
+      expect(
+        writes.filter(
+          ({ request, response }) => response?.statusCode === 201 && request.url.includes('/pub/social/v1/files/'),
+        ),
+        'media copied on Retry',
+      ).to.not.be.empty;
+    });
+    expectNoSignOutRoutes(visited, 'sign-out routes during the paused run');
+    cy.then(() => {
+      expectOneVersionPerPost(user, [image, note]);
+    });
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A homeserver from before private storage refuses every path outside /pub/ with a 403 naming it, the first one
+  // being the run's HEAD of the done flag under /priv/. A HEAD answer has no body, so the port asks again with a GET
+  // and reads the reason from that one: both are stubbed. A bare 403 on the GET would be an expired session instead,
+  // which signs the account out, and a 403 on the HEAD alone falls through to the real GET's 404 and a normal run.
+  it('stops on a homeserver without private storage and signs out from the gate', () => {
+    const profileName = `Old Homeserver ${Cypress._.random(100_000)}`;
+    const noteText = `Never copied to an old homeserver ${Date.now()}`;
+    // What such a homeserver answers; the port looks for "other than '/pub/' is forbidden" in it
+    const privateStorageRefused = "Writing to directories other than '/pub/' is forbidden";
+
+    let user: SeededUser;
+    let note: SeededPost;
+    const visited: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      createPostViaApi(user, noteText).then((post) => {
+        note = post;
+      });
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), postIndexed(note));
+    });
+
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }, { statusCode: 403 }).as('flagProbe');
+    cy.intercept({ method: 'GET', url: MIGRATION_FLAG_GLOB }, { statusCode: 403, body: privateStorageRefused }).as(
+      'flagRead',
+    );
+    cy.intercept({ method: 'PUT', url: '**/{pub,priv}/social/v1/**' }).as('v1Write');
+
+    // A run stopped at its first request never shows the progress screen, so the sign-in only reaches the gate
+    cy.signInWithPubkyRing(profileName, '/migration');
+    recordRoutes(visited);
+    cy.get('[data-testid="social-migration"]', extendedTimeout())
+      .should('contain.text', 'Your homeserver needs an upgrade')
+      .and('contain.text', 'It does not support private storage yet, which the update needs.');
+    cy.get('#social-migration-blocked-navigation-back-btn').should('contain.text', 'Sign out');
+    cy.get('#social-migration-blocked-navigation-continue-btn').should('contain.text', 'Retry');
+    cy.wait('@flagProbe').its('response.statusCode').should('eq', 403);
+    cy.wait('@flagRead').its('response.statusCode').should('eq', 403);
+    cy.get('@v1Write.all').should('have.length', 0);
+    expectNoSignOutRoutes(visited, 'no forced sign-out on a homeserver without private storage');
+
+    cy.get('#social-migration-blocked-navigation-back-btn').click();
+    cy.location('pathname').should('eq', '/logout');
+    confirmLogoutBackupBeforeNavigation(HasBackedUp.Yes, '#logout-navigation-back-btn');
+    cy.get('#logout-navigation-back-btn').click();
+    cy.location('pathname').should('eq', '/');
+    checkHeaderIsVisible();
+    cy.get('@flagProbe.all').should('have.length', 1);
   });
 
   it('shows what a migration left behind and lets the account continue', () => {

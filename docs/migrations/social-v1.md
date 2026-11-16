@@ -412,7 +412,9 @@ Ring sign-in (#3150): 28 files against `dev`. What the specs now assume:
   blocks on Retry and then finishes without duplicates. `locks.cy.ts` (#3114) takes a 0.x lock through the migration
   (the seeding paragraph below). A second tab waiting on the Web Lock is stood in for by the spec's own frame, which holds
   the migrator's lock while the app waits on "Another tab is updating your account" with its request queued, then
-  runs once on release; the other stages are at the unit level and in the QA matrix.
+  runs once on release. A full homeserver (a 507) pauses the run until Retry, which then finishes it, and a homeserver
+  without private storage (a 403 naming `/pub/` on the done flag's HEAD and GET) stops on its own screen, from which
+  Sign out leaves; the other stages are at the unit level and in the QA matrix.
 
 Seeding (`cypress/plugins/seed.ts`, `cypress/plugins/seed.writers.ts`): `seedUserViaApi` writes v1 through
 `pubky-social-specs`. `{ legacy: true }` writes the 0.x layout by hand under `/pub/pubky.app/`, so a supporting user
