@@ -373,6 +373,10 @@ a Paykit double). The collection-items test runs unconditionally since #3094.
   with an image type and the decoded image for a v1 upload and its replacement (`posts.cy.ts`, image and article
   cover), a v1 and a 0.x image post and article cover (`deep-links.cy.ts`) and an avatar set in the profile editor
   (`profile.cy.ts`, on `/static/avatar/{user}`).
+- Independent run (catch-21, 2026-11-16, a local testnet with the Nexus of pubky/pubky-stack#388, reported on #3140):
+  the epoch flip and backfill, no "post edited" or reply/repost notification from a migration or from an
+  `already_migrated` rerun, v1 image and PDF bytes from Nexus, and an edit notice after the migration were confirmed.
+  The 20-account runs called `runMigration` directly; the browser runs used the app. OG images were not checked.
 
 ## Cypress (QA-owned; edited by the social v1 work under agreement)
 
@@ -594,9 +598,17 @@ gate list.
    when that run is green; pubky-stack's `social-v1` branch is deleted only after the merge, because the branch's own
    push runs still point at it.
 4. **Infrastructure gates.** The production homeserver serves the same feature set as staging and the local stack at
-   0.16.2 (verified 2026-11-04). A migration temporarily doubles each user's storage (the 0.x tree stays until the
-   cleanup pass), so before the deploy the infrastructure owner raises the allowances of the accounts nearest their cap
-   first, then the heaviest. Moderation service readiness is a release gate. Bot accounts (the moderation
+   0.16.2 (verified 2026-11-04; on 2026-11-16 staging and production report the same three features plus `websites`).
+   A migration temporarily doubles each user's storage (the 0.x tree stays until the cleanup pass), so before the
+   deploy the infrastructure owner raises the allowances of the accounts nearest their cap first, then the heaviest. A
+   media-heavy account is slow, not stuck: the homeserver slows upload bodies past a per-user burst (catch-21 reports
+   1 MB/s after 20 MB on staging and production; one allowance for all of a user's uploads), so media takes about a
+   second per MB beyond the burst. The progress count moves once per finished object and stands still during a large
+   file. A run resumed after a reload downloads every 0.x media file again before it skips the ones already copied
+   (migrator rc.1), and writes nothing twice. No timeout in the app, the migrator's port or the SDK ends an upload that
+   keeps moving (the port's 60 s deadline covers listings, presence checks and JSON reads only). Unchecked: the
+   timeouts of the proxy in front of the deployed homeservers; migrate one account with a file near the 100 MiB cap on
+   staging before production. Moderation service readiness is a release gate. Bot accounts (the moderation
    bot) need a migration path (open). `NEXT_PUBLIC_DB_VERSION=4` is in both Docker workflows (PR-CI).
 5. **No rollback after the first migrated user** (ADR-0019, ADR-0026): before anyone migrates, redeploying the previous
    image tag is safe (the database version mismatch recreates symmetrically); after, v1 writes are invisible to a 0.x
@@ -822,9 +834,9 @@ Asked of the Nexus team, the data model's author, the Ring team and ops while th
 where they changed the app.
 
 - **Nexus (answered by the carrier):** the flip trigger is the v1 `profile.json` PUT, and 0.x PUT/DEL are ignored after
-  it (the app's dual 0.x delete is harmless); v1 objects written before the profile are indexed by the per-user backfill
-  at the flip, which rewrites post addresses, attachments and tag ids and keeps `indexed_at`; no "post edited" burst in
-  the normal flow; `tag_uri` points at the v1 copy after the flip and deleting it removes the edge; a tag on the
+  it (the app's dual 0.x delete is harmless); v1 objects written before the profile are ignored without a fetch, and at
+  the flip the per-user backfill rewrites what Nexus already indexed from the 0.x tree (post addresses, attachments and
+  tag ids) and keeps `indexed_at`; no "post edited" burst in the normal flow; `tag_uri` points at the v1 copy after the flip and deleting it removes the edge; a tag on the
   profile URL counts as a user tag; v1 files are served at `/v1/static/files/{owner}/{hash}.{ext}/{variant}` with no
   metadata (no `File` object, so the app types another user's v1 attachment from its URI) and the avatar route serves a
   v1 image; `/v0/files/by_ids` skips a v1 address with a warning and a 200; kind names on `/v1` are `note`/`article`
