@@ -9,6 +9,7 @@ import { Progress } from '@/atoms/Progress/Progress';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { cn } from '@/libs/utils/utils';
+import { ResourceArrowText } from './ResourceArrowText';
 import type { TChainGroup, TChainLine, TChainLink, TChainList, TChainView } from './ResourceChain.utils';
 
 /** The links in a chain card's lines read as the links in its Details do. */
@@ -40,13 +41,13 @@ function ChainLink({
       data-testid="resource-chain-link"
       className={cn(className, link.mono && 'font-mono')}
     >
-      {link.label}
+      <ResourceArrowText text={link.label} />
     </Link>
   );
 }
 
 function ChainPart({ part, target }: ChainTargetProps & { part: string | TChainLink | TChainGroup }) {
-  if (typeof part === 'string') return <>{part}</>;
+  if (typeof part === 'string') return <ResourceArrowText text={part} />;
   if (!Array.isArray(part)) return <ChainLink link={part} target={target} />;
   return (
     <>

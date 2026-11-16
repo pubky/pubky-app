@@ -72,8 +72,9 @@ describe('ResourceCard, a Bitcoin or Lightning card', () => {
     expect(mockPush).not.toHaveBeenCalled();
 
     const lines = screen.getAllByTestId('resource-chain-line').map(lineText);
+    expect(screen.getAllByTestId('resource-chain-line')[0].querySelector('svg.lucide-arrow-right')).not.toBeNull();
     expect(lines).toEqual([
-      'In block 975,251 · Nov 10, 2026 · 400 inputs → 1 output',
+      'In block 975,251 · Nov 10, 2026 · 400 inputs to 1 output',
       'Fee 118,488 sats · 2.01 sat/vB · 1.29 BTC out',
     ]);
     // The heading's name is the title alone; the copy button sits next to it.
@@ -96,7 +97,7 @@ describe('ResourceCard, a Bitcoin or Lightning card', () => {
 
     expect(screen.getByTestId('resource-card-title')).toHaveTextContent('Transaction 3d365b…e46fd5');
     expect(screen.getAllByTestId('resource-chain-line').map(lineText)).toEqual([
-      'In block 975,251 · Nov 10, 2026 · 400 inputs → 1 output',
+      'In block 975,251 · Nov 10, 2026 · 400 inputs to 1 output',
     ]);
     expect(screen.queryByTestId('resource-chain-copy')).not.toBeInTheDocument();
     expect(screen.queryByTestId('resource-facts')).not.toBeInTheDocument();
