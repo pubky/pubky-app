@@ -309,33 +309,6 @@ export const hoursAgo = (hours: number): number => Date.now() - hours * 60 * 60 
 export const daysAgo = (days: number): number => Date.now() - days * 24 * 60 * 60 * 1000;
 
 /**
- * Formats a filename by truncating it if it exceeds the max length,
- * preserving the file extension
- * @param filename - The filename to format
- * @param maxLength - Maximum length for the filename (default: 18)
- * @returns Formatted filename with ellipsis if truncated
- */
-export function formatFileName(filename: string, maxLength = 18): string {
-  if (filename.length <= maxLength) {
-    return filename;
-  }
-
-  const extensionIndex = filename.lastIndexOf('.');
-  if (extensionIndex <= 0) {
-    return `${filename.slice(0, maxLength - 1)}…`;
-  }
-
-  const extension = filename.slice(extensionIndex);
-  const baseLength = maxLength - extension.length - 1;
-
-  if (baseLength <= 0) {
-    return `${filename.slice(0, maxLength - 1)}…`;
-  }
-
-  return `${filename.slice(0, baseLength)}…${extension}`;
-}
-
-/**
  * Truncates a string to a maximum length and appends an ellipsis if truncated.
  * @param str - The string to truncate
  * @param maxLength - Maximum length of the string

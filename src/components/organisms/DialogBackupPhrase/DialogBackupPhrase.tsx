@@ -221,15 +221,7 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
             const isCorrect = word !== '' && word === recoveryWords[i];
             const isError = errors[i];
             return (
-              <WordSlot
-                key={i}
-                mode="readonly"
-                index={i}
-                word={word}
-                isCorrect={isCorrect}
-                isError={isError}
-                onClear={clearWord}
-              />
+              <WordSlot key={i} index={i} word={word} isCorrect={isCorrect} isError={isError} onClear={clearWord} />
             );
           })}
         </Container>

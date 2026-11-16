@@ -53,12 +53,13 @@ export function HelpContent() {
           id: '3',
           question: 'How can I restore my account?',
           answer:
-            'If you signed up with Pubky Ring, sign in with Pubky Ring to restore your account.\n\nIf your keys were created in the browser with an earlier version of Pubky App, you were prompted to back them up using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nTo restore with a .pkarr file:\n\n1. Select the file you saved.\n2. Enter your password.\n3. Click "Sign In".',
+            'If you signed up with Pubky Ring, sign in with Pubky Ring to restore your account.\n\nIf your keys were created in the browser with an earlier version of Pubky App, you were prompted to back them up using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nImport that backup into Pubky Ring, then sign in with Pubky Ring.',
         },
         {
           id: '4',
           question: 'Can I restore my Pubky account on another device?',
-          answer: 'Yes, if you have your .pkarr file or seed phrase.',
+          answer:
+            'Yes. Sign in with Pubky Ring on the new device. If you only have a .pkarr file or recovery phrase, import it into Pubky Ring first.',
         },
         {
           id: '5',
@@ -75,7 +76,7 @@ export function HelpContent() {
           id: '7',
           question: 'I downloaded a .txt file instead of a .pkarr backup. What do I do?',
           answer:
-            'This happens if you chose the mnemonic (seed phrase) backup option. Sign in with your recovery phrase instead.',
+            'This happens if you chose the mnemonic (seed phrase) backup option. Import that recovery phrase into Pubky Ring, then sign in with Pubky Ring.',
         },
         {
           id: '8',
