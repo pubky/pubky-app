@@ -180,6 +180,8 @@ export function DialogLocksAuth({
   const isSessionStep = step === 'session';
   const isBitkitStep =
     step === 'bitkit' && !isPaykitError && !isPaykitUnavailable && !isReconnectRequired && !isSetupIncomplete;
+  // The Paykit iframe is on screen only once its page reported ready; copy and badges follow it.
+  const isSetupVisible = Boolean(setupUrl && isSetupReady);
 
   let title = 'Lock Content';
   let description: ReactNode = 'Pubky Locks allows you to lock content with payments.';
@@ -208,8 +210,9 @@ export function DialogLocksAuth({
     description = <SessionUpgradeDescription />;
   } else if (isBitkitStep) {
     title = isReconnecting && setupUrl ? 'Reconnect Bitkit' : 'Enable Payments';
-    // No setup URL yet: the setup-status check is running, and there is no QR to scan.
-    description = setupUrl ? (
+    // No QR to scan until the /setup page reports ready: before that the setup-status check is
+    // running, or the iframe is still hidden behind the spinner.
+    description = isSetupVisible ? (
       <>
         {'Scan this QR with your '}
         <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
@@ -333,9 +336,9 @@ export function DialogLocksAuth({
                   className={cn('h-48 w-full pointer-coarse:h-15', !isSetupReady && 'invisible absolute inset-0')}
                 />
               )}
-              {!(setupUrl && isSetupReady) && <LoaderCircle className="size-8 animate-spin text-brand" />}
+              {!isSetupVisible && <LoaderCircle className="size-8 animate-spin text-brand" />}
             </Container>
-            {setupUrl && (
+            {isSetupVisible && (
               <AppDownload
                 logo={{ src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110 }}
                 appStoreUrl={BITKIT_APP_STORE_URL}

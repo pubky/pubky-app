@@ -353,6 +353,7 @@ describe('DialogLocksAuth', () => {
       mode: 'setup',
       setupUrl: 'https://paykit.server/setup?state=STATE',
       error: null,
+      isSetupReady: true,
     };
     renderDialog();
 
@@ -395,6 +396,28 @@ describe('DialogLocksAuth', () => {
 
       expect(screen.getByTitle('Bitkit payout account setup')).toHaveClass('invisible');
       expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).toBeInTheDocument();
+    });
+
+    it('keeps the checking copy and no store badges while the Paykit iframe is hidden', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(false);
+      renderDialog();
+
+      expect(screen.getByText('Checking whether your Bitkit wallet is connected.')).toBeInTheDocument();
+      expect(screen.queryByText(/Scan this QR with your/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Google Play' })).not.toBeInTheDocument();
+    });
+
+    it('shows the scan copy and store badges once the Paykit page is ready', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(true);
+      renderDialog();
+
+      expect(screen.getByText(/Scan this QR with your/)).toBeInTheDocument();
+      expect(screen.queryByText('Checking whether your Bitkit wallet is connected.')).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
     });
 
     it('reports the Paykit iframe load event to the flow', () => {
@@ -443,6 +466,7 @@ describe('DialogLocksAuth', () => {
       mode: 'setup',
       setupUrl: 'https://paykit.server/setup?state=STATE',
       error: null,
+      isSetupReady: true,
     };
     renderDialog();
 
@@ -655,6 +679,7 @@ describe('DialogLocksAuth', () => {
         mode: 'reconnect',
         setupUrl: 'https://paykit.server/setup/reconnect?creator=pubkyX&state=STATE',
         error: null,
+        isSetupReady: true,
       };
       renderDialog();
 
