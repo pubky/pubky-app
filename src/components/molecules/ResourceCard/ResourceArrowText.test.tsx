@@ -30,6 +30,10 @@ describe('ResourceArrowText', () => {
     expect(srWords(container)).toEqual(['to']);
     expect(container.textContent).toBe('131 inputs to 1 output');
     expect(container.textContent).not.toContain('→');
+    // The gap before the arrow sits on the space, so a line that wraps there starts flush with the arrow.
+    expect(icon).not.toHaveClass('mx-[0.2em]');
+    expect(icon.previousElementSibling).toHaveClass('mr-[0.2em]');
+    expect(icon.previousElementSibling?.textContent).toBe(' ');
   });
 
   it('adds no word for an arrow at the start or end of a link label', () => {
@@ -51,7 +55,7 @@ describe('ResourceArrowText', () => {
 
   it('says "and" for an arrow that stands alone between two parts', () => {
     const { container } = render(<ResourceArrowText text="↔" />);
-    expect(container.querySelector('.lucide-arrow-left-right')).not.toBeNull();
+    expect(container.querySelector('.lucide-arrow-left-right')).toHaveClass('mx-[0.2em]');
     expect(srWords(container)).toEqual(['and']);
   });
 
