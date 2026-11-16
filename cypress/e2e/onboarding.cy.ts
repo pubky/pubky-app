@@ -60,6 +60,23 @@ const recordRoutes = (visited: string[]) => {
   });
 };
 
+// Records each title the gate's screen shows from here on, in order, into the test's own list, so a test can tell
+// every screen a run passed through, however briefly. The app's window survives every stage change of the gate.
+const recordGateTitles = (titles: string[]) => {
+  cy.window().then((win) => {
+    const record = () => {
+      const title = win.document.querySelector('[data-testid="social-migration"] h1')?.textContent;
+      if (title && titles[titles.length - 1] !== title) titles.push(title);
+    };
+    record();
+    new win.MutationObserver(record).observe(win.document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  });
+};
+
 // A sign-out during an interrupted run would show as a visit to /sign-in or /logout
 const expectNoSignOutRoutes = (visited: string[], label: string) => {
   cy.then(() => {
@@ -665,6 +682,121 @@ describe('Onboarding', () => {
     cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-tab-content"]').should('contain.text', `Copied once the homeserver is back 0 ${run}`);
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A homeserver that rate-limits the copy (429) only slows a run down: the migrator's engine backs off on its own
+  // (1 s, doubling to a minute, with no attempt limit) and the run finishes in one go, without the gate's retries above
+  // and without a blocked screen. A 429 the port misread as a network error would use up the engine's network retries
+  // instead and end the run `incomplete`, which the gate retries: a second run. The engine ignores Retry-After (its
+  // port errors carry no headers), so the waits below are lower bounds only.
+  it('slows a rate-limited migration down without blocking it and finishes in one run', () => {
+    const profileName = `Rate Limited ${Cypress._.random(100_000)}`;
+    const run = Date.now();
+    const postCount = 2;
+    // One more refusal than the engine's network-retry budget (NETWORK_RETRIES = 3 in pubky-social-migrator's
+    // engine.ts): a `rate_limited` copy is tried a fifth time and lands, a `network` one fails on the fourth refusal.
+    // All on one URL, because the engine's back-off is per call and restarts at 1 s for every other object.
+    const RATE_LIMITED = 4;
+    // The engine's wait before each retry of a rate-limited call (FIRST_BACKOFF_MS, doubling; engine.ts)
+    const backoffMs = [1000, 2000, 4000, 8000];
+    // Every timestamp is taken in this frame as the requests pass the proxy, so a little apart from the engine's timers
+    const clockSlackMs = 250;
+    // The refusals and their back-off, about 15 s, then the copy that lands
+    const landedCopyTimeoutMs = 60_000;
+
+    let user: SeededUser;
+    const posts: SeededPost[] = [];
+    // When each refused profile copy was sent, and when and how the one that went through was answered
+    const refusedAt: number[] = [];
+    let landedAt = 0;
+    let landedStatus: number | undefined;
+    // Every run opens with one HEAD of the done flag: the probes say how many runs the gate started
+    const runsStartedAt: number[] = [];
+    const visited: string[] = [];
+    const titles: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      for (let index = 0; index < postCount; index += 1) {
+        createPostViaApi(user, `Copied past a rate limit ${index} ${run}`).then((post) => {
+          posts.push(post);
+        });
+      }
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), ...posts.map(postIndexed));
+    });
+
+    // Refused with a reply of its own, never passed on: a refused copy that landed would be found by the retry's
+    // HEAD and counted as already there. The header is what a homeserver sends; the engine does not read it.
+    cy.intercept('PUT', '**/pub/social/v1/profile.json', (req) => {
+      if (refusedAt.length < RATE_LIMITED) {
+        refusedAt.push(Date.now());
+        req.reply({ statusCode: 429, headers: { 'retry-after': '1' }, body: 'Too Many Requests' });
+        return;
+      }
+      landedAt = Date.now();
+      req.continue((res) => {
+        landedStatus = res.statusCode;
+      });
+    }).as('profileCopy');
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }, () => {
+      runsStartedAt.push(Date.now());
+    });
+    holdMigrationFlag();
+
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      whileMigrating: () => {
+        recordRoutes(visited);
+        recordGateTitles(titles);
+        cy.wrap(refusedAt, { timeout: landedCopyTimeoutMs }).should('have.length', RATE_LIMITED);
+        // Backing off, the run is still under way on its progress screen
+        cy.get('[data-testid="social-migration"]')
+          .should('contain.text', 'Updating your account')
+          .and('not.contain.text', 'We could not reach your homeserver');
+        cy.get<Interception[]>('@profileCopy.all', { timeout: landedCopyTimeoutMs }).should((copies) => {
+          expect(copies.filter(({ response }) => response?.statusCode === 201)).to.have.length(1);
+        });
+      },
+    });
+
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include.members(['pub/pubky.app/profile.json', ...posts.map(legacyPostPath)]);
+      // A 429 read as a refusal would leave the profile behind in a run that otherwise looks clean
+      expect(Object.values(flag.skipped).flat(), 'skipped').to.not.include('pub/pubky.app/profile.json');
+    });
+    // Read before anything else can write the profile: the four refusals and the one copy, nothing retried elsewhere
+    cy.get<Interception[]>('@profileCopy.all').should('have.length', RATE_LIMITED + 1);
+    cy.get('@migrationDone.all').should('have.length', 1);
+    cy.then(() => {
+      expect(runsStartedAt, 'runs in all').to.have.length(1);
+      expect(landedStatus, 'the profile copy that went through').to.eq(201);
+      const sentAt = [...refusedAt, landedAt];
+      backoffMs.forEach((backoff, index) => {
+        expect(sentAt[index + 1] - sentAt[index], `wait before retry ${index + 1}`).to.be.gte(backoff - clockSlackMs);
+      });
+      // Only the progress screen, never a blocked one, from the first refusal to the landing route
+      expect(
+        titles.filter((title) => title !== 'Updating your account'),
+        'screens of the rate-limited run',
+      ).to.deep.equal([]);
+    });
+    expectNoSignOutRoutes(visited, 'sign-out routes during the rate-limited run');
+    cy.then(() => {
+      expectOneVersionPerPost(user, posts).then((urls) => {
+        expect(
+          urls.filter((url) => url.endsWith('/profile.json')),
+          'v1 profile',
+        ).to.have.length(1);
+      });
+    });
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
     cy.signOut(HasBackedUp.Yes);
   });
 
