@@ -196,6 +196,29 @@ describe('NewPostsSection', () => {
     expect(prependPosts).not.toHaveBeenCalled();
   });
 
+  it('prepends only the posts with a lock on a Locks stream', async () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'new2'], unreadCount: 2 });
+    vi.mocked(PostController.getDetailsByIds).mockResolvedValue([
+      { kind: 'short', lock: 'pubky://author/pub/app.locks/LOCK1.json' } as never,
+      { kind: 'short', lock: null } as never,
+    ]);
+    const prependPosts = vi.fn();
+
+    render(
+      <NewPostsSection
+        {...defaultProps}
+        streamId={'timeline:all:locked' as PostStreamId}
+        prependPosts={prependPosts}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('new-posts-button'));
+
+    await waitFor(() => {
+      expect(prependPosts).toHaveBeenCalledWith(['new1']);
+    });
+  });
+
   it('does not prepend posts whose kind does not match a wot_domain stream kind', async () => {
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
     vi.mocked(PostController.getDetailsByIds).mockResolvedValue([{ kind: 'short' } as never]);

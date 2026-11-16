@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Logger } from '@/libs/logger/logger';
-import { postKindBelongsToStream } from '@/stores/home/home.utils';
+import { postBelongsToStream } from '@/stores/home/home.utils';
 import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPosts.types';
 
 /**
@@ -37,7 +37,7 @@ export function useUnreadPosts({ streamId }: UseUnreadPostsOptions): UseUnreadPo
       const details = await PostController.getDetailsByIds({ compositeIds: stream.stream });
       const readyPostIds = stream.stream.filter((_id, index) => {
         const detail = details[index];
-        return detail !== undefined && postKindBelongsToStream(detail.kind, streamId);
+        return detail !== undefined && postBelongsToStream(detail, streamId);
       });
       const filteredStream = await StreamPostsController.filterStreamPosts({ streamId, postIds: readyPostIds });
       return { streamId, stream: filteredStream };

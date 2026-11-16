@@ -764,6 +764,19 @@ describe('usePostInputLock', () => {
       await waitFor(() => expect(mocks.prependPosts).toHaveBeenCalledWith('alice:POST1'));
     });
 
+    it('prepends the announcement to a Locks feed, whatever its kind', async () => {
+      setUpLocks();
+      mocks.streamId = 'timeline:all:locked';
+      mocks.getDetails.mockResolvedValue({ kind: 'short', lock: 'pubky://alice/pub/app.locks/LOCK1.json' });
+      mocks.publish.mockResolvedValue({ status: 'published', postId: 'alice:POST1' });
+      const { result } = setup();
+
+      configureLock(result);
+      await act(async () => result.current.submitOrPublish());
+
+      await waitFor(() => expect(mocks.prependPosts).toHaveBeenCalledWith('alice:POST1'));
+    });
+
     it('toasts and keeps the composer on a failed publish', async () => {
       setUpLocks();
       mocks.publish.mockResolvedValue({ status: 'failed' });

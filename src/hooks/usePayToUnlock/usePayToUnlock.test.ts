@@ -5,6 +5,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { LockFile, TUnlockedContent, TVerificationStatus, TVerificationTask } from '@/services/locks/locks.types';
+import { mockVerificationTask } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
   CONNECTION_POLL_INTERVAL_MS,
@@ -22,7 +23,7 @@ vi.mock('@/controllers/locks/locks', () => ({
     // Default so every test that does not care about the link still returns a settled one.
     fetchPaykitConnectionState: vi.fn(async () => 'connected'),
     // Defaults so a test that does not arrange the wait still gets a settled poll.
-    fetchPaymentStatus: vi.fn(async () => ({ status: 'pending', walletSetupNeeded: false, admissionDeadlineAt: null })),
+    fetchPaymentStatus: vi.fn(async () => mockVerificationTask('pending')),
     fetchPaidContent: vi.fn(),
     hasPaykitReceiver: vi.fn(),
   },
@@ -84,13 +85,16 @@ const statusCalls = () => vi.mocked(LocksController.fetchPaymentStatus).mock.cal
 const connectionCalls = () => vi.mocked(LocksController.fetchPaykitConnectionState).mock.calls.length;
 
 type TSubmitted = Awaited<ReturnType<typeof LocksController.startPayment>>;
-const submitted = (bundleId: string, status: TVerificationStatus = 'pending'): TSubmitted => ({ bundleId, status });
-const task = (status: TVerificationStatus, fields: Partial<TVerificationTask> = {}): TVerificationTask => ({
+const submitted = (
+  bundleId: string,
+  status: TVerificationStatus = 'pending',
+  readerNotPayable = false,
+): TSubmitted => ({
+  bundleId,
   status,
-  walletSetupNeeded: false,
-  admissionDeadlineAt: null,
-  ...fields,
+  readerNotPayable,
 });
+const task = mockVerificationTask;
 const PAYMENT_PARAMS = { lockFile, lockUrl: LOCK_URL, readerPubky: 'reader1' };
 const AUTO_PARAMS = { ...PAYMENT_PARAMS, isRetry: false };
 const RETRY_PARAMS = { ...PAYMENT_PARAMS, isRetry: true };
@@ -101,10 +105,11 @@ const reusable = (bundleId: string, task: TVerificationTask | null): TResolved =
   bundleId,
   task,
 });
-const terminal = (bundleId: string, status: 'failed' | 'expired'): TResolved => ({
+const terminal = (bundleId: string, status: 'failed' | 'expired', readerNotPayable = false): TResolved => ({
   kind: 'terminal',
   bundleId,
   status,
+  readerNotPayable,
 });
 /**
  * `fetchResolvedPurchase` looks the saved id up on the server. Routing the stub through `fetchPaymentStatus`
@@ -112,7 +117,9 @@ const terminal = (bundleId: string, status: 'failed' | 'expired'): TResolved => 
  */
 const resolveThroughLookup = (bundleId: string) => async (): Promise<TResolved> => {
   const found = await LocksController.fetchPaymentStatus({ lockFile, bundleId });
-  if (found?.status === 'failed' || found?.status === 'expired') return terminal(bundleId, found.status);
+  if (found?.status === 'failed' || found?.status === 'expired') {
+    return terminal(bundleId, found.status, found.readerNotPayable);
+  }
   return reusable(bundleId, found);
 };
 
@@ -1313,6 +1320,27 @@ describe('usePayToUnlock (waiting)', () => {
     expect(statusCalls()).toBe(3);
   });
 
+  it('moves to the not-payable screen, with no toast, when the poll reports it, and stops reading', async () => {
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending'))
+      .mockResolvedValue(task('failed', { readerNotPayable: true }));
+    vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1'));
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.stage).toBe('waiting');
+
+    await advance(POLL_INTERVAL_MS);
+    expect(result.current.stage).toBe('reader-not-payable');
+    expect(toastMock).not.toHaveBeenCalled();
+
+    const callsWhenDead = statusCalls();
+    await advance(POLL_INTERVAL_MS);
+    await returnToTab();
+    expect(statusCalls()).toBe(callsWhenDead);
+  });
+
   it.each(['failed', 'expired'] as const)('offers Try again when the poll reports %s', async (status) => {
     vi.mocked(LocksController.fetchPaymentStatus)
       .mockResolvedValueOnce(task('pending'))
@@ -1924,11 +1952,116 @@ describe('usePayToUnlock (region refusal)', () => {
     await waitFor(() => expect(result.current.stage).toBe('region-blocked'));
 
     rerender({ open: false });
-    vi.mocked(LocksController.startPayment).mockResolvedValue({ bundleId: 'fresh-1', status: 'pending' });
+    vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1'));
     rerender({ open: true });
 
     await waitFor(() => expect(result.current.stage).toBe('waiting'));
     expect(LocksController.startPayment).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('usePayToUnlock (reader not payable)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authState.currentUserPubky = 'reader1';
+    authState.session = {};
+    authState.restoreStatus = 'ready';
+    vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue(terminal('dead-1', 'failed', true));
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
+    vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1'));
+    vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('connected');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
+  });
+
+  it('opens on its own screen from an ended id, with no toast and nothing submitted', async () => {
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
+  });
+
+  it('shows the same screen after the modal closes and reopens', async () => {
+    const { result, rerender } = renderPayWith({ open: true });
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+
+    rerender({ open: false });
+    rerender({ open: true });
+
+    await waitFor(() => expect(LocksController.fetchResolvedPurchase).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
+  });
+
+  // Replaying an id with no task can answer with the failed task, and so can a start queued behind another one.
+  it('lands on its screen when the automatic start answers with it', async () => {
+    vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue(reusable('stored-1', null));
+    vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('stored-1', 'failed', true));
+
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+    expect(LocksController.startPayment).toHaveBeenCalledExactlyOnceWith(AUTO_PARAMS);
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(LocksController.fetchPaykitConnectionState).not.toHaveBeenCalled();
+    expect(result.current.isSubmitting).toBe(false);
+  });
+
+  // The ended id stays failed even once the wallet is fixed, so only a fresh id can pay.
+  it('checks the wallet, then submits a fresh attempt, when the reader asks to check again', async () => {
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(result.current.stage).toBe('waiting'));
+    expect(LocksController.hasPaykitReceiver).toHaveBeenCalledTimes(1);
+    expect(LocksController.startPayment).toHaveBeenCalledExactlyOnceWith(RETRY_PARAMS);
+  });
+
+  it('returns to its screen without a toast when the fresh attempt fails the same way', async () => {
+    vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1', 'failed', true));
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.isSubmitting).toBe(false));
+    expect(result.current.stage).toBe('reader-not-payable');
+    expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it('moves to the install steps when checking again finds no wallet', async () => {
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(false);
+
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(result.current.stage).toBe('install'));
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
+  });
+
+  // A submission that never landed says nothing about the wallet, so it is an ordinary failed submission.
+  it('falls back to Try again when the fresh attempt cannot be submitted', async () => {
+    vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('network down'));
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('reader-not-payable'));
+
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(result.current.stage).toBe('retry'));
+    expect(toastMock).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'The payment could not be started. Try again later.',
+    });
+  });
+
+  // Its button submits a new payment, which the region gate must keep out like any other.
+  it('yields to the region gate', async () => {
+    const { result } = renderPayWith({ open: true, paymentAvailability: 'blocked' });
+    await waitFor(() => expect(result.current.stage).toBe('region-blocked'));
+    expect(toastMock).not.toHaveBeenCalled();
   });
 });
 

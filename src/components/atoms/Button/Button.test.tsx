@@ -21,7 +21,7 @@ describe('Button', () => {
 
     rerender(<Button variant={ButtonVariant.OUTLINE}>Outline</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-foreground/4', 'border-border');
+    expect(button).toHaveClass('bg-button-outline', 'border-border');
 
     rerender(<Button variant={ButtonVariant.GHOST}>Ghost</Button>);
     button = screen.getByRole('button');
@@ -29,11 +29,11 @@ describe('Button', () => {
 
     rerender(<Button variant={ButtonVariant.BRAND}>Brand</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-brand', 'text-background');
+    expect(button).toHaveClass('bg-brand', 'text-brand-foreground');
 
     rerender(<Button variant="destructive">Destructive</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-destructive/60', 'text-destructive-foreground');
+    expect(button).toHaveClass('bg-destructive-button', 'text-destructive-foreground');
 
     rerender(<Button variant="destructive-soft">Destructive Soft</Button>);
     button = screen.getByRole('button');

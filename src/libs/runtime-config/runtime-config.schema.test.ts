@@ -391,6 +391,18 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: '   ' }).passportUrl).toBeUndefined();
   });
 
+  it('keeps passportApple off by default in strict and lenient mode', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).passportApple).toBe(false);
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).passportApple).toBe(false);
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportApple: '' }).passportApple).toBe(false);
+  });
+
+  it('parses passportApple as "true"/"false" and rejects anything else', () => {
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportApple: 'true' }).passportApple).toBe(true);
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportApple: 'false' }).passportApple).toBe(false);
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportApple: 'on' })).toThrow();
+  });
+
   it('honors a provided passportUrl and rejects a malformed one', () => {
     expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: 'https://passport.example.com' }).passportUrl).toBe(
       'https://passport.example.com',

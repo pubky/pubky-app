@@ -65,8 +65,8 @@ export function ProfilePageLayout({
   const showMobilePostsProfileHeader = !isOwnProfile && activePage === PROFILE_PAGE_TYPES.POSTS;
   const shouldAutoScrollToPostsFeed = showMobilePostsProfileHeader && isMobile && !isLoading;
   const profileHeaderWrapperClassName = showMobilePostsProfileHeader
-    ? 'mb-6 flex min-w-0 flex-col overflow-hidden bg-transparent pb-0 shadow-none lg:mb-0 lg:block lg:bg-background lg:pb-12 lg:shadow-sm'
-    : 'hidden overflow-hidden bg-background pb-12 shadow-sm lg:block';
+    ? 'mb-6 flex min-w-0 flex-col overflow-hidden bg-transparent pb-0 lg:mb-0 lg:block lg:bg-background lg:pb-12'
+    : 'hidden overflow-hidden bg-background pb-12 lg:block';
 
   // Stabilize callbacks to prevent unnecessary re-renders in child components
   const handleAvatarClick = useCallback(() => {

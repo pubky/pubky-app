@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getPassportUrl } from '@/config/network';
+import { getPassportUrl, isPassportAppleEnabled } from '@/config/network';
 import {
   PASSPORT_ATTEMPT_TIMEOUT_MS,
   PASSPORT_POPUP_CLOSED_CONFIRMATIONS,
   PASSPORT_POPUP_CLOSED_POLL_MS,
-  PASSPORT_POPUP_FEATURES,
+  PASSPORT_POPUP_HEIGHT,
   PASSPORT_POPUP_NAME_PREFIX,
+  PASSPORT_POPUP_WIDTH,
 } from '@/config/passport';
 import { AuthController } from '@/controllers/auth/auth';
 import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
@@ -65,6 +66,19 @@ const FAILURE_TOAST_COPY: Record<PassportFailureReason, string> = {
   'flow-error': 'Sign in with Google failed. Try again.',
 };
 
+/** Same copy without a provider name when Passport also offers Apple (`isPassportAppleEnabled`). */
+const FAILURE_TOAST_COPY_WITH_APPLE: Record<PassportFailureReason, string> = {
+  'popup-blocked': 'Allow pop-ups for this site to continue with Passport.',
+  cancel: 'Passport sign-in was cancelled.',
+  error: 'Passport could not complete the sign-in. Try again.',
+  'popup-closed': 'The Passport window was closed before sign-in finished.',
+  timeout: 'Passport sign-in timed out. Try again.',
+  'flow-error': 'Sign in with Passport failed. Try again.',
+};
+
+const failureToastCopy = (reason: PassportFailureReason): string =>
+  (isPassportAppleEnabled() ? FAILURE_TOAST_COPY_WITH_APPLE : FAILURE_TOAST_COPY)[reason];
+
 /**
  * Drive one Pubky Passport ("Continue with Google") attempt.
  *
@@ -105,7 +119,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
   const fail = (attempt: PassportAttempt, reason: PassportFailureReason) => {
     if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
     attempt.cancelAuthFlow?.();
-    toast({ variant: 'error', description: FAILURE_TOAST_COPY[reason] });
+    toast({ variant: 'error', description: failureToastCopy(reason) });
     settle(attempt, 'failed');
   };
 
@@ -266,12 +280,19 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     }
 
     const attemptId = crypto.randomUUID();
+    const width = Math.min(PASSPORT_POPUP_WIDTH, window.screen.availWidth || PASSPORT_POPUP_WIDTH);
+    const height = Math.min(PASSPORT_POPUP_HEIGHT, window.screen.availHeight || PASSPORT_POPUP_HEIGHT);
     // Opened synchronously from the click; awaiting first would trigger popup blocking.
-    const popup = window.open('about:blank', `${PASSPORT_POPUP_NAME_PREFIX}${attemptId}`, PASSPORT_POPUP_FEATURES);
+    // Keep window.opener: Passport needs it for the outcome hand-off.
+    const popup = window.open(
+      'about:blank',
+      `${PASSPORT_POPUP_NAME_PREFIX}${attemptId}`,
+      `popup,width=${width},height=${height}`,
+    );
     if (!popup) {
       // No auth flow was started and nothing else was touched: report it as its own outcome so
       // callers do not regenerate a Ring request that is still perfectly valid.
-      toast({ variant: 'error', description: FAILURE_TOAST_COPY['popup-blocked'] });
+      toast({ variant: 'error', description: failureToastCopy('popup-blocked') });
       onAttemptSettledRef.current?.({ attemptId, result: 'popup-blocked' });
       return;
     }

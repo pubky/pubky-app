@@ -485,4 +485,14 @@ describe('Hot — visual regression', () => {
     // but CSS-hidden so the snapshot matches the Tags first fold.
     await matchVrtFrameScreenshot('hot-mobile');
   });
+
+  it('renders the hot discovery page in light mode at desktop viewport', async () => {
+    await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP, theme: 'light' });
+    await matchVrtFrameScreenshot('hot-light-desktop');
+  });
+
+  it('renders the hot discovery page in light mode at mobile viewport', async () => {
+    await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_MOBILE, theme: 'light' });
+    await matchVrtFrameScreenshot('hot-light-mobile');
+  });
 });

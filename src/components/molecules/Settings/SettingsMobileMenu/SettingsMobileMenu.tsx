@@ -30,6 +30,7 @@ export function SettingsMobileMenu() {
     label: item.label,
     isActive: pathname === item.path,
     onSelect: () => router.push(item.path),
+    dataCy: `settings-mobile-tab-${item.id}`,
   }));
 
   return <MobileTabBar items={items} position="fixed" headerTop="compact" data-testid="settings-mobile-menu" />;

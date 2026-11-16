@@ -16,6 +16,7 @@ vi.mock('facehash', () => ({
       {onRenderMouth?.()}
     </div>
   ),
+  stringHash: () => 0,
 }));
 
 // Mock dexie-react-hooks

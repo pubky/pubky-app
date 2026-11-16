@@ -76,7 +76,7 @@ export function DialogReportPostIssueStep({
         <Button
           data-cy="report-issue-step-cancel"
           variant="outline"
-          className="border-border bg-foreground/5 font-bold"
+          className="border-border bg-glass font-bold"
           onClick={onCancel}
           aria-label={'Cancel'}
         >

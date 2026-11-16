@@ -105,6 +105,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
             <Link
               key={item.href}
               href={item.href}
+              data-cy={`footer-nav-${item.label.toLowerCase()}-btn`}
               // Search prefetch can loop even after leaving a query search (#2755).
               // Active feed links only scroll, so they also skip prefetch.
               prefetch={item.href === APP_ROUTES.SEARCH || (item.isFeedRoute && itemIsActive) ? false : undefined}
@@ -120,7 +121,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
               }}
               className={cn(
                 'shrink-0 rounded-full p-2 transition-all sm:p-3',
-                itemIsActive ? 'bg-secondary' : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
+                itemIsActive ? 'bg-secondary' : 'border border-border bg-glass backdrop-blur-sm hover:bg-glass-hover',
               )}
             >
               <Icon className="h-6 w-6" />
@@ -150,7 +151,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 variant="secondary"
               >
                 <Typography
-                  className={cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
+                  className={cn('font-semibold text-brand-foreground', unreadNotifications > 21 && 'text-xs')}
                   size="xs"
                 >
                   {unreadNotifications > 21 ? '21+' : unreadNotifications}
@@ -162,7 +163,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           <Button
             variant="secondary"
             size="icon"
-            className="size-10 items-center justify-center border bg-white/5 sm:size-12"
+            className="size-10 items-center justify-center border bg-glass sm:size-12"
             aria-label="Join Pubky"
             onClick={() => setShowSignInDialog(true)}
           >

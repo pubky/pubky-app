@@ -5,6 +5,8 @@ export type TLocalTagParams = Omit<TTagEventParams, 'taggedKind'> & {
   expectedMutationId?: string;
   synced?: boolean;
   isCurrent?: () => boolean;
+  /** The tag file a create writes (or restores); deletes ignore it. */
+  tagUri?: string;
 };
 
 export type TViewerTagMutationsParams = Omit<TTagEventParams, 'label'>;

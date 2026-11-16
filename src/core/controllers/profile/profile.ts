@@ -8,7 +8,6 @@ import type {
 import { Identity } from '@/libs/identity/identity';
 import type { Pubky } from '@/models/models.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 // Operations related with the profile.json file in the homeserver
@@ -57,15 +56,6 @@ export class ProfileController {
       pubky,
       changes: links === undefined ? fields : { ...fields, links: UserNormalizer.linksFromUi(links) },
     });
-  }
-
-  /**
-   * Generates a new pair of secret key and mnemonic and sets them in the onboarding and auth stores.
-   */
-  static generateSecrets() {
-    const secrets = Identity.generateSecrets();
-    useOnboardingStore.getState().setSecrets(secrets);
-    useAuthStore.getState().setCurrentUserPubky(Identity.z32FromSecret(secrets.secretKey));
   }
 
   /**

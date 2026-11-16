@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CirclePlay, Download, Image, Layers, Library, Link, Newspaper, StickyNote } from 'lucide-react';
+import { CirclePlay, Download, Image, Layers, Library, Link, Lock, Newspaper, StickyNote } from 'lucide-react';
 import { CONTENT, type ContentType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
@@ -80,6 +80,13 @@ export function FilterContent({
         icon: Download,
         disabled: isDisabled(CONTENT.FILES),
         dataCy: 'files-content-toggle',
+      },
+      {
+        key: CONTENT.LOCKS,
+        label: 'Locks',
+        icon: Lock,
+        disabled: isDisabled(CONTENT.LOCKS),
+        dataCy: 'locks-content-toggle',
       },
     ],
     [isDisabled],

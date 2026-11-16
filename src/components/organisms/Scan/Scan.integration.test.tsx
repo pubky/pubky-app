@@ -46,7 +46,7 @@ describe('ScanContent Android signup handoff', () => {
 
   it('opens Pubky Ring via a signup_grant intent URL for the pending signup request', async () => {
     render(<ScanContent />);
-    const ring = await screen.findByRole('button', { name: 'Authorize with Pubky Ring' });
+    const ring = await screen.findByRole('button', { name: 'Continue with Pubky Ring' });
 
     fireEvent.click(ring);
 

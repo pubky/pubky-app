@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { AppWindow, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -17,7 +17,6 @@ import { cn } from '@/libs/utils/utils';
 import { DialogDownloadPubkyRing } from '@/organisms/DialogDownloadPubkyRing/DialogDownloadPubkyRing';
 import { ContentCard } from '../Content/Content';
 import { PageTitle } from '../Page/Page';
-import { PopoverTradeoffs } from '../PopoverTradeoffs/PopoverTradeoffs';
 
 export const InstallCard = () => {
   return (
@@ -58,7 +57,7 @@ export const InstallFooter = () => {
       <Link href={getPubkyProtocolLink()} target="_blank">
         {'Pubky'}
       </Link>
-      {'-powered keychain, or create your keys in the browser (less secure).'}
+      {'-powered keychain.'}
     </FooterLinks>
   );
 };
@@ -75,38 +74,19 @@ export const InstallHeader = () => {
 };
 export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const router = useRouter();
-  const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingContinue, setLoadingContinue] = useState(false);
-  const handleCreate = () => {
-    // Reset any existing keypair to ensure a fresh one is generated
-    setLoadingCreate(true);
-    router.push(ONBOARDING_ROUTES.PUBKY);
-  };
   const handleContinue = () => {
     setLoadingContinue(true);
     router.push(ONBOARDING_ROUTES.SCAN);
   };
   return (
-    <Container className={cn('flex-col-reverse gap-3 md:flex-row lg:gap-6', props.className)}>
-      <Container className="flex-row items-center gap-1">
-        <Button
-          id="create-keys-in-browser-btn"
-          variant="outline"
-          className="flex-1 rounded-full md:flex-none"
-          onClick={handleCreate}
-          disabled={loadingCreate || loadingContinue}
-        >
-          {loadingCreate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AppWindow className="mr-2 h-4 w-4" />}
-          {'Create keys in browser'}
-        </Button>
-        <PopoverTradeoffs />
-      </Container>
+    <Container className={cn('gap-3 md:flex-row lg:gap-6', props.className)}>
       <Button
         id="continue-with-pubky-ring-btn"
         size="lg"
         className="rounded-full"
         onClick={handleContinue}
-        disabled={loadingCreate || loadingContinue}
+        disabled={loadingContinue}
       >
         {loadingContinue ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
         {'Continue with Pubky Ring'}

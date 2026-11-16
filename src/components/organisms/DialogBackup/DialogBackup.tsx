@@ -63,7 +63,7 @@ export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
           <Button
             id="backup-btn"
             variant="outline"
-            className="border text-xs font-bold text-primary-foreground shadow-sm hover:text-primary-foreground"
+            className="border text-xs font-bold text-brand-foreground shadow-sm hover:text-brand-foreground"
           >
             {'Backup'}
           </Button>

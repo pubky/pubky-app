@@ -32,8 +32,9 @@ export const PASSPORT_RETURN_QUERY = {
   outcome: 'outcome',
 } as const;
 
-/** Window features for the Passport popup. `noopener`/`noreferrer` must not be used: Passport needs `window.opener`. */
-export const PASSPORT_POPUP_FEATURES = 'popup,width=520,height=760';
+/** Preferred Passport popup size in CSS pixels; the hook caps it to the available screen. */
+export const PASSPORT_POPUP_WIDTH = 375;
+export const PASSPORT_POPUP_HEIGHT = 812;
 
 /** Prefix of the popup window name; the attempt id is appended so each attempt targets its own window. */
 export const PASSPORT_POPUP_NAME_PREFIX = 'pubky-passport-';

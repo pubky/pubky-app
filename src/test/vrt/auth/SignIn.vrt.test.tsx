@@ -1,6 +1,6 @@
 // Preserve browser mock initialization order.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -8,6 +8,9 @@ import { createZustandLikeHook } from '@/test-utils/stores';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { Header } from '@/organisms/Header/Header';
 import { SignInPage } from '@/templates/Auth/SignInPage/SignInPage';
+
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -49,6 +52,7 @@ vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => ({
 for (const [name, viewport] of [
   ['desktop', VRT_VIEWPORT_DESKTOP],
   ['mobile', VRT_VIEWPORT_MOBILE],
+  ['figma-mobile', { width: 375, height: 812 }],
 ] as const) {
   describe(`SignIn ${name}`, () => {
     it.each(['enabled', 'disabled'] as const)('renders with Passport %s', async (passportEligibility) => {
@@ -60,13 +64,54 @@ for (const [name, viewport] of [
         </>,
         { viewport },
       );
-      if (name === 'mobile') {
-        await expect.element(page.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeVisible();
-        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeVisible();
+      if (name !== 'desktop') {
+        await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
+        const signerButtons = ['Continue with Pubky Ring', 'Continue with Bitkit'];
+        if (passportEligibility === 'enabled') signerButtons.push('Continue with Google');
+        for (const label of signerButtons) {
+          expect(page.getByRole('button', { name: label }).element().getBoundingClientRect().height).toBe(60);
+        }
+        if (passportEligibility === 'enabled') {
+          expect(
+            page.getByRole('button', { name: 'About signing in with Google' }).element().getBoundingClientRect().height,
+          ).toBe(32);
+          const sovereign = page.getByTestId('sign-in-sovereign-card-mobile').element().getBoundingClientRect();
+          const passport = page.getByTestId('passport-method-section').element().getBoundingClientRect();
+          expect(sovereign.height).toBeCloseTo(228, 0);
+          expect(passport.height).toBeCloseTo(152, 0);
+          expect(passport.top - sovereign.bottom).toBeCloseTo(24, 0);
+          for (const card of [sovereign, passport]) {
+            expect(card.left).toBeCloseTo(16, 0);
+            expect(card.width).toBeCloseTo(viewport.width - 32, 0);
+          }
+          if (name === 'figma-mobile') expect(sovereign.top).toBeCloseTo(216, 0);
+        }
+        expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
       } else {
         await expect.element(page.getByRole('button', { name: 'Copy authentication link' })).toBeVisible();
       }
       await matchVrtFrameScreenshot(`sign-in-passport-${passportEligibility}-${name}`);
     });
+
+    it('renders the provider button when Apple is enabled', async () => {
+      mockAppleEnabled.mockReturnValue(true);
+      vi.mocked(usePassportEligibility).mockReturnValue('enabled');
+      await renderForVRT(
+        <>
+          <Header />
+          <SignInPage />
+        </>,
+        { viewport },
+      );
+      await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' })).toBeVisible();
+      await matchVrtFrameScreenshot(`sign-in-apple-enabled-${name}`);
+    });
   });
 }
+
+// Match the default deployment, with explicit Apple-enabled coverage above.
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  isPassportAppleEnabled: mockAppleEnabled,
+}));

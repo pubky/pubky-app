@@ -129,6 +129,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         isEditInlineMediaLoading: false,
         serializeArticleForLock: mocks.serializeArticleForLock,
         getLatestArticle: () => mocks.latestArticle ?? { title: articleTitle, body: content },
+        discardPendingArticle: () => {},
         isArticle,
         setIsArticle,
         handleArticleClick: vi.fn(),

@@ -7,6 +7,7 @@ import type {
   TUserId,
 } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import type { TQueryNexusParams } from '@/services/nexus/nexus.utils.types';
 import { userApi } from '@/services/nexus/user/user.api';
 import {
   PROFILE_LOOKUP_NOT_FOUND_RETRIES,
@@ -48,12 +49,16 @@ export class NexusUserService {
    * Retrieves taggers for a specific tag label on a user from Nexus API
    *
    * @param params - Parameters containing user ID, label, and pagination options
+   * @param params.notFoundRetries - 404 attempts allowed after the first, overriding the shared budget
    * @returns Users who tagged the user with the specified label (`{ users, relationship }`)
    */
-  static async taggers(params: TUserTaggersParams): Promise<NexusTaggers> {
+  static async taggers({
+    notFoundRetries,
+    ...params
+  }: TUserTaggersParams & Pick<TQueryNexusParams, 'notFoundRetries'>): Promise<NexusTaggers> {
     const url = userApi.taggers(params);
     // Tagger lists revalidate after local mutations or count changes.
-    return await queryNexus<NexusTaggers>({ url, staleTime: 0 });
+    return await queryNexus<NexusTaggers>({ url, staleTime: 0, notFoundRetries });
   }
 
   /**

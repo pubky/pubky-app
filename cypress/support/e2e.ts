@@ -15,6 +15,10 @@
 
 // Import commands.ts using ES2015 syntax:
 import './commands';
+import './console-log';
+import { skipTestsOutsideMobileSubset } from './mobile';
+
+skipTestsOutsideMobileSubset();
 
 // uses Chrome DevTools Protocol to allow clipboard permissions
 // resolves 'NotAllowedError: Document is not focused.' in CI

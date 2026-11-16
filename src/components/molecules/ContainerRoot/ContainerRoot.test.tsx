@@ -7,6 +7,12 @@ vi.mock('next/font/google', () => ({
   Inter_Tight: () => ({ variable: '--font-geist-sans' }),
 }));
 
+// next-themes reads `window.matchMedia` on mount, which jsdom does not implement; the
+// provider is exercised in its own test, so a passthrough keeps this one about the shell.
+vi.mock('@/providers/ThemeProvider/ThemeProvider', () => ({
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 // Distinct origins per field: the test config points the CDN and the API at the same host,
 // which would let a component that read the wrong getter (or only one of them) pass.
 vi.mock('@/libs/runtime-config/runtime-config', async (importOriginal) => ({

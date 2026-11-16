@@ -37,7 +37,7 @@ export function FilterPostsBar({ value, onValueChange, validationMessage }: Filt
           aria-label={'Filter posts'}
           aria-invalid={!!validationMessage}
           aria-describedby={validationMessage ? MESSAGE_ID : undefined}
-          className="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 pl-0 text-base font-medium text-foreground md:text-base"
+          className="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 pl-0 text-base font-medium text-foreground shadow-none md:text-base"
         />
         <span className="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
           <Search className="size-4 text-muted-foreground" />

@@ -39,6 +39,7 @@ export class LocalPostTagService {
     expectedMutationId,
     synced = false,
     isCurrent,
+    tagUri,
   }: TLocalTagParams): Promise<boolean> {
     // True only when the transaction actually changed IndexedDB state.
     let mutated = false;
@@ -52,7 +53,7 @@ export class LocalPostTagService {
         if (status === null && expectedMutationId === undefined) {
           return false;
         }
-        postTagsModel.recordMutation(label, taggerId, true, mutationId, synced);
+        postTagsModel.recordMutation(label, taggerId, true, mutationId, synced, tagUri);
         if (status === null) {
           await this.savePostTagsModel(postId, postTagsModel);
           return true;

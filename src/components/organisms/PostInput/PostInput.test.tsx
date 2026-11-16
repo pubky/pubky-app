@@ -608,6 +608,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     isEditInlineMediaLoading: false,
     serializeArticleForLock: vi.fn(() => null),
     getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
+    discardPendingArticle: vi.fn(),
     mentionUsers: [],
     mentionIsOpen: false,
     mentionSelectedIndex: 0,

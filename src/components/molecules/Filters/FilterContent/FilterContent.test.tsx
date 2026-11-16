@@ -33,6 +33,7 @@ describe('FilterContent', () => {
       { value: CONTENT.VIDEOS, label: 'Videos' },
       { value: CONTENT.LINKS, label: 'Links' },
       { value: CONTENT.FILES, label: 'Files' },
+      { value: CONTENT.LOCKS, label: 'Locks' },
     ];
 
     tabsToTest.forEach(({ value, label }) => {
@@ -68,7 +69,7 @@ describe('FilterContent', () => {
   it('renders all items as disabled when disabled prop is true', () => {
     render(<FilterContent disabled />);
 
-    const labels = ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files'];
+    const labels = ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files', 'Locks'];
     labels.forEach((label) => {
       expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
     });
@@ -88,7 +89,7 @@ describe('FilterContent', () => {
   it('items are not disabled by default', () => {
     render(<FilterContent />);
 
-    const labels = ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files'];
+    const labels = ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files', 'Locks'];
     labels.forEach((label) => {
       expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
     });
@@ -102,6 +103,7 @@ describe('FilterContent', () => {
     expect(screen.getByLabelText('Collections')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByLabelText('Links')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByLabelText('Files')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Locks')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByLabelText('All')).not.toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByLabelText('Images')).not.toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByLabelText('Videos')).not.toHaveAttribute('aria-disabled', 'true');

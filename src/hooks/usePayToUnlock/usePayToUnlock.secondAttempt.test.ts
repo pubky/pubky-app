@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { LocksService } from '@/services/locks/locks';
 import type { LockFile } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePayToUnlock } from './usePayToUnlock';
@@ -10,8 +11,8 @@ import type { TPayToUnlockStage } from './usePayToUnlock.types';
 const mocks = vi.hoisted(() => ({
   saved: [] as string[],
   generateBundleId: vi.fn(),
-  submitProof: vi.fn(),
-  lookupVerificationTask: vi.fn(),
+  submitProof: vi.fn<typeof LocksService.submitProof>(),
+  lookupVerificationTask: vi.fn<typeof LocksService.lookupVerificationTask>(),
   hasPaykitReceiver: vi.fn(),
   toast: vi.fn(),
 }));
@@ -137,7 +138,7 @@ describe('usePayToUnlock, second attempt after a 451', () => {
     first.unmount();
 
     mocks.lookupVerificationTask.mockResolvedValue(null);
-    mocks.submitProof.mockResolvedValue({ status: 'pending' });
+    mocks.submitProof.mockResolvedValue({ status: 'pending', readerNotPayable: false });
     const later = renderOpening();
 
     await waitFor(() => expect(later.result.current.stage).toBe('waiting'));

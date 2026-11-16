@@ -32,11 +32,12 @@ export function ProfilePageSidebar() {
 
   const {
     tags,
+    count: tagsCount,
     isLoading: isLoadingTags,
     handleTagToggle,
   } = useTagged(pubky, {
     enablePagination: false,
-    enableStats: false,
+    enableStats: true,
   });
 
   // Show only top 5 most popular tags (sorted by taggers_count)
@@ -66,7 +67,13 @@ export function ProfilePageSidebar() {
     >
       {socialGraphStatus && <ProfilePageSocialGraph status={socialGraphStatus} />}
       {!isTaggedPage && (
-        <ProfilePageTaggedAs tags={topTags} isLoading={isLoadingTags} onTagClick={handleTagClick} pubky={pubky ?? ''} />
+        <ProfilePageTaggedAs
+          tags={topTags}
+          count={tagsCount}
+          isLoading={isLoadingTags}
+          onTagClick={handleTagClick}
+          pubky={pubky ?? ''}
+        />
       )}
       <ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
       {isAuthenticated && <FeedbackCard />}

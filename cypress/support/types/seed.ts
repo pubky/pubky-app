@@ -20,7 +20,24 @@ export type SeededPost = {
   kind: SeededPostKind;
 };
 
-export type SeedCreateUserArgs = { name: string; bio: string; recoveryFilePath?: string };
+export type SeedCreateUserArgs = { name: string; bio: string };
+
+export type SeedSignUpArgs = { name: string };
+
+// A key signed up on the homeserver with no profile yet, the state a Pubky Ring sign-up leaves
+// the app in before the Profile step
+export type SeededSignUp = {
+  id: string;
+  pubky: string;
+  // The signup token the sign-up consumed
+  inviteCode: string;
+};
+
+// `authUrl` is the `pubkyauth://` request the app shows as its sign-in QR code or Ring deeplink
+export type SeedApprovePubkyAuthArgs = { name: string; authUrl: string };
+
+/** A homeserver write the stand-in Lock Server makes for `owner`: a PUT of `bytes` (base64), or a DELETE without. */
+export type SeedLockServerWriteArgs = { owner: string; path: string; bytes?: string };
 
 export type SeedCreatePostArgs = {
   authorId: string;
@@ -48,3 +65,21 @@ export type SeedCreateCollectionArgs = {
   layout: SeededCollectionLayout;
 };
 export type SeedAddToCollectionArgs = { authorId: string; collectionId: string; itemUri: string };
+
+export type SeedCreateLockPostArgs = {
+  authorId: string;
+  title: string;
+  teaser: string;
+  // Text of the short post behind the lock
+  lockedContent: string;
+  // Price in sats
+  amount: string;
+};
+
+export type SeededLockPost = SeededPost & {
+  lockId: string;
+  // Path tail under /priv/app.locks/content/, as a guarded read names it
+  guardedPath: string;
+  // The locked post's JSON, base64, for the Lock Server stub to serve
+  guardedBytes: string;
+};

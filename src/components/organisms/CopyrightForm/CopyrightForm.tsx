@@ -12,6 +12,7 @@ import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { useCopyrightForm } from '@/hooks/useCopyrightForm/useCopyrightForm';
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES } from '@/hooks/useCopyrightForm/useCopyrightForm.constants';
 import type { CopyrightFormData } from '@/hooks/useCopyrightForm/useCopyrightForm.types';
+import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { formatUSDate } from '@/libs/utils/utils';
 import { cn } from '@/libs/utils/utils';
 import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
@@ -21,10 +22,14 @@ export function CopyrightForm() {
   const { form, onSubmit } = useCopyrightForm();
   const { isSubmitting, errors } = form.formState;
   const roleError = errors.role?.message;
-  const currentDate = formatUSDate();
+  // The page is server-rendered: the server's time zone is not the visitor's, so the date waits for hydration, and so
+  // does submitting, because until then the browser would submit the form natively instead of through `onSubmit`.
+  const isHydrated = useIsHydrated();
+  const currentDate = isHydrated ? formatUSDate() : '';
   return (
     <Container size="container" className={cn('pb-12', CONTENT_GUTTER_CLASS)}>
-      <form onSubmit={onSubmit}>
+      {/* POST keeps the personal details out of the URL should the browser ever submit natively. */}
+      <form method="post" onSubmit={onSubmit}>
         <Card className="rounded-t-lg rounded-b-none border border-border p-8 md:p-12">
           <Container className="gap-6">
             <Typography as="h1" size="lg">
@@ -289,7 +294,7 @@ export function CopyrightForm() {
           <Container className="flex-row justify-end">
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isHydrated}
               size="lg"
               className="w-auto"
               aria-label={isSubmitting ? 'Submitting...' : 'Submit Form'}

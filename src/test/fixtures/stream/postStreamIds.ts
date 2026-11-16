@@ -12,6 +12,11 @@ export const POST_STREAM_GRAMMAR_FIXTURES = [
     scopes: ['follow_graph'],
   },
   {
+    streamId: 'timeline:following:locked',
+    source: StreamSource.FOLLOWING,
+    scopes: ['follow_graph'],
+  },
+  {
     streamId: 'total_engagement:following:image:bitcoin',
     source: StreamSource.FOLLOWING,
     scopes: ['follow_graph'],

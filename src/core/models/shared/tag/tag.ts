@@ -6,12 +6,14 @@ export class TagModel implements NexusTag {
   taggers: Pubky[];
   taggers_count: number;
   relationship: boolean;
+  tag_uri?: string | null;
 
   constructor(tag: NexusTag) {
     this.label = tag.label;
     this.taggers = tag.taggers;
     this.taggers_count = tag.taggers_count;
     this.relationship = tag.relationship;
+    if (tag.tag_uri !== undefined) this.tag_uri = tag.tag_uri;
   }
 
   setRelationship(relationship: boolean) {

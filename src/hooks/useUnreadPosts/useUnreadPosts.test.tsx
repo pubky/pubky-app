@@ -154,6 +154,18 @@ describe('useUnreadPosts', () => {
     expect(result.current.unreadCount).toBe(2);
   });
 
+  it('counts only the posts with a lock when the Locks filter is selected', async () => {
+    const locked = postDetails('locked', { lock: 'pubky://author/pub/app.locks/LOCK1.json' });
+    const plain = postDetails('plain', { lock: null });
+    await PostDetailsModel.create(locked);
+    await PostDetailsModel.create(plain);
+    await setUnreadStream(PostStreamTypes.TIMELINE_ALL_LOCKED, [locked.id, plain.id]);
+    const { result } = renderHook(() => useUnreadPosts({ streamId: PostStreamTypes.TIMELINE_ALL_LOCKED }));
+
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([locked.id]));
+    expect(result.current.unreadCount).toBe(1);
+  });
+
   it.each<PostStreamId>([
     PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
     buildCollectionItemsStreamId('owner', 'collection-post'),

@@ -80,6 +80,7 @@ const setupNotificationMocks = () => {
     mockNotificationStore({
       setState: storeMocks.notificationInit,
       reset: storeMocks.resetNotificationStore,
+      selectLastRead: () => 0,
     }),
   );
 

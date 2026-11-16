@@ -16,7 +16,7 @@ export function FAQAccordion({ items, className }: FAQAccordionProps) {
           className="w-full overflow-hidden rounded-md border border-border"
         >
           <AccordionPrimitive.Header>
-            <AccordionPrimitive.Trigger className="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5">
+            <AccordionPrimitive.Trigger className="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-foreground/5">
               <span className="text-left text-sm leading-5 font-medium text-popover-foreground">{item.question}</span>
               <ChevronRight
                 size={16}

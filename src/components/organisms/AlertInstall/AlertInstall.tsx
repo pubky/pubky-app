@@ -27,8 +27,8 @@ export function AlertInstall() {
         className="flex-row items-center gap-3 rounded-lg bg-brand px-6 py-3"
       >
         <Container className="min-w-0 flex-1 flex-row items-center gap-3">
-          <Smartphone aria-hidden="true" className="size-4 shrink-0 text-primary-foreground" />
-          <Typography size="sm" className="truncate font-bold text-primary-foreground">
+          <Smartphone aria-hidden="true" className="size-4 shrink-0 text-brand-foreground" />
+          <Typography size="sm" className="truncate font-bold text-brand-foreground">
             <span className="md:hidden">Install Pubky</span>
             <span className="hidden md:inline">Install Pubky for faster access</span>
           </Typography>
@@ -37,7 +37,7 @@ export function AlertInstall() {
           <Button
             variant="dark-outline"
             size="sm"
-            className="bg-input/30 px-3.5 text-xs font-bold text-primary-foreground"
+            className="bg-input/30 px-3.5 text-xs font-bold text-brand-foreground"
             onClick={remindLater}
           >
             Later

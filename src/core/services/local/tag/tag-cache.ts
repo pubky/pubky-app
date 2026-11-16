@@ -6,8 +6,8 @@ import { ErrorService } from '@/libs/error/error.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { getTagCursor, getTagMutationEntries } from '@/models/shared/tag/tag.utils';
+import type { TagCollectionModelSchema, TagMutation } from '@/models/shared/tag/tag.schema';
+import { findTagMutation, getTagCursor, getTagMutationEntries, getViewerTagUri } from '@/models/shared/tag/tag.utils';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { reconcileTagCounts, reconcileTagWindow } from '@/pipes/tag/tag-cache';
@@ -49,6 +49,19 @@ export class LocalTagCacheService {
           },
         ]),
     );
+  }
+
+  static async getViewerTagUri(entity: TagEntity, label: string, viewerId: string): Promise<string | undefined> {
+    return getViewerTagUri(await this.read(entity), label, viewerId);
+  }
+
+  /** The viewer's latest local write for a label, whatever its age, or `undefined` when none is recorded. */
+  static async findViewerMutation(
+    entity: TagEntity,
+    label: string,
+    viewerId: string,
+  ): Promise<TagMutation | undefined> {
+    return findTagMutation(await this.read(entity), label, viewerId);
   }
 
   /** A completed request may settle only the operation it originally wrote. */

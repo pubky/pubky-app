@@ -7,9 +7,11 @@ import {
   getSourceFromReach,
   getStreamId,
   getStreamIdFromFilters,
+  getTextSearchKind,
   matchesFilters,
   parseStreamId,
-  postKindBelongsToStream,
+  postBelongsToStream,
+  resolveEnabledContent,
 } from './home.utils';
 
 describe('filters.utils', () => {
@@ -26,6 +28,7 @@ describe('filters.utils', () => {
       [CONTENT.VIDEOS, 'video'],
       [CONTENT.LINKS, 'link'],
       [CONTENT.FILES, 'file'],
+      [CONTENT.LOCKS, 'locked'],
     ] as const)('maps CONTENT %s to kind segment %s', (content, kind) => {
       expect(getKindFromContent(content)).toBe(kind);
     });
@@ -40,8 +43,30 @@ describe('filters.utils', () => {
         CONTENT.VIDEOS,
         CONTENT.LINKS,
         CONTENT.FILES,
+        CONTENT.LOCKS,
       ]);
       expect([...covered].sort()).toEqual(Object.values(CONTENT).sort());
+    });
+
+    it('builds and parses the Locks stream ids', () => {
+      expect(getStreamId(SORT.TIMELINE, REACH.ALL, CONTENT.LOCKS)).toBe(PostStreamTypes.TIMELINE_ALL_LOCKED);
+      expect(getStreamId(SORT.ENGAGEMENT, REACH.FRIENDS, CONTENT.LOCKS)).toBe(
+        PostStreamTypes.POPULARITY_FRIENDS_LOCKED,
+      );
+      expect(parseStreamId(PostStreamTypes.TIMELINE_FOLLOWING_LOCKED)).toEqual({
+        sort: SORT.TIMELINE,
+        reach: REACH.FOLLOWING,
+        content: CONTENT.LOCKS,
+      });
+    });
+
+    it('carries Locks into the Me and Tagged as stream ids', () => {
+      const filters = { sort: SORT.TIMELINE, content: CONTENT.LOCKS, currentUserPubky: 'viewer-pubky' };
+
+      expect(getHomeStreamIdFromFilters({ ...filters, reach: REACH.ME })).toBe('timeline:author:viewer-pubky:locked');
+      expect(
+        getHomeStreamIdFromFilters({ ...filters, reach: REACH.ALL, taggedAsActive: true, profileTags: ['bitcoin'] }),
+      ).toBe('timeline:wot_domain:2:locked:bitcoin');
     });
   });
 
@@ -503,50 +528,85 @@ describe('filters.utils', () => {
     });
   });
 
-  describe('postKindBelongsToStream', () => {
+  describe('resolveEnabledContent', () => {
+    it('falls back to All only for a disabled content filter', () => {
+      expect(resolveEnabledContent(CONTENT.LOCKS, [CONTENT.LOCKS])).toBe(CONTENT.ALL);
+      expect(resolveEnabledContent(CONTENT.IMAGES, [CONTENT.LOCKS])).toBe(CONTENT.IMAGES);
+      expect(resolveEnabledContent(CONTENT.LOCKS, [])).toBe(CONTENT.LOCKS);
+    });
+  });
+
+  describe('getTextSearchKind', () => {
+    it('maps a content filter to its kind', () => {
+      expect(getTextSearchKind(CONTENT.ALL)).toBe('all');
+      expect(getTextSearchKind(CONTENT.IMAGES)).toBe('image');
+    });
+
+    it('applies All for a filter text search cannot apply', () => {
+      expect(getTextSearchKind(CONTENT.LOCKS)).toBe('all');
+    });
+  });
+
+  describe('postBelongsToStream', () => {
     it('allows any kind when the stream content filter is all', () => {
-      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
-      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
+      expect(postBelongsToStream({ kind: 'collection' }, PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
     });
 
     it('matches post kind to the stream content filter', () => {
-      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(true);
-      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
-      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(true);
-      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
+      expect(postBelongsToStream({ kind: 'collection' }, PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
+      expect(postBelongsToStream({ kind: 'short' }, PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(true);
+      expect(postBelongsToStream({ kind: 'collection' }, PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
     });
 
     it('rejects unknown post kinds when the stream has a specific content filter', () => {
-      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
-      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
+      expect(postBelongsToStream({ kind: 'unknown' }, PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
+      expect(postBelongsToStream({ kind: 'unknown' }, PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
     });
 
     it('gates wot_domain streams by their kind segment', () => {
       // PR #2156 review repro: short post must not prepend into an images-only domain feed.
-      expect(postKindBelongsToStream('short', 'timeline:wot_domain:2:image:bitcoin')).toBe(false);
-      expect(postKindBelongsToStream('image', 'timeline:wot_domain:2:image:bitcoin')).toBe(true);
-      expect(postKindBelongsToStream('short', 'timeline:wot_domain:1:collection:bitcoin')).toBe(false);
-      expect(postKindBelongsToStream('collection', 'timeline:wot_domain:1:collection:bitcoin')).toBe(true);
-      expect(postKindBelongsToStream('short', 'timeline:wot_domain:2:all:bitcoin')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'timeline:wot_domain:2:image:bitcoin')).toBe(false);
+      expect(postBelongsToStream({ kind: 'image' }, 'timeline:wot_domain:2:image:bitcoin')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'timeline:wot_domain:1:collection:bitcoin')).toBe(false);
+      expect(postBelongsToStream({ kind: 'collection' }, 'timeline:wot_domain:1:collection:bitcoin')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'timeline:wot_domain:2:all:bitcoin')).toBe(true);
     });
 
     it('gates 4-segment tag streams by their kind segment', () => {
-      expect(postKindBelongsToStream('short', 'timeline:all:image:bitcoin')).toBe(false);
-      expect(postKindBelongsToStream('image', 'timeline:all:image:bitcoin')).toBe(true);
-      expect(postKindBelongsToStream('short', 'timeline:all:all:bitcoin,dev')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'timeline:all:image:bitcoin')).toBe(false);
+      expect(postBelongsToStream({ kind: 'image' }, 'timeline:all:image:bitcoin')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'timeline:all:all:bitcoin,dev')).toBe(true);
     });
 
     it('gates author-kind streams by their kind segment', () => {
-      expect(postKindBelongsToStream('collection', 'pubky123:author:collection')).toBe(true);
-      expect(postKindBelongsToStream('short', 'pubky123:author:collection')).toBe(false);
-      expect(postKindBelongsToStream('image', 'pubky123:author:image')).toBe(true);
-      expect(postKindBelongsToStream('short', 'pubky123:author:image')).toBe(false);
+      expect(postBelongsToStream({ kind: 'collection' }, 'pubky123:author:collection')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'pubky123:author:collection')).toBe(false);
+      expect(postBelongsToStream({ kind: 'image' }, 'pubky123:author:image')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'pubky123:author:image')).toBe(false);
+    });
+
+    it('gates Locks streams by the lock, whatever the kind', () => {
+      const lock = 'pubky://author/pub/app.locks/LOCK1.json';
+
+      expect(postBelongsToStream({ kind: 'short', lock }, PostStreamTypes.TIMELINE_ALL_LOCKED)).toBe(true);
+      expect(postBelongsToStream({ kind: 'image', lock }, 'timeline:wot_domain:2:locked:bitcoin')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short', lock: null }, PostStreamTypes.TIMELINE_ALL_LOCKED)).toBe(false);
+      expect(postBelongsToStream({ kind: 'short' }, PostStreamTypes.TIMELINE_ALL_LOCKED)).toBe(false);
+    });
+
+    it('keeps gating a lock post by kind on every other stream', () => {
+      const lock = 'pubky://author/pub/app.locks/LOCK1.json';
+
+      expect(postBelongsToStream({ kind: 'short', lock }, PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(true);
+      expect(postBelongsToStream({ kind: 'short', lock }, PostStreamTypes.TIMELINE_ALL_IMAGE)).toBe(false);
     });
 
     it('allows any kind for stream ids that encode no kind', () => {
-      expect(postKindBelongsToStream('short', 'author:pubky123')).toBe(true);
-      expect(postKindBelongsToStream('short', 'author_replies:pubky123')).toBe(true);
-      expect(postKindBelongsToStream('collection', 'post_replies:pubky123:post456')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'author:pubky123')).toBe(true);
+      expect(postBelongsToStream({ kind: 'short' }, 'author_replies:pubky123')).toBe(true);
+      expect(postBelongsToStream({ kind: 'collection' }, 'post_replies:pubky123:post456')).toBe(true);
     });
   });
 });

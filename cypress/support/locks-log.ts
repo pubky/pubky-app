@@ -14,7 +14,6 @@
 
 export const LOCKS_STUB_LOG_NAME = '[locks-stub]';
 const STEP_LOG_NAME = '[locks-step]';
-const STEP_COUNT = 6;
 const REDACTED = '[redacted]';
 const SECRET_FIELD = /secret|token|credential|signature|private|password|^code$|^state$/i;
 
@@ -70,9 +69,9 @@ export const flushLocksStubLog = () => {
 };
 
 /** A step marker in the command log and the terminal, after the stub lines of the step before it. */
-export const locksStep = (step: number, text: string) => {
+export const locksStep = (step: number, stepCount: number, text: string) => {
   flushLocksStubLog();
-  const line = `Step ${step}/${STEP_COUNT}: ${text}`;
+  const line = `Step ${step}/${stepCount}: ${text}`;
   cy.log(`**${STEP_LOG_NAME} ${line}**`);
   cy.task('log', `${STEP_LOG_NAME} ${line}`, { log: false });
 };

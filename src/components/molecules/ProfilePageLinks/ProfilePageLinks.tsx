@@ -72,7 +72,7 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
               data-cy="profile-add-link-btn"
               variant="outline"
               size="sm"
-              className="mt-2 border border-border bg-foreground/5"
+              className="mt-2 border border-border bg-glass"
               onClick={handleAddLinkClick}
             >
               <Link size={16} className="text-foreground" />

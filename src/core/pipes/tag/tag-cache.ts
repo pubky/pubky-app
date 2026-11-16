@@ -12,9 +12,15 @@ export function reconcileTagWindow(
 ) {
   const remoteTags = new Map(incoming.map((tag) => [tag.label.toLowerCase(), tag]));
   const localTags = new Map(existing?.tags.map((tag) => [tag.label.toLowerCase(), tag]));
-  const tags = new Map(
-    [...(options.append ? (existing?.tags ?? []) : []), ...incoming].map((tag) => [tag.label.toLowerCase(), tag]),
-  );
+  // A response without `tag_uri` keeps the address stored for the same viewer while they still tag the label.
+  const sameViewer = viewerId !== undefined && existing?.cache?.viewerId === viewerId;
+  const withStoredUri = (tag: NexusTag): NexusTag => {
+    const stored =
+      sameViewer && tag.relationship && tag.tag_uri === undefined && localTags.get(tag.label.toLowerCase())?.tag_uri;
+    return stored ? { ...tag, tag_uri: stored } : tag;
+  };
+  const retained = options.append ? (existing?.tags ?? []) : [];
+  const tags = new Map([...retained, ...incoming.map(withStoredUri)].map((tag) => [tag.label.toLowerCase(), tag]));
   const mutations: NonNullable<TagCollectionModelSchema<string>['mutations']> = {};
   for (const { key, label, mutation } of getTagMutationEntries(existing)) {
     // A replacement retires expired intent along with the optimistic window.
@@ -26,7 +32,14 @@ export function reconcileTagWindow(
       : options.complete
         ? false
         : undefined;
-    if (mutation.synced && acknowledged === mutation.relationship) continue;
+    // A same-viewer response acknowledges a create only once it reports the file that create wrote: until Nexus
+    // indexes the new file it can still report one the viewer already deleted, and the next untag would target it.
+    const addressConfirmed =
+      !mutation.uri ||
+      mutation.viewerId !== viewerId ||
+      remote?.tag_uri === undefined ||
+      remote.tag_uri === mutation.uri;
+    if (mutation.synced && acknowledged === mutation.relationship && addressConfirmed) continue;
     mutations[key] = mutation;
     if (mutation.expiresAt <= now) continue;
 
@@ -72,11 +85,14 @@ export function reconcileTagWindow(
     }
     const taggers = tag.taggers.filter((tagger) => tagger !== mutation.viewerId);
     if (mutation.relationship) taggers.push(mutation.viewerId);
+    const ownWrite = mutation.viewerId === viewerId;
     tags.set(label, {
       ...tag,
       taggers,
       taggers_count: count,
-      relationship: mutation.viewerId === viewerId ? mutation.relationship : tag.relationship,
+      relationship: ownWrite ? mutation.relationship : tag.relationship,
+      // The row carries the kept create's address, so it outlives the create when Nexus is still behind.
+      ...(ownWrite && mutation.relationship && mutation.uri && { tag_uri: mutation.uri }),
     });
   }
   return { tags: [...tags.values()], mutations };

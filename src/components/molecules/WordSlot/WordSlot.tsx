@@ -71,7 +71,7 @@ export const WordSlot = (props: WordSlotProps) => {
   const badgeClasses = cn(
     'absolute top-1/2 left-3 z-10 h-5 min-w-5 flex-shrink-0 -translate-y-1/2 rounded-full px-1 sm:left-5',
     !isCorrect && !isError && 'border border-transparent bg-secondary text-secondary-foreground',
-    isCorrect && 'border border-transparent bg-brand text-primary-foreground',
+    isCorrect && 'border border-transparent bg-brand text-brand-foreground',
     isError && 'border border-transparent bg-destructive text-destructive-foreground',
   );
 

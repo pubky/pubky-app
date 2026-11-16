@@ -26,6 +26,8 @@ export type ContainerProps = {
   dir?: React.HTMLAttributes<HTMLElement>['dir'];
   /** HTML translate attribute to disable browser translation */
   translate?: 'yes' | 'no';
+  /** Required on <html> when a theme class is applied after mount */
+  suppressHydrationWarning?: boolean;
 };
 
 export interface ContainerElementProps extends React.HTMLAttributes<HTMLElement> {

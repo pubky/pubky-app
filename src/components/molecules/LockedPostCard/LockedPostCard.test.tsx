@@ -1,7 +1,11 @@
+import { type ComponentProps } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { stubUnlockSlideGeometry } from '@/test-utils/locks';
 import { LockedPostCard, SLIDE_MS } from './LockedPostCard';
+
+type LockedPostCardProps = ComponentProps<typeof LockedPostCard>;
 
 describe('LockedPostCard', () => {
   it('steps down a shade inside a post preview, where the surround is already bg-muted', () => {
@@ -148,6 +152,326 @@ describe('LockedPostCard', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('dragging Unlock', () => {
+    // A 120px slide: 90% of it is 108px.
+    let restoreGeometry: () => void;
+    beforeEach(() => {
+      vi.useFakeTimers();
+      restoreGeometry = stubUnlockSlideGeometry();
+    });
+
+    afterEach(() => {
+      restoreGeometry();
+      vi.useRealTimers();
+    });
+
+    const renderUnlock = (props: Partial<LockedPostCardProps> = {}) => {
+      const onUnlock = vi.fn();
+      const view = render(<LockedPostCard title="" onUnlock={onUnlock} {...props} />);
+      return { onUnlock, button: screen.getByRole('button', { name: 'Unlock' }), ...view };
+    };
+    const pointer = (clientX: number, overrides: PointerEventInit = {}) => ({
+      pointerId: 1,
+      isPrimary: true,
+      buttons: 1,
+      clientX,
+      clientY: 0,
+      ...overrides,
+    });
+    const press = (button: HTMLElement) => fireEvent.pointerDown(button, pointer(0));
+    const moveTo = (button: HTMLElement, x: number) => fireEvent.pointerMove(button, pointer(x));
+    // A browser releases the capture right after the pointerup.
+    const release = (button: HTMLElement, x: number) => {
+      fireEvent.pointerUp(button, pointer(x, { buttons: 0 }));
+      fireEvent.lostPointerCapture(button, pointer(x, { buttons: 0 }));
+    };
+    const drag = (button: HTMLElement, x: number) => {
+      press(button);
+      moveTo(button, x);
+      release(button, x);
+    };
+    // What a browser sends after a mouse drag; a keyboard press has `detail` 0, `fireEvent.click`'s default.
+    const pointerClick = (button: HTMLElement) => fireEvent.click(button, { detail: 1 });
+
+    it.each([108, 120])('unlocks once on a release at %ipx, with the same slide as a click', (x) => {
+      const { onUnlock, button } = renderUnlock();
+
+      drag(button, x);
+      pointerClick(button);
+
+      expect(button).toHaveStyle({ transform: 'translateX(120px)' });
+      expect(onUnlock).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    it('slides back on a release before 90%, and the click after it does not unlock', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      drag(button, 107);
+      pointerClick(button);
+
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
+
+    it('follows the pointer without a transition, inside the slide', () => {
+      const { button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 60);
+      expect(button).toHaveStyle({ transform: 'translateX(60px)', transitionDuration: '0ms' });
+      moveTo(button, 500);
+      expect(button).toHaveStyle({ transform: 'translateX(120px)' });
+      moveTo(button, -50);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      release(button, -50);
+      expect(button).toHaveStyle({ transitionDuration: `${SLIDE_MS}ms` });
+    });
+
+    it('still treats a press that barely moves as a click', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 10);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+      release(button, 10);
+      pointerClick(button);
+
+      expect(button).toHaveStyle({ transform: 'translateX(120px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    // Only a modal closing snaps the button back, and a signed-out reader gets no modal.
+    it('returns the button by itself and unlocks at once when no modal follows', () => {
+      const { onUnlock, button } = renderUnlock({ slideOnUnlock: false });
+
+      drag(button, 120);
+      pointerClick(button);
+
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+    });
+
+    // A touch drag sends no click, so nothing consumes the mark it leaves.
+    it('unlocks from the keyboard after a touch drag', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      drag(button, 50);
+      fireEvent.click(button);
+
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    it('unlocks from the next tap after a touch drag', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      drag(button, 50);
+      press(button);
+      release(button, 0);
+      pointerClick(button);
+
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    it('captures the pointer so the drag keeps following it off the button', () => {
+      const { button } = renderUnlock();
+      const capture = vi.fn();
+      button.setPointerCapture = capture;
+
+      press(button);
+
+      expect(capture).toHaveBeenCalledWith(1);
+    });
+
+    // Capture throws for a pointer the browser does not count as active, such as one from a synthetic press. The
+    // error would reach the page as an uncaught error.
+    it('reports no error and still unlocks on a click when the pointer cannot be captured', () => {
+      const { onUnlock, button } = renderUnlock();
+      button.setPointerCapture = () => {
+        throw new DOMException('No active pointer', 'NotFoundError');
+      };
+      const onError = vi.fn();
+      window.addEventListener('error', onError);
+
+      try {
+        press(button);
+        release(button, 0);
+        pointerClick(button);
+      } finally {
+        window.removeEventListener('error', onError);
+      }
+
+      expect(onError).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    // Holding past SLIDE_MS lets the slide's timer run, and clear its guard, before the release.
+    it.each([
+      ['a drag', true, 60],
+      ['a drag', false, 60],
+      ['a press that has not moved', true, 0],
+    ])('unlocks once when a keyboard press lands during %s (slideOnUnlock: %s)', (_, slideOnUnlock, x) => {
+      const { onUnlock, button, unmount } = renderUnlock({ slideOnUnlock });
+
+      press(button);
+      moveTo(button, x);
+      fireEvent.click(button);
+      vi.advanceTimersByTime(SLIDE_MS);
+      moveTo(button, 120);
+      release(button, 120);
+      pointerClick(button);
+
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+      unmount();
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    // An assistive technology can send a click with no pointerdown before it.
+    it('unlocks on a click without a pointerdown after a drag the browser cancelled', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 60);
+      fireEvent.pointerCancel(button, pointer(60));
+      pointerClick(button);
+
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    // The modal's close is what returns a button parked at the end.
+    it('returns after a drag once the modal closes, and unlocks again on the next drag', () => {
+      const { onUnlock, button, rerender } = renderUnlock();
+
+      drag(button, 120);
+      pointerClick(button);
+      vi.advanceTimersByTime(SLIDE_MS);
+      rerender(<LockedPostCard title="" onUnlock={onUnlock} unlockOpen />);
+      expect(button).toHaveStyle({ transform: 'translateX(120px)' });
+
+      rerender(<LockedPostCard title="" onUnlock={onUnlock} unlockOpen={false} />);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      drag(button, 120);
+      pointerClick(button);
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(2);
+    });
+
+    // A release that never reached the button, for example after a pointer capture that failed.
+    it('ends a press on a move with no button held, so later moves and a release do nothing', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 60);
+      fireEvent.pointerMove(button, pointer(80, { buttons: 0 }));
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      moveTo(button, 120);
+      release(button, 120);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
+
+    it('slides back without unlocking when the browser drops the pointer capture during a drag', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 120);
+      fireEvent.lostPointerCapture(button, pointer(120));
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      release(button, 120);
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
+
+    it('slides back without unlocking when the browser cancels the press to scroll', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      press(button);
+      moveTo(button, 120);
+      fireEvent.pointerCancel(button, pointer(120));
+
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
+
+    it('keeps following the first finger when a second one lands', () => {
+      const { onUnlock, button } = renderUnlock();
+      const secondFinger = { pointerId: 2, isPrimary: false };
+
+      press(button);
+      moveTo(button, 60);
+      fireEvent.pointerDown(button, pointer(0, secondFinger));
+      fireEvent.pointerMove(button, pointer(120, secondFinger));
+      fireEvent.pointerUp(button, pointer(120, secondFinger));
+      expect(button).toHaveStyle({ transform: 'translateX(60px)' });
+
+      release(button, 60);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
+
+    it('ignores a press with another mouse button', () => {
+      const { button } = renderUnlock();
+
+      fireEvent.pointerDown(button, pointer(0, { button: 2 }));
+      moveTo(button, 60);
+
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+    });
+
+    it('ignores a drag while the slide from a click is running', () => {
+      const { onUnlock, button } = renderUnlock();
+
+      pointerClick(button);
+      drag(button, 50);
+
+      expect(button).toHaveStyle({ transform: 'translateX(120px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['disabled', { disabled: true }],
+      ['loading', { isLoading: true }],
+    ])('does not drag while %s', (_state, props) => {
+      const { onUnlock, button } = renderUnlock(props);
+
+      drag(button, 120);
+
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
+
+    it('slides back without unlocking when the control turns disabled during a drag', () => {
+      const { onUnlock, button, rerender } = renderUnlock();
+
+      press(button);
+      moveTo(button, 120);
+      rerender(<LockedPostCard title="" onUnlock={onUnlock} disabled />);
+      expect(button).toHaveStyle({ transform: 'translateX(0px)' });
+
+      release(button, 120);
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
   });
 
   // The price is still loading, so a dimmed pill would read as "disabled" and then flash to active.

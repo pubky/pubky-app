@@ -1,4 +1,4 @@
-import type { LockFile } from '@/services/locks/locks.types';
+import type { LockFile, TVerificationStatus, TVerificationTask } from '@/services/locks/locks.types';
 
 export const MOCK_LOCK_AUTHOR_PUBKY = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 
@@ -25,3 +25,33 @@ export const mockLockFile = (overrides: Partial<LockFile> = {}): LockFile => ({
   lock_server: { override: 'pubkyserver123' },
   ...overrides,
 });
+
+/** Sample task lookup answer. Pass overrides for the one field a test cares about. */
+export const mockVerificationTask = (
+  status: TVerificationStatus,
+  overrides: Partial<TVerificationTask> = {},
+): TVerificationTask => ({
+  status,
+  walletSetupNeeded: false,
+  readerNotPayable: false,
+  admissionDeadlineAt: null,
+  completedAt: null,
+  ...overrides,
+});
+
+/**
+ * jsdom reports every offset as 0, which would make the Unlock slide-over a no-op no test could see. This gives the
+ * button a 120px slide over the price. Returns the restore.
+ */
+export const stubUnlockSlideGeometry = () => {
+  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetLeft');
+  Object.defineProperty(HTMLElement.prototype, 'offsetLeft', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return this.tagName === 'BUTTON' ? 0 : 120;
+    },
+  });
+  return () => {
+    if (original) Object.defineProperty(HTMLElement.prototype, 'offsetLeft', original);
+  };
+};

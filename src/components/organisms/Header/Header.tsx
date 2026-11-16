@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
+import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import {
@@ -20,6 +21,7 @@ import { pathToStepConfig } from './Header.constants';
 
 export function Header() {
   const pathname = usePathname();
+  const isHydrated = useIsHydrated();
   const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
@@ -46,10 +48,9 @@ export function Header() {
   const shouldHideHeaderOnMobile =
     !isLegalPage &&
     (isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute));
-  // Show the step title on every onboarding page regardless of auth state: sign-up happens on the
-  // pubky step, so the later key steps (pubky, backup) and the post-auth steps (profile, experience)
-  // are all reached while authenticated. Outside onboarding (i.e. /logout) the title is only for
-  // signed-out users.
+  // Show the step title on every onboarding page regardless of auth state: the post-auth steps
+  // (profile, experience) are reached while authenticated. Outside onboarding (i.e. /logout) the
+  // title is only for signed-out users.
   const shouldShowTitle = currentTitle && (isOnboarding || !isAuthenticated);
 
   // Determine which header content to show:
@@ -70,8 +71,11 @@ export function Header() {
     return <HeaderHome />;
   };
 
-  // Copyright page shows only logo (minimal header).
-  if (isCopyrightPage) {
+  // Copyright page shows only logo (minimal header), and so do the legal pages for members: the public documents
+  // render outside the database and session restore (`AppShell`) that the member header reads. They are also
+  // server-rendered while the auth store only exists in the browser, so the legal pages keep the logo until hydration
+  // and only then offer guests their sign-in header.
+  if (isCopyrightPage || (isLegalPage && (isAuthenticated || !isHydrated))) {
     return (
       <HeaderContainer>
         <Logo />

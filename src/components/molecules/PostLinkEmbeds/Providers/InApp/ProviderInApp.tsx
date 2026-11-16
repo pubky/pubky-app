@@ -59,6 +59,6 @@ export const InApp: EmbedProvider = {
     // Type guard: ensure we have a post type
     if (embedData.type !== 'post') return null;
 
-    return <PostPreviewCard postId={embedData.value} className="bg-muted" />;
+    return <PostPreviewCard postId={embedData.value} className="bg-embed" />;
   },
 };

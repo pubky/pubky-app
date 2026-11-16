@@ -36,14 +36,17 @@ const uiState = vi.hoisted(() => ({
 const CHROME_IMAGE_URLS = ['/pubky-logo.svg'] as const;
 
 const fixtures = vi.hoisted(async () => {
-  const [articleModule, profilesModule] = await Promise.all([
+  const [articleModule, profilesModule, postsModule] = await Promise.all([
     import('@/test/fixtures/post/article'),
     import('@/test/fixtures/feed/profiles'),
+    import('@/test/fixtures/feed/posts'),
   ]);
 
   const article = articleModule.VRT_ARTICLE;
   const threadReplies = articleModule.VRT_ARTICLE_THREAD_REPLIES;
-  const allPostFixtures = [article, ...threadReplies];
+  // Alice's announcement. The article editor is covered below; this is the short-post editor.
+  const shortPost = postsModule.VRT_FEED_POSTS[0];
+  const allPostFixtures = [article, ...threadReplies, shortPost];
   const entitiesByCompositeId = new Map(allPostFixtures.map((post) => [post.compositeId, post] as const));
   const threadReplyIdsByParent = new Map<string, string[]>([
     [article.compositeId, threadReplies.map((reply) => reply.compositeId)],
@@ -67,6 +70,7 @@ const fixtures = vi.hoisted(async () => {
     participantIds,
     entitiesByCompositeId,
     threadReplyIdsByParent,
+    shortPost,
   };
 });
 
@@ -620,6 +624,34 @@ function scrollArticleBodyIntoView() {
   }
   root.scrollTop += body.getBoundingClientRect().top - root.getBoundingClientRect().top - 24;
 }
+
+describe('Edit short post dialog — visual regression', () => {
+  async function renderEditShortPost(viewport: { width: number; height: number }) {
+    const f = await fixtures;
+    await preloadImages(['/pubky-logo.svg']);
+    await renderForVRT(
+      <>
+        <Header />
+        <DialogEditPost open onOpenChangeAction={() => undefined} postId={f.shortPost.compositeId} />
+      </>,
+      { viewport },
+    );
+    const dialog = page.getByTestId('dialog-content');
+    await expect.element(dialog.getByTestId('dialog-title')).toHaveTextContent('Edit Post');
+    await expect.element(dialog.getByRole('textbox')).toHaveValue(f.shortPost.details.content);
+    return dialog;
+  }
+
+  it('renders the edit post dialog at desktop viewport', async () => {
+    await renderEditShortPost(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('dialog-edit-post-desktop');
+  });
+
+  it('renders the edit post dialog at mobile viewport', async () => {
+    await renderEditShortPost(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('dialog-edit-post-mobile');
+  });
+});
 
 describe('Article — published page — body typography — visual regression', () => {
   it('renders the article body at desktop viewport', async () => {

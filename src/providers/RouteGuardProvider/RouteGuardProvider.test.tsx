@@ -131,6 +131,7 @@ vi.mock('@/controllers/auth/auth', () => ({
     restorePersistedSession: mocks.restorePersistedSession,
     retireLegacyCookieSessions: mocks.retireLegacyCookieSessions,
     syncRemovedSession: mocks.syncRemovedSession,
+    syncSessionFromStorage: vi.fn().mockResolvedValue(undefined),
   },
 }));
 vi.mock('@/controllers/migration/migration', () => ({

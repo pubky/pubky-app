@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { ContextualBanner } from './ContextualBanner';
 import type { ContextualBannerProps } from './ContextualBanner.types';
+
+const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@/config/network', () => ({ isPassportAppleEnabled: mockAppleEnabled }));
+beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 
 const HEADLINE = 'Get to know Satoshi';
 const BODY = 'Join Pubky to follow Satoshi and take part in the conversation.';
@@ -20,6 +24,43 @@ function renderBanner(overrides: Partial<ContextualBannerProps> = {}) {
 }
 
 describe('ContextualBanner', () => {
+  it.each([false, true])('keeps provider marks behind Apple flag=%s, including below sm', (enabled) => {
+    mockAppleEnabled.mockReturnValue(enabled);
+    const onContinueWithGoogle = vi.fn();
+    renderBanner({ onContinueWithGoogle });
+    const button = screen.getByRole('button', {
+      name: enabled ? 'Continue with Google or Apple' : 'Continue with Google',
+    });
+    expect(button).toHaveAttribute('aria-label', enabled ? 'Continue with Google or Apple' : 'Continue with Google');
+    expect(button.textContent).toBe(enabled ? 'Continue with' : 'Continue with Google');
+    expect(button.querySelectorAll('svg')).toHaveLength(enabled ? 2 : 1);
+    if (enabled) {
+      expect(button).toHaveClass('h-10', 'w-16');
+      expect(button).not.toHaveClass('size-10');
+    } else {
+      expect(button).toHaveClass('size-10');
+    }
+    for (const icon of button.querySelectorAll('svg')) {
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).not.toHaveClass('hidden');
+    }
+    expect(screen.getByText(enabled ? 'Continue with' : 'Continue with Google')).toHaveClass('hidden', 'sm:inline');
+    fireEvent.click(button);
+    expect(onContinueWithGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the pending action disabled with Apple enabled', () => {
+    mockAppleEnabled.mockReturnValue(true);
+    const onContinueWithGoogle = vi.fn();
+    renderBanner({ onContinueWithGoogle, isGooglePending: true });
+    const button = screen.getByRole('button', { name: 'Waiting for Passport...' });
+    expect(button).toBeDisabled();
+    expect(button.querySelectorAll('svg')).toHaveLength(1);
+    expect(button.querySelector('svg')).toHaveClass('animate-spin');
+    fireEvent.click(button);
+    expect(onContinueWithGoogle).not.toHaveBeenCalled();
+  });
+
   it('renders a region named "Join Pubky" with the headline and body', () => {
     renderBanner();
 
@@ -133,7 +174,7 @@ describe('ContextualBanner', () => {
       screen.getByRole('link', { name: 'Sign in' }),
       screen.getByRole('button', { name: 'Continue with Google' }),
     ]) {
-      expect(action).toHaveClass('focus-visible:ring-primary-foreground');
+      expect(action).toHaveClass('focus-visible:ring-brand-foreground');
     }
   });
 

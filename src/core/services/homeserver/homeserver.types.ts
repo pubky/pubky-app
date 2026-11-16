@@ -1,16 +1,12 @@
 import type { Capabilities, PublicKey, Session, XCallbackParams } from '@synonymdev/pubky';
-import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import type { Pubky } from '@/models/models.types';
 import type { THomeserverWriteFence } from './write-retry';
 
 export type FetchOptions = {
   method?: HttpMethod;
   body?: string | Uint8Array;
   cache?: RequestCache;
-};
-
-export type THomeserverSignUpParams = TKeypairParams & {
-  signupToken: string;
 };
 
 export type THomeserverPublicKeyParams = {
@@ -110,6 +106,24 @@ export type THomeserverListAllParams = Pick<THomeserverListParams, 'baseDirector
 export type THomeserverUserEvent = {
   cursor: string;
   eventType: string;
+  /** Absolute storage path of the changed resource, e.g. `/pub/pubky.app/last_read`. */
+  path: string;
+};
+
+export type THomeserverUserEventStreamParams = {
+  userZ32: Pubky;
+  cursor: string | null;
+  /** Union of path filters: a trailing slash matches a directory subtree, otherwise one exact file. */
+  paths: readonly string[];
+  /** Aborts the request in every phase, including one still waiting for response headers. */
+  signal: AbortSignal;
+};
+
+export type TBuildUserEventStreamUrlParams = {
+  homeserverZ32: string;
+  userZ32: string;
+  cursor: string | null;
+  paths: readonly string[];
 };
 
 // Utility function parameter types

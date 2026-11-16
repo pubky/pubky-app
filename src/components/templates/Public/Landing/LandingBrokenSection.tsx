@@ -80,7 +80,7 @@ export function LandingBrokenSection() {
               <div
                 className={`pointer-events-none absolute hidden max-w-[82%] rounded-md bg-brand px-5 py-4 opacity-0 shadow-[0_50px_100px_rgba(0,0,0,0.8)] transition-opacity duration-300 ease-out group-hover:opacity-100 lg:block ${bubbleClassName}`}
               >
-                <Typography size="sm" className="text-background">
+                <Typography size="sm" className="text-brand-foreground">
                   {description}
                 </Typography>
                 <span className={`absolute size-5 rotate-45 bg-brand ${tipClassName}`} aria-hidden="true" />

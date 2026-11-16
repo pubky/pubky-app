@@ -10,6 +10,7 @@ export interface TLocalUpdatePostStreamParams {
   compositePostId: string;
   kind: string;
   parentUri?: string;
+  lock?: string | null;
   ops: Promise<unknown>[];
   action: HttpMethod.PUT | HttpMethod.DELETE;
 }

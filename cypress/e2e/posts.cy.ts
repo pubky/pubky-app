@@ -1,5 +1,4 @@
 import type { Interception } from 'cypress/types/net-stubbing';
-import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
@@ -30,6 +29,7 @@ import {
   restoreSessionByReload,
   switchToArticleMode,
   waitForFeedToLoad,
+  showArticleTitle,
 } from '../support/posts';
 import { taggedPostFromInterception } from '../support/nexus';
 import {
@@ -40,8 +40,11 @@ import {
   resetHomeFeedToAllRecent,
   revealPostInTimeline,
 } from '../support/feeds';
+import { goToCollectionsPage } from '../support/header';
+import { itMobile } from '../support/mobile';
+import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
-import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
 
 const username = 'Poster';
 
@@ -149,10 +152,9 @@ const waitForHeadPollOffering = (postId: string, timeout: number, polls = 8) => 
 describe('posts', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
     // create profile to post from
-    cy.onboardAsNewUser(username, 'Big on posting.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(username, 'Big on posting.');
     waitForFeedToLoad();
   });
 
@@ -163,12 +165,12 @@ describe('posts', () => {
     // sign in if not already
     cy.location('pathname').then((currentPath) => {
       if (currentPath !== '/home') {
-        cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+        cy.signInWithPubkyRing(username);
       }
     });
   });
 
-  it('can post from quick post box', () => {
+  itMobile('can post from quick post box', () => {
     const postContent = `I can post using the quick post box! ${Date.now()}`;
     createQuickPost(postContent);
 
@@ -195,7 +197,7 @@ describe('posts', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  it('can edit a post', () => {
+  itMobile('can edit a post', () => {
     const postContent = `I can edit this post! ${Date.now()}`;
     const editedContent = `I have edited this post! ${Date.now()}`;
 
@@ -340,14 +342,9 @@ describe('posts', () => {
     const pubkyAlias = 'mention_pubky';
 
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser(
-      fullUsername,
-      'My account will be referenced in a post.',
-      [BackupType.EncryptedFile],
-      pubkyAlias,
-    );
+    cy.onboardAsNewUser(fullUsername, 'My account will be referenced in a post.', pubkyAlias);
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+    cy.signInWithPubkyRing(username);
 
     cy.get(`@${pubkyAlias}`).then((pubky) => {
       const pubkyText = String(pubky);
@@ -393,14 +390,13 @@ describe('posts', () => {
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
   });
 
-  it('can edit and delete a post from the profile posts tab', () => {
+  itMobile('can edit and delete a post from the profile posts tab', () => {
     const postContent = `I can edit this post from my profile! ${Date.now()}`;
     const editedContent = `I have edited this post from my profile! ${Date.now()}`;
     createQuickPost(postContent);
 
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-posts"]').click();
-    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    openProfileTab('posts');
     expectTimelineContains(postContent);
 
     editPost({ newPostContent: editedContent, filterText: postContent });
@@ -416,13 +412,13 @@ describe('posts', () => {
 
   it("cannot delete other profile's post", () => {
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser('Del Boy', 'Try delete my post.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser('Del Boy', 'Try delete my post.');
 
     const postContent = `No one else can delete this post! ${Date.now()}`;
     createQuickPost(postContent);
 
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+    cy.signInWithPubkyRing(username);
 
     cy.findPostInFeed(0, postContent, CheckForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-more-btn"]').click();
@@ -438,7 +434,7 @@ describe('posts', () => {
 
     createQuickPost(canReportPostContent);
     cy.signOut(HasBackedUp.Yes);
-    cy.onboardAsNewUser('Reporter', 'I can report a post.', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser('Reporter', 'I can report a post.');
 
     createQuickPost(cannotReportPostContent);
 
@@ -497,7 +493,7 @@ describe('posts', () => {
     });
   });
 
-  it('can tag and remove tags from existing post on feed page', () => {
+  itMobile('can tag and remove tags from existing post on feed page', () => {
     const postContent = `I can add and remove tags from my existing post on the feed page! ${Date.now()}`;
     const tag1 = 'bananas';
     const tag2 = 'pyjamas';
@@ -535,7 +531,7 @@ describe('posts', () => {
     });
   });
 
-  it("can tag another profile's post from the feed and from their profile", () => {
+  itMobile("can tag another profile's post from the feed and from their profile", () => {
     const stamp = Date.now();
     const postContent = `Tag my post from anywhere! ${stamp}`;
     const feedTag = `feed${String(stamp).slice(-6)}`;
@@ -565,8 +561,7 @@ describe('posts', () => {
 
         // * tag the same post from the Posts tab of the author's profile
         searchForProfileByPubky(author.pubky, author.name);
-        cy.get('[data-cy="profile-filter-item-posts"]').click();
-        cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+        openProfileTab('posts');
         expectTimelineContains(postContent);
         fastTagPostInFeed([profileTag], postContent);
         expectTagsOnPost([feedTag, profileTag]);
@@ -684,6 +679,7 @@ describe('posts', () => {
     });
   });
 
+  // Switches layout through the post page's layout filter, which phones do not offer.
   it('can tag and remove tags from existing post on post page (wide layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
@@ -761,7 +757,7 @@ describe('posts', () => {
     });
   });
 
-  it('can bookmark multiple posts then remove bookmarks', () => {
+  itMobile('can bookmark multiple posts then remove bookmarks', () => {
     const postContent1 = `This post will be bookmarked! ${Date.now()}`;
     const postContent2 = `This post will also be bookmarked! ${Date.now()}`;
 
@@ -784,8 +780,7 @@ describe('posts', () => {
     createQuickPost(postContent2);
     bookmarkPost(postContent2);
 
-    cy.get('[data-cy="header-collections-btn"]').click();
-    cy.location('pathname').should('eq', '/collections');
+    goToCollectionsPage();
     cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.location('pathname').should('eq', '/collections/bookmarks');
 
@@ -931,7 +926,7 @@ describe('posts', () => {
     cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
   });
 
-  it('can create an article from quick post box', () => {
+  itMobile('can create an article from quick post box', () => {
     const title = `Quick article ${Date.now()}`;
     const body = `I can create an article from the quick post box! ${Date.now()}`;
 
@@ -944,7 +939,7 @@ describe('posts', () => {
     articleInFeedEq(title, body);
   });
 
-  it('can create an article from new post', () => {
+  itMobile('can create an article from new post', () => {
     const title = `Dialog article ${Date.now()}`;
     const body = `I can create an article from new post! ${Date.now()}`;
 
@@ -958,7 +953,7 @@ describe('posts', () => {
   });
 
   // Cover stacking bug: article composer must appear in the same dialog, not behind it
-  it('new article modal is shown infront of new post modal', () => {
+  itMobile('new article modal is shown infront of new post modal', () => {
     cy.get('[data-cy="new-post-btn"]').click();
 
     cy.get('[data-cy="dialog-content"]')
@@ -970,14 +965,15 @@ describe('posts', () => {
 
     cy.get('[data-cy="new-post-input"]').within(() => {
       cy.get('[data-cy="post-input-action-bar-add-article"]').should('be.visible').click();
-      cy.get('[data-cy="article-title-input"]').should('be.visible');
+      showArticleTitle();
     });
 
     cy.get('[data-cy="dialog-content"]').should('be.visible').and('contain.text', 'New Article');
 
     // Title field is interactable, so the article composer is in front of the post modal
     cy.get('[data-cy="new-post-input"]').within(() => {
-      cy.get('[data-cy="article-title-input"]').should('be.visible').click();
+      showArticleTitle();
+      cy.get('[data-cy="article-title-input"]').click();
       cy.get('[data-cy="post-input-action-bar-publish-article"]').should('be.visible');
     });
 
@@ -989,7 +985,7 @@ describe('posts', () => {
     cy.get('[data-cy="dialog-content"]').should('not.exist');
   });
 
-  it('can edit an article', () => {
+  itMobile('can edit an article', () => {
     const title = `Editable article ${Date.now()}`;
     const body = `This article will be edited! ${Date.now()}`;
     const editedTitle = `Edited article ${Date.now()}`;
@@ -1175,8 +1171,8 @@ describe('posts', () => {
   });
 
   // https://github.com/pubky/pubky-app/issues/416
-  it('can navigate back to feed from post view', () => {
-    cy.viewport(1920, 640);
+  itMobile('can navigate back to feed from post view', () => {
+    cy.viewport(Cypress.config('viewportWidth'), 640);
 
     const filler = `Scroll anchor ${Date.now()}`;
     [0, 1, 2, 3].forEach((index) => {
@@ -1207,13 +1203,13 @@ describe('posts', () => {
       cy.window().its('scrollY').should('be.closeTo', feedScrollY, 1);
     });
 
-    cy.viewport(1920, 1080);
+    cy.viewport(Cypress.config('viewportWidth'), Cypress.config('viewportHeight'));
   });
 
   // TODO: https://github.com/pubky/pubky-app/issues/2900
   // The mixed image+file post intermittently fails to create until file IDs are unique.
   it.skip('can filter the feed by post kind', () => {
-    cy.viewport(1920, 1080);
+    cy.viewport(Cypress.config('viewportWidth'), Cypress.config('viewportHeight'));
     applyContentFilter('All');
 
     const stamp = Date.now();
@@ -1300,7 +1296,7 @@ describe('posts', () => {
     restoreSessionByReload();
   });
 
-  it('prompts to sign in again when homeserver responds 401 to creating new article', () => {
+  itMobile('prompts to sign in again when homeserver responds 401 to creating new article', () => {
     const title = `Unauthenticated article ${Date.now()}`;
     const body = `This article is rejected as unauthenticated! ${Date.now()}`;
     cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('articleUnauthorized');

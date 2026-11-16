@@ -5,12 +5,21 @@ import { expect, vi } from 'vitest';
 import { type Locator, page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { THEME_CLASSES } from '@/config/theme';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { freezeNow } from './vrt.clock';
 import { VRT_CAPTURE_MAX_SIZE, type VrtViewport } from './vrt.viewports';
 
+export type VrtTheme = 'dark' | 'light';
+
 export interface RenderForVRTOptions {
   viewport: VrtViewport;
+  /**
+   * Colour scheme to capture. Defaults to `dark` (the `:root` tokens). The
+   * matching `.dark` / `.light` class is put on `<html>` the same way
+   * next-themes does at runtime, so `dark:` and `light:` utilities apply.
+   */
+  theme?: VrtTheme;
 }
 
 export const VRT_ROOT_TESTID = 'vrt-root';
@@ -169,6 +178,10 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
     () =>
       `VRT viewport timed out after ${VIEWPORT_READY_TIMEOUT_MS}ms (${options.viewport.width}x${options.viewport.height})`,
   );
+  // Set explicitly on every render so a light capture never leaks into the
+  // next (dark) test in the same browser document.
+  const theme = options.theme ?? 'dark';
+  for (const themeClass of THEME_CLASSES) document.documentElement.classList.toggle(themeClass, themeClass === theme);
   focusTesterFrame();
   await moveCursorToTopLeftCorner();
   freezeNow();

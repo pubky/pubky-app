@@ -19,6 +19,8 @@ const LEGACY_PUBKY_PREFIX = 'pk:';
 
 export function withPubkyPrefix(key: string): string {
   if (!key) return '';
+  // A raw key can itself start with "pubky"; it still needs the prefix.
+  if (isPubkyIdentifier(key)) return `${PUBKY_PREFIX}${key}`;
   if (key.startsWith(PUBKY_PREFIX)) return key;
   if (key.startsWith(LEGACY_PUBKY_PREFIX)) {
     return `${PUBKY_PREFIX}${key.slice(LEGACY_PUBKY_PREFIX.length)}`;

@@ -140,7 +140,7 @@ describe('ProviderInApp', () => {
     it('applies the repost preview contrast background', () => {
       render(<>{InApp.renderEmbed({ type: 'post', value: `${PUBKY}:${POST_ID}` })}</>);
 
-      expect(screen.getByTestId('post-preview-card')).toHaveClass('bg-muted');
+      expect(screen.getByTestId('post-preview-card')).toHaveClass('bg-embed');
     });
 
     it('returns null for url embed data', () => {

@@ -36,6 +36,7 @@ export enum CONTENT {
   VIDEOS = 'videos',
   LINKS = 'links',
   FILES = 'files',
+  LOCKS = 'locks',
 }
 
 // Home types

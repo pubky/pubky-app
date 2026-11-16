@@ -3,7 +3,7 @@ import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 /**
  * Layout variant of the tagged section.
  *
- * - `sidebar`: desktop profile sidebar widget (current behaviour, unchanged).
+ * - `sidebar`: desktop profile sidebar widget ("See all (n)" action).
  * - `mobile`: mobile profile tab card (count heading, inline add-tag input,
  *   tagger avatars and a "See All" action).
  */
@@ -17,7 +17,7 @@ export interface ProfilePageTaggedAsProps {
   pubky?: string;
   /** Layout variant. Defaults to `sidebar` so the desktop widget is untouched. */
   variant?: ProfilePageTaggedAsVariant;
-  /** Total number of unique tags for the profile. Only rendered in the `mobile` variant. */
+  /** Total number of unique tags for the profile: the `mobile` heading and the `sidebar` "See all (n)" action. */
   count?: number;
   /** Adds a tag to the profile. Required for the `mobile` variant's inline input to render. */
   onTagAdd?: (tag: string) => void | Promise<unknown>;

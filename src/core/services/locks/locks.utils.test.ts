@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import {
   ensureLocksSdkReady,
   getLockServerPubky,
@@ -12,6 +13,7 @@ import {
   initLockClient,
   isLockServerRegionBlocked,
   toLocksError,
+  withLocksTimeout,
 } from './locks.utils';
 
 const mocks = vi.hoisted(() => ({
@@ -146,6 +148,88 @@ describe('locks.utils', () => {
         operation: 'op',
       });
       expect(toLocksError(original, 'other-op')).toBe(original);
+    });
+  });
+
+  describe('withLocksTimeout', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    it('passes the request rejection through unchanged and clears its timer', async () => {
+      vi.useFakeTimers();
+      const failure = new Error('network down');
+
+      await expect(withLocksTimeout(Promise.reject(failure), 'op')).rejects.toBe(failure);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('rejects with a Locks timeout once the given limit passes', async () => {
+      vi.useFakeTimers();
+      const outcome = withLocksTimeout(new Promise<never>(() => {}), 'op', { timeoutMs: 50 }).catch(
+        (caught: unknown) => caught,
+      );
+
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(await outcome).toMatchObject({
+        category: ErrorCategory.Timeout,
+        code: TimeoutErrorCode.REQUEST_TIMEOUT,
+        service: ErrorService.Locks,
+        operation: 'op',
+        context: { timeoutMs: 50 },
+      });
+    });
+
+    it('undoes a write that lands after the timeout, and only then', async () => {
+      vi.useFakeTimers();
+      const undoLateWrite = vi.fn(async () => {});
+      const late = new Promise<string>((resolve) => setTimeout(() => resolve('late'), 80));
+      await withLocksTimeout(Promise.resolve('on time'), 'op', { timeoutMs: 50, undoLateWrite });
+      const timedOut = withLocksTimeout(late, 'op', { timeoutMs: 50, undoLateWrite }).catch(() => undefined);
+
+      await vi.advanceTimersByTimeAsync(50);
+      await timedOut;
+      expect(undoLateWrite).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(30);
+
+      expect(undoLateWrite).toHaveBeenCalledExactlyOnceWith('late');
+    });
+
+    it('drops a request that fails after the timeout, with no undo and no second report', async () => {
+      vi.useFakeTimers();
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      const undoLateWrite = vi.fn(async () => {});
+      const late = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('network down')), 80));
+      const outcome = withLocksTimeout(late, 'op', { timeoutMs: 50, undoLateWrite }).catch((caught: unknown) => caught);
+
+      await vi.advanceTimersByTimeAsync(50);
+      expect(await outcome).toMatchObject({ code: TimeoutErrorCode.REQUEST_TIMEOUT });
+      const reportsAtTimeout = logError.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(30);
+
+      expect(logError).toHaveBeenCalledTimes(reportsAtTimeout);
+      expect(undoLateWrite).not.toHaveBeenCalled();
+    });
+
+    it('reports an undo that fails', async () => {
+      vi.useFakeTimers();
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      const late = new Promise<string>((resolve) => setTimeout(() => resolve('late'), 80));
+      const undoLateWrite = vi.fn(async () => {
+        throw new Error('Lock Server request failed with HTTP 401');
+      });
+      const timedOut = withLocksTimeout(late, 'op', { timeoutMs: 50, undoLateWrite }).catch(() => undefined);
+
+      await vi.advanceTimersByTimeAsync(80);
+      await timedOut;
+
+      expect(logError).toHaveBeenLastCalledWith(
+        expect.stringContaining('op'),
+        'Lock Server request failed with HTTP 401',
+        { undoLateWrite: true },
+      );
     });
   });
 

@@ -3,12 +3,10 @@ import { isPubkyIdentifier } from '@/libs/utils/utils';
 export const ROOT_ROUTES = '/';
 
 export enum ONBOARDING_ROUTES {
-  BACKUP = '/onboarding/backup',
   INSTALL = '/onboarding/install',
   /** Step 1 when Pubky Passport is available: "Manage your own keys" vs "Continue with Google". */
   JOIN = '/onboarding/join',
   PROFILE = '/onboarding/profile',
-  PUBKY = '/onboarding/pubky',
   SCAN = '/onboarding/scan',
   HUMAN = '/onboarding/human',
   TAGS = '/onboarding/tags',
@@ -68,6 +66,7 @@ export enum SETTINGS_ROUTES {
   ACCOUNT = '/settings/account',
   EDIT = '/settings/edit',
   NOTIFICATIONS = '/settings/notifications',
+  APPEARANCE = '/settings/appearance',
   PRIVACY_SAFETY = '/settings/privacy-safety',
   MUTED_USERS = '/settings/muted-users',
   HELP = '/settings/help',
@@ -138,8 +137,6 @@ export const UNAUTHENTICATED_ROUTES = {
     AUTH_ROUTES.SIGN_IN,
     ONBOARDING_ROUTES.INSTALL,
     ONBOARDING_ROUTES.SCAN,
-    ONBOARDING_ROUTES.PUBKY,
-    ONBOARDING_ROUTES.BACKUP,
     ONBOARDING_ROUTES.HUMAN,
     ONBOARDING_ROUTES.JOIN,
     ...EXPLORE_ROUTES,
@@ -150,7 +147,7 @@ export const UNAUTHENTICATED_ROUTES = {
 };
 
 export const NEEDS_PROFILE_CREATION_ROUTES = {
-  allowedRoutes: [ONBOARDING_ROUTES.PROFILE, ONBOARDING_ROUTES.BACKUP],
+  allowedRoutes: [ONBOARDING_ROUTES.PROFILE],
   redirectTo: ONBOARDING_ROUTES.PROFILE,
 };
 
@@ -284,6 +281,14 @@ export function isLogoLandingRoute(pathname: string | null): boolean {
 /** `/terms-of-use` or `/privacy-policy`. */
 export function isLegalRoute(pathname: string | null): boolean {
   return pathname === LEGAL_ROUTES.TERMS_OF_USE || pathname === LEGAL_ROUTES.PRIVACY_POLICY;
+}
+
+/**
+ * The public documents: `/copyright` and the legal routes. They render outside the app's database and auth gate
+ * (`AppShell`), so their text is in the server's HTML and they open without IndexedDB.
+ */
+export function isPublicDocumentRoute(pathname: string | null): boolean {
+  return pathname === COPYRIGHT_ROUTES.COPYRIGHT || isLegalRoute(pathname);
 }
 
 // ============================================================================

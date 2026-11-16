@@ -238,7 +238,7 @@ describe('HomeFeedSidebar', () => {
 
     expect(screen.getByTestId('filter-content')).toHaveAttribute(
       'data-disabled-tabs',
-      'short,long,collections,links,files',
+      'short,long,collections,links,files,locks',
     );
   });
 

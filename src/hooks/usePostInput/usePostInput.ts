@@ -39,7 +39,7 @@ import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import { postKindBelongsToStream } from '@/stores/home/home.utils';
+import { postBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
@@ -438,6 +438,13 @@ export function usePostInput({
     pendingArticleBodyRef.current = null;
   }, [isArticle]);
 
+  // A debounce commit leaves its value pending until the new state has rendered: a lock capture or a
+  // submit made before that render would otherwise read the previous state (#3030)
+  useEffect(() => {
+    if (pendingArticleTitleRef.current === articleTitle) pendingArticleTitleRef.current = null;
+    if (pendingArticleBodyRef.current === content) pendingArticleBodyRef.current = null;
+  }, [articleTitle, content]);
+
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
@@ -541,7 +548,7 @@ export function usePostInput({
             }
 
             const details = await PostController.getDetails({ compositeId: createdPostId });
-            if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+            if (!details?.kind || postBelongsToStream(details, streamId)) {
               await timelineFeed.prependPosts(createdPostId);
             }
           } catch (error) {
@@ -644,7 +651,6 @@ export function usePostInput({
   // that fires after a submit consumed the pending value, finds a mismatch and does nothing.
   const commitArticleTitle = useDebounceCallback((value: string) => {
     if (pendingArticleTitleRef.current !== value) return;
-    pendingArticleTitleRef.current = null;
     setArticleTitle(value);
   }, 500);
 
@@ -658,9 +664,15 @@ export function usePostInput({
 
   const commitArticleBody = useDebounceCallback((markdown: string) => {
     if (pendingArticleBodyRef.current !== markdown) return;
-    pendingArticleBodyRef.current = null;
     setContent(markdown);
   }, 500);
+
+  // Lock Apply empties the composer outside a render; null the refs now so a debounce that fires
+  // before `useEffect([isArticle])` cannot write the body into the teaser (#3021).
+  const discardPendingArticle = () => {
+    pendingArticleTitleRef.current = null;
+    pendingArticleBodyRef.current = null;
+  };
 
   // Handle article body change - length validation is handled via MDXEditor's maxLength plugin.
   // Rich text and markdown mode both report here; the rich text editor knows nothing of markdown mode.
@@ -948,6 +960,7 @@ export function usePostInput({
     isEditInlineMediaLoading,
     serializeArticleForLock,
     getLatestArticle,
+    discardPendingArticle,
 
     // Mention autocomplete state
     mentionUsers,

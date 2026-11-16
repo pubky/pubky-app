@@ -19,15 +19,14 @@ export function QrCodeSlot({
   clickToReloadLabel,
   size = DEFAULT_QR_SIZE,
   activeQrHasHoverEffect = false,
-  expiredReloadAction,
 }: QrCodeSlotProps) {
   const ringLogoSize = Math.round((DEFAULT_RING_LOGO_SIZE / DEFAULT_QR_SIZE) * size);
 
   if (isLoading || (!url && !isExpired)) {
     return (
       <Container className="items-center gap-2">
-        <Loader2 className="size-8 animate-spin text-background" />
-        <Typography as="small" size="sm" className="text-background">
+        <Loader2 className="size-8 animate-spin text-background light:text-foreground" />
+        <Typography as="small" size="sm" className="text-background light:text-foreground">
           {generatingLabel}
         </Typography>
       </Container>
@@ -35,7 +34,7 @@ export function QrCodeSlot({
   }
 
   if (isExpired) {
-    const blurredQr = (
+    return (
       <>
         <Image
           src="/images/qr-blurred.png"
@@ -54,21 +53,6 @@ export function QrCodeSlot({
         </span>
       </>
     );
-
-    if (expiredReloadAction) {
-      return (
-        <button
-          type="button"
-          onClick={expiredReloadAction.onClick}
-          aria-label={expiredReloadAction.ariaLabel}
-          className="group absolute inset-0 flex cursor-pointer items-center justify-center p-4"
-        >
-          {blurredQr}
-        </button>
-      );
-    }
-
-    return blurredQr;
   }
 
   return (

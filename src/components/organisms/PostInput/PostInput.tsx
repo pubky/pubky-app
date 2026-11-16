@@ -162,6 +162,7 @@ export function PostInput({
     isEditInlineMediaLoading,
     serializeArticleForLock,
     getLatestArticle,
+    discardPendingArticle,
     // Mention autocomplete
     mentionUsers,
     mentionIsOpen,
@@ -235,6 +236,7 @@ export function PostInput({
   // keeps the tags (they belong to the announcement). Used by the switch-on capture and the
   // lock-publish cleanup.
   const clearComposerForLock = () => {
+    discardPendingArticle();
     setContent('');
     setAttachments([]);
     setIsArticle(false);

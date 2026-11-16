@@ -1,6 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { LocksService } from '@/services/locks/locks';
 import type { LockFile, TAccessCredential } from '@/services/locks/locks.types';
+import { mockVerificationTask } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { STALL_AFTER_MS, usePayToUnlock } from './usePayToUnlock';
 
@@ -9,7 +11,7 @@ import { STALL_AFTER_MS, usePayToUnlock } from './usePayToUnlock';
 // Lock Server's own view of what Check again did.
 const mocks = vi.hoisted(() => ({
   saved: [] as string[],
-  lookupVerificationTask: vi.fn(),
+  lookupVerificationTask: vi.fn<typeof LocksService.lookupVerificationTask>(),
   issueAccessCredential: vi.fn(),
   proxyReadGuardedResource: vi.fn(),
   toast: vi.fn(),
@@ -65,11 +67,7 @@ describe('usePayToUnlock, Check again on a download that never settles', () => {
     vi.useFakeTimers();
     mocks.saved.length = 0;
     mocks.saved.push(`pubky://reader1/priv/social/purchases/LOCK1/${BUNDLE}.json`);
-    mocks.lookupVerificationTask.mockResolvedValue({
-      status: 'completed',
-      walletSetupNeeded: false,
-      admissionDeadlineAt: null,
-    });
+    mocks.lookupVerificationTask.mockResolvedValue(mockVerificationTask('completed'));
     mocks.proxyReadGuardedResource.mockResolvedValue(
       new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
     );
