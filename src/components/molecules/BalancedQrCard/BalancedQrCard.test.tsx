@@ -14,4 +14,16 @@ describe('BalancedQrCard', () => {
     expect(screen.getByText('QR code').parentElement).toHaveClass('w-48', 'shrink-0', 'justify-center');
     expect(container.querySelector('[data-slot="balanced-qr-spacer"]')).toHaveClass('w-48', 'shrink-0');
   });
+
+  it('fills the right column with the aside content instead of the spacer', () => {
+    const { container } = render(
+      <BalancedQrCard illustration={<span>Illustration</span>} aside={<span>Steps</span>}>
+        <span>QR code</span>
+      </BalancedQrCard>,
+    );
+
+    expect(screen.getByText('Steps').parentElement).toHaveAttribute('data-slot', 'balanced-qr-aside');
+    expect(screen.getByText('Steps').parentElement).toHaveClass('w-48', 'shrink-0');
+    expect(container.querySelector('[data-slot="balanced-qr-spacer"]')).not.toBeInTheDocument();
+  });
 });
