@@ -62,7 +62,8 @@ export function useIframeReady({
   // Until the page reports it rendered: listen for that report, and cap the wait from its start.
   useEffect(() => {
     if (!isWaitingForPage) return;
-    // A wait (re)starts: a new page, or the same one after leaving and re-entering the wait.
+    // A wait starts for a new page. Callers mint a fresh URL for every wait, so re-entering the wait
+    // with the same key is not a supported path: a `load` it already reported would still count.
     settledKeyRef.current = null;
 
     const onMessage = (event: MessageEvent) => {

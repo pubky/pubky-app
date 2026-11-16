@@ -193,6 +193,20 @@ describe('useIframeReady', () => {
     expect(onTimeout).not.toHaveBeenCalled();
   });
 
+  it('ignores a ready report that lands in the same batch after a deadline', async () => {
+    const { result, onTimeout } = renderIframeReady();
+    act(() => result.current.onLoad());
+
+    // The load deadline and then the report arrive before React renders again.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(IFRAME_READY_AFTER_LOAD_MS);
+      window.dispatchEvent(new MessageEvent('message', { data: { type: READY } }));
+    });
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+    expect(onTimeout).toHaveBeenCalledWith('load');
+    expect(result.current.isReady).toBe(false);
+  });
+
   it('does nothing while not waiting or without a page', async () => {
     const { result, onTimeout, readyCheck } = renderIframeReady({ isWaiting: false });
     act(() => result.current.onLoad());
