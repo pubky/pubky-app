@@ -164,7 +164,11 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
 // one seeded `legacy` copies its tree there before the landing route (`migrates`).
 Cypress.Commands.add(
   'signInWithPubkyRing',
-  (name: string, landingPath = '/home', { migrates = false, whileMigrating, acknowledgesSummary = false } = {}) => {
+  (
+    name: string,
+    landingPath = '/home',
+    { migrates = false, beforeRun, whileMigrating, acknowledgesSummary = false } = {},
+  ) => {
     openSignInPage();
     readPubkyRingAuthUrl().then((authUrl) => {
       expect(authUrl).to.match(/^pubkyauth:\/\//);
@@ -174,6 +178,8 @@ Cypress.Commands.add(
     // An account with a 0.x tree stops on the gate's progress screen; any other only checks and moves on
     if (migrates) {
       cy.location('pathname').should('eq', '/migration');
+      // A spec that keeps the run from starting (another holder of the migration lock) waits it out from here
+      beforeRun?.();
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
       // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here
       whileMigrating?.();

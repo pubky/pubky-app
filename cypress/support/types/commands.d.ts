@@ -10,6 +10,8 @@ declare global {
         options?: {
           /** The account has a 0.x tree: wait on the gate's progress screen, then up to an extended timeout for the landing route. */
           migrates?: boolean;
+          /** Runs on /migration before the run is under way, e.g. while another holder has the migration lock; with `migrates` only. */
+          beforeRun?: () => void;
           /** Runs on the gate's progress screen, before the command waits for the landing route; with `migrates` only. */
           whileMigrating?: () => void;
           acknowledgesSummary?: boolean;

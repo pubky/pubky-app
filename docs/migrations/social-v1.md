@@ -410,8 +410,9 @@ Ring sign-in (#3150): 28 files against `dev`. What the specs now assume:
   interruptions: a reload mid-copy resumes the run on the restored grant ("Continuing from an earlier run", one flag write, one version file
   per post), and a homeserver that stops answering writes ends the run `incomplete`, which auto-retries three times,
   blocks on Retry and then finishes without duplicates. `locks.cy.ts` (#3114) takes a 0.x lock through the migration
-  (the seeding paragraph below). A second tab waiting on the Web Lock is not testable in Cypress (one tab); it and the
-  other stages are at the unit level and in the QA matrix.
+  (the seeding paragraph below). A second tab waiting on the Web Lock is stood in for by the spec's own frame, which holds
+  the migrator's lock while the app waits on "Another tab is updating your account" with its request queued, then
+  runs once on release; the other stages are at the unit level and in the QA matrix.
 
 Seeding (`cypress/plugins/seed.ts`, `cypress/plugins/seed.writers.ts`): `seedUserViaApi` writes v1 through
 `pubky-social-specs`. `{ legacy: true }` writes the 0.x layout by hand under `/pub/pubky.app/`, so a supporting user

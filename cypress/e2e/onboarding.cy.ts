@@ -157,6 +157,13 @@ describe('Onboarding', () => {
     checkHeaderIsVisible();
   });
 
+  // The migration lock the waiting test holds from this spec's frame, which outlives the test: let go of it even when
+  // the test failed before it did
+  let releaseMigrationLock = () => {};
+  afterEach(() => {
+    releaseMigrationLock();
+  });
+
   const checkOwnProfile = (profileName: string, profileBio: string) => {
     goToProfilePageFromHeader();
     cy.location('pathname').should('eq', '/profile');
@@ -574,7 +581,7 @@ describe('Onboarding', () => {
   // A homeserver that stops answering writes ends a run `incomplete`; the gate retries three times on its own
   // (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), then blocks on Retry, and the retried run writes each object once.
   // The other interruption the gate handles, a second tab waiting on the first one's run ("Another tab is updating
-  // your account"), is not testable here: Cypress drives a single tab.
+  // your account"), is the waiting test below: this spec's own frame holds the migrator's Web Lock in that tab's place.
   it('retries a migration the homeserver stops answering, blocks on Retry and finishes without duplicates', () => {
     const profileName = `Interrupted ${Cypress._.random(100_000)}`;
     const run = Date.now();
@@ -794,6 +801,114 @@ describe('Onboarding', () => {
         ).to.have.length(1);
       });
     });
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A run holds the migrator's Web Lock for its account, so a second tab of the same origin waits on "Another tab is
+  // updating your account" and runs once the first lets go. Web Locks are shared by every frame of an origin, and this
+  // spec's frame is served from the app's, so it holds the lock in the first tab's place; it also outlives every
+  // navigation of the app's frame.
+  it('waits for another holder of the migration lock, then migrates once it is released', () => {
+    const profileName = `Waiting ${Cypress._.random(100_000)}`;
+    const noteText = `Migrated once the other tab is done ${Date.now()}`;
+    const waitingTitle = 'Another tab is updating your account';
+    // Longer than the gate's first automatic retry (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), so a gate that gave up on
+    // the lock instead of waiting for it would show another screen in the meantime
+    const lockHeldMs = 5000;
+
+    let user: SeededUser;
+    let note: SeededPost;
+    const visited: string[] = [];
+    const titles: string[] = [];
+    // The engine names the lock after the owner's raw z32 key (`user.id`), not its `pubky`-prefixed form
+    const lockName = () => `pubky-social-migrator:${user.id}`;
+    const lockState = () => cy.then(() => window.navigator.locks.query());
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      createPostViaApi(user, noteText).then((post) => {
+        note = post;
+      });
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), postIndexed(note));
+    });
+
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }).as('migrationProbe');
+    cy.intercept({ method: /^(PUT|DELETE)$/, url: '**/{pub,priv}/social/v1/**' }).as('v1Write');
+    holdMigrationFlag();
+
+    // Granted before the sign-in: the app looks for a holder once, before it asks for the lock. The promise that
+    // keeps the lock stays out of Cypress's hands, which would wait for it.
+    cy.then(() => {
+      const held = new Promise<void>((resolve) => {
+        releaseMigrationLock = resolve;
+      });
+      return new Cypress.Promise<void>((granted) => {
+        void window.navigator.locks.request(lockName(), () => {
+          granted();
+          return held;
+        });
+      });
+    });
+    lockState().then(({ held = [] }) => {
+      expect(
+        held.map(({ name }) => name),
+        'held by this frame',
+      ).to.include(lockName());
+    });
+
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      beforeRun: () => {
+        recordRoutes(visited);
+        recordGateTitles(titles);
+        // The engine's chunk loads before the app looks for a holder
+        cy.get('[data-testid="social-migration"]', extendedTimeout())
+          .should('contain.text', waitingTitle)
+          .and('contain.text', 'Keep that tab open. This page continues when it finishes.');
+        cy.get('#social-migration-blocked-navigation-continue-btn').should('not.exist');
+        cy.get('#social-migration-blocked-navigation-back-btn').should('not.exist');
+        // The app's own request waits behind the holder: a gate that only looked at the lock would show this screen too
+        lockState().then(({ pending = [] }) => {
+          expect(
+            pending.map(({ name }) => name),
+            "the app's request, queued",
+          ).to.include(lockName());
+        });
+        cy.wait(lockHeldMs);
+        cy.then(() => {
+          expect(titles.slice(titles.indexOf(waitingTitle)), 'screens while the lock is held').to.deep.equal([
+            waitingTitle,
+          ]);
+        });
+        lockState().then(({ pending = [] }) => {
+          expect(
+            pending.map(({ name }) => name),
+            "the app's request, still queued",
+          ).to.include(lockName());
+        });
+        // The whole run happens under the lock, the probe of the done flag included
+        cy.get('@migrationProbe.all').should('have.length', 0);
+        cy.get('@v1Write.all').should('have.length', 0);
+        cy.location('pathname').should('eq', '/migration');
+        cy.then(() => {
+          releaseMigrationLock();
+        });
+      },
+    });
+
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include(legacyPostPath(note));
+    });
+    cy.get('@migrationDone.all').should('have.length', 1);
+    cy.get('@migrationProbe.all').should('have.length', 1);
+    expectNoSignOutRoutes(visited, 'sign-out routes while waiting for the lock');
 
     goToProfilePageFromHeader();
     cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
