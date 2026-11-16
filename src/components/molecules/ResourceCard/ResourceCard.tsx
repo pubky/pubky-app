@@ -23,6 +23,7 @@ import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { PinakesStatus, type TPinakesCredit } from '@/services/pinakes/pinakes.types';
+import { ResourceArrowText } from './ResourceArrowText';
 import { type ResourceCardProps, ResourceFamily } from './ResourceCard.types';
 import {
   formatResourceDates,
@@ -271,7 +272,7 @@ export function ResourceCard({
                 title={summary}
                 className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
               >
-                {summary}
+                <ResourceArrowText text={summary} />
               </Typography>
             )}
 
