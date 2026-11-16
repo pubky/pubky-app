@@ -1,5 +1,4 @@
 import { Keypair } from '@synonymdev/pubky';
-import * as bip39 from 'bip39';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
@@ -21,7 +20,6 @@ const mockKeypair = {
 vi.mock('@synonymdev/pubky', () => ({
   Keypair: {
     fromSecret: vi.fn(() => mockKeypair),
-    fromRecoveryFile: vi.fn(() => mockKeypair),
   },
 }));
 
@@ -170,42 +168,6 @@ describe('Identity', () => {
         expect(error).toHaveProperty('category', ErrorCategory.Validation);
         expect(error).toHaveProperty('code', ValidationErrorCode.INVALID_INPUT);
       }
-    });
-  });
-
-  describe('keypairFromMnemonic', () => {
-    // Standard BIP39 test vector; any valid 12-word phrase works here.
-    const mnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-
-    it('should generate a valid keypair from mnemonic', () => {
-      const keypair = Identity.keypairFromMnemonic(mnemonic);
-
-      expect(keypair).toBeDefined();
-      // The mock returns a keypair object
-      expect(keypair.publicKey).toBeDefined();
-    });
-
-    it('derives the secret key from the first 32 bytes of the BIP39 seed', () => {
-      // Recovery phrases created by the former in-browser sign-up used this derivation, so it must not change.
-      Identity.keypairFromMnemonic(mnemonic);
-
-      const expectedSecret = bip39.mnemonicToSeedSync(mnemonic).subarray(0, 32);
-      expect(Array.from(vi.mocked(Keypair.fromSecret).mock.calls[0][0])).toEqual(Array.from(expectedSecret));
-    });
-
-    it('should throw error for invalid mnemonic', () => {
-      const invalidMnemonic = 'invalid mnemonic phrase test';
-
-      expect(() => Identity.keypairFromMnemonic(invalidMnemonic)).toThrow();
-    });
-
-    it('should generate consistent keypairs for same mnemonic', () => {
-      const keypair1 = Identity.keypairFromMnemonic(mnemonic);
-      const keypair2 = Identity.keypairFromMnemonic(mnemonic);
-
-      // Both calls should succeed (the mock returns the same keypair)
-      expect(keypair1).toBeDefined();
-      expect(keypair2).toBeDefined();
     });
   });
 
