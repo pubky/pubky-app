@@ -40,6 +40,11 @@ export interface CardPlayer {
    * or Card (no player) above its first service in Players): no service's embed loads.
    */
   isCard?: boolean;
+  /**
+   * The service's player loads in `embed`: platform embeds up front, or its stand-in's Play on pressed
+   * with them off. `false` while `embed` is the stand-in, which loads nothing.
+   */
+  showsPlayer?: boolean;
 }
 
 export interface CardPlayerOptions {
@@ -151,6 +156,7 @@ export function useCardPlayer(
   if (!selected) return { isCard: true, switcher };
   return {
     switcher,
+    showsPlayer,
     embed: (
       // A new resource or service starts over: no Play on pressed. The same one (new counts or
       // tags) keeps its player.
