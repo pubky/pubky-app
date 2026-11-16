@@ -184,9 +184,12 @@ Cypress.Commands.add(
       // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here
       whileMigrating?.();
     }
-    // A run that left something behind waits on its summary for a click
+    // A run that left something behind waits on its summary for a click; a string is the summary's expected text
     if (acknowledgesSummary) {
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Your account is up to date');
+      if (typeof acknowledgesSummary === 'string') {
+        cy.get('[data-testid="social-migration"]').should('contain.text', acknowledgesSummary);
+      }
       cy.get('#social-migration-summary-navigation-continue-btn').click();
     }
     // Every sign-in passes the gate and then prepares the account before the landing route, a first one

@@ -30,7 +30,13 @@ import {
 } from '../support/nexus';
 import { createQuickPost, deletePost, editPost, waitForFeedToLoad } from '../support/posts';
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
-import { addProfileTags, openProfileTab, showProfileHeader, unfollowUserByUsername } from '../support/profile';
+import {
+  addProfileTags,
+  openEditProfile,
+  openProfileTab,
+  showProfileHeader,
+  unfollowUserByUsername,
+} from '../support/profile';
 import { itMobile } from '../support/mobile';
 import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
 import {
@@ -1098,16 +1104,27 @@ describe('Onboarding', () => {
     cy.get('@flagProbe.all').should('have.length', 1);
   });
 
+  // A 0.x profile value v1 refuses is dropped and the profile still migrates; the summary says so, and the profile
+  // form says it once more, until it is dismissed
   it('shows what a migration left behind and lets the account continue', () => {
     const profileName = `Partly Migrating ${Cypress._.random(100_000)}`;
     const profileBio = 'Leaves one thing behind';
     const noteText = `Migrates beside an article that cannot ${Date.now()}`;
+    // Values the 0.x reader accepts and v1 refuses (the migrator's own vector for dropped profile values): an image
+    // that is not a file of the owner's, and a link that is not http(s)
+    const droppedImage = 'data:image/png;base64,AAAA';
+    const droppedLink = { title: 'FTP', url: 'ftp://files.example' };
 
     let user: SeededUser;
     let note: SeededPost;
     let untitled: SeededPost;
 
-    seedUserViaApi(profileName, { bio: profileBio, legacy: true }).then((seeded) => {
+    seedUserViaApi(profileName, {
+      bio: profileBio,
+      legacy: true,
+      image: droppedImage,
+      links: [droppedLink],
+    }).then((seeded) => {
       user = seeded;
     });
     cy.then(() => {
@@ -1123,20 +1140,46 @@ describe('Onboarding', () => {
       waitForNexus(userIndexed(user), postIndexed(note));
     });
 
+    cy.intercept('PUT', '**/pub/social/v1/profile.json').as('profileCopy');
     holdMigrationFlag();
     cy.signInWithPubkyRing(profileName, '/home', {
       migrates: true,
-      acknowledgesSummary: true,
+      acknowledgesSummary:
+        'Some items could not be carried over: 1 skipped. ' +
+        'Your profile picture and 1 profile link need to be set again in Settings.',
     });
 
     migrationFlag().then((flag) => {
       expect(flag.skipped['empty_title']).to.deep.equal([legacyPostPath(untitled)]);
-      expect(flag.migrated).to.include(legacyPostPath(note));
+      expect(flag.migrated).to.include.members([legacyPostPath(note), 'pub/pubky.app/profile.json']);
+    });
+    // Dropped from the copy, not only reported
+    cy.wait('@profileCopy').then(({ request, response }) => {
+      expect(response?.statusCode, 'profile copy').to.eq(201);
+      const profile = parseRequestBody(request.body) as { name: string; image?: string | null; links?: unknown };
+      expect(profile.name).to.eq(profileName);
+      expect(profile.image ?? null, 'copied image').to.eq(null);
+      expect(JSON.stringify(profile.links ?? []), 'copied links').to.not.include(droppedLink.url);
     });
 
     checkOwnProfile(profileName, profileBio);
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-tab-content"]').should('contain.text', noteText);
+
+    // The note shows on the loaded form only, so each check waits for the form first
+    openEditProfile();
+    cy.get('#profile-name-input').should('have.value', profileName);
+    cy.get('[data-testid="edit-profile-migration-notice"]')
+      .should('be.visible')
+      .and('contain.text', 'Your profile picture could not be carried over by the account update. Set it again.')
+      .and('contain.text', 'One of your profile links could not be carried over. Check your links.');
+    cy.get('[data-testid="edit-profile-migration-notice-dismiss"]').click();
+    cy.get('[data-testid="edit-profile-migration-notice"]').should('not.exist');
+    // Dismissed for good: a reload shows the form without it
+    cy.reload();
+    cy.get('#profile-name-input').should('have.value', profileName);
+    cy.get('[data-testid="edit-profile-form"]').should('be.visible');
+    cy.get('[data-testid="edit-profile-migration-notice"]').should('not.exist');
     cy.signOut(HasBackedUp.Yes);
   });
 

@@ -236,14 +236,14 @@ export const createSeedTasks = (config: SeedConfig) => {
         return null;
       }),
 
-    seedCreateUser: ({ name, bio, legacy = false }: SeedCreateUserArgs): Promise<SeededUser> =>
+    seedCreateUser: ({ name, bio, legacy = false, image, links }: SeedCreateUserArgs): Promise<SeededUser> =>
       step(`create ${legacy ? 'un-migrated ' : ''}user '${name}'`, async () => {
         // Signed up like any other key, so the mock Pubky Ring can sign the app in as them
         const { keypair } = await signUp(name);
         const session = await pubky().signer(keypair).signin(SEED_CLIENT_ID);
         const id = keypair.publicKey.z32();
         const writer = legacy ? legacyWriter(id, session) : v1Writer(id, session);
-        const uri = await writer.writeProfile(name, bio);
+        const uri = await writer.writeProfile(name, bio, { image, links });
         // Like the app after onboarding, tell Nexus about the new user; best effort, as in the app
         await fetch(`${config.nexusUrl.replace(/\/$/, '')}/v1/ingest/${id}`, { method: 'PUT' }).catch(() => null);
         sessions.set(id, { name, session, writer, legacy });

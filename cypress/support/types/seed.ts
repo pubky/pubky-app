@@ -20,7 +20,14 @@ export type SeededPost = {
   kind: SeededPostKind;
 };
 
-export type SeedCreateUserArgs = { name: string; bio: string; legacy?: boolean };
+// A profile link as 0.x and v1 profiles both spell it
+export type SeededProfileLink = { title: string; url: string };
+
+// What a profile carries besides its name and bio. Only the 0.x writer takes them: they exist to seed 0.x values the
+// migration drops (see onboarding.cy.ts), which v1 validation refuses to write in the first place.
+export type SeededProfileExtras = { image?: string; links?: SeededProfileLink[] };
+
+export type SeedCreateUserArgs = { name: string; bio: string; legacy?: boolean } & SeededProfileExtras;
 
 export type SeedSignUpArgs = { name: string };
 
