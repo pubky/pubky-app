@@ -416,6 +416,55 @@ describe('usePaykitSetupFlow', () => {
       expect(result.current.isSetupReady).toBe(true);
     });
 
+    // A callback state mismatch goes to ERROR with `setupUrl` still set; the page wait must stop there,
+    // or its timer would overwrite the validation error with a "did not render" timeout.
+    it('stops the page wait once a mismatching callback moves the flow to ERROR', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+
+      await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state: 'other-state' });
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
+      expect(result.current.setupUrl).not.toBeNull();
+
+      await advance(IFRAME_MOUNT_TIMEOUT_MS + IFRAME_READY_AFTER_LOAD_MS);
+      expect(result.current.error?.category).toBe(ErrorCategory.Validation);
+    });
+
+    it('accepts a callback that arrives before any ready report', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      const state = startFlow(result);
+      attachIframeSource(result);
+      fireLoad(result);
+
+      await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state });
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.SUCCESS);
+
+      await advance(IFRAME_MOUNT_TIMEOUT_MS + IFRAME_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.SUCCESS);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('flags only a page-render timeout as a setup page failure', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+      startFlow(result, 'reconnect');
+      attachIframeSource(result);
+      fireLoad(result);
+      expect(result.current.isSetupPageFailed).toBe(false);
+
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
+      expect(result.current.isSetupPageFailed).toBe(true);
+
+      // Another approval clears it, and a callback failure never sets it.
+      act(() => result.current.reconnect());
+      expect(result.current.isSetupPageFailed).toBe(false);
+      await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state: 'other-state' });
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
+      expect(result.current.isSetupPageFailed).toBe(false);
+    });
+
     it('applies the same wait to the /setup/reconnect page', async () => {
       const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
       const state = startFlow(result, 'reconnect');

@@ -42,6 +42,7 @@ const mocks = vi.hoisted(() => ({
     setupUrl: string | null;
     error: unknown;
     isSetupReady?: boolean;
+    isSetupPageFailed?: boolean;
   },
 }));
 
@@ -444,11 +445,14 @@ describe('DialogLocksAuth', () => {
       const { rerender } = renderDialog();
       expect(screen.getByTitle('Bitkit payout account setup')).toBeInTheDocument();
 
+      // The real hook keeps `setupUrl` after the timeout; only check() / reset() clear it.
       mocks.paykitFlow = {
         status: PaykitSetupFlowStatus.ERROR,
         mode: 'setup',
-        setupUrl: null,
+        setupUrl: 'https://paykit.server/setup?state=STATE',
         error: { message: 'did not render' },
+        isSetupReady: false,
+        isSetupPageFailed: true,
       };
       rerender(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
 
@@ -710,6 +714,32 @@ describe('DialogLocksAuth', () => {
       expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
       expect(mocks.reconnectPaykit).not.toHaveBeenCalled();
       expect(mocks.startPaykit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a /setup/reconnect page that never rendered', () => {
+    it('shows the generic connect copy, not the approve-in-time reconnect copy', () => {
+      signIn();
+      mocks.paykitFlow = {
+        status: PaykitSetupFlowStatus.ERROR,
+        mode: 'reconnect',
+        setupUrl: 'https://paykit.server/setup/reconnect?creator=pubkyX&state=STATE',
+        error: { message: 'Paykit setup page did not render' },
+        isSetupReady: false,
+        isSetupPageFailed: true,
+      };
+      renderDialog();
+
+      // No QR was ever shown, so there was nothing to approve within 5 minutes.
+      expect(screen.queryByText(/Approve it in Bitkit within 5 minutes/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Reconnecting Bitkit failed.')).not.toBeInTheDocument();
+      expect(screen.getByText('Something went wrong while connecting your Bitkit wallet.')).toBeInTheDocument();
+      expect(screen.getByText("Couldn't connect your Bitkit wallet. Please try again.")).toBeInTheDocument();
+      expect(screen.queryByTitle('Bitkit payout account reconnect')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+      expect(mocks.reconnectPaykit).not.toHaveBeenCalled();
     });
   });
 

@@ -142,6 +142,57 @@ describe('useIframeReady', () => {
     expect(onTimeout).toHaveBeenCalledWith('mount');
   });
 
+  // A new key mid-wait drops the old page's timers and listener: its deadlines never fire, and a ready
+  // report marks the new page ready.
+  it.each([
+    ['before load', false],
+    ['after load', true],
+  ])('starts a fresh wait when the key changes mid-wait, %s', async (_label, loaded) => {
+    const { result, rerender, onTimeout } = renderIframeReady();
+    if (loaded) {
+      await advance(IFRAME_MOUNT_TIMEOUT_MS - IFRAME_READY_AFTER_LOAD_MS - 1_000);
+      act(() => result.current.onLoad());
+      await advance(IFRAME_READY_AFTER_LOAD_MS - 1_000);
+    } else {
+      await advance(IFRAME_MOUNT_TIMEOUT_MS - 1_000);
+    }
+    expect(onTimeout).not.toHaveBeenCalled();
+
+    rerender({ key: OTHER_PAGE_URL });
+    // Past the old page's mount deadline (and its load deadline, when it loaded).
+    await advance(IFRAME_READY_AFTER_LOAD_MS);
+    expect(onTimeout).not.toHaveBeenCalled();
+
+    post({ type: READY });
+    expect(result.current.isReady).toBe(true);
+    await advance(IFRAME_MOUNT_TIMEOUT_MS);
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it('calls onTimeout exactly once when both limits come due before the next render', async () => {
+    const { result, onTimeout } = renderIframeReady();
+    await advance(IFRAME_MOUNT_TIMEOUT_MS - IFRAME_READY_AFTER_LOAD_MS);
+    // Load lands exactly 5 s before the mount limit: both timers are due at the same instant.
+    act(() => result.current.onLoad());
+
+    await advance(IFRAME_READY_AFTER_LOAD_MS);
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not time out after a ready report that lands in the same batch as a deadline', async () => {
+    const { result, onTimeout } = renderIframeReady();
+    act(() => result.current.onLoad());
+    await advance(IFRAME_READY_AFTER_LOAD_MS - 1);
+
+    // The report and the load deadline arrive before React renders again.
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', { data: { type: READY } }));
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(result.current.isReady).toBe(true);
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
   it('does nothing while not waiting or without a page', async () => {
     const { result, onTimeout, readyCheck } = renderIframeReady({ isWaiting: false });
     act(() => result.current.onLoad());

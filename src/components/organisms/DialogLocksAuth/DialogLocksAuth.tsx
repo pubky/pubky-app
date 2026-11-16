@@ -107,6 +107,7 @@ export function DialogLocksAuth({
     mode: paykitMode,
     iframeRef: paykitIframeRef,
     isSetupReady,
+    isSetupPageFailed,
     onSetupLoad,
     check: checkPaykit,
     reconnect: reconnectPaykit,
@@ -165,7 +166,9 @@ export function DialogLocksAuth({
   const isPaykitUnavailable = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.UNAVAILABLE;
   const isReconnectRequired = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.RECONNECT_REQUIRED;
   const isSetupIncomplete = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.SETUP_INCOMPLETE;
-  const isReconnectFailed = isPaykitError && paykitMode === 'reconnect';
+  // A reconnect page that never rendered showed no QR, so it gets the generic error copy, not the
+  // approve-in-time reconnect copy.
+  const isReconnectFailed = isPaykitError && paykitMode === 'reconnect' && !isSetupPageFailed;
   const isReconnecting = paykitMode === 'reconnect';
   const isError = isLocksError || isPaykitError || isPaykitUnavailable;
   // Intro step: the readiness probe (checking / ready / unavailable), before the auth iframe.

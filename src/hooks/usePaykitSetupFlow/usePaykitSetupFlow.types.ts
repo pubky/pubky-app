@@ -38,6 +38,11 @@ export type UsePaykitSetupFlowReturn = {
    * posts it, and must never be shown.
    */
   isSetupReady: boolean;
+  /**
+   * True when the flow is in `ERROR` because the `/setup` or `/setup/reconnect` page never reported
+   * it rendered. The creator saw no QR, so copy that asks them to approve in time does not apply.
+   */
+  isSetupPageFailed: boolean;
   /** Attach to the setup iframe's `onLoad`: starts the short wait for the ready message. */
   onSetupLoad: () => void;
   /**

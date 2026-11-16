@@ -14,11 +14,13 @@ import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { PaykitSetupFlowStatus, type PaykitSetupMode, type UsePaykitSetupFlowReturn } from './usePaykitSetupFlow.types';
 import { isPaykitSetupReadyMessage, readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
 
+const AWAIT_SETUP_PAGE_OPERATION = 'usePaykitSetupFlow.awaitSetupPage';
+
 /** The error for a `/setup` page that never reported it rendered, counted from `mount` or `load`. */
 const setupPageTimeout = (countedFrom: IframeReadyCountedFrom): AppError =>
   Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Paykit setup page did not render', {
     service: ErrorService.Locks,
-    operation: 'usePaykitSetupFlow.awaitSetupPage',
+    operation: AWAIT_SETUP_PAGE_OPERATION,
     context: { countedFrom },
   });
 
@@ -265,5 +267,22 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     },
   });
 
-  return { status, mode, setupUrl, error, iframeRef, isSetupReady, onSetupLoad, check, start, reconnect, reset };
+  // The page never rendered, so the creator saw no QR: nothing was there to approve.
+  const isSetupPageFailed =
+    status === PaykitSetupFlowStatus.ERROR && isAppError(error) && error.operation === AWAIT_SETUP_PAGE_OPERATION;
+
+  return {
+    status,
+    mode,
+    setupUrl,
+    error,
+    iframeRef,
+    isSetupReady,
+    isSetupPageFailed,
+    onSetupLoad,
+    check,
+    start,
+    reconnect,
+    reset,
+  };
 }
