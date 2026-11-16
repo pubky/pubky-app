@@ -1,7 +1,6 @@
-import type { Keypair, Session } from '@synonymdev/pubky';
+import type { Session } from '@synonymdev/pubky';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
-import type { THomeserverAuthenticateParams } from '@/application/auth/auth.types';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -24,125 +23,6 @@ const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sle
 describe('AuthApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('signIn', () => {
-    const createParams = (): THomeserverAuthenticateParams => ({
-      keypair: asOpaque<Keypair>({
-        publicKey: vi.fn(() => ({ z32: () => 'test-pubky' })),
-        secret: vi.fn(() => new Uint8Array([1, 2, 3])),
-      }),
-      secretKey: 'test-secret-key',
-    });
-
-    it('should successfully authenticate and return result', async () => {
-      const params = createParams();
-      const session = asOpaque<Session>({ token: 'test-token' });
-      const expectedResult = { session };
-
-      const signInSpy = vi.spyOn(HomeserverService, 'signIn').mockResolvedValue(expectedResult);
-
-      const result = await AuthApplication.signIn(params);
-
-      expect(signInSpy).toHaveBeenCalledWith({ keypair: params.keypair });
-      expect(result).toEqual(expectedResult);
-    });
-
-    it('should return undefined when homeserver is not found during authentication', async () => {
-      const params = createParams();
-      const signInSpy = vi.spyOn(HomeserverService, 'signIn').mockResolvedValue(undefined);
-
-      const result = await AuthApplication.signIn(params);
-
-      expect(signInSpy).toHaveBeenCalledWith({ keypair: params.keypair });
-      expect(result).toBeUndefined();
-    });
-
-    it('should propagate error when authentication throws', async () => {
-      const params = createParams();
-      const signInSpy = vi.spyOn(HomeserverService, 'signIn').mockRejectedValue(new Error('Authentication failed'));
-
-      await expect(AuthApplication.signIn(params)).rejects.toThrow('Authentication failed');
-      expect(signInSpy).toHaveBeenCalledOnce();
-    });
-
-    const createPkarrLookupError = () =>
-      Err.network(NetworkErrorCode.CONNECTION_FAILED, 'PKARR lookup failed', {
-        service: ErrorService.Homeserver,
-        operation: 'resolveHomeserverRecord',
-      });
-
-    const createWrongEnvironmentError = () =>
-      Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'Wrong environment', {
-        service: ErrorService.Homeserver,
-        operation: 'assertUserHomeserverAllowed',
-      });
-
-    it('should retry a failed PKARR lookup with backoff and sign in once it succeeds', async () => {
-      const params = createParams();
-      const expectedResult = { session: asOpaque<Session>({ token: 'test-token' }) };
-      const signInSpy = vi
-        .spyOn(HomeserverService, 'signIn')
-        .mockRejectedValueOnce(createPkarrLookupError())
-        .mockRejectedValueOnce(createPkarrLookupError())
-        .mockResolvedValueOnce(expectedResult);
-      const sleepSpy = await spyOnSleep();
-
-      const result = await AuthApplication.signIn(params);
-
-      expect(result).toEqual(expectedResult);
-      expect(signInSpy).toHaveBeenCalledTimes(3);
-      expect(sleepSpy.mock.calls).toEqual([[500], [1000]]);
-    });
-
-    it('should throw the connection error once every attempt fails', async () => {
-      const params = createParams();
-      const error = createPkarrLookupError();
-      const signInSpy = vi.spyOn(HomeserverService, 'signIn').mockRejectedValue(error);
-      const sleepSpy = await spyOnSleep();
-
-      await expect(AuthApplication.signIn(params)).rejects.toBe(error);
-      // 3 attempts with a sleep between them
-      expect(signInSpy).toHaveBeenCalledTimes(3);
-      expect(sleepSpy).toHaveBeenCalledTimes(2);
-    });
-
-    it('should not retry a non-retryable failure', async () => {
-      const params = createParams();
-      const error = createWrongEnvironmentError();
-      const signInSpy = vi.spyOn(HomeserverService, 'signIn').mockRejectedValue(error);
-      const sleepSpy = await spyOnSleep();
-
-      await expect(AuthApplication.signIn(params)).rejects.toBe(error);
-      expect(signInSpy).toHaveBeenCalledOnce();
-      expect(sleepSpy).not.toHaveBeenCalled();
-    });
-
-    it('should not schedule a retry when the sign-in was superseded during the attempt', async () => {
-      const params = createParams();
-      const error = createPkarrLookupError();
-      const signInSpy = vi.spyOn(HomeserverService, 'signIn').mockRejectedValue(error);
-      const sleepSpy = await spyOnSleep();
-
-      await expect(AuthApplication.signIn({ ...params, isCurrent: () => false })).rejects.toBe(error);
-      expect(signInSpy).toHaveBeenCalledOnce();
-      expect(sleepSpy).not.toHaveBeenCalled();
-    });
-
-    it('should make no further attempt once a newer auth flow supersedes the sign-in', async () => {
-      const params = createParams();
-      const error = createPkarrLookupError();
-      const signInSpy = vi.spyOn(HomeserverService, 'signIn').mockRejectedValue(error);
-      const sleepSpy = await spyOnSleep();
-      let current = true;
-      sleepSpy.mockImplementation(async () => {
-        current = false;
-      });
-
-      await expect(AuthApplication.signIn({ ...params, isCurrent: () => current })).rejects.toBe(error);
-      expect(signInSpy).toHaveBeenCalledOnce();
-      expect(sleepSpy).toHaveBeenCalledOnce();
-    });
   });
 
   describe('logout', () => {

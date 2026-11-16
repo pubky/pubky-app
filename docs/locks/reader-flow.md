@@ -364,8 +364,8 @@ it. Neither state shows a spinner.
 ### E. A session from before Locks (#2373)
 
 Setup: an older, still-valid grant whose capabilities lack the Locks `/priv` paths. Legacy cookie
-sessions must authorize again first; a fresh Ring grant already includes these paths. A recovery-file
-or recovery-phrase login obtains a root grant and does not enter this state. See the
+sessions must authorize again first; a fresh Ring grant already includes these paths. A root grant from
+the former recovery-file or recovery-phrase login does not enter this state. See the
 [grant migration guide](../migrations/2600-grant-auth-and-locks.md).
 
 **E-1. The permission notice**

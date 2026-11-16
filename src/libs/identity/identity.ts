@@ -1,11 +1,10 @@
 import { Keypair } from '@synonymdev/pubky';
-import * as bip39 from 'bip39';
 import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
-import type { TCreateRecoveryFileParams, TDecryptRecoveryFileParams } from './identity.types';
+import type { TCreateRecoveryFileParams } from './identity.types';
 
 export class Identity {
   /**
@@ -63,26 +62,6 @@ export class Identity {
       throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to download recovery file', {
         service: ErrorService.Local,
         operation: 'handleDownloadRecoveryFile',
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Decrypts a recovery file and returns the keypair
-   * @param encryptedFile - The encrypted recovery file
-   * @param passphrase - The passphrase to decrypt the recovery file
-   * @returns The keypair
-   */
-  static async decryptRecoveryFile({ encryptedFile, passphrase }: TDecryptRecoveryFileParams) {
-    const arrayBuffer = await encryptedFile.arrayBuffer();
-    const recoveryFile = new Uint8Array(arrayBuffer);
-    try {
-      return Keypair.fromRecoveryFile(recoveryFile, passphrase);
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid recovery file or passphrase', {
-        service: ErrorService.Local,
-        operation: 'decryptRecoveryFile',
         cause: error,
       });
     }
@@ -168,38 +147,6 @@ export class Identity {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid secret key format', {
         service: ErrorService.Local,
         operation: 'secretKeyFromHex',
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Converts a mnemonic to a keypair
-   * @param mnemonic - The mnemonic to convert
-   * @returns The keypair
-   */
-  static keypairFromMnemonic(mnemonic: string) {
-    if (!bip39.validateMnemonic(mnemonic)) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid recovery phrase', {
-        service: ErrorService.Local,
-        operation: 'keypairFromMnemonic',
-      });
-    }
-
-    try {
-      // Convert mnemonic to seed using BIP39 standard
-      const seedMnemonic = bip39.mnemonicToSeedSync(mnemonic);
-
-      // Use first 32 bytes as secret key (the derivation the former in-browser sign-up used)
-      // TODO: const secretKey = new Uint8Array(seedMnemonic.subarray(0, 32));
-      const secretKey = seedMnemonic.slice(0, 32);
-
-      return Keypair.fromSecret(secretKey);
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to restore keypair from recovery phrase', {
-        service: ErrorService.Local,
-        operation: 'keypairFromMnemonic',
-        context: { originalError: error instanceof Error ? error.message : 'Unknown error' },
         cause: error,
       });
     }
