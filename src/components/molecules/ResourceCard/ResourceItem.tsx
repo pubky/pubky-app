@@ -21,6 +21,7 @@ import {
 import { ResourceRowContent } from '@/molecules/ResourceCard/ResourceRowContent';
 import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
+import { getCategoryPlayers, PlayerCategory } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 
 interface ResourceItemProps {
@@ -56,7 +57,9 @@ export function ResourceItem({ uri, 'data-testid': testId }: ResourceItemProps) 
   const cardLink = webLink ?? (card?.name?.trim() ? uri : null);
   const isRow = cardLink === null && (!isLoading || isSlow);
   const app = getPubkyObjectApp(uri);
-  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
+  const media = useSettingsStore((state) => state.media);
+  // YouTube and Vimeo, the only platform embeds with a player here, follow Video's Players, as in a post.
+  const { hiddenPlayers } = getCategoryPlayers(media, PlayerCategory.VIDEO);
   // A platform whose player the viewer removed from Players embeds nothing; without Pinakes, the card.
   const { embed, provider } = parseUrlForLinkEmbed(webLink, false, hiddenPlayers);
   const kind = isPinakesConfigured() ? provider?.resourceKind : undefined;
