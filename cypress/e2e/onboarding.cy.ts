@@ -30,8 +30,15 @@ import {
 } from '../support/nexus';
 import { createQuickPost, deletePost, editPost, waitForFeedToLoad } from '../support/posts';
 import { expectFeedTab, expectVisibleReachSelected, getFeedNavigationItem } from '../support/feeds';
-import { addProfileTags, openProfileTab, showProfileHeader, unfollowUserByUsername } from '../support/profile';
+import {
+  addProfileTags,
+  openEditProfile,
+  openProfileTab,
+  showProfileHeader,
+  unfollowUserByUsername,
+} from '../support/profile';
 import { itMobile } from '../support/mobile';
+import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
 import {
   bookmarkViaApi,
   createArticleViaApi,
@@ -42,6 +49,8 @@ import {
   listHomeserverPathsViaApi,
   markNotificationsReadViaApi,
   muteViaApi,
+  replyViaApi,
+  repostViaApi,
   seedUserViaApi,
   signUpViaApi,
   tagPostViaApi,
@@ -56,6 +65,23 @@ const recordRoutes = (visited: string[]) => {
   cy.then(() => {
     cy.on('url:changed', (url) => {
       visited.push(url);
+    });
+  });
+};
+
+// Records each title the gate's screen shows from here on, in order, into the test's own list, so a test can tell
+// every screen a run passed through, however briefly. The app's window survives every stage change of the gate.
+const recordGateTitles = (titles: string[]) => {
+  cy.window().then((win) => {
+    const record = () => {
+      const title = win.document.querySelector('[data-testid="social-migration"] h1')?.textContent;
+      if (title && titles[titles.length - 1] !== title) titles.push(title);
+    };
+    record();
+    new win.MutationObserver(record).observe(win.document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
     });
   });
 };
@@ -140,6 +166,13 @@ describe('Onboarding', () => {
     checkHeaderIsVisible();
   });
 
+  // The migration lock the waiting test holds from this spec's frame, which outlives the test: let go of it even when
+  // the test failed before it did
+  let releaseMigrationLock = () => {};
+  afterEach(() => {
+    releaseMigrationLock();
+  });
+
   const checkOwnProfile = (profileName: string, profileBio: string) => {
     goToProfilePageFromHeader();
     cy.location('pathname').should('eq', '/profile');
@@ -195,12 +228,16 @@ describe('Onboarding', () => {
     const articleBody = `Its body, under a cover in its first attachment ${run}`;
     const collectionName = `Collection from before the migration ${run}`;
     const tagLabel = `premigration${Cypress._.random(100_000)}`;
+    const replyText = `A reply from before the migration ${run}`;
+    const quoteText = `A quote from before the migration ${run}`;
 
     let user: SeededUser;
     let followee: SeededUser;
     let follower: SeededUser;
     let mutee: SeededUser;
     let note: SeededPost;
+    let reply: SeededPost;
+    let quote: SeededPost;
     let image: SeededPost;
     let article: SeededPost;
     let collection: SeededPost;
@@ -221,6 +258,14 @@ describe('Onboarding', () => {
     cy.then(() => {
       createPostViaApi(user, noteText).then((post) => {
         note = post;
+        // Both reference the note in its 0.x spelling. Nexus does not notify an author of their own reply or
+        // repost, so neither moves the notification counter checked below.
+        replyViaApi(user, post, replyText).then((seeded) => {
+          reply = seeded;
+        });
+        repostViaApi(user, post, quoteText).then((seeded) => {
+          quote = seeded;
+        });
       });
       createImagePostViaApi(user, imageText).then((post) => {
         image = post;
@@ -249,6 +294,8 @@ describe('Onboarding', () => {
         userIndexed(user),
         userIndexed(mutee),
         postIndexed(note),
+        postIndexed(reply),
+        postIndexed(quote),
         postIndexed(image),
         postIndexed(article),
         postIndexed(collection),
@@ -272,6 +319,8 @@ describe('Onboarding', () => {
       expect(flag.migrated).to.include.members([
         'pub/pubky.app/profile.json',
         legacyPostPath(note),
+        legacyPostPath(reply),
+        legacyPostPath(quote),
         legacyPostPath(image),
         legacyPostPath(article),
         legacyPostPath(collection),
@@ -289,6 +338,8 @@ describe('Onboarding', () => {
       [
         /^\/pub\/social\/v1\/profile\.json$/,
         new RegExp(`^/pub/social/v1/posts/${note.id}/[^/]+\\.json$`),
+        new RegExp(`^/pub/social/v1/posts/${reply.id}/[^/]+\\.json$`),
+        new RegExp(`^/pub/social/v1/posts/${quote.id}/[^/]+\\.json$`),
         new RegExp(`^/pub/social/v1/posts/${image.id}/[^/]+\\.json$`),
         new RegExp(`^/pub/social/v1/posts/${article.id}/[^/]+\\.json$`),
         new RegExp(`^/pub/social/v1/posts/${collection.id}/[^/]+\\.json$`),
@@ -307,9 +358,14 @@ describe('Onboarding', () => {
       expect(paths.filter((path) => /^\/pub\/social\/v1\/(bookmarks|mutes)\//.test(path))).to.deep.equal([]);
 
       const postCopies = landed.filter((write) => pathOf(write).startsWith('/pub/social/v1/posts/'));
+      // A reference to a post names the post, not one of its versions, under the v1 root
+      const v1Note = note.uri.replace('/pub/pubky.app/', '/pub/social/v1/');
       postCopies.forEach((write) => {
         expectV1PostWrite(write).then((post) => {
-          if (postIdFromWriteUrl(write.request.url) !== article.id) return;
+          const postId = postIdFromWriteUrl(write.request.url);
+          if (postId === reply.id) expect(post.parent, 'reply parent').to.eq(v1Note);
+          if (postId === quote.id) expect(post.embed, 'quoted post').to.eq(v1Note);
+          if (postId !== article.id) return;
           // The first attachment of a 0.x article moves into the envelope as its cover
           expect(post.kind).to.eq('article');
           expect(post.attachments).to.deep.equal([]);
@@ -557,7 +613,7 @@ describe('Onboarding', () => {
   // A homeserver that stops answering writes ends a run `incomplete`; the gate retries three times on its own
   // (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), then blocks on Retry, and the retried run writes each object once.
   // The other interruption the gate handles, a second tab waiting on the first one's run ("Another tab is updating
-  // your account"), is not testable here: Cypress drives a single tab.
+  // your account"), is the waiting test below: this spec's own frame holds the migrator's Web Lock in that tab's place.
   it('retries a migration the homeserver stops answering, blocks on Retry and finishes without duplicates', () => {
     const profileName = `Interrupted ${Cypress._.random(100_000)}`;
     const run = Date.now();
@@ -668,16 +724,407 @@ describe('Onboarding', () => {
     cy.signOut(HasBackedUp.Yes);
   });
 
+  // A homeserver that rate-limits the copy (429) only slows a run down: the migrator's engine backs off on its own
+  // (1 s, doubling to a minute, with no attempt limit) and the run finishes in one go, without the gate's retries above
+  // and without a blocked screen. A 429 the port misread as a network error would get the same waits but only three
+  // retries: its fourth refusal ends the run `incomplete`, which the gate retries, so a second run. The engine ignores
+  // Retry-After (its port errors carry no headers), so the waits below are lower bounds only.
+  it('slows a rate-limited migration down without blocking it and finishes in one run', () => {
+    const profileName = `Rate Limited ${Cypress._.random(100_000)}`;
+    const run = Date.now();
+    const postCount = 2;
+    // One more refusal than the engine's network-retry budget (NETWORK_RETRIES = 3 in pubky-social-migrator's
+    // engine.ts): a `rate_limited` copy is tried a fifth time and lands, a 429 read as `network` fails on its fourth
+    // refusal. Each 429 is one engine attempt; a dropped connection is not (something below the engine resends it), so
+    // forceNetworkError does not stand in for a misread 429. All on one URL, because the engine's back-off is per call
+    // and restarts at 1 s for every other object.
+    const RATE_LIMITED = 4;
+    // The engine's wait before each retry of a rate-limited call (FIRST_BACKOFF_MS, doubling; engine.ts)
+    const backoffMs = [1000, 2000, 4000, 8000];
+    // Every timestamp is taken in this frame as the requests pass the proxy, so a little apart from the engine's timers
+    const clockSlackMs = 250;
+    // The refusals and their back-off, about 15 s, then the copy that lands
+    const landedCopyTimeoutMs = 60_000;
+
+    let user: SeededUser;
+    const posts: SeededPost[] = [];
+    // When each refused profile copy was sent, and when and how the one that went through was answered
+    const refusedAt: number[] = [];
+    let landedAt = 0;
+    let landedStatus: number | undefined;
+    // Every run opens with one HEAD of the done flag: the probes say how many runs the gate started
+    const runsStartedAt: number[] = [];
+    const visited: string[] = [];
+    const titles: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      for (let index = 0; index < postCount; index += 1) {
+        createPostViaApi(user, `Copied past a rate limit ${index} ${run}`).then((post) => {
+          posts.push(post);
+        });
+      }
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), ...posts.map(postIndexed));
+    });
+
+    // Refused with a reply of its own, never passed on: a refused copy that landed would be found by the retry's
+    // HEAD and counted as already there. The header is what a homeserver sends; the engine does not read it.
+    cy.intercept('PUT', '**/pub/social/v1/profile.json', (req) => {
+      if (refusedAt.length < RATE_LIMITED) {
+        refusedAt.push(Date.now());
+        req.reply({ statusCode: 429, headers: { 'retry-after': '1' }, body: 'Too Many Requests' });
+        return;
+      }
+      landedAt = Date.now();
+      req.continue((res) => {
+        landedStatus = res.statusCode;
+      });
+    }).as('profileCopy');
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }, () => {
+      runsStartedAt.push(Date.now());
+    });
+    holdMigrationFlag();
+
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      whileMigrating: () => {
+        recordRoutes(visited);
+        recordGateTitles(titles);
+        cy.wrap(refusedAt, { timeout: landedCopyTimeoutMs }).should('have.length', RATE_LIMITED);
+        // Backing off, the run is still under way on its progress screen
+        cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+        cy.get<Interception[]>('@profileCopy.all', { timeout: landedCopyTimeoutMs }).should((copies) => {
+          expect(copies.filter(({ response }) => response?.statusCode === 201)).to.have.length(1);
+        });
+      },
+    });
+
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include.members(['pub/pubky.app/profile.json', ...posts.map(legacyPostPath)]);
+      // A 429 read as a refusal would leave the profile behind in a run that otherwise looks clean
+      expect(Object.values(flag.skipped).flat(), 'skipped').to.not.include('pub/pubky.app/profile.json');
+    });
+    // Read before anything else can write the profile: the four refusals and the one copy, nothing retried elsewhere
+    cy.get<Interception[]>('@profileCopy.all').should('have.length', RATE_LIMITED + 1);
+    cy.get('@migrationDone.all').should('have.length', 1);
+    cy.then(() => {
+      expect(runsStartedAt, 'runs in all').to.have.length(1);
+      expect(landedStatus, 'the profile copy that went through').to.eq(201);
+      const sentAt = [...refusedAt, landedAt];
+      backoffMs.forEach((backoff, index) => {
+        expect(sentAt[index + 1] - sentAt[index], `wait before retry ${index + 1}`).to.be.gte(backoff - clockSlackMs);
+      });
+      // Only the progress screen, never a blocked one, from the first refusal to the landing route
+      expect(
+        titles.filter((title) => title !== 'Updating your account'),
+        'screens of the rate-limited run',
+      ).to.deep.equal([]);
+    });
+    expectNoSignOutRoutes(visited, 'sign-out routes during the rate-limited run');
+    cy.then(() => {
+      expectOneVersionPerPost(user, posts).then((urls) => {
+        expect(
+          urls.filter((url) => url.endsWith('/profile.json')),
+          'v1 profile',
+        ).to.have.length(1);
+      });
+    });
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A run holds the migrator's Web Lock for its account, so a second tab of the same origin waits on "Another tab is
+  // updating your account" and runs once the first lets go. Web Locks are shared by every frame of an origin, and this
+  // spec's frame is served from the app's, so it holds the lock in the first tab's place; it also outlives every
+  // navigation of the app's frame.
+  it('waits for another holder of the migration lock, then migrates once it is released', () => {
+    const profileName = `Waiting ${Cypress._.random(100_000)}`;
+    const noteText = `Migrated once the other tab is done ${Date.now()}`;
+    const waitingTitle = 'Another tab is updating your account';
+    // Longer than the gate's first automatic retry (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), so a gate that gave up on
+    // the lock instead of waiting for it would show another screen in the meantime
+    const lockHeldMs = SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS[0] + 1000;
+
+    let user: SeededUser;
+    let note: SeededPost;
+    const visited: string[] = [];
+    const titles: string[] = [];
+    // The engine names the lock after the owner's raw z32 key (`user.id`), not its `pubky`-prefixed form
+    const lockName = () => `pubky-social-migrator:${user.id}`;
+    const lockState = () => cy.then(() => window.navigator.locks.query());
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      createPostViaApi(user, noteText).then((post) => {
+        note = post;
+      });
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), postIndexed(note));
+    });
+
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }).as('migrationProbe');
+    cy.intercept({ method: /^(PUT|DELETE)$/, url: '**/{pub,priv}/social/v1/**' }).as('v1Write');
+    holdMigrationFlag();
+
+    // Granted before the sign-in: the app looks for a holder once, before it asks for the lock. The promise that
+    // keeps the lock stays out of Cypress's hands, which would wait for it.
+    cy.then(() => {
+      const held = new Promise<void>((resolve) => {
+        releaseMigrationLock = resolve;
+      });
+      return new Cypress.Promise<void>((granted) => {
+        void window.navigator.locks.request(lockName(), () => {
+          granted();
+          return held;
+        });
+      });
+    });
+    lockState().then(({ held = [] }) => {
+      expect(
+        held.map(({ name }) => name),
+        'held by this frame',
+      ).to.include(lockName());
+    });
+
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      beforeRun: () => {
+        recordRoutes(visited);
+        recordGateTitles(titles);
+        // The engine's chunk loads before the app looks for a holder
+        cy.get('[data-testid="social-migration"]', extendedTimeout())
+          .should('contain.text', waitingTitle)
+          .and('contain.text', 'Keep that tab open. This page continues when it finishes.');
+        cy.get('#social-migration-blocked-navigation-continue-btn').should('not.exist');
+        cy.get('#social-migration-blocked-navigation-back-btn').should('not.exist');
+        // The app's own request waits behind the holder: a gate that only looked at the lock would show this screen too
+        lockState().then(({ pending = [] }) => {
+          expect(
+            pending.map(({ name }) => name),
+            "the app's request, queued",
+          ).to.include(lockName());
+        });
+        cy.wait(lockHeldMs);
+        cy.then(() => {
+          expect(titles.slice(titles.indexOf(waitingTitle)), 'screens while the lock is held').to.deep.equal([
+            waitingTitle,
+          ]);
+        });
+        lockState().then(({ pending = [] }) => {
+          expect(
+            pending.map(({ name }) => name),
+            "the app's request, still queued",
+          ).to.include(lockName());
+        });
+        // The whole run happens under the lock, the probe of the done flag included
+        cy.get('@migrationProbe.all').should('have.length', 0);
+        cy.get('@v1Write.all').should('have.length', 0);
+        cy.location('pathname').should('eq', '/migration');
+        cy.then(() => {
+          releaseMigrationLock();
+        });
+      },
+    });
+
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include(legacyPostPath(note));
+    });
+    cy.get('@migrationDone.all').should('have.length', 1);
+    cy.get('@migrationProbe.all').should('have.length', 1);
+    expectNoSignOutRoutes(visited, 'sign-out routes while waiting for the lock');
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A full homeserver (507) pauses a run at once: no engine retry, no automatic retry by the gate, and a screen that
+  // waits for Retry. The figure on it is the declared size of the media not yet copied, which this e2e cannot check:
+  // the screen never shows less than 1 MB, so the seeded 20 KB image and a missing figure both read "About 1 MB".
+  // The figure is pinned by the template's and the controller's unit tests.
+  it('pauses a migration on a full homeserver and finishes it on Retry', () => {
+    const profileName = `Full Homeserver ${Cypress._.random(100_000)}`;
+    const run = Date.now();
+    const imageText = `Media copied once there is space ${run}`;
+    const noteText = `Copied once there is space ${run}`;
+    // The refusal answers late, so the progress screen the sign-in waits for is up before the run pauses
+    const refusalDelayMs = 3000;
+    // Waited after the pause, past the gate's first automatic retry, to see that none comes
+    const autoRetryWindowMs = SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS[0] + 1000;
+
+    let user: SeededUser;
+    let image: SeededPost;
+    let note: SeededPost;
+    let full = true;
+    const runsStartedAt: number[] = [];
+    const visited: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      createImagePostViaApi(user, imageText).then((post) => {
+        image = post;
+      });
+      createPostViaApi(user, noteText).then((post) => {
+        note = post;
+      });
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), postIndexed(image), postIndexed(note));
+    });
+
+    // The first write of a run is the image's media, under the public v1 root
+    cy.intercept('PUT', '**/pub/social/v1/**', (req) => {
+      if (!full) {
+        req.continue();
+        return;
+      }
+      req.reply({ statusCode: 507, body: 'Insufficient Storage', delay: refusalDelayMs });
+    }).as('v1Write');
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }, () => {
+      runsStartedAt.push(Date.now());
+    });
+    holdMigrationFlag();
+
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      whileMigrating: () => {
+        recordRoutes(visited);
+        cy.get('[data-testid="social-migration"]', extendedTimeout())
+          .should('contain.text', 'Your homeserver is out of space')
+          .and('contain.text', 'About 1 MB more is needed for your media');
+        cy.get('#social-migration-blocked-navigation-back-btn').should('contain.text', 'Sign out');
+        cy.get('#social-migration-blocked-navigation-continue-btn').should('contain.text', 'Retry');
+        cy.wait(autoRetryWindowMs);
+        // One run, stopped by its first refused write, and nothing retried until Retry
+        cy.then(() => {
+          expect(runsStartedAt, 'runs before Retry').to.have.length(1);
+        });
+        cy.get('@v1Write.all').should('have.length', 1);
+        cy.get('[data-testid="social-migration"]').should('contain.text', 'Your homeserver is out of space');
+        cy.then(() => {
+          full = false;
+        });
+        cy.get('#social-migration-blocked-navigation-continue-btn').click();
+        cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+      },
+    });
+
+    migrationFlag().then((flag) => {
+      expect(flag.migrated).to.include.members([legacyPostPath(image), legacyPostPath(note)]);
+    });
+    cy.get('@migrationDone.all').should('have.length', 1);
+    cy.then(() => {
+      expect(runsStartedAt, 'runs in all').to.have.length(2);
+    });
+    // The retried run copied the media the first one was refused
+    cy.get<Interception[]>('@v1Write.all').then((writes) => {
+      expect(
+        writes.filter(({ response }) => response?.statusCode === 507),
+        'refused writes',
+      ).to.have.length(1);
+      expect(
+        writes.filter(
+          ({ request, response }) => response?.statusCode === 201 && request.url.includes('/pub/social/v1/files/'),
+        ),
+        'media copied on Retry',
+      ).to.not.be.empty;
+    });
+    expectNoSignOutRoutes(visited, 'sign-out routes during the paused run');
+    cy.then(() => {
+      expectOneVersionPerPost(user, [image, note]);
+    });
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // A homeserver from before private storage refuses every path outside /pub/ with a 403 naming it, the first one
+  // being the run's HEAD of the done flag under /priv/. A HEAD answer has no body, so the port asks again with a GET
+  // and reads the reason from that one: both are stubbed. A bare 403 on the GET would be an expired session instead,
+  // which signs the account out, and a 403 on the HEAD alone falls through to the real GET's 404 and a normal run.
+  it('stops on a homeserver without private storage and signs out from the gate', () => {
+    const profileName = `Old Homeserver ${Cypress._.random(100_000)}`;
+    const noteText = `Never copied to an old homeserver ${Date.now()}`;
+    // What such a homeserver answers; the port looks for "other than '/pub/' is forbidden" in it
+    const privateStorageRefused = "Writing to directories other than '/pub/' is forbidden";
+
+    let user: SeededUser;
+    let note: SeededPost;
+    const visited: string[] = [];
+
+    seedUserViaApi(profileName, { legacy: true }).then((seeded) => {
+      user = seeded;
+    });
+    cy.then(() => {
+      createPostViaApi(user, noteText).then((post) => {
+        note = post;
+      });
+    });
+    cy.then(() => {
+      waitForNexus(userIndexed(user), postIndexed(note));
+    });
+
+    cy.intercept({ method: 'HEAD', url: MIGRATION_FLAG_GLOB }, { statusCode: 403 }).as('flagProbe');
+    cy.intercept({ method: 'GET', url: MIGRATION_FLAG_GLOB }, { statusCode: 403, body: privateStorageRefused }).as(
+      'flagRead',
+    );
+    cy.intercept({ method: 'PUT', url: '**/{pub,priv}/social/v1/**' }).as('v1Write');
+
+    // A run stopped at its first request never shows the progress screen, so the sign-in only reaches the gate
+    cy.signInWithPubkyRing(profileName, '/migration');
+    recordRoutes(visited);
+    cy.get('[data-testid="social-migration"]', extendedTimeout())
+      .should('contain.text', 'Your homeserver needs an upgrade')
+      .and('contain.text', 'It does not support private storage yet, which the update needs.');
+    cy.get('#social-migration-blocked-navigation-back-btn').should('contain.text', 'Sign out');
+    cy.get('#social-migration-blocked-navigation-continue-btn').should('contain.text', 'Retry');
+    cy.wait('@flagProbe').its('response.statusCode').should('eq', 403);
+    cy.wait('@flagRead').its('response.statusCode').should('eq', 403);
+    cy.get('@v1Write.all').should('have.length', 0);
+    expectNoSignOutRoutes(visited, 'no forced sign-out on a homeserver without private storage');
+
+    cy.get('#social-migration-blocked-navigation-back-btn').click();
+    cy.location('pathname').should('eq', '/logout');
+    confirmLogoutBackupBeforeNavigation(HasBackedUp.Yes, '#logout-navigation-back-btn');
+    cy.get('#logout-navigation-back-btn').click();
+    cy.location('pathname').should('eq', '/');
+    checkHeaderIsVisible();
+    cy.get('@flagProbe.all').should('have.length', 1);
+  });
+
+  // A 0.x profile value v1 refuses is dropped and the profile still migrates; the summary says so, and the profile
+  // form says it once more, until it is dismissed
   it('shows what a migration left behind and lets the account continue', () => {
     const profileName = `Partly Migrating ${Cypress._.random(100_000)}`;
     const profileBio = 'Leaves one thing behind';
     const noteText = `Migrates beside an article that cannot ${Date.now()}`;
+    // Values the 0.x reader accepts and v1 refuses (the migrator's own vector for dropped profile values): an image
+    // that is not a file of the owner's, and a link that is not http(s)
+    const droppedImage = 'data:image/png;base64,AAAA';
+    const droppedLink = { title: 'FTP', url: 'ftp://files.example' };
 
     let user: SeededUser;
     let note: SeededPost;
     let untitled: SeededPost;
 
-    seedUserViaApi(profileName, { bio: profileBio, legacy: true }).then((seeded) => {
+    seedUserViaApi(profileName, {
+      bio: profileBio,
+      legacy: true,
+      image: droppedImage,
+      links: [droppedLink],
+    }).then((seeded) => {
       user = seeded;
     });
     cy.then(() => {
@@ -693,20 +1140,46 @@ describe('Onboarding', () => {
       waitForNexus(userIndexed(user), postIndexed(note));
     });
 
+    cy.intercept('PUT', '**/pub/social/v1/profile.json').as('profileCopy');
     holdMigrationFlag();
     cy.signInWithPubkyRing(profileName, '/home', {
       migrates: true,
-      acknowledgesSummary: true,
+      acknowledgesSummary:
+        'Some items could not be carried over: 1 skipped. ' +
+        'Your profile picture and 1 profile link need to be set again in Settings.',
     });
 
     migrationFlag().then((flag) => {
       expect(flag.skipped['empty_title']).to.deep.equal([legacyPostPath(untitled)]);
-      expect(flag.migrated).to.include(legacyPostPath(note));
+      expect(flag.migrated).to.include.members([legacyPostPath(note), 'pub/pubky.app/profile.json']);
+    });
+    // Dropped from the copy, not only reported
+    cy.wait('@profileCopy').then(({ request, response }) => {
+      expect(response?.statusCode, 'profile copy').to.eq(201);
+      const profile = parseRequestBody(request.body) as { name: string; image?: string | null; links?: unknown };
+      expect(profile.name).to.eq(profileName);
+      expect(profile.image ?? null, 'copied image').to.eq(null);
+      expect(JSON.stringify(profile.links ?? []), 'copied links').to.not.include(droppedLink.url);
     });
 
     checkOwnProfile(profileName, profileBio);
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-tab-content"]').should('contain.text', noteText);
+
+    // The note shows on the loaded form only, so each check waits for the form first
+    openEditProfile();
+    cy.get('#profile-name-input').should('have.value', profileName);
+    cy.get('[data-testid="edit-profile-migration-notice"]')
+      .should('be.visible')
+      .and('contain.text', 'Your profile picture could not be carried over by the account update. Set it again.')
+      .and('contain.text', 'One of your profile links could not be carried over. Check your links.');
+    cy.get('[data-testid="edit-profile-migration-notice-dismiss"]').click();
+    cy.get('[data-testid="edit-profile-migration-notice"]').should('not.exist');
+    // Dismissed for good: a reload shows the form without it
+    cy.reload();
+    cy.get('#profile-name-input').should('have.value', profileName);
+    cy.get('[data-testid="edit-profile-form"]').should('be.visible');
+    cy.get('[data-testid="edit-profile-migration-notice"]').should('not.exist');
     cy.signOut(HasBackedUp.Yes);
   });
 

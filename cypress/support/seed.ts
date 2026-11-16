@@ -8,6 +8,7 @@ import type {
   SeededLockPrice,
   SeededLockTeaser,
   SeededPost,
+  SeededProfileExtras,
   SeededSignUp,
   SeededUser,
 } from './types/seed';
@@ -43,10 +44,13 @@ export const signUpViaApi = (name: string) => cy.task<SeededSignUp>('seedSignUp'
  * `cy.signInWithPubkyRing(name)`.
  * With `legacy`, everything seeded for them is written in the 0.x layout, as an account that has
  * not migrated yet. Signing in as them runs the migration (`cy.signInWithPubkyRing(name, '/home',
- * { migrates: true })`); every other account has nothing to move.
+ * { migrates: true })`); every other account has nothing to move. `image` and `links` seed 0.x profile values the
+ * migration drops, with `legacy` only.
  */
-export const seedUserViaApi = (name: string, { bio = '', legacy = false } = {}) =>
-  cy.task<SeededUser>('seedCreateUser', { name, bio, legacy });
+export const seedUserViaApi = (
+  name: string,
+  { bio = '', legacy = false, image, links }: { bio?: string; legacy?: boolean } & SeededProfileExtras = {},
+) => cy.task<SeededUser>('seedCreateUser', { name, bio, legacy, image, links });
 
 /** Approves the app's `pubkyauth://` sign-in request as `name`, in place of the Pubky Ring app. */
 export const approvePubkyAuthViaApi = (name: string, authUrl: string) =>

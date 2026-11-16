@@ -29,6 +29,7 @@ import type {
   SeedCreatePostArgs,
   SeededLegacyLock,
   SeededPostKind,
+  SeededProfileExtras,
   SeedLegacyLockArgs,
 } from '../support/types/seed';
 
@@ -56,8 +57,11 @@ type CollectionInput = Pick<SeedCreateCollectionArgs, 'name' | 'description' | '
 type LockInput = Pick<SeedLegacyLockArgs, 'lockedText' | 'teaser' | 'price' | 'imageFixturePath'>;
 
 export type SeedWriter = {
-  /** Writes the profile, which makes the app treat the key as signed up; yields the URI a tag targets. */
-  writeProfile: (name: string, bio: string) => Promise<string>;
+  /**
+   * Writes the profile, which makes the app treat the key as signed up; yields the URI a tag targets. `extras` are
+   * 0.x-only (`SeededProfileExtras`).
+   */
+  writeProfile: (name: string, bio: string, extras?: SeededProfileExtras) => Promise<string>;
   writePost: (post: PostInput) => Promise<StoredPost>;
   editPost: (postId: string, content: string) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
@@ -98,7 +102,11 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
     (await session.storage.list(`${toPath(buildUri(owner, 'post', postId))}/` as Path)).sort();
 
   return {
-    writeProfile: async (name, bio) => {
+    writeProfile: async (name, bio, extras = {}) => {
+      // Only 0.x values the migration drops are seeded as extras, and v1 validation refuses those outright
+      if (extras.image !== undefined || extras.links !== undefined) {
+        throw new Error('profile image and links are seeded for an un-migrated account only (legacy: true)');
+      }
       await put(buildUser(owner, { name, bio: bio || null }));
       return buildUri(owner, 'user');
     },
@@ -228,8 +236,13 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
   };
 
   return {
-    writeProfile: async (name, bio) => {
-      await session.storage.putJson(legacyPath('profile.json'), { name, bio });
+    writeProfile: async (name, bio, { image, links } = {}) => {
+      await session.storage.putJson(legacyPath('profile.json'), {
+        name,
+        bio,
+        ...(image === undefined ? {} : { image }),
+        ...(links === undefined ? {} : { links }),
+      });
       return legacyUrl('profile.json');
     },
 
