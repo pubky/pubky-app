@@ -209,12 +209,12 @@ function ResourceKnown({
   // the card's image and text, a generic link's card; the switch in the large card's header. An X
   // post's embed, or its Show on, is its only source; once X cannot show it, its card is generic.
   const showsPost = postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined);
-  const { embed, switcher } = useCardPlayer(showsPost ? null : card, uri, 'default');
+  const { embed, switcher, showsPlayer } = useCardPlayer(showsPost ? null : card, uri, 'default');
   // A service's player loaded in the body: a card that plays whole in our player (a show's latest
   // episodes, an episode's audio) gives way to it, as in a post's resource frame. A recording's
-  // preview, and the stand-in that loads nothing (platform embeds up front off), keep ours.
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
-  const ownPlayerAside = embed !== undefined && embedsUpFront && playsInCard(card);
+  // preview, and the stand-in that loads nothing (platform embeds up front off, until its Play on
+  // is pressed), keep ours.
+  const ownPlayerAside = showsPlayer === true && playsInCard(card);
   const actions = (
     <ResourceActions
       uri={actionUri}

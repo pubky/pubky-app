@@ -463,6 +463,27 @@ describe('ResourceDetails', () => {
         expect(document.querySelector('iframe')).toBeNull();
         expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
       });
+
+      it('gives way to the service’s player once its Play on is pressed with platform embeds up front off', () => {
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+        onTestFinished(() => {
+          useSettingsStore.setState({ media: defaultMediaPreferences });
+        });
+        read = settled({ ...podcastFixture, episodes });
+        renderDetails(podcastFixture.uri);
+
+        const card = screen.getByTestId('resource-card');
+        pick(card, 'Card', 'Apple Podcasts');
+        expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
+
+        fireEvent.click(within(card).getByRole('button', { name: 'Play on Apple Podcasts' }));
+
+        expect(within(card).getByTestId('resource-player-frame').getAttribute('src')).toMatch(
+          /^https:\/\/embed\.podcasts\.apple\.com\/us\/podcast\/173001861/,
+        );
+        expect(within(card).queryByTestId('resource-card-episodes')).not.toBeInTheDocument();
+        expect(within(card).queryByTestId('resource-card-episode-audio')).not.toBeInTheDocument();
+      });
     });
 
     it('plays a song on the service of the link the page was opened with', () => {
