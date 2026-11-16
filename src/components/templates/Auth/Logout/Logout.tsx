@@ -150,8 +150,8 @@ export function Logout() {
           <PageHeader>
             <PageTitle size="large">Back up your key before signing out</PageTitle>
             <PageSubtitle>
-              Your recovery key is still saved in this browser. If you already have a backup, choose Done to confirm and
-              sign out.
+              Your recovery key is only saved in this browser, and Pubky App signs in with Pubky Ring. Export it to
+              Pubky Ring before you sign out. If you already have a backup, choose Done to confirm and sign out.
             </PageSubtitle>
           </PageHeader>
           <AlertBackup />
