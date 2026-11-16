@@ -43,6 +43,8 @@ import {
   listHomeserverPathsViaApi,
   markNotificationsReadViaApi,
   muteViaApi,
+  replyViaApi,
+  repostViaApi,
   seedUserViaApi,
   signUpViaApi,
   tagPostViaApi,
@@ -220,12 +222,16 @@ describe('Onboarding', () => {
     const articleBody = `Its body, under a cover in its first attachment ${run}`;
     const collectionName = `Collection from before the migration ${run}`;
     const tagLabel = `premigration${Cypress._.random(100_000)}`;
+    const replyText = `A reply from before the migration ${run}`;
+    const quoteText = `A quote from before the migration ${run}`;
 
     let user: SeededUser;
     let followee: SeededUser;
     let follower: SeededUser;
     let mutee: SeededUser;
     let note: SeededPost;
+    let reply: SeededPost;
+    let quote: SeededPost;
     let image: SeededPost;
     let article: SeededPost;
     let collection: SeededPost;
@@ -246,6 +252,14 @@ describe('Onboarding', () => {
     cy.then(() => {
       createPostViaApi(user, noteText).then((post) => {
         note = post;
+        // Both reference the note in its 0.x spelling. Nexus does not notify an author of their own reply or
+        // repost, so neither moves the notification counter checked below.
+        replyViaApi(user, post, replyText).then((seeded) => {
+          reply = seeded;
+        });
+        repostViaApi(user, post, quoteText).then((seeded) => {
+          quote = seeded;
+        });
       });
       createImagePostViaApi(user, imageText).then((post) => {
         image = post;
@@ -274,6 +288,8 @@ describe('Onboarding', () => {
         userIndexed(user),
         userIndexed(mutee),
         postIndexed(note),
+        postIndexed(reply),
+        postIndexed(quote),
         postIndexed(image),
         postIndexed(article),
         postIndexed(collection),
@@ -297,6 +313,8 @@ describe('Onboarding', () => {
       expect(flag.migrated).to.include.members([
         'pub/pubky.app/profile.json',
         legacyPostPath(note),
+        legacyPostPath(reply),
+        legacyPostPath(quote),
         legacyPostPath(image),
         legacyPostPath(article),
         legacyPostPath(collection),
@@ -314,6 +332,8 @@ describe('Onboarding', () => {
       [
         /^\/pub\/social\/v1\/profile\.json$/,
         new RegExp(`^/pub/social/v1/posts/${note.id}/[^/]+\\.json$`),
+        new RegExp(`^/pub/social/v1/posts/${reply.id}/[^/]+\\.json$`),
+        new RegExp(`^/pub/social/v1/posts/${quote.id}/[^/]+\\.json$`),
         new RegExp(`^/pub/social/v1/posts/${image.id}/[^/]+\\.json$`),
         new RegExp(`^/pub/social/v1/posts/${article.id}/[^/]+\\.json$`),
         new RegExp(`^/pub/social/v1/posts/${collection.id}/[^/]+\\.json$`),
@@ -332,9 +352,14 @@ describe('Onboarding', () => {
       expect(paths.filter((path) => /^\/pub\/social\/v1\/(bookmarks|mutes)\//.test(path))).to.deep.equal([]);
 
       const postCopies = landed.filter((write) => pathOf(write).startsWith('/pub/social/v1/posts/'));
+      // A reference to a post names the post, not one of its versions, under the v1 root
+      const v1Note = note.uri.replace('/pub/pubky.app/', '/pub/social/v1/');
       postCopies.forEach((write) => {
         expectV1PostWrite(write).then((post) => {
-          if (postIdFromWriteUrl(write.request.url) !== article.id) return;
+          const postId = postIdFromWriteUrl(write.request.url);
+          if (postId === reply.id) expect(post.parent, 'reply parent').to.eq(v1Note);
+          if (postId === quote.id) expect(post.embed, 'quoted post').to.eq(v1Note);
+          if (postId !== article.id) return;
           // The first attachment of a 0.x article moves into the envelope as its cover
           expect(post.kind).to.eq('article');
           expect(post.attachments).to.deep.equal([]);
