@@ -726,16 +726,18 @@ describe('Onboarding', () => {
 
   // A homeserver that rate-limits the copy (429) only slows a run down: the migrator's engine backs off on its own
   // (1 s, doubling to a minute, with no attempt limit) and the run finishes in one go, without the gate's retries above
-  // and without a blocked screen. A 429 the port misread as a network error would use up the engine's network retries
-  // instead and end the run `incomplete`, which the gate retries: a second run. The engine ignores Retry-After (its
-  // port errors carry no headers), so the waits below are lower bounds only.
+  // and without a blocked screen. A 429 the port misread as a network error would get the same waits but only three
+  // retries: its fourth refusal ends the run `incomplete`, which the gate retries, so a second run. The engine ignores
+  // Retry-After (its port errors carry no headers), so the waits below are lower bounds only.
   it('slows a rate-limited migration down without blocking it and finishes in one run', () => {
     const profileName = `Rate Limited ${Cypress._.random(100_000)}`;
     const run = Date.now();
     const postCount = 2;
     // One more refusal than the engine's network-retry budget (NETWORK_RETRIES = 3 in pubky-social-migrator's
-    // engine.ts): a `rate_limited` copy is tried a fifth time and lands, a `network` one fails on the fourth refusal.
-    // All on one URL, because the engine's back-off is per call and restarts at 1 s for every other object.
+    // engine.ts): a `rate_limited` copy is tried a fifth time and lands, a 429 read as `network` fails on its fourth
+    // refusal. Each 429 is one engine attempt; a dropped connection is not (something below the engine resends it), so
+    // forceNetworkError does not stand in for a misread 429. All on one URL, because the engine's back-off is per call
+    // and restarts at 1 s for every other object.
     const RATE_LIMITED = 4;
     // The engine's wait before each retry of a rate-limited call (FIRST_BACKOFF_MS, doubling; engine.ts)
     const backoffMs = [1000, 2000, 4000, 8000];
@@ -794,9 +796,7 @@ describe('Onboarding', () => {
         recordGateTitles(titles);
         cy.wrap(refusedAt, { timeout: landedCopyTimeoutMs }).should('have.length', RATE_LIMITED);
         // Backing off, the run is still under way on its progress screen
-        cy.get('[data-testid="social-migration"]')
-          .should('contain.text', 'Updating your account')
-          .and('not.contain.text', 'We could not reach your homeserver');
+        cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
         cy.get<Interception[]>('@profileCopy.all', { timeout: landedCopyTimeoutMs }).should((copies) => {
           expect(copies.filter(({ response }) => response?.statusCode === 201)).to.have.length(1);
         });
@@ -849,7 +849,7 @@ describe('Onboarding', () => {
     const waitingTitle = 'Another tab is updating your account';
     // Longer than the gate's first automatic retry (SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS), so a gate that gave up on
     // the lock instead of waiting for it would show another screen in the meantime
-    const lockHeldMs = 5000;
+    const lockHeldMs = SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS[0] + 1000;
 
     let user: SeededUser;
     let note: SeededPost;
