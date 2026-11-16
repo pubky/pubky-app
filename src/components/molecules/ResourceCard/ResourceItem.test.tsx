@@ -329,6 +329,24 @@ describe('ResourceItem', () => {
       expect(document.querySelectorAll('iframe')).toHaveLength(0);
     });
 
+    it('follows Video’s own Players, as a post does: a player removed there embeds nothing', () => {
+      setMedia({ hiddenPlayers: [], players: { video: { order: [], hidden: ['youtube'] } } });
+      read({ ...videoFixture, also_on: [] });
+      render(<ResourceItem uri={VIDEO_URL} />);
+
+      expect(screen.queryByTestId('native-embed-resource')).not.toBeInTheDocument();
+      expect(screen.getByTestId('preview')).toHaveAttribute('data-url', VIDEO_URL);
+      expect(document.querySelectorAll('iframe')).toHaveLength(0);
+    });
+
+    it('embeds a player Video’s own Players keeps, though the older list without kinds removed it', () => {
+      setMedia({ hiddenPlayers: ['youtube'], players: { video: { order: [], hidden: [] } } });
+      read({ ...videoFixture, also_on: [] });
+      render(<ResourceItem uri={VIDEO_URL} />);
+
+      expect(screen.getByTestId('native-embed-resource')).toBeInTheDocument();
+    });
+
     it('keeps X’s embed when every player is removed: an X post is no player', () => {
       setMedia({ hiddenPlayers: ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer'] });
       read(POST_CARD);
