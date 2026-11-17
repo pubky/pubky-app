@@ -246,7 +246,7 @@ function RecoveryStep3({ handleClose }: { handleClose: () => void }) {
       <DialogHeader>
         <DialogTitle>{'Backup complete'}</DialogTitle>
         <DialogDescription>
-          {'You can use your backed up recovery phrase to restore your account later.'}
+          {'Import your recovery phrase into Pubky Ring to sign in to your account later.'}
         </DialogDescription>
       </DialogHeader>
 

@@ -183,7 +183,7 @@ describe('AlertBackup', () => {
 
     // TriangleAlert icon is now actual lucide-react component (SVG), not mocked div
     expect(screen.getByText('Back up now')).toBeInTheDocument();
-    expect(screen.getByText('Back up your key to Pubky Ring to keep your account!')).toBeInTheDocument();
+    expect(screen.getByText('Back up your key to Pubky Ring!')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-backup')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-confirm-backup')).toBeInTheDocument();
   });

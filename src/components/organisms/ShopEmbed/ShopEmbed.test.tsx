@@ -361,7 +361,7 @@ describe('ShopEmbed', () => {
     useSignInStore.setState({ authUrlResolved: true });
     const { frame } = mount();
     send(frame, { type: 'request-capabilities' });
-    fireEvent.click(screen.getByRole('button', { name: 'Use Passport or recovery key' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use Passport' }));
     expect(navigation.push).toHaveBeenCalledWith('/sign-in?returnTo=%2Fshop&shopReauth=initial');
     expect(AuthController.cancelActiveAuthFlow).toHaveBeenCalledOnce();
     expect(AuthController.logout).not.toHaveBeenCalled();
