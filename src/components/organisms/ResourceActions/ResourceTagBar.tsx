@@ -56,9 +56,10 @@ interface ResourceTagBarProps {
  * On the resource page the same thing's other links' tags join the one list (`otherTags`): the
  * link's own tags first, a label also on other services with the people across all of them muted
  * after its count ("5 (10)"); then, in the places the own tags leave free (all of them once
- * expanded), the labels only other services have as secondary chips, most popular first: a press
- * adds the tag here. Such a tag's detail (hover, or its taggers once expanded) lists each person
- * once, the people who tagged this link first, each with the icons of the links they tagged.
+ * expanded), the labels only other services have as secondary chips, most popular first, counted
+ * the same way with nobody here yet ("0 (3)"): a press adds the tag here. Such a tag's detail
+ * (hover, or its taggers once expanded) lists each person once, the people who tagged this link
+ * first, each with the icons of the links they tagged.
  */
 export function ResourceTagBar({
   resourceTags,
@@ -95,7 +96,9 @@ export function ResourceTagBar({
       .map((tag): TagWithAvatars => ({
         label: tag.label,
         taggers: tag.taggers.map((tagger) => ({ id: tagger })),
-        taggers_count: tag.count,
+        // Nobody here yet: "0 (n)", n counted like an own chip's total (each person once).
+        taggers_count: 0,
+        total: getTagPeople(undefined, tag).total,
         relationship: false,
         tag_uri: null,
         isSecondary: true,
@@ -209,13 +212,13 @@ export function ResourceTagBar({
 
 /**
  * A chip's name when its label is on other services: how many here and across them (an own chip),
- * or how many on other services and that a press adds it here (a secondary chip). Otherwise the
+ * or none here, how many elsewhere and that a press adds it here (a secondary chip). Otherwise the
  * post tag's own name.
  */
 function getChipLabel(tag: TagWithAvatars, people: TTagPeople | undefined): string | undefined {
   if (!people) return undefined;
   const atLeast = people.isComplete ? '' : 'at least ';
-  if (tag.isSecondary) return `${tag.label}, ${atLeast}${people.total} on other services, add it here`;
+  if (tag.isSecondary) return `${tag.label}, 0 here, ${atLeast}${people.total} on other services, add it here`;
   return `${tag.label}, ${tag.taggers_count} here, ${atLeast}${people.total} across services`;
 }
 

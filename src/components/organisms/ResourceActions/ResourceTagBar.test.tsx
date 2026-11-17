@@ -408,10 +408,10 @@ describe('ResourceTagBar', () => {
     mocks.tags = TWO_TAGS;
     render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
 
-    expect(chipLabels()).toEqual(['berlin3', 'travel2(4)', 'capital2']);
+    expect(chipLabels()).toEqual(['berlin3', 'travel2(4)', 'capital0(2)']);
     const [capital] = secondaryChips();
-    expect(capital).toHaveTextContent('capital2');
-    expect(capital).toHaveAccessibleName('capital, 2 on other services, add it here');
+    expect(capital).toHaveTextContent('capital0(2)');
+    expect(capital).toHaveAccessibleName('capital, 0 here, 2 on other services, add it here');
     expect(capital).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -500,14 +500,14 @@ describe('ResourceTagBar', () => {
     render(<TagBar isExpanded otherTags={OTHER_TAGS} uri={LINK} />);
 
     const list = await screen.findByTestId('tagged-list');
-    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'city1', 'capital2', 'europe1']);
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'city1', 'capital0', 'europe0']);
     const rows = [...list.children] as HTMLElement[];
     expect(rows.map((row) => row.dataset.secondary)).toEqual(['false', 'false', 'false', 'true', 'true']);
-    expect(rows.map((row) => row.dataset.total)).toEqual(['none', '4', 'none', 'none', 'none']);
+    expect(rows.map((row) => row.dataset.total)).toEqual(['none', '4', 'none', '2', '1']);
     expect(within(rows[1]).getByTestId('tag-people')).toBeInTheDocument();
     expect(within(rows[0]).queryByTestId('tag-people')).not.toBeInTheDocument();
 
-    fireEvent.click(within(rows[3]).getByRole('button', { name: 'capital2' }));
+    fireEvent.click(within(rows[3]).getByRole('button', { name: 'capital0' }));
     expect(mocks.addTag).toHaveBeenCalledWith('capital');
     fireEvent.click(within(rows[1]).getByRole('button', { name: 'travel2' }));
     expect(mocks.toggleTag).toHaveBeenCalledWith(expect.objectContaining({ label: 'travel', relationship: true }));
@@ -516,6 +516,7 @@ describe('ResourceTagBar', () => {
   it('turns a secondary chip into an own one once the viewer added its tag, with no second chip', () => {
     mocks.tags = TWO_TAGS;
     const { rerender } = render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+    expect(secondaryChips()[0]).toHaveTextContent('capital0(2)');
     fireEvent.click(secondaryChips()[0]);
     expect(mocks.addTag).toHaveBeenCalledWith('capital');
 
@@ -529,6 +530,93 @@ describe('ResourceTagBar', () => {
     expect(chipLabels()).toEqual(['berlin3', 'travel2(4)', 'capital1(3)']);
     expect(secondaryChips()).toHaveLength(0);
     expect(screen.getByText('capital').closest('button')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('shows a secondary chip as "0 (n)": nobody here, n counted like an own chip’s total', () => {
+    mocks.tags = TWO_TAGS;
+    render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    const [capital] = secondaryChips();
+    expect(within(capital).getByTestId('tag-count')).toHaveTextContent('0');
+    expect(within(capital).getByTestId('tag-total')).toHaveTextContent('(2)');
+    // The own chip next to it keeps its count and total.
+    const travel = screen.getByText('travel').closest('button')!;
+    expect(within(travel).getByTestId('tag-count')).toHaveTextContent('2');
+    expect(within(travel).getByTestId('tag-total')).toHaveTextContent('(4)');
+  });
+
+  it('says "at least" on a secondary chip when Nexus did not list every tagger, and after a press', () => {
+    mocks.tags = TWO_TAGS;
+    // Spotify counts 5 people and lists 2.
+    const album: TMergedTag = {
+      label: 'album',
+      taggers: ['x', 'y'],
+      count: 5,
+      isComplete: false,
+      sources: [{ ...service('Spotify', ['x', 'y']), count: 5 }],
+    };
+    const { rerender } = render(<TagBar otherTags={[album]} uri={LINK} />);
+    const [chip] = secondaryChips();
+    expect(chip).toHaveTextContent('album0(5)');
+    expect(chip).toHaveAccessibleName('album, 0 here, at least 5 on other services, add it here');
+    fireEvent.click(chip);
+    expect(mocks.addTag).toHaveBeenCalledWith('album');
+
+    mocks.tags = [
+      ...TWO_TAGS,
+      { label: 'album', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: 'pubky://viewer/a' },
+    ];
+    rerender(<TagBar otherTags={[album]} uri={LINK} />);
+    // The viewer may be one of the 3 Spotify does not list: still at least 5 across services.
+    const own = screen.getByText('album').closest('button')!;
+    expect(own).toHaveTextContent('album1(5)');
+    expect(own).toHaveAccessibleName('album, 1 here, at least 5 across services');
+    expect(secondaryChips()).toHaveLength(0);
+  });
+
+  it('counts the viewer once after a press when they already put the tag on another service', () => {
+    mocks.tags = TWO_TAGS;
+    const capital: TMergedTag = {
+      label: 'capital',
+      taggers: ['e', 'viewer'],
+      count: 2,
+      isComplete: true,
+      sources: [service('Wikidata', ['e', 'viewer'])],
+    };
+    const { rerender } = render(<TagBar otherTags={[capital]} uri={LINK} />);
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital0(2)']);
+    fireEvent.click(secondaryChips()[0]);
+    expect(mocks.addTag).toHaveBeenCalledWith('capital');
+
+    mocks.tags = [
+      ...TWO_TAGS,
+      { label: 'capital', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: 'pubky://viewer/c' },
+    ];
+    rerender(<TagBar otherTags={[capital]} uri={LINK} />);
+    // 1 here, 2 in all: the viewer here and on Wikidata is one person.
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital1(2)']);
+    expect(screen.getByText('capital').closest('button')).toHaveAccessibleName('capital, 1 here, 2 across services');
+  });
+
+  it('shows just "1" after a press when the viewer was the only one on the other services', () => {
+    mocks.tags = TWO_TAGS;
+    const mine: TMergedTag = {
+      label: 'capital',
+      taggers: ['viewer'],
+      count: 1,
+      isComplete: true,
+      sources: [service('Wikidata', ['viewer'])],
+    };
+    const { rerender } = render(<TagBar otherTags={[mine]} uri={LINK} />);
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital0(1)']);
+
+    mocks.tags = [
+      ...TWO_TAGS,
+      { label: 'capital', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: 'pubky://viewer/c' },
+    ];
+    rerender(<TagBar otherTags={[mine]} uri={LINK} />);
+    // As on any own chip, no total when the other services add nobody.
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital1']);
   });
 
   it('lists at most MAX_OTHER_TAGS other services’ tags once expanded', async () => {
@@ -568,6 +656,6 @@ describe('ResourceTagBar', () => {
     mocks.tags = [{ ...TWO_TAGS[1], label: 'Travel' }];
     render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
 
-    expect(chipLabels()).toEqual(['Travel2(4)', 'capital2', 'europe1']);
+    expect(chipLabels()).toEqual(['Travel2(4)', 'capital0(2)', 'europe0(1)']);
   });
 });
