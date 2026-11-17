@@ -142,18 +142,17 @@ needs the update: a fresh sign-in, a gated upgrade without a trusted record, and
 grant, or a record that saw an earlier revision) whose record has no `lastRun`, such as a reload on this screen.
 It does not show on a signup (inline, unchanged), on a run that already started here (`record.lastRun` present: it
 resumes at once), or for an account already updated: a trusted record passes (a sign-in on one no longer runs the
-engine's check), and a sign-in or upgrade
-without one reads the flag first with the restore's bounded `SocialMigrationApplication.readFlag`, writes the record
-and passes on a current flag, with no screen and no chunk. That read never fails the sign-in: a timeout, a network
-failure or a refusal (401/403) asks, and the run after Continue settles it as before (`already_migrated` for an
-updated account). Nothing presses Continue for the user: `retry()`, `retryAfterReconnect()` and `acknowledge()` wake
+engine's check), and a sign-in or upgrade without one reads the flag first with the restore's bounded
+`SocialMigrationApplication.readFlag`, writes the record and passes on a current flag, with no screen and no chunk.
+That read never fails the sign-in: a timeout, a network failure or a refusal (401/403) asks, and the run after
+Continue settles it as before (`already_migrated` for an updated account). Nothing presses Continue for the user: `retry()`, `retryAfterReconnect()` and `acknowledge()` wake
 only their own stages. `useBeforeUnloadGuard` stays tied to a run in flight, so the screen does not hold the tab. A
 user the gate signed out sees the explanation, signs in, then this screen: two screens, by decision.
 
 **Consequences.** A sign-in of an account without the flag costs one bounded flag read before the screen; a sign-in
 on a trusted record now passes without the engine's check. An account that has no 0.x data and no flag (a key that
-never used the 1.x app) is asked too, and its run then only checks and writes the flag. Two residuals are accepted
-(coordinator review, 2026-11-18): another tab that finishes the update during this tab's one flag read leaves this tab
+never used the 1.x app) is asked too, and its run then only checks and writes the flag. Two residuals are accepted:
+another tab that finishes the update during this tab's one flag read leaves this tab
 asking once for an account already updated, and Continue then passes at the engine's first check; and a second tab
 waiting at Continue is not woken when the first tab's run finishes, and its Continue passes at once.
 
