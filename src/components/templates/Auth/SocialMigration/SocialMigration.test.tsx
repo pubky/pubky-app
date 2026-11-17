@@ -88,6 +88,7 @@ describe('SocialMigration', () => {
     mocks.logout.mockReset().mockResolvedValue(undefined);
     mocks.restore.mockResolvedValue(false);
     mocks.onboardingState.secretKey = '';
+    mocks.authState.generation = 'gate';
     heldAccount();
     setStore({});
   });
@@ -173,6 +174,43 @@ describe('SocialMigration', () => {
     expect(sessionStorage.getItem('social-migration:signed-out')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
     expect(mocks.push).toHaveBeenCalledWith('/');
+  });
+
+  it('signs out again when a session another tab signed in, restored in this mounted screen, needs reauthentication', async () => {
+    const tree = () => (
+      <React.StrictMode>
+        <SocialMigration />
+      </React.StrictMode>
+    );
+    setStore({ stage: 'reauth-required', reason: 'pre-migration-grant' });
+    writeSocialMigrationSignedOutNotice({ reason: 'pre-migration-grant' });
+    const { rerender } = render(tree());
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalledOnce());
+    signedOut();
+    setStore({});
+    rerender(tree());
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+
+    // Another tab signs in: this tab adopts the new generation and restores it here, then runs the engine itself
+    mocks.authState.generation = 'gate-2';
+    heldAccount();
+    mocks.authState.restoreStatus = 'restoring';
+    rerender(tree());
+    expect(screen.getByRole('heading', { name: 'Checking your account' })).toBeInTheDocument();
+    mocks.authState.restoreStatus = 'social-migration';
+    act(() => setStore({ stage: 'running', phase: 'migrating', done: 2, total: 9, attempt: 1 }));
+    expect(screen.getByRole('heading', { name: 'Updating your account' })).toBeInTheDocument();
+
+    // Its run ends with the session expired: this new session is signed out too, not left on a screen with no way out
+    writeSocialMigrationSignedOutNotice({ reason: 'session-expired' });
+    act(() => setStore({ stage: 'reauth-required', reason: 'session-expired' }));
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalledTimes(2));
+    expect(screen.getByText(/Your session ended during the update/)).toBeInTheDocument();
+    signedOut();
+    setStore({});
+    rerender(tree());
+    expect(mocks.logout).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   // FIX-FINAL-7: the route guard brings a signed-out tab back here while the notice is pending, so every way out of the

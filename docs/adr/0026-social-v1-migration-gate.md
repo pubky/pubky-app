@@ -6,7 +6,8 @@ Accepted — 2026-10-30, for the `pubky-social-specs` 1.x port (`docs/migrations
 Updated — 2026-11-11 (outcome policy and telemetry brought in line with the controller and `report-telemetry.ts`)  
 Updated — 2026-11-12 (the restore's flag read bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; a timeout ends in `temporary-error`)  
 Updated — 2026-11-13 (the signed-out explanation is route-independent while its notice is pending; the cut-over worker reloads a tab to its creation URL, see _Amendment_)  
-Updated — 2026-11-13 (the worker no longer reloads the new build's own pages, ADR-0021 amendment; the double boot and option (i) re-scoped, see _Consequences_ of the _Amendment_)
+Updated — 2026-11-13 (the worker no longer reloads the new build's own pages, ADR-0021 amendment; the double boot and option (i) re-scoped, see _Consequences_ of the _Amendment_)  
+Updated — 2026-11-17 (every adopted grant is admitted before its session reference is published; the gate's automatic sign-out runs once per auth generation; third human review)
 
 ## Context
 
@@ -60,9 +61,11 @@ transport failures throw, so a refused flag never reads as a missing one), a cur
 and an absent or outdated flag resumes the run when this browser's record saw the flag at an earlier revision or
 admitted the grant, and otherwise signs the account out (`pre-migration-grant`, D2). On a fresh sign-in the grant's
 session-store id is recorded as admitted and the engine runs; its own HEAD finds a finished migration
-(`already_migrated`). A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the
-app never hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
-keeps its context when it passes and admits its grant.
+(`already_migrated`). Every adopted grant (sign-in, signup, upgrade) is admitted before the auth record publishes its
+reference, so no other tab can restore a fresh grant the record does not yet list (third human review, 2026-11-17).
+A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the app never
+hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
+keeps its context when it passes.
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen
 (Continue) only when the last run skipped something or any run of the gate dropped a profile value. `incomplete` and
@@ -103,8 +106,9 @@ is owed on every route (see _Amendment — the explanation is route-independent_
 `useSocialMigrationStore` (written by `SocialMigrationController` only, progress coalesced to phase changes plus one
 write per `SOCIAL_MIGRATION_PROGRESS_THROTTLE_MS`; a run's terminal `incomplete`/`paused`/`aborted` event is not
 written, so the screen keeps the step that stopped while the gate waits to retry). The reauth state reuses the `/logout`
-backup rule (`useHasBackupAccount`, `AlertBackup`) and then calls `AuthController.logout()` once (Strict Mode included);
-after the logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
+backup rule (`useHasBackupAccount`, `AlertBackup`) and then calls `AuthController.logout()` once per auth generation
+(Strict Mode included), so a session another tab signed in and this mounted screen restored is signed out in turn when
+it needs reauthentication; after the logout it offers Sign in. `useBeforeUnloadGuard` holds the tab while a run is in flight.
 
 **Telemetry.** One capture per (account, code) per page, operation `socialMigration`
 (`src/libs/social-migration/report-telemetry.ts`): a blocked run is `Err.server` with `SERVICE_UNAVAILABLE` for

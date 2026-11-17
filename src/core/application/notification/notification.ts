@@ -30,6 +30,7 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService, type TagEntity } from '@/services/local/tag/tag-cache';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { NexusUserService } from '@/services/nexus/user/user';
+import { awaitBounded } from '@/utils/bounded-read';
 
 const MAX_FETCH_ROUNDS = 10;
 
@@ -111,6 +112,11 @@ export class NotificationApplication {
    * Reads the published `last_read` timestamp through the owner's session: the social v1 file is private
    * (`/priv/app.pubky/v1/last_read.json`), and an anonymous read of it answers 401.
    *
+   * Bounded (`awaitBounded`, `HOMESERVER_SYNC_READ_TIMEOUT_MS`): a GET that never answers rejects with
+   * `REQUEST_TIMEOUT`, which frees the poll coordinator's in-flight slot for the next trigger and ends the
+   * `markAllAsRead` pass waiting on it (a timeout has no HTTP status, so that pass is not retried and the marks queued
+   * behind it run). What the abandoned GET answers late is never returned.
+   *
    * No cache bypass: the homeserver serves every `/priv/` response with `Cache-Control: no-store` (`private,
    * no-cache` with an `ETag` from v0.18.0), so the browser never answers this read from its cache without
    * revalidating. That keeps the poll and the `markAllAsRead` read-check-write fence on the published value (ADR-0029).
@@ -121,11 +127,14 @@ export class NotificationApplication {
   static async fetchLastReadFromHomeserver(url: string): Promise<number | null> {
     try {
       // A missing file is the usual answer for a new account and reads as absent without reporting an error.
-      const published = await HomeserverService.request<{ timestamp?: unknown } | null | undefined>({
-        method: HttpMethod.GET,
-        url,
-        notFoundAsNull: true,
-      });
+      const published = await awaitBounded(
+        HomeserverService.request<{ timestamp?: unknown } | null | undefined>({
+          method: HttpMethod.GET,
+          url,
+          notFoundAsNull: true,
+        }),
+        { operation: 'fetchLastReadFromHomeserver', context: { url } },
+      );
       const value = Number(published?.timestamp);
       return Number.isFinite(value) ? value : null;
     } catch (error) {

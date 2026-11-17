@@ -28,6 +28,9 @@ Amended — 2026-11-13 (FIX-FINAL-10, the Greptile P1 on #3140, round 7): a coll
 there, never the item list the controller read before the lock, so an edit queued behind another edit of the same
 collection keeps that edit, and one the head already holds writes no version. See the _Edit_ bullet below.
 
+Amended — 2026-11-17 (third human review): every upload claims its file's local row (`upload_claims`), and a
+rollback keeps a file another pending upload still claims. See _Media lifetime_, _Upload claims_ below.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`). Amends ADR-0023 (article covers)
 and the Locks reader described in ADR-0022.
 
@@ -129,6 +132,20 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   - **A rollback** (`commitDeleteUploaded`) deletes only files the failed write itself created: the upload asked
     `exists` first, and a `preexisting` file stays. The same verified delete serves a discarded composer session's
     uploads (`FileController.commitDelete`).
+  - **Upload claims** (amended 2026-11-17, third human review). Two pending creates of one owner can upload the same
+    bytes, and while the second still uploads another file it has no post row for the reference check to see. Each
+    upload therefore adds its own claim id (`crypto.randomUUID()`) to the file's local row (`upload_claims`, merged
+    in a Dexie read-modify-write transaction, so a claim written by another tab survives the upsert), and a rollback
+    first releases its own claims, in the same kind of transaction, and keeps any file another upload still claims.
+    This restores what dev's per-upload file rows gave on one device, in the same tab and across its tabs. A
+    successful upload never releases its claim: a later rollback of the same bytes then keeps an orphan, the safe
+    failure. The residuals are dev's: the moment between another upload's PUT landing and its claim being written,
+    a check-then-delete that is not atomic, and no protection across devices. `commitDelete` (a post delete, the
+    discard sweep of an article session) does not consult claims: since successful claims are never released it
+    would never delete a file this device uploaded. Dev's rows did protect a pending create there, so a post delete
+    or a discarded session that shares bytes with a create pending at that moment can still delete the file; a
+    release of the claim once the referencing row is written is the follow-up that closes it. No `DB_VERSION` bump:
+    the field is unindexed.
   - Private trees are not checked: the app writes no private object that references public media.
 - **Kinds** cross the vocabulary in one place (`toLocalPostKind` / `toStoredPostKind`); `storedKind` fails closed.
 - **Nexus API version** (amended 2026-11-09, FIX-7). Every Nexus URL is built by `buildNexusUrl` under

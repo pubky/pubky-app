@@ -99,6 +99,8 @@ export function getHomeserverCapabilities(): Capabilities {
  * write lock, the post edit's head read (LIST and GET as one) and the post delete's listings (both LISTs and the 0.x
  * `exists` as one). A bound on how long a read that never answers can hold the lock, and the writes of every tab
  * behind it; not a product limit. The migration gate's flag read on a restore (`SocialMigrationApplication.readFlag`)
- * reuses it: it holds no lock, but it holds the restore. Fixed (not configurable via env); see `docs/environment.md`.
+ * reuses it: it holds no lock, but it holds the restore. So does the notification `last_read` GET
+ * (`NotificationApplication.fetchLastReadFromHomeserver`), which holds the poll's in-flight slot and is the
+ * `markAllAsRead` pre-read. Fixed (not configurable via env); see `docs/environment.md`.
  */
 export const HOMESERVER_SYNC_READ_TIMEOUT_MS = 30_000;

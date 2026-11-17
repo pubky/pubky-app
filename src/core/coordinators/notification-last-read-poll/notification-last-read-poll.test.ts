@@ -1,14 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES, PROFILE_ROUTES } from '@/app/routes';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import {
   NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS,
   NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS,
 } from '@/config/notification-last-read-sync';
 import { NotificationController } from '@/controllers/notification/notification';
 import { NotificationLastReadPollCoordinator } from '@/coordinators/notification-last-read-poll/notification-last-read-poll';
+import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
 import { mockPubky, mockSession } from '@/test-utils/pubky';
 
 const PUBKY = mockPubky('5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y');
@@ -403,6 +407,74 @@ describe('NotificationLastReadPollCoordinator', () => {
       await settleDebounce();
 
       expect(fetchLastRead()).toHaveBeenLastCalledWith(OTHER_PUBKY);
+    });
+  });
+
+  // Through the real controller and application: only the homeserver GET is stubbed
+  describe('a homeserver read that never answers', () => {
+    let request: MockInstance<typeof HomeserverService.request>;
+    const refreshFailures = () =>
+      vi.mocked(Logger.error).mock.calls.filter(([message]) => message === 'Notification last_read refresh failed');
+
+    beforeEach(() => {
+      fetchLastRead().mockRestore();
+      vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      request = vi.spyOn(HomeserverService, 'request');
+    });
+
+    it('frees the slot at the sync-read bound when the first read hangs, and the next trigger reads again', async () => {
+      request.mockImplementation(() => new Promise(() => {}));
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(request).toHaveBeenCalledTimes(1);
+
+      // A trigger just before the bound ends is debounced into a refresh the taken slot would hide
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS - 1);
+      window.dispatchEvent(new Event('online'));
+      expect(refreshFailures()).toHaveLength(0);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(refreshFailures()).toEqual([
+        [
+          'Notification last_read refresh failed',
+          { error: expect.objectContaining({ code: TimeoutErrorCode.REQUEST_TIMEOUT }) },
+        ],
+      ]);
+      expect(request).toHaveBeenCalledTimes(1);
+
+      await settleDebounce();
+      expect(request).toHaveBeenCalledTimes(2);
+    });
+
+    it('frees the slot when a later read hangs, and never applies what that read answers late', async () => {
+      let answerLate: (value: { timestamp: number }) => void = () => {};
+      request
+        .mockResolvedValueOnce(null)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              answerLate = resolve;
+            }),
+        )
+        .mockResolvedValue(null);
+      signIn();
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
+      expect(request).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+      expect(refreshFailures()).toHaveLength(1);
+      const reads = request.mock.calls.length;
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+      expect(request).toHaveBeenCalledTimes(reads + 1);
+
+      const lastRead = useNotificationStore.getState().lastRead;
+      answerLate({ timestamp: Date.now() + 1_000_000 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(useNotificationStore.getState().lastRead).toBe(lastRead);
     });
   });
 

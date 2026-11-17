@@ -8,6 +8,8 @@ Updated — 2026-11-05 (one shared homeserver event stream per tab, #3066)
 
 Updated — 2026-11-09 (social v1: the private `last_read` is polled on the mute cadence while a private stream cannot be held, FIX-8)
 
+Updated — 2026-11-17 (the poll's `last_read` GET is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`, third human review)
+
 ## Context
 
 Marking notifications as read writes the `last_read` timestamp to the user's homeserver, but an open session on
@@ -145,15 +147,18 @@ The sync is polled instead, on the mute list's cadence. `NotificationLastReadPol
 (`src/core/coordinators/notification-last-read-poll/`) extends the polling `Coordinator` base exactly as
 `MuteListSyncCoordinator` does and calls the same `NotificationController.fetchLastReadFromHomeserver` the channel
 calls: on start, when the tab becomes visible, on `online`, and every `NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS`
-(`src/config/notification-last-read-sync.ts`, which reuses `MUTE_SYNC_POLL_INTERVAL_MS`, 30 s), with triggers that
-land together debounced into one read (`NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS`), one read out at a time while
-polling runs (a stop frees the slot, so a read that never settles cannot end polling, and the controller's
-forward-only, account-checked write keeps a late read harmless), a failed read logged and retried at the next
-trigger. It keeps the mute coordinator's guards: signed in with a profile, not on
-the auth or onboarding routes, paused while the tab is hidden under the runtime visibility flag, stopped on sign-out
-and on an account switch, and started by `CoordinatorsManager` only once the social v1 migration gate has passed. The
-read itself is unchanged: the boundary only moves forward and the recount runs before the store changes, so a poll
-that lands during bootstrap is adopted by `AuthController` instead of being rolled back.
+(`src/config/notification-last-read-sync.ts`, which reuses `MUTE_SYNC_POLL_INTERVAL_MS`, 30 s), with triggers that land
+together debounced into one read (`NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS`), one read out at a time while polling runs
+(the GET is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` through `awaitBounded`, so a read that never answers fails with
+`REQUEST_TIMEOUT` and frees the slot for the next trigger; a stop frees it too; nothing the abandoned GET answers late
+is applied, and the controller's forward-only, account-checked write keeps any late read harmless), a failed read logged
+and retried at the next trigger. The same bounded read is the pre-read of a mark-all-as-read: a timeout there ends that
+mark without a PUT (no HTTP status, so no retry; the badge stays until the next mark or a poll that reads a newer value)
+and lets the marks queued behind it run (third human review, 2026-11-17). It keeps the mute coordinator's guards: signed
+in with a profile, not on the auth or onboarding routes, paused while the tab is hidden under the runtime visibility
+flag, stopped on sign-out and on an account switch, and started by `CoordinatorsManager` only once the social v1
+migration gate has passed. The read itself is unchanged: the boundary only moves forward and the recount runs before the
+store changes, so a poll that lands during bootstrap is adopted by `AuthController` instead of being rolled back.
 
 Consequences on this tree: a mark-as-read on another device reaches an open tab within about the poll interval,
 not within a second; one `last_read` GET per visible signed-in tab every 30 s, next to the mute LIST, and no
