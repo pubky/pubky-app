@@ -343,9 +343,8 @@ export class PostController {
    * still reference it, and content-addressed media may be shared with other posts
    * or the profile (ADR-0027).
    *
-   * If a new cover File was uploaded and then edit normalization or `commitEdit`
-   * fails, the new file is deleted before rethrowing so the failed edit does not
-   * leave an unreferenced upload (never a file the homeserver held before).
+   * A new cover uploaded for an edit that then fails stays on the homeserver, as
+   * a failed post edit leaves its uploads (ADR-0027, _Media lifetime_).
    */
   static async commitEditCollection({
     compositeCollectionId,

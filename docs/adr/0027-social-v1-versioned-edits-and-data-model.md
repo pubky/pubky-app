@@ -130,17 +130,17 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
     homeserver or Nexus outage) is still reported by its service like any other data read; lag is not a failure
     (`by_ids` answers 200 without the post) and reports nothing.
   - The same verified delete serves a discarded composer session's uploads (`FileController.commitDelete`).
-  - **A failed create or edit** (amended 2026-11-17, third human review, maintainer ruling) leaves the media it
-    uploaded in place: a post create or edit, a collection's cover upload, and an upload batch with one failed file
-    all roll their local post row back and delete no file. Why: identical bytes name one file, and another pending
-    create of the same bytes on this device (this tab or another) has uploaded it but has no post row yet, so no
-    reference check can see it; the earlier sweep of a failed post's uploads (#3118) could delete that file under
-    the other post, and establishing exclusive ownership cheaply is not possible. The accepted cost: when a failed
-    post is abandoned, its uploads stay on the homeserver as unused files in the user's storage, readable at their public URLs like any `/pub/` file; a retry of the same
-    post PUTs the same bytes to the same address and uses them. Unchanged: a post delete and the discard sweep of an
-    article session (`commitDelete`) still delete a file only when no cached or published object references it, and
-    can still race a create of the same bytes pending at that moment on this device (its post is neither cached nor
-    published yet); that limit stays.
+  - **A failed create or edit** (amended 2026-11-17, third human review, maintainer ruling) leaves the media it uploaded
+    in place: a post create or edit, a collection's cover upload, and an upload batch with one failed file all roll
+    their local post row back and delete no file. Why: identical bytes name one file, and another pending create of the
+    same bytes on this device (this tab or another) has uploaded it but has no post row yet, so no reference check can
+    see it; the earlier sweep of a failed post's uploads (#3118) could delete that file under the other post, and
+    establishing exclusive ownership cheaply is not possible. The accepted cost: when a failed post is abandoned, its
+    uploads stay on the homeserver as unused files in the user's storage, readable at their public URLs like any `/pub/`
+    file; a retry of the same post PUTs the same bytes to the same address and uses them. Unchanged: a post delete and
+    the discard sweep of an article session (`commitDelete`) still delete a file only when no cached or published object
+    references it, and can still race a create of the same bytes pending at that moment on this device (its post is
+    neither cached nor published yet); that limit stays.
   - Private trees are not checked: the app writes no private object that references public media.
 - **Kinds** cross the vocabulary in one place (`toLocalPostKind` / `toStoredPostKind`); `storedKind` fails closed.
 - **Nexus API version** (amended 2026-11-09, FIX-7). Every Nexus URL is built by `buildNexusUrl` under

@@ -2332,7 +2332,7 @@ describe('usePost — article inline images', () => {
       ]);
     });
 
-    it('leaves nothing on the homeserver and keeps the staged file when the publish fails', async () => {
+    it('uploads and deletes nothing itself and keeps the staged file when the publish fails', async () => {
       mockPostControllerCreate.mockRejectedValueOnce(new Error('offline'));
       const result = await setupArticle('draft');
       const staged = await stageViaSession(result);
@@ -2347,7 +2347,7 @@ describe('usePost — article inline images', () => {
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: 'Could not create post. Try again.' }),
       );
-      // The controller rolled its uploads back; the session never uploaded anything itself
+      // The session never uploads or deletes anything itself: the controller owns the uploads
       expect(FileController.commitCreate).not.toHaveBeenCalled();
       expect(FileController.commitDelete).not.toHaveBeenCalled();
       // The file is still staged for a retry
