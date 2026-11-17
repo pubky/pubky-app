@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import { TagCacheApplication } from '@/application/tag/tag-cache';
+import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { getTtlUserMs } from '@/config/sync';
 import { USER_TAGS_PER_PAGE } from '@/config/tags';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -693,6 +694,35 @@ describe('NotificationApplication.markAllAsRead', () => {
     });
     expect(spy).toHaveBeenCalledOnce();
   });
+
+  describe('with a pre-read that never answers', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('gives up at the bound, writes nothing, and lets a mark queued behind it run', async () => {
+      const later = mockTimestamp + 1_000;
+      let reads = 0;
+      const spy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method }) => {
+        if (method === HttpMethod.GET) return (reads += 1) === 1 ? new Promise(() => {}) : Promise.resolve(null);
+        return Promise.resolve(undefined);
+      });
+      const outcomes: unknown[] = [];
+      const record = (mark: Promise<number>) =>
+        void mark.then(
+          (value) => outcomes.push(value),
+          (error: unknown) => outcomes.push(error),
+        );
+
+      record(NotificationApplication.markAllAsRead(lastReadResult()));
+      record(NotificationApplication.markAllAsRead(lastReadResult(later)));
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+      // A timeout carries no HTTP status, so the write retry does not run the pass again
+      expect(outcomes).toEqual([expect.objectContaining({ code: TimeoutErrorCode.REQUEST_TIMEOUT }), later]);
+      expect(spy.mock.calls.map(([params]) => params.method)).toEqual([HttpMethod.GET, HttpMethod.GET, HttpMethod.PUT]);
+      expect(putBodies(spy)).toEqual([{ timestamp: later }]);
+    });
+  });
 });
 
 describe('NotificationApplication.fetchMissingEntities', () => {
@@ -919,6 +949,49 @@ describe('NotificationApplication.fetchLastReadFromHomeserver', () => {
     vi.spyOn(HomeserverService, 'request').mockRejectedValue(error);
 
     await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).rejects.toBe(error);
+  });
+
+  it('returns null for a 404 the not-found option does not cover', async () => {
+    const error = httpStatusCodeToError(404, 'not found', ErrorService.Homeserver, 'request', url);
+    vi.spyOn(HomeserverService, 'request').mockRejectedValue(error);
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(url)).resolves.toBeNull();
+  });
+
+  describe('a read that never answers', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('rejects with a request timeout at the sync-read bound, not before', async () => {
+      vi.spyOn(HomeserverService, 'request').mockImplementation(() => new Promise(() => {}));
+      let settled: unknown = 'pending';
+      void NotificationApplication.fetchLastReadFromHomeserver(url).catch((error: unknown) => {
+        settled = error;
+      });
+
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS - 1);
+      expect(settled).toBe('pending');
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(settled).toMatchObject({
+        code: TimeoutErrorCode.REQUEST_TIMEOUT,
+        service: ErrorService.Homeserver,
+        operation: 'fetchLastReadFromHomeserver',
+        context: { url, timeoutMs: HOMESERVER_SYNC_READ_TIMEOUT_MS },
+      });
+    });
+
+    it('returns a read that answers within the bound', async () => {
+      vi.spyOn(HomeserverService, 'request').mockImplementation(
+        () =>
+          new Promise((resolve) => setTimeout(() => resolve({ timestamp: 7 }), HOMESERVER_SYNC_READ_TIMEOUT_MS - 1)),
+      );
+      const read = NotificationApplication.fetchLastReadFromHomeserver(url);
+
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS - 1);
+
+      await expect(read).resolves.toBe(7);
+    });
   });
 });
 

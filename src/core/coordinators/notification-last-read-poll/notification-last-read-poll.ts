@@ -45,8 +45,10 @@ export class NotificationLastReadPollCoordinator extends Coordinator<PollingServ
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   /**
    * The read still out, so a slow one does not stack up. Cleared on stop, so one that never settles cannot end
-   * polling; `NotificationController.fetchLastReadFromHomeserver` only moves the boundary forward and checks the
-   * account again before it stores, so an older read that answers late cannot undo a newer one.
+   * polling, and freed once the fetch settles, which `NotificationApplication.fetchLastReadFromHomeserver` bounds by
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`); `NotificationController.fetchLastReadFromHomeserver` only
+   * moves the boundary forward and checks the account again before it stores, so an older read that answers late
+   * cannot undo a newer one.
    */
   private activeRefresh: symbol | null = null;
   private accountUnsubscribe: (() => void) | null = null;
