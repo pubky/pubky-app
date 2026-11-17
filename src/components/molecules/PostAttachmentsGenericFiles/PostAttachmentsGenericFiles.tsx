@@ -7,13 +7,15 @@ import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAtta
 
 type PostAttachmentsGenericFilesProps = {
   genericFiles: AttachmentConstructed[];
+  /** A tile for a file of any type, not only a PDF: a file shown on its own (`ResourceFileCard`). */
+  allTypes?: boolean;
 };
-export const PostAttachmentsGenericFiles = ({ genericFiles }: PostAttachmentsGenericFilesProps) => {
-  const pdfs = genericFiles.filter((f) => f.type === 'application/pdf');
-  if (!pdfs.length) return null;
+export const PostAttachmentsGenericFiles = ({ genericFiles, allTypes = false }: PostAttachmentsGenericFilesProps) => {
+  const files = allTypes ? genericFiles : genericFiles.filter((f) => f.type === 'application/pdf');
+  if (!files.length) return null;
   return (
     <Container className="gap-3">
-      {pdfs.map((pdf, i) => (
+      {files.map((file, i) => (
         <Container
           key={i}
           onClick={(e) => {
@@ -25,12 +27,12 @@ export const PostAttachmentsGenericFiles = ({ genericFiles }: PostAttachmentsGen
             <FileText className="size-6 shrink-0" />
 
             <Typography size="sm" className="font-bold break-all">
-              {pdf.name}
+              {file.name}
             </Typography>
           </Container>
 
           <Button asChild variant="dark" size="icon" className="h-8 w-10 shrink-0 border-none bg-card hover:bg-card/70">
-            <Link overrideDefaults href={pdf.urls.main} aria-label="Preview file">
+            <Link overrideDefaults href={file.urls.main} aria-label="Preview file">
               <Eye className="size-4" />
             </Link>
           </Button>

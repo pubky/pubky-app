@@ -44,10 +44,10 @@ interface ResourceAlsoOnProps {
 /**
  * The last section of a resource card's ⋯ menu: a separator, an "Also on" label, then one row per
  * service in the post menu's style; a service in several languages is one row with a language
- * switcher (`ResourceAlsoOnLanguages`). A row opens that link's page on Pubky, not the service; a
- * Pubky object is listed as text. A row's note is in its accessible name only; a match by metadata,
- * listed after the exact links (`pickAlsoOn`), shows no label: its note (`MAYBE_ALSO_ON_NOTE`) is also
- * its hover text.
+ * switcher (`ResourceAlsoOnLanguages`). A row opens that link's page on Pubky, not the service (a
+ * pubky.app post or profile its own page, `getAlsoOnRoute`); another Pubky app's object is listed as
+ * text. A row's note is in its accessible name only; a match by metadata, listed after the exact links
+ * (`pickAlsoOn`), shows no label: its note (`MAYBE_ALSO_ON_NOTE`) is also its hover text.
  */
 export function ResourceAlsoOn({ alsoOn, variant, closeMenu }: ResourceAlsoOnProps) {
   const labelId = useId();

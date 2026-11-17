@@ -14,6 +14,7 @@ import {
   getContentSearchUrl,
   getOnboardingScanRoute,
   getProfileRoute,
+  getPubkyAppPageRoute,
   getResourceRoute,
   getUserProfileUrl,
   isCollectionsOverviewRoute,
@@ -81,6 +82,30 @@ describe('getResourceRoute', () => {
 
     expect(url.pathname).toBe(RESOURCE_ROUTES.RESOURCE);
     expect(url.searchParams.get('uri')).toBe('isbn:9780140328721');
+  });
+
+  describe('a pubky.app object', () => {
+    const KEY = 'apuij4kxbsj1wnh4douy7jptoscrttnkoz9zfo6k8dge1mfyadso';
+
+    it.each([
+      [`pubky://${KEY}/pub/pubky.app/posts/00360YV6W3NZG`, `/post/${KEY}/00360YV6W3NZG`],
+      [`pubky://${KEY}/pub/social/v1/posts/00360YV6W3NZG`, `/post/${KEY}/00360YV6W3NZG`],
+      [`pubky://${KEY}/pub/pubky.app/profile.json`, `/profile/${KEY}`],
+      [`pubky://${KEY}`, `/profile/${KEY}`],
+    ])('opens %s on its own page', (uri, page) => {
+      expect(getResourceRoute(uri)).toBe(page);
+      expect(getPubkyAppPageRoute(uri)).toBe(page);
+    });
+
+    it('keeps the resource page for a file, which shows the file, and for another app’s object', () => {
+      const file = `pubky://${KEY}/pub/pubky.app/files/00360YV6W3NZG`;
+      const deck = `pubky://${KEY}/pub/loopky/decks/a/manifest.json`;
+
+      expect(getPubkyAppPageRoute(file)).toBeNull();
+      expect(new URL(getResourceRoute(file), 'https://pubky.app').searchParams.get('uri')).toBe(file);
+      expect(getPubkyAppPageRoute(deck)).toBeNull();
+      expect(new URL(getResourceRoute(deck), 'https://pubky.app').searchParams.get('uri')).toBe(deck);
+    });
   });
 });
 
