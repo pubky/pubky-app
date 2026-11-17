@@ -251,10 +251,15 @@ export class HomeserverService {
   /**
    * Resolve PKARR homeserver; on staging, require it matches this deploy's homeserver.
    *
+   * Runs before a Ring/Passport-approved session is adopted and before a saved
+   * session is restored, so a staging build never signs in a key whose homeserver
+   * is elsewhere (e.g. a production account, #2126). It originally also stopped the
+   * former keypair sign-in from force-republishing a prod key's record to staging;
+   * that path is gone.
+   *
    * An absent record is rejected the same way as a mismatched one: absence cannot
    * prove the key belongs here, both outcomes are deterministic (retrying the
-   * lookup cannot change them), and fail-open would re-enable the prod-key
-   * force-republish this guard exists to prevent (#2126). This also means a key
+   * lookup cannot change them), and failing open would let an unverified key in. This also means a key
    * whose just-published record has not yet propagated to our relays is rejected
    * until it propagates. Only a lookup that itself failed (relay/network error)
    * throws a retryable error instead (Network for the SDK's `PkarrError`,
