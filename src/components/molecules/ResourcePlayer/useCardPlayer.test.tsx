@@ -441,6 +441,38 @@ describe('useCardPlayer, a song', () => {
         expect(screen.getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
       });
 
+      it('keeps the switch for a song on one service: Card and that service, there and back', () => {
+        render(<Song card={SONG_ALONE} />);
+
+        expect(document.querySelector('iframe')).toBeNull();
+        let menu = openSwitch();
+        expect(cardRow(menu)).toHaveAttribute('aria-current', 'true');
+        expect(
+          within(menu)
+            .getAllByTestId('play-on-row')
+            .map((row) => row.textContent),
+        ).toEqual(['Spotify']);
+
+        fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
+        expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
+        expect(screen.getByRole('button', { name: 'Spotify: choose another service' })).toBeInTheDocument();
+        menu = openSwitch();
+        expect(cardRow(menu)).not.toHaveAttribute('aria-current');
+
+        fireEvent.click(cardRow(menu));
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
+      });
+
+      it('has no switch for a song on one service the viewer ranked above Card', () => {
+        setMedia({ playerOrder: ['spotify', 'card'] });
+        render(<Song card={SONG_ALONE} />);
+
+        expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
+        expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
+      });
+
       it('loads not even the services’ icons with platform embeds up front off', () => {
         setMedia({ playerOrder: ['card'], embedsUpFront: false });
         render(<Song card={SONG} />);

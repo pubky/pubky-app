@@ -35,7 +35,7 @@ export interface CardPlayer {
   /**
    * The embed/card switch (`PlayerSwitch`: Card, then the card's services), for the header of the
    * frame or card it is shown in; only with a choice to make (more than one service, a generic link,
-   * or Card shown).
+   * Card shown, or Card (no player) above the service in Players).
    */
   switcher?: ReactNode;
   /**
@@ -64,8 +64,9 @@ export interface CardPlayerOptions {
  *   the card's image and text.
  * - A generic link (MusicBrainz, Wikipedia, Discogs, an article) shows our card up front (`isCard`),
  *   the services Pinakes knows it on (Also on) in the switch below Card.
- * - One service only, the link's own: its player alone, no switch and no Card. A viewer who wants
- *   cards turns "Show platform embeds up front" off (Settings, Links & Media).
+ * - One service only, the link's own: its player alone, no switch and no Card, unless Card (no
+ *   player) is above that service in Players: then the switch offers Card and that service. A
+ *   viewer who wants cards turns "Show platform embeds up front" off (Settings, Links & Media).
  * - Several services: the link's own first, then the others; Card is always in the switch.
  * - The viewer's Players (Settings, Links & Media) still apply: services in the viewer's order go
  *   first (no order set: the link's own first, then Pinakes' order), removed ones are left out (a
@@ -112,9 +113,8 @@ export function useCardPlayer(
   const title = card.name?.trim() || href || card.uri;
   // Another resource starts over: nothing picked; a generic link's card, else the Players order
   // again (its first service, or the card when Card (no player) is above that service).
-  const choice =
-    (picked?.uri === card.uri ? picked.choice : null) ??
-    (!linked || isCardFirst(targets[0].provider, playerOrder) ? CARD_PLAYER : null);
+  const cardFirst = !linked || isCardFirst(targets[0].provider, playerOrder);
+  const choice = (picked?.uri === card.uri ? picked.choice : null) ?? (cardFirst ? CARD_PLAYER : null);
   const selected = choice === CARD_PLAYER ? null : (targets.find((target) => target.provider === choice) ?? targets[0]);
   const showsPlayer = embedsUpFront || optedIn === card.uri;
   const choose = (next: EmbedChoice) => {
@@ -124,10 +124,11 @@ export function useCardPlayer(
     if (next === CARD_PLAYER) setOptedIn(null);
     setPicked({ uri: card.uri, choice: next });
   };
-  // A choice to make: several services, or Card (a generic link's, always; or shown). The link's own
-  // service alone has none: a viewer who wants cards turns platform embeds up front off.
+  // A choice to make: several services, or Card when it comes first (a generic link, or Card above
+  // the service in Players) or is shown. The link's own service alone, with no Card above it, has
+  // none: a viewer who wants cards turns platform embeds up front off.
   const switcher =
-    targets.length > 1 || !linked || !selected ? (
+    targets.length > 1 || cardFirst || !selected ? (
       <PlayerSwitch
         targets={targets}
         current={selected}
