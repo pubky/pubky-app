@@ -359,7 +359,11 @@ a Paykit double). The collection-items test runs unconditionally since #3094.
   Nexus indexes the file instead of ignoring it for good. Check the avatar serves once the flip is indexed.
 - The epoch flip on the v1 `profile.json` and the per-user backfill (N3/N4): posts, tags and follows written before
   the profile appear.
-- The "post edited" notification burst a migration's PUTs may emit.
+- The "post edited" notification burst a migration's PUTs may emit. One path still emits it (read from the Nexus and
+  migrator sources on 2026-11-17, not reproduced): a run whose copy of an article fails on a network error goes on and
+  writes the profile, which flips the account; the retry then copies the article as a v1 write, and when that copy's
+  content differs from what Nexus holds, Nexus takes it for an edit and notifies the people who replied. A note's copy
+  stays silent. Nexus records this in a skipped test of its migration suite (pubky/pubky-nexus#1228).
 - Tag deletion across epochs via `tag_uri`.
 - `details.content` served verbatim for articles (the cover in the envelope).
 - Nexus notification URI forms; the resources stream without `app`; `details.uri` after a URI-only change.
@@ -451,9 +455,13 @@ mobile viewport; a plain `it` is desktop only. The merge applied `dev`'s mobile 
 
 e2e runs on pushes to `dev`/`master` and, while the branch lives, `feat/social-v1`, against the private pubky-stack:
 `feat/social-v1` points `pubky_stack_ref` (`.github/workflows/e2e-test.yml`) at pubky-stack's `social-v1` branch, whose
-Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). How that pin and the trigger change at the release is
-in _Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on the
-homeserver, as CI sets it: otherwise the invite check answers 400 and onboarding stops at Continue. CI runs the suite on
+Nexus submodule is pinned to the carrier (pubky/pubky-stack#388). Since 2026-11-17 that branch contains pubky-stack's
+`staging` and pins the carrier head `dc9cd459`, which carries the Nexus fixes for the delete race and the duplicate
+post id (_Follow-ups_); before, it pinned `d94c3e89` and trailed `staging`. A hand-dispatched run of `4e8a118f4` against
+the updated stack was green the same day (13 of 13, run 44004783227). How that pin and the trigger change at the
+release is in _Rollout order and release checklist_, steps 2 and 3. Local runs need `signup_mode = "token_required"` on
+the homeserver, as CI sets it: otherwise the invite check answers 400 and onboarding stops at Continue. CI runs the
+suite on
 every push to the branch (desktop, Chrome, 13 specs): green on the FIX-7 merge (2026-11-10, after one earlier flake on a
 post delete that the Nexus delete race explains, _External questions_), on #3094, #3110, #3112 and #3111, on the
 dev-sync 5 merge `93db5b9dc`, on #3114's `ae4ba8ad2` and on the fix PRs #3118, #3119, #3116, #3121, #3122 and #3123
@@ -551,13 +559,16 @@ After dev-sync 3 (2026-11-09):
 - Ring folds the ten requested scopes into nine (`/priv/social/v1/:rw` is covered by `/priv/social/:rw`); adoption and
   the gate work with the folded grant (QA-1 O-7, QA-3 O-4). Known, nothing to do unless Ring changes.
 - Nexus post delete vs. read-repair race (pubky/pubky-nexus#1213, found 2026-11-10): a read concurrent with a delete
-  can resurrect the post in Redis. The e2e `postGone` waiter stays at 404, which is right; deletes in e2e may flake
-  until Nexus fixes it.
+  can resurrect the post in Redis. The e2e `postGone` waiter stays at 404, which is right; deletes in e2e could flake
+  until the fix (pubky/pubky-nexus#1230: a read no longer writes a missing post back to Redis) reached the carrier at
+  `dc9cd459`, which the branch's e2e stack pins since 2026-11-17. The 1.5 s settle before the waiter stays until the
+  deploy ref is final.
 - Nexus watcher wedge on a duplicate post id (pubky/pubky-nexus#1229, pre-existing on Nexus `main`; QA-1 S-1, QA-4
   F-3): post ids are per-author microsecond timestamps, but the graph makes `Post.id` globally unique, so when two
   authors publish the same id the indexer fails that batch with a non-retryable constraint error, retries it forever
   and stops indexing for every user until an operator moves the Redis cursor past the event. No app change; the local
-  stack recovered by a cursor bump in QA-4.
+  stack recovered by a cursor bump in QA-4. Fixed in pubky/pubky-nexus#1231 (uniqueness per author; the old constraint
+  is dropped at start-up), on the carrier from `dc9cd459`.
 - Migrated articles are served by Nexus in the 0.x content shape on `/v1` (QA-3 F-1, Nexus contract point 24); the app
   renders both shapes through the reader rules, so no change here.
 - Cleanup pass of the `/pub/pubky.app/` copies: not at release (meeting 2026-11-04: no app-side deletion; Nexus clears
@@ -836,19 +847,23 @@ where they changed the app.
 - **Nexus (answered by the carrier):** the flip trigger is the v1 `profile.json` PUT, and 0.x PUT/DEL are ignored after
   it (the app's dual 0.x delete is harmless); v1 objects written before the profile are ignored without a fetch, and at
   the flip the per-user backfill rewrites what Nexus already indexed from the 0.x tree (post addresses, attachments and
-  tag ids) and keeps `indexed_at`; no "post edited" burst in the normal flow; `tag_uri` points at the v1 copy after the flip and deleting it removes the edge; a tag on the
-  profile URL counts as a user tag; v1 files are served at `/v1/static/files/{owner}/{hash}.{ext}/{variant}` with no
+  tag ids) and keeps `indexed_at`; no "post edited" burst in the normal flow (an article copied after the flip is the
+  exception, _Retest list_); `tag_uri` points at the v1 copy after the flip and deleting it removes the edge; a tag on
+  the profile URL counts as a user tag; v1 files are served at `/v1/static/files/{owner}/{hash}.{ext}/{variant}` with no
   metadata (no `File` object, so the app types another user's v1 attachment from its URI) and the avatar route serves a
   v1 image; `/v0/files/by_ids` skips a v1 address with a warning and a 200; kind names on `/v1` are `note`/`article`
   (strict in filters); collection items of either epoch are read back; notification URIs are the stored versionless
-  address, while `parent_post_uri` and `embed_uri` are spelled as the referencing author wrote them; `/v0` is frozen
+  address, with two forms corrected on 2026-11-17 from the Nexus handlers and its migration suite: a reply's
+  `parent_post_uri` is the parent's stored address, and a tag notification's `post_uri` is the address as the tagger
+  wrote it (`embed_uri` and a mention's `post_uri` were not re-read; the app parses either spelling); `/v0` is frozen
   and served until the remaining clients leave it; rate-limit buckets are shared across the two prefixes.
 - **Nexus (open):** the staging and production deploy ref and dates; who forwards `/v1/*` on the proxy in front of
   Nexus, in the same deploy; the owner and timing of the `/pub/pubky.app/` cleanup pass (the Nexus gate PR calls it a
   requirement, the 2026-11-04 meeting said no deletion at release); a removal date for `/v0`; whether the extension
   Nexus picks for a copied blob always equals the migrator's; E1 (head selection by edit id) timing; the 0.x content
-  shape served for migrated articles (QA-3 F-1); the delete race (pubky/pubky-nexus#1213); the watcher wedge on a
-  duplicate post id (pubky/pubky-nexus#1229, _Follow-ups_).
+  shape served for migrated articles (QA-3 F-1); whether the deploy ref carries the delete-race and duplicate-post-id
+  fixes (pubky/pubky-nexus#1230 and #1231, both on the carrier from `dc9cd459`); the article copy taken for an edit
+  after the flip (_Retest list_).
 - **Data model author:** the migrator's article cover promotion is fixed in pubky/pubky-social-specs#210 (renumbered
   references, no promotion of a referenced slot 0, transform revision 4), awaiting the maintainer's review and the
   rc.2 tag; `/priv/app.pubky/v1/` is the app namespace the port adopted (its confirmation was asked and no answer is
