@@ -77,7 +77,8 @@ export interface TPinakesStream {
  */
 export interface TPinakesEpisode {
   /**
-   * The episode's own link (its feed item `{feed}?guid=…`, else its page): its card and resource page
+   * The episode's own link: its publisher's episode card when Pinakes has one, else the card its feed
+   * item `{feed}?guid=…` reads as (the item itself when it is its own card). Its card and resource page
    * are read by it.
    */
   uri: string;
@@ -91,6 +92,8 @@ export interface TPinakesEpisode {
   stream?: TPinakesStream | null;
   /** The episode's own card, when Pinakes has read one. */
   id?: string | null;
+  /** Other links of the episode, read with `uri` (tags, counts, replies); at most 16, absent when none. */
+  aliases?: string[];
 }
 
 /** `EpisodePage`: `GET /v1/resources/{id}/episodes`, a show's episodes newest first. */

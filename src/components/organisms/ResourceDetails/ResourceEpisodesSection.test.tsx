@@ -7,6 +7,7 @@ import { EPISODES_FILTER_DEBOUNCE_MS, ResourceEpisodesSection } from './Resource
 const mocks = vi.hoisted(() => ({
   fetchEpisodes: vi.fn(),
   tagReads: [] as string[],
+  tagSpellings: {} as Record<string, string[]>,
   infinite: { onLoadMore: () => {}, hasMore: false, isLoading: false, itemCount: 0, maxUnproductiveLoads: 0 },
   stalled: false,
   resume: vi.fn(),
@@ -24,10 +25,11 @@ vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
   },
 }));
 vi.mock('@/hooks/useResourceTags/useResourceTags', () => ({
-  useResourceTags: (uri: string) => {
+  useResourceTags: (uri: string, options?: { spellings?: string[] }) => {
     mocks.tagReads.push(uri);
+    mocks.tagSpellings[uri] = options?.spellings ?? [];
     return {
-      tags: uri.endsWith('504/')
+      tags: [uri, ...(options?.spellings ?? [])].some((link) => link.endsWith('504/'))
         ? [{ label: 'war', taggers: ['a', 'b'], taggers_count: 2, relationship: false, tag_uri: null }]
         : [],
       isLoading: false,
@@ -64,6 +66,7 @@ describe('ResourceEpisodesSection', () => {
   beforeEach(() => {
     mocks.fetchEpisodes.mockReset();
     mocks.tagReads = [];
+    mocks.tagSpellings = {};
     mocks.stalled = false;
     mocks.resume.mockReset();
   });
@@ -107,6 +110,29 @@ describe('ResourceEpisodesSection', () => {
     expect(mocks.tagReads).toContain('https://lexfridman.com/episode-503/');
     expect(within(untagged).queryByRole('group', { name: /^Tags on/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add new tag' })).toBeNull();
+  });
+
+  it('reads an episode’s tags across its other links (aliases) too', async () => {
+    const page = 'https://lexfridman.com/episode-504/';
+    const item = 'https://lexfridman.com/feed/podcast/?guid=g504';
+    mocks.fetchEpisodes.mockResolvedValueOnce({
+      items: [
+        // tagged on its page only, listed by its feed item
+        { ...episode(502), uri: item, aliases: [page, item] },
+        episode(503),
+      ],
+      next_offset: null,
+    });
+    render(<ResourceEpisodesSection card={SHOW} />);
+
+    await waitFor(() => expect(items()).toHaveLength(2));
+    const [aliased, plain] = items();
+    expect(within(aliased).getByRole('group', { name: 'Tags on #502 – Episode 502' })).toHaveTextContent('war');
+    // the row's own link once, the other links read along
+    expect(mocks.tagSpellings[item]).toEqual([page]);
+    // a row without aliases reads its link alone, as before
+    expect(within(plain).queryByRole('group')).not.toBeInTheDocument();
+    expect(mocks.tagSpellings['https://lexfridman.com/episode-503/']).toEqual([]);
   });
 
   it('plays an episode in place on Play, its title still opening the episode’s page', async () => {
