@@ -1100,6 +1100,8 @@ describe('Onboarding', () => {
     cy.get('#social-migration-blocked-navigation-continue-btn').should('contain.text', 'Retry');
     cy.wait('@flagProbe').its('response.statusCode').should('eq', 403);
     cy.wait('@flagRead').its('response.statusCode').should('eq', 403);
+    // The sign-in's own read before the screen, then the port's read of the refusal
+    cy.wait('@flagRead').its('response.statusCode').should('eq', 403);
     cy.get('@v1Write.all').should('have.length', 0);
     expectNoSignOutRoutes(visited, 'no forced sign-out on a homeserver without private storage');
 

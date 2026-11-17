@@ -569,6 +569,24 @@ describe('SocialMigrationController', () => {
       },
     );
 
+    it('does not ask when another tab of this browser started the run during the flag read', async () => {
+      await seedLegacyTree();
+      let answer!: (value: null) => void;
+      homeserver.spies.getBytesIfExists.mockReturnValueOnce(
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      );
+      const migrating = ensure('signin');
+      await vi.waitFor(() => expect(homeserver.spies.getBytesIfExists).toHaveBeenCalledOnce());
+
+      writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT], lastRun });
+      answer(null);
+
+      expect(await migrating).toBe('passed');
+      expect(continues).toBe(0);
+    });
+
     it('shows the screen again on a restore of an admitted grant whose record has no last run', async () => {
       autoContinue = false;
       await seedLegacyTree();
