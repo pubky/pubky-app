@@ -150,14 +150,17 @@ export function SocialMigration() {
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const restoreStatus = useAuthStore((state) => state.restoreStatus);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const generation = useAuthStore((state) => state.generation);
   const onboardingHydrated = useOnboardingStore((state) => state.hasHydrated);
   const secretKey = useOnboardingStore((state) => state.secretKey);
   const hasBackupAccount = useHasBackupAccount();
   const [notice, setNotice] = useState<SocialMigrationSignedOutNotice | null>(null);
   // Held here, not read from the gate: logout resets the gate store before it can fail.
   const [logoutFailed, setLogoutFailed] = useState(false);
-  // The first sign-out starts once, so Strict Mode's second effect run leaves it alone; Retry signs out directly.
-  const logoutStarted = useRef(false);
+  // The automatic sign-out starts once per auth generation: Strict Mode's second effect run sees the same generation
+  // and leaves it alone, while a new session restored into this mounted screen (a sign-in in another tab) that needs
+  // reauthentication is signed out in turn. Retry signs out directly.
+  const logoutStartedFor = useRef<string | null>(null);
 
   const isHydrated = authHydrated && onboardingHydrated;
   const isReauth = stage === 'reauth-required';
@@ -198,10 +201,10 @@ export function SocialMigration() {
 
   useEffect(() => {
     if (!isHydrated || !isReauth || !hasAccount || isLoggingOut || needsBackup) return;
-    if (logoutStarted.current) return;
-    logoutStarted.current = true;
+    if (logoutStartedFor.current === generation) return;
+    logoutStartedFor.current = generation;
     signOutOfGate();
-  }, [isHydrated, isReauth, hasAccount, isLoggingOut, needsBackup]);
+  }, [isHydrated, isReauth, hasAccount, isLoggingOut, needsBackup, generation]);
 
   // The route guard brings a signed-out tab back here while the notice is pending: leaving settles it, as Sign in does.
   // A held account's screen keeps it: the guard sends that tab back here anyway, and its sign-out still owes the reason.
