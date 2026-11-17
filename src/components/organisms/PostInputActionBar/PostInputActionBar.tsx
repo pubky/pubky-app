@@ -49,10 +49,7 @@ export function PostInputActionBar({
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Container
-      className="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
-      overrideDefaults
-    >
+    <Container className="flex w-full flex-wrap items-center gap-x-2 gap-y-4" overrideDefaults>
       <Container className="flex items-center gap-2" overrideDefaults>
         {leadingContent}
         {!isArticle ? (
@@ -100,6 +97,9 @@ export function PostInputActionBar({
             <ActionButtonContent Icon={fullscreen.isFullscreen ? Shrink : Expand} />
           </Button>
         ) : null}
+      </Container>
+      {/* `max-md:contents` puts the lock switch in the tool row on mobile; the `max-md:w-full` Post wraps below. */}
+      <Container className="flex shrink-0 items-center gap-2 max-md:contents md:ml-auto" overrideDefaults>
         {lockSwitch ? (
           <Container className="flex h-8 items-center gap-2 rounded-full bg-secondary px-3 shadow-xs" overrideDefaults>
             <ActionButtonContent Icon={lockSwitch.checked ? Lock : LockOpen} />
@@ -111,7 +111,9 @@ export function PostInputActionBar({
               aria-label="Lock content"
               className="data-[state=unchecked]:bg-accent"
             />
-            {lockSwitch.regionNotice ? <LocksRegionNotice variant="icon" cause={lockSwitch.regionNotice} /> : null}
+            {lockSwitch.regionNotice ? (
+              <LocksRegionNotice variant="icon" align="end" cause={lockSwitch.regionNotice} />
+            ) : null}
             {/* TODO: share this info popover with the `icon` variant of `LocksRegionNotice`, which it mirrors. */}
             {lockSwitch.showHelp && !lockSwitch.regionNotice ? (
               <Popover>
@@ -126,7 +128,13 @@ export function PostInputActionBar({
                     <Info aria-hidden />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent side="top" align="start" sideOffset={6} className="flex flex-col gap-2 p-3">
+                <PopoverContent
+                  side="top"
+                  align="end"
+                  sideOffset={6}
+                  collisionPadding={16}
+                  className="mx-0 flex flex-col gap-2 p-3"
+                >
                   <Typography overrideDefaults className="text-sm font-bold text-popover-foreground">
                     {LOCK_HELP_HEADING}
                   </Typography>
@@ -142,8 +150,6 @@ export function PostInputActionBar({
             ) : null}
           </Container>
         ) : null}
-      </Container>
-      <Container className="flex shrink-0 items-center justify-end gap-2 max-md:w-full" overrideDefaults>
         <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
           {...COMMON_BUTTON_PROPS}
