@@ -59,8 +59,8 @@ export interface ResourceMapProps {
   fit?: readonly TPinakesPoint[];
   /** The pin shown as picked. */
   selectedId?: string | null;
-  /** A pin was pressed (`explore`). */
-  onSelect?: (id: string) => void;
+  /** A pin was pressed (`explore`), with the pin's own element: where on the page it is. */
+  onSelect?: (id: string, pin: HTMLElement) => void;
   /** How close the map is, once drawn and after every zoom: what its pins are grouped for. */
   onZoom?: (zoom: number) => void;
   /** A control in the map's top right corner in every state: "Open in Maps". */
@@ -82,10 +82,14 @@ const FIT_OPTIONS = { padding: MAP_FIT_PADDING_PX, maxZoom: MAP_FIT_MAX_ZOOM };
  * A map of one or more points (MapLibre GL on OpenFreeMap's tiles, `@/config/maps`), for a place's
  * or an event's card, its page and a map of search results.
  *
- * Nothing is loaded before the map is on screen: not the library, not a tile. It is removed again
- * when it leaves the screen or its card goes away, so no card off screen holds a WebGL context. A
- * viewer who turned platform embeds up front off (Settings, Links & Media) gets "Show map" first.
- * Every request goes out without credentials or a referrer (`toPrivateMapRequest`).
+ * Nothing is loaded for a map before it is on screen: not a tile, and not the library unless the
+ * Map view of a search already asked for it (`loadMapLibrary`). It is removed again when it leaves
+ * the screen or its card goes away, so no card off screen holds a WebGL context. A viewer who
+ * turned platform embeds up front off (Settings, Links & Media) gets "Show map" first. Every
+ * request goes out without credentials or a referrer (`toPrivateMapRequest`).
+ *
+ * Until the map's style is read, a map that may load shows a loading skeleton, from the first render
+ * on. The pins and the credit go on as soon as the style is read; the tiles fill in under them.
  *
  * A card's map (`preview`) cannot be moved, scrolled or focused until it is tapped; any map then
  * asks for two fingers or a modifier key, so the page's scroll never stops on it. Where the map
@@ -192,17 +196,24 @@ export function ResourceMap({
         map: made,
         createMarker: (element) => new maplibre.Marker({ element, anchor: 'bottom' }),
       };
-      made.on('load', () => {
-        isDrawn = true;
-        if (cancelled) return;
+      let isShown = false;
+      // The pins are elements over the map, not drawn in it: they need the style, not its tiles
+      const show = () => {
+        if (isShown || cancelled) return;
+        isShown = true;
         setLoaded({ key: styleUrl, status: 'ready' });
         reportZoom(made.getZoom());
+      };
+      made.on('style.load', show);
+      made.on('load', () => {
+        isDrawn = true;
+        show();
       });
       made.on('zoomend', () => {
         if (!cancelled) reportZoom(made.getZoom());
       });
-      // A style or tile that fails before the first drawing leaves no map to show; later, a
-      // missing tile is a gap in a map that is still one
+      // A style or tile that fails before the map is first drawn whole (`load`) leaves no map to
+      // show, pins or not; later, a missing tile is a gap in a map that is still one
       made.on('error', () => {
         if (!isDrawn) fail();
       });
@@ -263,12 +274,12 @@ export function ResourceMap({
 
   if (!hasPoints) return null;
 
-  const pressPin = (marker: TResourceMapMarker) => {
+  const pressPin = (marker: TResourceMapMarker, pin: HTMLElement) => {
     if (marker.bounds && live.current) {
       // The pin pressed is replaced by the ones it stood for: the keyboard stays on the map
       live.current.map.getCanvas().focus({ preventScroll: true });
       live.current.map.fitBounds(marker.bounds, FIT_OPTIONS);
-    } else onSelect?.(marker.id);
+    } else onSelect?.(marker.id, pin);
   };
   return (
     <Container overrideDefaults className={cn('flex min-w-0 flex-col gap-1', className)}>
@@ -293,7 +304,8 @@ export function ResourceMap({
           // any layer, which beats a layered `absolute` and would leave it without a height
           className={cn('size-full', status === 'failed' && 'hidden')}
         />
-        {status === 'loading' && (
+        {/* Also before the viewport is known to show the map: an empty box reads as a map that failed */}
+        {(status === 'loading' || (status === 'idle' && isAllowed)) && (
           <Skeleton className="absolute inset-0 rounded-none" data-testid="resource-map-loading" />
         )}
         {status === 'idle' && !isAllowed && (
@@ -341,7 +353,7 @@ export function ResourceMap({
             <ResourceMapPin
               marker={marker}
               isSelected={marker.id === selectedId}
-              onPress={mode === 'explore' ? () => pressPin(marker) : undefined}
+              onPress={mode === 'explore' ? (pin) => pressPin(marker, pin) : undefined}
             />,
             element,
             marker.id,
@@ -370,7 +382,8 @@ export function ResourceMap({
 
 /**
  * A pin: on a card's map the point itself, no control; on a map to explore a button named by what
- * it stands for, pressed when picked, with its count when it stands for several results.
+ * it stands for, pressed when picked, with its count when it stands for several results. A picked
+ * pin, one place or a group, is larger and in the foreground colour, so it stands out on the map.
  */
 function ResourceMapPin({
   marker,
@@ -379,7 +392,7 @@ function ResourceMapPin({
 }: {
   marker: TResourceMapMarker;
   isSelected: boolean;
-  onPress?: () => void;
+  onPress?: (pin: HTMLElement) => void;
 }) {
   const isGroup = (marker.count ?? 1) > 1;
   const pin = isGroup ? (
@@ -388,7 +401,7 @@ function ResourceMapPin({
       overrideDefaults
       className={cn(
         'flex size-8 items-center justify-center rounded-full border-2 border-background bg-brand text-xs font-bold text-brand-foreground shadow-md',
-        isSelected && 'ring-2 ring-foreground',
+        isSelected && 'size-10 bg-foreground text-background',
       )}
     >
       {marker.count}
@@ -413,7 +426,7 @@ function ResourceMapPin({
       aria-label={marker.label}
       aria-pressed={isSelected}
       title={marker.label}
-      onClick={onPress}
+      onClick={(event) => onPress(event.currentTarget)}
       data-testid="resource-map-pin"
       className="flex cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >

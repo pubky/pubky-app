@@ -7,7 +7,8 @@ let library: Promise<TMapLibrary> | null = null;
 
 /**
  * MapLibre GL, loaded on first use (its script, worker and stylesheet are about half a megabyte
- * compressed, so no page pays for them before a map is on screen), once per page load
+ * compressed, so no page pays for them before a map is on screen, or about to be: a search's Map
+ * button asks for it as the pointer or the keyboard reaches it), once per page load
  * (`maplibre.runtime`).
  */
 export function loadMapLibrary(): Promise<TMapLibrary> {
