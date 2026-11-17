@@ -460,23 +460,58 @@ describe('SocialMigrationController', () => {
       expect(run).not.toHaveBeenCalled();
     });
 
-    it('passes a sign-in of an account already updated elsewhere on the flag, with no screen and no engine', async () => {
-      await flagAt(SOCIAL_MIGRATION_TRANSFORM_REV);
-      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
-      const { seen, unsubscribe } = stages();
+    it.each(['signin', 'upgrade'] as const)(
+      'passes an account already updated elsewhere on the flag at %s, with no screen and no engine',
+      async (entry) => {
+        await flagAt(SOCIAL_MIGRATION_TRANSFORM_REV);
+        const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+        const { seen, unsubscribe } = stages();
 
-      expect(await ensure('signin')).toBe('passed');
-      unsubscribe();
+        expect(await ensure(entry)).toBe('passed');
+        unsubscribe();
 
-      expect(seen).toEqual([]);
-      expect(continues).toBe(0);
-      expect(run).not.toHaveBeenCalled();
-      expect(status()).toBe('restoring');
-      expect(readSocialMigrationRecord(owner)).toMatchObject({
-        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
-        admittedGrantIds: [GRANT],
-      });
-    });
+        expect(seen).toEqual([]);
+        expect(continues).toBe(0);
+        expect(run).not.toHaveBeenCalled();
+        expect(status()).toBe('restoring');
+        expect(readSocialMigrationRecord(owner)).toMatchObject({
+          migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+          admittedGrantIds: [GRANT],
+        });
+      },
+    );
+
+    it.each(['signin', 'restore'] as const)(
+      'cancels a %s whose auth generation changed during the flag read, without asking or loading the engine',
+      async (entry) => {
+        autoContinue = false;
+        await seedLegacyTree();
+        // An admitted grant, so a restore that went on would resume instead of signing out
+        writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT] });
+        let answer!: (value: null) => void;
+        homeserver.spies.getBytesIfExists.mockReturnValueOnce(
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+        );
+        const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+        const { seen, unsubscribe } = stages();
+        const gate = ensure(entry);
+        await vi.waitFor(() => expect(homeserver.spies.getBytesIfExists).toHaveBeenCalledOnce());
+
+        useAuthStore.setState({ generation: 'another-tab' });
+        answer(null);
+        const outcome = await Promise.race([
+          gate,
+          new Promise((resolve) => setTimeout(() => resolve('still waiting'), 200)),
+        ]);
+        unsubscribe();
+
+        expect(outcome).toBe('canceled');
+        expect(run).not.toHaveBeenCalled();
+        expect(seen).not.toContain('confirm');
+      },
+    );
 
     it('passes a sign-in on a trusted record with no request', async () => {
       writeSocialMigrationRecord(owner, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV, admittedGrantIds: [] });
@@ -510,6 +545,15 @@ describe('SocialMigrationController', () => {
         operation: 'getBytesIfExists',
         context: { statusCode: 401 },
       });
+    const forbidden = () =>
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.FORBIDDEN,
+        message: 'Forbidden',
+        service: ErrorService.Homeserver,
+        operation: 'getBytesIfExists',
+        context: { statusCode: 403 },
+      });
     const offline = () =>
       new AppError({
         category: ErrorCategory.Network,
@@ -522,6 +566,7 @@ describe('SocialMigrationController', () => {
     it.each([
       ['a network failure', 'network'],
       ['a 401', 'unauthorized'],
+      ['a 403', 'forbidden'],
       ['a timeout', 'timeout'],
     ] as const)(
       'shows the screen when the sign-in flag read fails with %s, and the run finds the account updated',
@@ -532,7 +577,9 @@ describe('SocialMigrationController', () => {
           vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
           homeserver.spies.getBytesIfExists.mockReturnValueOnce(new Promise(() => {}));
         } else {
-          homeserver.spies.getBytesIfExists.mockRejectedValueOnce(failure === 'network' ? offline() : unauthorized());
+          homeserver.spies.getBytesIfExists.mockRejectedValueOnce(
+            failure === 'network' ? offline() : failure === 'forbidden' ? forbidden() : unauthorized(),
+          );
         }
         autoContinue = false;
         const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
@@ -636,8 +683,31 @@ describe('SocialMigrationController', () => {
 
       expect(stage().stage).toBe('confirm');
       expect(run).not.toHaveBeenCalled();
-      SocialMigrationController.cancel();
-      expect(await migrating).toBe('canceled');
+      // The gate still waits for Continue: a wrong wake above would have ended it
+      SocialMigrationController.confirm();
+      expect(await migrating).toBe('passed');
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it('ignores Continue of the confirm screen while the gate waits on its summary', async () => {
+      await seedLegacyTree();
+      await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', {
+        name: 'Alice',
+        links: [{ title: 'mail', url: 'mailto:alice@example.com' }],
+      });
+      let settled = false;
+      const migrating = ensure('signin').finally(() => {
+        settled = true;
+      });
+      await vi.waitFor(() => expect(stage().stage).toBe('summary'));
+
+      SocialMigrationController.confirm();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(stage().stage).toBe('summary');
+      expect(settled).toBe(false);
+      SocialMigrationController.acknowledge();
+      expect(await migrating).toBe('passed');
     });
   });
 

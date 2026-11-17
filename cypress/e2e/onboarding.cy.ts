@@ -412,8 +412,8 @@ describe('Onboarding', () => {
     cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', noteText);
 
-    // A second sign-in goes through the gate's route while it checks, finds the done flag and writes no
-    // second one: the flag is the last write of a run, so a repeated migration would show here.
+    // A second sign-in passes on this browser's record (or the done flag) without the gate's route and writes no
+    // second flag: the flag is the last write of a run, so a repeated migration would show here.
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithPubkyRing(profileName);
     cy.get('@migrationDone.all').should('have.length', 1);
