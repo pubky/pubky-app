@@ -8,9 +8,11 @@ declare global {
         name: string,
         landingPath?: string,
         options?: {
-          /** The account has a 0.x tree: wait on the gate's progress screen, then up to an extended timeout for the landing route. */
+          /** The account has a 0.x tree: wait on the gate's Continue screen, click Continue, wait on the progress screen, then up to an extended timeout for the landing route. */
           migrates?: boolean;
-          /** Runs on /migration before the run is under way, e.g. while another holder has the migration lock; with `migrates` only. */
+          /** Runs on the gate's Continue screen before Continue is clicked, e.g. to check nothing was written yet; with `migrates` only. */
+          beforeContinue?: () => void;
+          /** Runs on /migration after Continue, before the run is under way, e.g. while another holder has the migration lock; with `migrates` only. */
           beforeRun?: () => void;
           /** Runs on the gate's progress screen, before the command waits for the landing route; with `migrates` only. */
           whileMigrating?: () => void;

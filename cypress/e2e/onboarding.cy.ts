@@ -310,7 +310,14 @@ describe('Onboarding', () => {
     cy.intercept('PUT', '**/priv/app.pubky/v1/last_read*').as('lastReadCopied');
     holdMigrationFlag();
 
-    cy.signInWithPubkyRing(profileName, '/home', { migrates: true });
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      // Asked first: nothing is copied before Continue
+      beforeContinue: () => {
+        cy.get('@v1Write.all').should('have.length', 0);
+        listHomeserverPathsViaApi(user, '/pub/social/v1/').should('have.length', 0);
+      },
+    });
 
     migrationFlag().then((flag) => {
       // The app's own files are the only thing a clean run leaves behind: it imports those itself
@@ -1082,7 +1089,8 @@ describe('Onboarding', () => {
     );
     cy.intercept({ method: 'PUT', url: '**/{pub,priv}/social/v1/**' }).as('v1Write');
 
-    // A run stopped at its first request never shows the progress screen, so the sign-in only reaches the gate
+    // The sign-in's own flag read is refused too, so it asks and the run starts on Continue; a run stopped at its
+    // first request never shows the progress screen, so the sign-in only reaches the gate
     cy.signInWithPubkyRing(profileName, '/migration');
     recordRoutes(visited);
     cy.get('[data-testid="social-migration"]', extendedTimeout())

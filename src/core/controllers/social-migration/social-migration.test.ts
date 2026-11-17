@@ -111,6 +111,10 @@ describe('SocialMigrationController', () => {
     });
   const status = () => useAuthStore.getState().restoreStatus;
   const stage = () => useSocialMigrationStore.getState();
+  // The user presses Continue on the confirm screen as soon as it shows, unless a test turns this off to observe it
+  let autoContinue = true;
+  let continues = 0;
+  let unsubscribeContinue = () => {};
 
   beforeEach(() => {
     homeserver = stubMemoryHomeserver(fakeOwner(1));
@@ -128,9 +132,18 @@ describe('SocialMigrationController', () => {
       sessionReference: mockGrantReference(GRANT),
       restoreStatus: 'restoring',
     });
+    autoContinue = true;
+    continues = 0;
+    unsubscribeContinue = useSocialMigrationStore.subscribe((state, previous) => {
+      if (!autoContinue || state.stage !== 'confirm' || previous.stage === 'confirm') return;
+      continues += 1;
+      // The gate installs its wait right after it shows the stage
+      queueMicrotask(() => SocialMigrationController.confirm());
+    });
   });
 
   afterEach(() => {
+    unsubscribeContinue();
     retry.immediate = false;
     SocialMigrationController.cancel();
     vi.restoreAllMocks();
@@ -152,6 +165,7 @@ describe('SocialMigrationController', () => {
     expect(status()).toBe('social-migration');
     expect(stages).toEqual([
       'idle:',
+      'confirm:',
       'running:',
       'running:probe',
       'running:listing',
@@ -351,13 +365,262 @@ describe('SocialMigrationController', () => {
 
   it('cancels a run when another generation takes the store', async () => {
     await seedLegacyTree();
-    const migrating = ensure('signin');
+    // Held mid-walk: the sign-in reads the flag before the screen, so the run no longer starts synchronously
+    const slow = slowSession();
+    const migrating = ensure('signin', slow.session);
     await vi.waitFor(() => expect(stage().stage).toBe('running'));
 
     useAuthStore.setState({ generation: 'another-tab' });
+    slow.release();
 
     expect(await migrating).toBe('canceled');
     expect(stage().stage).toBe('idle');
+  });
+
+  describe('the confirm screen', () => {
+    const flagAt = (rev: number) =>
+      homeserver.session.storage.putJson(SOCIAL_MIGRATION_FLAG_PATH, {
+        migrated_at: 1,
+        transform_rev: rev,
+        skipped: {},
+        migrated: [],
+      });
+    /** Every stage the store passed through, in order and without repeats. */
+    const stages = () => {
+      const seen: string[] = [];
+      const unsubscribe = useSocialMigrationStore.subscribe((state) => {
+        if (seen.at(-1) !== state.stage) seen.push(state.stage);
+      });
+      return { seen, unsubscribe };
+    };
+    /** Every write the session makes to the account's tree, the engine's included. */
+    const sessionWrites = () => {
+      const { storage } = homeserver.session;
+      return [vi.spyOn(storage, 'putJson'), vi.spyOn(storage, 'putBytes'), vi.spyOn(storage, 'delete')];
+    };
+    const lastRun = { at: 1, status: 'running', done: 2, total: 9, counts: {}, dropped: 0 };
+
+    it('waits at confirm on a sign-in of an account that needs the update, with no engine run and no write', async () => {
+      autoContinue = false;
+      await seedLegacyTree();
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const writes = sessionWrites();
+      const migrating = ensure('signin');
+
+      await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(stage().stage).toBe('confirm');
+      expect(status()).toBe('social-migration');
+      expect(run).not.toHaveBeenCalled();
+      for (const write of writes) expect(write).not.toHaveBeenCalled();
+      expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(false);
+      // The grant is admitted, so a reload on this screen comes back to it instead of a sign-out
+      expect(readSocialMigrationRecord(owner)).toEqual({ v: 1, admittedGrantIds: [GRANT] });
+      SocialMigrationController.cancel();
+      expect(await migrating).toBe('canceled');
+    });
+
+    it('runs to the summary after Continue', async () => {
+      autoContinue = false;
+      await seedLegacyTree();
+      await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', {
+        name: 'Alice',
+        links: [{ title: 'mail', url: 'mailto:alice@example.com' }],
+      });
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const migrating = ensure('signin');
+      await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+
+      SocialMigrationController.confirm();
+
+      await vi.waitFor(() => expect(stage().stage).toBe('summary'));
+      expect(run).toHaveBeenCalledOnce();
+      expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(true);
+      SocialMigrationController.acknowledge();
+      expect(await migrating).toBe('passed');
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it.each([
+      ['logout', () => useAuthStore.getState().setIsLoggingOut(true)],
+      ['a new auth generation', () => useAuthStore.setState({ generation: 'another-tab' })],
+    ])('cancels the wait on %s without loading the engine', async (_, leave) => {
+      autoContinue = false;
+      await seedLegacyTree();
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const migrating = ensure('signin');
+      await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+
+      leave();
+
+      expect(await migrating).toBe('canceled');
+      expect(stage().stage).toBe('idle');
+      SocialMigrationController.confirm();
+      expect(run).not.toHaveBeenCalled();
+    });
+
+    it('passes a sign-in of an account already updated elsewhere on the flag, with no screen and no engine', async () => {
+      await flagAt(SOCIAL_MIGRATION_TRANSFORM_REV);
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const { seen, unsubscribe } = stages();
+
+      expect(await ensure('signin')).toBe('passed');
+      unsubscribe();
+
+      expect(seen).toEqual([]);
+      expect(continues).toBe(0);
+      expect(run).not.toHaveBeenCalled();
+      expect(status()).toBe('restoring');
+      expect(readSocialMigrationRecord(owner)).toMatchObject({
+        migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+        admittedGrantIds: [GRANT],
+      });
+    });
+
+    it('passes a sign-in on a trusted record with no request', async () => {
+      writeSocialMigrationRecord(owner, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV, admittedGrantIds: [] });
+      const read = vi.spyOn(HomeserverService, 'getBytesIfExists');
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+
+      expect(await ensure('signin')).toBe('passed');
+
+      expect(read).not.toHaveBeenCalled();
+      expect(run).not.toHaveBeenCalled();
+      expect(continues).toBe(0);
+      expect(status()).toBe('restoring');
+    });
+
+    it('asks when the flag is at an older revision', async () => {
+      await seedLegacyTree();
+      await flagAt(SOCIAL_MIGRATION_TRANSFORM_REV - 1);
+
+      expect(await ensure('signin')).toBe('passed');
+
+      expect(continues).toBe(1);
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    const unauthorized = () =>
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.UNAUTHORIZED,
+        message: 'Unauthorized',
+        service: ErrorService.Homeserver,
+        operation: 'getBytesIfExists',
+        context: { statusCode: 401 },
+      });
+    const offline = () =>
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'Failed to fetch',
+        service: ErrorService.Homeserver,
+        operation: 'getBytesIfExists',
+      });
+
+    it.each([
+      ['a network failure', 'network'],
+      ['a 401', 'unauthorized'],
+      ['a timeout', 'timeout'],
+    ] as const)(
+      'shows the screen when the sign-in flag read fails with %s, and the run finds the account updated',
+      async (_, failure) => {
+        // The account is already updated: only the run, after Continue, can tell
+        await flagAt(SOCIAL_MIGRATION_TRANSFORM_REV);
+        if (failure === 'timeout') {
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+          homeserver.spies.getBytesIfExists.mockReturnValueOnce(new Promise(() => {}));
+        } else {
+          homeserver.spies.getBytesIfExists.mockRejectedValueOnce(failure === 'network' ? offline() : unauthorized());
+        }
+        autoContinue = false;
+        const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+        const migrating = ensure('signin');
+
+        if (failure === 'timeout') await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+        await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+        expect(status()).toBe('social-migration');
+        expect(run).not.toHaveBeenCalled();
+        vi.useRealTimers();
+        SocialMigrationController.confirm();
+
+        expect(await migrating).toBe('passed');
+        expect(run).toHaveBeenCalledOnce();
+        await expect(run.mock.results[0].value).resolves.toMatchObject({ status: 'already_migrated' });
+        expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+      },
+    );
+
+    it.each(['signin', 'restore'] as const)(
+      'resumes a %s whose record has a last run without the screen',
+      async (entry) => {
+        await seedLegacyTree();
+        writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT], lastRun });
+        const { seen, unsubscribe } = stages();
+
+        expect(await ensure(entry)).toBe('passed');
+        unsubscribe();
+
+        expect(continues).toBe(0);
+        expect(seen).not.toContain('confirm');
+        expect(seen).toContain('running');
+        expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+      },
+    );
+
+    it('shows the screen again on a restore of an admitted grant whose record has no last run', async () => {
+      autoContinue = false;
+      await seedLegacyTree();
+      writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT] });
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const migrating = ensure('restore');
+
+      await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+      expect(status()).toBe('social-migration');
+      expect(run).not.toHaveBeenCalled();
+      SocialMigrationController.confirm();
+
+      expect(await migrating).toBe('passed');
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it('shows the screen on an upgrade without a record', async () => {
+      await seedLegacyTree();
+
+      expect(await ensure('upgrade')).toBe('passed');
+
+      expect(continues).toBe(1);
+    });
+
+    it('never shows it on a signup', async () => {
+      const { seen, unsubscribe } = stages();
+
+      expect(await ensure('signup')).toBe('passed');
+      unsubscribe();
+
+      expect(continues).toBe(0);
+      expect(seen).not.toContain('confirm');
+      expect(status()).toBe('restoring');
+    });
+
+    it('is never pressed by the reconnect retry, Retry or the summary Continue', async () => {
+      autoContinue = false;
+      await seedLegacyTree();
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const migrating = ensure('signin');
+      await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+
+      SocialMigrationController.retryAfterReconnect();
+      SocialMigrationController.retry();
+      SocialMigrationController.acknowledge();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(stage().stage).toBe('confirm');
+      expect(run).not.toHaveBeenCalled();
+      SocialMigrationController.cancel();
+      expect(await migrating).toBe('canceled');
+    });
   });
 
   describe('profile values a run dropped', () => {
@@ -663,6 +926,8 @@ describe('SocialMigrationController', () => {
 
       expect(await migrating).toBe('passed');
 
+      // A sign-in on the record the first gate wrote would pass without a run
+      localStorage.clear();
       runs(aborted('QUOTA', { error: { code: 'QUOTA', message: '', needBytes: 5_000_000 } }));
       const quota = ensure('signin');
       await vi.waitFor(() => expect(stage().stage).toBe('blocked'));
@@ -864,6 +1129,7 @@ describe('SocialMigrationController', () => {
     it('ignores Retry and Continue outside their stage', async () => {
       SocialMigrationController.retry();
       SocialMigrationController.acknowledge();
+      SocialMigrationController.confirm();
       SocialMigrationController.retryAfterReconnect();
       expect(stage().stage).toBe('idle');
     });

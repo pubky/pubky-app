@@ -2,9 +2,11 @@ import type { Bucket, Counts, Phase } from 'pubky-social-migrator';
 
 /**
  * Where the social v1 migration gate is (ADR-0026). `idle` outside a gate; `reauth-required`
- * ends in a forced logout; `summary` waits for Continue; `blocked` waits for Retry.
+ * ends in a forced logout; `confirm` waits for Continue before the first run; `summary` waits for Continue;
+ * `blocked` waits for Retry.
  */
-export type SocialMigrationStage = 'idle' | 'reauth-required' | 'waiting-for-tab' | 'running' | 'blocked' | 'summary';
+export type SocialMigrationStage =
+  'idle' | 'reauth-required' | 'confirm' | 'waiting-for-tab' | 'running' | 'blocked' | 'summary';
 
 /** Why the account is signed out: a grant from before the gate, a grant without the scopes, or one that expired mid-run. */
 export type SocialMigrationReauthReason = 'pre-migration-grant' | 'missing-scopes' | 'session-expired';

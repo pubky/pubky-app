@@ -126,6 +126,16 @@ export class SocialMigrationController {
     } else {
       const grantId = this.activeGrantId();
       if (grantId) admitSocialMigrationGrant(pubky, grantId);
+      if (entry !== 'signup') {
+        // An account already updated is not asked. A failed read asks: the run that follows finds the flag itself.
+        if (isSocialMigrationRecordTrusted(record)) return 'passed';
+        const rev = await SocialMigrationApplication.readFlag({ session, pubky }).catch(() => null);
+        if (!isCurrent()) return 'canceled';
+        if (rev !== null && rev >= SOCIAL_MIGRATION_TRANSFORM_REV) {
+          markSocialMigrated(pubky, rev);
+          return 'passed';
+        }
+      }
     }
     return this.migrate({ session, pubky, generation, isCurrent, inline: entry === 'signup', record });
   }
@@ -152,6 +162,11 @@ export class SocialMigrationController {
   static retryAfterReconnect(): void {
     const { stage, reason } = useSocialMigrationStore.getState();
     if (stage === 'blocked' && reason === 'incomplete') this.gate?.wake?.('retry');
+  }
+
+  /** Continue from the confirm screen: the first run starts. */
+  static confirm(): void {
+    if (useSocialMigrationStore.getState().stage === 'confirm') this.gate?.wake?.('continue');
   }
 
   /** Continue from the summary screen. */
@@ -237,6 +252,11 @@ export class SocialMigrationController {
     };
     if (!inline) show();
     try {
+      // A run this browser has not started yet waits for Continue; an interrupted one resumes at once
+      if (!inline && !lastRun) {
+        store.setStage('confirm');
+        if ((await this.wait(gate)) !== 'continue') return 'canceled';
+      }
       let attempt = 0;
       let autoRetries = 0;
       for (;;) {

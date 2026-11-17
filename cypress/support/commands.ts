@@ -18,6 +18,9 @@ import { CheckForNewPosts, HasBackedUp, OnboardingExperience, PostType, WaitForN
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
+// The gate's Continue on the screen that asks before the update starts
+const CONFIRM_CONTINUE_BUTTON = '#social-migration-confirm-navigation-continue-btn';
+
 // TypeScript's DOM types do not include the Navigation API yet
 type NavigationApi = {
   addEventListener(type: 'navigate', listener: (event: Event & { destination: { url: string } }) => void): void;
@@ -160,14 +163,15 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
 // Signs the app in as `name` (signed up by `cy.onboardAsNewUser`, `seedUserViaApi` or `signUpViaApi`)
 // through its Pubky Ring flow, with the seed tasks approving in Ring's place. A key with a profile
 // lands on /home; one without lands on /onboarding/profile. Every fresh grant passes the social v1
-// migration gate (`/migration`) first: a key with no 0.x tree only checks there and moves on, while
-// one seeded `legacy` copies its tree there before the landing route (`migrates`).
+// migration gate (`/migration`) first: a key without the done flag is asked to Continue there (a key with
+// no 0.x tree then only checks and moves on), while one seeded `legacy` copies its tree there before the
+// landing route (`migrates`).
 Cypress.Commands.add(
   'signInWithPubkyRing',
   (
     name: string,
     landingPath = '/home',
-    { migrates = false, beforeRun, whileMigrating, acknowledgesSummary = false } = {},
+    { migrates = false, beforeContinue, beforeRun, whileMigrating, acknowledgesSummary = false } = {},
   ) => {
     openSignInPage();
     readPubkyRingAuthUrl().then((authUrl) => {
@@ -175,14 +179,35 @@ Cypress.Commands.add(
       approvePubkyAuthViaApi(name, authUrl);
     });
 
-    // An account with a 0.x tree stops on the gate's progress screen; any other only checks and moves on
+    // An account with a 0.x tree is asked first, then stops on the gate's progress screen
     if (migrates) {
       cy.location('pathname').should('eq', '/migration');
+      cy.get('[data-testid="social-migration"]', extendedTimeout()).should(
+        'contain.text',
+        'Your account needs an update',
+      );
+      cy.get(CONFIRM_CONTINUE_BUTTON).should('be.visible');
+      // A spec that checks what happened before the user agreed (nothing written yet) does so from here
+      beforeContinue?.();
+      cy.get(CONFIRM_CONTINUE_BUTTON).click();
       // A spec that keeps the run from starting (another holder of the migration lock) waits it out from here
       beforeRun?.();
       cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
-      // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here
+      // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here; a reload
+      // resumes the run that started, without asking again
       whileMigrating?.();
+    } else {
+      // A key seeded outside the app has no done flag yet, so its first sign-in is asked too and finds nothing to
+      // copy; a key the app saw pass lands directly. The screen waits for the click, so whichever shows first is final.
+      // A sign-in that stays on the gate (`/migration`) is always asked first: its flag read did not pass it.
+      cy.document(extendedTimeout()).should((doc) => {
+        const asked = doc.querySelector(CONFIRM_CONTINUE_BUTTON) !== null;
+        const landed = landingPath !== '/migration' && doc.location.pathname === landingPath;
+        expect(asked || landed, `asked to continue or on ${landingPath}`).to.equal(true);
+      });
+      cy.document().then((doc) => {
+        if (doc.querySelector(CONFIRM_CONTINUE_BUTTON)) cy.get(CONFIRM_CONTINUE_BUTTON).click();
+      });
     }
     // A run that left something behind waits on its summary for a click; a string is the summary's expected text
     if (acknowledgesSummary) {
