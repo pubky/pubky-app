@@ -315,7 +315,8 @@ describe('Onboarding', () => {
       // Asked first: nothing is copied before Continue
       beforeContinue: () => {
         cy.get('@v1Write.all').should('have.length', 0);
-        listHomeserverPathsViaApi(user, '/pub/social/v1/').should('have.length', 0);
+        cy.get('@settingsCopied.all').should('have.length', 0);
+        cy.get('@lastReadCopied.all').should('have.length', 0);
       },
     });
 
