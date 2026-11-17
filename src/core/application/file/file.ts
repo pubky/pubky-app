@@ -80,7 +80,9 @@ export class FileApplication {
    * Uploads media to the homeserver and persists its metadata locally. v1 media is one
    * content-addressed file: there is no metadata record to write. A file the homeserver already
    * holds (the same bytes referenced by another post) is marked `preexisting` before the PUT, so
-   * a rollback of this upload leaves it in place.
+   * a rollback of this upload leaves it in place. Each upload mints its own `claim` and adds it to
+   * the file's local row once the PUT landed: a rollback of another upload of the same bytes then
+   * leaves the file to this one while its post has no row yet (`commitDeleteUploaded`).
    */
   static async commitCreate({ fileAttachments }: FilesListParams) {
     // allSettled, not all: on a partial failure the callers roll back the whole
@@ -90,6 +92,7 @@ export class FileApplication {
     // Waiting for every upload to settle before throwing keeps rollback safe.
     const results = await Promise.allSettled(
       fileAttachments.map(async (fileAttachment) => {
+        fileAttachment.claim = crypto.randomUUID();
         fileAttachment.preexisting = await HomeserverService.exists(fileAttachment.media.url);
         await HomeserverService.putBlob({ url: fileAttachment.media.url, blob: fileAttachment.bytes });
         await LocalFileService.create(fileAttachment);
@@ -155,18 +158,48 @@ export class FileApplication {
    * either: a failed create leaves its row behind as a tombstone whose `attachments` still name
    * these very files, and a restored row names nothing this batch put on the homeserver.
    *
-   * @param fileAttachments - The batch that was uploaded, `preexisting` set by `commitCreate`
+   * First the batch releases its upload claims, and a file another upload still claims stays: a
+   * pending create of the same bytes, in this tab or another, has uploaded it but has no post row
+   * yet for the reference check to see. A file whose own claim was never written (its PUT never
+   * landed) respects the other claims all the same. A successful upload never releases its claim,
+   * so a later rollback of the same bytes keeps the file as an orphan: the safe failure. What dev's
+   * per-upload file rows left open stays open: the moment between another upload's PUT landing and
+   * its claim being written, a claim written between this check and the delete, and uploads on
+   * another device.
+   *
+   * @param fileAttachments - The batch that was uploaded, `preexisting` and `claim` set by `commitCreate`
    * @param excludePostId - The post the batch was for, whose own references do not count
    */
   static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[], excludePostId?: string) {
     await this.deleteMedia(
-      await this.filterLocallyUnreferenced(
-        fileAttachments
-          .filter((attachment) => attachment.preexisting === false)
-          .map((attachment) => attachment.media.url),
-        excludePostId,
-      ),
+      await this.filterLocallyUnreferenced(await this.releaseUploadClaims(fileAttachments), excludePostId),
     );
+  }
+
+  /**
+   * Releases every upload claim of the batch, all of one file in one write, and returns the URIs of
+   * the files the batch created (`preexisting === false`) that no other upload still claims.
+   */
+  private static async releaseUploadClaims(fileAttachments: TFileAttachmentResult[]): Promise<string[]> {
+    const byFileId = new Map<string, { claims: string[]; createdUris: string[] }>();
+    for (const { media, claim, preexisting } of fileAttachments) {
+      const fileId = buildCompositeIdFromPubkyUri({ uri: media.url, domain: CompositeIdDomain.FILES });
+      if (!fileId || (claim === undefined && preexisting !== false)) continue;
+      const file = byFileId.get(fileId) ?? { claims: [], createdUris: [] };
+      if (claim !== undefined) file.claims.push(claim);
+      if (preexisting === false) file.createdUris.push(media.url);
+      byFileId.set(fileId, file);
+    }
+    const released = await Promise.all(
+      [...byFileId].map(async ([fileId, { claims, createdUris }]) => {
+        if (!(await LocalFileService.releaseClaims({ fileId, claims }))) return createdUris;
+        if (createdUris.length > 0) {
+          Logger.debug('[FileApplication] Kept media another pending upload claims', { fileUris: createdUris });
+        }
+        return [];
+      }),
+    );
+    return released.flat();
   }
 
   /** The v1 media files among `fileUris`, once each, that no cached object other than `excludePostId` references. */

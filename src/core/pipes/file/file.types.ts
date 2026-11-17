@@ -17,6 +17,13 @@ export interface TFileAttachmentResult {
    * file alone.
    */
   preexisting?: boolean;
+  /**
+   * The id `FileApplication.commitCreate` minted for this upload and added to the file's local row
+   * (`upload_claims`), set before the PUT. A rollback of this upload releases it and deletes the
+   * file only when no other upload of the same bytes still claims it; a successful upload never
+   * releases it.
+   */
+  claim?: string;
 }
 
 export type TFileAttachmentWithDataParams = {

@@ -204,15 +204,15 @@ describe('LocalFileService', () => {
     });
   });
 
-  describe('create', () => {
-    const bytes = new Uint8Array([1, 2, 3]);
-    const upload = (name = 'test-file.jpg', contentType = 'image/jpeg', data = bytes) => ({
-      media: buildFile(testPubky, { bytes: data, type: contentType }),
-      bytes: data,
-      name,
-      contentType,
-    });
+  const bytes = new Uint8Array([1, 2, 3]);
+  const upload = (name = 'test-file.jpg', contentType = 'image/jpeg', data = bytes) => ({
+    media: buildFile(testPubky, { bytes: data, type: contentType }),
+    bytes: data,
+    name,
+    contentType,
+  });
 
+  describe('create', () => {
     it('creates a file record keyed owner:hash from the upload, with the urls hardcoded', async () => {
       const attachment = upload();
       const compositeId = buildCompositeId({ pubky: testPubky, id: attachment.media.id });
@@ -232,6 +232,20 @@ describe('LocalFileService', () => {
       expect(saved?.metadata).toEqual({});
       expect(saved?.owner_id).toBe(testPubky);
       expect(saved?.urls).toEqual(buildUrls(compositeId));
+      expect(saved?.upload_claims).toEqual([]);
+    });
+
+    it("adds the upload's claim to the row, keeping the claims of earlier uploads of the same bytes", async () => {
+      const attachment = upload();
+      const compositeId = buildCompositeId({ pubky: testPubky, id: attachment.media.id });
+
+      await LocalFileService.create({ ...attachment, claim: 'first' });
+      await LocalFileService.create({ ...attachment, name: 'again.jpg', claim: 'second' });
+      await LocalFileService.create({ ...attachment, name: 'again.jpg', claim: 'second' });
+
+      const saved = await FileDetailsModel.findById(compositeId);
+      expect(saved?.name).toBe('again.jpg');
+      expect(saved?.upload_claims).toEqual(['first', 'second']);
     });
 
     it('replaces the row of the same bytes uploaded again: media is content addressed', async () => {
@@ -248,13 +262,55 @@ describe('LocalFileService', () => {
         service: ErrorService.Local,
         operation: 'upsert',
       });
-      vi.spyOn(FileDetailsModel, 'upsert').mockRejectedValueOnce(dbError);
+      vi.spyOn(FileDetailsModel, 'upsertWithClaim').mockRejectedValueOnce(dbError);
 
       await expect(LocalFileService.create(upload())).rejects.toMatchObject({
         category: ErrorCategory.Database,
         code: DatabaseErrorCode.WRITE_FAILED,
       });
       vi.restoreAllMocks();
+    });
+  });
+
+  describe('releaseClaims', () => {
+    const attachment = upload('claimed.png', 'image/png', new Uint8Array([4]));
+    const fileId = buildCompositeId({ pubky: testPubky, id: attachment.media.id });
+
+    it('removes the given claims and answers whether another upload still claims the file', async () => {
+      await LocalFileService.create({ ...attachment, claim: 'a' });
+      await LocalFileService.create({ ...attachment, claim: 'b' });
+      await LocalFileService.create({ ...attachment, claim: 'c' });
+
+      expect(await LocalFileService.releaseClaims({ fileId, claims: ['a', 'b'] })).toBe(true);
+      expect((await FileDetailsModel.findById(fileId))?.upload_claims).toEqual(['c']);
+      expect(await LocalFileService.releaseClaims({ fileId, claims: ['c'] })).toBe(false);
+      expect((await FileDetailsModel.findById(fileId))?.upload_claims).toEqual([]);
+    });
+
+    it('answers for the claims left when this upload wrote none', async () => {
+      await LocalFileService.create({ ...attachment, claim: 'other' });
+
+      expect(await LocalFileService.releaseClaims({ fileId, claims: [] })).toBe(true);
+      expect((await FileDetailsModel.findById(fileId))?.upload_claims).toEqual(['other']);
+    });
+
+    it('answers no claim, and writes nothing, when the file has no row', async () => {
+      expect(await LocalFileService.releaseClaims({ fileId, claims: ['a'] })).toBe(false);
+      expect(await FileDetailsModel.findById(fileId)).toBeNull();
+    });
+
+    it('propagates a failed write as a database error', async () => {
+      await LocalFileService.create({ ...attachment, claim: 'a' });
+      const update = vi.spyOn(FileDetailsModel.table, 'update').mockRejectedValueOnce(new Error('disk full'));
+
+      try {
+        await expect(LocalFileService.releaseClaims({ fileId, claims: ['a'] })).rejects.toMatchObject({
+          category: ErrorCategory.Database,
+          code: DatabaseErrorCode.WRITE_FAILED,
+        });
+      } finally {
+        update.mockRestore();
+      }
     });
   });
 

@@ -53,6 +53,7 @@ vi.mock('@/services/local/file/file', () => ({
     read: vi.fn(),
     deleteById: vi.fn(),
     isReferencedElsewhere: vi.fn(),
+    releaseClaims: vi.fn(),
   },
 }));
 
@@ -132,6 +133,8 @@ beforeEach(async () => {
   // cached post, a published profile without an image, no other post
   vi.mocked(HomeserverService.exists).mockResolvedValue(false);
   vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(false);
+  // No other upload claims a file
+  vi.mocked(LocalFileService.releaseClaims).mockResolvedValue(false);
   vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(buildUser(TEST_PUBKY, { name: 'Alice' }).body);
   vi.mocked(HomeserverService.listAll).mockResolvedValue([]);
   vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue([]);
@@ -243,6 +246,7 @@ describe('FileApplication', () => {
 
       await FileApplication.commitCreate({ fileAttachments: [attachment] });
 
+      expect(attachment.claim).toEqual(expect.any(String));
       expect(existsSpy).toHaveBeenCalledWith(attachment.media.url);
       expect(putBlobSpy).toHaveBeenCalledWith({ url: attachment.media.url, blob: attachment.bytes });
       expect(createSpy).toHaveBeenCalledWith(attachment);
@@ -307,6 +311,19 @@ describe('FileApplication', () => {
       expect((error as Error).message).toBe('blob upload failed');
       // The slow sibling completed its full chain before the rejection surfaced
       expect(createSpy).toHaveBeenCalledWith(slow);
+    });
+
+    it('mints a claim per upload, the same bytes uploaded twice included', async () => {
+      const first = createMockFileAttachment(1);
+      const again = createMockFileAttachment(1);
+      vi.mocked(HomeserverService.putBlob).mockResolvedValue(undefined);
+      vi.mocked(LocalFileService.create).mockResolvedValue(undefined);
+
+      await FileApplication.commitCreate({ fileAttachments: [first, again] });
+
+      expect(first.claim).toEqual(expect.any(String));
+      expect(again.claim).toEqual(expect.any(String));
+      expect(again.claim).not.toBe(first.claim);
     });
 
     it('uploads multiple files in parallel', async () => {
@@ -945,6 +962,7 @@ describe('FileApplication', () => {
 
       await FileApplication.commitDeleteUploaded([attachment]);
 
+      expect(LocalFileService.releaseClaims).not.toHaveBeenCalled();
       expect(LocalFileService.isReferencedElsewhere).not.toHaveBeenCalled();
       expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
       expect(LocalFileService.deleteById).not.toHaveBeenCalled();
@@ -961,6 +979,66 @@ describe('FileApplication', () => {
       expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
       expect(NexusPostStreamService.fetchByIds).not.toHaveBeenCalled();
       expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(attachment.media.url);
+    });
+
+    it("releases the batch's claims on each file at once, those of a preexisting file too", async () => {
+      const fresh = { ...createMockFileAttachment(1), preexisting: false, claim: 'claim-1' };
+      const freshAgain = { ...createMockFileAttachment(1), preexisting: false, claim: 'claim-2' };
+      const preexisting = { ...createMockFileAttachment(2), preexisting: true, claim: 'claim-3' };
+      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
+      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
+
+      await FileApplication.commitDeleteUploaded([fresh, freshAgain, preexisting]);
+
+      expect(LocalFileService.releaseClaims).toHaveBeenCalledTimes(2);
+      expect(LocalFileService.releaseClaims).toHaveBeenCalledWith({
+        fileId: buildCompositeId({ pubky: TEST_PUBKY, id: fresh.media.id }),
+        claims: ['claim-1', 'claim-2'],
+      });
+      expect(LocalFileService.releaseClaims).toHaveBeenCalledWith({
+        fileId: buildCompositeId({ pubky: TEST_PUBKY, id: preexisting.media.id }),
+        claims: ['claim-3'],
+      });
+      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(fresh.media.url);
+    });
+
+    it('keeps a file another pending upload still claims, before any reference check', async () => {
+      const attachment = createMockFileAttachment(1);
+      attachment.preexisting = false;
+      attachment.claim = 'mine';
+      vi.mocked(LocalFileService.releaseClaims).mockResolvedValue(true);
+
+      await FileApplication.commitDeleteUploaded([attachment]);
+
+      expect(LocalFileService.isReferencedElsewhere).not.toHaveBeenCalled();
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+      expect(LocalFileService.deleteById).not.toHaveBeenCalled();
+    });
+
+    it("respects other uploads' claims on a file whose own claim was never written", async () => {
+      const attachment = createMockFileAttachment(1);
+      attachment.preexisting = false;
+      vi.mocked(LocalFileService.releaseClaims).mockResolvedValue(true);
+
+      await FileApplication.commitDeleteUploaded([attachment]);
+
+      expect(LocalFileService.releaseClaims).toHaveBeenCalledExactlyOnceWith({
+        fileId: buildCompositeId({ pubky: TEST_PUBKY, id: attachment.media.id }),
+        claims: [],
+      });
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    it('deletes nothing when a claim cannot be released, and rejects with that failure', async () => {
+      const first = { ...createMockFileAttachment(1), preexisting: false, claim: 'claim-1' };
+      const second = { ...createMockFileAttachment(2), preexisting: false, claim: 'claim-2' };
+      const dbError = new Error('claims unreadable');
+      vi.mocked(LocalFileService.releaseClaims).mockRejectedValueOnce(dbError);
+
+      await expect(FileApplication.commitDeleteUploaded([first, second])).rejects.toBe(dbError);
+
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+      expect(LocalFileService.deleteById).not.toHaveBeenCalled();
     });
 
     it('propagates errors when the deletion fails, leaving the row for a retry', async () => {
