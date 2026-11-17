@@ -12,7 +12,12 @@ import { useResourceTags } from '@/hooks/useResourceTags/useResourceTags';
 import { useShowEpisodes } from '@/hooks/useShowEpisodes/useShowEpisodes';
 import { FilterPostsBar } from '@/molecules/FilterPostsBar/FilterPostsBar';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
-import { EPISODES_ANCHOR, getAudioStreamUrl, getHttpUrl } from '@/molecules/ResourceCard/ResourceCard.utils';
+import {
+  EPISODES_ANCHOR,
+  getAudioStreamUrl,
+  getHttpUrl,
+  getResourceTarget,
+} from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceEpisodeRow, type TEpisodeShow } from '@/molecules/ResourceCard/ResourceEpisodes';
 import { formatDuration, formatFactDate } from '@/molecules/ResourceCard/ResourceFacts.utils';
 import { PlayStandIn } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
@@ -175,18 +180,21 @@ function EpisodeItem({ episode, show }: { episode: TPinakesEpisode; show: TEpiso
           />
         )}
       </Container>
-      {episode.uri && <EpisodeTags uri={episode.uri} title={title} />}
+      {episode.uri && <EpisodeTags uri={episode.uri} aliases={episode.aliases} title={title} />}
     </li>
   );
 }
 
 /**
- * An episode's own tags, read by its link, as a card's footer shows them (`ResourceTagBar`) but inline:
- * the chips only, nothing for an episode nobody tagged. The rows of a page mount together, so their
- * reads go to Nexus as one `by_ids` batch (one `by-uri` read per row on a Nexus without it).
+ * An episode's own tags, read by its link with its other links along (the entry's `aliases`, such as
+ * its feed item once `uri` names its page; deduped and capped as a card's spellings), as a card's
+ * footer shows them (`ResourceTagBar`) but inline: the chips only, nothing for an episode nobody
+ * tagged. The rows of a page mount together, so their reads go to Nexus as one `by_ids` batch (one
+ * `by-uri` read per row on a Nexus without it).
  */
-function EpisodeTags({ uri, title }: { uri: string; title: string }) {
-  const resourceTags = useResourceTags(uri);
+function EpisodeTags({ uri, aliases, title }: { uri: string; aliases?: string[]; title: string }) {
+  const { spellings } = getResourceTarget({ uri, refs: [], aliases }, uri);
+  const resourceTags = useResourceTags(uri, { spellings });
   if (resourceTags.tags.length === 0) return null;
   return (
     <Container overrideDefaults className="pl-14 sm:mt-0.5 sm:max-w-1/2 sm:pl-0">
