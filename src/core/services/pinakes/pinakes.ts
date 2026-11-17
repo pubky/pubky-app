@@ -6,6 +6,7 @@ import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { pinakesCardStaleTime, pinakesQueryClient } from './pinakes.query-client';
 import type {
   TPinakesCard,
+  TPinakesEpisodePage,
   TPinakesGroupDetail,
   TPinakesResourceDetail,
   TPinakesSearchResponse,
@@ -81,6 +82,41 @@ export class PinakesService {
       url: `${base}${RESOURCES_PATH}/${encodeURIComponent(id)}`,
       endpoint: `${base}${RESOURCES_PATH}/{id}`,
       operation: 'fetchCardById',
+    });
+  }
+
+  /**
+   * One page of a podcast show's episodes (`GET /v1/resources/{id}/episodes`), newest first: the
+   * episodes Pinakes keeps from the show's feed, or those whose title matches `q`.
+   *
+   * @param id - Pinakes resource ID of the show (`card.id`)
+   * @param options.limit - Episodes to ask for (1-20)
+   * @param options.offset - Where the page starts: the page before's `next_offset`; the first page without
+   * @param options.q - Words the episode titles are searched for (case-insensitive); none lists all
+   * @returns The page, or `null` when Pinakes does not know the resource (404) or is not configured
+   * @throws AppError when Pinakes fails or refuses the page
+   */
+  static async fetchEpisodes(
+    id: string,
+    { limit, offset, q }: { limit: number; offset?: number | null; q?: string | null },
+  ): Promise<TPinakesEpisodePage | null> {
+    const base = getPinakesBaseUrl();
+    if (!base) return null;
+
+    const endpoint = `${base}${RESOURCES_PATH}/${encodeURIComponent(id)}/episodes`;
+    const query = new URLSearchParams({
+      limit: String(limit),
+      ...(q ? { q } : {}),
+      ...(offset ? { offset: String(offset) } : {}),
+    }).toString();
+    return pinakesQueryClient.fetchQuery({
+      queryKey: ['pinakes', 'episodes', id, query],
+      queryFn: () =>
+        fetchPinakesOrNull<TPinakesEpisodePage>({
+          url: `${endpoint}?${query}`,
+          endpoint: `${base}${RESOURCES_PATH}/{id}/episodes`,
+          operation: 'fetchEpisodes',
+        }),
     });
   }
 

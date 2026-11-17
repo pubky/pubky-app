@@ -1,5 +1,10 @@
 import { PinakesApplication } from '@/application/pinakes/pinakes';
-import type { TPinakesCard, TPinakesGroupDetail, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import type {
+  TPinakesCard,
+  TPinakesEpisodePage,
+  TPinakesGroupDetail,
+  TPinakesResourceDetail,
+} from '@/services/pinakes/pinakes.types';
 
 /**
  * Entry point for external resource cards (Pinakes). Every method is network only (`fetch*`);
@@ -41,6 +46,30 @@ export class PinakesController {
    */
   static fetchRelated({ id, limit }: { id: string; limit: number }): Promise<TPinakesCard[]> {
     return PinakesApplication.fetchRelated(id, limit);
+  }
+
+  /**
+   * One page of a podcast show's episodes, newest first, or those whose title matches `q`.
+   *
+   * @param params.id - Pinakes resource ID of the show (`card.id`)
+   * @param params.limit - Episodes to ask for (1-20)
+   * @param params.offset - Where the page starts: the page before's `next_offset`
+   * @param params.q - Words to search the episode titles for
+   * @returns The page; empty, with no `next_offset`, when Pinakes does not know the show
+   * @throws AppError when Pinakes fails or refuses the page
+   */
+  static fetchEpisodes({
+    id,
+    limit,
+    offset,
+    q,
+  }: {
+    id: string;
+    limit: number;
+    offset?: number | null;
+    q?: string | null;
+  }): Promise<TPinakesEpisodePage> {
+    return PinakesApplication.fetchEpisodes(id, { limit, offset, q });
   }
 
   /**

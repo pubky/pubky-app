@@ -5,4 +5,6 @@ export interface FilterPostsBarProps {
   onValueChange: (value: string) => void;
   /** Validator message for a settled-but-invalid query; rendered below the pill. */
   validationMessage?: string | null;
+  /** What it filters, as its placeholder and accessible name; defaults to "Filter posts". */
+  label?: string;
 }

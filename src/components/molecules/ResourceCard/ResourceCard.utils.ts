@@ -174,6 +174,20 @@ export function getPlayableEpisodes(card: Partial<Pick<TPinakesResourceDetail, '
   });
 }
 
+/** The id of a show's Episodes section on its resource page: a show card's "All episodes" opens it. */
+export const EPISODES_ANCHOR = 'episodes';
+
+/**
+ * The show a podcast episode is from, as Pinakes names it (`related` entry `show`: the show's feed and
+ * title), or `null` when the card names none.
+ */
+export function getEpisodeShow(
+  card: Partial<Pick<TPinakesResourceDetail, 'related'>>,
+): { uri: string; name: string | null } | null {
+  const show = card.related?.find((entry) => entry.rel === 'show' && entry.uri);
+  return show?.uri ? { uri: show.uri, name: show.name?.trim() || null } : null;
+}
+
 /**
  * Whether the card plays whole in the app's own audio player: its own audio that is no preview (a
  * podcast episode's enclosure, an audio file Pinakes read), or a show's latest episodes. A

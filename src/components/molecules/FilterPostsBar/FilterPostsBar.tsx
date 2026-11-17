@@ -15,9 +15,15 @@ const MESSAGE_ID = 'filter-posts-bar-message';
  * Pill-shaped inline search input for the profile Posts tab ("Filter posts",
  * issue #2234). Presentation-only: debounce/validation live in
  * `useProfilePostsFilter`. Modeled on `SearchInputBar` minus tags/dropdown;
- * the validation message mirrors the `InputField` message pattern.
+ * the validation message mirrors the `InputField` message pattern. A show's resource page filters
+ * its episodes with it too (`label` "Filter episodes").
  */
-export function FilterPostsBar({ value, onValueChange, validationMessage }: FilterPostsBarProps) {
+export function FilterPostsBar({
+  value,
+  onValueChange,
+  validationMessage,
+  label = 'Filter posts',
+}: FilterPostsBarProps) {
   return (
     <Container overrideDefaults className="flex min-w-0 shrink-0 flex-col gap-2">
       <Container
@@ -29,12 +35,12 @@ export function FilterPostsBar({ value, onValueChange, validationMessage }: Filt
       >
         <Input
           type="text"
-          placeholder={'Filter posts'}
+          placeholder={label}
           value={value}
           onChange={(event) => onValueChange(event.target.value)}
           maxLength={CONTENT_SEARCH_QUERY_MAX_LENGTH}
           data-cy="profile-filter-posts-input"
-          aria-label={'Filter posts'}
+          aria-label={label}
           aria-invalid={!!validationMessage}
           aria-describedby={validationMessage ? MESSAGE_ID : undefined}
           className="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 pl-0 text-base font-medium text-foreground shadow-none md:text-base"

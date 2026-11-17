@@ -2,7 +2,6 @@
 
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Loader2 } from 'lucide-react';
-import { Audio } from '@/atoms/Audio/Audio';
 import { Container } from '@/atoms/Container/Container';
 import { Iframe } from '@/atoms/Iframe/Iframe';
 import { Link } from '@/atoms/Link/Link';
@@ -11,6 +10,7 @@ import { reportMediaStart, stopOtherMedia, useMediaBox } from '@/hooks/useOnePla
 import { tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { cn } from '@/libs/utils/utils';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
+import { ResourceAudioControls } from './ResourceAudioControls';
 import { getMinFrameWidth, type PlayerStart, type PlayerTarget } from './resourcePlayer.utils';
 import { type PlayerLoadState, useFramePress } from './useResourcePlayer';
 
@@ -27,6 +27,11 @@ interface ResourcePlayerFrameProps {
   onPlay?: (media: Element) => void;
   /** Its media was paused or has ended, where its player tells (`useMediaBox`): paused in its card, it does not dock. */
   onPause?: () => void;
+  /**
+   * The app's audio player asks, once mounted, whether a press opened it (`ResourceAudioPlayer`): its
+   * Play/Pause then takes the focus of the Play that is gone.
+   */
+  takeFocus?: () => boolean;
   /**
    * An embed shown up front (a card without Also on, `GenericResourcePreview`), not opened by Play:
    * no status line, since nothing was asked to start; loaded once near the screen, like a post's
@@ -108,10 +113,11 @@ function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: numb
 }
 
 /**
- * A service's own player, unchanged: the iframe its embed code makes (or the themed `Audio` for a
- * plain file), at the service's height for audio and 16:9 for video (at the card's full width, no height
- * floor). Until the frame loads, a pulsing placeholder of the same size covers it, and only the
- * status line names the service, to screen readers. A frame that has not loaded after a while
+ * A service's own player, unchanged: the iframe its embed code makes, at the service's height for
+ * audio and 16:9 for video (at the card's full width, no height floor); a plain file plays in the
+ * app's own audio player (`ResourceAudioControls`), as tall as its controls. Until a frame loads, a
+ * pulsing placeholder of the same size covers it, and only the status line names the service, to
+ * screen readers. A frame that has not loaded after a while
  * offers the service's page. One press on our Play starts it: by its `src` or by its start message
  * (Spotify, TIDAL). A service that cannot start that way (Mixcloud, Deezer) says a press inside its
  * player is needed, to screen readers only; the card never claims playback. One media plays on the
@@ -126,6 +132,7 @@ export function ResourcePlayerFrame({
   quiet = false,
   onPlay,
   onPause,
+  takeFocus,
 }: ResourcePlayerFrameProps) {
   const { frameRef, onLoad } = useStartMessage(target, onLoaded);
   const regionRef = useRef<HTMLDivElement>(null);
@@ -174,8 +181,10 @@ export function ResourcePlayerFrame({
     minWidth && fit < 1
       ? { width: minWidth, height: `${100 / fit}%`, transform: `scale(${fit})`, transformOrigin: '0 0' }
       : undefined;
-  const style =
-    target.layout.kind === 'audio'
+  const isAudioFile = target.element === 'audio';
+  const style = isAudioFile
+    ? undefined
+    : target.layout.kind === 'audio'
       ? ({
           '--player-h': `${target.layout.height * fit}px`,
           '--player-dock-h': `${(target.layout.dockHeight ?? target.layout.height) * fit}px`,
@@ -201,25 +210,22 @@ export function ResourcePlayerFrame({
         className={cn(
           'relative w-full overflow-hidden rounded-lg',
           target.element !== 'audio' && load !== 'ready' && 'bg-card',
-          // A tall frame (a 9:16 video) stays within the screen.
-          isVideo ? 'aspect-video max-h-[80vh]' : 'h-(--player-h)',
+          // A tall frame (a 9:16 video) stays within the screen; the app's audio player is as tall as its controls.
+          isVideo ? 'aspect-video max-h-[80vh]' : !isAudioFile && 'h-(--player-h)',
         )}
       >
-        {target.element === 'audio' ? (
-          <Audio
-            src={target.src}
-            controls
-            autoPlay={target.autoplay}
-            preload="metadata"
-            aria-label={label}
+        {isAudioFile ? (
+          <ResourceAudioControls
+            target={target}
+            title={title}
+            label={label}
+            takeFocus={takeFocus}
             onLoadedMetadata={() => {
               onLoaded();
               setLoadedRound(round);
             }}
-            // A file that fails shows the browser's own controls, not a placeholder that never ends.
+            // A file that fails keeps the controls (its time at 0:00), not a placeholder that never ends.
             onError={() => setLoadedRound(round)}
-            className="absolute inset-0 size-full"
-            data-testid="resource-player-audio"
           />
         ) : (
           <Iframe
@@ -247,7 +253,8 @@ export function ResourcePlayerFrame({
             )}
           />
         )}
-        {load === 'loading' && (
+        {/* The app's audio player shows its controls at once: its length reads "--:--" until known. */}
+        {load === 'loading' && !isAudioFile && (
           <Container
             overrideDefaults
             aria-hidden="true"

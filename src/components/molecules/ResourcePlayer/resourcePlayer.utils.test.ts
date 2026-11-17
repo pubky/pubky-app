@@ -184,7 +184,7 @@ describe('getPlayerTarget', () => {
     });
   });
 
-  it('plays a plain https audio file in the browser player', () => {
+  it('plays a plain https audio file in the app audio player', () => {
     expect(getPlayerTarget('https://example.com/files/episode.mp3')).toMatchObject({ element: 'audio' });
   });
 
@@ -478,7 +478,7 @@ describe('getUpFrontTarget', () => {
     expect(upFront.autoplay).toBe(false);
   });
 
-  it('keeps a plain audio file in the browser player, which then does not start on its own', () => {
+  it('keeps a plain audio file in the app audio player, which then does not start on its own', () => {
     const upFront = getUpFrontTarget(getPlayerTarget('https://example.com/a.mp3')!);
     expect(upFront.element).toBe('audio');
     expect(upFront.src).toBe('https://example.com/a.mp3');

@@ -10,6 +10,7 @@ import { getResourceTarget } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { PostPageLayout } from '@/organisms/PostPageShell/PostPageLayout';
 import { ResourceDetails } from '@/organisms/ResourceDetails/ResourceDetails';
 import { getThreadUri } from '@/organisms/ResourceDetails/ResourceDetails.utils';
+import { ResourceEpisodesSection } from '@/organisms/ResourceDetails/ResourceEpisodesSection';
 import { ResourceSidebar } from '@/organisms/ResourceDetails/ResourceSidebar';
 
 interface ResourcePageProps {
@@ -21,7 +22,8 @@ interface ResourcePageProps {
  * Template for an external resource's page (`/resource?uri=…`), laid out as a single post's page
  * ({@link PostPageLayout}): the resource's card where the post stands, its sidebar cards (Also on,
  * Similar) above the post page's Participants and Feedback. Below `lg` they follow the card inline,
- * since the mobile header's right button is "Join Pubky" for visitors.
+ * since the mobile header's right button is "Join Pubky" for visitors. A podcast show's episodes
+ * come last (`ResourceEpisodesSection`), since their list reads on as it scrolls.
  *
  * A link Pinakes does not know is sent to be read when its page opens (`POST /v1/resolve`): the page
  * shows the card's skeleton and the thread meanwhile, the card once Pinakes has read it, and the link
@@ -69,6 +71,8 @@ function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () =>
           {sidebar(false)}
         </Container>
       )}
+      {/* A show's episodes, last: the list reads on as it scrolls, as a feed */}
+      <ResourceEpisodesSection card={card} />
     </PostPageLayout>
   );
 }

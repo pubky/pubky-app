@@ -42,7 +42,7 @@ describe('ResourcePlayerFrame', () => {
     vi.useRealTimers();
   });
 
-  it('plays a plain audio file in the app Audio player, drawn in the app theme', () => {
+  it('plays a plain audio file in the app’s own audio player, with no browser controls', () => {
     const file = getPlayerTarget('https://example.com/episode.mp3')!;
     render(<ResourcePlayerFrame target={file} title="Episode 1" load="loading" onLoaded={() => {}} />);
 
@@ -51,13 +51,18 @@ describe('ResourcePlayerFrame', () => {
     expect(audio).toHaveAttribute('src', 'https://example.com/episode.mp3');
     expect(audio).toHaveAttribute('aria-label', 'example.com player: Episode 1');
     expect(audio).toHaveAttribute('preload', 'metadata');
-    expect(audio.controls).toBe(true);
+    expect(audio.controls).toBe(false);
     expect(audio.autoplay).toBe(true);
-    expect(audio).toHaveClass('scheme-dark', 'light:scheme-light', 'absolute', 'inset-0', 'size-full');
-    expect(screen.getByRole('region', { name: 'example.com player: Episode 1' })).not.toHaveClass('bg-card');
-    // Until its metadata has loaded, a placeholder covers it; only the status line names the service.
-    expect(screen.getByTestId('resource-player-placeholder')).toHaveAttribute('aria-hidden', 'true');
-    expect(screen.getByTestId('resource-player-placeholder').textContent).toBe('');
+    expect(audio).toHaveClass('hidden');
+    const region = screen.getByRole('region', { name: 'example.com player: Episode 1' });
+    expect(region).not.toHaveClass('bg-card');
+    // As tall as its controls: no service height
+    expect(region).not.toHaveClass('h-(--player-h)');
+    // Its controls show at once, no placeholder over them; the status line says it is loading.
+    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+    expect(screen.getByTestId('resource-audio-controls')).toHaveTextContent('Episode 1');
+    expect(screen.getByTestId('resource-audio-from')).toHaveTextContent('example.com');
+    expect(screen.getByTestId('resource-player-status')).toHaveTextContent('Loading the example.com player');
   });
 
   it('shows no loading text, and tells only screen readers it is loading', () => {
@@ -104,23 +109,26 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
   });
 
-  it('shows its placeholder again over a plain audio file mounted anew, until its metadata has loaded', () => {
-    const file = getPlayerTarget('https://example.com/episode.mp3')!;
-    render(<ResourcePlayerFrame target={file} title="Episode 1" load="ready" onLoaded={() => {}} />);
-    expect(screen.getByTestId('resource-player-placeholder')).toBeInTheDocument();
-
-    act(() => screen.getByTestId('resource-player-audio').dispatchEvent(new Event('loadedmetadata')));
-    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
-  });
-
-  it('drops the placeholder over a plain audio file mounted anew whose file fails to load', () => {
+  it('says a plain audio file mounted anew is loading until its metadata has loaded', () => {
     const file = getPlayerTarget('https://example.com/episode.mp3')!;
     const onLoaded = vi.fn();
     render(<ResourcePlayerFrame target={file} title="Episode 1" load="ready" onLoaded={onLoaded} />);
-    expect(screen.getByTestId('resource-player-placeholder')).toBeInTheDocument();
+    const region = screen.getByRole('region', { name: 'example.com player: Episode 1' });
+    expect(region).toHaveAttribute('aria-busy', 'true');
+
+    act(() => screen.getByTestId('resource-player-audio').dispatchEvent(new Event('loadedmetadata')));
+    expect(region).toHaveAttribute('aria-busy', 'false');
+    expect(onLoaded).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the controls of a plain audio file mounted anew whose file fails to load', () => {
+    const file = getPlayerTarget('https://example.com/episode.mp3')!;
+    const onLoaded = vi.fn();
+    render(<ResourcePlayerFrame target={file} title="Episode 1" load="ready" onLoaded={onLoaded} />);
 
     act(() => screen.getByTestId('resource-player-audio').dispatchEvent(new Event('error')));
-    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+    expect(screen.getByRole('region', { name: 'example.com player: Episode 1' })).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByTestId('resource-audio-controls')).toBeInTheDocument();
     expect(onLoaded).not.toHaveBeenCalled();
   });
 

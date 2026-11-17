@@ -485,7 +485,10 @@ describe('PlayerHost', () => {
     };
     const Episodes = ({ testId }: { testId: string }) => (
       <section data-testid={testId}>
-        <ResourceEpisodes episodes={getPlayableEpisodes({ episodes: [EPISODE] })} />
+        <ResourceEpisodes
+          episodes={getPlayableEpisodes({ episodes: [EPISODE] })}
+          show={{ uri: 'https://darknetdiaries.com/', name: 'Darknet Diaries' }}
+        />
       </section>
     );
     const audios = () => Array.from(document.querySelectorAll('audio'));
