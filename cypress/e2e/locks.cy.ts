@@ -372,7 +372,11 @@ describe('locks', () => {
       cy.intercept('DELETE', `**/pub/social/v1/posts/${postId}/*`).as('announcementDeleted');
       cy.get('[data-cy="dialog-confirm-delete-btn"]').should('be.enabled').click();
       cy.get('[data-cy="dialog-content"]').should('not.exist');
-      cy.wait('@announcementDeleted').its('response.statusCode').should('be.oneOf', [200, 204]);
+      // The DELETE follows the lock deletion and three bounded reads; on a loaded machine it lands past the
+      // default 5 s request wait (seen at 4.4 s and later after the dialog closed), so wait like any other command.
+      cy.wait('@announcementDeleted', { requestTimeout: Cypress.config('defaultCommandTimeout') })
+        .its('response.statusCode')
+        .should('be.oneOf', [200, 204]);
       // The post is deleted only after the Lock Server has accepted the lock deletion.
       cy.get<string>('@lockId').then((lockId) => {
         cy.wrap(lockServer).its('deletedLocks').should('deep.eq', [lockId]);
