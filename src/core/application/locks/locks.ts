@@ -313,15 +313,16 @@ export class LocksApplication {
   }
 
   /**
-   * Lock ids the reader has started a payment for, from the purchases root (and the social one until
-   * the copy is done). The bundle id file is written before the proof is submitted, so pending and
-   * failed purchases are included. One listing per root answers it for every lock post on screen, so
-   * the feed never asks per post.
+   * Lock ids the reader has started a payment for, from both purchases roots. The bundle id file is
+   * written before the proof is submitted, so pending and failed purchases are included. One listing
+   * per root answers it for every lock post on screen, so the feed never asks per post.
    */
   static async fetchPurchasedLockIds({ readerPubky }: TFetchUnlockedListParams): Promise<string[]> {
+    // The social root even after the copy, until #3207, as in `fetchResolvedPurchase`: a build before
+    // #3206 and a failed second PUT in `startPayment` can leave an id only there.
     const [files, socialFiles] = await Promise.all([
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchasesRootUrl(readerPubky) }),
-      this.listSocialRoot(readerPubky, GuardedContentParser.socialPurchasesRootUrl(readerPubky)),
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialPurchasesRootUrl(readerPubky) }),
     ]);
     return GuardedContentParser.purchasedLockIds([...files, ...socialFiles]);
   }
@@ -520,9 +521,12 @@ export class LocksApplication {
     readerPubky,
     isCurrent,
   }: TFetchUnlockedListParams & TViewerScope): Promise<TUnlockedListItem[]> {
+    const copied = await this.hasCopiedSocialFiles(readerPubky);
     const [files, socialFiles] = await Promise.all([
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),
-      this.listSocialRoot(readerPubky, GuardedContentParser.socialUnlockedRootUrl(readerPubky)),
+      copied
+        ? []
+        : HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialUnlockedRootUrl(readerPubky) }),
     ]);
     const markerUrls = new Map<string, string>();
     for (const lockId of GuardedContentParser.completedLockIds(socialFiles)) {
@@ -617,12 +621,13 @@ export class LocksApplication {
     if (!lockId) return null;
 
     const operation = 'fetchReplicatedContent';
+    const copied = await this.hasCopiedSocialFiles(readerPubky);
     let replicatedPost = await this.readReplicatedMarker(
       GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
       lockId,
       operation,
     );
-    if (!replicatedPost && !(await this.hasCopiedSocialFiles(readerPubky))) {
+    if (!replicatedPost && !copied) {
       const socialMarkerUrl = GuardedContentParser.socialUnlockedPostUrl(readerPubky, lockId);
       replicatedPost = await this.readReplicatedMarker(socialMarkerUrl, lockId, operation);
     }
@@ -682,8 +687,10 @@ export class LocksApplication {
 
   /**
    * Whether the reader's files under `/priv/social/` are all copied to the app's namespace (#3206);
-   * until then the lists and the replica read also look there. One flag read per reader and page load.
-   * A failed read counts as not copied: reading both roots is only slower.
+   * until then the unlocked list and the replica read also look there. One flag read per reader and
+   * page load. A failed read counts as not copied: reading both roots is only slower. Await it before
+   * reading the new root: read after, it can report a copy that finished after that read, and the
+   * file is then in neither answer.
    */
   private static hasCopiedSocialFiles(readerPubky: string): Promise<boolean> {
     let copied = this.socialFilesCopied.get(readerPubky);
@@ -695,14 +702,6 @@ export class LocksApplication {
       this.socialFilesCopied.set(readerPubky, copied);
     }
     return copied;
-  }
-
-  /**
-   * A social root's listing, or none once the copy is done. Called beside the new root's listing, so the
-   * flag read adds no wait.
-   */
-  private static async listSocialRoot(readerPubky: string, baseDirectory: string): Promise<string[]> {
-    return (await this.hasCopiedSocialFiles(readerPubky)) ? [] : HomeserverService.listAll({ baseDirectory });
   }
 
   /**

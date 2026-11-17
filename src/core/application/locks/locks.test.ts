@@ -1444,14 +1444,19 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.socialListAll).toHaveBeenCalledWith({ baseDirectory: 'pubky://reader1/priv/social/purchases/' });
     });
 
-    it('lists only the new root once the copy is done', async () => {
+    // A build before #3206 can still save an id there after the copy, and so can a failed second PUT in
+    // `startPayment`: without it, a paid lock loses the recovery of content it never received.
+    it('still lists the social root after the copy, until #3207', async () => {
       mocks.copyFlag.mockResolvedValue({ bytes: new Uint8Array(), modifiedAt: 1 });
       mocks.listAll.mockResolvedValue([
         `pubky://copied-buyer/priv/app.pubky/v1/locks/purchases/lock3/${BUNDLE_B}.json`,
       ]);
+      mocks.socialListAll.mockResolvedValue([`pubky://copied-buyer/priv/social/purchases/lock4/${BUNDLE_A}.json`]);
 
-      await expect(LocksApplication.fetchPurchasedLockIds({ readerPubky: 'copied-buyer' })).resolves.toEqual(['lock3']);
-      expect(mocks.socialListAll).not.toHaveBeenCalled();
+      await expect(LocksApplication.fetchPurchasedLockIds({ readerPubky: 'copied-buyer' })).resolves.toEqual([
+        'lock3',
+        'lock4',
+      ]);
     });
   });
 
@@ -2027,6 +2032,16 @@ describe('LocksApplication.fetchReplicatedContent', () => {
     expect(mocks.socialGetBytesIfExists).not.toHaveBeenCalled();
   });
 
+  // Read after the new marker, the flag can report a copy that finished after that read: the replica
+  // is then in neither root's answer.
+  it('reads the copy flag before the new marker', async () => {
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker({ content: 'new copy', kind: 'short', attachments: null }));
+
+    await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: 'flag-first-reader' });
+
+    expect(mocks.copyFlag.mock.invocationCallOrder[0]).toBeLessThan(mocks.getBytesIfExists.mock.invocationCallOrder[0]);
+  });
+
   it('loads the replicated post and its attachments from the reader priv (no lock file needed)', async () => {
     const attachmentUrl = `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/img1`;
     mocks.getBytesIfExists.mockResolvedValueOnce(
@@ -2204,6 +2219,16 @@ describe('LocksApplication.fetchUnlockedList', () => {
 
     await expect(LocksApplication.fetchUnlockedList({ readerPubky: 'copied-library' })).resolves.toEqual([]);
     expect(mocks.socialListAll).not.toHaveBeenCalled();
+  });
+
+  // Read beside the new root's listing, the flag can report a copy that another tab finished after
+  // that listing: the replica is then in neither listing.
+  it("reads the copy flag before the new root's listing", async () => {
+    mocks.listAll.mockResolvedValueOnce([]);
+
+    await LocksApplication.fetchUnlockedList({ readerPubky: 'flag-first-library' });
+
+    expect(mocks.copyFlag.mock.invocationCallOrder[0]).toBeLessThan(mocks.listAll.mock.invocationCallOrder[0]);
   });
 });
 
@@ -2431,15 +2456,16 @@ describe('LocksApplication.copySocialReaderFiles', () => {
     expect(written()).toEqual([url(NEW, '_social_copied.json')]);
   });
 
-  it('stops reading the social roots once the copy finished', async () => {
+  it('stops reading the social unlocked root once the copy finished, and keeps the purchases root', async () => {
     await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
     vi.clearAllMocks();
     mocks.listAll.mockResolvedValue([]);
+    mocks.socialListAll.mockResolvedValue([]);
 
     await LocksApplication.fetchUnlockedList({ readerPubky: reader });
     await LocksApplication.fetchPurchasedLockIds({ readerPubky: reader });
 
-    expect(mocks.socialListAll).not.toHaveBeenCalled();
+    expect(mocks.socialListAll.mock.calls).toEqual([[{ baseDirectory: url(SOCIAL, 'purchases/') }]]);
     expect(mocks.copyFlag).not.toHaveBeenCalled();
   });
 

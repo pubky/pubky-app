@@ -150,16 +150,18 @@ for objects the social spec defines, and only pubky.app reads these files, so th
 2. **Flag.** `/priv/app.pubky/v1/locks/_social_copied.json` (named apart from the migration gate's `_migrated.json`)
    is written last, after a run with no failure. An account whose social roots are empty (it never used Locks before
    #3206) gets no flag file, so its export shows nothing new; the page remembers the answer instead.
-3. **Reads.** The flag is read once per reader and page load, beside the new root's listing. Until it exists, one
-   replica is read from the new root, then from the social root only when the new one has no marker, and the lists
-   (the Unlocked screen, `usePurchasedLocks`) read both roots, the new one winning. After the flag they read only the
-   new root. One lock's purchase files (`fetchResolvedPurchase`) are read from both roots on every payment until
-   #3207, flag or not: a build before #3206 still open in another tab or device writes its ids under the social
-   root, and a lock with an unreadable file there is still refused instead of paid twice.
+3. **Reads.** The flag is read once per reader and page load, before the new root: read after it, the flag can
+   report a copy another tab finished after that read, and the file is then in neither answer. Until the flag
+   exists, one replica is read from the new root, then from the social root only when the new one has no marker,
+   and the Unlocked screen reads both roots, the new one winning. After the flag they read only the new root.
+   Purchase files are read from both roots until #3207, flag or not: one lock's on every payment
+   (`fetchResolvedPurchase`) and all of them for `usePurchasedLocks`. A build before #3206 still open in another
+   tab or device writes its ids under the social root, and a lock with an unreadable file there is still refused
+   instead of paid twice.
 4. **Writes.** A fresh bundle id is saved under the social root first, then under the new root, both before the
    proof is submitted, until #3207. A build before #3206 on another device reads only the social root: without that
    copy it would mint a second id for a lock already paid here. If the second PUT fails, the retry finds the id under
-   the social root, which every build reads, and reuses it.
+   the social root, which every purchase read covers, and reuses it.
 5. **Left for #3207.** The social files are not deleted; removing them, the fallback reads, the copy, the social-root
    write and `/priv/social/:rw` from the Locks scopes is #3207. Account deletion also sweeps `/priv/social/` with that scope, so
    #3207 decides how a reader's leftover social files go.
