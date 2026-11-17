@@ -285,8 +285,8 @@ so local-first rollback can run. Network failures, server errors and permission 
 Public fetches and the separate Lock Server authentication flow do not enter this subscription.
 
 `ClientStateError` from the SDK `browserSessionStore.save()` call maps to `Database/WRITE_FAILED`; storage availability
-and app-reference writes keep their own database errors. Report a browser-storage problem for those failures, not a
-rejected approval. Unknown errors use a generic sign-in failure message.
+and app-reference writes keep their own database errors. The Ring/Bitkit and Passport sign-in surfaces do not tell these
+apart yet: like unknown errors, they show the generic sign-in failure message.
 
 ### Expected auth control flow
 

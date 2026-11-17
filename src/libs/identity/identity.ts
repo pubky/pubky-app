@@ -98,15 +98,6 @@ export class Identity {
   }
 
   /**
-   * Converts a keypair to a human-readable pubky string
-   * @param keypair - The keypair to convert
-   * @returns The pubky string with prefix
-   */
-  static pubkyFromKeypair(keypair: Keypair): string {
-    return keypair.publicKey.toString();
-  }
-
-  /**
    * Converts a secret key to a human-readable pubky string
    * @param secretKey - The secret key to convert
    * @returns The pubky string with prefix
