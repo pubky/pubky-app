@@ -72,11 +72,14 @@ export interface TPinakesStream {
 }
 
 /**
- * `Episode`: one of a podcast show's latest episodes, as a show's card carries it (`episodes`) and
- * `GET /v1/resources/{id}/episodes` lists it.
+ * `Episode`: one of a podcast show's episodes, as a show's card carries its latest (`episodes`) and
+ * `GET /v1/resources/{id}/episodes` lists them all, page by page.
  */
 export interface TPinakesEpisode {
-  /** The episode's page, else its feed item. */
+  /**
+   * The episode's own link (its feed item `{feed}?guid=…`, else its page): its card and resource page
+   * are read by it.
+   */
   uri: string;
   /** Plain text. */
   name?: string | null;
@@ -88,6 +91,13 @@ export interface TPinakesEpisode {
   stream?: TPinakesStream | null;
   /** The episode's own card, when Pinakes has read one. */
   id?: string | null;
+}
+
+/** `EpisodePage`: `GET /v1/resources/{id}/episodes`, a show's episodes newest first. */
+export interface TPinakesEpisodePage {
+  items: TPinakesEpisode[];
+  /** Where the next page starts (`offset`); absent or `null` on the last page. */
+  next_offset?: number | null;
 }
 
 /** `GroupRef`: the group a card is in; its other members are in `also_on`. */
@@ -254,10 +264,14 @@ export interface TPinakesCard {
 /**
  * `Related`: an object a chain card points at (a transaction's inputs and outputs and its block, a
  * block's neighbours and coinbase, an address's latest transactions, a Lightning node's channels),
- * with its own card root when it has one.
+ * with its own card root when it has one; on a podcast episode's card, its show (`show`: the show's
+ * feed and title).
  */
 export interface TPinakesRelated {
-  /** What it is to the card: `input`, `output`, `block`, `previous`, `next`, `coinbase`, `tx`, `channel`, ... */
+  /**
+   * What it is to the card: `input`, `output`, `block`, `previous`, `next`, `coinbase`, `tx`, `channel`,
+   * `show`, ...
+   */
   rel: string;
   /** Its card root (`btc:address/…`, `btc:tx/…`, `ln:node/…`), `null` for one with none (`OP_RETURN`). */
   uri?: string | null;
