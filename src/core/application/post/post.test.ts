@@ -81,7 +81,6 @@ vi.mock('@/application/file/file', () => ({
   FileApplication: {
     commitCreate: vi.fn(),
     commitDelete: vi.fn(),
-    commitDeleteUploaded: vi.fn(),
   },
 }));
 
@@ -203,43 +202,27 @@ describe('Post Application', () => {
         expect(saveSpy.mock.invocationCallOrder[0]).toBeLessThan(putBlobSpy.mock.invocationCallOrder[0]);
       });
 
-      it('should sweep the whole batch and skip the post when an upload fails', async () => {
+      it('should skip the post and delete no media when an upload fails', async () => {
         const fileAttachments = [createMockFileAttachment(1), createMockFileAttachment(2)];
         const mockData = { ...createMockPostData(), fileAttachments };
         const { commitCreateSpy, saveSpy, putBlobSpy } = setupCreateSpies();
         commitCreateSpy.mockRejectedValue(new Error('File upload failed'));
-        const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
 
         await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed');
-        expect(sweepSpy).toHaveBeenCalledWith(fileAttachments, mockData.compositePostId);
         expect(saveSpy).not.toHaveBeenCalled();
         expect(putBlobSpy).not.toHaveBeenCalled();
+        expect(FileApplication.commitDelete).not.toHaveBeenCalled();
       });
 
-      it('should roll back the uploads when the local post write fails', async () => {
+      it('should skip the PUT and delete no media when the local post write fails', async () => {
         const fileAttachments = [createMockFileAttachment(1)];
         const mockData = { ...createMockPostData(), fileAttachments };
         const { saveSpy, putBlobSpy } = setupCreateSpies();
         saveSpy.mockRejectedValue(new Error('Database write failed'));
-        const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
 
         await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('Database write failed');
-        expect(sweepSpy).toHaveBeenCalledWith(fileAttachments, mockData.compositePostId);
         expect(putBlobSpy).not.toHaveBeenCalled();
-      });
-
-      it('should propagate the upload error when the batch rollback also fails', async () => {
-        const mockData = { ...createMockPostData(), fileAttachments: [createMockFileAttachment(1)] };
-        const { commitCreateSpy } = setupCreateSpies();
-        commitCreateSpy.mockRejectedValue(new Error('File upload failed'));
-        vi.spyOn(FileApplication, 'commitDeleteUploaded').mockRejectedValue(new Error('Rollback failed'));
-        const loggerSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
-
-        await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed');
-        expect(loggerSpy).toHaveBeenCalledWith(
-          '[PostApplication.commitCreate] Failed to rollback file attachments',
-          expect.objectContaining({ compositePostId: mockData.compositePostId }),
-        );
+        expect(FileApplication.commitDelete).not.toHaveBeenCalled();
       });
     });
 
@@ -278,7 +261,7 @@ describe('Post Application', () => {
       });
     });
 
-    it('should rollback local write, rollback files, and skip tags when homeserver sync fails', async () => {
+    it('should rollback the local write, keep the uploads, and skip tags when homeserver sync fails', async () => {
       const fileAttachments = [createMockFileAttachment(1)];
       const mockData = {
         ...createMockPostData(),
@@ -288,11 +271,10 @@ describe('Post Application', () => {
       };
       const { deleteSpy, putBlobSpy, tagCreateSpy } = setupCreateSpies();
       putBlobSpy.mockRejectedValue(new Error('Homeserver sync failed'));
-      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
 
       await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('Homeserver sync failed');
       expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
-      expect(sweepSpy).toHaveBeenCalledWith(fileAttachments, mockData.compositePostId);
+      expect(FileApplication.commitDelete).not.toHaveBeenCalled();
       expect(tagCreateSpy).not.toHaveBeenCalled();
       expect(mockData.onPostSynced).not.toHaveBeenCalled();
     });
@@ -612,7 +594,6 @@ describe('Post Application', () => {
       putBlobSpy: vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined),
       fileCreateSpy: vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined),
       fileDeleteSpy: vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined),
-      fileDeleteUploadedSpy: vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined),
       removeKindStreamsSpy: vi.spyOn(LocalPostService, 'removeFromKindStreams').mockResolvedValue(undefined),
     });
 
@@ -814,9 +795,9 @@ describe('Post Application', () => {
         ]);
       });
 
-      it('should rollback the local edit and delete the new files when the PUT fails', async () => {
+      it('should rollback the local edit and keep the new files when the PUT fails', async () => {
         storeVersions(withAttachments());
-        const { editSpy, putBlobSpy, fileDeleteUploadedSpy } = setupEditSpies();
+        const { editSpy, putBlobSpy, fileDeleteSpy } = setupEditSpies();
         putBlobSpy.mockRejectedValue(new Error('PUT failed'));
 
         await expect(
@@ -833,11 +814,11 @@ describe('Post Application', () => {
           attachments: originalRow.attachments,
           kind: originalRow.kind,
         });
-        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added], compositePostId);
+        expect(fileDeleteSpy).not.toHaveBeenCalled();
       });
 
-      it('should sweep new files and skip the local edit when file upload fails', async () => {
-        const { editSpy, fileCreateSpy, fileDeleteUploadedSpy } = setupEditSpies();
+      it('should skip the local edit and delete no media when file upload fails', async () => {
+        const { editSpy, fileCreateSpy, fileDeleteSpy } = setupEditSpies();
         fileCreateSpy.mockRejectedValue(new Error('upload failed'));
 
         await expect(
@@ -848,13 +829,13 @@ describe('Post Application', () => {
           }),
         ).rejects.toThrow('upload failed');
 
-        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added], compositePostId);
+        expect(fileDeleteSpy).not.toHaveBeenCalled();
         expect(editSpy).not.toHaveBeenCalled();
       });
 
-      it('should delete uploaded files and skip the PUT when the local edit fails after uploads', async () => {
+      it('should keep the uploaded files and skip the PUT when the local edit fails after uploads', async () => {
         storeVersions(withAttachments());
-        const { editSpy, putBlobSpy, fileDeleteUploadedSpy } = setupEditSpies();
+        const { editSpy, putBlobSpy, fileDeleteSpy } = setupEditSpies();
         editSpy.mockRejectedValueOnce(new Error('local edit failed'));
 
         await expect(
@@ -865,19 +846,18 @@ describe('Post Application', () => {
           }),
         ).rejects.toThrow('local edit failed');
 
-        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith([added], compositePostId);
+        expect(fileDeleteSpy).not.toHaveBeenCalled();
         expect(putBlobSpy).not.toHaveBeenCalled();
       });
 
       it('never deletes media the edit removes: the earlier versions still reference it', async () => {
         storeVersions(withAttachments());
-        const { fileDeleteSpy, fileDeleteUploadedSpy, putBlobSpy } = setupEditSpies();
+        const { fileDeleteSpy, putBlobSpy } = setupEditSpies();
 
         await PostApplication.commitEdit({ compositePostId, edit: { attachmentUris: [kept] } });
 
         expect(lastPut(putBlobSpy).post.attachments).toEqual([{ uri: kept, alt: null, name: null }]);
         expect(fileDeleteSpy).not.toHaveBeenCalled();
-        expect(fileDeleteUploadedSpy).not.toHaveBeenCalled();
       });
 
       it('should remove the post from the old kind streams after a kind-changing edit succeeds', async () => {

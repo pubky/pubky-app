@@ -330,8 +330,9 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       if (isArticle && !article) return;
 
       // An article's inline files go up with the cover, in slot order (the order the serialized
-      // body references), through the controller: a failed publish rolls every upload back, so
-      // nothing of an unpublished article ever stays on the homeserver.
+      // body references), through the controller: the session uploads nothing itself, so a failed
+      // publish keeps the files staged for a retry. What the controller already uploaded stays on
+      // the homeserver (ADR-0027, _Media lifetime_); the retry PUTs the same bytes to the same address.
       const coverFile: File | undefined = article ? attachments[0] : undefined;
       const uploads = article ? article.inlineFiles : attachments;
       const createdPostId = await PostController.commitCreate({

@@ -53,7 +53,6 @@ vi.mock('@/services/local/file/file', () => ({
     read: vi.fn(),
     deleteById: vi.fn(),
     isReferencedElsewhere: vi.fn(),
-    releaseClaims: vi.fn(),
   },
 }));
 
@@ -129,12 +128,9 @@ beforeEach(async () => {
 
   ({ FileApplication } = await import('./file'));
 
-  // Default: the homeserver does not hold the bytes yet, and nothing references them: no other
-  // cached post, a published profile without an image, no other post
-  vi.mocked(HomeserverService.exists).mockResolvedValue(false);
+  // Default: nothing references the bytes: no other cached post, a published profile without an
+  // image, no other post
   vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(false);
-  // No other upload claims a file
-  vi.mocked(LocalFileService.releaseClaims).mockResolvedValue(false);
   vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(buildUser(TEST_PUBKY, { name: 'Alice' }).body);
   vi.mocked(HomeserverService.listAll).mockResolvedValue([]);
   vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue([]);
@@ -237,35 +233,18 @@ describe('FileApplication', () => {
   });
 
   describe('commitCreate', () => {
-    it('checks whether the homeserver holds the bytes, PUTs them, then persists the row', async () => {
+    it('PUTs the bytes, then persists the row, asking the homeserver nothing first', async () => {
       const attachment = createMockFileAttachment(1);
 
-      const existsSpy = vi.mocked(HomeserverService.exists).mockResolvedValue(false);
       const putBlobSpy = vi.mocked(HomeserverService.putBlob).mockResolvedValue(undefined);
       const createSpy = vi.mocked(LocalFileService.create).mockResolvedValue(undefined);
 
       await FileApplication.commitCreate({ fileAttachments: [attachment] });
 
-      expect(attachment.claim).toEqual(expect.any(String));
-      expect(existsSpy).toHaveBeenCalledWith(attachment.media.url);
       expect(putBlobSpy).toHaveBeenCalledWith({ url: attachment.media.url, blob: attachment.bytes });
       expect(createSpy).toHaveBeenCalledWith(attachment);
-      expect(attachment.preexisting).toBe(false);
-      expect(existsSpy.mock.invocationCallOrder[0]).toBeLessThan(putBlobSpy.mock.invocationCallOrder[0]);
+      expect(HomeserverService.exists).not.toHaveBeenCalled();
       expect(putBlobSpy.mock.invocationCallOrder[0]).toBeLessThan(createSpy.mock.invocationCallOrder[0]);
-    });
-
-    it('marks an upload whose bytes the homeserver already holds as preexisting, and still PUTs it', async () => {
-      const attachment = createMockFileAttachment(1);
-      vi.mocked(HomeserverService.exists).mockResolvedValue(true);
-      vi.mocked(HomeserverService.putBlob).mockResolvedValue(undefined);
-      vi.mocked(LocalFileService.create).mockResolvedValue(undefined);
-
-      await FileApplication.commitCreate({ fileAttachments: [attachment] });
-
-      expect(attachment.preexisting).toBe(true);
-      expect(HomeserverService.putBlob).toHaveBeenCalledTimes(1);
-      expect(LocalFileService.create).toHaveBeenCalledWith(attachment);
     });
 
     it('propagates errors if the upload fails, without persisting the row', async () => {
@@ -280,8 +259,7 @@ describe('FileApplication', () => {
     });
 
     it('waits for sibling uploads to settle before rejecting on a partial failure', async () => {
-      // On failure the callers sweep the whole batch — rejecting while a
-      // sibling upload is still in flight would race the rollback against it
+      // The caller hears of a failure only once no sibling PUT is in flight
       const failing = createMockFileAttachment(1);
       const slow = createMockFileAttachment(2);
 
@@ -311,19 +289,6 @@ describe('FileApplication', () => {
       expect((error as Error).message).toBe('blob upload failed');
       // The slow sibling completed its full chain before the rejection surfaced
       expect(createSpy).toHaveBeenCalledWith(slow);
-    });
-
-    it('mints a claim per upload, the same bytes uploaded twice included', async () => {
-      const first = createMockFileAttachment(1);
-      const again = createMockFileAttachment(1);
-      vi.mocked(HomeserverService.putBlob).mockResolvedValue(undefined);
-      vi.mocked(LocalFileService.create).mockResolvedValue(undefined);
-
-      await FileApplication.commitCreate({ fileAttachments: [first, again] });
-
-      expect(first.claim).toEqual(expect.any(String));
-      expect(again.claim).toEqual(expect.any(String));
-      expect(again.claim).not.toBe(first.claim);
     });
 
     it('uploads multiple files in parallel', async () => {
@@ -899,155 +864,6 @@ describe('FileApplication', () => {
       vi.mocked(LocalFileService.deleteById).mockRejectedValue(new Error('Local deletion failed'));
 
       await expect(FileApplication.commitDelete([url])).rejects.toThrow('Local deletion failed');
-    });
-  });
-
-  describe('commitDeleteUploaded', () => {
-    it('deletes the files this batch put on the homeserver by their known URLs and removes the rows', async () => {
-      const attachment = createMockFileAttachment(1);
-      attachment.preexisting = false;
-      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
-      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(attachment.media.url);
-      expect(LocalFileService.deleteById).toHaveBeenCalledWith(
-        buildCompositeId({ pubky: TEST_PUBKY, id: attachment.media.id }),
-      );
-      expect(LocalFileService.read).not.toHaveBeenCalled();
-    });
-
-    it('never deletes a file the homeserver held before the upload: another post may reference it', async () => {
-      const preexisting = createMockFileAttachment(1);
-      preexisting.preexisting = true;
-      const fresh = createMockFileAttachment(2);
-      fresh.preexisting = false;
-      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
-      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([preexisting, fresh]);
-
-      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(fresh.media.url);
-    });
-
-    it('keeps a file another cached object references, and asks nothing of the network', async () => {
-      const attachment = createMockFileAttachment(1);
-      attachment.preexisting = false;
-      vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(true);
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
-    });
-
-    it('leaves the post the batch was for out of the local check: a failed create tombstones its row with the URIs', async () => {
-      const attachment = createMockFileAttachment(1);
-      attachment.preexisting = false;
-      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
-      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([attachment], 'author:post');
-
-      expect(LocalFileService.isReferencedElsewhere).toHaveBeenCalledExactlyOnceWith({
-        uri: attachment.media.url,
-        excludePostId: 'author:post',
-      });
-      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(attachment.media.url);
-    });
-
-    it('leaves a file whose probe failed alone: whether the homeserver held it before is unknown', async () => {
-      const attachment = createMockFileAttachment(1);
-      expect(attachment.preexisting).toBeUndefined();
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(LocalFileService.releaseClaims).not.toHaveBeenCalled();
-      expect(LocalFileService.isReferencedElsewhere).not.toHaveBeenCalled();
-      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
-      expect(LocalFileService.deleteById).not.toHaveBeenCalled();
-    });
-
-    it('runs only the local check: a file new to the homeserver has no other referencer there', async () => {
-      const attachment = createMockFileAttachment(1);
-      attachment.preexisting = false;
-      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
-      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
-      expect(NexusPostStreamService.fetchByIds).not.toHaveBeenCalled();
-      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(attachment.media.url);
-    });
-
-    it("releases the batch's claims on each file at once, those of a preexisting file too", async () => {
-      const fresh = { ...createMockFileAttachment(1), preexisting: false, claim: 'claim-1' };
-      const freshAgain = { ...createMockFileAttachment(1), preexisting: false, claim: 'claim-2' };
-      const preexisting = { ...createMockFileAttachment(2), preexisting: true, claim: 'claim-3' };
-      vi.mocked(HomeserverService.deleteIdempotent).mockResolvedValue(undefined);
-      vi.mocked(LocalFileService.deleteById).mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([fresh, freshAgain, preexisting]);
-
-      expect(LocalFileService.releaseClaims).toHaveBeenCalledTimes(2);
-      expect(LocalFileService.releaseClaims).toHaveBeenCalledWith({
-        fileId: buildCompositeId({ pubky: TEST_PUBKY, id: fresh.media.id }),
-        claims: ['claim-1', 'claim-2'],
-      });
-      expect(LocalFileService.releaseClaims).toHaveBeenCalledWith({
-        fileId: buildCompositeId({ pubky: TEST_PUBKY, id: preexisting.media.id }),
-        claims: ['claim-3'],
-      });
-      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(fresh.media.url);
-    });
-
-    it('keeps a file another pending upload still claims, before any reference check', async () => {
-      const attachment = createMockFileAttachment(1);
-      attachment.preexisting = false;
-      attachment.claim = 'mine';
-      vi.mocked(LocalFileService.releaseClaims).mockResolvedValue(true);
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(LocalFileService.isReferencedElsewhere).not.toHaveBeenCalled();
-      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
-      expect(LocalFileService.deleteById).not.toHaveBeenCalled();
-    });
-
-    it("respects other uploads' claims on a file whose own claim was never written", async () => {
-      const attachment = createMockFileAttachment(1);
-      attachment.preexisting = false;
-      vi.mocked(LocalFileService.releaseClaims).mockResolvedValue(true);
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(LocalFileService.releaseClaims).toHaveBeenCalledExactlyOnceWith({
-        fileId: buildCompositeId({ pubky: TEST_PUBKY, id: attachment.media.id }),
-        claims: [],
-      });
-      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
-    });
-
-    it('deletes nothing when a claim cannot be released, and rejects with that failure', async () => {
-      const first = { ...createMockFileAttachment(1), preexisting: false, claim: 'claim-1' };
-      const second = { ...createMockFileAttachment(2), preexisting: false, claim: 'claim-2' };
-      const dbError = new Error('claims unreadable');
-      vi.mocked(LocalFileService.releaseClaims).mockRejectedValueOnce(dbError);
-
-      await expect(FileApplication.commitDeleteUploaded([first, second])).rejects.toBe(dbError);
-
-      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
-      expect(LocalFileService.deleteById).not.toHaveBeenCalled();
-    });
-
-    it('propagates errors when the deletion fails, leaving the row for a retry', async () => {
-      const attachment = createMockFileAttachment(1);
-      attachment.preexisting = false;
-      vi.mocked(HomeserverService.deleteIdempotent).mockRejectedValue(new Error('deletion failed'));
-
-      await expect(FileApplication.commitDeleteUploaded([attachment])).rejects.toThrow('deletion failed');
-      expect(LocalFileService.deleteById).not.toHaveBeenCalled();
     });
   });
 });

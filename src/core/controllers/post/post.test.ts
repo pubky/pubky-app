@@ -11,7 +11,6 @@ import { db } from '@/database/franky/franky';
 import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -55,7 +54,6 @@ vi.mock('@/application/file/file', () => ({
     toFileAttachment: vi.fn(),
     commitCreate: vi.fn(),
     commitDelete: vi.fn(),
-    commitDeleteUploaded: vi.fn(),
     getMetadata: vi.fn(),
   },
 }));
@@ -947,7 +945,7 @@ describe('PostController', () => {
           attachments: { original: [keptUri, photoUri], kept: [keptUri], added: [imageFile] },
         });
 
-        // The re-added file goes up (idempotent, found preexisting)
+        // The re-added file goes up again (idempotent: content addressed)
         expect(commitEditSpy).toHaveBeenCalledWith(
           expect.objectContaining({ edit: expect.objectContaining({ attachmentUris: [keptUri, photoUri] }) }),
         );
@@ -1014,7 +1012,6 @@ describe('PostController', () => {
           fileAttachments: undefined,
         });
         expect(FileApplication.commitDelete).not.toHaveBeenCalled();
-        expect(FileApplication.commitDeleteUploaded).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
@@ -1778,68 +1775,34 @@ describe('PostController', () => {
       expect(JSON.parse(post.object.content).cover_image).toBe(mediaUrl('x', 'image/png'));
     });
 
-    it('rolls back the uploaded cover when the collection create fails, as commitEditCollection does', async () => {
+    it('keeps the uploaded cover when the collection create fails', async () => {
       vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
       vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
       const createError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
         service: ErrorService.Homeserver,
         operation: 'commitCreate',
       });
-      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate').mockRejectedValue(createError);
-      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+      vi.spyOn(PostApplication, 'commitCreate').mockRejectedValue(createError);
 
       const { PostController } = await import('./post');
       await expect(PostController.commitCreateCollection(createParams())).rejects.toBe(createError);
 
-      // The upload itself goes to the sweep, named with its post, which leaves a preexisting file in place
-      const [{ compositePostId }] = commitCreateSpy.mock.calls[0];
-      expect(sweepSpy).toHaveBeenCalledWith(
-        [expect.objectContaining({ media: expect.objectContaining({ url: mediaUrl('x', 'image/png') }) })],
-        compositePostId,
-      );
+      expect(FileApplication.commitCreate).toHaveBeenCalledOnce();
       expect(FileApplication.commitDelete).not.toHaveBeenCalled();
     });
 
-    it('rolls back the uploaded cover when the envelope is refused after the upload, before any post is named', async () => {
+    it('keeps the uploaded cover when the envelope is refused after the upload, before any post is named', async () => {
       vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
       vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
       const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate');
-      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
 
       const { PostController } = await import('./post');
       await expect(PostController.commitCreateCollection({ ...createParams(), name: '   ' })).rejects.toThrow(
         'Collection name is required',
       );
 
-      // No post was named yet, so the sweep has no post to leave out of its local check
       expect(commitCreateSpy).not.toHaveBeenCalled();
-      expect(sweepSpy).toHaveBeenCalledWith(
-        [expect.objectContaining({ media: expect.objectContaining({ url: mediaUrl('x', 'image/png') }) })],
-        undefined,
-      );
       expect(FileApplication.commitDelete).not.toHaveBeenCalled();
-    });
-
-    it('logs a failed cover rollback and still rethrows the create error', async () => {
-      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
-      vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
-      const createError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
-        service: ErrorService.Homeserver,
-        operation: 'commitCreate',
-      });
-      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate').mockRejectedValue(createError);
-      const cleanupError = new Error('sweep failed');
-      vi.spyOn(FileApplication, 'commitDeleteUploaded').mockRejectedValue(cleanupError);
-      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
-
-      const { PostController } = await import('./post');
-      await expect(PostController.commitCreateCollection(createParams())).rejects.toBe(createError);
-
-      const [{ compositePostId }] = commitCreateSpy.mock.calls[0];
-      expect(warnSpy).toHaveBeenCalledWith(
-        '[PostController.commitCreateCollection] Failed to rollback newly uploaded cover',
-        { compositePostId, uploadedCoverUri: mediaUrl('x', 'image/png'), cleanupError },
-      );
     });
   });
 
@@ -2103,7 +2066,7 @@ describe('PostController', () => {
       }
     });
 
-    it('rolls back a newly uploaded cover when commitEdit fails', async () => {
+    it('keeps a newly uploaded cover when commitEdit fails', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
       const editError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
@@ -2112,8 +2075,7 @@ describe('PostController', () => {
       });
       vi.spyOn(PostApplication, 'commitEdit').mockRejectedValue(editError);
       vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
-      vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
-      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+      const uploadSpy = vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
       const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
 
       try {
@@ -2127,62 +2089,21 @@ describe('PostController', () => {
           }),
         ).rejects.toBe(editError);
 
-        // The upload itself goes to the sweep, which leaves a preexisting file in place
-        expect(sweepSpy).toHaveBeenCalledWith(
-          [expect.objectContaining({ media: expect.objectContaining({ url: newCover }) })],
-          collectionPostId,
-        );
+        expect(uploadSpy).toHaveBeenCalledWith({
+          fileAttachments: [expect.objectContaining({ media: expect.objectContaining({ url: newCover }) })],
+        });
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();
       }
     });
 
-    it('keeps a cover picked again when the edit fails: the upload found it on the homeserver', async () => {
-      setupAuthUser(testData.authorPubky);
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
-      const editError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'homeserver put failed', {
-        service: ErrorService.Homeserver,
-        operation: 'commitEditCollection',
-      });
-      vi.spyOn(PostApplication, 'commitEdit').mockRejectedValue(editError);
-      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
-      // The same bytes as the stored cover: the homeserver already holds them
-      vi.spyOn(FileApplication, 'commitCreate').mockImplementation(async ({ fileAttachments }) => {
-        for (const attachment of fileAttachments) attachment.preexisting = true;
-      });
-      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
-      const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
-
-      try {
-        const { PostController } = await import('./post');
-        await expect(
-          PostController.commitEditCollection({
-            compositeCollectionId: collectionPostId,
-            name: 'Renamed',
-            description: 'Updated description',
-            coverImage: new File(['old-cover'], 'cover.png', { type: 'image/png' }),
-          }),
-        ).rejects.toBe(editError);
-
-        // The restored row still shows that cover: the sweep sees it preexisting and leaves it alone
-        expect(sweepSpy).toHaveBeenCalledWith(
-          [expect.objectContaining({ media: expect.objectContaining({ url: oldCover }), preexisting: true })],
-          collectionPostId,
-        );
-        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
-      } finally {
-        cleanupAuthUser();
-      }
-    });
-
-    it('rolls back a newly uploaded cover when the envelope is refused after the upload', async () => {
+    it('keeps a newly uploaded cover when the envelope is refused after the upload', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
       const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit');
       vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(mockUpload);
       vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
-      const sweepSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
       const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
 
       try {
@@ -2197,10 +2118,6 @@ describe('PostController', () => {
         ).rejects.toThrow('Collection name is required');
 
         expect(commitEditSpy).not.toHaveBeenCalled();
-        expect(sweepSpy).toHaveBeenCalledWith(
-          [expect.objectContaining({ media: expect.objectContaining({ url: newCover }) })],
-          collectionPostId,
-        );
         expect(commitFileDeleteSpy).not.toHaveBeenCalled();
       } finally {
         cleanupAuthUser();

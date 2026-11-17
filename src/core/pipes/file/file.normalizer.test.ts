@@ -85,7 +85,7 @@ describe('FileNormalizer.toFileAttachment', () => {
     expect(result.bytes).toBe(BYTES);
     expect(result.name).toBe('test-image.png');
     expect(result.contentType).toBe('image/png');
-    expect(result.preexisting).toBeUndefined();
+    expect(Object.keys(result).sort()).toEqual(['bytes', 'contentType', 'media', 'name']);
   });
 
   it('names the same bytes the same whatever the file is called: media is content addressed', () => {

@@ -1,6 +1,7 @@
 import { buildFile, buildPost, buildUri, buildUser, decodeObject, toPath } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
@@ -167,10 +168,23 @@ describe('content-addressed media lifetime', () => {
     });
   });
 
-  describe('a create whose first-version PUT fails', () => {
-    it('sweeps the uploads the post made, keeps a file an earlier post shares, and leaves the tombstone', async () => {
-      // The earlier post's photo is on the homeserver already; the new post attaches the same
-      // bytes (content addressed: one file) and a fresh one, then its first version is refused.
+  describe('a failed create or edit leaves its uploads in place', () => {
+    /** Fails the PUTs `refuse` matches: by default every PUT under the owner's `posts/` directory (post versions). */
+    const refusePuts = (refuse: (url: string) => boolean = (url) => url.includes('/posts/')) => {
+      const putBytes = homeserver.spies.putBlob.getMockImplementation()!;
+      homeserver.spies.putBlob.mockImplementation(async (params) => {
+        if (refuse(params.url)) throw new Error('Homeserver refused the write');
+        return putBytes(params);
+      });
+    };
+    /** The upload is on the homeserver and its local row describes it. */
+    const expectUploadKept = async (file: ReturnType<typeof media>) => {
+      expect(await stored(file.url)).toBe(true);
+      expect(await fileRow(file.url, file.id)).toBe(true);
+    };
+
+    it('a create whose post PUT fails keeps every upload and its row, and leaves the tombstone', async () => {
+      // One of the bytes is a file an earlier post already uses (content addressed: one file)
       const shared = await store(media(1));
       await publishProfile(null);
       await publish(buildPost(OWNER, { content: 'earlier', kind: 'image', attachments: [{ uri: shared }] }));
@@ -182,11 +196,7 @@ describe('content-addressed media lifetime', () => {
         attachments: [{ uri: sharedAgain.url }, { uri: fresh.url }],
       });
       const compositePostId = `${OWNER}:${post.id}`;
-      const putBytes = homeserver.spies.putBlob.getMockImplementation()!;
-      homeserver.spies.putBlob.mockImplementation(async (params) => {
-        if (params.url === post.url) throw new Error('Homeserver refused the post');
-        return putBytes(params);
-      });
+      refusePuts((url) => url === post.url);
 
       await expect(
         PostApplication.commitCreate({
@@ -194,17 +204,162 @@ describe('content-addressed media lifetime', () => {
           post,
           fileAttachments: [attachment(sharedAgain), attachment(fresh)],
         }),
-      ).rejects.toThrow('Homeserver refused the post');
+      ).rejects.toThrow('Homeserver refused the write');
 
-      // The upload this post made is gone from the homeserver and from `file_details`
-      expect(await stored(fresh.url)).toBe(false);
-      expect(await fileRow(fresh.url, fresh.id)).toBe(false);
-      // The file the earlier post uploaded stays, with its row
-      expect(await stored(shared)).toBe(true);
-      expect(await fileRow(shared, sharedAgain.id)).toBe(true);
-      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalledWith(shared);
+      await expectUploadKept(fresh);
+      await expectUploadKept(sharedAgain);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
       // The row is a tombstone, as any failed create leaves
       expect(isPostDeleted(await PostDetailsModel.findById(compositePostId))).toBe(true);
+    });
+
+    it('a create whose batch has a failed upload keeps the uploads that landed and PUTs no post', async () => {
+      const landed = media(1);
+      const refused = media(2);
+      const post = buildPost(OWNER, {
+        content: 'photos',
+        kind: 'image',
+        attachments: [{ uri: landed.url }, { uri: refused.url }],
+      });
+      refusePuts((url) => url === refused.url);
+
+      await expect(
+        PostApplication.commitCreate({
+          compositePostId: `${OWNER}:${post.id}`,
+          post,
+          fileAttachments: [attachment(landed), attachment(refused)],
+        }),
+      ).rejects.toThrow('Homeserver refused the write');
+
+      await expectUploadKept(landed);
+      expect(await stored(refused.url)).toBe(false);
+      expect(await PostDetailsModel.findById(`${OWNER}:${post.id}`)).toBeNull();
+      expect(homeserver.spies.putBlob).not.toHaveBeenCalledWith(expect.objectContaining({ url: post.url }));
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    it('an edit whose PUT fails keeps the files it uploaded and restores the row', async () => {
+      const kept = await store(media(1));
+      const compositePostId = await publish(
+        buildPost(OWNER, { content: 'pics', kind: 'image', attachments: [{ uri: kept }] }),
+      );
+      const added = media(2);
+      refusePuts();
+
+      await expect(
+        PostApplication.commitEdit({
+          compositePostId,
+          edit: { content: 'pics', attachmentUris: [kept, added.url] },
+          fileAttachments: [attachment(added)],
+        }),
+      ).rejects.toThrow('Homeserver refused the write');
+
+      await expectUploadKept(added);
+      expect((await PostDetailsModel.findById(compositePostId))?.attachments).toEqual([kept]);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    it('a collection create whose PUT fails keeps its uploaded cover', async () => {
+      const cover = media(3);
+      vi.spyOn(FileApplication, 'toFileAttachment').mockResolvedValue(attachment(cover));
+      refusePuts();
+
+      await expect(
+        PostController.commitCreateCollection({
+          authorId: OWNER,
+          name: 'Reading list',
+          items: [],
+          coverImage: new File([cover.bytes], 'cover.png', { type: 'image/png' }),
+        }),
+      ).rejects.toThrow('Homeserver refused the write');
+
+      await expectUploadKept(cover);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    it('a collection edit whose PUT fails keeps its uploaded cover', async () => {
+      const readingList = await publish(buildPost(OWNER, { kind: 'collection', name: 'Reading list', items: [] }));
+      const cover = media(3);
+      vi.spyOn(FileApplication, 'toFileAttachment').mockResolvedValue(attachment(cover));
+      refusePuts();
+
+      await expect(
+        PostController.commitEditCollection({
+          compositeCollectionId: readingList,
+          name: 'Reading list',
+          coverImage: new File([cover.bytes], 'cover.png', { type: 'image/png' }),
+        }),
+      ).rejects.toMatchObject({ operation: 'commitEditCollection', cause: new Error('Homeserver refused the write') });
+
+      await expectUploadKept(cover);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
+    });
+
+    // The third human review of #3140: two overlapping creates carry the same bytes X; the first fails after the
+    // second uploaded X but before the second has a post row. X must still be there for the second post.
+    it('keeps a file another pending create of the same bytes uploaded when the first create fails', async () => {
+      const x = media(1);
+      const y = media(2);
+      const postA = buildPost(OWNER, { content: 'A', kind: 'image', attachments: [{ uri: x.url }] });
+      const postB = buildPost(OWNER, {
+        content: 'B',
+        kind: 'image',
+        attachments: [{ uri: x.url }, { uri: y.url }],
+      });
+      const putBytes = homeserver.spies.putBlob.getMockImplementation()!;
+      const aPostTaken = Promise.withResolvers<void>();
+      const failAPost = Promise.withResolvers<void>();
+      const yTaken = Promise.withResolvers<void>();
+      const releaseY = Promise.withResolvers<void>();
+      homeserver.spies.putBlob.mockImplementation(async (params) => {
+        if (params.url === postA.url) {
+          aPostTaken.resolve();
+          await failAPost.promise;
+          throw new Error('Homeserver refused the write');
+        }
+        if (params.url === y.url) {
+          yTaken.resolve();
+          await releaseY.promise;
+        }
+        return putBytes(params);
+      });
+      const settle = (promise: Promise<void>) =>
+        promise.then(
+          () => 'ok',
+          (error: unknown) => error,
+        );
+
+      const a = settle(
+        PostApplication.commitCreate({
+          compositePostId: `${OWNER}:${postA.id}`,
+          post: postA,
+          fileAttachments: [attachment(x)],
+        }),
+      );
+      await aPostTaken.promise;
+      const b = settle(
+        PostApplication.commitCreate({
+          compositePostId: `${OWNER}:${postB.id}`,
+          post: postB,
+          fileAttachments: [attachment(x), attachment(y)],
+        }),
+      );
+      await yTaken.promise;
+      // B's X has landed and its row is written; B has no post row yet
+      await vi.waitFor(() =>
+        expect(homeserver.spies.putBlob.mock.calls.filter(([{ url }]) => url === x.url)).toHaveLength(2),
+      );
+      await vi.waitFor(async () => expect(await fileRow(x.url, x.id)).toBe(true));
+      expect(await PostDetailsModel.findById(`${OWNER}:${postB.id}`)).toBeNull();
+
+      failAPost.resolve();
+      expect(await a).not.toBe('ok');
+      releaseY.resolve();
+      expect(await b).toBe('ok');
+
+      await expectUploadKept(x);
+      expect((await PostDetailsModel.findById(`${OWNER}:${postB.id}`))?.attachments).toEqual([x.url, y.url]);
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
     });
   });
 
