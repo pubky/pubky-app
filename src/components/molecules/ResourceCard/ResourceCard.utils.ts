@@ -1,5 +1,6 @@
 import { getResourceRoute } from '@/app/routes';
 import { isExternalParentUri } from '@/libs/post/externalParent';
+import { getPubkyAppTarget } from '@/libs/pubkyApp/pubkyAppTarget';
 import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
 import {
@@ -380,8 +381,13 @@ export function getPubkyObjectApp(uri: string): string | null {
   return /^pubky:\/\/[^/]+\/pub\/([^/]+)\//.exec(uri)?.[1] ?? null;
 }
 
-/** Where an Also on entry opens: the link's resource page; `null` for a Pubky object, no external resource. */
+/**
+ * Where an Also on entry opens: the link's resource page, a pubky.app post's or profile's own page,
+ * a pubky.app file's page (`getResourceRoute`); `null` for another Pubky app's object, which the app
+ * has no page for.
+ */
 export function getAlsoOnRoute(uri: string): string | null {
+  if (getPubkyAppTarget(uri)) return getResourceRoute(uri);
   return uri.startsWith('pubky:') ? null : getResourceRoute(uri);
 }
 

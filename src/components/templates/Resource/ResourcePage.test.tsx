@@ -152,6 +152,17 @@ describe('ResourcePage', () => {
     );
   });
 
+  it('never asks Pinakes about a pubky.app file: the body shows the file, its thread on the file’s URI', () => {
+    const file = 'pubky://apuij4kxbsj1wnh4douy7jptoscrttnkoz9zfo6k8dge1mfyadso/pub/pubky.app/files/00360YV6W3NZG';
+    mockCard.mockReturnValue({ data: null, isLoading: false, isError: false });
+    render(<ResourcePage uri={file} />);
+
+    expect(mockCard).toHaveBeenCalledWith(null, { resolve: true, recheck: true });
+    expect(mockCard).not.toHaveBeenCalledWith(file, expect.anything());
+    expect(screen.getByTestId('resource-details-stub')).toHaveAttribute('data-uri', file);
+    expect(mocks.repliesUri).toBe(file);
+  });
+
   it('keeps the right column empty and reads no thread while the card is read', () => {
     mockCard.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     render(<ResourcePage uri={VIDEO.uri} />);

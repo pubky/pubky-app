@@ -178,13 +178,21 @@ describe('ResourceAlsoOn', () => {
     expect(script).toHaveTextContent('Script');
   });
 
-  it('lists a Pubky object as text: it has no external resource page', () => {
-    const uri = 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0034A0X7NJ52G';
-    renderAlsoOn([{ uri, site: 'Pubky' }]);
+  it('lists another Pubky app’s object as text: it has no external resource page', () => {
+    const uri = 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/loopky/decks/a/manifest.json';
+    renderAlsoOn([{ uri, site: 'Loopky' }]);
 
     const [row] = rows();
     expect(row.querySelector('a')).toBeNull();
     expect(row).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('opens a pubky.app post on its own page, never as an external resource', () => {
+    const uri = 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0034A0X7NJ52G';
+    renderAlsoOn([{ uri, site: 'Pubky' }]);
+
+    const [row] = rows();
+    expect(row).toHaveAttribute('href', '/post/o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/0034A0X7NJ52G');
   });
 
   it('shows the identifier of a non-web entry named by its service', () => {
@@ -411,12 +419,21 @@ describe('ResourceAlsoOn', () => {
       expect(isbn).toHaveTextContent('9780140328721');
     });
 
-    it('lists a Pubky object as plain text', () => {
-      renderSheet([{ uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json' }]);
+    it('lists another Pubky app’s object as plain text', () => {
+      renderSheet([
+        { uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/loopky/decks/a/manifest.json' },
+      ]);
 
       const [row] = rows();
       expect(row.tagName).not.toBe('A');
       expect(row.querySelector('a')).toBeNull();
+    });
+
+    it('opens a pubky.app profile on its own page', () => {
+      renderSheet([{ uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json' }]);
+
+      const [row] = rows();
+      expect(row).toHaveAttribute('href', '/profile/o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo');
     });
 
     it('unfolds the languages by touch as a radio group and picks one without closing the sheet', () => {

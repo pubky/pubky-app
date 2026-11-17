@@ -108,6 +108,34 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     </div>
   ),
 }));
+// A pubky.app file's card has its own tests (`ResourceItem.pubkyApp`); here only what it is given matters.
+const fileRead = vi.hoisted(() => ({ value: { file: null as { name: string } | null, isLoading: false } }));
+vi.mock('@/hooks/usePubkyAppFile/usePubkyAppFile', () => ({ usePubkyAppFile: () => fileRead.value }));
+vi.mock('@/molecules/ResourceCard/ResourceFileCard', () => ({
+  ResourceFileCard: ({
+    uri,
+    ownerId,
+    file,
+    size,
+    actions,
+  }: {
+    uri: string;
+    ownerId: string;
+    file: { name: string } | null;
+    size?: string;
+    actions?: React.ReactNode;
+  }) => (
+    <div
+      data-testid="resource-file-card-stub"
+      data-uri={uri}
+      data-owner={ownerId}
+      data-name={file?.name ?? 'none'}
+      data-size={size}
+    >
+      {actions}
+    </div>
+  ),
+}));
 // The page's Reply dialog: only which link it answers and whether it keeps its draft matter.
 vi.mock('@/organisms/DialogReply/DialogReply', () => ({
   DialogReply: ({
@@ -1074,5 +1102,67 @@ describe('ResourceDetails', () => {
     renderDetails(null);
 
     expect(screen.getByText('No link to show')).toBeInTheDocument();
+  });
+
+  describe('a pubky.app file', () => {
+    const KEY = 'apuij4kxbsj1wnh4douy7jptoscrttnkoz9zfo6k8dge1mfyadso';
+    const FILE = `pubky://${KEY}/pub/pubky.app/files/00360YV6W3NZG`;
+
+    beforeEach(() => {
+      fileRead.value = { file: { name: 'note-1.txt' }, isLoading: false };
+      // The page asks Pinakes nothing about it (`ResourcePage`): its read stays empty.
+      read = settled(null);
+    });
+
+    it('shows the file large under the heading "File", closed by a footer on its URI, the thread under it', () => {
+      renderDetails(FILE);
+
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('File');
+      const card = screen.getByTestId('resource-file-card-stub');
+      expect(card).toHaveAttribute('data-uri', FILE);
+      expect(card).toHaveAttribute('data-owner', KEY);
+      expect(card).toHaveAttribute('data-name', 'note-1.txt');
+      expect(card).toHaveAttribute('data-size', 'large');
+      const actions = within(card).getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', FILE);
+      expect(actions).toHaveAttribute('data-tags-label', 'Tags on this file');
+      expect(actions).toHaveAttribute('data-post-uri', 'none');
+      expect(actions).toHaveAttribute('data-link-url', 'none');
+      expect(actions).toHaveAttribute('data-title', 'note-1.txt');
+      expect(actions).toHaveAttribute('data-size', 'large');
+      expect(screen.getByTestId('resource-replies-stub')).toHaveAttribute('data-uri', FILE);
+      // Never an external resource's card or the link's own preview.
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
+    });
+
+    it('shows the file whatever Pinakes would say, configured or not', () => {
+      read = LOADING;
+      const { unmount } = renderDetails(FILE);
+      expect(screen.getByTestId('resource-file-card-stub')).toBeInTheDocument();
+      unmount();
+
+      mocks.configured = false;
+      renderDetails(FILE);
+      expect(screen.getByTestId('resource-file-card-stub')).toBeInTheDocument();
+    });
+
+    it('holds the card’s place with its footer while the file is read', () => {
+      fileRead.value = { file: null, isLoading: true };
+      renderDetails(FILE);
+
+      const loading = screen.getByTestId('resource-loading');
+      expect(loading).toHaveAttribute('aria-busy', 'true');
+      expect(within(loading).getByTestId('resource-actions')).toHaveAttribute('data-uri', FILE);
+      expect(screen.queryByTestId('resource-file-card-stub')).not.toBeInTheDocument();
+    });
+
+    it('shows a file Nexus does not know as a file with no details, its footer kept', () => {
+      fileRead.value = { file: null, isLoading: false };
+      renderDetails(FILE);
+
+      expect(screen.getByTestId('resource-file-card-stub')).toHaveAttribute('data-name', 'none');
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-title', 'none');
+    });
   });
 });
