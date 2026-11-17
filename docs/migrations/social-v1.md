@@ -641,19 +641,19 @@ Final review (2026-11-11): an independent review of the whole branch diff agains
 lenses, every finding checked by two independent verifiers) found no blocking defect, seven should-fix code defects and
 the docs drift #3120 fixes. The defects landed as six PRs into `feat/social-v1`, all merged on 2026-11-11 before the
 final PR: the Shop sign-in return kept through the gate and `/migration` settled for a failed restore (#3121), the
-uploads of a post whose PUT failed swept (#3118; removed again in #3214, which leaves them), collection items matched
-by post identity on an edit instead of being rewritten to 0.x spellings (#3117), profile links validated the way the v1 data model does (#3119), feed filter tags
-folded with the stored label fold (#3122) and every private fetch of the resync guarded with the viewer session (#3116);
-the docs drift is the sweep #3120. The QA-6 live pass that followed (its findings are recorded in #3121 and #3123) added
-a seventh code fix, merged the same day: the `/collections` live queries kept observing bookmarked post details on a
-cold visit (#3123). Two findings identical on `dev` are `dev` follow-ups, not merge gates: clearing an article's cover
-can re-promote an unreferenced slot 0 under rule B, and the attachment-reference collector misses a backslash-escaped
-`attachment:n`. The review also confirmed step 3's `pubky_stack_ref` flip as a hard precondition of the final PR. Final
-review 2 (Opus, 2026-11-12, seven lenses on the merged head `d98f14a6d`): no blocking finding; the seven fixes hold
-together as one change; five regression-guard test gaps (the D11 gate for a capability upgrade, reply lookup under both
-spellings of the parent post, and three article-cover paths: `PostArticle`'s `localCover`, `legacyCoverSlot` and
-`setArticleCover`) are closed in test-only PRs (pending), and its one docs gap, the `mailto:`/`tel:` link reduction, is
-recorded above.
+uploads of a post whose PUT failed swept (#3118; removed again in #3214, which leaves them), collection items matched by
+post identity on an edit instead of being rewritten to 0.x spellings (#3117), profile links validated the way the v1
+data model does (#3119), feed filter tags folded with the stored label fold (#3122) and every private fetch of the
+resync guarded with the viewer session (#3116); the docs drift is the sweep #3120. The QA-6 live pass that followed (its
+findings are recorded in #3121 and #3123) added a seventh code fix, merged the same day: the `/collections` live queries
+kept observing bookmarked post details on a cold visit (#3123). Two findings identical on `dev` are `dev` follow-ups,
+not merge gates: clearing an article's cover can re-promote an unreferenced slot 0 under rule B, and the
+attachment-reference collector misses a backslash-escaped `attachment:n`. The review also confirmed step 3's
+`pubky_stack_ref` flip as a hard precondition of the final PR. Final review 2 (Opus, 2026-11-12, seven lenses on the
+merged head `d98f14a6d`): no blocking finding; the seven fixes hold together as one change; five regression-guard test
+gaps (the D11 gate for a capability upgrade, reply lookup under both spellings of the parent post, and three
+article-cover paths: `PostArticle`'s `localCover`, `legacyCoverSlot` and `setArticleCover`) are closed in test-only PRs
+(pending), and its one docs gap, the `mailto:`/`tel:` link reduction, is recorded above.
 
 Checklist:
 
