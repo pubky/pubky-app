@@ -760,6 +760,9 @@ export class AuthController {
       retiringSession: null,
       needsAccountPreparation,
     };
+    // Admitted before the record publishes the reference: another tab restoring it then reads an admitted grant
+    // (ADR-0026). A commit that fails leaves an admitted id no tab can restore, among the record's few kept ids.
+    SocialMigrationController.admitGrant(pubky, reference.sessionStoreId);
     try {
       await AuthApplication.commitPersistedAuth(record, previous.generation, () => epoch === this.epoch);
     } catch (error) {
@@ -780,9 +783,8 @@ export class AuthController {
     this.sessionRestore = null;
     // The migration gate runs before the session enters the store (ADR-0026): the committed identity
     // is visible to logout and the route guard, the session is not. An upgrade of an account that
-    // passed the gate in this browser keeps its context, as before, and its grant is admitted.
+    // passed the gate in this browser keeps its context, as before; its grant was admitted above.
     const gated = !(preserveContext && SocialMigrationController.hasPassedLocally(pubky));
-    if (!gated) SocialMigrationController.admitGrant(pubky, reference.sessionStoreId);
     previous.init({
       ...committed,
       session: gated ? null : session,

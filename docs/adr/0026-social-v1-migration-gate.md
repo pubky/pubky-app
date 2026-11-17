@@ -60,8 +60,10 @@ transport failures throw, so a refused flag never reads as a missing one), a cur
 and an absent or outdated flag resumes the run when this browser's record saw the flag at an earlier revision or
 admitted the grant, and otherwise signs the account out (`pre-migration-grant`, D2). On a fresh sign-in the grant's
 session-store id is recorded as admitted and the engine runs; its own HEAD finds a finished migration
-(`already_migrated`). A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the
-app never hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
+(`already_migrated`). Every adopted grant (sign-in, signup, upgrade) is admitted before the auth record publishes its
+reference, so no other tab can restore a fresh grant the record does not yet list (third human review, 2026-11-17).
+A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the app never
+hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
 keeps its context when it passes and admits its grant.
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen

@@ -105,6 +105,25 @@ function reloadOnNextTransformRevision(grant: string) {
   return vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
 }
 
+/**
+ * Records the grants the social v1 migration record had admitted at each write of the auth record naming `grant`, the
+ * moment another tab can restore that grant; the returned check expects `grant` among them at every such write.
+ */
+function admittedAtPublish(grant: string) {
+  const seen: string[][] = [];
+  const setItem = Storage.prototype.setItem;
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+    if (key === AUTH_PERSIST_KEY && value.includes(`"sessionStoreId":"${grant}"`)) {
+      seen.push(readSocialMigrationRecord(pubky)?.admittedGrantIds ?? []);
+    }
+    setItem.call(this, key, value);
+  });
+  return () => {
+    expect(seen.length).toBeGreaterThan(0);
+    for (const admitted of seen) expect(admitted).toContain(grant);
+  };
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -382,6 +401,16 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       });
     });
 
+    it('admits the fresh grant before the auth record publishes it, so no other tab can restore it unadmitted', async () => {
+      vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
+      const expectAdmittedAtPublish = admittedAtPublish('new-grant');
+
+      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+
+      expectAdmittedAtPublish();
+      expect(readSocialMigrationRecord(pubky)?.admittedGrantIds).toEqual(['new-grant']);
+    });
+
     it('leaves the account on the gate when the session expired mid-run, reporting the sign-in as not completed', async () => {
       vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(
         asOpaque<MigrationReport>({ ...done(), status: 'aborted', error: { code: 'SESSION_EXPIRED', message: '' } }),
@@ -494,6 +523,17 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       // Still an upgrade: no profile bootstrap, and the replaced grant is retired
       expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
       await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
+    });
+
+    it('admits the upgraded grant before the auth record publishes it, gated or not', async () => {
+      vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
+      const expectAdmittedAtPublish = admittedAtPublish('upgraded-grant');
+
+      const flow = await AuthController.getUpgradeAuthUrl(true);
+      await flow?.awaitApproval;
+      await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
+
+      expectAdmittedAtPublish();
     });
 
     it('keeps the context of an upgrade once this browser saw the account pass: no gate, no request', async () => {
