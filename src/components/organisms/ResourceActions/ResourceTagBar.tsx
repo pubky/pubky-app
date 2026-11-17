@@ -8,7 +8,7 @@ import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { UseResourceTagsResult } from '@/hooks/useResourceTags/useResourceTags.types';
 import { useStableValue } from '@/hooks/useStableValue/useStableValue';
-import { canonicalizeTagLabel, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton';
 import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper';
@@ -47,6 +47,11 @@ interface ResourceTagBarProps {
    * as secondary chips.
    */
   otherTags?: readonly TMergedTag[];
+  /**
+   * The tags at the end of an item's row (a show's episode list): the chips alone (the post's tag
+   * budget), right-aligned from `sm` up, with no "+": the item is tagged on its own page.
+   */
+  inline?: boolean;
 }
 
 /**
@@ -64,6 +69,8 @@ interface ResourceTagBarProps {
  * the same way with nobody here yet ("0 (3)"): a press adds the tag here. Such a tag's detail
  * (hover, or its taggers once expanded) lists each person once, the people who tagged this link
  * first, each with the icons of the links they tagged.
+ *
+ * Inline (`inline`), at the end of an item's row, it shows the same chips and no "+".
  */
 export function ResourceTagBar({
   resourceTags,
@@ -74,6 +81,7 @@ export function ResourceTagBar({
   isAdding,
   onAddingChange,
   otherTags = [],
+  inline = false,
 }: ResourceTagBarProps) {
   const { isAuthenticated, requireAuth } = useRequireAuth();
   const viewerId = useAuthStore((state) => state.currentUserPubky);
@@ -181,7 +189,7 @@ export function ResourceTagBar({
       role="group"
       aria-label={label}
       data-testid="resource-tag-bar"
-      className="flex min-w-0 flex-wrap items-center gap-2"
+      className={cn('flex min-w-0 flex-wrap items-center gap-2', inline && 'sm:justify-end')}
     >
       {visibleTags.map((tag) => (
         <PostTagPopoverWrapper
@@ -204,31 +212,35 @@ export function ResourceTagBar({
           />
         </PostTagPopoverWrapper>
       ))}
-      <TagInputToggle
-        showInput={isAdding}
-        widthByState={{ input: TAG_INPUT_WIDTH_DEFAULT, addButton: 34 }}
-        inputContent={
-          <TagInput
-            // As on the post, the input stays open after an add (TagInput clears it) for the next tag.
-            onTagAdd={addTag}
-            existingTags={tags}
-            viewerTags={viewerTags}
-            showCloseButton={isAuthenticated}
-            onClose={() => onAddingChange(false)}
-            onBlur={() => onAddingChange(false)}
-            disabled={!isAuthenticated}
-            onClick={isAuthenticated ? undefined : () => requireAuth(() => undefined)}
-            currentTagsCount={tags.length}
-            enableApiSuggestions={isAuthenticated}
-            excludeFromApiSuggestions={tags.map((tag) => tag.label)}
-            addOnSuggestionClick
-            autoFocus={isAuthenticated}
-            containerVariant="plain"
-            className="w-full shrink-0"
-          />
-        }
-        addButtonContent={<PostTagAddButton variant="plain" onClick={() => requireAuth(() => onAddingChange(true))} />}
-      />
+      {!inline && (
+        <TagInputToggle
+          showInput={isAdding}
+          widthByState={{ input: TAG_INPUT_WIDTH_DEFAULT, addButton: 34 }}
+          inputContent={
+            <TagInput
+              // As on the post, the input stays open after an add (TagInput clears it) for the next tag.
+              onTagAdd={addTag}
+              existingTags={tags}
+              viewerTags={viewerTags}
+              showCloseButton={isAuthenticated}
+              onClose={() => onAddingChange(false)}
+              onBlur={() => onAddingChange(false)}
+              disabled={!isAuthenticated}
+              onClick={isAuthenticated ? undefined : () => requireAuth(() => undefined)}
+              currentTagsCount={tags.length}
+              enableApiSuggestions={isAuthenticated}
+              excludeFromApiSuggestions={tags.map((tag) => tag.label)}
+              addOnSuggestionClick
+              autoFocus={isAuthenticated}
+              containerVariant="plain"
+              className="w-full shrink-0"
+            />
+          }
+          addButtonContent={
+            <PostTagAddButton variant="plain" onClick={() => requireAuth(() => onAddingChange(true))} />
+          }
+        />
+      )}
     </Container>
   );
 }

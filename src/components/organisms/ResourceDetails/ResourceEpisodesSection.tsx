@@ -30,7 +30,8 @@ const MAX_UNPRODUCTIVE_EPISODE_LOADS = 2;
  * the next page read as the list scrolls to its end (`useShowEpisodes`, as the app's feeds do), and
  * "Filter episodes" searching their titles. Each is a row as in the show's card
  * (`ResourceEpisodeRow`: Play in place, the title opening the episode's own page) with the episode's
- * own tags under it (`ResourceTagBar`: the chips, "+" to add one). A next page that fails offers
+ * own tags at its end when it has any (`ResourceTagBar` inline: the chips, no "+"; an episode is
+ * tagged on its own page, as any resource). A next page that fails offers
  * Try again. Nothing for a card that is no show. The section carries the page's `#episodes` anchor
  * (a show card's "All episodes") and is scrolled to once its first episodes show.
  */
@@ -97,7 +98,10 @@ export function ResourceEpisodesSection({ card }: { card: TPinakesResourceDetail
           {query ? `No episode titles match “${query}”.` : 'No episodes yet.'}
         </Typography>
       ) : (
-        <ul aria-label={query ? `Episodes matching ${query}` : 'All episodes'} className="flex min-w-0 flex-col gap-4">
+        <ul
+          aria-label={query ? `Episodes matching ${query}` : 'All episodes'}
+          className="flex min-w-0 flex-col gap-2.5"
+        >
           {list.episodes.map((episode) => (
             <EpisodeItem key={`${episode.guid}|${episode.uri}`} episode={episode} show={show} />
           ))}
@@ -141,54 +145,59 @@ export function ResourceEpisodesSection({ card }: { card: TPinakesResourceDetail
 }
 
 /**
- * One episode of the list: its row, then its own tags. An episode without audio that plays here keeps
- * its title (opening its page), date and length, with no Play.
+ * One episode of the list on one line: its row (the title truncated), then its own tags at the end,
+ * level with Play (and with the player's first line once it plays), in at most half the row (under the
+ * title on a phone), so the title stays readable. An episode without audio that plays here keeps its
+ * title (opening its page), date and length, with no Play.
  */
 function EpisodeItem({ episode, show }: { episode: TPinakesEpisode; show: TEpisodeShow }) {
   const navigable = useIsPostPreviewNavigable();
   const audioUrl = getAudioStreamUrl(episode.stream);
   const title = episode.name?.trim() || 'Episode';
   return (
-    <li data-testid="resource-episode" className="flex min-w-0 flex-col gap-1.5">
-      {audioUrl ? (
-        <ResourceEpisodeRow episode={episode} audioUrl={audioUrl} show={show} surface="default" />
-      ) : (
-        <PlayStandIn
-          title={title}
-          label={title}
-          detail={
-            [formatFactDate(episode.published), formatDuration(episode.stream?.duration_s)]
-              .filter(Boolean)
-              .join(' · ') || null
-          }
-          href={episode.uri ? getResourceRoute(episode.uri) : null}
-          linkTarget={navigable ? undefined : '_blank'}
-          className="pl-14"
-          data-testid="resource-episode-no-audio"
-        />
-      )}
+    <li data-testid="resource-episode" className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
+      <Container overrideDefaults className="min-w-0 flex-1">
+        {audioUrl ? (
+          <ResourceEpisodeRow episode={episode} audioUrl={audioUrl} show={show} surface="default" />
+        ) : (
+          <PlayStandIn
+            title={title}
+            label={title}
+            detail={
+              [formatFactDate(episode.published), formatDuration(episode.stream?.duration_s)]
+                .filter(Boolean)
+                .join(' · ') || null
+            }
+            href={episode.uri ? getResourceRoute(episode.uri) : null}
+            linkTarget={navigable ? undefined : '_blank'}
+            className="pl-14"
+            data-testid="resource-episode-no-audio"
+          />
+        )}
+      </Container>
       {episode.uri && <EpisodeTags uri={episode.uri} title={title} />}
     </li>
   );
 }
 
 /**
- * An episode's own tags, as a card's footer shows them (`ResourceTagBar`): read by the episode's
- * link. The rows of a page mount together, so their reads go to Nexus as one `by_ids` batch (one
- * `by-uri` read per row on a Nexus without it).
+ * An episode's own tags, read by its link, as a card's footer shows them (`ResourceTagBar`) but inline:
+ * the chips only, nothing for an episode nobody tagged. The rows of a page mount together, so their
+ * reads go to Nexus as one `by_ids` batch (one `by-uri` read per row on a Nexus without it).
  */
 function EpisodeTags({ uri, title }: { uri: string; title: string }) {
   const resourceTags = useResourceTags(uri);
-  const [isAdding, setIsAdding] = useState(false);
+  if (resourceTags.tags.length === 0) return null;
   return (
-    <Container overrideDefaults className="pl-14">
+    <Container overrideDefaults className="pl-14 sm:mt-0.5 sm:max-w-1/2 sm:pl-0">
       <ResourceTagBar
         resourceTags={resourceTags}
         label={`Tags on ${title}`}
         uri={uri}
         isExpanded={false}
-        isAdding={isAdding}
-        onAddingChange={setIsAdding}
+        isAdding={false}
+        onAddingChange={() => undefined}
+        inline
       />
     </Container>
   );

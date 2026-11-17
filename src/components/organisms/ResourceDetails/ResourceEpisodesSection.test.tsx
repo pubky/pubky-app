@@ -89,6 +89,49 @@ describe('ResourceEpisodesSection', () => {
     expect(mocks.tagReads).toContain('https://lexfridman.com/episode-504/');
   });
 
+  it('shows an episode’s own tags in its row only when it has any, with no "+" on the list', async () => {
+    mocks.fetchEpisodes.mockResolvedValueOnce({ items: [episode(504), episode(503)], next_offset: null });
+    render(<ResourceEpisodesSection card={SHOW} />);
+    await waitFor(() => expect(items()).toHaveLength(2));
+
+    const [tagged, untagged] = items();
+    // One line: the row, then the chips at its end (no line of their own under it)
+    expect(tagged).toHaveClass('sm:flex-row');
+    const tags = within(tagged).getByRole('group', { name: 'Tags on #504 – Episode 504' });
+    expect(tags).toHaveTextContent('war');
+    // At the row's end, in at most half of it: long labels never squeeze the title away
+    expect(tags).toHaveClass('sm:justify-end');
+    expect(tagged.lastElementChild).toContainElement(tags);
+    expect(tagged.lastElementChild).toHaveClass('sm:max-w-1/2');
+    // Nobody tagged #503 (it was read): no tag bar, no empty "+"
+    expect(mocks.tagReads).toContain('https://lexfridman.com/episode-503/');
+    expect(within(untagged).queryByRole('group', { name: /^Tags on/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add new tag' })).toBeNull();
+  });
+
+  it('plays an episode in place on Play, its title still opening the episode’s page', async () => {
+    mocks.fetchEpisodes.mockResolvedValueOnce({ items: [episode(504)], next_offset: null });
+    const before = window.location.href;
+    render(<ResourceEpisodesSection card={SHOW} />);
+    await waitFor(() => expect(items()).toHaveLength(1));
+    const [row] = items();
+
+    const play = within(row).getByRole('button', { name: 'Play #504 – Episode 504' });
+    // Play is no link and no press on it is taken by one (the title's link only covers the row beside it)
+    expect(play.closest('a')).toBeNull();
+    expect(fireEvent.click(play)).toBe(true);
+    expect(window.location.href).toBe(before);
+    expect(within(row).getByTestId('resource-player-audio')).toHaveAttribute(
+      'src',
+      'https://media.example.com/504.mp3',
+    );
+    expect(
+      within(within(row).getByTestId('resource-audio-controls')).getByRole('link', { name: '#504 – Episode 504' }),
+    ).toHaveAttribute('href', `/resource?uri=${encodeURIComponent('https://lexfridman.com/episode-504/')}`);
+    // The episode's tags stay in its row
+    expect(within(row).getByRole('group', { name: 'Tags on #504 – Episode 504' })).toBeInTheDocument();
+  });
+
   it('searches the titles with q once typing settles', async () => {
     mocks.fetchEpisodes
       .mockResolvedValueOnce({ items: [episode(504)], next_offset: 20 })
