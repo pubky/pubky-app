@@ -106,6 +106,9 @@ export function DialogLocksAuth({
     setupUrl,
     mode: paykitMode,
     iframeRef: paykitIframeRef,
+    isSetupReady,
+    isSetupPageFailed,
+    onSetupLoad,
     check: checkPaykit,
     reconnect: reconnectPaykit,
     reset: resetPaykit,
@@ -163,7 +166,9 @@ export function DialogLocksAuth({
   const isPaykitUnavailable = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.UNAVAILABLE;
   const isReconnectRequired = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.RECONNECT_REQUIRED;
   const isSetupIncomplete = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.SETUP_INCOMPLETE;
-  const isReconnectFailed = isPaykitError && paykitMode === 'reconnect';
+  // A reconnect page that never rendered showed no QR, so it gets the generic error copy, not the
+  // approve-in-time reconnect copy.
+  const isReconnectFailed = isPaykitError && paykitMode === 'reconnect' && !isSetupPageFailed;
   const isReconnecting = paykitMode === 'reconnect';
   const isError = isLocksError || isPaykitError || isPaykitUnavailable;
   // Intro step: the readiness probe (checking / ready / unavailable), before the auth iframe.
@@ -178,6 +183,8 @@ export function DialogLocksAuth({
   const isSessionStep = step === 'session';
   const isBitkitStep =
     step === 'bitkit' && !isPaykitError && !isPaykitUnavailable && !isReconnectRequired && !isSetupIncomplete;
+  // The Paykit iframe is on screen only once its page reported ready; copy and badges follow it.
+  const isSetupVisible = Boolean(setupUrl && isSetupReady);
 
   let title = 'Lock Content';
   let description: ReactNode = 'Pubky Locks allows you to lock content with payments.';
@@ -206,8 +213,9 @@ export function DialogLocksAuth({
     description = <SessionUpgradeDescription />;
   } else if (isBitkitStep) {
     title = isReconnecting && setupUrl ? 'Reconnect Bitkit' : 'Enable Payments';
-    // No setup URL yet: the setup-status check is running, and there is no QR to scan.
-    description = setupUrl ? (
+    // No QR to scan until the /setup page reports ready: before that the setup-status check is
+    // running, or the iframe is still hidden behind the spinner.
+    description = isSetupVisible ? (
       <>
         {'Scan this QR with your '}
         <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
@@ -313,8 +321,10 @@ export function DialogLocksAuth({
 
         {isBitkitStep && (
           <Container className="flex flex-col items-center justify-center gap-6 py-3">
-            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
-              {setupUrl ? (
+            <Container className="relative flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
+              {/* Mounted but invisible until the page posts `paykit-setup-ready`: a page that failed to
+                  render (a JSON error body) never sends it and is never shown (#3027). */}
+              {setupUrl && (
                 <iframe
                   ref={paykitIframeRef}
                   src={setupUrl}
@@ -325,13 +335,13 @@ export function DialogLocksAuth({
                   sandbox="allow-scripts allow-same-origin allow-popups"
                   // Same reason as the Lock Server iframe above.
                   allow="clipboard-write"
-                  className="h-48 w-full pointer-coarse:h-15"
+                  onLoad={onSetupLoad}
+                  className={cn('h-48 w-full pointer-coarse:h-15', !isSetupReady && 'invisible absolute inset-0')}
                 />
-              ) : (
-                <LoaderCircle className="size-8 animate-spin text-brand" />
               )}
+              {!isSetupVisible && <LoaderCircle className="size-8 animate-spin text-brand" />}
             </Container>
-            {setupUrl && (
+            {isSetupVisible && (
               <AppDownload
                 logo={{ src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110 }}
                 appStoreUrl={BITKIT_APP_STORE_URL}

@@ -144,6 +144,16 @@ const inFlightForcedQueries = new Map<string, Promise<unknown>>();
  */
 const queuedForcedQueries = new Map<string, Promise<unknown>>();
 
+/** Retry budgets are part of query identity because the first caller owns the retryer. */
+export function buildNexusQueryKey({
+  url,
+  method = HttpMethod.GET,
+  body = null,
+  notFoundRetries,
+}: Pick<TQueryNexusParams, 'url' | 'method' | 'body' | 'notFoundRetries'>) {
+  return ['nexus', url, method, body, ...(notFoundRetries === undefined ? [] : [{ notFoundRetries }])];
+}
+
 /**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
@@ -165,9 +175,7 @@ export async function queryNexus<T>({
   staleTime,
   notFoundRetries,
 }: TQueryNexusParams): Promise<T> {
-  // Different retry budgets must not share an in-flight request: the first caller's
-  // retryer would otherwise decide when every consumer gives up.
-  const queryKey = ['nexus', url, method, body, ...(notFoundRetries === undefined ? [] : [{ notFoundRetries }])];
+  const queryKey = buildNexusQueryKey({ url, method, body, notFoundRetries });
   // A scoped 404 budget replaces the client-level retry option wholesale, so the full
   // policy is derived from the shared Nexus config and passed with the query.
   const retryPolicy = notFoundRetries === undefined ? undefined : nexusRetryPolicy(notFoundRetries);
