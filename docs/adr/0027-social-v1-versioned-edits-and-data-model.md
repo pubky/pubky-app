@@ -28,8 +28,9 @@ Amended — 2026-11-13 (FIX-FINAL-10, the Greptile P1 on #3140, round 7): a coll
 there, never the item list the controller read before the lock, so an edit queued behind another edit of the same
 collection keeps that edit, and one the head already holds writes no version. See the _Edit_ bullet below.
 
-Amended — 2026-11-17 (third human review): every upload claims its file's local row (`upload_claims`), and a
-rollback keeps a file another pending upload still claims. See _Media lifetime_, _Upload claims_ below.
+Amended — 2026-11-17 (third human review, maintainer ruling): a create or edit that fails leaves the media it
+uploaded in place; nothing deletes a file because the write it was for failed. See _Media lifetime_,
+_A failed create or edit_ below.
 
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`). Amends ADR-0023 (article covers)
 and the Locks reader described in ADR-0022.
@@ -65,17 +66,16 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   `retryHomeserverWriteAfterReread` it LISTs `posts/{id}/`, picks the head (`pickHeadVersion`), GETs and decodes it,
   applies the edit (`PostNormalizer.toEdit`: spreads the head, so the lock, kept attachments' alt text, the article
   cover, item notes and `$unknown` survive), `editPost`s the next version and PUTs it. A refusal the policy retries
-  runs the read again; the row converges to what was PUT; a failure restores the row and sweeps the uploads. An
+  runs the read again; the row converges to what was PUT; a failure restores the row and leaves the uploads. An
   empty LIST (a post the migration skipped) is `NOT_FOUND`. An edit and a delete of one post hold the post's Web
   Lock `pubky-post-write:<owner>:<postId>` exclusive (`withSyncLock`, every tab of the origin; a per-tab queue
   where Web Locks are unavailable): the edit checks the tombstone, uploads, projects, reads the head and PUTs under
-  it, so an edit that starts after a delete finds the tombstone and writes nothing (`NOT_FOUND`: no upload, nothing
-  to sweep, the tombstone intact, since `LocalPostService.edit` clears the tombstone flag by design and must never
+  it, so an edit that starts after a delete finds the tombstone and writes nothing (`NOT_FOUND`: no upload, the
+  tombstone intact, since `LocalPostService.edit` clears the tombstone flag by design and must never
   run over a delete); the fence is taken before the wait for the lock and guards its first pass (`guardFirstPass`),
   checked once the lock is held and again before the PUT, so an edit that waited across a logout, an account change
   or a session replacement writes nothing, not an upload or the projection (`SESSION_EXPIRED`), and one whose
-  session changes during its uploads PUTs nothing and rolls back (the sweep of its uploads is best-effort: after a
-  logout or an account switch it cannot reach the old account's files); the head read (LIST and GET as one)
+  session changes during its uploads PUTs nothing and rolls its row back; the head read (LIST and GET as one)
   is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`
   (`awaitBounded`), a timeout failing the edit like a failed read and releasing the lock. Two tabs editing at once
   write their versions one after the other, the second above the first's; the higher edit id is the head. A
@@ -101,8 +101,8 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
 - **Dual spellings.** A post URI is never compared against one spelling: lookups reduce it to a composite id or match
   both `postReferenceSpellings` (replies, collection membership and counts, validators, the Locks announcement).
 - **Media** is hashed (`hashMedia` + `buildFile`), PUT once, and rowed as `owner:hash` with the upload's
-  `content_type`, `size` and `name`. The homeserver is asked `exists` before the PUT, so a rollback never deletes a
-  file another post already references; the per-tab timestamp-id guard is gone. A v1 file is rendered from the Nexus
+  `content_type`, `size` and `name`. A failed write never deletes it (see _Media lifetime_), so no
+  probe precedes the PUT; the per-tab timestamp-id guard is gone. A v1 file is rendered from the Nexus
   route `{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}` (`NEXUS_V1_STATIC_PATH` in `src/config/nexus.ts`,
   FIX-5, Nexus N5); 0.x files and every avatar stay on `/static` (D6: no app-side homeserver fallback).
 - **Articles** write the cover in `cover_image`; `attachments` hold inline media only and `attachment:{n}` indexes
@@ -129,23 +129,18 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
     with a `Logger.warn`, never an error or a toast. An orphan is the safe failure. A read that fails outright (a
     homeserver or Nexus outage) is still reported by its service like any other data read; lag is not a failure
     (`by_ids` answers 200 without the post) and reports nothing.
-  - **A rollback** (`commitDeleteUploaded`) deletes only files the failed write itself created: the upload asked
-    `exists` first, and a `preexisting` file stays. The same verified delete serves a discarded composer session's
-    uploads (`FileController.commitDelete`).
-  - **Upload claims** (amended 2026-11-17, third human review). Two pending creates of one owner can upload the same
-    bytes, and while the second still uploads another file it has no post row for the reference check to see. Each
-    upload therefore adds its own claim id (`crypto.randomUUID()`) to the file's local row (`upload_claims`, merged
-    in a Dexie read-modify-write transaction, so a claim written by another tab survives the upsert), and a rollback
-    first releases its own claims, in the same kind of transaction, and keeps any file another upload still claims.
-    This restores what dev's per-upload file rows gave on one device, in the same tab and across its tabs. A
-    successful upload never releases its claim: a later rollback of the same bytes then keeps an orphan, the safe
-    failure. The residuals are dev's: the moment between another upload's PUT landing and its claim being written,
-    a check-then-delete that is not atomic, and no protection across devices. `commitDelete` (a post delete, the
-    discard sweep of an article session) does not consult claims: since successful claims are never released it
-    would never delete a file this device uploaded. Dev's rows did protect a pending create there, so a post delete
-    or a discarded session that shares bytes with a create pending at that moment can still delete the file; a
-    release of the claim once the referencing row is written is the follow-up that closes it. No `DB_VERSION` bump:
-    the field is unindexed.
+  - The same verified delete serves a discarded composer session's uploads (`FileController.commitDelete`).
+  - **A failed create or edit** (amended 2026-11-17, third human review, maintainer ruling) leaves the media it
+    uploaded in place: a post create or edit, a collection's cover upload, and an upload batch with one failed file
+    all roll their local post row back and delete no file. Why: identical bytes name one file, and another pending
+    create of the same bytes on this device (this tab or another) has uploaded it but has no post row yet, so no
+    reference check can see it; the earlier sweep of a failed post's uploads (#3118) could delete that file under
+    the other post, and establishing exclusive ownership cheaply is not possible. The accepted cost: when a failed
+    post is abandoned, its uploads stay on the homeserver as unused files in the user's storage, readable at their public URLs like any `/pub/` file; a retry of the same
+    post PUTs the same bytes to the same address and uses them. Unchanged: a post delete and the discard sweep of an
+    article session (`commitDelete`) still delete a file only when no cached or published object references it, and
+    can still race a create of the same bytes pending at that moment on this device (its post is neither cached nor
+    published yet); that limit stays.
   - Private trees are not checked: the app writes no private object that references public media.
 - **Kinds** cross the vocabulary in one place (`toLocalPostKind` / `toStoredPostKind`); `storedKind` fails closed.
 - **Nexus API version** (amended 2026-11-09, FIX-7). Every Nexus URL is built by `buildNexusUrl` under
@@ -209,7 +204,7 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
 - The post write lock orders the tabs of one origin only. What it leaves: another device's or origin's edit can
   still land after this device's delete listing (Nexus follows event order); on an insecure origin the queue covers
   one tab; a collection edit uploads its new cover in the controller (`PostController.commitEditCollection`) before
-  the lock, so one queued behind a delete still uploads and then sweeps that cover; a collection change applied to a
+  the lock, so one queued behind a delete still uploads that cover and leaves it; a collection change applied to a
   head another device's version replaces between this device's LIST and its PUT is still last-writer-wins (no
   compare-and-swap; `pickHeadVersion` picks one), and the controller's local no-op (the row already shows an add, or
   does not yet show an item a remove names) trusts the row read before the lock; the edit's generic error toast says
@@ -240,7 +235,7 @@ migrated-shape heuristic permanent. Rejected (D14).
   `PostNormalizer.fromNexus`, `UserNormalizer.fromNexus`, `TagNormalizer.fromNexus{,Taggers}`, applied in
   `src/core/services/nexus/{post/post,user/user,bootstrap/bootstrap,stream/posts/postStream,stream/users/userStream}.ts`
 - `src/core/application/post/post.ts` (`commitCreate`, `commitEdit`, `commitDelete`, `readHead`),
-  `src/core/application/file/file.ts` (`commitDelete`, `commitDeleteUploaded`), `src/core/services/local/{post,file}`
+  `src/core/application/file/file.ts` (`commitDelete`), `src/core/services/local/{post,file}`
 - Media lifetime tests: `src/core/controllers/post/post.media.integration.test.ts` (the BUG-2 regression included)
 - `src/libs/post/articleCover.ts` and its consumers; `docs/data-patterns.md`, `docs/local-first.md`, `docs/locks.md`
 - Gate: `write-call-sites.gate.test.ts` lists `PostApplication.commitCreate` and `commitDelete` as unfenced writes.

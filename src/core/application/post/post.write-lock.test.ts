@@ -201,7 +201,6 @@ describe('PostApplication post write lock', () => {
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
     // Uploads never reach the homeserver here, and the media collection a delete ends with asks Nexus.
     vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
-    vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
     vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
     await PostDetailsModel.table.clear();
     installWebLocks();
@@ -327,7 +326,7 @@ describe('PostApplication post write lock', () => {
       expect(isPostDeleted(await row(compositePostId))).toBe(true);
     });
 
-    it('waits for an edit still uploading; its file is then collected by the delete, not swept as the edit’s orphan', async () => {
+    it('waits for an edit still uploading; its file is then collected by the delete', async () => {
       const { compositePostId, postId } = await publish('original');
       const added = attachment(7);
       const settled: string[] = [];
@@ -350,7 +349,6 @@ describe('PostApplication post write lock', () => {
       await Promise.all([editing, deleting]);
 
       expect(settled).toEqual(['edit', 'delete']);
-      expect(FileApplication.commitDeleteUploaded).not.toHaveBeenCalled();
       expect(FileApplication.commitDelete).toHaveBeenCalledExactlyOnceWith([added.media.url], compositePostId);
       expect(await versions(postId)).toEqual([]);
       expect(isPostDeleted(await row(compositePostId))).toBe(true);
@@ -388,35 +386,31 @@ describe('PostApplication post write lock', () => {
     it.each([
       ['this tab', false],
       ['another tab', true],
-    ])(
-      'refuses an edit with new files queued behind a delete in %s, uploading and sweeping nothing',
-      async (_, inOtherTab) => {
-        const deleter = inOtherTab ? (otherTab = await openOtherTab()).application : PostApplication;
-        const { compositePostId, postId } = await publish('original');
-        const added = attachment(9);
-        const listing = holdListing();
+    ])('refuses an edit with new files queued behind a delete in %s, uploading nothing', async (_, inOtherTab) => {
+      const deleter = inOtherTab ? (otherTab = await openOtherTab()).application : PostApplication;
+      const { compositePostId, postId } = await publish('original');
+      const added = attachment(9);
+      const listing = holdListing();
 
-        const deleting = run(deleter.commitDelete({ compositePostId, canWriteLegacy: true }));
-        await listing.taken;
-        const editing = run(
-          PostApplication.commitEdit({
-            compositePostId,
-            edit: { content: 'edited', attachmentUris: [added.media.url], kind: 'image' },
-            fileAttachments: [added],
-          }),
-        );
-        await tick();
-        listing.release();
-        await deleting;
+      const deleting = run(deleter.commitDelete({ compositePostId, canWriteLegacy: true }));
+      await listing.taken;
+      const editing = run(
+        PostApplication.commitEdit({
+          compositePostId,
+          edit: { content: 'edited', attachmentUris: [added.media.url], kind: 'image' },
+          fileAttachments: [added],
+        }),
+      );
+      await tick();
+      listing.release();
+      await deleting;
 
-        await expect(editing).rejects.toMatchObject(notFound);
-        expect(FileApplication.commitCreate).not.toHaveBeenCalled();
-        expect(FileApplication.commitDeleteUploaded).not.toHaveBeenCalled();
-        expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1); // the first version only
-        expect(await versions(postId)).toEqual([]);
-        expect(isPostDeleted(await row(compositePostId))).toBe(true);
-      },
-    );
+      await expect(editing).rejects.toMatchObject(notFound);
+      expect(FileApplication.commitCreate).not.toHaveBeenCalled();
+      expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1); // the first version only
+      expect(await versions(postId)).toEqual([]);
+      expect(isPostDeleted(await row(compositePostId))).toBe(true);
+    });
 
     it('refuses a collection item add queued behind the collection’s delete, writing nothing', async () => {
       const { compositePostId, postId } = await publishCollection('reading list');
@@ -470,7 +464,7 @@ describe('PostApplication post write lock', () => {
     /** Lets the pending microtasks and IndexedDB work run; the faked timers stay where they are. */
     const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 
-    it('bounds the edit’s head read: the edit rolls back and sweeps its uploads, then a queued delete runs', async () => {
+    it('bounds the edit’s head read: the edit rolls its row back, then a queued delete runs', async () => {
       const { compositePostId, postId, firstUrl } = await publish('original');
       const added = attachment(10);
       const listing = hangListing();
@@ -496,7 +490,6 @@ describe('PostApplication post write lock', () => {
 
       expect(await editing).toMatchObject(timedOut('commitEdit'));
       await deleting;
-      expect(FileApplication.commitDeleteUploaded).toHaveBeenCalledExactlyOnceWith([added], compositePostId);
       expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1);
       expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledExactlyOnceWith(firstUrl);
       expect(await versions(postId)).toEqual([]);
@@ -586,13 +579,12 @@ describe('PostApplication post write lock', () => {
       await expect(second).rejects.toMatchObject(sessionExpired);
       // Nothing of the second edit: no upload, no projection, no PUT; the row holds the first edit.
       expect(FileApplication.commitCreate).not.toHaveBeenCalled();
-      expect(FileApplication.commitDeleteUploaded).not.toHaveBeenCalled();
       expect(editSpy).toHaveBeenCalledTimes(2); // the first edit's projection and converge
       expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(2); // the first version and the first edit's
       expect(await row(compositePostId)).toMatchObject({ content: 'first edit', deleted: false });
     });
 
-    it('an edit whose session is replaced during its uploads PUTs nothing, rolls back and sweeps them', async () => {
+    it('an edit whose session is replaced during its uploads PUTs nothing and rolls its row back', async () => {
       const { compositePostId } = await publish('original');
       const added = attachment(13);
       const upload = holdFileWrite('commitCreate');
@@ -610,7 +602,9 @@ describe('PostApplication post write lock', () => {
 
       await expect(editing).rejects.toMatchObject(sessionExpired);
       expect(homeserver.spies.putBlob).toHaveBeenCalledTimes(1); // the first version only
-      expect(FileApplication.commitDeleteUploaded).toHaveBeenCalledExactlyOnceWith([added], compositePostId);
+      // The upload stays: a failed edit deletes no media
+      expect(FileApplication.commitDelete).not.toHaveBeenCalled();
+      expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
       expect(await row(compositePostId)).toMatchObject({ content: 'original', attachments: null, deleted: false });
     });
   });

@@ -30,7 +30,6 @@ import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
-import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { pickHeadVersion, pickPostVersions } from '@/pipes/post/post.head';
 import { toLocalPostKind } from '@/pipes/post/post.kind';
@@ -236,36 +235,12 @@ export class PostApplication {
   }
 
   /**
-   * Rolls freshly uploaded files back after a failed create or edit: the files this write put on
-   * the homeserver, never one it found there already (content-addressed media may be shared).
-   * The post's own row is no referencer: a failed create tombstones it with its `attachments`
-   * intact (the very URIs swept here), and a failed edit restores the row the edit started from,
-   * which names nothing this batch put on the homeserver.
-   * Best-effort — the triggering error is what the caller rethrows.
-   */
-  private static async rollbackUploadedFiles({
-    fileAttachments,
-    compositePostId,
-    operation,
-  }: {
-    fileAttachments: TFileAttachmentResult[];
-    compositePostId: string;
-    operation: 'commitCreate' | 'commitEdit';
-  }) {
-    if (fileAttachments.length === 0) return;
-    await FileApplication.commitDeleteUploaded(fileAttachments, compositePostId).catch((fileRollbackError) => {
-      Logger.error(`[PostApplication.${operation}] Failed to rollback file attachments`, {
-        compositePostId,
-        fileRollbackError,
-      });
-    });
-  }
-
-  /**
    * Creates a post: uploads first (the post references them), then, under the post's write lock
    * (`postWriteLock`), the local row and the first version PUT at the URL `buildPost` named. The
    * local row holds the versionless v1 reference as its `uri`; a failed PUT tombstones the row
-   * again and sweeps the uploads. The lock keeps a delete that starts during the PUT (a 429
+   * again. A failed create leaves what it uploaded in place: content-addressed media may already
+   * be used by another pending or published post, and a retry PUTs the same bytes to the same
+   * address (ADR-0027, _Media lifetime_). The lock keeps a delete that starts during the PUT (a 429
    * back-off can hold it for 30 s) from tombstoning the row, listing an empty directory and
    * reporting the post deleted before the version lands: it waits, then lists and deletes it. The
    * uploads stay outside the lock, since no delete can target a post that has no row yet;
@@ -280,34 +255,13 @@ export class PostApplication {
     isCurrent,
     onPostSynced,
   }: TCreatePostInput) {
-    const hasFiles = fileAttachments != null && fileAttachments.length > 0;
-    const rollbackUploadedFiles = () =>
-      this.rollbackUploadedFiles({
-        fileAttachments: hasFiles ? fileAttachments : [],
-        compositePostId,
-        operation: 'commitCreate',
-      });
-
-    if (hasFiles) {
-      try {
-        await FileApplication.commitCreate({ fileAttachments });
-      } catch (error) {
-        // Uploads run in parallel and can partially succeed (an article sends
-        // its cover and body files as one batch); sweep everything before
-        // rethrowing, so nothing of the unpublished post stays behind.
-        await rollbackUploadedFiles();
-        throw error;
-      }
+    if (fileAttachments != null && fileAttachments.length > 0) {
+      await FileApplication.commitCreate({ fileAttachments });
     }
 
     const { pubky: owner, id: postId } = parseCompositeId(compositePostId);
     await withSyncLock(postWriteLock(owner, postId), 'exclusive', async () => {
-      try {
-        await LocalPostService.create({ compositePostId, post });
-      } catch (error) {
-        await rollbackUploadedFiles();
-        throw error;
-      }
+      await LocalPostService.create({ compositePostId, post });
 
       try {
         await HomeserverService.putBlob({ url: post.url, blob: post.body });
@@ -320,7 +274,6 @@ export class PostApplication {
             rollbackError,
           });
         }
-        await rollbackUploadedFiles();
         throw error;
       }
     });
@@ -455,7 +408,7 @@ export class PostApplication {
    * Edit a post, local-first, as a new version (ADR-0027).
    *
    * 1. New uploads go up first, so the edited post never references files that do not exist
-   *    yet; they are deleted again if the edit fails.
+   *    yet; they stay if the edit fails (ADR-0027, _Media lifetime_).
    * 2. The edit is projected onto the cached row (`PostNormalizer.toLocalEdit`), so the UI shows
    *    it at once and offline behaves as it always did.
    * 3. Inside a write fence, the newest stored version is read (LIST, pick the head, GET,
@@ -466,8 +419,8 @@ export class PostApplication {
    *    again; the body is never replayed from a stale read. A collection change the head already
    *    holds (`toEdit` returns `null`) PUTs nothing and writes no version.
    * 4. The local row converges to the version that was PUT, or to the head when nothing was; on
-   *    failure it goes back to what it was and the uploads are swept. Media the edit removed (an attachment, an article's or a
-   *    collection's cover) is never deleted: the earlier versions still reference it, and content
+   *    failure it goes back to what it was; the uploads stay. Media the edit removed (an attachment, an
+   *    article's or a collection's cover) is never deleted: the earlier versions still reference it, and content
    *    addressing lets other objects share it.
    *
    * All of it runs under the post's write lock (`postWriteLock`), the uploads included, so an edit
@@ -476,11 +429,10 @@ export class PostApplication {
    * the lock and guards its first pass, which is checked once the lock is held and again before
    * the PUT: an edit that waited across a logout, an account change or a session replacement
    * writes nothing, not an upload or the projection (`SESSION_EXPIRED`), and one whose session
-   * changes during its uploads PUTs nothing and rolls back (the sweep of its uploads is
-   * best-effort: after a logout or an account switch it cannot reach the old account's files). The
-   * head read is bounded
-   * by `HOMESERVER_SYNC_READ_TIMEOUT_MS`: past it the edit fails like a failed read (rollback, the
-   * uploads swept) and releases the lock.
+   * changes during its uploads PUTs nothing and rolls its row back. The head read is bounded by
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS`: past it the edit fails like a failed read (the row rolled
+   * back) and releases the lock. A failed edit leaves what it uploaded in place, as a failed create
+   * does (ADR-0027, _Media lifetime_).
    *
    * A post with no v1 version (one the migration skipped) cannot be edited: `NOT_FOUND`.
    */
@@ -510,32 +462,11 @@ export class PostApplication {
       });
     }
 
-    const hasNewFiles = fileAttachments != null && fileAttachments.length > 0;
-    const rollbackUploadedFiles = () =>
-      this.rollbackUploadedFiles({
-        fileAttachments: hasNewFiles ? fileAttachments : [],
-        compositePostId,
-        operation: 'commitEdit',
-      });
-
-    if (hasNewFiles) {
-      try {
-        await FileApplication.commitCreate({ fileAttachments });
-      } catch (error) {
-        // Uploads run in parallel and can partially succeed; sweep everything
-        // best-effort before rethrowing (nothing else has happened yet).
-        await rollbackUploadedFiles();
-        throw error;
-      }
+    if (fileAttachments != null && fileAttachments.length > 0) {
+      await FileApplication.commitCreate({ fileAttachments });
     }
 
-    try {
-      await LocalPostService.edit({ compositePostId, ...PostNormalizer.toLocalEdit({ row: originalPost, edit }) });
-    } catch (error) {
-      // Local write failed after the uploads — remove them or they orphan
-      await rollbackUploadedFiles();
-      throw error;
-    }
+    await LocalPostService.edit({ compositePostId, ...PostNormalizer.toLocalEdit({ row: originalPost, edit }) });
 
     /** The version the row converges to: the one PUT, or the head when it already held the edit. */
     let built: { object: Post };
@@ -568,8 +499,6 @@ export class PostApplication {
           rollbackError,
         });
       }
-
-      await rollbackUploadedFiles();
 
       throw error;
     }

@@ -29,7 +29,6 @@ import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils';
-import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { isAuthorFileUri } from '@/libs/post/articleInlineMedia';
 import { extractHashtagLabelsFromMarkdown, mergeTagLabels } from '@/libs/post/hashtags';
@@ -293,13 +292,11 @@ export class PostController {
     // before normalization so the resulting `pubky://` URL participates in the
     // envelope's max-length and protocol validation.
     let coverImageUrl: string | null = null;
-    let uploadedCover: TFileAttachmentResult | null = null;
     if (coverImage instanceof File) {
       try {
         const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
         coverImageUrl = fileAttachment.media.url;
-        uploadedCover = fileAttachment;
       } catch (error) {
         // Keep an expired-session failure classified instead of wrapping it as
         // validation, so the caller can ask for a sign-in rather than reporting a
@@ -316,40 +313,24 @@ export class PostController {
       coverImageUrl = coverImage;
     }
 
-    let compositePostId: string | undefined;
-    try {
-      const post = PostNormalizer.toCollection(
-        {
-          name,
-          description,
-          items,
-          coverImage: coverImageUrl,
-          layout,
-        },
-        authorId,
-      );
+    // A failed create leaves an uploaded cover in place, as a failed post create leaves its uploads
+    // (ADR-0027, _Media lifetime_): the bytes may name a file another post already uses.
+    const post = PostNormalizer.toCollection(
+      {
+        name,
+        description,
+        items,
+        coverImage: coverImageUrl,
+        layout,
+      },
+      authorId,
+    );
 
-      compositePostId = buildCompositeId({ pubky: authorId, id: post.id });
+    const compositePostId = buildCompositeId({ pubky: authorId, id: post.id });
 
-      await PostApplication.commitCreate({ compositePostId, post });
+    await PostApplication.commitCreate({ compositePostId, post });
 
-      return compositePostId;
-    } catch (error) {
-      // Roll back the newly uploaded cover so a failed create does not orphan it, as
-      // `commitEditCollection` does: the sweep leaves a file the upload found on the homeserver
-      // (`preexisting`) in place, and a row of this post that survived its own rollback does not
-      // keep the cover. If the rollback itself fails, log and still rethrow the original error.
-      if (uploadedCover) {
-        await FileApplication.commitDeleteUploaded([uploadedCover], compositePostId).catch((cleanupError) => {
-          Logger.warn('[PostController.commitCreateCollection] Failed to rollback newly uploaded cover', {
-            compositePostId,
-            uploadedCoverUri: uploadedCover.media.url,
-            cleanupError,
-          });
-        });
-      }
-      throw error;
-    }
+    return compositePostId;
   }
 
   /**
@@ -404,13 +385,11 @@ export class PostController {
     }
 
     let coverImageUrl: string | null = null;
-    let uploadedCover: TFileAttachmentResult | null = null;
     if (coverImage instanceof File) {
       try {
         const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
         coverImageUrl = fileAttachment.media.url;
-        uploadedCover = fileAttachment;
       } catch (error) {
         // Same as `commitCreateCollection`: an expired session keeps its auth
         // classification so the caller can prompt for sign-in (issue #2555).
@@ -438,20 +417,8 @@ export class PostController {
         edit: { collection: change },
       });
     } catch (error) {
-      // Roll back the newly uploaded cover so a failed edit does not orphan it: media is content
-      // addressed, so a cover picked again names the file the restored row still uses, which the
-      // upload found there (`preexisting`) and the sweep leaves in place; the collection's own row
-      // is no referencer of what the batch put there. If the rollback itself fails, log and still
-      // rethrow the original edit error.
-      if (uploadedCover) {
-        await FileApplication.commitDeleteUploaded([uploadedCover], compositeCollectionId).catch((cleanupError) => {
-          Logger.warn('[PostController.commitEditCollection] Failed to rollback newly uploaded cover', {
-            compositeCollectionId,
-            uploadedCoverUri: uploadedCover.media.url,
-            cleanupError,
-          });
-        });
-      }
+      // A failed edit leaves an uploaded cover in place, as a failed post edit leaves its uploads
+      // (ADR-0027, _Media lifetime_): a cover picked again names the file the restored row may still use.
       throw toAppError(error, ErrorService.Local, 'commitEditCollection');
     }
   }

@@ -8,22 +8,6 @@ export interface TFileAttachmentResult {
   /** The picked file's name, stored on the post's attachment: v1 media has no metadata object. */
   name: string;
   contentType: string;
-  /**
-   * What `FileApplication.commitCreate` learned before the PUT, read by a rollback of this upload
-   * (`commitDeleteUploaded`). Three-valued: `true`, the homeserver already held these bytes (media
-   * is content addressed, so another post may reference the same file) and a rollback leaves them
-   * in place; `false`, this upload created the file and a rollback deletes it; unset, the probe
-   * failed and nothing was PUT, so a rollback has nothing of this batch to clean and leaves the
-   * file alone.
-   */
-  preexisting?: boolean;
-  /**
-   * The id `FileApplication.commitCreate` minted for this upload and added to the file's local row
-   * (`upload_claims`), set before the PUT. A rollback of this upload releases it and deletes the
-   * file only when no other upload of the same bytes still claims it; a successful upload never
-   * releases it.
-   */
-  claim?: string;
 }
 
 export type TFileAttachmentWithDataParams = {

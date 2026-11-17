@@ -78,22 +78,16 @@ export class FileApplication {
 
   /**
    * Uploads media to the homeserver and persists its metadata locally. v1 media is one
-   * content-addressed file: there is no metadata record to write. A file the homeserver already
-   * holds (the same bytes referenced by another post) is marked `preexisting` before the PUT, so
-   * a rollback of this upload leaves it in place. Each upload mints its own `claim` and adds it to
-   * the file's local row once the PUT landed: a rollback of another upload of the same bytes then
-   * leaves the file to this one while its post has no row yet (`commitDeleteUploaded`).
+   * content-addressed file: there is no metadata record to write. Nothing deletes an upload because
+   * the write it was for failed: the same bytes name one file, which a pending post of this device
+   * or a published one may use as well, so a failed create or edit leaves what it uploaded, and a
+   * retry PUTs the same bytes to the same address (ADR-0027, _Media lifetime_).
    */
   static async commitCreate({ fileAttachments }: FilesListParams) {
-    // allSettled, not all: on a partial failure the callers roll back the whole
-    // batch (`commitDeleteUploaded`) — rejecting early would start that sweep
-    // while sibling uploads are still in flight, letting a late PUT recreate a
-    // file the sweep already deleted, or finish after it and orphan.
-    // Waiting for every upload to settle before throwing keeps rollback safe.
+    // allSettled, not all: on a partial failure the caller hears of it only once every sibling
+    // upload has settled, so a retry never runs beside a PUT of this batch still in flight.
     const results = await Promise.allSettled(
       fileAttachments.map(async (fileAttachment) => {
-        fileAttachment.claim = crypto.randomUUID();
-        fileAttachment.preexisting = await HomeserverService.exists(fileAttachment.media.url);
         await HomeserverService.putBlob({ url: fileAttachment.media.url, blob: fileAttachment.bytes });
         await LocalFileService.create(fileAttachment);
       }),
@@ -146,62 +140,6 @@ export class FileApplication {
       [...byOwner].map(([owner, files]) => this.filterRemotelyUnreferenced(owner, files, excludePostId)),
     );
     await this.deleteMedia(unreferenced.flat());
-  }
-
-  /**
-   * Deletes freshly uploaded media during a rollback: the files this batch put on the homeserver,
-   * never one it found there already (`preexisting`), which another post may reference. Identical
-   * bytes within the batch share one URI. Only the local reference check applies: a file that was
-   * not on the homeserver before this upload can have no other referencer there. A file whose
-   * probe never answered (`preexisting` unset: `exists` failed before the PUT) was never put there
-   * by this batch and is left alone. The post the batch was for, `excludePostId`, is no referencer
-   * either: a failed create leaves its row behind as a tombstone whose `attachments` still name
-   * these very files, and a restored row names nothing this batch put on the homeserver.
-   *
-   * First the batch releases its upload claims, and a file another upload still claims stays: a
-   * pending create of the same bytes, in this tab or another, has uploaded it but has no post row
-   * yet for the reference check to see. A file whose own claim was never written (its PUT never
-   * landed) respects the other claims all the same. A successful upload never releases its claim,
-   * so a later rollback of the same bytes keeps the file as an orphan: the safe failure. What dev's
-   * per-upload file rows left open stays open: the moment between another upload's PUT landing and
-   * its claim being written, a claim written between this check and the delete, and uploads on
-   * another device.
-   *
-   * @param fileAttachments - The batch that was uploaded, `preexisting` and `claim` set by `commitCreate`
-   * @param excludePostId - The post the batch was for, whose own references do not count
-   */
-  static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[], excludePostId?: string) {
-    await this.deleteMedia(
-      await this.filterLocallyUnreferenced(await this.releaseUploadClaims(fileAttachments), excludePostId),
-    );
-  }
-
-  /**
-   * Releases every upload claim of the batch, all of one file in one write, and returns the URIs of
-   * the files the batch created (`preexisting === false`) that no other upload still claims. Claims are kept per file
-   * id (the hash, without the extension), so the same bytes uploaded under two types share one claim set: that only
-   * over-protects, keeping an orphan, the safe failure.
-   */
-  private static async releaseUploadClaims(fileAttachments: TFileAttachmentResult[]): Promise<string[]> {
-    const byFileId = new Map<string, { claims: string[]; createdUris: string[] }>();
-    for (const { media, claim, preexisting } of fileAttachments) {
-      const fileId = buildCompositeIdFromPubkyUri({ uri: media.url, domain: CompositeIdDomain.FILES });
-      if (!fileId || (claim === undefined && preexisting !== false)) continue;
-      const file = byFileId.get(fileId) ?? { claims: [], createdUris: [] };
-      if (claim !== undefined) file.claims.push(claim);
-      if (preexisting === false) file.createdUris.push(media.url);
-      byFileId.set(fileId, file);
-    }
-    const released = await Promise.all(
-      [...byFileId].map(async ([fileId, { claims, createdUris }]) => {
-        if (!(await LocalFileService.releaseClaims({ fileId, claims }))) return createdUris;
-        if (createdUris.length > 0) {
-          Logger.debug('[FileApplication] Kept media another pending upload claims', { fileUris: createdUris });
-        }
-        return [];
-      }),
-    );
-    return released.flat();
   }
 
   /** The v1 media files among `fileUris`, once each, that no cached object other than `excludePostId` references. */

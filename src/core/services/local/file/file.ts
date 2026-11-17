@@ -56,10 +56,9 @@ export class LocalFileService {
    * Stores the media record in the local database right away instead of waiting for Nexus,
    * hardcoding the urls. v1 media has no metadata object: the name and type come from the upload.
    * Media is content addressed (the id is `owner:hash`), so uploading bytes already cached
-   * replaces their row instead of failing on the key; the row keeps the upload claims it holds and
-   * gains this upload's `claim` (`releaseClaims`).
+   * replaces their row instead of failing on the key.
    */
-  static async create({ media, bytes, name, contentType, claim }: TFileAttachmentResult) {
+  static async create({ media, bytes, name, contentType }: TFileAttachmentResult) {
     const uri = media.url;
     const fileCompositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
 
@@ -78,15 +77,7 @@ export class LocalFileService {
         owner_id: fileCompositeId.split(':')[0],
         urls: buildUrls(fileCompositeId),
       };
-      await FileDetailsModel.upsertWithClaim(file, claim);
+      await FileDetailsModel.upsert(file);
     }
-  }
-
-  /**
-   * Releases the upload claims `claims` on the file `fileId`, and answers whether another upload
-   * (of this tab or another) still claims the file: a rollback leaves such a file in place.
-   */
-  static async releaseClaims({ fileId, claims }: { fileId: string; claims: string[] }): Promise<boolean> {
-    return await FileDetailsModel.releaseClaims(fileId, claims);
   }
 }
