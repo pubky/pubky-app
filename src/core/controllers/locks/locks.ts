@@ -464,7 +464,7 @@ export class LocksController {
     return LocksApplication.fetchReplicatedAttachments(params);
   }
 
-  /** Lists the reader's unlocked content (newest first) from their own `/priv/social/unlocked/`. */
+  /** Lists the reader's unlocked content (newest first) from their own `/priv/app.pubky/v1/locks/unlocked/`. */
   static fetchUnlockedList(params: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
     return LocksApplication.fetchUnlockedList({ ...params, isCurrent: captureViewerSession() });
   }

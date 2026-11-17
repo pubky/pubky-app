@@ -121,6 +121,7 @@ beforeEach(async () => {
     homeserver.files.delete(path);
   });
   onBackoff = undefined;
+  LocksApplication.resetSocialCopyStateForTests();
   installHomeserverWriteRetryDependenciesForTests({
     sleep: async () => {
       await onBackoff?.();
@@ -442,7 +443,7 @@ describe('a lock payment retry that reuses a saved bundle', () => {
     ],
   });
   const lockUrl = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
-  const savedPurchase = `/priv/social/purchases/LOCK1/${BUNDLE}.json`;
+  const savedPurchase = `/priv/app.pubky/v1/locks/purchases/LOCK1/${BUNDLE}.json`;
 
   it.each([
     ['logout begins', () => useAuthStore.setState({ isLoggingOut: true })],
@@ -482,5 +483,54 @@ describe('a lock payment retry that reuses a saved bundle', () => {
       LocksApplication.startPayment({ lockFile, lockUrl, readerPubky: USER, isRetry: false }),
     ).resolves.toEqual({ bundleId: BUNDLE, status: 'pending', readerNotPayable: false });
     expect(submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: BUNDLE }));
+  });
+});
+
+describe('the copy of the Locks reader files from /priv/social/ (#3206)', () => {
+  const BUNDLE = 'A'.repeat(26);
+  const SOCIAL = '/priv/social/';
+  const NEW = '/priv/app.pubky/v1/locks/';
+  const FLAG = `${NEW}_social_copied.json`;
+  const seedReplica = (lockId: string) => {
+    homeserver.files.set(`${SOCIAL}unlocked/${lockId}/img1`, 'image bytes');
+    homeserver.files.set(
+      `${SOCIAL}unlocked/${lockId}/post.json`,
+      JSON.stringify({
+        content: lockId,
+        kind: 'image',
+        attachments: [{ url: `pubky://${USER}${SOCIAL}unlocked/${lockId}/img1`, content_type: 'image/png' }],
+      }),
+    );
+  };
+
+  it('copies the replicas and the legacy purchase file, then writes the flag', async () => {
+    seedReplica('LOCK1');
+    homeserver.files.set(`${SOCIAL}purchases/LOCK2.json`, JSON.stringify({ bundle_id: BUNDLE }));
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: USER });
+
+    expect(homeserver.files.get(`${NEW}unlocked/LOCK1/img1`)).toBe('image bytes');
+    expect(JSON.parse(homeserver.files.get(`${NEW}unlocked/LOCK1/post.json`) ?? '').attachments).toEqual([
+      { url: `pubky://${USER}${NEW}unlocked/LOCK1/img1`, content_type: 'image/png' },
+    ]);
+    expect(JSON.parse(homeserver.files.get(`${NEW}purchases/LOCK2/${BUNDLE}.json`) ?? '')).toEqual({
+      bundle_id: BUNDLE,
+    });
+    expect(homeserver.files.has(FLAG)).toBe(true);
+    expect(homeserver.files.has(`${SOCIAL}unlocked/LOCK1/post.json`)).toBe(true);
+  });
+
+  it('sends nothing more once logout begins during a retry, and leaves the flag for the next run', async () => {
+    seedReplica('LOCK1');
+    seedReplica('LOCK2');
+    homeserver.putBytes.mockRejectedValueOnce(sdkError(503));
+    onBackoff = () => {
+      useAuthStore.setState({ isLoggingOut: true });
+    };
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: USER });
+
+    expect(homeserver.writes.filter((write) => write.isLoggingOut)).toEqual([]);
+    expect(homeserver.files.has(FLAG)).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import type { MigrationReport } from 'pubky-social-migrator';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
@@ -158,6 +159,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
     vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
     vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notificationInitialState);
+    vi.spyOn(LocksApplication, 'copySocialReaderFiles').mockResolvedValue(undefined);
     vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
     vi.spyOn(HomeserverService, 'logout').mockResolvedValue(undefined);
     vi.spyOn(HomeserverService, 'logoutLegacyCookie').mockResolvedValue(undefined);

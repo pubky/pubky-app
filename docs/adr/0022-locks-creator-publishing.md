@@ -12,8 +12,8 @@ against. Since the `pubky-social-specs` port the announcement is an ordinary ver
 edit spreads the stored head so the `lock` survives, and the guarded primary is a v1 `Post` encoded by kind
 (`GuardedPostBuilder.toPrimary`; a locked article keeps its cover in slot 0 with `cover_image: null`) that readers parse
 before falling back to the 0.x shape (`GuardedContentParser.parsePost`). The Lock Server paths (`/pub/app.locks/`,
-`/priv/app.locks/content/`) and the reader directories under `/priv/social/` are unchanged. Current detail:
-`docs/locks.md`.
+`/priv/app.locks/content/`) are unchanged. The reader directories moved from `/priv/social/` to
+`/priv/app.pubky/v1/locks/` in #3206 (`docs/locks.md`, _Reader files before #3206_). Current detail: `docs/locks.md`.
 
 **Interim note (#2758, 2026-10-08):** until #2283 lands, Enable Locks requires the Lock Server session to belong
 to the account signed in to pubky.app. The two-identities decision below is unchanged; the check is
