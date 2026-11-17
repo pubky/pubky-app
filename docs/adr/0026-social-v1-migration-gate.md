@@ -6,7 +6,8 @@ Accepted — 2026-10-30, for the `pubky-social-specs` 1.x port (`docs/migrations
 Updated — 2026-11-11 (outcome policy and telemetry brought in line with the controller and `report-telemetry.ts`)  
 Updated — 2026-11-12 (the restore's flag read bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; a timeout ends in `temporary-error`)  
 Updated — 2026-11-13 (the signed-out explanation is route-independent while its notice is pending; the cut-over worker reloads a tab to its creation URL, see _Amendment_)  
-Updated — 2026-11-13 (the worker no longer reloads the new build's own pages, ADR-0021 amendment; the double boot and option (i) re-scoped, see _Consequences_ of the _Amendment_)
+Updated — 2026-11-13 (the worker no longer reloads the new build's own pages, ADR-0021 amendment; the double boot and option (i) re-scoped, see _Consequences_ of the _Amendment_)  
+Updated — 2026-11-17 (every adopted grant is admitted before its session reference is published; the gate's automatic sign-out runs once per auth generation; third human review)
 
 ## Context
 
@@ -64,7 +65,7 @@ session-store id is recorded as admitted and the engine runs; its own HEAD finds
 reference, so no other tab can restore a fresh grant the record does not yet list (third human review, 2026-11-17).
 A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the app never
 hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
-keeps its context when it passes and admits its grant.
+keeps its context when it passes.
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen
 (Continue) only when the last run skipped something or any run of the gate dropped a profile value. `incomplete` and

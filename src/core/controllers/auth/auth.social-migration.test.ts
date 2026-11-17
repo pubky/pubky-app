@@ -525,14 +525,21 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
     });
 
-    it('admits the upgraded grant before the auth record publishes it, gated or not', async () => {
-      vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
+    it.each([
+      ['gated: this browser never saw the account pass', false],
+      ['ungated: a trusted local record keeps the context', true],
+    ])('admits the upgraded grant before the auth record publishes it, %s', async (_, trusted) => {
+      if (trusted) {
+        writeSocialMigrationRecord(pubky, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV, admittedGrantIds: [] });
+      }
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
       const expectAdmittedAtPublish = admittedAtPublish('upgraded-grant');
 
       const flow = await AuthController.getUpgradeAuthUrl(true);
       await flow?.awaitApproval;
       await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
 
+      expect(run).toHaveBeenCalledTimes(trusted ? 0 : 1);
       expectAdmittedAtPublish();
     });
 

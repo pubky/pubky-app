@@ -178,7 +178,9 @@ export class FileApplication {
 
   /**
    * Releases every upload claim of the batch, all of one file in one write, and returns the URIs of
-   * the files the batch created (`preexisting === false`) that no other upload still claims.
+   * the files the batch created (`preexisting === false`) that no other upload still claims. Claims are kept per file
+   * id (the hash, without the extension), so the same bytes uploaded under two types share one claim set: that only
+   * over-protects, keeping an orphan, the safe failure.
    */
   private static async releaseUploadClaims(fileAttachments: TFileAttachmentResult[]): Promise<string[]> {
     const byFileId = new Map<string, { claims: string[]; createdUris: string[] }>();

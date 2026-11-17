@@ -135,7 +135,10 @@ export class SocialMigrationController {
     return isSocialMigrationRecordTrusted(readSocialMigrationRecord(pubky));
   }
 
-  /** An upgrade adopted on a trusted record passes without the gate; its grant is admitted all the same. */
+  /**
+   * Admits `grantId` for `pubky`. `AuthController` admits every adopted grant (sign-in, signup, upgrade, gated or not)
+   * before it publishes the session reference, so no other tab can restore it unadmitted (ADR-0026).
+   */
   static admitGrant(pubky: string, grantId: string): void {
     admitSocialMigrationGrant(pubky, grantId);
   }

@@ -257,6 +257,20 @@ describe('LocalFileService', () => {
       expect(rows[0].name).toBe('second.jpg');
     });
 
+    it('reports a failed merge write as a database error of upsertWithClaim', async () => {
+      const put = vi.spyOn(FileDetailsModel.table, 'put').mockRejectedValueOnce(new Error('disk full'));
+
+      try {
+        await expect(LocalFileService.create({ ...upload(), claim: 'a' })).rejects.toMatchObject({
+          category: ErrorCategory.Database,
+          code: DatabaseErrorCode.WRITE_FAILED,
+          operation: 'upsertWithClaim',
+        });
+      } finally {
+        put.mockRestore();
+      }
+    });
+
     it('propagates database error when the write fails', async () => {
       const dbError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Database write failed', {
         service: ErrorService.Local,

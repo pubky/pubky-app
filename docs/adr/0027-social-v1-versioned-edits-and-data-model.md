@@ -28,6 +28,9 @@ Amended — 2026-11-13 (FIX-FINAL-10, the Greptile P1 on #3140, round 7): a coll
 there, never the item list the controller read before the lock, so an edit queued behind another edit of the same
 collection keeps that edit, and one the head already holds writes no version. See the _Edit_ bullet below.
 
+Amended — 2026-11-17 (third human review): every upload claims its file's local row (`upload_claims`), and a
+rollback keeps a file another pending upload still claims. See _Media lifetime_, _Upload claims_ below.
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`). Amends ADR-0023 (article covers)
 and the Locks reader described in ADR-0022.
 
