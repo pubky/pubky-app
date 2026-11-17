@@ -484,9 +484,10 @@ only an address, one line; an event that names neither (an online one, a venue k
 no destination. "Open in Maps" (`ResourceMapsMenu`) is on every one of these surfaces: the map's corner, the line's
 end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Android only, where something opens it. Maps are MapLibre GL on OpenFreeMap's tiles (`@/config/maps`), with these rules:
 
-- Nothing loads before a map is on screen (`ResourceMap`: no library, no tile), and the map is removed when it leaves
-  the screen or its card goes away, so a feed never holds one WebGL context per card. A viewer with platform embeds up
-  front off gets "Show map" first. Every request goes out without credentials or a referrer (`toPrivateMapRequest`),
+- Nothing loads before a map is on screen (`ResourceMap`: no tile, and no library unless a search's Map button
+  started it on hover or focus), and the map is removed when it leaves the screen or its card goes away, so a feed
+  never holds one WebGL context per card. Until the style is read the box shows a loading skeleton; the pins go on
+  then, before the tiles. A viewer with platform embeds up front off gets "Show map" first. Every request goes out without credentials or a referrer (`toPrivateMapRequest`),
   and nothing of the resource or the viewer is put into a tile address or an "Open in Maps" link.
 - The library, its stylesheet and its worker file are one lazily imported unit (`src/libs/maps/maplibre.runtime.ts`),
   kept out of the service worker's precache (`docs/pwa.md`, _Precache diet_).
@@ -522,7 +523,8 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
   its `occurrence.status` or `event_status`, never filtered.
 - The results map groups pins in the browser over the rows read so far (`clusterMapPoints`), at most
   `MAP_RESULTS_MAX` of them, and says how many rows it shows and how many have no location; it never searches the
-  area in view. Boxes and nearness take the short way round the world (`getPointsBounds`), so results either side of
+  area in view. A press on a pin that selects scrolls its cards up into view, never so far that the pin goes under
+  the page's header (`revealSelection`). Boxes and nearness take the short way round the world (`getPointsBounds`), so results either side of
   the antimeridian are fitted and grouped as the neighbours they are.
 - Events or Places alone are a search (`isResourceFiltersSearch`): `/search?kind=event` lists the coming events as an
   agenda and `/search?kind=place` the places, either on a map with `view=map`, without a text or a tag. Any other

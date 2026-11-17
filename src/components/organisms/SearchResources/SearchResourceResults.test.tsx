@@ -21,7 +21,10 @@ const mocks = vi.hoisted(() => ({
   user: { name: undefined as string | undefined },
   view: 'list' as 'list' | 'map',
   setView: vi.fn(),
+  loadMapLibrary: vi.fn(() => Promise.resolve({})),
 }));
+
+vi.mock('@/libs/maps/maplibre', () => ({ loadMapLibrary: mocks.loadMapLibrary }));
 
 vi.mock('@/hooks/useResourceSearch/useResourceSearch', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/hooks/useResourceSearch/useResourceSearch')>()),
@@ -331,6 +334,24 @@ describe('SearchResourceResults', () => {
       rerender(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
       expect(screen.getByTestId('results-map')).toHaveAttribute('data-kind', 'place');
       expect(screen.queryByTestId('resource-feed')).toBeNull();
+    });
+
+    it('starts loading the map’s library as the pointer or the keyboard reaches Map, and not before', async () => {
+      mocks.query.mockReturnValue(queryResult('kind=event'));
+      render(<SearchResourceResults layout={LAYOUT.COLUMNS} />);
+      expect(mocks.loadMapLibrary).not.toHaveBeenCalled();
+
+      fireEvent.pointerEnter(within(view()).getByRole('button', { name: 'Agenda' }));
+      expect(mocks.loadMapLibrary).not.toHaveBeenCalled();
+
+      fireEvent.pointerEnter(within(view()).getByRole('button', { name: 'Map' }));
+      expect(mocks.loadMapLibrary).toHaveBeenCalledTimes(1);
+
+      // A load that fails is left to the map, which tries again: nothing is thrown here
+      mocks.loadMapLibrary.mockReturnValueOnce(Promise.reject(new Error('offline')));
+      fireEvent.focus(within(view()).getByRole('button', { name: 'Map' }));
+      expect(mocks.loadMapLibrary).toHaveBeenCalledTimes(2);
+      await Promise.resolve();
     });
 
     it('moves between the two views with the keyboard: both are buttons in the tab order', () => {

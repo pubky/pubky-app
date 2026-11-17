@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UseResourceSearchResult } from '@/hooks/useResourceSearch/useResourceSearch';
 import { useResourceLocationVariant } from '@/molecules/ResourceMap/ResourceLocationContext';
 import type { ResourceMapProps } from '@/molecules/ResourceMap/ResourceMap';
@@ -24,7 +24,7 @@ vi.mock('@/molecules/ResourceMap/ResourceMap', () => ({
             aria-pressed={marker.id === props.selectedId}
             data-count={marker.count ?? 1}
             data-zooms={marker.bounds ? 'yes' : 'no'}
-            onClick={() => props.onSelect?.(marker.id)}
+            onClick={(event) => props.onSelect?.(marker.id, event.currentTarget)}
           >
             {marker.label}
           </button>
@@ -122,6 +122,87 @@ describe('SearchResourceMap', () => {
     expect(cards[0]).toHaveAttribute('data-uri', 'https://www.openstreetmap.org/node/633601362');
     expect(cards[0]).toHaveAttribute('data-location', 'row');
     expect(screen.getByRole('button', { name: 'Henrici' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  describe('bringing a pressed pin’s cards into view', () => {
+    /** Where the pressed pin and the first card are on the page (jsdom lays nothing out). */
+    const layout = { pin: 556, card: [892, 1400] };
+    const scrollBy = vi.fn();
+    let reducedMotion = false;
+
+    beforeEach(() => {
+      layout.pin = 556;
+      layout.card = [892, 1400];
+      reducedMotion = false;
+      scrollBy.mockClear();
+      vi.stubGlobal('innerHeight', 900);
+      vi.stubGlobal('scrollBy', scrollBy);
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: reducedMotion && query.includes('reduce') }));
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.testid === 'event-card') return { top: layout.card[0], bottom: layout.card[1] } as DOMRect;
+        if (this.tagName === 'BUTTON') return { top: layout.pin, bottom: layout.pin + 32 } as DOMRect;
+        return { top: 0, bottom: 0 } as DOMRect;
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    const pressThreeHere = () => {
+      const spot = { lat: 47.37688, lon: 8.53844 };
+      render(
+        <SearchResourceMap
+          kind="event"
+          search={search({ cards: [EVENTS[1], EVENTS[4], EVENTS[5]].map((card) => ({ ...card, point: spot })) })}
+        />,
+      );
+      zoomTo(18);
+      fireEvent.click(screen.getByRole('button', { name: '3 events here' }));
+    };
+
+    it('scrolls as far as the first card needs to be seen whole, smoothly', () => {
+      layout.card = [892, 1100];
+      pressThreeHere();
+
+      expect(screen.getAllByTestId('event-card')).toHaveLength(3);
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith({ top: 200, behavior: 'smooth' });
+    });
+
+    it('stops before the pressed pin goes under the page’s header', () => {
+      pressThreeHere();
+
+      // The card would need 500; the pin at 556 may go up to 16 below the 144 of the header
+      expect(scrollBy).toHaveBeenCalledWith({ top: 396, behavior: 'smooth' });
+    });
+
+    it('moves nothing when the first card is already in view, or the pin is already at the header', () => {
+      layout.card = [500, 800];
+      pressThreeHere();
+      expect(scrollBy).not.toHaveBeenCalled();
+
+      cleanup();
+      layout.card = [892, 1400];
+      layout.pin = 150;
+      pressThreeHere();
+      expect(scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('brings them into view again on a second press of the same pin', () => {
+      pressThreeHere();
+      fireEvent.click(screen.getByRole('button', { name: '3 events here' }));
+
+      expect(scrollBy).toHaveBeenCalledTimes(2);
+    });
+
+    it('jumps instead of scrolling smoothly for a viewer who asked for reduced motion', () => {
+      reducedMotion = true;
+      pressThreeHere();
+
+      expect(scrollBy).toHaveBeenCalledWith({ top: 396, behavior: 'instant' });
+    });
   });
 
   it('keeps the selected card when the map is zoomed and its pin joins a group', () => {

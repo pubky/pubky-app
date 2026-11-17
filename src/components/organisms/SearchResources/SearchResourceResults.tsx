@@ -19,6 +19,7 @@ import {
 } from '@/hooks/useSearchResourceQuery/useSearchResourceQuery';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { loadMapLibrary } from '@/libs/maps/maplibre';
 import { formatPublicKey } from '@/libs/utils/utils';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { ResourceItem } from '@/molecules/ResourceCard/ResourceItem';
@@ -53,6 +54,8 @@ const MAPPED_KINDS: Readonly<Record<string, { kind: 'event' | 'place'; list: str
  * A search of Events lists as an agenda (`SearchEventAgenda`: by day, each calendar occurrence an
  * event of its own), and a search of Events or Places can be seen on a map instead
  * (`SearchResourceMap`), picked above the results and kept in the URL (`useResourceResultsView`).
+ * The map's library starts loading as the pointer or the keyboard reaches Map, so the map is drawn
+ * sooner once it is pressed; nothing of a map (no tile) is asked for before then.
  * Every other search, a searched link and a feed keep the list.
  *
  * With `feed`, the same list for a feed's External resources (Home): the panel's filters on the
@@ -98,13 +101,18 @@ export function SearchResourceResults({
     filters.author && !url ? author?.name || formatPublicKey({ key: filters.author, length: 8 }) : null;
   const inCollection = url ? null : filters.inCollection;
 
-  const viewButton = (value: TResourceResultsView, label: string, Icon: LucideIcon) => (
+  // A failed load is tried again by the map itself (`loadMapLibrary`)
+  const warmMap = () => void loadMapLibrary().catch(() => {});
+
+  const viewButton = (value: TResourceResultsView, label: string, Icon: LucideIcon, onApproach?: () => void) => (
     <Button
       type="button"
       variant={view === value ? 'secondary' : 'ghost'}
       size="sm"
       aria-pressed={view === value}
       onClick={() => setView(value)}
+      onPointerEnter={onApproach}
+      onFocus={onApproach}
       data-testid={`search-resource-view-${value}`}
     >
       <Icon aria-hidden="true" />
@@ -123,7 +131,7 @@ export function SearchResourceResults({
           data-testid="search-resource-view"
         >
           {viewButton('list', mapped.list, mapped.icon)}
-          {viewButton('map', 'Map', MapIcon)}
+          {viewButton('map', 'Map', MapIcon, warmMap)}
         </Container>
       )}
       {(authorName || inCollection) && (

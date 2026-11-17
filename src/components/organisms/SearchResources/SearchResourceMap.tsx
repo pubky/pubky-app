@@ -1,11 +1,12 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { CONTENT_AREA_STACK_CLASS } from '@/config/layoutClasses';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { MAP_FIT_MAX_ZOOM, MAP_RESULTS_MAX } from '@/config/maps';
 import { useEventInstances } from '@/hooks/useEventInstances/useEventInstances';
 import type { UseResourceSearchResult } from '@/hooks/useResourceSearch/useResourceSearch';
@@ -24,6 +25,9 @@ import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
 
 /** How close the map is taken to be before it says: the whole world, so near results start as one pin. */
 const INITIAL_ZOOM = 0;
+
+/** Room kept between the page's header and a pressed pin when its cards are brought into view. */
+const PIN_ROOM_PX = 16;
 
 /** What each kind's results are called, and the quiet line under its map. */
 const KINDS = {
@@ -47,8 +51,10 @@ interface SearchResourceMapProps {
  * map asks Pinakes for nothing as it moves, and searches no area). A press on a group zooms into
  * it; on a pin, or on a group of results at one spot, it opens their real cards under the map, each
  * with its tag bar and saying where it is on a line with "Open in Maps" (the map above already
- * shows it). Under the map: how much it shows (at most `MAP_RESULTS_MAX` results), and how many
- * results have no location and so no pin. Every event is its own result, a calendar's occurrences too (`useEventInstances`).
+ * shows it). Each such press scrolls the page as far as the first card needs, but never so far that
+ * the pressed pin goes under the page's header (`revealSelection`). Under the
+ * map: how much it shows (at most `MAP_RESULTS_MAX` results), and how many results have no location
+ * and so no pin. Every event is its own result, a calendar's occurrences too (`useEventInstances`).
  */
 export function SearchResourceMap({ kind, search, children }: SearchResourceMapProps) {
   const { cards, loading, loadingMore, error, hasMore, loadMore, retry, unavailable } = search;
@@ -61,7 +67,14 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
   const isCapped = read.length >= MAP_RESULTS_MAX && (hasMore || read.length > MAP_RESULTS_MAX);
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [selected, setSelected] = useState<string[]>([]);
+  // The pin last pressed, a new object on every press (the same pin's too): each reveals its cards once they render
+  const [pressed, setPressed] = useState<{ pin: HTMLElement } | null>(null);
+  const selectionRef = useRef<HTMLDivElement>(null);
   const words = KINDS[kind];
+
+  useEffect(() => {
+    if (pressed) revealSelection(selectionRef.current?.firstElementChild, pressed.pin);
+  }, [pressed]);
   const count = (total: number) => `${total} ${total === 1 ? words.one : words.many}`;
 
   const located = rows.flatMap((card) => {
@@ -148,7 +161,10 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
           size="wide"
           fit={located.map((item) => item.point)}
           selectedId={selectedPin?.id ?? null}
-          onSelect={(id) => setSelected(clusters.find((cluster) => cluster.id === id)?.ids ?? [])}
+          onSelect={(id, pin) => {
+            setSelected(clusters.find((cluster) => cluster.id === id)?.ids ?? []);
+            setPressed({ pin });
+          }}
           onZoom={setZoom}
         />
         <Container overrideDefaults className="flex flex-col gap-2">
@@ -166,6 +182,7 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
         </Container>
         <Container
           as="section"
+          ref={selectionRef}
           overrideDefaults
           aria-label="Selected on the map"
           aria-live="polite"
@@ -202,4 +219,22 @@ export function SearchResourceMap({ kind, search, children }: SearchResourceMapP
       </Typography>
     </Container>
   );
+}
+
+/**
+ * Brings the first card of a pressed pin into view: the cards open under the map, often below the
+ * fold, and a press that changed nothing on screen reads as one that did nothing. The page moves
+ * no further than the card's end (measured once: a place's card may still be loading), and stops
+ * before the pin goes under the page's header. A card already in view moves nothing; with reduced
+ * motion the page jumps.
+ */
+function revealSelection(card: Element | null | undefined, pin: HTMLElement) {
+  if (!card) return;
+  const { top, bottom } = card.getBoundingClientRect();
+  if (top >= 0 && bottom <= window.innerHeight) return;
+  const pinRoom = pin.getBoundingClientRect().top - LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN - PIN_ROOM_PX;
+  const distance = Math.min(bottom - window.innerHeight, pinRoom);
+  if (distance <= 0) return;
+  const isReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  window.scrollBy({ top: distance, behavior: isReduced ? 'instant' : 'smooth' });
 }

@@ -151,6 +151,18 @@ describe('ResourceMap', () => {
       expect(screen.queryByTestId('resource-map-attribution')).toBeNull();
     });
 
+    it('shows a loading map from the first render, before the viewport is known to show it, loading nothing yet', async () => {
+      const importsBefore = mocks.state.imports;
+      renderMap();
+      await act(async () => {});
+
+      // Not an empty box, which reads as a map that failed
+      expect(screen.getByTestId('resource-map-loading')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'idle');
+      expect(mocks.state.imports).toBe(importsBefore);
+      expect(mocks.state.maps).toHaveLength(0);
+    });
+
     it('counts as on screen only what is in the viewport itself, with no margin around it', () => {
       renderMap();
 
@@ -224,6 +236,46 @@ describe('ResourceMap', () => {
       ]);
       expect(map.options.attributionControl).toBe(false);
       expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'ready');
+    });
+  });
+
+  describe('drawing', () => {
+    it('shows its pins and credit and ends the loading map once the style is read, before every tile is', async () => {
+      mocks.state.isVisible = true;
+      const onZoom = vi.fn();
+      renderMap({ markers: [CAFE], mode: 'explore', onZoom });
+      const map = await madeMap();
+      map.options.zoom = 14;
+      expect(screen.getByTestId('resource-map-loading')).toBeInTheDocument();
+
+      // The style is read; the tiles, sprites and fonts (`load`) are still on their way
+      act(() => map.fire('style.load'));
+
+      expect(await screen.findByRole('button', { name: 'Conditorei schober' })).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-map-loading')).toBeNull();
+      expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'ready');
+      expect(screen.getByTestId('resource-map-attribution')).toBeInTheDocument();
+      expect(onZoom).toHaveBeenCalledWith(14);
+
+      // The whole first drawing changes nothing more, and tells the zoom only once
+      act(() => map.fire('load'));
+      expect(onZoom).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Conditorei schober' })).toBeInTheDocument();
+    });
+
+    it('still falls back when a tile fails after the style is read, before the map is first drawn whole', async () => {
+      mocks.state.isVisible = true;
+      renderMap({ mode: 'explore' });
+      const map = await madeMap();
+      act(() => map.fire('style.load'));
+      await screen.findByRole('button', { name: 'Conditorei schober' });
+
+      act(() => map.fire('error', { error: new Error('Failed to fetch') }));
+
+      expect(screen.getByTestId('resource-map-fallback')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Conditorei schober' })).toBeNull();
+      await act(async () => {});
+      expect(map.removed).toBe(true);
     });
   });
 
@@ -508,6 +560,8 @@ describe('ResourceMap', () => {
       renderMap();
       await act(async () => {});
       expect(mocks.state.maps).toHaveLength(0);
+      // Nothing is on its way: no loading map, the button to ask for one
+      expect(screen.queryByTestId('resource-map-loading')).toBeNull();
 
       fireEvent.click(screen.getByRole('button', { name: 'Show map' }));
 
@@ -574,7 +628,34 @@ describe('ResourceMap', () => {
 
       fireEvent.click(cafe);
 
-      expect(onSelect).toHaveBeenCalledWith('cafe');
+      // With the pin itself: where on the page it is
+      expect(onSelect).toHaveBeenCalledWith('cafe', cafe);
+    });
+
+    it('shows a picked pin larger and in the foreground colour, a group of results too', async () => {
+      mocks.state.isVisible = true;
+      const stacked = { id: 'stacked', point: { lat: 47.41, lon: 8.55 }, label: '2 results here', count: 2 };
+      const { rerender } = renderMap({ markers: [CAFE, stacked], mode: 'explore' });
+      const map = await madeMap();
+      act(() => map.fire('load'));
+
+      const group = () => screen.getByRole('button', { name: '2 results here' }).firstElementChild;
+      const place = () => screen.getByRole('button', { name: 'Conditorei schober' }).firstElementChild;
+      expect(await screen.findByRole('button', { name: '2 results here' })).toBeInTheDocument();
+      expect(group()).toHaveClass('size-8', 'bg-brand');
+      expect(place()).toHaveClass('size-7', 'fill-brand');
+
+      rerender(
+        <ResourceMap markers={[CAFE, stacked]} label="Map of Conditorei schober" mode="explore" selectedId="stacked" />,
+      );
+      expect(group()).toHaveClass('size-10', 'bg-foreground', 'text-background');
+      expect(group()).not.toHaveClass('size-8', 'bg-brand');
+
+      rerender(
+        <ResourceMap markers={[CAFE, stacked]} label="Map of Conditorei schober" mode="explore" selectedId="cafe" />,
+      );
+      expect(place()).toHaveClass('size-9', 'fill-foreground');
+      expect(group()).toHaveClass('size-8', 'bg-brand');
     });
 
     it('zooms into a group of pins that can be told apart, and selects one that cannot', async () => {
@@ -595,7 +676,7 @@ describe('ResourceMap', () => {
       expect(map.focused).toEqual([{ inert: false, options: { preventScroll: true } }]);
 
       fireEvent.click(screen.getByRole('button', { name: '2 results here' }));
-      expect(onSelect).toHaveBeenCalledWith('stacked');
+      expect(onSelect).toHaveBeenCalledWith('stacked', screen.getByRole('button', { name: '2 results here' }));
       expect(screen.getByRole('button', { name: '2 results here' })).toHaveTextContent('2');
     });
 
