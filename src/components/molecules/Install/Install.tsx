@@ -12,6 +12,7 @@ import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
+import { getDeployEnv } from '@/config/network';
 import { Bitkit, PubkyIcon } from '@/icons';
 import { isIosDevice } from '@/libs/pwa/platform';
 import { DialogDownloadPubkyRing } from '@/organisms/DialogDownloadPubkyRing/DialogDownloadPubkyRing';
@@ -78,6 +79,14 @@ const KEYCHAINS = {
   },
 } satisfies Record<OnboardingKeychain, unknown>;
 
+/**
+ * The store badges install the production apps. On staging the Bitkit sign-up tap opens Bitkit's
+ * regtest build (`to.bitkit.dev`, see `toAndroidAuthIntentUrl`), which no public store carries, so
+ * staging shows no Bitkit badges rather than send testers to an app that cannot take the request.
+ */
+const showsStoreButtons = (keychain: OnboardingKeychain): boolean =>
+  keychain === 'ring' || getDeployEnv() === 'production';
+
 interface KeychainCardProps {
   keychain: OnboardingKeychain;
   pendingKeychain: OnboardingKeychain | null;
@@ -92,7 +101,9 @@ const KeychainCard = ({ keychain, pendingKeychain, onContinue }: KeychainCardPro
       <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground opacity-80">
         {description}
       </Typography>
-      <Container className="flex-row flex-wrap items-center gap-4">{storeButtons}</Container>
+      {showsStoreButtons(keychain) && (
+        <Container className="flex-row flex-wrap items-center gap-4">{storeButtons}</Container>
+      )}
       <Button
         id={buttonId}
         type="button"

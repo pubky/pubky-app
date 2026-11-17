@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
+import type { DeployEnv } from '@/libs/runtime-config/runtime-config.schema';
 import { InstallHeader, InstallKeychains } from './Install';
 
 // Mock Next.js Image
@@ -10,6 +11,12 @@ vi.mock('next/image', () => ({
   default: ({ src, alt, ...props }: { src: string; alt: string; [key: string]: unknown }) => (
     <img src={src} alt={alt} {...props} />
   ),
+}));
+
+const { network } = vi.hoisted(() => ({ network: { deployEnv: 'production' as DeployEnv } }));
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  getDeployEnv: () => network.deployEnv,
 }));
 
 // Mock Next.js router
@@ -35,6 +42,7 @@ describe('InstallHeader', () => {
 describe('InstallKeychains', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    network.deployEnv = 'production';
     vi.stubGlobal('navigator', { userAgent: ANDROID, platform: 'Linux armv8l', maxTouchPoints: 5 });
   });
 
@@ -69,6 +77,18 @@ describe('InstallKeychains', () => {
       'href',
       BITKIT_PLAY_STORE_URL,
     );
+  });
+
+  it('shows no Bitkit store badges on staging, whose sign-up opens the regtest build', () => {
+    network.deployEnv = 'staging';
+
+    render(<InstallKeychains />);
+
+    expect(screen.queryByAltText('Download Bitkit on the App Store')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Get Bitkit on Google Play')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
+    expect(screen.getAllByAltText('App Store').length).toBeGreaterThan(0);
+    expect(screen.getAllByAltText('Google Play').length).toBeGreaterThan(0);
   });
 
   it('continues to the Pubky Ring scan step', () => {
