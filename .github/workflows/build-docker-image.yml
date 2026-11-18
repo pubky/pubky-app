@@ -156,8 +156,11 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
           image: 'pubky-app'
-          cache_from: type=gha
-          cache_to: type=gha,mode=max
+          # No BuildKit layer cache. Every layer after `COPY . .` is unique per commit, so
+          # `mode=max` exported ~1 GB of never-reused blobs per build (the export step alone
+          # took ~3.5 min of a ~7.5 min build) and filled the repo's 10 GB Actions cache,
+          # evicting the node_modules and Playwright caches other workflows rely on. The one
+          # reusable layer, `npm ci`, took longer to import from the cache than to re-run.
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}

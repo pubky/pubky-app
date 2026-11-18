@@ -8,8 +8,12 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY patches ./patches
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Install all dependencies (including devDependencies for build).
+# The Cypress binary (~640 MB unpacked) is only used by the e2e runner, never by the
+# image build, so its postinstall download is skipped; npm's download cache is dropped
+# in the same layer. Neither reaches the final image, but both made this layer heavy.
+ENV CYPRESS_INSTALL_BINARY=0
+RUN npm ci && npm cache clean --force
 
 # Stage 2: Builder
 FROM node:lts-alpine AS builder
