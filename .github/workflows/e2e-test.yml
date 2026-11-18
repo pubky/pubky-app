@@ -133,11 +133,14 @@ jobs:
     name: End-to-End Tests
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    # Intentionally not needs: rebuild_pubky_app. The spec jobs do their own
-    # setup (checkout, npm ci, infra services) while the app image is still
-    # building, then poll the registry for it (see the wait step below), so
-    # setup overlaps the build instead of starting after it.
-    needs: [rebuild_images]
+    # Starts after the app image exists. Overlapping setup with the build (#2824) saved
+    # ~2-3 min of wall time per rebuild run, but each of the ~13 spec jobs then sat idle
+    # in the wait step below for a median 3 min: ~4,600 runner-minutes per 14 days, about
+    # a tenth of all Linux CI minutes. This suite runs after merge, so it takes the
+    # minutes back and accepts the later start. When no build input changed, the build
+    # job is skipped and the specs start as early as before. The wait step stays: it
+    # returns at once here and still checks that the content tag is in the registry.
+    needs: [rebuild_images, rebuild_pubky_app]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}

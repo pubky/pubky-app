@@ -2,8 +2,9 @@
 # Wait for the pubky-app image built for this workflow run to appear in the
 # registry under its content tag.
 #
-# The spec jobs start while rebuild_pubky_app may still be building, so their
-# setup overlaps the build; this step is where the two join. The content tag
+# The spec jobs start once rebuild_pubky_app has finished, so this normally
+# finds the image at once; it remains the check that the content tag really is
+# in the registry before the stack pulls it. The content tag
 # always names a linux/amd64 image: the platform is part of the hash and only
 # e2e requests content mode. Fails fast when the build job has already
 # failed; gives it a short grace once it concluded successfully, since the
