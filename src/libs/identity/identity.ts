@@ -1,72 +1,8 @@
 import { Keypair } from '@synonymdev/pubky';
-import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
-import type { TCreateRecoveryFileParams } from './identity.types';
 
 export class Identity {
-  /**
-   * Creates and downloads a recovery file for the keypair
-   * @param keypair - The keypair to create the recovery file for
-   * @param passphrase - The passphrase to use to create the recovery file
-   * @returns void
-   */
-  static createRecoveryFile({ keypair, passphrase }: TCreateRecoveryFileParams) {
-    try {
-      const recoveryFile = keypair.createRecoveryFile(passphrase);
-      this.handleDownloadRecoveryFile({ recoveryFile, filename: 'recovery.pkarr' });
-    } catch (error) {
-      // Re-throw validation errors
-      if (error instanceof Error && error.message.includes('Invalid secret key')) {
-        throw error;
-      }
-
-      throw Err.client(ClientErrorCode.UNPROCESSABLE, 'Failed to create recovery file, invalid secret key', {
-        service: ErrorService.Local,
-        operation: 'createRecoveryFile',
-        context: { originalError: error instanceof Error ? error.message : 'Unknown error' },
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Handles the download of the recovery file to the user's computer
-   * @param recoveryFile - The recovery file to download
-   * @param filename - The filename to use for the download
-   * @returns void
-   */
-  private static handleDownloadRecoveryFile({
-    recoveryFile,
-    filename,
-  }: {
-    recoveryFile: Uint8Array;
-    filename: string;
-  }) {
-    try {
-      const arrayBuffer = new ArrayBuffer(recoveryFile.byteLength);
-      new Uint8Array(arrayBuffer).set(recoveryFile);
-      const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(link.href);
-    } catch (error) {
-      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to download recovery file', {
-        service: ErrorService.Local,
-        operation: 'handleDownloadRecoveryFile',
-        cause: error,
-      });
-    }
-  }
-
   /**
    * Converts a keypair to a z32 pubky string
    * @param keypair - The keypair to convert
@@ -74,73 +10,6 @@ export class Identity {
    */
   static z32FromKeypair(keypair: Keypair): Pubky {
     return keypair.publicKey.z32();
-  }
-
-  /**
-   * Converts a secret key to a z32 pubky string
-   * @param secretKey - The secret key to convert
-   * @returns The z-base32 encoding of this public key
-   */
-  static z32FromSecret(secretKey: string): Pubky {
-    const secretKeyUint8Array = this.secretKeyFromHex(secretKey);
-    const keypair = Keypair.fromSecret(secretKeyUint8Array);
-    return keypair.publicKey.z32();
-  }
-
-  /** Inspect optional recovery material without reporting an expected validation failure. */
-  static tryZ32FromSecret(secretKey: string): Pubky | null {
-    if (!/^[0-9a-f]{64}$/i.test(secretKey)) return null;
-    try {
-      return Keypair.fromSecret(new Uint8Array(Buffer.from(secretKey, 'hex'))).publicKey.z32();
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Converts a secret key to a human-readable pubky string
-   * @param secretKey - The secret key to convert
-   * @returns The pubky string with prefix
-   */
-  static pubkyFromSecret(secretKey: string): string {
-    const secretKeyUint8Array = this.secretKeyFromHex(secretKey);
-    const keypair = Keypair.fromSecret(secretKeyUint8Array);
-    return keypair.publicKey.toString();
-  }
-
-  /**
-   * Converts a secret key to a keypair
-   * @param secretKey - The secret key to convert
-   * @returns The keypair
-   */
-  static keypairFromSecretKey(secretKey: string): Keypair {
-    try {
-      const secretKeyUint8Array = this.secretKeyFromHex(secretKey);
-      return Keypair.fromSecret(secretKeyUint8Array);
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid secret key format', {
-        service: ErrorService.Local,
-        operation: 'keypairFromSecretKey',
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Converts a hex string to a Uint8Array
-   * @param secretKey - The hex string
-   * @returns The secret key as a Uint8Array
-   */
-  private static secretKeyFromHex(secretKey: string) {
-    try {
-      return new Uint8Array(Buffer.from(secretKey, 'hex'));
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid secret key format', {
-        service: ErrorService.Local,
-        operation: 'secretKeyFromHex',
-        cause: error,
-      });
-    }
   }
 
   /**

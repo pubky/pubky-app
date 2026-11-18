@@ -30,7 +30,7 @@ Older grants missing core Shop access request the fixed Shop scopes through `Aut
 
 ### Logout and private Shop cleanup
 
-Embedded logout goes through App's existing backup-aware sign-out hook. A pending recovery-key backup only opens the logout page; no credential cleanup or epoch rotation occurs until logout is confirmed there.
+Embedded logout goes through App's existing sign-out hook, which logs out and then opens the logout page.
 
 App atomically persists the optional public `shopCleanupEpoch` in `auth-store-v3.state` when the identity changes (including logout and same-account logout/login), before removing local credentials. Same-account grant refreshes retain the previous epoch, including an absent legacy epoch. Only an identity boundary initializes or rotates it. Legacy records/snapshots default to an empty epoch. Shop keeps `shop-host-cleanup-epoch-v1`; a missing marker, including for the empty legacy epoch, requires cleanup before restoring the host grant. The marker is acknowledged only after successful cleanup. This makes an absent/unmounted iframe and interrupted cleanup recoverable. Shop compares the latest durable host generation, identity and epoch before restoring or acknowledging, and fences in-flight work immediately when the host leaves ready state. `request-retry` explicitly retries a temporary host restore without opening sign-in; frame load and ready handshakes republish the current lifecycle state.
 

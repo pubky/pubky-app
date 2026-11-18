@@ -56,7 +56,6 @@ vi.mock('next/navigation', () => {
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: createZustandLikeHook({
     inviteCode: 'VRT0CODE000001',
-    secretKey: 'vrt-fixed-secret-key',
     setInviteCode: vi.fn(),
     reset: vi.fn(),
     hasHydrated: true,

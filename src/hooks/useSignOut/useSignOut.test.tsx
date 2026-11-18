@@ -95,14 +95,6 @@ describe('useSignOut', () => {
   });
 });
 
-it('routes an unbacked browser key through backup confirmation before logout', async () => {
-  useOnboardingStore.setState({ secretKey: 'unbacked' });
-  const { result } = renderHook(() => useSignOut());
-  await act(() => result.current.handleSignOut());
-  expect(mockLogout).not.toHaveBeenCalled();
-  expect(mockPush).toHaveBeenCalledWith('/logout');
-  expect(useOnboardingStore.getState().secretKey).toBe('unbacked');
-});
 it('keeps the current page when another login supersedes signout', async () => {
   mockLogout.mockRejectedValue(createCanceledError());
   const { result } = renderHook(() => useSignOut());

@@ -68,7 +68,7 @@ beforeEach(() => {
     restoreStatus: 'ready',
     shopCleanupEpoch: 'login',
   });
-  useOnboardingStore.setState({ secretKey: 'test-recovery-key', mnemonic: 'test recovery words', hasHydrated: true });
+  useOnboardingStore.setState({ hasHydrated: true });
   localStorage.setItem(
     AUTH_PERSIST_KEY,
     JSON.stringify({
@@ -94,20 +94,16 @@ afterEach(() => {
   Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
 });
 
-describe('embedded backup and real App logout boundary', () => {
-  it('keeps recovery secrets and Shop credentials until actual logout, even after the iframe unmounts', async () => {
+describe('embedded real App logout boundary', () => {
+  it('clears Shop credentials on logout, and a same-account return cannot reuse the cleanup acknowledgment', async () => {
     const logout = vi.spyOn(AuthController, 'logout'); // Real controller, application and Shop cleanup service.
-    const { unmount } = render(<Harness />);
+    render(<Harness />);
     requestLogout();
+    expect(logout).toHaveBeenCalledOnce();
+    await act(async () => {
+      await logout.mock.results[0].value;
+    });
     expect(navigation.push).toHaveBeenCalledWith('/logout');
-    expect(logout).not.toHaveBeenCalled();
-    expect(useOnboardingStore.getState().secretKey).toBe('test-recovery-key');
-    expect(AuthApplication.readPersistedAuth()?.shopCleanupEpoch).toBe('login');
-    expect(localStorage.getItem('pubky.marketplace.session.v1')).toBe('shop-credential');
-    unmount();
-    // The existing logout confirmation calls this same real controller after the backup decision.
-    await AuthController.logout();
-    expect(useOnboardingStore.getState().secretKey).toBeNull();
     expect(useAuthStore.getState().currentUserPubky).toBeNull();
     const signedOut = AuthApplication.readPersistedAuth()!;
     expect(signedOut.shopCleanupEpoch).toBe(signedOut.generation);
@@ -121,7 +117,6 @@ describe('embedded backup and real App logout boundary', () => {
     expect(AuthApplication.readPersistedAuth()?.shopCleanupEpoch).toBe('same-account-return');
   });
   it('finishes initiated cleanup after its requesting iframe unmounts', async () => {
-    useOnboardingStore.getState().clearSecrets();
     const logout = vi.spyOn(AuthController, 'logout');
     const { unmount } = render(<Harness />);
     requestLogout();

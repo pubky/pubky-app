@@ -196,7 +196,7 @@ beforeEach(() => {
     );
   });
   useAuthStore.setState({ ...authInitialState, hasHydrated: true, generation: 'login' });
-  useOnboardingStore.setState({ secretKey: null, hasHydrated: true });
+  useOnboardingStore.setState({ hasHydrated: true });
   vi.mocked(AuthController.logout).mockResolvedValue();
 });
 afterEach(() => {

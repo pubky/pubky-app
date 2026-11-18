@@ -11,7 +11,6 @@ const mockSession = buildSession();
 const mockOnboardingStore = {
   hasHydrated: true,
   pubky: '',
-  secretKey: '',
   reset: vi.fn(),
   setHydrated: vi.fn(),
 };
@@ -43,7 +42,6 @@ describe('useAuthStatus', () => {
     // Reset default mock values
     mockOnboardingStore.hasHydrated = true;
     mockOnboardingStore.pubky = '';
-    mockOnboardingStore.secretKey = '';
     mockAuthStore.session = null;
     mockAuthStore.sessionReference = null;
     mockAuthStore.restoreStatus = 'idle';

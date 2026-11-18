@@ -2,26 +2,23 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { ONBOARDING_PERSIST_KEY } from '../persistedKeys';
 import { createOnboardingActions } from './onboarding.actions';
-import { createOnboardingSelectors } from './onboarding.selectors';
+import { migrateOnboardingPersistedState, ONBOARDING_STORE_VERSION } from './onboarding.migrations';
 import { onboardingInitialState, type OnboardingStore } from './onboarding.types';
 
 // Store creation
 export const useOnboardingStore = create<OnboardingStore>()(
   devtools(
     persist(
-      (set, get) => ({
+      (set) => ({
         ...onboardingInitialState,
         ...createOnboardingActions(set),
-        ...createOnboardingSelectors(get),
       }),
       {
         name: ONBOARDING_PERSIST_KEY,
+        version: ONBOARDING_STORE_VERSION,
+        migrate: migrateOnboardingPersistedState,
 
-        // Persist keys data
         partialize: (state) => ({
-          signupAttempt: state.signupAttempt,
-          secretKey: state.secretKey,
-          mnemonic: state.mnemonic,
           showWelcomeDialog: state.showWelcomeDialog,
           inviteCode: state.inviteCode,
           interestTags: state.interestTags,

@@ -1,10 +1,8 @@
 import React from 'react';
-import { Keypair } from '@synonymdev/pubky';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
-import type { OnboardingState } from '@/stores/onboarding/onboarding.types';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { Logout } from './Logout';
 
@@ -22,22 +20,13 @@ const mocks = vi.hoisted(() => {
     }),
   };
 
-  const onboardingState = {
-    secretKey: '',
-    signupAttempt: null as OnboardingState['signupAttempt'],
-    hasHydrated: true,
-  };
-
   return {
     authState,
-    onboardingState,
     mockPush: vi.fn(),
     mockLogout: vi.fn(),
     mockLoggerError: vi.fn(),
   };
 });
-
-vi.mock('@/organisms/AlertBackup/AlertBackup', () => ({ AlertBackup: () => <div>Backup controls</div> }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -138,15 +127,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
     },
   ),
 }));
-vi.mock('@/stores/onboarding/onboarding.store', () => ({
-  useOnboardingStore: Object.assign(
-    (selector?: (state: typeof mocks.onboardingState) => unknown) =>
-      selector ? selector(mocks.onboardingState) : mocks.onboardingState,
-    {
-      getState: () => mocks.onboardingState,
-    },
-  ),
-}));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     logout: (...args: unknown[]) => mocks.mockLogout(...args),
@@ -154,97 +134,6 @@ vi.mock('@/controllers/auth/auth', () => ({
 }));
 
 describe('Logout', () => {
-  it('waits for backup confirmation before direct-route signout', async () => {
-    const key = Keypair.random();
-    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
-    mocks.authState.currentUserPubky = key.publicKey.z32();
-    mocks.mockLogout.mockResolvedValue(undefined);
-    const { rerender } = render(<Logout />);
-    expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
-    expect(screen.getByText('Backup controls')).toBeInTheDocument();
-    expect(mocks.mockLogout).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
-    expect(mocks.mockPush).toHaveBeenCalledWith('/');
-    expect(mocks.onboardingState.secretKey).not.toBe('');
-    expect(mocks.mockLogout).not.toHaveBeenCalled();
-    mocks.onboardingState.secretKey = '';
-    rerender(<Logout />);
-    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
-    expect(mocks.mockLogout).toHaveBeenCalledOnce();
-  });
-  it.each(['different account', 'new grant'])('does not transfer a pending backup logout to a %s', async (change) => {
-    const key = Keypair.random();
-    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
-    mocks.authState.currentUserPubky = key.publicKey.z32();
-    mocks.mockLogout.mockResolvedValue(undefined);
-    const { rerender } = render(<Logout />);
-    expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
-    mocks.authState.generation = 'incoming';
-    if (change === 'different account') mocks.authState.currentUserPubky = Keypair.random().publicKey.z32();
-    mocks.onboardingState.secretKey = '';
-    rerender(<Logout />);
-    expect(await screen.findByText('Your account changed')).toBeInTheDocument();
-    expect(mocks.mockLogout).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
-    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
-    expect(mocks.mockLogout).toHaveBeenCalledOnce();
-  });
-
-  it('does not ask for a backup of an unrelated onboarding key', async () => {
-    mocks.onboardingState.secretKey = Buffer.from(Keypair.random().secret()).toString('hex');
-    mocks.mockLogout.mockResolvedValue(undefined);
-    render(<Logout />);
-    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
-    expect(screen.queryByText('Backup controls')).not.toBeInTheDocument();
-    expect(mocks.mockLogout).toHaveBeenCalledOnce();
-  });
-  it('signs a guest out without a backup prompt when the stored key has no account (#2955)', async () => {
-    // A stored key whose pubky has no session and nothing to restore (left by the former in-browser key step).
-    const key = Keypair.random();
-    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
-    mocks.authState.currentUserPubky = key.publicKey.z32();
-    mocks.authState.session = null;
-    mocks.authState.sessionReference = null;
-    mocks.authState.restoreStatus = 'idle';
-    mocks.mockLogout.mockResolvedValue(undefined);
-    render(<Logout />);
-    expect(screen.queryByText('Back up your key before signing out')).not.toBeInTheDocument();
-    expect(screen.queryByText('Backup controls')).not.toBeInTheDocument();
-    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
-    expect(mocks.mockLogout).toHaveBeenCalledOnce();
-  });
-  it.each(['reauth-required', 'temporary-error'] as const)(
-    'keeps the backup prompt for a member whose restore ended in %s (#2955)',
-    (restoreStatus) => {
-      // The auth store merge yields reauth-required for a persisted pubky without a reference: no session, nothing
-      // to restore, but an account whose only key may still be in this browser.
-      const key = Keypair.random();
-      mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
-      mocks.authState.currentUserPubky = key.publicKey.z32();
-      mocks.authState.session = null;
-      mocks.authState.sessionReference = null;
-      mocks.authState.restoreStatus = restoreStatus;
-      render(<Logout />);
-      expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
-      expect(screen.getByText('Backup controls')).toBeInTheDocument();
-      expect(mocks.mockLogout).not.toHaveBeenCalled();
-    },
-  );
-  it('keeps the backup prompt when the stored key has a sign-up attempt but no session yet (#2955)', () => {
-    // The former in-browser sign-up recorded the attempt before signing the created account in; that key may own an account.
-    const key = Keypair.random();
-    const pubky = key.publicKey.z32();
-    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
-    mocks.onboardingState.signupAttempt = { pubky, homeserver: 'homeserver', environment: 'staging', phase: 'created' };
-    mocks.authState.currentUserPubky = pubky;
-    mocks.authState.session = null;
-    mocks.authState.sessionReference = null;
-    mocks.authState.restoreStatus = 'idle';
-    render(<Logout />);
-    expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
-    expect(screen.getByText('Backup controls')).toBeInTheDocument();
-    expect(mocks.mockLogout).not.toHaveBeenCalled();
-  });
   it('waits for a controller-owned logout even after the account fields are cleared', () => {
     mocks.authState.currentUserPubky = null;
     mocks.authState.session = null;
@@ -265,9 +154,6 @@ describe('Logout', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.onboardingState.hasHydrated = true;
-    mocks.onboardingState.secretKey = '';
-    mocks.onboardingState.signupAttempt = null;
     mocks.authState.hasHydrated = true;
     mocks.authState.generation = 'original';
     mocks.authState.restoreStatus = 'idle';
@@ -438,8 +324,6 @@ describe('Logout', () => {
 describe('Logout after cookie migration', () => {
   it('runs cleanup for a retained account even though its cookie reference was discarded', async () => {
     mocks.authState.hasHydrated = true;
-    mocks.onboardingState.hasHydrated = true;
-    mocks.onboardingState.secretKey = '';
     mocks.authState.session = null;
     mocks.authState.sessionReference = null;
     mocks.authState.currentUserPubky = 'legacy-account';

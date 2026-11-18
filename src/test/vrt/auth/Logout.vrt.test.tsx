@@ -6,7 +6,6 @@ import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { Header } from '@/organisms/Header/Header';
 import { Logout } from '@/templates/Auth/Logout/Logout';
@@ -33,14 +32,8 @@ vi.mock('@/stores/auth/auth.store', () => ({
   }),
 }));
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
-  useOnboardingStore: createZustandLikeHook({
-    secretKey: '',
-    signupAttempt: null,
-    hasHydrated: true,
-    clearSecrets: vi.fn(),
-  }),
+  useOnboardingStore: createZustandLikeHook({ hasHydrated: true }),
 }));
-vi.mock('@/libs/identity/identity', () => ({ Identity: { tryZ32FromSecret: () => 'vrt-account' } }));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     logout: vi.fn(async () => {
@@ -58,9 +51,8 @@ for (const [name, viewport] of [
   ['mobile', VRT_VIEWPORT_MOBILE],
 ] as const) {
   describe(`Logout ${name}`, () => {
-    it.each(['backup', 'canceled', 'success', 'loading', 'error'] as const)('renders %s logout', async (state) => {
+    it.each(['canceled', 'success', 'loading', 'error'] as const)('renders %s logout', async (state) => {
       logoutFailure.kind = state === 'error' ? 'error' : 'canceled';
-      Object.assign(useOnboardingStore.getState(), { secretKey: state === 'backup' ? 'fixture-key' : '' });
       // Every state but 'success' is reached signed in; a pubky with no session and 'idle' would be a guest (#2882).
       Object.assign(useAuthStore.getState(), {
         currentUserPubky: state === 'success' ? null : 'vrt-account',
@@ -74,11 +66,7 @@ for (const [name, viewport] of [
         </>,
         { viewport },
       );
-      if (state === 'backup') {
-        await expect.element(page.getByRole('heading', { name: 'Back up your key before signing out' })).toBeVisible();
-        await expect.element(page.getByRole('button', { name: 'Done' })).toBeVisible();
-        await expect.element(page.getByRole('button', { name: 'Homepage' })).toBeVisible();
-      } else if (state === 'canceled') {
+      if (state === 'canceled') {
         await expect.element(page.getByRole('heading', { name: 'Your account changed' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
       } else if (state === 'loading') {

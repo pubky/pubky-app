@@ -22,14 +22,8 @@ const mockClearExperienceCompleted = vi.fn();
 
 const mockOnboardingStore = {
   getState: vi.fn(() => ({
-    selectSecretKey: vi.fn(() => 'test-secret-key'),
     clearExperienceCompleted: mockClearExperienceCompleted,
   })),
-};
-
-const mockIdentity = {
-  keypairFromSecretKey: vi.fn(() => ({ keypair: 'test-keypair' })),
-  createRecoveryFile: vi.fn(),
 };
 
 vi.mock('@/application/profile/profile', () => ({
@@ -42,13 +36,6 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: mockOnboardingStore,
 }));
 
-vi.mock('@/libs/identity/identity', async () => {
-  const actual = await vi.importActual<typeof import('@/libs/identity/identity')>('@/libs/identity/identity');
-  return {
-    ...actual,
-    Identity: mockIdentity,
-  };
-});
 const testPubky = 'o4dksfbqk85ogzdb5osziw6befigbuxmuxkuxq8434q89uj56uyy' as Pubky;
 
 let ProfileController: typeof import('./profile').ProfileController;
@@ -64,11 +51,8 @@ describe('ProfileController', () => {
     mockProfileApplication.commitUpdateStatus.mockReset();
     mockProfileApplication.commitUpdate.mockReset();
     mockUserNormalizer.to.mockReset();
-    mockIdentity.keypairFromSecretKey.mockReset();
-    mockIdentity.createRecoveryFile.mockReset();
     mockClearExperienceCompleted.mockReset();
     mockOnboardingStore.getState.mockReturnValue({
-      selectSecretKey: vi.fn(() => 'test-secret-key'),
       clearExperienceCompleted: mockClearExperienceCompleted,
     });
 
@@ -192,39 +176,6 @@ describe('ProfileController', () => {
           pubky: testPubky,
         }),
       ).rejects.toThrow('create failed');
-    });
-  });
-
-  describe('createRecoveryFile', () => {
-    it('creates recovery file from secret key', () => {
-      const mockSelectSecretKey = vi.fn(() => 'test-secret-key');
-      mockOnboardingStore.getState.mockReturnValue({
-        selectSecretKey: mockSelectSecretKey,
-        clearExperienceCompleted: mockClearExperienceCompleted,
-      });
-      mockIdentity.keypairFromSecretKey.mockReturnValue({ keypair: 'test-keypair' });
-
-      ProfileController.createRecoveryFile('test-passphrase');
-
-      expect(mockSelectSecretKey).toHaveBeenCalledTimes(1);
-      expect(mockIdentity.keypairFromSecretKey).toHaveBeenCalledWith('test-secret-key');
-      expect(mockIdentity.createRecoveryFile).toHaveBeenCalledWith({
-        keypair: { keypair: 'test-keypair' },
-        passphrase: 'test-passphrase',
-      });
-    });
-
-    it('throws error when secret key is not available', () => {
-      const mockSelectSecretKey = vi.fn(() => {
-        throw new Error('Secret key is not available');
-      });
-      mockOnboardingStore.getState.mockReturnValue({
-        selectSecretKey: mockSelectSecretKey,
-        clearExperienceCompleted: mockClearExperienceCompleted,
-      });
-
-      expect(() => ProfileController.createRecoveryFile('test-passphrase')).toThrow('Secret key is not available');
-      expect(mockIdentity.createRecoveryFile).not.toHaveBeenCalled();
     });
   });
 

@@ -3,12 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Home } from './Home';
 
 // Mock Organisms
-vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
-  return {
-    AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
-  };
-});
-
 vi.mock('@/organisms/AlertInstall/AlertInstall', () => {
   return {
     AlertInstall: () => <div data-testid="alert-install">AlertInstall</div>,
@@ -99,16 +93,10 @@ describe('Home', () => {
     expect(screen.getByTestId('dialog-welcome')).toBeInTheDocument();
   });
 
-  it('renders AlertBackup', () => {
+  it('renders AlertInstall right after FeedNavigation, with no backup reminder', () => {
     render(<Home />);
-    expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
-  });
-
-  it('renders AlertInstall between FeedNavigation and AlertBackup', () => {
-    render(<Home />);
-    const alertInstall = screen.getByTestId('alert-install');
-    expect(screen.getByTestId('feed-navigation').nextElementSibling).toBe(alertInstall);
-    expect(alertInstall.nextElementSibling).toBe(screen.getByTestId('alert-backup'));
+    expect(screen.getByTestId('feed-navigation').nextElementSibling).toBe(screen.getByTestId('alert-install'));
+    expect(screen.queryByText(/back up/i)).not.toBeInTheDocument();
   });
 
   it('renders FeedNavigation in main content', () => {

@@ -569,15 +569,6 @@ export class AuthController {
       LocksController.clearLocalSession();
       current.setNeedsAccountSync(current.currentUserPubky !== null);
       if (current.currentUserPubky) await useLocksAuthStore.persist.rehydrate();
-      if (epoch !== this.epoch) return;
-      // Another tab may hold recovery keys from the former in-browser sign-up that still need a backup.
-      await useOnboardingStore.persist.rehydrate();
-      if (epoch !== this.epoch) return;
-      const onboarding = useOnboardingStore.getState();
-      let onboardingPubky = onboarding.signupAttempt?.pubky;
-      if (!onboardingPubky && onboarding.secretKey)
-        onboardingPubky = Identity.tryZ32FromSecret(onboarding.secretKey) ?? undefined;
-      if (!current.currentUserPubky || onboardingPubky !== current.currentUserPubky) resetTabStore(useOnboardingStore);
     }
     if (previousRestore) await previousRestore.catch(() => false);
     if (epoch !== this.epoch) return;
@@ -739,13 +730,7 @@ export class AuthController {
       session,
       restoreStatus: preserveContext && !needsAccountPreparation ? 'ready' : 'restoring',
     });
-    // Keep browser recovery keys until a replacement account is durably accepted.
-    // A same-account reauthorization must not erase its still-unconfirmed backup.
-    const onboarding = useOnboardingStore.getState();
-    const onboardingPubky = onboarding.secretKey
-      ? Identity.tryZ32FromSecret(onboarding.secretKey)
-      : onboarding.signupAttempt?.pubky;
-    if (onboardingPubky !== pubky) resetTabStore(useOnboardingStore, true);
+    resetTabStore(useOnboardingStore, true);
     void this.retireLegacyCookieSessions();
     if (needsAccountPreparation) useAuthStore.getState().setNeedsAccountSync(true);
     if (!preserveContext || needsAccountPreparation) useAuthStore.getState().setRestoreStatus('restoring');

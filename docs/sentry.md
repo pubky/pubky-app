@@ -160,7 +160,7 @@ Pubky App is decentralized social — strict defaults:
   list for PII-shaped header/query keys), so no IP inference and no IP/cookie/header PII is attached in any
   runtime (browser, server, edge).
 - Replay: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`, `networkCaptureBodies: false`
-- Secret-bearing UI (the recovery phrase backup dialog) carries the `sentry-block` class, which removes its DOM from
+- Secret-bearing UI carries the `sentry-block` class (none ships since the recovery phrase dialog was removed), which removes its DOM from
   the Replay recording. `beforeBreadcrumb` (`dropBlockedUiBreadcrumb`) drops the `ui.*` breadcrumbs raised inside it,
   but that covers only the SDK breadcrumb trail: Replay's own click events are built from the target's id and classes
   with no block check and never pass `beforeBreadcrumb`. So element ids and classes must never carry user secrets;
