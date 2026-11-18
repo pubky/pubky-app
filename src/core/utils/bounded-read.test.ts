@@ -3,7 +3,7 @@ import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { awaitBounded } from './bounded-read';
+import { awaitBounded, whenAbandonedReadSettles } from './bounded-read';
 
 const MS = 1_000;
 
@@ -101,5 +101,60 @@ describe('awaitBounded', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(await bounded).toMatchObject({ code: TimeoutErrorCode.REQUEST_TIMEOUT });
+  });
+});
+
+describe('whenAbandonedReadSettles', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const abandon = async (read: Promise<string[]>) => {
+    const bounded = awaitBounded(read, { ms: MS, operation: 'fetchMutedUsers' }).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(MS);
+    return await bounded;
+  };
+
+  it.each([
+    ['answers', (read: PromiseWithResolvers<string[]>) => read.resolve(['late'])],
+    ['fails', (read: PromiseWithResolvers<string[]>) => read.reject(new Error('the homeserver answered 500, late'))],
+  ])('resolves for the timeout awaitBounded ended its wait with once the abandoned read %s', async (_name, settle) => {
+    const read = Promise.withResolvers<string[]>();
+    const settled = whenAbandonedReadSettles(await abandon(read.promise));
+    expect(settled).toBeInstanceOf(Promise);
+    let done = false;
+    void settled?.then(() => (done = true));
+
+    await vi.advanceTimersByTimeAsync(MS * 10);
+    expect(done).toBe(false);
+
+    settle(read);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(done).toBe(true);
+    await expect(settled).resolves.toBeUndefined();
+  });
+
+  it('is undefined for a REQUEST_TIMEOUT the read itself settled with, and for any other value', async () => {
+    const answered408 = new AppError({
+      category: ErrorCategory.Timeout,
+      code: TimeoutErrorCode.REQUEST_TIMEOUT,
+      message: 'Request timeout',
+      service: ErrorService.Homeserver,
+      operation: 'request',
+      context: { statusCode: 408 },
+    });
+    const rethrown = await awaitBounded(Promise.reject(answered408), { ms: MS, operation: 'fetchMutedUsers' }).catch(
+      (error: unknown) => error,
+    );
+
+    expect(rethrown).toBe(answered408);
+    expect(whenAbandonedReadSettles(rethrown)).toBeUndefined();
+    expect(whenAbandonedReadSettles(new Error('Homeserver read timed out'))).toBeUndefined();
+    expect(whenAbandonedReadSettles(undefined)).toBeUndefined();
+    expect(whenAbandonedReadSettles('REQUEST_TIMEOUT')).toBeUndefined();
   });
 });

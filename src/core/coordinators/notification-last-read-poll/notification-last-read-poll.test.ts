@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import {
@@ -10,13 +10,14 @@ import { NotificationLastReadPollCoordinator } from '@/coordinators/notification
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { mockPubky, mockSession } from '@/test-utils/pubky';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 const PUBKY = mockPubky('5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y');
 const OTHER_PUBKY = mockPubky('c5nr657md9g8mut1xb7pyj8fuhm1aukwpmkqqjhiwsp9wdhmwzay');
+const LAST_READ_PATH = '/priv/app.pubky/v1/last_read.json';
 
 function setVisibilityState(visibilityState: DocumentVisibilityState): void {
   Object.defineProperty(document, 'visibilityState', {
@@ -410,71 +411,251 @@ describe('NotificationLastReadPollCoordinator', () => {
     });
   });
 
-  // Through the real controller and application: only the homeserver GET is stubbed
-  describe('a homeserver read that never answers', () => {
-    let request: MockInstance<typeof HomeserverService.request>;
+  // Through the real controller, application and HomeserverService: only the SDK's `session.storage` is stubbed.
+  describe('a read abandoned at the sync-read bound', () => {
+    /** One `storage.get` outcome: held open until the test settles it, answered with a status, or rejected. */
+    type GetOutcome = 'stall' | { status: number; body?: unknown } | Error;
+    let outcomes: GetOutcome[];
+    let fallback: GetOutcome;
+    let stalled: PromiseWithResolvers<Response>[];
+    let get: Mock<(path: string) => Promise<Response>>;
+    let putJson: Mock<(path: string, body: unknown) => Promise<void>>;
     const refreshFailures = () =>
       vi.mocked(Logger.error).mock.calls.filter(([message]) => message === 'Notification last_read refresh failed');
 
     beforeEach(() => {
       fetchLastRead().mockRestore();
       vi.spyOn(Logger, 'error').mockImplementation(() => {});
-      request = vi.spyOn(HomeserverService, 'request');
+      outcomes = [];
+      fallback = 'stall';
+      stalled = [];
+      useNotificationStore.getState().reset();
+      get = vi.fn((_path: string) => {
+        const outcome = outcomes.shift() ?? fallback;
+        if (outcome === 'stall') {
+          const held = Promise.withResolvers<Response>();
+          stalled.push(held);
+          return held.promise;
+        }
+        if (outcome instanceof Error) return Promise.reject(outcome);
+        const body = outcome.body === undefined ? null : JSON.stringify(outcome.body);
+        return Promise.resolve(
+          new Response(body, { status: outcome.status, headers: { 'content-type': 'application/json' } }),
+        );
+      });
+      putJson = vi.fn(async (_path: string, _body: unknown) => {});
+      const session = mockSession({
+        info: asOpaque({ publicKey: { z32: () => PUBKY }, capabilities: ['/:rw'] }),
+        storage: asOpaque({ get, putJson }),
+      });
+      useAuthStore.getState().init({ session, currentUserPubky: PUBKY, hasProfile: true });
     });
 
-    it('frees the slot at the sync-read bound when the first read hangs, and the next trigger reads again', async () => {
-      request.mockImplementation(() => new Promise(() => {}));
-      signIn();
+    /** Starts polling; the first read never answers and the wait for it ends at the bound. */
+    const abandonFirstRead = async () => {
       startOn(APP_ROUTES.HOME);
       await settleDebounce();
-      expect(request).toHaveBeenCalledTimes(1);
-
-      // A trigger just before the bound ends is debounced into a refresh the taken slot would hide
-      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS - 1);
-      window.dispatchEvent(new Event('online'));
-      expect(refreshFailures()).toHaveLength(0);
-
-      await vi.advanceTimersByTimeAsync(1);
+      expect(get).toHaveBeenCalledExactlyOnceWith(LAST_READ_PATH);
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
       expect(refreshFailures()).toEqual([
         [
           'Notification last_read refresh failed',
           { error: expect.objectContaining({ code: TimeoutErrorCode.REQUEST_TIMEOUT }) },
         ],
       ]);
-      expect(request).toHaveBeenCalledTimes(1);
+    };
 
+    it('pauses: no interval and no visible trigger starts another read while the abandoned one runs', async () => {
+      await abandonFirstRead();
+
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS * 10);
+      setVisibilityState('visible');
       await settleDebounce();
-      expect(request).toHaveBeenCalledTimes(2);
+
+      expect(get).toHaveBeenCalledTimes(1);
     });
 
-    it('frees the slot when a later read hangs, and never applies what that read answers late', async () => {
-      let answerLate: (value: { timestamp: number }) => void = () => {};
-      request
-        .mockResolvedValueOnce(null)
-        .mockImplementationOnce(
-          () =>
-            new Promise((resolve) => {
-              answerLate = resolve;
-            }),
-        )
-        .mockResolvedValue(null);
-      signIn();
+    it.each<[string, (held: PromiseWithResolvers<Response>) => void]>([
+      ['answers', (held) => held.resolve(new Response(JSON.stringify({ timestamp: 7 }), { status: 200 }))],
+      ['fails', (held) => held.reject(new TypeError('Failed to fetch'))],
+    ])(
+      'resumes at the next interval once the abandoned read %s late, and the next read is applied',
+      async (_name, settle) => {
+        await abandonFirstRead();
+        await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS * 2);
+        expect(get).toHaveBeenCalledTimes(1);
+        fallback = { status: 200, body: { timestamp: 9 } };
+
+        settle(stalled[0]);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(get).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
+        expect(get).toHaveBeenCalledTimes(2);
+        await settleDebounce();
+        expect(useNotificationStore.getState().lastRead).toBe(9);
+      },
+    );
+
+    it('does not let the abandoned read, settling late, free the slot of a newer read still out', async () => {
+      await abandonFirstRead();
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(get).toHaveBeenCalledTimes(2);
+
+      stalled[0].resolve(new Response(JSON.stringify({ timestamp: 7 }), { status: 200 }));
+      await vi.advanceTimersByTimeAsync(0);
+      setVisibilityState('visible');
+      await settleDebounce();
+
+      expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not start a second read on `online` while a read is still inside its bound', async () => {
       startOn(APP_ROUTES.HOME);
       await settleDebounce();
-      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
-      expect(request).toHaveBeenCalledTimes(2);
+      expect(get).toHaveBeenCalledTimes(1);
 
-      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
-      expect(refreshFailures()).toHaveLength(1);
-      const reads = request.mock.calls.length;
       window.dispatchEvent(new Event('online'));
       await settleDebounce();
-      expect(request).toHaveBeenCalledTimes(reads + 1);
+      expect(get).toHaveBeenCalledTimes(1);
 
+      for (let event = 1; event <= 5; event++) {
+        window.dispatchEvent(new Event('online'));
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+      expect(get).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not let `online` free a newer read when an older read is abandoned while the newer one is out', async () => {
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(10_000);
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(get).toHaveBeenCalledTimes(2);
+
+      // The first read is abandoned at its bound while the second still holds the slot, inside its own bound.
+      await vi.advanceTimersByTimeAsync(
+        HOMESERVER_SYNC_READ_TIMEOUT_MS - 10_000 - NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS,
+      );
+      expect(refreshFailures()).toHaveLength(1);
+      for (let event = 1; event <= 5; event++) {
+        window.dispatchEvent(new Event('online'));
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+
+      expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it('stays paused on the newer abandoned read when an older one settles, and `online` resumes with one read', async () => {
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(10_000);
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+      expect(refreshFailures()).toHaveLength(2);
+
+      stalled[0].resolve(new Response(JSON.stringify({ timestamp: 3 }), { status: 200 }));
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS * 3);
+      expect(get).toHaveBeenCalledTimes(2);
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+
+      expect(get).toHaveBeenCalledTimes(3);
+    });
+
+    it('resumes with one read when the tab is hidden and shown again', async () => {
+      await abandonFirstRead();
+
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+
+      expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it('stays paused over the intervals and resumes with one read when the connection returns', async () => {
+      await abandonFirstRead();
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS * 2);
+      expect(get).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+
+      expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it.each<[string, GetOutcome, unknown]>([
+      ['a network error', new TypeError('Failed to fetch'), expect.anything()],
+      ['a 503', { status: 503 }, expect.anything()],
+      // A settled 408 maps to REQUEST_TIMEOUT too: only the abandoned wait keeps the slot.
+      ['a 408 the homeserver answered', { status: 408 }, TimeoutErrorCode.REQUEST_TIMEOUT],
+    ])('frees the slot after %s, so the next interval reads', async (_name, failure, code) => {
+      outcomes = [failure];
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(get).toHaveBeenCalledTimes(1);
+      expect(refreshFailures()).toEqual([[expect.any(String), { error: expect.objectContaining({ code }) }]]);
+
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
+
+      expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it('polls once per interval again once a read answers after the pause', async () => {
+      await abandonFirstRead();
+      fallback = { status: 200, body: { timestamp: 5 } };
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+      expect(get).toHaveBeenCalledTimes(2);
+
+      for (let interval = 1; interval <= 3; interval++) {
+        await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
+        expect(get).toHaveBeenCalledTimes(2 + interval);
+      }
+      expect(useNotificationStore.getState().lastRead).toBe(5);
+    });
+
+    it('never applies what the abandoned read answers late', async () => {
+      let answerLate: (response: Response) => void = () => {};
+      get.mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            answerLate = resolve;
+          }),
+      );
+      await abandonFirstRead();
       const lastRead = useNotificationStore.getState().lastRead;
-      answerLate({ timestamp: Date.now() + 1_000_000 });
+
+      answerLate(new Response(JSON.stringify({ timestamp: Date.now() + 1_000_000 }), { status: 200 }));
       await vi.advanceTimersByTimeAsync(0);
+
       expect(useNotificationStore.getState().lastRead).toBe(lastRead);
+    });
+
+    it('still marks all as read with its own read and PUT while the poll is paused', async () => {
+      await abandonFirstRead();
+      useNotificationStore.getState().setUnread(3);
+      outcomes = [{ status: 404 }];
+
+      await NotificationController.markAllAsRead();
+
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(putJson).toHaveBeenCalledExactlyOnceWith(
+        LAST_READ_PATH,
+        expect.objectContaining({ timestamp: expect.any(Number) }),
+      );
+      expect(useNotificationStore.getState().unread).toBe(0);
+
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
+      expect(get).toHaveBeenCalledTimes(2);
     });
   });
 
