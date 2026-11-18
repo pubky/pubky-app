@@ -24,6 +24,8 @@ import {
 export type { ConnectionType, UseProfileConnectionsResult, UserConnectionData };
 export { CONNECTION_TYPE } from './useProfileConnections.types';
 
+type FollowObservation = 'cached' | 'following' | 'unfollowed';
+
 // ============================================================================
 // Hook Implementation
 // ============================================================================
@@ -57,6 +59,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [observedFollows, setObservedFollows] = useState<ReadonlyMap<Pubky, FollowObservation>>(() => new Map());
 
   // Refs for stable callbacks
   const userIdsRef = useRef<Pubky[]>([]);
@@ -288,6 +291,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
     setSkip(0);
     setHasMore(true);
     setError(null);
+    setObservedFollows(new Map());
   }, []);
 
   /**
@@ -313,13 +317,38 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId]);
 
-  // Rows kept on screen after an unfollow: gone from the cached stream and no longer followed. Both are
-  // required, so a page whose ids reach the screen before the live stream query catches up is not counted.
-  const cachedIds = new Set(cachedStream ?? []);
-  const retainedCount =
-    preserveOnUnfollow && cachedStream !== null
-      ? userIds.filter((id) => !cachedIds.has(id) && userRelationshipsMap.get(id)?.following === false).length
-      : 0;
+  // A late page can restore an unfollowed ID to the stream cache. Keep the transition from
+  // followed to unfollowed for rows still on screen, even while the relationship read is pending.
+  // A row removed from the cache before its first relationship read can also be retained. Require
+  // prior membership in that case so a fresh row with an initially stale relationship still counts.
+  let retainedCount = 0;
+  if (preserveOnUnfollow) {
+    const cachedIds = cachedStream && new Set(cachedStream);
+    const nextObservedFollows = new Map<Pubky, FollowObservation>();
+    let changed = false;
+    for (const id of userIds) {
+      const previous = observedFollows.get(id);
+      const following = userRelationshipsMap.get(id)?.following;
+      const inCache = cachedIds?.has(id);
+      let observation = previous;
+
+      if (following === true) {
+        observation = 'following';
+      } else if (following === false && (previous === 'following' || (previous === 'cached' && inCache === false))) {
+        observation = 'unfollowed';
+      } else if (previous === undefined && inCache) {
+        observation = 'cached';
+      }
+
+      if (observation === undefined) continue;
+      nextObservedFollows.set(id, observation);
+      if (observation !== previous) changed = true;
+      if (observation === 'unfollowed') retainedCount += 1;
+    }
+    if (changed || nextObservedFollows.size !== observedFollows.size) {
+      setObservedFollows(nextObservedFollows);
+    }
+  }
 
   return {
     connections,

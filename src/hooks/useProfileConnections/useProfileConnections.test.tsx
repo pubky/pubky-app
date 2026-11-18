@@ -481,9 +481,14 @@ describe('useProfileConnections', () => {
       });
     });
 
-    it('counts the rows kept on screen after an unfollow as retained', async () => {
-      const initialFollowing = ['user-1', 'user-2', 'user-3'] as Pubky[];
+    it.each([
+      { update: 'is observed before the response', observesStreamShrink: true },
+      { update: 'is coalesced with the response', observesStreamShrink: false },
+    ])('keeps an unfollowed row out of the count when the stream update $update', async ({ observesStreamShrink }) => {
+      const initialFollowing = ['user-1', 'user-2', 'user-3'];
+      const previouslyFollowed = { id: 'user-3', following: true, followed_by: false };
 
+      mockUserRelationshipsMap = new Map([['user-3', previouslyFollowed]]);
       mockCachedStream = initialFollowing;
       mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
         nextPageIds: initialFollowing,
@@ -497,18 +502,80 @@ describe('useProfileConnections', () => {
       });
       expect(result.current.retainedCount).toBe(0);
 
-      // Still followed while the live stream query lags: not retained
-      mockCachedStream = ['user-1', 'user-2'] as Pubky[];
-      rerender();
-      expect(result.current.retainedCount).toBe(0);
+      // The stream observer may see the shrink first or only see the restored page.
+      if (observesStreamShrink) {
+        mockCachedStream = ['user-1', 'user-2'];
+        rerender();
+        expect(result.current.retainedCount).toBe(0);
+      }
 
-      mockUserRelationshipsMap = new Map([['user-3' as Pubky, { id: 'user-3', following: false, followed_by: false }]]);
+      mockUserRelationshipsMap = new Map([['user-3', { ...previouslyFollowed, following: false }]]);
       rerender();
 
       await waitFor(() => {
         expect(result.current.retainedCount).toBe(1);
       });
       expect(result.current.count).toBe(3);
+
+      // A response started before the unfollow overwrites the cached stream.
+      mockCachedStream = initialFollowing;
+      rerender();
+      expect(result.current.retainedCount).toBe(1);
+      expect(result.current.count).toBe(3);
+
+      mockUserRelationshipsMap = new Map();
+      rerender();
+      expect(result.current.retainedCount).toBe(1);
+
+      mockUserRelationshipsMap = new Map([['user-3', previouslyFollowed]]);
+      rerender();
+      await waitFor(() => {
+        expect(result.current.retainedCount).toBe(0);
+      });
+    });
+
+    it('excludes a previously cached row after an unfollow before its relationship read settled', async () => {
+      const following = ['user-1', 'user-2', 'user-3'];
+      mockCachedStream = following;
+      mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: following,
+        skip: following.length,
+      });
+
+      const { result, rerender } = renderHook(() => useProfileConnections(CONNECTION_TYPE.FOLLOWING));
+
+      await waitFor(() => {
+        expect(result.current.count).toBe(3);
+      });
+      expect(result.current.retainedCount).toBe(0);
+
+      mockCachedStream = ['user-1', 'user-2'];
+      mockUserRelationshipsMap = new Map([['user-3', { id: 'user-3', following: false, followed_by: false }]]);
+      rerender();
+
+      await waitFor(() => {
+        expect(result.current.retainedCount).toBe(1);
+      });
+      expect(result.current.count).toBe(3);
+    });
+
+    it('counts fresh rows while the stream and relationship reads are catching up', async () => {
+      const following = ['user-1', 'user-2', 'user-3'];
+      mockCachedStream = ['user-1'];
+      mockUserRelationshipsMap = new Map([['user-2', { id: 'user-2', following: false, followed_by: false }]]);
+      mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: following,
+        skip: following.length,
+      });
+
+      const { result } = renderHook(() => useProfileConnections(CONNECTION_TYPE.FOLLOWING));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+      expect(result.current.hasMore).toBe(false);
+      expect(result.current.count).toBe(3);
+      expect(result.current.retainedCount).toBe(0);
     });
 
     it('syncs own FOLLOWING list when cached stream grows after follow', async () => {
