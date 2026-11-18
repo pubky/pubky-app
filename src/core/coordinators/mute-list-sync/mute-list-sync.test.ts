@@ -485,6 +485,25 @@ describe('MuteListSyncCoordinator', () => {
       expect(refreshes).toHaveBeenCalledTimes(2);
     });
 
+    it('does not start a second LIST on `online` while a LIST is still inside its bound', async () => {
+      // Calls through: a second refresh would queue behind the first LIST's lock, so count the refreshes too.
+      const refreshes = vi.spyOn(MuteController, 'fetchMutedUsers');
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(list).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+      expect(refreshes).toHaveBeenCalledTimes(1);
+
+      for (let event = 1; event <= 5; event++) {
+        window.dispatchEvent(new Event('online'));
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+      expect(refreshes).toHaveBeenCalledTimes(1);
+      expect(list).toHaveBeenCalledTimes(1);
+    });
+
     it('resumes with one LIST when the tab is hidden and shown again', async () => {
       await abandonFirstList();
 

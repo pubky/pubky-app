@@ -478,21 +478,24 @@ describe('NotificationLastReadPollCoordinator', () => {
     it.each<[string, (held: PromiseWithResolvers<Response>) => void]>([
       ['answers', (held) => held.resolve(new Response(JSON.stringify({ timestamp: 7 }), { status: 200 }))],
       ['fails', (held) => held.reject(new TypeError('Failed to fetch'))],
-    ])('resumes at the next interval once the abandoned read %s late, and applies that read', async (_name, settle) => {
-      await abandonFirstRead();
-      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS * 2);
-      expect(get).toHaveBeenCalledTimes(1);
-      fallback = { status: 200, body: { timestamp: 9 } };
+    ])(
+      'resumes at the next interval once the abandoned read %s late, and the next read is applied',
+      async (_name, settle) => {
+        await abandonFirstRead();
+        await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS * 2);
+        expect(get).toHaveBeenCalledTimes(1);
+        fallback = { status: 200, body: { timestamp: 9 } };
 
-      settle(stalled[0]);
-      await vi.advanceTimersByTimeAsync(0);
-      expect(get).toHaveBeenCalledTimes(1);
+        settle(stalled[0]);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(get).toHaveBeenCalledTimes(1);
 
-      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
-      expect(get).toHaveBeenCalledTimes(2);
-      await settleDebounce();
-      expect(useNotificationStore.getState().lastRead).toBe(9);
-    });
+        await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS);
+        expect(get).toHaveBeenCalledTimes(2);
+        await settleDebounce();
+        expect(useNotificationStore.getState().lastRead).toBe(9);
+      },
+    );
 
     it('does not let the abandoned read, settling late, free the slot of a newer read still out', async () => {
       await abandonFirstRead();
@@ -507,6 +510,22 @@ describe('NotificationLastReadPollCoordinator', () => {
       await settleDebounce();
 
       expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not start a second read on `online` while a read is still inside its bound', async () => {
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      expect(get).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+      expect(get).toHaveBeenCalledTimes(1);
+
+      for (let event = 1; event <= 5; event++) {
+        window.dispatchEvent(new Event('online'));
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+      expect(get).toHaveBeenCalledTimes(1);
     });
 
     it('resumes with one read when the tab is hidden and shown again', async () => {

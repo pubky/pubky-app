@@ -57,6 +57,8 @@ export class NotificationLastReadPollCoordinator extends Coordinator<PollingServ
    * again before it stores, so an older read that answers late cannot undo a newer one.
    */
   private activeRefresh: symbol | null = null;
+  /** The refresh whose read was abandoned at the bound and still holds the slot: `online` releases only that one. */
+  private pausedRefresh: symbol | null = null;
   private accountUnsubscribe: (() => void) | null = null;
 
   /** A return to the network or to the tab: the interval alone could leave the boundary a full period behind. */
@@ -64,9 +66,10 @@ export class NotificationLastReadPollCoordinator extends Coordinator<PollingServ
     if (this.shouldPoll()) void this.poll();
   };
 
-  /** The connection is back: release a slot an abandoned read still holds, then refresh. */
+  /** The connection is back: release the slot only if an abandoned read still holds it, then refresh. */
   private readonly resumeOnline = () => {
-    this.activeRefresh = null;
+    if (this.pausedRefresh && this.activeRefresh === this.pausedRefresh) this.activeRefresh = null;
+    this.pausedRefresh = null;
     this.refreshIfActive();
   };
 
@@ -118,6 +121,7 @@ export class NotificationLastReadPollCoordinator extends Coordinator<PollingServ
     clearTimeout(this.debounceTimer);
     this.debounceTimer = undefined;
     this.activeRefresh = null;
+    this.pausedRefresh = null;
     super.stopPolling(reason);
   }
 
@@ -144,10 +148,12 @@ export class NotificationLastReadPollCoordinator extends Coordinator<PollingServ
       // Don't stop polling on error: the next trigger retries.
       Logger.error('Notification last_read refresh failed', { error });
       abandonedReadSettled = whenAbandonedReadSettles(error);
+      if (abandonedReadSettled) this.pausedRefresh = refresh;
     }
     // An abandoned read still runs and cannot be cancelled: keep its slot until it settles, so no trigger stacks
     // another on it. The next interval or trigger reads again.
     await abandonedReadSettled;
+    if (this.pausedRefresh === refresh) this.pausedRefresh = null;
     if (this.activeRefresh === refresh) this.activeRefresh = null;
   }
 }
