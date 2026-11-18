@@ -75,7 +75,8 @@ export function settleArticleSlotZero(resolved: ResolvedArticleCover, slotZeroIs
  *   references were not renumbered, so a reference `n` still means the file that is now at
  *   `attachments[n - 1]`. Told apart from A by references that exist but never name slot 0, which
  *   this app's writer always does when it has any inline media, and so does rc.2's renumbering of a
- *   0.x body that named slot 1. A' stays for as long as an rc.1-written article is left to read:
+ *   0.x body that named slot 1, as every body the 0.x composer wrote with inline media did (one
+ *   whose lowest image reference is above slot 1 would read as A'). A' stays for as long as an rc.1-written article is left to read:
  *   the migrator's writes are create-only, so neither pinning rc.2 nor raising
  *   `SOCIAL_MIGRATION_TRANSFORM_REV` rewrites an article rc.1 copied (ADR-0023, amended
  *   2026-11-10 and 2026-11-18).

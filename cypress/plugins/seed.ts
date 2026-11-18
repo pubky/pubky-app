@@ -8,7 +8,7 @@ import {
   type Path,
   type Session,
 } from '@synonymdev/pubky';
-import { decodeObject, encodeObject, toPath } from 'pubky-social-specs';
+import { buildUri, decodeObject, encodeObject, toPath } from 'pubky-social-specs';
 import { LOCKS_GUARDED_CONTENT_PATH } from '../../src/config/locks';
 import type {
   SeedBookmarkArgs,
@@ -328,14 +328,9 @@ export const createSeedTasks = (config: SeedConfig) => {
     // session and decoded like `decodeStoredPost`. Null while the post has no version there.
     readStoredPost: async ({ userId, postId }: SeedReadPostArgs) => {
       const { session } = sessionFor(userId);
-      const versions = await session.storage.list(
-        `/pub/social/v1/posts/${postId}/` as Path,
-        null,
-        false,
-        LIST_PAGE_SIZE,
-        false,
-      );
-      const head = versions.sort().at(-1);
+      // A post is a directory of versions whose names sort by the time they were written, as the v1 writer lists them
+      const directory = `${toPath(buildUri(userId, 'post', postId))}/` as Path;
+      const head = (await session.storage.list(directory, null, false, LIST_PAGE_SIZE, false)).sort().at(-1);
       return head ? decodeObject({ kind: 'post' }, await session.storage.getBytes(toPath(head) as Path)) : null;
     },
 

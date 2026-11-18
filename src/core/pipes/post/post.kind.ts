@@ -73,7 +73,7 @@ export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInf
 };
 
 /**
- * The pubky-social-specs v1.0.0-rc.1 name a lock announcement saves for the kind of its locked post (#2433). An
+ * The pubky-social-specs 1.x name a lock announcement saves for the kind of its locked post (#2433). An
  * explicit mapping, so the stored names stay fixed when the internal kinds are renamed. A `Record` over every
  * `KnownPostKind`, so a kind added by a specs upgrade fails to compile until it is mapped here. A create never
  * infers a collection, so it saves nothing and reads as generic content.

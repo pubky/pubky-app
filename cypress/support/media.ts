@@ -6,6 +6,20 @@ const VARIANT = '(small|feed|large|main)';
 // A v1 file, on the route Nexus serves it under: `/v1/static/files/{owner}/{hash}.{ext}/{variant}`
 export const V1_MEDIA_ROUTE = new RegExp(`/v1/static/files/[a-z0-9]{52}/[0-9A-Z]{26}\\.[a-z0-9]+/${VARIANT}$`);
 
+/** Where Nexus serves the v1 file `pubky://{owner}/pub/social/v1/files/{hash}.{ext}`: its route in any variant. */
+export const v1FileRoute = (uri: string) => {
+  const [, owner, file] =
+    /^pubky:\/\/([a-z0-9]{52})\/pub\/social\/v1\/files\/([0-9A-Z]{26}\.[a-z0-9]+)$/.exec(uri) ?? [];
+  if (!owner || !file) throw new Error(`not a v1 file: ${uri}`);
+  const served: NexusCheck = {
+    description: `v1 file ${file}`,
+    // The variant the article reader's inline images use
+    path: `/v1/static/files/${owner}/${file}/main`,
+    expect: { kind: 'found' },
+  };
+  return { served, route: new RegExp(`/v1/static/files/${owner}/${file.replace('.', '\\.')}/${VARIANT}$`) };
+};
+
 // A 0.x file, on the route it has always had: `/static/files/{owner}/{id}/{variant}`, with no `/v1` before it
 export const LEGACY_MEDIA_ROUTE = new RegExp(`(?<!/v1)/static/files/[a-z0-9]{52}/[0-9A-Z]{13}/${VARIANT}$`);
 

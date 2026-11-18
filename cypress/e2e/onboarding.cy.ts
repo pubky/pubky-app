@@ -3,7 +3,7 @@ import { slowCypressDown } from 'cypress-slow-down';
 import { SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS } from '../../src/config/social-migration';
 import { extendedTimeout, verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
-import { expectImageServed } from '../support/media';
+import { expectImageServed, v1FileRoute } from '../support/media';
 import {
   holdMigrationFlag,
   holdMigrationProbe,
@@ -436,21 +436,10 @@ describe('Onboarding', () => {
 
     // The migrated article shows its cover and its inline image, each the file the 0.x article meant there
     cy.then(() => {
-      const served = (uri: string) => {
-        const [, owner, file] = uri.match(/^pubky:\/\/([^/]+)\/pub\/social\/v1\/files\/([^/]+)$/)!;
-        return {
-          check: {
-            description: `v1 file ${file}`,
-            path: `/v1/static/files/${owner}/${file}/main`,
-            expect: { kind: 'found' as const },
-          },
-          route: new RegExp(`/v1/static/files/${owner}/${file.replace('.', '\\.')}/(small|feed|large|main)$`),
-        };
-      };
-      const cover = served(articleMedia.cover);
-      const inline = served(articleMedia.inline);
+      const cover = v1FileRoute(articleMedia.cover);
+      const inline = v1FileRoute(articleMedia.inline);
       // An inline image that meets a 404 shows its fallback for good, so the page opens once Nexus serves both
-      waitForNexus(cover.check, inline.check);
+      waitForNexus(cover.served, inline.served);
       cy.visit(`/post/${user.id}/${article.id}`);
       cy.contains('h1', articleTitle).should('be.visible');
       // Only the article's cover is a <picture>

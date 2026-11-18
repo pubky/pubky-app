@@ -886,9 +886,11 @@ where they changed the app.
   a referenced slot 0 kept inline with no cover; an envelope cover leaving the body as written; a body that is only
   `attachment:0`; a reference past the end, renumbered and still dangling; a non-image slot 0 never promoted) are unit
   tests, semantic vectors and a fuzz oracle, and each lands on a reader rule the app already has (A for a promotion, B
-  otherwise). The one difference from the app's reader: the migrator scans the body as text, so an `attachment:0`
-  inside a code span or fence blocks the promotion, while the app walks the markdown tree, sees no reference and shows
-  that image as the cover through rule B, as the 0.x app did. The app's own suites now run the rc.2 migrator on a 0.x
+  otherwise). Where the migrator and the app's reader differ: the migrator scans the body as text, so an
+  `attachment:0` inside a code span or fence blocks the promotion, while the app walks the markdown tree, sees no
+  reference and shows that image as the cover through rule B, as the 0.x app did; an entity-escaped slot or a
+  reference-style definition, which the app counts, the migrator does not, and a body whose lowest image reference is
+  above slot 1 reads as A′. The 0.x composer wrote none of these. The app's own suites now run the rc.2 migrator on a 0.x
   article with a cover and inline media and on one whose slot 0 is referenced
   (`homeserver.social-migration.test.ts`), and the Cypress migration test seeds the first and checks the stored copy and
   the rendered article; `/priv/app.pubky/v1/` is the app namespace the port adopted (its confirmation was asked and no answer is
