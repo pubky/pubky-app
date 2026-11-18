@@ -13,6 +13,24 @@ export enum ONBOARDING_ROUTES {
   FOLLOW = '/onboarding/follow',
 }
 
+/** Keychain app picked on the Install step to create and authorize the new pubky. */
+export type OnboardingKeychain = 'ring' | 'bitkit';
+
+/**
+ * Builds the sign-up scan URL for the keychain picked on the Install step. Pubky Ring is the
+ * default and keeps the bare `/onboarding/scan`; Bitkit adds `?keychain=bitkit`.
+ */
+export function getOnboardingScanRoute(keychain: OnboardingKeychain): string {
+  if (keychain === 'ring') return ONBOARDING_ROUTES.SCAN;
+  const params = new URLSearchParams({ keychain });
+  return `${ONBOARDING_ROUTES.SCAN}?${params.toString()}`;
+}
+
+/** Reads the `keychain` search param of the scan step; anything but `bitkit` means Pubky Ring. */
+export function parseOnboardingKeychain(value: string | null): OnboardingKeychain {
+  return value === 'bitkit' ? 'bitkit' : 'ring';
+}
+
 export enum AUTH_ROUTES {
   SIGN_IN = '/sign-in',
   LOGOUT = '/logout',
