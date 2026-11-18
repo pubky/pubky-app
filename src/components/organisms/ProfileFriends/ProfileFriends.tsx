@@ -32,20 +32,18 @@ export function ProfileFriends() {
   // Get the current logged-in user's pubky
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
-  const { connections, count, isLoading, isLoadingMore, hasMore, loadMore } = useProfileConnections(
-    CONNECTION_TYPE.FRIENDS,
-    pubky ?? undefined,
-  );
+  const { connections, count, retainedCount, isLoading, isLoadingMore, error, hasMore, loadMore } =
+    useProfileConnections(CONNECTION_TYPE.FRIENDS, pubky ?? undefined);
   const { toggleFollow, isUserLoading } = useFollowUser();
   // The list is paginated, so its length is only what has loaded so far. The total comes from the
   // counts the profile layout already reads.
   const stats = useProfileStatsContext();
   const totalCount = getConnectionsHeadingCount({
-    type: CONNECTION_TYPE.FRIENDS,
     total: stats?.friends ?? 0,
     loaded: count,
+    retained: retainedCount,
     hasMore,
-    isOwnProfile: pubky !== null && pubky === currentUserPubky,
+    failed: error !== null,
   });
 
   // Handle infinite scroll

@@ -79,6 +79,10 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
     null,
   );
 
+  // For own following/friends lists, rows unfollowed from the list itself stay on screen (see below)
+  const preserveOnUnfollow =
+    targetUserId === currentUserPubky && (type === CONNECTION_TYPE.FOLLOWING || type === CONNECTION_TYPE.FRIENDS);
+
   // Sync userIds when stream changes in cache (e.g., after follow/unfollow)
   useEffect(() => {
     if (cachedStream !== null && !isLoading) {
@@ -88,15 +92,12 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
       // For own following/friends lists: only sync when cache has MORE users (new follows)
       // Block sync when cache has fewer users (unfollows) to preserve UI state
       // This allows new follows to appear reactively while keeping unfollowed users visible
-      const isOwnProfile = targetUserId === currentUserPubky;
-      const preserveOnUnfollow =
-        isOwnProfile && (type === CONNECTION_TYPE.FOLLOWING || type === CONNECTION_TYPE.FRIENDS);
       if (preserveOnUnfollow && cachedStream.length <= userIdsRef.current.length) return;
 
       userIdsRef.current = cachedStream;
       setUserIds(cachedStream);
     }
-  }, [cachedStream, isLoading, skip, targetUserId, currentUserPubky, type]);
+  }, [cachedStream, isLoading, skip, preserveOnUnfollow]);
 
   // Subscribe to user details from local database (reactive via Controller)
   const userDetailsMap = useLiveQuery(
@@ -312,9 +313,18 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId]);
 
+  // Rows kept on screen after an unfollow: gone from the cached stream and no longer followed. Both are
+  // required, so a page whose ids reach the screen before the live stream query catches up is not counted.
+  const cachedIds = new Set(cachedStream ?? []);
+  const retainedCount =
+    preserveOnUnfollow && cachedStream !== null
+      ? userIds.filter((id) => !cachedIds.has(id) && userRelationshipsMap.get(id)?.following === false).length
+      : 0;
+
   return {
     connections,
     count: connections.length,
+    retainedCount,
     isLoading,
     isLoadingMore,
     error,

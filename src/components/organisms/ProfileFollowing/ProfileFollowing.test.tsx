@@ -29,6 +29,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 const mockUseProfileConnections = vi.fn(() => ({
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -145,6 +146,7 @@ const mockConnections = [
 const mockLoadingConnectionsResult = {
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: true,
   isLoadingMore: false,
   hasMore: false,
@@ -156,6 +158,7 @@ const mockLoadingConnectionsResult = {
 const mockConnectionsResult = {
   connections: mockConnections,
   count: 2,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -233,10 +236,30 @@ describe('ProfileFollowing', () => {
 
   it('on the own profile, an exhausted list does not count the rows kept after an unfollow', () => {
     vi.mocked(useProfileContext).mockReturnValue({ pubky: 'current-user-123', isOwnProfile: true, isLoading: false });
+    mockProfileStats.value = { ...mockProfileStats.value, following: 2 };
+    vi.mocked(useProfileConnections).mockReturnValue({ ...mockConnectionsResult, retainedCount: 1 });
+
+    render(<ProfileFollowing />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Following (1)');
+  });
+
+  it('on the own profile, a fresh exhausted list wins over a stale lower total', () => {
+    vi.mocked(useProfileContext).mockReturnValue({ pubky: 'current-user-123', isOwnProfile: true, isLoading: false });
     mockProfileStats.value = { ...mockProfileStats.value, following: 1 };
     vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFollowing />);
-    expect(screen.getByTestId('heading')).toHaveTextContent('Following (1)');
+    expect(screen.getByTestId('heading')).toHaveTextContent('Following (2)');
+  });
+
+  it('keeps the total when a later page failed to load', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, following: 25 };
+    vi.mocked(useProfileConnections).mockReturnValue({
+      ...mockConnectionsResult,
+      error: 'Failed to fetch connections',
+    });
+
+    render(<ProfileFollowing />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Following (25)');
   });
 });

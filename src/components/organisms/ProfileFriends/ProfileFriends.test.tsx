@@ -29,6 +29,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 const mockUseProfileConnections = vi.fn(() => ({
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -145,6 +146,7 @@ const mockConnections = [
 const mockLoadingConnectionsResult = {
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: true,
   isLoadingMore: false,
   hasMore: false,
@@ -156,6 +158,7 @@ const mockLoadingConnectionsResult = {
 const mockConnectionsResult = {
   connections: mockConnections,
   count: 2,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -233,10 +236,30 @@ describe('ProfileFriends', () => {
 
   it('on the own profile, an exhausted list does not count the rows kept after an unfollow', () => {
     vi.mocked(useProfileContext).mockReturnValue({ pubky: 'current-user-123', isOwnProfile: true, isLoading: false });
+    mockProfileStats.value = { ...mockProfileStats.value, friends: 2 };
+    vi.mocked(useProfileConnections).mockReturnValue({ ...mockConnectionsResult, retainedCount: 1 });
+
+    render(<ProfileFriends />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Friends (1)');
+  });
+
+  it('on the own profile, a fresh exhausted list wins over a stale lower total', () => {
+    vi.mocked(useProfileContext).mockReturnValue({ pubky: 'current-user-123', isOwnProfile: true, isLoading: false });
     mockProfileStats.value = { ...mockProfileStats.value, friends: 1 };
     vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFriends />);
-    expect(screen.getByTestId('heading')).toHaveTextContent('Friends (1)');
+    expect(screen.getByTestId('heading')).toHaveTextContent('Friends (2)');
+  });
+
+  it('keeps the total when a later page failed to load', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, friends: 25 };
+    vi.mocked(useProfileConnections).mockReturnValue({
+      ...mockConnectionsResult,
+      error: 'Failed to fetch connections',
+    });
+
+    render(<ProfileFriends />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Friends (25)');
   });
 });

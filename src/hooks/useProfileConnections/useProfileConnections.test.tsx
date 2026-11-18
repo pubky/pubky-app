@@ -481,6 +481,36 @@ describe('useProfileConnections', () => {
       });
     });
 
+    it('counts the rows kept on screen after an unfollow as retained', async () => {
+      const initialFollowing = ['user-1', 'user-2', 'user-3'] as Pubky[];
+
+      mockCachedStream = initialFollowing;
+      mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: initialFollowing,
+        skip: 3,
+      });
+
+      const { result, rerender } = renderHook(() => useProfileConnections(CONNECTION_TYPE.FOLLOWING));
+
+      await waitFor(() => {
+        expect(result.current.count).toBe(3);
+      });
+      expect(result.current.retainedCount).toBe(0);
+
+      // Still followed while the live stream query lags: not retained
+      mockCachedStream = ['user-1', 'user-2'] as Pubky[];
+      rerender();
+      expect(result.current.retainedCount).toBe(0);
+
+      mockUserRelationshipsMap = new Map([['user-3' as Pubky, { id: 'user-3', following: false, followed_by: false }]]);
+      rerender();
+
+      await waitFor(() => {
+        expect(result.current.retainedCount).toBe(1);
+      });
+      expect(result.current.count).toBe(3);
+    });
+
     it('syncs own FOLLOWING list when cached stream grows after follow', async () => {
       const initialFollowing = ['user-1', 'user-2'] as Pubky[];
       const afterFollow = ['user-3', 'user-1', 'user-2'] as Pubky[];

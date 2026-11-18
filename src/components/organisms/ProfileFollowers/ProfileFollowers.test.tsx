@@ -28,6 +28,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 const mockUseProfileConnections = vi.fn(() => ({
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -144,6 +145,7 @@ const mockConnections = [
 const mockLoadingConnectionsResult = {
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: true,
   isLoadingMore: false,
   hasMore: false,
@@ -155,6 +157,7 @@ const mockLoadingConnectionsResult = {
 const mockConnectionsResult = {
   connections: mockConnections,
   count: 2,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -228,5 +231,16 @@ describe('ProfileFollowers', () => {
 
     render(<ProfileFollowers />);
     expect(screen.getByTestId('heading')).toHaveTextContent('Followers (2)');
+  });
+
+  it('keeps the total when a later page failed to load', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, followers: 25 };
+    vi.mocked(useProfileConnections).mockReturnValue({
+      ...mockConnectionsResult,
+      error: 'Failed to fetch connections',
+    });
+
+    render(<ProfileFollowers />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers (25)');
   });
 });

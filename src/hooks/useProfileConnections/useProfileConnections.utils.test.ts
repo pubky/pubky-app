@@ -1,55 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { CONNECTION_TYPE } from './useProfileConnections.types';
 import { getConnectionsHeadingCount } from './useProfileConnections.utils';
 
 describe('getConnectionsHeadingCount', () => {
   it('uses the profile total while pages remain', () => {
-    expect(
-      getConnectionsHeadingCount({
-        type: CONNECTION_TYPE.FOLLOWERS,
-        total: 30,
-        loaded: 20,
-        hasMore: true,
-        isOwnProfile: false,
-      }),
-    ).toBe(30);
+    expect(getConnectionsHeadingCount({ total: 30, loaded: 20, retained: 0, hasMore: true, failed: false })).toBe(30);
   });
 
   it('never shows fewer than the loaded rows while pages remain', () => {
-    expect(
-      getConnectionsHeadingCount({
-        type: CONNECTION_TYPE.FOLLOWING,
-        total: 5,
-        loaded: 20,
-        hasMore: true,
-        isOwnProfile: false,
-      }),
-    ).toBe(20);
+    expect(getConnectionsHeadingCount({ total: 5, loaded: 20, retained: 0, hasMore: true, failed: false })).toBe(20);
   });
 
-  it.each([CONNECTION_TYPE.FOLLOWERS, CONNECTION_TYPE.FOLLOWING, CONNECTION_TYPE.FRIENDS])(
-    'uses the loaded rows of an exhausted %s list over a stale higher total',
-    (type) => {
-      expect(getConnectionsHeadingCount({ type, total: 3, loaded: 2, hasMore: false, isOwnProfile: false })).toBe(2);
-    },
-  );
-
-  it('uses the loaded rows of the own Followers list once exhausted', () => {
-    expect(
-      getConnectionsHeadingCount({
-        type: CONNECTION_TYPE.FOLLOWERS,
-        total: 3,
-        loaded: 2,
-        hasMore: false,
-        isOwnProfile: true,
-      }),
-    ).toBe(2);
+  it('keeps the profile total when a later page failed to load', () => {
+    expect(getConnectionsHeadingCount({ total: 25, loaded: 10, retained: 0, hasMore: false, failed: true })).toBe(25);
   });
 
-  it.each([CONNECTION_TYPE.FOLLOWING, CONNECTION_TYPE.FRIENDS])(
-    'uses the total for the own exhausted %s list, which keeps unfollowed rows on screen',
-    (type) => {
-      expect(getConnectionsHeadingCount({ type, total: 1, loaded: 2, hasMore: false, isOwnProfile: true })).toBe(1);
-    },
-  );
+  it('uses the loaded rows of an exhausted list over a stale higher total', () => {
+    expect(getConnectionsHeadingCount({ total: 3, loaded: 2, retained: 0, hasMore: false, failed: false })).toBe(2);
+  });
+
+  it('uses the loaded rows of an exhausted list over a stale lower total', () => {
+    expect(getConnectionsHeadingCount({ total: 2, loaded: 3, retained: 0, hasMore: false, failed: false })).toBe(3);
+  });
+
+  it('does not count rows kept on screen after an unfollow', () => {
+    expect(getConnectionsHeadingCount({ total: 1, loaded: 2, retained: 1, hasMore: false, failed: false })).toBe(1);
+  });
+
+  it('does not count retained rows while pages remain', () => {
+    expect(getConnectionsHeadingCount({ total: 5, loaded: 20, retained: 2, hasMore: true, failed: false })).toBe(18);
+  });
 });
