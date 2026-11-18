@@ -4,6 +4,7 @@ import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COPYRIGHT_ROUTES, LEGAL_ROUTES } from '@/app/routes';
+import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
 import type { PersistedAuth } from '@/libs/auth/session.types';
 import { SHOP_CLEANUP_ACK_KEY, SHOP_TEARDOWN_PENDING_KEY } from '@/libs/shop-embed/cleanup';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -147,6 +148,34 @@ describe('AppShell', () => {
     expect(useAuthStore.getState().generation).toBe('guest-generation');
     expect(screen.getByTestId('public-header')).toBeInTheDocument();
     expect(screen.queryByTestId('database-provider')).not.toBeInTheDocument();
+  });
+
+  it('returns to the public landing only once all same-document cleanup obligations are gone', async () => {
+    persistGuest({ pendingRetirements: [mockGrantReference()], shopCleanupEpoch: 'logout' });
+    vi.mocked(usePathname).mockReturnValue('/');
+    render(<AppShell>Landing</AppShell>);
+    const guard = await screen.findByTestId('route-guard-provider');
+
+    localStorage.setItem(SHOP_CLEANUP_ACK_KEY, 'logout');
+    act(() => window.dispatchEvent(new Event(AUTH_CLEANUP_CHANGED_EVENT)));
+    expect(screen.getByTestId('route-guard-provider')).toBe(guard);
+
+    persistGuest({ shopCleanupEpoch: 'logout' });
+    act(() => window.dispatchEvent(new Event(AUTH_CLEANUP_CHANGED_EVENT)));
+    expect(await screen.findByTestId('public-header')).toBeInTheDocument();
+    expect(screen.queryByTestId('route-guard-provider')).not.toBeInTheDocument();
+  });
+
+  it('hands cross-tab storage removal to the normal sync when a guest has a stale generation', async () => {
+    useAuthStore.setState({ generation: 'signed-out', hasHydrated: true });
+    persistGuest({ generation: 'signed-out' });
+    vi.mocked(usePathname).mockReturnValue('/');
+    render(<AppShell>Landing</AppShell>);
+    expect(screen.getByTestId('public-header')).toBeInTheDocument();
+
+    localStorage.clear();
+    act(() => window.dispatchEvent(new StorageEvent('storage', { key: null })));
+    expect(await screen.findByTestId('route-guard-provider')).toBeInTheDocument();
   });
 
   it('still runs the guard to finish pending Shop teardown for a signed-out account', async () => {

@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { isPublicDocumentRoute, ROOT_ROUTES } from '@/app/routes';
-import { legacyCookieExports, readAuthStorage } from '@/libs/auth/persistence';
+import { AUTH_CLEANUP_CHANGED_EVENT, legacyCookieExports, readAuthStorage } from '@/libs/auth/persistence';
 import type { PersistedAuth } from '@/libs/auth/session.types';
 import { needsShopCleanup, SHOP_CLEANUP_ACK_KEY, SHOP_TEARDOWN_PENDING_KEY } from '@/libs/shop-embed/cleanup';
 import { PublicHeader } from '@/organisms/Header/PublicHeader';
@@ -37,10 +37,12 @@ function useLandingNeedsApp(isLanding: boolean) {
           needsShopCleanup(localStorage, record?.shopCleanupEpoch) ||
           legacyCleanup,
         );
-        setNeedsStorageSync(hasWork);
+        const current = useAuthStore.getState();
+        // A cleared auth record leaves an old compare-and-swap base in memory. Delegate
+        // this removal to the coordinator, which establishes a fresh signed-out generation.
+        setNeedsStorageSync(hasWork || (!record && current.generation !== ''));
         // Two signed-out tabs can legitimately hold different generations. Align the empty
         // guest's compare-and-swap base without mounting the database and feed coordinators.
-        const current = useAuthStore.getState();
         if (
           record &&
           !hasWork &&
@@ -70,8 +72,12 @@ function useLandingNeedsApp(isLanding: boolean) {
       }
     };
     window.addEventListener('storage', onStorage);
+    window.addEventListener(AUTH_CLEANUP_CHANGED_EVENT, checkStorage);
     checkStorage();
-    return () => window.removeEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(AUTH_CLEANUP_CHANGED_EVENT, checkStorage);
+    };
   }, [isLanding, generation]);
 
   return needsApp || needsStorageSync;

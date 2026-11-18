@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { notifyAuthCleanupChanged } from '@/libs/auth/persistence';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
@@ -153,7 +154,10 @@ export class ShopEmbedService {
               abort.signal,
               ['wrapping-key', 'wrapping-key-epoch'],
             );
-            if (keyCleared && isCurrent()) localStorage.removeItem(SHOP_TEARDOWN_PENDING_KEY);
+            if (keyCleared && isCurrent()) {
+              localStorage.removeItem(SHOP_TEARDOWN_PENDING_KEY);
+              notifyAuthCleanupChanged();
+            }
           }),
           // Existing Shop BFF owns the HttpOnly session and flow cookies. No App SDK grant is removed here.
           this.clearSession(abort.signal),
