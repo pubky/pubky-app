@@ -101,6 +101,11 @@ export interface TPinakesEpisodePage {
   items: TPinakesEpisode[];
   /** Where the next page starts (`offset`); absent or `null` on the last page. */
   next_offset?: number | null;
+  /**
+   * The show's feed lists older episodes than Pinakes keeps (its latest 1000): the same on every page.
+   * Absent from an older Pinakes.
+   */
+  truncated?: boolean;
 }
 
 /** `GroupRef`: the group a card is in; its other members are in `also_on`. */

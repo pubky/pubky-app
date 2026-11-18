@@ -218,7 +218,8 @@ export function PlayOnPill({
  * row: a press anywhere but Play opens it, in a new tab with `linkTarget` (where links may not
  * navigate). `image` adds a cover after the title (`ResourceAudioArt`) and `titleLines` lets the
  * title wrap (a show's newest episode); `hideTitle` leaves it to screen readers (a card whose heading
- * names it).
+ * names it). Without `onPlay`, `icon` stands where Play would, in the same pill, as part of the row
+ * (a press on it opens `href`): a link out of the list, such as a show's older episodes on its service.
  */
 export function PlayStandIn({
   title,
@@ -231,6 +232,7 @@ export function PlayStandIn({
   image,
   titleLines = 1,
   hideTitle = false,
+  icon,
   className,
   ...props
 }: {
@@ -245,6 +247,8 @@ export function PlayStandIn({
   image?: string | null;
   titleLines?: 1 | 2;
   hideTitle?: boolean;
+  /** Decorative, in Play's place when there is no `onPlay` (a service's icon). */
+  icon?: ReactNode;
 } & Omit<ComponentProps<typeof Container>, 'title' | 'children'>) {
   const titleClass = cn(
     'font-bold text-foreground',
@@ -267,6 +271,18 @@ export function PlayStandIn({
           className={cn(postActionsButtonVariants({ surface }), href && 'relative z-10')}
         >
           <Play aria-hidden="true" className="fill-current" />
+        </Button>
+      )}
+      {!onPlay && icon && (
+        <Button
+          asChild
+          variant="secondary"
+          size="sm"
+          className={cn(postActionsButtonVariants({ surface }), 'pointer-events-none px-3.5')}
+        >
+          <span aria-hidden="true" data-testid="play-stand-in-icon">
+            {icon}
+          </span>
         </Button>
       )}
       <Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
