@@ -255,6 +255,25 @@ recognizes the exact `AuthenticationError` message `Authentication error: The pr
 was cancelled.` from `restoreSession(export)`. This means no live cookie was found; it is not a generic network-error
 exception. Keep both contracts covered by the real-SDK tests in `session-store.contract.test.ts` on SDK updates.
 
+### SDK 0.18.0 wrong-signer approval exception
+
+A grant request that names the signed-in key (`expectedSigner`, sent as `spk` on the link) can be approved by another
+key when the signer ignores `spk`. SDK 0.18.0 refuses that approval inside `tryPollOnce`, before the exchange, with
+an `AuthenticationError` whose full message is `Authentication error: General authentication error: approved grant
+was issued by a different key than the request expected`. The SDK has no distinct error name for it.
+`isWrongSignerApproval` in `src/core/services/homeserver/homeserver.utils.ts` matches the name and the full message
+only at this boundary and maps it to `AuthApprovalMismatch`; `GrantFlowService` then discards the pending flow it
+owns. The error arises only when `expectedSigner` is set, which today means `requestCapabilities` (Locks and
+permission upgrades) and Shop reauthorization links, including a Shop reauthorization after the session expired.
+First sign-in, other sign-in after expiry, signup and Passport never set it.
+
+Keep the real-SDK test in `grant-flow.recovery.contract.test.ts` (wrong-key approval of a link stripped of `spk`)
+on SDK updates. If the message changes and the check stops matching, the refusal falls back to the generic poll
+failure path: it is reported as `SESSION_EXPIRED` and the spent pending flow is kept. On a Shop reauthorization the
+toast also falls back to "Authorization failed. Try again." instead of asking for the signed-in key; upgrades keep
+that copy because `useAuthUrl` shows it for every upgrade. Replace the message check with a structured
+discriminator when the SDK provides one.
+
 ### Locks SDK 0.1.0 region classification exception
 
 `isLockServerRegionBlocked` in `src/core/services/locks/locks.utils.ts` is a second narrow exception to message-free

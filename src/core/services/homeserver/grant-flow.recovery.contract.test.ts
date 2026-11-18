@@ -4,6 +4,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_CAPABILITIES, getAuthClientId } from '@/config/auth';
 import { getDefaultHttpRelay } from '@/config/network';
+import { isAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 import { type GrantFlowRequest, GrantFlowService } from './grant-flow';
 
@@ -232,4 +233,40 @@ describe('pending grant recovery after page storage is lost (real SDK)', () => {
       signer.free();
     }
   }, 10_000);
+});
+
+describe('an approval from another key on a link that names the signer (real SDK)', () => {
+  it('rejects as an approval mismatch, not an expired session, and drops the pending flow', async () => {
+    const relay = createRelayFixture();
+    vi.stubGlobal('fetch', relay.fetch);
+    const sdk = new Pubky();
+    const flow = await GrantFlowService.start(sdk, {
+      purpose: 'signin',
+      capabilities: APP_CAPABILITIES,
+      generation: '',
+      fresh: true,
+      expectedSigner: USER,
+    });
+    expect(sessionStorage.getItem('pubky-app-pending-grant-v1')).not.toBeNull();
+    // An older Ring or Bitkit ignores `spk` and approves with the key it holds; a current signer refuses the link.
+    const unhinted = flow.authorizationUrl.replace(/([?&])spk=[^&]*(&|$)/, (_, lead: string, tail: string) =>
+      tail ? lead : '',
+    );
+    expect(unhinted).not.toBe(flow.authorizationUrl);
+    expect(unhinted).not.toContain('spk=');
+    const signer = sdk.signer(Keypair.fromSecret(new Uint8Array(32).fill(1)));
+    try {
+      await signer.approveAuthRequest(unhinted);
+      const error = await flow.awaitApproval.then(
+        () => null,
+        (rejection: unknown) => rejection,
+      );
+      expect(isAuthApprovalMismatchError(error)).toBe(true);
+      expect(relay.exchanges).toHaveLength(0);
+      expect(sessionStorage.getItem('pubky-app-pending-grant-v1')).toBeNull();
+    } finally {
+      flow.cancelAuthFlow();
+      signer.free();
+    }
+  });
 });
