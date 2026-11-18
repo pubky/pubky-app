@@ -1,3 +1,4 @@
+// CI demo only (do not merge): exercises the affected unit-test path.
 'use client';
 
 import { useRef } from 'react';

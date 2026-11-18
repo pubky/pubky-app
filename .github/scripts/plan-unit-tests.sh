@@ -102,7 +102,7 @@ fi
 #  - __mocks__ folders (module-level automocks are not import edges);
 #  - deleted or renamed source files: a test still importing a removed module
 #    has no edge to it in the current tree.
-FORCE_FULL='^(package\.json|package-lock\.json|\.npmrc|\.nvmrc|patches/|tsconfig[^/]*\.json$|vitest\.config\.|vite\.config\.|next\.config\.|postcss\.config\.|\.github/workflows/test\.yml$|\.github/scripts/plan-unit-tests\.sh$|\.github/actions/install-dependencies/)|(^|/)__mocks__/'
+FORCE_FULL='^(package\.json|package-lock\.json|\.npmrc|\.nvmrc|patches/|tsconfig[^/]*\.json$|vitest\.config\.|vite\.config\.|next\.config\.|postcss\.config\.|\.github/actions/install-dependencies/)|(^|/)__mocks__/'
 
 # Paths no unit test can depend on: docs and agent files, e2e specs, VRT tests and
 # baselines (their own vitest project), other CI files. Everything else outside
