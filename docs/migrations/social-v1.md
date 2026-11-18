@@ -13,8 +13,8 @@ the in-repo record and is kept current by every child PR.
 
 ## Behavior
 
-`pubky-app-specs` 0.8.1 (wasm, data under `/pub/pubky.app/`) is deprecated and no longer used by the app. `pubky-social-specs` 1.0.0-rc.1
-(native TypeScript, `/pub/social/v1/` + `/priv/social/v1/`) replaces it, and `pubky-social-migrator` 1.0.0-rc.1
+`pubky-app-specs` 0.8.1 (wasm, data under `/pub/pubky.app/`) is deprecated and no longer used by the app. `pubky-social-specs` 1.0.0-rc.2
+(native TypeScript, `/pub/social/v1/` + `/priv/social/v1/`) replaces it, and `pubky-social-migrator` 1.0.0-rc.2
 copies each user's 0.x tree to the 1.x layout and records the done flag `/priv/social/v1/_migrated.json`. When
 the branch ships, the app reads and writes only the 1.x trees, every existing user is force-migrated through a
 blocking, resumable screen, no un-migrated user can run the 1.x app, and every current feature survives except the
@@ -542,7 +542,8 @@ After dev-sync 3 (2026-11-09):
   update hook announces itself and is left in place since FIX-FINAL-8, unless its announce lost the race to the worker's
   `matchAll`.
 - Migrated articles with the rc.1 off-by-one render through the migrated-article reader rule (A′), and keep doing so
-  after the migrator fix, since the fixed migrator rewrites nothing an earlier run wrote (ADR-0023 amendment).
+  under the fixed migrator the app pins (1.0.0-rc.2, transform revision 4), which rewrites nothing an earlier run wrote
+  (ADR-0023 amendments). Only accounts migrated on test stacks and staging before rc.2 was pinned have such articles.
 - Mute changes and the notification read boundary (`last_read`) changed on another device appear within the poll
   interval (≤30 s) or on focus, not live: a session-bound stream's lease is unbounded while its response headers are
   outstanding (pubky/pubky-homeserver#798; ADR-0014, and the `last_read` poll is ADR-0029).
@@ -557,16 +558,6 @@ After dev-sync 3 (2026-11-09):
 - **Media lifetime in v1**, as its own piece of work outside this migration: what a failed write leaves behind, a post
   delete or a draft discard racing a create of the same bytes that is still pending, and a way to remove files no post
   references.
-- **Migrator rc.2 adoption PR** (after the maintainer tags `v1.0.0-rc.2` of pubky/pubky-social-specs with #210): bump
-  `pubky-social-specs` and `pubky-social-migrator`, mirror `SOCIAL_MIGRATION_TRANSFORM_REV` 4 (contract-tested) and
-  keep rule A′: it goes only once no rc.1-written article is left to read (the revision bump re-walks but rewrites
-  nothing, so pinning rc.2 retires nothing), as the `src/libs/post/articleCover.ts` docblock says since the pre-rc.2
-  cleanup PR (#3110), which also made rule B image-only (`attachments[0]` is the cover only when its file row says
-  image; a PDF or video at slot 0 is no cover and never paints as one). Re-QA a migrated article with cover and inline
-  media. Re-read the package's own test suite at the rc.2 tag, the #210 cover cases first: the rule A′ tests in
-  `src/libs/post/articleCover.test.ts` build the migrated shape by hand and never run the migrator, and the article the
-  Cypress migration test seeds has a cover and no inline media, so nothing in the app's suites fails if the migrator's
-  output for a cover plus inline media changes.
 - Restore the mute and `last_read` event streams when the SDK bounds the session lease for streams or the team
   accepts the exposure (pubky/pubky-homeserver#798): register the `last_read` channel and remove the poller
   (ADR-0029), bring back the mute channel (ADR-0014). The compliance gate's `.session(` rule goes with them.
@@ -639,8 +630,8 @@ gate list.
    1 MB/s after 20 MB on staging and production; one allowance for all of a user's uploads), so media takes about a
    second per MB beyond the burst. The progress count moves once per finished object and stands still during a large
    file. A run resumed after a reload downloads every 0.x media file again before it skips the ones already copied
-   (migrator rc.1), and writes nothing twice. No timeout in the app, the migrator's port or the SDK ends an upload that
-   keeps moving (the port's 60 s deadline covers listings, presence checks and JSON reads only). Unchecked: the
+   (migrator rc.1 and rc.2), and writes nothing twice. No timeout in the app, the migrator's port or the SDK ends an
+   upload that keeps moving (the port's 60 s deadline covers listings, presence checks and JSON reads only). Unchecked: the
    timeouts of the proxy in front of the deployed homeservers; migrate one account with a file near the 100 MiB cap on
    staging before production. Moderation service readiness is a release gate. Bot accounts (the moderation
    bot) need a migration path (open). `NEXT_PUBLIC_DB_VERSION=4` is in both Docker workflows (PR-CI).
@@ -683,7 +674,7 @@ Checklist:
 - [ ] QA-1, QA-3, QA-4, QA-5 and QA-6 recorded (_QA matrix_, done 2026-11-12); the maintainer's manual pass done;
       staging checks (Ring grant, Locks with a real Paykit)
 - [ ] Storage allowances raised; moderation service ready; bot-account migration path decided
-- [ ] Migrator rc.2 adopted (both packages, `SOCIAL_MIGRATION_TRANSFORM_REV` 4)
+- [x] Migrator rc.2 adopted (both packages, `SOCIAL_MIGRATION_TRANSFORM_REV` 4)
 - [ ] Final PR reviewed (full code review, security review, Greptile, talosmachina, frontend team), `pubky_stack_ref`
       back to `staging`, the `feat/social-v1` e2e trigger dropped
 - [ ] Release per `docs/release.md`, with the social v1 release notes
@@ -889,8 +880,18 @@ where they changed the app.
   fixes (pubky/pubky-nexus#1230 and #1231, both on the carrier from `dc9cd459`); the article copy taken for an edit
   after the flip (_Retest list_).
 - **Data model author:** the migrator's article cover promotion is fixed in pubky/pubky-social-specs#210 (renumbered
-  references, no promotion of a referenced slot 0, transform revision 4), merged on 2026-11-17 and awaiting the rc.2
-  tag; `/priv/app.pubky/v1/` is the app namespace the port adopted (its confirmation was asked and no answer is
+  references, no promotion of a referenced slot 0, transform revision 4), released in 1.0.0-rc.2 on 2026-11-18 and
+  pinned by the app since. The package's suite at the rc.2 tag, re-read for the adoption: the #210 cases (an
+  unreferenced image at slot 0 promoted with every reference renumbered, links and angle-bracket destinations included;
+  a referenced slot 0 kept inline with no cover; an envelope cover leaving the body as written; a body that is only
+  `attachment:0`; a reference past the end, renumbered and still dangling; a non-image slot 0 never promoted) are unit
+  tests, semantic vectors and a fuzz oracle, and each lands on a reader rule the app already has (A for a promotion, B
+  otherwise). The one difference from the app's reader: the migrator scans the body as text, so an `attachment:0`
+  inside a code span or fence blocks the promotion, while the app walks the markdown tree, sees no reference and shows
+  that image as the cover through rule B, as the 0.x app did. The app's own suites now run the rc.2 migrator on a 0.x
+  article with a cover and inline media and on one whose slot 0 is referenced
+  (`homeserver.social-migration.test.ts`), and the Cypress migration test seeds the first and checks the stored copy and
+  the rendered article; `/priv/app.pubky/v1/` is the app namespace the port adopted (its confirmation was asked and no answer is
   recorded); `memoryHomeserver` differences from SDK 0.16.2 are test-only; Ring writes no 0.x profile at signup.
 - **Ring:** scopes are approved all-or-nothing (partial approval exists only for the encryption action), with no count
   or length limit in code; the published Ring folds `/priv/social/v1/:rw` into `/priv/social/:rw`, so the grant shows
