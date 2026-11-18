@@ -165,14 +165,24 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
 // lands on /home; one without lands on /onboarding/profile. Every fresh grant passes the social v1
 // migration gate (`/migration`) first: a key without the done flag is asked to Continue there (a key with
 // no 0.x tree then only checks and moves on), while one seeded `legacy` copies its tree there before the
-// landing route (`migrates`).
+// landing route (`migrates`). With `asked: false` the account must pass the gate without being asked (this
+// browser's record or the done flag): the command fails if `/migration` or the Continue button shows.
 Cypress.Commands.add(
   'signInWithPubkyRing',
   (
     name: string,
     landingPath = '/home',
-    { migrates = false, beforeContinue, beforeRun, whileMigrating, acknowledgesSummary = false } = {},
+    { migrates = false, asked, beforeContinue, beforeRun, whileMigrating, acknowledgesSummary = false } = {},
   ) => {
+    // `asked: false`: every route from here on, so a passing visit to the gate cannot slip between two polls
+    const visited: string[] = [];
+    if (asked === false) {
+      cy.then(() => {
+        cy.on('url:changed', (url) => {
+          visited.push(url);
+        });
+      });
+    }
     openSignInPage();
     readPubkyRingAuthUrl().then((authUrl) => {
       expect(authUrl).to.match(/^pubkyauth:\/\//);
@@ -196,7 +206,7 @@ Cypress.Commands.add(
       // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here; a reload
       // resumes the run that started, without asking again
       whileMigrating?.();
-    } else {
+    } else if (asked !== false) {
       // A key seeded outside the app has no done flag yet, so its first sign-in is asked too and finds nothing to
       // copy; a key the app saw pass lands directly. The screen waits for the click, so whichever shows first is final.
       // A sign-in that stays on the gate (`/migration`) is always asked first: its flag read did not pass it.
@@ -208,6 +218,21 @@ Cypress.Commands.add(
       cy.document().then((doc) => {
         if (doc.querySelector(CONFIRM_CONTINUE_BUTTON)) cy.get(CONFIRM_CONTINUE_BUTTON).click();
       });
+    } else {
+      // Whichever shows first is final here too: the screen would wait for a click that never comes
+      cy.document(extendedTimeout())
+        .should((doc) => {
+          const shown = doc.querySelector(CONFIRM_CONTINUE_BUTTON) !== null;
+          expect(shown || doc.location.pathname === landingPath, `asked to continue or on ${landingPath}`).to.equal(
+            true,
+          );
+        })
+        .then((doc) => {
+          expect(
+            doc.querySelector(CONFIRM_CONTINUE_BUTTON),
+            'Continue button on a sign-in that is never asked',
+          ).to.equal(null);
+        });
     }
     // A run that left something behind waits on its summary for a click; a string is the summary's expected text
     if (acknowledgesSummary) {
@@ -220,6 +245,16 @@ Cypress.Commands.add(
     // Every sign-in passes the gate and then prepares the account before the landing route, a first one
     // about 15 s on a local stack; a run copies the whole tree first, and its specs hold some of its answers back
     cy.location('pathname', extendedTimeout()).should('eq', landingPath);
+    // An account the gate already passed is never asked: no visit to the gate's route, no Continue button
+    if (asked === false) {
+      cy.get(CONFIRM_CONTINUE_BUTTON).should('not.exist');
+      cy.then(() => {
+        expect(
+          visited.filter((url) => new URL(url).pathname === '/migration'),
+          'visits to the gate during a sign-in that is never asked',
+        ).to.deep.eq([]);
+      });
+    }
     if (landingPath === '/home') waitForFeedToLoad();
   },
 );

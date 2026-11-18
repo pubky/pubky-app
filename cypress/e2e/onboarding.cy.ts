@@ -211,7 +211,7 @@ describe('Onboarding', () => {
 
       cy.signOut(HasBackedUp.Yes);
 
-      cy.signInWithPubkyRing(profileName);
+      cy.signInWithPubkyRing(profileName, '/home', { asked: false });
       checkOwnProfile(profileName, profileBio);
 
       cy.signOut(HasBackedUp.Yes);
@@ -1399,9 +1399,32 @@ describe('Onboarding', () => {
     showProfileHeader();
     cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
 
-    // the key Ring signed up is the account: signing back in with it lands on the home feed
+    // the key Ring signed up is the account: signing back in with it lands on the home feed, never asked to update
+    // (this browser's record saw the flag) and without a second flag
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithPubkyRing(profileName);
+    cy.signInWithPubkyRing(profileName, '/home', { asked: false });
+    cy.get('@signupFlag.all').should('have.length', 1);
+
+    // Another browser of the same account: without this browser's record the gate reads the flag on the homeserver,
+    // passes on it and is never asked either
+    cy.signOut(HasBackedUp.Yes);
+    cy.window().then((win) => {
+      // `social-migration:<pubky>` (`SOCIAL_MIGRATION_RECORD_KEY_PREFIX` in src/libs/social-migration/record.ts)
+      const records = Object.keys(win.localStorage).filter(
+        (key) => key.startsWith('social-migration:') && key !== 'social-migration:signed-out',
+      );
+      expect(records, "the account's migration record").to.have.length(1);
+      win.localStorage.removeItem(records[0]);
+    });
+    cy.intercept('GET', MIGRATION_FLAG_GLOB).as('flagRead');
+    cy.signInWithPubkyRing(profileName, '/home', { asked: false });
+    cy.get<Interception[]>('@flagRead.all').then((reads) => {
+      expect(
+        reads.filter(({ response }) => response?.statusCode === 200),
+        'flag reads answered from the homeserver',
+      ).to.not.be.empty;
+    });
+    cy.get('@signupFlag.all').should('have.length', 1);
   });
 
   it('cannot proceed with a reused invite code', () => {
