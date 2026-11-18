@@ -105,7 +105,7 @@ describe('Landing — visual regression', () => {
 
   it('reveals the card description on keyboard focus with motion disabled and dismisses it after a pointer click', async () => {
     await renderForVRT(<LandingBrokenSection />, { viewport: VRT_VIEWPORT_DESKTOP });
-    const heading = page.getByRole('heading', { name: 'The web is broken.' });
+    const heading = page.getByRole('heading', { level: 2 });
     const poster = page.getByRole('img', { name: 'They own you' });
     const description = document.getElementById(poster.element().getAttribute('aria-describedby')!)!;
     await heading.click();

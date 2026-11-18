@@ -40,7 +40,8 @@ export function LandingBrokenPoster({ alt, descriptionId, className, asset }: La
 
   return (
     <div
-      className={cn('relative block overflow-hidden has-focus-visible:ring-2 has-focus-visible:ring-brand', className)}
+      className={cn('peer relative block overflow-hidden data-[keyboard-focus]:ring-2 data-[keyboard-focus]:ring-brand', className)}
+      data-keyboard-focus={focused || undefined}
       onPointerEnter={(event) => setHovered(event.pointerType !== 'touch')}
       onPointerLeave={() => setHovered(false)}
       onPointerDown={() => setFocused(false)}
@@ -60,7 +61,7 @@ export function LandingBrokenPoster({ alt, descriptionId, className, asset }: La
           loading="lazy"
           width={758}
           height={758}
-          className="absolute inset-0 size-full object-cover"
+          className="absolute inset-0 size-full object-cover focus:outline-none"
         />
       </picture>
       {canAnimate && (hovered || focused) && <LandingBrokenVideo src={`${asset}.mp4`} />}
