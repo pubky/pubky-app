@@ -4,6 +4,7 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import type { Pubky } from '@/models/models.types';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ProfileFriends } from './ProfileFriends';
 
@@ -61,8 +62,8 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 
 const mockProfileStats = vi.hoisted(() => ({ value: { followers: 0, following: 0, friends: 0 } }));
 
-vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
-  useProfileStats: vi.fn(() => ({ stats: mockProfileStats.value, isLoading: false })),
+vi.mock('@/providers/ProfileStatsProvider/ProfileStatsProvider', () => ({
+  useProfileStatsContext: vi.fn(() => mockProfileStats.value),
 }));
 
 // Mock Atoms
@@ -220,5 +221,22 @@ describe('ProfileFriends', () => {
 
     render(<ProfileFriends />);
     expect(screen.getByTestId('heading')).toHaveTextContent('Friends (2)');
+  });
+
+  it('shows the loaded count once the list is exhausted, even when the cached total is higher', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, friends: 3 };
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
+
+    render(<ProfileFriends />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Friends (2)');
+  });
+
+  it('on the own profile, an exhausted list does not count the rows kept after an unfollow', () => {
+    vi.mocked(useProfileContext).mockReturnValue({ pubky: 'current-user-123', isOwnProfile: true, isLoading: false });
+    mockProfileStats.value = { ...mockProfileStats.value, friends: 1 };
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
+
+    render(<ProfileFriends />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Friends (1)');
   });
 });

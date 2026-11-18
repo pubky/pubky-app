@@ -7,9 +7,10 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
-import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { getConnectionsHeadingCount } from '@/hooks/useProfileConnections/useProfileConnections.utils';
 import { FollowingEmpty } from '@/molecules/FollowingEmpty/FollowingEmpty';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { useProfileStatsContext } from '@/providers/ProfileStatsProvider/ProfileStatsProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
@@ -34,10 +35,16 @@ export function ProfileFollowing() {
     pubky ?? undefined,
   );
   const { toggleFollow, isUserLoading } = useFollowUser();
-  // The list is paginated, so its length is only what has loaded so far. The heading shows the
-  // total from the profile counts, and never less than the rows already on screen.
-  const { stats } = useProfileStats(pubky ?? '');
-  const totalCount = Math.max(stats.following, count);
+  // The list is paginated, so its length is only what has loaded so far. The total comes from the
+  // counts the profile layout already reads.
+  const stats = useProfileStatsContext();
+  const totalCount = getConnectionsHeadingCount({
+    type: CONNECTION_TYPE.FOLLOWING,
+    total: stats?.following ?? 0,
+    loaded: count,
+    hasMore,
+    isOwnProfile: pubky !== null && pubky === currentUserPubky,
+  });
 
   // Handle infinite scroll
   const { sentinelRef } = useInfiniteScroll({

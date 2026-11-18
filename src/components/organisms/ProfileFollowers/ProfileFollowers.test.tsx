@@ -61,8 +61,8 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 
 const mockProfileStats = vi.hoisted(() => ({ value: { followers: 0, following: 0, friends: 0 } }));
 
-vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
-  useProfileStats: vi.fn(() => ({ stats: mockProfileStats.value, isLoading: false })),
+vi.mock('@/providers/ProfileStatsProvider/ProfileStatsProvider', () => ({
+  useProfileStatsContext: vi.fn(() => mockProfileStats.value),
 }));
 
 // Mock Atoms
@@ -216,6 +216,14 @@ describe('ProfileFollowers', () => {
   });
 
   it('falls back to the loaded count while the profile stats are not available', () => {
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
+
+    render(<ProfileFollowers />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers (2)');
+  });
+
+  it('shows the loaded count once the list is exhausted, even when the cached total is higher', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, followers: 3 };
     vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFollowers />);
