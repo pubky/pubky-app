@@ -8,6 +8,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
+import { BROWSER_KEY_DELETION_DATE } from '@/config/auth';
 import { DialogFeedback } from '@/organisms/DialogFeedback/DialogFeedback';
 import { FAQAccordion } from '../../FAQAccordion/FAQAccordion';
 import type { FAQAccordionItem } from '../../FAQAccordion/FAQAccordion.types';
@@ -52,8 +53,7 @@ export function HelpContent() {
         {
           id: '3',
           question: 'How can I restore my account?',
-          answer:
-            'If you signed up with Pubky Ring, sign in with Pubky Ring to restore your account.\n\nIf your keys were created in the browser with an earlier version of Pubky App, you were prompted to back them up using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nImport that backup into Pubky Ring, then sign in with Pubky Ring.',
+          answer: `If you signed up with Pubky Ring, sign in with Pubky Ring to restore your account.\n\nIf your keys were created in the browser with an earlier version of Pubky App, you were prompted to back them up using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nImport that backup into Pubky Ring, then sign in with Pubky Ring. If you have not backed up yet, use Backup on the home feed to export the key to Pubky Ring: Pubky App deletes keys stored in the browser on ${BROWSER_KEY_DELETION_DATE}.`,
         },
         {
           id: '4',
