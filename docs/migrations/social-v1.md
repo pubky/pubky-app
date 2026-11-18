@@ -154,15 +154,15 @@ review and a `talosmachina` review, and merged with a merge commit once CI and b
 | #3224                             | fourth human review of #3140 (2026-11-18): a poll whose bounded read is abandoned keeps its in-flight slot instead of starting another read each interval (21 pending after 10 minutes, measured); it resumes when that read settles, on a stop (tab hidden, account change), on `online` when paused, or on reload; both polls (`last_read`, mutes); `awaitBounded` maps its timeout to the abandoned read's settle (`whenAbandonedReadSettles`, by identity); mark-all-as-read and mute writes stay bounded; ADR-0014 and ADR-0029 amended                                                                                                                                                                                                                                                                                                |
 | #3231                             | dev-sync 13, the last (`dev` @ `a4310c25c`: #3049, #3162, #3217, #3129, #3202, #3200): 18 conflicted files; `dev`'s removal of the phrase and file sign-in taken, so the gate's sign-in tests drive a Ring approval; `dev`'s IndexedDB recovery composed with the mixed-build loop-breaker (ADR-0019); one copy of #3162's Locks e2e helpers with the branch's edits; nothing ported by the sweep                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | #3232                             | `pubky-social-specs` and `pubky-social-migrator` 1.0.0-rc.2: `SOCIAL_MIGRATION_TRANSFORM_REV` 4; real-migrator tests for a 0.x article with cover and inline media (cover promoted, references renumbered: rule A), a referenced slot 0 and a non-image slot 0 (rule B); the Cypress migration test seeds that article and checks the stored object and the rendered page; ADR-0023 amended                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| #3233                             | e2e: the 0.x-lock migration test finds the owner's post by a retried lookup after the owner signs back in (three CI failures on the one-shot feed scan); the phone sign-up helper clicks the scan step's button `dev`'s #3202 renamed; first mobile-target run on the branch green (nine specs, run 44369972308)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| #3233                             | e2e: the 0.x-lock migration test finds the owner's post by a retried lookup after the owner signs back in (three CI failures on the one-shot feed scan); the phone sign-up helper clicks the scan step's button `dev`'s #3202 renamed; first mobile-target run green on this PR's head (nine specs, run 44369972308)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | #3234                             | `.github/workflows/e2e-test.yml` back to `dev`'s version (`pubky_stack_ref: 'staging'`, no `feat/social-v1` push trigger): the branch's last code commit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
-The branch also carries CI-owned VRT baseline commits from thirteen `VRT Update Baselines` dispatches: after the QA-1
+The branch also carries CI-owned VRT baseline commits from fourteen `VRT Update Baselines` dispatches: after the QA-1
 fixes (two, 2026-10-31 and 2026-11-02), after dev-sync 2, 3 and 4, after #3110 (no change), after #3113 (`495ddbca3`),
 after dev-sync 7 (`41c0d42f9`: the two states #3121 added and the changed `reauth-backup` capture), after dev-sync 8
-(`9e0a3d41b`: `onboarding-install`), after dev-sync 9, 10 and 11 (no change) and after #3215 (`324e10350`: the ten
-`confirm` captures). They hold the `auth/SocialMigration` suite and the fixture-driven re-captures. The last dev-sync
-before the merge needs one more dispatch (see the checklist).
+(`9e0a3d41b`: `onboarding-install`), after dev-sync 9, 10 and 11 (no change), after #3215 (`324e10350`: the ten
+`confirm` captures) and after dev-sync 13 (`2498427ae`: 30 captures in `auth/SocialMigration`, `onboarding/Install` and
+`onboarding/OnboardingScanPage`). They hold the `auth/SocialMigration` suite and the fixture-driven re-captures.
 
 History: between PR-A and PR-D the branch had a known limitation (the first bootstrap read and wrote the app files at
 `/priv/app.pubky/v1/`, so a pre-port Ring grant failed those requests until the gate signed it out, and
@@ -485,8 +485,9 @@ release is in _Rollout order and release checklist_, steps 2 and 3. Local runs n
 the homeserver, as CI sets it: otherwise the invite check answers 400 and onboarding stops at Continue. For
 `locks.cy.ts` a local run also needs `PUBKY_RUNTIME_ENV=staging`, `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`,
 `PUBKY_RUNTIME_LOCK_SERVER` (the staging key in `.env.example`) and `PUBKY_RUNTIME_PAYKIT_SERVER_URL` (the stub's URL):
-without the last two the composer shows no lock switch. The mobile target ran once on the branch (2026-11-18, run
-44369972308, nine specs green), after #3233 pointed the phone sign-up helper at the scan step's button.
+without the last two the composer shows no lock switch. The mobile target ran once, on #3233's head before it merged
+(2026-11-18, run 44369972308, nine specs green), after that PR pointed the phone sign-up helper at the scan step's
+button.
 The branch's last push runs on the `social-v1` stack, on `3778dc91c` (#3233) and `f923388af` (#3232, the first CI
 run of the rc.2 article case), passed 13 of 13; two runs on 2026-11-18 failed only on the 0.x-lock test's one-shot feed
 lookup that #3233 replaced. CI runs the
@@ -689,7 +690,7 @@ attachment-reference collector misses a backslash-escaped `attachment:n`. The re
 merged head `d98f14a6d`): no blocking finding; the seven fixes hold together as one change; five regression-guard test
 gaps (the D11 gate for a capability upgrade, reply lookup under both spellings of the parent post, and three
 article-cover paths: `PostArticle`'s `localCover`, `legacyCoverSlot` and `setArticleCover`) are closed in test-only PRs
-(pending), and its one docs gap, the `mailto:`/`tel:` link reduction, is recorded above.
+(#3135, #3136), and its one docs gap, the `mailto:`/`tel:` link reduction, is recorded above.
 
 Checklist:
 
@@ -697,7 +698,8 @@ Checklist:
       dates named; the proxy forwards `/v1/*`
 - [ ] pubky/pubky-stack#399 merged (staging Nexus bump to `2e0b09b`; our #388 was closed in its favour)
 - [ ] Integration branch green: lint, typecheck, full `npm test`, `npm run build`, branch e2e 13/13, VRT baselines
-      regenerated by CI after the last dev-sync
+      regenerated by CI after the last dev-sync (baselines done: `2498427ae` after dev-sync 13; the e2e run on the final
+      head waits for pubky/pubky-stack#399)
 - [x] `VRT Update Baselines` dispatched after #3121 and after #3215: `41c0d42f9` holds the two new
       `auth/SocialMigration` states and the changed `reauth-backup` capture, `324e10350` the ten `confirm` captures of
       the Continue screen
