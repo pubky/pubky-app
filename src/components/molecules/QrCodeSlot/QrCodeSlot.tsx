@@ -5,10 +5,11 @@ import { buttonVariants } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
-import type { QrCodeSlotProps } from './QrCodeSlot.types';
+import type { QrCodeSlotLogo, QrCodeSlotProps } from './QrCodeSlot.types';
 
 const DEFAULT_QR_SIZE = 176;
 const DEFAULT_RING_LOGO_SIZE = 48;
+const RING_LOGO: QrCodeSlotLogo = { src: '/images/ring-logo.svg', alt: 'Pubky Ring' };
 export const QR_HOVER_OPACITY = 'transition-opacity group-hover:opacity-90 group-active:opacity-80';
 
 export function QrCodeSlot({
@@ -19,6 +20,7 @@ export function QrCodeSlot({
   clickToReloadLabel,
   size = DEFAULT_QR_SIZE,
   activeQrHasHoverEffect = false,
+  logo = RING_LOGO,
 }: QrCodeSlotProps) {
   const ringLogoSize = Math.round((DEFAULT_RING_LOGO_SIZE / DEFAULT_QR_SIZE) * size);
 
@@ -59,8 +61,8 @@ export function QrCodeSlot({
     <>
       <QRCodeSVG value={url} size={size} className={cn(activeQrHasHoverEffect && QR_HOVER_OPACITY)} />
       <Image
-        src="/images/ring-logo.svg"
-        alt="Pubky Ring"
+        src={logo.src}
+        alt={logo.alt}
         width={ringLogoSize}
         height={ringLogoSize}
         className={cn(

@@ -26,6 +26,16 @@
       "scope": ["src/core/**", "src/hooks/**", "src/config/database.ts"]
     },
     {
+      "path": "docs/adr/0030-bounded-indexeddb-connection-recovery.md",
+      "description": "Narrow ADR-0011 exception: bounded IndexedDB reconnect, whole-operation replay, error classification and lifecycle fences",
+      "scope": [
+        "src/core/database/**",
+        "src/core/models/shared/base/**",
+        "src/core/services/local/tag/**",
+        "src/providers/DatabaseProvider/**"
+      ]
+    },
+    {
       "path": "docs/error-handling.md",
       "description": "Error handling conventions using Err.* factories across all layers",
       "scope": ["src/core/**", "src/hooks/**", "src/libs/**"]

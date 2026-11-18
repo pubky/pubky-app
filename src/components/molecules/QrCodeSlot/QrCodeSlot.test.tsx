@@ -83,6 +83,15 @@ describe('QrCodeSlot', () => {
     expect(ringLogo).toHaveAttribute('width', '48');
   });
 
+  it('draws the given centre logo instead of the Pubky Ring mark', () => {
+    render(<QrCodeSlot {...baseProps} logo={{ src: '/images/bitkit-qr-logo.svg', alt: 'Bitkit' }} />);
+
+    const logo = screen.getByAltText('Bitkit');
+    expect(logo).toHaveAttribute('src', '/images/bitkit-qr-logo.svg');
+    expect(logo).toHaveAttribute('width', '48');
+    expect(screen.queryByAltText('Pubky Ring')).not.toBeInTheDocument();
+  });
+
   it('scales the QR code and ring logo for a non-default size', () => {
     render(<QrCodeSlot {...baseProps} size={220} />);
 

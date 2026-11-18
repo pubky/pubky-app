@@ -1,4 +1,5 @@
 import { IndexableType, Table, UpdateSpec } from 'dexie';
+import { withIndexedDbRecovery } from '@/database/franky/franky.recovery';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -81,7 +82,7 @@ export abstract class ModelBase<Id, Schema extends { id: Id }> {
     id: TId,
   ): Promise<TModel | null> {
     try {
-      const record = await this.table.get(id);
+      const record = await withIndexedDbRecovery(this.table.db, () => this.table.get(id));
       if (!record) {
         return null;
       }
@@ -107,10 +108,12 @@ export abstract class ModelBase<Id, Schema extends { id: Id }> {
     ids: TId[],
   ): Promise<TSchema[]> {
     try {
-      return await this.table
-        .where('id')
-        .anyOf(ids as IndexableType[])
-        .toArray();
+      return await withIndexedDbRecovery(this.table.db, () =>
+        this.table
+          .where('id')
+          .anyOf(ids as IndexableType[])
+          .toArray(),
+      );
     } catch (error) {
       throw Err.database(DatabaseErrorCode.QUERY_FAILED, `Failed to find records in ${this.table.name}`, {
         service: ErrorService.Local,
@@ -135,7 +138,7 @@ export abstract class ModelBase<Id, Schema extends { id: Id }> {
     ids: TId[],
   ): Promise<Array<TSchema | undefined>> {
     try {
-      return await this.table.bulkGet(ids as IndexableType[]);
+      return await withIndexedDbRecovery(this.table.db, () => this.table.bulkGet(ids as IndexableType[]));
     } catch (error) {
       throw Err.database(DatabaseErrorCode.QUERY_FAILED, `Failed to find records (with nulls) in ${this.table.name}`, {
         service: ErrorService.Local,
@@ -152,10 +155,12 @@ export abstract class ModelBase<Id, Schema extends { id: Id }> {
   static async exists<TId, TSchema extends { id: TId }>(this: { table: Table<TSchema> }, id: TId) {
     try {
       return (
-        (await this.table
-          .where('id')
-          .equals(id as IndexableType)
-          .count()) > 0
+        (await withIndexedDbRecovery(this.table.db, () =>
+          this.table
+            .where('id')
+            .equals(id as IndexableType)
+            .count(),
+        )) > 0
       );
     } catch (error) {
       throw Err.database(DatabaseErrorCode.QUERY_FAILED, `Failed to check if record exists in ${this.table.name}`, {

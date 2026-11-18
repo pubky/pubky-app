@@ -638,8 +638,9 @@ is not kept. The cache is per server instance. Presence is not payment readiness
 readiness after either flow.
 
 `/setup/creator-held` first shipped in Paykit Server v0.1.1-rc2. An older Paykit Server answers it with `404`,
-which reads as "Paykit cannot say", so no creator could open setup: the Paykit Server behind an environment must
-run v0.1.1-rc2 or later before this app does.
+which reads as "Paykit cannot say", so no creator could open setup. The `paykit-setup-ready` report below first
+shipped in the same release, and without it every setup and reconnect page times out. For both reasons the Paykit
+Server behind an environment must run v0.1.1-rc2 or later before this app does.
 
 Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
 USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
@@ -660,8 +661,8 @@ reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's ow
 with a valid saved Ring grant issued before those entries shipped keeps a session without them: the social trees keep
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
 or write under the missing private scopes with **403** (insufficient permission; 401 means authentication failed).
-Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
-the local stack, and root covers every required entry with no special case. The social v1 scopes
+Root grants saved by the former keypair sign-in are unaffected: the SDK minted them with the root capability, `/:rw` —
+confirmed against the local stack, and root covers every required entry with no special case. The social v1 scopes
 (`SOCIAL_V1_APP_CAPABILITIES`, `src/config/auth.ts`) are different: a grant that lacks them cannot run the app at all,
 so the migration gate signs that session out (`missing-scopes`) and the user signs in again with the full list
 (ADR-0026); only the Locks entries are upgraded in place.
@@ -750,6 +751,8 @@ This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://gith
 
 Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
 
-The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`CONNECT_READY_AFTER_LOAD_MS`, `CONNECT_MOUNT_TIMEOUT_MS`). A page that failed to render, such as a JSON error body, is never shown (#3027).
+The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`IFRAME_READY_AFTER_LOAD_MS`, `IFRAME_MOUNT_TIMEOUT_MS` in `useIframeReady`, which the Paykit `/setup` iframe shares). A page that failed to render, such as a JSON error body, is never shown (#3027).
+
+Paykit Server's `/setup` and `/setup/reconnect` follow the same contract: both render the same shell, which posts `{ type: 'paykit-setup-ready', state }` to the `return_to` origin as the first thing its script does ([paykit-server#125](https://github.com/pubky/paykit-server/pull/125), first in v0.1.1-rc2). `usePaykitSetupFlow` checks the origin, the iframe source, `type` and the echoed `state`, keeps the iframe invisible behind the spinner until the report arrives, and applies the same 5 s / 20 s limits (`useIframeReady`) before the error step with Try again. A ready report is never read as a callback. An environment whose Paykit Server predates rc2 never sends it, so every Enable Payments and reconnect attempt ends in that error step 5 s after `load`, and the only trace is a `Paykit setup page did not render` timeout.
 
 The pinned SDK takes no `AbortSignal`, so `LocksService` bounds every network request it makes through the SDK with `withLocksTimeout`: 30 s for a lookup or a small write, and 6 minutes for a request that carries a file's bytes (`registerGuardedResource`, `proxyReadGuardedResource`): the longest a user is expected to wait for a file. This is a UX limit, not a bandwidth guarantee: on a slow link, parallel uploads or downloads of large files can run out of it every time. A request that runs out of time fails with a retryable `Err.timeout`, so each screen shows the same failure state as for a network error. The request itself keeps running and a write may still land, so nothing retries a write automatically. When a late upload, content lock or session lands, the app tries to undo it: it deletes the upload or the lock, and signs out the session. An undo can fail, for example after a logout ended the session; the failure is reported, and the upload or lock stays on the server. A late proof submission needs no undo, because Try again resubmits the same saved bundle id. The setup dialog's server check builds the connect URL (up to 30 s) and then probes `/readyz` (up to 10 s), so it reports the server as unavailable within 40 s. `signout` has no limit of its own: logout waits for it at most `SIGNOUT_TIMEOUT_MS`, and the other callers (discarding a stale sign-in, undoing a late session) do not wait for it. Loading the SDK's wasm is not bounded (#3026).

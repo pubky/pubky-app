@@ -50,15 +50,15 @@ export const AlertBackup = () => {
         <TriangleAlert className="h-4 w-4 font-bold text-brand-foreground" />
         <Typography size="sm" className="font-bold whitespace-nowrap text-brand-foreground">
           <span className="md:hidden">{'Back up now'}</span>
-          <span className="hidden md:inline">{'Back up now to avoid losing your account!'}</span>
+          <span className="hidden md:inline">{'Back up your key to Pubky Ring!'}</span>
         </Typography>
       </Container>
       <DialogBackup />
       <DialogConfirmBackup onConfirm={handleDismiss} />
       {needsSignIn && (
         <Typography size="sm" className="basis-full text-brand-foreground">
-          Save your recovery phrase or encrypted file using Backup, then use it on the Sign In page to access your
-          account again. If you already have a backup, you can use that instead.
+          Export your key to Pubky Ring using Backup, then sign in with Pubky Ring to access your account again. If you
+          already saved a recovery phrase or encrypted file, import it into Pubky Ring instead.
         </Typography>
       )}
     </Container>

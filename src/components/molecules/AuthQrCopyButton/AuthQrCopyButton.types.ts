@@ -1,3 +1,5 @@
+import type { QrCodeSlotLogo } from '@/molecules/QrCodeSlot/QrCodeSlot.types';
+
 export interface AuthQrCopyButtonProps {
   url: string;
   isLoading: boolean;
@@ -10,4 +12,6 @@ export interface AuthQrCopyButtonProps {
   reloadAriaLabel: string;
   /** Extra lock on top of the loading and missing-URL states. */
   disabled?: boolean;
+  /** Centre mark of the QR, e.g. Bitkit's when the sign-up QR is meant for Bitkit. Defaults to Pubky Ring. */
+  logo?: QrCodeSlotLogo;
 }

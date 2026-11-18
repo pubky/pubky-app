@@ -1,8 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IFRAME_MOUNT_TIMEOUT_MS, IFRAME_READY_AFTER_LOAD_MS } from '@/hooks/useIframeReady/useIframeReady';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { ErrorCategory } from '@/libs/error/error.types';
-import { CONNECT_MOUNT_TIMEOUT_MS, CONNECT_READY_AFTER_LOAD_MS, useLocksAuthFlow } from './useLocksAuthFlow';
+import { useLocksAuthFlow } from './useLocksAuthFlow';
 import { LocksAuthFlowStatus } from './useLocksAuthFlow.types';
 
 const mocks = vi.hoisted(() => ({
@@ -302,6 +303,10 @@ describe('useLocksAuthFlow', () => {
   describe('waiting for the /connect page to render', () => {
     beforeEach(() => {
       vi.useFakeTimers();
+      // Each start() carries a fresh `state` in the URL, which keys the wait for the page.
+      mocks.getConnectUrl.mockImplementation(async ({ state }: { state: string }) => {
+        return `${LOCK_SERVER_ORIGIN}/connect?delivery=postmessage&state=${state}`;
+      });
     });
     afterEach(() => {
       vi.useRealTimers();
@@ -327,7 +332,7 @@ describe('useLocksAuthFlow', () => {
       await postReady();
       expect(result.current.isConnectReady).toBe(true);
 
-      await advance(CONNECT_MOUNT_TIMEOUT_MS + CONNECT_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_MOUNT_TIMEOUT_MS + IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
       expect(result.current.error).toBeNull();
     });
@@ -338,7 +343,7 @@ describe('useLocksAuthFlow', () => {
       attachIframeSource(result);
       fireLoad(result);
 
-      await advance(CONNECT_READY_AFTER_LOAD_MS - 1);
+      await advance(IFRAME_READY_AFTER_LOAD_MS - 1);
       expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
 
       await advance(1);
@@ -352,7 +357,7 @@ describe('useLocksAuthFlow', () => {
       await startFlow(result);
       attachIframeSource(result);
 
-      await advance(CONNECT_MOUNT_TIMEOUT_MS - 1);
+      await advance(IFRAME_MOUNT_TIMEOUT_MS - 1);
       expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
 
       await advance(1);
@@ -367,7 +372,7 @@ describe('useLocksAuthFlow', () => {
       fireLoad(result);
       await postReady();
 
-      await advance(CONNECT_MOUNT_TIMEOUT_MS); // the creator takes a while to scan
+      await advance(IFRAME_MOUNT_TIMEOUT_MS); // the creator takes a while to scan
       await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
 
       expect(result.current.status).toBe(LocksAuthFlowStatus.SUCCESS);
@@ -381,7 +386,7 @@ describe('useLocksAuthFlow', () => {
       fireLoad(result);
 
       await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
-      await advance(CONNECT_MOUNT_TIMEOUT_MS);
+      await advance(IFRAME_MOUNT_TIMEOUT_MS);
 
       expect(result.current.status).toBe(LocksAuthFlowStatus.SUCCESS);
     });
@@ -395,7 +400,7 @@ describe('useLocksAuthFlow', () => {
       await postReady('https://evil.example');
       expect(result.current.isConnectReady).toBe(false);
 
-      await advance(CONNECT_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
     });
 
@@ -404,7 +409,7 @@ describe('useLocksAuthFlow', () => {
       await startFlow(result);
       attachIframeSource(result);
       fireLoad(result);
-      await advance(CONNECT_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
 
       await act(() => result.current.start());
@@ -413,7 +418,7 @@ describe('useLocksAuthFlow', () => {
       expect(result.current.isConnectReady).toBe(false);
 
       // The new page gets its own limits: the old load does not carry over.
-      await advance(CONNECT_READY_AFTER_LOAD_MS);
+      await advance(IFRAME_READY_AFTER_LOAD_MS);
       expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
       fireLoad(result);
       await postReady();

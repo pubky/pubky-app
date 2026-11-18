@@ -63,16 +63,16 @@ export function isPassportAppleEnabled(): boolean {
  * Declared identity, deliberately NOT inferred from network values: equality
  * with the canonical staging defaults must never be load-bearing, because any
  * config drift (URL rotation, trailing slash) would silently disable the
- * staging sign-in guard and re-enable the force-republish path it exists to
- * prevent. `PUBKY_RUNTIME_HOMESERVER_URL` is also temporary until
+ * staging sign-in guard and let a staging build adopt or restore a session for
+ * a key whose homeserver is elsewhere (e.g. a production account). `PUBKY_RUNTIME_HOMESERVER_URL` is also temporary until
  * pubky-homeserver#410 resolves transport URLs via PKARR.
  */
 export function isStagingHomeserverDeploy(): boolean {
   return getDeployEnv() === 'staging';
 }
 
-// Requested from Pubky Ring at sign-in and fixed for the life of that session; keypair sign-in mints a
-// root (`/:rw`) session instead. A session from before an entry was added lacks it until the user
+// Requested from Pubky Ring at sign-in and fixed for the life of that session; a root (`/:rw`) grant saved
+// by the former keypair sign-in covers every entry. A session from before an entry was added lacks it until the user
 // approves a new one (`docs/locks.md`, _Sessions from before locks_).
 // - /pub/pubky.app/:rw         — the 0.x public tree: legacy reads, and deletes of migrated objects
 // - /pub/social/v1/:rw         — the app's public social data (`pubky-social-specs` 1.x)

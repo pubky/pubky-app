@@ -10,7 +10,6 @@ import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
-import { Identity } from '@/libs/identity/identity';
 import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
 import { resetSocialMigrationReports } from '@/libs/social-migration/report-telemetry';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -388,9 +387,20 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
   });
 
   describe('sign-in', () => {
+    // A Ring approval stands in for an interactive sign-in; the phrase login this suite used is gone (#3200)
+    let completeAuthFlow = vi.fn();
+    const signInWithRing = async () => (await AuthController.getAuthUrl()).awaitApproval;
+
     beforeEach(() => {
-      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(asOpaque({}));
-      vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session });
+      completeAuthFlow = vi.fn();
+      vi.spyOn(AuthApplication, 'startGrantFlow').mockResolvedValue(
+        asOpaque({
+          url: 'pubkyauth://flow',
+          awaitApproval: Promise.resolve(session),
+          cancelAuthFlow: vi.fn(),
+          completeAuthFlow,
+        }),
+      );
       vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('new-grant'));
       // The account has not been updated yet: no done flag
       vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
@@ -406,7 +416,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       });
       const { seen, unsubscribe } = trackStore();
 
-      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+      expect(await signInWithRing()).toBe(session);
       unsubscribe();
 
       expect(sessionDuringRun).toBeNull();
@@ -423,7 +433,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     it('asks before the run: the sign-in waits on the screen until Continue, with no engine load', async () => {
       unsubscribeContinue();
       const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
-      const signIn = AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' });
+      const signIn = signInWithRing();
 
       await vi.waitFor(() => expect(useSocialMigrationStore.getState().stage).toBe('confirm'));
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -432,7 +442,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
       SocialMigrationController.confirm();
 
-      expect(await signIn).toBe(true);
+      expect(await signIn).toBe(session);
       expect(run).toHaveBeenCalledOnce();
       expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
     });
@@ -442,7 +452,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
       const { seen, unsubscribe } = trackStore();
 
-      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+      expect(await signInWithRing()).toBe(session);
       unsubscribe();
 
       expect(run).not.toHaveBeenCalled();
@@ -457,7 +467,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
         .spyOn(HomeserverService, 'migrateToSocialV1')
         .mockResolvedValue(asOpaque<MigrationReport>({ ...done(), status: 'already_migrated' }));
 
-      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+      expect(await signInWithRing()).toBe(session);
 
       expect(continues).toBe(1);
       expect(run).toHaveBeenCalledOnce();
@@ -469,7 +479,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
       const expectAdmittedAtPublish = admittedAtPublish('new-grant');
 
-      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+      expect(await signInWithRing()).toBe(session);
 
       expectAdmittedAtPublish();
       expect(readSocialMigrationRecord(pubky)?.admittedGrantIds).toEqual(['new-grant']);
@@ -480,8 +490,9 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
         asOpaque<MigrationReport>({ ...done(), status: 'aborted', error: { code: 'SESSION_EXPIRED', message: '' } }),
       );
 
-      // F-QA6-1: a `true` here made the sign-in dialog navigate home over the signed-out explanation
-      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(false);
+      // The approval resolves; the gate's sign-out ends the attempt and the route guard shows /migration
+      expect(await signInWithRing()).toBe(session);
+      expect(completeAuthFlow).toHaveBeenCalledOnce();
 
       expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'social-migration' });
       expect(useSocialMigrationStore.getState()).toMatchObject({ stage: 'reauth-required', reason: 'session-expired' });
@@ -499,7 +510,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
             ),
           ),
       );
-      const signIn = AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' }).catch((error: unknown) => error);
+      const signIn = signInWithRing().catch((error: unknown) => error);
       await vi.waitFor(() => expect(useSocialMigrationStore.getState().stage).toBe('running'));
 
       await AuthController.logout();
@@ -516,7 +527,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       useAuthStore.setState({ currentUserPubky: mockPubky('o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo') });
       persistState();
 
-      await expect(AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).rejects.toThrow('cleanup failed');
+      await expect(signInWithRing()).rejects.toThrow('cleanup failed');
 
       expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'temporary-error' });
     });
