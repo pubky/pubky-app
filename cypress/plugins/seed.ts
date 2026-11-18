@@ -8,7 +8,7 @@ import {
   type Path,
   type Session,
 } from '@synonymdev/pubky';
-import { decodeObject, encodeObject } from 'pubky-social-specs';
+import { decodeObject, encodeObject, toPath } from 'pubky-social-specs';
 import { LOCKS_GUARDED_CONTENT_PATH } from '../../src/config/locks';
 import type {
   SeedBookmarkArgs,
@@ -30,6 +30,7 @@ import type {
   SeedLockServerWriteArgs,
   SeedMarkNotificationsReadArgs,
   SeedMuteArgs,
+  SeedReadPostArgs,
   SeedSettingsArgs,
   SeedSignUpArgs,
   SeedTagArgs,
@@ -322,6 +323,21 @@ export const createSeedTasks = (config: SeedConfig) => {
     // count what a run left on the homeserver. Deep and ascending, like the migrator's own LIST.
     listHomeserverPaths: ({ userId, prefix }: SeedListPathsArgs): Promise<string[]> =>
       sessionFor(userId).session.storage.list(prefix, null, false, LIST_PAGE_SIZE, false),
+
+    // Not a seed: the newest stored version of a seeded user's v1 post, read back from the homeserver with their
+    // session and decoded like `decodeStoredPost`. Null while the post has no version there.
+    readStoredPost: async ({ userId, postId }: SeedReadPostArgs) => {
+      const { session } = sessionFor(userId);
+      const versions = await session.storage.list(
+        `/pub/social/v1/posts/${postId}/` as Path,
+        null,
+        false,
+        LIST_PAGE_SIZE,
+        false,
+      );
+      const head = versions.sort().at(-1);
+      return head ? decodeObject({ kind: 'post' }, await session.storage.getBytes(toPath(head) as Path)) : null;
+    },
 
     seedCreateCollection: ({ authorId, ...collection }: SeedCreateCollectionArgs): Promise<SeededPost> =>
       step(`create collection '${collection.name}' by '${nameOf(authorId)}'`, async () => ({

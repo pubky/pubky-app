@@ -3,6 +3,7 @@ import { slowCypressDown } from 'cypress-slow-down';
 import { SOCIAL_MIGRATION_AUTO_RETRY_DELAYS_MS } from '../../src/config/social-migration';
 import { extendedTimeout, verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
+import { expectImageServed } from '../support/media';
 import {
   holdMigrationFlag,
   holdMigrationProbe,
@@ -49,10 +50,12 @@ import {
   listHomeserverPathsViaApi,
   markNotificationsReadViaApi,
   muteViaApi,
+  readStoredPostViaApi,
   replyViaApi,
   repostViaApi,
   seedUserViaApi,
   signUpViaApi,
+  type StoredV1Post,
   tagPostViaApi,
   writeSettingsViaApi,
 } from '../support/seed';
@@ -226,6 +229,7 @@ describe('Onboarding', () => {
     const imageText = `Image from before the migration ${run}`;
     const articleTitle = `Article from before the migration ${run}`;
     const articleBody = `Its body, under a cover in its first attachment ${run}`;
+    const articleInlineAlt = `Inline image from before the migration ${run}`;
     const collectionName = `Collection from before the migration ${run}`;
     const tagLabel = `premigration${Cypress._.random(100_000)}`;
     const replyText = `A reply from before the migration ${run}`;
@@ -242,6 +246,7 @@ describe('Onboarding', () => {
     let article: SeededPost;
     let collection: SeededPost;
     let lastRead: number;
+    let articleMedia: { cover: string; inline: string };
 
     seedUserViaApi(profileName, { bio: profileBio, legacy: true }).then((seeded) => {
       user = seeded;
@@ -270,7 +275,11 @@ describe('Onboarding', () => {
       createImagePostViaApi(user, imageText).then((post) => {
         image = post;
       });
-      createArticleViaApi(user, articleTitle, articleBody, { coverFixture: 'mustache-you.png' }).then((post) => {
+      // The 0.x composer's numbering: the cover at slot 0, the inline image at slot 1
+      createArticleViaApi(user, articleTitle, `${articleBody}\n\n![${articleInlineAlt}](attachment:1)`, {
+        coverFixture: 'mustache-you.png',
+        inlineFixtures: ['mustache-edit.png'],
+      }).then((post) => {
         article = post;
       });
       followUserViaApi(user, followee);
@@ -373,12 +382,25 @@ describe('Onboarding', () => {
           const postId = postIdFromWriteUrl(write.request.url);
           if (postId === reply.id) expect(post.parent, 'reply parent').to.eq(v1Note);
           if (postId === quote.id) expect(post.embed, 'quoted post').to.eq(v1Note);
-          if (postId !== article.id) return;
-          // The first attachment of a 0.x article moves into the envelope as its cover
-          expect(post.kind).to.eq('article');
-          expect(post.attachments).to.deep.equal([]);
-          expect(JSON.parse(post.content).cover_image, 'article cover').to.be.a('string');
+          if (postId === article.id) expect(post.kind).to.eq('article');
         });
+      });
+
+      // The first attachment of a 0.x article, an image the body does not reference, moves into the envelope as its
+      // cover; the inline image moves up to slot 0 and the body's reference follows it (transform revision 4)
+      readStoredPostViaApi(article).then((stored) => {
+        expect(stored, 'stored article').to.not.equal(null);
+        const { content, attachments } = stored as StoredV1Post;
+        const { body, cover_image: cover } = JSON.parse(content) as { body: string; cover_image: string | null };
+        expect(cover, 'article cover').to.be.a('string');
+        expect(attachments.map(({ name }) => name)).to.deep.equal(['mustache-edit.png']);
+        expect(attachments[0]!.uri, 'inline image').to.not.eq(cover);
+        expect(body, 'article body').to.eq(`${articleBody}\n\n![${articleInlineAlt}](attachment:0)`);
+        // Both files were copied in this run
+        [cover!, attachments[0]!.uri].forEach((uri) =>
+          expect(paths, `the copy of ${uri}`).to.include(uri.replace(/^pubky:\/\/[^/]+/, '')),
+        );
+        articleMedia = { cover: cover!, inline: attachments[0]!.uri };
       });
     });
 
@@ -411,6 +433,33 @@ describe('Onboarding', () => {
     cy.get('[data-cy="header-collections-btn"]').click();
     cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', noteText);
+
+    // The migrated article shows its cover and its inline image, each the file the 0.x article meant there
+    cy.then(() => {
+      const served = (uri: string) => {
+        const [, owner, file] = uri.match(/^pubky:\/\/([^/]+)\/pub\/social\/v1\/files\/([^/]+)$/)!;
+        return {
+          check: {
+            description: `v1 file ${file}`,
+            path: `/v1/static/files/${owner}/${file}/main`,
+            expect: { kind: 'found' as const },
+          },
+          route: new RegExp(`/v1/static/files/${owner}/${file.replace('.', '\\.')}/(small|feed|large|main)$`),
+        };
+      };
+      const cover = served(articleMedia.cover);
+      const inline = served(articleMedia.inline);
+      // An inline image that meets a 404 shows its fallback for good, so the page opens once Nexus serves both
+      waitForNexus(cover.check, inline.check);
+      cy.visit(`/post/${user.id}/${article.id}`);
+      cy.contains('h1', articleTitle).should('be.visible');
+      // Only the article's cover is a <picture>
+      expectImageServed(() => cy.get('picture img'), cover.route);
+      expectImageServed(
+        () => cy.get(`img[data-testid="article-inline-image"][alt="${articleInlineAlt}"]`),
+        inline.route,
+      );
+    });
 
     // A second sign-in passes on this browser's record (or the done flag) without the gate's route and writes no
     // second flag: the flag is the last write of a run, so a repeated migration would show here.
