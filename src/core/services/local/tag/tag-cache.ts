@@ -1,5 +1,6 @@
 import type { Table } from 'dexie';
 import { db } from '@/database/franky/franky';
+import { withIndexedDbRecovery } from '@/database/franky/franky.recovery';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -270,7 +271,7 @@ export class LocalTagCacheService {
   }
   private static async write<T>(table: string, operation: () => Promise<T>): Promise<T> {
     try {
-      return await operation();
+      return await withIndexedDbRecovery(db, operation);
     } catch (cause) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to persist tag cache', {
         service: ErrorService.Local,
