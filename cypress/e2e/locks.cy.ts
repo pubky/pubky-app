@@ -355,6 +355,16 @@ describe('locks', () => {
     });
   });
 
+  /**
+   * An unlocked lock article on the post page uses the article layout: its title is the page's h1.
+   * The page paints the post card until the article is read, so each check retries past that swap.
+   */
+  const expectUnlockedArticle = (articleTitle: string, body: string, accessLabel: 'My locked content' | 'Unlocked') => {
+    cy.contains('h1', articleTitle).should('be.visible');
+    cy.get('[data-cy="locked-post-access-label"]:visible').should('have.text', accessLabel);
+    return cy.contains('[data-cy="post-text"]:visible', body).should('be.visible');
+  };
+
   it('locks an article: the owner sees the body, another reader pays to unlock it', () => {
     const run = Date.now();
     const articleTitle = `Locked article ${run}`;
@@ -392,16 +402,9 @@ describe('locks', () => {
     cy.get<string>('@postId').then((postId) => {
       waitForNexusLockPost(creator.pubky, postId);
 
-      locksStep(3, ARTICLE_STEPS, 'Owner view: A sees the locked article body, with the title and teaser');
+      locksStep(3, ARTICLE_STEPS, 'Owner view: A sees the locked article, title and body');
       openPostFromHomeFeed(creator.pubky, postId, teaser);
-      singlePostCard().should('contain.text', teaser).and('not.contain.text', draftTeaser);
-      singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
-      singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'My locked content');
-      singlePostCard()
-        .find('[data-cy="locked-post-unlocked-content"]')
-        .should('contain.text', articleTitle)
-        .and('contain.text', body)
-        .and('not.contain.text', draftBody);
+      expectUnlockedArticle(articleTitle, body, 'My locked content').and('not.contain.text', draftBody);
 
       locksStep(4, ARTICLE_STEPS, 'Locked view: B sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
@@ -414,17 +417,13 @@ describe('locks', () => {
       locksStep(5, ARTICLE_STEPS, 'B pays in bitcoin through the stubbed Bitkit wallet');
       payToUnlock();
 
-      locksStep(6, ARTICLE_STEPS, 'Unlocked view: B sees the full article body');
-      singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
-      singlePostCard()
-        .find('[data-cy="locked-post-unlocked-content"]')
-        .should('contain.text', articleTitle)
-        .and('contain.text', body);
+      locksStep(6, ARTICLE_STEPS, 'Unlocked view: B sees the full article, title and body');
+      expectUnlockedArticle(articleTitle, body, 'Unlocked');
 
       cy.get<string>('@lockId').then((lockId) =>
         reloadFromReaderReplica(lockId, () => {
           expectSignedIn('the reader is still signed in after a reload');
-          singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', body);
+          expectUnlockedArticle(articleTitle, body, 'Unlocked');
         }),
       );
     });
