@@ -1015,7 +1015,7 @@ describe('Cards cards — browser coverage', () => {
       type: 'video/mp4',
       width: 400,
       height: 225,
-      urls: { main: '/pubky.mp4' },
+      urls: { main: '/images/landing-video.mp4' },
     }));
     await renderForVRT(
       <div data-testid="media-scroll" className="h-80 w-80 overflow-y-auto p-4">

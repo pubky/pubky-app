@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { fileUriBuilder } from 'pubky-app-specs';
-import { ARTICLE_INLINE_SUPPORTED_MIME_TYPES } from '@/config/attachmentMimeTypes';
-import { ARTICLE_INLINE_SUPPORTED_FILE_TYPES } from '@/config/attachmentMimeTypes';
+import { ARTICLE_INLINE_SUPPORTED_FILE_TYPES, ARTICLE_INLINE_SUPPORTED_MIME_TYPES } from '@/config/attachmentMimeTypes';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import { ARTICLE_ATTACHMENT_MAX_FILES, ATTACHMENT_MAX_OTHER_SIZE } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';

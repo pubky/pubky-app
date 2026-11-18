@@ -7,9 +7,12 @@ import { COPYRIGHT_ROUTES, LEGAL_ROUTES } from '@/app/routes';
 import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
 import type { PersistedAuth } from '@/libs/auth/session.types';
 import { SHOP_CLEANUP_ACK_KEY, SHOP_TEARDOWN_PENDING_KEY } from '@/libs/shop-embed/cleanup';
+import { LocalAuthService } from '@/services/local/auth/auth';
+import { ShopEmbedService } from '@/services/shop-embed/shop-embed';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { AUTH_PERSIST_KEY, AUTH_STORE_VERSION, LEGACY_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { mockGrantReference } from '@/test-utils/pubky';
+import { createTestWebLocks } from '@/test-utils/web-locks';
 import { AppShell } from './AppShell';
 
 const cleanup = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
@@ -127,6 +130,13 @@ describe('AppShell', () => {
     expect(screen.queryByTestId('public-header')).not.toBeInTheDocument();
   });
 
+  it('uses the normal recovery path when the persisted record is unreadable', async () => {
+    vi.mocked(usePathname).mockReturnValue('/');
+    localStorage.setItem(AUTH_PERSIST_KEY, 'incomplete');
+    render(<AppShell>Landing</AppShell>);
+    expect(await screen.findByTestId('route-guard-provider')).toBeInTheDocument();
+  });
+
   it('resumes cross-tab reconciliation when a guest receives an auth storage event', async () => {
     vi.mocked(usePathname).mockReturnValue('/');
     render(<AppShell>Landing</AppShell>);
@@ -144,6 +154,45 @@ describe('AppShell', () => {
     render(<AppShell>Landing</AppShell>);
     expect(screen.getByTestId('public-header')).toBeInTheDocument();
     expect(screen.queryByTestId('database-provider')).not.toBeInTheDocument();
+  });
+
+  it('renders the public landing after an actual App logout and cleanup without a Shop acknowledgement', async ({
+    onTestFinished,
+  }) => {
+    vi.stubGlobal('navigator', Object.create(navigator, { locks: { value: createTestWebLocks() } }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    const grant = mockGrantReference();
+    const guest: PersistedAuth = {
+      generation: 'logout',
+      currentUserPubky: null,
+      sessionReference: null,
+      hasProfile: null,
+      retiringSession: null,
+    };
+    await LocalAuthService.commit(
+      { ...guest, currentUserPubky: 'alice', sessionReference: grant, generation: 'login' },
+      '',
+    );
+    await LocalAuthService.commit(guest, 'login');
+    await LocalAuthService.finishRetirement(grant.sessionStoreId);
+    localStorage.setItem('pubky.messaging.session.v1', 'old-session');
+    await ShopEmbedService.cleanupSignedOut('logout', 'logout');
+
+    expect(LocalAuthService.read()).toMatchObject({ shopCleanupEpoch: 'logout', pendingRetirements: [] });
+    expect(localStorage.getItem('pubky.messaging.session.v1')).toBeNull();
+    expect(localStorage.getItem(SHOP_TEARDOWN_PENDING_KEY)).toBeNull();
+    expect(localStorage.getItem(SHOP_CLEANUP_ACK_KEY)).toBeNull();
+    await useAuthStore.persist.rehydrate();
+    vi.mocked(usePathname).mockReturnValue('/');
+    render(<AppShell>Landing</AppShell>);
+    await waitFor(() => expect(cleanup.start).toHaveBeenCalledOnce());
+    expect(screen.getByTestId('public-header')).toBeInTheDocument();
+    expect(screen.getByText('Landing')).toBeVisible();
+    expect(screen.queryByTestId('database-provider')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-guard-provider')).not.toBeInTheDocument();
   });
 
   it('keeps guest-to-guest storage updates on the public landing and adopts their generation', async () => {

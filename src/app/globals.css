@@ -2,6 +2,20 @@
 @import 'tw-animate-css';
 @plugin '@tailwindcss/typography';
 
+/* The parser marks the bootstrap script for saved accounts. The hydrated shell removes
+   the script once it knows whether to show the public landing or restore the account. */
+.landing-account-spinner {
+  display: none;
+}
+
+script[data-saved-account] ~ .landing-account-spinner {
+  display: flex;
+}
+
+script[data-saved-account] ~ .landing-public-content {
+  display: none;
+}
+
 body {
   font-family: 'Inter Tight', sans-serif;
   min-width: 375px;

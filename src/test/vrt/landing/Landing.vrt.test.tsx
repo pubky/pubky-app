@@ -13,6 +13,8 @@ import { LandingFinalSection } from '@/templates/Public/Landing/LandingFinalSect
 import { LandingFreedomSection } from '@/templates/Public/Landing/LandingFreedomSection';
 import { HomeFooter } from '@/molecules/Home/Home';
 import { LandingBrokenSection } from '@/templates/Public/Landing/LandingBrokenSection';
+import { PublicLanding } from '@/organisms/AppShell/PublicLanding';
+import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 
 const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
 beforeEach(() => mockAppleEnabled.mockReturnValue(false));
@@ -78,6 +80,26 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 }));
 
 describe('Landing — visual regression', () => {
+  it('hides guest controls and shows the spinner on client entry for a saved member', async () => {
+    const previous = localStorage.getItem(AUTH_PERSIST_KEY);
+    try {
+      localStorage.setItem(AUTH_PERSIST_KEY, JSON.stringify({ state: { currentUserPubky: 'member' } }));
+      await renderForVRT(
+        <PublicLanding checking>
+          <button>Join now</button>
+        </PublicLanding>,
+        { viewport: VRT_VIEWPORT_MOBILE },
+      );
+      const content = document.querySelector('.landing-public-content')!;
+      await expect.element(page.getByRole('status', { name: 'Loading' })).toBeVisible();
+      expect(getComputedStyle(content).display).toBe('none');
+      expect(page.getByRole('button', { name: 'Join now' }).elements()).toHaveLength(0);
+    } finally {
+      if (previous === null) localStorage.removeItem(AUTH_PERSIST_KEY);
+      else localStorage.setItem(AUTH_PERSIST_KEY, previous);
+    }
+  });
+
   it('renders the landing hero at desktop viewport', async () => {
     await preloadImages(DESKTOP_HERO_ASSETS);
     await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });

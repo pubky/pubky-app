@@ -6,9 +6,10 @@ import { useDebounceCallback, useTimeout } from 'usehooks-ts';
 import {
   ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  ARTICLE_SUPPORTED_FILE_TYPES,
   POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  POST_SUPPORTED_FILE_TYPES,
 } from '@/config/attachmentMimeTypes';
-import { ARTICLE_SUPPORTED_FILE_TYPES, POST_SUPPORTED_FILE_TYPES } from '@/config/attachmentMimeTypes';
 import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {

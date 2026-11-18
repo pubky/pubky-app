@@ -51,7 +51,9 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
 - **App shell and public documents:** The public landing page (`/`) and documents (`isPublicDocumentRoute`:
   `/terms-of-use`, `/privacy-policy`, `/copyright`) render their header and content in the server HTML without opening
-  IndexedDB. Saved accounts and cross-tab sign-in use the same `DatabaseProvider` → `RouteGuardProvider` as app routes.
+  IndexedDB. On a direct visit to `/`, the browser checks for a saved account before painting the landing actions.
+  A returning member sees the loading spinner while the guarded shell loads. Guests can read the landing page
+  with JavaScript disabled. Saved accounts and cross-tab sign-in use the same `DatabaseProvider` → `RouteGuardProvider` as app routes.
   A signed-out visitor's pending credential cleanup runs alongside the landing page so its completion preserves an
   active Passport sign-in. The landing offers Passport once the saved auth state has hydrated. A click opens the popup
   immediately and shows “Opening Passport…” while the app prepares the database and requests a grant.
