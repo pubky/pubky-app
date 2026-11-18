@@ -268,7 +268,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     } catch (error) {
       if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
       if (isAuthFlowCanceledError(error)) {
-        // A newer auth flow (for example a recovery-phrase sign-in) took over: end quietly and
+        // A newer auth flow (for example a Pubky Ring sign-in) took over: end quietly and
         // do not report a failure, the other flow owns the session now.
         settle(attempt, 'superseded');
         return;

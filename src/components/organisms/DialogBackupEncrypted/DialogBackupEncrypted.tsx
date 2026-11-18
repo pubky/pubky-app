@@ -187,7 +187,7 @@ function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
       <DialogHeader>
         <DialogTitle>{'Backup complete'}</DialogTitle>
         <DialogDescription>
-          {'You can use your backed up encrypted file to restore your account again later.'}
+          {'Import your encrypted file into Pubky Ring to sign in to your account later.'}
         </DialogDescription>
       </DialogHeader>
 

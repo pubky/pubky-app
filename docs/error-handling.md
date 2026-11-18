@@ -284,10 +284,9 @@ captured session and generation still match the active account. The original req
 so local-first rollback can run. Network failures, server errors and permission denials do not invalidate the session.
 Public fetches and the separate Lock Server authentication flow do not enter this subscription.
 
-Encrypted-file sign-in distinguishes decryption errors from storage and transport errors by `AppError` metadata.
 `ClientStateError` from the SDK `browserSessionStore.save()` call maps to `Database/WRITE_FAILED`; storage availability
-and app-reference writes keep their own database errors. Report a browser-storage problem for those failures, not an
-invalid password or damaged backup. Unknown errors use a generic sign-in failure message.
+and app-reference writes keep their own database errors. The Ring/Bitkit and Passport sign-in surfaces do not tell these
+apart yet: like unknown errors, they show the generic sign-in failure message.
 
 ### Expected auth control flow
 

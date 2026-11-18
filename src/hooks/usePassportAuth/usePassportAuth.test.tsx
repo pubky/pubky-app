@@ -646,7 +646,7 @@ describe('usePassportAuth', () => {
     expect(onAttemptSettled).toHaveBeenCalledTimes(1);
   });
 
-  it('settles superseded (not failed) when a newer auth flow cancels it, e.g. a recovery-phrase sign-in', async () => {
+  it('settles superseded (not failed) when a newer auth flow cancels it, e.g. a Pubky Ring sign-in', async () => {
     const flow = createFlow();
     mockGetPassportAuthUrl.mockResolvedValue(flow);
     const onAttemptSettled = vi.fn<(event: PassportAttemptSettledEvent) => void>();

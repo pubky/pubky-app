@@ -161,7 +161,7 @@ export function usePostDetails(compositeId: string | null | undefined, options?:
 - `queryFn` is a `get*` controller read and runs inside `useLiveQuery`: pure, local, no network.
 - `fetchFn` is a `fetch*` controller call that fetches from Nexus and persists to Dexie; the live query then re-renders on its own.
 - `fetchFn` runs **only when local data is `null`**. A cache hit is never refreshed by this hook (TTL does that).
-- Never call a network client, TanStack Query or retry logic inside `useLiveQuery`: it breaks Dexie's PSD.
+- Never call a network client, TanStack Query or application retry logic inside `useLiveQuery`: it breaks Dexie's PSD. ADR-0030 narrowly permits the database-layer single reconnect and one replay for an eligible failed local read, with one `Dexie.asap` transition task in a Dexie promise, lifecycle fences and preserved caller observations (see `data-patterns.md`, _Runtime connection recovery_). Hooks must not add timers or their own retry loop.
 - A change to `deps` or `enabled` starts a new query lifetime. While its first local read is pending, `data` is `undefined` and `isLoading` is true; the previous lifetime's hit or miss is hidden. Switching away and back does not reuse the earlier snapshot.
 - When disabled, neither `queryFn` nor `fetchFn` runs. After that lifetime settles, `data` is `null` and `isLoading` is false. Cleanup prevents an earlier fetch from changing the current loading state, but does not abort its network request or persistence; controllers and services must still guard stale-session writes.
 

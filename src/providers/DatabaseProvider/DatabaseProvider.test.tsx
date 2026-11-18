@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
+import { withIndexedDbRecovery } from '@/database/franky/franky.recovery';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -15,6 +17,7 @@ describe('DatabaseProvider', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('should initialize database successfully', async () => {
@@ -147,5 +150,109 @@ describe('DatabaseProvider', () => {
 
     expect(screen.queryByText('Test Content')).not.toBeInTheDocument();
     expect(screen.getByTestId('database-error-screen')).toBeInTheDocument();
+  });
+
+  it('preserves child state through recovery and still handles a later unexpected close', async () => {
+    vi.useRealTimers();
+    const reinitializing = Promise.withResolvers<{ wasDbReset: boolean }>();
+    const initialize = vi
+      .spyOn(db, 'initialize')
+      .mockResolvedValueOnce({ wasDbReset: false })
+      .mockImplementation(() => reinitializing.promise);
+    function Draft() {
+      const [draft, setDraft] = useState('');
+      return <input aria-label="Draft" value={draft} onChange={(event) => setDraft(event.target.value)} />;
+    }
+    render(
+      <DatabaseProvider>
+        <Draft />
+      </DatabaseProvider>,
+    );
+    const input = await screen.findByRole('textbox', { name: 'Draft' });
+    fireEvent.change(input, { target: { value: 'Unsaved draft' } });
+
+    const reopened = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    const open = db.open.bind(db);
+    vi.spyOn(db, 'open').mockImplementationOnce(() =>
+      open().then(async (database) => {
+        reopened.resolve();
+        await resume.promise;
+        return database;
+      }),
+    );
+    vi.spyOn(db.core, 'transaction').mockImplementationOnce(() => {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    });
+    const recovery = withIndexedDbRecovery(db, () => db.user_counts.count());
+    try {
+      await act(async () => reopened.promise);
+      expect(screen.getByRole('textbox', { name: 'Draft' })).toBe(input);
+      expect(input).toHaveValue('Unsaved draft');
+      expect(initialize).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        resume.resolve();
+        await expect(recovery).resolves.toBe(0);
+      });
+      expect(screen.getByRole('textbox', { name: 'Draft' })).toBe(input);
+      expect(input).toHaveValue('Unsaved draft');
+
+      act(() => db.close());
+      expect(screen.queryByRole('textbox', { name: 'Draft' })).not.toBeInTheDocument();
+      expect(initialize).toHaveBeenCalledTimes(2);
+    } finally {
+      await act(async () => {
+        resume.resolve();
+        reinitializing.resolve({ wasDbReset: false });
+        await recovery;
+      });
+    }
+    expect(screen.getByRole('textbox', { name: 'Draft' })).toHaveValue('');
+  });
+
+  it('handles an unexpected close while a recovery open is still pending', async () => {
+    vi.useRealTimers();
+    const reinitializing = Promise.withResolvers<{ wasDbReset: boolean }>();
+    const initialize = vi
+      .spyOn(db, 'initialize')
+      .mockResolvedValueOnce({ wasDbReset: false })
+      .mockImplementation(() => reinitializing.promise);
+    render(
+      <DatabaseProvider>
+        <div>Test Content</div>
+      </DatabaseProvider>,
+    );
+    await screen.findByText('Test Content');
+
+    const reopened = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    const open = db.open.bind(db);
+    vi.spyOn(db, 'open').mockImplementationOnce(() =>
+      open().then(async (database) => {
+        reopened.resolve();
+        await resume.promise;
+        return database;
+      }),
+    );
+    const failure = new DOMException('The operation was aborted.', 'AbortError');
+    vi.spyOn(db.core, 'transaction').mockImplementationOnce(() => {
+      throw failure;
+    });
+    const recovery = withIndexedDbRecovery(db, () => db.user_counts.count());
+    const rejection = expect(recovery).rejects.toMatchObject({ name: failure.name });
+    try {
+      await act(async () => reopened.promise);
+      expect(initialize).toHaveBeenCalledTimes(1);
+      act(() => db.close());
+      expect(screen.queryByText('Test Content')).not.toBeInTheDocument();
+      expect(initialize).toHaveBeenCalledTimes(2);
+    } finally {
+      await act(async () => {
+        resume.resolve();
+        reinitializing.resolve({ wasDbReset: false });
+        await rejection;
+      });
+    }
+    expect(screen.getByText('Test Content')).toBeInTheDocument();
   });
 });

@@ -116,6 +116,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 ### Database (`src/core/database/`)
 
 - Single Dexie schema version (`DB_VERSION`), safe initialization and recovery
+- Bounded runtime reconnect and one replay for eligible local reads or fully aborted local transactions, preserving each caller's Dexie scope and lifecycle fences ([ADR-0030](adr/0030-bounded-indexeddb-connection-recovery.md))
 - A version mismatch deletes and recreates the database; there is no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_)
 
 ## Allowed Dependencies
@@ -306,7 +307,7 @@ Trace call sites and mirror the existing pattern before changing any of these. N
 - `src/core/services/local/**` — writer of Dexie + TTL invariants; getting the order wrong corrupts caches silently. Persist dependencies before dependents, refresh `*_ttl` rows on every write, and use the dirty registry rather than deleting stream rows eagerly (`docs/local-first.md`).
 - `src/core/application/**` cross-domain calls — verify the ADR-0009 allow-list above before wiring two Applications together.
 - `src/libs/env/env.ts` + `src/libs/runtime-config/**` — the only places allowed to read `process.env.NEXT_PUBLIC_*` / `process.env.PUBKY_RUNTIME_*` (ESLint-enforced). Runtime config is injected into the browser as `window.__PUBKY_CONFIG__`, so never put a secret there (`docs/environment.md`).
-- `src/libs/{password,identity,phone}`, `src/components/organisms/{DialogBackup*,DialogRestore*,Human*}` — cryptographic, identity and onboarding-verification flows.
+- `src/libs/{password,identity,phone}`, `src/components/organisms/{DialogBackup*,Human*}` — cryptographic, identity and onboarding-verification flows.
 - `src/core/services/nextjs/og-metadata/**` + `src/libs/network/network.ts` — server-side fetching of user-supplied URLs for link previews, deliberately SSRF-guarded (`checkDnsSafety`, `isIpSafe`, DNS-rebinding checks). Any change here is a security change: keep the guards and their tests intact.
 - `src/sw.ts`, `next.config.ts`, `src/instrumentation*.ts`, `src/sentry.*.config.ts`, `.github/workflows/**` — build and runtime plumbing with cross-cutting effects. Change them only when the task is about them; `public/sw.js` is generated from `src/sw.ts`, never edit it by hand.
 
@@ -341,6 +342,8 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0023 | Article inline media as attachment slots                                  |
 | 0024 | Grant-only authentication                                                 |
 | 0025 | App-owned grant for same-origin Shop                                      |
+| 0029 | Cross-device notification `last_read` sync                                |
+| 0030 | Bounded IndexedDB connection recovery                                     |
 
 ## Quick Checklist
 

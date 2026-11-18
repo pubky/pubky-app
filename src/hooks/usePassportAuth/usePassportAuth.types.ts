@@ -10,7 +10,7 @@ export type PassportAttemptResult =
   /** Cancelled, errored, closed without success, timed out, flow error, or initialization failure. */
   | 'failed'
   /**
-   * A newer auth flow took over (for example a recovery-phrase sign-in completed while the popup
+   * A newer auth flow took over (for example a Pubky Ring sign-in completed while the popup
    * was open). Nothing to retry: the other flow owns the session now.
    */
   | 'superseded'
