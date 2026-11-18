@@ -7,7 +7,7 @@ describe('TermsOfService', () => {
     render(<TermsOfService />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Terms of Service' })).toBeInTheDocument();
-    expect(screen.getByText('Effective Date: October 22, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Effective Date: November 18, 2026')).toBeInTheDocument();
   });
 
   it('turns the all-caps lead lines into numbered section headings after the unnumbered preamble', () => {
@@ -31,7 +31,7 @@ describe('TermsOfService', () => {
       '14. PUBLISHING AND DISTRIBUTION OF CONTENT VIA THE PLATFORM',
       '15. PROHIBITED USES',
       '16. NO REPRESENTATION BY SYNONYM',
-      '17. PUBKY IS A PROGRESSIVE WEB APPLICATION',
+      '17. THE PUBKY APP',
       '18. TAX',
       '19. RESPONSIBILITIES, LIMITATION OF LIABILITY AND INDEMNITY',
       '20. FORCE MAJEURE',
@@ -63,7 +63,7 @@ describe('TermsOfService', () => {
     expect(screen.getByText(/Thank you for using the Pubky platform/)).toBeInTheDocument();
     expect(screen.getByText(/PLEASE REVIEW THE ARBITRATION PROVISION SET FORTH BELOW CAREFULLY/)).toBeInTheDocument();
     expect(
-      screen.getByText(/not sharing your private keys or recovery phase with any third party/),
+      screen.getByText(/not sharing your private keys or recovery phrase with any third party/),
     ).toBeInTheDocument();
     expect(screen.getByText(/You must not be a convicted sex offender;/)).toBeInTheDocument();
     expect(screen.getByText(/a company operating under the laws of the Republic of El Salvador/)).toHaveTextContent(
@@ -74,7 +74,9 @@ describe('TermsOfService', () => {
   it('keeps the contact emails and points the Privacy Policy links at the new page', () => {
     render(<TermsOfService />);
 
-    expect(screen.getByRole('link', { name: 'info@synonym.to' })).toHaveAttribute('href', 'mailto:info@synonym.to');
+    for (const link of screen.getAllByRole('link', { name: 'info@synonym.to' })) {
+      expect(link).toHaveAttribute('href', 'mailto:info@synonym.to');
+    }
     expect(screen.getByRole('link', { name: 'report@synonym.to' })).toHaveAttribute('href', 'mailto:report@synonym.to');
     expect(screen.getByRole('link', { name: 'https://pubky.app/privacy' })).toHaveAttribute('href', '/privacy-policy');
     for (const link of screen.getAllByRole('link', { name: 'Privacy Policy' })) {
@@ -102,7 +104,9 @@ describe('TermsOfService - regional availability', () => {
     expect(text).toContain(
       'It applies to commerce features only: the rest of the Platform remains available in those places.',
     );
-    expect(text).toContain('We reserve the right to restrict access to specific features based on your location.');
+    expect(text).toContain(
+      'We reserve the right to restrict access to specific features based on your location, or on the app or app store you use.',
+    );
   });
 
   it('keeps Prohibited Jurisdiction to the sanctions list plus Russia and Belarus', () => {
@@ -143,5 +147,38 @@ describe('TermsOfService - regional availability', () => {
     expect(text).toContain('"Pubky Market" means the concept of commerce among Pubky identities.');
     expect(text).toContain('Pubky Market is not a separate product or a second set of Terms.');
     expect(text).not.toMatch(/Pubky Marketplace/i);
+  });
+});
+
+describe('TermsOfService - keys and the mobile apps', () => {
+  it('sends key creation and recovery to Pubky Ring, not the browser', () => {
+    const { container } = render(<TermsOfService />);
+    const text = container.textContent ?? '';
+
+    expect(text).toContain('The Pubky App does not create, store or back up these keys.');
+    expect(text).toContain(
+      'If you created your keys in the Pubky App in a web browser before November 18, 2026, you were given a recovery phrase, an encrypted backup file (.pkarr) and a QR code. The Pubky App no longer accepts them for sign-in. To keep using your account, import them into Pubky Ring.',
+    );
+    expect(text).not.toContain('During the signup process, you will be provided with recovery options');
+    expect(text).toContain('The rules in the section titled “Cryptographic Keys and Account Recovery” still apply.');
+  });
+
+  it('covers the iOS and Android apps, with the terms Apple requires', () => {
+    const { container } = render(<TermsOfService />);
+    const text = container.textContent ?? '';
+
+    expect(screen.getByRole('heading', { level: 3, name: '17.1 Web and mobile applications' })).toHaveAttribute(
+      'id',
+      'web-and-mobile-applications',
+    );
+    expect(screen.getByRole('heading', { level: 3, name: '17.2 Apple App Store' })).toHaveAttribute(
+      'id',
+      'apple-app-store',
+    );
+    expect(text).toContain('as a progressive web application and as mobile applications for iOS and Android.');
+    expect(text).toContain('Apple has no obligation to provide any maintenance or support for the Pubky App.');
+    expect(text).toContain(
+      '(iii) that Apple and its subsidiaries are third-party beneficiaries as provided in the subsection titled “Apple App Store”.',
+    );
   });
 });

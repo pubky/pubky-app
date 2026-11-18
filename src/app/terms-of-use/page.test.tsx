@@ -7,7 +7,7 @@ describe('TermsOfUsePage', () => {
     render(<TermsOfUsePage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Terms of Service' })).toBeInTheDocument();
-    expect(screen.getByText('Effective Date: October 22, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Effective Date: November 18, 2026')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'TERMS AND CONDITIONS' })).toHaveAttribute(
       'id',
       'terms-and-conditions',

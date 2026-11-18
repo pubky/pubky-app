@@ -11,9 +11,9 @@ const PRIVACY_SECTIONS: LegalSection[] = [
     content: (
       <>
         <LegalParagraph>
-          This Privacy Policy (“Policy“) describes how {LEGAL_ENTITY_NAME} treats personal information on the Pubky
-          progressive web application and the products, services and features made available as part of the application
-          (collectively, the “Platform“).
+          This Privacy Policy (“Policy“) describes how {LEGAL_ENTITY_NAME} treats personal information on the Pubky App,
+          as a progressive web application and as mobile applications for iOS and Android, and the products, services
+          and features made available as part of the application (collectively, the “Platform“).
         </LegalParagraph>
       </>
     ),
@@ -296,6 +296,12 @@ const PRIVACY_SECTIONS: LegalSection[] = [
               This data remains on your device and syncs with our servers when you&apos;re online. You can clear this
               data through your browser settings.
             </LegalParagraph>
+            <LegalParagraph>
+              In the Pubky mobile app, this data is stored in the app&apos;s own storage on your device instead of the
+              browser, and your sign-in session is kept in your device&apos;s secure storage. The Pubky App does not
+              store your Pubky identity keys; they stay in Pubky Ring. You can clear this data by signing out and
+              uninstalling the app.
+            </LegalParagraph>
           </>
         ),
       },
@@ -338,6 +344,10 @@ const PRIVACY_SECTIONS: LegalSection[] = [
           </li>
           <li>
             <strong>As Requested or Directed By You.</strong>
+          </li>
+          <li>
+            <strong>With App Stores.</strong> Apple and Google distribute the Pubky mobile app. When you download it,
+            they process information about you under their own privacy policies.
           </li>
         </LegalList>
       </>
@@ -634,7 +644,7 @@ export function PrivacyPolicy() {
           <span className="text-brand">{'Policy'}</span>
         </>
       }
-      effectiveDate="January 29, 2026"
+      effectiveDate="November 18, 2026"
       sections={PRIVACY_SECTIONS}
     />
   );
