@@ -15,12 +15,10 @@ import { SocialMigrationController } from '@/controllers/social-migration/social
 import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-event-stream/homeserver-event-stream';
 import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
-import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
-import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
-import { Identity } from '@/libs/identity/identity';
 import * as utils from '@/libs/utils/utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -120,27 +118,25 @@ function storeSavedSettings() {
     );
 }
 
-const pkarrLookupError = () =>
-  Err.network(NetworkErrorCode.CONNECTION_FAILED, 'PKARR lookup failed', {
-    service: ErrorService.Homeserver,
-    operation: 'resolveHomeserverRecord',
-  });
-
 /** A fresh browser with no saved account: an interactive sign-in runs the full bootstrap. */
 function prepareFreshLogin() {
   localStorage.clear();
   useAuthStore.setState({ ...authInitialState, hasHydrated: true });
-  vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(asOpaque({}));
-  vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(asOpaque({}));
   vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference());
   vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
   storeSavedSettings();
 }
 
-function startFreshRecoveryLogin() {
+async function startFreshRingLogin() {
   prepareFreshLogin();
-  vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: sessionA });
-  return AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' });
+  vi.spyOn(AuthApplication, 'startGrantFlow').mockResolvedValue({
+    authorizationUrl: 'pubkyauth://grant',
+    awaitApproval: Promise.resolve(sessionA),
+    cancelAuthFlow: vi.fn(),
+    completeAuthFlow: vi.fn(),
+  });
+  const { awaitApproval } = await AuthController.getAuthUrl();
+  return awaitApproval;
 }
 
 describe('AuthController restored session lifecycle', () => {
@@ -594,7 +590,7 @@ describe('AuthController restored session lifecycle', () => {
     const error = profileError();
     vi.mocked(BootstrapApplication.initialize).mockRejectedValue(error);
 
-    await expect(startFreshRecoveryLogin()).rejects.toBe(error);
+    await expect(startFreshRingLogin()).rejects.toBe(error);
 
     expect(useAuthStore.getState()).toMatchObject({
       session: sessionA,
@@ -606,44 +602,10 @@ describe('AuthController restored session lifecycle', () => {
     expect(useSignInStore.getState()).toMatchObject(signInInitialState);
   });
 
-  it('signs in once the PKARR lookup recovers within the retry window', async () => {
-    prepareFreshLogin();
-    const signIn = vi
-      .spyOn(HomeserverService, 'signIn')
-      .mockRejectedValueOnce(pkarrLookupError())
-      .mockRejectedValueOnce(pkarrLookupError())
-      .mockResolvedValueOnce({ session: sessionA });
-
-    await expect(
-      AuthController.loginWithEncryptedFile({ encryptedFile: new File([], 'backup.pkarr'), password: 'password' }),
-    ).resolves.toBe(true);
-
-    expect(signIn).toHaveBeenCalledTimes(3);
-    expect(useAuthStore.getState()).toMatchObject({ session: sessionA, currentUserPubky: pubkyA, hasProfile: true });
-  });
-
-  it('makes no further sign-in attempt once a newer flow starts while a retry is pending', async () => {
-    prepareFreshLogin();
-    const error = pkarrLookupError();
-    const signIn = vi.spyOn(HomeserverService, 'signIn').mockRejectedValue(error);
-    const backoff = deferred<void>();
-    vi.mocked(utils.sleep).mockReturnValueOnce(backoff.promise);
-    const before = useAuthStore.getState();
-
-    const login = AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' });
-    await vi.waitFor(() => expect(signIn).toHaveBeenCalledOnce());
-    AuthController.cancelActiveAuthFlow();
-    backoff.resolve();
-
-    await expect(login).rejects.toSatisfy(isAuthFlowCanceledError);
-    expect(signIn).toHaveBeenCalledOnce();
-    expect(useAuthStore.getState()).toBe(before);
-  });
-
   it('ignores an interactive bootstrap failure after account replacement', async () => {
     const bootstrap = deferred<typeof notificationInitialState>();
     vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
-    const login = startFreshRecoveryLogin();
+    const login = startFreshRingLogin();
     await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
 
     await replaceAccount();

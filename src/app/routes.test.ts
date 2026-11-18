@@ -12,6 +12,7 @@ import {
   COPYRIGHT_ROUTES,
   getCollectionRoute,
   getContentSearchUrl,
+  getOnboardingScanRoute,
   getProfileRoute,
   getUserProfileUrl,
   isCollectionsOverviewRoute,
@@ -32,6 +33,7 @@ import {
   matchSingleCollectionRoute,
   NEEDS_SOCIAL_MIGRATION_ROUTES,
   ONBOARDING_ROUTES,
+  parseOnboardingKeychain,
   PROFILE_ROUTES,
   PUBLIC_ROUTES,
   SETTINGS_ROUTES,
@@ -42,6 +44,26 @@ import {
 describe('getContentSearchUrl', () => {
   it('builds an encoded q-only search URL', () => {
     expect(getContentSearchUrl('bitcoin wallets & privacy')).toBe('/search?q=bitcoin+wallets+%26+privacy');
+  });
+});
+
+describe('getOnboardingScanRoute', () => {
+  it('keeps the bare scan route for Pubky Ring', () => {
+    expect(getOnboardingScanRoute('ring')).toBe(ONBOARDING_ROUTES.SCAN);
+  });
+
+  it('adds the keychain param for Bitkit', () => {
+    expect(getOnboardingScanRoute('bitkit')).toBe('/onboarding/scan?keychain=bitkit');
+  });
+});
+
+describe('parseOnboardingKeychain', () => {
+  it('reads bitkit', () => {
+    expect(parseOnboardingKeychain('bitkit')).toBe('bitkit');
+  });
+
+  it.each([null, '', 'ring', 'BITKIT', 'other'])('falls back to Pubky Ring for %s', (value) => {
+    expect(parseOnboardingKeychain(value)).toBe('ring');
   });
 });
 

@@ -2,7 +2,6 @@ import type { Capabilities, Session } from '@synonymdev/pubky';
 import { validateCapabilities } from '@synonymdev/pubky';
 import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
-import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
@@ -11,11 +10,7 @@ import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
-import type {
-  SessionReadiness,
-  TLoginWithEncryptedFileParams,
-  TLoginWithMnemonicParams,
-} from '@/controllers/auth/auth.types';
+import type { SessionReadiness } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
 import { SocialMigrationController, type SocialMigrationEntry } from '@/controllers/social-migration/social-migration';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
@@ -606,30 +601,6 @@ export class AuthController {
   }
 
   /**
-   * Signs the keypair in and adopts the session.
-   * @param params - The authentication parameters
-   * @param params.keypair - The cryptographic keypair for the user
-   * @returns true once the account is ready; false when the sign-in did not complete, including a migration
-   * gate that signed the account out (the tab is on `/migration`, which explains it)
-   */
-  private static async signIn({ keypair }: TKeypairParams, expectedPubky?: string): Promise<boolean> {
-    this.cancelActiveAuthFlow();
-    const epoch = this.epoch;
-    void this.retrySessionRetirement();
-    let result: THomeserverSessionResult | undefined;
-    try {
-      result = await AuthApplication.signIn({ keypair, isCurrent: () => epoch === this.epoch });
-    } catch (error) {
-      // A newer flow owns sign-in: its outcome matters, not this one's last failure.
-      if (epoch !== this.epoch) throw createCanceledError();
-      throw error;
-    }
-    if (epoch !== this.epoch) throw createCanceledError();
-    if (!result) return false;
-    return await this.completeAuthenticatedSession(result, { epoch, expectedPubky });
-  }
-
-  /**
    * Bootstrap data to initialize the application snapshot.
    * @param params - Object containing session and pubky data from authentication
    * @param params.session - The user session data
@@ -958,35 +929,6 @@ export class AuthController {
       })
       .catch(() => {});
     return task;
-  }
-
-  /**
-   * Authenticates the keypair with the homeserver and saves the authenticated data if successful.
-   * @param params - Object containing the mnemonic phrase for key derivation
-   * @param params.mnemonic - The mnemonic phrase for key derivation
-   * @returns Promise resolving to true once the account is ready, false when the sign-in did not complete
-   * (the migration gate signed the account out: the tab is on `/migration`)
-   */
-  static async loginWithMnemonic({ mnemonic, expectedPubky }: TLoginWithMnemonicParams): Promise<boolean> {
-    const keypair = Identity.keypairFromMnemonic(mnemonic);
-    return await this.signIn({ keypair }, expectedPubky);
-  }
-
-  /**
-   * Decrypts the file to obtain the keypair, authenticates with the homeserver, and saves authenticated data if successful.
-   * @param params - Object containing the encrypted file and password for decryption
-   * @param params.encryptedFile - The encrypted recovery file
-   * @param params.password - The password to decrypt the recovery file
-   * @returns Promise resolving to true once the account is ready, false when the sign-in did not complete
-   * (the migration gate signed the account out: the tab is on `/migration`)
-   */
-  static async loginWithEncryptedFile({
-    encryptedFile,
-    password,
-    expectedPubky,
-  }: TLoginWithEncryptedFileParams): Promise<boolean> {
-    const keypair = await Identity.decryptRecoveryFile({ encryptedFile, passphrase: password });
-    return await this.signIn({ keypair }, expectedPubky);
   }
 
   /**

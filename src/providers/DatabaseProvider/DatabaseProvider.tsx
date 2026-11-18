@@ -4,6 +4,7 @@ import { createContext, type ReactNode, useEffect, useRef, useState } from 'reac
 import { Container } from '@/atoms/Container/Container';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { db } from '@/database/franky/franky';
+import { isClosingForIndexedDbRecovery } from '@/database/franky/franky.recovery';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -69,9 +70,10 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     // isInitializingRef guard. A version mismatch (or a database that stays missing) found from here, after this
     // page already recreated the database once, is that other tab at work: `allowRecreate: false` surfaces it as
     // VERSION_CONFLICT instead of recreating the database back and forth between the two tabs (ADR-0019). A devtools
-    // delete after that recreate shows the conflict screen too; Retry recovers.
+    // delete after that recreate shows the conflict screen too; Retry recovers. Connection recovery (ADR-0030) owns
+    // its own synchronous close and reopens the database itself: keep the mounted app while it does.
     const handleUnexpectedClose = () => {
-      if (isInitializingRef.current) return;
+      if (isInitializingRef.current || isClosingForIndexedDbRecovery(db)) return;
       setIsReady(false);
       initDatabase({ allowRecreate: false });
     };

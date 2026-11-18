@@ -43,7 +43,7 @@ describe('isStagingHomeserverDeploy', () => {
   it('stays true on staging when homeserver config drifts from the canonical defaults', () => {
     // Regression: the guard is driven by the declared PUBKY_RUNTIME_ENV, not
     // by config equality with the compiled-in staging defaults — drift used to
-    // silently disable it and re-enable the force-republish path.
+    // silently disable it and let a key from another homeserver sign in.
     withRuntimeEnv(
       {
         PUBKY_RUNTIME_ENV: 'staging',

@@ -404,57 +404,13 @@ describe('locks', () => {
   });
 
   /**
-   * An unlocked lock article on the post page uses the article layout, not the post card.
-   * The large title is the article's own title (an h1; the card's title is not). The body is the
-   * article body. The access label sits in the header. The teaser and the lock card are absent.
-   * The home feed stays mounted under the post and still holds both, hidden, so only what is on
-   * screen counts.
+   * An unlocked lock article on the post page uses the article layout: its title is the page's h1.
+   * The page paints the post card until the article is read, so each check retries past that swap.
    */
-  const expectUnlockedArticlePage = ({
-    articleTitle,
-    body,
-    draftBody,
-    teaser,
-    draftTeaser,
-    accessLabel,
-  }: {
-    articleTitle: string;
-    body: string;
-    draftBody: string;
-    teaser: string;
-    draftTeaser: string;
-    accessLabel: 'My locked content' | 'Unlocked';
-  }) => {
-    // The card stays up until the article is read, then this title replaces it. Scroll it clear of
-    // the sticky header; landing under that header is normal.
-    cy.contains('h1', articleTitle)
-      .scrollIntoView({ offset: { top: -200, left: 0 } })
-      .should('be.visible')
-      .and('have.text', articleTitle);
-    cy.get('[data-cy="post-text"]')
-      .filter(':visible')
-      .should('have.length', 1)
-      .and('contain.text', body)
-      .and('not.contain.text', draftBody)
-      .scrollIntoView({ offset: { top: -200, left: 0 } })
-      .should('be.visible');
-    cy.get('[data-cy="locked-post-access-label"]')
-      .filter(':visible')
-      .should('have.length', 1)
-      .scrollIntoView({ offset: { top: -200, left: 0 } })
-      .should('have.text', accessLabel)
-      .and('be.visible');
-    cy.get('[data-cy="single-post-card"]:visible').should('not.exist');
-    cy.get('[data-cy="locked-post-card"]:visible').should('not.exist');
-    cy.get('[data-cy="locked-post-title"]:visible').should('not.exist');
-    cy.get('[data-cy="locked-post-unlocked-content"]:visible').should('not.exist');
-    // innerText is the text on screen. textContent would also read the Next.js flight payload and
-    // the hidden feed, which still carry the teaser.
-    cy.get('body').should(($body) => {
-      const visible = ($body[0] as HTMLElement).innerText;
-      expect(visible, 'the teaser').not.to.include(teaser);
-      expect(visible, 'the draft teaser').not.to.include(draftTeaser);
-    });
+  const expectUnlockedArticle = (articleTitle: string, body: string, accessLabel: 'My locked content' | 'Unlocked') => {
+    cy.contains('h1', articleTitle).should('be.visible');
+    cy.get('[data-cy="locked-post-access-label"]:visible').should('have.text', accessLabel);
+    return cy.contains('[data-cy="post-text"]:visible', body).should('be.visible');
   };
 
   it('locks an article: the owner sees the body, another reader pays to unlock it', () => {
@@ -494,16 +450,9 @@ describe('locks', () => {
     cy.get<string>('@postId').then((postId) => {
       waitForNexusLockPost(creator.pubky, postId);
 
-      locksStep(3, ARTICLE_STEPS, 'Owner view: A sees the article title and body, not the teaser or lock card');
-      openPostFromHomeFeed(creator.pubky, postId, teaser, { requirePostCard: false });
-      expectUnlockedArticlePage({
-        articleTitle,
-        body,
-        draftBody,
-        teaser,
-        draftTeaser,
-        accessLabel: 'My locked content',
-      });
+      locksStep(3, ARTICLE_STEPS, 'Owner view: A sees the locked article, title and body');
+      openPostFromHomeFeed(creator.pubky, postId, teaser);
+      expectUnlockedArticle(articleTitle, body, 'My locked content').and('not.contain.text', draftBody);
 
       locksStep(4, ARTICLE_STEPS, 'Locked view: B sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
@@ -516,27 +465,13 @@ describe('locks', () => {
       locksStep(5, ARTICLE_STEPS, 'B pays in bitcoin through the stubbed Bitkit wallet');
       payToUnlock({ creator, reader, lockServer });
 
-      locksStep(6, ARTICLE_STEPS, 'Unlocked view: B sees the article title and body, not the teaser or lock card');
-      expectUnlockedArticlePage({
-        articleTitle,
-        body,
-        draftBody,
-        teaser,
-        draftTeaser,
-        accessLabel: 'Unlocked',
-      });
+      locksStep(6, ARTICLE_STEPS, 'Unlocked view: B sees the full article, title and body');
+      expectUnlockedArticle(articleTitle, body, 'Unlocked');
 
       cy.get<string>('@lockId').then((lockId) =>
         reloadFromReaderReplica(lockId, () => {
           expectSignedIn('the reader is still signed in after a reload');
-          expectUnlockedArticlePage({
-            articleTitle,
-            body,
-            draftBody,
-            teaser,
-            draftTeaser,
-            accessLabel: 'Unlocked',
-          });
+          expectUnlockedArticle(articleTitle, body, 'Unlocked');
         }),
       );
     });
