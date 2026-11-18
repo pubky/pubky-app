@@ -10,6 +10,8 @@ Updated — 2026-11-09 (social v1: the private `last_read` is polled on the mute
 
 Updated — 2026-11-17 (the poll's `last_read` GET is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`, third human review)
 
+Updated — 2026-11-18 (a poll whose GET was abandoned at the bound pauses while that GET is still out, human review of #3140)
+
 ## Context
 
 Marking notifications as read writes the `last_read` timestamp to the user's homeserver, but an open session on
@@ -150,21 +152,26 @@ calls: on start, when the tab becomes visible, on `online`, and every `NOTIFICAT
 (`src/config/notification-last-read-sync.ts`, which reuses `MUTE_SYNC_POLL_INTERVAL_MS`, 30 s), with triggers that land
 together debounced into one read (`NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS`), one read out at a time while polling runs
 (the GET is bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` through `awaitBounded`, so a read that never answers fails with
-`REQUEST_TIMEOUT`; a stop frees the slot; nothing the abandoned GET answers late
+`REQUEST_TIMEOUT` and frees the slot for the next trigger; a stop frees it too; nothing the abandoned GET answers late
 is applied, and the controller's forward-only, account-checked write keeps any late read harmless), a failed read logged
 and retried at the next trigger. The same bounded read is the pre-read of a mark-all-as-read: a timeout there ends that
 mark without a PUT (no HTTP status, so no retry; the badge stays until the next mark or a poll that reads a newer value)
-and lets the marks queued behind it run (third human review, 2026-11-17). A poll whose GET was abandoned at the bound
-keeps its slot and pauses until the tab is next shown after a hide (under the runtime visibility flag, on by default, a
-hide stops polling and clears the slot), the connection returns (`online` clears the slot), the account changes or the
-page reloads: the SDK cannot cancel a read, so starting one per interval would stack uncancellable GETs for as long as
-the homeserver hangs (21 pending after 10 minutes, measured; human review of #3140, 2026-11-18). Only the adoption of a
-`last_read` written by another session pauses; the user's own mark-all-as-read still makes its own bounded read and PUT.
-Any other failure, a settled 408 included, frees the slot for the next trigger. It keeps the mute coordinator's guards:
-signed in with a profile, not on the auth or onboarding routes, paused while the tab is hidden under the runtime
-visibility flag, stopped on sign-out and on an account switch, and started by `CoordinatorsManager` only once the
-social v1 migration gate has passed. The read itself is unchanged: the boundary only moves forward and the recount
-runs before the store changes, so a poll that lands during bootstrap is adopted by `AuthController` instead of being rolled back.
+and lets the marks queued behind it run (third human review, 2026-11-17). It keeps the mute coordinator's guards: signed
+in with a profile, not on the auth or onboarding routes, paused while the tab is hidden under the runtime visibility
+flag, stopped on sign-out and on an account switch, and started by `CoordinatorsManager` only once the social v1
+migration gate has passed. The read itself is unchanged: the boundary only moves forward and the recount runs before the
+store changes, so a poll that lands during bootstrap is adopted by `AuthController` instead of being rolled back.
+
+Amended — 2026-11-18 (human review of #3140): the poll no longer frees its slot at the bound. The SDK cannot cancel a
+read, so the GET abandoned at the bound keeps running, and freeing the slot started one more uncancellable GET every
+interval for as long as the homeserver hung (21 pending after 10 minutes, measured through the real coordinator,
+controller and application). The coordinator now keeps the slot, and polling pauses, while the abandoned GET is still
+out: it resumes when that GET settles (answer or failure; the next interval or trigger reads again, nothing polls from
+the settling), on a stop (the tab hidden under the runtime visibility flag, on by default; an account change; a disabled
+route), on `online` (its handler clears the slot), or on reload. The abandoned wait is recognised by the error object
+`awaitBounded` rejects with (`whenAbandonedReadSettles`), so any other failure, a 408 the homeserver answered included,
+frees the slot for the next trigger as before. Only the adoption of a `last_read` written by another session pauses;
+the user's own mark-all-as-read still makes its own bounded read and PUT.
 
 Consequences on this tree: a mark-as-read on another device reaches an open tab within about the poll interval,
 not within a second; one `last_read` GET per visible signed-in tab every 30 s, next to the mute LIST, and no

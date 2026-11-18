@@ -10,7 +10,7 @@ import {
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
 import { Logger } from '@/libs/logger/logger';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { isAbandonedBoundedRead } from '@/utils/bounded-read';
+import { whenAbandonedReadSettles } from '@/utils/bounded-read';
 
 /**
  * Keeps the Dexie-backed mute list aligned with the homeserver when another session mutates users.
@@ -28,9 +28,9 @@ import { isAbandonedBoundedRead } from '@/utils/bounded-read';
  * - Disabled on onboarding / sign-in / logout routes.
  * - Uses runtime notification visibility config: when true, pauses while the tab is hidden.
  * - Moving between allowed routes keeps the running interval; crossing into an allowed route refreshes.
- * - A LIST abandoned at the sync-read bound pauses polling until a stop (the tab hidden while the visibility flag
- *   pauses polling, an account change, a disabled route), `online` or a reload, instead of stacking a LIST per
- *   interval on a homeserver that hangs (ADR-0014).
+ * - A LIST abandoned at the sync-read bound pauses polling while it is still out, until it settles, a stop (the
+ *   tab hidden while the visibility flag pauses polling, an account change, a disabled route), `online` or a
+ *   reload, instead of stacking a LIST per interval on a homeserver that hangs (ADR-0014).
  */
 export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, PollingServiceState> {
   private static instance: MuteListSyncCoordinator | null = null;
@@ -45,10 +45,10 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
   /**
    * The LIST still out, so a slow one does not stack up. Freed once the fetch settles, except when
    * `MuteApplication.fetchMutedUsers` gave up on it at `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`): that LIST
-   * still runs and the SDK cannot cancel it, so the slot stays taken and polling pauses until a stop (the tab
-   * hidden under the visibility flag, the account changed, a disabled route) or `online` clears it. Clearing it on
-   * a stop also means a LIST that never settles cannot end polling. `fetchMutedUsers` also keeps an older LIST that
-   * answers late from undoing a newer one.
+   * still runs and the SDK cannot cancel it, so the slot stays taken, and polling paused, until that LIST settles,
+   * a stop (the tab hidden under the visibility flag, the account changed, a disabled route) or `online`. Clearing
+   * it on a stop also means a LIST that never settles cannot end polling. `fetchMutedUsers` also keeps an older LIST
+   * that answers late from undoing a newer one.
    */
   private activeRefresh: symbol | null = null;
   private accountUnsubscribe: (() => void) | null = null;
@@ -58,7 +58,7 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
     if (this.shouldPoll()) void this.poll();
   };
 
-  /** The connection is back: release a slot an abandoned read kept, then refresh. */
+  /** The connection is back: release a slot an abandoned read still holds, then refresh. */
   private readonly resumeOnline = () => {
     this.activeRefresh = null;
     this.refreshIfActive();
@@ -129,6 +129,7 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
     const pubky = useAuthStore.getState().currentUserPubky;
     if (!pubky || this.activeRefresh) return;
 
+    let abandonedReadSettled: Promise<void> | undefined;
     const refresh = Symbol('mute-list-refresh');
     this.activeRefresh = refresh;
     try {
@@ -136,9 +137,11 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
     } catch (error) {
       // Don't stop polling on error: the next trigger retries.
       Logger.error('Mute list refresh failed', { error });
-      // The abandoned read still runs and cannot be cancelled: keep its slot, so no trigger stacks another on it.
-      if (isAbandonedBoundedRead(error)) return;
+      abandonedReadSettled = whenAbandonedReadSettles(error);
     }
+    // An abandoned read still runs and cannot be cancelled: keep its slot until it settles, so no trigger stacks
+    // another on it. The next interval or trigger reads again.
+    await abandonedReadSettled;
     if (this.activeRefresh === refresh) this.activeRefresh = null;
   }
 }

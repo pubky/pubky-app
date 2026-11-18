@@ -113,10 +113,10 @@ export class NotificationApplication {
    * (`/priv/app.pubky/v1/last_read.json`), and an anonymous read of it answers 401.
    *
    * Bounded (`awaitBounded`, `HOMESERVER_SYNC_READ_TIMEOUT_MS`): a GET that never answers rejects with
-   * `REQUEST_TIMEOUT`, which pauses the poll coordinator (it keeps its in-flight slot until a stop or `online`
-   * clears it, `NotificationLastReadPollCoordinator`) and ends the `markAllAsRead` pass waiting on it (a timeout
-   * has no HTTP status, so that pass is not retried and the marks queued behind it run). What the abandoned GET
-   * answers late is never returned.
+   * `REQUEST_TIMEOUT`, which pauses the poll coordinator while the abandoned GET is still out (it keeps its
+   * in-flight slot until that GET settles, a stop or `online`, `NotificationLastReadPollCoordinator`) and ends the
+   * `markAllAsRead` pass waiting on it (a timeout has no HTTP status, so that pass is not retried and the marks
+   * queued behind it run). What the abandoned GET answers late is never returned.
    *
    * No cache bypass: the homeserver serves every `/priv/` response with `Cache-Control: no-store` (`private,
    * no-cache` with an `ETag` from v0.18.0), so the browser never answers this read from its cache without

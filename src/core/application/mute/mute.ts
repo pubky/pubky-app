@@ -109,7 +109,7 @@ export class MuteApplication {
    *
    * The whole run holds `muteSyncLock` `exclusive`; the wait for the LIST is bounded by
    * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`), after which the run fails like a failed LIST and releases
-   * the lock; the sync coordinator then pauses while the abandoned LIST runs (`isAbandonedBoundedRead`).
+   * the lock; the sync coordinator then pauses while the abandoned LIST runs (`whenAbandonedReadSettles`).
    *
    * The sync coordinator calls this on a timer, so the local write also stands down in four cases: the session
    * the fetch started for ended; a commit of this tab settled during the run; a LIST started later has already

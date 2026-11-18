@@ -390,10 +390,11 @@ describe('MuteListSyncCoordinator', () => {
 
   // Through the real controller, application and HomeserverService: only the SDK's `session.storage` is stubbed.
   describe('a LIST abandoned at the sync-read bound', () => {
-    /** One `storage.list` outcome: held open forever, answered with file URLs, or rejected. */
+    /** One `storage.list` outcome: held open (until the test settles it), answered with file URLs, or rejected. */
     type ListOutcome = 'stall' | string[] | Error;
     let outcomes: ListOutcome[];
     let fallback: ListOutcome;
+    let stalled: PromiseWithResolvers<string[]>[];
     let list: Mock<(path: string) => Promise<string[]>>;
     const refreshFailures = () =>
       vi.mocked(Logger.error).mock.calls.filter(([message]) => message === 'Mute list refresh failed');
@@ -405,9 +406,14 @@ describe('MuteListSyncCoordinator', () => {
       vi.spyOn(Logger, 'error').mockImplementation(() => {});
       outcomes = [];
       fallback = 'stall';
+      stalled = [];
       list = vi.fn((_path: string) => {
         const outcome = outcomes.shift() ?? fallback;
-        if (outcome === 'stall') return new Promise<string[]>(() => {});
+        if (outcome === 'stall') {
+          const held = Promise.withResolvers<string[]>();
+          stalled.push(held);
+          return held.promise;
+        }
         return outcome instanceof Error ? Promise.reject(outcome) : Promise.resolve(outcome);
       });
       const session = mockSession({
@@ -442,6 +448,41 @@ describe('MuteListSyncCoordinator', () => {
       await settleDebounce();
 
       expect(list).toHaveBeenCalledTimes(1);
+    });
+
+    it.each<[string, (held: PromiseWithResolvers<string[]>) => void]>([
+      ['answers', (held) => held.resolve([])],
+      ['fails', (held) => held.reject(sdkError(503))],
+    ])('resumes at the next interval once the abandoned LIST %s late', async (_name, settle) => {
+      await abandonFirstList();
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS * 2);
+      expect(list).toHaveBeenCalledTimes(1);
+      fallback = [];
+
+      settle(stalled[0]);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(list).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS);
+      expect(list).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not let the abandoned LIST, settling late, free the slot of a newer LIST still out', async () => {
+      // Calls through: a third refresh would queue behind the second LIST's lock, so count the refreshes.
+      const refreshes = vi.spyOn(MuteController, 'fetchMutedUsers');
+      await abandonFirstList();
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(list).toHaveBeenCalledTimes(2);
+      expect(refreshes).toHaveBeenCalledTimes(2);
+
+      stalled[0].resolve([]);
+      await vi.advanceTimersByTimeAsync(0);
+      setVisibilityState('visible');
+      await settleDebounce();
+
+      expect(refreshes).toHaveBeenCalledTimes(2);
     });
 
     it('resumes with one LIST when the tab is hidden and shown again', async () => {
