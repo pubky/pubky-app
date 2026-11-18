@@ -1,5 +1,4 @@
-import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
-import type { TKeypairParams } from '@/application/auth/auth.types';
+import { Address, Client, Pubky, PublicKey, resolvePubky, Session } from '@synonymdev/pubky';
 import { getAuthClientId } from '@/config/auth';
 import {
   getHomeserver,
@@ -22,7 +21,6 @@ import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
-import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
@@ -232,16 +230,6 @@ export class HomeserverService {
   }
 
   /**
-   * Gets a signer for the homeserver
-   * @param keypair - The keypair to get a signer for
-   * @returns The signer
-   */
-  private static getSigner(keypair: Keypair): Signer {
-    const pubkySdk = this.getPubkySdk();
-    return pubkySdk.signer(keypair);
-  }
-
-  /**
    * Resolves the key's homeserver from its PKARR record.
    * @returns The homeserver public key, or `null` when the record is provably absent
    * @throws When the lookup itself failed (relay/network error) — absence NOT proven.
@@ -263,10 +251,15 @@ export class HomeserverService {
   /**
    * Resolve PKARR homeserver; on staging, require it matches this deploy's homeserver.
    *
+   * Runs before a Ring/Passport-approved session is adopted and before a saved
+   * session is restored, so a staging build never signs in a key whose homeserver
+   * is elsewhere (e.g. a production account, #2126). It originally also stopped the
+   * former keypair sign-in from force-republishing a prod key's record to staging;
+   * that path is gone.
+   *
    * An absent record is rejected the same way as a mismatched one: absence cannot
    * prove the key belongs here, both outcomes are deterministic (retrying the
-   * lookup cannot change them), and fail-open would re-enable the prod-key
-   * force-republish this guard exists to prevent (#2126). This also means a key
+   * lookup cannot change them), and failing open would let an unverified key in. This also means a key
    * whose just-published record has not yet propagated to our relays is rejected
    * until it propagates. Only a lookup that itself failed (relay/network error)
    * throws a retryable error instead (Network for the SDK's `PkarrError`,
@@ -345,46 +338,6 @@ export class HomeserverService {
     } catch (error) {
       Logger.warn('Signup token verification could not reach the homeserver', { error });
       throw error;
-    }
-  }
-
-  /**
-   * Signs in a user to the homeserver.
-   *
-   * If signin fails due to missing homeserver records, this method will attempt to republish
-   * the homeserver and return `undefined` to signal the caller should retry the signin.
-   *
-   * @param keypair - The keypair to sign in with
-   * @returns The session result, or `undefined` if homeserver was republished and caller should retry
-   */
-  static async signIn({ keypair }: TKeypairParams): Promise<THomeserverSessionResult | undefined> {
-    await this.assertSessionStoreAvailable();
-    const signer = this.getSigner(keypair);
-
-    if (isStagingHomeserverDeploy()) {
-      // Fail closed on staging: an inconclusive PKARR lookup must never migrate an
-      // unverified key to the configured staging homeserver.
-      await this.assertUserHomeserverAllowed({ publicKey: keypair.publicKey });
-    } else {
-      // Lookup-failure hardening: self-heal (republish) only a PROVABLY ABSENT
-      // record (e.g. expired from the DHT). A failed lookup throws instead —
-      // republishing on a transient error could overwrite an existing record
-      // that points at another homeserver. A failed grant exchange never republishes it.
-      const homeserverRecord = await this.resolveHomeserverRecord({ publicKey: keypair.publicKey });
-      if (homeserverRecord === null) {
-        return await this.republishConfiguredHomeserver({
-          signer,
-          keypair,
-          originalError: 'homeserver record absent from PKARR',
-        });
-      }
-    }
-
-    try {
-      const session = await signer.signin(getAuthClientId());
-      return { session };
-    } catch (signinError) {
-      return handleError({ error: signinError, additionalContext: { operation: 'signIn' } });
     }
   }
 
@@ -528,33 +481,6 @@ export class HomeserverService {
       'message' in error &&
       error.message === `Stored Pubky session not found: ${id}`
     );
-  }
-
-  private static async republishConfiguredHomeserver({
-    signer,
-    keypair,
-    originalError,
-  }: {
-    signer: Signer;
-    keypair: Keypair;
-    originalError: unknown;
-  }): Promise<undefined> {
-    try {
-      const homeserverPublicKey = PublicKey.from(getHomeserver());
-      await signer.pkdns.publishHomeserverForce(homeserverPublicKey);
-      Logger.debug('Republish homeserver successful', { keypair: Identity.pubkyFromKeypair(keypair) });
-      return undefined;
-    } catch (republishError) {
-      return handleError({
-        error: republishError,
-        additionalContext: {
-          pubky: Identity.pubkyFromKeypair(keypair),
-          originalSigninError: String(originalError),
-          operation: 'republishConfiguredHomeserver',
-        },
-        statusCode: HttpStatusCode.UNAUTHORIZED,
-      });
-    }
   }
 
   static async startGrantFlow(request: GrantFlowRequest): Promise<TGenerateAuthUrlResult> {

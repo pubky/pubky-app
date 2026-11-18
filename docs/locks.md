@@ -646,8 +646,8 @@ reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's ow
 with a valid saved Ring grant issued before those entries shipped keeps a session without them: `/pub/pubky.app/` keeps
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
 or write under the missing private scopes with **403** (insufficient permission; 401 means authentication failed).
-Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
-the local stack, and root covers every required entry with no special case.
+Root grants saved by the former keypair sign-in are unaffected: the SDK minted them with the root capability, `/:rw` —
+confirmed against the local stack, and root covers every required entry with no special case.
 
 The app does not sign out a user merely because a valid grant lacks Locks scopes. Instead (#2373):
 
