@@ -52,6 +52,7 @@ vi.mock('@/libs/logger/logger', async () => {
 
 type FakePopup = {
   closed: boolean;
+  document: Document;
   location: { replace: ReturnType<typeof vi.fn> };
   postMessage: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
@@ -60,6 +61,7 @@ type FakePopup = {
 function createFakePopup(): FakePopup {
   const popup: FakePopup = {
     closed: false,
+    document: document.implementation.createHTMLDocument(),
     location: { replace: vi.fn() },
     postMessage: vi.fn(),
     close: vi.fn(() => {
@@ -696,11 +698,33 @@ describe('usePassportAuth', () => {
     mockGetPassportAuthUrl.mockResolvedValue(createFlow());
     const hook = renderHook(() => usePassportAuth({ prepare: () => ready.promise }));
 
-    await startAttempt(hook);
+    act(() => hook.result.current.startPassportAuth());
     expect(openSpy).toHaveBeenCalledOnce();
+    expect(popup.document.title).toBe('Opening Passport…');
+    expect(popup.document.querySelector('[role="status"]')?.textContent).toBe('Opening Passport…');
+    expect(popup.location.replace).not.toHaveBeenCalled();
+    await flushMicrotasks();
     expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
     await act(async () => ready.resolve());
     expect(mockGetPassportAuthUrl).toHaveBeenCalledOnce();
+  });
+
+  it('continues to Passport when the browser restricts the popup document', async () => {
+    Object.defineProperty(popup, 'document', {
+      get() {
+        throw new DOMException('Access denied', 'SecurityError');
+      },
+    });
+    const flow = createFlow();
+    mockGetPassportAuthUrl.mockResolvedValue(flow);
+    const hook = renderHook(() => usePassportAuth());
+
+    await startAttempt(hook);
+
+    expect(popup.location.replace).toHaveBeenCalledWith(
+      `${PASSPORT_ORIGIN}/authorize#d=${encodeURIComponent(flow.authorizationUrl)}`,
+    );
+    await act(async () => flow.approval.resolve(mockSession()));
   });
 
   it('releases an unresolved preflight on timeout, permits a retry, and ignores its late completion', async () => {

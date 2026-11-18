@@ -15,6 +15,7 @@ import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { ActionButtons } from '../ActionButtons/ActionButtons';
 import { HeaderSocialLinks } from '../Header/HeaderPublicContent';
@@ -28,6 +29,7 @@ export const HomeActions = () => {
   const router = useRouter();
   const joinRoute = useJoinRoute();
   const passportEligibility = usePassportEligibility();
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const { startPassportAuth, isPending: isPassportPending } = usePassportAuth({ prepare: prepareLandingPassport });
 
   const handleLearn = () => {
@@ -47,7 +49,7 @@ export const HomeActions = () => {
       onLearn={handleLearn}
       onExplore={handleExplore}
       onCreateAccount={handleCreateAccount}
-      onContinueWithGoogle={passportEligibility === 'enabled' ? startPassportAuth : undefined}
+      onContinueWithGoogle={passportEligibility === 'enabled' && hasHydrated ? startPassportAuth : undefined}
       isContinueWithGooglePending={isPassportPending}
       className="gap-4"
     />

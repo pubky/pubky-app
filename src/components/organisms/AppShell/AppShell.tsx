@@ -14,13 +14,22 @@ import { AUTH_PERSIST_KEY, LEGACY_AUTH_PERSIST_KEY, PREVIOUS_AUTH_PERSIST_KEY } 
 
 const GuardedAppShell = dynamic(() => import('./GuardedAppShell').then((module) => module.GuardedAppShell));
 
-function useLandingNeedsApp(isLanding: boolean) {
+const LandingAuthCleanup = dynamic(() => import('./LandingAuthCleanup').then((module) => module.LandingAuthCleanup), {
+  ssr: false,
+});
+type LandingMode = 'public' | 'cleanup' | 'guarded';
+
+function useLandingMode(isLanding: boolean): LandingMode {
   const needsApp = useAuthStore((state) => hasAccountState(state) || state.showSignInDialog);
   const generation = useAuthStore((state) => state.generation);
-  const [needsStorageSync, setNeedsStorageSync] = useState(false);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const [storageMode, setStorageMode] = useState<LandingMode>('public');
 
   useEffect(() => {
-    if (!isLanding) return;
+    if (!isLanding) {
+      setStorageMode('public');
+      return;
+    }
     const checkStorage = () => {
       try {
         const stored = readAuthStorage(localStorage);
@@ -29,32 +38,31 @@ function useLandingNeedsApp(isLanding: boolean) {
           const value = localStorage.getItem(key);
           return value !== null && legacyCookieExports(key, value).length > 0;
         });
-        const hasWork = Boolean(
-          record?.currentUserPubky ||
-          record?.sessionReference ||
+        const hasCleanup = Boolean(
           record?.retiringSession ||
           record?.pendingRetirements?.length ||
           needsShopCleanup(localStorage, record?.shopCleanupEpoch) ||
           legacyCleanup,
         );
         const current = useAuthStore.getState();
-        // A cleared auth record leaves an old compare-and-swap base in memory. Delegate
-        // this removal to the coordinator, which establishes a fresh signed-out generation.
-        setNeedsStorageSync(hasWork || (!record && current.generation !== ''));
-        // Two signed-out tabs can legitimately hold different generations. Align the empty
-        // guest's compare-and-swap base without mounting the database and feed coordinators.
+        // The coordinator owns account transitions and replacing a removed or stale generation.
         if (
-          record &&
-          !hasWork &&
-          !hasAccountState(current) &&
-          current.hasHydrated &&
-          record.generation !== current.generation
+          record?.currentUserPubky ||
+          record?.sessionReference ||
+          (!record && current.generation !== '') ||
+          (hasCleanup && record && current.hasHydrated && record.generation !== current.generation)
         ) {
+          setStorageMode('guarded');
+          return;
+        }
+        setStorageMode(hasCleanup && current.hasHydrated ? 'cleanup' : 'public');
+        // Align two empty guests' compare-and-swap base without loading the rest of the app.
+        if (record && !hasAccountState(current) && current.hasHydrated && record.generation !== current.generation) {
           void useAuthStore.persist.rehydrate();
         }
       } catch {
         // The existing recovery path owns unreadable or unavailable auth storage.
-        setNeedsStorageSync(true);
+        setStorageMode('guarded');
       }
     };
     const onStorage = (event: StorageEvent) => {
@@ -78,21 +86,22 @@ function useLandingNeedsApp(isLanding: boolean) {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener(AUTH_CLEANUP_CHANGED_EVENT, checkStorage);
     };
-  }, [isLanding, generation]);
+  }, [isLanding, generation, hasHydrated]);
 
-  return needsApp || needsStorageSync;
+  return needsApp ? 'guarded' : storageMode;
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === ROOT_ROUTES;
-  const landingNeedsApp = useLandingNeedsApp(isLanding);
+  const landingMode = useLandingMode(isLanding);
 
-  if ((isLanding && !landingNeedsApp) || isPublicDocumentRoute(pathname)) {
+  if ((isLanding && landingMode !== 'guarded') || isPublicDocumentRoute(pathname)) {
     return (
       <>
         <PublicHeader />
         {children}
+        {isLanding && landingMode === 'cleanup' && <LandingAuthCleanup />}
       </>
     );
   }

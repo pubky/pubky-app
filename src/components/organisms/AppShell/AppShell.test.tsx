@@ -1,7 +1,7 @@
+import { type ReactNode, useState } from 'react';
 import { renderToString } from 'react-dom/server';
 import { usePathname } from 'next/navigation';
-import { act, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COPYRIGHT_ROUTES, LEGAL_ROUTES } from '@/app/routes';
 import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
@@ -11,6 +11,11 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { AUTH_PERSIST_KEY, AUTH_STORE_VERSION, LEGACY_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { AppShell } from './AppShell';
+
+const cleanup = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
+vi.mock('@/coordinators/auth/auth', () => ({
+  AuthCoordinator: { getInstance: () => ({ watchGuestCleanup: cleanup.start }) },
+}));
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
@@ -73,6 +78,8 @@ function persistGuest(overrides: Partial<PersistedAuth> = {}) {
 
 describe('AppShell', () => {
   beforeEach(() => {
+    cleanup.start.mockReset().mockReturnValue(cleanup.stop);
+    cleanup.stop.mockReset();
     localStorage.clear();
     useAuthStore.setState(useAuthStore.getInitialState());
     vi.mocked(usePathname).mockReturnValue('/home');
@@ -150,20 +157,43 @@ describe('AppShell', () => {
     expect(screen.queryByTestId('database-provider')).not.toBeInTheDocument();
   });
 
-  it('returns to the public landing only once all same-document cleanup obligations are gone', async () => {
-    persistGuest({ pendingRetirements: [mockGrantReference()], shopCleanupEpoch: 'logout' });
+  it('preserves a pending landing action while cleanup starts, runs and completes', async () => {
+    function LandingAction() {
+      const [pending, setPending] = useState(false);
+      return (
+        <button disabled={pending} onClick={() => setPending(true)}>
+          Continue
+        </button>
+      );
+    }
     vi.mocked(usePathname).mockReturnValue('/');
-    render(<AppShell>Landing</AppShell>);
-    const guard = await screen.findByTestId('route-guard-provider');
+    useAuthStore.setState({ generation: 'guest-generation', hasHydrated: true });
+    persistGuest();
+    render(
+      <AppShell>
+        <LandingAction />
+      </AppShell>,
+    );
+    const button = screen.getByRole('button', { name: 'Continue' });
+    fireEvent.click(button);
+    expect(button).toBeDisabled();
+    expect(cleanup.start).not.toHaveBeenCalled();
+
+    persistGuest({ pendingRetirements: [mockGrantReference()], shopCleanupEpoch: 'logout' });
+    act(() => window.dispatchEvent(new StorageEvent('storage', { key: AUTH_PERSIST_KEY })));
+    await waitFor(() => expect(cleanup.start).toHaveBeenCalledOnce());
+    expect(screen.getByRole('button', { name: 'Continue' })).toBe(button);
+    expect(screen.queryByTestId('route-guard-provider')).not.toBeInTheDocument();
 
     localStorage.setItem(SHOP_CLEANUP_ACK_KEY, 'logout');
     act(() => window.dispatchEvent(new Event(AUTH_CLEANUP_CHANGED_EVENT)));
-    expect(screen.getByTestId('route-guard-provider')).toBe(guard);
+    expect(cleanup.stop).not.toHaveBeenCalled();
 
     persistGuest({ shopCleanupEpoch: 'logout' });
     act(() => window.dispatchEvent(new Event(AUTH_CLEANUP_CHANGED_EVENT)));
-    expect(await screen.findByTestId('public-header')).toBeInTheDocument();
-    expect(screen.queryByTestId('route-guard-provider')).not.toBeInTheDocument();
+    expect(cleanup.stop).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBe(button);
+    expect(button).toBeDisabled();
   });
 
   it('hands cross-tab storage removal to the normal sync when a guest has a stale generation', async () => {
@@ -178,13 +208,29 @@ describe('AppShell', () => {
     expect(await screen.findByTestId('route-guard-provider')).toBeInTheDocument();
   });
 
-  it('still runs the guard to finish pending Shop teardown for a signed-out account', async () => {
+  it('reconciles outstanding cleanup against a changed generation before running it as a guest', async () => {
+    useAuthStore.setState({ generation: 'previous', hasHydrated: true });
+    persistGuest({ pendingRetirements: [mockGrantReference()] });
+    vi.mocked(usePathname).mockReturnValue('/');
+    render(<AppShell>Landing</AppShell>);
+    expect(await screen.findByTestId('route-guard-provider')).toBeInTheDocument();
+    expect(cleanup.start).not.toHaveBeenCalled();
+
+    await act(async () => useAuthStore.persist.rehydrate());
+    await waitFor(() => expect(cleanup.start).toHaveBeenCalledOnce());
+    expect(screen.queryByTestId('route-guard-provider')).not.toBeInTheDocument();
+  });
+
+  it('runs pending Shop teardown for a signed-out account after hydration', async () => {
     localStorage.setItem(SHOP_CLEANUP_ACK_KEY, 'logout');
     localStorage.setItem(SHOP_TEARDOWN_PENDING_KEY, '1');
     persistGuest({ shopCleanupEpoch: 'logout' });
     vi.mocked(usePathname).mockReturnValue('/');
     render(<AppShell>Landing</AppShell>);
-    expect(await screen.findByTestId('route-guard-provider')).toBeInTheDocument();
+    expect(cleanup.start).not.toHaveBeenCalled();
+    act(() => useAuthStore.setState({ generation: 'guest-generation', hasHydrated: true }));
+    await waitFor(() => expect(cleanup.start).toHaveBeenCalledOnce());
+    expect(screen.queryByTestId('route-guard-provider')).not.toBeInTheDocument();
   });
 
   it('preserves legacy-session cleanup on the landing page', async () => {
@@ -192,9 +238,11 @@ describe('AppShell', () => {
       LEGACY_AUTH_PERSIST_KEY,
       JSON.stringify({ state: { currentUserPubky: null, sessionExport: 'legacy' } }),
     );
+    useAuthStore.setState({ generation: 'legacy', hasHydrated: true });
     vi.mocked(usePathname).mockReturnValue('/');
     render(<AppShell>Landing</AppShell>);
-    expect(await screen.findByTestId('route-guard-provider')).toBeInTheDocument();
+    await waitFor(() => expect(cleanup.start).toHaveBeenCalledOnce());
+    expect(screen.queryByTestId('route-guard-provider')).not.toBeInTheDocument();
   });
 
   it.each(['/', ...PUBLIC_DOCUMENT_ROUTES])("puts the text of %s in the server's HTML", (pathname) => {

@@ -307,6 +307,18 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       return;
     }
 
+    try {
+      const doc = popup.document;
+      doc.documentElement.lang = 'en';
+      doc.title = 'Opening Passport…';
+      const status = doc.createElement('p');
+      status.setAttribute('role', 'status');
+      status.textContent = doc.title;
+      doc.body.append(status);
+    } catch {
+      // A browser can restrict access to the popup document while still allowing navigation.
+    }
+
     const attempt: PassportAttempt = {
       id: attemptId,
       popup,

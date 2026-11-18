@@ -51,11 +51,12 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
 - **App shell and public documents:** The public landing page (`/`) and documents (`isPublicDocumentRoute`:
   `/terms-of-use`, `/privacy-policy`, `/copyright`) render their header and content in the server HTML without opening
-  IndexedDB. The landing page hands saved accounts, cross-tab sign-in, and pending auth cleanup to the same
-  `DatabaseProvider` → `RouteGuardProvider` used on app routes. Its Passport action opens the popup on click and
-  initializes the database before requesting a grant. A timed-out preflight releases the popup and button immediately.
-  Leaving the page before the grant starts abandons the attempt so a later sign-in keeps ownership. A signed-out
-  generation with completed cleanup uses the public landing, including after a guest-to-guest tab update. Other app routes mount the guarded shell with the coordinators,
+  IndexedDB. Saved accounts and cross-tab sign-in use the same `DatabaseProvider` → `RouteGuardProvider` as app routes.
+  A signed-out visitor's pending credential cleanup runs alongside the landing page so its completion preserves an
+  active Passport sign-in. The landing offers Passport once the saved auth state has hydrated. A click opens the popup
+  immediately and shows “Opening Passport…” while the app prepares the database and requests a grant.
+  A timed-out preflight releases the popup and button immediately. Leaving the page before the grant starts abandons
+  the attempt so a later sign-in keeps ownership. Other app routes mount the guarded shell with the coordinators,
   Fab, guest banner and sign-in dialog. The public documents stay outside that shell and show members only the logo.
   Browser-only presentation on those documents waits for hydration so the first client render matches the server.
 - **Active nav state:** a nav item that links to a default child route (footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay active on sibling routes (`/settings/notifications`) needs active detection on the parent prefix (`activePrefix: APP_ROUTES.SETTINGS`, see `MobileFooter`), not only `href` or `pathname.startsWith(href + '/')`.

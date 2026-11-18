@@ -36,6 +36,27 @@ afterEach(() => {
 });
 
 describe('AuthCoordinator', () => {
+  it('runs only guest cleanup on startup and network return until the landing releases it', () => {
+    useAuthStore.setState({ hasHydrated: true });
+    const stop = coordinator.watchGuestCleanup();
+    window.dispatchEvent(new Event('online'));
+    window.dispatchEvent(new Event('online'));
+    for (const retry of [
+      AuthController.retireLegacyCookieSessions,
+      AuthController.retrySessionRetirement,
+      AuthController.retryShopCleanup,
+    ]) {
+      expect(retry).toHaveBeenCalledTimes(2);
+    }
+    expect(AuthController.syncSessionFromStorage).not.toHaveBeenCalled();
+    expect(AuthController.subscribeSessionFailures).not.toHaveBeenCalled();
+    expect(AuthController.restorePersistedSession).not.toHaveBeenCalled();
+    stop();
+    vi.advanceTimersByTime(10_000);
+    window.dispatchEvent(new Event('online'));
+    expect(AuthController.retryShopCleanup).toHaveBeenCalledTimes(2);
+  });
+
   it('shares only accepted failure generations, ignores malformed events and closes subscriptions', () => {
     const postMessage = vi.fn();
     const close = vi.fn();
