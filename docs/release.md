@@ -84,9 +84,11 @@ These workflows trigger on `pull_request` (any target branch):
 
 | Workflow     | File                           | What it gates                          |
 | ------------ | ------------------------------ | -------------------------------------- |
-| Tests        | `.github/workflows/test.yml`   | Unit tests (sharded Vitest)            |
+| Tests        | `.github/workflows/test.yml`   | Unit tests (sharded Vitest)¹           |
 | Build        | `.github/workflows/build.yml`  | Production Next.js build + smoke start |
 | Code Quality | `.github/workflows/format.yml` | Prettier, ESLint, TypeScript           |
+
+¹ A PR into `dev` runs only the unit tests its change can affect, and the merge queue runs the full suite before it lands. A PR into `master` (the release PR) or any other branch always runs the full suite. The plan and its reasons are in the run summary; `.github/scripts/plan-unit-tests.sh` holds the rules.
 
 ### VRT and e2e
 
