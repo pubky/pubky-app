@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => {
     restore: vi.fn(),
     retry: vi.fn(),
     acknowledge: vi.fn(),
+    confirm: vi.fn(),
   };
 });
 
@@ -50,7 +51,11 @@ vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { logout: () => mocks.logout(), restorePersistedSession: () => mocks.restore() },
 }));
 vi.mock('@/controllers/social-migration/social-migration', () => ({
-  SocialMigrationController: { retry: () => mocks.retry(), acknowledge: () => mocks.acknowledge() },
+  SocialMigrationController: {
+    retry: () => mocks.retry(),
+    acknowledge: () => mocks.acknowledge(),
+    confirm: () => mocks.confirm(),
+  },
 }));
 vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/organisms/AlertBackup/AlertBackup', () => ({ AlertBackup: () => <div>Backup controls</div> }));
@@ -137,6 +142,40 @@ describe('SocialMigration', () => {
     render(<SocialMigration />);
     expect(screen.getByRole('heading', { name: 'Updating your account' })).toBeInTheDocument();
     expect(screen.getByTestId('progress')).toHaveAttribute('data-phase', 'probe');
+  });
+
+  it('asks before the update starts, with Continue and Sign out, and does not guard the tab', () => {
+    setStore({ stage: 'confirm' });
+    render(<SocialMigration />);
+    expect(screen.getByRole('heading', { name: 'Your account needs an update' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Pubky.app moved to a new data format. We will copy your posts, tags, follows and media to it. This can take a few minutes, longer if you have a lot of media. Keep this tab open and stay connected until it finishes.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('progress')).not.toBeInTheDocument();
+    expect(unloadPrevented()).toBe(false);
+    expect(mocks.confirm).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(mocks.confirm).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(mocks.push).toHaveBeenCalledWith('/logout');
+    expect(mocks.logout).not.toHaveBeenCalled();
+  });
+
+  it('never starts the update on its own, Strict Mode included', async () => {
+    setStore({ stage: 'confirm' });
+    render(
+      <React.StrictMode>
+        <SocialMigration />
+      </React.StrictMode>,
+    );
+    await act(async () => {});
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
+    expect(mocks.confirm).not.toHaveBeenCalled();
+    expect(mocks.retry).not.toHaveBeenCalled();
+    expect(mocks.acknowledge).not.toHaveBeenCalled();
+    expect(mocks.logout).not.toHaveBeenCalled();
   });
 
   it('shows the waiting screen while another tab runs, still guarding the tab', () => {

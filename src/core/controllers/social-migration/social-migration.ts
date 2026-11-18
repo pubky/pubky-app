@@ -50,7 +50,7 @@ type SocialMigrationOutcome = 'passed' | 'reauth-required' | 'canceled';
 
 type Wake = 'retry' | 'continue' | 'cancel';
 
-/** One gate in flight: the run's abort, and the wait of a blocked or summary stage. */
+/** One gate in flight: the run's abort, and the wait of a confirm, blocked or summary stage. */
 type Gate = {
   pubky: string;
   generation: string;
@@ -93,9 +93,11 @@ export class SocialMigrationController {
   /**
    * Restore: scopes, then the local record (no network), then the flag, then resume when this
    * browser's record saw the flag at an earlier revision or admitted the grant, and sign out
-   * otherwise (D2). Fresh sign-in: admit the grant and run the engine, whose own HEAD finds a
-   * finished migration. Upgrade: the local record only; without one, like a sign-in. Never
-   * hand-writes the flag.
+   * otherwise (D2). Fresh sign-in: admit the grant, pass on a trusted record or a current flag,
+   * and otherwise ask (`confirm`) before the engine runs; a failed flag read asks too, and the
+   * engine's own HEAD then finds a finished migration. Upgrade: the local record; without one,
+   * like a sign-in. A run that has not started in this browser (no `lastRun`) waits for Continue;
+   * a signup never does. Never hand-writes the flag.
    */
   static async ensureMigrated({
     session,
@@ -126,8 +128,26 @@ export class SocialMigrationController {
     } else {
       const grantId = this.activeGrantId();
       if (grantId) admitSocialMigrationGrant(pubky, grantId);
+      if (entry !== 'signup') {
+        // An account already updated is not asked. A failed read asks: the run that follows finds the flag itself.
+        if (isSocialMigrationRecordTrusted(record)) return 'passed';
+        const rev = await SocialMigrationApplication.readFlag({ session, pubky }).catch(() => null);
+        if (!isCurrent()) return 'canceled';
+        if (rev !== null && rev >= SOCIAL_MIGRATION_TRANSFORM_REV) {
+          markSocialMigrated(pubky, rev);
+          return 'passed';
+        }
+      }
     }
-    return this.migrate({ session, pubky, generation, isCurrent, inline: entry === 'signup', record });
+    // Read again after the flag read: a run another tab of this browser started meanwhile has started here too
+    return this.migrate({
+      session,
+      pubky,
+      generation,
+      isCurrent,
+      inline: entry === 'signup',
+      record: readSocialMigrationRecord(pubky),
+    });
   }
 
   /** Whether this browser saw the done flag at this build's revision for `pubky`: no network, no chunk. */
@@ -152,6 +172,11 @@ export class SocialMigrationController {
   static retryAfterReconnect(): void {
     const { stage, reason } = useSocialMigrationStore.getState();
     if (stage === 'blocked' && reason === 'incomplete') this.gate?.wake?.('retry');
+  }
+
+  /** Continue from the confirm screen: the first run starts. */
+  static confirm(): void {
+    if (useSocialMigrationStore.getState().stage === 'confirm') this.gate?.wake?.('continue');
   }
 
   /** Continue from the summary screen. */
@@ -237,6 +262,11 @@ export class SocialMigrationController {
     };
     if (!inline) show();
     try {
+      // A run this browser has not started yet waits for Continue; an interrupted one resumes at once
+      if (!inline && !lastRun) {
+        store.setStage('confirm');
+        if ((await this.wait(gate)) !== 'continue') return 'canceled';
+      }
       let attempt = 0;
       let autoRetries = 0;
       for (;;) {

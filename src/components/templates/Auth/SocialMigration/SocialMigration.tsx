@@ -312,6 +312,22 @@ export function SocialMigration() {
         />
       </>
     );
+  } else if (stage === 'confirm') {
+    content = (
+      <>
+        <Screen
+          title={UPDATE_TITLE}
+          subtitle="Pubky.app moved to a new data format. We will copy your posts, tags, follows and media to it. This can take a few minutes, longer if you have a lot of media. Keep this tab open and stay connected until it finishes."
+        />
+        <Navigation
+          id="social-migration-confirm-navigation"
+          backText="Sign out"
+          continueText="Continue"
+          onHandleBackButton={onSignOut}
+          onHandleContinueButton={() => SocialMigrationController.confirm()}
+        />
+      </>
+    );
   } else if (stage === 'waiting-for-tab') {
     content = (
       <Waiting

@@ -7,6 +7,7 @@ import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { Identity } from '@/libs/identity/identity';
@@ -132,6 +133,18 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+/** Presses Continue each time the gate asks before its first run, as the user does; counted in `continues`. */
+let continues = 0;
+let unsubscribeContinue = () => {};
+function pressContinueOnConfirm() {
+  return useSocialMigrationStore.subscribe((state, previous) => {
+    if (state.stage !== 'confirm' || previous.stage === 'confirm') return;
+    continues += 1;
+    // The gate installs its wait right after it shows the stage
+    queueMicrotask(() => SocialMigrationController.confirm());
+  });
+}
+
 describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -150,9 +163,12 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     vi.spyOn(HomeserverService, 'logout').mockResolvedValue(undefined);
     vi.spyOn(HomeserverService, 'logoutLegacyCookie').mockResolvedValue(undefined);
     vi.spyOn(databaseHelpers, 'clearDatabase').mockResolvedValue(undefined);
+    continues = 0;
+    unsubscribeContinue = pressContinueOnConfirm();
   });
 
   afterEach(() => {
+    unsubscribeContinue();
     transform.bump = 0;
     AuthController.cancelActiveAuthFlow();
     AuthController.cancelModerationFollow();
@@ -376,6 +392,8 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(asOpaque({}));
       vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session });
       vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('new-grant'));
+      // The account has not been updated yet: no done flag
+      vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
     });
 
     it('runs the engine before the session enters the store and bootstraps after it passed', async () => {
@@ -393,12 +411,58 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
 
       expect(sessionDuringRun).toBeNull();
       expect(statusDuringRun).toBe('social-migration');
+      expect(continues).toBe(1);
       expect(seen).toEqual(['restoring', 'social-migration', 'restoring+session', 'ready+session']);
       expect(BootstrapApplication.initialize).toHaveBeenCalledOnce();
       expect(readSocialMigrationRecord(pubky)).toMatchObject({
         migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
         admittedGrantIds: ['new-grant'],
       });
+    });
+
+    it('asks before the run: the sign-in waits on the screen until Continue, with no engine load', async () => {
+      unsubscribeContinue();
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
+      const signIn = AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' });
+
+      await vi.waitFor(() => expect(useSocialMigrationStore.getState().stage).toBe('confirm'));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'social-migration' });
+      expect(run).not.toHaveBeenCalled();
+      expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
+      SocialMigrationController.confirm();
+
+      expect(await signIn).toBe(true);
+      expect(run).toHaveBeenCalledOnce();
+      expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
+    });
+
+    it('signs in an account already updated with no screen and no engine: the flag is read first', async () => {
+      vi.mocked(HomeserverService.getBytesIfExists).mockResolvedValue(flagBytes());
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const { seen, unsubscribe } = trackStore();
+
+      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+      unsubscribe();
+
+      expect(run).not.toHaveBeenCalled();
+      expect(continues).toBe(0);
+      expect(seen).toEqual(['restoring', 'restoring+session', 'ready+session']);
+      expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it('does not fail the sign-in when the flag read fails: it asks, and the run finds the account updated', async () => {
+      vi.mocked(HomeserverService.getBytesIfExists).mockRejectedValue(new Error('offline'));
+      const run = vi
+        .spyOn(HomeserverService, 'migrateToSocialV1')
+        .mockResolvedValue(asOpaque<MigrationReport>({ ...done(), status: 'already_migrated' }));
+
+      expect(await AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).toBe(true);
+
+      expect(continues).toBe(1);
+      expect(run).toHaveBeenCalledOnce();
+      expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
+      expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
     });
 
     it('admits the fresh grant before the auth record publishes it, so no other tab can restore it unadmitted', async () => {
@@ -487,6 +551,8 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
         }),
       );
       vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('upgraded-grant'));
+      // No done flag: an upgrade without a trusted record reads it like a sign-in
+      vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
       // The replaced grant's retirement runs detached once the upgrade is adopted (asserted by each case)
       vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
       vi.spyOn(AuthApplication, 'removeSessionRecord').mockResolvedValue(undefined);
@@ -508,6 +574,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
 
       expect(flow).not.toBeNull();
       expect(run).toHaveBeenCalledOnce();
+      expect(continues).toBe(1);
       expect(sessionDuringRun).toBeNull();
       expect(statusDuringRun).toBe('social-migration');
       expect(seen).toEqual(['restoring', 'social-migration', 'restoring+session', 'ready+session']);
@@ -634,6 +701,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       expect.objectContaining({ purpose: 'signup', inviteCode: 'invite' }),
     );
     expect(run).toHaveBeenCalledOnce();
+    expect(continues).toBe(0);
     expect(seen).not.toContain('social-migration');
     expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
     expect(complete).toHaveBeenCalledOnce();

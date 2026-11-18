@@ -211,7 +211,7 @@ describe('Onboarding', () => {
 
       cy.signOut(HasBackedUp.Yes);
 
-      cy.signInWithPubkyRing(profileName);
+      cy.signInWithPubkyRing(profileName, '/home', { asked: false });
       checkOwnProfile(profileName, profileBio);
 
       cy.signOut(HasBackedUp.Yes);
@@ -310,7 +310,15 @@ describe('Onboarding', () => {
     cy.intercept('PUT', '**/priv/app.pubky/v1/last_read*').as('lastReadCopied');
     holdMigrationFlag();
 
-    cy.signInWithPubkyRing(profileName, '/home', { migrates: true });
+    cy.signInWithPubkyRing(profileName, '/home', {
+      migrates: true,
+      // Asked first: nothing is copied before Continue
+      beforeContinue: () => {
+        cy.get('@v1Write.all').should('have.length', 0);
+        cy.get('@settingsCopied.all').should('have.length', 0);
+        cy.get('@lastReadCopied.all').should('have.length', 0);
+      },
+    });
 
     migrationFlag().then((flag) => {
       // The app's own files are the only thing a clean run leaves behind: it imports those itself
@@ -404,8 +412,8 @@ describe('Onboarding', () => {
     cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', noteText);
 
-    // A second sign-in goes through the gate's route while it checks, finds the done flag and writes no
-    // second one: the flag is the last write of a run, so a repeated migration would show here.
+    // A second sign-in passes on this browser's record (or the done flag) without the gate's route and writes no
+    // second flag: the flag is the last write of a run, so a repeated migration would show here.
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithPubkyRing(profileName);
     cy.get('@migrationDone.all').should('have.length', 1);
@@ -1082,7 +1090,8 @@ describe('Onboarding', () => {
     );
     cy.intercept({ method: 'PUT', url: '**/{pub,priv}/social/v1/**' }).as('v1Write');
 
-    // A run stopped at its first request never shows the progress screen, so the sign-in only reaches the gate
+    // The sign-in's own flag read is refused too, so it asks and the run starts on Continue; a run stopped at its
+    // first request never shows the progress screen, so the sign-in only reaches the gate
     cy.signInWithPubkyRing(profileName, '/migration');
     recordRoutes(visited);
     cy.get('[data-testid="social-migration"]', extendedTimeout())
@@ -1091,6 +1100,8 @@ describe('Onboarding', () => {
     cy.get('#social-migration-blocked-navigation-back-btn').should('contain.text', 'Sign out');
     cy.get('#social-migration-blocked-navigation-continue-btn').should('contain.text', 'Retry');
     cy.wait('@flagProbe').its('response.statusCode').should('eq', 403);
+    cy.wait('@flagRead').its('response.statusCode').should('eq', 403);
+    // The sign-in's own read before the screen, then the port's read of the refusal
     cy.wait('@flagRead').its('response.statusCode').should('eq', 403);
     cy.get('@v1Write.all').should('have.length', 0);
     expectNoSignOutRoutes(visited, 'no forced sign-out on a homeserver without private storage');
@@ -1388,9 +1399,32 @@ describe('Onboarding', () => {
     showProfileHeader();
     cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileName);
 
-    // the key Ring signed up is the account: signing back in with it lands on the home feed
+    // the key Ring signed up is the account: signing back in with it lands on the home feed, never asked to update
+    // (this browser's record saw the flag) and without a second flag
     cy.signOut(HasBackedUp.Yes);
-    cy.signInWithPubkyRing(profileName);
+    cy.signInWithPubkyRing(profileName, '/home', { asked: false });
+    cy.get('@signupFlag.all').should('have.length', 1);
+
+    // Another browser of the same account: without this browser's record the gate reads the flag on the homeserver,
+    // passes on it and is never asked either
+    cy.signOut(HasBackedUp.Yes);
+    cy.window().then((win) => {
+      // `social-migration:<pubky>` (`SOCIAL_MIGRATION_RECORD_KEY_PREFIX` in src/libs/social-migration/record.ts)
+      const records = Object.keys(win.localStorage).filter(
+        (key) => key.startsWith('social-migration:') && key !== 'social-migration:signed-out',
+      );
+      expect(records, "the account's migration record").to.have.length(1);
+      win.localStorage.removeItem(records[0]);
+    });
+    cy.intercept('GET', MIGRATION_FLAG_GLOB).as('flagRead');
+    cy.signInWithPubkyRing(profileName, '/home', { asked: false });
+    cy.get<Interception[]>('@flagRead.all').then((reads) => {
+      expect(
+        reads.filter(({ response }) => response?.statusCode === 200),
+        'flag reads answered from the homeserver',
+      ).to.not.be.empty;
+    });
+    cy.get('@signupFlag.all').should('have.length', 1);
   });
 
   it('cannot proceed with a reused invite code', () => {

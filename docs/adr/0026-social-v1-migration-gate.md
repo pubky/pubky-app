@@ -7,7 +7,8 @@ Updated — 2026-11-11 (outcome policy and telemetry brought in line with the co
 Updated — 2026-11-12 (the restore's flag read bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS`; a timeout ends in `temporary-error`)  
 Updated — 2026-11-13 (the signed-out explanation is route-independent while its notice is pending; the cut-over worker reloads a tab to its creation URL, see _Amendment_)  
 Updated — 2026-11-13 (the worker no longer reloads the new build's own pages, ADR-0021 amendment; the double boot and option (i) re-scoped, see _Consequences_ of the _Amendment_)  
-Updated — 2026-11-17 (every adopted grant is admitted before its session reference is published; the gate's automatic sign-out runs once per auth generation; third human review)
+Updated — 2026-11-17 (every adopted grant is admitted before its session reference is published; the gate's automatic sign-out runs once per auth generation; third human review)  
+Updated — 2026-11-17 (the gate asks before the first run: the `confirm` stage, and the flag read on sign-in, see _Amendment — the gate asks before the first run_)
 
 ## Context
 
@@ -60,12 +61,14 @@ later one, passes without network; otherwise the flag is read with the explicit 
 transport failures throw, so a refused flag never reads as a missing one), a current flag writes the record and passes,
 and an absent or outdated flag resumes the run when this browser's record saw the flag at an earlier revision or
 admitted the grant, and otherwise signs the account out (`pre-migration-grant`, D2). On a fresh sign-in the grant's
-session-store id is recorded as admitted and the engine runs; its own HEAD finds a finished migration
-(`already_migrated`). Every adopted grant (sign-in, signup, upgrade) is admitted before the auth record publishes its
+session-store id is recorded as admitted; a trusted record passes, otherwise the flag is read and a current one writes
+the record and passes, and any other answer asks before the engine runs (see _Amendment — the gate asks before the
+first run_); the engine's own HEAD then finds a finished migration (`already_migrated`). Every adopted grant (sign-in,
+signup, upgrade) is admitted before the auth record publishes its
 reference, so no other tab can restore a fresh grant the record does not yet list (third human review, 2026-11-17).
 A signup runs the engine inline on its empty tree with no screen (the engine writes the flag; the app never
-hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) consults the local record only, and
-keeps its context when it passes.
+hand-writes `_migrated.json`). An upgrade adoption (`preserveContext`) passes on a trusted local record with no request
+and keeps its context; without one it is gated like a sign-in.
 
 **Outcome policy.** `done`/`already_migrated` record the flag revision locally and pass, through a summary screen
 (Continue) only when the last run skipped something or any run of the gate dropped a profile value. `incomplete` and
@@ -121,8 +124,37 @@ failure uncaptured so this guard decides the single capture). Counts only: the r
 restore's flag read is the one gate step with a deadline: `awaitBounded` waits `HOMESERVER_SYNC_READ_TIMEOUT_MS` (30 s)
 for the GET, which the SDK cannot cancel, then rejects with `Err.timeout(REQUEST_TIMEOUT)` (operation
 `readMigrationFlag`, context the pubky and the bound only), and `AuthController` ends the restore in `temporary-error`
-(`/migration` shows Retry; the focus and network-return retries apply); the engine run, its Web Lock wait and the flag
+(`/migration` shows Retry; the focus and network-return retries apply); the same bounded read on a sign-in asks
+instead of failing (see the amendment below), its capture unchanged; the engine run, its Web Lock wait and the flag
 write are not bounded.
+
+## Amendment — the gate asks before the first run (2026-11-17)
+
+A fresh sign-in used to drop the user straight into the progress screen; the user may be travelling or on a bad
+connection and want to do it later (team decision, 2026-11-16).
+
+**Decision.** A new stage, `confirm`, shows on `/migration` before anything is copied: the update title, what the
+update copies and how long it may take, and **Continue** (`SocialMigrationController.confirm()`) beside **Sign out**
+(`/logout`, as on the blocked screens). The gate waits on it with the same wait the blocked and summary stages use; the
+engine's chunk is not loaded and nothing is written before Continue, and logout or a new auth generation cancels the
+wait as they cancel a run. It shows when a run for the account has not started in this browser and the account still
+needs the update: a fresh sign-in, a gated upgrade without a trusted record, and a restore that resumes (an admitted
+grant, or a record that saw an earlier revision) whose record has no `lastRun`, such as a reload on this screen.
+It does not show on a signup (inline, unchanged), on a run that already started here (`record.lastRun` present: it
+resumes at once), or for an account already updated: a trusted record passes (a sign-in on one no longer runs the
+engine's check), and a sign-in or upgrade without one reads the flag first with the restore's bounded
+`SocialMigrationApplication.readFlag`, writes the record and passes on a current flag, with no screen and no chunk.
+That read never fails the sign-in: a timeout, a network failure or a refusal (401/403) asks, and the run after
+Continue settles it as before (`already_migrated` for an updated account). Nothing presses Continue for the user: `retry()`, `retryAfterReconnect()` and `acknowledge()` wake
+only their own stages. `useBeforeUnloadGuard` stays tied to a run in flight, so the screen does not hold the tab. A
+user the gate signed out sees the explanation, signs in, then this screen: two screens, by decision.
+
+**Consequences.** A sign-in of an account without the flag costs one bounded flag read before the screen; a sign-in
+on a trusted record now passes without the engine's check. An account that has no 0.x data and no flag (a key that
+never used the 1.x app) is asked too, and its run then only checks and writes the flag. Two residuals are accepted:
+another tab that finishes the update during this tab's one flag read leaves this tab
+asking once for an account already updated, and Continue then passes at the engine's first check; and a second tab
+waiting at Continue is not woken when the first tab's run finishes, and its Continue passes at once.
 
 ## Amendment — the explanation is route-independent while its notice is pending (2026-11-13)
 

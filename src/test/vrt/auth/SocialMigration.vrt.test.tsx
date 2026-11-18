@@ -68,7 +68,7 @@ vi.mock('@/controllers/auth/auth', () => ({
   },
 }));
 vi.mock('@/controllers/social-migration/social-migration', () => ({
-  SocialMigrationController: { retry: vi.fn(), acknowledge: vi.fn() },
+  SocialMigrationController: { retry: vi.fn(), acknowledge: vi.fn(), confirm: vi.fn() },
 }));
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({ isCoreExploreRoute: false, isDynamicPublicRoute: false }),
@@ -118,6 +118,7 @@ const SCENARIOS: Record<string, Scenario> = {
     restoreStatus: 'temporary-error',
     heading: "We couldn't reach your homeserver",
   },
+  confirm: { stage: 'confirm', heading: 'Your account needs an update' },
   waiting: { stage: 'waiting-for-tab', heading: 'Another tab is updating your account' },
   checking: { stage: 'running', progress: { phase: 'probe', done: 0, total: 0 }, heading: 'Checking your account' },
   running: { stage: 'running', heading: 'Updating your account' },
@@ -178,8 +179,10 @@ for (const [name, viewport] of [
       if (state === 'running') await expect.element(page.getByText('42 of 120')).toBeVisible();
       if (scenario.stage === 'blocked' || scenario.logoutFails || scenario.restoreStatus === 'temporary-error')
         await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
-      if (scenario.stage === 'summary')
+      if (scenario.stage === 'summary' || scenario.stage === 'confirm')
         await expect.element(page.getByRole('button', { name: 'Continue' })).toBeVisible();
+      if (scenario.stage === 'confirm')
+        await expect.element(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
       if (signedOut || scenario.restoreStatus === 'reauth-required')
         await expect.element(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
       await matchVrtFrameScreenshot(`social-migration-${state}-${name}`);

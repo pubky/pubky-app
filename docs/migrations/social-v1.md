@@ -166,9 +166,11 @@ Behavior. Every restore and every sign-in passes `SocialMigrationController.ensu
 the auth store (`restoreStatus` `social-migration`, session `null`, committed identity visible meanwhile). A session
 without `MIGRATION_CAPS`, or a saved grant from before the gate whose flag is absent in a browser whose record never saw
 the flag, is signed out on `/migration`
-(backup prompt first for a never-backed-up browser key), told why, and offered Sign in; the new grant is admitted, runs
-`pubky-social-migrator` on the blocking screen (steps, "{done} of {total}", "Do not close this tab"), and bootstraps as
-usual once it passes. A reload or a closed tab mid-run resumes on the next restore (the grant is admitted); a second
+(backup prompt first for a never-backed-up browser key), told why, and offered Sign in; the new grant is admitted, its
+sign-in reads the flag (a current one passes with no screen), asks before anything is copied (Continue or Sign out;
+a failed flag read asks too), runs `pubky-social-migrator` on the blocking screen after Continue (steps,
+"{done} of {total}", "Do not close this tab"), and bootstraps as usual once it passes. A reload or a closed tab mid-run
+resumes on the next restore without asking again (the grant is admitted, the record has `lastRun`); a second
 tab waits for the Web Lock and then reads the flag; a signup runs inline on its empty tree with no screen. Outcomes:
 `incomplete`/`IO_ERROR` auto-retry (2 s, 5 s, 15 s) then Retry, also on foreground and network return; `QUOTA` shows
 the bytes needed; `PRIV_UNSUPPORTED`, `UNSUPPORTED_EPOCH` and a thrown error block on Retry with Sign out;
@@ -186,22 +188,25 @@ takes minutes does not time the attempt out); recovery phrase and encrypted file
 (dev): a phrase or file backup is imported into Ring, which then adopts and gates like any Ring sign-in; Ring signup
 runs inline (#3142 removed browser signup; a browser key created before it
 still gets the backup prompt at the forced sign-out); a capability upgrade (Locks, Shop) consults the local
-record only and keeps its context. Shop learns the account as `restoring` while gated.
+record and keeps its context when it passes, and is gated like a sign-in otherwise. Shop learns the account as
+`restoring` while gated.
 
 Verification matrix (QA-1, local stack, see _QA matrix_): seed user X with 0.x data on the current build, deploy the branch, restore → sign-out
-explanation → Sign in → `/migration` runs → `/home`; reload mid-run resumes ("Continuing from an earlier run"); second
+explanation → Sign in → `/migration` asks, Continue runs → `/home`; reload mid-run resumes ("Continuing from an earlier run"); second
 tab waits; sign in from a second browser after the first finished passes on the flag read; a never-backed-up browser key
 sees the backup prompt first; a pre-port Ring grant sees `missing-scopes`; signup lands on onboarding with no gate screen;
 QUOTA, offline (auto-retry then Retry), summary with a dropped profile image; `/post/*`, `/profile/<pk>`, `/shop` redirect
 to `/migration` while gated; logout from `/migration` works with the backup prompt.
 
-Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (fourteen
+Telemetry: operation `socialMigration`, counts only (`docs/sentry.md`). VRT: new suite `auth/SocialMigration` (fifteen
 states × desktop/mobile, dark only: `/migration` is a signed-out route, forced dark since #3081; #3121 added
 `restore-reauth-required` and `restore-temporary-error` and changed the `reauth-backup` capture, whose Sign out button
-is gone, so those baselines wait for the next `VRT Update Baselines` dispatch, see the checklist), the D17 note in
+is gone, and the Continue screen added `confirm`, so those baselines wait for the next `VRT Update Baselines`
+dispatch, see the checklist), the D17 note in
 `settings/Settings` and the D8 conflict copy in `misc/DatabaseErrorScreen` (desktop/mobile × dark/light), CI-owned
-baselines. Cypress: a seeded 0.x account shows the progress screen on sign-in; a freshly signed-up one
-never reaches `/migration`, and an empty or v1-only one only passes through it while the check runs (see _Cypress_).
+baselines. Cypress: a seeded 0.x account is asked on sign-in and shows the progress screen after Continue; a freshly
+signed-up one never reaches `/migration`, and an empty or v1-only one without the flag is asked, then only passes
+through it while the check runs (see _Cypress_).
 
 ## Compliance gate and dev-sync routine
 
@@ -411,10 +416,12 @@ Ring sign-in (#3150): 28 files against `dev`. What the specs now assume:
   button (the deeplink on phones) and approves it as that key, in Ring's place (`seedApprovePubkyAuth`). The grant then takes the app's own path: `completeAuthenticatedSession`
   runs the gate (`SocialMigrationController.ensureMigrated`, entry `signin`) before the session enters the store. A
   sign-up through the scan QR (`cy.completeSignUpWithPubkyRing`) is a `signup_grant`, whose gate runs inline.
-- The gate: a sign-in waits for its destination route. An empty or v1-only tree, or one already migrated, goes through
-  `/migration` only while the check runs, with no progress screen.
-  `cy.signInWithPubkyRing(name, '/home', { migrates: true })` also asserts the progress screen for a 0.x account
-  (`whileMigrating` interrupts the run from there), and `acknowledgesSummary` clicks through the summary.
+- The gate: a sign-in waits for its destination route. An account already migrated passes on its flag; an empty or
+  v1-only tree without the flag (a key seeded in Node) is asked first, and the helper clicks Continue, then goes
+  through `/migration` only while the check runs, with no progress screen.
+  `cy.signInWithPubkyRing(name, '/home', { migrates: true })` also asserts the Continue screen and then the progress
+  screen for a 0.x account (`beforeContinue` runs on the Continue screen, `beforeRun` after it, `whileMigrating`
+  interrupts the run from the progress screen), and `acknowledgesSummary` clicks through the summary.
   `onboarding.cy.ts` covers a clean run over every kind of object with what it writes and what reads back, the same
   account's later edits, deletes and new writes reaching Nexus, the summary, a new key's first sign-in writing one flag,
   and a scan-QR signup that writes its flag and never reaches `/migration`. Since #3111 it also covers the two
@@ -662,7 +669,8 @@ Checklist:
 - [ ] Integration branch green: lint, typecheck, full `npm test`, `npm run build`, branch e2e 13/13, VRT baselines
       regenerated by CI after the last dev-sync
 - [ ] `VRT Update Baselines` dispatched after #3121 (two new `auth/SocialMigration` states and the changed
-      `reauth-backup` capture have no CI baseline yet; the second review bundles it with the dispatch after dev-sync 6)
+      `reauth-backup` capture have no CI baseline yet; the second review bundles it with the dispatch after dev-sync 6;
+      the `confirm` state of the Continue screen joins them)
 - [ ] QA-1, QA-3, QA-4, QA-5 and QA-6 recorded (_QA matrix_, done 2026-11-12); the maintainer's manual pass done;
       staging checks (Ring grant, Locks with a real Paykit)
 - [ ] Storage allowances raised; moderation service ready; bot-account migration path decided
