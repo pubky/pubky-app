@@ -39,8 +39,8 @@ function openSignInPage(): void {
 }
 
 // The app's Pubky Ring request, taken where a user hands it to Ring: the link the desktop QR code
-// copies, or the deeplink the mobile "Continue with Pubky Ring" button opens
-function readPubkyRingAuthUrl(): Cypress.Chainable<string> {
+// copies, or the deeplink the mobile button labelled `mobileButtonLabel` opens
+function readPubkyRingAuthUrl(mobileButtonLabel = 'Continue with Pubky Ring'): Cypress.Chainable<string> {
   if (isMobile()) {
     const deeplink: { url?: string } = {};
     cy.window().then((win) => {
@@ -52,7 +52,7 @@ function readPubkyRingAuthUrl(): Cypress.Chainable<string> {
         deeplink.url = event.destination.url;
       });
     });
-    cy.contains('button:visible', 'Continue with Pubky Ring').should('not.be.disabled').click();
+    cy.contains('button:visible', mobileButtonLabel).should('not.be.disabled').click();
     cy.contains('button:visible', 'Opening Pubky Ring...').should('be.disabled');
     return cy.wrap(deeplink).its('url');
   }
@@ -136,9 +136,9 @@ Cypress.Commands.add(
 // would from the Profile step. `cy.signInWithPubkyRing(profileName)` signs back in as the account.
 Cypress.Commands.add('completeSignUpWithPubkyRing', (profileName: string) => {
   cy.location('pathname').should('eq', '/onboarding/scan');
-  // The Install step's "Continue with Pubky Ring" shares the phone button's label; wait for the Scan page
+  // Wait for the Scan page to render before reading its request; on phones its button reads "Authorize & configure"
   cy.get('[data-testid="scan-qr-card"]').should('exist');
-  readPubkyRingAuthUrl().then((authUrl) => {
+  readPubkyRingAuthUrl('Authorize & configure').then((authUrl) => {
     expect(authUrl).to.match(/^pubkyauth:\/\/signup_grant\?/);
     signUpWithPubkyAuthViaApi(profileName, authUrl);
   });
