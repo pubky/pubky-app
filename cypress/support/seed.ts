@@ -86,12 +86,16 @@ export const createImagePostViaApi = (
     tags,
   });
 
-/** Publishes an article as `author`, with `coverFixture` as its cover (the article composer is covered in posts.cy.ts). */
+/**
+ * Publishes an article as `author`, with `coverFixture` as its cover (the article composer is covered in posts.cy.ts).
+ * `inlineFixtures` are an un-migrated author's inline media, in the slots after the cover: `body` names them as the
+ * 0.x composer did, from `![alt](attachment:1)`.
+ */
 export const createArticleViaApi = (
   author: SeededUser,
   title: string,
   body: string,
-  { coverFixture }: { coverFixture?: string } = {},
+  { coverFixture, inlineFixtures }: { coverFixture?: string; inlineFixtures?: string[] } = {},
 ) =>
   createPost({
     authorId: author.id,
@@ -99,6 +103,7 @@ export const createArticleViaApi = (
     content: body,
     kind: 'article',
     imageFixturePath: coverFixture ? `${Cypress.config('fixturesFolder')}/${coverFixture}` : undefined,
+    inlineFixturePaths: inlineFixtures?.map((fixture) => `${Cypress.config('fixturesFolder')}/${fixture}`),
   });
 
 /** Replies to `parent` as `author` (the reply dialogs are covered in posts.cy.ts). */
@@ -214,3 +219,13 @@ export const createLegacyLockViaApi = (
 /** Every URL under `prefix` in `user`'s homeserver tree, so a spec can count what a run left there. */
 export const listHomeserverPathsViaApi = (user: SeededUser, prefix: HomeserverDirectory) =>
   cy.task<string[]>('listHomeserverPaths', { userId: user.id, prefix });
+
+/** The fields of a stored v1 post a spec reads back; the article envelope stays a JSON string in `content`. */
+export type StoredV1Post = { kind: string; content: string; attachments: { uri: string; name: string | null }[] };
+
+/**
+ * The newest version of `post` as `post.authorId`'s homeserver stores it under the v1 root, or null when it has
+ * none.
+ */
+export const readStoredPostViaApi = (post: SeededPost) =>
+  cy.task<StoredV1Post | null>('readStoredPost', { userId: post.authorId, postId: post.id });

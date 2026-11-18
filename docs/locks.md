@@ -222,7 +222,7 @@ deleted-post fallback once Nexus drops it.
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
 - `content_kind` (#2433) is the locked post's kind, from `inferPostKindForCreate` at publish time, in its
-  pubky-social-specs 1.0.0-rc.1 name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
+  pubky-social-specs 1.x name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
   the internal post kind by `toLockContentKind`). The list is its own, not derived from the app's internal
   kinds, so renaming those never changes what a lock stores.
   The order is the normal post's: video over image over file, and audio is a file. Any string is kept raw, so

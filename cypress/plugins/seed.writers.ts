@@ -49,7 +49,10 @@ import type {
  */
 
 type StoredPost = { id: string; uri: string };
-type PostInput = Pick<SeedCreatePostArgs, 'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath'> & {
+type PostInput = Pick<
+  SeedCreatePostArgs,
+  'content' | 'kind' | 'title' | 'parentUri' | 'embed' | 'imageFixturePath' | 'inlineFixturePaths'
+> & {
   // A lock announcement's lock file, `pubky://<author>/pub/app.locks/<id>.json` (`seedCreateLockPost`)
   lock?: string;
 };
@@ -113,7 +116,11 @@ export const v1Writer = (owner: string, session: Session): SeedWriter => {
 
     // Same two writes as the app's upload: the media under its content hash, then the post pointing at it.
     // An article names its image as the cover, in its envelope; any other post attaches it.
-    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath, lock }) => {
+    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath, inlineFixturePaths = [], lock }) => {
+      // The app's own composer covers a v1 article's inline media (posts.cy.ts)
+      if (inlineFixturePaths.length > 0) {
+        throw new Error('inline media are seeded for an un-migrated account only (legacy: true)');
+      }
       const image = imageFixturePath ? readImage(imageFixturePath) : null;
       const media = image ? buildFile(owner, { bytes: image.bytes, type: image.type }) : null;
       if (image && media) {
@@ -235,6 +242,23 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
     return { id, uri: legacyUrl(`posts/${id}`) };
   };
 
+  // Same two writes as a 0.x client's upload: the blob, then its file record. Yields the file's URL.
+  const writeFile = async (imagePath: string) => {
+    const { bytes, type, name } = readImage(imagePath);
+    // A 0.x blob id is the hash a v1 media id is
+    const blobId = buildFile(owner, { bytes, type }).id;
+    await session.storage.putBytes(legacyPath(`blobs/${blobId}`), bytes);
+    const fileId = mintId();
+    await session.storage.putJson(legacyPath(`files/${fileId}`), {
+      name,
+      created_at: nowMicros(),
+      src: legacyUrl(`blobs/${blobId}`),
+      content_type: type,
+      size: bytes.length,
+    });
+    return legacyUrl(`files/${fileId}`);
+  };
+
   return {
     writeProfile: async (name, bio, { image, links } = {}) => {
       await session.storage.putJson(legacyPath('profile.json'), {
@@ -246,9 +270,13 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
       return legacyUrl('profile.json');
     },
 
-    // Same three writes as a 0.x client's upload: the blob, its file record, then the post pointing at the file.
-    // A 0.x article keeps its cover in the first attachment and its title and body in an envelope.
-    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath, lock }) => {
+    // The uploads first, then the post pointing at their files. A 0.x article keeps its cover in the first attachment,
+    // its inline media in the slots after it (the body names them from `attachment:1`, as the 0.x composer numbered
+    // them), and its title and body in an envelope.
+    writePost: async ({ content, kind, title, parentUri, embed, imageFixturePath, inlineFixturePaths = [], lock }) => {
+      if (inlineFixturePaths.length > 0 && (kind !== 'article' || !imageFixturePath)) {
+        throw new Error('inline media are seeded for a 0.x article with a cover only');
+      }
       const body: Record<string, unknown> = {
         content: kind === 'article' ? JSON.stringify({ title: title ?? '', body: content }) : content,
         kind: LEGACY_POST_KINDS[kind],
@@ -257,19 +285,11 @@ export const legacyWriter = (owner: string, session: Session): SeedWriter => {
       if (embed) body['embed'] = { uri: toLegacyReference(embed.uri), kind: LEGACY_POST_KINDS[embed.kind] };
       if (lock) body['lock'] = lock;
       if (imageFixturePath) {
-        const { bytes, type, name } = readImage(imageFixturePath);
-        // A 0.x blob id is the hash a v1 media id is
-        const blobId = buildFile(owner, { bytes, type }).id;
-        await session.storage.putBytes(legacyPath(`blobs/${blobId}`), bytes);
-        const fileId = mintId();
-        await session.storage.putJson(legacyPath(`files/${fileId}`), {
-          name,
-          created_at: nowMicros(),
-          src: legacyUrl(`blobs/${blobId}`),
-          content_type: type,
-          size: bytes.length,
-        });
-        body['attachments'] = [legacyUrl(`files/${fileId}`)];
+        const attachments = [await writeFile(imageFixturePath)];
+        for (const inlinePath of inlineFixturePaths) {
+          attachments.push(await writeFile(inlinePath));
+        }
+        body['attachments'] = attachments;
       }
       return writeStoredPost(body);
     },

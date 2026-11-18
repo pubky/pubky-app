@@ -227,7 +227,7 @@ export interface LockFile {
 
 /**
  * The locked post's kind, saved in the announcement as `content_kind` so the card and the unlock dialog can
- * show what is locked before anyone unlocks it (#2433). These are the pubky-social-specs 1.0.0-rc.1 kind names. They are
+ * show what is locked before anyone unlocks it (#2433). These are the pubky-social-specs 1.x kind names. They are
  * stored in published posts, so the list is its own and is never derived from the app's internal post kinds:
  * renaming an internal kind must not change what a lock saves. `toLockContentKind` maps one to the other.
  */

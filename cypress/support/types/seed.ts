@@ -55,6 +55,8 @@ export type SeedCreatePostArgs = {
   parentUri?: string;
   embed?: { uri: string; kind: SeededPostKind };
   imageFixturePath?: string;
+  // A 0.x article's inline media, in the slots after its cover (`imageFixturePath`); un-migrated authors only
+  inlineFixturePaths?: string[];
   tags?: string[];
 };
 
@@ -69,6 +71,7 @@ export type SeedSettingsArgs = { userId: string; settings: Record<string, unknow
 // A directory of the owner's tree, as `SessionStorage.list` takes it
 export type HomeserverDirectory = `/pub/${string}/` | `/priv/${string}/`;
 export type SeedListPathsArgs = { userId: string; prefix: HomeserverDirectory };
+export type SeedReadPostArgs = { userId: string; postId: string };
 
 /** The amount and asset a lock asks for; the recipient is always the lock's creator. */
 export type SeededLockPrice = { amount: string; asset: 'BTC' | 'USD' };
