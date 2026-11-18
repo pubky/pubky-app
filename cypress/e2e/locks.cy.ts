@@ -41,6 +41,7 @@
  * Paykit and Bitkit; this spec covers the app's own flow until then.
  */
 import type { CyHttpMessages, Interception } from 'cypress/types/net-stubbing';
+import { extendedTimeout } from '../support/common';
 import {
   answerLockServerOnce,
   applyLockPrice,
@@ -695,7 +696,9 @@ describe('locks published before the migration', () => {
         cy.signOut(HasBackedUp.Yes);
         signInAs(legacyCreator);
         cy.intercept('PUT', `**/pub/social/v1/posts/${lock.post.id}/*`).as('teaserEdited');
-        cy.findPostInFeed(0, teaser, CheckForNewPosts.Yes).within(() => {
+        // The card can render after the sign-in lands on home, and an already-published post brings no new-posts
+        // button, so a one-shot feed scan can miss it: retry the lookup by its text until the card is there.
+        cy.contains('[data-cy="timeline-posts"] [data-cy="post-card"]', teaser, extendedTimeout()).within(() => {
           cy.get('[data-cy="post-more-btn"]').first().should('be.visible').click();
         });
         cy.get('[data-cy="post-menu-action-edit"]').should('be.visible').click();
