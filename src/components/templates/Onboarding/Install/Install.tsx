@@ -6,7 +6,7 @@ import { ROOT_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { AuthController } from '@/controllers/auth/auth';
 import { formatInviteCode } from '@/libs/utils/utils';
-import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from '@/molecules/Install/Install';
+import { InstallHeader, InstallKeychains } from '@/molecules/Install/Install';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
 import { toast } from '@/molecules/Toaster/toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -75,10 +75,9 @@ export function Install() {
   }
 
   return (
-    <OnboardingLayout testId="install-content" navigation={<InstallNavigation />}>
+    <OnboardingLayout testId="install-content" className="pb-6">
       <InstallHeader />
-      <InstallCard />
-      <InstallFooter />
+      <InstallKeychains />
     </OnboardingLayout>
   );
 }

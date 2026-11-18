@@ -761,6 +761,7 @@ vi.mock('@/hooks/useProfileConnections/useProfileConnections', async () => {
       return {
         connections,
         count: connections.length,
+        retainedCount: 0,
         isLoading: false,
         isLoadingMore: false,
         error: null as string | null,

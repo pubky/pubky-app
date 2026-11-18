@@ -33,6 +33,19 @@ export type UsePaykitSetupFlowReturn = {
   /** Attach to the setup iframe so the bridge can verify the message source. */
   iframeRef: RefObject<HTMLIFrameElement | null>;
   /**
+   * True once the `/setup` page has posted `paykit-setup-ready`, which it does as soon as it renders.
+   * Until then the iframe stays hidden: a page that failed (a JSON error body, a proxy page) never
+   * posts it, and must never be shown.
+   */
+  isSetupReady: boolean;
+  /**
+   * True when the flow is in `ERROR` because the `/setup` or `/setup/reconnect` page never reported
+   * it rendered. The creator saw no QR, so copy that asks them to approve in time does not apply.
+   */
+  isSetupPageFailed: boolean;
+  /** Attach to the setup iframe's `onLoad`: starts the short wait for the ready message. */
+  onSetupLoad: () => void;
+  /**
    * Asks the Lock Server for the creator's Paykit setup status: `ready` records the connection,
    * `setup_required` asks Paykit whether it already holds the creator and then starts the setup (or
    * stops at `RECONNECT_REQUIRED`), `unavailable` stops at `UNAVAILABLE`.

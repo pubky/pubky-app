@@ -1,3 +1,9 @@
+/** Brand mark drawn over the centre of the active QR. */
+export interface QrCodeSlotLogo {
+  src: string;
+  alt: string;
+}
+
 export interface QrCodeSlotProps {
   isLoading: boolean;
   isExpired: boolean;
@@ -13,4 +19,6 @@ export interface QrCodeSlotProps {
    * they react to the parent group.
    */
   activeQrHasHoverEffect?: boolean;
+  /** Centre mark of the active QR. Defaults to the Pubky Ring mark. */
+  logo?: QrCodeSlotLogo;
 }

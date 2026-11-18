@@ -28,6 +28,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 const mockUseProfileConnections = vi.fn(() => ({
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -57,6 +58,12 @@ vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
 
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: vi.fn(),
+}));
+
+const mockProfileStats = vi.hoisted(() => ({ value: { followers: 0, following: 0, friends: 0 } }));
+
+vi.mock('@/providers/ProfileStatsProvider/ProfileStatsProvider', () => ({
+  useProfileStatsContext: vi.fn(() => mockProfileStats.value),
 }));
 
 // Mock Atoms
@@ -138,6 +145,7 @@ const mockConnections = [
 const mockLoadingConnectionsResult = {
   connections: [],
   count: 0,
+  retainedCount: 0,
   isLoading: true,
   isLoadingMore: false,
   hasMore: false,
@@ -149,6 +157,7 @@ const mockLoadingConnectionsResult = {
 const mockConnectionsResult = {
   connections: mockConnections,
   count: 2,
+  retainedCount: 0,
   isLoading: false,
   isLoadingMore: false,
   hasMore: false,
@@ -159,6 +168,7 @@ const mockConnectionsResult = {
 
 describe('ProfileFollowers', () => {
   beforeEach(() => {
+    mockProfileStats.value = { followers: 0, following: 0, friends: 0 };
     vi.mocked(useProfileConnections).mockReturnValue(mockUseProfileConnections());
     vi.mocked(useInfiniteScroll).mockReturnValue(
       asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
@@ -198,5 +208,39 @@ describe('ProfileFollowers', () => {
     userItems.forEach((item) => {
       expect(item).toHaveAttribute('data-follow-button-variant', 'icon');
     });
+  });
+
+  it('shows the total followers count from the profile stats, not the number of loaded rows', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, followers: 30 };
+    vi.mocked(useProfileConnections).mockReturnValue({ ...mockConnectionsResult, hasMore: true });
+
+    render(<ProfileFollowers />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers (30)');
+  });
+
+  it('falls back to the loaded count while the profile stats are not available', () => {
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
+
+    render(<ProfileFollowers />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers (2)');
+  });
+
+  it('shows the loaded count once the list is exhausted, even when the cached total is higher', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, followers: 3 };
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
+
+    render(<ProfileFollowers />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers (2)');
+  });
+
+  it('keeps the total when a later page failed to load', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, followers: 25 };
+    vi.mocked(useProfileConnections).mockReturnValue({
+      ...mockConnectionsResult,
+      error: 'Failed to fetch connections',
+    });
+
+    render(<ProfileFollowers />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers (25)');
   });
 });

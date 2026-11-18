@@ -5,13 +5,15 @@ import { cn } from '@/libs/utils/utils';
 interface BalancedQrCardProps extends Omit<ComponentProps<typeof Card>, 'children'> {
   children: ReactNode;
   illustration: ReactNode;
+  /** Shown in the column right of the QR (e.g. setup steps); an equal-width spacer fills it otherwise. */
+  aside?: ReactNode;
 }
 
 /**
  * Keeps a QR code centered in the card by balancing the illustration with an
- * equal-width spacer at desktop sizes.
+ * equal-width column at desktop sizes: the `aside` content, or a spacer.
  */
-export function BalancedQrCard({ children, illustration, className, ...props }: BalancedQrCardProps) {
+export function BalancedQrCard({ children, illustration, aside, className, ...props }: BalancedQrCardProps) {
   return (
     <Card
       className={cn(
@@ -26,7 +28,13 @@ export function BalancedQrCard({ children, illustration, className, ...props }: 
       <div data-slot="balanced-qr-content" className="flex w-48 shrink-0 items-center justify-center">
         {children}
       </div>
-      <div data-slot="balanced-qr-spacer" className="hidden w-48 shrink-0 lg:block" aria-hidden="true" />
+      {aside ? (
+        <div data-slot="balanced-qr-aside" className="flex w-48 shrink-0 flex-col justify-center">
+          {aside}
+        </div>
+      ) : (
+        <div data-slot="balanced-qr-spacer" className="hidden w-48 shrink-0 lg:block" aria-hidden="true" />
+      )}
     </Card>
   );
 }

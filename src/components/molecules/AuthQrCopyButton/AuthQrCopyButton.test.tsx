@@ -49,6 +49,12 @@ describe('AuthQrCopyButton', () => {
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkyauth://signup?hs=example');
   });
 
+  it('passes the centre logo to the QR', () => {
+    renderButton({ logo: { src: '/images/bitkit-qr-logo.svg', alt: 'Bitkit' } });
+
+    expect(screen.getByAltText('Bitkit')).toHaveAttribute('src', '/images/bitkit-qr-logo.svg');
+  });
+
   it('copies the link and confirms with an info toast', async () => {
     renderButton();
 

@@ -17,7 +17,7 @@ export const mockSession = (partial: Partial<Session> = {}): Session =>
       publicKey: {
         z32: () => 'mock-session-pubky',
       },
-      // Root, like a keypair sign-in: a test that wants a narrow Ring session overrides `info`.
+      // Root, like a grant saved by the former keypair sign-in: a test that wants a narrow Ring session overrides `info`.
       capabilities: ['/:rw'],
     },
     ...partial,

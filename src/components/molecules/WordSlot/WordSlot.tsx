@@ -5,57 +5,7 @@ import { cn } from '@/libs/utils/utils';
 import type { WordSlotProps } from './WordSlot.types';
 
 export const WordSlot = (props: WordSlotProps) => {
-  const { index, word, mode } = props;
-
-  if (mode === 'editable') {
-    const { isError, showError, isRestoring, onChange, onValidate, onKeyDown } = props;
-    const hasError = isError && showError;
-
-    const containerClasses = cn(
-      'relative flex-row overflow-hidden rounded-md border border-dashed px-3 py-2',
-      'inline-flex w-full items-center bg-background/20 transition-colors',
-      hasError && 'border-red-500 bg-red-500/10',
-      !hasError && 'border-input hover:bg-secondary/50',
-    );
-
-    const badgeClasses = cn(
-      'absolute top-1/2 left-3 z-10 h-6 w-6 flex-shrink-0 -translate-y-1/2 rounded-full',
-      hasError && 'bg-red-500 text-white',
-      !hasError && 'bg-muted text-muted-foreground',
-    );
-
-    const inputColor = cn(
-      'min-w-0 flex-1 flex-row !border-none !bg-transparent !px-0 !pr-3 !pl-10',
-      hasError && '!text-red-500',
-    );
-
-    return (
-      <Container className="relative">
-        <Container className={containerClasses}>
-          <Badge variant="outline" className={badgeClasses}>
-            {index + 1}
-          </Badge>
-          <Input
-            id={`word-slot-input-${index + 1}`}
-            value={word}
-            placeholder="word"
-            className={inputColor}
-            onChange={(e) => onChange(index, e.target.value.toLowerCase().trim())}
-            onBlur={() => onValidate(index, word)}
-            onKeyDown={onKeyDown}
-            disabled={isRestoring}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-          />
-        </Container>
-      </Container>
-    );
-  }
-
-  // readonly mode
-  const { isCorrect, isError, onClear } = props;
+  const { index, word, isCorrect, isError, onClear } = props;
   const canClear = word !== '';
 
   const containerClasses = cn(

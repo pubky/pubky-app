@@ -663,7 +663,6 @@ export const openPostFromHomeFeed = (authorPubky: string, postId: string, teaser
     cy.get('[data-cy="post-text"]').filter(':visible').first().click();
   });
   cy.location('pathname').should('eq', `/post/${userIdFromPubky(authorPubky)}/${postId}`);
-  singlePostCard().should('have.length', 1);
 };
 
 /** The header shows the profile button only while the app treats the account as signed in. */

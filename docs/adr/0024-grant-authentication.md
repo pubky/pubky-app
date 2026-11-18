@@ -42,7 +42,8 @@ capability upgrades stay tab-scoped. SDK delegated-key storage and the main acco
 Delegated serialization contains relay/HPKE secrets; IndexedDB does not encrypt it. Never log it or include it in
 URLs or telemetry.
 
-Ring and Passport request ordinary app and merged Locks capabilities upfront. Root-key login/signup obtains root grants.
+Ring and Passport request ordinary app and merged Locks capabilities upfront. Pubky App no longer signs up or signs in
+with a root key (#3142, #3147); root grants saved by those earlier flows still restore through the session store.
 Older narrow grants can upgrade in the Locks context, preserving the same account and local state. Save the replacement
 before retiring the previous grant. A deduplicated public queue preserves all pending revocations across successive
 upgrades, logout and later login. Failed retirement does not block a valid active grant, and its SDK credentials

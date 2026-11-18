@@ -9,8 +9,3 @@ export interface TCreateRecoveryFileParams {
   keypair: Keypair;
   passphrase: string;
 }
-
-export interface TDecryptRecoveryFileParams {
-  encryptedFile: File;
-  passphrase: string;
-}

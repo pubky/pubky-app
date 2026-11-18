@@ -1,5 +1,5 @@
 import type { Session as LocksSession } from '@synonymdev/locks-sdk';
-import type { Keypair, Session } from '@synonymdev/pubky';
+import type { Session } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
@@ -739,22 +739,6 @@ describe('grant-only session lifecycle', () => {
     flow.approval.resolve(grantSession());
     await expect(result.awaitApproval).rejects.toMatchObject({ code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER });
     expect(AuthApplication.saveSession).not.toHaveBeenCalled();
-  });
-  it.each(['mnemonic', 'file'])('persists the root grant from %s login', async (method) => {
-    seed(null, null);
-    const keypair = asOpaque<Keypair>({ publicKey: { z32: () => PUBKY } });
-    vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-    vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(keypair);
-    const next = grantSession(['/:rw']);
-    vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: next });
-    const result =
-      method === 'mnemonic'
-        ? await AuthController.loginWithMnemonic({ mnemonic: 'phrase' })
-        : await AuthController.loginWithEncryptedFile({ encryptedFile: new File([], 'backup'), password: 'password' });
-    expect(result).toBe(true);
-    expect(useAuthStore.getState()).toMatchObject({ session: next, hasProfile: false });
-    expect(AuthApplication.readPersistedAuth()?.sessionReference?.kind).toBe('grant');
-    expect(clearDatabase).toHaveBeenCalledOnce();
   });
   it('cleans up locally after a bounded offline logout', async () => {
     vi.useFakeTimers();
@@ -2026,11 +2010,10 @@ describe('final review session ownership regressions', () => {
 
     if (change === 'logout') await AuthController.logout();
     else if (change === 'new-sign-in') {
-      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
-      const replacement = grantSession(undefined, OTHER_PUBKY);
-      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-      vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: replacement });
-      await AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' });
+      const flow = startFlow();
+      const request = await AuthController.getAuthUrl();
+      flow.approval.resolve(grantSession(undefined, OTHER_PUBKY));
+      await request.awaitApproval;
     } else {
       // Another tab changed only durable metadata; the storage listener has not run yet.
       const stored = JSON.parse(localStorage.getItem(AUTH_PERSIST_KEY)!);
@@ -2098,28 +2081,6 @@ describe('final review session ownership regressions', () => {
     expect(await retry).toBe(true);
     expect(useAuthStore.getState().session).toBe(narrowGrant);
   });
-  it.each(['mnemonic', 'file'] as const)(
-    'allows signing in to another account with a %s after expiry',
-    async (method) => {
-      useAuthStore.setState({ restoreStatus: 'reauth-required' });
-      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
-      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-      vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(keypair);
-      const session = grantSession(undefined, OTHER_PUBKY);
-      const signin = vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session });
-      const result =
-        method === 'mnemonic'
-          ? await AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' })
-          : await AuthController.loginWithEncryptedFile({
-              encryptedFile: new File(['encrypted'], 'recovery.pkarr'),
-              password: 'password',
-            });
-      expect(result).toBe(true);
-      expect(signin).toHaveBeenCalledWith({ keypair, isCurrent: expect.any(Function) });
-      expect(useAuthStore.getState()).toMatchObject({ currentUserPubky: OTHER_PUBKY, session, restoreStatus: 'ready' });
-      expect(clearDatabase).toHaveBeenCalledOnce();
-    },
-  );
   it('does not write metadata or notify subscribers for an empty retirement queue', async () => {
     const onChange = vi.fn();
     const unsubscribe = useAuthStore.subscribe(onChange);
@@ -2141,36 +2102,21 @@ describe('final review session ownership regressions', () => {
 });
 
 describe('identity-bound Shop reauthorization', () => {
-  it.each(['ring', 'passport', 'mnemonic', 'file'] as const)(
+  it.each(['ring', 'passport'] as const)(
     'rejects a different identity from %s without losing the current recovery backup',
     async (method) => {
       useOnboardingStore.getState().setSecrets({ secretKey: 'pending-secret', mnemonic: 'pending phrase' });
       const previous = AuthApplication.readPersistedAuth();
       const replacement = grantSession(undefined, OTHER_PUBKY);
-      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
-      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-      vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(keypair);
-      vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: replacement });
-      let adoption: Promise<unknown>;
-      if (method === 'ring' || method === 'passport') {
-        const flow = startFlow();
-        const request =
-          method === 'ring'
-            ? await AuthController.getAuthUrl(false, PUBKY)
-            : await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' }, expectedPubky: PUBKY });
-        adoption = request.awaitApproval.then((session) =>
-          method === 'passport' ? AuthController.initializeAuthenticatedSession({ session }) : undefined,
-        );
-        flow.approval.resolve(replacement);
-      } else
-        adoption =
-          method === 'mnemonic'
-            ? AuthController.loginWithMnemonic({ mnemonic: 'phrase', expectedPubky: PUBKY })
-            : AuthController.loginWithEncryptedFile({
-                encryptedFile: new File(['encrypted'], 'recovery.pkarr'),
-                password: 'password',
-                expectedPubky: PUBKY,
-              });
+      const flow = startFlow();
+      const request =
+        method === 'ring'
+          ? await AuthController.getAuthUrl(false, PUBKY)
+          : await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' }, expectedPubky: PUBKY });
+      const adoption = request.awaitApproval.then((session) =>
+        method === 'passport' ? AuthController.initializeAuthenticatedSession({ session }) : undefined,
+      );
+      flow.approval.resolve(replacement);
       await expect(adoption).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
       expect(AuthApplication.readPersistedAuth()).toEqual(previous);
       expect(useOnboardingStore.getState()).toMatchObject({ secretKey: 'pending-secret', mnemonic: 'pending phrase' });

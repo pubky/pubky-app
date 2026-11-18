@@ -104,7 +104,7 @@
     },
     {
       "id": "local-first-reads",
-      "rule": "Local-first reads in hooks must use useLocalFirstQuery (@/hooks/useLocalFirstQuery/useLocalFirstQuery): queryFn is a pure get* controller read run inside useLiveQuery, fetchFn is a fetch* controller that persists to Dexie. Flag network calls, TanStack Query or retry logic inside a useLiveQuery callback (breaks Dexie PSD, ADR-0011), new hand-rolled useEffect + useLiveQuery pairs, and read paths that do not handle a settled null (missing) or a soft-deleted tombstone. See docs/local-first.md.",
+      "rule": "Local-first reads in hooks must use useLocalFirstQuery (@/hooks/useLocalFirstQuery/useLocalFirstQuery): queryFn is a pure get* controller read run inside useLiveQuery, fetchFn is a fetch* controller that persists to Dexie. Flag network calls, TanStack Query or application retry logic inside a useLiveQuery callback (breaks Dexie PSD, ADR-0011), new hand-rolled useEffect + useLiveQuery pairs, and read paths that do not handle a settled null (missing) or a soft-deleted tombstone. ADR-0030 permits only the bounded database-layer reconnect and one replay for an eligible local read, with one Dexie.asap transition task in a Dexie promise, retaining its own caller scope and lifecycle fences; hooks cannot add timers or retry loops. See docs/local-first.md and docs/adr/0030-bounded-indexeddb-connection-recovery.md.",
       "scope": ["src/hooks/**", "src/components/**"],
       "severity": "high"
     },
