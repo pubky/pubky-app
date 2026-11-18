@@ -41,7 +41,12 @@ jobs:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
+      # Still a clean install of every package; only the Cypress binary (~640 MB,
+      # downloaded by its postinstall into ~/.cache, outside node_modules) is skipped,
+      # because nothing in this job launches Cypress.
       - name: Install dependencies
+        env:
+          CYPRESS_INSTALL_BINARY: 0
         run: npm ci
 
       - name: Build prod

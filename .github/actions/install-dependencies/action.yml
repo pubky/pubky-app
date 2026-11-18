@@ -32,9 +32,14 @@ runs:
         # The npm download cache only pays off when npm ci actually runs.
         cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
 
+    # No caller launches Cypress (e2e-test.yml installs and caches its own binary), so its
+    # ~640 MB postinstall download is skipped. The binary lives in ~/.cache, outside the
+    # cached node_modules, so the cache contents and key are unaffected.
     - name: Install dependencies
       if: steps.node-modules.outputs.cache-hit != 'true'
       shell: bash
+      env:
+        CYPRESS_INSTALL_BINARY: 0
       run: npm ci
 
     # Save right after installing so a later failing step does not cost the next run a reinstall.
