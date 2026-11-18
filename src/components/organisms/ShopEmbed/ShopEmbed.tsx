@@ -60,7 +60,7 @@ export function ShopEmbed() {
           </DialogHeader>
           {upgradeOpen && <SessionUpgradePanel requiredCapabilities={SHOP_CAPABILITIES} />}
           <Button variant="outline" onClick={requestLogin}>
-            {'Use Passport or recovery key'}
+            {'Use Passport'}
           </Button>
           <Button variant="outline" onClick={closeUpgrade}>
             {'Cancel'}

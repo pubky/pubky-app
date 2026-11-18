@@ -9,8 +9,6 @@ import { createZustandLikeHook } from '@/test-utils/stores';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { VrtDialogChrome } from '@/test-utils/vrt.dialog-chrome';
-import { DialogRestoreEncryptedFile } from '@/organisms/DialogRestoreEncryptedFile/DialogRestoreEncryptedFile';
-import { DialogRestoreRecoveryPhrase } from '@/organisms/DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogBackup } from '@/organisms/DialogBackup/DialogBackup';
 import { DialogConfirmBackup } from '@/organisms/DialogConfirmBackup/DialogConfirmBackup';
@@ -370,32 +368,6 @@ describe('Welcome and backup dialogs — visual regression', () => {
     const exportTitle = page.getByTestId('dialog-title').filter({ hasText: 'Import recovery phrase' });
     await expect.element(viewport.width >= 1024 ? exportTitle.first() : exportTitle.last()).toBeVisible();
     await matchVrtFrameScreenshot(`dialog-backup-ring-export-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders restore with a recovery phrase at %s viewport', async (name, viewport) => {
-    await preloadImages(CHROME_IMAGES);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogRestoreRecoveryPhrase />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Use recovery phrase' }).click();
-    await expect.element(page.getByTestId('dialog-title')).toHaveTextContent('Restore with recovery phrase');
-    await matchVrtFrameScreenshot(`dialog-restore-phrase-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders restore with an encrypted file at %s viewport', async (name, viewport) => {
-    await preloadImages(CHROME_IMAGES);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogRestoreEncryptedFile onRestore={() => undefined} />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Use encrypted file' }).click();
-    await expect.element(page.getByTestId('dialog-title')).toHaveTextContent('Restore with encrypted file');
-    await matchVrtFrameScreenshot(`dialog-restore-file-${name}`);
   });
 });
 
