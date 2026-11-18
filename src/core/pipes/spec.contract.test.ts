@@ -12,7 +12,7 @@ import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it } from 'vitest';
 
 /**
- * What this app relies on from `pubky-social-specs` 1.0.0-rc.1 beyond its types: the error
+ * What this app relies on from `pubky-social-specs` 1.0.0-rc.2 beyond its types: the error
  * contract the pipes classify by, the limits `src/config/*` turns into policy, and the file
  * extension table that names v1 media. A release that changes any of these fails here, not in
  * a user's browser.

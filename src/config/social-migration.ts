@@ -4,7 +4,7 @@
  */
 
 /** Mirror of the migrator's `transformRev`; a flag recorded under a lower one is walked again (contract-tested). */
-export const SOCIAL_MIGRATION_TRANSFORM_REV = 3;
+export const SOCIAL_MIGRATION_TRANSFORM_REV = 4;
 
 /** Owner-relative path of the done flag the migrator writes last; the gate reads it with an explicit session. */
 export const SOCIAL_MIGRATION_FLAG_PATH = '/priv/social/v1/_migrated.json';
