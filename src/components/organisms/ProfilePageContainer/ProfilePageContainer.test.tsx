@@ -5,6 +5,7 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useUnlockedList } from '@/hooks/useUnlockedList/useUnlockedList';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { useProfileStatsContext } from '@/providers/ProfileStatsProvider/ProfileStatsProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
@@ -220,6 +221,18 @@ describe('ProfilePageContainer', () => {
     const layout = screen.getByTestId('profile-page-layout');
     const profileData = JSON.parse(layout.getAttribute('data-profile') || '{}');
     expect(profileData).toEqual(mockProfile);
+  });
+
+  it('shares the stats from useProfileHeader with the profile tabs', () => {
+    function StatsReader() {
+      return <div data-testid="tab-stats">{JSON.stringify(useProfileStatsContext())}</div>;
+    }
+    render(
+      <ProfilePageContainer>
+        <StatsReader />
+      </ProfilePageContainer>,
+    );
+    expect(screen.getByTestId('tab-stats')).toHaveTextContent(JSON.stringify(mockStats));
   });
 
   it('passes stats from useProfileHeader to layout', () => {

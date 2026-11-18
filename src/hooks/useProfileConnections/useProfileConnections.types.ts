@@ -34,6 +34,8 @@ export interface UseProfileConnectionsResult {
   connections: UserConnectionData[];
   /** Total count of connections loaded */
   count: number;
+  /** Rows kept on screen after an unfollow from the own Following or Friends list; no longer in the list */
+  retainedCount: number;
   /** Whether the initial load is in progress */
   isLoading: boolean;
   /** Whether loading more connections (pagination) */
