@@ -1,91 +1,69 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
+import { useMediaQuery } from 'usehooks-ts';
 import { Image } from '@/atoms/Image/Image';
-import { BREAKPOINTS } from '@/config/theme';
 import { cn } from '@/libs/utils/utils';
-
-const LANDING_BROKEN_VIDEO_QUERY = `(min-width: ${BREAKPOINTS.md}px)`;
-
-function subscribeToBreakpoint(onStoreChange: () => void) {
-  const mediaQueryList = window.matchMedia(LANDING_BROKEN_VIDEO_QUERY);
-  mediaQueryList.addEventListener('change', onStoreChange);
-
-  return () => {
-    mediaQueryList.removeEventListener('change', onStoreChange);
-  };
-}
-
-function getBreakpointSnapshot() {
-  return window.matchMedia(LANDING_BROKEN_VIDEO_QUERY).matches;
-}
-
-function getServerBreakpointSnapshot() {
-  return false;
-}
+import { LANDING_DESKTOP_QUERY, LANDING_VIDEO_QUERY } from './LandingVideo.constants';
 
 interface LandingBrokenPosterProps {
   alt: string;
+  descriptionId: string;
   className: string;
-  image: string;
-  video: string;
+  asset: string;
 }
 
-export function LandingBrokenPoster({ alt, className, image, video }: LandingBrokenPosterProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const shouldLoadVideo = useSyncExternalStore(
-    subscribeToBreakpoint,
-    getBreakpointSnapshot,
-    getServerBreakpointSnapshot,
-  );
-
-  useEffect(() => {
-    if (!shouldLoadVideo) return;
-
-    videoRef.current?.load();
-  }, [shouldLoadVideo, video]);
-
-  const handlePointerEnter = () => {
-    const videoElement = videoRef.current;
-
-    if (!videoElement) return;
-
-    setIsHovered(true);
-    videoElement.currentTime = 0;
-    void videoElement.play();
-  };
-
-  const handlePointerLeave = () => {
-    const videoElement = videoRef.current;
-
-    setIsHovered(false);
-
-    if (!videoElement) return;
-
-    videoElement.pause();
-    videoElement.currentTime = 0;
-  };
-
-  if (!shouldLoadVideo) {
-    return <Image src={image} alt={alt} width={1516} height={1516} className={className} />;
-  }
+function LandingBrokenVideo({ src }: { src: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <div className={cn('relative block overflow-hidden', className)} onPointerEnter={handlePointerEnter} onPointerLeave={handlePointerLeave}>
-      <Image src={image} alt={alt} width={1516} height={1516} className="absolute inset-0 size-full object-cover" />
-      <video
-        ref={videoRef}
-        src={video}
-        preload="auto"
-        muted
-        playsInline
-        className={cn(
-          'absolute inset-0 size-full object-cover opacity-0 transition-opacity duration-200 ease-out',
-          isHovered && 'opacity-100',
-        )}
-        aria-hidden="true"
-      />
+    <video
+      src={src}
+      autoPlay
+      muted
+      playsInline
+      aria-hidden="true"
+      onPlaying={() => setIsPlaying(true)}
+      className={cn(
+        'absolute inset-0 size-full object-cover opacity-0 transition-opacity duration-200 ease-out',
+        isPlaying && 'opacity-100',
+      )}
+    />
+  );
+}
+
+export function LandingBrokenPoster({ alt, descriptionId, className, asset }: LandingBrokenPosterProps) {
+  const isDesktop = useMediaQuery(LANDING_DESKTOP_QUERY, { initializeWithValue: false });
+  const canAnimate = useMediaQuery(LANDING_VIDEO_QUERY, { initializeWithValue: false });
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <div
+      className={cn('relative block overflow-hidden has-focus-visible:ring-2 has-focus-visible:ring-brand', className)}
+      onPointerEnter={(event) => setHovered(event.pointerType !== 'touch')}
+      onPointerLeave={() => setHovered(false)}
+      onPointerDown={() => setFocused(false)}
+    >
+      <picture>
+        <source
+          srcSet={`${asset}-384.webp 384w, ${asset}.webp 758w`}
+          sizes="auto, (min-width: 1280px) 341px, (min-width: 768px) 33vw, 100vw"
+        />
+        <Image
+          src={`${asset}.webp`}
+          alt={alt}
+          tabIndex={isDesktop ? 0 : undefined}
+          aria-describedby={isDesktop ? descriptionId : undefined}
+          onFocus={(event) => setFocused(event.currentTarget.matches(':focus-visible'))}
+          onBlur={() => setFocused(false)}
+          loading="lazy"
+          width={758}
+          height={758}
+          className="absolute inset-0 size-full object-cover"
+        />
+      </picture>
+      {canAnimate && (hovered || focused) && <LandingBrokenVideo src={`${asset}.mp4`} />}
     </div>
   );
 }

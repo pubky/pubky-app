@@ -691,6 +691,68 @@ describe('usePassportAuth', () => {
       description: 'Sign in with Google is not available right now.',
     });
   });
+  it('opens the popup on click, then waits for the public landing database before requesting a grant', async () => {
+    const ready = deferred<void>();
+    mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+    const hook = renderHook(() => usePassportAuth({ prepare: () => ready.promise }));
+
+    await startAttempt(hook);
+    expect(openSpy).toHaveBeenCalledOnce();
+    expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
+    await act(async () => ready.resolve());
+    expect(mockGetPassportAuthUrl).toHaveBeenCalledOnce();
+  });
+
+  it('releases an unresolved preflight on timeout, permits a retry, and ignores its late completion', async () => {
+    const ready = deferred<void>();
+    const onAttemptSettled = vi.fn();
+    const prepare = vi.fn().mockReturnValueOnce(ready.promise).mockResolvedValueOnce(undefined);
+    mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+    const hook = renderHook(() => usePassportAuth({ prepare, onAttemptSettled }));
+    await startAttempt(hook);
+
+    await act(async () => vi.advanceTimersByTime(PASSPORT_ATTEMPT_TIMEOUT_MS));
+    expect(hook.result.current.isPending).toBe(false);
+    expect(popup.close).toHaveBeenCalledOnce();
+    expect(onAttemptSettled).toHaveBeenCalledExactlyOnceWith({ attemptId: attemptIds[0], result: 'failed' });
+
+    popup = createFakePopup();
+    await startAttempt(hook);
+    expect(mockGetPassportAuthUrl).toHaveBeenCalledOnce();
+    await act(async () => ready.resolve());
+    expect(mockGetPassportAuthUrl).toHaveBeenCalledOnce();
+    expect(popup.close).not.toHaveBeenCalled();
+    expect(hook.result.current.isPending).toBe(true);
+  });
+
+  it('abandons a delayed preflight when its page unmounts before the next page starts Ring', async () => {
+    const ready = deferred<void>();
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ prepare: () => ready.promise, onAttemptSettled }));
+    await startAttempt(hook);
+    hook.unmount();
+
+    expect(popup.close).toHaveBeenCalledOnce();
+    expect(onAttemptSettled).toHaveBeenCalledExactlyOnceWith({ attemptId: attemptIds[0], result: 'superseded' });
+    await act(async () => ready.resolve());
+    expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not start a stale grant if an account switch wins while the landing database is opening', async () => {
+    const ready = deferred<void>();
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ prepare: () => ready.promise, onAttemptSettled }));
+
+    await startAttempt(hook);
+    await act(async () => {
+      useAuthStore.setState({ generation: 'new-owner' });
+      ready.resolve();
+    });
+    expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
+    expect(onAttemptSettled).toHaveBeenCalledWith({ attemptId: attemptIds[0], result: 'superseded' });
+    expect(hook.result.current.isPending).toBe(false);
+  });
+
   it('binds Passport to the Shop reauthorization account without deferring popup creation', async () => {
     vi.spyOn(shopSignIn, 'getShopReauthorizationIdentity').mockReturnValue({ expectedPubky: 'alice' });
     mockGetPassportAuthUrl.mockResolvedValue(createFlow());

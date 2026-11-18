@@ -4,6 +4,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { getMarketplaceUrl } from '@/libs/runtime-config/runtime-config';
+import { needsShopCleanup, SHOP_TEARDOWN_PENDING_KEY } from '@/libs/shop-embed/cleanup';
 import { LocalAuthService } from '@/services/local/auth/auth';
 
 // Shared deployment contract with Shop; see ADR 0025. Never enumerate/delete other databases.
@@ -58,7 +59,6 @@ const SERVICE_KEYS = [
   'pubky.messaging.session.v1',
   'shop-chat-inbox-session:v1',
 ];
-const TEARDOWN_PENDING = 'pubky-messaging-keys-teardown-pending';
 const CLEANUP_TIMEOUT_MS = 4000;
 
 // The service issues 32-byte URL-safe base64 bearers and canonical lowercase uuid text session ids. The records
@@ -136,12 +136,11 @@ export class ShopEmbedService {
       if (!locks?.request) return;
       await locks.request('pubky-shop-host-cleanup', { signal: abort.signal }, async () => {
         if (!isCurrent()) return;
-        if (localStorage.getItem('shop-host-cleanup-epoch-v1') === epoch && !localStorage.getItem(TEARDOWN_PENDING))
-          return;
+        if (!needsShopCleanup(localStorage, epoch)) return;
         // The bearers exist only in these records once Shop's frame is gone, so read them before they are removed.
         const held = this.readHeldMarketplaceSessions();
         for (const key of SERVICE_KEYS) localStorage.removeItem(key);
-        localStorage.setItem(TEARDOWN_PENDING, '1');
+        localStorage.setItem(SHOP_TEARDOWN_PENDING_KEY, '1');
         await Promise.allSettled([
           locks.request('pubky-messaging-keys', { signal: abort.signal }, async () => {
             if (!isCurrent()) return;
@@ -154,7 +153,7 @@ export class ShopEmbedService {
               abort.signal,
               ['wrapping-key', 'wrapping-key-epoch'],
             );
-            if (keyCleared && isCurrent()) localStorage.removeItem(TEARDOWN_PENDING);
+            if (keyCleared && isCurrent()) localStorage.removeItem(SHOP_TEARDOWN_PENDING_KEY);
           }),
           // Existing Shop BFF owns the HttpOnly session and flow cookies. No App SDK grant is removed here.
           this.clearSession(abort.signal),

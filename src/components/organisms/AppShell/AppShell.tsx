@@ -1,46 +1,94 @@
 'use client';
 
+import { type ReactNode, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
-import { isPublicDocumentRoute } from '@/app/routes';
-import { Fab } from '@/molecules/Fab/Fab';
-import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
-import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
-import { GuestContextualBanner } from '@/organisms/GuestContextualBanner/GuestContextualBanner';
-import { Header } from '@/organisms/Header/Header';
-import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
-import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
+import { isPublicDocumentRoute, ROOT_ROUTES } from '@/app/routes';
+import { legacyCookieExports, readAuthStorage } from '@/libs/auth/persistence';
+import type { PersistedAuth } from '@/libs/auth/session.types';
+import { needsShopCleanup, SHOP_CLEANUP_ACK_KEY, SHOP_TEARDOWN_PENDING_KEY } from '@/libs/shop-embed/cleanup';
+import { PublicHeader } from '@/organisms/Header/PublicHeader';
+import { hasAccountState } from '@/stores/auth/auth.selectors';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { AUTH_PERSIST_KEY, LEGACY_AUTH_PERSIST_KEY, PREVIOUS_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 
-/**
- * The app tree under the root layout. Every route waits behind the database and auth gate, which holds `{children}`
- * back until IndexedDB and the session are ready, so the server's HTML holds only its spinner.
- *
- * The public documents (`/terms-of-use`, `/privacy-policy`, `/copyright`) are the exception: store listings and sign-up
- * link to them, so they render with just the header, their text in the first HTML and with no IndexedDB needed. They
- * read nothing local; the header shows members only the logo there (`Header`).
- */
+const GuardedAppShell = dynamic(() => import('./GuardedAppShell').then((module) => module.GuardedAppShell));
+
+function useLandingNeedsApp(isLanding: boolean) {
+  const needsApp = useAuthStore((state) => hasAccountState(state) || state.showSignInDialog);
+  const generation = useAuthStore((state) => state.generation);
+  const [needsStorageSync, setNeedsStorageSync] = useState(false);
+
+  useEffect(() => {
+    if (!isLanding) return;
+    const checkStorage = () => {
+      try {
+        const stored = readAuthStorage(localStorage);
+        const record: PersistedAuth | null = stored ? JSON.parse(stored).state : null;
+        const legacyCleanup = [LEGACY_AUTH_PERSIST_KEY, PREVIOUS_AUTH_PERSIST_KEY].some((key) => {
+          const value = localStorage.getItem(key);
+          return value !== null && legacyCookieExports(key, value).length > 0;
+        });
+        const hasWork = Boolean(
+          record?.currentUserPubky ||
+          record?.sessionReference ||
+          record?.retiringSession ||
+          record?.pendingRetirements?.length ||
+          needsShopCleanup(localStorage, record?.shopCleanupEpoch) ||
+          legacyCleanup,
+        );
+        setNeedsStorageSync(hasWork);
+        // Two signed-out tabs can legitimately hold different generations. Align the empty
+        // guest's compare-and-swap base without mounting the database and feed coordinators.
+        const current = useAuthStore.getState();
+        if (
+          record &&
+          !hasWork &&
+          !hasAccountState(current) &&
+          current.hasHydrated &&
+          record.generation !== current.generation
+        ) {
+          void useAuthStore.persist.rehydrate();
+        }
+      } catch {
+        // The existing recovery path owns unreadable or unavailable auth storage.
+        setNeedsStorageSync(true);
+      }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (
+        [
+          AUTH_PERSIST_KEY,
+          LEGACY_AUTH_PERSIST_KEY,
+          PREVIOUS_AUTH_PERSIST_KEY,
+          SHOP_CLEANUP_ACK_KEY,
+          SHOP_TEARDOWN_PENDING_KEY,
+          null,
+        ].includes(event.key)
+      ) {
+        checkStorage();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    checkStorage();
+    return () => window.removeEventListener('storage', onStorage);
+  }, [isLanding, generation]);
+
+  return needsApp || needsStorageSync;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const isLanding = pathname === ROOT_ROUTES;
+  const landingNeedsApp = useLandingNeedsApp(isLanding);
 
-  if (isPublicDocumentRoute(pathname)) {
+  if ((isLanding && !landingNeedsApp) || isPublicDocumentRoute(pathname)) {
     return (
       <>
-        <Header />
+        <PublicHeader />
         {children}
       </>
     );
   }
-
-  return (
-    <DatabaseProvider>
-      <RouteGuardProvider>
-        <CoordinatorsManager />
-        <Header />
-        {children}
-        <Fab />
-        <GuestContextualBanner />
-        <DialogSignIn />
-      </RouteGuardProvider>
-    </DatabaseProvider>
-  );
+  return <GuardedAppShell>{children}</GuardedAppShell>;
 }

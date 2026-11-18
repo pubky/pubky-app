@@ -10,11 +10,11 @@ import { MarkdownEditorMediaDialog } from './MarkdownEditorMediaDialog';
 
 // Mock config - use a smaller value for easier testing
 const MOCK_MAX_LENGTH = 1000;
-vi.mock('@/config/posts', () => {
+vi.mock('@/config/posts', () => ({ ARTICLE_MAX_CHARACTER_LENGTH: 1000 }));
+vi.mock('@/config/attachmentMimeTypes', () => {
   const images = ['image/gif', 'image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'];
   const nonImages = ['video/mp4', 'video/mpeg', 'audio/mpeg', 'audio/wav', 'application/pdf'];
   return {
-    ARTICLE_MAX_CHARACTER_LENGTH: 1000,
     ARTICLE_ATTACHMENT_ACCEPT_STRING: images.join(','),
     ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES: images,
     ARTICLE_INLINE_SUPPORTED_MIME_TYPES: [...images, ...nonImages],

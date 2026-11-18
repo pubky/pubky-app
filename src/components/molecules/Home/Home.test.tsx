@@ -88,7 +88,7 @@ vi.mock('@/config/externalLinks', () => ({
 }));
 
 // Social links moved from the landing navbar into the hero footer (design 41492-354461).
-vi.mock('../Header/Header', () => ({
+vi.mock('../Header/HeaderPublicContent', () => ({
   HeaderSocialLinks: ({ className }: { className?: string }) => (
     <div data-testid="header-social-links" className={className}>
       Social Links

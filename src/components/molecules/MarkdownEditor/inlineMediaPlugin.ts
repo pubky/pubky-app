@@ -21,11 +21,8 @@ import {
   PASTE_COMMAND,
 } from 'lexical';
 import type * as Mdast from 'mdast';
-import {
-  ARTICLE_INLINE_NON_IMAGE_MIME_TYPES,
-  ARTICLE_INLINE_SUPPORTED_FILE_TYPES,
-  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
-} from '@/config/posts';
+import { ARTICLE_INLINE_NON_IMAGE_MIME_TYPES, ARTICLE_INLINE_SUPPORTED_MIME_TYPES } from '@/config/attachmentMimeTypes';
+import { ARTICLE_INLINE_SUPPORTED_FILE_TYPES } from '@/config/attachmentMimeTypes';
 import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import {
   getInlineMediaKindFromMime,

@@ -8,8 +8,7 @@ import { LandingBrokenPoster } from './LandingBrokenPoster';
 
 const FEATURES: Array<{
   key: string;
-  image: string;
-  video: string;
+  asset: string;
   hoverClassName: string;
   bubbleClassName: string;
   tipClassName: string;
@@ -18,8 +17,7 @@ const FEATURES: Array<{
 }> = [
   {
     key: 'identity',
-    image: '/images/landing-webbroken1.png',
-    video: '/images/landing-webbroken1.mp4',
+    asset: '/images/landing-webbroken1',
     hoverClassName: 'group-hover:rotate-[12deg]',
     bubbleClassName: 'top-8 right-8',
     tipClassName: 'right-8 -bottom-2.5',
@@ -28,8 +26,7 @@ const FEATURES: Array<{
   },
   {
     key: 'data',
-    image: '/images/landing-webbroken2.png',
-    video: '/images/landing-webbroken2.mp4',
+    asset: '/images/landing-webbroken2',
     hoverClassName: 'group-hover:rotate-[12deg]',
     bubbleClassName: 'right-8 bottom-8',
     tipClassName: 'right-8 -top-2.5',
@@ -38,8 +35,7 @@ const FEATURES: Array<{
   },
   {
     key: 'reach',
-    image: '/images/landing-webbroken3.png',
-    video: '/images/landing-webbroken3.mp4',
+    asset: '/images/landing-webbroken3',
     hoverClassName: 'group-hover:-rotate-[12deg]',
     bubbleClassName: 'right-8 bottom-8',
     tipClassName: 'right-8 -top-2.5',
@@ -66,19 +62,20 @@ export function LandingBrokenSection() {
           </Typography>
         </Container>
         <div className="grid gap-4 md:grid-cols-3 lg:[&:has(article:hover)>article:not(:hover)]:opacity-[0.32]">
-          {FEATURES.map(({ key, image, video, hoverClassName, bubbleClassName, tipClassName, title, description }) => (
+          {FEATURES.map(({ key, asset, hoverClassName, bubbleClassName, tipClassName, title, description }) => (
             <article
               key={key}
               className="group relative rounded-md bg-card/80 p-6 shadow-sm backdrop-blur-sm transition-opacity duration-300 ease-out lg:hover:z-10"
             >
               <LandingBrokenPoster
-                image={image}
-                video={video}
+                asset={asset}
                 alt={title}
+                descriptionId={`landing-description-${key}`}
                 className={`aspect-square w-full rounded-md object-cover transition-all duration-300 ease-out group-hover:scale-120 group-hover:drop-shadow-[0_50px_100px_rgba(0,0,0,1)] ${hoverClassName}`}
               />
               <div
-                className={`pointer-events-none absolute hidden max-w-[82%] rounded-md bg-brand px-5 py-4 opacity-0 shadow-[0_50px_100px_rgba(0,0,0,0.8)] transition-opacity duration-300 ease-out group-hover:opacity-100 lg:block ${bubbleClassName}`}
+                id={`landing-description-${key}`}
+                className={`pointer-events-none absolute hidden max-w-[82%] rounded-md bg-brand px-5 py-4 opacity-0 shadow-[0_50px_100px_rgba(0,0,0,0.8)] transition-opacity duration-300 ease-out group-hover:opacity-100 group-has-focus-visible:opacity-100 lg:block ${bubbleClassName}`}
               >
                 <Typography size="sm" className="text-brand-foreground">
                   {description}

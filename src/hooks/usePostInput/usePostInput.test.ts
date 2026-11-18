@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST_SUPPORTED_FILE_TYPES } from '@/config/attachmentMimeTypes';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
@@ -8,7 +9,6 @@ import {
   ATTACHMENT_MAX_OTHER_SIZE,
   POST_ATTACHMENT_MAX_FILES,
   POST_MAX_CHARACTER_LENGTH,
-  POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
