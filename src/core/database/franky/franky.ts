@@ -6,6 +6,7 @@ import {
   DB_NAME,
   DB_VERSION,
 } from '@/config/database';
+import { TRANSIENT_INDEXED_DB_ERROR_NAMES } from '@/database/franky/franky.constants';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -49,7 +50,6 @@ const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * IndexedDB connection is severed mid-operation rather than because of a real data problem.
  * These failures are typically transient and recover on a fresh open attempt.
  */
-const TRANSIENT_INDEXED_DB_ERROR_NAMES = new Set(['UnknownError', 'AbortError']);
 const TRANSIENT_INDEXED_DB_ERROR_PATTERNS = [
   'connection to indexed database server lost',
   'database deleted by request of the user',

@@ -2,8 +2,9 @@
 
 ## Behavior
 
-PubkyApp uses `@synonymdev/pubky@0.16.2` and grant authentication for Ring, Passport (Continue with Google),
-encrypted-file and recovery-phrase login, and browser signup. Existing cookie sessions require fresh authorization.
+PubkyApp uses `@synonymdev/pubky@0.16.2` and grant authentication for Ring and Passport (Continue with Google).
+Encrypted-file and recovery-phrase login and browser signup used root grants until they were removed (#3142, #3147).
+Existing cookie sessions require fresh authorization.
 Valid saved grants continue to restore. The update does not change accounts, published content or the Dexie version.
 Nexus reads and public mute SSE subscriptions retain their current behavior (superseded by the social v1 port: mutes
 are private and polled, ADR-0014).
@@ -14,7 +15,8 @@ Since the social v1 port they also request `/pub/social/v1/:rw`, `/priv/social/v
 (`SOCIAL_V1_APP_CAPABILITIES` in `src/config/auth.ts`), and a saved grant without them is signed out by the migration
 gate instead of being upgraded in place ([ADR 0026](../adr/0026-social-v1-migration-gate.md),
 [social v1 migration](social-v1.md)).
-Key recovery and browser signup obtain root grants. Feature access depends on the active grant's actual capabilities.
+Root grants saved by the former key recovery and browser signup still restore, through the migration gate like any
+saved grant. Feature access depends on the active grant's actual capabilities.
 A valid older grant without the Locks scopes can be upgraded for the same account from the Locks UI.
 
 ### SDK 0.16 upgrade
@@ -170,10 +172,6 @@ retries once a grant is durably adopted, leaving profile-bootstrap retry to the 
 attempt, allowing correction without replacing its keys. Missing delegated pending-flow keys and malformed SDK serializations start fresh authorization;
 transient storage failures keep the pending material for retry.
 
-Encrypted-file sign-in reports decryption, session-storage and connection failures separately. A correct file must
-not be labeled invalid when IndexedDB or the app's metadata write fails. After storage recovers, retrying the same
-file can complete sign-in; there is no separate saved-session retry screen.
-
 ## Locks contract
 
 Locks keeps its merged UI, payment behavior and independent Lock Server authentication. `@synonymdev/locks-sdk`
@@ -191,8 +189,9 @@ remain visible. `modifiedAt` is milliseconds since epoch, or null.
 
 ## Rollout communication
 
-Existing cookie users must sign in again. Browser-key users can save their recovery phrase or encrypted file from
-Backup, then use it to sign in; opening Sign In or starting Passport preserves that backup material.
+Existing cookie users must sign in again. Browser-key users can export their key to Pubky Ring from Backup, or save a
+recovery phrase or encrypted file to import into Pubky Ring, then sign in with Ring; opening Sign In or starting
+Passport preserves that backup material.
 Whether and how to announce this change before release is a separate product decision.
 
 ## Verification before production rollout

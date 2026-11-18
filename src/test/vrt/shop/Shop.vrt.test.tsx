@@ -484,7 +484,7 @@ describe('embedded Shop shell — visual regression', () => {
     await expect
       .element(page.getByRole('button', { name: 'Continue with Bitkit', includeHidden: true }))
       .not.toBeVisible();
-    await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Use Passport' })).toBeVisible();
     await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
     await matchVrtFrameScreenshot('shop-enable-desktop');
   });
@@ -505,7 +505,7 @@ describe('embedded Shop shell — visual regression', () => {
         await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
         await expect.element(page.getByTestId('session-upgrade-qr')).not.toBeVisible();
-        await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Use Passport' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
         await matchVrtFrameScreenshot('shop-enable-mobile');
       } finally {

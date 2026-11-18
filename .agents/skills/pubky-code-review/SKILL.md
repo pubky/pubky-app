@@ -109,7 +109,7 @@ Review only what the project rules do not cover: (1) security: hardcoded secrets
 
 ### Reviewer 3 — Simplification
 
-One question per changed function, component or block: could this be simpler? (1) over-abstraction and premature generalisation; (2) control flow: nested if/else that could be early returns, ternaries that should be if statements; (3) duplication within the diff; (4) existing utilities ignored: `cn()`, timestamp helpers, `truncateString`, `truncateMiddle`, `formatPublicKey`, `formatFileName`, `toAppError`, `safeFetch`, route builders in `@/app/routes`, existing atoms, molecules and hooks (check `src/libs/`, `src/components/`, `src/hooks/` first); (5) components mixing concerns that belong in a hook, controller or pipe. Read the surrounding code before flagging. Do not report architecture, security or type-safety issues.
+One question per changed function, component or block: could this be simpler? (1) over-abstraction and premature generalisation; (2) control flow: nested if/else that could be early returns, ternaries that should be if statements; (3) duplication within the diff; (4) existing utilities ignored: `cn()`, timestamp helpers, `truncateString`, `truncateMiddle`, `formatPublicKey`, `toAppError`, `safeFetch`, route builders in `@/app/routes`, existing atoms, molecules and hooks (check `src/libs/`, `src/components/`, `src/hooks/` first); (5) components mixing concerns that belong in a hook, controller or pipe. Read the surrounding code before flagging. Do not report architecture, security or type-safety issues.
 
 ## Step 6 — Synthesize
 

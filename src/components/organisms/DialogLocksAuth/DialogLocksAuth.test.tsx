@@ -30,11 +30,19 @@ const mocks = vi.hoisted(() => ({
     session: null,
     error: null,
   } as { status: string; connectUrl: string | null; session: unknown; error: unknown; isConnectReady?: boolean },
+  onSetupLoad: vi.fn(),
   paykitFlow: {
-    status: 'idle' as string,
-    mode: 'setup' as 'setup' | 'reconnect',
-    setupUrl: null as string | null,
-    error: null as unknown,
+    status: 'idle',
+    mode: 'setup',
+    setupUrl: null,
+    error: null,
+  } as {
+    status: string;
+    mode: 'setup' | 'reconnect';
+    setupUrl: string | null;
+    error: unknown;
+    isSetupReady?: boolean;
+    isSetupPageFailed?: boolean;
   },
 }));
 
@@ -66,6 +74,7 @@ vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
   usePaykitSetupFlow: () => ({
     ...mocks.paykitFlow,
     iframeRef: { current: null },
+    onSetupLoad: mocks.onSetupLoad,
     check: mocks.checkPaykit,
     start: mocks.startPaykit,
     reconnect: mocks.reconnectPaykit,
@@ -345,6 +354,7 @@ describe('DialogLocksAuth', () => {
       mode: 'setup',
       setupUrl: 'https://paykit.server/setup?state=STATE',
       error: null,
+      isSetupReady: true,
     };
     renderDialog();
 
@@ -371,6 +381,88 @@ describe('DialogLocksAuth', () => {
     expect(iframe).toHaveAttribute('allow', 'clipboard-write');
   });
 
+  describe('until the /setup page reports it rendered', () => {
+    const awaitingSetup = (isSetupReady: boolean) => ({
+      status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
+      mode: 'setup' as const,
+      setupUrl: 'https://paykit.server/setup?state=STATE',
+      error: null,
+      isSetupReady,
+    });
+
+    it('keeps the Paykit iframe mounted but invisible behind the spinner', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(false);
+      renderDialog();
+
+      expect(screen.getByTitle('Bitkit payout account setup')).toHaveClass('invisible');
+      expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).toBeInTheDocument();
+    });
+
+    it('keeps the checking copy and no store badges while the Paykit iframe is hidden', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(false);
+      renderDialog();
+
+      expect(screen.getByText('Checking whether your Bitkit wallet is connected.')).toBeInTheDocument();
+      expect(screen.queryByText(/Scan this QR with your/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Google Play' })).not.toBeInTheDocument();
+    });
+
+    it('shows the scan copy and store badges once the Paykit page is ready', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(true);
+      renderDialog();
+
+      expect(screen.getByText(/Scan this QR with your/)).toBeInTheDocument();
+      expect(screen.queryByText('Checking whether your Bitkit wallet is connected.')).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
+    });
+
+    it('reports the Paykit iframe load event to the flow', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(false);
+      renderDialog();
+
+      fireEvent.load(screen.getByTitle('Bitkit payout account setup'));
+      expect(mocks.onSetupLoad).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the Paykit iframe and drops the spinner once the page is ready', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(true);
+      renderDialog();
+
+      expect(screen.getByTitle('Bitkit payout account setup')).not.toHaveClass('invisible');
+      expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).not.toBeInTheDocument();
+    });
+
+    it('replaces the hidden Paykit iframe with the error step and Try again when the page never reports', () => {
+      signIn();
+      mocks.paykitFlow = awaitingSetup(false);
+      const { rerender } = renderDialog();
+      expect(screen.getByTitle('Bitkit payout account setup')).toBeInTheDocument();
+
+      // The real hook keeps `setupUrl` after the timeout; only check() / reset() clear it.
+      mocks.paykitFlow = {
+        status: PaykitSetupFlowStatus.ERROR,
+        mode: 'setup',
+        setupUrl: 'https://paykit.server/setup?state=STATE',
+        error: { message: 'did not render' },
+        isSetupReady: false,
+        isSetupPageFailed: true,
+      };
+      rerender(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+
+      expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
+      expect(screen.getByText("Couldn't connect your Bitkit wallet. Please try again.")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(mocks.checkPaykit).toHaveBeenCalled();
+    });
+  });
+
   it('links the store badges to Bitkit on the Bitkit step', () => {
     signIn();
     mocks.paykitFlow = {
@@ -378,6 +470,7 @@ describe('DialogLocksAuth', () => {
       mode: 'setup',
       setupUrl: 'https://paykit.server/setup?state=STATE',
       error: null,
+      isSetupReady: true,
     };
     renderDialog();
 
@@ -590,6 +683,7 @@ describe('DialogLocksAuth', () => {
         mode: 'reconnect',
         setupUrl: 'https://paykit.server/setup/reconnect?creator=pubkyX&state=STATE',
         error: null,
+        isSetupReady: true,
       };
       renderDialog();
 
@@ -620,6 +714,32 @@ describe('DialogLocksAuth', () => {
       expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
       expect(mocks.reconnectPaykit).not.toHaveBeenCalled();
       expect(mocks.startPaykit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a /setup/reconnect page that never rendered', () => {
+    it('shows the generic connect copy, not the approve-in-time reconnect copy', () => {
+      signIn();
+      mocks.paykitFlow = {
+        status: PaykitSetupFlowStatus.ERROR,
+        mode: 'reconnect',
+        setupUrl: 'https://paykit.server/setup/reconnect?creator=pubkyX&state=STATE',
+        error: { message: 'Paykit setup page did not render' },
+        isSetupReady: false,
+        isSetupPageFailed: true,
+      };
+      renderDialog();
+
+      // No QR was ever shown, so there was nothing to approve within 5 minutes.
+      expect(screen.queryByText(/Approve it in Bitkit within 5 minutes/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Reconnecting Bitkit failed.')).not.toBeInTheDocument();
+      expect(screen.getByText('Something went wrong while connecting your Bitkit wallet.')).toBeInTheDocument();
+      expect(screen.getByText("Couldn't connect your Bitkit wallet. Please try again.")).toBeInTheDocument();
+      expect(screen.queryByTitle('Bitkit payout account reconnect')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+      expect(mocks.reconnectPaykit).not.toHaveBeenCalled();
     });
   });
 
