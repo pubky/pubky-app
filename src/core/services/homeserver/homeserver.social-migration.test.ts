@@ -9,7 +9,9 @@ import { ErrorCategory } from '@/libs/error/error.types';
 import { resolveArticleCover } from '@/libs/post/articleCover';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 
 const LEGACY_PROFILE = '/pub/pubky.app/profile.json';
@@ -177,6 +179,8 @@ describe('HomeserverService.migrateToSocialV1', () => {
 describe('HomeserverService.migrateToSocialV1 on a 0.x article', () => {
   let homeserver: ReturnType<typeof memoryHomeserver>;
   let session: Session;
+  // A fixed clock, so every run mints the same ids and migrates the same input
+  withFrozenSpecClock();
 
   // A timestamp id, spelled the same in both layouts; a post that is never stored mints one
   const mintId = () => buildPost(homeserver.owner, { content: 'id' }).id;
@@ -190,7 +194,7 @@ describe('HomeserverService.migrateToSocialV1 on a 0.x article', () => {
     const fileId = mintId();
     await homeserver.session.storage.putJson(`/pub/pubky.app/files/${fileId}`, {
       name,
-      created_at: Date.now() * 1000,
+      created_at: VRT_FROZEN_NOW_MS * 1000,
       src: `pubky://${homeserver.owner}/pub/pubky.app/blobs/${media.id}`,
       content_type: type,
       size: bytes.length,
@@ -279,6 +283,31 @@ describe('HomeserverService.migrateToSocialV1 on a 0.x article', () => {
         slotZeroContentType: 'image/png',
       }),
     ).toEqual({ cover: null, slots: [hero.v1, second.v1], legacyCoverSlot: false, coverCandidate: null });
+  });
+
+  it('keeps a PDF at slot 0 an attachment, with no cover and the body as written (rule B, image-only)', async () => {
+    const pdf = await seedLegacyFile(6, 'application/pdf', 'report.pdf');
+    const image = await seedLegacyFile(7, 'image/png', 'figure.png');
+    const body = 'Intro\n\n![figure](attachment:1)';
+
+    const { post, article } = await migrateArticle(body, [pdf.legacy, image.legacy]);
+
+    // Only an image can be a cover, so nothing moves and the references stay as the 0.x article numbered them
+    expect(article.cover_image).toBeNull();
+    expect(article.body).toBe(body);
+    expect(post.attachments).toEqual([
+      { uri: pdf.v1, name: pdf.name, alt: null },
+      { uri: image.v1, name: image.name, alt: null },
+    ]);
+
+    // Slot 0 is unreferenced but its row says PDF: no cover, and the slots index the attachments directly
+    expect(
+      resolveArticleCover({
+        content: post.content,
+        attachments: post.attachments.map(({ uri }) => uri),
+        slotZeroContentType: 'application/pdf',
+      }),
+    ).toEqual({ cover: null, slots: [pdf.v1, image.v1], legacyCoverSlot: false, coverCandidate: null });
   });
 });
 

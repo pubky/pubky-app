@@ -616,7 +616,7 @@ gate list.
    and gets a full code review, a security review, Greptile, talosmachina and the frontend team's review. Before it:
    the maintainer's manual pass on the local stack (after a reset and re-seed), the final review's should-fix PRs
    (the `fix/social-v1-*` PRs listed after step 7; the code ones are merged), the
-   migrator rc.2 adoption PR, and this docs sweep (the e2e follow-up landed as #3094); after it, a staging deploy and
+   migrator rc.2 adoption PR (done: #3232), and this docs sweep (the e2e follow-up landed as #3094); after it, a staging deploy and
    the maintainer's staging test (one real-Ring sign-in with the ten-scope grant; Locks before and after a migration
    with a real Paykit and Bitkit), then production with the Nexus deploy. Once step 2 is done, dispatch `e2e-test.yml`
    by hand (`workflow_dispatch`) on the final PR's head, where `pubky_stack_ref` already reads `staging`, and merge only
@@ -893,8 +893,11 @@ where they changed the app.
   above slot 1 reads as A′. The 0.x composer wrote none of these. The app's own suites now run the rc.2 migrator on a 0.x
   article with a cover and inline media and on one whose slot 0 is referenced
   (`homeserver.social-migration.test.ts`), and the Cypress migration test seeds the first and checks the stored copy and
-  the rendered article; `/priv/app.pubky/v1/` is the app namespace the port adopted (its confirmation was asked and no answer is
-  recorded); `memoryHomeserver` differences from SDK 0.16.2 are test-only; Ring writes no 0.x profile at signup.
+  the rendered article. The re-QA of a migrated article with a cover and inline media the adoption asked for ran as
+  that test: `onboarding.cy.ts` on a production build against the local stack on 2026-11-18 (20 of 20, the extended
+  migration test included, plus a negative control expecting the un-renumbered reference, which failed on the article
+  body); the branch e2e run after the merge is its CI run. `/priv/app.pubky/v1/` is the app namespace the port adopted
+  (its confirmation was asked and no answer is recorded); `memoryHomeserver` differences from SDK 0.16.2 are test-only; Ring writes no 0.x profile at signup.
 - **Ring:** scopes are approved all-or-nothing (partial approval exists only for the encryption action), with no count
   or length limit in code; the published Ring folds `/priv/social/v1/:rw` into `/priv/social/:rw`, so the grant shows
   nine scopes and adoption works; HPKE approvals with the current SDK are to be verified on staging with a real Ring

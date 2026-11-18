@@ -223,6 +223,9 @@ export const listHomeserverPathsViaApi = (user: SeededUser, prefix: HomeserverDi
 /** The fields of a stored v1 post a spec reads back; the article envelope stays a JSON string in `content`. */
 export type StoredV1Post = { kind: string; content: string; attachments: { uri: string; name: string | null }[] };
 
-/** The newest version of `post` as `post.authorId`'s homeserver stores it under the v1 root, or null when it has none. */
+/**
+ * The newest version of `post` as `post.authorId`'s homeserver stores it under the v1 root, or null when it has
+ * none.
+ */
 export const readStoredPostViaApi = (post: SeededPost) =>
   cy.task<StoredV1Post | null>('readStoredPost', { userId: post.authorId, postId: post.id });
