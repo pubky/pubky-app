@@ -504,6 +504,51 @@ describe('MuteListSyncCoordinator', () => {
       expect(list).toHaveBeenCalledTimes(1);
     });
 
+    it('does not let `online` free a newer LIST when an older LIST is abandoned while the newer one is out', async () => {
+      // Calls through: the second refresh queues behind the first LIST's lock, so count the refreshes.
+      const refreshes = vi.spyOn(MuteController, 'fetchMutedUsers');
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(10_000);
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(refreshes).toHaveBeenCalledTimes(2);
+      expect(list).toHaveBeenCalledTimes(1);
+
+      // The first LIST is abandoned at its bound, releasing the lock: the second LIST starts and holds the slot.
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS - 10_000 - MUTE_SYNC_DEBOUNCE_MS);
+      expect(refreshFailures()).toHaveLength(1);
+      expect(list).toHaveBeenCalledTimes(2);
+      for (let event = 1; event <= 5; event++) {
+        window.dispatchEvent(new Event('online'));
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+
+      expect(refreshes).toHaveBeenCalledTimes(2);
+    });
+
+    it('stays paused on the newer abandoned LIST when an older one settles, and `online` resumes with one LIST', async () => {
+      const refreshes = vi.spyOn(MuteController, 'fetchMutedUsers');
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(10_000);
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS * 2);
+      expect(refreshFailures()).toHaveLength(2);
+
+      stalled[0].resolve([]);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_POLL_INTERVAL_MS * 3);
+      expect(refreshes).toHaveBeenCalledTimes(2);
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+
+      expect(refreshes).toHaveBeenCalledTimes(3);
+    });
+
     it('resumes with one LIST when the tab is hidden and shown again', async () => {
       await abandonFirstList();
 

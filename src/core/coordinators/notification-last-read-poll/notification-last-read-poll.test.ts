@@ -528,6 +528,48 @@ describe('NotificationLastReadPollCoordinator', () => {
       expect(get).toHaveBeenCalledTimes(1);
     });
 
+    it('does not let `online` free a newer read when an older read is abandoned while the newer one is out', async () => {
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(10_000);
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      expect(get).toHaveBeenCalledTimes(2);
+
+      // The first read is abandoned at its bound while the second still holds the slot, inside its own bound.
+      await vi.advanceTimersByTimeAsync(
+        HOMESERVER_SYNC_READ_TIMEOUT_MS - 10_000 - NOTIFICATION_LAST_READ_SYNC_DEBOUNCE_MS,
+      );
+      expect(refreshFailures()).toHaveLength(1);
+      for (let event = 1; event <= 5; event++) {
+        window.dispatchEvent(new Event('online'));
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+
+      expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it('stays paused on the newer abandoned read when an older one settles, and `online` resumes with one read', async () => {
+      startOn(APP_ROUTES.HOME);
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(10_000);
+      setVisibilityState('hidden');
+      setVisibilityState('visible');
+      await settleDebounce();
+      await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+      expect(refreshFailures()).toHaveLength(2);
+
+      stalled[0].resolve(new Response(JSON.stringify({ timestamp: 3 }), { status: 200 }));
+      await vi.advanceTimersByTimeAsync(NOTIFICATION_LAST_READ_SYNC_POLL_INTERVAL_MS * 3);
+      expect(get).toHaveBeenCalledTimes(2);
+
+      window.dispatchEvent(new Event('online'));
+      await settleDebounce();
+
+      expect(get).toHaveBeenCalledTimes(3);
+    });
+
     it('resumes with one read when the tab is hidden and shown again', async () => {
       await abandonFirstRead();
 
