@@ -14,12 +14,16 @@ import { FilterPostsBar } from '@/molecules/FilterPostsBar/FilterPostsBar';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import {
   EPISODES_ANCHOR,
+  getAlsoOnName,
   getAudioStreamUrl,
   getHttpUrl,
+  getLinkHost,
   getResourceTarget,
+  isMaybeAlsoOn,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceEpisodeRow, type TEpisodeShow } from '@/molecules/ResourceCard/ResourceEpisodes';
 import { formatDuration, formatFactDate } from '@/molecules/ResourceCard/ResourceFacts.utils';
+import { ResourceSourceIcon } from '@/molecules/ResourceCard/ResourceSourceIcon';
 import { PlayStandIn } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { CompactUserListItemSkeleton } from '@/organisms/CompactUserListItemSkeleton/CompactUserListItemSkeleton';
 import { ResourceTagBar } from '@/organisms/ResourceActions/ResourceTagBar';
@@ -29,6 +33,26 @@ import type { TPinakesEpisode, TPinakesResourceDetail } from '@/services/pinakes
 export const EPISODES_FILTER_DEBOUNCE_MS = 300;
 /** Pages in a row that add no episode before the list waits for Load more. */
 const MAX_UNPRODUCTIVE_EPISODE_LOADS = 2;
+/** The services a show's older episodes open on first: the podcast apps people know it from. */
+const OLDER_EPISODES_HOSTS: readonly string[] = ['podcasts.apple.com', 'open.spotify.com'];
+
+/** Where a show's older episodes are listed: the show's page on a service, and its name. */
+export type TOlderEpisodesLink = { url: string; name: string };
+
+/**
+ * Where a show's older episodes are, past the ones Pinakes keeps: its page on Apple Podcasts or Spotify
+ * (the card's own link first, then its Also on in order), else the card's own web link, else its first
+ * Also on web link. A match by metadata (`maybe`) is never one: it may be another show. `null` without
+ * a web link.
+ */
+export function getOlderEpisodesLink(
+  card: Pick<TPinakesResourceDetail, 'uri' | 'site' | 'also_on'>,
+): TOlderEpisodesLink | null {
+  const links = [{ uri: card.uri, site: card.site }, ...card.also_on.filter((entry) => !isMaybeAlsoOn(entry))]
+    .map((entry) => ({ url: getHttpUrl(entry.uri), name: getAlsoOnName(entry) }))
+    .filter((link): link is TOlderEpisodesLink => link.url !== null);
+  return links.find((link) => OLDER_EPISODES_HOSTS.includes(getLinkHost(link.url) ?? '')) ?? links[0] ?? null;
+}
 
 /**
  * A podcast show's page: "Episodes", the episodes Pinakes keeps from the show's feed, newest first,
@@ -37,8 +61,10 @@ const MAX_UNPRODUCTIVE_EPISODE_LOADS = 2;
  * (`ResourceEpisodeRow`: Play in place, the title opening the episode's own page) with the episode's
  * own tags at its end when it has any (`ResourceTagBar` inline: the chips, no "+"; an episode is
  * tagged on its own page, as any resource). A next page that fails offers
- * Try again. Nothing for a card that is no show. The section carries the page's `#episodes` anchor
- * (a show card's "All episodes") and is scrolled to once its first episodes show.
+ * Try again. When the show's feed lists older episodes than Pinakes keeps (`truncated`), the list ends
+ * with a row opening the show on its own service for them (`getOlderEpisodesLink`). Nothing for a card
+ * that is no show. The section carries the page's `#episodes` anchor (a show card's "All episodes")
+ * and is scrolled to once its first episodes show.
  */
 export function ResourceEpisodesSection({ card }: { card: TPinakesResourceDetail | null | undefined }) {
   // A podcast show by its type; a card read before Pinakes typed it, by its latest episodes
@@ -62,6 +88,8 @@ export function ResourceEpisodesSection({ card }: { card: TPinakesResourceDetail
   useScrollToAnchor(isShow && !list.isLoading);
   if (!card || !isShow) return null;
   const show: TEpisodeShow = { uri: card.uri, name: card.name, image: getHttpUrl(card.image) };
+  // Once the list has ended: the episodes past it are on the show's own service
+  const older = list.isTruncated && !list.hasMore ? getOlderEpisodesLink(card) : null;
 
   return (
     <Container
@@ -110,6 +138,7 @@ export function ResourceEpisodesSection({ card }: { card: TPinakesResourceDetail
           {list.episodes.map((episode) => (
             <EpisodeItem key={`${episode.guid}|${episode.uri}`} episode={episode} show={show} />
           ))}
+          {older && <OlderEpisodesItem link={older} />}
         </ul>
       )}
       {list.isMoreError && (
@@ -181,6 +210,28 @@ function EpisodeItem({ episode, show }: { episode: TPinakesEpisode; show: TEpiso
         )}
       </Container>
       {episode.uri && <EpisodeTags uri={episode.uri} aliases={episode.aliases} title={title} />}
+    </li>
+  );
+}
+
+/**
+ * The list's last row when the show's feed lists older episodes than Pinakes keeps: an episode row
+ * (`PlayStandIn`) whose title opens the show on its own service in a new tab, the service's icon in
+ * Play's place.
+ */
+function OlderEpisodesItem({ link }: { link: TOlderEpisodesLink }) {
+  const title = `Older episodes on ${link.name}`;
+  return (
+    <li data-testid="resource-episodes-older" className="flex min-w-0">
+      <PlayStandIn
+        title={title}
+        label={title}
+        href={link.url}
+        linkTarget="_blank"
+        icon={<ResourceSourceIcon uri={link.url} />}
+        surface="default"
+        className="flex-1"
+      />
     </li>
   );
 }

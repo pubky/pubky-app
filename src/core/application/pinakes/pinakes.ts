@@ -70,6 +70,6 @@ export class PinakesApplication {
     options: { limit: number; offset?: number | null; q?: string | null },
   ): Promise<TPinakesEpisodePage> {
     const page = await PinakesService.fetchEpisodes(id, options);
-    return { items: page?.items ?? [], next_offset: page?.next_offset ?? null };
+    return { items: page?.items ?? [], next_offset: page?.next_offset ?? null, truncated: page?.truncated === true };
   }
 }

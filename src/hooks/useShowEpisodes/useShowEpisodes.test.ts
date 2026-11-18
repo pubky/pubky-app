@@ -130,4 +130,16 @@ describe('useShowEpisodes', () => {
     renderHook(() => useShowEpisodes(SHOW));
     expect(mocks.fetchEpisodes).not.toHaveBeenCalled();
   });
+  it('says the feed lists older episodes than Pinakes keeps once any page says so', async () => {
+    mocks.fetchEpisodes
+      .mockResolvedValueOnce({ items: [episode(504)], next_offset: 20 })
+      .mockResolvedValueOnce({ items: [episode(503)], next_offset: null, truncated: true });
+
+    const { result } = renderHook(() => useShowEpisodes(SHOW));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isTruncated).toBe(false);
+    await act(() => result.current.loadMore());
+    expect(result.current.isTruncated).toBe(true);
+    expect(result.current.hasMore).toBe(false);
+  });
 });

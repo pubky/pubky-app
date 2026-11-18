@@ -16,6 +16,8 @@ export interface UseShowEpisodesResult {
   /** The first page could not be read. */
   isError: boolean;
   hasMore: boolean;
+  /** The show's feed lists older episodes than Pinakes keeps (`truncated`): a client links the show for them. */
+  isTruncated: boolean;
   isLoadingMore: boolean;
   /** The next page could not be read: the episodes read stay, and `loadMore` asks again. */
   isMoreError: boolean;
@@ -30,6 +32,8 @@ type TRead = {
   episodes: TPinakesEpisode[];
   /** Where the next page starts, `null` after the last one. */
   nextOffset: number | null;
+  /** A page said the feed lists older episodes than Pinakes keeps. */
+  isTruncated: boolean;
   isError: boolean;
   isLoadingMore: boolean;
   isMoreError: boolean;
@@ -69,13 +73,18 @@ export function useShowEpisodes(id: string | null | undefined, q = ''): UseShowE
     if (!isEnabled || !id) return;
     const readKey = `${id}\n${query}\n${attempt}`;
     let cancelled = false;
-    const settle = (page: Pick<TRead, 'episodes' | 'nextOffset' | 'isError'>) => {
+    const settle = (page: Pick<TRead, 'episodes' | 'nextOffset' | 'isTruncated' | 'isError'>) => {
       if (!cancelled) setRead({ key: readKey, ...page, isLoadingMore: false, isMoreError: false });
     };
     PinakesController.fetchEpisodes({ id, limit: SHOW_EPISODES_PAGE_SIZE, q: query || null }).then(
       (page) =>
-        settle({ episodes: mergeEpisodes([], page.items), nextOffset: nextOffsetAfter(0, page), isError: false }),
-      () => settle({ episodes: [], nextOffset: null, isError: true }),
+        settle({
+          episodes: mergeEpisodes([], page.items),
+          nextOffset: nextOffsetAfter(0, page),
+          isTruncated: page.truncated === true,
+          isError: false,
+        }),
+      () => settle({ episodes: [], nextOffset: null, isTruncated: false, isError: true }),
     );
     return () => {
       cancelled = true;
@@ -102,6 +111,7 @@ export function useShowEpisodes(id: string | null | undefined, q = ''): UseShowE
         ...prev,
         episodes: mergeEpisodes(prev.episodes, page.items),
         nextOffset: nextOffsetAfter(prev.nextOffset, page),
+        isTruncated: prev.isTruncated || page.truncated === true,
         isLoadingMore: false,
       }));
     } catch {
@@ -116,6 +126,7 @@ export function useShowEpisodes(id: string | null | undefined, q = ''): UseShowE
     isLoading: isEnabled && !shown,
     isError: shown?.isError ?? false,
     hasMore: shown?.nextOffset != null,
+    isTruncated: shown?.isTruncated ?? false,
     isLoadingMore: shown?.isLoadingMore ?? false,
     isMoreError: shown?.isMoreError ?? false,
     loadMore,

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TPinakesEpisode, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { EPISODES_FILTER_DEBOUNCE_MS, ResourceEpisodesSection } from './ResourceEpisodesSection';
+import { EPISODES_FILTER_DEBOUNCE_MS, getOlderEpisodesLink, ResourceEpisodesSection } from './ResourceEpisodesSection';
 
 const mocks = vi.hoisted(() => ({
   fetchEpisodes: vi.fn(),
@@ -61,6 +61,19 @@ const episode = (n: number): TPinakesEpisode => ({
 });
 
 const items = () => screen.queryAllByTestId('resource-episode');
+
+const FEED = asOpaque<TPinakesResourceDetail>({
+  id: 'faf081897e81377fd45b404f02a7f190',
+  uri: 'https://podcast.darknetdiaries.com/',
+  site: 'podcast.darknetdiaries.com',
+  type: 'PodcastSeries',
+  name: 'Darknet Diaries',
+  also_on: [
+    { uri: 'https://podcastindex.org/podcast/577105', site: 'Podcast Index' },
+    { uri: 'https://open.spotify.com/show/4XPl3uEEL9hvqMkoZrzbx5', site: 'Spotify' },
+    { uri: 'https://podcasts.apple.com/us/podcast/darknet-diaries/id1296350485', site: 'Apple Podcasts' },
+  ],
+});
 
 describe('ResourceEpisodesSection', () => {
   beforeEach(() => {
@@ -274,5 +287,71 @@ describe('ResourceEpisodesSection', () => {
 
     expect(container).toBeEmptyDOMElement();
     expect(mocks.fetchEpisodes).not.toHaveBeenCalled();
+  });
+  it('ends a list the feed lists more of with the show on its own service, once its last page is read', async () => {
+    mocks.fetchEpisodes
+      .mockResolvedValueOnce({ items: [episode(504)], next_offset: 20, truncated: true })
+      .mockResolvedValueOnce({ items: [episode(503)], next_offset: null, truncated: true });
+    render(<ResourceEpisodesSection card={FEED} />);
+    await waitFor(() => expect(items()).toHaveLength(1));
+    // More pages to come: not yet
+    expect(screen.queryByTestId('resource-episodes-older')).toBeNull();
+
+    await act(async () => mocks.infinite.onLoadMore());
+    await waitFor(() => expect(items()).toHaveLength(2));
+    const older = screen.getByTestId('resource-episodes-older');
+    // The last row of the list, as an episode row: the service's icon in Play's place, no line under it
+    expect(screen.getByRole('list', { name: 'All episodes' }).lastElementChild).toBe(older);
+    const link = within(older).getByRole('link', { name: 'Older episodes on Spotify' });
+    expect(link).toHaveAttribute('href', 'https://open.spotify.com/show/4XPl3uEEL9hvqMkoZrzbx5');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(older).getByTestId('play-stand-in-icon')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(older).queryByRole('button')).toBeNull();
+    expect(older.textContent).toBe('Older episodes on Spotify');
+  });
+
+  it('lists no older-episodes row when the feed has none past the list, or with an older Pinakes', async () => {
+    mocks.fetchEpisodes.mockResolvedValueOnce({ items: [episode(504)], next_offset: null, truncated: false });
+    const { unmount } = render(<ResourceEpisodesSection card={FEED} />);
+    await waitFor(() => expect(items()).toHaveLength(1));
+    expect(screen.queryByTestId('resource-episodes-older')).toBeNull();
+    unmount();
+
+    mocks.fetchEpisodes.mockResolvedValueOnce({ items: [episode(504)], next_offset: null });
+    render(<ResourceEpisodesSection card={FEED} />);
+    await waitFor(() => expect(items()).toHaveLength(1));
+    expect(screen.queryByTestId('resource-episodes-older')).toBeNull();
+  });
+
+  it('opens older episodes on Apple Podcasts or Spotify first, else the card’s own link, never a maybe link', () => {
+    // The card's own link first when it is one of them
+    expect(
+      getOlderEpisodesLink({ ...FEED, uri: FEED.also_on[2].uri, site: 'Apple Podcasts', also_on: FEED.also_on }),
+    ).toEqual({ url: FEED.also_on[2].uri, name: 'Apple Podcasts' });
+    // Else the first of them in Also on
+    expect(getOlderEpisodesLink(FEED)).toEqual({ url: FEED.also_on[1].uri, name: 'Spotify' });
+    // A match by metadata may be another show
+    expect(
+      getOlderEpisodesLink({
+        ...FEED,
+        also_on: [
+          { uri: 'https://open.spotify.com/show/other', site: 'Spotify', derived: true, kind: 'maybe' },
+          FEED.also_on[0],
+        ],
+      }),
+    ).toEqual({ url: FEED.uri, name: 'podcast.darknetdiaries.com' });
+    // Neither: the card's own web link, else the first web link in Also on
+    expect(getOlderEpisodesLink({ ...FEED, also_on: [] })).toEqual({
+      url: FEED.uri,
+      name: 'podcast.darknetdiaries.com',
+    });
+    expect(
+      getOlderEpisodesLink({ ...FEED, uri: 'isbn:9780000000000', site: null, also_on: [FEED.also_on[0]] }),
+    ).toEqual({
+      url: FEED.also_on[0].uri,
+      name: 'Podcast Index',
+    });
+    expect(getOlderEpisodesLink({ ...FEED, uri: 'isbn:9780000000000', site: null, also_on: [] })).toBeNull();
   });
 });
