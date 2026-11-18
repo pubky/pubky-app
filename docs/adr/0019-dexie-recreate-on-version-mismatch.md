@@ -5,7 +5,8 @@
 Accepted — 2026-09-15  
 Updated — 2026-10-30 (`DB_VERSION` 3 → 4 for the social v1 port; mixed-build tabs and the recreate loop-breaker)  
 Updated — 2026-11-10 (the loop-breaker never fired: the unexpected-close path probes without `Dexie.exists()`; see _Amendment_)  
-Updated — 2026-11-11 (QA-4 A.5's verification of the reworked probe on production builds, run 2026-11-10, recorded; see _Amendment_)
+Updated — 2026-11-11 (QA-4 A.5's verification of the reworked probe on production builds, run 2026-11-10, recorded; see _Amendment_)  
+Updated — 2026-11-18 (residual recorded: the connection recovery from #3129 reopens without the version check; see _Amendment_)
 
 ## Context
 
@@ -124,6 +125,15 @@ land in a slow old tab's gap (the same end state as F-2; rare, because the old b
 delete). Rows written there stay, because the database is at the current version and start-up does not recreate
 it. Closing the old tab, which is what the screen
 asks, or the forced worker reload ends the exposure.
+
+**Residual: the connection recovery (2026-11-18).** `dev`'s recovery from a transient connection failure (#3129,
+ADR-0030) closes and reopens the database with `open()` and no version check. If this tab's connection died without a
+`versionchange` or close event, and an old-build tab deleted and recreated the database in that time, a later failing
+read makes the recovery upgrade the old build's database in place: rows the old build wrote survive in the current
+tables, and the reset is not reported, so that resync is skipped. It was reproduced in `fake-indexeddb`, not in a
+browser. The loop-breaker still converges one step later (the old tab is closed by the upgrade and recreates again; this
+tab then takes the after-close path). A guard would be an upgrade that only aborts, which this ADR's "no `.upgrade()`"
+rule would have to allow; it is a follow-up.
 
 One opening on this page is not covered: `clearDatabase()` (`franky.helpers.ts`) opens the database explicitly when
 it is closed, and an explicit `open()` ignores the auto-open switch. It runs from sign-out and account preparation; a
