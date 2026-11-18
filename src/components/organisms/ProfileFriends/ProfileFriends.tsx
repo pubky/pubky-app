@@ -7,6 +7,7 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
 import { FriendsEmpty } from '@/molecules/FriendsEmpty/FriendsEmpty';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -35,6 +36,10 @@ export function ProfileFriends() {
     pubky ?? undefined,
   );
   const { toggleFollow, isUserLoading } = useFollowUser();
+  // The list is paginated, so its length is only what has loaded so far. The heading shows the
+  // total from the profile counts, and never less than the rows already on screen.
+  const { stats } = useProfileStats(pubky ?? '');
+  const totalCount = Math.max(stats.friends, count);
 
   // Handle infinite scroll
   const { sentinelRef } = useInfiniteScroll({
@@ -72,7 +77,7 @@ export function ProfileFriends() {
   return (
     <Container className="gap-4">
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
-        Friends {count > 0 && `(${count})`}
+        Friends {totalCount > 0 && `(${totalCount})`}
       </Heading>
       <Container
         data-cy="profile-connections-list"

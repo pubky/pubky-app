@@ -59,6 +59,12 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: vi.fn(),
 }));
 
+const mockProfileStats = vi.hoisted(() => ({ value: { followers: 0, following: 0, friends: 0 } }));
+
+vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
+  useProfileStats: vi.fn(() => ({ stats: mockProfileStats.value, isLoading: false })),
+}));
+
 // Mock Atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -159,6 +165,7 @@ const mockConnectionsResult = {
 
 describe('ProfileFollowing', () => {
   beforeEach(() => {
+    mockProfileStats.value = { followers: 0, following: 0, friends: 0 };
     vi.mocked(useProfileConnections).mockImplementation(mockUseProfileConnections);
     vi.mocked(useInfiniteScroll).mockReturnValue(
       asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
@@ -198,5 +205,20 @@ describe('ProfileFollowing', () => {
     userItems.forEach((item) => {
       expect(item).toHaveAttribute('data-follow-button-variant', 'icon');
     });
+  });
+
+  it('shows the total following count from the profile stats, not the number of loaded rows', () => {
+    mockProfileStats.value = { ...mockProfileStats.value, following: 30 };
+    vi.mocked(useProfileConnections).mockReturnValue({ ...mockConnectionsResult, hasMore: true });
+
+    render(<ProfileFollowing />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Following (30)');
+  });
+
+  it('falls back to the loaded count while the profile stats are not available', () => {
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
+
+    render(<ProfileFollowing />);
+    expect(screen.getByTestId('heading')).toHaveTextContent('Following (2)');
   });
 });
