@@ -12,6 +12,9 @@ type BoundedReadOptions = {
   context?: Record<string, unknown>;
 };
 
+/** The timeouts `awaitBounded` rejected with: each ended a wait on a read that was still running. */
+const abandonedReads = new WeakSet<object>();
+
 /**
  * Waits for a homeserver `read` at most `ms` (`HOMESERVER_SYNC_READ_TIMEOUT_MS` unless given): the SDK's reads
  * take no `AbortSignal` and have no timeout, so a read that never answers would otherwise be awaited forever, and
@@ -22,7 +25,7 @@ type BoundedReadOptions = {
  * late. A read that settles first is returned, or rethrown, as it is. `withLocksTimeout`
  * (`src/core/services/locks/locks.utils.ts`) is the same race for the Locks SDK, with that service's extras, and
  * `AuthController.bounded` (`src/core/controllers/auth/auth.ts`) the same for the auth steps; a change to the race
- * belongs in all three.
+ * belongs in all three. {@link isAbandonedBoundedRead} recognises this race's timeout only.
  */
 export async function awaitBounded<T>(
   read: Promise<T>,
@@ -34,17 +37,26 @@ export async function awaitBounded<T>(
       read,
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
-          reject(
-            Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Homeserver read timed out', {
-              service: ErrorService.Homeserver,
-              operation,
-              context: { ...context, timeoutMs: ms },
-            }),
-          );
+          const error = Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Homeserver read timed out', {
+            service: ErrorService.Homeserver,
+            operation,
+            context: { ...context, timeoutMs: ms },
+          });
+          abandonedReads.add(error);
+          reject(error);
         }, ms);
       }),
     ]);
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * True for the `REQUEST_TIMEOUT` with which {@link awaitBounded} ended its wait, so for a read that was still
+ * running then and cannot be cancelled. Recognises that error object itself, so any other failure, including a
+ * `REQUEST_TIMEOUT` mapped from a 408 the homeserver answered, is false.
+ */
+export function isAbandonedBoundedRead(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && abandonedReads.has(error);
 }

@@ -3,7 +3,7 @@ import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { awaitBounded } from './bounded-read';
+import { awaitBounded, isAbandonedBoundedRead } from './bounded-read';
 
 const MS = 1_000;
 
@@ -101,5 +101,44 @@ describe('awaitBounded', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(await bounded).toMatchObject({ code: TimeoutErrorCode.REQUEST_TIMEOUT });
+  });
+});
+
+describe('isAbandonedBoundedRead', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('recognises the timeout with which awaitBounded ended its wait', async () => {
+    const bounded = awaitBounded(new Promise<never>(() => {}), { ms: MS, operation: 'fetchMutedUsers' }).catch(
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(MS);
+
+    expect(isAbandonedBoundedRead(await bounded)).toBe(true);
+  });
+
+  it('is false for a REQUEST_TIMEOUT the read itself settled with, and for any other value', async () => {
+    const answered408 = new AppError({
+      category: ErrorCategory.Timeout,
+      code: TimeoutErrorCode.REQUEST_TIMEOUT,
+      message: 'Request timeout',
+      service: ErrorService.Homeserver,
+      operation: 'request',
+      context: { statusCode: 408 },
+    });
+    const rethrown = await awaitBounded(Promise.reject(answered408), { ms: MS, operation: 'fetchMutedUsers' }).catch(
+      (error: unknown) => error,
+    );
+
+    expect(rethrown).toBe(answered408);
+    expect(isAbandonedBoundedRead(rethrown)).toBe(false);
+    expect(isAbandonedBoundedRead(new Error('Homeserver read timed out'))).toBe(false);
+    expect(isAbandonedBoundedRead(undefined)).toBe(false);
+    expect(isAbandonedBoundedRead('REQUEST_TIMEOUT')).toBe(false);
   });
 });

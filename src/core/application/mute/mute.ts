@@ -108,7 +108,8 @@ export class MuteApplication {
    * and an unmute deletes both copies, so the 0.x tree has nothing the v1 one lacks (ADR-0014).
    *
    * The whole run holds `muteSyncLock` `exclusive`; the wait for the LIST is bounded by
-   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`), after which the run fails like a failed LIST.
+   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`), after which the run fails like a failed LIST and releases
+   * the lock; the sync coordinator then pauses while the abandoned LIST runs (`isAbandonedBoundedRead`).
    *
    * The sync coordinator calls this on a timer, so the local write also stands down in four cases: the session
    * the fetch started for ended; a commit of this tab settled during the run; a LIST started later has already

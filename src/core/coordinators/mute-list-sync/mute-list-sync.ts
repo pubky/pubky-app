@@ -10,6 +10,7 @@ import {
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
 import { Logger } from '@/libs/logger/logger';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { isAbandonedBoundedRead } from '@/utils/bounded-read';
 
 /**
  * Keeps the Dexie-backed mute list aligned with the homeserver when another session mutates users.
@@ -27,6 +28,9 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * - Disabled on onboarding / sign-in / logout routes.
  * - Uses runtime notification visibility config: when true, pauses while the tab is hidden.
  * - Moving between allowed routes keeps the running interval; crossing into an allowed route refreshes.
+ * - A LIST abandoned at the sync-read bound pauses polling until a stop (the tab hidden while the visibility flag
+ *   pauses polling, an account change, a disabled route), `online` or a reload, instead of stacking a LIST per
+ *   interval on a homeserver that hangs (ADR-0014).
  */
 export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, PollingServiceState> {
   private static instance: MuteListSyncCoordinator | null = null;
@@ -39,10 +43,12 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
 
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   /**
-   * The LIST still out, so a slow one does not stack up. Cleared on stop, so one that never settles cannot end
-   * polling, and freed once the fetch settles, which `MuteApplication.fetchMutedUsers` bounds by
-   * `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`); `fetchMutedUsers` also keeps an older LIST that answers
-   * late from undoing a newer one.
+   * The LIST still out, so a slow one does not stack up. Freed once the fetch settles, except when
+   * `MuteApplication.fetchMutedUsers` gave up on it at `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`): that LIST
+   * still runs and the SDK cannot cancel it, so the slot stays taken and polling pauses until a stop (the tab
+   * hidden under the visibility flag, the account changed, a disabled route) or `online` clears it. Clearing it on
+   * a stop also means a LIST that never settles cannot end polling. `fetchMutedUsers` also keeps an older LIST that
+   * answers late from undoing a newer one.
    */
   private activeRefresh: symbol | null = null;
   private accountUnsubscribe: (() => void) | null = null;
@@ -50,6 +56,12 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
   /** A return to the network or to the tab: the interval alone could leave the list a full period behind. */
   private readonly refreshIfActive = () => {
     if (this.shouldPoll()) void this.poll();
+  };
+
+  /** The connection is back: release a slot an abandoned read kept, then refresh. */
+  private readonly resumeOnline = () => {
+    this.activeRefresh = null;
+    this.refreshIfActive();
   };
 
   private readonly refreshIfVisible = () => {
@@ -65,7 +77,7 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
       this.evaluateAndStartPolling();
     });
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', this.refreshIfActive);
+      window.addEventListener('online', this.resumeOnline);
       document.addEventListener('visibilitychange', this.refreshIfVisible);
     }
   }
@@ -108,7 +120,7 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
     this.accountUnsubscribe?.();
     this.accountUnsubscribe = null;
     if (typeof window !== 'undefined') {
-      window.removeEventListener('online', this.refreshIfActive);
+      window.removeEventListener('online', this.resumeOnline);
       document.removeEventListener('visibilitychange', this.refreshIfVisible);
     }
   }
@@ -124,8 +136,9 @@ export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, P
     } catch (error) {
       // Don't stop polling on error: the next trigger retries.
       Logger.error('Mute list refresh failed', { error });
-    } finally {
-      if (this.activeRefresh === refresh) this.activeRefresh = null;
+      // The abandoned read still runs and cannot be cancelled: keep its slot, so no trigger stacks another on it.
+      if (isAbandonedBoundedRead(error)) return;
     }
+    if (this.activeRefresh === refresh) this.activeRefresh = null;
   }
 }
