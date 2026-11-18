@@ -64,17 +64,21 @@ export function settleArticleSlotZero(resolved: ResolvedArticleCover, slotZeroIs
  * Where an article's cover and inline media are, for the three shapes a reader meets (ADR-0023 as
  * amended by ADR-0027):
  *
- * - **A** (written by this app): `cover_image` set, `attachments` hold the inline media only and
- *   `attachment:{n}` indexes them directly.
- * - **A'** (migrated by `pubky-social-migrator` 1.0.0-rc.1): `cover_image` set because the
- *   migrator promoted `attachments[0]` into it, but the body's references were not renumbered,
- *   so a reference `n` still means the file that is now at `attachments[n - 1]`. Told apart from A
- *   by references that exist but never name slot 0, which this app's writer always does when it
- *   has any inline media. A' goes only once no rc.1-written article is left to read, never "once
- *   rc.2 is pinned": the rc.2 migrator (transform revision 4) writes shape A, or a null cover (rule
- *   B) when slot 0 is not an image, never A'; but its writes are create-only, so neither pinning it
- *   nor raising `SOCIAL_MIGRATION_TRANSFORM_REV` rewrites an article rc.1 copied (ADR-0023, amended
- *   2026-11-10).
+ * - **A** (written by this app, and by `pubky-social-migrator` 1.0.0-rc.2, the pinned one, when it
+ *   promotes a 0.x cover): `cover_image` set, `attachments` hold the inline media only and
+ *   `attachment:{n}` indexes them directly. rc.2 (transform revision 4) promotes `attachments[0]`
+ *   only when it is an image the body does not reference, and then renumbers every reference
+ *   `attachment:{n}` to `attachment:{n-1}`; otherwise it writes a null cover and the attachments
+ *   as they were, which reads as rule B.
+ * - **A'** (migrated by `pubky-social-migrator` 1.0.0-rc.1, before rc.2 was pinned):
+ *   `cover_image` set because the migrator promoted `attachments[0]` into it, but the body's
+ *   references were not renumbered, so a reference `n` still means the file that is now at
+ *   `attachments[n - 1]`. Told apart from A by references that exist but never name slot 0, which
+ *   this app's writer always does when it has any inline media, and so does rc.2's renumbering of a
+ *   0.x body that named slot 1. A' stays for as long as an rc.1-written article is left to read:
+ *   the migrator's writes are create-only, so neither pinning rc.2 nor raising
+ *   `SOCIAL_MIGRATION_TRANSFORM_REV` rewrites an article rc.1 copied (ADR-0023, amended
+ *   2026-11-10 and 2026-11-18).
  * - **B** (0.x, never migrated; also every migrated article as Nexus serves it, in the 0.x content
  *   shape): no `cover_image`; `attachments[0]` is the cover when the body does not reference
  *   `attachment:0` and its file is an image, which only its metadata says

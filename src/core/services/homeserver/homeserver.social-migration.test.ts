@@ -1,10 +1,12 @@
 import type { Session } from '@synonymdev/pubky';
 import type { ProgressEvent } from 'pubky-social-migrator';
+import { buildFile, buildPost, decodeContent, decodeObject } from 'pubky-social-specs';
 import { memoryHomeserver } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCIAL_MIGRATION_FLAG_PATH, SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import { AuthErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -164,6 +166,119 @@ describe('HomeserverService.migrateToSocialV1', () => {
       vi.doUnmock('pubky-social-migrator');
       vi.resetModules();
     }
+  });
+});
+
+/**
+ * The real migrator over the in-memory homeserver on a 0.x article, then the app's reader on what it stored: the
+ * transform's article rule (pubky-social-specs#210, transform revision 4) and `resolveArticleCover` must agree on
+ * the cover and on the file each `attachment:{n}` of the body shows.
+ */
+describe('HomeserverService.migrateToSocialV1 on a 0.x article', () => {
+  let homeserver: ReturnType<typeof memoryHomeserver>;
+  let session: Session;
+
+  // A timestamp id, spelled the same in both layouts; a post that is never stored mints one
+  const mintId = () => buildPost(homeserver.owner, { content: 'id' }).id;
+
+  /** A 0.x upload as a 0.x client made it: the blob, then its file record. Yields its 0.x URL and its v1 copy's. */
+  const seedLegacyFile = async (byte: number, type: string, name: string) => {
+    const bytes = new Uint8Array([byte, byte, byte]);
+    // A 0.x blob id is the hash a v1 media id is
+    const media = buildFile(homeserver.owner, { bytes, type });
+    await homeserver.session.storage.putBytes(`/pub/pubky.app/blobs/${media.id}`, bytes);
+    const fileId = mintId();
+    await homeserver.session.storage.putJson(`/pub/pubky.app/files/${fileId}`, {
+      name,
+      created_at: Date.now() * 1000,
+      src: `pubky://${homeserver.owner}/pub/pubky.app/blobs/${media.id}`,
+      content_type: type,
+      size: bytes.length,
+    });
+    return { legacy: `pubky://${homeserver.owner}/pub/pubky.app/files/${fileId}`, v1: media.url, name };
+  };
+
+  /** Seeds a 0.x `long` post with this body and these attachments, migrates, and reads back the v1 post it became. */
+  const migrateArticle = async (body: string, attachments: string[]) => {
+    const postId = mintId();
+    await homeserver.session.storage.putJson(`/pub/pubky.app/posts/${postId}`, {
+      content: JSON.stringify({ title: 'Before the migration', body }),
+      kind: 'long',
+      parent: null,
+      embed: null,
+      attachments,
+    });
+
+    const report = await HomeserverService.migrateToSocialV1({ session });
+    expect(report.status).toBe('done');
+
+    const versions = await homeserver.session.storage.list(`/pub/social/v1/posts/${postId}/`);
+    expect(versions).toHaveLength(1);
+    const post = decodeObject(versions[0], await homeserver.publicStorage.getBytes(versions[0]), 'post');
+    const envelope = decodeContent(post);
+    if (envelope?.kind !== 'article') return expect.unreachable(`the copy of ${postId} is no article`);
+    return { post, article: envelope.content };
+  };
+
+  beforeEach(() => {
+    homeserver = memoryHomeserver();
+    session = asOpaque<Session>(homeserver.session);
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: createTestWebLocks() });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+  });
+
+  it('moves an unreferenced image at slot 0 into the cover and renumbers the inline references (rule A)', async () => {
+    const cover = await seedLegacyFile(1, 'image/png', 'cover.png');
+    const image = await seedLegacyFile(2, 'image/png', 'inline.png');
+    const video = await seedLegacyFile(3, 'video/mp4', 'clip.mp4');
+
+    // The 0.x composer numbered the inline media from 1, after the cover at slot 0
+    const { post, article } = await migrateArticle(
+      'Intro\n\n![inline](attachment:1)\n\nBetween\n\n![clip](attachment:2)\n\n![inline again](attachment:1)',
+      [cover.legacy, image.legacy, video.legacy],
+    );
+
+    expect(article.cover_image).toBe(cover.v1);
+    expect(post.attachments).toEqual([
+      { uri: image.v1, name: image.name, alt: null },
+      { uri: video.v1, name: video.name, alt: null },
+    ]);
+    // Each reference follows its file down one slot; everything else in the body keeps its bytes
+    expect(article.body).toBe(
+      'Intro\n\n![inline](attachment:0)\n\nBetween\n\n![clip](attachment:1)\n\n![inline again](attachment:0)',
+    );
+
+    // Shape A, not A': the renumbered body names slot 0, so the slots index the attachments as stored
+    expect(resolveArticleCover({ content: post.content, attachments: post.attachments.map(({ uri }) => uri) })).toEqual(
+      { cover: cover.v1, slots: [image.v1, video.v1], legacyCoverSlot: false, coverCandidate: null },
+    );
+  });
+
+  it('keeps a referenced slot 0 inline, with no cover and the body as written (rule B)', async () => {
+    const hero = await seedLegacyFile(4, 'image/png', 'hero.png');
+    const second = await seedLegacyFile(5, 'image/png', 'second.png');
+    const body = '![hero](attachment:0)\n\nText\n\n![second](attachment:1)';
+
+    const { post, article } = await migrateArticle(body, [hero.legacy, second.legacy]);
+
+    expect(article.cover_image).toBeNull();
+    expect(article.body).toBe(body);
+    expect(post.attachments).toEqual([
+      { uri: hero.v1, name: hero.name, alt: null },
+      { uri: second.v1, name: second.name, alt: null },
+    ]);
+
+    // Slot 0 is an image, but the body references it: inline media, never the cover
+    expect(
+      resolveArticleCover({
+        content: post.content,
+        attachments: post.attachments.map(({ uri }) => uri),
+        slotZeroContentType: 'image/png',
+      }),
+    ).toEqual({ cover: null, slots: [hero.v1, second.v1], legacyCoverSlot: false, coverCandidate: null });
   });
 });
 
