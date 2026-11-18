@@ -1,5 +1,4 @@
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { FeedNavigation } from '@/organisms/FeedNavigation/FeedNavigation';
 import { PostInput } from '@/organisms/PostInput/PostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -17,7 +16,6 @@ export function Custom() {
     <>
       {/* First child so the mobile tab bar sits directly under the compact header (Hot pattern). */}
       <FeedNavigation />
-      <AlertBackup />
       <TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM}>
         <PostInput variant={POST_INPUT_VARIANT.POST} />
       </TimelineFeed>

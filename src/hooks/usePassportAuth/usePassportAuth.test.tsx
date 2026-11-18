@@ -159,8 +159,8 @@ describe('usePassportAuth', () => {
     vi.restoreAllMocks();
   });
 
-  it('opens the popup synchronously, preserves backup material, then navigates it to Passport', async () => {
-    useOnboardingStore.setState({ secretKey: 'abandoned-secret', mnemonic: 'abandoned words', inviteCode: 'CODE' });
+  it('opens the popup synchronously, keeps the invite code, then navigates it to Passport', async () => {
+    useOnboardingStore.setState({ inviteCode: 'CODE' });
     const flow = createFlow();
     mockGetPassportAuthUrl.mockResolvedValue(flow);
 
@@ -169,15 +169,13 @@ describe('usePassportAuth', () => {
       hook.result.current.startPassportAuth();
     });
 
-    // Opening a popup is not successful account adoption and must not erase the only backup.
+    // Opening a popup is not successful account adoption and must not reset onboarding.
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(openSpy).toHaveBeenCalledWith(
       'about:blank',
       `pubky-passport-${attemptIds[0]}`,
       'popup,width=375,height=812',
     );
-    expect(useOnboardingStore.getState().secretKey).toBe('abandoned-secret');
-    expect(useOnboardingStore.getState().mnemonic).toBe('abandoned words');
     expect(useOnboardingStore.getState().inviteCode).toBe('CODE');
 
     await flushMicrotasks();
@@ -210,50 +208,16 @@ describe('usePassportAuth', () => {
     await act(async () => flow.approval.resolve(mockSession()));
   });
 
-  it('preserves draft keys until Passport actually adopts an account', async () => {
-    useAuthStore.setState({
-      currentUserPubky: 'draft-account',
-      session: null,
-      sessionReference: null,
-      restoreStatus: 'idle',
-    });
-    useOnboardingStore.setState({ secretKey: 'draft-secret', mnemonic: 'draft words' });
-    mockGetPassportAuthUrl.mockResolvedValue(createFlow());
-    const hook = renderHook(() => usePassportAuth());
-    act(() => hook.result.current.startPassportAuth());
-    expect(useOnboardingStore.getState().secretKey).toBe('draft-secret');
-    expect(useOnboardingStore.getState().mnemonic).toBe('draft words');
-    await flushMicrotasks();
-  });
-
-  it.each(['reauth-required', 'temporary-error', 'restoring'] as const)(
-    'preserves pending backup material when Passport fails during %s',
-    async (restoreStatus) => {
-      useAuthStore.setState({ currentUserPubky: 'recovering-account', restoreStatus });
-      useOnboardingStore.setState({ secretKey: 'saved-secret', mnemonic: 'saved words' });
-      mockGetPassportAuthUrl.mockRejectedValue(new Error('Network unavailable'));
-      const hook = renderHook(() => usePassportAuth());
-      act(() => hook.result.current.startPassportAuth());
-      await flushMicrotasks();
-      expect(useOnboardingStore.getState()).toMatchObject({
-        secretKey: 'saved-secret',
-        mnemonic: 'saved words',
-      });
-      expect(useAuthStore.getState().currentUserPubky).toBe('recovering-account');
-      expect(hook.result.current.isPending).toBe(false);
-    },
-  );
-
   it('settles popup-blocked without starting a flow or touching onboarding state when the popup is blocked', async () => {
     openSpy.mockImplementation(() => null);
-    useOnboardingStore.setState({ secretKey: 'still-mine' });
+    useOnboardingStore.setState({ inviteCode: 'STILL-MINE' });
     const onAttemptSettled = vi.fn();
     const hook = renderHook(() => usePassportAuth({ onAttemptSettled }));
 
     await startAttempt(hook);
 
     expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
-    expect(useOnboardingStore.getState().secretKey).toBe('still-mine');
+    expect(useOnboardingStore.getState().inviteCode).toBe('STILL-MINE');
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Allow pop-ups for this site to continue with Google.',

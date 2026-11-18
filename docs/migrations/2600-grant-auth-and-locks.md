@@ -64,8 +64,7 @@ safely share V2 records. This bump does not enable signed approvals or encryptio
   logout can still advance the auth reference independently. Migration resync waits for a ready session too.
 - Cross-tab account changes reset account-specific memory without overwriting the other tab's shared settings, then
   bootstrap the incoming account before exposing it. Same-account upgrades preserve the profile, route and composer.
-  Incoming onboarding recovery material is rehydrated only for its owning account. Locks restore and creator calls
-  also check account ownership; delayed work cannot reinstall the previous account's session.
+  Locks restore and creator calls also check account ownership; delayed work cannot reinstall the previous account's session.
 - A retained public identity is not authorization. Public pages and the exact core explore routes (`/home`, `/hot`,
   `/search`, `/collections`) remain readable during recovery, including pending database resync. Explore routes still
   wait for auth hydration; protected sub-routes such as `/collections/bookmarks` redirect to the existing landing page when restoration fails. Mutations,
@@ -158,13 +157,8 @@ adoption/bootstrap failures remain visible even if the mobile subscriber unmount
 a generic approval 401 while the screen is mounted is reported rather than classified as idle expiry. A newer request supersedes adoption by an older popup. The deployed
 Passport still needs verification even when its source supports `signin_grant` and `signer.approveAuthRequest`.
 
-Browser signup retains its original keys and creation stage after uncertain network responses. It attempts signin
-before spending the invite again; only a definitive missing account in the still-current signup permits another create
-attempt. Only this known signup path may repair a proven missing PKARR record to the intended homeserver. Failed grant/bootstrap work must not
-destroy backup keys. The existing onboarding backup and logout confirmation protect saved browser keys before clearing them. Downloading a file or completing the phrase quiz does
-not itself authorize deletion: users with an existing backup select Done and confirm. Invite signup stops automatic
-retries once a grant is durably adopted, leaving profile-bootstrap retry to the automatic session lifecycle. A definitive rejected invite clears only the creation
-attempt, allowing correction without replacing its keys. Missing delegated pending-flow keys and malformed SDK serializations start fresh authorization;
+Browser signup was removed in #3142. The keys, recovery phrases and sign-up attempts it stored in `onboarding-storage`
+were deleted by version 1 of the onboarding store, after the deadline announced in #3236. Missing delegated pending-flow keys and malformed SDK serializations start fresh authorization;
 transient storage failures keep the pending material for retry.
 
 ## Locks contract
@@ -184,9 +178,9 @@ remain visible. `modifiedAt` is milliseconds since epoch, or null.
 
 ## Rollout communication
 
-Existing cookie users must sign in again. Browser-key users can export their key to Pubky Ring from Backup, or save a
-recovery phrase or encrypted file to import into Pubky Ring, then sign in with Ring; opening Sign In or starting
-Passport preserves that backup material.
+Existing cookie users must sign in again. Browser-key users had until December 18, 2026 to export their key to Pubky
+Ring from Backup (#3236); the app then deleted the keys still stored in the browser. A recovery phrase or encrypted file
+saved earlier can still be imported into Pubky Ring.
 Whether and how to announce this change before release is a separate product decision.
 
 ## Verification before production rollout

@@ -10,15 +10,13 @@ import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-uti
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { VrtDialogChrome } from '@/test-utils/vrt.dialog-chrome';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
-import { DialogBackup } from '@/organisms/DialogBackup/DialogBackup';
-import { DialogConfirmBackup } from '@/organisms/DialogConfirmBackup/DialogConfirmBackup';
 import { DialogInstallIos } from '@/organisms/DialogInstallIos/DialogInstallIos';
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { DialogWelcome } from '@/organisms/DialogWelcome/DialogWelcome';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 
-// Welcome, backup reminders, the age notice, install, Locks, and pay-to-unlock.
+// Welcome, the age notice, install, Locks, and pay-to-unlock.
 // Sign-in is already covered in auth/DialogSignIn.vrt.test.tsx.
 // Terms and privacy are pages now (`/terms-of-use`, `/privacy-policy`), not dialogs.
 
@@ -28,13 +26,6 @@ const VIEWPORTS = [
 ] as const;
 
 const CHROME_IMAGES = ['/pubky-logo.svg'] as const;
-const BACKUP_IMAGES = ['/images/note.webp', '/images/folder.webp', '/images/keyring.webp'] as const;
-const RING_EXPORT_IMAGES = [
-  '/images/pubky-ring-phone.webp',
-  '/images/ring-logo.svg',
-  '/images/badge-apple.webp',
-  '/images/badge-android.webp',
-] as const;
 const LOCKS_INTRO_IMAGES = ['/images/locks-intro.webp'] as const;
 const LOCKS_ENABLED_IMAGES = ['/images/locks-enabled.webp'] as const;
 const PAY_IMAGES = ['/images/bitkit-logo.svg', '/images/badge-apple.webp', '/images/badge-android.webp'] as const;
@@ -43,7 +34,6 @@ const flags = vi.hoisted(() => ({
   showWelcomeDialog: false,
   locksAuthenticated: false,
   paykitConnected: false,
-  recoveryPhrase: 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima',
 }));
 
 const fixtures = vi.hoisted(async () => {
@@ -106,11 +96,6 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
     setShowWelcomeDialog: (value: boolean) => {
       flags.showWelcomeDialog = value;
     },
-    mnemonic: flags.recoveryPhrase,
-    clearSecrets: vi.fn(),
-    secretKey: null as string | null,
-    // Signed-out value. `hasSignupAttemptForSecretState` reads `.pubky` when this is not null.
-    signupAttempt: null,
     hasHydrated: true,
   }),
 }));
@@ -276,7 +261,7 @@ async function renderDialog(
   return dialog;
 }
 
-describe('Welcome and backup dialogs — visual regression', () => {
+describe('Welcome dialog — visual regression', () => {
   beforeEach(() => {
     flags.showWelcomeDialog = false;
     flags.locksAuthenticated = false;
@@ -289,85 +274,6 @@ describe('Welcome and backup dialogs — visual regression', () => {
     await expect.element(dialog.getByTestId('dialog-title')).toHaveTextContent('Welcome to Pubky!');
     await expect.element(dialog.getByText('Alice Mercado')).toBeVisible();
     await matchVrtFrameScreenshot(`dialog-welcome-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders backup methods at %s viewport', async (name, viewport) => {
-    const dialog = await renderDialog(<DialogBackup open onOpenChange={() => undefined} />, viewport, BACKUP_IMAGES);
-    await expect.element(dialog.getByTestId('dialog-title')).toHaveTextContent('Back up your pubky');
-    await expect.element(dialog.getByRole('img', { name: 'Note' })).toBeVisible();
-    await matchVrtFrameScreenshot(`dialog-backup-methods-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders the backup confirmation at %s viewport', async (name, viewport) => {
-    await preloadImages(CHROME_IMAGES);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogConfirmBackup />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Done' }).click();
-    const dialog = page.getByTestId('dialog-content');
-    await expect.element(dialog.getByTestId('dialog-title')).toHaveTextContent('All backed up?');
-    await matchVrtFrameScreenshot(`dialog-backup-confirm-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders a hidden recovery phrase at %s viewport', async (name, viewport) => {
-    await preloadImages([...CHROME_IMAGES, ...BACKUP_IMAGES]);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogBackup open onOpenChange={() => undefined} />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Continue' }).first().click();
-    await expect.element(page.getByTestId('dialog-title').filter({ hasText: 'Backup recovery phrase' })).toBeVisible();
-    await expect.element(page.getByRole('button', { name: 'Reveal recovery phrase' })).toBeVisible();
-    await matchVrtFrameScreenshot(`dialog-backup-phrase-hidden-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders a revealed recovery phrase at %s viewport', async (name, viewport) => {
-    await preloadImages([...CHROME_IMAGES, ...BACKUP_IMAGES]);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogBackup open onOpenChange={() => undefined} />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Continue' }).first().click();
-    await page.getByRole('button', { name: 'Reveal recovery phrase' }).click();
-    await expect.element(page.getByText('alpha')).toBeVisible();
-    await expect.element(page.getByRole('button', { name: 'Hide recovery phrase' })).toBeVisible();
-    await matchVrtFrameScreenshot(`dialog-backup-phrase-revealed-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders the encrypted-file backup at %s viewport', async (name, viewport) => {
-    await preloadImages([...CHROME_IMAGES, ...BACKUP_IMAGES]);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogBackup open onOpenChange={() => undefined} />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Continue' }).nth(1).click();
-    await expect
-      .element(page.getByTestId('dialog-title').filter({ hasText: 'Backup as encrypted file' }))
-      .toBeVisible();
-    await matchVrtFrameScreenshot(`dialog-backup-encrypted-${name}`);
-  });
-
-  it.each(VIEWPORTS)('renders the Pubky Ring export at %s viewport', async (name, viewport) => {
-    await preloadImages([...CHROME_IMAGES, ...BACKUP_IMAGES, ...RING_EXPORT_IMAGES]);
-    await renderForVRT(
-      <VrtDialogChrome>
-        <DialogBackup open onOpenChange={() => undefined} />
-      </VrtDialogChrome>,
-      { viewport },
-    );
-    await page.getByRole('button', { name: 'Continue' }).nth(2).click();
-    const exportTitle = page.getByTestId('dialog-title').filter({ hasText: 'Import recovery phrase' });
-    await expect.element(viewport.width >= 1024 ? exportTitle.first() : exportTitle.last()).toBeVisible();
-    await matchVrtFrameScreenshot(`dialog-backup-ring-export-${name}`);
   });
 });
 

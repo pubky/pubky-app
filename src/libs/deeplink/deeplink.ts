@@ -1,9 +1,5 @@
 import { getDeployEnv } from '@/config/network';
 
-export interface GenerateDeeplinkOptions {
-  encode?: boolean;
-}
-
 export type MobileAuthSigner = 'ring' | 'bitkit';
 
 const PUBKYAUTH_PREFIX = 'pubkyauth://';
@@ -12,12 +8,6 @@ const BITKIT_ANDROID_PACKAGE = 'to.bitkit';
 // Staging pairs with the regtest Bitkit build so its payments are compatible.
 const BITKIT_REGTEST_ANDROID_PACKAGE = 'to.bitkit.dev';
 const CANONICAL_GRANT_URL = /^pubkyauth:\/\/(signin_grant|signup_grant)(?:\/[^\s?#]*)?(?:\?[^\s#]+)?$/;
-
-export const generatePubkyRingDeeplink = (value: string, options: GenerateDeeplinkOptions = {}): string => {
-  const { encode = true } = options;
-  const payload = encode ? encodeURIComponent(value) : value;
-  return `pubkyring://${payload}`;
-};
 
 // Bitkit rejects the link unless `pubky` is its only query parameter, so nothing may be appended to it.
 export const generateBitkitContactDeeplink = (pubky: string): string =>

@@ -102,7 +102,6 @@ z-0   ─────────────  Normal document flow
 
 - `ProgressSteps`
 - `ButtonFilters`
-- `WordSlot` badges
 - `IllustratedEmptyState`
 
 ### Floating (`z-30`)

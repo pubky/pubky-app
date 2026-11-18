@@ -8,7 +8,6 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { BROWSER_KEY_DELETION_DATE } from '@/config/auth';
 import { DialogFeedback } from '@/organisms/DialogFeedback/DialogFeedback';
 import { FAQAccordion } from '../../FAQAccordion/FAQAccordion';
 import type { FAQAccordionItem } from '../../FAQAccordion/FAQAccordion.types';
@@ -53,7 +52,8 @@ export function HelpContent() {
         {
           id: '3',
           question: 'How can I restore my account?',
-          answer: `If you signed up with Pubky Ring, sign in with Pubky Ring to restore your account.\n\nIf your keys were created in the browser with an earlier version of Pubky App, you were prompted to back them up using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nImport that backup into Pubky Ring, then sign in with Pubky Ring. If you have not backed up yet, use Backup on the home feed to export the key to Pubky Ring: Pubky App deletes keys stored in the browser on ${BROWSER_KEY_DELETION_DATE}.`,
+          answer:
+            'If you signed up with Pubky Ring, sign in with Pubky Ring to restore your account.\n\nIf your keys were created in the browser with an earlier version of Pubky App, you were prompted to back them up using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nImport that backup into Pubky Ring, then sign in with Pubky Ring.',
         },
         {
           id: '4',
@@ -81,7 +81,8 @@ export function HelpContent() {
         {
           id: '8',
           question: 'I missed downloading the recovery file. Can I back up again?',
-          answer: 'Currently, backups can only be created once via the web app. This may change in future updates.',
+          answer:
+            'No. Pubky App no longer keeps keys that were created in the browser, so it cannot make another backup. If you still have the recovery phrase or a .pkarr file, import it into Pubky Ring.',
         },
       ] as FAQAccordionItem[],
     },

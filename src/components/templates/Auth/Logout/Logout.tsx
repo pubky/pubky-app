@@ -9,19 +9,15 @@ import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { AuthController } from '@/controllers/auth/auth';
-import { useHasBackupAccount } from '@/hooks/useHasBackupAccount/useHasBackupAccount';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
-import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { LogoutContent, LogoutNavigation } from '@/molecules/Logout/Logout';
 import { PageTitle } from '@/molecules/Page/Page';
-import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { hasAccountState } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 type LogoutViewState = 'idle' | 'loading' | 'success' | 'error' | 'canceled';
 
@@ -47,7 +43,6 @@ async function handleRouteLogout(setViewState: Dispatch<SetStateAction<LogoutVie
 
 export function Logout() {
   const router = useRouter();
-  const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const hasAuthAccount = useAuthStore(hasAccountState);
   const generation = useAuthStore((state) => state.generation);
@@ -56,15 +51,7 @@ export function Logout() {
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const [viewState, setViewState] = useState<LogoutViewState>('idle');
 
-  const secretKey = useOnboardingStore((state) => state.secretKey);
-  // Same rule as AlertBackup, which this page renders: a generated pubky without an account has nothing to back up,
-  // while a key whose sign-up already started keeps the prompt (#2955).
-  const hasBackupAccount = useHasBackupAccount();
-  const needsBackup = Boolean(
-    hasBackupAccount && secretKey && currentUserPubky && Identity.tryZ32FromSecret(secretKey) === currentUserPubky,
-  );
-
-  const isHydrated = onboardingHasHydrated && authHasHydrated;
+  const isHydrated = authHasHydrated;
   const isSignedOut = !hasAuthAccount && currentUserPubky === null;
 
   useEffect(() => {
@@ -77,7 +64,6 @@ export function Logout() {
       setViewState('canceled');
       return;
     }
-    if (needsBackup) return;
 
     if (isSignedOut) {
       setViewState('success');
@@ -85,7 +71,7 @@ export function Logout() {
     }
 
     void handleRouteLogout(setViewState);
-  }, [isHydrated, isLoggingOut, isSignedOut, viewState, needsBackup, currentUserPubky, generation]);
+  }, [isHydrated, isLoggingOut, isSignedOut, viewState, currentUserPubky, generation]);
 
   const onHandleHome = () => {
     router.push(ROOT_ROUTES);
@@ -144,29 +130,7 @@ export function Logout() {
     !isHydrated || isLoggingOut || viewState === 'loading' || (viewState === 'idle' && !isSignedOut);
 
   const content =
-    needsBackup && isHydrated && viewState !== 'canceled' ? (
-      <>
-        <Container className="gap-6">
-          <PageHeader>
-            <PageTitle size="large">Back up your key before signing out</PageTitle>
-            <PageSubtitle>
-              Your recovery key is only saved in this browser, and Pubky App signs in with Pubky Ring. Export it to
-              Pubky Ring before you sign out. If you already have a backup, choose Done to confirm and sign out.
-            </PageSubtitle>
-          </PageHeader>
-          <AlertBackup />
-        </Container>
-        <div className="onboarding-nav mt-auto w-full lg:mt-0">
-          <ButtonsNavigation
-            id="logout-backup-navigation"
-            className={LOGOUT_NAV_CLASSNAME}
-            backText="Homepage"
-            hiddenContinueButton
-            onHandleBackButton={onHandleHome}
-          />
-        </div>
-      </>
-    ) : viewState === 'canceled' ? (
+    viewState === 'canceled' ? (
       <>
         <Container className="gap-6">
           <PageHeader>

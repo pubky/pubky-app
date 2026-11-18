@@ -5,7 +5,6 @@ import type {
   TDeleteAccountInput,
   TDownloadDataInput,
 } from '@/controllers/profile/profile.types';
-import { Identity } from '@/libs/identity/identity';
 import type { Pubky } from '@/models/models.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -56,16 +55,6 @@ export class ProfileController {
       pubky,
       changes: links === undefined ? fields : { ...fields, links: UserNormalizer.linksFromUi(links) },
     });
-  }
-
-  /**
-   * Creates a recovery file for the keypair
-   * @param passphrase - The passphrase to use to create the recovery file
-   */
-  static createRecoveryFile(passphrase: string) {
-    const secretKey = useOnboardingStore.getState().selectSecretKey();
-    const keypair = Identity.keypairFromSecretKey(secretKey);
-    Identity.createRecoveryFile({ keypair, passphrase });
   }
 
   /**

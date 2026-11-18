@@ -18,7 +18,6 @@ import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { markShopFrameLoaded, resetShopFramePresence } from '@/libs/shop-embed/frame-presence';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -30,7 +29,6 @@ import {
   AUTH_PERSIST_KEY,
   LEGACY_AUTH_PERSIST_KEY,
   LOCKS_AUTH_PERSIST_KEY,
-  ONBOARDING_PERSIST_KEY,
   PREVIOUS_AUTH_PERSIST_KEY,
   SETTINGS_PERSIST_KEY,
 } from '@/stores/persistedKeys';
@@ -169,28 +167,26 @@ afterEach(async () => {
 
 describe('grant-only session lifecycle', () => {
   it.each([true, false])(
-    'clears unrelated browser keys only after durable account adoption (same account: %s)',
+    'resets onboarding only after durable account adoption (same account: %s)',
     async (sameAccount) => {
-      useOnboardingStore.setState({ secretKey: 'saved-key', mnemonic: 'saved phrase', hasHydrated: true });
-      vi.spyOn(Identity, 'tryZ32FromSecret').mockReturnValue(PUBKY);
+      useOnboardingStore.setState({ inviteCode: 'SAVED-CODE', hasHydrated: true });
       const flow = startFlow();
       const result = await AuthController.getAuthUrl();
-      expect(useOnboardingStore.getState().secretKey).toBe('saved-key');
+      expect(useOnboardingStore.getState().inviteCode).toBe('SAVED-CODE');
       flow.approval.resolve(grantSession(undefined, sameAccount ? PUBKY : OTHER_PUBKY));
       await result.awaitApproval;
-      expect(useOnboardingStore.getState().secretKey).toBe(sameAccount ? 'saved-key' : null);
-      expect(useOnboardingStore.getState().mnemonic).toBe(sameAccount ? 'saved phrase' : null);
+      expect(useOnboardingStore.getState().inviteCode).toBe('');
     },
   );
 
-  it('preserves browser keys if saving the approved session fails', async () => {
-    useOnboardingStore.setState({ secretKey: 'saved-key', mnemonic: 'saved phrase' });
+  it('keeps onboarding state if saving the approved session fails', async () => {
+    useOnboardingStore.setState({ inviteCode: 'SAVED-CODE' });
     const flow = startFlow();
     const result = await AuthController.getAuthUrl();
     vi.mocked(AuthApplication.saveSession).mockRejectedValue(offline());
     flow.approval.resolve(grantSession(undefined, OTHER_PUBKY));
     await expect(result.awaitApproval).rejects.toThrow();
-    expect(useOnboardingStore.getState()).toMatchObject({ secretKey: 'saved-key', mnemonic: 'saved phrase' });
+    expect(useOnboardingStore.getState().inviteCode).toBe('SAVED-CODE');
   });
 
   it.each(['invalid_grant', 'unsupported_stored_session'])(
@@ -627,37 +623,9 @@ describe('grant-only session lifecycle', () => {
     );
     expect(useAuthStore.getState()).toMatchObject({ needsAccountSync: false, restoreStatus: 'ready' });
   });
-  it.each(['current', 'legacy'])('preserves the incoming signup backup from %s onboarding storage', async (kind) => {
-    const recovery = { secretKey: 'new-account-secret', mnemonic: 'new-account-phrase' };
-    const signupAttempt =
-      kind === 'current' ? { pubky: OTHER_PUBKY, homeserver: 'hs', environment: 'test', phase: 'created' } : null;
-    localStorage.setItem(ONBOARDING_PERSIST_KEY, JSON.stringify({ version: 0, state: { ...recovery, signupAttempt } }));
-    vi.spyOn(Identity, 'tryZ32FromSecret').mockReturnValue(OTHER_PUBKY);
-    await AuthApplication.commitPersistedAuth(
-      {
-        generation: 'new-signup',
-        currentUserPubky: OTHER_PUBKY,
-        sessionReference: grantReference('new-signup'),
-        hasProfile: false,
-        retiringSession: null,
-      },
-      '',
-    );
-    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
-      status: 'restored',
-      session: grantSession([APP_CAPABILITIES], OTHER_PUBKY),
-    });
-    await AuthController.syncSessionFromStorage();
-    expect(useOnboardingStore.getState()).toMatchObject(recovery);
-    // Profile completion writes this flag; it must not persist null recovery keys over the other tab's backup.
-    useOnboardingStore.getState().setShowWelcomeDialog(true);
-    expect(JSON.parse(localStorage.getItem(ONBOARDING_PERSIST_KEY)!).state).toMatchObject(recovery);
-  });
-  it('does not expose a previous account backup after a cross-tab account change', async () => {
-    useOnboardingStore.getState().setSecrets({ secretKey: 'old-account-secret', mnemonic: 'old-account-phrase' });
-    useOnboardingStore
-      .getState()
-      .setSignupAttempt({ pubky: PUBKY, homeserver: 'hs', environment: 'test', phase: 'created' });
+  it('does not carry the previous account onboarding state across a cross-tab account change', async () => {
+    useOnboardingStore.getState().setInviteCode('OLD-ACCOUNT-CODE');
+    useOnboardingStore.getState().setInterestTags(['old-account-tag']);
     await AuthApplication.commitPersistedAuth(
       {
         generation: 'other-signup',
@@ -673,7 +641,7 @@ describe('grant-only session lifecycle', () => {
       session: grantSession([APP_CAPABILITIES], OTHER_PUBKY),
     });
     await AuthController.syncSessionFromStorage();
-    expect(useOnboardingStore.getState()).toMatchObject({ secretKey: null, mnemonic: null, signupAttempt: null });
+    expect(useOnboardingStore.getState()).toMatchObject({ inviteCode: '', interestTags: [] });
   });
   it('preserves account-local state when another tab upgrades the same account', async () => {
     useSettingsStore.getState().setMutedUsers(['same-account-mute']);
@@ -2103,9 +2071,9 @@ describe('final review session ownership regressions', () => {
 
 describe('identity-bound Shop reauthorization', () => {
   it.each(['ring', 'passport'] as const)(
-    'rejects a different identity from %s without losing the current recovery backup',
+    'rejects a different identity from %s without resetting onboarding',
     async (method) => {
-      useOnboardingStore.getState().setSecrets({ secretKey: 'pending-secret', mnemonic: 'pending phrase' });
+      useOnboardingStore.getState().setInviteCode('PENDING-CODE');
       const previous = AuthApplication.readPersistedAuth();
       const replacement = grantSession(undefined, OTHER_PUBKY);
       const flow = startFlow();
@@ -2119,7 +2087,7 @@ describe('identity-bound Shop reauthorization', () => {
       flow.approval.resolve(replacement);
       await expect(adoption).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
       expect(AuthApplication.readPersistedAuth()).toEqual(previous);
-      expect(useOnboardingStore.getState()).toMatchObject({ secretKey: 'pending-secret', mnemonic: 'pending phrase' });
+      expect(useOnboardingStore.getState().inviteCode).toBe('PENDING-CODE');
       expect(AuthApplication.saveSession).not.toHaveBeenCalled();
     },
   );

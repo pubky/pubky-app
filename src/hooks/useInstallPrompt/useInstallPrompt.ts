@@ -18,7 +18,6 @@ import {
 import { isIosDevice } from '@/libs/pwa/platform';
 import type { InstallPlatform } from '@/libs/pwa/pwa.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type { UseInstallPromptResult } from './useInstallPrompt.types';
 
 const noopSubscribe = () => () => undefined;
@@ -29,13 +28,11 @@ const getServerIsIos = () => false;
  *
  * Shown to signed-in users browsing in a tab (not installed), once the browser can
  * install (Chromium captured `beforeinstallprompt`, or iOS Safari where the steps
- * are manual), while no backup reminder is pending, and only when the snooze is
- * due. Eligibility is re-checked on a visit or on returning to the tab, never on
+ * are manual), and only when the snooze is due. Eligibility is re-checked on a visit or on returning to the tab, never on
  * a timer.
  */
 export function useInstallPrompt(): UseInstallPromptResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const hasPendingBackup = useOnboardingStore((state) => Boolean(state.secretKey));
   const isStandalone = useIsStandalone();
   const isIos = useSyncExternalStore(noopSubscribe, isIosDevice, getServerIsIos);
   const { canPrompt, installed } = useSyncExternalStore(
@@ -76,7 +73,7 @@ export function useInstallPrompt(): UseInstallPromptResult {
   }, [currentUserPubky, eligible]);
 
   const due = Boolean(currentUserPubky) && reminder.pubky === currentUserPubky && reminder.due;
-  const visible = eligible && !hasPendingBackup && due;
+  const visible = eligible && due;
 
   const remindLater = () => {
     if (currentUserPubky && visible) snoozeInstallReminder(currentUserPubky);

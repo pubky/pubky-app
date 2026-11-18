@@ -73,7 +73,7 @@ beforeEach(() => {
   navigation.pathname = '/shop';
   navigation.search = '';
   useAuthStore.setState({ ...authInitialState, hasHydrated: true, generation: 'initial' });
-  useOnboardingStore.setState({ hasHydrated: true, secretKey: null });
+  useOnboardingStore.setState({ hasHydrated: true });
   useSignInStore.getState().reset();
   vi.mocked(AuthController.hasCapabilities).mockReturnValue(false);
   vi.mocked(AuthController.logout).mockResolvedValue();
@@ -260,14 +260,6 @@ describe('ShopEmbed', () => {
     await act(async () => {});
     expect(AuthController.restorePersistedSession).toHaveBeenCalledOnce();
     expect(navigation.push).not.toHaveBeenCalled();
-  });
-  it('preserves an unbacked-up onboarding key and goes through the backup-aware logout page', () => {
-    useOnboardingStore.setState({ secretKey: 'unbacked-up-test-key' });
-    const { frame } = mount();
-    send(frame, { type: 'request-logout' });
-    expect(AuthController.logout).not.toHaveBeenCalled();
-    expect(navigation.push).toHaveBeenCalledWith('/logout');
-    expect(useOnboardingStore.getState().secretKey).not.toBeNull();
   });
   it('keeps the same frame mounted after child and outer route updates', () => {
     const { frame, rerender } = mount();

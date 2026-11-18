@@ -3,12 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { Custom } from './Custom';
 
 // Mock Organisms
-vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
-  return {
-    AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
-  };
-});
-
 vi.mock('@/organisms/FeedNavigation/FeedNavigation', () => {
   return {
     FeedNavigation: ({ className }: { className?: string }) => (
@@ -58,11 +52,6 @@ vi.mock('@/config/feed', async (importOriginal) => {
 });
 
 describe('Custom', () => {
-  it('renders AlertBackup', () => {
-    render(<Custom />);
-    expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
-  });
-
   it('renders FeedNavigation in main content', () => {
     render(<Custom />);
     expect(screen.getByTestId('feed-navigation')).toBeInTheDocument();

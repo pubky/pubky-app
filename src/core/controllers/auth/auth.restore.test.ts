@@ -177,9 +177,7 @@ describe('AuthController restored session lifecycle', () => {
     (source) => {
       useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
       useSignInStore.setState(completedSignIn);
-      useOnboardingStore
-        .getState()
-        .setSecrets({ secretKey: 'retained-secret-key', mnemonic: 'retained recovery phrase' });
+      useOnboardingStore.getState().setInviteCode('RETAINED-CODE');
       const onboardingBefore = useOnboardingStore.getState();
       const settingsBefore = useSettingsStore.getState();
       persistState();

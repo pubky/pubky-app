@@ -76,7 +76,7 @@ await sharp({ create: { width: 512, height: 512, channels: 4, background: '#0000
 
 ## Install banner
 
-`AlertInstall` (Home feed, between `FeedNavigation` and `AlertBackup`) is driven by `useInstallPrompt`. It shows for a signed-in user browsing in a tab, once the browser can install (Chromium fired `beforeinstallprompt`, or iOS Safari where the steps are manual), while no backup reminder is pending, and only when the snooze in `src/libs/pwa/installReminder.ts` is due. "Later" snoozes with the `PWA_INSTALL_REMINDER_DELAYS_MS` schedule; installing, `appinstalled`, or confirming the iOS steps retires it. `PWA_INSTALL_BANNER_ENABLED` is the kill switch. The banner never renders in unit tests or VRT (no captured prompt, non-iOS user agents).
+`AlertInstall` (Home feed, right after `FeedNavigation`) is driven by `useInstallPrompt`. It shows for a signed-in user browsing in a tab, once the browser can install (Chromium fired `beforeinstallprompt`, or iOS Safari where the steps are manual), and only when the snooze in `src/libs/pwa/installReminder.ts` is due. "Later" snoozes with the `PWA_INSTALL_REMINDER_DELAYS_MS` schedule; installing, `appinstalled`, or confirming the iOS steps retires it. `PWA_INSTALL_BANNER_ENABLED` is the kill switch. The banner never renders in unit tests or VRT (no captured prompt, non-iOS user agents).
 
 ## Testing locally
 

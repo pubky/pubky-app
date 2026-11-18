@@ -11,7 +11,6 @@ const KEY = buildFeatureDiscoveryStorageKey(PUBKY, PWA_INSTALL_STORAGE_ID);
 
 const mocks = vi.hoisted(() => ({
   currentUserPubky: 'pk:alice' as string | null,
-  secretKey: null as string | null,
   isStandalone: false,
   isIos: false,
   snapshot: { canPrompt: true, installed: false },
@@ -20,12 +19,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
     selector({ currentUserPubky: mocks.currentUserPubky }),
-  ),
-}));
-
-vi.mock('@/stores/onboarding/onboarding.store', () => ({
-  useOnboardingStore: vi.fn((selector: (state: { secretKey: string | null }) => unknown) =>
-    selector({ secretKey: mocks.secretKey }),
   ),
 }));
 
@@ -53,7 +46,6 @@ describe('useInstallPrompt', () => {
     window.localStorage.clear();
     resetInstallReminderMemory();
     mocks.currentUserPubky = PUBKY;
-    mocks.secretKey = null;
     mocks.isStandalone = false;
     mocks.isIos = false;
     mocks.snapshot = { canPrompt: true, installed: false };
@@ -71,7 +63,6 @@ describe('useInstallPrompt', () => {
     ['guest', () => (mocks.currentUserPubky = null)],
     ['already installed (standalone)', () => (mocks.isStandalone = true)],
     ['installed during this session', () => (mocks.snapshot = { canPrompt: false, installed: true })],
-    ['pending backup reminder', () => (mocks.secretKey = 'secret')],
     ['browser cannot install', () => (mocks.snapshot = { canPrompt: false, installed: false })],
     [
       'snoozed',

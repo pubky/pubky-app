@@ -55,7 +55,6 @@ vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: createZustandLikeHook({
-    secretKey: null as string | null,
     inviteCode: null as string | null,
     setInviteCode: vi.fn(),
     reset: vi.fn(),

@@ -24,7 +24,7 @@ public-reference transitions and reject stale callbacks. Services own I/O, Appli
 own store changes. This decision extends ADR 0004's read-only session-store exception: `HomeserverService` may read
 the session's generation, restore status and saved reference to identify terminal failures of the active session.
 `LocksService` may also read `useAuthStore.currentUserPubky` solely to verify that a retained creator session belongs to the active app account
-before I/O. Other auth/UI fields remain outside that exception; controllers retain all store writes. Pending Passport flows and uncertain signup retain their existing recovery material.
+before I/O. Other auth/UI fields remain outside that exception; controllers retain all store writes.
 
 For ordinary Ring/Bitkit sign-in, keep delegated pending-flow serialization in a separate App-owned IndexedDB
 store for the existing three-minute recovery window. This supersedes the sessionStorage-only pending-flow
@@ -44,6 +44,8 @@ URLs or telemetry.
 
 Ring and Passport request ordinary app and merged Locks capabilities upfront. Pubky App no longer signs up or signs in
 with a root key (#3142, #3147); root grants saved by those earlier flows still restore through the session store.
+It holds no root key either: after the deadline announced in #3236, version 1 of the onboarding store deleted the keys,
+recovery phrases and sign-up attempts the in-browser sign-up had left in `onboarding-storage`.
 Older narrow grants can upgrade in the Locks context, preserving the same account and local state. Save the replacement
 before retiring the previous grant. A deduplicated public queue preserves all pending revocations across successive
 upgrades, logout and later login. Failed retirement does not block a valid active grant, and its SDK credentials
@@ -84,8 +86,6 @@ remain available for retry; generic auth errors do not prove revocation succeede
   action (repost Undo) is clicked after its producer unmounted, so it opts into `outlivesOwner` and waits in a
   scope of its own; logout, account replacement and the timeout still cancel it.
   Synchronous guards remain for browser gestures and opening controls; they do not open sign-in while restoration runs.
-  Direct logout waits for backup confirmation before erasing browser-generated recovery material and cancels if
-  another tab replaces the account or grant while that confirmation is open.
   Failed restoration, including corrupt metadata, never silently deletes saved data.
 - Local browser QA against the staging homeserver covers grant renewal, terminal rejection across tabs and storage
   failures. Deployed Ring/Passport approval, complete Locks flows and the remaining browser/rollout checks still require
