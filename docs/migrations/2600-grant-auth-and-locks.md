@@ -2,7 +2,7 @@
 
 ## Behavior
 
-PubkyApp uses `@synonymdev/pubky` (`0.16.2` when this migration landed; `package.json` has the current pin) and grant authentication for Ring and Passport (Continue with Google).
+PubkyApp uses `@synonymdev/pubky` (`0.15.0` when this migration landed, `0.16.2` from #2847; `package.json` has the current pin) and grant authentication for Ring and Passport (Continue with Google).
 Encrypted-file and recovery-phrase login and browser signup used root grants until they were removed (#3142, #3147).
 Existing cookie sessions require fresh authorization.
 Valid saved grants continue to restore. The update does not change accounts, published content or the Dexie version.

@@ -12,6 +12,8 @@ Updated — 2026-11-17 (the poll's `last_read` GET is bounded by `HOMESERVER_SYN
 
 Updated — 2026-11-18 (a poll whose GET was abandoned at the bound pauses while that GET is still out, human review of #3140)
 
+Updated — 2026-11-19 (the SDK statements name 0.18.0, whose event-stream and storage read code has no diff from 0.17.1; the staging cache header observation is dated)
+
 ## Context
 
 Marking notifications as read writes the `last_read` timestamp to the user's homeserver, but an open session on
@@ -187,5 +189,5 @@ sets a fetch `cache` mode; reqwest's wasm request leaves `cache` unset. Freshnes
 `pubky-homeserver/src/client_server/cache_policy.rs`, layered on the tenant router, stamps every `/priv/` response
 `Cache-Control: no-store` with `Vary: Authorization, Cookie` (v0.13.0 through v0.17.1; `private, no-cache` with an
 `ETag` on a served or unchanged file from v0.18.0), so the browser never answers the read from its cache without
-revalidating. The staging homeserver answered a `/priv/…/last_read.json` GET with `cache-control: no-store` when it
-ran a version before v0.18.0.
+revalidating. Observed on the staging homeserver on 2026-11-06: a `/priv/…/last_read.json` GET answered
+`cache-control: no-store`, the pre-v0.18.0 answer; not re-checked since.

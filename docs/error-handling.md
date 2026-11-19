@@ -285,8 +285,8 @@ and which would report each failure twice; `locks.e2eStub.test.ts` asserts the s
 
 ### Grant failures during use and sign-in
 
-The SDK recovers a rejected bearer itself: after a 401 it refreshes the bearer once and sends the same request once
-more. It sends nothing more when the homeserver refuses that refresh or answers the replay with another 401, and it
+The SDK recovers a rejected bearer itself: after a 401 it refreshes the bearer at most once (not at all when another
+tab already replaced the rejected one) and sends the same request once more. It sends nothing more when the homeserver refuses that refresh or answers the replay with another 401, and it
 neither refreshes nor replays after any other status (`homeserver.storage.contract.test.ts` pins this on the
 installed SDK, for the store-backed sessions the app uses).
 After SDK refresh/retry has finished, terminal failures from active, owned homeserver storage requests notify
