@@ -12,7 +12,7 @@ export interface ArticleCoverInput {
    * `type`), for rule B: a 0.x article's slot 0 is its cover only when it is an image, and only
    * metadata says what it is, never the markdown (for v1 media, which Nexus keeps no metadata
    * for, the row is the one `FileNormalizer` synthesizes from the URI's extension). Omit it while
-   * unread; `null` once the read settled without a row. The other shapes ignore it.
+   * unread; `null` once the read settled without a row. Rule A ignores it.
    */
   slotZeroContentType?: string | null;
 }
@@ -68,8 +68,9 @@ export function settleArticleSlotZero(resolved: ResolvedArticleCover, slotZeroIs
  *   promotes a 0.x cover): `cover_image` set, `attachments` hold the inline media only and
  *   `attachment:{n}` indexes them directly, whichever slots the body names. rc.2 (transform
  *   revision 4) promotes `attachments[0]` only when it is an image the body does not reference,
- *   and then renumbers every reference `attachment:{n}` to `attachment:{n-1}`; otherwise it writes
- *   a null cover and the attachments as they were, which reads as rule B.
+ *   and then renumbers every reference its textual scan sees, `attachment:{n}` to
+ *   `attachment:{n-1}`; otherwise it writes a null cover and the attachments as they were, which
+ *   reads as rule B.
  * - **B** (0.x, never migrated; also every migrated article as Nexus serves it, in the 0.x content
  *   shape): no `cover_image`; `attachments[0]` is the cover when the body does not reference
  *   `attachment:0` and its file is an image, which only its metadata says
@@ -77,9 +78,11 @@ export function settleArticleSlotZero(resolved: ResolvedArticleCover, slotZeroIs
  *   nothing paints as a cover, so a PDF or a video at slot 0 never flashes as one. Every reference
  *   indexes `attachments` directly.
  *
- * An article `pubky-social-migrator` 1.0.0-rc.1 copied (the cover promoted, the body's references
- * left one slot too high) has no rule of its own: it reads as A, one file off, until its tree is
- * wiped and migrated again (ADR-0023, amended 2026-11-19).
+ * An article whose cover was promoted while its references kept their 0.x numbers has no rule of
+ * its own: it reads as A, each reference one file later. That is every article
+ * `pubky-social-migrator` 1.0.0-rc.1 copied, and an rc.2 copy whose references are all
+ * reference-style definitions or entity-escaped slots, which the migrator's textual scan does not
+ * renumber and this app never wrote (ADR-0023, amended 2026-11-19).
  *
  * Pure and server-safe.
  */

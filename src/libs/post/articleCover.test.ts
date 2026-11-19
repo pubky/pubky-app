@@ -97,16 +97,13 @@ describe('resolveArticleCover', () => {
       // The envelope is what it is; whether it renders is the metadata read's call, not this one's.
       const resolved = resolveArticleCover({
         content: encodeContent({ title: 'Title', body: '![a](attachment:1)', cover_image: PDF }),
-        attachments: [INLINE_A, INLINE_B],
+        attachments: [INLINE_A],
         slotZeroContentType: IMAGE,
       });
 
-      expect(resolved).toEqual({
-        cover: PDF,
-        slots: [INLINE_A, INLINE_B],
-        legacyCoverSlot: false,
-        coverCandidate: null,
-      });
+      // The one attachment is slot 0; the body's reference to slot 1 finds no file
+      expect(resolved).toEqual({ cover: PDF, slots: [INLINE_A], legacyCoverSlot: false, coverCandidate: null });
+      expect(resolved.slots[1]).toBeUndefined();
     });
 
     it('trusts a video the envelope names beside no inline media', () => {

@@ -907,6 +907,41 @@ describe('usePostInput', () => {
       });
     });
 
+    it('reads an envelope-cover article by its slots as stored when the body names none at slot 0', async () => {
+      mockIsArticle = true;
+      mockContent = 'Text with ![a](pubky://user/pub/pubky.app/files/SECOND)';
+      mockArticleTitle = 'Title';
+      const cover = 'pubky://user/pub/pubky.app/files/COVER';
+      const uris = ['pubky://user/pub/pubky.app/files/FIRST', 'pubky://user/pub/pubky.app/files/SECOND'];
+      mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: uris,
+          editIsArticle: true,
+          // `attachment:1` names the second file; the first is an original the body never showed
+          editContent: JSON.stringify({ title: 'Title', body: 'Text with ![a](attachment:1)', cover_image: cover }),
+        }),
+      );
+
+      // The referenced file is the one whose row types the inline media
+      expect(mockUseAttachmentsMetadata).toHaveBeenCalledWith({ fileUris: [uris[1]] });
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originalAttachmentUris: uris,
+          originalCoverUri: cover,
+          preservedAttachmentUris: [uris[0]],
+        }),
+      );
+    });
+
     it('submits edit with empty content when new attachments were added', async () => {
       mockContent = '';
       mockAttachments = [new File(['test'], 'test.png', { type: 'image/png' })];

@@ -261,6 +261,31 @@ describe('HomeserverService.migrateToSocialV1 on a 0.x article', () => {
     );
   });
 
+  it('reads the file a lone reference above slot 1 names, one slot down after the promotion (rule A)', async () => {
+    const cover = await seedLegacyFile(8, 'image/png', 'cover.png');
+    const first = await seedLegacyFile(9, 'image/png', 'first.png');
+    const second = await seedLegacyFile(10, 'image/png', 'second.png');
+
+    // The body leaves slot 1 alone: its only reference is the third file
+    const { post, article } = await migrateArticle('Intro\n\n![second](attachment:2)', [
+      cover.legacy,
+      first.legacy,
+      second.legacy,
+    ]);
+
+    expect(article.cover_image).toBe(cover.v1);
+    expect(article.body).toBe('Intro\n\n![second](attachment:1)');
+    expect(post.attachments.map(({ uri }) => uri)).toEqual([first.v1, second.v1]);
+
+    // The copy names no slot 0, and the reference still finds the file the 0.x article meant
+    const { slots } = resolveArticleCover({
+      content: post.content,
+      attachments: post.attachments.map(({ uri }) => uri),
+    });
+    expect(slots).toEqual([first.v1, second.v1]);
+    expect(slots[1]).toBe(second.v1);
+  });
+
   it('keeps a referenced slot 0 inline, with no cover and the body as written (rule B)', async () => {
     const hero = await seedLegacyFile(4, 'image/png', 'hero.png');
     const second = await seedLegacyFile(5, 'image/png', 'second.png');

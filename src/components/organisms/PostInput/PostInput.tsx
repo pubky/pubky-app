@@ -392,7 +392,7 @@ export function PostInput({
         } catch {
           // Malformed composite id — no reference can resolve to an author-owned file
         }
-        // What each `attachment:{n}` names depends on the stored shape (ADR-0023, ADR-0027)
+        // Each `attachment:{n}` names the attachment at that slot, as stored (ADR-0023, ADR-0027)
         const { slots } = resolveArticleCover({ content: editSeed.content ?? '', attachments: editSeed.attachments });
         const deserialized = deserializeArticleBody({
           body: parsed.body,
