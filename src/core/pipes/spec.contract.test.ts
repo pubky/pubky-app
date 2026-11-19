@@ -1,6 +1,13 @@
 import {
   ArgumentError,
+  buildBookmark,
+  buildFeed,
   buildFile,
+  buildFollow,
+  buildMute,
+  buildPost,
+  buildTag,
+  buildUri,
   buildUser,
   type ErrorCode,
   limits,
@@ -154,5 +161,42 @@ describe('pubky-social-specs contract', () => {
   it('matches a media type on its essence and gives an unknown one .bin', () => {
     expect(buildFile(owner, { bytes: new Uint8Array([1]), type: 'IMAGE/PNG; charset=binary' }).path).toMatch(/\.png$/);
     expect(buildFile(owner, { bytes: new Uint8Array([1]), type: 'application/x-unknown' }).path).toMatch(/\.bin$/);
+  });
+
+  // `@synonymdev/pubky` 0.18 percent-encodes every other byte of a storage path once, where 0.17 and older
+  // encoded some of them twice and so stored such a file under its escaped name. A path made of these
+  // characters alone goes out as written under both, so a file written before the SDK bump is found after it.
+  it('builds every storage path from unreserved characters, whatever the user typed', () => {
+    const other = fakeOwner(1);
+    const hostile = 'a b/c%20d?e#f"<>{}`ü\\';
+    const post = buildPost(owner, { kind: 'note', content: hostile });
+    const target = buildUri(other, 'post', post.id);
+    const paths = [
+      buildUser(owner, { name: 'Ada', bio: hostile }).path,
+      post.path,
+      buildPost(owner, { kind: 'article', title: hostile, body: hostile }).path,
+      buildFollow(owner, other).path,
+      buildMute(owner, other).path,
+      buildTag(owner, target, 'tag').path,
+      buildTag(owner, target, 'ünïcödé').path,
+      // A post target encodes to a base64url id; a long one hashes to `~` and a hash id.
+      buildBookmark(owner, target).path,
+      buildBookmark(owner, `https://example.com/${'a'.repeat(200)}`).path,
+      buildFeed(owner, {
+        name: hostile,
+        icon: 'star',
+        reach: 'all',
+        layout: 'columns',
+        sort: 'recent',
+        tags: ['ünïcödé'],
+      }).path,
+      // The extension comes from the media type table, never from the file's name or a raw type.
+      buildFile(owner, { bytes: new Uint8Array([1]), type: hostile }).path,
+      ...[...validMimeTypes].map((type) => buildFile(owner, { bytes: new Uint8Array([1]), type }).path),
+    ];
+
+    for (const path of paths) expect(path).toMatch(/^\/(pub|priv)\/social\/v1\/[A-Za-z0-9\-_.~/]+$/);
+    // Both bookmark forms were built: `~` is the one character here a URL library might escape.
+    expect(paths.filter((path) => path.includes('/bookmarks/~'))).toHaveLength(1);
   });
 });
