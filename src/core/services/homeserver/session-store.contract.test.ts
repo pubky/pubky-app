@@ -318,7 +318,7 @@ describe('SDK upgrade grant compatibility', () => {
           tx.oncomplete = () => resolve();
           tx.onerror = tx.onabort = () => reject(tx.error);
         });
-        // SDK 0.17 keeps refresh transport details secret-safe and omits an HTTP status.
+        // Since SDK 0.17 a refresh that got no answer is reported secret-safe, without an HTTP status.
         const restore = sdk.browserSessionStore.restore(record.id);
         await expect(restore).rejects.toMatchObject({
           name: 'CredentialRefreshError',

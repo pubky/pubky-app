@@ -25,6 +25,7 @@ It is not a consumer-driven contract (no Pact, no provider verification). The ot
 - Our code classifies an SDK error by **name or message**. Every such exception in `error-handling.md` (the Pubky session-store messages, the Locks HTTP 451 check) must have a contract test that runs the installed SDK and produces the exact error.
 - Our code depends on SDK **wire behaviour**: the request path or method, the `Authorization` header, retries, ACK order on the relay.
 - Our code reads **state the SDK persisted**, especially state an older SDK version wrote (upgrade compatibility).
+- Our code builds **names the SDK puts on the wire** (homeserver paths, list cursors) or relies on what the SDK repeats by itself (its replay after a rejected bearer).
 - A documented server **status or error code** must reach the user as a specific `AppError` or result.
 
 ### When not to
@@ -36,10 +37,10 @@ It is not a consumer-driven contract (no Pact, no provider verification). The ot
 
 ## What is covered today
 
-| Service                                    | SDK (pinned in `package.json`)  | Files                                                                                                                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lock Server (Paykit is reached through it) | `@synonymdev/locks-sdk` `0.1.0` | [`locks.errors.contract.test.ts`](../src/core/services/locks/locks.errors.contract.test.ts), [`locks.region.contract.test.ts`](../src/core/services/locks/locks.region.contract.test.ts), [`locks.guarded-resource.contract.test.ts`](../src/core/services/locks/locks.guarded-resource.contract.test.ts)                                          |
-| Homeserver grant auth and HTTP relay       | `@synonymdev/pubky` `0.18.0`    | [`session-store.contract.test.ts`](../src/core/services/homeserver/session-store.contract.test.ts), [`grant-flow.recovery.contract.test.ts`](../src/core/services/homeserver/grant-flow.recovery.contract.test.ts), [`homeserver.grant-hidden-ios.contract.test.ts`](../src/core/services/homeserver/homeserver.grant-hidden-ios.contract.test.ts) |
+| Service                                    | SDK (pinned in `package.json`)  | Files                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lock Server (Paykit is reached through it) | `@synonymdev/locks-sdk` `0.1.0` | [`locks.errors.contract.test.ts`](../src/core/services/locks/locks.errors.contract.test.ts), [`locks.region.contract.test.ts`](../src/core/services/locks/locks.region.contract.test.ts), [`locks.guarded-resource.contract.test.ts`](../src/core/services/locks/locks.guarded-resource.contract.test.ts)                                                                                                                                                        |
+| Homeserver grant auth, relay and storage   | `@synonymdev/pubky` `0.18.0`    | [`session-store.contract.test.ts`](../src/core/services/homeserver/session-store.contract.test.ts), [`grant-flow.recovery.contract.test.ts`](../src/core/services/homeserver/grant-flow.recovery.contract.test.ts), [`homeserver.grant-hidden-ios.contract.test.ts`](../src/core/services/homeserver/homeserver.grant-hidden-ios.contract.test.ts), [`homeserver.storage.contract.test.ts`](../src/core/services/homeserver/homeserver.storage.contract.test.ts) |
 
 - **`locks.errors`**: each documented Lock Server status and error code on the viewer, creator and code-exchange calls, network failure, malformed 200 bodies, task and Paykit connection states, and the reader's Paykit presence read from their own homeserver (`PaykitDataLookupFailed` on a failed read). Each case checks the `AppError` category and code, `requiresLogin`, that no server code or failure text leaks into the message, and that the error is reported exactly once.
 - **`locks.region`**: HTTP 451 on proof submission and task lookup becomes `regionBlocked` with nothing logged or reported; 401, 403, 429, 500, network failure, and invalid JSON containing `HTTP 451` stay on the reported path.
@@ -47,8 +48,9 @@ It is not a consumer-driven contract (no Pact, no provider verification). The ot
 - **`session-store`**: the exact `ClientStateError` / `AuthenticationError` messages `HomeserverService` matches, IndexedDB and Web Locks failures, and resuming pending logins and sessions saved by SDK 0.15.
 - **`grant-flow.recovery`**: a pending grant survives lost page storage, with real signing and a verified delegated PoP.
 - **`grant-hidden-ios`**: iOS hiding the page while the relay ACK is in flight still delivers the approval once.
+- **`homeserver.storage`**: `HomeserverService` on a session restored from the SDK's browser store, against an in-memory homeserver. Every path family the app builds goes out as written and any other byte is escaped exactly once (SDK 0.18 path encoding); listings return plain names and page with the entry as listed; a 401 is refreshed and replayed once inside one SDK call, a second 401 or a refused refresh ends the session once, and no other status is replayed; the 409 publish conflict is recognized by the body the SDK carries in its message; a delegated session saved by an older SDK restores and refreshes. It also runs `pubky-social-migrator`'s SDK port on the same session: the listing spelling the engine requires and the `MigrationPortError` kind per status.
 
-Not covered by contract tests: Nexus (no SDK; plain HTTP through `safeFetch`), direct homeserver storage calls, `pubky-social-specs`, and the Paykit `/setup` and `/connect` pages (a cross-origin iframe).
+Not covered by contract tests: Nexus (no SDK; plain HTTP through `safeFetch`), homeserver storage outside the cases above (public reads of another user's storage, the event stream), and the Paykit `/setup` and `/connect` pages (a cross-origin iframe). `pubky-social-specs` and `pubky-social-migrator` have their own contract files ([`spec.contract.test.ts`](../src/core/pipes/spec.contract.test.ts), [`social-migration.contract.test.ts`](../src/config/social-migration.contract.test.ts), [`summary.contract.test.ts`](../src/libs/social-migration/summary.contract.test.ts)).
 
 ## How to write one
 
@@ -71,15 +73,15 @@ Contract tests decide what the SDK does; the stub copies it. If a contract test 
 
 ### Source of truth
 
-- **The SDK version in `package.json`**, pinned exactly (no range), is what the tests run. The test names say which version they pin (`pinned Locks SDK 0.1.0 …`, `SDK 0.15`, `SDK 0.16.2`).
+- **The SDK version in `package.json`**, pinned exactly (no range), is what the tests run. The test names say which version they pin (`pinned Locks SDK 0.1.0 …`, `pinned SDK 0.18.0 …`) or which version wrote a fixture (`SDK 0.15`).
 - **Lock Server and Paykit**: the [`pubky/locks`](https://github.com/pubky/locks) repository, `locks-server/src/api/errors.rs` and `locks-server/docs/API.md`. The revision is recorded in prose in [`migrations/2600-grant-auth-and-locks.md`](migrations/2600-grant-auth-and-locks.md#locks-contract) and the [local stack runbook](locks/locks-local-stack/README.md).
-- **Grant auth**: [`pubky/pubky-homeserver`](https://github.com/pubky/pubky-homeserver), including its [grant session lifecycle](https://github.com/pubky/pubky-homeserver/blob/v0.16.0/docs/grant-session-lifecycle.md).
+- **Grant auth**: [`pubky/pubky-homeserver`](https://github.com/pubky/pubky-homeserver), including its [grant session lifecycle](https://github.com/pubky/pubky-homeserver/blob/v0.18.0/docs/grant-session-lifecycle.md).
 - There is no OpenAPI spec or shared types package for either server.
 
 ### When the upstream changes
 
 1. Dependabot groups `@synonymdev/*` into one monthly `pubky-sdk` PR (`.github/dependabot.yml`), and CI runs every contract test on it in the `unit` project. A manual bump gets the same check.
-2. Read the upstream changelog and diff for error names, messages, statuses, request paths and persisted formats. Our tests only catch what they already assert.
+2. Read the upstream changelog and diff for error names, messages, statuses, request paths and persisted formats. Our tests only catch what they already assert. To see what a release changed on the wire, run the same calls against the old and the new package with `fetch` faked and compare the requests; a case that differs belongs in a contract test.
 3. For a new or changed status or code, add or update the `it.each` row, quoting the upstream source.
 4. When the SDK changes its stored state, keep the old fixture, since users still have it, and add a fixture generated with the new version.
 5. Update the version in test names, `error-handling.md` and the Locks docs if they mention it.
@@ -102,6 +104,5 @@ Contract tests decide what the SDK does; the stub copies it. If a contract test 
 
 - **No automated drift check.** Nothing compares fixtures or error rows with the upstream API; alignment depends on the SDK bump PR and on reading upstream changes.
 - **Upstream revisions are recorded only in prose**, and the Locks docs don't agree with each other: `migrations/2600-grant-auth-and-locks.md` names `0.1.0-rc9+git.c692fb70522c` at artifact `245253a6d7c9`, and the local stack runbook names tag `v0.1.0` at `ac8e893b`. The npm pin (`0.1.0`) is authoritative for what runs.
-- **Some version references are stale**: `error-handling.md` and `homeserver.grant-hidden-ios.contract.test.ts` describe Pubky SDK 0.16 behaviour, while `package.json` pins 0.18.0.
 - **The e2e stub is checked only against our mapping**, not against the real SDK. If the SDK's error shape changes, `sdkError` must be updated by hand.
 - **No live check against real servers.** Lock Server and Paykit are covered only by the manual [local stack](locks/locks-local-stack/README.md).
