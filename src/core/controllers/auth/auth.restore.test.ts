@@ -1,4 +1,3 @@
-import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
@@ -12,6 +11,7 @@ import {
 } from '@/config/notification-last-read-sync';
 import { THEME_STORAGE_KEY } from '@/config/theme';
 import { SettingsController } from '@/controllers/settings/settings';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-event-stream/homeserver-event-stream';
 import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
@@ -20,8 +20,6 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import * as utils from '@/libs/utils/utils';
-import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
-import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
@@ -53,6 +51,7 @@ const savedSettings = {
   updatedAt: 10,
   version: 1,
 };
+const settingsUrlA = `pubky://${pubkyA}/priv/app.pubky/v1/settings.json`;
 const completedSignIn = {
   authUrlResolved: true,
   profileChecked: true,
@@ -108,14 +107,24 @@ async function replaceAccount() {
   persistState();
 }
 
+/** Serves `savedSettings` as account A's v1 settings file; every other read is absent (404). */
+function storeSavedSettings() {
+  return vi
+    .spyOn(HomeserverService, 'getBytesIfExists')
+    .mockImplementation(async (url) =>
+      url === settingsUrlA
+        ? { bytes: new TextEncoder().encode(JSON.stringify(savedSettings)), modifiedAt: null }
+        : null,
+    );
+}
+
 /** A fresh browser with no saved account: an interactive sign-in runs the full bootstrap. */
 function prepareFreshLogin() {
   localStorage.clear();
   useAuthStore.setState({ ...authInitialState, hasHydrated: true });
   vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference());
-  vi.spyOn(HomeserverService, 'request')
-    .mockResolvedValueOnce({ name: 'Account A' })
-    .mockResolvedValueOnce(savedSettings);
+  vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+  storeSavedSettings();
 }
 
 async function startFreshRingLogin() {
@@ -133,6 +142,9 @@ async function startFreshRingLogin() {
 describe('AuthController restored session lifecycle', () => {
   beforeEach(() => {
     localStorage.clear();
+    // These suites cover the auth lifecycle of a migrated account; the gate has its own suite.
+    vi.spyOn(SocialMigrationController, 'ensureMigrated').mockResolvedValue('passed');
+    vi.spyOn(SocialMigrationController, 'hasPassedLocally').mockReturnValue(true);
     sessionStorage.clear();
     vi.stubGlobal('navigator', { locks: { request: async (_name: string, callback: () => unknown) => callback() } });
     useAuthStore.setState(authInitialState);
@@ -156,10 +168,10 @@ describe('AuthController restored session lifecycle', () => {
     vi.spyOn(utils, 'sleep').mockResolvedValue(undefined);
     vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notificationInitialState);
     vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
-    // createLastRead crosses into the WASM SDK; keep settings normalization and stores real.
-    vi.spyOn(NotificationNormalizer, 'to').mockReturnValue(
-      asOpaque<LastReadResult>({ meta: { url: `pubky://${pubkyA}/pub/pubky.app/last_read` } }),
-    );
+    // The settings sync before bootstrap reads `/priv/app.pubky/v1/settings.json` through `getBytesIfExists`, not
+    // `request`: unstubbed, the read runs against the mock session, fails, and costs each restore some 700 ms, which
+    // tips the 1 s `waitFor` on a loaded runner and leaves the shared restore promise pending for every later test.
+    storeSavedSettings();
   });
 
   afterEach(() => {
@@ -345,16 +357,12 @@ describe('AuthController restored session lifecycle', () => {
     const request = vi
       .spyOn(HomeserverService, 'request')
       .mockResolvedValueOnce({ name: 'Account A' })
-      .mockResolvedValueOnce(savedSettings)
       .mockResolvedValue(undefined);
+    const read = storeSavedSettings();
     const restore = AuthController.restorePersistedSession();
     await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
 
-    expect(request).toHaveBeenCalledWith({
-      method: HttpMethod.GET,
-      url: `pubky://${pubkyA}/pub/pubky.app/settings.json`,
-      notFoundAsNull: true,
-    });
+    expect(read).toHaveBeenCalledWith(settingsUrlA);
     expect(useAuthStore.getState()).toMatchObject({ hasProfile: null, isRestoringSession: true });
 
     bootstrap.resolve(notificationInitialState);
@@ -366,7 +374,7 @@ describe('AuthController restored session lifecycle', () => {
     await SettingsController.setHideSearch(true);
     expect(request).toHaveBeenLastCalledWith({
       method: HttpMethod.PUT,
-      url: `pubky://${pubkyA}/pub/pubky.app/settings.json`,
+      url: settingsUrlA,
       bodyJson: expect.objectContaining({
         notifications: expect.objectContaining({ follow: false }),
         privacy: expect.objectContaining({ hideSearch: true, neverShowPosts: true }),
@@ -385,9 +393,6 @@ describe('AuthController restored session lifecycle', () => {
     vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
     const bootstrap = deferred<typeof notificationInitialState>();
     vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
-    vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(
-      asOpaque<LastReadResult>({ meta: { url: `pubky://${pubkyA}/pub/pubky.app/last_read` } }),
-    );
     const freshRead = vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2_000);
     vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(0);
     const stream = vi.spyOn(HomeserverEventApplication, 'subscribeUserEventStream').mockImplementation(
@@ -518,9 +523,8 @@ describe('AuthController restored session lifecycle', () => {
   it.each(['success', 'failure'] as const)('ignores bootstrap %s after account replacement', async (result) => {
     const bootstrap = deferred<typeof notificationInitialState>();
     vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
-    vi.spyOn(HomeserverService, 'request')
-      .mockResolvedValueOnce({ name: 'Account A' })
-      .mockResolvedValueOnce(savedSettings);
+    vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+    storeSavedSettings();
     const restore = AuthController.restorePersistedSession();
     await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
 
@@ -546,9 +550,8 @@ describe('AuthController restored session lifecycle', () => {
   ] as const)(
     'preserves its session and offers recovery when bootstrap fails: $failure',
     async ({ failure, restoreStatus }) => {
-      vi.spyOn(HomeserverService, 'request')
-        .mockResolvedValueOnce({ name: 'Account A' })
-        .mockResolvedValueOnce(savedSettings);
+      vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+      storeSavedSettings();
       const error = failure === 'temporary' ? profileError() : wrongEnvironmentError();
       vi.mocked(BootstrapApplication.initialize).mockRejectedValue(error);
 
@@ -568,9 +571,8 @@ describe('AuthController restored session lifecycle', () => {
   );
 
   it('offers recovery when the saved session becomes unreadable during bootstrap', async () => {
-    vi.spyOn(HomeserverService, 'request')
-      .mockResolvedValueOnce({ name: 'Account A' })
-      .mockResolvedValueOnce(savedSettings);
+    vi.spyOn(HomeserverService, 'request').mockResolvedValueOnce({ name: 'Account A' });
+    storeSavedSettings();
     const generation = useAuthStore.getState().generation;
     vi.mocked(BootstrapApplication.initialize).mockImplementation(async () => {
       // The post-restore storage check cannot parse the record and falls back to recovery.

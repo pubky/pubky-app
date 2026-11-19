@@ -22,3 +22,7 @@ export const PWA_STANDALONE_MEDIA_QUERY = '(display-mode: standalone), (display-
 
 /** Minimum gap between service-worker update checks triggered by the tab becoming visible. */
 export const SW_UPDATE_CHECK_MIN_INTERVAL_MS = 60 * 60 * 1000;
+
+/** Page ↔ cut-over worker handshake (`src/sw.ts`, `useServiceWorkerUpdate`; ADR-0021 amendment, removed by PR-E2). */
+export const SW_CLIENT_ANNOUNCE = 'CLIENT_ANNOUNCE';
+export const SW_TAKEOVER_SKIPPED = 'TAKEOVER_SKIPPED';

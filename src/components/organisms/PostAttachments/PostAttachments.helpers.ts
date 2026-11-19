@@ -26,7 +26,7 @@ export function categorizeAttachments<T extends { type: string }>(attachments: T
 /** Build categorized AttachmentConstructed lists from remote file metadata. */
 export function splitAttachmentsByMediaType(metadata: FileMetadata[]): CategorizedAttachments {
   return categorizeAttachments(
-    metadata.map(({ content_type, name, id, metadata }) => ({
+    metadata.map(({ content_type, name, id, uri, metadata }) => ({
       type: content_type,
       name,
       ...(Number.isFinite(Number(metadata?.width)) &&
@@ -36,9 +36,9 @@ export function splitAttachmentsByMediaType(metadata: FileMetadata[]): Categoriz
         ? { width: Number(metadata.width), height: Number(metadata.height) }
         : {}),
       urls: {
-        main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }),
+        main: FileController.getFileUrl({ fileId: id, uri, variant: FileVariant.MAIN }),
         feed: content_type.startsWith('image')
-          ? FileController.getFileUrl({ fileId: id, variant: FileVariant.FEED })
+          ? FileController.getFileUrl({ fileId: id, uri, variant: FileVariant.FEED })
           : undefined,
       },
     })),

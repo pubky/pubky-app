@@ -25,6 +25,13 @@ export interface LocalFilesState {
   posts: Record<string, AttachmentConstructed[] | undefined>;
 
   /**
+   * Article covers keyed by composite post id, for the articles this session published or edited.
+   * An article's cover is no attachment slot (it lives in the envelope's `cover_image`, ADR-0023 as
+   * amended by ADR-0027), so it has its own entry beside the post's inline media in `posts`.
+   */
+  articleCovers: Record<string, AttachmentConstructed | undefined>;
+
+  /**
    * Collection cover images keyed by composite collection id.
    * Used for instant cover preview before the CDN indexes the uploaded file.
    *
@@ -52,6 +59,12 @@ export interface LocalFilesActions {
   setPostAttachments: (postId: string, attachments: AttachmentConstructed[]) => void;
 
   /**
+   * Set or clear an article's cover entry. Pass `null` to clear. Automatically revokes the
+   * previous blob URL unless the incoming entry reuses it.
+   */
+  setArticleCover: (postId: string, cover: AttachmentConstructed | null) => void;
+
+  /**
    * Set or clear the cover image blob URL for a collection.
    * Pass `null` to clear the entry. Automatically revokes the previous blob URL.
    */
@@ -69,12 +82,14 @@ export type LocalFilesStore = LocalFilesState & LocalFilesActions;
 export const localFilesInitialState: LocalFilesState = {
   profile: null,
   posts: {},
+  articleCovers: {},
   collections: {},
 };
 
 export enum LocalFilesActionTypes {
   SET_PROFILE = 'SET_PROFILE',
   SET_POST_ATTACHMENTS = 'SET_POST_ATTACHMENTS',
+  SET_ARTICLE_COVER = 'SET_ARTICLE_COVER',
   SET_COLLECTION_COVER = 'SET_COLLECTION_COVER',
   RESET = 'RESET',
 }

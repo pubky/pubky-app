@@ -1,11 +1,12 @@
 import { hashKey, onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getNexusUrl } from '@/config/nexus';
 import { HttpMethod } from '@/libs/http/http.types';
 import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
 import { buildNexusQueryKey, getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
 
 describe('nexus.by-ids', () => {
   const mockFetch = vi.fn();
@@ -30,7 +31,9 @@ describe('nexus.by-ids', () => {
       const running = Promise.withResolvers<Response>();
       const ids = kind === 'users' ? ['alice', 'bob', 'carol'] : ['alice:one', 'bob:two', 'carol:three'];
       const records = ids.map((id) =>
-        kind === 'users' ? { details: { id } } : { details: { author: id.split(':')[0], id: id.split(':')[1] } },
+        kind === 'users'
+          ? { details: { id }, tags: [] }
+          : { details: { author: id.split(':')[0], id: id.split(':')[1], kind: 'link' }, tags: [] },
       );
       const fetchIds = (requested: string[]) =>
         kind === 'users'
@@ -80,7 +83,9 @@ describe('nexus.by-ids', () => {
         kind === 'users' ? `user${index}` : `user${index}:post`,
       ).sort();
       const records = ids.map((id) =>
-        kind === 'users' ? { details: { id } } : { details: { author: id.split(':')[0], id: id.split(':')[1] } },
+        kind === 'users'
+          ? { details: { id }, tags: [] }
+          : { details: { author: id.split(':')[0], id: id.split(':')[1], kind: 'link' }, tags: [] },
       );
       const fetchIds = (requested: string[]) =>
         kind === 'users'
@@ -104,7 +109,7 @@ describe('nexus.by-ids', () => {
         expect(originalResult).toEqual(records);
         expect(joinedResult).toEqual(records.slice(1));
         hash.mockClear();
-        expect(await fetchIds(ids)).toBe(originalResult);
+        expect(await fetchIds(ids)).toEqual(originalResult);
         const cachedHashes = hash.mock.calls.length;
         expect(mockFetch).toHaveBeenCalledTimes(1);
         // Count public key hashing work instead of timing the machine. Unrelated
@@ -131,7 +136,7 @@ describe('nexus.by-ids', () => {
       await vi.waitFor(() => expect(rejected).toHaveBeenCalledOnce());
       expect(mockFetch).toHaveBeenCalledTimes(2);
     } finally {
-      running.resolve(nexusResponse([{ details: { id: 'bob' } }]));
+      running.resolve(nexusResponse([{ details: { id: 'bob' }, tags: [] }]));
       await Promise.all([original, overlap]);
     }
   });
@@ -143,7 +148,7 @@ describe('nexus.by-ids', () => {
     const joined = NexusUserStreamService.fetchByIds({ user_ids: ['bob'] });
     const results = Promise.allSettled([original, joined]);
     nexusQueryClient.clear();
-    running.resolve(nexusResponse([{ details: { id: 'bob' } }]));
+    running.resolve(nexusResponse([{ details: { id: 'bob' }, tags: [] }]));
 
     expect((await results).map((result) => result.status)).toEqual(['rejected', 'rejected']);
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -169,7 +174,7 @@ describe('nexus.by-ids', () => {
   });
 
   it('collapses two concurrent identical posts/by_ids calls into one request', async () => {
-    const posts = [{ details: { author: 'author1', id: 'post1' } }];
+    const posts = [{ details: { author: 'author1', id: 'post1', kind: 'note' }, tags: [] }];
     mockFetch.mockResolvedValueOnce(nexusResponse(posts));
 
     const [first, second] = await Promise.all([
@@ -178,12 +183,45 @@ describe('nexus.by-ids', () => {
     ]);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(first).toEqual(posts);
-    expect(second).toEqual(posts);
+    // Both callers get the one response, past the read boundary (`note` -> `short`)
+    const folded = [{ details: { author: 'author1', id: 'post1', kind: 'short' }, tags: [] }];
+    expect(first).toEqual(folded);
+    expect(second).toEqual(folded);
+  });
+
+  it('folds a response assembled from overlapping batches and keeps its start time', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const running = Promise.withResolvers<Response>();
+    const wire = (author: string, id: string, kind: string) => ({
+      details: { author, id, kind },
+      tags: [{ label: 'x' }],
+    });
+    mockFetch
+      .mockReturnValueOnce(running.promise)
+      .mockResolvedValueOnce(nexusResponse([wire('carol', 'three', 'article')]));
+    try {
+      const original = NexusPostStreamService.fetchByIds({ post_ids: ['alice:one', 'bob:two'] });
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      now.mockReturnValue(2_000);
+      const overlap = NexusPostStreamService.fetchByIds({ post_ids: ['bob:two', 'carol:three'] });
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+      running.resolve(nexusResponse([wire('alice', 'one', 'note'), wire('bob', 'two', 'note')]));
+
+      await original;
+      const result = await overlap;
+      // Joined from two wire responses: local kinds and the derived tag `relationship` on both
+      expect(result).toEqual([
+        { details: { author: 'bob', id: 'two', kind: 'short' }, tags: [{ label: 'x', relationship: false }] },
+        { details: { author: 'carol', id: 'three', kind: 'long' }, tags: [{ label: 'x', relationship: false }] },
+      ]);
+      expect(getNexusResponseStartedAt(result)).toBe(1_000);
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('collapses two concurrent identical users/by_ids calls into one request', async () => {
-    const users = [{ details: { id: 'user1' } }];
+    const users = [{ details: { id: 'user1' }, tags: [] }];
     mockFetch.mockResolvedValueOnce(nexusResponse(users));
 
     await Promise.all([
@@ -201,11 +239,11 @@ describe('nexus.by-ids', () => {
       const ids = kind === 'users' ? ['alice', 'bob', 'carol'] : ['alice:one', 'bob:two', 'carol:three'];
       const records =
         kind === 'users'
-          ? ids.map((id) => ({ details: { id } }))
+          ? ids.map((id) => ({ details: { id }, tags: [] }))
           : [
-              { details: { author: 'alice', id: 'one' } },
-              { details: { author: 'bob', id: 'two' } },
-              { details: { author: 'carol', id: 'three' } },
+              { details: { author: 'alice', id: 'one', kind: 'link' }, tags: [] },
+              { details: { author: 'bob', id: 'two', kind: 'link' }, tags: [] },
+              { details: { author: 'carol', id: 'three', kind: 'link' }, tags: [] },
             ];
       const fetchIds = (requested: string[]) =>
         kind === 'users'
@@ -238,17 +276,27 @@ describe('nexus.by-ids', () => {
   it('retains the oldest start time and sorted caller subset when combining pending users', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
     const running = Promise.withResolvers<Response>();
-    mockFetch.mockReturnValueOnce(running.promise).mockResolvedValueOnce(nexusResponse([{ details: { id: 'alice' } }]));
+    mockFetch
+      .mockReturnValueOnce(running.promise)
+      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'alice' }, tags: [] }]));
     try {
       const original = NexusUserStreamService.fetchByIds({ user_ids: ['bob', 'carol', 'missing'] });
       now.mockReturnValue(2_000);
       const overlap = NexusUserStreamService.fetchByIds({ user_ids: ['missing', 'bob', 'alice'] });
       const missing = NexusUserStreamService.fetchByIds({ user_ids: ['missing'] });
-      running.resolve(nexusResponse([{ details: { id: 'bob' } }, { details: { id: 'carol' } }]));
+      running.resolve(
+        nexusResponse([
+          { details: { id: 'bob' }, tags: [] },
+          { details: { id: 'carol' }, tags: [] },
+        ]),
+      );
 
       await original;
       const result = await overlap;
-      expect(result).toEqual([{ details: { id: 'alice' } }, { details: { id: 'bob' } }]);
+      expect(result).toEqual([
+        { details: { id: 'alice' }, tags: [] },
+        { details: { id: 'bob' }, tags: [] },
+      ]);
       expect(getNexusResponseStartedAt(result)).toBe(1_000);
       const absent = await missing;
       expect(absent).toEqual([]);
@@ -266,25 +314,22 @@ describe('nexus.by-ids', () => {
     const otherViewer = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], viewer_id: 'viewer-b', depth: 1 });
     const otherDepth = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], viewer_id: 'viewer-a', depth: 2 });
     const publicRead = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], depth: 1 });
-    running.resolve(nexusResponse([{ details: { id: 'bob' } }]));
+    running.resolve(nexusResponse([{ details: { id: 'bob' }, tags: [] }]));
 
-    expect(await first).toEqual([{ details: { id: 'bob' } }]);
+    expect(await first).toEqual([{ details: { id: 'bob' }, tags: [] }]);
     expect(await Promise.all([otherViewer, otherDepth, publicRead])).toEqual([[], [], []]);
     expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 
-  it('isolates overlapping posts by attachment metadata options', async () => {
+  it('isolates overlapping posts by viewer', async () => {
     const running = Promise.withResolvers<Response>();
     mockFetch.mockReturnValueOnce(running.promise).mockResolvedValueOnce(nexusResponse([]));
-    const withMetadata = NexusPostStreamService.fetchByIds({ post_ids: ['alice:one', 'bob:two'] });
-    const withoutMetadata = NexusPostStreamService.fetchByIds({
-      post_ids: ['bob:two'],
-      include_attachment_metadata: false,
-    });
-    running.resolve(nexusResponse([{ details: { author: 'bob', id: 'two' } }]));
+    const asViewer = NexusPostStreamService.fetchByIds({ post_ids: ['alice:one', 'bob:two'], viewer_id: 'viewer-a' });
+    const asGuest = NexusPostStreamService.fetchByIds({ post_ids: ['bob:two'] });
+    running.resolve(nexusResponse([{ details: { author: 'bob', id: 'two', kind: 'link' }, tags: [] }]));
 
-    await withMetadata;
-    expect(await withoutMetadata).toEqual([]);
+    await asViewer;
+    expect(await asGuest).toEqual([]);
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -293,16 +338,16 @@ describe('nexus.by-ids', () => {
     const running = Promise.withResolvers<Response>();
     mockFetch
       .mockReturnValueOnce(running.promise)
-      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob', name: 'New name' } }]));
+      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob', name: 'New name' }, tags: [] }]));
     try {
       const old = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] });
       now.mockReturnValue(2_000);
       const forced = NexusUserStreamService.fetchByIds({ user_ids: ['bob'], force: true });
       const refreshed = await forced;
-      expect(refreshed).toEqual([{ details: { id: 'bob', name: 'New name' } }]);
+      expect(refreshed).toEqual([{ details: { id: 'bob', name: 'New name' }, tags: [] }]);
       expect(getNexusResponseStartedAt(refreshed)).toBe(2_000);
-      running.resolve(nexusResponse([{ details: { id: 'bob', name: 'Old name' } }]));
-      expect(await old).toEqual([{ details: { id: 'bob', name: 'Old name' } }]);
+      running.resolve(nexusResponse([{ details: { id: 'bob', name: 'Old name' }, tags: [] }]));
+      expect(await old).toEqual([{ details: { id: 'bob', name: 'Old name' }, tags: [] }]);
       expect(mockFetch).toHaveBeenCalledTimes(2);
     } finally {
       now.mockRestore();
@@ -316,20 +361,19 @@ describe('nexus.by-ids', () => {
     const ids = kind === 'users' ? ['alice', 'bob'] : ['alice:one', 'bob:two'];
     const record = (id: string, version: string) =>
       kind === 'users'
-        ? { details: { id, name: version } }
-        : { details: { author: id.split(':')[0], id: id.split(':')[1], content: version } };
+        ? { details: { id, name: version }, tags: [] }
+        : { details: { author: id.split(':')[0], id: id.split(':')[1], content: version, kind: 'link' }, tags: [] };
     const fetchIds = (requested: string[], force = false) =>
       kind === 'users'
         ? NexusUserStreamService.fetchByIds({ user_ids: requested, force })
         : NexusPostStreamService.fetchByIds({ post_ids: requested, force });
-    const exactQueryKey = () =>
-      buildNexusQueryKey({
-        url: `${getNexusUrl()}/v0/stream/${kind}/by_ids`,
-        method: HttpMethod.POST,
-        body: JSON.stringify(
-          kind === 'users' ? { user_ids: [ids[1]] } : { post_ids: [ids[1]], include_attachment_metadata: true },
-        ),
-      });
+    const exactQueryKey = () => {
+      const { url, body } =
+        kind === 'users'
+          ? userStreamApi.usersByIds({ user_ids: [ids[1]] })
+          : postStreamApi.postsByIds({ post_ids: [ids[1]] });
+      return buildNexusQueryKey({ url, method: HttpMethod.POST, body: JSON.stringify(body) });
+    };
 
     it('joins an active batch when an idle exact query has only an error', async () => {
       const running = Promise.withResolvers<Response>();
@@ -368,7 +412,7 @@ describe('nexus.by-ids', () => {
         const ordinary = fetchIds([ids[1]]).then(resolved);
         try {
           await vi.waitFor(() => expect(resolved).toHaveBeenCalledOnce());
-          expect(resolved.mock.calls[0][0]).toBe(refreshed);
+          expect(resolved.mock.calls[0][0]).toEqual(refreshed);
           expect(getNexusResponseStartedAt(resolved.mock.calls[0][0])).toBe(2_000);
           expect(mockFetch).toHaveBeenCalledTimes(2);
         } finally {
@@ -400,7 +444,7 @@ describe('nexus.by-ids', () => {
           await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
           const requested = JSON.parse(mockFetch.mock.calls[2][1].body);
           expect(requested[kind === 'users' ? 'user_ids' : 'post_ids']).toEqual([thirdId]);
-          expect(await exact).toBe(cached);
+          expect(await exact).toEqual(cached);
           expect(getNexusResponseStartedAt(await exact)).toBe(1_000);
         } finally {
           running.resolve(nexusResponse([record(ids[1], 'Active batch')]));
@@ -437,7 +481,7 @@ describe('nexus.by-ids', () => {
             expect(nexusQueryClient.getQueryState(exactQueryKey())?.fetchStatus).toBe(fetchStatus),
           );
           const exact = await fetchIds([ids[1]]);
-          expect(exact).toBe(cached);
+          expect(exact).toEqual(cached);
           expect(getNexusResponseStartedAt(exact)).toBe(1_000);
           onlineManager.setOnline(true);
           await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
@@ -626,7 +670,7 @@ describe('nexus.by-ids', () => {
       const refreshed = await forced;
       try {
         await vi.waitFor(() => expect(resolved).toHaveBeenCalledOnce());
-        expect(resolved.mock.calls[0][0]).toBe(refreshed);
+        expect(resolved.mock.calls[0][0]).toEqual(refreshed);
         expect(getNexusResponseStartedAt(resolved.mock.calls[0][0])).toBe(2_000);
         expect(mockFetch).toHaveBeenCalledTimes(2);
       } finally {
@@ -639,7 +683,9 @@ describe('nexus.by-ids', () => {
 
   it('fetches a joined caller independently after a shared batch fails', async () => {
     const running = Promise.withResolvers<Response>();
-    mockFetch.mockReturnValueOnce(running.promise).mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob' } }]));
+    mockFetch
+      .mockReturnValueOnce(running.promise)
+      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob' }, tags: [] }]));
     const original = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] });
     const joined = NexusUserStreamService.fetchByIds({ user_ids: ['bob'] });
     const failures = Promise.allSettled([original, joined]);
@@ -647,7 +693,9 @@ describe('nexus.by-ids', () => {
 
     expect((await failures).map((result) => result.status)).toEqual(['rejected', 'fulfilled']);
     expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(await NexusUserStreamService.fetchByIds({ user_ids: ['bob'] })).toEqual([{ details: { id: 'bob' } }]);
+    expect(await NexusUserStreamService.fetchByIds({ user_ids: ['bob'] })).toEqual([
+      { details: { id: 'bob' }, tags: [] },
+    ]);
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -655,7 +703,7 @@ describe('nexus.by-ids', () => {
     const running = Promise.withResolvers<Response>();
     mockFetch
       .mockReturnValueOnce(running.promise)
-      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'carol' } }]))
+      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'carol' }, tags: [] }]))
       .mockResolvedValueOnce(new Response('Bad request', { status: 400 }));
     const original = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] });
     const overlap = NexusUserStreamService.fetchByIds({ user_ids: ['bob', 'carol'] });
@@ -673,8 +721,13 @@ describe('nexus.by-ids', () => {
     mockFetch
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise)
-      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'carol' } }]))
-      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob' } }, { details: { id: 'dave' } }]));
+      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'carol' }, tags: [] }]))
+      .mockResolvedValueOnce(
+        nexusResponse([
+          { details: { id: 'bob' }, tags: [] },
+          { details: { id: 'dave' }, tags: [] },
+        ]),
+      );
     const originals = Promise.allSettled([
       NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] }),
       NexusUserStreamService.fetchByIds({ user_ids: ['dave'] }),
@@ -685,9 +738,9 @@ describe('nexus.by-ids', () => {
 
     expect((await originals).map((result) => result.status)).toEqual(['rejected', 'rejected']);
     expect(await overlap).toEqual([
-      { details: { id: 'bob' } },
-      { details: { id: 'carol' } },
-      { details: { id: 'dave' } },
+      { details: { id: 'bob' }, tags: [] },
+      { details: { id: 'carol' }, tags: [] },
+      { details: { id: 'dave' }, tags: [] },
     ]);
     expect(mockFetch).toHaveBeenCalledTimes(4);
     expect(JSON.parse(mockFetch.mock.calls[3][1].body).user_ids).toEqual(['bob', 'dave']);
@@ -697,14 +750,14 @@ describe('nexus.by-ids', () => {
     const running = Promise.withResolvers<Response>();
     mockFetch
       .mockReturnValueOnce(running.promise)
-      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob', name: 'New session' } }]));
+      .mockResolvedValueOnce(nexusResponse([{ details: { id: 'bob', name: 'New session' }, tags: [] }]));
     const old = NexusUserStreamService.fetchByIds({ user_ids: ['alice', 'bob'] });
     const oldResult = Promise.allSettled([old]);
     nexusQueryClient.clear();
     const current = NexusUserStreamService.fetchByIds({ user_ids: ['bob'] });
-    running.resolve(nexusResponse([{ details: { id: 'bob', name: 'Old session' } }]));
+    running.resolve(nexusResponse([{ details: { id: 'bob', name: 'Old session' }, tags: [] }]));
 
-    expect(await current).toEqual([{ details: { id: 'bob', name: 'New session' } }]);
+    expect(await current).toEqual([{ details: { id: 'bob', name: 'New session' }, tags: [] }]);
     expect((await oldResult)[0].status).toBe('rejected');
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });

@@ -1,15 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import { FeedApplication } from '@/application/feed/feed';
 import { MuteApplication } from '@/application/mute/mute';
 import { SettingsApplication } from '@/application/settings/settings';
+import { FeedModel } from '@/models/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { SettingsState } from '@/stores/settings/settings.types';
 import { MigrationApplication } from './migration';
-
-vi.mock('pubky-app-specs', () => ({
-  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
-}));
 
 vi.mock('@/libs/logger/logger', () => ({
   Logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -18,8 +17,11 @@ vi.mock('@/libs/logger/logger', () => ({
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 
 describe('MigrationApplication', () => {
+  let fetchBookmarksSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchBookmarksSpy = vi.spyOn(BookmarkApplication, 'fetchBookmarks').mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -27,7 +29,7 @@ describe('MigrationApplication', () => {
   });
 
   describe('resync', () => {
-    it('should fetch muted users, feeds, and settings in parallel, and return settings', async () => {
+    it('should fetch muted users, feeds, settings and bookmarks in parallel, and return settings', async () => {
       const mockMutedUsers = ['muted-1', 'muted-2'] as Pubky[];
       const mockFeeds = [{ id: 'feed-1' }] as FeedModelSchema[];
       const mockSettings = { version: 1, updatedAt: 123 } as SettingsState;
@@ -39,9 +41,74 @@ describe('MigrationApplication', () => {
 
       const result = await MigrationApplication.resync(TEST_PUBKY, mockLocalSettings);
 
-      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
-      expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
+      expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
       expect(initSettingsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, mockLocalSettings);
+      expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
+      expect(result).toBe(mockSettings);
+    });
+
+    it('passes the account guard to every private fetch: mutes, feeds and bookmarks', async () => {
+      const fetchMutedSpy = vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+      const fetchFeedsSpy = vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+      const isCurrent = () => true;
+
+      await MigrationApplication.resync(TEST_PUBKY, { version: 3, updatedAt: 300 } as SettingsState, { isCurrent });
+
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent });
+      expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent });
+      expect(fetchBookmarksSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent });
+    });
+
+    describe('with the real feed fetch', () => {
+      const localSettings = { version: 3, updatedAt: 300 } as SettingsState;
+      /** A feed row the next account owns; the listing run under that account's session names no feed of the first. */
+      const nextAccountFeed: FeedModelSchema = {
+        id: 'feed-next-account',
+        name: 'Next account',
+        icon: 'activity',
+        tags: ['next'],
+        domain_tags: [],
+        reach: 'all',
+        sort: 'recent',
+        content: null,
+        layout: 'columns',
+        created_at: 1,
+        updated_at: 1,
+      };
+
+      const resyncOverEmptyListing = async (isCurrent: () => boolean) => {
+        vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+        vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+        vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([]);
+        await FeedModel.upsert(nextAccountFeed);
+
+        await MigrationApplication.resync(TEST_PUBKY, localSettings, { isCurrent });
+      };
+
+      it('reconciles the local feeds with the listing while the account is still the current one', async () => {
+        await resyncOverEmptyListing(() => true);
+
+        expect(await FeedModel.table.count()).toBe(0);
+      });
+
+      it("leaves the next account's feed rows in place once the account the resync started for is gone", async () => {
+        await resyncOverEmptyListing(() => false);
+
+        expect(await FeedModel.table.toArray()).toEqual([nextAccountFeed]);
+      });
+    });
+
+    it('still returns the settings when the bookmarks fetch fails', async () => {
+      const mockSettings = { version: 2, updatedAt: 456 } as SettingsState;
+      vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+      vi.spyOn(FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(mockSettings);
+      fetchBookmarksSpy.mockRejectedValue(new Error('bookmarks-500'));
+
+      const result = await MigrationApplication.resync(TEST_PUBKY, { version: 3, updatedAt: 300 } as SettingsState);
+
       expect(result).toBe(mockSettings);
     });
 
@@ -64,7 +131,7 @@ describe('MigrationApplication', () => {
 
       await MigrationApplication.resync(TEST_PUBKY, mockLocalSettings);
 
-      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
     });
 
     it('should still call fetchMutedUsers when feeds fetch fails', async () => {
@@ -76,7 +143,7 @@ describe('MigrationApplication', () => {
 
       const result = await MigrationApplication.resync(TEST_PUBKY, mockLocalSettings);
 
-      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, { isCurrent: undefined });
       expect(result).toBeNull();
     });
 

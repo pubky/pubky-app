@@ -7,6 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { mergeTaggerIds, useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
 import { MAX_VISIBLE_AVATARS, POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
@@ -36,7 +37,7 @@ export function PostTagPopoverWrapper({
   const viewerId = useAuthStore((state) => state.currentUserPubky);
   const { taggerStates, loadTaggers, loadMoreTaggers } = useEntityTaggers(tagLabel ? postId : null, TagKind.POST);
   const previewTaggerIds = taggers.map((tagger) => tagger.id);
-  const taggerState = tagLabel ? taggerStates.get(tagLabel.toLowerCase()) : undefined;
+  const taggerState = tagLabel ? taggerStates.get(canonicalizeTagLabel(tagLabel)) : undefined;
   const isFetching = taggerState?.isLoading ?? false;
 
   const handleOpenChange = (newOpen: boolean) => {

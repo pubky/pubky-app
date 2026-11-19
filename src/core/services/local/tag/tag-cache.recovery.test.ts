@@ -3,12 +3,14 @@ import { IDBObjectStore } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { clearDatabase } from '@/database/franky/franky.helpers';
-import type { NexusTag, NexusUserCounts } from '@/services/nexus/nexus.types';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 import { LocalTagCacheService } from './tag-cache';
 
 const entity = { kind: 'user', id: 'alice' } as const;
 const tag: NexusTag = { label: 'test', taggers: [], taggers_count: 1, relationship: false };
-const counts: NexusUserCounts = {
+// The stored row shape `savePreviews` takes: `bookmarks` is the row's local default, never a Nexus count (ADR-0028)
+const counts: Omit<UserCountsModelSchema, 'id'> = {
   tagged: 0,
   tags: 1,
   unique_tags: 1,

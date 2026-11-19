@@ -7,11 +7,12 @@ import { NotificationApplication } from '@/application/notification/notification
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
 import type { SessionReadiness } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
+import { SocialMigrationController, type SocialMigrationEntry } from '@/controllers/social-migration/social-migration';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
@@ -36,14 +37,13 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
-import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
 import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { clearThemePreference } from '@/libs/theme/clear-theme-preference';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import type {
@@ -123,6 +123,8 @@ export class AuthController {
       if (state.restoreStatus === 'temporary-error') return 'unavailable';
       if (
         state.restoreStatus === 'restoring' ||
+        // The migration gate ends in a ready session or a logout; keep waiting like a restore
+        state.restoreStatus === 'social-migration' ||
         (state.currentUserPubky && state.sessionReference && state.restoreStatus === 'idle')
       )
         return null;
@@ -417,6 +419,18 @@ export class AuthController {
         }
         await this.prepareAccount(generation);
         if (!isCurrent()) return false;
+        // The gate runs before the session enters the store (ADR-0026): a trusted local record passes at
+        // once; otherwise the flag is read, a run resumes, or the account is signed out (D2).
+        const gate = await SocialMigrationController.ensureMigrated({
+          session: result.session,
+          generation,
+          entry: 'restore',
+          isCurrent,
+        });
+        if (!isCurrent()) return false;
+        if (gate === 'canceled') throw createCanceledError();
+        // The /migration screen signs the account out; `restoreStatus` stays `social-migration`.
+        if (gate === 'reauth-required') return false;
         const current = useAuthStore.getState();
         current.init({
           session: result.session,
@@ -486,6 +500,7 @@ export class AuthController {
       return false;
     ++this.restoreVersion;
     this.sessionRestore = null;
+    SocialMigrationController.cancel();
     this.cancelModerationFollow();
     useSignInStore.getState().reset();
     // Set the status first so clearing the handle cannot trigger automatic startup restoration.
@@ -517,6 +532,8 @@ export class AuthController {
     if (!snapshot.sessionReference || (id !== null && snapshot.sessionReference.sessionStoreId !== id)) return;
     this.reportSavedSessionLoss(id === null ? 'cleared' : 'removed', snapshot.sessionReference);
     this.cancelActiveAuthFlow();
+    // A gate paused on Retry or Continue would otherwise hold the restore awaited below behind a loading screen.
+    SocialMigrationController.cancel();
     const version = ++this.restoreVersion;
     this.sessionRestore = null;
     const previousRestore = this.restorePromise;
@@ -556,7 +573,6 @@ export class AuthController {
     if (previous.currentUserPubky !== current.currentUserPubky) {
       clearAllQueryClients();
       postStreamQueue.clear();
-      clearMuteSyncCursorSessionStorage();
       clearNotificationLastReadSyncCursorSessionStorage();
       useLocalFilesStore.getState().reset();
       useSignInStore.getState().reset();
@@ -595,9 +611,7 @@ export class AuthController {
     // A boundary already in the store may have been hydrated from storage another account's tab wrote: it has no owner.
     const lastReadBeforeBootstrap = useNotificationStore.getState().selectLastRead();
     const signInStore = useSignInStore.getState();
-    const {
-      meta: { url },
-    } = NotificationNormalizer.to(pubky);
+    const url = LastReadNormalizer.buildUrl(pubky);
 
     // Progress callback to update signInStore from Controller layer (respecting architecture rules)
     const onProgress: BootstrapProgressCallback = (step) => {
@@ -667,22 +681,23 @@ export class AuthController {
       expectedPubky,
       required = [APP_CAPABILITIES],
       preserveContext = false,
+      entry = preserveContext ? 'upgrade' : 'signin',
     }: {
       epoch?: number;
       expectedPubky?: string;
       required?: readonly string[];
       preserveContext?: boolean;
+      /** How the migration gate treats the session; a signup runs inline on its empty tree. */
+      entry?: SocialMigrationEntry;
     } = {},
-  ) {
+  ): Promise<boolean> {
     const previous = useAuthStore.getState();
     const pubky = Identity.z32FromSession({ session });
-    if (
-      (expectedPubky && pubky !== expectedPubky) ||
-      !hasCapabilities(session.info.capabilities, required) ||
-      !session.grant
-    ) {
+    const wrongAccount = Boolean(expectedPubky) && pubky !== expectedPubky;
+    const missingCapabilities = !hasCapabilities(session.info.capabilities, required);
+    if (wrongAccount || missingCapabilities || !session.grant) {
       await AuthApplication.retainUnusedSession(session);
-      throw createAuthApprovalMismatchError();
+      throw createAuthApprovalMismatchError(!wrongAccount && missingCapabilities ? 'capabilities' : 'identity');
     }
     const persistence = AuthApplication.saveSession(session);
     let reference;
@@ -716,6 +731,9 @@ export class AuthController {
       retiringSession: null,
       needsAccountPreparation,
     };
+    // Admitted before the record publishes the reference: another tab restoring it then reads an admitted grant
+    // (ADR-0026). A commit that fails leaves an admitted id no tab can restore, among the record's few kept ids.
+    SocialMigrationController.admitGrant(pubky, reference.sessionStoreId);
     try {
       await AuthApplication.commitPersistedAuth(record, previous.generation, () => epoch === this.epoch);
     } catch (error) {
@@ -734,10 +752,14 @@ export class AuthController {
     }
     // Once the reference is durable, this tab must adopt it even if UI cancellation arrives late.
     this.sessionRestore = null;
+    // The migration gate runs before the session enters the store (ADR-0026): the committed identity
+    // is visible to logout and the route guard, the session is not. An upgrade of an account that
+    // passed the gate in this browser keeps its context, as before; its grant was admitted above.
+    const gated = !(preserveContext && SocialMigrationController.hasPassedLocally(pubky));
     previous.init({
       ...committed,
-      session,
-      restoreStatus: preserveContext && !needsAccountPreparation ? 'ready' : 'restoring',
+      session: gated ? null : session,
+      restoreStatus: !gated && preserveContext && !needsAccountPreparation ? 'ready' : 'restoring',
     });
     // Keep browser recovery keys until a replacement account is durably accepted.
     // A same-account reauthorization must not erase its still-unconfirmed backup.
@@ -748,7 +770,8 @@ export class AuthController {
     if (onboardingPubky !== pubky) resetTabStore(useOnboardingStore, true);
     void this.retireLegacyCookieSessions();
     if (needsAccountPreparation) useAuthStore.getState().setNeedsAccountSync(true);
-    if (!preserveContext || needsAccountPreparation) useAuthStore.getState().setRestoreStatus('restoring');
+    if (gated || !preserveContext || needsAccountPreparation) useAuthStore.getState().setRestoreStatus('restoring');
+    let placed = !gated;
     try {
       if (!sameAccount) {
         this.cancelModerationFollow();
@@ -756,6 +779,21 @@ export class AuthController {
         resetTabStore(useSettingsStore, true);
         resetTabStore(useNotificationStore, true);
         LocksController.clearLocalSession();
+      }
+      if (gated) {
+        // Before account preparation: a failed cleanup then retains the admitted session for its retry.
+        const gate = await SocialMigrationController.ensureMigrated({
+          session,
+          generation,
+          entry,
+          isCurrent: () => this.isCurrentGeneration(generation),
+        });
+        if (!this.isCurrentGeneration(generation) || gate === 'canceled') throw createCanceledError();
+        // The /migration screen signs the account out; the grant stays durable for its retirement.
+        if (gate === 'reauth-required') return false;
+        // One write: a session beside a `social-migration` status would read as the account for a tick.
+        useAuthStore.setState({ session, restoreStatus: 'restoring', isRestoringSession: true });
+        placed = true;
       }
       await this.prepareAccount(generation);
       if (!this.isCurrentGeneration(generation)) throw createCanceledError();
@@ -769,9 +807,12 @@ export class AuthController {
         await this.bootstrapProfile(session, generation);
       if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
         useAuthStore.getState().setRestoreStatus('ready');
+      return true;
     } catch (error) {
       // The replacement is already durable. Never resurrect the previous session or erase this grant.
-      if (useAuthStore.getState().generation === generation && useAuthStore.getState().session === session) {
+      // Before the gate placed the session the store holds none; the failure is still this adoption's.
+      const state = useAuthStore.getState();
+      if (state.generation === generation && (state.session === session || (!placed && state.session === null))) {
         // The retained session needs a fresh sign-in: clear the primed progress steps so /sign-in offers choices.
         useSignInStore.getState().reset();
         useAuthStore.getState().setRestoreStatus('temporary-error');
@@ -933,6 +974,8 @@ export class AuthController {
             await assertCurrent();
             let completed = false;
             try {
+              // The outcome is not needed here: a gate sign-out ends the attempt below (`social-migration`), and the
+              // page learns it from the route guard, which already sent the tab to `/migration`.
               await this.completeAuthenticatedSession(
                 { session },
                 {
@@ -940,13 +983,17 @@ export class AuthController {
                   expectedPubky: request.expectedPubky,
                   required: request.capabilities.split(','),
                   preserveContext: request.purpose === 'upgrade',
+                  entry: request.purpose,
                 },
               );
             } catch (error) {
               completed = isAuthFlowCanceledError(error) || isAuthApprovalMismatchError(error);
               throw error;
             } finally {
-              if (completed || useAuthStore.getState().session === session) flow.completeAuthFlow?.();
+              // The gate's forced sign-out also ends the attempt: the session never reaches the store.
+              const state = useAuthStore.getState();
+              if (completed || state.session === session || state.restoreStatus === 'social-migration')
+                flow.completeAuthFlow?.();
             }
           };
           if (deferAdoption) this.pendingSessionAdoptions.set(session, adopt);
@@ -977,19 +1024,16 @@ export class AuthController {
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
    * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * and the mute-sync and last_read-sync `sessionStorage` cursors.
+   * and the last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
-    // Mute-list and last_read SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
-    clearMuteSyncCursorSessionStorage();
+    // The last_read SSE cursor lives in sessionStorage; clear before the next account might reuse the same tab.
     clearNotificationLastReadSyncCursorSessionStorage();
 
-    // Reset singletons
-    PubkySpecsSingleton.reset();
-    // CoordinatorManager owns TTL lifetime; its auth listener clears session work.
+    // Reset singletons. CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
 
@@ -1065,7 +1109,9 @@ export class AuthController {
         operation: 'requestCapabilities',
       });
     const capabilities = validateCapabilities(
-      [APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(','),
+      [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(
+        ',',
+      ),
     ) as Capabilities;
     return this.wrapAuthFlow({
       purpose: 'upgrade',
@@ -1113,6 +1159,11 @@ export class AuthController {
     return this.requestCapabilities(LOCKS_CAPABILITIES, fresh);
   }
 
+  /** The network or the tab came back while a migration run waits on a homeserver it could not reach. */
+  static retrySocialMigration(): void {
+    SocialMigrationController.retryAfterReconnect();
+  }
+
   /** Retry durable Shop cleanup after an absent iframe or interrupted signed-out cleanup. */
   static async retryShopCleanup(): Promise<void> {
     try {
@@ -1133,6 +1184,7 @@ export class AuthController {
     this.accountPreparation?.cancel();
     this.accountPreparation = null;
     this.cancelActiveAuthFlow();
+    SocialMigrationController.cancel();
     this.cancelModerationFollow();
     const epoch = this.epoch;
     const snapshot = useAuthStore.getState();

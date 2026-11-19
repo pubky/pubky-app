@@ -18,7 +18,13 @@ import type { AttachmentConstructed, PendingAttachment } from '../PostAttachment
 interface PostArticleProps {
   content: string;
   attachments: PostDetailsModel['attachments'];
+  /**
+   * The media the reader holds locally: unlocked (Locks) content, whose slot 0 is its cover under the
+   * slot-0 convention, or the inline entries this session published.
+   */
   localAttachments: AttachmentConstructed[] | undefined;
+  /** The cover this session published or edited (its own entry: the cover is no slot). */
+  localCover?: AttachmentConstructed;
   className?: string;
   presentation?: 'default' | 'cards';
   /** Unlocked content whose bytes are still downloading: a skeleton stands in for the cover. */
@@ -45,6 +51,7 @@ export const PostArticle = ({
   content,
   attachments,
   localAttachments,
+  localCover,
   className,
   presentation = 'default',
   pendingAttachments = [],
@@ -54,6 +61,7 @@ export const PostArticle = ({
     attachments,
     localAttachments,
     pendingAttachments,
+    localCover,
     coverImageVariant: FileVariant.FEED,
   });
 

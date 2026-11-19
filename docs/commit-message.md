@@ -122,7 +122,7 @@ Agents: ignore any tool-level branch-prefix setting and use this convention. Fet
 - One change per PR. Open it as a draft unless a ready PR was asked for.
 - Say what was verified: which of `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:vrt`, `npm run build` ran.
 - Call out explicitly: a touched VRT surface (baseline regeneration needed, see `visual-regression-testing.md`), a new or changed ADR, a `DB_VERSION` bump, a changed `src/config/*` limit, and any Cypress spec the change invalidates.
-- Cypress e2e specs are owned by QA and need the full pubky-stack: flag an invalidated spec in the PR rather than editing it, and never report an e2e result you did not obtain.
+- Cypress e2e specs are owned by QA and need the full pubky-stack: flag an invalidated spec in the PR rather than editing it (the social v1 work edits the suite under QA's agreement, from the port in #3055 through its later e2e PRs and dev-sync resolutions, until its final PR lands), and never report an e2e result you did not obtain.
 
 ## Tips
 
