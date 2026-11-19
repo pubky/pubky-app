@@ -258,6 +258,27 @@ describe('useBookmarksCollectionSummary', () => {
       expect(shownCounts()).toEqual([3]);
     });
 
+    it('asks once for a bookmark Nexus does not serve, and not again on the next mount', async () => {
+      await bookmarkAll();
+      byIds.mockResolvedValue(servedBookmarks().slice(1));
+
+      const first = renderSummary();
+      await waitFor(() => expect(first.result.current.bookmarkCount).toBe(3));
+      // The gate stays a miss for this mount, and a settled miss does not fetch again.
+      await settle();
+      await settle();
+      expect(byIds).toHaveBeenCalledTimes(1);
+      first.unmount();
+
+      // The next page that shows the count: the unserved bookmark is known, so nothing is sent.
+      const second = renderSummary();
+      await waitFor(() => expect(second.result.current.bookmarkCount).toBe(3));
+      await settle();
+      await settle();
+      expect(byIds).toHaveBeenCalledTimes(1);
+      expect(second.shownCounts()).toEqual([3]);
+    });
+
     it('fetches once for two mounted surfaces', async () => {
       await bookmarkAll();
       const answer: ByIdsAnswer = Promise.withResolvers();

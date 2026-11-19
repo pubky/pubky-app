@@ -16,6 +16,12 @@ export class BookmarkController {
   /** The `fetchMissingPosts` pass in flight, with the viewer session it runs for. */
   private static missingPostsPass: { isCurrent: () => boolean; request: Promise<void> } | null = null;
 
+  /**
+   * The bookmarked posts Nexus answered without a row, with the viewer session that asked: in memory,
+   * so until the page is loaded again or the session changes.
+   */
+  private static unservedPosts: { isCurrent: () => boolean; ids: Set<string> } | null = null;
+
   /** How often one `fetchMissingPosts` call runs again because the account's session was replaced under it. */
   private static readonly MISSING_POSTS_SESSION_RERUNS = 2;
 
@@ -81,9 +87,10 @@ export class BookmarkController {
    * `NEXUS_STREAM_MAX_LIMIT`; with nothing missing it is one local read and no request.
    *
    * Always resolves, whatever came back: a post Nexus does not serve stays uncached, where it keeps
-   * counting as a post, as the Bookmarks list shows it, and a batch that fails (logged by the
-   * application) ends the pass, so an outage costs the wait of one batch, not of every batch; the
-   * next call asks again for what is still missing. Callers of one viewer session share the pass
+   * counting as a post, as the Bookmarks list shows it, and is not asked for again in this session
+   * and page lifetime; a batch that fails (logged by the application) ends the pass, so an outage
+   * costs the wait of one batch, not of every batch, and the next call asks again for its posts and
+   * the ones after them. Callers of one viewer session share the pass
    * in flight. A pass whose session ends stops and stores no post or user row under the next one;
    * when the same account goes on under another session (the restore on a hard page load, which
    * starts from the stored pubky and no session), the pass runs again under that session before
@@ -118,17 +125,28 @@ export class BookmarkController {
   }
 
   private static async fetchMissingPostsInBatches(viewerId: Pubky, isCurrent: () => boolean): Promise<void> {
-    const missingPostIds = await this.getMissingPostIds();
+    const unserved = this.unservedPosts?.isCurrent() ? this.unservedPosts.ids : new Set<string>();
+    const missingPostIds = (await this.getMissingPostIds()).filter((id) => !unserved.has(id));
+    const answered: string[] = [];
     for (let index = 0; index < missingPostIds.length; index += NEXUS_STREAM_MAX_LIMIT) {
+      const batch = missingPostIds.slice(index, index + NEXUS_STREAM_MAX_LIMIT);
       // The controller orchestrates the two domains: `BookmarkApplication` calls no other Application (ADR-0009).
       const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
-        cacheMissPostIds: missingPostIds.slice(index, index + NEXUS_STREAM_MAX_LIMIT),
+        cacheMissPostIds: batch,
         viewerId,
         isCurrent,
       });
       // False when the batch failed or the session changed: the batches left would fail or be dropped as well.
-      if (!hydrated) return;
+      if (!hydrated) break;
+      answered.push(...batch);
     }
+    if (answered.length === 0 || !isCurrent()) return;
+
+    // A post Nexus answered without a row stays missing: remember it, so the next page that shows the
+    // count reads it locally instead of asking again. A batch that failed is not remembered.
+    const stillMissing = new Set(await this.getMissingPostIds());
+    if (!isCurrent()) return;
+    this.unservedPosts = { isCurrent, ids: new Set([...unserved, ...answered.filter((id) => stillMissing.has(id))]) };
   }
 
   /**
