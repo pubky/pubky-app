@@ -16,6 +16,9 @@ export class BookmarkController {
   /** The `fetchMissingPosts` pass in flight, with the viewer session it runs for. */
   private static missingPostsPass: { isCurrent: () => boolean; request: Promise<void> } | null = null;
 
+  /** How often one `fetchMissingPosts` call runs again because the account's session was replaced under it. */
+  private static readonly MISSING_POSTS_SESSION_RERUNS = 2;
+
   /**
    * Check if a post is bookmarked
    * @param postId - Composite post ID (authorId:postId)
@@ -81,9 +84,16 @@ export class BookmarkController {
    * counting as a post, as the Bookmarks list shows it, and a batch that fails (logged by the
    * application) ends the pass, so an outage costs the wait of one batch, not of every batch; the
    * next call asks again for what is still missing. Callers of one viewer session share the pass
-   * in flight. A pass that outlives its session stops and writes nothing for the next one.
+   * in flight. A pass whose session ends stops and stores no post or user row under the next one;
+   * when the same account goes on under another session (the restore on a hard page load, which
+   * starts from the stored pubky and no session), the pass runs again under that session before
+   * it resolves, so its callers still get the posts.
    */
   static fetchMissingPosts(): Promise<void> {
+    return this.startMissingPostsPass(BookmarkController.MISSING_POSTS_SESSION_RERUNS);
+  }
+
+  private static startMissingPostsPass(rerunsLeft: number): Promise<void> {
     const pending = this.missingPostsPass;
     if (pending?.isCurrent()) return pending.request;
 
@@ -92,9 +102,17 @@ export class BookmarkController {
     if (!viewerId) return Promise.resolve();
 
     const isCurrent = captureViewerSession();
-    const request = this.fetchMissingPostsInBatches(viewerId, isCurrent).finally(() => {
-      if (this.missingPostsPass?.request === request) this.missingPostsPass = null;
-    });
+    const request = this.fetchMissingPostsInBatches(viewerId, isCurrent)
+      .then(() => {
+        // The same account under another session: a hard page load starts with the stored pubky and no session,
+        // and the restore replaces it while the pass is out, so the answers were dropped. Its callers still wait
+        // for the posts: run again (or join the pass already running) under the session that is current now.
+        const sessionReplaced = !isCurrent() && useAuthStore.getState().currentUserPubky === viewerId;
+        if (sessionReplaced && rerunsLeft > 0) return this.startMissingPostsPass(rerunsLeft - 1);
+      })
+      .finally(() => {
+        if (this.missingPostsPass?.request === request) this.missingPostsPass = null;
+      });
     this.missingPostsPass = { isCurrent, request };
     return request;
   }

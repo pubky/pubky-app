@@ -256,7 +256,7 @@ describe('BookmarkController', () => {
 
         const previous = BookmarkController.fetchMissingPosts();
         await vi.waitFor(() => expect(byIds).toHaveBeenCalledTimes(1));
-        // Same account, new session: the database was cleared in between, so the old pass hydrates nothing.
+        // Same account, new session: the old pass stores no post row from here on.
         signIn();
         const current = BookmarkController.fetchMissingPosts();
 
@@ -264,14 +264,54 @@ describe('BookmarkController', () => {
         await vi.waitFor(() => expect(byIds).toHaveBeenCalledTimes(2));
 
         stale.resolve([served(postAt(1))]);
-        await previous;
+        await tick();
         expect(await PostDetailsModel.table.count()).toBe(0);
-        // The previous pass settling does not release the current one.
+        // The previous pass ending does not release the current one.
         expect(BookmarkController.fetchMissingPosts()).toBe(current);
 
         fresh.resolve([served(postAt(1))]);
-        await current;
+        await Promise.all([previous, current]);
         expect(await PostDetailsModel.table.count()).toBe(1);
+        expect(byIds).toHaveBeenCalledTimes(2);
+      });
+
+      it('runs again under the session that replaced its own while the account stays the same', async () => {
+        const ids = [postAt(1), postAt(2), postAt(3)];
+        await bookmarkAll(ids);
+        // A hard page load: the stored pubky is there, the session is still being restored.
+        useAuthStore.setState({ currentUserPubky: testData.userPubky, session: null });
+        const dropped = answer();
+        byIds
+          .mockReturnValueOnce(dropped.promise)
+          .mockImplementation(async ({ post_ids }) => post_ids.map((id) => served(id)));
+
+        const pass = BookmarkController.fetchMissingPosts();
+        await vi.waitFor(() => expect(byIds).toHaveBeenCalledTimes(1));
+        // The restore lands while the request is out: the answer is dropped with the session it was asked under.
+        signIn();
+        dropped.resolve(ids.map((id) => served(id)));
+        await pass;
+
+        // The callers of the first pass get the posts all the same, stored under the session that is current now.
+        expect(byIds).toHaveBeenCalledTimes(2);
+        expect(requestedIds(1)).toEqual(ids);
+        expect(await PostDetailsModel.table.count()).toBe(3);
+        await expect(BookmarkController.getMissingPostIds()).resolves.toEqual([]);
+      });
+
+      it('stops running again when the session keeps being replaced', async () => {
+        await bookmarkAll([postAt(1)]);
+        useAuthStore.setState({ currentUserPubky: testData.userPubky, session: null });
+        // Every request is answered under a session newer than the one it was asked under.
+        byIds.mockImplementation(async ({ post_ids }) => {
+          signIn();
+          return post_ids.map((id) => served(id));
+        });
+
+        await expect(BookmarkController.fetchMissingPosts()).resolves.toBeUndefined();
+
+        expect(byIds).toHaveBeenCalledTimes(3);
+        expect(await PostDetailsModel.table.count()).toBe(0);
       });
 
       it('reads and fetches nothing for a guest', async () => {

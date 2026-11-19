@@ -296,6 +296,28 @@ describe('useBookmarksCollectionSummary', () => {
       await waitFor(() => expect(result.current.bookmarkCount).toBe(3));
     });
 
+    it('shows the right count when the session is restored while the request is out', async () => {
+      await bookmarkAll();
+      // A hard page load: the stored pubky is there, the session is still being restored.
+      useAuthStore.setState({ session: null });
+      const dropped: ByIdsAnswer = Promise.withResolvers();
+      byIds.mockReturnValueOnce(dropped.promise).mockResolvedValue(servedBookmarks());
+
+      const { result, shownCounts } = renderSummary();
+      await untilCountOrRequest(result);
+      expect(byIds).toHaveBeenCalledTimes(1);
+
+      // The restore lands, and the answer asked under no session is dropped.
+      await act(async () => useAuthStore.setState({ session: mockSession() }));
+      await act(async () => dropped.resolve(servedBookmarks()));
+
+      await waitFor(() => expect(result.current.bookmarkCount).toBe(3));
+      // The posts were asked for again under the restored session and stored; five was never shown.
+      expect(shownCounts()).toEqual([3]);
+      expect(byIds).toHaveBeenCalledTimes(2);
+      expect(await PostDetailsModel.table.count()).toBe(5);
+    });
+
     it('writes nothing and shows no count for a viewer who left while the request was out', async () => {
       await bookmarkAll();
       const first: ByIdsAnswer = Promise.withResolvers();
