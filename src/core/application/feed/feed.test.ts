@@ -1040,7 +1040,7 @@ describe('FeedApplication', () => {
     const resources = (overrides: Partial<TFeedCreateParams> = {}) => built({ target: 'resources', ...overrides });
 
     it('keeps the id and the bytes a post feed always had, and gives a resources feed its own', async () => {
-      // The id 1.0.0-rc.1, which had no target, gave this filter
+      // The id the released 1.0.0-rc.2, which has no target, gives this filter
       const post = built();
       expect(post.id).toBe('E82XC9WBRFDCEAPPAKBC8ZE1EM');
       expect(built({ target: 'posts' }).id).toBe(post.id);
