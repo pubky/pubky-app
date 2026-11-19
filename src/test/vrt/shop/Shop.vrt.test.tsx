@@ -5,7 +5,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { cdp, page, server } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
-import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
+import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE, VRT_VIEWPORT_NARROW } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import ShopLayout from '@/app/shop/layout';
@@ -333,7 +333,11 @@ function expectShopViewport(root: HTMLElement | SVGElement, content: HTMLElement
   expect(document.elementFromPoint(window.innerWidth - 4, middle)).toBe(content);
   // Headless browsers hide scrollbars, so the hit tests above cannot see a reserved gutter.
   if (CSS.supports('scrollbar-gutter', 'stable')) expect(appScrollbarGutter()).toBe('auto');
-  if (!desktop) expect(footer.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
+  if (!desktop) {
+    expect(footer.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
+    const lastAction = footer.querySelector('[aria-label="Profile"], [aria-label="Join Pubky"]')!;
+    expect(lastAction.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+  }
   expect(shell.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
   expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(window.innerHeight + 1);
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
@@ -368,6 +372,9 @@ describe('embedded Shop shell — visual regression', () => {
     await matchVrtFrameScreenshot('shop-mobile');
   });
   it.each([
+    { name: '320px phone', viewport: VRT_VIEWPORT_NARROW, signedIn: true },
+    { name: 'guest 360px phone', viewport: { width: 360, height: 800 }, signedIn: false },
+    { name: '375px phone', viewport: { width: 375, height: 812 }, signedIn: true },
     { name: 'portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: true },
     { name: 'landscape', viewport: { width: 844, height: 390 }, signedIn: true },
     { name: 'guest portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: false },
@@ -383,7 +390,7 @@ describe('embedded Shop shell — visual regression', () => {
     const root = screen.getByTestId(VRT_ROOT_TESTID).element();
     const frame = screen.getByTitle('Pubky Shop').element() as HTMLIFrameElement;
     await withUnclippedDocument(root, async () => {
-      frame.srcdoc = `<!doctype html><html><body style="margin:0;min-width:375px">
+      frame.srcdoc = `<!doctype html><html><body style="margin:0;min-width:320px">
         <main style="box-sizing:border-box;padding:24px">
           <h1>Long marketplace listing</h1>
           <div style="height:2400px">Listing details</div>
@@ -472,6 +479,13 @@ describe('embedded Shop shell — visual regression', () => {
     const screen = await renderShop(VRT_VIEWPORT_MOBILE, { unavailable: true });
     await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
     await matchVrtFrameScreenshot('shop-unavailable-mobile');
+  });
+  it('fits the unavailable Shop on a narrow phone and restores the App width after leaving', async () => {
+    const screen = await renderShop(VRT_VIEWPORT_NARROW, { unavailable: true });
+    await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    await screen.unmount();
+    expect(document.body.getBoundingClientRect().width).toBe(375);
   });
   it('renders the Enable Shop dialog in the desktop App shell', async () => {
     await renderShop(VRT_VIEWPORT_DESKTOP, { upgradeOpen: true });

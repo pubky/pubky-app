@@ -12,6 +12,11 @@ body {
   overscroll-behavior-y: contain;
 }
 
+/* Shop supports 320px phones. Its iframe takes its width from the host body. */
+body:has([data-slot='shop-route']) {
+  min-width: 320px;
+}
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
