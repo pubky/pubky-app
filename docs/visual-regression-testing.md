@@ -212,7 +212,7 @@ unchanged.
 Playwright's default pointer position can land on interactive elements inside a
 small mobile viewport, especially when the browser window is larger than the
 VRT viewport. The screenshot then captures the `:hover` state instead of the
-resting state (e.g. `bg-brand/30` instead of `bg-brand/16`), producing a brighter
+resting state (e.g. `bg-brand/32` instead of `bg-brand/16`), producing a brighter
 button on some browser/OS pairs but not others. This looks like a random colour
 shift but is actually cursor position.
 
