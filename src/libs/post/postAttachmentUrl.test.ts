@@ -1,3 +1,5 @@
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { resolvePostAttachmentUrl } from './postAttachmentUrl';
@@ -40,6 +42,13 @@ describe('resolvePostAttachmentUrl', () => {
     expect(resolvePostAttachmentUrl('pubky://userpk/pub/pubky.app/files/file123', FileVariant.MAIN)).toBe(
       'https://cdn.test/files/userpk/file123/main',
     );
+  });
+
+  it('resolves a v1 media URI with its whole `{hash}.{ext}` filename', () => {
+    const owner = fakeOwner(1);
+    const { id, url } = buildFile(owner, { bytes: new Uint8Array([1]), type: 'image/png' });
+
+    expect(resolvePostAttachmentUrl(url, FileVariant.FEED)).toBe(`https://cdn.test/files/${owner}/${id}.png/feed`);
   });
 
   it('returns null for a pubky:// URI without a files segment', () => {

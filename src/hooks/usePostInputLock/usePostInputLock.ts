@@ -14,7 +14,7 @@ import { getLockContentDisplay } from '@/libs/post/lockContentKind';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import { inferPostKindForCreate, toLockContentKind } from '@/pipes/post/post.kind';
+import { inferPostKindForCreate, toLocalPostKind, toLockContentKind } from '@/pipes/post/post.kind';
 import { postBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -176,7 +176,7 @@ export function usePostInputLock({
       content: lockDraft?.isArticle
         ? buildArticleContent(lockDraft.articleTitle, lockDraft.serializedArticle.body)
         : (lockDraft?.content ?? ''),
-      kind: lockedKind,
+      kind: toLocalPostKind(lockedKind),
       attachments: [
         ...(lockDraft?.attachments ?? []),
         ...(lockDraft?.isArticle ? lockDraft.serializedArticle.inlineFiles : []),

@@ -104,7 +104,21 @@ vi.mock('next/image', () => ({
   // Forward only the props a plain <img> understands; next-specific props
   // (priority, quality, loader, placeholder, sizes, unoptimized, …) are
   // intentionally dropped so React doesn't warn about unknown DOM attributes.
-  default: ({ src, alt, width, height, fill, className, style, onLoad, onError }: Record<string, unknown>) => {
+  default: ({
+    src,
+    alt,
+    width,
+    height,
+    fill,
+    className,
+    style,
+    onLoad,
+    onError,
+    tabIndex,
+    onFocus,
+    onBlur,
+    'aria-describedby': describedBy,
+  }: Record<string, unknown>) => {
     // Static imports resolve to `{ src, width, height }`; string srcs pass through.
     const resolvedSrc = typeof src === 'object' && src !== null ? (src as { src: string }).src : src;
     // `fill` makes next/image absolutely cover its positioned parent. Like the
@@ -118,6 +132,10 @@ vi.mock('next/image', () => ({
       width: fill ? undefined : width,
       height: fill ? undefined : height,
       className,
+      tabIndex,
+      onFocus,
+      onBlur,
+      'aria-describedby': describedBy,
       // Media layouts rely on natural dimensions and error fallbacks.
       onLoad,
       onError,

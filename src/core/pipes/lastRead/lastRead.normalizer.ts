@@ -1,23 +1,27 @@
-import { LastReadResult } from 'pubky-app-specs';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
+import { APP_LAST_READ_FILE, APP_PRIVATE_PATH, LEGACY_LAST_READ_PATH } from '@/config/app-files';
 import type { Pubky } from '@/models/models.types';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
+/** The notification read cursor as the app stores it, `{ timestamp }` in milliseconds, with its URL. */
+export type TLastRead = {
+  url: string;
+  lastRead: { timestamp: number };
+};
 
 export class LastReadNormalizer {
   private constructor() {}
 
-  static to(pubky: Pubky): LastReadResult {
-    try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createLastRead();
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
-        operation: 'createLastRead',
-        context: { pubky },
-      });
-    }
+  /** The app-owned notification read cursor, in the app's private namespace. */
+  static buildUrl(pubky: Pubky): string {
+    return `pubky://${pubky}${APP_PRIVATE_PATH}${APP_LAST_READ_FILE}`;
+  }
+
+  /** Where a 0.x client kept the cursor; read while the v1 file is absent. */
+  static buildLegacyUrl(pubky: Pubky): string {
+    return `pubky://${pubky}${LEGACY_LAST_READ_PATH}`;
+  }
+
+  /** A cursor at the current time, the document a mark-all-as-read or a first bootstrap writes. */
+  static to(pubky: Pubky): TLastRead {
+    return { url: this.buildUrl(pubky), lastRead: { timestamp: Date.now() } };
   }
 }

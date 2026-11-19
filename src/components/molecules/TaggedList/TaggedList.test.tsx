@@ -277,4 +277,32 @@ describe('TaggedList', () => {
     await waitFor(() => expect(repostLoadTaggers).toHaveBeenCalledWith('bitcoin', 2));
     expect(mockLoadTaggers).toHaveBeenCalledWith('bitcoin', 2);
   });
+
+  it.each([
+    ['Bitcoin', 'bitcoin'],
+    ['Ärger', 'Ärger'],
+  ])('finds the taggers of %s under the stored label fold %s', (label, key) => {
+    // The hook keys its states with `canonicalizeTagLabel`: ASCII letters fold, the `Ä` stays (never Unicode
+    // `toLowerCase`), so the list has to look a label up the same way or the fetched taggers never show.
+    mockTaggerStates.set(key, {
+      ids: ['user1', 'user9'],
+      hasError: false,
+      isLoading: false,
+      hasMore: false,
+      hasFetched: true,
+    });
+    const tags: TagWithAvatars[] = [
+      {
+        label,
+        taggers: [{ id: 'user1', avatarUrl: 'https://cdn.example.com/avatar/user1' }],
+        taggers_count: 1,
+        relationship: false,
+      },
+    ];
+
+    render(<TaggedList tags={tags} taggedId="profile-pubky" taggedKind={TagKind.USER} onTagToggle={mockOnTagToggle} />);
+    fireEvent.click(screen.getByText(label));
+
+    expect(screen.getByText(label)).toHaveAttribute('data-expanded-ids', 'user1,user9');
+  });
 });

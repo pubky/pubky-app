@@ -18,6 +18,9 @@ import { CheckForNewPosts, HasBackedUp, OnboardingExperience, PostType, WaitForN
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
+// The gate's Continue on the screen that asks before the update starts
+const CONFIRM_CONTINUE_BUTTON = '#social-migration-confirm-navigation-continue-btn';
+
 // TypeScript's DOM types do not include the Navigation API yet
 type NavigationApi = {
   addEventListener(type: 'navigate', listener: (event: Event & { destination: { url: string } }) => void): void;
@@ -36,8 +39,8 @@ function openSignInPage(): void {
 }
 
 // The app's Pubky Ring request, taken where a user hands it to Ring: the link the desktop QR code
-// copies, or the deeplink the mobile "Continue with Pubky Ring" button opens
-function readPubkyRingAuthUrl(): Cypress.Chainable<string> {
+// copies, or the deeplink the mobile button labelled `mobileButtonLabel` opens
+function readPubkyRingAuthUrl(mobileButtonLabel = 'Continue with Pubky Ring'): Cypress.Chainable<string> {
   if (isMobile()) {
     const deeplink: { url?: string } = {};
     cy.window().then((win) => {
@@ -49,7 +52,7 @@ function readPubkyRingAuthUrl(): Cypress.Chainable<string> {
         deeplink.url = event.destination.url;
       });
     });
-    cy.contains('button:visible', 'Continue with Pubky Ring').should('not.be.disabled').click();
+    cy.contains('button:visible', mobileButtonLabel).should('not.be.disabled').click();
     cy.contains('button:visible', 'Opening Pubky Ring...').should('be.disabled');
     return cy.wrap(deeplink).its('url');
   }
@@ -133,9 +136,9 @@ Cypress.Commands.add(
 // would from the Profile step. `cy.signInWithPubkyRing(profileName)` signs back in as the account.
 Cypress.Commands.add('completeSignUpWithPubkyRing', (profileName: string) => {
   cy.location('pathname').should('eq', '/onboarding/scan');
-  // The Install step's "Continue with Pubky Ring" shares the phone button's label; wait for the Scan page
+  // Wait for the Scan page to render before reading its request; on phones its button reads "Authorize & configure"
   cy.get('[data-testid="scan-qr-card"]').should('exist');
-  readPubkyRingAuthUrl().then((authUrl) => {
+  readPubkyRingAuthUrl('Authorize & configure').then((authUrl) => {
     expect(authUrl).to.match(/^pubkyauth:\/\/signup_grant\?/);
     signUpWithPubkyAuthViaApi(profileName, authUrl);
   });
@@ -159,17 +162,102 @@ Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
 
 // Signs the app in as `name` (signed up by `cy.onboardAsNewUser`, `seedUserViaApi` or `signUpViaApi`)
 // through its Pubky Ring flow, with the seed tasks approving in Ring's place. A key with a profile
-// lands on /home; one without lands on /onboarding/profile.
-Cypress.Commands.add('signInWithPubkyRing', (name: string, landingPath = '/home') => {
-  openSignInPage();
-  readPubkyRingAuthUrl().then((authUrl) => {
-    expect(authUrl).to.match(/^pubkyauth:\/\//);
-    approvePubkyAuthViaApi(name, authUrl);
-  });
+// lands on /home; one without lands on /onboarding/profile. Every fresh grant passes the social v1
+// migration gate (`/migration`) first: a key without the done flag is asked to Continue there (a key with
+// no 0.x tree then only checks and moves on), while one seeded `legacy` copies its tree there before the
+// landing route (`migrates`). With `asked: false` the account must pass the gate without being asked (this
+// browser's record or the done flag): the command fails if `/migration` or the Continue button shows.
+Cypress.Commands.add(
+  'signInWithPubkyRing',
+  (
+    name: string,
+    landingPath = '/home',
+    { migrates = false, asked, beforeContinue, beforeRun, whileMigrating, acknowledgesSummary = false } = {},
+  ) => {
+    // `asked: false`: every route from here on, so a passing visit to the gate cannot slip between two polls
+    const visited: string[] = [];
+    if (asked === false) {
+      cy.then(() => {
+        cy.on('url:changed', (url) => {
+          visited.push(url);
+        });
+      });
+    }
+    openSignInPage();
+    readPubkyRingAuthUrl().then((authUrl) => {
+      expect(authUrl).to.match(/^pubkyauth:\/\//);
+      approvePubkyAuthViaApi(name, authUrl);
+    });
 
-  cy.location('pathname').should('eq', landingPath);
-  if (landingPath === '/home') waitForFeedToLoad();
-});
+    // An account with a 0.x tree is asked first, then stops on the gate's progress screen
+    if (migrates) {
+      cy.location('pathname').should('eq', '/migration');
+      cy.get('[data-testid="social-migration"]', extendedTimeout()).should(
+        'contain.text',
+        'Your account needs an update',
+      );
+      cy.get(CONFIRM_CONTINUE_BUTTON).should('be.visible');
+      // A spec that checks what happened before the user agreed (nothing written yet) does so from here
+      beforeContinue?.();
+      cy.get(CONFIRM_CONTINUE_BUTTON).click();
+      // A spec that keeps the run from starting (another holder of the migration lock) waits it out from here
+      beforeRun?.();
+      cy.get('[data-testid="social-migration"]').should('contain.text', 'Updating your account');
+      // A spec that interrupts the run (a reload, a homeserver that stops answering) does so from here; a reload
+      // resumes the run that started, without asking again
+      whileMigrating?.();
+    } else if (asked !== false) {
+      // A key seeded outside the app has no done flag yet, so its first sign-in is asked too and finds nothing to
+      // copy; a key the app saw pass lands directly. The screen waits for the click, so whichever shows first is final.
+      // A sign-in that stays on the gate (`/migration`) is always asked first: its flag read did not pass it.
+      cy.document(extendedTimeout()).should((doc) => {
+        const asked = doc.querySelector(CONFIRM_CONTINUE_BUTTON) !== null;
+        const landed = landingPath !== '/migration' && doc.location.pathname === landingPath;
+        expect(asked || landed, `asked to continue or on ${landingPath}`).to.equal(true);
+      });
+      cy.document().then((doc) => {
+        if (doc.querySelector(CONFIRM_CONTINUE_BUTTON)) cy.get(CONFIRM_CONTINUE_BUTTON).click();
+      });
+    } else {
+      // Whichever shows first is final here too: the screen would wait for a click that never comes
+      cy.document(extendedTimeout())
+        .should((doc) => {
+          const shown = doc.querySelector(CONFIRM_CONTINUE_BUTTON) !== null;
+          expect(shown || doc.location.pathname === landingPath, `asked to continue or on ${landingPath}`).to.equal(
+            true,
+          );
+        })
+        .then((doc) => {
+          expect(
+            doc.querySelector(CONFIRM_CONTINUE_BUTTON),
+            'Continue button on a sign-in that is never asked',
+          ).to.equal(null);
+        });
+    }
+    // A run that left something behind waits on its summary for a click; a string is the summary's expected text
+    if (acknowledgesSummary) {
+      cy.get('[data-testid="social-migration"]').should('contain.text', 'Your account is up to date');
+      if (typeof acknowledgesSummary === 'string') {
+        cy.get('[data-testid="social-migration"]').should('contain.text', acknowledgesSummary);
+      }
+      cy.get('#social-migration-summary-navigation-continue-btn').click();
+    }
+    // Every sign-in passes the gate and then prepares the account before the landing route, a first one
+    // about 15 s on a local stack; a run copies the whole tree first, and its specs hold some of its answers back
+    cy.location('pathname', extendedTimeout()).should('eq', landingPath);
+    // An account the gate already passed is never asked: no visit to the gate's route, no Continue button
+    if (asked === false) {
+      cy.get(CONFIRM_CONTINUE_BUTTON).should('not.exist');
+      cy.then(() => {
+        expect(
+          visited.filter((url) => new URL(url).pathname === '/migration'),
+          'visits to the gate during a sign-in that is never asked',
+        ).to.deep.eq([]);
+      });
+    }
+    if (landingPath === '/home') waitForFeedToLoad();
+  },
+);
 
 // Useful when 'should.be' doesn't work due to additional space inserted before final word.
 Cypress.Commands.add('innerTextShouldEq', { prevSubject: 'element' }, (subject, text) => {

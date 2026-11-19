@@ -1,11 +1,19 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
+import { USER_LINK_URL_MAX_LENGTH } from '@/config/user';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useProfileForm } from './useProfileForm';
+import { PROFILE_SUBMIT_TEXT } from './useProfileForm.types';
 
 const routerPush = vi.hoisted(() => vi.fn());
 
@@ -19,7 +27,12 @@ vi.mock('@/controllers/auth/auth', () => ({
 }));
 
 vi.mock('@/controllers/file/file', () => ({
-  FileController: { commitCreate: vi.fn(), getAvatarUrl: vi.fn() },
+  FileController: {
+    commitCreate: vi.fn(),
+    commitCreateAttachment: vi.fn(),
+    getAvatarUrl: vi.fn(),
+    toFileAttachment: vi.fn(),
+  },
 }));
 
 vi.mock('@/controllers/profile/profile', () => ({
@@ -34,6 +47,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
 
 const pubky = 'test-pubky';
 const unsafeLink = { label: 'Website', url: 'javascript:alert(1)' };
+const SCHEME_MESSAGE = 'Links must start with http:// or https://';
 
 describe('useProfileForm profile link safety', () => {
   beforeEach(() => {
@@ -49,13 +63,61 @@ describe('useProfileForm profile link safety', () => {
       result.current.handlers.validateLinkUrl(unsafeLink.url, 0);
     });
 
-    expect(result.current.errors.linkUrlErrors[0]).toBe('Invalid URL');
+    expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
 
     await act(async () => {
       await result.current.handlers.handleSubmit();
     });
 
     expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+  });
+
+  // The v1 data model refuses these (SF-5); the field says so before the write instead of a generic toast after it
+  it.each([['mailto:test@example.com'], ['tel:+1234567890'], ['HTTPS://Example.com/x']])(
+    'refuses the link "%s" on its field, as the data model would at the write',
+    async (url) => {
+      const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+      act(() => {
+        result.current.handlers.setName('Valid User');
+        result.current.handlers.setLinks([{ label: 'CONTACT', url }]);
+        result.current.handlers.validateLinkUrl(url, 0);
+      });
+
+      expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
+      expect(result.current.isSubmitDisabled).toBe(true);
+
+      await act(async () => {
+        await result.current.handlers.handleSubmit();
+      });
+
+      expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+      expect(toast).not.toHaveBeenCalled();
+    },
+  );
+
+  it('blocks a legacy mailto: link the edit form loaded, naming the field, before the write', async () => {
+    const userDetails: NexusUserDetails = {
+      id: pubky,
+      name: 'Valid User',
+      bio: '',
+      links: [{ title: 'EMAIL', url: 'mailto:test@example.com' }],
+      status: null,
+      image: null,
+      indexed_at: 1,
+    };
+    const { result } = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
+    expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('accepts a bare X handle and saves it as the profile URL (issue #1846)', async () => {
@@ -104,13 +166,124 @@ describe('useProfileForm profile link safety', () => {
       result.current.handlers.validateLinkUrl(unsafeLink.url, 0);
     });
 
-    expect(result.current.errors.linkUrlErrors[0]).toBe('Invalid URL');
+    expect(result.current.errors.linkUrlErrors[0]).toBe(SCHEME_MESSAGE);
 
     await act(async () => {
       await result.current.handlers.handleSubmit();
     });
 
     expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
+  });
+
+  it(`accepts a link of ${USER_LINK_URL_MAX_LENGTH} code points and refuses one code point more`, () => {
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+    const prefix = 'https://example.com/';
+    // Counted in code points, as the data model counts: an emoji is one, not two UTF-16 units
+    const atCap = `${prefix}${'🎉'.repeat(USER_LINK_URL_MAX_LENGTH - prefix.length)}`;
+
+    act(() => result.current.handlers.validateLinkUrl(atCap, 0));
+    expect(result.current.errors.linkUrlErrors[0]).toBeNull();
+
+    act(() => result.current.handlers.validateLinkUrl(`${atCap}a`, 0));
+    expect(result.current.errors.linkUrlErrors[0]).toBe(
+      `Links must be no more than ${USER_LINK_URL_MAX_LENGTH} characters`,
+    );
+  });
+});
+
+describe('useProfileForm link refusals from the data model', () => {
+  const userDetails: NexusUserDetails = {
+    id: pubky,
+    name: 'Valid User',
+    bio: '',
+    links: [
+      { title: 'WEBSITE', url: 'https://example.com' },
+      { title: 'BLOG', url: 'https://blog.example.com' },
+    ],
+    status: null,
+    image: null,
+    indexed_at: 1,
+  };
+  // What `UserNormalizer.to` and `ProfileApplication` throw when `buildUser` refuses a member
+  const refusalOf = (field: string) =>
+    Err.validation(ValidationErrorCode.INVALID_INPUT, `${field} must be a canonical web URI`, {
+      service: ErrorService.SocialSpecs,
+      operation: 'buildUser',
+      context: { pubky, code: 'reference', field },
+    });
+
+  const renderEditForm = async () => {
+    const hook = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(hook.result.current.state.isLoading).toBe(false));
+    act(() => hook.result.current.handlers.setBio('New bio'));
+    return hook.result;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows a refusal of links[n].url on that link instead of the generic toast', async () => {
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(refusalOf('links[1].url'));
+    const result = await renderEditForm();
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({ 1: 'Invalid URL' });
+    expect(result.current.isSubmitDisabled).toBe(true);
+    expect(result.current.state.submitText).toBe(PROFILE_SUBMIT_TEXT.saveProfile);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('puts the refusal on the form row the link sits in, not its place among the rows with a URL', async () => {
+    vi.mocked(ProfileController.commitCreate).mockRejectedValueOnce(refusalOf('links[0].url'));
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+    act(() => {
+      result.current.handlers.setName('Valid User');
+      // The WEBSITE row is empty, so the model's first link is the X row
+      result.current.handlers.setLinks([
+        { label: 'WEBSITE', url: '' },
+        { label: 'X (TWITTER)', url: 'https://x.com/jack' },
+      ]);
+    });
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({ 1: 'Invalid URL' });
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('keeps the generic toast for a refusal that names another member', async () => {
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(refusalOf('links[1].title'));
+    const result = await renderEditForm();
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({});
+    expect(result.current.state.submitText).toBe(PROFILE_SUBMIT_TEXT.tryAgain);
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not update profile' });
+  });
+
+  it('falls through to the generic toast when the refusal names a row the form does not show', async () => {
+    // The form loaded two rows; a longer stored list made the model refuse a third
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(refusalOf('links[2].url'));
+    const result = await renderEditForm();
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.errors.linkUrlErrors).toEqual({});
+    expect(result.current.isSubmitDisabled).toBe(false);
+    expect(result.current.state.submitText).toBe(PROFILE_SUBMIT_TEXT.tryAgain);
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not update profile' });
   });
 });
 
@@ -161,6 +334,109 @@ describe('useProfileForm post-save navigation', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('signup write order', () => {
+    const avatarFile = new File(['a'], 'avatar.jpg', { type: 'image/jpeg' });
+    const media = buildFile(fakeOwner(1), { bytes: new Uint8Array([1]), type: 'image/jpeg' });
+    const avatarUri = media.url;
+    const avatarAttachment = { media, bytes: new Uint8Array([1]), name: 'avatar.jpg', contentType: 'image/jpeg' };
+
+    const submitSignup = async (withAvatar = true) => {
+      const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+      act(() => {
+        result.current.handlers.setName('Valid User');
+        if (withAvatar) result.current.handlers.handleCropComplete(avatarFile, 'blob:preview');
+      });
+      await act(async () => {
+        await result.current.handlers.handleSubmit();
+      });
+      return result;
+    };
+
+    beforeEach(() => {
+      vi.mocked(FileController.toFileAttachment).mockResolvedValue(avatarAttachment);
+    });
+
+    it('puts the first profile, already carrying the image URI, before the avatar bytes', async () => {
+      await submitSignup();
+
+      expect(ProfileController.commitCreate).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ image: avatarUri, pubky }),
+      );
+      expect(FileController.commitCreateAttachment).toHaveBeenCalledExactlyOnceWith({
+        fileAttachment: avatarAttachment,
+      });
+      const [hashed] = vi.mocked(FileController.toFileAttachment).mock.invocationCallOrder;
+      const [profile] = vi.mocked(ProfileController.commitCreate).mock.invocationCallOrder;
+      const [upload] = vi.mocked(FileController.commitCreateAttachment).mock.invocationCallOrder;
+      expect(hashed).toBeLessThan(profile);
+      expect(profile).toBeLessThan(upload);
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+    });
+
+    it('shows each step as it runs: the profile, then the upload', async () => {
+      const profile = Promise.withResolvers<void>();
+      const upload = Promise.withResolvers<void>();
+      vi.mocked(ProfileController.commitCreate).mockReturnValueOnce(profile.promise);
+      vi.mocked(FileController.commitCreateAttachment).mockReturnValueOnce(upload.promise);
+      const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+      act(() => {
+        result.current.handlers.setName('Valid User');
+        result.current.handlers.handleCropComplete(avatarFile, 'blob:preview');
+      });
+
+      act(() => {
+        void result.current.handlers.handleSubmit();
+      });
+
+      await waitFor(() => expect(result.current.state.submitText).toBe('Saving profile...'));
+      await act(async () => profile.resolve());
+      await waitFor(() => expect(result.current.state.submitText).toBe('Uploading avatar...'));
+      await act(async () => upload.resolve());
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS));
+    });
+
+    it('writes the profile alone when no avatar was chosen', async () => {
+      await submitSignup(false);
+
+      expect(ProfileController.commitCreate).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ image: null, pubky }),
+      );
+      expect(FileController.toFileAttachment).not.toHaveBeenCalled();
+      expect(FileController.commitCreateAttachment).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when the avatar cannot be prepared', async () => {
+      vi.mocked(FileController.toFileAttachment).mockRejectedValueOnce(new Error('too large'));
+
+      const result = await submitSignup();
+
+      expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+      expect(FileController.commitCreateAttachment).not.toHaveBeenCalled();
+      expect(result.current.state.submitText).toBe('Try again!');
+    });
+
+    it('offers a retry that writes both again in order when the upload fails', async () => {
+      vi.mocked(FileController.commitCreateAttachment).mockRejectedValueOnce(new Error('offline'));
+
+      const result = await submitSignup();
+
+      expect(result.current.state.submitText).toBe('Try again!');
+      expect(routerPush).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.handlers.handleSubmit();
+      });
+
+      expect(ProfileController.commitCreate).toHaveBeenCalledTimes(2);
+      expect(FileController.commitCreateAttachment).toHaveBeenCalledTimes(2);
+      const profiles = vi.mocked(ProfileController.commitCreate).mock.invocationCallOrder;
+      const uploads = vi.mocked(FileController.commitCreateAttachment).mock.invocationCallOrder;
+      expect(profiles[1]).toBeLessThan(uploads[1]);
+      expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+    });
   });
 
   it('redirects to the onboarding tags step after a successful create', async () => {
@@ -312,6 +588,10 @@ describe('useProfileForm edit sends only the fields the user changed', () => {
     await submit(result);
 
     expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { image: uploaded } });
+    // An existing user's files are indexed either way: the edit path uploads first, as it always did.
+    expect(vi.mocked(FileController.commitCreate).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(ProfileController.commitUpdate).mock.invocationCallOrder[0],
+    );
   });
 
   it('sends an empty link list when every link is removed', async () => {
@@ -408,6 +688,116 @@ describe('useProfileForm effective link changes', () => {
       pubky,
       changes: { bio: 'New bio', ...expected },
     });
+  });
+});
+
+describe('useProfileForm account update notice', () => {
+  const userDetails: NexusUserDetails = {
+    id: pubky,
+    name: 'Valid User',
+    bio: '',
+    links: [],
+    status: null,
+    image: null,
+    indexed_at: 1,
+  };
+
+  const writeNotice = (notice: { profileImage: number; profileLinks: number; pending: boolean }) =>
+    writeSocialMigrationRecord(pubky, {
+      v: 1,
+      migratedRev: 1,
+      admittedGrantIds: [],
+      notice: { skipped: {}, ...notice },
+    });
+
+  const renderEditForm = async () => {
+    const hook = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(hook.result.current.state.isLoading).toBe(false));
+    return hook.result;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it('exposes the profile values the account update dropped while the notice is pending', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 2, pending: true });
+    const result = await renderEditForm();
+    expect(result.current.state.migrationNotice).toEqual({ profileImage: 1, profileLinks: 2 });
+  });
+
+  it('exposes nothing without a record, after an acknowledged notice, or on the create form', async () => {
+    expect((await renderEditForm()).current.state.migrationNotice).toBeNull();
+
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: false });
+    expect((await renderEditForm()).current.state.migrationNotice).toBeNull();
+
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+    expect(result.current.state.migrationNotice).toBeNull();
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(true);
+  });
+
+  it('clears the notice for good when dismissed', async () => {
+    writeNotice({ profileImage: 0, profileLinks: 1, pending: true });
+    const result = await renderEditForm();
+
+    act(() => result.current.handlers.handleDismissMigrationNotice());
+
+    expect(result.current.state.migrationNotice).toBeNull();
+    expect(readSocialMigrationRecord(pubky)?.notice).toEqual({
+      skipped: {},
+      profileImage: 0,
+      profileLinks: 1,
+      pending: false,
+    });
+    expect((await renderEditForm()).current.state.migrationNotice).toBeNull();
+  });
+
+  it('clears the notice on the next successful save', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    const result = await renderEditForm();
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledOnce();
+    expect(result.current.state.migrationNotice).toBeNull();
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(false);
+  });
+
+  it('leaves the notice to the settings page on the onboarding revisit', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    const { result } = renderHook(() =>
+      useProfileForm({ mode: 'edit', pubky, userDetails, redirectTo: ONBOARDING_ROUTES.TAGS }),
+    );
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+    expect(result.current.state.migrationNotice).toBeNull();
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledOnce();
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(true);
+  });
+
+  it('keeps the notice when the save fails', async () => {
+    writeNotice({ profileImage: 1, profileLinks: 0, pending: true });
+    vi.mocked(ProfileController.commitUpdate).mockRejectedValueOnce(new Error('offline'));
+    const result = await renderEditForm();
+    act(() => result.current.handlers.setBio('New bio'));
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(result.current.state.migrationNotice).toEqual({ profileImage: 1, profileLinks: 0 });
+    expect(readSocialMigrationRecord(pubky)?.notice?.pending).toBe(true);
   });
 });
 

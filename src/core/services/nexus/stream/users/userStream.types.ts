@@ -3,10 +3,10 @@ import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import type { TPaginationParams, TUserId, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 
 export enum USER_STREAM_PREFIX {
-  USERS = 'v0/stream/users',
-  USER_IDS = 'v0/stream/users/ids',
-  USERNAME = 'v0/stream/users/username',
-  USERS_BY_IDS = 'v0/stream/users/by_ids',
+  USERS = 'stream/users',
+  USER_IDS = 'stream/users/ids',
+  USERNAME = 'stream/users/username',
+  USERS_BY_IDS = 'stream/users/by_ids',
 }
 
 export enum UserStreamSource {

@@ -1,3 +1,4 @@
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { useLocalFilesStore } from './localFiles.store';
@@ -12,13 +13,16 @@ const createMockAttachment = (mainUrl: string, feedUrl?: string): AttachmentCons
   },
 });
 
+const ARTICLE_ID = `${fakeOwner(1)}:0034BBBDFK83G`;
+const OTHER_ARTICLE_ID = `${fakeOwner(1)}:0035NGP297YG0`;
+
 describe('LocalFilesStore', () => {
   // Mock URL.revokeObjectURL to track calls
   const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
   beforeEach(() => {
     // Reset the store to initial state before each test
-    useLocalFilesStore.setState({ profile: null, posts: {}, collections: {} });
+    useLocalFilesStore.setState({ profile: null, posts: {}, articleCovers: {}, collections: {} });
     revokeObjectURLSpy.mockClear();
   });
 
@@ -225,6 +229,87 @@ describe('LocalFilesStore', () => {
     });
   });
 
+  // An article's cover is no attachment slot (ADR-0027 D14): it has its own entry beside the
+  // post's inline media, with the same revoke-unless-reused rule an edit relies on.
+  describe('setArticleCover', () => {
+    it('should set the cover entry for the post', () => {
+      const cover = createMockAttachment('blob:http://localhost/cover1', 'blob:http://localhost/cover1');
+
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, cover);
+
+      expect(useLocalFilesStore.getState().articleCovers[ARTICLE_ID]).toEqual(cover);
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+    });
+
+    it('should remove the entry and revoke its blob URL when cleared with null', () => {
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, createMockAttachment('blob:http://localhost/cover1'));
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, null);
+
+      expect(ARTICLE_ID in useLocalFilesStore.getState().articleCovers).toBe(false);
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/cover1');
+      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should revoke the previous blob URL when a different cover replaces it', () => {
+      useLocalFilesStore
+        .getState()
+        .setArticleCover(ARTICLE_ID, createMockAttachment('blob:http://localhost/old-cover'));
+      revokeObjectURLSpy.mockClear();
+      const next = createMockAttachment('blob:http://localhost/new-cover');
+
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, next);
+
+      expect(useLocalFilesStore.getState().articleCovers[ARTICLE_ID]).toEqual(next);
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/old-cover');
+      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should keep the blob URL alive when the incoming entry reuses it (an edit that keeps the cover)', () => {
+      const kept = createMockAttachment('blob:http://localhost/kept-cover');
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, kept);
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, { ...kept, name: 'renamed.jpg' });
+
+      expect(useLocalFilesStore.getState().articleCovers[ARTICLE_ID]).toEqual({ ...kept, name: 'renamed.jpg' });
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not revoke a non-blob URL (a kept cover the CDN already serves)', () => {
+      useLocalFilesStore
+        .getState()
+        .setArticleCover(ARTICLE_ID, createMockAttachment('https://cdn.example.com/cover.png'));
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore
+        .getState()
+        .setArticleCover(ARTICLE_ID, createMockAttachment('blob:http://localhost/new-cover'));
+
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not revoke or add a key when clearing a post that has no cover entry', () => {
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, null);
+
+      expect(ARTICLE_ID in useLocalFilesStore.getState().articleCovers).toBe(false);
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+    });
+
+    it('should handle multiple posts independently', () => {
+      const cover = createMockAttachment('blob:http://localhost/cover1');
+      const otherCover = createMockAttachment('blob:http://localhost/cover2');
+
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, cover);
+      useLocalFilesStore.getState().setArticleCover(OTHER_ARTICLE_ID, otherCover);
+
+      expect(useLocalFilesStore.getState().articleCovers[ARTICLE_ID]).toEqual(cover);
+      expect(useLocalFilesStore.getState().articleCovers[OTHER_ARTICLE_ID]).toEqual(otherCover);
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('setCollectionCover', () => {
     const collectionId = 'pk:abc123/posts/collection1';
 
@@ -324,6 +409,21 @@ describe('LocalFilesStore', () => {
       expect(useLocalFilesStore.getState().collections).toEqual({});
       expect(revokeObjectURLSpy).toHaveBeenCalledWith(cover1);
       expect(revokeObjectURLSpy).toHaveBeenCalledWith(cover2);
+      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should reset articleCovers to empty object and revoke their blob URLs', () => {
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, createMockAttachment('blob:http://localhost/cover1'));
+      useLocalFilesStore
+        .getState()
+        .setArticleCover(OTHER_ARTICLE_ID, createMockAttachment('blob:http://localhost/cover2'));
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore.getState().reset();
+
+      expect(useLocalFilesStore.getState().articleCovers).toEqual({});
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/cover1');
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/cover2');
       expect(revokeObjectURLSpy).toHaveBeenCalledTimes(2);
     });
 

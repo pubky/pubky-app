@@ -23,6 +23,8 @@ export type PassportAttemptSettledEvent = {
 };
 
 export type UsePassportAuthOptions = {
+  /** Prepare storage on surfaces rendered outside DatabaseProvider. Runs after the popup is open. */
+  prepare?: () => Promise<void>;
   /** Called once when an attempt settles. Use `result === 'failed'` to regenerate a Ring request, for example. */
   onAttemptSettled?: (event: PassportAttemptSettledEvent) => void;
 };

@@ -11,7 +11,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { DatabaseErrorScreen } from '@/molecules/DatabaseErrorScreen/DatabaseErrorScreen';
 import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
-import { useMigrationStore } from '@/stores/migration/migration.store';
+import { initializeAppDatabase } from './initializeAppDatabase';
 
 export const DatabaseContext = createContext<DatabaseContextType>({
   isReady: false,
@@ -31,14 +31,11 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   // Without this, the close handler would re-trigger initDatabase and cause an infinite loop.
   const isInitializingRef = useRef(false);
 
-  const initDatabase = async () => {
+  const initDatabase = async ({ allowRecreate }: { allowRecreate: boolean }) => {
     isInitializingRef.current = true;
     try {
       setError(null);
-      const { wasDbReset } = await db.initialize();
-      if (wasDbReset) {
-        useMigrationStore.getState().setWasDbReset(true);
-      }
+      await initializeAppDatabase({ allowRecreate });
       setIsReady(true);
     } catch (err) {
       setIsReady(false);
@@ -59,16 +56,23 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  useEffect(() => {
-    initDatabase();
+  // The user's retry may recreate the database again; see handleUnexpectedClose for the one path that may not.
+  const retry = () => initDatabase({ allowRecreate: true });
 
-    // Re-initialize when the DB is unexpectedly closed (e.g. user deletes IndexedDB via devtools).
-    // Recovery owns its synchronous close; keep the mounted app while it reopens.
-    // Initialization also owns expected closes during recreateDatabase().
+  useEffect(() => {
+    initDatabase({ allowRecreate: true });
+
+    // Re-initialize when the DB is unexpectedly closed (e.g. user deletes IndexedDB via devtools, or a
+    // tab running another build recreated it). Skips expected closes during recreateDatabase() via the
+    // isInitializingRef guard. A version mismatch (or a database that stays missing) found from here, after this
+    // page already recreated the database once, is that other tab at work: `allowRecreate: false` surfaces it as
+    // VERSION_CONFLICT instead of recreating the database back and forth between the two tabs (ADR-0019). A devtools
+    // delete after that recreate shows the conflict screen too; Retry recovers. Connection recovery (ADR-0030) owns
+    // its own synchronous close and reopens the database itself: keep the mounted app while it does.
     const handleUnexpectedClose = () => {
       if (isInitializingRef.current || isClosingForIndexedDbRecovery(db)) return;
       setIsReady(false);
-      initDatabase();
+      initDatabase({ allowRecreate: false });
     };
 
     db.on('close', handleUnexpectedClose);
@@ -84,7 +88,14 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   // - ready: render the app
   let content: ReactNode;
   if (error) {
-    content = <DatabaseErrorScreen onRetry={initDatabase} />;
+    content = (
+      <DatabaseErrorScreen
+        onRetry={retry}
+        description={
+          error.code === DatabaseErrorCode.VERSION_CONFLICT ? 'Close other Pubky tabs, then retry.' : undefined
+        }
+      />
+    );
   } else if (!isReady) {
     content = (
       <Container overrideDefaults className="flex min-h-screen items-center justify-center">
@@ -100,7 +111,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       value={{
         isReady,
         error,
-        retry: initDatabase,
+        retry,
       }}
     >
       {content}

@@ -12,7 +12,7 @@ import {
  * All API endpoints related to tag operations
  */
 
-const PREFIX = 'v0/tags';
+const PREFIX = 'tags';
 
 export const tagApi = {
   view: (params: TTagViewParams) => {

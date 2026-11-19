@@ -1,7 +1,7 @@
 import { createRef } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
+import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config/attachmentMimeTypes';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { PostInputAttachments } from './PostInputAttachments';
 
