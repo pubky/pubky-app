@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-event-stream/homeserver-event-stream';
+import { MessagesCoordinator } from '@/coordinators/messages/messages';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import { NotificationLastReadPollCoordinator } from '@/coordinators/notification-last-read-poll/notification-last-read-poll';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
@@ -19,6 +20,7 @@ function getAppCoordinators() {
     homeserverEventStream: HomeserverEventStreamCoordinator.getInstance(),
     muteListSync: MuteListSyncCoordinator.getInstance(),
     notificationLastReadPoll: NotificationLastReadPollCoordinator.getInstance(),
+    messages: MessagesCoordinator.getInstance(),
   };
 }
 
@@ -28,6 +30,7 @@ function applyRouteToCoordinators(pathname: string): void {
   void coordinators.stream.setRoute(pathname);
   void coordinators.muteListSync.setRoute(pathname);
   void coordinators.notificationLastReadPoll.setRoute(pathname);
+  void coordinators.messages.setRoute(pathname);
   coordinators.homeserverEventStream.setRoute(pathname);
 }
 
@@ -42,6 +45,7 @@ function startAppCoordinators(): void {
   // SDK bounds that lease or the team accepts the exposure; it then replaces the poller.
   void coordinators.muteListSync.start();
   void coordinators.notificationLastReadPoll.start();
+  void coordinators.messages.start();
   coordinators.homeserverEventStream.start();
 }
 
@@ -53,6 +57,7 @@ function stopAppCoordinators(): void {
   coordinators.homeserverEventStream.stop();
   coordinators.muteListSync.stop();
   coordinators.notificationLastReadPoll.stop();
+  coordinators.messages.stop();
 }
 
 /**
@@ -63,7 +68,8 @@ function stopAppCoordinators(): void {
  *
  * Responsibilities:
  * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator,
- *   MuteListSyncCoordinator, NotificationLastReadPollCoordinator, TtlCoordinator, HomeserverEventStreamCoordinator)
+ *   MuteListSyncCoordinator, NotificationLastReadPollCoordinator, TtlCoordinator, HomeserverEventStreamCoordinator,
+ *   MessagesCoordinator)
  * - Start coordination when the component is mounted, except while the account is held behind
  *   the social v1 migration gate: the stream coordinator keys on the persisted pubky and would
  *   read as the account before its data is migrated (ADR-0026); they start once the gate passes

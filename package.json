@@ -75,6 +75,7 @@
     "motion": "14.8.0",
     "next": "16.4.3",
     "next-themes": "0.4.6",
+    "pubky-messenger-ts": "github:coreyphillips/pubky-messenger-ts#378660e8887ce6e1e8a7218ddd97545abe445cce",
     "pubky-social-migrator": "1.0.0-rc.2",
     "pubky-social-specs": "1.0.0-rc.2",
     "qrcode.react": "4.2.0",

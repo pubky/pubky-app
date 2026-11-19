@@ -44,6 +44,10 @@ import { AuthController } from './auth';
 vi.mock('@/database/franky/franky.helpers', () => ({ clearDatabase: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/coordinators/notifications/notifications', () => ({ NotificationCoordinator: { resetInstance: vi.fn() } }));
 vi.mock('@/coordinators/streams/stream', () => ({ StreamCoordinator: { resetInstance: vi.fn() } }));
+vi.mock('@/coordinators/messages/messages', () => ({ MessagesCoordinator: { resetInstance: vi.fn() } }));
+vi.mock('@/controllers/messages/messages', () => ({
+  MessagesController: { resetSession: vi.fn(), clear: vi.fn().mockResolvedValue(undefined) },
+}));
 vi.mock('@/libs/query-client/query-client.factory', async (original) => ({
   ...(await original<typeof import('@/libs/query-client/query-client.factory')>()),
   clearAllQueryClients: vi.fn(),

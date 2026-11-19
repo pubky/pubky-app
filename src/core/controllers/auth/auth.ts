@@ -12,8 +12,10 @@ import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
 import type { SessionReadiness } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
+import { MessagesController } from '@/controllers/messages/messages';
 import { SocialMigrationController, type SocialMigrationEntry } from '@/controllers/social-migration/social-migration';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
+import { MessagesCoordinator } from '@/coordinators/messages/messages';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { clearDatabase } from '@/database/franky/franky.helpers';
@@ -1036,6 +1038,7 @@ export class AuthController {
     // Reset singletons. CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
+    MessagesCoordinator.resetInstance();
 
     // Clear in-memory feed stream queues
     postStreamQueue.clear();
@@ -1057,12 +1060,20 @@ export class AuthController {
     // Unified logout: tear down the Locks session (Lock Server signout + local store) alongside the
     // homeserver session, so the user can never stay logged into Locks after leaving pubky.app.
     await LocksController.logout(persist);
+    // The messaging key never outlives the session in memory.
+    MessagesController.resetSession();
 
     if (!persist || !isCurrent()) return;
     // Credential logout is already complete; cache cleanup cannot turn it into a failed sign-out.
     await this.bounded(clearDatabase(isCurrent), 'clearAccount', LOGOUT_TIMEOUT_MS, ErrorService.Local).catch(
       (error) => {
         if (!isAppError(error)) toAppError(error, ErrorService.Local, 'clearAccount');
+      },
+    );
+    // Direct messages are account data in their own database: remove every message from this device.
+    await this.bounded(MessagesController.clear(), 'clearMessages', LOGOUT_TIMEOUT_MS, ErrorService.Local).catch(
+      (error) => {
+        if (!isAppError(error)) toAppError(error, ErrorService.Local, 'clearMessages');
       },
     );
     if (!isCurrent()) return;
