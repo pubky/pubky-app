@@ -92,8 +92,8 @@ vi.mock('@/atoms/Typography/Typography', () => {
 
 // The notice has its own tests; here only whether the bar shows it, and with what, matters.
 vi.mock('@/molecules/LocksRegionNotice/LocksRegionNotice', () => ({
-  LocksRegionNotice: ({ cause, variant }: { cause?: string; variant?: string }) => (
-    <span data-testid="locks-region-notice" data-cause={cause} data-variant={variant} />
+  LocksRegionNotice: ({ cause, variant, align }: { cause?: string; variant?: string; align?: string }) => (
+    <span data-testid="locks-region-notice" data-cause={cause} data-variant={variant} data-align={align} />
   ),
 }));
 
@@ -321,6 +321,7 @@ describe('PostInputActionBar', () => {
       expect(lockSwitch).toBeDisabled();
       expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-cause', cause);
       expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-variant', 'icon');
+      expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-align', 'end');
       expect(screen.queryByRole('button', { name: LOCK_HELP_HEADING })).not.toBeInTheDocument();
       fireEvent.click(lockSwitch);
       expect(onCheckedChange).not.toHaveBeenCalled();
