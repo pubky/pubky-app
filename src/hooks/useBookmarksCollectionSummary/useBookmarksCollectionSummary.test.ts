@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { FileController } from '@/controllers/file/file';
 import { db } from '@/database/franky/franky';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
@@ -173,14 +174,18 @@ describe('useBookmarksCollectionSummary', () => {
   it('falls back to U, reports an unresolved profile and no count without a current user', async () => {
     await bookmark(postAt(1));
     setup({ currentUserPubky: null, userDetails: null });
+    const count = vi.spyOn(BookmarkController, 'getCount');
 
-    const { result } = renderSummary();
+    const { result, shownCounts } = renderSummary();
 
     expect(result.current.avatarName).toBe('U');
     expect(result.current.avatarSeed).toBe('U');
     expect(result.current.isProfileResolved).toBe(false);
-    await settle();
+    // Long enough for the disabled gate to settle and a count read behind it to answer.
+    for (let round = 0; round < 4; round += 1) await settle();
     expect(result.current.bookmarkCount).toBeUndefined();
+    expect(shownCounts()).toEqual([]);
+    expect(count).not.toHaveBeenCalled();
     expect(byIds).not.toHaveBeenCalled();
   });
 
@@ -243,7 +248,28 @@ describe('useBookmarksCollectionSummary', () => {
       const { result } = renderSummary();
 
       await waitFor(() => expect(result.current.bookmarkCount).toBe(5));
+      // A settled miss is not fetched again in this mount.
+      await settle();
+      await settle();
       expect(byIds).toHaveBeenCalledTimes(1);
+    });
+
+    it('fetches a bookmark added later whose post is not cached', async () => {
+      await bookmarkAll();
+      await Promise.all(BOOKMARKED.map((id) => cachePost(id, COLLECTIONS.has(id) ? 'collection' : 'short')));
+      const { result } = renderSummary();
+      await waitFor(() => expect(result.current.bookmarkCount).toBe(3));
+      expect(byIds).not.toHaveBeenCalled();
+
+      // The gate was a hit; the new row makes it a miss, which starts a fresh attempt in the same mount.
+      const added = postAt(6);
+      byIds.mockResolvedValue([served(added, 'note')]);
+      await BookmarkModel.table.put({ id: added, created_at: 2_000 });
+
+      await waitFor(() => expect(byIds).toHaveBeenCalledTimes(1));
+      expect(byIds.mock.calls[0][0]).toMatchObject({ post_ids: [added] });
+      await waitFor(() => expect(result.current.bookmarkCount).toBe(4));
+      expect(await PostDetailsModel.findById(added)).not.toBeNull();
     });
 
     it('counts a bookmark Nexus does not serve as a post, as the Bookmarks list shows it', async () => {

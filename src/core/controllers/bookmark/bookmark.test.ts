@@ -125,8 +125,9 @@ describe('BookmarkController', () => {
 
     describe('getMissingPostIds', () => {
       it('names the bookmarked posts without cached details, newest bookmark first', async () => {
-        await bookmarkAll([postAt(1), postAt(2), postAt(3)]);
-        await PostDetailsModel.upsert(cached(postAt(2)));
+        await bookmarkAll([postAt(1), postAt(2), postAt(3), postAt(4)]);
+        // A cached post and a cached followed collection are both classified.
+        await PostDetailsModel.table.bulkPut([cached(postAt(2)), { ...cached(postAt(4)), kind: 'collection' }]);
 
         await expect(BookmarkController.getMissingPostIds()).resolves.toEqual([postAt(1), postAt(3)]);
       });
