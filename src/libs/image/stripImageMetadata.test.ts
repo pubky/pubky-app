@@ -550,6 +550,17 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
+  it('starts a cleaned SVG at <svg>, so the homeserver stores it by its .svg path (#2683)', async () => {
+    // The homeserver stores a file that starts with an XML declaration as text/xml,
+    // and one that starts with a comment as text/html.
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="4"/></svg>';
+    for (const prefix of ['\uFEFF<?xml version="1.0" encoding="UTF-8"?>\n', '<!-- Created with Inkscape -->\n']) {
+      const result = await stripImageMetadata(new File([prefix + svg], 'icon.svg', { type: 'image/svg+xml' }));
+
+      expect(await result.text()).toMatch(/^<svg[^>]*><circle/);
+    }
+  });
+
   it('rejects SVG files over the upload limit after sanitization', async () => {
     const padding = 'x'.repeat(IMAGE_MAX_UPLOAD_SIZE + 1);
     const inputFile = new File(

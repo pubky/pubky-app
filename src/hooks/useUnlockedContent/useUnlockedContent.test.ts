@@ -1,12 +1,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
-import type { LockFile, TUnlockedAttachment, TUnlockedContent } from '@/services/locks/locks.types';
+import type { LockFile, ReplicatedPost, TUnlockedAttachment, TUnlockedContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { useUnlockedContent } from './useUnlockedContent';
 
-const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
+const { toastMock, rasterizeSvgMock } = vi.hoisted(() => ({ toastMock: vi.fn(), rasterizeSvgMock: vi.fn() }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => toastMock(...args) }));
+// jsdom has no canvas to draw an SVG with.
+vi.mock('@/libs/image/rasterizeSvg', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/libs/image/rasterizeSvg')>()),
+  rasterizeSvg: (bytes: Uint8Array) => rasterizeSvgMock(bytes),
+}));
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
     getUnlockedPost: vi.fn().mockResolvedValue(null),
@@ -413,7 +418,7 @@ describe('useUnlockedContent', () => {
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
     const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
 
-    act(() => result.current.applyUnlockedContent(content));
+    await act(async () => result.current.applyUnlockedContent(content));
 
     expect(result.current.unlockedPost).toEqual(content.post);
     expect(result.current.hasCompleteContent).toBe(true);
@@ -437,11 +442,11 @@ describe('useUnlockedContent (fresh unlock)', () => {
 
   // A dropped attachment is a permanent data error already reported to Sentry; the reader still has
   // to hear about it, while the rest of the post renders.
-  it('warns about attachments dropped from a fresh unlock', () => {
+  it('warns about attachments dropped from a fresh unlock', async () => {
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
     const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
 
-    act(() =>
+    await act(async () =>
       result.current.applyUnlockedContent({
         post: { content: 'x', kind: 'image', attachments: ['a', 'b'] },
         attachments: [{ id: 'a', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 }],
@@ -461,25 +466,176 @@ describe('useUnlockedContent (fresh unlock)', () => {
       kept: [],
     },
     { name: 'every file of a post that is not an article', kind: 'image' as const, body: 'text', kept: [0, 1] },
-  ])('keeps $name from a fresh unlock on a preview card, while replicating every file', ({ kind, body, kept }) => {
+  ])(
+    'keeps $name from a fresh unlock on a preview card, while replicating every file',
+    async ({ kind, body, kept }) => {
+      const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+      const { result } = renderHook(() =>
+        useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1', preview: true }),
+      );
+      const unlocked: TUnlockedContent = {
+        post: { content: JSON.stringify({ title: 'T', body }), kind, attachments: ['a', 'b'] },
+        attachments: [
+          { id: 'a', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
+          { id: 'b', contentType: 'image/png', bytes: new Uint8Array([2]), slot: 1 },
+        ],
+      };
+
+      await act(async () => result.current.applyUnlockedContent(unlocked));
+
+      expect(result.current.media.map((item) => item.slot)).toEqual(kept);
+      expect(LocksController.replicateUnlockedContent).toHaveBeenCalledWith(
+        expect.objectContaining({ content: unlocked }),
+      );
+    },
+  );
+});
+
+describe('useUnlockedContent (SVG files, #2683)', () => {
+  const svgContent: TUnlockedContent = {
+    post: { content: 'x', kind: 'image', attachments: ['a.svg'] },
+    attachments: [{ id: 'a.svg', contentType: 'image/svg+xml', bytes: new Uint8Array([1]), slot: 0 }],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authState.currentUserPubky = 'me';
+    authState.session = {};
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(null);
+    vi.mocked(LocksController.getOwnPost).mockResolvedValue(null);
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([]);
+    rasterizeSvgMock.mockResolvedValue(new Uint8Array([9]));
+  });
+
+  it("shows a fresh unlock's SVG as a PNG, and replicates the original", async () => {
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
+
+    await act(async () => result.current.applyUnlockedContent(svgContent));
+
+    expect(result.current.media.map((item) => item.type)).toEqual(['image/png']);
+    expect(LocksController.replicateUnlockedContent).toHaveBeenCalledWith(
+      expect.objectContaining({ content: svgContent }),
+    );
+  });
+
+  it('draws only the SVG cover of an article on a preview card, and replicates every file', async () => {
+    const article: TUnlockedContent = {
+      post: {
+        content: JSON.stringify({ title: 'T', body: '![b](attachment:1)' }),
+        kind: 'long',
+        attachments: ['a.svg', 'b.svg'],
+      },
+      attachments: [
+        { id: 'a.svg', contentType: 'image/svg+xml', bytes: new Uint8Array([1]), slot: 0 },
+        { id: 'b.svg', contentType: 'image/svg+xml', bytes: new Uint8Array([2]), slot: 1 },
+      ],
+    };
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
     const { result } = renderHook(() =>
       useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1', preview: true }),
     );
-    const unlocked: TUnlockedContent = {
-      post: { content: JSON.stringify({ title: 'T', body }), kind, attachments: ['a', 'b'] },
-      attachments: [
-        { id: 'a', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
-        { id: 'b', contentType: 'image/png', bytes: new Uint8Array([2]), slot: 1 },
-      ],
-    };
 
-    act(() => result.current.applyUnlockedContent(unlocked));
+    await act(async () => result.current.applyUnlockedContent(article));
 
-    expect(result.current.media.map((item) => item.slot)).toEqual(kept);
+    expect(result.current.media.map(({ slot, type }) => ({ slot, type }))).toEqual([{ slot: 0, type: 'image/png' }]);
+    expect(rasterizeSvgMock.mock.calls).toEqual([[new Uint8Array([1])]]);
     expect(LocksController.replicateUnlockedContent).toHaveBeenCalledWith(
-      expect.objectContaining({ content: unlocked }),
+      expect.objectContaining({ content: article }),
     );
+  });
+
+  it('shows the post at once, with the SVG pending until its drawing is ready', async () => {
+    let finishDrawing: (png: Uint8Array) => void = () => undefined;
+    rasterizeSvgMock.mockReturnValue(
+      new Promise((resolve) => {
+        finishDrawing = resolve;
+      }),
+    );
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
+
+    act(() => result.current.applyUnlockedContent(svgContent));
+
+    expect(result.current.unlockedPost).toEqual(svgContent.post);
+    expect(result.current.hasCompleteContent).toBe(true);
+    expect(result.current.pendingAttachments).toEqual([{ slot: 0, type: 'image/svg+xml' }]);
+    expect(result.current.media).toEqual([]);
+
+    await act(async () => finishDrawing(new Uint8Array([9])));
+
+    expect(result.current.media.map((item) => item.type)).toEqual(['image/png']);
+    expect(result.current.pendingAttachments).toEqual([]);
+  });
+
+  it('drops a fresh unlock still being drawn when the post changes', async () => {
+    let finishDrawing: (png: Uint8Array) => void = () => undefined;
+    rasterizeSvgMock.mockReturnValue(
+      new Promise((resolve) => {
+        finishDrawing = resolve;
+      }),
+    );
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+    const { result, rerender } = renderHook(
+      ({ lock }) => useUnlockedContent({ lock, lockFile, postId: 'author:POST1' }),
+      {
+        initialProps: { lock: LOCK_URL },
+      },
+    );
+
+    act(() => result.current.applyUnlockedContent(svgContent));
+    rerender({ lock: 'pubky://hs/pub/app.locks/lock2.json' });
+    await act(async () => finishDrawing(new Uint8Array([9])));
+
+    expect(result.current.media).toEqual([]);
+    expect(result.current.unlockedPost).toBeNull();
+  });
+
+  it("shows a cached replica's SVG as a PNG", async () => {
+    const cached: ReplicatedPost = {
+      content: 'cached',
+      kind: 'image',
+      attachments: [{ url: 'pubky://me/priv/social/unlocked/lock1/a.svg', content_type: 'image/svg+xml' }],
+    };
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(cached);
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue(svgContent.attachments);
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }));
+
+    await waitFor(() => expect(result.current.media.map((item) => item.type)).toEqual(['image/png']));
+    expect(result.current.pendingAttachments).toEqual([]);
+  });
+
+  it("shows the creator's own SVG as a PNG", async () => {
+    vi.mocked(LocksController.fetchOwnContent).mockResolvedValueOnce(svgContent);
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyme' });
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'me:POST1' }));
+
+    await waitFor(() => expect(result.current.media.map((item) => item.type)).toEqual(['image/png']));
+    expect(result.current.unlockedPost).toEqual(svgContent.post);
+  });
+
+  it("shows the creator's own post without an SVG that cannot be drawn", async () => {
+    rasterizeSvgMock.mockResolvedValue(null);
+    vi.mocked(LocksController.fetchOwnContent).mockResolvedValueOnce(svgContent);
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyme' });
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'me:POST1' }));
+
+    await waitFor(() => expect(result.current.unlockedPost).toEqual(svgContent.post));
+    expect(result.current.media).toEqual([]);
+    expect(result.current.pendingAttachments).toEqual([]);
+  });
+
+  it('ends the skeleton of a fresh unlock whose SVG cannot be drawn', async () => {
+    rasterizeSvgMock.mockResolvedValue(null);
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
+
+    await act(async () => result.current.applyUnlockedContent(svgContent));
+
+    expect(result.current.unlockedPost).toEqual(svgContent.post);
+    expect(result.current.media).toEqual([]);
+    expect(result.current.pendingAttachments).toEqual([]);
   });
 });
 

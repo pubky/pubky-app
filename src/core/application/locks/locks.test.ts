@@ -578,6 +578,50 @@ describe('LocksApplication (content)', () => {
       ]);
     });
 
+    // A cleaned SVG matches no homeserver byte check, so its path extension sets its type (#2683).
+    it('uploads an SVG under a path that ends in .svg', async () => {
+      await LocksApplication.createLockContent({
+        attachments: [picked('image/svg+xml', '<svg />'), picked('image/png')],
+        buildPost,
+        lockConfig: paymentConfig,
+      });
+
+      expect(mocks.registerGuardedResource.mock.calls.map(([params]) => params.path)).toEqual([
+        'id-1.svg',
+        'id-2',
+        'id-3',
+      ]);
+    });
+
+    it('uploads an SVG without its scripts, through the real clean-up', async () => {
+      const actual = await vi.importActual<typeof import('@/libs/image/stripImageMetadata')>(
+        '@/libs/image/stripImageMetadata',
+      );
+      mocks.strip.mockImplementation(actual.stripImageMetadata);
+      const svg = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<svg xmlns="http://www.w3.org/2000/svg" onload="steal()">',
+        '<script>steal()</script>',
+        '<foreignObject><iframe src="https://evil.example"></iframe></foreignObject>',
+        '<a href="javascript:steal()"><circle cx="8" cy="8" r="4" onclick="steal()"/></a>',
+        '</svg>',
+      ].join('');
+
+      await LocksApplication.createLockContent({
+        attachments: [picked('image/svg+xml', svg)],
+        buildPost,
+        lockConfig: paymentConfig,
+      });
+
+      const [{ path }] = mocks.registerGuardedResource.mock.calls[0];
+      const [{ contentType, body }] = uploaded();
+      expect(path).toMatch(/\.svg$/);
+      expect(contentType).toBe('image/svg+xml');
+      expect(body).toMatch(/^<svg/);
+      expect(body).toContain('<circle');
+      expect(body).not.toMatch(/steal|evil|script|foreignObject|iframe/);
+    });
+
     it('cleans one file at a time, never two at once', async () => {
       let active = 0;
       let peak = 0;

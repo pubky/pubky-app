@@ -86,8 +86,13 @@ picked them. The session keeps them while the lock draft exists (`keepInlineMedi
 the lock puts a working article back into the editor; releasing it only revokes the local previews.
 A locked article's images are therefore never public.
 
-_SVG files._ A locked SVG is stored without its image type, so it does not render after an unlock.
-Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
+_SVG files._ A locked SVG is uploaded under a `.svg` path. The homeserver ignores the declared type
+and checks the first bytes before the path: a file that starts with an XML declaration is stored as
+`text/xml`, and one that starts with a comment as `text/html`. The SVG clean-up keeps only the
+`<svg>` element, so no check matches and the extension makes the stored type `image/svg+xml` (#2683). After
+an unlock the app shows a PNG drawing of the SVG, never the SVG itself: an unlocked file's object URL
+is on the app origin, so an SVG opened from it in a new tab would run its scripts there. An SVG that
+the browser cannot draw is not shown.
 
 _Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
 10,000,000 bytes per file. It refuses a lock only after its files were uploaded, so a draft over the
