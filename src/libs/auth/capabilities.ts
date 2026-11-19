@@ -36,3 +36,16 @@ export function hasCapabilities(granted: readonly string[], required: readonly s
     return false;
   }
 }
+
+/**
+ * Whether a capability list asks for scoped encryption keys (the `e` action). Such a request needs a
+ * signed approval (`af=v1`): the SDK delivers keys only through it, and the homeserver rejects a bare
+ * grant that names `e`.
+ */
+export function requestsEncryptionKeys(capabilities: string): boolean {
+  try {
+    return parseCapabilities([capabilities]).some(({ actions }) => actions.includes('e'));
+  } catch {
+    return false;
+  }
+}

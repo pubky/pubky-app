@@ -188,3 +188,27 @@ it.each(['local', 'delegated'] as const)(
     expect(sessionStorage.getItem(savedKey)).not.toBe(original);
   },
 );
+
+describe('approval format', () => {
+  it('requests a signed approval when the capabilities ask for encryption keys', async () => {
+    const sdk = makeSdk();
+    await GrantFlowService.start(sdk, {
+      purpose: 'upgrade',
+      capabilities: '/pub/private_messages/:rw,/priv/private_messages/v2/messaging-key:e',
+      generation: 'generation',
+      fresh: true,
+    });
+    expect(sdk.startGrantAuthFlow).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.anything(),
+      expect.objectContaining({ approvalFormat: 'signedApprovalV1' }),
+    );
+  });
+
+  it('keeps a bare grant for read and write scopes', async () => {
+    const sdk = makeSdk();
+    await GrantFlowService.start(sdk, { ...request, fresh: true });
+    const options = vi.mocked(sdk.startGrantAuthFlow).mock.calls[0][2];
+    expect(options).not.toHaveProperty('approvalFormat');
+  });
+});

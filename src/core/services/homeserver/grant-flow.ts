@@ -10,6 +10,7 @@ import {
 import { z } from 'zod';
 import { getAuthClientId } from '@/config/auth';
 import { getDefaultHttpRelay, getDeployEnv, getHomeserver, getTestnet } from '@/config/network';
+import { requestsEncryptionKeys } from '@/libs/auth/capabilities';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { isIosDevice } from '@/libs/pwa/platform';
 import { isPubkyErrorLike } from './error.utils';
@@ -280,6 +281,8 @@ export class GrantFlowService {
           clientId: getAuthClientId(),
           relay: getDefaultHttpRelay(),
           xCallback: request.xCallback,
+          // Encryption keys arrive only inside a signed approval; bare grants keep older signers working.
+          ...(requestsEncryptionKeys(request.capabilities) ? { approvalFormat: 'signedApprovalV1' as const } : {}),
         });
         assertCurrent();
         try {

@@ -26,6 +26,16 @@ export const LOCKS_CAPABILITIES = [
   `${LOCKS_GUARDED_CONTENT_PATH}:r`,
 ] as const satisfies readonly Capabilities[];
 
+/**
+ * Direct messages (vibe): write access to the sender-owned message tree, plus the scoped encryption key
+ * (`e`) for the one file path the messaging keypair is derived from (pubky-messenger protocol v2).
+ * Requested only through the Messages upgrade, never at sign-in, so a bare-grant signer can still sign in.
+ */
+export const DM_CAPABILITIES = [
+  '/pub/private_messages/:rw',
+  '/priv/private_messages/v2/messaging-key:e',
+] as const satisfies readonly Capabilities[];
+
 /** Shared App/Shop storage. Encryption-key permissions are a separate feature. */
 export const SHOP_CAPABILITIES = [
   APP_CAPABILITIES,
