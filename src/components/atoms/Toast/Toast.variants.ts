@@ -8,7 +8,7 @@ export type ToastIconComponent = ComponentType<LucideProps>;
 
 export const toastVariants = cva(
   [
-    'group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all',
+    'group/toast pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all',
     'data-[swipe=cancel]:translate-x-0',
     'data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]',
     'data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]',
@@ -24,7 +24,7 @@ export const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-brand/32 bg-brand/8',
+        default: 'rounded-md border-brand/50 bg-brand/25',
         error: 'border-destructive/32 bg-destructive/8',
         warning: 'border-yellow-500/32 bg-yellow-500/8',
         info: 'border-accent/32 bg-accent/8',
@@ -50,14 +50,14 @@ export const toastIconVariants = cva('size-5 shrink-0', {
   },
 });
 
-// Action buttons carry an emphasis, not a toast semantic: brand matches Button
-// variant="default" color classes, muted is the low-emphasis style used everywhere else.
+// Toast action emphasis is independent of the notification variant.
 export const toastActionVariants = cva(
   'inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold  transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        brand: 'shadow-xs border-brand bg-brand/16 text-brand hover:!bg-brand/30',
+        brand:
+          'shadow-xs border-brand bg-toast-action-brand text-brand hover:!bg-toast-action-brand-hover light:text-brand-foreground',
         muted: 'shadow-xs bg-toast-action-muted text-foreground hover:border-toast-action-muted-hover-border',
       },
     },

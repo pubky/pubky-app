@@ -373,7 +373,7 @@ When a surface really differs per theme, use the `light:` and `dark:` variants d
 <div className="bg-white" /> // QR plate, not `bg-foreground light:bg-white`
 
 // Text on a brand-green fill
-<Button variant="brand" /> // uses `text-brand-foreground`
+<Button variant="brand" /> // primary-foreground in dark mode, dark brand ink in light mode
 <div className="bg-brand text-brand-foreground" />
 ```
 

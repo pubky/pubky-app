@@ -59,8 +59,16 @@ body {
   --color-glass-hover: var(--glass-hover);
   --color-glass-strong: var(--glass-strong);
   --color-button-outline: var(--button-outline);
+  /* Default button hover layers the page surface at 10% over the 32% brand fill. */
+  --background-image-button-hover: linear-gradient(
+    color-mix(in srgb, var(--background) 10%, transparent),
+    color-mix(in srgb, var(--background) 10%, transparent)
+  );
   --color-action-pill: var(--action-pill);
   --color-embed: var(--embed);
+  /* Keep the small OK label legible over content behind a translucent success toast. */
+  --color-toast-action-brand: color-mix(in srgb, var(--brand) 32%, var(--background));
+  --color-toast-action-brand-hover: color-mix(in srgb, var(--brand) 40%, var(--background));
   --color-toast-action-muted: var(--toast-action-muted);
   --color-toast-action-muted-hover-border: var(--toast-action-muted-hover-border);
   --color-transparent: var(--transparent);
@@ -157,10 +165,10 @@ body {
   --glass-hover: rgb(255 255 255 / 0.1);
   --glass-strong: rgb(255 255 255 / 0.12);
   /**
-   * Surface of the `outline` Button variant. Dark mode matches `bg-foreground/4`.
+   * Surface of the `outline` Button variant. Dark controls use the Figma outline fill at 4.5%.
    * Light mode uses the card surface, so these buttons read lighter than the page.
    */
-  --button-outline: color-mix(in oklab, var(--foreground) 4%, transparent);
+  --button-outline: color-mix(in oklab, var(--foreground) 4.5%, transparent);
   /** Surface of the post action pills (tag / reply / repost / save / more): secondary in dark, page in light. */
   --action-pill: var(--secondary);
   /** Surface of a post or link embedded in a post (repost preview, link preview): muted in dark, page in light. */

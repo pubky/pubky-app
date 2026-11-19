@@ -65,7 +65,11 @@ describe('Toaster', () => {
 
     const okButton = screen.getByRole('button', { name: 'OK' });
     expect(okButton).toBeInTheDocument();
-    expect(okButton).toHaveClass('border-brand');
+    expect(okButton).toHaveClass(
+      'bg-toast-action-brand',
+      'hover:!bg-toast-action-brand-hover',
+      'light:text-brand-foreground',
+    );
 
     fireEvent.click(okButton);
     // No timer advance: the dismissal must come from the click itself,
