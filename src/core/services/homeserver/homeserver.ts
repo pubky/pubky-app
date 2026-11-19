@@ -1014,6 +1014,53 @@ export class HomeserverService {
   }
 
   /**
+   * Public read of another user's (or the own) public file as bytes, bypassing the HTTP cache so a
+   * poll sees the latest write. Resolves `null` on 404 instead of treating absence as an error.
+   *
+   * @param url - `pubky://<owner>/pub/...` address.
+   */
+  static async getPublicBytesIfExists(url: string): Promise<Uint8Array | null> {
+    try {
+      const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getPublicBytesIfExists' });
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
+      throw toAppError(error, ErrorService.Homeserver, 'getPublicBytesIfExists');
+    }
+  }
+
+  /**
+   * Derives the scoped content key for one file path from the active session's signed approval
+   * (capability action `e`). Reads the live grant first and falls back to the approval stored with a
+   * restored session. The caller owns the returned bytes and should clear them after use.
+   *
+   * @param path - Canonical file path inside an approved `e` scope.
+   * @returns The 32-byte key, or `null` when the session holds no approved scope covering the path.
+   */
+  static async deriveScopedEncryptionKey(path: string): Promise<Uint8Array | null> {
+    const state = useAuthStore.getState();
+    const session = state.selectSession();
+    if (!session) return null;
+    let keys = session.grant?.encryptionKeys;
+    if (!keys && state.sessionReference) {
+      keys = await this.getPubkySdk()
+        .browserSessionStore.restoreEncryptionKeys(state.sessionReference.sessionStoreId)
+        .catch(() => undefined);
+    }
+    if (!keys) return null;
+    try {
+      const covered = keys.scopes.some((scope) => scope === path || (scope.endsWith('/') && path.startsWith(scope)));
+      return covered ? keys.deriveForPath(path) : null;
+    } catch (error) {
+      throw toAppError(error, ErrorService.Homeserver, 'deriveScopedEncryptionKey');
+    } finally {
+      keys.free();
+    }
+  }
+
+  /**
    * Checks whether a homeserver resource exists without treating an expected 404 as an error.
    * Storage SDK probes return a boolean; plain HTTP URLs retain explicit response handling.
    */
