@@ -82,7 +82,7 @@ and each channel acts on events under its own path:
   synced session, the mute list does not). A change in the set reconnects the stream once.
 - **One connection at a time.** A new connection waits until the previous loop has exited. A subscribe still in
   flight at sign-out or an account switch is aborted, never stacked under the next session's.
-- **Teardown.** Each connection owns an `AbortController`. SDK 0.17.1's `subscribe()` takes no signal and its WASM
+- **Teardown.** Each connection owns an `AbortController`. SDK 0.18.0's `subscribe()` takes no signal and its WASM
   transport has no timeout, so a request waiting for response headers could hold the loop indefinitely.
   `HomeserverService.subscribeUserEventStream` therefore sends the SDK's anonymous `/events-stream` request itself,
   through `client.fetch` with the signal, and decodes the SSE body as the SDK does. Only the PKARR lookups before
@@ -181,10 +181,11 @@ long-lived homeserver connection. The channel class stays in the tree, unregiste
 the SDK bounds that lease, or the team accepts the exposure, register the channel and remove the poller.
 
 No cache bypass is needed for the session read, and `markAllAsRead`'s read-check-write fence relies on it. The SDK
-(`@synonymdev/pubky` 0.17.1) sends the session `storage.get` as a default-mode fetch: `pubky-sdk/src/actors/storage/verbs.rs`
+(`@synonymdev/pubky` 0.18.0) sends the session `storage.get` as a default-mode fetch: `pubky-sdk/src/actors/storage/verbs.rs`
 (`get`) builds it through `core.rs` (`request` → `cross_request`, `send` attaches the bearer) and nothing in the SDK
 sets a fetch `cache` mode; reqwest's wasm request leaves `cache` unset. Freshness comes from the homeserver:
 `pubky-homeserver/src/client_server/cache_policy.rs`, layered on the tenant router, stamps every `/priv/` response
 `Cache-Control: no-store` with `Vary: Authorization, Cookie` (v0.13.0 through v0.17.1; `private, no-cache` with an
 `ETag` on a served or unchanged file from v0.18.0), so the browser never answers the read from its cache without
-revalidating. The staging homeserver answers a `/priv/…/last_read.json` GET with `cache-control: no-store`.
+revalidating. The staging homeserver answered a `/priv/…/last_read.json` GET with `cache-control: no-store` when it
+ran a version before v0.18.0.
