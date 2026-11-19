@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+cypress
+src/test
+src/test-utils
+**/*.test.ts
+**/*.test.tsx
+**/__snapshots__
