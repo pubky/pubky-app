@@ -14,6 +14,7 @@ export enum FileVariant {
 
 export type TFileParams = {
   pubky: Pubky;
+  /** A v1 file's whole `{hash}.{ext}` filename, or a 0.x file's id. */
   file_id: string;
   variant: FileVariant;
 };

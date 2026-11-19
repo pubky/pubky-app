@@ -12,6 +12,7 @@ import {
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
+import { useEditAttachments } from '@/hooks/useEditAttachments/useEditAttachments';
 import { usePost } from '@/hooks/usePost/usePost';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { Logger } from '@/libs/logger/logger';
@@ -684,6 +685,11 @@ describe('usePostInput', () => {
         'pubky://user/pub/pubky.app/files/REF',
         'pubky://user/pub/pubky.app/files/UNSEEN',
       ];
+      // A 0.x article: slot 0 is the cover only once its row says image
+      mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+        files: fileUris.includes(uris[0]) ? [{ uri: uris[0], content_type: 'image/jpeg' }] : [],
+        isLoading: false,
+      }));
 
       const { result } = renderHook(() =>
         usePostInput({
@@ -703,9 +709,202 @@ describe('usePostInput', () => {
       expect(mockEdit).toHaveBeenCalledWith(
         expect.objectContaining({
           originalAttachmentUris: uris,
+          originalCoverUri: uris[0],
           preservedAttachmentUris: ['pubky://user/pub/pubky.app/files/UNSEEN'],
         }),
       );
+      // The strip shows the cover alone, seeded from the full list
+      expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+        expect.objectContaining({ uris, displayUris: [uris[0]] }),
+      );
+    });
+
+    describe('0.x article cover (rule B, image-only)', () => {
+      const COVER = 'pubky://user/pub/pubky.app/files/COVER';
+      const REF = 'pubky://user/pub/pubky.app/files/REF';
+      const UNSEEN = 'pubky://user/pub/pubky.app/files/UNSEEN';
+      const uris = [COVER, REF, UNSEEN];
+      const editLegacyArticle = () =>
+        renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            editAttachmentUris: uris,
+            editIsArticle: true,
+            // No envelope cover; the body references slot 1 only, so slot 0 is a cover candidate
+            editContent: JSON.stringify({ title: 'Title', body: 'Text with ![a](attachment:1)' }),
+          }),
+        );
+
+      beforeEach(() => {
+        mockIsArticle = true;
+        mockContent = `Text with ![a](${REF})`;
+        mockArticleTitle = 'Title';
+      });
+
+      it('reads the slot-0 row and holds the strip until it lands', () => {
+        mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+          files: [],
+          isLoading: fileUris.includes(COVER),
+        }));
+
+        const { result } = editLegacyArticle();
+
+        expect(mockUseAttachmentsMetadata).toHaveBeenCalledWith({ fileUris: [COVER] });
+        // Seeding happens once, so it waits for the row that says whether slot 0 is the cover
+        expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+          expect.objectContaining({ uris: undefined, displayUris: [] }),
+        );
+        expect(result.current.isEditInlineMediaLoading).toBe(true);
+      });
+
+      it('keeps a PDF at slot 0 out of the cover strip and with the unreferenced originals', async () => {
+        mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+          files: fileUris.includes(COVER) ? [{ uri: COVER, content_type: 'application/pdf' }] : [],
+          isLoading: false,
+        }));
+
+        const { result } = editLegacyArticle();
+
+        expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+          expect.objectContaining({ uris, displayUris: [] }),
+        );
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        // Never saved as the cover; kept at the tail like any original the user was not shown
+        expect(mockEdit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            originalAttachmentUris: uris,
+            originalCoverUri: undefined,
+            preservedAttachmentUris: [COVER, UNSEEN],
+          }),
+        );
+      });
+
+      it('keeps slot 0 as the cover when the read settles without a row: only a row can demote it', () => {
+        mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+
+        editLegacyArticle();
+
+        expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+          expect.objectContaining({ uris, displayUris: [COVER] }),
+        );
+      });
+
+      it('refuses a save while the strip waits for the slot-0 row', async () => {
+        mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+          files: [],
+          isLoading: fileUris.includes(COVER),
+        }));
+
+        const { result } = editLegacyArticle();
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        // A save now would diff against an empty snapshot and refuse the article's own inline files
+        expect(mockEdit).not.toHaveBeenCalled();
+      });
+
+      it('seeds slot 0 as the cover once the wait cap passes with its row still out, and keeps that decision', async () => {
+        vi.useFakeTimers();
+        try {
+          mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+            files: [],
+            isLoading: fileUris.includes(COVER),
+          }));
+
+          const { result, rerender } = editLegacyArticle();
+          expect(result.current.isEditInlineMediaLoading).toBe(true);
+          expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(expect.objectContaining({ uris: undefined }));
+
+          act(() => {
+            vi.advanceTimersByTime(5000);
+          });
+
+          // A slow row must never cost the article its cover: past the cap slot 0 is the cover, as before
+          expect(result.current.isEditInlineMediaLoading).toBe(false);
+          expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+            expect.objectContaining({ uris, displayUris: [COVER] }),
+          );
+
+          // The row lands late and says PDF: the strip was seeded with the cover, so the decision stands
+          mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+            files: fileUris.includes(COVER) ? [{ uri: COVER, content_type: 'application/pdf' }] : [],
+            isLoading: false,
+          }));
+          rerender();
+          expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+            expect.objectContaining({ uris, displayUris: [COVER] }),
+          );
+
+          await act(async () => {
+            await result.current.handleSubmit();
+          });
+          expect(mockEdit).toHaveBeenCalledWith(
+            expect.objectContaining({
+              originalAttachmentUris: uris,
+              originalCoverUri: COVER,
+              preservedAttachmentUris: [UNSEEN],
+            }),
+          );
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('keeps a strip seeded without the cover when an image row lands late', async () => {
+        // The read settled with no row first (slot 0 taken as the cover), so a late row changes nothing either
+        // way; here the first answer is a PDF row and a later image row must not re-seed or move the cover
+        mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+          files: fileUris.includes(COVER) ? [{ uri: COVER, content_type: 'application/pdf' }] : [],
+          isLoading: false,
+        }));
+
+        const { result, rerender } = editLegacyArticle();
+        expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+          expect.objectContaining({ uris, displayUris: [] }),
+        );
+
+        mockUseAttachmentsMetadata.mockImplementation(({ fileUris }) => ({
+          files: fileUris.includes(COVER) ? [{ uri: COVER, content_type: 'image/jpeg' }] : [],
+          isLoading: false,
+        }));
+        rerender();
+
+        expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+          expect.objectContaining({ uris, displayUris: [] }),
+        );
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+        expect(mockEdit).toHaveBeenCalledWith(
+          expect.objectContaining({ originalCoverUri: undefined, preservedAttachmentUris: [COVER, UNSEEN] }),
+        );
+      });
+
+      it('reads no slot-0 row when the envelope names the cover', () => {
+        mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+
+        renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            editAttachmentUris: [REF],
+            editIsArticle: true,
+            editContent: JSON.stringify({ title: 'Title', body: 'Text with ![a](attachment:0)', cover_image: COVER }),
+          }),
+        );
+
+        expect(mockUseAttachmentsMetadata).not.toHaveBeenCalledWith({ fileUris: [COVER] });
+        expect(vi.mocked(useEditAttachments)).toHaveBeenLastCalledWith(
+          expect.objectContaining({ uris: [REF], displayUris: [COVER] }),
+        );
+      });
     });
 
     it('submits edit with empty content when new attachments were added', async () => {
@@ -2720,6 +2919,26 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).toHaveBeenCalled();
+    });
+
+    it('rejects a CSV file like any unsupported type: text/csv is in the v1 table but deferred', () => {
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+
+      const file = new File(['a,b\n1,2'], 'table.csv', { type: 'text/csv' });
+
+      act(() => {
+        result.current.handleFilesAdded([file]);
+      });
+
+      expect(mockSetAttachments).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: expect.stringContaining('Unsupported file type'),
+      });
     });
 
     it('rejects files with invalid types and shows toast', () => {

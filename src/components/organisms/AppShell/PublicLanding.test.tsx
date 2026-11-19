@@ -1,6 +1,10 @@
 import { render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  clearSocialMigrationSignedOutNotice,
+  writeSocialMigrationSignedOutNotice,
+} from '@/libs/social-migration/signed-out-notice';
+import {
   AUTH_MIGRATION_KEY,
   AUTH_PERSIST_KEY,
   LEGACY_AUTH_PERSIST_KEY,
@@ -30,6 +34,7 @@ function store(key: string, state: object) {
 describe('PublicLanding first paint', () => {
   afterEach(() => {
     localStorage.clear();
+    clearSocialMigrationSignedOutNotice();
     vi.restoreAllMocks();
   });
 
@@ -61,6 +66,11 @@ describe('PublicLanding first paint', () => {
     store(AUTH_PERSIST_KEY, { currentUserPubky: null, sessionReference: null });
     store(LEGACY_AUTH_PERSIST_KEY, { currentUserPubky: 'old-member' });
     expect(runBootstrap().script).not.toHaveAttribute('data-saved-account');
+  });
+
+  it('shows the gate before paint while a signed-out visitor is owed the migration explanation', () => {
+    writeSocialMigrationSignedOutNotice({ reason: 'pre-migration-grant' });
+    expect(runBootstrap().script).toHaveAttribute('data-saved-account');
   });
 
   it('leaves guest controls available on a first visit', () => {

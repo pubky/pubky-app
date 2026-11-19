@@ -7,6 +7,7 @@ import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { type UserStreamId, UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
+import { mockNexusUserWire } from '@/test-utils/nexus';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { NexusUserStreamService } from './userStream';
 import { buildUserStreamBodyUrl, userStreamApi } from './userStream.api';
@@ -44,7 +45,7 @@ describe('Users Stream API - Error Control', () => {
         viewer_id: mockViewerId,
       });
 
-      expect(url).toContain('v0/stream/users/username?');
+      expect(url).toContain('v1/stream/users/username?');
       expect(url).toContain('username=');
       expect(url).toContain(`viewer_id=${mockViewerId}`);
     });
@@ -68,7 +69,7 @@ describe('Users Stream API - Error Control', () => {
         viewer_id: mockViewerId,
       });
 
-      expect(url).toContain('v0/stream/users/username?');
+      expect(url).toContain('v1/stream/users/username?');
       expect(url).toContain(`username=${encodeURIComponent(specialUsername)}`);
     });
 
@@ -100,7 +101,7 @@ describe('Users Stream API - Error Control', () => {
         user_ids: [],
       });
 
-      expect(request.url).toMatch('v0/stream/users/by_ids');
+      expect(request.url).toMatch('v1/stream/users/by_ids');
       expect(request.body.user_ids).toEqual([]);
       expect(request.body).not.toHaveProperty('viewer_id');
       expect(request.body).not.toHaveProperty('depth');
@@ -114,7 +115,7 @@ describe('Users Stream API - Error Control', () => {
         depth: 3,
       });
 
-      expect(request.url).toMatch('v0/stream/users/by_ids');
+      expect(request.url).toMatch('v1/stream/users/by_ids');
       expect(request.body.user_ids).toHaveLength(1000);
       expect(request.body.viewer_id).toBe(mockViewerId);
       expect(request.body.depth).toBe(3);
@@ -365,7 +366,7 @@ describe('NexusUserStreamService.fetch', () => {
         limit: 10,
       });
 
-      expect(url).toContain('v0/stream/users/ids?');
+      expect(url).toContain('v1/stream/users/ids?');
       expect(url).toContain('source=followers');
       expect(url).toContain(`user_id=${mockUserId}`);
       expect(url).toContain('skip=0');
@@ -379,7 +380,7 @@ describe('NexusUserStreamService.fetch', () => {
         limit: 10,
       });
 
-      expect(url).toContain('v0/stream/users/ids?');
+      expect(url).toContain('v1/stream/users/ids?');
       expect(url).toContain('source=following');
       expect(url).toContain(`user_id=${mockUserId}`);
       expect(url).toContain('skip=0');
@@ -416,7 +417,7 @@ describe('NexusUserStreamService.fetch', () => {
         limit: 10,
       });
 
-      expect(url).toContain('v0/stream/users/ids?');
+      expect(url).toContain('v1/stream/users/ids?');
       expect(url).toContain('source=starter_pack');
       // URLSearchParams encodes the comma; order must be preserved
       expect(url).toContain('tags=bitcoin%2Cmusic');
@@ -517,14 +518,14 @@ describe('NexusUserStreamService.fetch', () => {
   });
 
   describe('URL structure validation', () => {
-    it('should always start with v0/stream/users/ids?', () => {
+    it('should always start with v1/stream/users/ids?', () => {
       const url = userStreamApi.followers({
         user_id: mockUserId,
         skip: 0,
         limit: 10,
       });
 
-      expect(url).toMatch(/v0\/stream\/users\/ids\?/);
+      expect(url).toMatch(/v1\/stream\/users\/ids\?/);
     });
 
     it('should have proper query parameter format', () => {
@@ -543,12 +544,14 @@ describe('NexusUserStreamService.fetch', () => {
 });
 
 describe('NexusUserStreamService.fetchByIds', () => {
+  const wireUser = (id: string) => mockNexusUserWire({ id: id as Pubky });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('sorts user_ids in the request body so identical batches coalesce (B3)', async () => {
-    const mockUsers = [{ details: { id: 'user1' } } as never];
+    const mockUsers = [wireUser('user1')];
     const queryNexusSpy = vi.mocked(queryNexus).mockResolvedValue(mockUsers);
 
     const result = await NexusUserStreamService.fetchByIds({
@@ -564,15 +567,34 @@ describe('NexusUserStreamService.fetchByIds', () => {
     expect(result).toEqual(mockUsers);
   });
 
-  it('returns the response queryNexus stamped when one request is enough', async () => {
-    const mockUsers = [{ details: { id: 'user1' } } as never];
+  it('returns the response stamped as queryNexus stamped it when one request is enough', async () => {
+    const mockUsers = [wireUser('user1')];
     markNexusResponseStartedAt(mockUsers, 1_000);
     vi.mocked(queryNexus).mockResolvedValue(mockUsers);
 
     const result = await NexusUserStreamService.fetchByIds({ user_ids: ['user1'] as Pubky[] });
 
-    expect(result).toBe(mockUsers);
+    expect(result).toEqual(mockUsers);
     expect(getNexusResponseStartedAt(result)).toBe(1_000);
+  });
+
+  it('derives each tag relationship from tag_uri, which /v1 serves in place of the field', async () => {
+    const user = wireUser('user1');
+    user.tags = [
+      { label: 'own', taggers: ['viewer'], taggers_count: 1, tag_uri: 'pubky://viewer/pub/social/v1/tags/T1' },
+      { label: 'foreign', taggers: ['other'], taggers_count: 1, tag_uri: null },
+    ];
+    vi.mocked(queryNexus).mockResolvedValue([user]);
+
+    const [result] = await NexusUserStreamService.fetchByIds({
+      user_ids: ['user1'] as Pubky[],
+      viewer_id: 'viewer' as Pubky,
+    });
+
+    expect(result.tags.map((tag) => [tag.label, tag.relationship])).toEqual([
+      ['own', true],
+      ['foreign', false],
+    ]);
   });
 
   it('splits more ids than one request takes into sequential sorted slices', async () => {
@@ -584,9 +606,7 @@ describe('NexusUserStreamService.fetchByIds', () => {
     // merged response must carry the earliest
     const sliceStartedAt = [5_000, 3_000, 4_000];
     const queryNexusSpy = vi.mocked(queryNexus).mockImplementation(async ({ body }) => {
-      const page = (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map(
-        (id) => ({ details: { id } }) as never,
-      );
+      const page = (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map(wireUser);
       markNexusResponseStartedAt(page, sliceStartedAt[queryNexusSpy.mock.calls.length - 1]);
       return page;
     });
@@ -611,9 +631,7 @@ describe('NexusUserStreamService.fetchByIds', () => {
   it('leaves a merged response unstamped when a slice carries no start time', async () => {
     const userIds = Array.from({ length: NEXUS_USERS_BY_IDS_MAX_IDS + 1 }, (_, i) => `user-${i}`) as Pubky[];
     vi.mocked(queryNexus).mockImplementation(async ({ body }) => {
-      const page = (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map(
-        (id) => ({ details: { id } }) as never,
-      );
+      const page = (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map(wireUser);
       if (page.length === NEXUS_USERS_BY_IDS_MAX_IDS) markNexusResponseStartedAt(page, 1_000);
       return page;
     });
@@ -625,7 +643,7 @@ describe('NexusUserStreamService.fetchByIds', () => {
   });
 
   it('keeps viewer_id alongside the sorted user_ids', async () => {
-    const mockUsers = [{ details: { id: 'user1' } } as never];
+    const mockUsers = [wireUser('user1')];
     const queryNexusSpy = vi.mocked(queryNexus).mockResolvedValue(mockUsers);
 
     await NexusUserStreamService.fetchByIds({

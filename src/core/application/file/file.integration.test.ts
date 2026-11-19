@@ -1,67 +1,68 @@
-import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
-import { TEST_PUBKY } from '@/pipes/pipes.test-utils';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
+import { FileApplication } from './file';
 
+vi.mock('@/libs/image/stripImageMetadata', () => ({ stripImageMetadata: vi.fn() }));
 vi.mock('@/services/homeserver/homeserver', () => ({
-  HomeserverService: { putBlob: vi.fn(), request: vi.fn(), deleteIdempotent: vi.fn() },
+  HomeserverService: { putBlob: vi.fn(), exists: vi.fn(), deleteIdempotent: vi.fn() },
 }));
 vi.mock('@/services/nexus/file/file', () => ({ NexusFileService: { fetchFiles: vi.fn() } }));
 
-// 13-character Crockford base32 timestamp minted by pubky-app-specs `createFile`
-const FILE_ID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{13}$/;
-const PINNED_NOW = Date.now();
+const OWNER = fakeOwner(1);
 
-let FileApplication: typeof import('@/application/file/file').FileApplication;
-let sleepSpy: MockInstance<(ms: number) => Promise<void>>;
+const toFileAttachment = (name: string, body: string, type = 'application/pdf') =>
+  FileApplication.toFileAttachment({ file: new File([body], name, { type }), pubky: OWNER });
 
-const toFileAttachment = (name: string) =>
-  FileApplication.toFileAttachment({
-    file: new File([name], name, { type: 'application/pdf' }),
-    pubky: TEST_PUBKY.USER_1,
-  });
-
-// Exercise the real normalizer and pubky-app-specs id minting together. The
-// clock is pinned so every mint in a test lands in the same millisecond, and
-// only the guard's own retry delay moves it on: without the guard the ids
-// would be identical.
-describe('FileApplication.toFileAttachment with the real pubky-app-specs builder', () => {
-  beforeEach(async () => {
-    vi.resetModules();
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(PINNED_NOW);
-    sleepSpy = vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockImplementation(async () => {
-      vi.setSystemTime(Date.now() + 1);
-    });
-    ({ FileApplication } = await import('@/application/file/file'));
+// Exercise the real normalizer and the data model's media hashing together: the id of an upload is
+// the hash of its bytes, so the same bytes name one file whatever they are called, and different
+// bytes never collide, with no clock and no per-tab guard involved.
+describe('FileApplication.toFileAttachment with the real pubky-social-specs hashing', () => {
+  beforeEach(() => {
+    vi.mocked(stripImageMetadata).mockImplementation(async (file) => file);
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  it('mints a strictly newer file id for each attachment normalized in sequence', async () => {
-    const first = await toFileAttachment('one.pdf');
-    const second = await toFileAttachment('two.pdf');
+  it('names the media by the hash of its bytes, as buildFile does from the bytes themselves', async () => {
+    const attachment = await toFileAttachment('one.pdf', 'one');
 
-    expect(first.fileResult.meta.id).toMatch(FILE_ID_PATTERN);
-    expect(second.fileResult.meta.id).toMatch(FILE_ID_PATTERN);
-    expect(second.fileResult.meta.id > first.fileResult.meta.id).toBe(true);
-    expect(second.fileResult.meta.url).not.toBe(first.fileResult.meta.url);
-    // the second mint collided with the first and waited for the next millisecond
-    expect(sleepSpy).toHaveBeenCalledTimes(1);
+    expect(attachment.media).toEqual(
+      buildFile(OWNER, { bytes: new TextEncoder().encode('one'), type: 'application/pdf' }),
+    );
+    expect(attachment.media.url).toBe(`pubky://${OWNER}/pub/social/v1/files/${attachment.media.id}.pdf`);
+    expect(attachment.name).toBe('one.pdf');
+    expect(attachment.contentType).toBe('application/pdf');
+    // The bytes come from Node's realm under jsdom: compare their values, not the array class
+    expect(Array.from(attachment.bytes)).toEqual(Array.from(new TextEncoder().encode('one')));
   });
 
-  it('mints distinct file ids for attachments normalized concurrently', async () => {
-    const attachments = await Promise.all([
-      toFileAttachment('one.pdf'),
-      toFileAttachment('two.pdf'),
-      toFileAttachment('three.pdf'),
+  it('gives identical bytes one URI and different bytes distinct ones, in sequence and concurrently', async () => {
+    const [a, b, c, sameAsA] = await Promise.all([
+      toFileAttachment('a.pdf', 'alpha'),
+      toFileAttachment('b.pdf', 'beta'),
+      toFileAttachment('c.pdf', 'gamma'),
+      toFileAttachment('renamed.pdf', 'alpha'),
     ]);
+    const d = await toFileAttachment('d.pdf', 'delta');
 
-    const ids = attachments.map((attachment) => attachment.fileResult.meta.id);
-    const urls = attachments.map((attachment) => attachment.fileResult.meta.url);
-    expect(new Set(ids).size).toBe(3);
-    expect(new Set(urls).size).toBe(3);
-    expect(sleepSpy).toHaveBeenCalled();
+    expect(new Set([a, b, c, d].map((attachment) => attachment.media.url)).size).toBe(4);
+    expect(sameAsA.media.url).toBe(a.media.url);
+  });
+
+  it('hashes the cleaned file, not the picked one', async () => {
+    const cleaned = new File(['cleaned'], 'photo.webp', { type: 'image/webp' });
+    vi.mocked(stripImageMetadata).mockResolvedValueOnce(cleaned);
+
+    const attachment = await toFileAttachment('photo.jpg', 'raw-with-exif', 'image/jpeg');
+
+    expect(attachment.media).toEqual(
+      buildFile(OWNER, { bytes: new TextEncoder().encode('cleaned'), type: 'image/webp' }),
+    );
+    expect(attachment.contentType).toBe('image/webp');
+    expect(attachment.name).toBe('photo.webp');
   });
 });

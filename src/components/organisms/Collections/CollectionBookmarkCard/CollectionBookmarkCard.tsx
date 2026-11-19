@@ -22,13 +22,14 @@ interface CollectionBookmarkCardProps {
  * user's legacy bookmark feed. Always rendered as the first item inside
  * the "My Collections" section.
  *
- * Self-contained: reads the current-user bookmark count and avatar metadata
- * from `useBookmarksCollectionSummary` and links to the bookmarks route.
- * No required props.
+ * Self-contained: reads the current-user bookmark count (local and live) and
+ * avatar metadata from `useBookmarksCollectionSummary` and links to the
+ * bookmarks route. No required props.
  *
  * The `"PRIVATE"` visibility label that earlier designs included was
- * removed during Phase 3 planning — bookmarks aren't actually scoped
- * private in the current stack, so the label was misleading.
+ * removed during Phase 3 planning, while bookmarks were still public. Since
+ * social v1 they are private objects (ADR-0028); showing the label again is
+ * a product decision outside the port.
  */
 export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProps) {
   const { avatarName, avatarSeed, avatarUrl, bookmarkCount } = useBookmarksCollectionSummary();

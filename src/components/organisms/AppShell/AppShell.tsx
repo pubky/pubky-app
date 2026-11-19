@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { isPublicDocumentRoute, ROOT_ROUTES } from '@/app/routes';
 import { getLandingAuthMode, isLandingAuthStorageKey, type LandingMode } from '@/libs/auth/landing-auth-mode';
 import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
+import { readSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
 import { PublicHeader } from '@/organisms/Header/PublicHeader';
 import { hasAccountState } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -30,7 +31,9 @@ function useLandingMode(isLanding: boolean) {
     }
     const checkStorage = () => {
       try {
-        const mode = getLandingAuthMode(localStorage, useAuthStore.getState());
+        const mode = readSocialMigrationSignedOutNotice()
+          ? 'guarded'
+          : getLandingAuthMode(localStorage, useAuthStore.getState());
         if (mode === 'rehydrate-guest') {
           setStorageMode('public');
           void useAuthStore.persist.rehydrate();

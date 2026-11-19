@@ -1,6 +1,7 @@
 // import { CheckIndexed } from '../support/types/enums';
 
 import { isMobile } from './mobile';
+import { expectV1PostWrite } from './nexus';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 export const MAX_POST_LENGTH = 2000;
@@ -54,10 +55,10 @@ export const createQuickPost = (postContent: string, tags?: string[], expectedPo
           : expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
       });
 
-      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
       // submit the post
       cy.get('[data-cy="post-input-action-bar-post"]').click();
-      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@postCreated').then(expectV1PostWrite);
       // verify textarea is empty
       cy.get('textarea').should('have.value', '');
     });
@@ -73,9 +74,9 @@ export const createQuickPostWithImage = (postContent: string) => {
       cy.get('[data-cy="post-header-character-count"]').then((counter) => {
         expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
       });
-      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
       cy.get('[data-cy="post-input-action-bar-post"]').click();
-      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@postCreated').then(expectV1PostWrite);
       cy.get('textarea').should('have.value', '');
     });
 };
@@ -93,9 +94,9 @@ export const createQuickPostWithMention = (mentionUsername: string) => {
   cy.get('[data-cy="mention-popover"]').should('be.visible').contains(mentionUsername).click();
 
   cy.get('[data-cy="home-post-input"]').within(() => {
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
     cy.get('[data-cy="post-input-action-bar-post"]').click();
-    cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@postCreated').then(expectV1PostWrite);
     cy.get('textarea').should('have.value', '');
   });
 };
@@ -121,10 +122,10 @@ export const createPostFromDialog = (postContent: string, expectedPostLength?: n
           : expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
       });
 
-      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreated');
       // submit
       cy.get('[data-cy="post-input-action-bar-post"]').click();
-      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@postCreated').then(expectV1PostWrite);
     });
   // verify dialog is closed
   cy.get('[data-cy="dialog-content"]').should('not.exist');
@@ -233,9 +234,9 @@ export const createQuickArticle = (title: string, body: string, withImage = fals
       cy.get('textarea').click();
       switchToArticleMode();
       fillArticleFields({ title, body, imageAction: withImage ? { action: 'add' } : undefined });
-      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleCreated');
+      cy.intercept('PUT', '**/pub/social/v1/posts/**').as('articleCreated');
       cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
-      cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
+      cy.wait('@articleCreated').then(expectV1PostWrite);
     });
 };
 
@@ -247,9 +248,9 @@ export const createArticleFromDialog = (title: string, body: string) => {
   cy.get('[data-cy="new-post-input"]').within(() => {
     switchToArticleMode();
     fillArticleFields({ title, body });
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('articleCreated');
     cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
-    cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@articleCreated').then(expectV1PostWrite);
   });
 
   cy.get('[data-cy="dialog-content"]').should('not.exist');
@@ -297,7 +298,7 @@ export const editArticle = ({
       fillArticleFields({ title: newTitle, body: newBody, imageAction });
 
       if (imageAction) {
-        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleEdited');
+        cy.intercept('PUT', '**/pub/social/v1/posts/**').as('articleEdited');
       }
 
       cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
@@ -328,9 +329,9 @@ export const replyToPost = ({
   cy.get('[data-cy="reply-post-input"]').should('be.visible');
   cy.get('[data-cy="reply-post-input"]').within(() => {
     cy.get('textarea').should('have.value', '').type(replyContent);
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('replyCreated');
     cy.get('[data-cy="post-input-action-bar-reply"]').click();
-    cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@replyCreated').then(expectV1PostWrite);
   });
 
   // Wait for dialog to close
@@ -358,10 +359,10 @@ export const repostPost = ({
     if (repostContent) {
       cy.get('textarea').should('have.value', '').type(repostContent);
     }
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('repostCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('repostCreated');
     // Submit the repost
     cy.get('[data-cy="post-input-action-bar-repost"]').click();
-    cy.wait('@repostCreated').its('response.statusCode').should('eq', 201);
+    cy.wait('@repostCreated').then(expectV1PostWrite);
   });
 
   // Wait for dialog to close
@@ -372,7 +373,7 @@ export const repostPost = ({
 export const fastTagPost = (tags: string[]) => {
   // Click the add tag button to show the input
   cy.get('[data-cy="post-tag-add-button"]').first().click();
-  cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+  cy.intercept('PUT', '**/pub/social/v1/tags/**').as('putTag');
   tags.forEach((tag) => {
     cy.get('[data-cy="add-tag-input"]').first().type(`${tag}{enter}`);
     cy.wait('@putTag').its('response.statusCode').should('eq', 201);
@@ -420,7 +421,7 @@ export const editPost = ({
           addImage('mustache-edit.png');
           cy.get('img[alt="Image preview"]').should('be.visible');
         }
-        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postEdited');
+        cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postEdited');
       }
 
       cy.get('[data-cy="post-input-action-bar-edit"]').click();

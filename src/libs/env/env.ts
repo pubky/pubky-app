@@ -20,7 +20,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_DB_NAME: z.string().default('franky'),
   NEXT_PUBLIC_DB_VERSION: z
     .string()
-    .default('3')
+    .default('4')
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
 

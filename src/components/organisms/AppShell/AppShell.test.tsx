@@ -7,6 +7,10 @@ import { COPYRIGHT_ROUTES, LEGAL_ROUTES } from '@/app/routes';
 import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
 import type { PersistedAuth } from '@/libs/auth/session.types';
 import { SHOP_CLEANUP_ACK_KEY, SHOP_TEARDOWN_PENDING_KEY } from '@/libs/shop-embed/cleanup';
+import {
+  clearSocialMigrationSignedOutNotice,
+  writeSocialMigrationSignedOutNotice,
+} from '@/libs/social-migration/signed-out-notice';
 import { LocalAuthService } from '@/services/local/auth/auth';
 import { ShopEmbedService } from '@/services/shop-embed/shop-embed';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -118,6 +122,15 @@ describe('AppShell', () => {
     for (const testId of APP_ONLY_TEST_IDS) {
       expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
     }
+  });
+
+  it('hands a pending migration sign-out notice to the route guard on the landing page', async ({ onTestFinished }) => {
+    vi.mocked(usePathname).mockReturnValue('/');
+    writeSocialMigrationSignedOutNotice({ reason: 'pre-migration-grant' });
+    onTestFinished(clearSocialMigrationSignedOutNotice);
+    render(<AppShell>Landing</AppShell>);
+    expect(await screen.findByTestId('route-guard-provider')).toBeInTheDocument();
+    expect(screen.queryByTestId('public-header')).not.toBeInTheDocument();
   });
 
   it('hands an existing session or a new same-tab sign-in to the normal guard', async () => {

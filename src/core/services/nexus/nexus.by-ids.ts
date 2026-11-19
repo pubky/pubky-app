@@ -61,7 +61,7 @@ export function createInFlightByIdsQuery<T>(getId: (record: T) => string) {
     const exact = nexusQueryClient.getQueryState(queryKeyFor(ids));
     const hasExactQuery = exact !== undefined && (exact.data !== undefined || exact.fetchStatus !== 'idle');
 
-    // Viewer, depth, attachment options and endpoint all affect the result.
+    // Viewer, depth and endpoint all affect the result.
     const scopeKey = JSON.stringify([url, bodyFor([])]);
     let pending = scopes.get(scopeKey);
     if (!pending) {

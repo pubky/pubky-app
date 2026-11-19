@@ -1,14 +1,12 @@
-import { getValidMimeTypes } from 'pubky-app-specs';
+import { validMimeTypes } from 'pubky-social-specs';
 
 /**
- * Supported MIME types for file attachments.
- * Imported directly from pubky-app-specs to ensure consistency.
+ * Supported MIME types for file attachments: the pubky-social-specs table minus `text/csv`, which the
+ * spec allows but the app defers (follow-up in `docs/migrations/social-v1.md`), so the list is the 0.x one.
  */
-export const POST_SUPPORTED_ATTACHMENT_MIME_TYPES = getValidMimeTypes() as string[];
+export const POST_SUPPORTED_ATTACHMENT_MIME_TYPES: string[] = validMimeTypes.filter((mime) => mime !== 'text/csv');
 
-export const ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES = POST_SUPPORTED_ATTACHMENT_MIME_TYPES.filter((mime) =>
-  mime.startsWith('image/'),
-);
+export const ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES: string[] = validMimeTypes.filter((t) => t.startsWith('image/'));
 
 /** File input accept attribute string for supported attachment types */
 export const POST_ATTACHMENT_ACCEPT_STRING = POST_SUPPORTED_ATTACHMENT_MIME_TYPES.join(',');

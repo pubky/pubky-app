@@ -49,14 +49,16 @@ export class AuthCoordinator {
 
   private recover = () => {
     const state = useAuthStore.getState();
-    if (
-      document.visibilityState !== 'hidden' &&
-      state.hasHydrated &&
-      !state.isLoggingOut &&
-      state.restoreStatus === 'temporary-error' &&
-      Date.now() >= this.nextRecoveryAt
-    )
-      this.restore();
+    if (document.visibilityState === 'hidden' || !state.hasHydrated || state.isLoggingOut) return;
+    if (Date.now() < this.nextRecoveryAt) return;
+    if (state.restoreStatus === 'temporary-error') this.restore();
+    else if (state.restoreStatus === 'social-migration') this.retryMigration();
+  };
+
+  /** A migration run blocked on an unreachable homeserver retries when the tab or the network comes back. */
+  private retryMigration = () => {
+    this.nextRecoveryAt = Date.now() + AUTO_RECOVERY_COOLDOWN_MS;
+    AuthController.retrySocialMigration();
   };
 
   private canRetryOnline(): boolean {
@@ -78,7 +80,8 @@ export class AuthCoordinator {
 
   private online = () => {
     if (!this.canRetryOnline()) return;
-    if (useAuthStore.getState().restoreStatus === 'temporary-error') {
+    const { restoreStatus } = useAuthStore.getState();
+    if (restoreStatus === 'temporary-error' || restoreStatus === 'social-migration') {
       // A real network return gets an immediate retry, even during the focus cooldown.
       // Recovery owns metadata validation and cleanup; don't read corrupt metadata three times.
       this.nextRecoveryAt = 0;

@@ -11,8 +11,10 @@ export interface TTagEventParams {
 export interface TTagFromResponse {
   taggerId: Pubky;
   taggedId: Pubky;
+  /** The label as `pubky-social-specs` stores it: trimmed and ASCII-lowercased. */
   label: string;
   taggedKind: TagKind;
   tagUrl: string;
-  tagJson: Record<string, unknown>;
+  /** The exact bytes to PUT at `tagUrl`. */
+  tagBody: Uint8Array;
 }

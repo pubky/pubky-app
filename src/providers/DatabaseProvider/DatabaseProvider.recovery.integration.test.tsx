@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DB_CLOSE_RECHECK_DELAYS_MS } from '@/config/database';
 import { MigrationController } from '@/controllers/migration/migration';
 import { db } from '@/database/franky/franky';
 import { withIndexedDbRecovery } from '@/database/franky/franky.recovery';
@@ -33,7 +34,9 @@ vi.mock('@/controllers/migration/migration', () => ({
   MigrationController: { resync: vi.fn() },
 }));
 
-describe('DatabaseProvider recovery integration', () => {
+const RECHECK_WINDOW_MS = DB_CLOSE_RECHECK_DELAYS_MS.reduce((total, waitMs) => total + waitMs, 0);
+
+describe('DatabaseProvider recovery integration', { timeout: RECHECK_WINDOW_MS + 10_000 }, () => {
   const pubky = 'database-recovery-viewer';
 
   beforeEach(() => {
@@ -96,7 +99,11 @@ describe('DatabaseProvider recovery integration', () => {
         await expect(withIndexedDbRecovery(db, operation)).rejects.toMatchObject({ name: failure.name });
         await deleted.promise;
       });
-      await waitFor(() => expect(MigrationController.resync).toHaveBeenCalledWith(pubky));
+      // The re-initialization after a close looks again while the database is missing (the mixed-build
+      // loop-breaker, ADR-0019) and reports the reset only once that re-check window has passed.
+      await waitFor(() => expect(MigrationController.resync).toHaveBeenCalledWith(pubky), {
+        timeout: RECHECK_WINDOW_MS + 2_000,
+      });
 
       // Recovery must not replay against a silently recreated, empty database. Normal
       // initialization owns creation and exposes the reset to the real route guard.

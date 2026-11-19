@@ -1,30 +1,22 @@
+import { buildUri, decodeObject, parseUri } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
+import { BookmarkController } from './bookmark';
 import type { TBookmarkEventParams } from './bookmark.types';
-
-// Mock pubky-app-specs
-vi.mock('pubky-app-specs', () => ({
-  PubkySpecsBuilder: class {
-    constructor(public pubky: string) {}
-    createBookmark(uri: string) {
-      return {
-        bookmark: { toJson: () => ({ uri }), free: () => {} },
-        meta: { url: `pubky://${this.pubky}/pub/pubky.app/bookmarks/${Date.now()}` },
-        free: () => {},
-      };
-    }
-  },
-  postUriBuilder: (authorId: string, postId: string) => `pubky://${authorId}/pub/pubky.app/posts/${postId}`,
-}));
 
 // Test data
 const testData = {
-  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
-  authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
-  postId: 'abc123xyz',
+  userPubky: fakeOwner(1) as Pubky,
+  authorPubky: fakeOwner(2) as Pubky,
+  postId: '0035V9A20WSE4',
   get compositePostId() {
     return buildCompositeId({ pubky: this.authorPubky, id: this.postId });
   },
@@ -37,17 +29,10 @@ const createBookmarkParams = (): TBookmarkEventParams => ({
 });
 
 describe('BookmarkController', () => {
-  let BookmarkController: typeof import('./bookmark').BookmarkController;
-
-  beforeEach(async () => {
-    vi.clearAllMocks();
-
-    // Mock BookmarkApplication
-    vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(undefined);
-
-    // Import BookmarkController
-    const bookmarkModule = await import('./bookmark');
-    BookmarkController = bookmarkModule.BookmarkController;
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    useAuthStore.setState({ currentUserPubky: null, session: null });
+    vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(true);
   });
 
   describe('getAll', () => {
@@ -68,29 +53,89 @@ describe('BookmarkController', () => {
     });
   });
 
+  describe('getAllWithPostDetails', () => {
+    it('delegates to BookmarkApplication.getAllWithPostDetails and returns its rows', async () => {
+      const rows = [{ id: 'authorA:p1', created_at: 2, details: undefined }];
+      const spy = vi.spyOn(BookmarkApplication, 'getAllWithPostDetails').mockResolvedValue(rows);
+
+      await expect(BookmarkController.getAllWithPostDetails()).resolves.toBe(rows);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getCount', () => {
+    it('delegates to BookmarkApplication.getCount', async () => {
+      vi.spyOn(BookmarkApplication, 'getCount').mockResolvedValue(7);
+
+      await expect(BookmarkController.getCount()).resolves.toBe(7);
+    });
+  });
+
   describe('commitCreate', () => {
-    it('should call BookmarkApplication.persist with correct parameters', async () => {
-      const persistSpy = vi.spyOn(BookmarkApplication, 'persist');
+    it('PUTs the private v1 bookmark of the post', async () => {
+      const persistSpy = vi.mocked(BookmarkApplication.persist);
 
       await BookmarkController.commitCreate(createBookmarkParams());
 
-      expect(persistSpy).toHaveBeenCalledWith(HttpMethod.PUT, {
-        postId: testData.compositePostId,
-        bookmarkUrl: expect.stringContaining('pubky://'),
-        bookmarkJson: expect.objectContaining({ uri: expect.any(String) }),
-      });
+      const [method, input] = persistSpy.mock.calls[0];
+      expect(method).toBe(HttpMethod.PUT);
+      expect(input.postId).toBe(testData.compositePostId);
+      // The application keys the sync lock on the user; it never parses the user out of the URL.
+      expect(input.userId).toBe(testData.userPubky);
+      expect(input.isCurrent).toEqual(expect.any(Function));
+      expect(input.bookmarkUrl).toContain(`pubky://${testData.userPubky}/priv/social/v1/bookmarks/`);
+      const parsed = parseUri(input.bookmarkUrl);
+      expect(parsed.kind === 'bookmark' && parsed.target).toBe(buildUri(testData.authorPubky, 'post', testData.postId));
+      expect(decodeObject(input.bookmarkUrl, input.bookmarkBody!, 'bookmark').target).toBeNull();
+    });
+
+    it('hands the application a session guard that expires on logout and same-account re-login', async () => {
+      useAuthStore.setState({ currentUserPubky: testData.userPubky, session: mockSession() });
+
+      await BookmarkController.commitCreate(createBookmarkParams());
+
+      // Checked by the application once the sync lock is acquired: a write that waited may start after a logout.
+      const isCurrent = vi.mocked(BookmarkApplication.persist).mock.calls[0][1].isCurrent!;
+      expect(isCurrent()).toBe(true);
+      useAuthStore.setState({ currentUserPubky: null, session: null });
+      expect(isCurrent()).toBe(false);
+      useAuthStore.setState({ currentUserPubky: testData.userPubky, session: mockSession() });
+      expect(isCurrent()).toBe(false);
+    });
+
+    it('reports whether the write ran, so a skip for a signed-out viewer reaches the hooks', async () => {
+      await expect(BookmarkController.commitCreate(createBookmarkParams())).resolves.toBe(true);
+      vi.mocked(BookmarkApplication.persist).mockResolvedValueOnce(false);
+      await expect(BookmarkController.commitCreate(createBookmarkParams())).resolves.toBe(false);
+      vi.mocked(BookmarkApplication.persist).mockResolvedValueOnce(false);
+      await expect(BookmarkController.commitDelete(createBookmarkParams())).resolves.toBe(false);
+    });
+
+    it('refuses a post id the data model cannot reference, before any write', async () => {
+      const error = await BookmarkController.commitCreate({
+        userId: testData.userPubky,
+        postId: `${testData.authorPubky}:abc123xyz`,
+      }).catch((reason: unknown) => reason);
+
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).code).toBe(ValidationErrorCode.INVALID_INPUT);
+      expect(BookmarkApplication.persist).not.toHaveBeenCalled();
     });
   });
 
   describe('commitDelete', () => {
-    it('should call BookmarkApplication.persist with correct parameters', async () => {
-      const persistSpy = vi.spyOn(BookmarkApplication, 'persist');
+    it('deletes the file the create wrote', async () => {
+      const persistSpy = vi.mocked(BookmarkApplication.persist);
 
+      await BookmarkController.commitCreate(createBookmarkParams());
       await BookmarkController.commitDelete(createBookmarkParams());
 
-      expect(persistSpy).toHaveBeenCalledWith(HttpMethod.DELETE, {
+      const created = persistSpy.mock.calls[0][1];
+      expect(persistSpy).toHaveBeenLastCalledWith(HttpMethod.DELETE, {
         postId: testData.compositePostId,
-        bookmarkUrl: expect.stringContaining('pubky://'),
+        userId: testData.userPubky,
+        bookmarkUrl: created.bookmarkUrl,
+        isCurrent: expect.any(Function),
       });
     });
   });

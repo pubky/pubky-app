@@ -51,10 +51,8 @@ type LoadPhase = 'idle' | 'initial' | 'more' | 'reload';
  * in Discover, so they can neither hide a card nor trigger a reload.
  */
 async function getFollowedCollectionIds(): Promise<string[]> {
-  const ids = await BookmarkController.getAll();
-  if (ids.length === 0) return [];
-  const details = await PostController.getDetailsByIds({ compositeIds: ids });
-  return ids.filter((_, index) => details[index]?.kind === 'collection');
+  const bookmarked = await BookmarkController.getAllWithPostDetails();
+  return bookmarked.filter(({ details }) => details?.kind === 'collection').map(({ id }) => id);
 }
 
 /**

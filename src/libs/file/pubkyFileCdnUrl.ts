@@ -5,8 +5,10 @@ import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import type { FileVariant } from '@/services/nexus/file/file.types';
 
 /**
- * Resolves a homeserver `pubky://<user>/pub/pubky.app/files/<fileId>` URI to
- * its Nexus static CDN URL for the requested variant. Returns `null` for
+ * Resolves a homeserver media URI (`pubky://<user>/pub/social/v1/files/<hash>.<ext>`,
+ * or a 0.x `files/<fileId>`) to its Nexus static URL for the requested variant:
+ * `files/<user>/<hash>.<ext>/<variant>` on the v1 route, `files/<user>/<fileId>/<variant>`
+ * on the 0.x one. Returns `null` for
  * anything that is not a well-formed homeserver file URI, so the caller can
  * fall back instead of firing a request the browser cannot load
  * (`pubky://` has no native handler — `net::ERR_UNKNOWN_URL_SCHEME`).
@@ -27,7 +29,7 @@ export function pubkyUriToCdnUrl(uri: string | null | undefined, variant: FileVa
       domain: CompositeIdDomain.FILES,
     });
     if (!compositeId) return null;
-    return FileController.getFileUrl({ fileId: compositeId, variant });
+    return FileController.getFileUrl({ fileId: compositeId, uri: trimmed, variant });
   } catch (error) {
     Logger.warn('[pubkyFileCdnUrl] Failed to resolve pubky file URI', { uri: trimmed, error });
     return null;

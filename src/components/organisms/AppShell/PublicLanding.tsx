@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Spinner } from '@/atoms/Spinner/Spinner';
+import { SOCIAL_MIGRATION_SIGNED_OUT_NOTICE_KEY } from '@/libs/social-migration/signed-out-notice';
 import {
   AUTH_MIGRATION_KEY,
   AUTH_PERSIST_KEY,
@@ -17,6 +18,7 @@ function markSavedLandingAccount(
   previousKey: string,
   previousMigratedKey: string,
   legacyKey: string,
+  noticeKey: string,
 ) {
   try {
     let raw = localStorage.getItem(currentKey);
@@ -27,7 +29,9 @@ function markSavedLandingAccount(
     const state = raw && JSON.parse(raw).state;
     script.toggleAttribute(
       'data-saved-account',
-      Boolean(state?.currentUserPubky || state?.sessionReference?.kind === 'grant'),
+      Boolean(
+        state?.currentUserPubky || state?.sessionReference?.kind === 'grant' || sessionStorage.getItem(noticeKey),
+      ),
     );
   } catch {
     // The hydrated auth guard handles unavailable storage and damaged records.
@@ -40,6 +44,7 @@ const storageKeys = [
   PREVIOUS_AUTH_PERSIST_KEY,
   PREVIOUS_AUTH_MIGRATION_KEY,
   LEGACY_AUTH_PERSIST_KEY,
+  SOCIAL_MIGRATION_SIGNED_OUT_NOTICE_KEY,
 ] as const;
 const firstPaintScript = `(${markSavedLandingAccount})(document.currentScript,...${JSON.stringify(storageKeys)})`;
 

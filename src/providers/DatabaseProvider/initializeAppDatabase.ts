@@ -4,9 +4,9 @@ import { useMigrationStore } from '@/stores/migration/migration.store';
 let initializing: Promise<void> | undefined;
 
 /** The public Passport CTA can overlap navigation into the app. Share any active version check or migration. */
-export function initializeAppDatabase(): Promise<void> {
+export function initializeAppDatabase({ allowRecreate } = { allowRecreate: true }): Promise<void> {
   initializing ??= db
-    .initialize()
+    .initialize({ allowRecreate })
     .then(({ wasDbReset }) => {
       if (wasDbReset) useMigrationStore.getState().setWasDbReset(true);
     })

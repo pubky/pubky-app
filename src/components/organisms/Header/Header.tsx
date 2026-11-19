@@ -1,8 +1,11 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { isPublicDocumentRoute, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { AUTH_ROUTES, isPublicDocumentRoute, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
+import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { clearSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
 import { cn } from '@/libs/utils/utils';
 import { HeaderExploreNavigationButtons, HeaderOnboarding, HeaderTitle } from '@/molecules/Header/Header';
 import { HeaderContainer } from '@/molecules/Header/HeaderPublicContent';
@@ -17,6 +20,7 @@ import { PublicHeader, scrollLandingToTop } from './PublicHeader';
 export function Header() {
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
+  const { status } = useAuthStatus();
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
@@ -60,6 +64,18 @@ export function Header() {
     }
     return <HeaderHome />;
   };
+
+  if (pathname === AUTH_ROUTES.MIGRATION) {
+    // A signed-out visitor can leave the explanation. A held account still owes the migration.
+    const leaveMigration = () => {
+      if (status === AuthStatus.UNAUTHENTICATED) clearSocialMigrationSignedOutNotice();
+    };
+    return (
+      <HeaderContainer>
+        <Logo onClick={leaveMigration} />
+      </HeaderContainer>
+    );
+  }
 
   return (
     <HeaderContainer className={cn(shouldHideHeaderOnMobile && 'hidden lg:block')}>

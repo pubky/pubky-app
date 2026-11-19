@@ -22,7 +22,7 @@ import {
  * The Who to Follow page reads the `recommended` row it shares with the sidebar, so it opens on
  * whatever an earlier surface cached: nothing, the sidebar's buffer, the full row bootstrap
  * persisted, or a row a previous visit filled. The page shows up to 30 from that row in one read,
- * while Nexus rejects `limit` above 20 on `/v0/stream/users/ids` and serves `recommended` as a
+ * while Nexus rejects `limit` above 20 on `/v1/stream/users/ids` and serves `recommended` as a
  * sample of the user's pool whatever the `skip`, so a top-up overlaps what is cached already.
  *
  * Real Dexie, real controller and application, only the Nexus read service replaced.

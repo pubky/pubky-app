@@ -1,5 +1,7 @@
+import { buildFile } from 'pubky-social-specs';
 import { describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import type { ArticleMediaFile } from './ArticleInlineMedia.types';
 import { resolveArticleMedia } from './ArticleInlineMedia.utils';
 
@@ -41,6 +43,22 @@ describe('resolveArticleMedia — attachment slots on the CDN', () => {
       external: false,
     });
     expect(cdn('attachment:0')).toEqual({ kind: 'image' });
+  });
+
+  it('types a slot of v1 media from the row its URI gives: Nexus keeps no metadata for v1 files', () => {
+    const uri = buildFile(AUTHOR, { bytes: new Uint8Array([1]), type: 'video/mp4' }).url;
+    const row = FileNormalizer.toV1FileDetails(uri);
+
+    expect(
+      resolveArticleMedia({
+        src: 'attachment:0',
+        attachments: [uri],
+        authorId: AUTHOR,
+        postId: `${AUTHOR}:p`,
+        files: row ? [row] : [],
+        metadataSettled: true,
+      }),
+    ).toEqual({ kind: 'video', url: `cdn://${uri}/main`, name: uri.split('/').pop(), external: false });
   });
 
   it('marks a row of a type nothing renders as unsupported, and an empty type as an image', () => {

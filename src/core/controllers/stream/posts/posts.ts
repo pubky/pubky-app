@@ -152,8 +152,9 @@ export class StreamPostsController {
    * The Nexus position a fresh pagination session resumes from once the cached ids are
    * exhausted: the row's persisted `tailCursor` (the `last_post_score` of the deepest page
    * fetched into it) or, for a row without one (bootstrap-seeded or written before cursors
-   * were tracked), a one-time seed from the tail entry's timestamp (bookmark time for
-   * bookmark streams).
+   * were tracked), a one-time seed from the deepest entry whose post timestamp resolves. The
+   * bookmarks stream has no Nexus seam to resume (ADR-0028) and always answers
+   * `NOT_FOUND_CACHED_STREAM`.
    *
    * @param streamId - The ID of the post stream to query
    * @returns The resume cursor, or `NOT_FOUND_CACHED_STREAM` (0) when there is no usable cache

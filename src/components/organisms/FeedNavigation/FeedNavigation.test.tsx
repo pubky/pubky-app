@@ -1,6 +1,5 @@
 import { forwardRef } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { REACH } from '@/stores/home/home.types';
@@ -216,10 +215,10 @@ const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSche
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'all',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   created_at: Date.now(),
   updated_at: Date.now(),
   ...overrides,

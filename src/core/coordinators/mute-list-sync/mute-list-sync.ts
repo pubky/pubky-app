@@ -1,30 +1,88 @@
-import {
-  MUTE_HOMESERVER_EVENTS_PATH_PREFIX,
-  MUTE_SYNC_CURSOR_STORAGE_PREFIX,
-  MUTE_SYNC_DEBOUNCE_MS,
-} from '@/config/mute-sync';
+import { AUTH_ROUTES } from '@/app/routes';
+import { MUTE_SYNC_DEBOUNCE_MS, MUTE_SYNC_POLL_INTERVAL_MS } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
-import { EventStreamSyncCoordinator } from '@/coordinators/base/event-stream-sync-coordinator';
-import type { Pubky } from '@/models/models.types';
+import { Coordinator } from '@/coordinators/base/coordinator';
+import {
+  PollingInactiveReason,
+  type PollingServiceConfig,
+  type PollingServiceState,
+} from '@/coordinators/base/coordinators.types';
+import { routeToRegex } from '@/coordinators/base/coordinators.utils';
+import { Logger } from '@/libs/logger/logger';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { whenAbandonedReadSettles } from '@/utils/bounded-read';
 
 /**
  * Keeps the Dexie-backed mute list aligned with the homeserver when another session mutates users.
  *
- * Follows `/pub/pubky.app/mutes/` on the tab's shared homeserver event stream; the connection, its gating, backoff
- * and outage reporting live in `HomeserverEventStreamCoordinator`, the debounced refresh and cursor in
- * {@link EventStreamSyncCoordinator}. Refresh uses {@link MuteController.fetchMutedUsers} only. No polling fallback.
+ * Refreshes through {@link MuteController.fetchMutedUsers} (debounced) on start, when the tab becomes
+ * visible, on `online`, and every {@link MUTE_SYNC_POLL_INTERVAL_MS}. It polls instead of streaming: the
+ * mute directory is private, a private event stream needs a session, and a session-bound stream holds the
+ * shared session lock until its response headers reach the SDK, with no timeout; behind anything that buffers
+ * event streams that is unbounded and a 401 refresh then waits forever (pubky/pubky-homeserver#798). Polling
+ * has no such exposure; the stream comes back when the SDK bounds that lease or the team accepts the exposure
+ * (ADR-0014).
+ *
+ * Policy (aligned with {@link NotificationCoordinator}):
+ * - Requires authenticated session with profile and current pubky.
+ * - Disabled on onboarding / sign-in / logout routes.
+ * - Uses runtime notification visibility config: when true, pauses while the tab is hidden.
+ * - Moving between allowed routes keeps the running interval; crossing into an allowed route refreshes.
+ * - A LIST abandoned at the sync-read bound pauses polling while it is still out, until it settles, a stop (the
+ *   tab hidden while the visibility flag pauses polling, an account change, a disabled route), `online` or a
+ *   reload, instead of stacking a LIST per interval on a homeserver that hangs (ADR-0014).
  */
-export class MuteListSyncCoordinator extends EventStreamSyncCoordinator {
+export class MuteListSyncCoordinator extends Coordinator<PollingServiceConfig, PollingServiceState> {
   private static instance: MuteListSyncCoordinator | null = null;
 
+  private readonly disabledRoutes = [
+    routeToRegex('/onboarding'),
+    routeToRegex(AUTH_ROUTES.LOGOUT),
+    routeToRegex(AUTH_ROUTES.SIGN_IN),
+  ];
+
+  private debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * The LIST still out, so a slow one does not stack up. Freed once the fetch settles, except when
+   * `MuteApplication.fetchMutedUsers` gave up on it at `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`): that LIST
+   * still runs and the SDK cannot cancel it, so the slot stays taken, and polling paused, until that LIST settles,
+   * a stop (the tab hidden under the visibility flag, the account changed, a disabled route) or `online`. Clearing
+   * it on a stop also means a LIST that never settles cannot end polling. `fetchMutedUsers` also keeps an older LIST
+   * that answers late from undoing a newer one.
+   */
+  private activeRefresh: symbol | null = null;
+  /** The refresh whose LIST was abandoned at the bound and still holds the slot: `online` releases only that one. */
+  private pausedRefresh: symbol | null = null;
+  private accountUnsubscribe: (() => void) | null = null;
+
+  /** A return to the network or to the tab: the interval alone could leave the list a full period behind. */
+  private readonly refreshIfActive = () => {
+    if (this.shouldPoll()) void this.poll();
+  };
+
+  /** The connection is back: release the slot only if an abandoned read still holds it, then refresh. */
+  private readonly resumeOnline = () => {
+    if (this.pausedRefresh && this.activeRefresh === this.pausedRefresh) this.activeRefresh = null;
+    this.pausedRefresh = null;
+    this.refreshIfActive();
+  };
+
+  private readonly refreshIfVisible = () => {
+    if (document.visibilityState === 'visible') this.refreshIfActive();
+  };
+
   private constructor() {
-    super({
-      coordinatorName: 'MuteListSyncCoordinator',
-      streamLabel: 'Mute list',
-      path: MUTE_HOMESERVER_EVENTS_PATH_PREFIX,
-      debounceMs: MUTE_SYNC_DEBOUNCE_MS,
-      cursorStoragePrefix: MUTE_SYNC_CURSOR_STORAGE_PREFIX,
+    super({ initialConfig: { intervalMs: MUTE_SYNC_POLL_INTERVAL_MS, pollOnStart: true } });
+    // Here and not in `setupListeners`: the base constructor calls that before this class's fields exist.
+    this.accountUnsubscribe = useAuthStore.subscribe((state, prevState) => {
+      if (state.currentUserPubky === prevState.currentUserPubky) return;
+      this.stopPolling(PollingInactiveReason.NOT_STARTED);
+      this.evaluateAndStartPolling();
     });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', this.resumeOnline);
+      document.addEventListener('visibilitychange', this.refreshIfVisible);
+    }
   }
 
   public static getInstance(): MuteListSyncCoordinator {
@@ -41,7 +99,55 @@ export class MuteListSyncCoordinator extends EventStreamSyncCoordinator {
     }
   }
 
-  protected refresh(pubky: Pubky): Promise<unknown> {
-    return MuteController.fetchMutedUsers(pubky);
+  protected async poll(): Promise<void> {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = undefined;
+      void this.refreshMutedUsers();
+    }, MUTE_SYNC_DEBOUNCE_MS);
+  }
+
+  protected isRouteAllowed(): boolean {
+    return !this.disabledRoutes.some((pattern) => pattern.test(this.getState().currentRoute));
+  }
+
+  protected stopPolling(reason: PollingInactiveReason): void {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = undefined;
+    this.activeRefresh = null;
+    this.pausedRefresh = null;
+    super.stopPolling(reason);
+  }
+
+  protected removeListeners(): void {
+    super.removeListeners();
+    this.accountUnsubscribe?.();
+    this.accountUnsubscribe = null;
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.resumeOnline);
+      document.removeEventListener('visibilitychange', this.refreshIfVisible);
+    }
+  }
+
+  private async refreshMutedUsers(): Promise<void> {
+    const pubky = useAuthStore.getState().currentUserPubky;
+    if (!pubky || this.activeRefresh) return;
+
+    let abandonedReadSettled: Promise<void> | undefined;
+    const refresh = Symbol('mute-list-refresh');
+    this.activeRefresh = refresh;
+    try {
+      await MuteController.fetchMutedUsers(pubky);
+    } catch (error) {
+      // Don't stop polling on error: the next trigger retries.
+      Logger.error('Mute list refresh failed', { error });
+      abandonedReadSettled = whenAbandonedReadSettles(error);
+      if (abandonedReadSettled) this.pausedRefresh = refresh;
+    }
+    // An abandoned read still runs and cannot be cancelled: keep its slot until it settles, so no trigger stacks
+    // another on it. The next interval or trigger reads again.
+    await abandonedReadSettled;
+    if (this.pausedRefresh === refresh) this.pausedRefresh = null;
+    if (this.activeRefresh === refresh) this.activeRefresh = null;
   }
 }

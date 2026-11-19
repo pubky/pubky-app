@@ -1,16 +1,25 @@
 import JSZip from 'jszip';
-import { baseUriBuilder, userUriBuilder } from 'pubky-app-specs';
+import {
+  buildUri,
+  decodeObject,
+  deletionPaths,
+  encodeObject,
+  listPrefix,
+  type User,
+  ValidationError,
+} from 'pubky-social-specs';
 import type {
   TApplicationCommitUpdateDetailsParams,
   TCreateProfileInput,
   TDeleteAccountParams,
   TDownloadDataParams,
 } from '@/application/profile/profile.types';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { APP_PRIVATE_PATH } from '@/config/app-files';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -25,6 +34,11 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 const DELETE_FILE_MAX_ATTEMPTS = 3;
 const DELETE_FILE_RETRY_DELAY_MS = 500;
 const PROFILE_LOCK_PREFIX = 'pubky-app:profile:';
+/**
+ * The private social root: the v1 private tree (`listPrefix(pubky, 'private')`), the migration
+ * flag beside it, and the Locks reader directories `unlocked/` and `purchases/` (`docs/locks.md`).
+ */
+const PRIVATE_SOCIAL_ROOT = '/priv/social/';
 
 export class ProfileApplication {
   private constructor() {} // Prevent instantiation
@@ -33,13 +47,13 @@ export class ProfileApplication {
 
   /**
    * Commits the set details operation to the homeserver and local database.
-   * @param profile - The profile to set
-   * @param url - The URL of the profile
+   * @param profile - The profile to set, as the data model built it
    * @param pubky - The public key of the user
    */
-  static async commitCreate({ profile, url, pubky }: TCreateProfileInput) {
+  static async commitCreate({ profile: built, pubky }: TCreateProfileInput) {
+    const profile = built.object;
     try {
-      await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson: profile.toJson() });
+      await HomeserverService.putBlob({ url: built.url, blob: built.body });
       // Persist the successfully-created profile immediately so onboarding revisit
       // and the welcome dialog do not depend on Nexus indexing catching up first.
       await LocalProfileService.upsertDetails(
@@ -97,10 +111,11 @@ export class ProfileApplication {
    * exactly what was published locally. The PUT replaces the whole `profile.json`, so every
    * field the user didn't change comes from a fresh homeserver read, never from the local
    * cache, which can be older than the last save. A failed read aborts before the PUT, and a
-   * missing profile (a deleted account) is refused so it isn't recreated. The whole write
-   * holds the user's profile lock (see `withProfileLock`). A PUT the homeserver refuses with a
-   * retried status (429, 500, 503 or the publish conflict) starts over from the read, so a field
-   * another device changed meanwhile is kept, never replayed from the stale read.
+   * missing v1 profile is refused so it isn't recreated: after the migration gate that is a
+   * deleted account, never one still on its 0.x profile. The whole write holds the user's
+   * profile lock (see `withProfileLock`). A PUT the homeserver refuses with a retried status
+   * (429, 500, 503 or the publish conflict) starts over from the read, so a field another
+   * device changed meanwhile is kept, never replayed from the stale read.
    */
   private static async commitChanges({
     pubky,
@@ -114,11 +129,12 @@ export class ProfileApplication {
     deletedMessage: string;
   }) {
     await this.withProfileLock(pubky, async () => {
+      const url = buildUri(pubky, 'user');
       const fence = HomeserverService.createWriteFence();
       const user = await retryHomeserverWriteAfterReread(fence, async () => {
-        let publishedJson: unknown;
+        let stored: Uint8Array;
         try {
-          publishedJson = await HomeserverService.getFreshJson(userUriBuilder(pubky));
+          stored = await HomeserverService.getFreshBytes(url);
         } catch (error) {
           if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
             throw Err.client(ClientErrorCode.GONE, deletedMessage, {
@@ -131,18 +147,44 @@ export class ProfileApplication {
           throw error;
         }
 
-        const published = UserNormalizer.fromPublished(publishedJson);
-        const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
-        await HomeserverService.request({
-          method: HttpMethod.PUT,
-          url: meta.url,
-          bodyJson: user.toJson(),
-          fence,
-        });
-        return user;
+        const next = this.applyToStored({ url, stored, changes, operation, pubky });
+        await HomeserverService.putBlob({ url, blob: next.body, fence });
+        return next.user;
       });
       await LocalProfileService.updateDetails(user, pubky);
     });
+  }
+
+  /**
+   * The bytes of the stored profile with `changes` applied. The object is decoded, edited in
+   * place and encoded again, so a member another client added (`$unknown`) survives the edit;
+   * `encodeObject` re-checks every profile rule. Stored bytes that do not decode, or an edit
+   * that breaks a rule, are refused before anything is written.
+   */
+  private static applyToStored({
+    url,
+    stored,
+    changes,
+    operation,
+    pubky,
+  }: {
+    url: string;
+    stored: Uint8Array;
+    changes: ProfileChanges;
+    operation: string;
+    pubky: Pubky;
+  }): { body: Uint8Array; user: User } {
+    try {
+      const user = UserNormalizer.applyChanges(decodeObject(url, stored, 'user'), changes);
+      return { body: encodeObject(url, user), user };
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
+        service: ErrorService.SocialSpecs,
+        operation,
+        context: { pubky, ...(error instanceof ValidationError && { code: error.code, field: error.field }) },
+        cause: error,
+      });
+    }
   }
 
   /**
@@ -209,7 +251,8 @@ export class ProfileApplication {
   /**
    * Commits the delete profile operation to the homeserver and local database. Holds the
    * user's profile lock throughout, so a profile write can't PUT `profile.json` back after it
-   * is deleted.
+   * is deleted. The profiles go last, the 0.x one then the v1 one: either DELETE deletes the
+   * logical user on an indexer that reads both epochs, and both go anyway.
    * @param pubky - The public key of the user
    * @param setProgress - The function to set the progress
    */
@@ -218,22 +261,21 @@ export class ProfileApplication {
       // Clear local IndexedDB data first
       await LocalProfileService.deleteAll();
 
-      const baseDirectory = baseUriBuilder(pubky);
-      // Enumerate the full directory before deleting (single list calls are page-limited),
-      // so nothing is missed and progress reporting stays accurate.
-      const dataList = await HomeserverService.listAll({ baseDirectory });
+      // Enumerate every tree before deleting (single list calls are page-limited), so nothing
+      // is missed and progress reporting stays accurate.
+      const dataList = await this.listAllTrees(pubky);
 
-      // Separate profile.json and other files
-      const profileUrl = `${baseDirectory}profile.json`;
-      const filesToDelete = dataList.filter((file) => file !== profileUrl);
+      // Separate the profiles, in the order the data model deletes them, from the other files
+      const profileUrls = deletionPaths({ kind: 'user', id: '' }).map((path) => `pubky://${pubky}${path}`);
+      const filesToDelete = dataList.filter((file) => !profileUrls.includes(file));
 
-      // Sort remaining files alphanumerically and reverse
+      // Sort remaining files alphanumerically and reverse, so a directory empties deepest first
       filesToDelete.sort().reverse();
 
-      // Total files including profile.json for progress calculation
-      const totalFiles = filesToDelete.length + 1;
+      // Total files including the profiles for progress calculation
+      const totalFiles = filesToDelete.length + profileUrls.length;
 
-      // Delete each file (excluding profile.json) and update progress
+      // Delete each file (excluding the profiles) and update progress
       for (let index = 0; index < filesToDelete.length; index++) {
         await this.deleteFile(filesToDelete[index]);
 
@@ -244,8 +286,10 @@ export class ProfileApplication {
         setProgress(Math.round(((index + 1) / totalFiles) * 100));
       }
 
-      // Finally, delete profile.json and update progress to 100%
-      await this.deleteFile(profileUrl);
+      // Finally, delete the profiles and update progress to 100%
+      for (const profileUrl of profileUrls) {
+        await this.deleteFile(profileUrl);
+      }
 
       if (setProgress) {
         setProgress(100);
@@ -264,9 +308,7 @@ export class ProfileApplication {
    * @param params - Parameters containing user's public key and optional progress callback
    */
   static async downloadData({ pubky, setProgress }: TDownloadDataParams) {
-    const baseDirectory = baseUriBuilder(pubky);
-
-    const dataList = await HomeserverService.listAll({ baseDirectory });
+    const dataList = await this.listAllTrees(pubky);
 
     // Create JSZip instance and data folder
     const zip = new JSZip();
@@ -319,5 +361,24 @@ export class ProfileApplication {
 
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Every file of the account, for deletion and export: the 0.x tree a migrated account still
+   * holds, the v1 public tree, the whole private social root (the v1 private tree, the
+   * migration flag, and the Locks reader directories `unlocked/` and `purchases/`, which the
+   * `/priv/social/:rw` grant covers) and the app's own private namespace. `/pub/app.locks/`
+   * and `/priv/app.locks/content/` are Lock Server contracts under a read-only grant and are
+   * left alone (`docs/locks.md`). A tree the account never wrote lists as empty.
+   */
+  private static async listAllTrees(pubky: Pubky): Promise<string[]> {
+    const prefixes = [
+      listPrefix(pubky, 'legacy'),
+      listPrefix(pubky, 'public'),
+      `pubky://${pubky}${PRIVATE_SOCIAL_ROOT}`,
+      `pubky://${pubky}${APP_PRIVATE_PATH}`,
+    ];
+    const lists = await Promise.all(prefixes.map((baseDirectory) => HomeserverService.listAll({ baseDirectory })));
+    return lists.flat();
   }
 }
