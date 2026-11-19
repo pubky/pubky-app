@@ -84,17 +84,22 @@ export class BookmarkController {
   /**
    * Fetches the bookmarked posts that are not cached (`getMissingPostIds`) from Nexus and persists
    * them, so every bookmark is classified and `getCount` is exact. Sequential `by_ids` batches of
-   * `NEXUS_STREAM_MAX_LIMIT`; with nothing missing it is one local read and no request.
+   * `NEXUS_STREAM_MAX_LIMIT`, each followed by the application's requests for its 0.x file details,
+   * missing authors and repost originals; with nothing to ask for it is one local read and no request.
    *
-   * Always resolves, whatever came back: a post Nexus does not serve stays uncached, where it keeps
-   * counting as a post, as the Bookmarks list shows it, and is not asked for again in this session
-   * and page lifetime; a batch that fails (logged by the application) ends the pass, so an outage
-   * costs the wait of one batch, not of every batch, and the next call asks again for its posts and
-   * the ones after them. Callers of one viewer session share the pass
-   * in flight. A pass whose session ends stops and stores no post or user row under the next one;
-   * when the same account goes on under another session (the restore on a hard page load, which
-   * starts from the stored pubky and no session), the pass runs again under that session before
-   * it resolves, so its callers still get the posts.
+   * Resolves whatever Nexus answered, and rejects only when the local read of the missing ids fails.
+   * A post Nexus does not serve stays uncached, where it keeps counting as a post, as the Bookmarks
+   * list shows it, and is not asked for again in this session and page lifetime. A batch that fails
+   * (logged by the application) ends the pass, so an outage costs the wait of one batch, not of
+   * every batch, and the next call asks again for its posts and the ones after them. One case does
+   * not settle: TanStack pauses a retry whose back-off ends while the tab is hidden and resumes it
+   * only through a mounted query client, and no Nexus client is mounted, so the pass and the callers
+   * that joined it wait until the page is loaded again.
+   *
+   * Callers of one viewer session share the pass in flight. A pass whose session ends stops and
+   * stores no post or user row under the next one; when the same account goes on under another
+   * session (the restore on a hard page load, which starts from the stored pubky and no session),
+   * the pass runs again under that session before it resolves, so its callers still get the posts.
    */
   static fetchMissingPosts(): Promise<void> {
     return this.startMissingPostsPass(BookmarkController.MISSING_POSTS_SESSION_RERUNS);
