@@ -23,6 +23,11 @@ env:
   REGISTRY: europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo
   REGION: europe-west6
   PROJECT_ID: infra-464608
+  # Every PR preview is a tagged revision of this one Cloud Run service. The
+  # load balancer for *.preview.pubky.app routes <tag>.preview.pubky.app to
+  # the revision tagged <tag>, so PR 123 is served at pr-123.preview.pubky.app.
+  PREVIEW_SERVICE: pubky-preview
+  PREVIEW_DOMAIN: preview.pubky.app
 
 concurrency:
   group: preview-${{ github.event.pull_request.number || github.event.inputs.pr_number || '0' }}
@@ -39,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pr_number: ${{ steps.vars.outputs.pr_number }}
-      service_name: ${{ steps.vars.outputs.service_name }}
+      tag: ${{ steps.vars.outputs.tag }}
       short_sha: ${{ steps.vars.outputs.short_sha }}
       platforms: ${{ steps.vars.outputs.platforms }}
     steps:
@@ -57,7 +62,7 @@ jobs:
             COMMIT_SHA="${{ github.sha }}"
           fi
           echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
-          echo "service_name=pubky-app-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "tag=pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
           echo "short_sha=$(echo ${COMMIT_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
           echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
 
@@ -96,20 +101,65 @@ jobs:
         with:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 
-      - name: Updating the deploy file
-        run: |
-          yq -i '.metadata.name = env(SERVICE)' preview-deploy-service-file.yml
-          yq -i '.spec.template.spec.containers[1].image = env(IMAGE_FULL_PATH)' preview-deploy-service-file.yml
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Deploy tagged revision
+        id: deploy
         env:
           IMAGE_FULL_PATH: ${{ env.REGISTRY }}/${{ needs.build-preview.outputs.image_name }}:${{ needs.build-preview.outputs.image_tag }}
-          SERVICE: ${{ needs.set-vars.outputs.service_name }}
+          PR_NUMBER: ${{ needs.set-vars.outputs.pr_number }}
+          TAG: ${{ needs.set-vars.outputs.tag }}
+          # Unique per run so a re-run never collides with an existing revision.
+          REVISION: ${{ env.PREVIEW_SERVICE }}-${{ needs.set-vars.outputs.tag }}-${{ needs.set-vars.outputs.short_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          yq -i '.metadata.name = strenv(PREVIEW_SERVICE)' preview-deploy-service-file.yml
+          yq -i '.spec.template.metadata.name = strenv(REVISION)' preview-deploy-service-file.yml
+          yq -i '.spec.template.metadata.labels["pr-number"] = strenv(PR_NUMBER)' preview-deploy-service-file.yml
+          yq -i '.spec.template.spec.containers[1].image = strenv(IMAGE_FULL_PATH)' preview-deploy-service-file.yml
 
-      - name: Deploy to Cloud Run
-        id: deploy
-        uses: google-github-actions/deploy-cloudrun@v3
-        with:
-          region: europe-west6
-          metadata: preview-deploy-service-file.yml
+          # `services replace` overwrites the whole traffic block, so it is rebuilt
+          # from the live service: other PRs keep their tags, whatever holds the
+          # base traffic keeps it, and this PR's tag moves to the new revision.
+          # resourceVersion makes a concurrent deploy of another PR fail the
+          # replace instead of silently dropping its tag; that case is retried.
+          for attempt in 1 2 3 4 5; do
+            cp preview-deploy-service-file.yml service.yml
+            if gcloud run services describe "$PREVIEW_SERVICE" --region "$REGION" --format=json > current.json 2>/dev/null; then
+              yq -i '.metadata.resourceVersion = (load("current.json") | .metadata.resourceVersion)' service.yml
+            else
+              echo '{}' > current.json
+            fi
+            jq --arg tag "$TAG" --arg rev "$REVISION" '
+              [(.spec.traffic // [])[]
+                | if .tag == $tag then del(.tag) else . end
+                | select(.tag != null or (.percent // 0) > 0)]
+              | . + [{revisionName: $rev, tag: $tag,
+                      percent: (if ([.[].percent // 0] | add // 0) > 0 then 0 else 100 end)}]
+            ' current.json > traffic.json
+            yq -i '.spec.traffic = load("traffic.json")' service.yml
+
+            if gcloud run services replace service.yml --region "$REGION"; then
+              break
+            fi
+            # The revision exists only if the replace was accepted, so its own
+            # failure (for example a failed startup) is not retried.
+            if gcloud run revisions describe "$REVISION" --region "$REGION" >/dev/null 2>&1 || [ "$attempt" = 5 ]; then
+              exit 1
+            fi
+            echo "Replace rejected, retrying (attempt $attempt)"
+            sleep $((attempt * 5))
+          done
+
+          # Drop this PR's earlier revisions; one still holding base traffic is kept.
+          gcloud run revisions list --service "$PREVIEW_SERVICE" --region "$REGION" \
+            --filter="metadata.labels.pr-number=$PR_NUMBER AND metadata.name!=$REVISION" \
+            --format='value(metadata.name)' | while read -r rev; do
+              gcloud run revisions delete "$rev" --region "$REGION" --quiet || true
+            done
+
+          echo "url=https://${TAG}.${PREVIEW_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Find existing comment
         if: github.event_name == 'pull_request'
@@ -132,7 +182,7 @@ jobs:
 
             **URL:** ${{ steps.deploy.outputs.url }}
 
-            `${{ needs.set-vars.outputs.service_name }}` • `${{ needs.set-vars.outputs.short_sha }}`
+            `${{ needs.set-vars.outputs.tag }}` • `${{ needs.set-vars.outputs.short_sha }}`
 
 
   cleanup-preview:
@@ -150,7 +200,8 @@ jobs:
           else
             PR_NUMBER="${{ github.event.pull_request.number }}"
           fi
-          echo "service_name=pubky-app-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "tag=pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -160,7 +211,19 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v3
 
-      - name: Delete Cloud Run service
+      - name: Remove preview tag and revisions
+        env:
+          PR_NUMBER: ${{ steps.vars.outputs.pr_number }}
+          TAG: ${{ steps.vars.outputs.tag }}
         run: |
-          gcloud run services delete ${{ steps.vars.outputs.service_name }} \
-            --region=${{ env.REGION }} --quiet || true
+          gcloud run services update-traffic "$PREVIEW_SERVICE" \
+            --region="$REGION" --remove-tags="$TAG" --quiet || true
+          # A revision still holding base traffic cannot be deleted and is kept.
+          gcloud run revisions list --service "$PREVIEW_SERVICE" --region "$REGION" \
+            --filter="metadata.labels.pr-number=$PR_NUMBER" \
+            --format='value(metadata.name)' | while read -r rev; do
+              gcloud run revisions delete "$rev" --region "$REGION" --quiet || true
+            done
+          # PRs deployed before the shared service still have their own service.
+          gcloud run services delete "pubky-app-pr-${PR_NUMBER}" \
+            --region="$REGION" --quiet || true
