@@ -119,40 +119,19 @@ jobs:
           yq -i '.spec.template.metadata.labels["pr-number"] = strenv(PR_NUMBER)' preview-deploy-service-file.yml
           yq -i '.spec.template.spec.containers[1].image = strenv(IMAGE_FULL_PATH)' preview-deploy-service-file.yml
 
-          # `services replace` overwrites the whole traffic block, so it is rebuilt
-          # from the live service: other PRs keep their tags, whatever holds the
-          # base traffic keeps it, and this PR's tag moves to the new revision.
-          # resourceVersion makes a concurrent deploy of another PR fail the
-          # replace instead of silently dropping its tag; that case is retried.
-          for attempt in 1 2 3 4 5; do
-            cp preview-deploy-service-file.yml service.yml
-            if gcloud run services describe "$PREVIEW_SERVICE" --region "$REGION" --format=json > current.json 2>/dev/null; then
-              yq -i '.metadata.resourceVersion = (load("current.json") | .metadata.resourceVersion)' service.yml
-            else
-              echo '{}' > current.json
-            fi
-            jq --arg tag "$TAG" --arg rev "$REVISION" '
-              [(.spec.traffic // [])[]
-                | if .tag == $tag then del(.tag) else . end
-                | select(.tag != null or (.percent // 0) > 0)]
-              | . + [{revisionName: $rev, tag: $tag,
-                      percent: (if ([.[].percent // 0] | add // 0) > 0 then 0 else 100 end)}]
-            ' current.json > traffic.json
-            yq -i '.spec.traffic = load("traffic.json")' service.yml
+          # `services replace` rewrites the whole traffic list, so copy the other
+          # PRs' tags from the live service and point this PR's tag at the new
+          # revision. The new revision also takes the base traffic (unused by
+          # previews) so every older revision can be deleted.
+          gcloud run services describe "$PREVIEW_SERVICE" --region "$REGION" --format=json > current.json 2>/dev/null || echo '{}' > current.json
+          jq --arg tag "$TAG" --arg rev "$REVISION" \
+            '[(.spec.traffic // [])[] | select(.tag != null and .tag != $tag) | .percent = 0]
+             + [{revisionName: $rev, tag: $tag, percent: 100}]' current.json > traffic.json
+          yq -i '.spec.traffic = load("traffic.json")' preview-deploy-service-file.yml
 
-            if gcloud run services replace service.yml --region "$REGION"; then
-              break
-            fi
-            # The revision exists only if the replace was accepted, so its own
-            # failure (for example a failed startup) is not retried.
-            if gcloud run revisions describe "$REVISION" --region "$REGION" >/dev/null 2>&1 || [ "$attempt" = 5 ]; then
-              exit 1
-            fi
-            echo "Replace rejected, retrying (attempt $attempt)"
-            sleep $((attempt * 5))
-          done
+          gcloud run services replace preview-deploy-service-file.yml --region "$REGION"
 
-          # Drop this PR's earlier revisions; one still holding base traffic is kept.
+          # Drop this PR's earlier revisions.
           gcloud run revisions list --service "$PREVIEW_SERVICE" --region "$REGION" \
             --filter="metadata.labels.pr-number=$PR_NUMBER AND metadata.name!=$REVISION" \
             --format='value(metadata.name)' | while read -r rev; do
