@@ -9,6 +9,8 @@ import {
   buildTag,
   buildUri,
   buildUser,
+  decodeObject,
+  editPost,
   type ErrorCode,
   limits,
   parseUri,
@@ -163,9 +165,10 @@ describe('pubky-social-specs contract', () => {
     expect(buildFile(owner, { bytes: new Uint8Array([1]), type: 'application/x-unknown' }).path).toMatch(/\.bin$/);
   });
 
-  // `@synonymdev/pubky` 0.18 percent-encodes every other byte of a storage path once, where 0.17 and older
-  // encoded some of them twice and so stored such a file under its escaped name. A path made of these
-  // characters alone goes out as written under both, so a file written before the SDK bump is found after it.
+  // `@synonymdev/pubky` 0.18 percent-encodes every other byte of a storage path once, where a session call of
+  // 0.16.2 and 0.17.1 encoded some of them twice and so stored such a file under its escaped name. A path made
+  // of these characters alone goes out as written under both, so a file written before the SDK bump is found
+  // after it.
   it('builds every storage path from unreserved characters, whatever the user typed', () => {
     const other = fakeOwner(1);
     const hostile = 'a b/c%20d?e#f"<>{}`ü\\';
@@ -175,6 +178,8 @@ describe('pubky-social-specs contract', () => {
       buildUser(owner, { name: 'Ada', bio: hostile }).path,
       post.path,
       buildPost(owner, { kind: 'article', title: hostile, body: hostile }).path,
+      // An edit is the next version of the same post.
+      editPost(owner, post.url, { ...decodeObject(post.url, post.body, 'post'), content: `${hostile} edited` }).path,
       buildFollow(owner, other).path,
       buildMute(owner, other).path,
       buildTag(owner, target, 'tag').path,

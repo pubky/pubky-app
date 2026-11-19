@@ -26,9 +26,10 @@ import { getAuthClientId } from '@/config/auth';
 import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
 import { SOCIAL_MIGRATION_FLAG_PATH } from '@/config/social-migration';
 import type { SessionReference } from '@/libs/auth/session.types';
+import { AppError } from '@/libs/error/error';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
+import { hasHttpStatus, isRetryable } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -86,6 +87,11 @@ let refresh: 'issue' | number;
 /** What the homeserver answers session revalidation (`GET /auth/grant/session`); a status refuses it. */
 let revalidation: 'serve' | number;
 let signOuts: number;
+/**
+ * Requests the fake homeserver does not serve. Recorded and checked after each test: an assertion thrown inside
+ * `fetch` would reach the SDK as a transport failure and could pass for the error a test expects.
+ */
+let unexpected: string[];
 
 let storeCreated = false;
 const openSessionDatabase = async () => {
@@ -129,7 +135,11 @@ const stubHomeserver = () =>
     const respond = (response: Response) => Object.defineProperty(response, 'url', { value: raw.url });
     const packet = routingPackets[url.pathname.slice(1)];
     if (packet) return respond(new Response(Buffer.from(packet, 'base64')));
-    expect(url.origin).toBe(HOMESERVER_ORIGIN);
+    const unserved = () => {
+      unexpected.push(`${raw.method} ${raw.url}`);
+      return respond(refused(501));
+    };
+    if (url.origin !== HOMESERVER_ORIGIN) return unserved();
     if (url.pathname === '/info') {
       return respond(json({ features: ['path-addressed-storage', 'grant-proof-logout', 'webdav-locks'] }));
     }
@@ -139,12 +149,12 @@ const stubHomeserver = () =>
         signOuts += 1;
         return respond(new Response(null, { status: 200 }));
       }
-      expect(raw.method).toBe('POST');
+      if (raw.method !== 'POST') return unserved();
       refreshes += 1;
       if (refresh !== 'issue') return respond(refused(refresh));
       return respond(json({ ...held, token: `refreshed-bearer-${refreshes}` }));
     }
-    expect(url.pathname.startsWith(`${STORAGE_ROOT}/`)).toBe(true);
+    if (!url.pathname.startsWith(`${STORAGE_ROOT}/`)) return unserved();
     const request: StorageRequest = {
       method: raw.method,
       // The request line as sent: `pathname` keeps the SDK's percent-encoding.
@@ -174,6 +184,7 @@ beforeEach(async () => {
   refresh = 'issue';
   revalidation = 'serve';
   signOuts = 0;
+  unexpected = [];
   answer = () => json({});
   stubHomeserver();
   await putRecord();
@@ -184,6 +195,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  expect(unexpected).toEqual([]);
   unsubscribe();
   useAuthStore.setState({ session: null, currentUserPubky: null, sessionReference: null, restoreStatus: 'idle' });
   installHomeserverWriteRetryDependenciesForTests(null);
@@ -272,7 +284,11 @@ describe('pinned SDK 0.18.0 storage path contract', () => {
   it("lists another reader's view of a public directory as plain names", async () => {
     useAuthStore.setState({ session: null });
     const directory = '/pub/social/v1/posts/';
-    const entries = [url(`${directory}0034A0X7NJ52G/0034A0X7NJ52G.json`), url(`${directory}my file.json`)];
+    const entries = [
+      url(`${directory}0034A0X7NJ52G/0034A0X7NJ52G.json`),
+      url(`${directory}my file.json`),
+      url(`${directory}my%20file.json`),
+    ];
     answer = () => new Response(`${entries.join('\n')}\n`);
 
     await expect(HomeserverService.list({ baseDirectory: url(directory) })).resolves.toEqual(entries);
@@ -290,11 +306,20 @@ describe('pinned SDK 0.18.0 storage path contract', () => {
     ['/pub/t/100%', '/pub/t/100%25'],
     ['/pub/t/a:b,c@d+e', '/pub/t/a%3Ab%2Cc%40d%2Be'],
     ['/pub/t/über', '/pub/t/%C3%BCber'],
-  ])('escapes every other byte of %s exactly once', async (path, wire) => {
+  ])('escapes every other byte of %s exactly once on every verb', async (path, wire) => {
     await HomeserverService.request({ method: HttpMethod.PUT, url: url(path), bodyJson: { a: 1 } });
+    await HomeserverService.putBlob({ url: url(path), blob: new Uint8Array([1]) });
     await HomeserverService.get(url(path));
+    await HomeserverService.exists(url(path));
+    await HomeserverService.delete(url(path));
 
-    expect(storage.map((request) => request.path)).toEqual([wire, wire]);
+    expect(storage.map(({ method, path: sent }) => `${method} ${sent}`)).toEqual([
+      `PUT ${wire}`,
+      `PUT ${wire}`,
+      `GET ${wire}`,
+      `HEAD ${wire}`,
+      `DELETE ${wire}`,
+    ]);
   });
 
   it('lists plain names and pages with the entry it was given', async () => {
@@ -401,6 +426,7 @@ describe('pinned SDK 0.18.0 session end contract', () => {
 
     expect(failure).not.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
     expect(hasHttpStatus(failure, 503)).toBe(true);
+    expect(failure instanceof AppError && isRetryable(failure)).toBe(true);
   });
 
   it('finishes a sign-out another tab started, then reads the record as gone', async () => {
@@ -503,6 +529,34 @@ describe('pinned SDK 0.18.0 rejected bearer contract', () => {
 
     expect(sent('PUT')).toHaveLength(1);
     expect(refreshes).toBe(0);
+    expect(sessionFailures).not.toHaveBeenCalled();
+  });
+
+  // A known limit, pinned so a change to it is deliberate: the homeserver rejects the bearer, then answers the
+  // refresh with 404 (the grant is gone). The SDK's `CredentialRefreshError` carries that 404, and the app reads
+  // a 404 as "nothing there", so the session is not ended.
+  it('reads a refresh answered 404 as a missing file, not as an ended session', async () => {
+    answer = () => refused(401);
+    refresh = 404;
+    const flag = url(SOCIAL_MIGRATION_FLAG_PATH);
+    const notFound = (error: unknown) => hasHttpStatus(error, 404);
+
+    await expect(HomeserverService.getBytesIfExists(flag)).resolves.toBeNull();
+    await expect(
+      HomeserverService.request({ method: HttpMethod.GET, url: flag, notFoundAsNull: true }),
+    ).resolves.toBeNull();
+    await expect(HomeserverService.list({ baseDirectory: url('/priv/social/v1/mutes/') })).resolves.toEqual([]);
+    await expect(HomeserverService.get(flag)).rejects.toSatisfy(notFound);
+    await expect(HomeserverService.exists(flag)).rejects.toSatisfy(notFound);
+    await expect(
+      HomeserverService.request({ method: HttpMethod.PUT, url: flag, bodyJson: {}, singleAttempt: true }),
+    ).rejects.toSatisfy(notFound);
+
+    // The first call sends its request and one refresh. The refused refresh leaves the shared session marked
+    // for refresh, so every later call asks for a refresh first, is refused again, and sends nothing else.
+    expect(storage).toHaveLength(1);
+    expect(refreshes).toBe(6);
+    expect(sessionFailures).not.toHaveBeenCalled();
   });
 });
 
@@ -522,8 +576,9 @@ describe('pinned SDK 0.18.0 publish conflict contract', () => {
     expect(sent('PUT')).toHaveLength(HOMESERVER_WRITE_MAX_ATTEMPTS);
   });
 
-  it('does not retry a 409 with any other body', async () => {
-    answer = () => refused(409, 'A file exists where a directory is needed');
+  it('does not retry the 409 of a path collision', async () => {
+    // The homeserver's other 409 body (`http_error.rs`, v0.18.0).
+    answer = () => refused(409, 'File/folder path collision');
 
     await expect(HomeserverService.request({ method: HttpMethod.PUT, url: tag, bodyJson: {} })).rejects.toSatisfy(
       (error) => hasHttpStatus(error, 409),
