@@ -10,7 +10,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { LANDING_HERO_SECTION_ID, LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
-import { HeaderSocialLinks } from '../Header/Header';
+import { HeaderSocialLinks } from '../Header/HeaderPublicContent';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 
 export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {

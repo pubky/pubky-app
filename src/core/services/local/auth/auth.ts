@@ -2,6 +2,7 @@ import { clearDatabase } from '@/database/franky/franky.helpers';
 import {
   createAuthStorage,
   legacyCookieExports,
+  notifyAuthCleanupChanged,
   readAuthStorage,
   readDurableAuthStorage,
   suppressAuthRestore,
@@ -74,8 +75,10 @@ export class LocalAuthService {
       if (
         (localStorage.getItem(AUTH_PERSIST_KEY) || localStorage.getItem(AUTH_MIGRATION_KEY)) &&
         localStorage.getItem(key) === raw
-      )
+      ) {
         localStorage.removeItem(key);
+        notifyAuthCleanupChanged();
+      }
     };
     try {
       if (navigator.locks) await navigator.locks.request(AUTH_PERSIST_KEY, clear);
@@ -121,6 +124,7 @@ export class LocalAuthService {
           state: { ...record, retiringSession: null, pendingRetirements: remaining },
         }),
       );
+      notifyAuthCleanupChanged();
     };
     try {
       if (navigator.locks) await navigator.locks.request(AUTH_PERSIST_KEY, write);

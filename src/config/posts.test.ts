@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ARTICLE_MAX_CHARACTER_LENGTH,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
+} from '@/config/attachmentMimeTypes';
+import {
+  ARTICLE_MAX_CHARACTER_LENGTH,
   COLLECTION_COVER_IMAGE_URL_MAX_LENGTH,
   COLLECTION_ITEM_URI_MAX_LENGTH,
   LOCK_TEASER_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
-  POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
 } from '@/config/posts';
 
 describe('post limits sourced from pubky-social-specs', () => {

@@ -3,19 +3,21 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import { useDebounceCallback, useTimeout } from 'usehooks-ts';
+import {
+  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
+  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  ARTICLE_SUPPORTED_FILE_TYPES,
+  POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  POST_SUPPORTED_FILE_TYPES,
+} from '@/config/attachmentMimeTypes';
 import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_COVER_MAX_FILES,
-  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
-  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
-  ARTICLE_SUPPORTED_FILE_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   ATTACHMENT_MAX_OTHER_SIZE,
   POST_ATTACHMENT_MAX_FILES,
   POST_MAX_CHARACTER_LENGTH,
-  POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
-  POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';

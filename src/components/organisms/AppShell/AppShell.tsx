@@ -1,46 +1,88 @@
 'use client';
 
+import { type ReactNode, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
-import { isPublicDocumentRoute } from '@/app/routes';
-import { Fab } from '@/molecules/Fab/Fab';
-import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
-import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
-import { GuestContextualBanner } from '@/organisms/GuestContextualBanner/GuestContextualBanner';
-import { Header } from '@/organisms/Header/Header';
-import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
-import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
+import { isPublicDocumentRoute, ROOT_ROUTES } from '@/app/routes';
+import { getLandingAuthMode, isLandingAuthStorageKey, type LandingMode } from '@/libs/auth/landing-auth-mode';
+import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
+import { readSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
+import { PublicHeader } from '@/organisms/Header/PublicHeader';
+import { hasAccountState } from '@/stores/auth/auth.selectors';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { PublicLanding } from './PublicLanding';
 
-/**
- * The app tree under the root layout. Every route waits behind the database and auth gate, which holds `{children}`
- * back until IndexedDB and the session are ready, so the server's HTML holds only its spinner.
- *
- * The public documents (`/terms-of-use`, `/privacy-policy`, `/copyright`) are the exception: store listings and sign-up
- * link to them, so they render with just the header, their text in the first HTML and with no IndexedDB needed. They
- * read nothing local; the header shows members only the logo there (`Header`).
- */
+const GuardedAppShell = dynamic(() => import('./GuardedAppShell').then((module) => module.GuardedAppShell));
+
+const LandingAuthCleanup = dynamic(() => import('./LandingAuthCleanup').then((module) => module.LandingAuthCleanup), {
+  ssr: false,
+});
+
+function useLandingMode(isLanding: boolean) {
+  const needsApp = useAuthStore((state) => hasAccountState(state) || state.showSignInDialog);
+  const generation = useAuthStore((state) => state.generation);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const [storageMode, setStorageMode] = useState<LandingMode | 'checking'>('checking');
+
+  useEffect(() => {
+    if (!isLanding) {
+      setStorageMode('checking');
+      return;
+    }
+    const checkStorage = () => {
+      try {
+        const mode = readSocialMigrationSignedOutNotice()
+          ? 'guarded'
+          : getLandingAuthMode(localStorage, useAuthStore.getState());
+        if (mode === 'rehydrate-guest') {
+          setStorageMode('public');
+          void useAuthStore.persist.rehydrate();
+        } else {
+          setStorageMode(mode);
+        }
+      } catch {
+        // The existing recovery path owns unreadable or unavailable auth storage.
+        setStorageMode('guarded');
+      }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (isLandingAuthStorageKey(event.key)) checkStorage();
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener(AUTH_CLEANUP_CHANGED_EVENT, checkStorage);
+    checkStorage();
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(AUTH_CLEANUP_CHANGED_EVENT, checkStorage);
+    };
+  }, [isLanding, generation, hasHydrated]);
+
+  return needsApp ? 'guarded' : storageMode;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const isLanding = pathname === ROOT_ROUTES;
+  const landingMode = useLandingMode(isLanding);
 
+  if (isLanding && landingMode !== 'guarded') {
+    return (
+      <>
+        <PublicLanding checking={landingMode === 'checking'}>
+          <PublicHeader />
+          {children}
+        </PublicLanding>
+        {landingMode === 'cleanup' && <LandingAuthCleanup />}
+      </>
+    );
+  }
   if (isPublicDocumentRoute(pathname)) {
     return (
       <>
-        <Header />
+        <PublicHeader />
         {children}
       </>
     );
   }
-
-  return (
-    <DatabaseProvider>
-      <RouteGuardProvider>
-        <CoordinatorsManager />
-        <Header />
-        {children}
-        <Fab />
-        <GuestContextualBanner />
-        <DialogSignIn />
-      </RouteGuardProvider>
-    </DatabaseProvider>
-  );
+  return <GuardedAppShell>{children}</GuardedAppShell>;
 }
