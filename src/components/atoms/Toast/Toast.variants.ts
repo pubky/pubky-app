@@ -56,7 +56,8 @@ export const toastActionVariants = cva(
   {
     variants: {
       variant: {
-        brand: 'shadow-xs border-brand bg-brand/16 text-brand hover:!bg-brand/30',
+        brand:
+          'shadow-xs border-brand bg-toast-action-brand text-brand hover:!bg-toast-action-brand-hover light:text-brand-foreground',
         muted: 'shadow-xs bg-toast-action-muted text-foreground hover:border-toast-action-muted-hover-border',
       },
     },

@@ -66,6 +66,9 @@ body {
   );
   --color-action-pill: var(--action-pill);
   --color-embed: var(--embed);
+  /* Keep the small OK label legible over content behind a translucent success toast. */
+  --color-toast-action-brand: color-mix(in srgb, var(--brand) 32%, var(--background));
+  --color-toast-action-brand-hover: color-mix(in srgb, var(--brand) 40%, var(--background));
   --color-toast-action-muted: var(--toast-action-muted);
   --color-toast-action-muted-hover-border: var(--toast-action-muted-hover-border);
   --color-transparent: var(--transparent);

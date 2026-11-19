@@ -63,7 +63,7 @@ describe('ToastAction', () => {
   });
 
   it.each([
-    ['brand', 'bg-brand/16'],
+    ['brand', 'bg-toast-action-brand'],
     ['muted', 'bg-toast-action-muted'],
   ] as const)('applies variant=%s', (variant, className) => {
     renderToast(
