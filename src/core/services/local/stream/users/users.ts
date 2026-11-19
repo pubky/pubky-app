@@ -9,6 +9,8 @@ import { type ModerationModelSchema, ModerationType } from '@/models/moderation/
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
 import { getUserDetailsRejectionReason } from '@/models/user/details/userDetails.utils';
@@ -20,7 +22,6 @@ import {
   NexusSocialGraphStatus,
   type NexusTag,
   type NexusUser,
-  type NexusUserCounts,
   type NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
@@ -126,13 +127,23 @@ export class LocalStreamUsersService {
    * @param users - Array of users from Nexus API
    * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows.
    *   `fetchStartedAt` skips relationship rows whose user TTL was written at or after that
-   *   time so a local follow/unfollow during the request is not overwritten.
+   *   time so a local follow/unfollow during the request is not overwritten. A shared
+   *   response supplies a cutoff when the caller has none; otherwise the earlier of
+   *   the caller's and response's request starts protects local writes.
    * @returns Array of user IDs (Pubky)
    */
   static async persistUsers(users: NexusUser[], tagGuard: PersistUsersGuard = {}): Promise<Pubky[]> {
-    tagGuard = { ...tagGuard, validatedAt: tagGuard.validatedAt ?? getNexusResponseStartedAt(users) };
+    const responseStartedAt = getNexusResponseStartedAt(users);
+    tagGuard = {
+      ...tagGuard,
+      validatedAt: tagGuard.validatedAt ?? responseStartedAt,
+      fetchStartedAt:
+        responseStartedAt === undefined
+          ? tagGuard.fetchStartedAt
+          : Math.min(tagGuard.fetchStartedAt ?? responseStartedAt, responseStartedAt),
+    };
     if (tagGuard.isCurrent && !tagGuard.isCurrent()) return [];
-    const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
+    const userCounts: NexusModelTuple<Omit<UserCountsModelSchema, 'id'>>[] = [];
     const userRelationships: NexusModelTuple<NexusUserRelationship>[] = [];
     const userTags: NexusModelTuple<NexusTag[]>[] = [];
     const userDetails: UserDetailsModelSchema[] = [];
@@ -145,7 +156,8 @@ export class LocalStreamUsersService {
     for (const user of users) {
       const userId = user.details.id;
       userIds.push(userId);
-      userCounts.push([userId, user.counts]);
+      // `/v1` serves no `bookmarks`; the row keeps the field (`UserCountsModel.toRowCounts`).
+      userCounts.push([userId, UserCountsModel.toRowCounts(user.counts)]);
       userRelationships.push([userId, user.relationship]);
       userTags.push([userId, user.tags]);
       // The badge tier lives on the Nexus user view, not on `details`; it rides on the

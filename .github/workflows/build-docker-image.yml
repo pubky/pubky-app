@@ -114,7 +114,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
           registry: ${{ env.registry }}
-          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+          gcp_service_account_key: ${{ secrets.GRC_INFRA_READ_WRITE }}
 
       - name: Check if image needs to be rebuild
         uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
@@ -150,7 +150,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
           registry: ${{ env.registry }}
-          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+          gcp_service_account_key: ${{ secrets.GRC_INFRA_READ_WRITE }}
 
       - name: Build and push image pubky-app
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
@@ -175,7 +175,7 @@ jobs:
           # src/libs/runtime-config). Sentry build args are optional and used only by the
           # Dockerfile source-map upload step; public builds without them skip upload.
           build_args: |
-            NEXT_PUBLIC_DB_VERSION=3
+            NEXT_PUBLIC_DB_VERSION=4
             NEXT_PUBLIC_DB_NAME=franky
             NEXT_PUBLIC_DEBUG_MODE=false
             NEXT_PUBLIC_APP_VERSION=${{ github.sha }}

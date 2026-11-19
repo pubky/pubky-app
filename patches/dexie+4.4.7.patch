@@ -1,0 +1,29 @@
+diff --git a/node_modules/dexie/dist/dexie.js b/node_modules/dexie/dist/dexie.js
+--- a/node_modules/dexie/dist/dexie.js
++++ b/node_modules/dexie/dist/dexie.js
+@@ -469,7 +469,7 @@
+   fullNameExceptions.ModifyError = ModifyError;
+   fullNameExceptions.DexieError = DexieError;
+   fullNameExceptions.BulkError = BulkError;
+-
++  var reverseEventChainHead = Symbol();
+   function nop() { }
+   function mirror(val) {
+       return val;
+@@ -553,11 +553,11 @@
+   function reverseStoppableEventChain(f1, f2) {
+       if (f1 === nop)
+           return f2;
+-      return function () {
+-          if (f2.apply(this, arguments) === false)
+-              return false;
+-          return f1.apply(this, arguments);
+-      };
++      var head = { callback: f2, next: f1[reverseEventChainHead] || { callback: f1, next: null } };
++      var fire = function () {
++          for (var node = head, result; node; node = node.next) if ((result = node.callback.apply(this, arguments)) === false) return false;
++          return result; };
++      fire[reverseEventChainHead] = head; return fire;
+   }
+   function promisableChain(f1, f2) {
+       if (f1 === nop)

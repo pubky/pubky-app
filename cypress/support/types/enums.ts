@@ -41,11 +41,3 @@ export enum OnboardingExperience {
   // Stop on /onboarding/tags and let the spec drive the Experience steps itself
   StopAtTags = 'stopAtTags',
 }
-
-// can use only one of RecoveryPhraseWithConfirmation or RecoveryPhraseWithoutConfirmation
-export enum BackupType {
-  EncryptedFile = 'encryptedFile',
-  RecoveryPhraseWithConfirmation = 'recoveryPhraseWithConfirmation',
-  RecoveryPhraseWithoutConfirmation = 'recoveryPhraseWithoutConfirmation',
-  PubkyRing = 'pubkyRing',
-}

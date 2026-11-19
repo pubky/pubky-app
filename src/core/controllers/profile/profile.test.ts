@@ -1,4 +1,4 @@
-import { UserResult } from 'pubky-app-specs';
+import type { Built, User } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -22,24 +22,12 @@ const mockClearExperienceCompleted = vi.fn();
 
 const mockOnboardingStore = {
   getState: vi.fn(() => ({
-    setSecrets: vi.fn(),
     selectSecretKey: vi.fn(() => 'test-secret-key'),
     clearExperienceCompleted: mockClearExperienceCompleted,
   })),
 };
 
-const mockAuthStore = {
-  getState: vi.fn(() => ({
-    setCurrentUserPubky: vi.fn(),
-  })),
-};
-
 const mockIdentity = {
-  generateSecrets: vi.fn(() => ({
-    secretKey: 'test-secret-key',
-    mnemonic: 'test mnemonic phrase',
-  })),
-  z32FromSecret: vi.fn(() => 'test-pubky'),
   keypairFromSecretKey: vi.fn(() => ({ keypair: 'test-keypair' })),
   createRecoveryFile: vi.fn(),
 };
@@ -52,9 +40,6 @@ vi.mock('@/pipes/user/user.normalizer', () => ({
 }));
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: mockOnboardingStore,
-}));
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: mockAuthStore,
 }));
 
 vi.mock('@/libs/identity/identity', async () => {
@@ -79,18 +64,12 @@ describe('ProfileController', () => {
     mockProfileApplication.commitUpdateStatus.mockReset();
     mockProfileApplication.commitUpdate.mockReset();
     mockUserNormalizer.to.mockReset();
-    mockIdentity.generateSecrets.mockReset();
-    mockIdentity.z32FromSecret.mockReset();
     mockIdentity.keypairFromSecretKey.mockReset();
     mockIdentity.createRecoveryFile.mockReset();
     mockClearExperienceCompleted.mockReset();
     mockOnboardingStore.getState.mockReturnValue({
-      setSecrets: vi.fn(),
       selectSecretKey: vi.fn(() => 'test-secret-key'),
       clearExperienceCompleted: mockClearExperienceCompleted,
-    });
-    mockAuthStore.getState.mockReturnValue({
-      setCurrentUserPubky: vi.fn(),
     });
 
     ({ ProfileController } = await import('./profile'));
@@ -103,12 +82,9 @@ describe('ProfileController', () => {
         bio: 'Short bio',
         links: [{ label: 'Docs', url: 'https://example.com' }],
       };
-      const userResult = {
-        user: { toJson: vi.fn() },
-        meta: { url: 'user-url' },
-      };
+      const userResult = asOpaque<Built<User>>({ object: { name: 'Test User' }, url: 'user-url' });
 
-      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
+      mockUserNormalizer.to.mockReturnValue(userResult);
       mockProfileApplication.commitCreate.mockResolvedValue(undefined);
 
       await ProfileController.commitCreate({
@@ -129,23 +105,16 @@ describe('ProfileController', () => {
         testPubky,
       );
 
-      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({
-        profile: userResult.user,
-        url: userResult.meta.url,
-        pubky: testPubky,
-      });
+      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({ profile: userResult, pubky: testPubky });
     });
 
     it('defaults optional fields when not provided', async () => {
       const profile = {
         name: 'Test User',
       };
-      const userResult = {
-        user: { toJson: vi.fn() },
-        meta: { url: 'user-url' },
-      };
+      const userResult = asOpaque<Built<User>>({ object: { name: 'Test User' }, url: 'user-url' });
 
-      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
+      mockUserNormalizer.to.mockReturnValue(userResult);
       mockProfileApplication.commitCreate.mockResolvedValue(undefined);
 
       await ProfileController.commitCreate({
@@ -165,11 +134,7 @@ describe('ProfileController', () => {
         testPubky,
       );
 
-      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({
-        profile: userResult.user,
-        url: userResult.meta.url,
-        pubky: testPubky,
-      });
+      expect(mockProfileApplication.commitCreate).toHaveBeenCalledWith({ profile: userResult, pubky: testPubky });
     });
 
     it('propagates errors from the user normalizer', async () => {
@@ -198,12 +163,9 @@ describe('ProfileController', () => {
         name: 'Test User',
         bio: 'Short bio',
       };
-      const userResult = {
-        user: { toJson: vi.fn() },
-        meta: { url: 'user-url' },
-      };
+      const userResult = asOpaque<Built<User>>({ object: { name: 'Test User' }, url: 'user-url' });
 
-      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
+      mockUserNormalizer.to.mockReturnValue(userResult);
       mockProfileApplication.commitCreate.mockRejectedValue(new Error('create failed'));
 
       await expect(
@@ -216,42 +178,10 @@ describe('ProfileController', () => {
     });
   });
 
-  describe('generateSecrets', () => {
-    it('generates secrets and sets them in stores', () => {
-      const mockSetSecrets = vi.fn();
-      const mockSetCurrentUserPubky = vi.fn();
-
-      mockOnboardingStore.getState.mockReturnValue({
-        setSecrets: mockSetSecrets,
-        selectSecretKey: vi.fn(() => 'test-secret-key'),
-        clearExperienceCompleted: mockClearExperienceCompleted,
-      });
-      mockAuthStore.getState.mockReturnValue({
-        setCurrentUserPubky: mockSetCurrentUserPubky,
-      });
-      mockIdentity.generateSecrets.mockReturnValue({
-        secretKey: 'generated-secret-key',
-        mnemonic: 'generated mnemonic',
-      });
-      mockIdentity.z32FromSecret.mockReturnValue('generated-pubky' as Pubky);
-
-      ProfileController.generateSecrets();
-
-      expect(mockIdentity.generateSecrets).toHaveBeenCalledTimes(1);
-      expect(mockSetSecrets).toHaveBeenCalledWith({
-        secretKey: 'generated-secret-key',
-        mnemonic: 'generated mnemonic',
-      });
-      expect(mockIdentity.z32FromSecret).toHaveBeenCalledWith('generated-secret-key');
-      expect(mockSetCurrentUserPubky).toHaveBeenCalledWith('generated-pubky');
-    });
-  });
-
   describe('createRecoveryFile', () => {
     it('creates recovery file from secret key', () => {
       const mockSelectSecretKey = vi.fn(() => 'test-secret-key');
       mockOnboardingStore.getState.mockReturnValue({
-        setSecrets: vi.fn(),
         selectSecretKey: mockSelectSecretKey,
         clearExperienceCompleted: mockClearExperienceCompleted,
       });
@@ -272,7 +202,6 @@ describe('ProfileController', () => {
         throw new Error('Secret key is not available');
       });
       mockOnboardingStore.getState.mockReturnValue({
-        setSecrets: vi.fn(),
         selectSecretKey: mockSelectSecretKey,
         clearExperienceCompleted: mockClearExperienceCompleted,
       });

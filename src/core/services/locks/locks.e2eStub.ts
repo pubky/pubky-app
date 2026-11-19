@@ -8,7 +8,6 @@ import type {
   VerificationTaskHandleOptions,
   Viewer,
 } from '@synonymdev/locks-sdk';
-import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
 import { getLockServer } from '@/config/network';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -22,10 +21,11 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
  * run in CI, so every call the SDK would send to the Lock Server goes to `<stub>/e2e/...` instead,
  * where the spec answers it with `cy.intercept`.
  *
- * The homeserver stays real: the writes the Lock Server makes on the creator's behalf (guarded bytes
- * under `/priv/app.locks/content/`, the public `lock.json`) are made here through
- * `HomeserverService` with the creator's own session, so the owner view and every reader-side
- * `/priv` read and replica write hit the real homeserver.
+ * The homeserver stays real. As with the real Lock Server, the browser never writes the guarded
+ * bytes under `/priv/app.locks/content/` or the public `/pub/app.locks/<lock_id>.json`: the app's
+ * session only reads them, and the stand-in Lock Server writes them before it answers, with its own
+ * creator-granted session. The owner view and every reader-side `/priv` read and replica write
+ * still hit the real homeserver.
  *
  * A non-2xx answer rejects with the SDK's own error shape (see `sdkError`), so the spec can drive
  * every status mapping `LocksService` applies to the real Lock Server.
@@ -87,35 +87,16 @@ function createCreator(stubUrl: string, owner: string): Creator {
       await post(stubUrl, 'creator/lock-service-pointer', { owner, default_lock_server: options.defaultLockServer });
     },
     paykitSetupStatus: (asset) => post(stubUrl, 'creator/paykit-setup-status', { owner, asset }),
-    registerGuardedResource: async (options: RegisterGuardedResourceOptions) => {
-      const bytes = options.bytes;
-      await HomeserverService.putBlob({
-        url: `pubky://${owner}${LOCKS_GUARDED_CONTENT_PATH}${options.path}`,
-        blob: bytes,
-      });
-      return post(stubUrl, 'creator/guarded-resources', {
+    registerGuardedResource: (options: RegisterGuardedResourceOptions) =>
+      post(stubUrl, 'creator/guarded-resources', {
         owner,
         path: options.path,
         content_type: options.contentType,
-        bytes: toBase64(bytes),
-      });
-    },
-    createContentLock: async (body) => {
-      const response = await post<{ content_lock_path: string; content_lock: unknown }>(
-        stubUrl,
-        'creator/content-locks',
-        { owner, body },
-      );
-      await HomeserverService.putBlob({
-        url: `pubky://${owner}${response.content_lock_path}`,
-        blob: new TextEncoder().encode(JSON.stringify(response.content_lock)),
-      });
-      return response;
-    },
-    // The Lock Server takes the public `lock.json` down only once it has accepted the deletion.
+        bytes: toBase64(options.bytes),
+      }),
+    createContentLock: (body) => post(stubUrl, 'creator/content-locks', { owner, body }),
     deleteContentLock: async (lockId) => {
       await post(stubUrl, 'creator/content-locks/delete', { owner, lock_id: lockId });
-      await HomeserverService.delete(`pubky://${owner}/pub/app.locks/${lockId}.json`);
     },
   };
   return creator as Creator;

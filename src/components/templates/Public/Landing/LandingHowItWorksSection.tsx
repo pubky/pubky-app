@@ -58,8 +58,9 @@ export function LandingHowItWorksSection() {
               <Image
                 src={image}
                 alt=""
-                width={336}
-                height={336}
+                width={128}
+                height={128}
+                unoptimized={false}
                 className="mb-6 size-32 transition-transform duration-300 ease-out group-hover:scale-125 md:max-xl:mb-0 md:max-xl:shrink-0 xl:mx-auto"
                 aria-hidden
               />

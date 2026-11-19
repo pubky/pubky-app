@@ -1,5 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
@@ -89,6 +89,39 @@ export class LocksController {
   /** Builds the Paykit `/setup` URL to load in the payout-account iframe's src. */
   static getPaykitSetupUrl({ state }: TGetPaykitSetupUrlParams): string {
     return LocksApplication.generatePaykitSetupUrl({ returnTo: window.location.origin, state });
+  }
+
+  /**
+   * Builds the Paykit `/setup/reconnect` URL for the signed-in creator, to load in the payout-account
+   * iframe's src when Paykit already holds them.
+   */
+  static getPaykitReconnectUrl({ state }: TGetPaykitSetupUrlParams): string {
+    return LocksApplication.generatePaykitReconnectUrl({
+      returnTo: window.location.origin,
+      state,
+      creator: this.requireCreatorPubky('LocksController.getPaykitReconnectUrl'),
+    });
+  }
+
+  /**
+   * Whether the Paykit Server already holds the signed-in creator. Throws when Paykit cannot answer,
+   * which says nothing about the creator.
+   */
+  static async fetchPaykitCreatorHeld(): Promise<boolean> {
+    return LocksApplication.fetchPaykitCreatorHeld({
+      creator: this.requireCreatorPubky('LocksController.fetchPaykitCreatorHeld'),
+    });
+  }
+
+  private static requireCreatorPubky(operation: string): string {
+    const creator = useLocksAuthStore.getState().selectLocksCreatorPubky();
+    if (!creator) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks creator to look up Paykit for', {
+        service: ErrorService.Locks,
+        operation,
+      });
+    }
+    return creator;
   }
 
   /**
@@ -416,7 +449,7 @@ export class LocksController {
     const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
     return LocksApplication.replicateUnlockedContent({
       ...params,
-      announcementUri: postUriBuilder(authorId, rawPostId),
+      announcementUri: buildUri(authorId, 'post', rawPostId),
       isCurrent: captureViewerSession(),
     });
   }

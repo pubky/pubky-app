@@ -24,6 +24,8 @@ import {
 export type { ConnectionType, UseProfileConnectionsResult, UserConnectionData };
 export { CONNECTION_TYPE } from './useProfileConnections.types';
 
+type FollowObservation = 'cached' | 'following' | 'unfollowed';
+
 // ============================================================================
 // Hook Implementation
 // ============================================================================
@@ -57,6 +59,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [observedFollows, setObservedFollows] = useState<ReadonlyMap<Pubky, FollowObservation>>(() => new Map());
 
   // Refs for stable callbacks
   const userIdsRef = useRef<Pubky[]>([]);
@@ -79,6 +82,10 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
     null,
   );
 
+  // For own following/friends lists, rows unfollowed from the list itself stay on screen (see below)
+  const preserveOnUnfollow =
+    targetUserId === currentUserPubky && (type === CONNECTION_TYPE.FOLLOWING || type === CONNECTION_TYPE.FRIENDS);
+
   // Sync userIds when stream changes in cache (e.g., after follow/unfollow)
   useEffect(() => {
     if (cachedStream !== null && !isLoading) {
@@ -88,15 +95,12 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
       // For own following/friends lists: only sync when cache has MORE users (new follows)
       // Block sync when cache has fewer users (unfollows) to preserve UI state
       // This allows new follows to appear reactively while keeping unfollowed users visible
-      const isOwnProfile = targetUserId === currentUserPubky;
-      const preserveOnUnfollow =
-        isOwnProfile && (type === CONNECTION_TYPE.FOLLOWING || type === CONNECTION_TYPE.FRIENDS);
       if (preserveOnUnfollow && cachedStream.length <= userIdsRef.current.length) return;
 
       userIdsRef.current = cachedStream;
       setUserIds(cachedStream);
     }
-  }, [cachedStream, isLoading, skip, targetUserId, currentUserPubky, type]);
+  }, [cachedStream, isLoading, skip, preserveOnUnfollow]);
 
   // Subscribe to user details from local database (reactive via Controller)
   const userDetailsMap = useLiveQuery(
@@ -287,6 +291,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
     setSkip(0);
     setHasMore(true);
     setError(null);
+    setObservedFollows(new Map());
   }, []);
 
   /**
@@ -312,9 +317,43 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId]);
 
+  // A late page can restore an unfollowed ID to the stream cache. Keep the transition from
+  // followed to unfollowed for rows still on screen, even while the relationship read is pending.
+  // A row removed from the cache before its first relationship read can also be retained. Require
+  // prior membership in that case so a fresh row with an initially stale relationship still counts.
+  let retainedCount = 0;
+  if (preserveOnUnfollow) {
+    const cachedIds = cachedStream && new Set(cachedStream);
+    const nextObservedFollows = new Map<Pubky, FollowObservation>();
+    let changed = false;
+    for (const id of userIds) {
+      const previous = observedFollows.get(id);
+      const following = userRelationshipsMap.get(id)?.following;
+      const inCache = cachedIds?.has(id);
+      let observation = previous;
+
+      if (following === true) {
+        observation = 'following';
+      } else if (following === false && (previous === 'following' || (previous === 'cached' && inCache === false))) {
+        observation = 'unfollowed';
+      } else if (previous === undefined && inCache) {
+        observation = 'cached';
+      }
+
+      if (observation === undefined) continue;
+      nextObservedFollows.set(id, observation);
+      if (observation !== previous) changed = true;
+      if (observation === 'unfollowed') retainedCount += 1;
+    }
+    if (changed || nextObservedFollows.size !== observedFollows.size) {
+      setObservedFollows(nextObservedFollows);
+    }
+  }
+
   return {
     connections,
     count: connections.length,
+    retainedCount,
     isLoading,
     isLoadingMore,
     error,

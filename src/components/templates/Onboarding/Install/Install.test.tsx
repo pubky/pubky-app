@@ -35,10 +35,8 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 
 vi.mock('@/molecules/Install/Install', () => {
   return {
-    InstallNavigation: () => <div data-testid="install-navigation">Install Navigation</div>,
     InstallHeader: () => <div data-testid="install-header">Install Header</div>,
-    InstallCard: () => <div data-testid="install-card">Install Card</div>,
-    InstallFooter: () => <div data-testid="install-footer">Install Footer</div>,
+    InstallKeychains: () => <div data-testid="install-keychains">Install Keychains</div>,
   };
 });
 
@@ -66,8 +64,7 @@ describe('Install template', () => {
 
     expect(screen.getByTestId('install-layout')).toBeInTheDocument();
     expect(screen.getByTestId('install-header')).toBeInTheDocument();
-    expect(screen.getByTestId('install-card')).toBeInTheDocument();
-    expect(screen.getByTestId('install-footer')).toBeInTheDocument();
+    expect(screen.getByTestId('install-keychains')).toBeInTheDocument();
   });
 
   it('applies invite code from URL and shows toast when the code is valid', async () => {
@@ -84,7 +81,7 @@ describe('Install template', () => {
     });
     expect(mockReplace).not.toHaveBeenCalled();
     // Stays on the install page with the install content visible
-    expect(screen.getByTestId('install-card')).toBeInTheDocument();
+    expect(screen.getByTestId('install-keychains')).toBeInTheDocument();
   });
 
   it('does not apply the invite code and redirects home when the code is invalid', async () => {

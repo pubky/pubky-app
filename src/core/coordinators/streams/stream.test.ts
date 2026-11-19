@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
 import { FeedController } from '@/controllers/feed/feed';
@@ -1274,10 +1273,10 @@ describe('StreamCoordinator', () => {
       name: 'Test Feed',
       tags: ['bitcoin'],
       domain_tags: [],
-      reach: PubkyAppFeedReach.All,
-      sort: PubkyAppFeedSort.Recent,
+      reach: 'all',
+      sort: 'recent',
       content: null,
-      layout: PubkyAppFeedLayout.Wide,
+      layout: 'wide',
       created_at: 1000,
       updated_at: 1000,
     };

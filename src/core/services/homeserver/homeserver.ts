@@ -1,5 +1,5 @@
-import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
-import type { TKeypairParams } from '@/application/auth/auth.types';
+import { Address, Client, Pubky, PublicKey, resolvePubky, Session } from '@synonymdev/pubky';
+import type { MigrationLock, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
 import { getAuthClientId } from '@/config/auth';
 import {
   getHomeserver,
@@ -12,6 +12,7 @@ import type { ActiveSessionFailure, SessionReference } from '@/libs/auth/session
 import { AppError } from '@/libs/error/error';
 import {
   AuthErrorCode,
+  ClientErrorCode,
   DatabaseErrorCode,
   NetworkErrorCode,
   ServerErrorCode,
@@ -22,14 +23,12 @@ import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
-import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
 import type {
   TGenerateAuthUrlResult,
   THomeserverSessionResult,
-  THomeserverSignUpParams,
   TSignupTokenVerificationStatus,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -62,7 +61,8 @@ import {
 } from './homeserver.utils';
 import { retryHomeserverWrite, type THomeserverWriteFence } from './write-retry';
 
-const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
+const PRIVATE_STORAGE_PREFIX = '/priv/';
+const STORAGE_PATH_PREFIXES = ['/pub/', PRIVATE_STORAGE_PREFIX] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
@@ -233,16 +233,6 @@ export class HomeserverService {
   }
 
   /**
-   * Gets a signer for the homeserver
-   * @param keypair - The keypair to get a signer for
-   * @returns The signer
-   */
-  private static getSigner(keypair: Keypair): Signer {
-    const pubkySdk = this.getPubkySdk();
-    return pubkySdk.signer(keypair);
-  }
-
-  /**
    * Resolves the key's homeserver from its PKARR record.
    * @returns The homeserver public key, or `null` when the record is provably absent
    * @throws When the lookup itself failed (relay/network error) — absence NOT proven.
@@ -264,10 +254,15 @@ export class HomeserverService {
   /**
    * Resolve PKARR homeserver; on staging, require it matches this deploy's homeserver.
    *
+   * Runs before a Ring/Passport-approved session is adopted and before a saved
+   * session is restored, so a staging build never signs in a key whose homeserver
+   * is elsewhere (e.g. a production account, #2126). It originally also stopped the
+   * former keypair sign-in from force-republishing a prod key's record to staging;
+   * that path is gone.
+   *
    * An absent record is rejected the same way as a mismatched one: absence cannot
    * prove the key belongs here, both outcomes are deterministic (retrying the
-   * lookup cannot change them), and fail-open would re-enable the prod-key
-   * force-republish this guard exists to prevent (#2126). This also means a key
+   * lookup cannot change them), and failing open would let an unverified key in. This also means a key
    * whose just-published record has not yet propagated to our relays is rejected
    * until it propagates. Only a lookup that itself failed (relay/network error)
    * throws a retryable error instead (Network for the SDK's `PkarrError`,
@@ -346,76 +341,6 @@ export class HomeserverService {
     } catch (error) {
       Logger.warn('Signup token verification could not reach the homeserver', { error });
       throw error;
-    }
-  }
-
-  /**
-   * Signs in a user to the homeserver.
-   *
-   * If signin fails due to missing homeserver records, this method will attempt to republish
-   * the homeserver and return `undefined` to signal the caller should retry the signin.
-   *
-   * @param keypair - The keypair to sign in with
-   * @returns The session result, or `undefined` if homeserver was republished and caller should retry
-   */
-  static async signIn({ keypair }: TKeypairParams): Promise<THomeserverSessionResult | undefined> {
-    await this.assertSessionStoreAvailable();
-    const signer = this.getSigner(keypair);
-
-    if (isStagingHomeserverDeploy()) {
-      // Fail closed on staging: an inconclusive PKARR lookup must never migrate an
-      // unverified key to the configured staging homeserver.
-      await this.assertUserHomeserverAllowed({ publicKey: keypair.publicKey });
-    } else {
-      // Lookup-failure hardening: self-heal (republish) only a PROVABLY ABSENT
-      // record (e.g. expired from the DHT). A failed lookup throws instead —
-      // republishing on a transient error could overwrite an existing record
-      // that points at another homeserver. A failed grant exchange never republishes it.
-      const homeserverRecord = await this.resolveHomeserverRecord({ publicKey: keypair.publicKey });
-      if (homeserverRecord === null) {
-        return await this.republishConfiguredHomeserver({
-          signer,
-          keypair,
-          originalError: 'homeserver record absent from PKARR',
-        });
-      }
-    }
-
-    try {
-      const session = await signer.signin(getAuthClientId());
-      return { session };
-    } catch (signinError) {
-      return handleError({ error: signinError, additionalContext: { operation: 'signIn' } });
-    }
-  }
-
-  /** Account creation and session issuance are separate so retries cannot spend the invite twice. */
-  static async createAccount({ keypair, signupToken }: THomeserverSignUpParams): Promise<void> {
-    try {
-      await this.assertSessionStoreAvailable();
-      await this.getSigner(keypair).signup(PublicKey.from(getHomeserver()), signupToken);
-    } catch (error) {
-      return handleError({ error, additionalContext: { operation: 'createAccount' } });
-    }
-  }
-
-  static async signInCreatedAccount({ keypair }: TKeypairParams): Promise<THomeserverSessionResult> {
-    try {
-      await this.assertSessionStoreAvailable();
-      const signer = this.getSigner(keypair);
-      const record = await this.resolveHomeserverRecord({ publicKey: keypair.publicKey });
-      // Only this signup-specific path knows the generated key's intended homeserver.
-      // A lost create response can leave an account without its PKARR publication.
-      if (record === null) await signer.pkdns.publishHomeserverForce(PublicKey.from(getHomeserver()));
-      else if (record.z32() !== getHomeserver()) {
-        throw Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'This signup belongs to another homeserver.', {
-          service: ErrorService.Homeserver,
-          operation: 'signInCreatedAccount',
-        });
-      }
-      return { session: await signer.signin(getAuthClientId()) };
-    } catch (error) {
-      return handleError({ error, additionalContext: { operation: 'signInCreatedAccount' } });
     }
   }
 
@@ -559,33 +484,6 @@ export class HomeserverService {
       'message' in error &&
       error.message === `Stored Pubky session not found: ${id}`
     );
-  }
-
-  private static async republishConfiguredHomeserver({
-    signer,
-    keypair,
-    originalError,
-  }: {
-    signer: Signer;
-    keypair: Keypair;
-    originalError: unknown;
-  }): Promise<undefined> {
-    try {
-      const homeserverPublicKey = PublicKey.from(getHomeserver());
-      await signer.pkdns.publishHomeserverForce(homeserverPublicKey);
-      Logger.debug('Republish homeserver successful', { keypair: Identity.pubkyFromKeypair(keypair) });
-      return undefined;
-    } catch (republishError) {
-      return handleError({
-        error: republishError,
-        additionalContext: {
-          pubky: Identity.pubkyFromKeypair(keypair),
-          originalSigninError: String(originalError),
-          operation: 'republishConfiguredHomeserver',
-        },
-        statusCode: HttpStatusCode.UNAUTHORIZED,
-      });
-    }
   }
 
   static async startGrantFlow(request: GrantFlowRequest): Promise<TGenerateAuthUrlResult> {
@@ -900,6 +798,72 @@ export class HomeserverService {
   }
 
   /**
+   * Copies `session`'s 0.x tree to social v1 with `pubky-social-migrator`, which resolves with a
+   * report whatever the outcome (its own transport retries are the documented second retry
+   * policy, `docs/error-handling.md`). The session is passed explicitly: the gate runs before
+   * the session enters the auth store (ADR-0026), so nothing here reads the store. One run per
+   * account across tabs: a tab that finds the Web Lock taken waits for it (`onLockWait` fires
+   * once when another tab holds it) and then reads the flag the first tab wrote. Without
+   * `navigator.locks` the run is unlocked. The migrator loads a wasm, so it is imported only
+   * here and only when a run starts, which keeps its chunk out of the main bundle and out of
+   * the service-worker precache (`docs/pwa.md`).
+   */
+  static async migrateToSocialV1({
+    session,
+    signal,
+    onProgress,
+    onLockWait,
+  }: {
+    session: Session;
+    signal?: AbortSignal;
+    onProgress?: (event: ProgressEvent) => void;
+    onLockWait?: () => void;
+  }): Promise<MigrationReport> {
+    const engine = await Promise.all([
+      import('pubky-social-migrator'),
+      import('pubky-social-migrator/pubky-sdk'),
+    ]).catch((error: unknown) => {
+      // The chunk is fetched when a run starts: a load that fails is the network, not the engine, so the gate
+      // retries it on reconnect (ADR-0026). Constructed directly rather than via the Err factory: every Retry,
+      // focus and reconnect re-throws it, and the gate reports it once per account and page.
+      throw new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'Could not load the migration engine',
+        service: ErrorService.Homeserver,
+        operation: 'migrateToSocialV1',
+        cause: error,
+      });
+    });
+    const [{ runMigration }, { sdkPort }] = engine;
+    const locks = globalThis.navigator?.locks;
+    const lock: MigrationLock | undefined = locks
+      ? async (name, fn) => {
+          if (onLockWait) {
+            const { held = [] } = await locks.query().catch(() => ({ held: [] }));
+            if (held.some((entry) => entry.name === name)) onLockWait();
+          }
+          try {
+            return await locks.request(name, { signal }, fn);
+          } catch (error) {
+            // The wait itself was aborted: run unlocked (`null` would mean "another tab holds
+            // it"), the engine stops at once with `ABORTED` and nothing is written.
+            if (signal?.aborted) return await fn({});
+            throw error;
+          }
+        }
+      : undefined;
+    return await runMigration({
+      owner: session.info.publicKey.z32(),
+      port: sdkPort(session),
+      caps: session.info.capabilities,
+      lock,
+      signal,
+      onProgress,
+    });
+  }
+
+  /**
    * Deletes a file from the homeserver.
    *
    * @param {string} url - Pubky URL of the file to delete.
@@ -976,9 +940,15 @@ export class HomeserverService {
   /**
    * Read an owned resource with its server modification time. Only a 404 means absence;
    * missing authentication, insufficient permissions and transport failures reject.
+   *
+   * `session` reads through a session that is not (yet) in the auth store: the social
+   * migration gate checks the done flag before the session enters the store (ADR-0026).
+   * Without it the active session resolves the owned path as every other read does.
    */
-  static async getBytesIfExists(url: string): Promise<THomeserverBytesResult | null> {
-    const owned = this.resolveOwnedSessionPath(url);
+  static async getBytesIfExists(url: string, session?: Session): Promise<THomeserverBytesResult | null> {
+    const owned = session
+      ? resolveOwnedSessionPath({ url, session, allowedPrefixes: STORAGE_PATH_PREFIXES })
+      : this.resolveOwnedSessionPath(url);
     if (!owned) {
       throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Reading owned storage requires a session for the resource owner.', {
         service: ErrorService.Homeserver,
@@ -1021,6 +991,25 @@ export class HomeserverService {
       return await parseResponseOrUndefined<T>({ response, operation: 'getFreshJson', url });
     } catch (error) {
       throw toAppError(error, ErrorService.Homeserver, 'getFreshJson');
+    }
+  }
+
+  /**
+   * Bytes of a public resource read past the browser HTTP cache, for a read-modify-write (the
+   * head version of a post, a profile edit) where a heuristically fresh cached copy would undo
+   * another device's write (see `getFreshJson`). Rejects a missing resource and a failed HTTP
+   * response like `getBytes`. Public only: the raw fetch carries no session, so an owned `/priv/`
+   * path answers 401; read those through `request` (GET) or `getBytesIfExists`.
+   *
+   * @param url - Pubky URL to read.
+   */
+  static async getFreshBytes(url: string): Promise<Uint8Array> {
+    try {
+      const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      await assertOk({ response, url, operation: 'getFreshBytes' });
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      throw toAppError(error, ErrorService.Homeserver, 'getFreshBytes');
     }
   }
 
@@ -1103,11 +1092,30 @@ export class HomeserverService {
    * because SDK 0.17.1's `subscribe()` takes no `AbortSignal` and its WASM transport has no timeout: a request
    * waiting for response headers could not be ended. Aborting `signal` ends the request in every phase. An
    * aborted subscribe resolves to a closed stream, so the caller never has to win a race.
+   *
+   * Public paths only. The request is anonymous, so a `/priv/` path would need a session, and in `@synonymdev/pubky`
+   * a session-bound stream holds the shared session Web Lock until its response headers reach the SDK, with no
+   * timeout: behind anything that buffers event streams the SDK's exclusive bearer refresh after any 401 waits for
+   * as long as the headers are withheld, and every session request queues behind it (pubky/pubky-homeserver#798,
+   * ADR-0014).
    */
   static async subscribeUserEventStream(
     params: THomeserverUserEventStreamParams,
   ): Promise<ReadableStream<THomeserverUserEvent>> {
     const { userZ32, cursor, paths, signal } = params;
+    const privatePaths = paths.filter((path) => path.startsWith(PRIVATE_STORAGE_PREFIX));
+    if (privatePaths.length > 0) {
+      throw Err.client(
+        ClientErrorCode.BAD_REQUEST,
+        'A private event stream would hold the SDK session lock for as long as its response headers are outstanding and stall every bearer refresh; poll instead (ADR-0014).',
+        {
+          service: ErrorService.Homeserver,
+          // Not the stream-connect operation: the Sentry drop rule for routine reconnects must not hide this.
+          operation: 'subscribeUserEventStreamPrivatePath',
+          context: { paths: privatePaths },
+        },
+      );
+    }
     try {
       const pubkySdk = this.getPubkySdk();
       const homeserver = await pubkySdk.getHomeserverOf(PublicKey.from(userZ32));

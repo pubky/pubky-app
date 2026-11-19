@@ -89,10 +89,7 @@ export class LocalUserService {
    */
   static async upsertCounts(params: TReadProfileParams, userCounts: NexusUserCounts): Promise<void> {
     // Use proper upsert (put) to create the record if it doesn't exist
-    await UserCountsModel.upsert({
-      id: params.userId,
-      ...userCounts,
-    });
+    await UserCountsModel.upsert(UserCountsModel.toSchema([params.userId, userCounts]));
   }
 
   /**

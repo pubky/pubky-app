@@ -62,7 +62,7 @@ describe('generateMetadata (collection route)', () => {
   it('returns empty metadata for a non-collection post', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hi' }));
+      .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: 'hi' }));
 
     const metadata = await generateMetadata({
       params: Promise.resolve({ userId: AUTHOR_PUBKY, postId: POST_ID }),

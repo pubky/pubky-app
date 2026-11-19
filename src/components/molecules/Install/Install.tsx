@@ -1,124 +1,159 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { AppWindow, ArrowRight, Loader2 } from 'lucide-react';
-import { ONBOARDING_ROUTES } from '@/app/routes';
-import { Button } from '@/atoms/Button/Button';
+import { Loader2 } from 'lucide-react';
+import { getOnboardingScanRoute, type OnboardingKeychain } from '@/app/routes';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getPubkyProtocolLink, getPubkyRingLink } from '@/config/externalLinks';
-import { cn } from '@/libs/utils/utils';
+import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
+import { getDeployEnv } from '@/config/network';
+import { Bitkit, PubkyIcon } from '@/icons';
+import { isIosDevice } from '@/libs/pwa/platform';
 import { DialogDownloadPubkyRing } from '@/organisms/DialogDownloadPubkyRing/DialogDownloadPubkyRing';
-import { ContentCard } from '../Content/Content';
 import { PageTitle } from '../Page/Page';
-import { PopoverTradeoffs } from '../PopoverTradeoffs/PopoverTradeoffs';
 
-export const InstallCard = () => {
-  return (
-    <ContentCard
-      image={{
-        src: '/images/keyring.webp',
-        alt: 'Keyring',
-        width: 192,
-        height: 192,
-      }}
-    >
-      <Container className="gap-3">
-        <Container className="flex-col items-center sm:items-start">
-          <Image
-            src="/images/logo-pubky-ring.svg"
-            alt="Pubky Ring"
-            className="w-[137px] sm:w-auto"
-            width={220}
-            height={48}
-          />
-        </Container>
-        <Typography className="text-base font-medium text-secondary-foreground opacity-80">
-          {'Download and install the mobile app. Then continue to the next step.'}
-        </Typography>
-      </Container>
-      <StoreButtons />
-    </ContentCard>
-  );
-};
-export const InstallFooter = () => {
-  return (
-    <FooterLinks className="py-6">
-      {'Use '}
-      <Link href={getPubkyRingLink()} target="_blank">
-        {'Pubky Ring'}
-      </Link>
-      {' or any other '}
-      <Link href={getPubkyProtocolLink()} target="_blank">
-        {'Pubky'}
-      </Link>
-      {'-powered keychain, or create your keys in the browser (less secure).'}
-    </FooterLinks>
-  );
-};
+const noopSubscribe = () => () => {};
+const getServerIsIos = () => false;
+
 export const InstallHeader = () => {
   return (
     <PageHeader>
       <PageTitle size="large">
-        {'Install '}
-        <br className="block sm:hidden" /> <span className="text-brand">{'Pubky Ring.'}</span>
+        {'Pick your '}
+        <span className="block text-brand md:inline">{'keychain.'}</span>
       </PageTitle>
-      <PageSubtitle>{'Pubky Ring is a keychain for your identity keys in the Pubky ecosystem.'}</PageSubtitle>
+      <PageSubtitle>{'Install a keychain for your identity keys.'}</PageSubtitle>
     </PageHeader>
   );
 };
-export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
-  const router = useRouter();
-  const [loadingCreate, setLoadingCreate] = useState(false);
-  const [loadingContinue, setLoadingContinue] = useState(false);
-  const handleCreate = () => {
-    // Reset any existing keypair to ensure a fresh one is generated
-    setLoadingCreate(true);
-    router.push(ONBOARDING_ROUTES.PUBKY);
-  };
-  const handleContinue = () => {
-    setLoadingContinue(true);
-    router.push(ONBOARDING_ROUTES.SCAN);
-  };
+
+const BitkitStoreButtons = () => (
+  <>
+    <Link href={BITKIT_APP_STORE_URL} target="_blank">
+      <Image src="/images/badge-apple.webp" alt="Download Bitkit on the App Store" width={120} height={40} />
+    </Link>
+    <Link href={BITKIT_PLAY_STORE_URL} target="_blank">
+      <Image src="/images/badge-android.webp" alt="Get Bitkit on Google Play" width={135} height={40} />
+    </Link>
+  </>
+);
+
+const KEYCHAINS = {
+  ring: {
+    buttonId: 'continue-with-pubky-ring-btn',
+    label: 'Continue with Pubky Ring',
+    description: 'Pubky Ring is a mobile keychain that enables you to securely authorize web services and apps.',
+    logo: (
+      <Image
+        src="/images/logo-pubky-ring.svg"
+        alt="Pubky Ring"
+        width={184}
+        height={40}
+        className="h-10 w-auto self-start"
+      />
+    ),
+    icon: <PubkyIcon className="size-4 text-secondary-foreground [&_path]:fill-current" aria-hidden="true" />,
+    storeButtons: (
+      <>
+        <DialogDownloadPubkyRing store="apple" />
+        <DialogDownloadPubkyRing store="android" />
+      </>
+    ),
+  },
+  bitkit: {
+    buttonId: 'continue-with-bitkit-btn',
+    label: 'Continue with Bitkit',
+    description:
+      'Bitkit is a simple, yet powerful self‑custodial wallet, that also functions as keychain for the Pubky ecosystem.',
+    logo: (
+      <Image src="/images/bitkit-logo.svg" alt="Bitkit" width={138} height={40} className="h-10 w-auto self-start" />
+    ),
+    icon: <Bitkit className="size-4 translate-y-px" aria-hidden="true" />,
+    storeButtons: <BitkitStoreButtons />,
+  },
+} satisfies Record<OnboardingKeychain, unknown>;
+
+/**
+ * The store badges install the production apps. On staging the Bitkit sign-up tap opens Bitkit's
+ * regtest build (`to.bitkit.dev`, see `toAndroidAuthIntentUrl`), which no public store carries, so
+ * staging shows no Bitkit badges rather than send testers to an app that cannot take the request.
+ */
+const showsStoreButtons = (keychain: OnboardingKeychain): boolean =>
+  keychain === 'ring' || getDeployEnv() === 'production';
+
+interface KeychainCardProps {
+  keychain: OnboardingKeychain;
+  pendingKeychain: OnboardingKeychain | null;
+  onContinue: (keychain: OnboardingKeychain) => void;
+}
+
+const KeychainCard = ({ keychain, pendingKeychain, onContinue }: KeychainCardProps) => {
+  const { buttonId, label, description, logo, icon, storeButtons } = KEYCHAINS[keychain];
   return (
-    <Container className={cn('flex-col-reverse gap-3 md:flex-row lg:gap-6', props.className)}>
-      <Container className="flex-row items-center gap-1">
-        <Button
-          id="create-keys-in-browser-btn"
-          variant="outline"
-          className="flex-1 rounded-full md:flex-none"
-          onClick={handleCreate}
-          disabled={loadingCreate || loadingContinue}
-        >
-          {loadingCreate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AppWindow className="mr-2 h-4 w-4" />}
-          {'Create keys in browser'}
-        </Button>
-        <PopoverTradeoffs />
-      </Container>
+    <Container className="flex-1 gap-6 rounded-md bg-card p-6 lg:p-12" data-testid={`install-keychain-${keychain}`}>
+      {logo}
+      <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground opacity-80">
+        {description}
+      </Typography>
+      {showsStoreButtons(keychain) && (
+        <Container className="flex-row flex-wrap items-center gap-4">{storeButtons}</Container>
+      )}
       <Button
-        id="continue-with-pubky-ring-btn"
+        id={buttonId}
+        type="button"
+        variant={ButtonVariant.SECONDARY}
         size="lg"
-        className="rounded-full"
-        onClick={handleContinue}
-        disabled={loadingCreate || loadingContinue}
+        className="h-15 w-full border-0 leading-5"
+        onClick={() => onContinue(keychain)}
+        disabled={pendingKeychain !== null}
       >
-        {loadingContinue ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-        {'Continue with Pubky Ring'}
+        {pendingKeychain === keychain ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : icon}
+        {label}
       </Button>
     </Container>
   );
 };
-export function StoreButtons({ className }: React.HTMLAttributes<HTMLDivElement>) {
+
+/**
+ * The keychains a new pubky can be created with. Bitkit is left out on iOS: Bitkit iOS opens only
+ * sign-in and setup links, so the phone's tap-to-authorize could not hand it the sign-up request.
+ */
+export const InstallKeychains = () => {
+  const router = useRouter();
+  const isIos = useSyncExternalStore(noopSubscribe, isIosDevice, getServerIsIos);
+  const [pendingKeychain, setPendingKeychain] = useState<OnboardingKeychain | null>(null);
+  const keychains: OnboardingKeychain[] = isIos ? ['ring'] : ['ring', 'bitkit'];
+
+  const handleContinue = (keychain: OnboardingKeychain) => {
+    setPendingKeychain(keychain);
+    router.push(getOnboardingScanRoute(keychain));
+  };
+
   return (
-    <Container className={cn('flex-row justify-around gap-4 sm:justify-start', className)}>
-      <DialogDownloadPubkyRing store="apple" />
-      <DialogDownloadPubkyRing store="android" />
+    <Container className="gap-6 lg:flex-row lg:items-stretch" data-testid="install-keychains">
+      {keychains.map((keychain) => (
+        <KeychainCard
+          key={keychain}
+          keychain={keychain}
+          pendingKeychain={pendingKeychain}
+          onContinue={handleContinue}
+        />
+      ))}
+      <Container className="hidden flex-1 items-center justify-center rounded-md bg-card p-12 lg:flex">
+        <Image
+          src="/images/keyring.webp"
+          alt="Lime Pubky keyring representing keys you control"
+          width={192}
+          height={192}
+          className="size-48"
+        />
+      </Container>
     </Container>
   );
-}
+};

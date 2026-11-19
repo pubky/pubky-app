@@ -14,14 +14,8 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 import { HeaderHome } from '../HeaderHome/HeaderHome';
 import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
-import {
-  HeaderContainer,
-  HeaderExploreNavigationButtons,
-  HeaderNavigationButtons,
-  HeaderOnboarding,
-  HeaderSocialLinks,
-  HeaderTitle,
-} from './Header';
+import { HeaderExploreNavigationButtons, HeaderNavigationButtons, HeaderOnboarding, HeaderTitle } from './Header';
+import { HeaderContainer, HeaderSocialLinks } from './HeaderPublicContent';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({

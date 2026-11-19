@@ -38,8 +38,7 @@ export function Human() {
   }, [reset]);
 
   // After payment/SMS verification, save the invite code and redirect to install page.
-  // Signup to the homeserver happens later, after the user creates their keypair
-  // (browser keys on /onboarding/pubky or Pubky Ring on /onboarding/scan).
+  // Signup to the homeserver happens later, when Pubky Ring creates the keypair on /onboarding/scan.
   function onSuccess(inviteCode: string) {
     dismissVerificationToast();
     setInviteCode(inviteCode);

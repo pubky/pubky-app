@@ -16,17 +16,24 @@ const recordOf = (value: unknown): Record<string, unknown> =>
 const isFrom = (notificationBody: Record<string, unknown>, actorId?: string) =>
   !actorId || Object.entries(notificationBody).some(([field, value]) => field.endsWith('_by') && value === actorId);
 
+const tagLabels = (body: unknown) => arrayOf(body).map((tag) => recordOf(tag)['label']);
+
 const isIndexed = (expectation: NexusExpectation, { status, body }: NexusAnswer): boolean => {
+  if (expectation.kind === 'gone') return status === 404;
   if (status !== 200) return false;
   switch (expectation.kind) {
     case 'found':
       return true;
+    case 'content':
+      return String(recordOf(recordOf(body)['details'])['content']).includes(expectation.text);
     case 'includes':
       return arrayOf(body).includes(expectation.value);
-    case 'tags': {
-      const indexed = arrayOf(body).map((tag) => recordOf(tag)['label']);
-      return expectation.labels.every((label) => indexed.includes(label));
-    }
+    case 'excludes':
+      return !arrayOf(body).includes(expectation.value);
+    case 'tags':
+      return expectation.labels.every((label) => tagLabels(body).includes(label));
+    case 'noTag':
+      return !tagLabels(body).includes(expectation.label);
     case 'notifications':
       return (
         arrayOf(body).filter((notification) => {
@@ -34,8 +41,6 @@ const isIndexed = (expectation: NexusExpectation, { status, body }: NexusAnswer)
           return notificationBody['type'] === expectation.type && isFrom(notificationBody, expectation.actorId);
         }).length >= expectation.count
       );
-    case 'bookmark':
-      return Boolean(recordOf(body)['bookmark']);
     case 'lock':
       return Boolean(recordOf(body)['lock']);
     case 'streamKeys': {

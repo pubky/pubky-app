@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Check, Lock } from 'lucide-react';
-import { isPostRoute, matchPostRoute } from '@/app/routes';
+import { isPostRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
@@ -20,9 +19,9 @@ import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
+import { LockAccessLabel } from '@/molecules/LockAccessLabel/LockAccessLabel';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNotice';
-import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { LocksPermissionNotice } from '@/organisms/LocksPermissionNotice/LocksPermissionNotice';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
@@ -30,6 +29,7 @@ import type { TUnlockedContent } from '@/services/locks/locks.types';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostBody } from '../PostBody/PostBody';
 import { PostContentBaseSkeleton } from '../PostContentBase/PostContentBase.skeleton';
+import { useFocusedLock } from './FocusedLockContext';
 
 interface LockedPostContentProps {
   content: string;
@@ -58,20 +58,16 @@ export function LockedPostContent({
   textClassName,
 }: LockedPostContentProps) {
   const [isPayOpen, setIsPayOpen] = useState(false);
-  const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
-  const isNestedPostPreview = useIsNestedPostPreview();
+  const { pubky: authorId } = parseCompositeId(postId);
   const pathname = usePathname();
-  const routeParams = matchPostRoute(pathname);
-  // Only the post the route names opens in full: the same page renders embeds and thread parents
-  // through this component, and the reply/repost dialogs preview the focused post itself — which
-  // matches the route ids, so the nesting flag is what keeps those compact.
-  const isFocusedPostPage =
-    routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
-  // Fixed at mount: the feed stays mounted, hidden, under the post modal, whose route names this post,
-  // and must not read the full article there (#2686). The post page and the modal mount their own copy.
-  const [preview] = useState(!isFocusedPostPage);
   const lockContent = LocksController.getLockContent(content);
-  const { lockFile, price, isLoading: isLockFileLoading } = useLockFile(lock);
+  // The post a post page shows has its lock read by the page, which keeps the content once it swaps
+  // this card for the article layout. Anywhere else this card reads it, as a preview: an article loads
+  // its cover alone (#2686).
+  const focusedLock = useFocusedLock(postId);
+  const ownLockFile = useLockFile(focusedLock ? null : lock);
+  const { lockFile, price, isLoading: isLockFileLoading } = focusedLock?.lockFile ?? ownLockFile;
+  const ownUnlocked = useUnlockedContent({ lock: focusedLock ? null : lock, lockFile, postId, preview: true });
   const {
     unlockedPost,
     applyUnlockedContent,
@@ -81,7 +77,7 @@ export function LockedPostContent({
     isOwnLock,
     isResolvingOwn,
     isResolvingReplica,
-  } = useUnlockedContent({ lock, lockFile, postId, preview });
+  } = focusedLock?.unlocked ?? ownUnlocked;
   const { waitForAuth, isAuthenticated } = useRequireAuth();
   // A session from before the app asked for `/priv` cannot read whether this reader already
   // unlocked, so ask for the permission first and keep the card inert: a second unlock would
@@ -190,20 +186,7 @@ export function LockedPostContent({
           )}
           <div className="flex w-full flex-col gap-4" data-cy="locked-post-unlocked-content">
             <div className="border-t border-border" />
-            {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
-            <div className="flex items-center gap-1.5 text-brand">
-              {isOwnLock ? (
-                <Lock className="size-4 shrink-0" aria-hidden />
-              ) : (
-                <Check className="size-4 shrink-0" aria-hidden />
-              )}
-              <span
-                className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
-                data-cy="locked-post-access-label"
-              >
-                {isOwnLock ? 'My locked content' : 'Unlocked'}
-              </span>
-            </div>
+            <LockAccessLabel isOwnLock={isOwnLock} />
             {!unlockedPost ? (
               <PostContentBaseSkeleton />
             ) : unlockedPost.kind === 'long' && isArticleContent(unlockedPost.content) ? (
@@ -211,7 +194,6 @@ export function LockedPostContent({
                 content={unlockedPost.content}
                 attachments={null}
                 localAttachments={media}
-                variant={isFocusedPostPage ? 'full' : 'preview'}
                 pendingAttachments={pendingAttachments}
               />
             ) : (

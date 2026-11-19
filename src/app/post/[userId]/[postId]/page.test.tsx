@@ -86,15 +86,15 @@ describe('generateMetadata', () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ id: userId, name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hello world' }));
+      .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: 'hello world' }));
 
     const metadata = await generateMetadata({ params: Promise.resolve({ userId, postId }) });
 
     expect(metadata.title).toBe('Alice on Pubky');
     expect(metadata.alternates?.canonical).toBe(`/post/${userId}/${postId}`);
     expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
-      `https://nexus.staging.pubky.app/v0/user/${userId}/details`,
-      `https://nexus.staging.pubky.app/v0/post/${userId}/${postId}/details`,
+      `https://nexus.staging.pubky.app/v1/user/${userId}/details`,
+      `https://nexus.staging.pubky.app/v1/post/${userId}/${postId}/details`,
     ]);
   });
 
@@ -117,7 +117,7 @@ describe('generateMetadata', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hello world' }));
+      .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: 'hello world' }));
 
     const metadata = await generateMetadata({
       params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
@@ -135,7 +135,7 @@ describe('generateMetadata', () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: `gm pk:${mentioned} and pubky${mentioned}` }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: `gm pk:${mentioned} and pubky${mentioned}` }))
       .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
 
     const metadata = await generateMetadata({
@@ -144,7 +144,7 @@ describe('generateMetadata', () => {
 
     expect(metadata.description).toBe('gm @Bob and @Bob');
     expect(metadata.openGraph?.description).toBe('gm @Bob and @Bob');
-    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v0/user/${mentioned}/details`);
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v1/user/${mentioned}/details`);
   });
 
   it('keeps an article title verbatim without looking up mentions', async () => {
@@ -153,7 +153,7 @@ describe('generateMetadata', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
       .mockResolvedValueOnce(
-        jsonResponse({ kind: 'long', content: JSON.stringify({ title: `About pk:${mentioned}`, body: 'Body' }) }),
+        jsonResponse({ kind: 'article', content: JSON.stringify({ title: `About pk:${mentioned}`, body: 'Body' }) }),
       );
 
     const metadata = await generateMetadata({
@@ -164,11 +164,11 @@ describe('generateMetadata', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('resolves mentions in a long-kind post whose content is not an article, like the card does', async () => {
+  it('resolves mentions in an article-kind post whose content is not an article, like the card does', async () => {
     const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'long', content: `gm pk:${mentioned} welcome` }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'article', content: `gm pk:${mentioned} welcome` }))
       .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
 
     const metadata = await generateMetadata({
@@ -182,7 +182,7 @@ describe('generateMetadata', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: '' }));
+      .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: '' }));
 
     const metadata = await generateMetadata({
       params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
@@ -229,7 +229,7 @@ describe('PostPage (collection redirect)', () => {
   it('renders the post (no redirect) for a non-collection post', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hi' }));
+      .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: 'hi' }));
 
     const element = await PostPage({
       params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
@@ -274,7 +274,7 @@ describe('PostPage (cover preload)', () => {
 
   it('preloads both cover variants, one per media query, so the browser starts the one it renders', async () => {
     await renderPost({
-      kind: 'long',
+      kind: 'article',
       content: JSON.stringify({ title: 'How to Think About Names', body: 'My name is Jane Whitlock.' }),
       attachments: [FILE_URI],
     });
@@ -298,7 +298,7 @@ describe('PostPage (cover preload)', () => {
 
   it('emits no image preload when slot 0 is an inline image instead of the cover', async () => {
     await renderPost({
-      kind: 'long',
+      kind: 'article',
       content: JSON.stringify({ title: 'Article', body: 'Intro\n\n![diagram](attachment:0)' }),
       attachments: [FILE_URI],
     });
@@ -307,7 +307,7 @@ describe('PostPage (cover preload)', () => {
   });
 
   it('emits no image preload for a post that is not an article', async () => {
-    await renderPost({ kind: 'short', content: 'gm', attachments: [FILE_URI] });
+    await renderPost({ kind: 'note', content: 'gm', attachments: [FILE_URI] });
 
     expect(document.querySelector('link[rel="preload"]')).toBeNull();
   });

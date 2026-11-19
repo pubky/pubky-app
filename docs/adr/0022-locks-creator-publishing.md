@@ -6,12 +6,21 @@ Accepted — 2026-07-13
 
 Covers the creator side of Locks Phase 1. The reader/unlock side is a separate, upcoming decision.
 
+**Social v1 note (ADR-0027, 2026-10-30):** the paths and type names below are the 0.x ones this decision was taken
+against. Since the `pubky-social-specs` port the announcement is an ordinary versioned v1 post
+(`/pub/social/v1/posts/<id>/<editId>.json`, its `lock` field on the v1 `Post`), its URI is built with `buildUri`, an
+edit spreads the stored head so the `lock` survives, and the guarded primary is a v1 `Post` encoded by kind
+(`GuardedPostBuilder.toPrimary`; a locked article keeps its cover in slot 0 with `cover_image: null`) that readers parse
+before falling back to the 0.x shape (`GuardedContentParser.parsePost`). The Lock Server paths (`/pub/app.locks/`,
+`/priv/app.locks/content/`) and the reader directories under `/priv/social/` are unchanged. Current detail:
+`docs/locks.md`.
+
 **Interim note (#2758, 2026-10-08):** until #2283 lands, Enable Locks requires the Lock Server session to belong
 to the account signed in to pubky.app. The two-identities decision below is unchanged; the check is
 temporary.
 
 **Amendment (#2433, 2026-10-29):** the announcement envelope gains an optional `content_kind`, the locked
-post's kind in its pubky-app-specs v1.0.0-rc.1 name (`note | article | image | video | link | file`), mapped from the
+post's kind in its pubky-social-specs 1.0.0-rc.1 name (`note | article | image | video | link | file`), mapped from the
 internal kind by an explicit list that never follows a rename of it, so the card and the unlock dialog show
 what is locked before anyone unlocks it, with the content filter's icons. It stays app-owned and leniently
 parsed: a missing or unknown value shows as generic locked content and never fails the parse, and an edit

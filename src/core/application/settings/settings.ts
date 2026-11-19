@@ -1,5 +1,5 @@
-import { hasHttpStatus } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { parseJsonBytesOrUndefined } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
@@ -11,10 +11,13 @@ import type { SettingsState } from '@/stores/settings/settings.types';
  * Settings application service.
  *
  * Handles synchronization of user settings between the local store and homeserver.
- * Settings are stored at: pubky://{pubky}/pub/pubky.app/settings.json
+ * Settings are stored at: pubky://{pubky}/priv/app.pubky/v1/settings.json. An account whose only
+ * settings are the 0.x ones (`/pub/pubky.app/settings.json`, which the migrator does not copy)
+ * reads those until its first write to the v1 file; the first `initializeSettings` after the
+ * migration gate writes it, and the public 0.x file is left in place (D15).
  */
 export class SettingsApplication {
-  private static pendingCommits = new Map<Pubky, Promise<void>>();
+  private static pendingCommits = new Map<Pubky, Promise<unknown>>();
 
   private constructor() {}
 
@@ -67,14 +70,14 @@ export class SettingsApplication {
   }
 
   /** Serializes homeserver writes per account so concurrent full-document replaces cannot interleave. */
-  private static async enqueueWrite(pubky: Pubky, write: () => Promise<void>): Promise<void> {
+  private static async enqueueWrite<T>(pubky: Pubky, write: () => Promise<T>): Promise<T> {
     const previousCommit = this.pendingCommits.get(pubky) ?? Promise.resolve();
     const pendingCommit = previousCommit.catch(() => {}).then(write);
 
     this.pendingCommits.set(pubky, pendingCommit);
 
     try {
-      await pendingCommit;
+      return await pendingCommit;
     } finally {
       if (this.pendingCommits.get(pubky) === pendingCommit) {
         this.pendingCommits.delete(pubky);
@@ -82,8 +85,33 @@ export class SettingsApplication {
     }
   }
 
-  private static async push(settings: SettingsState, pubky: Pubky, fence: THomeserverWriteFence): Promise<void> {
+  /**
+   * Writes `settings` to the v1 file. With `ifAbsent` the v1 file is read again right before the
+   * PUT, and nothing is written when it holds settings: a copy of the 0.x settings (or of the local
+   * ones when there was no file) must not replace a v1 file another client wrote after this tab read
+   * it. A v1 file without a JSON document reads as absent here as in `fetchRemote`, so it is still
+   * replaced. The homeserver has no conditional PUT, so one round trip between the read and the PUT
+   * remains.
+   *
+   * @returns false when `ifAbsent` found v1 settings and nothing was written
+   */
+  private static async push(
+    settings: SettingsState,
+    pubky: Pubky,
+    fence: THomeserverWriteFence,
+    { ifAbsent = false }: { ifAbsent?: boolean } = {},
+  ): Promise<boolean> {
     const { settings: settingsJson, meta } = SettingsNormalizer.to(settings, pubky);
+
+    if (ifAbsent) {
+      fence.assertCurrent();
+      if (await this.fetchSettingsAt(meta.url)) {
+        Logger.info('[Settings] Another client wrote the settings file meanwhile, comparing with it', {
+          url: meta.url,
+        });
+        return false;
+      }
+    }
 
     Logger.info('[Settings] Pushing to homeserver', { url: meta.url, settings: settingsJson });
 
@@ -95,44 +123,52 @@ export class SettingsApplication {
     });
 
     Logger.info('[Settings] Push complete');
+    return true;
   }
 
   /**
-   * Fetches settings from the homeserver.
+   * Fetches settings from the homeserver: the v1 file, else the 0.x one.
    * Returns null if settings don't exist on homeserver (404).
    *
    * @param pubky, The user's public key
    * @returns The settings state from homeserver, or null if not found
    */
   static async fetchFromHomeserver(pubky: Pubky): Promise<SettingsState | null> {
-    const url = SettingsNormalizer.buildUrl(pubky);
+    return (await this.fetchRemote(pubky))?.settings ?? null;
+  }
 
+  /**
+   * The stored settings and where they were read. The 0.x file is read only while the v1 one is
+   * absent, so once the v1 file exists a newer 0.x write (a stale 0.x tab) is never adopted.
+   */
+  private static async fetchRemote(pubky: Pubky): Promise<{ settings: SettingsState; legacy: boolean } | null> {
+    const settings = await this.fetchSettingsAt(SettingsNormalizer.buildUrl(pubky));
+    if (settings) return { settings, legacy: false };
+
+    const legacySettings = await this.fetchSettingsAt(SettingsNormalizer.buildLegacyUrl(pubky));
+    return legacySettings ? { settings: legacySettings, legacy: true } : null;
+  }
+
+  private static async fetchSettingsAt(url: string): Promise<SettingsState | null> {
     Logger.info('[Settings] Pulling from homeserver', { url });
 
-    try {
-      // A new account has no settings.json yet: the 404 resolves to null instead of an error.
-      const settingsJson = await HomeserverService.request<SettingsJson | null>({
-        method: HttpMethod.GET,
-        url,
-        notFoundAsNull: true,
-      });
-
-      if (!settingsJson) {
-        Logger.info('[Settings] Pull complete, no settings found');
-        return null;
-      }
-
-      const settings = SettingsNormalizer.from(settingsJson);
-      Logger.info('[Settings] Pull complete', { settings });
-      return settings;
-    } catch (error) {
-      // Handle 404, settings don't exist yet
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-        Logger.info('[Settings] Pull complete, settings file not found (404)');
-        return null;
-      }
-      throw error;
+    // A 404 is the usual answer until the first write (a new or just-migrated account), so it is
+    // read as absent without reporting an error; any other failure still rejects.
+    const stored = await HomeserverService.getBytesIfExists(url);
+    if (!stored) {
+      Logger.info('[Settings] Pull complete, settings file not found (404)');
+      return null;
     }
+
+    const settingsJson = parseJsonBytesOrUndefined<SettingsJson>(stored.bytes);
+    if (!settingsJson) {
+      Logger.warn('[Settings] Pull complete, the settings file holds no JSON document', { url });
+      return null;
+    }
+
+    const settings = SettingsNormalizer.from(settingsJson);
+    Logger.info('[Settings] Pull complete', { settings });
+    return settings;
   }
 
   /**
@@ -141,6 +177,11 @@ export class SettingsApplication {
    * Uses version and timestamp for conflict resolution (newer wins).
    * A push the homeserver refuses with a retried status starts over from the read: the remote
    * document may have changed after the comparison and may now be the newer one.
+   * Whichever side wins is written to the v1 file when the remote came from the 0.x file, so
+   * the first sync after the migration gate copies the settings into the app's namespace. That
+   * copy, like the first write when no file exists, checks the v1 file is still absent right
+   * before it writes; when another client wrote it meanwhile, the local settings are compared
+   * with that file instead (once more at most) and nothing is copied over it.
    *
    * @param pubky, The user's public key
    * @returns The settings the store should adopt: remote when newer, or local enriched with
@@ -149,7 +190,8 @@ export class SettingsApplication {
    */
   static async initializeSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
     Logger.info('[Settings] Initializing settings sync');
-    const fence = HomeserverService.createWriteFence();
+    // Guarded from the first pass: the reads come before the first write.
+    const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
     return await retryHomeserverWriteAfterReread(fence, () => this.reconcileWithRemote(pubky, localSettings, fence));
   }
 
@@ -157,17 +199,26 @@ export class SettingsApplication {
     pubky: Pubky,
     localSettings: SettingsState,
     fence: THomeserverWriteFence,
+    recheck = false,
   ): Promise<SettingsState | null> {
-    const remoteSettings = await this.fetchFromHomeserver(pubky);
+    const remote = await this.fetchRemote(pubky);
+    // Writes `settings` and resolves `result`. When `ifAbsent` finds v1 settings another client wrote
+    // after the read above, compares the local settings with them instead, once.
+    const pushOrReconcile = async (settings: SettingsState, ifAbsent: boolean, result: SettingsState | null) => {
+      if (await this.enqueueWrite(pubky, () => this.push(settings, pubky, fence, { ifAbsent }))) return result;
+      if (!recheck) return await this.reconcileWithRemote(pubky, localSettings, fence, true);
+      Logger.warn('[Settings] The settings file read as absent, then present before the write, twice; writing nothing');
+      return null;
+    };
 
-    if (!remoteSettings) {
+    if (!remote) {
       Logger.info('[Settings] No remote settings, pushing local to homeserver');
       // Stamp a real timestamp if updatedAt is 0 (initial default), so homeserver has a valid timestamp for future conflict resolution
       const settingsWithTimestamp = { ...localSettings, updatedAt: localSettings.updatedAt || Date.now() };
-      await this.enqueueWrite(pubky, () => this.push(settingsWithTimestamp, pubky, fence));
-      return settingsWithTimestamp;
+      return await pushOrReconcile(settingsWithTimestamp, true, settingsWithTimestamp);
     }
 
+    const remoteSettings = remote.settings;
     // Check if remote settings are newer (higher version or same version with newer timestamp)
     const isRemoteNewer =
       remoteSettings.version > localSettings.version ||
@@ -181,13 +232,22 @@ export class SettingsApplication {
 
     if (isRemoteNewer) {
       Logger.info('[Settings] Using remote settings (newer)');
+      if (remote.legacy) {
+        // The 0.x file is the only copy: write it to the v1 file unless another client wrote that
+        // meanwhile. A retried status re-runs the read above, so such a file is adopted then too.
+        Logger.info('[Settings] Copying the 0.x settings to the app namespace');
+        return await pushOrReconcile(remoteSettings, true, remoteSettings);
+      }
       return remoteSettings;
     }
 
     Logger.info('[Settings] Local settings newer, pushing to homeserver');
     // The remote document was just read; reuse it instead of probing again inside commitUpdate.
     const settingsToPush = this.withRemoteModerationBot(localSettings, remoteSettings);
-    await this.enqueueWrite(pubky, () => this.push(settingsToPush, pubky, fence));
-    return settingsToPush === localSettings ? null : settingsToPush;
+    return await pushOrReconcile(
+      settingsToPush,
+      remote.legacy,
+      settingsToPush === localSettings ? null : settingsToPush,
+    );
   }
 }

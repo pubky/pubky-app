@@ -44,84 +44,8 @@ vi.mock('@/atoms/Input/Input', () => {
 });
 
 describe('WordSlot', () => {
-  describe('Editable Mode', () => {
-    const defaultEditableProps = {
-      mode: 'editable' as const,
-      index: 0,
-      word: 'test',
-      isError: false,
-      showError: false,
-      isRestoring: false,
-      onChange: vi.fn(),
-      onValidate: vi.fn(),
-    };
-
-    beforeEach(() => {
-      vi.clearAllMocks();
-    });
-
-    it('renders in editable mode with correct props', () => {
-      render(<WordSlot {...defaultEditableProps} />);
-
-      const badge = screen.getByTestId('badge');
-      const input = screen.getByTestId('input');
-
-      expect(badge).toBeInTheDocument();
-      expect(badge).toHaveTextContent('1'); // index + 1
-      expect(input).toBeInTheDocument();
-      expect(input).toHaveValue('test');
-      expect(input).toHaveAttribute('placeholder', 'word');
-    });
-
-    it('handles onChange events correctly', () => {
-      const mockOnChange = vi.fn();
-      render(<WordSlot {...defaultEditableProps} onChange={mockOnChange} />);
-
-      const input = screen.getByTestId('input');
-      fireEvent.change(input, { target: { value: 'NEW WORD ' } });
-
-      expect(mockOnChange).toHaveBeenCalledWith(0, 'new word');
-    });
-
-    it('handles onBlur events correctly', () => {
-      const mockOnValidate = vi.fn();
-      render(<WordSlot {...defaultEditableProps} onValidate={mockOnValidate} />);
-
-      const input = screen.getByTestId('input');
-      fireEvent.blur(input);
-
-      expect(mockOnValidate).toHaveBeenCalledWith(0, 'test');
-    });
-
-    it('applies error styling when isError and showError are true', () => {
-      render(<WordSlot {...defaultEditableProps} isError={true} showError={true} />);
-
-      const containers = screen.getAllByTestId('container');
-
-      // Check if the error class is applied (via className prop)
-      expect(containers.some((container) => container.className?.includes('border-red-500'))).toBe(true);
-    });
-
-    it('disables input when isRestoring is true', () => {
-      render(<WordSlot {...defaultEditableProps} isRestoring={true} />);
-
-      const input = screen.getByTestId('input');
-      expect(input).toBeDisabled();
-    });
-
-    it('does not apply error styling when showError is false', () => {
-      render(<WordSlot {...defaultEditableProps} isError={true} showError={false} />);
-
-      const containers = screen.getAllByTestId('container');
-
-      // Check that error styling is not applied
-      expect(containers.every((container) => !container.className?.includes('border-red-500'))).toBe(true);
-    });
-  });
-
   describe('Readonly Mode', () => {
     const defaultReadonlyProps = {
-      mode: 'readonly' as const,
       index: 1,
       word: 'example',
       isCorrect: false,
@@ -239,21 +163,12 @@ describe('WordSlot', () => {
   describe('Badge Numbering', () => {
     it('displays correct badge number for different indices', () => {
       const { rerender } = render(
-        <WordSlot
-          mode="editable"
-          index={5}
-          word="test"
-          isError={false}
-          showError={false}
-          isRestoring={false}
-          onChange={vi.fn()}
-          onValidate={vi.fn()}
-        />,
+        <WordSlot index={5} word="test" isCorrect={false} isError={false} onClear={vi.fn()} />,
       );
 
       expect(screen.getByTestId('badge')).toHaveTextContent('6'); // index + 1
 
-      rerender(<WordSlot mode="readonly" index={11} word="test" isCorrect={true} isError={false} onClear={vi.fn()} />);
+      rerender(<WordSlot index={11} word="test" isCorrect={true} isError={false} onClear={vi.fn()} />);
 
       expect(screen.getByTestId('badge')).toHaveTextContent('12'); // index + 1
     });

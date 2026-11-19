@@ -279,6 +279,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: createZustandLikeHook({
     profile: null,
     posts: {} as Record<string, never>,
+    articleCovers: {} as Record<string, never>,
     collections: {} as Record<string, never>,
   }),
 }));
@@ -761,6 +762,7 @@ vi.mock('@/hooks/useProfileConnections/useProfileConnections', async () => {
       return {
         connections,
         count: connections.length,
+        retainedCount: 0,
         isLoading: false,
         isLoadingMore: false,
         error: null as string | null,

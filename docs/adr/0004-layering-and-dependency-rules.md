@@ -26,3 +26,5 @@ Codify dependency boundaries: UI → controllers → pipes/application → servi
 - **ADR-0009: Application Layer Cross-Domain Orchestration** — Extends this ADR to allow Application-to-Application calls for cross-domain workflow orchestration while maintaining unidirectional flow principles.
 
 - **[ADR-0024: Grant-Only Authentication](0024-grant-authentication.md)** — Extends session-store reads to identify the active homeserver session that failed and to check Locks creator-account ownership at the IO boundary. Store writes remain in controllers.
+
+- **[ADR-0026: Social v1 Migration Gate](0026-social-v1-migration-gate.md)** — The one boundary where the session is not read from the store: the migration gate runs before the session enters it, so `HomeserverService.migrateToSocialV1` and `getBytesIfExists(url, session)` take the session explicitly. Reads only, still; the controller places the session afterwards.

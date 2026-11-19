@@ -1,0 +1,27 @@
+import { PaykitCreatorApplication } from '@/application/paykit-creator/paykit-creator';
+import { PaykitCreatorValidators } from '@/pipes/paykit-creator/paykit-creator.validators';
+import type { TPaykitCreatorControllerResult } from './paykit-creator.types';
+
+/**
+ * Entry point of the Paykit creator probe, called from the API route.
+ */
+export class PaykitCreatorController {
+  private constructor() {}
+
+  /**
+   * Asks Paykit over the network whether it already holds `creator`. The server-side service reuses a recent
+   * answer for the same creator and shares one request between concurrent callers.
+   *
+   * @param params.creator - Raw `creator` query value (may be null)
+   * @returns The answer, or a validation failure for a malformed query
+   * @throws AppError when Paykit cannot answer.
+   */
+  static async fetchCreatorHeld(params: { creator: string | null }): Promise<TPaykitCreatorControllerResult> {
+    const validation = PaykitCreatorValidators.validateSafe(params.creator);
+    if (!validation.ok) {
+      return { ok: false, message: validation.message, statusCode: validation.statusCode };
+    }
+    const held = await PaykitCreatorApplication.isCreatorHeld({ creator: validation.creator });
+    return { ok: true, held };
+  }
+}

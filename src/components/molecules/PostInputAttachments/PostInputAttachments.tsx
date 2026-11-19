@@ -10,7 +10,7 @@ import { Input } from '@/atoms/Input/Input';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
-import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
+import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config/attachmentMimeTypes';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { cn } from '@/libs/utils/utils';

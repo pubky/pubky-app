@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -12,14 +12,20 @@ import { Landing } from '@/templates/Public/Landing/Landing';
 import { LandingFinalSection } from '@/templates/Public/Landing/LandingFinalSection';
 import { LandingFreedomSection } from '@/templates/Public/Landing/LandingFreedomSection';
 import { HomeFooter } from '@/molecules/Home/Home';
+import { LandingBrokenSection } from '@/templates/Public/Landing/LandingBrokenSection';
+import { PublicLanding } from '@/organisms/AppShell/PublicLanding';
+import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 
 const mockAppleEnabled = vi.hoisted(() => vi.fn(() => false));
 beforeEach(() => mockAppleEnabled.mockReturnValue(false));
 
-// Preload images into cache to guarantee they render before snapshot.
-// This ensures the logo and Synonym/"a tether. company" brand mark <img>s are loaded up front,
-// preventing intermittent blank rendering in CI due to cold fetch racing initial paint.
-const LANDING_LOGO_URLS = ['/pubky-logo.svg', '/images/synonym-grey-logo.svg', '/images/a-tether-company.svg'];
+const HERO_ASSETS = [
+  '/pubky-logo.svg',
+  '/images/synonym-grey-logo.svg',
+  '/images/a-tether-company.svg',
+  '/images/bg-home.svg',
+];
+const DESKTOP_HERO_ASSETS = [...HERO_ASSETS, '/images/landing-video-poster.webp'];
 
 // Root layout mounts `<Header />` above every page. On `/` it renders
 // HeaderHome (social links + sign in) for guests — include it so the
@@ -51,27 +57,11 @@ vi.mock('next/navigation', () => {
   };
 });
 
-// Autoplaying `/pubky.mp4` would capture a non-deterministic frame. Keep the
-// layout slot (aspect-video card) as a static stand-in, but only from `md` up:
-// the real component returns null below it (`matchMedia` on BREAKPOINTS.md), so
-// a stand-in that always renders would show a video the mobile page never has.
-vi.mock('@/templates/Public/Landing/LandingVideo', async () => {
-  const { createElement } = await import('react');
-  return {
-    LandingVideo: () =>
-      createElement(
-        'aside',
-        {
-          className: 'hidden md:block relative z-0 w-full max-w-[460px] md:max-w-[560px] lg:max-w-none lg:pt-20',
-          'aria-label': 'Landing video',
-        },
-        createElement('div', {
-          className:
-            'aspect-video w-full overflow-hidden rounded-md border border-border bg-muted shadow-xl shadow-black/20',
-        }),
-      ),
-  };
-});
+// Capture the real responsive poster while keeping movie frames deterministic.
+vi.mock('@/templates/Public/Landing/LandingVideo.constants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/templates/Public/Landing/LandingVideo.constants')>()),
+  LANDING_VIDEO_QUERY: 'not all',
+}));
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: createZustandLikeHook({
@@ -90,8 +80,28 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 }));
 
 describe('Landing — visual regression', () => {
+  it('hides guest controls and shows the spinner on client entry for a saved member', async () => {
+    const previous = localStorage.getItem(AUTH_PERSIST_KEY);
+    try {
+      localStorage.setItem(AUTH_PERSIST_KEY, JSON.stringify({ state: { currentUserPubky: 'member' } }));
+      await renderForVRT(
+        <PublicLanding checking>
+          <button>Join now</button>
+        </PublicLanding>,
+        { viewport: VRT_VIEWPORT_MOBILE },
+      );
+      const content = document.querySelector('.landing-public-content')!;
+      await expect.element(page.getByRole('status', { name: 'Loading' })).toBeVisible();
+      expect(getComputedStyle(content).display).toBe('none');
+      expect(page.getByRole('button', { name: 'Join now' }).elements()).toHaveLength(0);
+    } finally {
+      if (previous === null) localStorage.removeItem(AUTH_PERSIST_KEY);
+      else localStorage.setItem(AUTH_PERSIST_KEY, previous);
+    }
+  });
+
   it('renders the landing hero at desktop viewport', async () => {
-    await preloadImages(LANDING_LOGO_URLS);
+    await preloadImages(DESKTOP_HERO_ASSETS);
     await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
     // Viewport-clamped root: first fold only (hero is min-h-svh; lower
     // sections are intentionally cropped — see docs/visual-regression-testing.md).
@@ -99,7 +109,7 @@ describe('Landing — visual regression', () => {
   });
 
   it('renders the landing hero at mobile viewport', async () => {
-    await preloadImages(LANDING_LOGO_URLS);
+    await preloadImages(HERO_ASSETS);
     await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await matchVrtFrameScreenshot('landing-mobile');
   });
@@ -109,10 +119,26 @@ describe('Landing — visual regression', () => {
     ['mobile', VRT_VIEWPORT_MOBILE],
   ] as const)('renders the Apple-enabled hero on %s', async (name, viewport) => {
     mockAppleEnabled.mockReturnValue(true);
-    await preloadImages(LANDING_LOGO_URLS);
+    await preloadImages(name === 'desktop' ? DESKTOP_HERO_ASSETS : HERO_ASSETS);
     await renderForVRT(<LandingWithHeader />, { viewport });
     await expect.element(page.getByRole('button', { name: 'Continue with Google or Apple' }).first()).toBeVisible();
     await matchVrtFrameScreenshot(`landing-apple-enabled-${name}`);
+  });
+
+  it('reveals the card description on keyboard focus with motion disabled and dismisses it after a pointer click', async () => {
+    await renderForVRT(<LandingBrokenSection />, { viewport: VRT_VIEWPORT_DESKTOP });
+    const heading = page.getByRole('heading', { level: 2 });
+    const poster = page.getByRole('img', { name: 'They own you' });
+    const description = document.getElementById(poster.element().getAttribute('aria-describedby')!)!;
+    await heading.click();
+    await userEvent.tab();
+    await expect.element(poster).toHaveFocus();
+    expect(getComputedStyle(description).opacity).toBe('1');
+    expect(poster.element().closest('article')?.querySelector('video')).toBeNull();
+
+    await poster.click();
+    await heading.hover();
+    await expect.poll(() => getComputedStyle(description).opacity).toBe('0');
   });
 
   it.each([
@@ -127,7 +153,6 @@ describe('Landing — visual regression', () => {
     { name: 'narrow mobile', viewport: { width: 360, height: 1024 } },
     { name: 'smallest mobile', viewport: { width: 320, height: 1024 } },
   ])('keeps the seven slide dots and arrow stable on $name', async ({ viewport }) => {
-    await preloadImages(['/images/landing-experience7.webp']);
     await renderForVRT(<LandingFreedomSection />, { viewport });
     const firstHeading = page.getByRole('heading', { name: 'Create without limits' });
     await expect.element(firstHeading).toBeVisible();
@@ -137,14 +162,15 @@ describe('Landing — visual regression', () => {
     const initialCardBounds = article.getBoundingClientRect();
     const initialNavBounds = navigation.getBoundingClientRect();
     const initialArrowBounds = arrowButton.element().getBoundingClientRect();
-    const image = article.querySelector('[style*="background-image"]')!;
-    const initialImageBounds = image.getBoundingClientRect();
+    const paintedArtwork = () => article.querySelector<HTMLImageElement>('img.opacity-100');
+    await expect.poll(() => paintedArtwork()?.naturalWidth).toBeGreaterThan(0);
+    const initialImageBounds = paintedArtwork()!.getBoundingClientRect();
     expect(navigation.getBoundingClientRect().top).toBeGreaterThan(
       firstHeading.element().parentElement!.getBoundingClientRect().bottom,
     );
 
     const buttons = navigation.querySelectorAll('button');
-    for (const button of buttons) {
+    for (const [index, button] of buttons.entries()) {
       await page.elementLocator(button).click();
       const visibleHeading = page.getByRole('heading', { level: 3 });
       await expect.element(visibleHeading).toBeVisible();
@@ -152,7 +178,8 @@ describe('Landing — visual regression', () => {
       expect(article.getBoundingClientRect().height).toBeCloseTo(initialCardBounds.height, 0);
       expect(navigation.getBoundingClientRect().top).toBeCloseTo(initialNavBounds.top, 0);
       expect(arrowButton.element().getBoundingClientRect().top).toBeCloseTo(initialArrowBounds.top, 0);
-      expect(image.getBoundingClientRect().top).toBeCloseTo(initialImageBounds.top, 0);
+      await expect.poll(() => paintedArtwork()?.currentSrc).toContain(`landing-experience${index + 1}.`);
+      expect(paintedArtwork()!.getBoundingClientRect().top).toBeCloseTo(initialImageBounds.top, 0);
       expect(navigation.getBoundingClientRect().top).toBeGreaterThan(
         visibleHeading.element().parentElement!.getBoundingClientRect().bottom,
       );
@@ -184,7 +211,7 @@ describe('Landing — visual regression', () => {
       const navigationBounds = navigation.getBoundingClientRect();
       const copyBounds = heading.element().parentElement!.getBoundingClientRect();
       expect(navigationBounds.top).toBeGreaterThan(copyBounds.bottom);
-      expect(navigationBounds.bottom).toBeLessThanOrEqual(image.getBoundingClientRect().top);
+      expect(navigationBounds.bottom).toBeLessThanOrEqual(paintedArtwork()!.getBoundingClientRect().top);
       expect(article.getBoundingClientRect().bottom - arrow.bottom).toBeCloseTo(32, 0);
       expect(article.getBoundingClientRect().right - arrow.right).toBeCloseTo(32, 0);
     }
