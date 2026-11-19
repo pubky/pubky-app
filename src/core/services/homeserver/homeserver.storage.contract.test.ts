@@ -83,6 +83,9 @@ let held: typeof record.sharedSession.response;
 let answer: Answer;
 /** What the homeserver answers a bearer refresh; a status refuses it. */
 let refresh: 'issue' | number;
+/** What the homeserver answers session revalidation (`GET /auth/grant/session`); a status refuses it. */
+let revalidation: 'serve' | number;
+let signOuts: number;
 
 let storeCreated = false;
 const openSessionDatabase = async () => {
@@ -98,12 +101,14 @@ const openSessionDatabase = async () => {
   });
 };
 
-const putRecord = async () => {
+/** Writes the saved record as the SDK left it, or removes it (`null`), behind the SDK's back. */
+const putRecord = async (stored: typeof record | null = record) => {
   const db = await openSessionDatabase();
   try {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction('storedSessions', 'readwrite');
-      tx.objectStore('storedSessions').put(record);
+      if (stored) tx.objectStore('storedSessions').put(stored);
+      else tx.objectStore('storedSessions').delete(record.id);
       tx.oncomplete = () => resolve();
       tx.onerror = tx.onabort = () => reject(tx.error);
     });
@@ -129,7 +134,11 @@ const stubHomeserver = () =>
       return respond(json({ features: ['path-addressed-storage', 'grant-proof-logout', 'webdav-locks'] }));
     }
     if (url.pathname === '/auth/grant/session') {
-      if (raw.method === 'GET') return respond(json(held.session));
+      if (raw.method === 'GET') return respond(revalidation === 'serve' ? json(held.session) : refused(revalidation));
+      if (raw.method === 'DELETE') {
+        signOuts += 1;
+        return respond(new Response(null, { status: 200 }));
+      }
       expect(raw.method).toBe('POST');
       refreshes += 1;
       if (refresh !== 'issue') return respond(refused(refresh));
@@ -163,6 +172,8 @@ beforeEach(async () => {
   refreshes = 0;
   held = record.sharedSession.response;
   refresh = 'issue';
+  revalidation = 'serve';
+  signOuts = 0;
   answer = () => json({});
   stubHomeserver();
   await putRecord();
@@ -358,6 +369,60 @@ describe('pinned SDK 0.18.0 stored session contract', () => {
       `Bearer ${savedBearer}`,
       'Bearer refreshed-bearer-1',
     ]);
+  });
+});
+
+describe('pinned SDK 0.18.0 session end contract', () => {
+  // `HomeserverService.unusableGrantReason` tells these outcomes apart by the SDK's exact `ClientStateError`
+  // message (`docs/error-handling.md`); each is produced here by the installed SDK, not by a hand-built error.
+  const restore = () => HomeserverService.restoreReference(reference);
+  const reauthorize = (reason: string) => ({
+    category: ErrorCategory.Auth,
+    code: AuthErrorCode.SESSION_EXPIRED,
+    context: { reason },
+  });
+
+  it.each([
+    ['the homeserver no longer has the session', 404, 'issue'],
+    ['the bearer is rejected and the refresh is refused', 401, 401],
+    ['the bearer is rejected and the grant is gone', 401, 404],
+  ] as const)('reads a restore as an invalid grant when %s', async (_case, sessionStatus, refreshAnswer) => {
+    revalidation = sessionStatus;
+    refresh = refreshAnswer;
+
+    await expect(restore()).rejects.toMatchObject(reauthorize('invalid_grant'));
+    expect(storage).toEqual([]);
+  });
+
+  it('keeps a restore retryable when revalidation fails for another reason', async () => {
+    revalidation = 503;
+
+    const failure = await restore().catch((error: unknown) => error);
+
+    expect(failure).not.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
+    expect(hasHttpStatus(failure, 503)).toBe(true);
+  });
+
+  it('finishes a sign-out another tab started, then reads the record as gone', async () => {
+    // Another tab marked the shared session for sign-out and closed before the homeserver answered.
+    await putRecord({ ...record, sharedSession: { ...record.sharedSession, logout_pending: true } });
+
+    await expect(restore()).rejects.toMatchObject(reauthorize('remote_logout_completed'));
+    expect(signOuts).toBe(1);
+    await expect(restore()).rejects.toMatchObject(reauthorize('missing_local_grant'));
+    expect(signOuts).toBe(1);
+  });
+
+  it('ends a live session whose record another tab removed, before any request', async () => {
+    await putRecord(null);
+
+    await expect(
+      HomeserverService.request({ method: HttpMethod.PUT, url: url('/pub/social/v1/profile.json'), bodyJson: {} }),
+    ).rejects.toMatchObject({ category: ErrorCategory.Auth, code: AuthErrorCode.SESSION_EXPIRED });
+
+    expect(storage).toEqual([]);
+    expect(refreshes).toBe(0);
+    expect(sessionFailures).toHaveBeenCalledTimes(1);
   });
 });
 
