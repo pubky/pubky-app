@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TLockConfig } from '@/application/locks/locks.types';
-import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -33,7 +32,6 @@ const mocks = vi.hoisted(() => ({
   commitCreateFile: vi.fn(),
   commitDeleteFile: vi.fn(),
   toast: vi.fn(),
-  post: vi.fn(), // PubkyAppPost constructor spy: the locked post as it is written
   // Handle into the stand-in editor, refreshed on every render. Null while no editor is mounted.
   editor: null as {
     markdown: string;
@@ -90,25 +88,6 @@ vi.mock('@/hooks/useMentionAutocomplete/useMentionAutocomplete', () => ({
   }),
 }));
 vi.mock('@/hooks/useUndoRepost/useUndoRepost', () => ({ useUndoRepost: () => ({ undoRepost: vi.fn() }) }));
-
-vi.mock('pubky-app-specs', () => ({
-  PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
-  fileUriBuilder: (author: string, fileId: string) => `pubky://${author}/pub/pubky.app/files/${fileId}`,
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {
-      mocks.post(content, kind, parent, embed, attachments);
-    }
-    toJson() {
-      return { content: this.content, kind: this.kind, attachments: this.attachments };
-    }
-  },
-}));
 
 // Auth wrappers: pass straight through, always authenticated to pubky.app.
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
@@ -209,7 +188,6 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => ({ PostPreviewCard:
 vi.mock('../PostHeader/PostHeader', () => ({ PostHeader: () => null }));
 
 const image = new File(['image bytes'], 'shot.png', { type: 'image/png' });
-const descriptor = (path: string): TGuardedResource => ({ path, hash: 'H', content_type: 'image/png', size: 2 });
 
 /** Lets the title and body debounce hand their values to the composer state. */
 const settle = () => act(() => vi.advanceTimersByTime(500));
@@ -238,18 +216,13 @@ const publishLock = async () => {
   await waitFor(() => expect(mocks.commitCreatePost).toHaveBeenCalledTimes(1));
 };
 
-/** The locked post as `useCreateLockContent` builds it from the uploaded attachment descriptors. */
+/** The locked post as the composer hands it to the application, which builds the guarded primary. */
 const lockedPost = () => {
-  const { attachments, buildPost } = mocks.createLockContent.mock.calls[0][0] as {
+  const { attachments, post } = mocks.createLockContent.mock.calls[0][0] as {
     attachments: File[];
-    buildPost: (resources: TGuardedResource[], owner?: string) => unknown;
+    post: { content: string; kind: string };
   };
-  buildPost(
-    attachments.map((_, index) => descriptor(`/priv/app.locks/content/file${index}`)),
-    'pubkyowner',
-  );
-  const [content, , , , uris] = mocks.post.mock.calls.at(-1) as [string, number, null, null, string[] | null];
-  return { attachments, body: (JSON.parse(content) as { body: string }).body, uris };
+  return { attachments, body: (JSON.parse(post.content) as { body: string }).body, kind: post.kind };
 };
 
 describe('PostInput - locking an article with body images (integration)', () => {
@@ -275,18 +248,18 @@ describe('PostInput - locking an article with body images (integration)', () => 
 
   it('locks the image bytes and the slot that points at them, without ever touching public storage', async () => {
     await writeArticle();
-    expect(imageUri).toMatch(new RegExp(`^pubky://${AUTHOR}/pub/pubky\\.app/files/draft-`));
+    expect(imageUri).toMatch(new RegExp(`^pubky://${AUTHOR}/pub/social/v1/files/`));
     applyLock();
     // The composer left article mode to take the teaser; the staged file must outlive that.
     expect(mocks.editor).toBeNull();
 
     await publishLock();
 
-    const { attachments, body, uris } = lockedPost();
+    const { attachments, body, kind } = lockedPost();
     expect(attachments).toHaveLength(1);
     expect(await attachments[0].text()).toBe('image bytes');
     expect(body).toBe('Intro\n\n![shot](attachment:0)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0']);
+    expect(kind).toBe('long');
     // The published lock lets go of the staged file: nothing was uploaded publicly, nothing to delete
     await act(async () => {});
     expect(mocks.commitCreateFile).not.toHaveBeenCalled();
@@ -300,10 +273,10 @@ describe('PostInput - locking an article with body images (integration)', () => 
     applyLock();
     await publishLock();
 
-    const { attachments, body, uris } = lockedPost();
+    const { attachments, body } = lockedPost();
+    // The cover stays in slot 0 inside the lock, so the body image takes slot 1
     expect(await Promise.all(attachments.map((a) => a.text()))).toEqual(['cover bytes', 'image bytes']);
     expect(body).toBe('Intro\n\n![shot](attachment:1)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0', 'pubky://owner/priv/app.locks/content/file1']);
   });
 
   it('publishes the article normally, image included, after the lock is abandoned', async () => {
@@ -345,8 +318,9 @@ describe('PostInput - locking an article with body images (integration)', () => 
 
     expect(mocks.commitCreatePost).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: JSON.stringify({ title: 'Essay', body: 'Intro\n\n![shot](attachment:1)\n\nOutro' }),
-        attachments: [expect.objectContaining({ name: 'cover.png' }), image],
+        content: JSON.stringify({ title: 'Essay', body: 'Intro\n\n![shot](attachment:0)\n\nOutro' }),
+        attachments: [image],
+        coverImage: expect.objectContaining({ name: 'cover.png' }),
       }),
     );
   });

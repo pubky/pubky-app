@@ -1,4 +1,4 @@
-import validationLimits from 'pubky-app-specs/validationLimits.json';
+import { limits } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
 import { FeedValidators } from './feed.validators';
@@ -13,7 +13,7 @@ describe('FeedValidators.sanitizeIcon', () => {
     ['null', null],
     ['an empty string', ''],
     ['whitespace only', '   '],
-    ['a name over the specs length limit', 'x'.repeat(validationLimits.feedIconMaxLength + 1)],
+    ['a name over the specs length limit', 'x'.repeat(limits.feedIconMaxLength + 1)],
     ['a snake_case name outside the specs charset', 'favorite_border'],
     ['a name with inner whitespace', 'alarm clock'],
     ['a name with punctuation outside the specs charset', 'icon.name'],
@@ -31,7 +31,7 @@ describe('FeedValidators.sanitizeIcon', () => {
   });
 
   it('keeps a name at exactly the length limit', () => {
-    const atLimit = 'x'.repeat(validationLimits.feedIconMaxLength);
+    const atLimit = 'x'.repeat(limits.feedIconMaxLength);
 
     expect(FeedValidators.sanitizeIcon(atLimit)).toBe(atLimit);
   });

@@ -1,3 +1,5 @@
+import { buildTag, buildUri, limits } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   POST_ID_STAGING_FIXTURE,
@@ -43,7 +45,7 @@ import {
   truncateString,
   withPubkyPrefix,
 } from './utils';
-import { HASHTAG_IN_TEXT_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { HASHTAG_IN_TEXT_REGEX, TAG_BANNED_CHARS, TAG_FROZEN_WHITESPACE_CODE_POINTS } from './utils.constants';
 
 describe('Utils', () => {
   describe('cn', () => {
@@ -286,12 +288,27 @@ describe('Utils', () => {
     it('returns false for unparseable composite', () => {
       expect(isValidPostCompositeId('nocolon')).toBe(false);
     });
+
+    it('returns false when post id is not a canonical TimestampId', () => {
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:0`)).toBe(false);
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE.slice(0, 12)}`)).toBe(false);
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE.toLowerCase()}`)).toBe(
+        false,
+      );
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:not-a-post-id`)).toBe(false);
+    });
   });
 
   describe('getValidAuthorPubkyFromPostCompositeId', () => {
     it('returns author pubky for a valid composite', () => {
       const composite = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
       expect(getValidAuthorPubkyFromPostCompositeId(composite)).toBe(PUBKY_52_STAGING_FIXTURE);
+    });
+
+    it('returns the author when only the post id is malformed', () => {
+      expect(getValidAuthorPubkyFromPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:not-a-post-id`)).toBe(
+        PUBKY_52_STAGING_FIXTURE,
+      );
     });
 
     it('returns null when composite is invalid', () => {
@@ -1282,6 +1299,16 @@ describe('Utils', () => {
     it('should reject a pk:-prefixed pubky string', () => {
       expect(isValidTagLabel('pk:abcdefghijklmnopqrstuvwxyz')).toBe(false);
     });
+
+    it('counts the limit in code points, as pubky-social-specs does', () => {
+      const target = buildUri(fakeOwner(2), 'post', '0032PARTQP4G0');
+      const atLimit = '😀'.repeat(limits.tagLabelMaxLength);
+
+      expect(isValidTagLabel(atLimit)).toBe(true);
+      expect(buildTag(fakeOwner(1), target, atLimit).object.label).toBe(atLimit);
+      expect(isValidTagLabel(`${atLimit}😀`)).toBe(false);
+      expect(() => buildTag(fakeOwner(1), target, `${atLimit}😀`)).toThrow();
+    });
   });
 
   describe('canonicalizeTagLabel', () => {
@@ -1291,6 +1318,66 @@ describe('Utils', () => {
 
     it('should preserve valid non-Latin labels', () => {
       expect(canonicalizeTagLabel(' 日本語 ')).toBe('日本語');
+    });
+
+    it('lowercases ASCII letters only, so a non-ASCII capital stays as typed', () => {
+      expect(canonicalizeTagLabel('ÄPFEL')).toBe('Äpfel');
+      expect(canonicalizeTagLabel('İSTANBUL')).toBe('İstanbul');
+    });
+
+    // The fold the data model applies when it stores a tag: the label a tag id hashes, and the one
+    // Nexus indexes, so hashtags, the composer and the search must agree with it.
+    it.each(['RUST', 'ÄPFEL', 'Café', 'İ', '  Mixed_Case  ', 'tag!'])(
+      'agrees with the label pubky-social-specs stores for %j',
+      (label) => {
+        const target = buildUri(fakeOwner(2), 'post', '0032PARTQP4G0');
+
+        expect(canonicalizeTagLabel(label)).toBe(buildTag(fakeOwner(1), target, label).object.label);
+      },
+    );
+
+    // The trim is the data model's frozen table, not the engine's: the 25 White_Space code points of
+    // Unicode 15.1, which Nexus `/v1` folds labels by too, so a label the app accepts never 400s there.
+    describe('frozen whitespace (contract with buildTag)', () => {
+      const target = buildUri(fakeOwner(2), 'post', '0032PARTQP4G0');
+      const codePoints = TAG_FROZEN_WHITESPACE_CODE_POINTS.map((codePoint) => [
+        `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`,
+        String.fromCodePoint(codePoint),
+      ]);
+
+      it('names the 25 code points of the frozen set once each, in order', () => {
+        expect(TAG_FROZEN_WHITESPACE_CODE_POINTS).toHaveLength(25);
+        expect([...new Set(TAG_FROZEN_WHITESPACE_CODE_POINTS)].sort((a, b) => a - b)).toEqual([
+          ...TAG_FROZEN_WHITESPACE_CODE_POINTS,
+        ]);
+      });
+
+      it.each(codePoints)('trims %s at either end, as buildTag does', (_name, whitespace) => {
+        const label = `${whitespace}Rust${whitespace}`;
+
+        expect(canonicalizeTagLabel(label)).toBe('rust');
+        expect(buildTag(fakeOwner(1), target, label).object.label).toBe('rust');
+      });
+
+      it.each(codePoints)('rejects %s inside a label, which buildTag refuses', (_name, whitespace) => {
+        const label = `ru${whitespace}st`;
+
+        expect(isValidTagLabel(label)).toBe(false);
+        expect(() => buildTag(fakeOwner(1), target, label)).toThrow();
+      });
+
+      it.each([
+        ['U+FEFF (BOM), trimmed by String.prototype.trim but not here', '\uFEFF'],
+        ['U+200B (zero width space), whitespace to nobody', '\u200B'],
+      ])('keeps %s where buildTag keeps it, at the edge and inside', (_name, character) => {
+        const edge = `${character}rust`;
+        const inside = `ru${character}st`;
+
+        expect(canonicalizeTagLabel(edge)).toBe(buildTag(fakeOwner(1), target, edge).object.label);
+        expect(canonicalizeTagLabel(edge)).toBe(edge);
+        expect(isValidTagLabel(inside)).toBe(true);
+        expect(buildTag(fakeOwner(1), target, inside).object.label).toBe(inside);
+      });
     });
   });
 

@@ -74,8 +74,8 @@ const DELAY_MS = 10_000;
 const ALICE = PUBKY_52_STAGING_FIXTURE;
 const BOB = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const POST_A = POST_ID_STAGING_FIXTURE;
-const POST_B = '00353GZ1H40WH';
-const REPLY_A = '00353GZ1H40WK';
+const POST_B = '00353GZ1H40WP';
+const REPLY_A = '00353GZ1H40WR';
 const COLLECTION = '00353GZ1H40WJ';
 
 const POST_A_ID = buildCompositeId({ pubky: ALICE, id: POST_A });

@@ -29,7 +29,7 @@ vi.mock('./renderFallbackOg', () => ({
 
 const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const MENTIONED = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
-const MENTIONED_DETAILS_URL = `https://nexus.staging.pubky.app/v0/user/${MENTIONED}/details`;
+const MENTIONED_DETAILS_URL = `https://nexus.staging.pubky.app/v1/user/${MENTIONED}/details`;
 
 const jsonResponse = (body: unknown) =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });

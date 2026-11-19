@@ -407,6 +407,23 @@ describe('NotificationItem', () => {
     expect(mockPush).toHaveBeenCalledWith('/search?tags=c%2B%2B');
   });
 
+  it('searches the stored label of a tag with a non-ASCII capital, not its Unicode lowercase', () => {
+    // `xÄpfel` is stored with the Ä (trim + ASCII lowercase); `xäpfel` would be another tag.
+    const tagNotification = {
+      id: 'tagpost:123:user1',
+      type: NotificationType.TagPost,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      tagged_by: 'user1',
+      tag_label: 'xÄpfel',
+      post_uri: 'user1:post123',
+    } as FlatNotification;
+    render(<NotificationItem notification={tagNotification} isUnread={false} />);
+
+    fireEvent.click(screen.getByTestId('post-tag'));
+
+    expect(mockPush).toHaveBeenCalledWith(`/search?tags=${encodeURIComponent('xÄpfel')}`);
+  });
+
   it('extracts title from article (long post) content in notifications', async () => {
     const articleContent = JSON.stringify({
       title: 'My Article Title',

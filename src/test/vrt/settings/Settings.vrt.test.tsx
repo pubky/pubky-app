@@ -2,11 +2,12 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT, type VrtTheme } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
 import { SETTINGS_ROUTES } from '@/app/routes';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { Header } from '@/organisms/Header/Header';
 import { Settings as SettingsLayout } from '@/templates/Settings/Settings';
 import { Account } from '@/templates/Settings/Account/Account';
@@ -16,7 +17,7 @@ import { MutedUsers } from '@/templates/Settings/MutedUsers/MutedUsers';
 import { Notifications } from '@/templates/Settings/Notifications/Notifications';
 import { Privacy } from '@/templates/Settings/Privacy/Privacy';
 
-// Covers tabs: account, edit profile, notifications, privacy & safety, muted users, help.
+// Covers tabs: account, edit profile (also with the migration note), notifications, privacy & safety, muted users, help.
 const routeState = vi.hoisted(() => ({
   pathname: '/settings/account',
 }));
@@ -140,6 +141,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: createZustandLikeHook({
     profile: null,
     posts: {} as Record<string, never>,
+    articleCovers: {} as Record<string, never>,
     collections: {} as Record<string, never>,
   }),
 }));
@@ -322,10 +324,10 @@ describe('Settings — account — visual regression', () => {
 describe('Settings — edit profile — visual regression', () => {
   // `/settings/edit` uses OnboardingLayout, not the Settings shell (Account
   // links here). Header still mounts from the root layout.
-  async function renderEditProfile(viewport: { width: number; height: number }) {
+  async function renderEditProfile(viewport: { width: number; height: number }, theme?: VrtTheme) {
     routeState.pathname = SETTINGS_ROUTES.EDIT;
     await preloadImages(SETTINGS_CHROME_IMAGE_URLS);
-    const screen = await renderForVRT(<EditProfileWithChrome />, { viewport });
+    const screen = await renderForVRT(<EditProfileWithChrome />, { viewport, theme });
     await expect.element(screen.getByTestId('edit-profile-form')).toBeVisible();
     await expect.element(screen.getByPlaceholder('Enter your name')).toHaveValue('Alice Mercado');
     return screen;
@@ -339,6 +341,30 @@ describe('Settings — edit profile — visual regression', () => {
   it('renders edit profile at mobile viewport', async () => {
     await renderEditProfile(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('settings-edit-profile-mobile');
+  });
+
+  // The one-shot note (D17) this browser keeps after the social v1 update dropped profile values: the picture and
+  // more than one link, so both lines show. The record read is its only input.
+  describe('with the migration note', () => {
+    beforeEach(() => {
+      const notice = vi
+        .spyOn(SocialMigrationController, 'getPendingProfileNotice')
+        .mockReturnValue({ profileImage: 1, profileLinks: 2 });
+      return () => notice.mockRestore();
+    });
+
+    it.each([
+      ['desktop', VRT_VIEWPORT_DESKTOP, 'dark'],
+      ['mobile', VRT_VIEWPORT_MOBILE, 'dark'],
+      ['light-desktop', VRT_VIEWPORT_DESKTOP, 'light'],
+      ['light-mobile', VRT_VIEWPORT_MOBILE, 'light'],
+    ] as const)('renders the note at %s', async (name, viewport, theme) => {
+      const screen = await renderEditProfile(viewport, theme);
+      const note = screen.getByTestId('edit-profile-migration-notice');
+      await expect.element(note).toMatchTextContent(/Your profile picture could not be carried over/);
+      await expect.element(note).toMatchTextContent(/Some of your profile links could not be carried over/);
+      await matchVrtFrameScreenshot(`settings-edit-profile-migration-note-${name}`);
+    });
   });
 });
 

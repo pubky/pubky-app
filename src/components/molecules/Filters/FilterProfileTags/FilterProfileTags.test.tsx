@@ -1,12 +1,25 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UseTagSuggestionsResult } from '@/hooks/useTagSuggestions/useTagSuggestions.types';
 import { FilterProfileTags } from './FilterProfileTags';
+
+const mockUseTagSuggestions = vi.hoisted(() =>
+  vi.fn((): UseTagSuggestionsResult => ({ suggestions: [], isLoading: false })),
+);
+
+vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({
+  useTagSuggestions: mockUseTagSuggestions,
+}));
 
 function getTagInputContainer(container: HTMLElement) {
   return container.querySelector('div.relative');
 }
 
 describe('FilterProfileTags', () => {
+  beforeEach(() => {
+    mockUseTagSuggestions.mockReturnValue({ suggestions: [], isLoading: false });
+  });
+
   it('adds a normalized profile tag from the input', async () => {
     const onTagAdd = vi.fn();
 
@@ -19,6 +32,21 @@ describe('FilterProfileTags', () => {
     await waitFor(() => {
       expect(onTagAdd).toHaveBeenCalledWith('bitcoin');
     });
+  });
+
+  it('adds a suggested label with a non-ASCII capital as the data model stores it', async () => {
+    const onTagAdd = vi.fn();
+    mockUseTagSuggestions.mockReturnValue({ suggestions: ['Äpfel'], isLoading: false });
+
+    render(<FilterProfileTags selectedTags={[]} onTagAdd={onTagAdd} onTagRemove={vi.fn()} />);
+
+    const input = screen.getByPlaceholderText('profile tag');
+    fireEvent.change(input, { target: { value: 'äp' } });
+    fireEvent.focus(input);
+    await waitFor(() => expect(screen.getByText('Äpfel')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Äpfel'));
+
+    await waitFor(() => expect(onTagAdd).toHaveBeenCalledWith('Äpfel'));
   });
 
   it('renders selected tags in a removable stack', () => {

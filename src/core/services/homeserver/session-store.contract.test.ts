@@ -7,10 +7,6 @@ import { isRetryable } from '@/libs/error/error.utils';
 import grantAuth015 from './grant-auth-0.15.fixture.json';
 import { HomeserverService } from './homeserver';
 
-vi.mock('pubky-app-specs', () => ({
-  default: vi.fn(),
-  userUriBuilder: (key: string) => `pubky://${key}/pub/pubky.app/profile.json`,
-}));
 const reference = {
   kind: 'grant' as const,
   sessionStoreId: 'missing-contract-record',

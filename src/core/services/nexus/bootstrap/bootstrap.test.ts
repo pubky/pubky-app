@@ -3,11 +3,13 @@ import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { bootstrapApi } from '@/services/nexus/bootstrap/bootstrap.api';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 
 describe('NexusBootstrapService', () => {
   const mockFetch = vi.fn();
   const pubky = 'test-user-123';
 
+  // The page as `/v1` serves it: wire kinds, tags without `relationship`
   const generateMockResponse = (testUserId: string, testPostId: string) => ({
     users: [
       {
@@ -37,13 +39,11 @@ describe('NexusBootstrapService', () => {
             label: 'developer',
             taggers: ['tagger-user-1', 'tagger-user-2'],
             taggers_count: 2,
-            relationship: false,
           },
           {
             label: 'p2p',
             taggers: ['tagger-user-3'],
             taggers_count: 1,
-            relationship: false,
           },
         ],
         relationship: {
@@ -57,7 +57,7 @@ describe('NexusBootstrapService', () => {
         details: {
           id: testPostId,
           content: 'Bootstrap post content',
-          kind: 'short',
+          kind: 'note',
           uri: `https://pubky.app/${testUserId}/pub/pubky.app/posts/${testPostId}`,
           author: testUserId,
           indexed_at: Date.now(),
@@ -95,13 +95,11 @@ describe('NexusBootstrapService', () => {
               label: 'developer',
               taggers: ['tagger-user-1', 'tagger-user-2'],
               taggers_count: 2,
-              relationship: false,
             },
             {
               label: 'p2p',
               taggers: ['tagger-user-3'],
               taggers_count: 1,
-              relationship: false,
             },
           ],
           relationship: {
@@ -114,13 +112,11 @@ describe('NexusBootstrapService', () => {
             label: 'tech',
             taggers: ['post-tagger-1'],
             taggers_count: 1,
-            relationship: false,
           },
           {
             label: 'announcement',
             taggers: ['post-tagger-2', 'post-tagger-3'],
             taggers_count: 2,
-            relationship: false,
           },
         ],
         relationships: {
@@ -164,7 +160,61 @@ describe('NexusBootstrapService', () => {
       expect(mockFetch).toHaveBeenCalledWith(bootstrapApi.get(pubky), {
         method: 'GET',
       });
-      expect(result).toEqual(mockResponse);
+      // Past the read boundary: local kinds, every tag with its derived `relationship`
+      const folded = (tags: { label: string }[]) => tags.map((tag) => ({ ...tag, relationship: false }));
+      expect(result).toEqual({
+        ...mockResponse,
+        users: mockResponse.users.map((user) => ({ ...user, tags: folded(user.tags) })),
+        posts: mockResponse.posts.map((post) => ({
+          ...post,
+          details: { ...post.details, kind: 'short' },
+          tags: folded(post.tags),
+        })),
+      });
+    });
+
+    it('folds the /v1 post kinds and derives every tag relationship', async () => {
+      const v1Pubky = 'v1-user-321';
+      const page = generateMockResponse(v1Pubky, 'v1-post');
+      const own = {
+        label: 'own',
+        taggers: [v1Pubky],
+        taggers_count: 1,
+        tag_uri: `pubky://${v1Pubky}/pub/social/v1/tags/T1`,
+      };
+      const foreign = { label: 'foreign', taggers: ['other'], taggers_count: 1, tag_uri: null };
+      const body = {
+        ...page,
+        users: [{ ...page.users[0], tags: [own, foreign] }],
+        posts: [{ ...page.posts[0], details: { ...page.posts[0].details, kind: 'article' }, tags: [own, foreign] }],
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(JSON.stringify(body)),
+        headers: { get: vi.fn() },
+      });
+
+      const result = await NexusBootstrapService.fetch(v1Pubky);
+
+      expect(result.posts[0].details.kind).toBe('long');
+      expect(result.posts[0].tags.map((tag) => tag.relationship)).toEqual([true, false]);
+      expect(result.users[0].tags.map((tag) => tag.relationship)).toEqual([true, false]);
+      expect(result.users[0].details).toEqual(page.users[0].details);
+    });
+
+    it('carries the response start time onto the folded page, the tag guard of the bootstrap persist', async () => {
+      const stampedPubky = 'stamped-user-654';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(JSON.stringify(generateMockResponse(stampedPubky, 'stamped-post'))),
+        headers: { get: vi.fn() },
+      });
+      const before = Date.now();
+
+      const result = await NexusBootstrapService.fetch(stampedPubky);
+
+      expect(getNexusResponseStartedAt(result)).toBeGreaterThanOrEqual(before);
+      expect(getNexusResponseStartedAt(result)).toBeLessThanOrEqual(Date.now());
     });
 
     it('should propagate errors from queryNexus', async () => {

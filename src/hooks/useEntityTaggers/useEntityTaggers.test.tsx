@@ -10,6 +10,7 @@ import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { ViewerTagMutation } from '@/services/local/tag/tag.types';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -63,7 +64,8 @@ const publishMutation = ({
   op: HttpMethod;
   taggersCount?: number;
 }) => {
-  observed.entries = new Map(observed.entries).set(label.toLowerCase(), {
+  // Keyed like `LocalTagCacheService.getViewerMutations`: the stored label fold
+  observed.entries = new Map(observed.entries).set(canonicalizeTagLabel(label), {
     id: crypto.randomUUID(),
     relationship: op === HttpMethod.PUT,
     expiresAt: Date.now() + 300_000,
@@ -324,6 +326,25 @@ describe('useEntityTaggers', () => {
       await result.current.loadTaggers('bitcoin', 1);
     });
     expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(false);
+  });
+
+  it('reads the pending intent of a label with a non-ASCII capital, keyed by the stored fold', async () => {
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
+    // `canonicalizeTagLabel('Ärger')` keeps the Ä: the cache key is the stored label, not its Unicode lowercase.
+    publishMutation({ pubky: 'viewer', taggedId: 'profile', label: 'Ärger', op: HttpMethod.PUT });
+    expect([...(observed.entries?.keys() ?? [])]).toEqual(['Ärger']);
+    vi.mocked(UserController.fetchTaggers).mockResolvedValue(page(['other']));
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('Ärger', 1);
+    });
+    expect(result.current.taggerStates.get('Ärger')?.isViewerTagger).toBe(true);
+    expect(result.current.taggerStates.get('ärger')).toBeUndefined();
+
+    act(() => {
+      publishMutation({ pubky: 'viewer', taggedId: 'profile', label: 'Ärger', op: HttpMethod.DELETE });
+    });
+    await waitFor(() => expect(result.current.taggerStates.get('Ärger')?.isViewerTagger).toBe(false));
   });
 
   describe.each([TagKind.USER, TagKind.POST])('local count notifications for %s', (kind) => {

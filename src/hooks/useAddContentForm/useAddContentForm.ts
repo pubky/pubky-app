@@ -8,9 +8,10 @@ import { PostController } from '@/controllers/post/post';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted, readFromClipboard } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
-import { parsePostReference } from '@/pipes/post/post.reference';
+import { parsePostReference, postReferenceSpellings } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import {
   ADD_CONTENT_FORM_FIELDS,
@@ -119,7 +120,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
           return false;
         }
 
-        const alreadyAdded = await isAlreadyAdded({ target, postId: parsed.compositeId, postUri: parsed.postUri });
+        const alreadyAdded = await isAlreadyAdded({ target, postId: parsed.compositeId });
         if (alreadyAdded) {
           setFieldError('This post is already added.');
           return false;
@@ -129,10 +130,12 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
         if (!mountedRef.current || !(await waitForAuth())) return false;
 
         if (target.type === 'bookmarks') {
-          await BookmarkController.commitCreate({
+          const saved = await BookmarkController.commitCreate({
             postId: parsed.compositeId,
             userId: currentUserPubky,
           });
+          // false: the account changed while the write waited for the sync lock or ran; nothing to announce.
+          if (!saved) return false;
         } else {
           await PostController.commitUpdateCollectionItem({
             collectionId: target.collectionId,
@@ -216,15 +219,7 @@ async function clipboardReadErrorDescription(): Promise<string> {
   return 'Could not read clipboard.';
 }
 
-async function isAlreadyAdded({
-  target,
-  postId,
-  postUri,
-}: {
-  target: AddContentTarget;
-  postId: string;
-  postUri: string;
-}): Promise<boolean> {
+async function isAlreadyAdded({ target, postId }: { target: AddContentTarget; postId: string }): Promise<boolean> {
   if (target.type === 'bookmarks') {
     return await BookmarkController.exists(postId);
   }
@@ -233,5 +228,8 @@ async function isAlreadyAdded({
   const currentContent =
     collection && !isPostDeleted(collection) ? CollectionPostContent.parse(collection.content) : null;
 
-  return Boolean(currentContent?.items?.includes(postUri));
+  // A stored item may spell the post the 0.x way (its author had not migrated when it was added).
+  const { pubky, id } = parseCompositeId(postId);
+  const spellings = postReferenceSpellings(pubky, id);
+  return Boolean(currentContent?.items?.some((item) => spellings.includes(item)));
 }

@@ -1,3 +1,4 @@
+import type { Interception } from 'cypress/types/net-stubbing';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
@@ -23,6 +24,7 @@ import {
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
 import { isMobile } from '../support/mobile';
+import { postIdFromWriteUrl, streamIndexed, waitForNexus } from '../support/nexus';
 import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
 import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
@@ -31,6 +33,8 @@ import { CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types
 const MY_SECTION = '[data-cy="my-collections-section"]';
 const FOLLOWED_SECTION = '[data-cy="followed-collections-section"]';
 const DISCOVER_SECTION = '[data-cy="discover-collections-section"]';
+// More than the three items a collection here holds
+const COLLECTION_STREAM_LIMIT = 20;
 
 const curator = {
   username: 'Curator',
@@ -84,6 +88,14 @@ describe('collections', () => {
     const editedDescription = 'The best posts, curated by e2e.';
     const tags = ['bitcoin', 'nostalgia'];
     const createdPostContent = `Created from the Add Post dialog! ${Date.now()}`;
+
+    // capture the URL of the post that will be added from the feed, for its id in the Nexus check below
+    cy.findFirstPostInFeedFiltered(curator.postText1, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').click();
+    });
+    cy.location('pathname').should('contain', '/post/');
+    cy.url().as('post1Url');
+    goToHomePage();
 
     // capture the URL of the post that will be added by URL later
     cy.findFirstPostInFeedFiltered(curator.postText2, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
@@ -151,6 +163,34 @@ describe('collections', () => {
     cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 3);
     collectionCounterEq(3);
 
+    // * Nexus reads every item back from the v1 envelope: `source=collection` is the stream a client pages them from
+    cy.location('pathname')
+      .should('match', /^\/collections\/[^/]+\/[^/]+$/)
+      .then((collectionPath) => {
+        const [authorId, collectionId] = collectionPath.split('/').slice(-2);
+        // The Add Post dialog writes the new post, then the collection's next version
+        cy.get<Interception[]>('@postCreatedInCollection.all').then((writes) => {
+          const createdIds = writes
+            .map(({ request }) => postIdFromWriteUrl(request.url))
+            .filter((id) => id !== collectionId);
+          expect(createdIds, 'post created in the collection').to.have.length(1);
+          cy.get('@post1Url').then((post1Url) => {
+            cy.get('@post2Url').then((post2Url) => {
+              const itemIds = [post1Url, post2Url]
+                .map((url) => new URL(String(url)).pathname.split('/').pop() ?? '')
+                .concat(createdIds);
+              waitForNexus(
+                streamIndexed(
+                  { source: 'collection', author_id: authorId, post_id: collectionId },
+                  itemIds,
+                  COLLECTION_STREAM_LIMIT,
+                ),
+              );
+            });
+          });
+        });
+      });
+
     // * the collection is not shown in the global feed (only its posts are)
     goToHomePage();
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', editedName);
@@ -201,11 +241,14 @@ describe('collections', () => {
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
     // * open the collection and follow it from the dedicated page header
-    cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('followCollection');
+    cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('followCollection');
+    cy.intercept('PUT', '**/pub/**/bookmarks/**').as('publicBookmark');
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Follow').click();
     cy.wait('@followCollection').its('response.statusCode').should('eq', 201);
+    // Following a collection is a private bookmark of it: its creator never learns of it
+    cy.get('@publicBookmark.all').should('have.length', 0);
 
     // * the collection moves to Followed Collections and leaves Discover Collections
     goToCollectionsPage();
@@ -238,7 +281,7 @@ describe('collections', () => {
 
     // * unfollowing from the dedicated page header returns the collection to Discover Collections
     goToCollectionsPage();
-    cy.intercept('DELETE', '**/pub/pubky.app/bookmarks/**').as('unfollowCollection');
+    cy.intercept('DELETE', '**/priv/social/v1/bookmarks/**').as('unfollowCollection');
     findCollectionCardInSection(FOLLOWED_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Unfollow').click();
@@ -382,7 +425,7 @@ describe('collections', () => {
       .should('be.visible')
       .within(() => {
         cy.get('textarea').should('have.value', '').type(shareComment);
-        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionShared');
+        cy.intercept('PUT', '**/pub/social/v1/posts/**').as('collectionShared');
         cy.get('[data-cy="post-input-action-bar-share"]').click();
         cy.wait('@collectionShared').its('response.statusCode').should('eq', 201);
       });

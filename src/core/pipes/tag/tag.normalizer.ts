@@ -1,42 +1,46 @@
-import { postUriBuilder, TagResult, userUriBuilder } from 'pubky-app-specs';
+import { buildTag, buildUri, type Built, type Tag } from 'pubky-social-specs';
 import { TagKind } from '@/application/tag/tag.types';
 import type { TTagEventParams, TTagFromResponse } from '@/controllers/tag/tag.types';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { toSpecsValidationError } from '@/pipes/specs.errors';
+import type { NexusTaggersWire, NexusTagWire } from '@/services/nexus/nexus.types';
 
 export class TagNormalizer {
   private constructor() {}
 
+  /**
+   * A tag, or a taggers page, as the app holds it, from the one Nexus serves. `/v0` served
+   * `relationship`; `/v1` does not, and `tag_uri` (the viewer's own tag file, `null` when they have
+   * not tagged the label) says the same, so a missing `relationship` is derived from it. Right only
+   * for a response fetched with the viewer on the request: without one `tag_uri` is `null`, which
+   * reads as `false`, the right answer for a guest. A `relationship` Nexus did send is kept as sent.
+   */
+  static fromNexus<T extends NexusTagWire | NexusTaggersWire>(tag: T): T & { relationship: boolean } {
+    return { ...tag, relationship: tag.relationship ?? tag.tag_uri != null };
+  }
+
+  /**
+   * The viewer's tag on a post or a user, as `pubky-social-specs` stores it. The target is the
+   * post reference or the profile URL, never the bare key: that is what the migration respells a
+   * 0.x user tag to, so the app's user tags and the migrated ones share one target. The label is
+   * the stored one (trimmed, ASCII-lowercased), which the tag id hashes with the target.
+   */
   static from({ taggedKind, taggedId, label, taggerId }: TTagEventParams): TTagFromResponse {
+    let uri: string;
     try {
-      let uri: string;
       if (taggedKind === TagKind.POST) {
         const { pubky, id: postId } = parseCompositeId(taggedId);
-        uri = postUriBuilder(pubky, postId);
+        uri = buildUri(pubky, 'post', postId);
       } else {
-        uri = userUriBuilder(taggedId);
+        uri = buildUri(taggedId, 'user');
       }
-      const { tag, meta } = TagNormalizer.to(uri, label.trim(), taggerId);
-
-      return {
-        taggerId,
-        taggedId,
-        label: tag.label.toLowerCase(),
-        taggedKind,
-        tagUrl: meta.url,
-        tagJson: tag.toJson(),
-      };
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
-        operation: 'createTagFromParams',
-        context: { taggedKind, taggedId, label, taggerId },
-      });
+      throw toSpecsValidationError(error, 'createTagFromParams', { taggedKind, taggedId, label, taggerId });
     }
+    const { object, url, body } = TagNormalizer.to(uri, label, taggerId);
+
+    return { taggerId, taggedId, label: object.label, taggedKind, tagUrl: url, tagBody: body };
   }
 
   /**
@@ -55,16 +59,12 @@ export class TagNormalizer {
     return isTagFile ? tagUri : undefined;
   }
 
-  static to(uri: string, label: string, pubky: Pubky): TagResult {
+  /** The tag `pubky` puts on `uri`: where it goes, the stored object and the bytes to PUT. */
+  static to(uri: string, label: string, pubky: Pubky): Built<Tag> {
     try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createTag(uri, label);
+      return buildTag(pubky, uri, label);
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
-        operation: 'createTag',
-        context: { uri, label, pubky },
-      });
+      throw toSpecsValidationError(error, 'buildTag', { uri, label, pubky });
     }
   }
 }

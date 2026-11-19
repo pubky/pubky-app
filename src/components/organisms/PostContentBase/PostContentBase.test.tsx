@@ -5,6 +5,8 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { PostText } from '@/molecules/PostText/PostText';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import type { LocalFilesStore } from '@/stores/localFiles/localFiles.types';
+import { mockLocalFilesStore } from '@/test-utils/stores';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostAttachments } from '../PostAttachments/PostAttachments';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
@@ -108,6 +110,9 @@ vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
+const selectLocalFiles = (posts: LocalFilesStore['posts'], articleCovers: LocalFilesStore['articleCovers'] = {}) => {
+  mockUseLocalFilesStore.mockImplementation((selector) => selector(mockLocalFilesStore({ posts, articleCovers })));
+};
 const mockPostAttachments = vi.mocked(PostAttachments);
 const mockPostContentBlurred = vi.mocked(PostContentBlurred);
 const mockPostArticle = vi.mocked(PostArticle);
@@ -140,7 +145,7 @@ describe('PostContentBase', () => {
       postDetails: createMockPostDetails(),
       isLoading: false,
     });
-    mockUseLocalFilesStore.mockReturnValue(undefined);
+    selectLocalFiles({});
   });
 
   it('passes the Cards presentation to an article', () => {
@@ -199,8 +204,8 @@ describe('PostContentBase', () => {
   });
 
   it('calls PostAttachments with localAttachments from store', () => {
-    const mockLocalAttachments = [{ id: 'local-1', blob: new Blob() }];
-    mockUseLocalFilesStore.mockReturnValue(mockLocalAttachments);
+    const mockLocalAttachments = [{ type: 'image/png', name: 'local-1.png', urls: { main: 'blob:local-1' } }];
+    selectLocalFiles({ 'post-123': mockLocalAttachments });
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({ content: 'Test content', attachments: ['file-id-1'] }),
       isLoading: false,
@@ -280,9 +285,10 @@ describe('PostContentBase', () => {
     expect(mockPostAttachments).not.toHaveBeenCalled();
   });
 
-  it('calls PostArticle with localAttachments from store', () => {
-    const mockLocalAttachments = [{ id: 'local-1', blob: new Blob() }];
-    mockUseLocalFilesStore.mockReturnValue(mockLocalAttachments);
+  it('calls PostArticle with the inline entries and the cover entry from the store', () => {
+    const mockLocalAttachments = [{ type: 'image/png', name: 'local-1.png', urls: { main: 'blob:local-1' } }];
+    const mockLocalCover = { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover' } };
+    selectLocalFiles({ 'post-123': mockLocalAttachments }, { 'post-123': mockLocalCover });
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({
         content: '{"title":"Article Title","body":"Article body content"}',
@@ -299,6 +305,7 @@ describe('PostContentBase', () => {
         content: '{"title":"Article Title","body":"Article body content"}',
         attachments: ['file-id-1'],
         localAttachments: mockLocalAttachments,
+        localCover: mockLocalCover,
         className: 'custom-class',
       },
       undefined,
