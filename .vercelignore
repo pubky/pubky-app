@@ -4,6 +4,8 @@ node_modules
 cypress
 src/test
 src/test-utils
+src/config/test.ts
+vitest.config.ts
 **/*.test.ts
 **/*.test.tsx
 **/__snapshots__
