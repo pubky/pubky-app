@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flame, Home, Library, Settings, Store, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Mail, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -11,7 +11,9 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
+import { MESSAGES_BADGE_CAP } from '@/config/messages';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useUnreadConversations } from '@/hooks/useUnreadConversations/useUnreadConversations';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
@@ -64,6 +66,13 @@ const getNavigationItems = (): NavigationItemConfig[] => [
   },
   { href: APP_ROUTES.SHOP, icon: Store, label: 'Shop', dataCy: 'header-shop-btn' },
   {
+    href: APP_ROUTES.MESSAGES,
+    icon: Mail,
+    label: 'Messages',
+    dataCy: 'header-messages-btn',
+    activePrefix: APP_ROUTES.MESSAGES,
+  },
+  {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,
     label: 'Collections',
@@ -89,6 +98,8 @@ type NavigationButtonProps = {
   isActive: boolean;
   dataCy?: string;
   isFeedRoute?: boolean;
+  /** Unread count drawn on the button (Messages). */
+  badge?: number;
 };
 const NavigationButton = ({
   href,
@@ -98,6 +109,7 @@ const NavigationButton = ({
   isActive,
   dataCy,
   isFeedRoute,
+  badge = 0,
 }: NavigationButtonProps) => {
   const button = (
     <Button
@@ -111,6 +123,26 @@ const NavigationButton = ({
       <Icon className="size-6" />
     </Button>
   );
+  const badged =
+    badge > 0 ? (
+      <span className="relative inline-flex">
+        {button}
+        <Badge
+          data-cy="header-messages-counter"
+          className="pointer-events-none absolute -top-1 -right-1 h-5 min-w-5 rounded-full bg-brand px-1 shadow-sm"
+          variant="secondary"
+        >
+          <Typography
+            className={cn('font-semibold text-brand-foreground', badge > MESSAGES_BADGE_CAP && 'text-xs')}
+            size="xs"
+          >
+            {badge > MESSAGES_BADGE_CAP ? `${MESSAGES_BADGE_CAP}+` : badge}
+          </Typography>
+        </Badge>
+      </span>
+    ) : (
+      button
+    );
   return href ? (
     <Link
       href={href}
@@ -119,10 +151,10 @@ const NavigationButton = ({
         isFeedRoute ? (event) => handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true }) : undefined
       }
     >
-      {button}
+      {badged}
     </Link>
   ) : (
-    button
+    badged
   );
 };
 export function HeaderNavigationButtons({
@@ -133,6 +165,7 @@ export function HeaderNavigationButtons({
   className,
 }: HeaderNavigationButtonsProps) {
   const pathname = usePathname();
+  const unreadMessages = useUnreadConversations();
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
     <Container className={cn('hidden w-auto flex-row items-center justify-start gap-3 lg:flex', className)}>
@@ -145,6 +178,7 @@ export function HeaderNavigationButtons({
           isActive={isNavItemActive(pathname, item)}
           dataCy={item.dataCy}
           isFeedRoute={item.isFeedRoute}
+          badge={item.href === APP_ROUTES.MESSAGES ? unreadMessages : 0}
         />
       ))}
 

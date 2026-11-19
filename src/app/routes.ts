@@ -49,6 +49,12 @@ export enum APP_ROUTES {
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
   SHOP = '/shop',
+  MESSAGES = '/messages',
+}
+
+/** The conversation with `peer` on the Messages page (`/messages/[pubky]`). */
+export function getMessagesRoute(peer: string): string {
+  return `${APP_ROUTES.MESSAGES}/${peer}`;
 }
 
 /**
@@ -146,6 +152,7 @@ export const ALLOWED_ROUTES = [
   APP_ROUTES.PROFILE,
   APP_ROUTES.WHO_TO_FOLLOW,
   APP_ROUTES.SHARE,
+  APP_ROUTES.MESSAGES,
   POST_ROUTES.POST,
   AUTH_ROUTES.LOGOUT,
 ];

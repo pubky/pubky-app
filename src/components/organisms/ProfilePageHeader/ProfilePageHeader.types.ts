@@ -33,6 +33,10 @@ export interface ProfileHeaderActions {
   followLoadingAction: FollowAction | null;
   /** Whether the current user is following this profile */
   isFollowing?: boolean;
+  /** The direct-message conversation with this profile; set only for a signed-in viewer */
+  messageHref?: string;
+  /** The profile has not published a messaging key, so it cannot receive messages yet */
+  isMessageUnavailable?: boolean;
 }
 
 /**

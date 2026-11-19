@@ -8,6 +8,7 @@ import {
   Link,
   Loader2,
   LogOut,
+  Mail,
   Pencil,
   UserMinus,
   UserRoundPlus,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { InternalLink } from '@/atoms/Link/Link.navigation';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
@@ -59,6 +61,8 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     isFollowLoading,
     followLoadingAction,
     isFollowing,
+    messageHref,
+    isMessageUnavailable,
   } = actions;
 
   // Subscribe to TTL coordinator based on viewport visibility
@@ -295,6 +299,30 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   )}
                 </Button>
               )}
+              {messageHref &&
+                (isMessageUnavailable ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {/* A span keeps the tooltip working while the button is disabled. */}
+                      <span className={cn('inline-flex', ACTION_BUTTON_GRID_CELL)}>
+                        <Button data-cy="profile-message-btn" variant="secondary" size="sm" className="w-full" disabled>
+                          <Mail className="size-4" />
+                          {'Message'}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent>{'This account cannot receive messages yet'}</TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
+                ) : (
+                  <Button asChild variant="secondary" size="sm" className={ACTION_BUTTON_GRID_CELL}>
+                    <InternalLink data-cy="profile-message-btn" href={messageHref}>
+                      <Mail className="size-4" />
+                      {'Message'}
+                    </InternalLink>
+                  </Button>
+                ))}
               {copyPublicKeyButton}
               <Button className={ACTION_BUTTON_GRID_CELL} variant="secondary" size="sm" onClick={onCopyLink}>
                 <Link className="size-4" />

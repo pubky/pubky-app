@@ -1,7 +1,9 @@
 'use client';
 
+import { getMessagesRoute } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { usePeerMessagingState } from '@/hooks/usePeerMessagingState/usePeerMessagingState';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
 import { useUnlockedList } from '@/hooks/useUnlockedList/useUnlockedList';
@@ -78,12 +80,19 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
     void toggleFollow(pubky, isFollowing);
   };
 
+  // Direct messages: like X, the Message button shows to signed-in viewers of someone else's profile.
+  const viewer = useAuthStore((state) => state.currentUserPubky);
+  const isOtherProfile = !isOwnProfile && viewer !== null && pubky !== null && isPubkyIdentifier(pubky);
+  const peerMessaging = usePeerMessagingState(isOtherProfile ? pubky : null);
+
   const mergedActions = {
     ...actions,
     onFollowToggle: handleFollowToggle,
     isFollowLoading,
     followLoadingAction,
     isFollowing,
+    messageHref: isOtherProfile && pubky ? getMessagesRoute(pubky) : undefined,
+    isMessageUnavailable: peerMessaging === 'missing',
   };
 
   const showUserNotFoundDiscovery =

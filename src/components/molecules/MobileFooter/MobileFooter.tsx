@@ -1,17 +1,19 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Flame, Home, Library, Search, Settings, Store, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Mail, Search, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { InternalLink as Link } from '@/atoms/Link/Link.navigation';
 import { Typography } from '@/atoms/Typography/Typography';
+import { MESSAGES_BADGE_CAP } from '@/config/messages';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { useUnreadConversations } from '@/hooks/useUnreadConversations/useUnreadConversations';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
@@ -37,6 +39,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const { isPublicExploreRoute } = usePublicRoute();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
+  const unreadMessages = useUnreadConversations();
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
   const isKeyboardVisible = useKeyboardVisible();
 
@@ -67,6 +70,12 @@ export function MobileFooter({ className }: MobileFooterProps) {
     },
     { href: APP_ROUTES.SHOP, icon: Store, label: 'Shop' },
     {
+      href: APP_ROUTES.MESSAGES,
+      activePrefix: APP_ROUTES.MESSAGES,
+      icon: Mail,
+      label: 'Messages',
+    },
+    {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,
       icon: Library,
@@ -79,7 +88,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       label: 'Settings',
     },
   ];
-  const protectedNavHrefs = new Set<string>([SETTINGS_ROUTES.ACCOUNT]);
+  const protectedNavHrefs = new Set<string>([SETTINGS_ROUTES.ACCOUNT, APP_ROUTES.MESSAGES]);
   // Hide footer for guests only on non-explore routes. Core explore and dynamic public
   // routes (/home, /post/..., /profile/...) use the public explore footer.
   if (isKeyboardVisible || (!isAuthenticated && !isPublicExploreRoute)) {
@@ -120,11 +129,22 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 handleFeedNavClick(event, { isActive: itemIsActive, smoothScrollWhenActive: true });
               }}
               className={cn(
-                'shrink-0 rounded-full p-2 transition-all sm:p-3',
+                'relative shrink-0 rounded-full p-2 transition-all sm:p-3',
                 itemIsActive ? 'bg-secondary' : 'border border-border bg-glass backdrop-blur-sm hover:bg-glass-hover',
               )}
             >
               <Icon className="h-6 w-6" />
+              {item.href === APP_ROUTES.MESSAGES && isAuthenticated && unreadMessages > 0 && (
+                <Badge
+                  data-testid="mobile-messages-counter"
+                  className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full bg-brand px-1 shadow-sm"
+                  variant="secondary"
+                >
+                  <Typography className="text-xs font-semibold text-brand-foreground" size="xs">
+                    {unreadMessages > MESSAGES_BADGE_CAP ? `${MESSAGES_BADGE_CAP}+` : unreadMessages}
+                  </Typography>
+                </Badge>
+              )}
             </Link>
           );
         })}

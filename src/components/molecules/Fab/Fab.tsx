@@ -62,6 +62,8 @@ export function Fab() {
 
   const isOnboardingRoute = pathname?.startsWith('/onboarding') ?? false;
   const isShopRoute = pathname === APP_ROUTES.SHOP || pathname?.startsWith(`${APP_ROUTES.SHOP}/`);
+  // Messages has its own composer pinned to the bottom right, which the FAB would cover.
+  const isMessagesRoute = pathname === APP_ROUTES.MESSAGES || pathname?.startsWith(`${APP_ROUTES.MESSAGES}/`);
   const isLegalPage = isLegalRoute(pathname);
   // Show FAB for authenticated users OR unauthenticated users on public explore routes
   const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
@@ -72,6 +74,7 @@ export function Fab() {
     isReorderActive ||
     isOnboardingRoute ||
     isShopRoute ||
+    isMessagesRoute ||
     isLegalPage ||
     isReplacedByGuestBanner
   ) {

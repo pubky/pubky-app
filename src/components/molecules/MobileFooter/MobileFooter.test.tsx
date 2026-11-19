@@ -97,6 +97,7 @@ vi.mock('@/app/routes', async () => {
       SEARCH: '/search',
       HOT: '/hot',
       SHOP: '/shop',
+      MESSAGES: '/messages',
       COLLECTIONS: '/collections',
       SETTINGS: '/settings',
       PROFILE: '/profile',
@@ -596,6 +597,7 @@ describe('MobileFooter', () => {
       '/search',
       '/hot',
       '/shop',
+      '/messages',
       '/collections',
       '/settings/account',
     ]);
