@@ -893,6 +893,41 @@ describe('Post Application', () => {
         expect(fileDeleteSpy).not.toHaveBeenCalled();
       });
 
+      it('keeps the new files and puts the embed the row had back when an edit of both fails its PUT', async () => {
+        const LINK = 'https://tidal.com/track/3524506';
+        const OTHER = 'https://luma.com/376whqyw';
+        storeVersions(
+          buildPost(OWNER, {
+            kind: 'image',
+            content: `pics ${LINK} ${OTHER}`,
+            embed: LINK,
+            attachments: [{ uri: kept }],
+          }),
+        );
+        const { editSpy, putBlobSpy, fileCreateSpy, fileDeleteSpy } = setupEditSpies();
+        vi.spyOn(LocalPostService, 'readRelationships').mockResolvedValue({
+          id: compositePostId,
+          replied: null,
+          reposted: null,
+          embedded: LINK,
+          mentioned: [],
+        });
+        putBlobSpy.mockRejectedValue(new Error('PUT failed'));
+
+        await expect(
+          PostApplication.commitEdit({
+            compositePostId,
+            edit: { attachmentUris: [kept, added.media.url], embed: OTHER },
+            fileAttachments: [added],
+          }),
+        ).rejects.toThrow('PUT failed');
+
+        expect(fileCreateSpy).toHaveBeenCalledWith({ fileAttachments: [added] });
+        expect(fileDeleteSpy).not.toHaveBeenCalled();
+        expect(editSpy).toHaveBeenNthCalledWith(1, expect.objectContaining({ compositePostId, embed: OTHER }));
+        expect(editSpy).toHaveBeenLastCalledWith(expect.objectContaining({ compositePostId, embed: LINK }));
+      });
+
       it('should skip the local edit and delete no media when file upload fails', async () => {
         const { editSpy, fileCreateSpy, fileDeleteSpy } = setupEditSpies();
         fileCreateSpy.mockRejectedValue(new Error('upload failed'));
