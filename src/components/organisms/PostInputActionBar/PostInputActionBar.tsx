@@ -100,8 +100,12 @@ export function PostInputActionBar({
       </Container>
       {/* `max-md:contents` puts the lock switch in the tool row on mobile; the `max-md:w-full` Post wraps below. */}
       <Container className="flex shrink-0 items-center gap-2 max-md:contents md:ml-auto" overrideDefaults>
+        {/* The pill is tighter below `xsm` so it stays in the tool row of a 320px composer. */}
         {lockSwitch ? (
-          <Container className="flex h-8 items-center gap-2 rounded-full bg-secondary px-3 shadow-xs" overrideDefaults>
+          <Container
+            className="flex h-8 items-center gap-2 rounded-full bg-secondary px-3 shadow-xs max-xsm:gap-1.5 max-xsm:px-2"
+            overrideDefaults
+          >
             <ActionButtonContent Icon={lockSwitch.checked ? Lock : LockOpen} />
             <Switch
               data-cy="post-input-action-bar-lock-switch"
