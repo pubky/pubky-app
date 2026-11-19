@@ -51,7 +51,8 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
   `HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]`;
   `APP_CAPABILITIES = '/pub/pubky.app/:rw'` stays (0.x deletes, the migrator). Pinned in `src/config/auth.test.ts`.
 - **Articles (D14):** the cover goes in the envelope `cover_image`; attachments hold inline media only; a reader
-  rule handles app-written v1, migrated (off by one until the migrator fix) and legacy articles.
+  rule handles app-written v1 and legacy articles (the rule for an rc.1 copy, off by one, was removed once rc.2 was
+  pinned; ADR-0023, amended 2026-11-19).
 - **App files (D15):** settings and the notification cursor move to `/priv/app.pubky/v1/`, copied from the legacy
   files in the first bootstrap after the gate; legacy fallback reads stay as a safety net. The copy never replaces a
   newer v1 file it finds on its re-read right before the PUT: `last_read` goes through the forward-only writer
@@ -557,9 +558,11 @@ After dev-sync 3 (2026-11-09):
   not its current route, so its user loses their in-app place at the cut-over (FIX-FINAL-7); a tab of a build with the
   update hook announces itself and is left in place since FIX-FINAL-8, unless its announce lost the race to the worker's
   `matchAll`.
-- Migrated articles with the rc.1 off-by-one render through the migrated-article reader rule (A′), and keep doing so
-  under the fixed migrator the app pins (1.0.0-rc.2, transform revision 4), which rewrites nothing an earlier run wrote
-  (ADR-0023 amendments). Only accounts migrated on test stacks and staging before rc.2 was pinned have such articles.
+- An article the rc.1 migrator copied (cover promoted, body references left one slot too high) is not supported: the
+  migrated-article reader rule (A′) was removed after the merge into `dev` (ADR-0023, amended 2026-11-19), so each of
+  its inline references reads the file one slot later, and the fixed migrator the app pins (1.0.0-rc.2, transform
+  revision 4) rewrites nothing an earlier run wrote. Only accounts migrated on test stacks and staging before rc.2 was
+  pinned have such articles; their v1 tree is wiped and migrated again. No production account migrated under rc.1.
 - Mute changes and the notification read boundary (`last_read`) changed on another device appear within the poll
   interval (≤30 s) or on focus, not live: a session-bound stream's lease is unbounded while its response headers are
   outstanding (pubky/pubky-homeserver#798; ADR-0014, and the `last_read` poll is ADR-0029).
@@ -921,8 +924,9 @@ where they changed the app.
   otherwise). Where the migrator and the app's reader differ: the migrator scans the body as text, so an
   `attachment:0` inside a code span or fence blocks the promotion, while the app walks the markdown tree, sees no
   reference and shows that image as the cover through rule B, as the 0.x app did; an entity-escaped slot or a
-  reference-style definition, which the app counts, the migrator does not, and a body whose lowest image reference is
-  above slot 1 reads as A′. The 0.x composer wrote none of these. The app's own suites now run the rc.2 migrator on a 0.x
+  reference-style definition, which the app counts, the migrator does not. The 0.x composer wrote none of these. A body
+  whose lowest image reference is above slot 1 read as A′ until that rule was removed (ADR-0023, amended 2026-11-19)
+  and now reads as rule A, as stored. The app's own suites now run the rc.2 migrator on a 0.x
   article with a cover and inline media and on one whose slot 0 is referenced
   (`homeserver.social-migration.test.ts`), and the Cypress migration test seeds the first and checks the stored copy and
   the rendered article. The re-QA of a migrated article with a cover and inline media the adoption asked for ran as

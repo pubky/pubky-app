@@ -93,8 +93,8 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred, unl
   });
 
   // What each `attachment:{n}` of the body names depends on the stored shape (the envelope's cover,
-  // a migrated article's shifted slots, or a 0.x article's slot 0): the resolved slots stand in
-  // for the raw attachments wherever a slot is read.
+  // or a 0.x article's slot 0): the resolved slots stand in for the raw attachments wherever a slot
+  // is read.
   const { slots } = resolveArticleCover({ content, attachments });
 
   // Inline slots are typed from their file rows (the markdown never says video or image). Only the

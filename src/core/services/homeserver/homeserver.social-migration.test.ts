@@ -255,7 +255,7 @@ describe('HomeserverService.migrateToSocialV1 on a 0.x article', () => {
       'Intro\n\n![inline](attachment:0)\n\nBetween\n\n![clip](attachment:1)\n\n![inline again](attachment:0)',
     );
 
-    // Shape A, not A': the renumbered body names slot 0, so the slots index the attachments as stored
+    // Shape A: the slots index the attachments as stored, so each renumbered reference finds its file
     expect(resolveArticleCover({ content: post.content, attachments: post.attachments.map(({ uri }) => uri) })).toEqual(
       { cover: cover.v1, slots: [image.v1, video.v1], legacyCoverSlot: false, coverCandidate: null },
     );
