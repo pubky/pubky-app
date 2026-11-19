@@ -119,7 +119,9 @@ export class BookmarkController {
         // The same account under another session: a hard page load starts with the stored pubky and no session,
         // and the restore replaces it while the pass is out, so the answers were dropped. Its callers still wait
         // for the posts: run again (or join the pass already running) under the session that is current now.
-        const sessionReplaced = !isCurrent() && useAuthStore.getState().currentUserPubky === viewerId;
+        // A session that was lost, not replaced, leaves nothing to run under.
+        const { currentUserPubky, session } = useAuthStore.getState();
+        const sessionReplaced = !isCurrent() && currentUserPubky === viewerId && session !== null;
         if (sessionReplaced && rerunsLeft > 0) return this.startMissingPostsPass(rerunsLeft - 1);
       })
       .finally(() => {

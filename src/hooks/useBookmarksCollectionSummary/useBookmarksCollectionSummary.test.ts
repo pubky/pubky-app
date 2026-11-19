@@ -271,8 +271,9 @@ describe('useBookmarksCollectionSummary', () => {
 
       await waitFor(() => expect(byIds).toHaveBeenCalledTimes(1));
       expect(byIds.mock.calls[0][0]).toMatchObject({ post_ids: [added] });
+      // Four is also what the new row counts as before it is classified: wait for the stored post first.
+      await waitFor(async () => expect(await PostDetailsModel.findById(added)).not.toBeNull());
       await waitFor(() => expect(result.current.bookmarkCount).toBe(4));
-      expect(await PostDetailsModel.findById(added)).not.toBeNull();
     });
 
     it('counts a bookmark Nexus does not serve as a post, as the Bookmarks list shows it', async () => {

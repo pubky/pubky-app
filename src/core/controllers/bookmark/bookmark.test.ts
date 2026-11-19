@@ -322,6 +322,22 @@ describe('BookmarkController', () => {
         await expect(BookmarkController.getMissingPostIds()).resolves.toEqual([]);
       });
 
+      it('does not run again when the session is lost and the account stays', async () => {
+        await bookmarkAll([postAt(1)]);
+        const pending = answer();
+        byIds.mockReturnValueOnce(pending.promise);
+
+        const pass = BookmarkController.fetchMissingPosts();
+        await vi.waitFor(() => expect(byIds).toHaveBeenCalledTimes(1));
+        // A failed restore keeps the stored pubky and leaves no session to ask under.
+        useAuthStore.setState({ session: null });
+        pending.resolve([served(postAt(1))]);
+        await pass;
+
+        expect(byIds).toHaveBeenCalledTimes(1);
+        expect(await PostDetailsModel.table.count()).toBe(0);
+      });
+
       it('stops running again when the session keeps being replaced', async () => {
         await bookmarkAll([postAt(1)]);
         useAuthStore.setState({ currentUserPubky: testData.userPubky, session: null });
