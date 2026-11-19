@@ -114,7 +114,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
           registry: ${{ env.registry }}
-          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+          gcp_service_account_key: ${{ secrets.GRC_INFRA_READ_WRITE }}
 
       - name: Check if image needs to be rebuild
         uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
@@ -150,7 +150,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
           registry: ${{ env.registry }}
-          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+          gcp_service_account_key: ${{ secrets.GRC_INFRA_READ_WRITE }}
 
       - name: Build and push image pubky-app
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
