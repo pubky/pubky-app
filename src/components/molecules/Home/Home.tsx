@@ -15,15 +15,22 @@ import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { ActionButtons } from '../ActionButtons/ActionButtons';
-import { HeaderSocialLinks } from '../Header/Header';
+import { HeaderSocialLinks } from '../Header/HeaderPublicContent';
+
+async function prepareLandingPassport() {
+  const { initializeAppDatabase } = await import('@/providers/DatabaseProvider/initializeAppDatabase');
+  await initializeAppDatabase();
+}
 
 export const HomeActions = () => {
   const router = useRouter();
   const joinRoute = useJoinRoute();
   const passportEligibility = usePassportEligibility();
-  const { startPassportAuth, isPending: isPassportPending } = usePassportAuth();
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const { startPassportAuth, isPending: isPassportPending } = usePassportAuth({ prepare: prepareLandingPassport });
 
   const handleLearn = () => {
     document.getElementById(LANDING_NEXT_SECTION_ID)?.scrollIntoView({ behavior: 'smooth' });
@@ -42,7 +49,7 @@ export const HomeActions = () => {
       onLearn={handleLearn}
       onExplore={handleExplore}
       onCreateAccount={handleCreateAccount}
-      onContinueWithGoogle={passportEligibility === 'enabled' ? startPassportAuth : undefined}
+      onContinueWithGoogle={passportEligibility === 'enabled' && hasHydrated ? startPassportAuth : undefined}
       isContinueWithGooglePending={isPassportPending}
       className="gap-4"
     />

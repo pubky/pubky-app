@@ -11,7 +11,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { DatabaseErrorScreen } from '@/molecules/DatabaseErrorScreen/DatabaseErrorScreen';
 import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
-import { useMigrationStore } from '@/stores/migration/migration.store';
+import { initializeAppDatabase } from './initializeAppDatabase';
 
 export const DatabaseContext = createContext<DatabaseContextType>({
   isReady: false,
@@ -35,10 +35,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     isInitializingRef.current = true;
     try {
       setError(null);
-      const { wasDbReset } = await db.initialize({ allowRecreate });
-      if (wasDbReset) {
-        useMigrationStore.getState().setWasDbReset(true);
-      }
+      await initializeAppDatabase({ allowRecreate });
       setIsReady(true);
     } catch (err) {
       setIsReady(false);

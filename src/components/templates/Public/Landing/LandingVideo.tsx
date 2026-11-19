@@ -1,40 +1,45 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { BREAKPOINTS } from '@/config/theme';
+import { useIntersectionObserver, useMediaQuery } from 'usehooks-ts';
+import { LANDING_VIDEO_QUERY } from './LandingVideo.constants';
 
-const LANDING_VIDEO_QUERY = `(min-width: ${BREAKPOINTS.md}px)`;
-
-function subscribeToBreakpoint(onStoreChange: () => void) {
-  const mediaQueryList = window.matchMedia(LANDING_VIDEO_QUERY);
-  mediaQueryList.addEventListener('change', onStoreChange);
-
-  return () => {
-    mediaQueryList.removeEventListener('change', onStoreChange);
-  };
+function subscribeToPageLoad(onLoad: () => void) {
+  window.addEventListener('load', onLoad);
+  return () => window.removeEventListener('load', onLoad);
 }
 
-function getBreakpointSnapshot() {
-  return window.matchMedia(LANDING_VIDEO_QUERY).matches;
+function isPageLoaded() {
+  return document.readyState === 'complete';
 }
 
-function getServerBreakpointSnapshot() {
+function getServerLoadState() {
   return false;
 }
 
 export function LandingVideo() {
-  const shouldLoadVideo = useSyncExternalStore(
-    subscribeToBreakpoint,
-    getBreakpointSnapshot,
-    getServerBreakpointSnapshot,
-  );
-
-  if (!shouldLoadVideo) return null;
+  const canAnimate = useMediaQuery(LANDING_VIDEO_QUERY, { initializeWithValue: false });
+  const pageLoaded = useSyncExternalStore(subscribeToPageLoad, isPageLoaded, getServerLoadState);
+  const { ref, isIntersecting } = useIntersectionObserver({ freezeOnceVisible: true });
 
   return (
-    <aside className="relative z-0 w-full max-w-[460px] md:max-w-[560px] lg:max-w-none lg:pt-20" aria-label={'Pubky video'}>
-      <div className="overflow-hidden rounded-md border border-border bg-background shadow-xl shadow-black/20">
-        <video className="block aspect-video w-full object-cover" src="/pubky.mp4" autoPlay loop muted playsInline />
+    <aside
+      ref={canAnimate && pageLoaded ? ref : undefined}
+      className="relative z-0 hidden w-full md:block md:max-w-[560px] lg:max-w-none lg:pt-20"
+      aria-label="Pubky video"
+    >
+      <div className="aspect-video overflow-hidden rounded-md border border-border bg-background bg-cover bg-center shadow-xl shadow-black/20 md:bg-[url('/images/landing-video-poster.webp')]">
+        {canAnimate && pageLoaded && isIntersecting && (
+          <video
+            className="block size-full object-cover"
+            src="/images/landing-video.mp4"
+            poster="/images/landing-video-poster.webp"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        )}
       </div>
     </aside>
   );

@@ -1,40 +1,30 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import type { MouseEvent } from 'react';
-import { AUTH_ROUTES, isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
+import { AUTH_ROUTES, isPublicDocumentRoute, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
-import { useIsHydrated } from '@/hooks/useIsHydrated/useIsHydrated';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { clearSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
 import { cn } from '@/libs/utils/utils';
-import {
-  HeaderContainer,
-  HeaderExploreNavigationButtons,
-  HeaderOnboarding,
-  HeaderTitle,
-} from '@/molecules/Header/Header';
+import { HeaderExploreNavigationButtons, HeaderOnboarding, HeaderTitle } from '@/molecules/Header/Header';
+import { HeaderContainer } from '@/molecules/Header/HeaderPublicContent';
 import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
 import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
 import { Logo } from '@/molecules/Logo/Logo';
 import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { pathToStepConfig } from './Header.constants';
+import { PublicHeader, scrollLandingToTop } from './PublicHeader';
 
 export function Header() {
   const pathname = usePathname();
-  const isHydrated = useIsHydrated();
   const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const { status } = useAuthStatus();
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
-  const isLandingPage = pathname === '/';
-  const isCopyrightPage = pathname === '/copyright';
-  // The migration gate holds the account out of the store: no account chrome, no own-profile query.
-  const isMigrationPage = pathname === AUTH_ROUTES.MIGRATION;
-  const isLegalPage = isLegalRoute(pathname);
+  if (isPublicDocumentRoute(pathname) || (pathname === ROOT_ROUTES && !isAuthenticated)) return <PublicHeader />;
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.title;
@@ -51,9 +41,7 @@ export function Header() {
   // - Any user on a dynamic public route (/post/..., /profile/[pubky], /collections/[userId]/[postId]) — page shell owns mobile chrome
   // - Authenticated on standard app routes — MobileHeader + MobileFooter
   // Legal pages have no mobile app shell, so their header (and its way back) stays on every viewport.
-  const shouldHideHeaderOnMobile =
-    !isLegalPage &&
-    (isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute));
+  const shouldHideHeaderOnMobile = isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding);
   // Show the step title on every onboarding page regardless of auth state: the post-auth steps
   // (profile, experience) are reached while authenticated. Outside onboarding (i.e. /logout) the
   // title is only for signed-out users.
@@ -77,35 +65,21 @@ export function Header() {
     return <HeaderHome />;
   };
 
-  // On the gate's signed-out explanation the logo is a way out of it, to the landing page: leaving settles the notice
-  // the route guard brings the signed-out tab back for, as the explanation's own Homepage does. A held account keeps
-  // its notice: the gate sends that tab back here anyway, and its sign-out still owes the reason.
-  const handleMigrationLogoClick = () => {
-    if (status === AuthStatus.UNAUTHENTICATED) clearSocialMigrationSignedOutNotice();
-  };
-
-  // Copyright and the migration gate show only the logo (minimal header), and so do the legal pages for members:
-  // the public documents render outside the database and session restore (`AppShell`) that the member header reads.
-  // They are also server-rendered while the auth store only exists in the browser, so the legal pages keep the logo
-  // until hydration and only then offer guests their sign-in header.
-  if (isCopyrightPage || isMigrationPage || (isLegalPage && (isAuthenticated || !isHydrated))) {
+  if (pathname === AUTH_ROUTES.MIGRATION) {
+    // A signed-out visitor can leave the explanation. A held account still owes the migration.
+    const leaveMigration = () => {
+      if (status === AuthStatus.UNAUTHENTICATED) clearSocialMigrationSignedOutNotice();
+    };
     return (
       <HeaderContainer>
-        <Logo onClick={isMigrationPage ? handleMigrationLogoClick : undefined} />
+        <Logo onClick={leaveMigration} />
       </HeaderContainer>
     );
   }
 
-  const handleLandingLogoClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!isLandingPage) return;
-
-    event.preventDefault();
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-  };
-
   return (
     <HeaderContainer className={cn(shouldHideHeaderOnMobile && 'hidden lg:block')}>
-      <Logo noLink={isPostAuthOnboardingStep} onClick={handleLandingLogoClick} />
+      <Logo noLink={isPostAuthOnboardingStep} onClick={pathname === ROOT_ROUTES ? scrollLandingToTop : undefined} />
       {shouldShowTitle && <HeaderTitle currentTitle={currentTitle} />}
       {renderHeaderContent()}
     </HeaderContainer>

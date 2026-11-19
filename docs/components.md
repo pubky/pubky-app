@@ -49,15 +49,18 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 
 - **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
-- **App shell and public documents:** `AppShell` (`src/components/organisms/AppShell/AppShell.tsx`, mounted by
-  `src/app/layout.tsx`) puts every route behind `DatabaseProvider` → `RouteGuardProvider` with the coordinators, the
-  Fab, the guest banner and the sign-in dialog. The server's HTML holds only the gate's spinner. The public documents
-  (`isPublicDocumentRoute`: `/terms-of-use`, `/privacy-policy`, `/copyright`) skip the gate and render with only
-  `<Header />`, so their text is in the first HTML and they open without IndexedDB. Anything they render must read
-  nothing from Dexie, controllers or the session restore. The header shows members only the logo there, and anything
-  that reads browser-only state (the auth store, the visitor's clock) waits for `useIsHydrated()` so the hydrating
-  render matches the server's markup. Moving between a public document and an app route remounts the gate (database
-  init, coordinators).
+- **App shell and public documents:** The public landing page (`/`) and documents (`isPublicDocumentRoute`:
+  `/terms-of-use`, `/privacy-policy`, `/copyright`) render their header and content in the server HTML without opening
+  IndexedDB. On a direct visit to `/`, the browser checks for a saved account before painting the landing actions.
+  A returning member or a signed-out visitor owed the migration explanation sees the loading spinner while the guarded shell loads. Guests can read the landing page
+  with JavaScript disabled. Saved accounts and cross-tab sign-in use the same `DatabaseProvider` → `RouteGuardProvider` as app routes.
+  A signed-out visitor's pending credential cleanup runs alongside the landing page so its completion preserves an
+  active Passport sign-in. The landing offers Passport once the saved auth state has hydrated. A click opens the popup
+  immediately and shows “Opening Passport…” while the app prepares the database and requests a grant.
+  A timed-out preflight releases the popup and button immediately. Leaving the page before the grant starts abandons
+  the attempt so a later sign-in keeps ownership. Other app routes mount the guarded shell with the coordinators,
+  Fab, guest banner and sign-in dialog. The public documents stay outside that shell and show members only the logo.
+  Browser-only presentation on those documents waits for hydration so the first client render matches the server.
 - **Active nav state:** a nav item that links to a default child route (footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay active on sibling routes (`/settings/notifications`) needs active detection on the parent prefix (`activePrefix: APP_ROUTES.SETTINGS`, see `MobileFooter`), not only `href` or `pathname.startsWith(href + '/')`.
 
 `MobileFooter` always disables prefetch for Search. With Next.js 16.3.6, any `/search` prefetch from the footer after a
