@@ -1,13 +1,20 @@
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
+import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 export class BookmarkController {
   private constructor() {}
+
+  /** The `fetchMissingPosts` pass in flight, with the viewer session it runs for. */
+  private static missingPostsPass: { isCurrent: () => boolean; request: Promise<void> } | null = null;
 
   /**
    * Check if a post is bookmarked
@@ -47,10 +54,63 @@ export class BookmarkController {
 
   /**
    * How many posts the current user bookmarked, bookmarked collections excluded. Local-only
-   * read, designed for `useLiveQuery`.
+   * read, designed for `useLiveQuery`. A bookmark whose post is not cached counts as a post, so
+   * the number is exact only once `getMissingPostIds` is empty or `fetchMissingPosts` has settled
+   * (`useBookmarksCollectionSummary` holds it until then).
    */
   static async getCount(): Promise<number> {
     return BookmarkApplication.getCount();
+  }
+
+  /**
+   * The bookmarked posts whose details are not cached, newest bookmark first: the bookmarks that
+   * cannot be told a post from a followed collection yet. Local-only read, designed for
+   * `useLiveQuery`; one Dexie transaction, as `getAllWithPostDetails`.
+   */
+  static async getMissingPostIds(): Promise<string[]> {
+    const bookmarked = await BookmarkApplication.getAllWithPostDetails();
+    return bookmarked.filter(({ details }) => !details).map(({ id }) => id);
+  }
+
+  /**
+   * Fetches the bookmarked posts that are not cached (`getMissingPostIds`) from Nexus and persists
+   * them, so every bookmark is classified and `getCount` is exact. Sequential `by_ids` batches of
+   * `NEXUS_STREAM_MAX_LIMIT`; with nothing missing it is one local read and no request.
+   *
+   * Always resolves, whatever came back: a post Nexus does not serve stays uncached, where it keeps
+   * counting as a post, as the Bookmarks list shows it, and a batch that fails (logged by the
+   * application) ends the pass, so an outage costs the wait of one batch, not of every batch; the
+   * next call asks again for what is still missing. Callers of one viewer session share the pass
+   * in flight. A pass that outlives its session stops and writes nothing for the next one.
+   */
+  static fetchMissingPosts(): Promise<void> {
+    const pending = this.missingPostsPass;
+    if (pending?.isCurrent()) return pending.request;
+
+    // Bookmarks are the signed-in viewer's: a guest has none to hydrate.
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    if (!viewerId) return Promise.resolve();
+
+    const isCurrent = captureViewerSession();
+    const request = this.fetchMissingPostsInBatches(viewerId, isCurrent).finally(() => {
+      if (this.missingPostsPass?.request === request) this.missingPostsPass = null;
+    });
+    this.missingPostsPass = { isCurrent, request };
+    return request;
+  }
+
+  private static async fetchMissingPostsInBatches(viewerId: Pubky, isCurrent: () => boolean): Promise<void> {
+    const missingPostIds = await this.getMissingPostIds();
+    for (let index = 0; index < missingPostIds.length; index += NEXUS_STREAM_MAX_LIMIT) {
+      // The controller orchestrates the two domains: `BookmarkApplication` calls no other Application (ADR-0009).
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds: missingPostIds.slice(index, index + NEXUS_STREAM_MAX_LIMIT),
+        viewerId,
+        isCurrent,
+      });
+      // False when the batch failed or the session changed: the batches left would fail or be dropped as well.
+      if (!hydrated) return;
+    }
   }
 
   /**
