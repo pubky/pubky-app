@@ -63,7 +63,10 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn('min-w-0 text-sm wrap-anywhere whitespace-pre-line text-muted-foreground', className)}
+    className={cn(
+      'min-w-0 text-sm wrap-anywhere whitespace-pre-line text-muted-foreground group-data-[variant=default]/toast:text-secondary-foreground',
+      className,
+    )}
     {...props}
   />
 ));

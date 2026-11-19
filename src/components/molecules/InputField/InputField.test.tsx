@@ -99,7 +99,7 @@ describe('InputField', () => {
 
   it.each([
     ['success', ['border-brand', 'text-brand']],
-    ['error', ['border-red-500', 'text-red-500']],
+    ['error', ['border-destructive', 'text-destructive']],
   ] as const)('applies status=%s classes', (status, classNames) => {
     render(<InputField value="test" status={status} />);
     expect(screen.getByTestId('input').parentElement).toHaveClass(...classNames);
@@ -135,7 +135,7 @@ describe('InputField', () => {
     ['default', 'text-muted-foreground'],
     ['info', 'text-blue-500'],
     ['alert', 'text-yellow-500'],
-    ['error', 'text-error-foreground'],
+    ['error', 'text-destructive'],
     ['success', 'text-brand'],
   ] as const)('styles the message for messageType=%s', (messageType, className) => {
     render(<InputField value="test" message="Hint" messageType={messageType} />);

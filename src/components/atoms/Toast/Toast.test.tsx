@@ -17,11 +17,11 @@ describe('Toast', () => {
 
     const toast = screen.getByText('Toast content').closest('[data-variant]');
     expect(toast).toHaveAttribute('data-variant', 'default');
-    expect(toast).toHaveClass('border-brand/32');
+    expect(toast).toHaveClass('border-brand/50');
   });
 
   it.each([
-    ['default', 'border-brand/32'],
+    ['default', 'border-brand/50'],
     ['error', 'border-destructive/32'],
     ['warning', 'border-yellow-500/32'],
     ['info', 'border-accent/32'],

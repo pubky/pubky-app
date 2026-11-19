@@ -70,9 +70,9 @@ export function InputField({
   const resolvedLoadingText = loadingText ?? 'Loading...';
   const containerClasses = variant === 'dashed' && 'border-dashed';
   const statusClasses = {
-    default: '',
-    success: 'border-brand text-brand',
-    error: 'border-red-500 text-red-500',
+    default: 'focus-within:border-ring',
+    success: 'border-brand text-brand focus-within:ring-1 focus-within:ring-ring',
+    error: 'border-destructive text-destructive focus-within:ring-1 focus-within:ring-ring light:text-error-foreground',
   };
   const sizeClasses = {
     sm: 'min-h-10 text-sm',
@@ -83,7 +83,7 @@ export function InputField({
     default: 'text-muted-foreground',
     info: 'text-blue-500',
     alert: 'text-yellow-500',
-    error: 'text-error-foreground',
+    error: 'text-destructive light:text-error-foreground',
     success: 'text-brand',
   } as const;
   const messageId = id && message ? `${id}-message` : undefined;

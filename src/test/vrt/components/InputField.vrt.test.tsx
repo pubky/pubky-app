@@ -11,10 +11,12 @@ for (const width of [390, 1440]) {
       const input = screen.getByRole('textbox');
       const field = screen.getByTestId('container');
       const bounds = field.element().getBoundingClientRect();
+      const idleBorder = getComputedStyle(field.element()).borderColor;
 
       for (const y of [10, bounds.height - 10]) {
         await field.click({ position: { x: bounds.width / 2, y } });
         expect(document.activeElement).toBe(input.element());
+        expect(getComputedStyle(field.element()).borderColor).not.toBe(idleBorder);
         input.element().blur();
       }
     });
